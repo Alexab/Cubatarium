@@ -10401,3 +10401,42 @@ live pool IDs points to cache synchronization; equal IDs that cease to be GL
 buffers point to an external deletion or GL-context/resource loss. Revisit the
 water/streaming hypothesis only after that distinction is captured. Confirm
 fog-debt transition count and presented horizon stability over the same route.
+
+### M588 follow-up: transient pool failure not reproduced (2026-10-15)
+
+M588 completed the same visible, no-teleport M335 route on
+`World_M572_Cold_20261014` (9,184 blocks, 914 perf periods, median cruise
+5.18555 blocks/s, `process_rc=0`, no forced termination). The suite report is
+still red: post-stop readiness debt peaked at 23 and focus visual missing-mesh
+count at 21; `visual_holes` coverage proxy was zero post-stop, and visible-black
+stalled/no-ticket counts were zero. Median stream stage was 5.52 ms and the
+median world streaming phase was 7.77 ms. These metrics do not support a
+streaming overload at the time of the reported water loss, but they also do not
+certify transparent surface rendering.
+
+The expanded `-4900..-4450` water probe produced 53 captures/3,180 samples.
+2,966 samples hit saved water blocks and 2,518 matched source fluid triangles.
+Within 64 blocks, 1,691/1,758 matched water samples changed RGB after the
+transparent pass. All 159 GPU payload/readback checks and all 159 fluid draw
+witnesses had matching live/cached pool handles (`82/83`), live GL buffers,
+valid sizes, correct binds, and no GL error. In the exact `-4760..-4650`
+camera-x interval where M587 reported invalid buffers, M588 recorded 39
+witnesses and all were valid. Thus M587's invalid-pool condition is real but
+intermittent; M588 did not reproduce it, and the mostly healthy -4900..-4450
+pixel region is not where the latest user report occurred.
+
+The four-second fog-clear grace reduced `fog_hole_debt` transitions from
+M587's 230/1,431 periods to 94/914 periods, but presented-horizon transitions
+still numbered 123 (69 outward, 54 inward). This is an improvement, not stable
+fog behavior. The current run's probe range ended before x=-5500, so it did not
+record GPU or pixel evidence from the latest reported water loss near
+x≈-5746..-6142.
+
+Next: repeat the same release binary, world, M335 no-teleport route, fog
+settings, and four-second grace, changing only the diagnostic range to
+`-6800..-5500`. Join pixel probes to saved water blocks and source triangles;
+inspect same-frame fluid draw witnesses, live pool handles, MDI payloads,
+stencil, and framebuffer RGB. This directly covers the user's latest reported
+location. Keep the fog-slew follow-up (longer clear grace and slower contract /
+expand rates) separate until this targeted capture is complete so the water
+reproduction uses unchanged rendering policy.
