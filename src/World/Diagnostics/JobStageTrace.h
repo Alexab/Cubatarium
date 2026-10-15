@@ -437,6 +437,8 @@ struct VisualBlackTraceRecord
   uint32_t renderer_fluid_draw_witness_block_id{0};
   uint32_t renderer_fluid_draw_witness_pool_vbo{0};
   uint32_t renderer_fluid_draw_witness_pool_ebo{0};
+  uint32_t renderer_fluid_draw_witness_pool_live_vbo{0};
+  uint32_t renderer_fluid_draw_witness_pool_live_ebo{0};
   uint32_t renderer_fluid_draw_witness_vbo{0};
   uint32_t renderer_fluid_draw_witness_ebo{0};
   uint32_t renderer_fluid_draw_witness_vao{0};

@@ -4,10 +4,15 @@ param(
     [int]$EndMarginBlocks = 0,
     [switch]$EnableFogPullIn,
     [string]$World = "World_M572_Cold_20261014",
+    [int]$ProbeMinCameraX = -4710,
+    [int]$ProbeMaxCameraX = -4550,
     [string]$Report = "bin/suite_reports/engine_refactor/m584_m572_water_fog_margin0_20261015.json"
 )
 
 $ErrorActionPreference = "Stop"
+if ($ProbeMinCameraX -ge $ProbeMaxCameraX) {
+    throw "ProbeMinCameraX must be smaller than ProbeMaxCameraX"
+}
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $configPath = Join-Path $repoRoot "bin\config.json"
 $configOriginal = [System.IO.File]::ReadAllBytes($configPath)
@@ -54,12 +59,12 @@ try {
         CUBA_WORLD_COLUMN_SOURCE_TRACE = "1"
         CUBA_VISUAL_BLACK_TRACE = "1"
         CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS = "0"
-        CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X = "-4710"
-        CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X = "-4550"
+        CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X = [string]$ProbeMinCameraX
+        CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X = [string]$ProbeMaxCameraX
         CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS = "1"
         CUBA_FLUID_RENDER_TRACE = "1"
-        CUBA_FLUID_RENDER_MIN_X = "-4710"
-        CUBA_FLUID_RENDER_MAX_X = "-4550"
+        CUBA_FLUID_RENDER_MIN_X = [string]$ProbeMinCameraX
+        CUBA_FLUID_RENDER_MAX_X = [string]$ProbeMaxCameraX
         CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS = "0"
         CUBA_DEBUG_FLUID_FRAGMENT_MARKER = "0"
         CUBA_DEBUG_TRANSPARENT_SINGLE_PASS = "0"

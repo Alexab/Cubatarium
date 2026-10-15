@@ -5163,6 +5163,10 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_fluid_draw_witness_pool_vbo
                  << ",\"pool_ebo\":"
                  << r.renderer_fluid_draw_witness_pool_ebo
+                 << ",\"pool_live_vbo\":"
+                 << r.renderer_fluid_draw_witness_pool_live_vbo
+                 << ",\"pool_live_ebo\":"
+                 << r.renderer_fluid_draw_witness_pool_live_ebo
                  << ",\"vbo\":" << r.renderer_fluid_draw_witness_vbo
                  << ",\"ebo\":" << r.renderer_fluid_draw_witness_ebo
                  << ",\"vbo_is_buffer\":"

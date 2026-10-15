@@ -5158,6 +5158,10 @@ void NoteFluidGpuDrawWitness(const GreedyGpuPassCache &cache,
   record.renderer_fluid_draw_witness_block_id = batch.blockId;
   record.renderer_fluid_draw_witness_pool_vbo = cache.poolVbo;
   record.renderer_fluid_draw_witness_pool_ebo = cache.poolEbo;
+  record.renderer_fluid_draw_witness_pool_live_vbo =
+      cache.VertexPool.VertexBuffer();
+  record.renderer_fluid_draw_witness_pool_live_ebo =
+      cache.VertexPool.IndexBuffer();
   const GLuint vertex_buffer = batch.pooled ? cache.poolVbo : batch.vbo;
   const GLuint index_buffer = batch.pooled ? cache.poolEbo : batch.ebo;
   record.renderer_fluid_draw_witness_vbo = vertex_buffer;

@@ -10356,3 +10356,48 @@ facing sector is clear, short local holes still trigger protection, and the
 water pixel join improves without worsening the existing streaming stop
 lines. Do not change water mesh or shell passes unless the new run provides
 direct draw evidence for that path.
+
+### M587 follow-up: fog hysteresis and transparent GPU residency (2026-10-15)
+
+M587 completed the same visible M335 route with margin 0 and fog pull-in on.
+This supersedes the assumption above that the remaining water symptom should
+be investigated only through fog. Across the `-4710..-4550` probe window,
+836 saved-water samples included 740 source-triangle matches. None of those
+matches changed the sampled RGB after transparency; in the 506 matches within
+64 blocks, RGB also remained unchanged. M586 on the same route/configuration
+changed RGB for 417/441 source-triangle matches within 64 blocks, with stencil
+set on 438/441 samples. At M587's x=-4705 witness, the surface was 23.2 blocks
+away and the MDI command was visible with 12 indices, but the selected pool
+buffers `82/83` were not GL buffer objects, the active array/element bindings
+remained `0/69`, and the post-submit GL error was 1282. M586 had those same
+numeric buffer names live at 48 MiB/16 MiB, correct bindings, and no GL error.
+This is direct evidence of invalid transparent GPU resources during M587; it
+does not yet identify whether the cached handles became stale, the pool was
+destroyed, or the GL context/resources were lost.
+
+The original M587 pixel-trace range ended at x=-4710 and therefore did not
+cover the reported x≈-4726 location. At that location, the saved world had a
+continuous water column at y=48, fog horizon was 64, and generation, async IO,
+and pending GPU queues were clear. In the traced window, generation and async
+IO queues were zero, pending GPU work remained small (0–7), and light queue
+drops were zero. Snapshot-cache LRU evictions and small dirty/apply-drop
+counters occurred, but there is not evidence that a saturated streaming queue
+caused the missing water.
+
+M587 also logged 230 fog-debt state transitions across 1,431 perf rows. The
+fog target repeatedly changed between RD 3 and 4, while presented horizon
+continued to follow those changing targets. The previous 0.9-second clear
+grace was shorter than the observed recurring readiness gaps. The code now
+requires four seconds of clear readiness before releasing the pulled fog
+target. This should suppress brief debt pulses while retaining fog protection
+for sustained local holes.
+
+Next: build Release only and repeat the same M335 route on `World_M572_Cold_20261014`.
+Expand the diagnostic camera-x range to -4900..-4450 so it spans the reported
+water-loss location and records live `VertexPool` handles beside cached pass
+handles. Compare cache handles, live pool handles, `glIsBuffer`, buffer sizes,
+bindings, MDI result, and RGB/stencil over time. A mismatch between cached and
+live pool IDs points to cache synchronization; equal IDs that cease to be GL
+buffers point to an external deletion or GL-context/resource loss. Revisit the
+water/streaming hypothesis only after that distinction is captured. Confirm
+fog-debt transition count and presented horizon stability over the same route.

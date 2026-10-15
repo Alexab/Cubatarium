@@ -96,7 +96,11 @@ constexpr int kRelightBacklogStuckWindowMs = 1500;
 constexpr int kRelightBgClampCooldownMs = 400;
 constexpr int kAdaptiveRdMin = 3;
 constexpr double kAdaptiveRdHysteresisSec = 2.5;
-constexpr double kFogDebtClearGraceSec = 0.9;
+// M587 still showed a 3<->4 fog-RD oscillation after the 0.9 s grace: the
+// facing-miss samples on this route commonly clear briefly, then recur. Hold
+// the pulled horizon until readiness has stayed clear long enough to avoid
+// exposing those short gaps as a moving fog boundary.
+constexpr double kFogDebtClearGraceSec = 4.0;
 constexpr float kFogHorizonContractBlocksPerSec = 72.0f;
 constexpr float kFogHorizonExpandBlocksPerSec = 28.0f;
 
