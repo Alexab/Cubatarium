@@ -6447,25 +6447,25 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         const auto &phys = world.PhysicsTelemetryData;
         const double wall_ms = world.GetWallFrameDelta() * 1000.0;
-        const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
         // Latch on near visual holes OR unfinished/VB rim debt (170548 W1) —
-        // unfinished alone must keep fog pulled so brief ring blacks stay masked
-        // when FocusMissingMesh already cleared.
+        // use the facing-sector unfinished count here: the all-ring census also
+        // includes unrelated columns behind/outside the view and can otherwise
+        // keep the water horizon fogged after the focus is ready.
         const bool hole_debt_now = ShouldLatchFogHoleDebtNow(
-            phys.FocusMissingMesh, phys.MissHoriz, unfinished,
+            phys.FocusMissingMesh, phys.MissHoriz, unfinished_ahead,
             phys.VisibleBlackFullyDarkStalledN, phys.VisibleBlackFocusN);
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
         }
         else if (ShouldClearFogHoleDebtLatch(
-                     phys.FocusMissingMesh, phys.VisualHoles, unfinished,
+                     phys.FocusMissingMesh, phys.VisualHoles, unfinished_ahead,
                      phys.VisibleBlackFullyDarkStalledN,
                      phys.VisibleBlackFocusN))
         {
-          // Clear only when miss/holes AND unfinished/VB stalled are gone.
+          // Clear when near-focus/facing debt and fully-dark stalls are gone.
           FogPullInHoleHoldFrames = 0;
         }
         else if (ShouldDecayFogHoleDebtHold(phys.FocusMissingMesh,
@@ -6501,8 +6501,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         else
         {
           // Cover incomplete outer ring before decor/trees pop in clear mid-range.
-          const int unfinished_eff =
-              std::max(unfinished, hole_debt_now ? unfinished : 1);
+          const int unfinished_eff = std::max(unfinished_ahead, 1);
           int pull = 1 + std::min(2, unfinished_eff / 3) +
                      (phys.VisualHoles > 0 ? 1 : 0);
           if (near_water_unfinished)
@@ -6544,9 +6543,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                         .count();
           if (target < FogPullInRd)
           {
-            // Rate-limit shrink; severe missing/unfinished may step immediately.
+            // Rate-limit shrink; severe missing/facing debt may step immediately.
             // gpu_pending alone is not urgent (213546: apply queue ≠ fog hole).
-            const bool urgent = phys.VisualHoles > 0 || unfinished >= 3 ||
+            const bool urgent = phys.VisualHoles > 0 || unfinished_ahead >= 3 ||
                                 (hole_debt_now && gpu_pending >= 8);
             if (urgent || since_shrink >= kFogPullInShrinkSec)
             {

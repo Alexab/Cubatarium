@@ -9337,8 +9337,39 @@ pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
   -Report bin/suite_reports/engine_refactor/m585_m572_water_margin0_pullin_20261015.json
 ```
 
-Join M585 with the same X bounds `[-4710,-4550]`. Compare actual fog end,
-unchanged water pixels, source-triangle coverage, and the dynamic pull-in
-margin/debt. The M584 result is a strong far-field diagnosis, not yet a
-permanent rendering change; keep the in-range source-triangle misses and the
-user-reported full disappearance in the remaining investigation.
+M585 completed the same full visible no-teleport route normally (913 periods,
+911 steady, movement median 5.18555 blocks/s, far distance 9152 blocks,
+`process_rc=0`, no hang kill). The runtime manifest confirmed margin 0 and
+pull-in enabled; afterward the helper restored the saved config (margin 28,
+pull-in enabled). The acceptance report remained red on existing A24/eye-proxy
+and post-stop convergence gates.
+
+The 14 water-window captures had 840 samples, 542 water/source-triangle
+matches, and 372 RGB changes (68.6%); 170 matched water pixels did not change.
+Actual fog uniforms were horizontal air fog start 16/end 32, while period
+telemetry at all 14 capture frames showed fog RD=3, margin=95, debt=1, and
+`unfinished_visual=35..49`. `focus_unfinished_ahead=0` in all 14 frames;
+`focus_missing_mesh` was nonzero in only one, `visual_holes=0` throughout, and
+`visible_black_fully_dark_stalled_n=0` throughout. Among the 170 unchanged
+water matches, 168 had stencil 1; 158 exactly equaled fog RGB and 167 were
+within one 8-bit channel value.
+
+Use horizontal distance here (the fog uniform has `horizontal=1`). In the
+32–64-block band, M584 with pull-in off/end=64 changed RGB in 140/141 water
+matches; M585 with pull-in on/end=32 changed only 50/189, leaving 136
+stencil-1 pixels unchanged inside the drawable radius. This directly explains
+why the user can see the water surface disappear with normal pull-in enabled:
+global unfinished ring debt keeps the fog end at its 32-block floor after the
+facing sector is ready. M584's 81 in-radius source-ray misses remain a weak
+proxy: 80 still changed RGB with stencil 1, so they are not proof of missing
+GPU water geometry.
+
+The production-policy change now under evaluation feeds `FocusUnfinishedAhead`
+to fog-debt latch, clear, margin scaling, and urgent-shrink decisions instead
+of the all-ring `UnfinishedVisual` count. Direct `FocusMissingMesh`, visual
+holes, and fully-dark stalled witnesses still retain the short protective
+latch. Build Release only, then repeat the same M335 flight as M586 with the
+normal pull-in enabled and margin 0. Check that fog returns to RD=4/end=64
+when the facing sector is clear, that short real holes can still pull it in,
+and that far/near water pixels respond as in M584 without worsening the
+existing stop-line behavior.
