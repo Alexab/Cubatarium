@@ -5523,7 +5523,7 @@ void UFramePerfMonitor::Shutdown()
           // write hundreds of MiB. Keep the pixel oracle's render, voxel,
           // fluid, draw, revision, and light witnesses in a compact row.
           (*out) << "{\"kind\":\"renderer_pixel_probe\""
-                 << ",\"renderer_pixel_light_trace_schema\":2"
+                 << ",\"renderer_pixel_light_trace_schema\":3"
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                  << ",\"cz\":" << r.cz
                  << ",\"sample_kind\":"
@@ -5534,6 +5534,8 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"camera_y\":" << r.camera_y
                  << ",\"camera_z\":" << r.camera_z
                  << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"renderer_pixel_sample_time_ms\":"
+                 << r.renderer_pixel_sample_time_ms
                  << ",\"world_epoch\":" << r.world_epoch
                  << ",\"incarnation\":" << r.incarnation
                  << ",\"renderer_pixel_probe_id\":"
@@ -6260,6 +6262,8 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_fluid_wetness
                << ",\"renderer_pixel_probe_id\":"
                << r.renderer_pixel_probe_id
+               << ",\"renderer_pixel_sample_time_ms\":"
+               << r.renderer_pixel_sample_time_ms
                << ",\"renderer_pixel_probe_trigger_flags\":"
                << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
                << ",\"renderer_pixel_probe_event_frame_epoch\":"

@@ -122,6 +122,9 @@ def main() -> int:
                             {
                                 "probe_id": probe_id,
                                 "frame_epoch": int(row.get("frame_epoch", 0)),
+                                "sample_time_ms": row.get(
+                                    "renderer_pixel_sample_time_ms"
+                                ),
                                 "camera": [camera_x, camera_y, camera_z],
                                 "preview_pixel_count": 0,
                                 "settled_nonpreview_pixel_count": 0,
@@ -206,6 +209,9 @@ def main() -> int:
                             {
                                 "probe_id": probe_id,
                                 "frame_epoch": int(row.get("frame_epoch", 0)),
+                                "sample_time_ms": row.get(
+                                    "renderer_pixel_sample_time_ms"
+                                ),
                                 "camera": [
                                     row.get("camera_x"),
                                     row.get("camera_y"),
@@ -570,6 +576,17 @@ def main() -> int:
             ),
             None,
         )
+        last_preview_time_ms = last_preview.get("sample_time_ms")
+        settled_time_ms = (
+            settled_after.get("sample_time_ms") if settled_after else None
+        )
+        elapsed_ms_to_settled = (
+            round(float(settled_time_ms) - float(last_preview_time_ms), 3)
+            if last_preview_time_ms is not None
+            and settled_time_ms is not None
+            and float(settled_time_ms) >= float(last_preview_time_ms)
+            else None
+        )
         preview_chunk_rows.append(
             {
                 "chunk": list(chunk),
@@ -592,6 +609,7 @@ def main() -> int:
                 "first_preview": first_preview,
                 "last_preview": last_preview,
                 "first_settled_nonpreview_after": settled_after,
+                "observed_preview_to_settled_interval_ms": elapsed_ms_to_settled,
                 "probe_id_delta_to_settled": (
                     settled_after["probe_id"] - last_preview["probe_id"]
                     if settled_after
@@ -649,7 +667,9 @@ def main() -> int:
             "framebuffer depth-hit surface (for example, with cutout geometry). The depth "
             "surface has separate chunk, MDI, source-light, dirty-queue, and work-owner "
             "witnesses. These joins localize mismatches but do not by themselves prove the "
-            "responsible draw path."
+            "responsible draw path. renderer_pixel_sample_time_ms is process-local monotonic "
+            "time. Preview-to-settled intervals are observation bounds from sparse route "
+            "samples, not exact transition timestamps."
         ),
     }
     rendered = json.dumps(report, ensure_ascii=False, indent=2)

@@ -470,6 +470,8 @@ struct VisualBlackTraceRecord
   uint32_t renderer_pixel_fluid_gpu_index_count{0};
   uint32_t renderer_pixel_fluid_gpu_index_count_gl{0};
   uint64_t renderer_pixel_probe_id{0};
+  /// Process-local monotonic time when the framebuffer pixel was sampled.
+  double renderer_pixel_sample_time_ms{0.0};
   /// sample_kind=10: exact streaming screen-ray sample and selector decision.
   /// Screen coordinates use top-left pixel space. Columns map to the
   /// renderer's 20-tile X centers; row is an index in the selector's ordered
