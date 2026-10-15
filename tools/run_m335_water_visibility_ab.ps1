@@ -6,6 +6,21 @@ param(
     [string]$World = "World_M572_Cold_20261014",
     [int]$ProbeMinCameraX = -4710,
     [int]$ProbeMaxCameraX = -4550,
+    [int]$StartX = 120,
+    [int]$StartY = 56,
+    [int]$StartZ = 56,
+    [int]$CruiseEyeY = 70,
+    [int]$Yaw = 180,
+    [int]$Pitch = -30,
+    [ValidateRange(30, 1800)]
+    [int]$FlyPhaseSeconds = 1800,
+    [ValidateRange(20, 300)]
+    [int]$StopPhaseSeconds = 20,
+    [ValidateRange(8, 300)]
+    [int]$StopAfterBlockedSeconds = 8,
+    [ValidateRange(8, 300)]
+    [int]$IdleSeconds = 15,
+    [string]$PhaseId,
     [string]$Report = "bin/suite_reports/engine_refactor/m584_m572_water_fog_margin0_20261015.json"
 )
 
@@ -91,24 +106,33 @@ try {
     }
 
     $pullInTag = if ($EnableFogPullIn) { "pullin_on" } else { "pullin_off" }
-    $phaseId = "m335_water_endmargin_{0}_{1}" -f $EndMarginBlocks, $pullInTag
+    if ([string]::IsNullOrWhiteSpace($PhaseId)) {
+        if ($StartX -eq 120 -and $StartY -eq 56 -and $StartZ -eq 56 -and
+            $FlyPhaseSeconds -eq 1800 -and $StopPhaseSeconds -eq 20 -and
+            $IdleSeconds -eq 15) {
+            $PhaseId = "m335_water_endmargin_{0}_{1}" -f $EndMarginBlocks, $pullInTag
+        } else {
+            $PhaseId = "water_target_x{0}_fly{1}_{2}" -f $StartX, $FlyPhaseSeconds, $pullInTag
+        }
+    }
+    $runSeconds = $IdleSeconds + $FlyPhaseSeconds + $StopPhaseSeconds + 5
     & python -X utf8 tools\flight_sim_run.py `
         --scenario product-174657-far `
         --world $World `
-        --seconds 1840 `
+        --seconds $runSeconds `
         --fly-stop `
-        --fly-phase-sec 1800 `
-        --stop-phase-sec 20 `
-        --stop-after-blocked-sec 8 `
-        --idle-sec 15 `
+        --fly-phase-sec $FlyPhaseSeconds `
+        --stop-phase-sec $StopPhaseSeconds `
+        --stop-after-blocked-sec $StopAfterBlockedSeconds `
+        --idle-sec $IdleSeconds `
         --visible `
         --resume `
-        --product-start-position 120 56 56 `
-        --cruise-eye-y 70 `
-        --yaw 180 `
-        --pitch -30 `
+        --product-start-position $StartX $StartY $StartZ `
+        --cruise-eye-y $CruiseEyeY `
+        --yaw $Yaw `
+        --pitch $Pitch `
         --report $Report `
-        --phase-id $phaseId
+        --phase-id $PhaseId
     $runExitCode = $LASTEXITCODE
 }
 finally {
