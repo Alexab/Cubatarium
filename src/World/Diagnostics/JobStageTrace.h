@@ -770,6 +770,10 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_opaque_chunk_x{0};
   int32_t renderer_pixel_opaque_chunk_y{0};
   int32_t renderer_pixel_opaque_chunk_z{0};
+  /// Lifecycle identity for the opaque depth-hit chunk. The generic
+  /// world_epoch/incarnation fields may describe the sea-plane sample.
+  uint64_t renderer_pixel_opaque_world_epoch{0};
+  uint64_t renderer_pixel_opaque_incarnation{0};
   uint32_t renderer_pixel_opaque_chunk_nonair{0};
   uint64_t renderer_pixel_opaque_chunk_content_revision{0};
   uint64_t renderer_pixel_opaque_mesh_revision{0};

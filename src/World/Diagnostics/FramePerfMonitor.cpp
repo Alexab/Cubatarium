@@ -5526,7 +5526,7 @@ void UFramePerfMonitor::Shutdown()
           // write hundreds of MiB. Keep the pixel oracle's render, voxel,
           // fluid, draw, revision, and light witnesses in a compact row.
           (*out) << "{\"kind\":\"renderer_pixel_probe\""
-                 << ",\"renderer_pixel_light_trace_schema\":4"
+                 << ",\"renderer_pixel_light_trace_schema\":5"
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                  << ",\"cz\":" << r.cz
                  << ",\"sample_kind\":"
@@ -6010,6 +6010,10 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_opaque_chunk_y
                  << ",\"renderer_pixel_opaque_chunk_z\":"
                  << r.renderer_pixel_opaque_chunk_z
+                 << ",\"renderer_pixel_opaque_world_epoch\":"
+                 << r.renderer_pixel_opaque_world_epoch
+                 << ",\"renderer_pixel_opaque_incarnation\":"
+                 << r.renderer_pixel_opaque_incarnation
                  << ",\"renderer_pixel_opaque_chunk_nonair\":"
                  << r.renderer_pixel_opaque_chunk_nonair
                  << ",\"renderer_pixel_opaque_chunk_content_revision\":"
@@ -6605,6 +6609,10 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_opaque_chunk_y
                << ",\"renderer_pixel_opaque_chunk_z\":"
                << r.renderer_pixel_opaque_chunk_z
+                 << ",\"renderer_pixel_opaque_world_epoch\":"
+                 << r.renderer_pixel_opaque_world_epoch
+                 << ",\"renderer_pixel_opaque_incarnation\":"
+                 << r.renderer_pixel_opaque_incarnation
                << ",\"renderer_pixel_opaque_chunk_nonair\":"
                << r.renderer_pixel_opaque_chunk_nonair
                << ",\"renderer_pixel_opaque_chunk_content_revision\":"

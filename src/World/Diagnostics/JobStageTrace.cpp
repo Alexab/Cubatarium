@@ -666,6 +666,18 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
     // re-admission, mesh schedule, or worker/GPU handoff.
     WatchVisualChunk(record.cx, record.cy, record.cz);
   }
+  if (record.sample_kind == 9 &&
+      record.renderer_pixel_opaque_surface_valid != 0 &&
+      (record.renderer_pixel_opaque_preview_shader_override != 0 ||
+       record.renderer_pixel_opaque_vertex_light_preview > 0.0f))
+  {
+    // Pixel probe coordinates identify the opaque depth-hit chunk. The
+    // generic cx/cy/cz may instead identify the sea-plane intersection, so
+    // watch the explicit opaque coordinates for subsequent lifecycle events.
+    WatchVisualChunk(record.renderer_pixel_opaque_chunk_x,
+                     record.renderer_pixel_opaque_chunk_y,
+                     record.renderer_pixel_opaque_chunk_z);
+  }
   if ((record.sample_kind == 12 || record.sample_kind == 13) &&
       record.frame_epoch != 0)
   {

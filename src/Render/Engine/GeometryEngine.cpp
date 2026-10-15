@@ -1727,6 +1727,8 @@ void CaptureTransparentPixelProbe(
                   world.GetBlockWorld().GetChunkManager().GetChunk(
                       opaque_chunk))
           {
+            record.renderer_pixel_opaque_incarnation =
+                opaque_chunk_data->GetIncarnation();
             record.renderer_pixel_opaque_chunk_nonair =
                 opaque_chunk_data->GetNonAirCount();
             record.renderer_pixel_opaque_chunk_content_revision =
@@ -1814,6 +1816,10 @@ void CaptureTransparentPixelProbe(
           if (const ChunkRenderDemandRecord *opaque_demand =
                   UChunkRenderDemandStore::Get().Find(opaque_chunk))
           {
+            record.renderer_pixel_opaque_world_epoch =
+                opaque_demand->world_epoch;
+            record.renderer_pixel_opaque_incarnation =
+                opaque_demand->incarnation;
             record.renderer_pixel_opaque_demand_present = 1;
             record.renderer_pixel_opaque_demand_has_active_attempt =
                 opaque_demand->has_active_attempt ? 1u : 0u;
