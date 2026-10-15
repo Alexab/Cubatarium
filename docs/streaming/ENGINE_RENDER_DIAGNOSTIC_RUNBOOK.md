@@ -376,3 +376,39 @@ perf JSONL. Сначала проверьте ненулевой
 `absolute_steady_clock_pixel_probe_count` и наличие нужных lifecycle event
 counts. Если событие settlement predates первую видимую пробу, стадия света
 получает левую границу “уже settled”; не приписывайте этот интервал relight.
+
+### M597–M598: opaque identity join and short cold-frontier result
+
+M597 показал, что координаты пиксельного opaque hit нельзя соединять с
+`world_epoch/incarnation` generic pixel row: последние могли принадлежать
+sea-plane sample. Текущая Release трасса пишет
+`renderer_pixel_opaque_world_epoch` и `renderer_pixel_opaque_incarnation`, а
+наблюдение включает точный opaque chunk при provisional sample. Analyzer
+отбирает соответствующую demand attempt и один mesh job; один chunk может
+иметь несколько попыток в том же временном окне.
+
+M598A создал cold мир `World_M598A_Cold_20261015` (seed `3650482197`, radius 4,
+597 файлов чанков). Запускайте GUI-subsystem create-world только в
+`Start-Process -WindowStyle Hidden -PassThru -Wait`, затем проверяйте
+`success`, seed, путь и `chunk_files` в report. Прямой вызов из PowerShell
+может вернуть управление раньше завершения процесса и породить orphan.
+
+M598B прошёл X `-32→-214` при `5.19653 blocks/s`, без teleport/collision.
+Pixel trace: 4,800 проб, 35 provisional chunks, 0 dark-threshold samples;
+all 35 provisional chunk timelines joined lifecycle events. На frontier
+`(-20,2,2)` light settled через ~64 ms, matching mesh published через ~112 ms
+от первого preview sample; следующий settled sample пришёл через 1.6 s уже с
+другой camera position. На stationary startup slice `(-4,2,2)` был виден
+deferred-far owner и ожидание до light settlement ~7.45 s, после чего build
+занял ~5 ms. Это указывает на очередь до освещения в startup backlog, но не
+измеряет точную длину enqueue→admit и не доказывает, что все визуальные
+наблюдения имеют ту же причину. Aggregate suite `pass=false` из-за readiness
+debt; direct `visual_holes_rate=0`, `dark_pixel_count=0`. Eye proxy не проверил
+temporal mid-flight segment, потому что выбранная проверка пространственная.
+
+Команды и артефакты M598 перечислены в
+[flight experiment notes](FLIGHT_EXPERIMENT_SCRIPTS.md); summary внесён в
+[ремедиационный план](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+Следующий шаг — проверить cadence `deferred_far→priority FIFO` на ограниченной
+pixel/state выборке. Не поднимать глобальный FIFO admit cap без парного
+наблюдения: историческое ограничение защищает от scheduler storm.

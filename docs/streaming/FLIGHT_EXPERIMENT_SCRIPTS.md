@@ -9534,3 +9534,74 @@ timestamps. M596 reports: [create](../../bin/suite_reports/engine_refactor/m596c
 [flight](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_20261015.json),
 [pixel analysis](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_pixels_20261015.json),
 [perf JSONL](../../bin/logs/perf_20261015-230556_21480.jsonl).
+
+## M598A/M598B — opaque-hit event join and cold light handoff (2026-10-15)
+
+M597 made clear that the pixel row's generic incarnation could belong to the
+sea-plane sample rather than the opaque depth-hit chunk, and that multiple mesh
+attempts for one chunk could be mixed by time-only joins. Release commit
+`c2cabbbb` records the exact opaque chunk identity, starts a bounded lifecycle
+watch when that hit is provisionally lit, and pairs demand attempts with a
+single mesh job in the offline analyzer.
+
+Create a fresh world after the Release build. This executable has a GUI
+subsystem; wait for completion so the runner cannot mistake an active world
+creation for an orphan:
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M598A_Cold_20261015',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m598a_world_create_20261015.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+```
+
+The report confirmed success, seed `3650482197`, radius 4, and 597 chunk
+files. The established visible no-teleport route was kept short:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M598A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m598b_cold_light_handoff `
+  -Report bin/suite_reports/engine_refactor/m598b_cold_light_handoff_20261015.json
+```
+
+M598B finished normally at 12 focus columns, speed `5.19653 blocks/s`,
+without collision or teleport. Composite `pass=false` was due readiness debt
+(rate 1, post-stop max 19); `visual_holes_rate=0` and direct dark pixels were
+zero. The eye-proxy mid-flight segment remained untested because this gate uses
+a spatial focus band. The 4,800 pixel probes recorded 35 chunks in provisional
+lighting, and the exact opaque-hit lifecycle joined for all 35.
+
+At moving frontier chunk `(-20,2,2)`, light settled about 64 ms after the first
+preview observation; matching stale-remesh admission followed immediately and
+the mesh job published about 112 ms after the preview. Its first settled
+non-preview sample came 1.6 s later after the camera moved about 2.1 blocks,
+so this is not a same-view latency. At stationary startup, chunk `(-4,2,2)` was
+observed first in `deferred_far` state with a RelightThenMesh ticket. Its light
+settled after about 7.45 s; the matching mesh build took about 5 ms and
+published about 24 ms later. Period snapshots show deferred-far pending peaking
+at 44 while FIFO pressure was active. This points to cold startup lighting
+service before mesh build, but the sparse trace does not pin exact defer/admit
+timestamps; do not expand the global admission policy yet.
+
+Re-run the pixel analyzer with the new causal attempt/job filtering:
+
+```powershell
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261015-233605_3608.jsonl `
+  --json-out bin/suite_reports/engine_refactor/m598b_cold_light_handoff_pixels_20261015.json
+```
+
+Artifacts: [create report](../../bin/suite_reports/engine_refactor/m598a_world_create_20261015.json),
+[flight report](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_20261015.json),
+[pixel/lifecycle analysis](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_pixels_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-233605_3608.jsonl).

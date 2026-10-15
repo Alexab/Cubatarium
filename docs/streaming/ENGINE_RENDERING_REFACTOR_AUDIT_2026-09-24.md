@@ -5480,3 +5480,39 @@ all-record stop predicate remains false. Continue by separating global work
 completion from current-view and lookahead coverage, while tracing the
 ownerless Created attempts and preserving actual framebuffer evidence as the
 visual verdict.
+
+## M597–M598: provisional-light lifecycle join and startup queue latency
+
+M597 identified that the pixel analyzer keyed an opaque depth-hit chunk using
+the generic pixel row's incarnation, which could belong to the sea-plane hit.
+Release commit `c2cabbbb` adds explicit opaque-hit world epoch/incarnation,
+watches that exact chunk when it is rendered with provisional light, and
+filters lifecycle stages by demand attempt and mesh job. This closes a gap in
+the diagnostic, not in the renderer.
+
+M598B repeated the ordinary-speed, visible, no-teleport lane on a fresh
+radius-4 world. It crossed 12 chunk columns at `5.19653 blocks/s`; there were
+zero direct dark-threshold pixel probes and zero near-focus visual-hole rate.
+The aggregate readiness gate still failed and the spatial eye-proxy gate did
+not test a temporal mid-flight segment, so this is not a broad acceptance run.
+
+All 35 provisional pixel-hit chunks now joined lifecycle events. At the moving
+frontier sample `(-20,2,2)`, light settlement followed the first preview by
+about 64 ms, and the matching mesh job published within about 112 ms. The
+later settled sample was captured after the camera moved, so it cannot time
+same-view visual persistence. At stationary startup, `(-4,2,2)` was observed
+in deferred-far state while a RelightThenMesh ticket existed; the first
+settlement event arrived about 7.45 s after the preview sample. The matching
+mesh built in about 5 ms and published about 24 ms later. Period-level
+deferred-far count peaked at 44 while relight FIFO pressure was active.
+
+This points to lighting service/admission delay during the cold startup burst,
+while the moving-frontier sample's mesh path was fast. The sparse samples do
+not timestamp exact defer/admit transitions and do not prove a route-wide
+regression. Preserve the Phase 5.7R5 under-pressure limit until a per-column
+trace demonstrates that visible work remains deferred after FIFO pressure
+has eased. Next compare same-pixel queue-kind snapshots against FIFO/deferred
+periods; only then consider a bounded age/visibility service guarantee. Full
+M598 evidence and the repeatable commands are recorded in the [remediation
+plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md) and
+[flight script notes](FLIGHT_EXPERIMENT_SCRIPTS.md).

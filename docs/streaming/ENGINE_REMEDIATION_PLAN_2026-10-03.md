@@ -10715,3 +10715,60 @@ Artifacts: [M596C create report](../../bin/suite_reports/engine_refactor/m596c_w
 [M596D flight report](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_20261015.json),
 [pixel lifecycle report](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_pixels_20261015.json),
 [perf JSONL](../../bin/logs/perf_20261015-230556_21480.jsonl).
+
+### M597–M598: exact opaque-hit identity and cold-start light handoff (2026-10-15)
+
+The first M597 event join exposed a diagnostics mismatch: pixel rows identified
+the chunk intersected by the sea-plane ray, while provisional-light events were
+looked up for the chunk at opaque framebuffer depth. Their coordinates could
+refer to different chunks, and most rows consequently had no lifecycle match.
+Commit `c2cabbbb` records the opaque hit's own world epoch/incarnation, watches
+that exact chunk on provisional pixel samples, and makes the analyzer filter
+mesh stages by attempt and job identity. This is diagnostic instrumentation;
+it does not alter render or scheduler policy.
+
+M598A created a fresh radius-4 world with seed `3650482197` and 597 chunk files.
+M598B repeated the established visible route at normal speed without teleport:
+X `-32→-214`, 12 focus columns, `5.19653 blocks/s`, 35 flight periods, no
+collision, `run_outcome=success`, and process exit 0. The aggregate suite still
+returned `pass=false` (`readiness_debt_rate=1`, post-stop debt max 19), while
+near-focus visual-hole rate was 0 and the 4,800 direct pixel probes contained
+zero dark-threshold samples. Its eye-proxy stop-line was untested for the
+mid-flight segment because that gate uses a spatial focus band; this short run
+is a diagnostic, not far-route acceptance.
+
+The corrected trace joined lifecycle events for all 35 chunks with provisional
+samples (the previous M597 analyzer joined only one). At the actual moving
+frontier, chunk `(-20,2,2)` settled light about 64 ms after its first preview
+sample; stale-remesh queue/admission followed immediately, and the matching
+mesh job built/published about 48 ms after that. The first later non-preview
+sample was 1.6 s after the preview, but the camera had moved about 2.1 blocks,
+so that is only a chunk-level observation bound, not a same-view visual delay.
+
+At the stationary startup view, chunk `(-4,2,2)` remained provisional while
+its relight owner was reported as deferred-far (`relight_queue_kind=7`) with a
+RelightThenMesh flow ticket. Its exact pixel samples observed the owner move
+back to the priority FIFO as FIFO pressure subsided; light settled at about
+7.45 s, and the matching mesh job built in about 5 ms and published about
+24 ms later. The sampled period trace had up to 44 deferred-far columns while
+the relight FIFO was above its pressure threshold. These observations place
+the long part of this startup transition before light settlement, not in mesh
+build time. Sparse pixel sampling does not timestamp the exact deferral or
+admission edge, and the 9.9 s preview-to-nonpreview interval is an observation
+bound, not proof that the chunk stayed provisional for the full interval.
+
+Do not globally relax the near-miss FIFO backpressure rule from this run. The
+historical Phase 5.7R5 limit exists to avoid FIFO storms; M598 shows the
+deferred owner eventually re-entering the queue as pressure eased, rather than
+remaining orphaned after capacity returned. Next compare per-pixel queue-state
+samples with period-level FIFO/deferred counts and inspect the deferred-far
+admission cadence. If a visible chunk's wait is confirmed to follow pressure,
+evaluate a bounded visibility/age service guarantee that retains underfeet
+priority and the existing queue cap. Keep the same 35-second cold-frontier
+lane as the control; reserve an 8,192-block flight for acceptance after a
+causal policy change.
+
+M598 artifacts: [world create report](../../bin/suite_reports/engine_refactor/m598a_world_create_20261015.json),
+[flight report](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_20261015.json),
+[pixel/lifecycle analysis](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_pixels_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-233605_3608.jsonl).

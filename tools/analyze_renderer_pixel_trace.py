@@ -891,6 +891,94 @@ def main() -> int:
             return None
         return round(float(end_ms) - float(start_ms), 3)
 
+    def causal_lifecycle_events(
+        events: list[dict[str, Any]],
+        start_ms: float,
+        end_ms: float,
+    ) -> tuple[list[dict[str, Any]], int | None, int | None]:
+        """Keep one demand attempt and its mesh job from a chunk time window.
+
+        A chunk incarnation can go through several mesh attempts while a
+        provisional sample remains visible. Joining by chunk/incarnation and
+        time alone can pair a light-settled event with an unrelated mesh job.
+        """
+        window = sorted(
+            (
+                event
+                for event in events
+                if start_ms <= float(event["event_ms"]) <= end_ms
+            ),
+            key=lambda event: float(event["event_ms"]),
+        )
+
+        def event_id(event: dict[str, Any], name: str) -> int:
+            try:
+                return int(event.get(name) or 0)
+            except (TypeError, ValueError):
+                return 0
+
+        settlement = next(
+            (event for event in window if event.get("event") == "light_calculation_settled"),
+            None,
+        )
+        anchor_ms = (
+            float(settlement["event_ms"])
+            if settlement is not None
+            else start_ms
+        )
+        attempt_id = event_id(settlement, "attempt_id") if settlement else 0
+        if attempt_id <= 0:
+            owners = [
+                event
+                for event in window
+                if float(event["event_ms"]) >= anchor_ms
+                and event.get("event")
+                in {
+                    "stale_light_remesh_queued",
+                    "stale_light_remesh_dirty_admitted",
+                    "mesh_job_started",
+                    "install_published",
+                }
+                and event_id(event, "attempt_id") > 0
+            ]
+            if owners:
+                attempt_id = event_id(owners[0], "attempt_id")
+
+        if attempt_id <= 0:
+            # A light-settled sample can be useful even if no subsequent mesh
+            # attempt was observed in the bounded trace window.
+            return ([settlement] if settlement is not None else []), None, None
+
+        job_starts = [
+            event
+            for event in window
+            if event.get("event") == "mesh_job_started"
+            and event_id(event, "attempt_id") == attempt_id
+            and float(event["event_ms"]) >= anchor_ms
+        ]
+        if not job_starts:
+            job_starts = [
+                event
+                for event in window
+                if event.get("event") == "mesh_job_started"
+                and event_id(event, "attempt_id") == attempt_id
+            ]
+        job_id = event_id(job_starts[0], "job_id") if job_starts else 0
+
+        selected = []
+        for event in window:
+            if event is settlement:
+                selected.append(event)
+                continue
+            if event_id(event, "attempt_id") != attempt_id:
+                continue
+            if str(event.get("event", "")).startswith("mesh_job_"):
+                if job_id <= 0 or event_id(event, "job_id") != job_id:
+                    continue
+            selected.append(event)
+        selected.sort(key=lambda event: float(event["event_ms"]))
+        return selected, attempt_id, (job_id if job_id > 0 else None)
+
     lifecycle_by_chunk: list[dict[str, Any]] = []
     lifecycle_event_timeline_by_chunk: list[dict[str, Any]] = []
     all_preview_to_nonpreview_intervals: list[float] = []
@@ -994,6 +1082,8 @@ def main() -> int:
 
                 stage_timeline: list[dict[str, Any]] = []
                 stage_intervals: dict[str, float | None] = {}
+                causal_attempt_id: int | None = None
+                causal_job_id: int | None = None
                 aligned_clock = bool(
                     first_preview.get("sample_clock_aligned")
                     and first_nonpreview_after.get("sample_clock_aligned")
@@ -1015,7 +1105,7 @@ def main() -> int:
                         demand_lifecycle_events.get(chunk, [])
                         + mesh_job_stage_events.get(chunk, [])
                     )
-                    stage_timeline = [
+                    window_stage_events = [
                         {
                             **event,
                             "relative_to_first_preview_ms": round(
@@ -1029,7 +1119,13 @@ def main() -> int:
                         <= float(event["event_ms"])
                         <= float(end_ms)
                     ]
-                    stage_timeline.sort(key=lambda event: event["event_ms"])
+                    stage_timeline, causal_attempt_id, causal_job_id = (
+                        causal_lifecycle_events(
+                            window_stage_events,
+                            float(start_ms),
+                            float(end_ms),
+                        )
+                    )
 
                     def first_stage_time(name: str) -> float | None:
                         return next(
@@ -1135,6 +1231,8 @@ def main() -> int:
                             handoff_elapsed
                         ),
                         "stage_clock_aligned": aligned_clock,
+                        "causal_attempt_id": causal_attempt_id,
+                        "causal_job_id": causal_job_id,
                         "stage_timeline": stage_timeline,
                         "stage_intervals_ms": stage_intervals,
                         "first_preview_state": stage_snapshot(first_preview),
@@ -1238,12 +1336,27 @@ def main() -> int:
             and (end_time is None or float(event["event_ms"]) <= float(end_time))
         ]
         event_timeline.sort(key=lambda event: event["event_ms"])
+        event_window_end_ms = (
+            float(end_time)
+            if end_time is not None
+            else max(
+                (float(event["event_ms"]) for event in event_timeline),
+                default=float(first_time or 0.0),
+            )
+        )
+        causal_event_timeline, causal_attempt_id, causal_job_id = (
+            causal_lifecycle_events(
+                event_timeline,
+                float(first_time or 0.0),
+                event_window_end_ms,
+            )
+        )
 
         def next_event_time(name: str, after_ms: float | None) -> float | None:
             return next(
                 (
                     float(event["event_ms"])
-                    for event in event_timeline
+                    for event in causal_event_timeline
                     if event["event"] == name
                     and (after_ms is None or float(event["event_ms"]) >= after_ms)
                 ),
@@ -1304,6 +1417,9 @@ def main() -> int:
                     end_time, first_time
                 ),
                 "same_pixel_camera_verified": False,
+                "chunk_observation_event_count": len(event_timeline),
+                "causal_attempt_id": causal_attempt_id,
+                "causal_job_id": causal_job_id,
                 "light_settlement_observed_ms": light_settled_ms,
                 "stale_remesh_queue_ms": queue_ms,
                 "stale_remesh_dirty_admitted_ms": dirty_admitted_ms,
@@ -1339,7 +1455,7 @@ def main() -> int:
                             float(event["event_ms"]) - float(first_time), 3
                         ),
                     }
-                    for event in event_timeline
+                    for event in causal_event_timeline
                 ],
             }
         )
