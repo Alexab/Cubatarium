@@ -5139,6 +5139,9 @@ void UFramePerfMonitor::Shutdown()
                  << static_cast<int>(r.renderer_fluid_draw_witness_valid)
                  << ",\"pass\":"
                  << static_cast<int>(r.renderer_fluid_draw_witness_pass)
+                 << ",\"pass_ordinal\":"
+                 << static_cast<int>(
+                        r.renderer_fluid_draw_witness_pass_ordinal)
                  << ",\"submit_path\":"
                  << static_cast<int>(
                         r.renderer_fluid_draw_witness_submit_path)

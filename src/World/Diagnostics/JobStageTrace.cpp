@@ -179,6 +179,15 @@ GetGpuDrawStateTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<
+    UJobStageTrace::kFluidDrawWitnessTraceRingCapacity> &
+GetFluidDrawWitnessTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFluidDrawWitnessTraceRingCapacity> r;
+  return r;
+}
+
 VisualBlackTraceRing<UJobStageTrace::kScreenRayTraceRingCapacity> &
 GetScreenRayTraceRing()
 {
@@ -740,6 +749,10 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetGpuDrawStateTraceRing(), record);
   }
+  else if (record.sample_kind == 19)
+  {
+    PushVisualTrace(GetFluidDrawWitnessTraceRing(), record);
+  }
   else if (record.sample_kind == 18)
   {
     NoteCameraBandPeakSchedule(record);
@@ -810,6 +823,7 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   ForEachVisualTraceNewest(GetCameraBandPeakScheduleTraceRing(), max_n, fn,
                            ctx);
   ForEachVisualTraceNewest(GetGpuDrawStateTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetFluidDrawWitnessTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);

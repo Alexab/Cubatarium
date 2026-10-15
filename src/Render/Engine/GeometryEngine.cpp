@@ -426,6 +426,7 @@ thread_local std::vector<GpuOpaqueDrawStateWitness>
     g_gpu_opaque_draw_state_frame_witnesses;
 thread_local bool g_capture_gpu_draw_state_for_pixel_probe{false};
 thread_local bool g_capture_fluid_draw_witness_for_pixel_probe{false};
+thread_local uint8_t g_fluid_draw_witness_pass_ordinal{255};
 
 void CopyGpuOpaqueDrawStateWitness(const GpuOpaqueDrawStateWitness &witness,
                                    VisualBlackTraceRecord &record);
@@ -5115,21 +5116,24 @@ void NoteFluidGpuDrawWitness(const GreedyGpuPassCache &cache,
                              const GreedyGpuBatch &batch,
                              const glm::vec3 &camera_position,
                              uint64_t frame_epoch, GreedyShaderMode mode,
-                             uint8_t submit_path, bool mdi_eligible)
+                             uint8_t pass_ordinal, uint8_t submit_path,
+                             bool mdi_eligible)
 {
   if (!g_capture_fluid_draw_witness_for_pixel_probe ||
       !UJobStageTrace::VisualBlackTraceEnabled() ||
       !FluidRenderDiagnosticWindowContains(camera_position) ||
-      (mode != GreedyShaderMode::ShellDepthPrepass &&
-       mode != GreedyShaderMode::TransparentColor))
+      pass_ordinal > 2 ||
+      (pass_ordinal == 0 && mode != GreedyShaderMode::ShellDepthPrepass) ||
+      (pass_ordinal > 0 && mode != GreedyShaderMode::TransparentColor))
   {
     return;
   }
 
-  static thread_local std::array<uint64_t, 2> last_epoch{
+  static thread_local std::array<uint64_t, 3> last_epoch{
+      std::numeric_limits<uint64_t>::max(),
       std::numeric_limits<uint64_t>::max(),
       std::numeric_limits<uint64_t>::max()};
-  const size_t pass_slot = mode == GreedyShaderMode::ShellDepthPrepass ? 0u : 1u;
+  const size_t pass_slot = pass_ordinal;
   if (last_epoch[pass_slot] == frame_epoch)
   {
     return;
@@ -5147,6 +5151,7 @@ void NoteFluidGpuDrawWitness(const GreedyGpuPassCache &cache,
   record.cz = batch.chunkCoord.z;
   record.renderer_fluid_draw_witness_valid = 1;
   record.renderer_fluid_draw_witness_pass = static_cast<uint8_t>(mode);
+  record.renderer_fluid_draw_witness_pass_ordinal = pass_ordinal;
   record.renderer_fluid_draw_witness_submit_path = submit_path;
   record.renderer_fluid_draw_witness_use_mdi = mdi_eligible ? 1u : 0u;
   record.renderer_fluid_draw_witness_pooled = batch.pooled ? 1u : 0u;
@@ -5339,7 +5344,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     {
       NoteFluidGpuDrawWitness(cache, batch, camera_position,
                               WorldInstance->GetStreamingFrameEpoch(), mode,
-                              submit_path, use_mdi);
+                              g_fluid_draw_witness_pass_ordinal, submit_path,
+                              use_mdi);
     }
   };
   const auto note_fluid_group_submit = [&](BlockId block_id, size_t begin,
@@ -5366,7 +5372,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         }
         NoteFluidGpuDrawWitness(cache, batch, camera_position,
                                 WorldInstance->GetStreamingFrameEpoch(), mode,
-                                submit_path, use_mdi);
+                                g_fluid_draw_witness_pass_ordinal, submit_path,
+                                use_mdi);
         break;
       }
     }
@@ -7194,11 +7201,40 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
   {
     return;
   }
+  const uint8_t previous_witness_pass_ordinal =
+      g_fluid_draw_witness_pass_ordinal;
+  if (g_capture_fluid_draw_witness_for_pixel_probe && WorldInstance)
+  {
+    if (mode == GreedyShaderMode::ShellDepthPrepass)
+    {
+      g_fluid_draw_witness_pass_ordinal = 0;
+    }
+    else if (mode == GreedyShaderMode::TransparentColor)
+    {
+      static thread_local uint64_t last_witness_frame_epoch =
+          std::numeric_limits<uint64_t>::max();
+      static thread_local uint8_t color_pass_ordinal = 0;
+      const uint64_t frame_epoch = WorldInstance->GetStreamingFrameEpoch();
+      if (last_witness_frame_epoch != frame_epoch)
+      {
+        last_witness_frame_epoch = frame_epoch;
+        color_pass_ordinal = 0;
+      }
+      color_pass_ordinal = static_cast<uint8_t>(
+          std::min<unsigned int>(color_pass_ordinal + 1u, 2u));
+      g_fluid_draw_witness_pass_ordinal = color_pass_ordinal;
+    }
+    else
+    {
+      g_fluid_draw_witness_pass_ordinal = 255;
+    }
+  }
   const bool kAlphaCutout =
       !GetActiveRenderBackendCaps().PreferSinglePassTransparent;
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
                        *PreparedTransparentTextures, kAlphaCutout, true, mode,
                        shellAlpha);
+  g_fluid_draw_witness_pass_ordinal = previous_witness_pass_ordinal;
   if (PreparedTransparentCache)
   {
     DrawPackedGpuMeshes(*PreparedTransparentCache,

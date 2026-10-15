@@ -418,12 +418,13 @@ struct VisualBlackTraceRecord
   uint64_t renderer_pixel_fluid_gpu_ebo_byte_offset{0};
   uint64_t renderer_pixel_fluid_gpu_vbo_buffer_bytes{0};
   uint64_t renderer_pixel_fluid_gpu_ebo_buffer_bytes{0};
-  /// sample_kind=18: state at a successful fluid draw submission in a
+  /// sample_kind=19: state at a successful fluid draw submission in a
   /// transparent pass. The pass/path identify the actual GL submission path;
   /// names, object validity, and sizes distinguish live pool storage from a
   /// stale/empty backing buffer.
   uint8_t renderer_fluid_draw_witness_valid{0};
   uint8_t renderer_fluid_draw_witness_pass{255};
+  uint8_t renderer_fluid_draw_witness_pass_ordinal{255};
   uint8_t renderer_fluid_draw_witness_submit_path{0};
   uint8_t renderer_fluid_draw_witness_use_mdi{0};
   uint8_t renderer_fluid_draw_witness_pooled{0};
@@ -899,6 +900,8 @@ public:
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   /// Keep the narrow opt-in M483 draw-state window independently bounded.
   static constexpr size_t kGpuDrawStateTraceRingCapacity = 512;
+  /// Preserve fluid draw witnesses independently from high-rate census rows.
+  static constexpr size_t kFluidDrawWitnessTraceRingCapacity = 256;
   // M466 filled 65,536 pixel rows and retained only the last ~40.8k frame
   // epochs. Keep room for the full M335 route's synchronized 5x20 samples and
   // its periodic 4x20 probes, with headroom for focus/peak captures.
@@ -940,7 +943,7 @@ public:
       kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity +
       kFirstMeshFrontierTraceRingCapacity +
       kCameraBandPeakScheduleTraceRingCapacity +
-      kGpuDrawStateTraceRingCapacity;
+      kGpuDrawStateTraceRingCapacity + kFluidDrawWitnessTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.

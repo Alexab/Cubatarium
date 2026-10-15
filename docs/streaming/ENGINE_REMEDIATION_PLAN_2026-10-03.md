@@ -10183,3 +10183,31 @@ desktop-shell mode. If the buffers are live and nonempty, inspect shell
 depth/depth-test/stencil transition and fragment coverage next; if missing or
 empty, follow the pool/VAO publication and lifetime path and fix that defect
 before changing the shader or falling back globally to single pass.
+
+### M580 result and M581 retained per-pass witnesses — 2026-10-15
+
+M580 completed the same visible no-teleport M335 route normally (`process_rc=0`,
+913 periods, 911 steady periods, 572 chunks, median flight speed 5.18555
+blocks/s). The host was busy (CPU median 83.75%, peak 100%), and the suite
+remains red on separate streaming/readiness gates; these are not quiet-host
+performance measurements.
+
+Unlike M579, M580's default desktop-shell samples show water reaching the
+framebuffer: of 502 water/source-triangle matches, 499 changed RGB after the
+transparent pass and had final stencil value 1; three had stencil 0. Only one
+of these 502 samples had a positive opaque-depth-ray hit closer than the water
+surface. M579, under the same route and shell mode, had zero changed pixels
+and stencil 0 for all 479 matches. Thus the loss is intermittent across
+otherwise matched runs, not a consistently absent water mesh or an always
+broken shell path. These debug-marker pixels prove fragment coverage at the
+sparse probes, not that every ordinary frame/camera position renders correctly.
+
+M580 did not retain its intended GL draw-state witnesses. The perf log dumped
+exactly 1,024 generic `visual_black_trace` rows and all were sample kind 0;
+sample kind 19 shared that high-rate ring and was overwritten before shutdown.
+M581 routes kind 19 through its own 256-entry ring, and records an explicit
+ordinal for ShellDepth, BehindShell, and ShellSurface so the two color-pass
+states cannot be confused. Rebuild Release and rerun the exact M335 route.
+Then compare M581 buffer IDs/liveness/sizes, submit paths, GL errors and pass
+state against the pixel/stencil join. Treat M580 as evidence of intermittent
+render success, not as a fix or a final verification.

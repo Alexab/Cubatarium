@@ -9180,3 +9180,32 @@ performance JSONL and the same world directory, restricting camera X to
 the successful draw used live, nonempty buffers and whether its depth/stencil
 state can write the shell. A captured submit and state are not by themselves
 proof that a particular sample pixel was covered.
+
+#### M580 result and M581 trace-ring correction
+
+M580 completed the visible no-teleport M335 route (`process_rc=0`, 913 periods,
+911 steady, 572 chunks; median flight speed 5.18555 blocks/s). Host CPU median
+was 83.75% and peaked at 100%, so do not use these timings as a quiet-host
+performance baseline. Pixel join: 14 captures/840 samples; 759 water blocks,
+502 source-fluid matches; 499/502 water matches changed RGB after the
+transparent pass, with stencil counts `1:499`, `0:3`. Only one of the 502 had
+a closer positive opaque-depth-ray hit. M579 under the same default-shell
+route had 0/479 RGB changes and stencil `0:479`: the failure is intermittent.
+
+M580 had no serialized fluid draw witnesses. Shutdown retained 1,024 generic
+`visual_black_trace` rows, all sample kind 0; kind 19 was sharing and losing
+that ring. The next build gives fluid witnesses a dedicated 256-entry ring
+and stores a pass ordinal (`0=ShellDepth`, `1=BehindShell`, `2=ShellSurface`).
+After rebuilding Release, rerun the same full M335 environment/route above;
+change only the host log, phase, and report names as follows:
+
+```powershell
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m581_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m581_m572_water_draw_witness --report bin/suite_reports/engine_refactor/m581_m572_water_draw_witness_20261015.json --process-timeout 2600
+```
+
+Keep all M580 environment variables unchanged, including
+`CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=0`; use the same water join bounds and
+world directory. Expect separate witness rows for shell depth, behind shell,
+and shell surface submissions. The suite may remain red on its existing
+streaming stop-line gates; judge the water question from matched RGB/stencil
+samples and retained GL state.
