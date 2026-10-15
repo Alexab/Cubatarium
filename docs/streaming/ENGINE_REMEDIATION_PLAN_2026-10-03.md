@@ -10432,11 +10432,89 @@ fog behavior. The current run's probe range ended before x=-5500, so it did not
 record GPU or pixel evidence from the latest reported water loss near
 x≈-5746..-6142.
 
-Next: repeat the same release binary, world, M335 no-teleport route, fog
-settings, and four-second grace, changing only the diagnostic range to
-`-6800..-5500`. Join pixel probes to saved water blocks and source triangles;
-inspect same-frame fluid draw witnesses, live pool handles, MDI payloads,
-stencil, and framebuffer RGB. This directly covers the user's latest reported
-location. Keep the fog-slew follow-up (longer clear grace and slower contract /
-expand rates) separate until this targeted capture is complete so the water
-reproduction uses unchanged rendering policy.
+That targeted follow-up completed as M589. Its direct pixel and GL evidence,
+and the resulting pool-ownership fix, are recorded below. Fog-slew tuning stays
+separate from the water repair until the pool fix is validated.
+
+### M589: target-zone water failure and pooled-buffer deletion (2026-10-15)
+
+M589 completed the visible no-teleport M335 route on
+`World_M572_Cold_20261014` (914 perf periods, 912 steady, `process_rc=0`, no
+forced kill), with pixel/draw tracing limited to camera X `[-6800,-5500]`. The
+suite report remains red on readiness/stop-line gates: `unfinished_visual`
+readiness debt rate was 1.0 and post-stop readiness debt peaked at 17, while
+post-stop `visual_holes` and visible-black stalled/no-ticket gates were zero.
+Median `stream_ms` was 5.60 ms and median `world_streaming_phase_ms` was 7.96
+ms; those aggregates do not indicate a streaming stall in this run.
+
+The water pixel join produced 136 captures/8,160 screen samples. It found
+6,993 persisted water blocks and 6,756 water-block samples matching source
+fluid triangles in render-ready chunks. None of those 6,756 matched samples
+changed framebuffer RGB after transparency, and all 6,756 had final stencil
+value 0. In 401 source-water samples, the diagnostic found a visible matching
+MDI command and matching command readback; this is not sufficient without a
+valid index buffer and a successful shell-depth write. This directly matches
+the user's observation that the surface was absent in this zone, and places
+the failure after saved world data and CPU mesh creation.
+
+The 256 same-frame fluid draw witnesses show the resource/state failure:
+cached pool handles equalled the live `VertexPool` handle values, but EBO
+handles failed `glIsBuffer` in 130 witnesses and VBO handles failed it in 63.
+There were 130 `GL_INVALID_OPERATION` and 41 `GL_INVALID_VALUE` errors after
+submit. Color draws were configured with stencil `EQUAL/ref=1`; the screen
+samples all remained stencil 0. This connects the missing surface to invalid
+GPU pool resources and a shell mask that never reached the sampled pixels,
+rather than to missing water blocks or a full generation/IO queue.
+
+Static source tracing found the ownership defect in
+`UGreedyGpuBackend::ApplyPublicationDelta` for `Remove` and
+`RepresentationSwitch`: it called `ReleasePooledBatch` and then called
+`DestroyBatchBuffers` again. `ReleasePooledBatch` already calls that cleanup.
+The pooled branch changed `pooled` to false but left the shared pool VBO/EBO
+aliases in the batch; the second call therefore treated those aliases as
+per-batch buffers and deleted the pool's backing GL objects. Streaming unloads
+and representation switches can hit this path repeatedly during a long route.
+
+Commit `c478286f` removes the duplicate cleanup and clears pooled buffer
+aliases to make cleanup idempotent. The Release target
+(`cmake --build bin --config Release --target Cubatarium --parallel`) builds
+successfully. M590 is a short visible target-lane in the same world and probe
+range; its result is required before calling the water repair confirmed. The
+long M589 capture is retained as the before-fix baseline.
+
+### M590: short target-lane after pool-lifetime fix (2026-10-15)
+
+M590 used the same persisted world, X window and fog policy as M589, but a
+parameterized 300-second visible no-teleport lane from X=-5450. It crossed the
+full diagnostic window: captures ran from camera X=-5505 through X=-6797. The
+flight ended normally (`process_rc=0`, 167 periods/165 steady, no hang kill,
+`teleport_cruise=false`). The broad flight analyzer still returns `pass=false`
+because readiness debt stayed nonzero and post-stop readiness debt peaked at
+23; the short lane is not a full-distance acceptance run.
+
+The pixel join found 7,007 water/source-triangle matches. Of these, 5,304
+(75.7%) changed framebuffer RGB after transparency, versus 0/6,756 in M589.
+All 5,304 changed samples had stencil 1. Of the 7,007 matched water samples,
+6,916 ended with stencil 1 and 91 with stencil 0. All 256 retained draw
+witnesses now reported both shared pool buffers as live GL buffers, matching
+cached and live handles, successful binding/size queries, and no GL error.
+The 477 exact MDI payload/command checks all matched, including 468 water
+source-triangle samples. This before/after difference validates that chunk
+removal no longer destroys the transparent pass's shared pool buffers in this
+scenario.
+
+The remaining 1,703 matched water samples without RGB change are mostly
+explained by the expected far-field fog: 1,681 were beyond the frame's fog end,
+1,452 exactly matched fog RGB, and 1,660 were within one 8-bit channel of fog.
+The captured fog end varied from 32 to 64 blocks. There were also 91
+stencil-zero samples and 22 unchanged samples within the fog end; sparse
+probes do not establish whether these are individually visible defects. If
+the operator still sees a missing near-field surface, record that location
+and use the same short target-lane before changing fog policy.
+
+The current water evidence closes the reproduced shared-pool deletion path,
+not all renderer work. Keep fog-horizon smoothing as a separate issue. Do not
+repeat a full M335 immediately: first confirm the operator view, then reserve
+one full M335 as the post-fix distance/streaming acceptance run. Run a cold
+seed only at the next significant milestone to check dependence on persisted
+chunk history.

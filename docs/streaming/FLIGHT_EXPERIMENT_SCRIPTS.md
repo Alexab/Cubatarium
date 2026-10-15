@@ -1,6 +1,6 @@
 # Experimental flight and analysis scripts
 
-Обновлено: 2026-10-08. Цель каталога — сохранить и объяснить поддерживаемые flight tools и одноразовые анализаторы, которые накопились в рабочем дереве во время streaming/rendering расследований.
+Обновлено: 2026-10-15. Цель каталога — сохранить и объяснить поддерживаемые flight tools и одноразовые анализаторы, которые накопились в рабочем дереве во время streaming/rendering расследований. Повторяемые water/streaming сценарии, evidence ladder и короткий target-lane описаны в [ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md).
 
 ## Поддерживаемый поток
 
@@ -9373,3 +9373,61 @@ normal pull-in enabled and margin 0. Check that fog returns to RD=4/end=64
 when the facing sector is clear, that short real holes can still pull it in,
 and that far/near water pixels respond as in M584 without worsening the
 existing stop-line behavior.
+
+### M587–M590: intermittent pool loss, target diagnosis, and short validation
+
+The exact full-route commands for M587/M588 differed mainly in their pixel
+windows; both used the visible no-teleport M335 route on
+`World_M572_Cold_20261014`, Release build, eye Y=70, yaw=180, pitch=-30,
+normal movement speed and a 1,800-second cruise. M587 used the narrower
+`[-4710,-4550]` interval and found water/source-triangle matches with no RGB
+change plus invalid shared pool handles. M588 widened the interval to
+`[-4900,-4450]`; it recorded healthy buffers and payloads in that window, so
+the failure was intermittent and its location differed from the latest
+operator report. Numerical details are in the plan's M587/M588 sections.
+
+M589 directly covered the subsequently reported `[-6800,-5500]` region using
+the same full M335 route:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M572_Cold_20261014 `
+  -ProbeMinCameraX -6800 -ProbeMaxCameraX -5500 `
+  -Report bin/suite_reports/engine_refactor/m589_m572_current_water_zone_20261015.json
+```
+
+M589 collected 136 captures/8,160 samples. Of 6,756 saved-water/source-fluid
+matches, 0 changed RGB after transparency; all 6,756 ended stencil=0. Among
+256 retained witnesses, pool EBO/VBO names matched the pool's live handle
+values but were not GL buffer objects in 130/63 rows; post-submit GL errors
+included 130 `GL_INVALID_OPERATION` and 41 `GL_INVALID_VALUE`.
+`ENGINE_REMEDIATION_PLAN_2026-10-03.md` records the source-level diagnosis:
+chunk `Remove`/`RepresentationSwitch` released a pooled batch and then
+performed a second generic destruction, deleting its aliased shared buffers.
+
+Commit `c478286f` removes that double destruction and clears pooled aliases.
+Release build succeeded. M590 used the newly parameterized short target-lane,
+with the same world, fog settings and pixel window:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M572_Cold_20261014 `
+  -ProbeMinCameraX -6800 -ProbeMaxCameraX -5500 `
+  -StartX -5450 -FlyPhaseSeconds 300 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m590_pool_release_fix_short_water_lane `
+  -Report bin/suite_reports/engine_refactor/m590_m572_pool_release_fix_water_20261015.json
+```
+
+M590 completed normally in 167 periods/165 steady. The 159 captures spanned
+camera X=-5505..-6797. Water/source-triangle samples changed RGB in 5,304/7,007
+(75.7%); 6,916/7,007 had stencil=1. All 256 draw witnesses showed valid VBO/EBO,
+correct live/cached pool handles, and no GL errors. All 477 exact MDI/payload
+checks matched, including 468 water samples. Of 1,703 unchanged water matches,
+1,681 were beyond fog end and 1,660 were within one 8-bit channel of fog RGB.
+The broad streaming suite still returned `pass=false` because of readiness and
+stop-line debt; this short render lane is not a replacement for final full-M335
+acceptance. M589/M590 direct data and remaining caveats are recorded in the
+plan and diagnostic runbook.
