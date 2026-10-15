@@ -406,9 +406,37 @@ deferred-far owner и ожидание до light settlement ~7.45 s, после
 debt; direct `visual_holes_rate=0`, `dark_pixel_count=0`. Eye proxy не проверил
 temporal mid-flight segment, потому что выбранная проверка пространственная.
 
+Сверка с `WorldColumnSource` INFO log показала, что startup column `(-4,2)`
+была загружена с диска (`spatial_load`, 22.096 ms); это та же колонка, что
+долго оставалась в `deferred_far`. Её pixel owner перешёл в priority FIFO
+между выборками около 6.78 и 8.43 s; периодные FIFO `17→11` согласуются с
+порогом admit 16, после чего свет установился около 7.45 s. Точный кадр
+перехода для отдельного demand не записан. Колонка frontier `(-20,2)` дала
+`procedural/disk_miss`, затем worker generation 91.182 ms и commit; соответствующий
+opaque chunk закончил световую часть через ~64 ms после preview и опубликовал
+mesh через ~112 ms. Поэтому этот запуск показывает два разных пути: задержка
+стартового чанка связана с deferred relight service после disk load, а не с
+медленным чтением самой колонки; выбранный свежесгенерированный frontier
+обработался быстро. Нельзя обобщать эти два наблюдения на все источники.
+
 Команды и артефакты M598 перечислены в
 [flight experiment notes](FLIGHT_EXPERIMENT_SCRIPTS.md); summary внесён в
 [ремедиационный план](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
-Следующий шаг — проверить cadence `deferred_far→priority FIFO` на ограниченной
-pixel/state выборке. Не поднимать глобальный FIFO admit cap без парного
-наблюдения: историческое ограничение защищает от scheduler storm.
+M599 добавил bounded age-service (возраст 1.5 s, не чаще 1 admission/250 ms,
+occupancy ниже 75% FIFO soft cap): 21 admissions, deferred-far peak 40,
+startup light settlement 6.892 s. Сам admission не помог заметно: колонка уже
+была в priority FIFO около 3.17 s, но оставалась позади очереди. M600 добавил
+поднятие age-selected entry к priority head после underfeet pin. На той же
+холодной карте и маршруте startup settlement сократился до 3.983 s; disk load
+занял 22.423 ms, deferred-far peak был 37, age-admit count — 11. Near-focus
+visual holes остались 0; suite `pass=false` из-за readiness debt. Это частичное
+улучшение: при выборке на 3.15 s стартовый chunk всё ещё был на queue index 11,
+а aggregate counter не связывает admission с конкретной колонкой. M600
+содержал 292 pixel samples ниже luma 96, но 258 из них имели settled light и
+все имели MDI depth surface; это не эквивалентно 292 дырам.
+
+Перед дальнейшей сменой scheduler нужно добавить адресный audit для каждого
+age admission (`coord`, age, FIFO до/после, queue index после вставки, active
+pin), чтобы связать age path с конкретным on-screen chunk. Дальше использовать
+тот же короткий контрольный маршрут; 8,192-block acceptance пока отложить.
+Сводка и артефакты M599/M600 внесены в [ремедиационный план](ENGINE_REMEDIATION_PLAN_2026-10-03.md).

@@ -314,9 +314,12 @@ private:
   {
     glm::ivec2 y_band;
     bool priority{false};
+    std::chrono::steady_clock::time_point first_deferred_at{};
   };
   std::unordered_map<glm::ivec2, DeferredFarRelightEntry, IVec2Hash>
       DeferredFarRelightColumns;
+  std::chrono::steady_clock::time_point
+      LastDeferredFarAgeServiceAttemptAt{};
   /// Columns whose disk lightmap is trusted (lighting_complete).
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
   bool LightCompleteDirty{false};

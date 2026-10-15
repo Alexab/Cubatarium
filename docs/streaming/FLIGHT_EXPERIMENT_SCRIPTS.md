@@ -9605,3 +9605,56 @@ Artifacts: [create report](../../bin/suite_reports/engine_refactor/m598a_world_c
 [flight report](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_20261015.json),
 [pixel/lifecycle analysis](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_pixels_20261015.json),
 [perf JSONL](../../bin/logs/perf_20261015-233605_3608.jsonl).
+
+## M599/M600 — bounded deferred-relight service probe (2026-10-15/16)
+
+These were short control runs, not far-flight acceptance. Both used the
+established 35 s flight + 20 s stop route on a fresh radius-4 world with seed
+`3650482197`. M599 tested age-gated admission; M600 added bounded priority
+promotion behind the underfeet pin. The Release binary only was built.
+
+For each build, create a new world with the Release CLI and wait for process
+completion, using the M598 `Start-Process -WindowStyle Hidden -PassThru -Wait`
+pattern. M599 used `World_M599A_Cold_20261015`; M600 used
+`World_M600A_Cold_20261015`. Each report recorded 597 initial chunk files.
+The experimental flight commands were:
+
+```powershell
+$env:CUBATARIUM_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1' # required only because these flights used uncommitted code
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M599A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m599b_aged_relight_service `
+  -Report bin/suite_reports/engine_refactor/m599b_aged_relight_service_20261015.json
+```
+
+For M600, substitute `World_M600A_Cold_20261015`, phase
+`m600b_aged_relight_priority`, and report
+`bin/suite_reports/engine_refactor/m600b_aged_relight_priority_20261016.json`.
+Run the pixel lifecycle analyzer against each emitted `perf_*.jsonl`, with
+`--threshold 96` and a separate `--json-out` report.
+
+M599 recorded 21 age admissions but startup chunk `(-4,2,2)` still settled
+light after 6.892 s. M600 recorded 11 admissions; that same disk-loaded chunk
+settled after 3.983 s and published mesh by +4.011 s. Queue pending peaks were
+40 and 37 respectively; the M598 baseline was 44. The runs indicate improvement
+but do not prove the age path serviced the exact sampled chunk: at ~3.15 s it
+was still observed at priority index 11. M600's aggregate suite verdict stayed
+false from readiness debt while near-focus mesh-hole rate stayed zero. Preserve
+all three reports as diagnostic outcomes, not merge-green acceptance.
+
+Artifacts: [M599 create](../../bin/suite_reports/engine_refactor/m599a_world_create_20261015.json),
+[M599 flight](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_20261015.json),
+[M599 pixel analysis](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_pixels_20261015.json),
+[M599 perf](../../bin/logs/perf_20261015-235616_22728.jsonl),
+[M600 create](../../bin/suite_reports/engine_refactor/m600a_world_create_20261015.json),
+[M600 flight](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_20261016.json),
+[M600 pixel analysis](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_pixels_20261016.json),
+[M600 perf](../../bin/logs/perf_20261016-000013_23452.jsonl).

@@ -10757,18 +10757,87 @@ build time. Sparse pixel sampling does not timestamp the exact deferral or
 admission edge, and the 9.9 s preview-to-nonpreview interval is an observation
 bound, not proof that the chunk stayed provisional for the full interval.
 
+The M598 world-column source log resolves whether these two cases came from
+disk or generation. Startup column `(-4,2)` produced a synchronous
+`disk/spatial_load` (`slices=12544`, `22.096 ms`); this is the same column as
+the long-lived provisional opaque chunk `(-4,2,2)`. Its pixel owner was still
+`deferred_far` at flight samples around 1.0–6.78 s, then appeared in the
+priority FIFO around 8.43 s. The nearest period samples bracket that transition
+with FIFO occupancy `17→11`, matching the existing under-pressure admission
+cutoff of 16; light settled at about 7.45 s. The exact enqueue/admission frame
+is not logged per candidate, so the cutoff explanation is strongly consistent
+with the trace but not a frame-exact proof.
+
+The moving frontier column `(-20,2)` instead logged `procedural/disk_miss`,
+then request `30438`, worker generation (`91.182 ms`) and commit; the worker
+pool had four workers and this request had no worker-pool wait. Its matching
+opaque chunk `(-20,2,2)` settled light about 64 ms after the first preview, and
+its mesh published about 112 ms after that preview. Thus M598 does not support
+a single source-path explanation: the slow startup sample came from disk and
+waited in deferred relight service, while this newly generated frontier sample
+completed its light/mesh handoff quickly. Both disk-loaded and procedural
+columns occur in the same route.
+
 Do not globally relax the near-miss FIFO backpressure rule from this run. The
 historical Phase 5.7R5 limit exists to avoid FIFO storms; M598 shows the
 deferred owner eventually re-entering the queue as pressure eased, rather than
-remaining orphaned after capacity returned. Next compare per-pixel queue-state
-samples with period-level FIFO/deferred counts and inspect the deferred-far
-admission cadence. If a visible chunk's wait is confirmed to follow pressure,
-evaluate a bounded visibility/age service guarantee that retains underfeet
-priority and the existing queue cap. Keep the same 35-second cold-frontier
-lane as the control; reserve an 8,192-block flight for acceptance after a
-causal policy change.
+remaining orphaned. The paired pixel and period samples now support a narrow
+next code change: provide a bounded age-based service opportunity to an
+existing deferred relight within the visible service horizon, while preserving
+the underfeet pin, FIFO hard cap, and ordinary near-miss policy. Keep the same
+35-second cold-frontier lane as the control and compare both the startup
+disk-loaded handoff and generated frontier; reserve an 8,192-block flight for
+acceptance after a causal policy change.
 
 M598 artifacts: [world create report](../../bin/suite_reports/engine_refactor/m598a_world_create_20261015.json),
 [flight report](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_20261015.json),
 [pixel/lifecycle analysis](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_pixels_20261015.json),
 [perf JSONL](../../bin/logs/perf_20261015-233605_3608.jsonl).
+
+### M599–M600: bounded aging service for deferred relights (2026-10-15/16)
+
+M599 introduced an age-based service lane for deferred relights within the
+existing pin horizon: a 1.5 s minimum age, at most one admission per 250 ms,
+and admission only while total relight FIFO occupancy is below 75% of its
+configured soft cap. M599 used the same seed, radius-4 cold world, and 35 s
+no-teleport route. The lane admitted 21 aged entries; deferred-far period peak
+fell from M598's 44 to 40, but the disk-loaded startup chunk `(-4,2,2)` still
+took 6.892 s to settle light (M598: 7.451 s). It entered the priority FIFO by
+about 3.17 s but remained behind queued work. Admission alone was insufficient.
+
+M600 also moved the single age-selected entry to the priority head after the
+active underfeet pin. Release build and static EXE verification passed. On the
+same cold seed and route, the startup column again loaded from disk in 22.423
+ms; the exact opaque chunk settled light 3.983 s after its first preview and
+published its matching mesh by +4.011 s. This is 3.468 s faster than M598 and
+2.909 s faster than M599 in these paired conditions. The period trace counted
+11 age admissions and deferred-far peak 37. Near-focus visual-hole rate stayed
+0; suite `pass=false` remained due readiness debt. The short run therefore
+shows a substantial but incomplete improvement, not acceptance: at a sampled
+3.15 s the startup chunk was still at priority queue index 11, and the aggregate
+age counter does not prove which age admission selected that exact column.
+
+M600's 292 luma-below-96 pixel samples are not 292 holes: all had an MDI depth
+surface, 258 reported settled light, and the direct near-focus mesh-hole rate
+was zero. This threshold is a lighting witness and must be interpreted with
+its per-sample settlement state. The source trace again separates pathways:
+the startup disk read took about 22 ms while light settlement took seconds;
+the frontier `(-20,2)` was a disk miss and procedural worker generation took
+89.811 ms. These runs support queue service as the larger startup delay, not
+slow disk reading or terrain generation.
+
+Next add an audit event for each age admission containing its column, age,
+FIFO occupancy, priority index after admission, and active pin identity. That
+will establish whether the exact on-screen provisional chunk received the age
+service or was reordered later by another scheduler pass. Keep the short
+control route; do not spend an 8,192-block acceptance flight until this causal
+link is verified.
+
+M599/M600 artifacts: [M599 world](../../bin/suite_reports/engine_refactor/m599a_world_create_20261015.json),
+[M599 flight](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_20261015.json),
+[M599 pixel analysis](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_pixels_20261015.json),
+[M600 world](../../bin/suite_reports/engine_refactor/m600a_world_create_20261015.json),
+[M600 flight](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_20261016.json),
+[M600 pixel analysis](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_pixels_20261016.json),
+[M599 perf](../../bin/logs/perf_20261015-235616_22728.jsonl),
+[M600 perf](../../bin/logs/perf_20261016-000013_23452.jsonl).

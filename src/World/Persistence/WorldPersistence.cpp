@@ -73,6 +73,10 @@ namespace
 {
 
 constexpr int kVisibleDrawGateRelightTargetLimit = 8;
+constexpr auto kDeferredFarRelightAgeServiceDelay =
+    std::chrono::milliseconds(1500);
+constexpr auto kDeferredFarRelightAgeServiceInterval =
+    std::chrono::milliseconds(250);
 
 int ColumnTopBlockY(const UWorld &world, glm::ivec2 ground_xz, int max_y)
 {
@@ -1009,6 +1013,7 @@ void UWorldPersistence::DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y,
     DeferredFarRelightEntry entry{};
     entry.y_band = glm::ivec2(min_y, max_y);
     entry.priority = priority;
+    entry.first_deferred_at = std::chrono::steady_clock::now();
     DeferredFarRelightColumns.emplace(ground_xz, entry);
     return;
   }
@@ -1094,8 +1099,16 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   int enqueue_attempts = 0;
   int enqueue_rejected = 0;
   int enqueue_trimmed = 0;
+  int aged_service_admitted = 0;
   int nearest_horiz = -1;
   glm::ivec2 nearest_coord{};
+  bool have_aged_service_candidate = false;
+  glm::ivec2 aged_service_coord{};
+  DeferredFarRelightEntry aged_service_entry{};
+  int aged_service_horiz = -1;
+  auto oldest_aged_service_time =
+      std::chrono::steady_clock::time_point::max();
+  const auto admission_now = std::chrono::steady_clock::now();
   std::vector<glm::ivec2> to_erase;
   to_erase.reserve(DeferredFarRelightColumns.size());
   for (const auto &kv : DeferredFarRelightColumns)
@@ -1121,6 +1134,34 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     if (!ShouldAdmitRelightFifoEnqueue(fifo_n, horiz))
     {
       ++fifo_blocked;
+      const auto &entry = kv.second;
+      if (entry.first_deferred_at !=
+              std::chrono::steady_clock::time_point{} &&
+          admission_now - entry.first_deferred_at >=
+              kDeferredFarRelightAgeServiceDelay)
+      {
+        const bool older =
+            !have_aged_service_candidate ||
+            entry.first_deferred_at < oldest_aged_service_time;
+        const bool same_age_but_better =
+            have_aged_service_candidate &&
+            entry.first_deferred_at == oldest_aged_service_time &&
+            (entry.priority != aged_service_entry.priority
+                 ? entry.priority
+                 : (horiz < aged_service_horiz ||
+                    (horiz == aged_service_horiz &&
+                     (ground_xz.x < aged_service_coord.x ||
+                      (ground_xz.x == aged_service_coord.x &&
+                       ground_xz.y < aged_service_coord.y)))));
+        if (older || same_age_but_better)
+        {
+          have_aged_service_candidate = true;
+          aged_service_coord = ground_xz;
+          aged_service_entry = entry;
+          aged_service_horiz = horiz;
+          oldest_aged_service_time = entry.first_deferred_at;
+        }
+      }
       continue;
     }
     const glm::ivec2 band = kv.second.y_band;
@@ -1160,6 +1201,50 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     to_erase.push_back(ground_xz);
     ++admitted;
   }
+  const int fifo_soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+  const int aged_service_fifo_limit =
+      fifo_soft_cap > 0 ? fifo_soft_cap * 3 / 4 : 0;
+  const bool aged_service_interval_elapsed =
+      LastDeferredFarAgeServiceAttemptAt ==
+          std::chrono::steady_clock::time_point{} ||
+      admission_now - LastDeferredFarAgeServiceAttemptAt >=
+          kDeferredFarRelightAgeServiceInterval;
+  if (have_aged_service_candidate && aged_service_fifo_limit > 0 &&
+      GetPendingTerrainColumnRelightCount() < aged_service_fifo_limit &&
+      aged_service_interval_elapsed)
+  {
+    LastDeferredFarAgeServiceAttemptAt = admission_now;
+    const glm::ivec2 world_key(aged_service_coord.x * CHUNK_SIZE,
+                               aged_service_coord.y * CHUNK_SIZE);
+    const bool async_owned =
+        world.IsAsyncRelightColumnInFlight(aged_service_coord);
+    const bool queued_before = IsTerrainColumnRelightQueued(world_key);
+    if (!async_owned && !queued_before)
+    {
+      EnqueueTerrainColumnRelightImpl(
+          world_key.x, world_key.y, aged_service_entry.priority,
+          aged_service_entry.y_band.x, aged_service_entry.y_band.y,
+          /*visible_admission=*/true);
+    }
+    const bool accepted =
+        async_owned || IsTerrainColumnRelightQueued(world_key);
+    if (accepted)
+    {
+      const bool pin_in_flight =
+          RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(
+                                     glm::ivec2(RelightFifoPinCx,
+                                                RelightFifoPinCz));
+      PrioritizeTerrainColumnRelight(world_key, pin_in_flight);
+      world.TryNotePendingLightBeforeMesh(
+          glm::ivec3(aged_service_coord.x, 0, aged_service_coord.y),
+          aged_service_entry.y_band.x, aged_service_entry.y_band.y,
+          __FUNCTION__);
+      to_erase.push_back(aged_service_coord);
+      ++admitted;
+      ++aged_service_admitted;
+      ++world.GetPhysicsTelemetryMutable().RelightDeferredFarAgeAdmitN;
+    }
+  }
   for (const glm::ivec2 &key : to_erase)
   {
     DeferredFarRelightColumns.erase(key);
@@ -1189,6 +1274,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
             " in_range=" + std::to_string(in_range) +
             " outside=" + std::to_string(outside_range) +
             " fifo_blocked=" + std::to_string(fifo_blocked) +
+            " age_service_admitted=" +
+            std::to_string(aged_service_admitted) +
             " queued=" + std::to_string(already_queued) +
             " inflight=" + std::to_string(already_inflight) +
             " enqueue=" + std::to_string(enqueue_attempts) +
@@ -3300,6 +3387,7 @@ void UWorldPersistence::ClearPendingRelights()
   PendingVisibleFirstMeshRelightYBands.clear();
   DeferredVisibleDrawGateRelightYBands.clear();
   DeferredFarRelightColumns.clear();
+  LastDeferredFarAgeServiceAttemptAt = {};
 }
 
 int UWorldPersistence::GetPendingPlayerRelightCount() const
