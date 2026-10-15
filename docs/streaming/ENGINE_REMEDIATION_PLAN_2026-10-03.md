@@ -10234,13 +10234,45 @@ probes and MDI commands matched the CPU source bytes/commands. This shows the
 default shell path can render the sampled water correctly; it does not explain
 why M579 failed or establish what the unmodified water shader displays.
 
-M582 repeats M335 with identical world, route, and draw witnesses but disables
-both fragment-marker shaders. Compare normal pre/post-transparent RGB at
-matched water/source triangles while retaining final stencil and GL-state
-evidence. If unmarked color changes while the user still sees no surface,
-investigate natural water color/blending and the distinction between window
-presentation and backbuffer readback. If unmarked RGB does not change despite
-stencil 1 and valid payload, trace alpha/blending and shader output next. If
-the shell witness/stencil fails again, use that captured pass state and live
-buffer evidence to find the changing runtime input. Keep the M335 route and
-desktop-shell path unchanged.
+M582 completed M335 in the same world and default desktop-shell path with both
+fragment markers disabled, so the framebuffer samples contain ordinary
+shader output. It completed 913 periods (911 steady) with `process_rc=0`; the
+flight quality suite remains red on separate streaming/readiness stop lines.
+In the target window, 367/541 water-block pixel rays also matched a CPU fluid
+surface triangle. Ordinary transparent rendering changed RGB at 265/367 of
+those matches; 364/367 samples ended with stencil 1. The dedicated pass ring
+retained 30 shell witnesses and all 30 exact GPU payload/MDI checks matched.
+This confirms ordinary water color reaches the framebuffer for a substantial
+part of the sampled near surface; it is not a proof that every point in the
+window is drawn or that the displayed window matches every sparse readback.
+
+The samples that did not change RGB are strongly associated with atmospheric
+fog saturation. Their camera-to-surface distance median was 49.9 blocks,
+versus 30.2 for RGB-changing samples. At frame 50160, flight telemetry reports
+`fog_pull_in_rd=3`, margin 120, start ratio 0.28, `unfinished_visual=29`, but
+`focus_missing_mesh=0`, `visual_holes=0`, and `focus_unfinished_ahead=0`. The
+actual pixel-probe fog uniforms were horizontal air fog from 16 to 32 blocks,
+with fog color (0.458, 0.640, 0.913). Several unchanged samples had exactly
+that RGB before and after transparency: the water shader and background had
+both converged to the sky/fog color. This makes the long-distance “no water”
+appearance consistent with fog hiding an otherwise present surface; fog
+pull-in is being driven by readiness debt even when the sampled near-focus
+mesh-hole counters are zero.
+
+M582 also sampled water blocks for which no source fluid triangle matched:
+174/541. All had corresponding saved block files; 127 had no render-ready
+chunk/GPU residency, and the remainder are not conclusive because the ray to
+the sea plane is a proxy for the precise rendered mesh. The sampled rays span
+the entire viewport, including points beyond the four-chunk render radius, so
+this count must not be read as 174 missing near-focus water meshes. Together,
+the two effects are distinct: distant water outside the render-ready radius
+has no draw geometry, while in-range water can be washed into the fog color.
+
+M583 is an A/B control on the exact M335 route/world/pixel window and normal
+water shader. It changes only `fog_pull_in_enabled` (off for the run, restored
+by the harness afterwards). Compare captured fog start/end, near-water RGB,
+and render-ready/source-triangle coverage. This will show whether fog debt
+pull-in is the main driver of the operator-visible loss. If water remains
+indistinguishable with pull-in off, continue with the ordinary fog/render
+distance and the effective distance cap; do not change water meshing or
+stencil rendering based on the current evidence alone.
