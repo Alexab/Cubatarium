@@ -10312,8 +10312,11 @@ This does not close the water issue. During the investigation the user
 reported seeing no water, while the sparse M584 probes showed framebuffer
 changes for most matched water pixels in the selected X window. In addition,
 263/765 sampled water-block rays had no matching source triangle; 182 were
-beyond 64 blocks, but 86 were in render-ready chunks. The ray/triangle join
-is only a proxy and does not prove the whole visible surface is present.
+beyond 64 blocks, but 86 were in render-ready chunks. The 81 misses within
+64 blocks were all in render-ready chunks, and 80/81 still had stencil 1 and
+an RGB change after transparency. That makes the source-ray miss a weak proxy
+for absent geometry, not evidence of a near-field mesh hole. The probes still
+do not cover the whole screen or every frame.
 The run's separate post-stop streaming gates also remained red. Do not yet
 claim a permanent fix.
 
@@ -10322,7 +10325,8 @@ pull-in back on. This checks whether active readiness debt widens the margin
 again or pulls fog inside the water-plane intersection. The helper
 `tools/run_m335_water_visibility_ab.ps1 -EnableFogPullIn` preserves/restores
 the config and environment. After M585, compare actual fog end, dynamic
-margin/debt, RGB/stencil, and the 86 in-radius source-triangle misses. Only
-then choose a production policy: likely align the ordinary water fog end to
-the drawable radius while keeping a bounded near-hole mask, without changing
-the shell passes until draw evidence requires it.
+margin/debt, RGB/stencil, and the 81 in-radius source-triangle ray misses
+(80 already changed RGB with stencil 1 in M584). Only then choose a
+production policy: likely align the ordinary water fog end to the drawable
+radius while keeping a bounded near-hole mask, without changing the shell
+passes until draw evidence requires it.

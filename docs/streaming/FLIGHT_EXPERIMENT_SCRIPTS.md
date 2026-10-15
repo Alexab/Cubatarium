@@ -9317,11 +9317,13 @@ water blending into the sky: with the fog end aligned to the 64-block render
 radius, matched water inside that radius changed the framebuffer in 93.4% of
 samples. It does not prove the whole surface is always visible. The user
 reported seeing no water during this investigation, while these sparse probes
-did see the surface in the selected X window; the remaining 86/263
-water-block samples without a source-triangle match were in render-ready
-chunks, so this discrepancy remains open. A source-triangle ray miss is a
-proxy, not proof that the actual GPU surface is absent. The suite still had
-its separate post-stop streaming gates red.
+did see the surface in the selected X window; the discrepancy remains open.
+Of the 263/765 water-block samples without a source-triangle match, 86 were
+in render-ready chunks. The 81 such samples within 64 blocks were all
+render-ready, and 80/81 still had stencil 1 and changed framebuffer RGB after
+transparency. A source-triangle ray miss is therefore not proof that the
+actual GPU surface is absent. The suite still had its separate post-stop
+streaming gates red.
 
 M585 checks the same route with margin 0 and normal fog pull-in enabled. The
 helper accepts `-EnableFogPullIn` for this control and still restores config
