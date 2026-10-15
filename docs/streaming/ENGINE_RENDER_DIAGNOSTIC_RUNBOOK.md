@@ -264,3 +264,41 @@ time и mesh publish time. Затем корректируйте либо гор
 либо ограниченный приоритет уже settled preview chunks в ближнем видимом кольце.
 Не enqueue-те все дальние previews; оставьте fallback, чтобы ремонт не создавал
 чёрные дыры. Длинный M335 сейчас не нужен.
+
+### M594–M595: проверка владельца для unsettled preview
+
+В M594 (176 блоков) 11 opaque preview-проб в шести чанках были unsettled при
+совпадающих field/published/meshed revisions `1/1/1`. В двух чанках в момент
+pixel capture не было ни mesh owner, ни relight queue/async owner, ни ColumnFlow
+ticket. Stale-light-remesh queue был пуст, что ожидаемо до settlement.
+Составной анализатор завершился `pass=false`; маршрут и его pixel trace всё же
+пригодны для диагностики этой handoff-ветки.
+
+Причина: одинаковые published и desired revisions дают `DemandResult::AlreadySatisfied`,
+хотя точный Y-срез ещё не имеет settlement proof. Старый путь
+`AdmitUnfinishedVisualDemand` не запрашивал relight для уже drawable
+provisional mesh. В коммите `3668f891` добавлена адресная ветка: при включённом
+lighting gate видимый `ShouldDrawProvisionalLightPreview` без slice settlement
+передаётся в `ensure_slice_relight`.
+
+M595 повторил короткий участок на том же уже прогретом мире. Единственный
+opaque preview-hit был unsettled, но имел `column_flow_ticket_flags=1` и
+`relight_owner_flags=195`; позднее тот же chunk попал в sample уже без preview.
+Это подтверждает, что новый путь может назначить owner. Снижение количества
+preview с 11 до 1 не является контролируемым сравнением: M594 прогрел тот же
+мир перед M595. Оба run завершили маршрут, но aggregate gate `pass=false`;
+общие readiness/visual метрики не доказывают улучшение производительности или
+закрытие рефакторинга.
+
+M594: [flight report](../../bin/suite_reports/engine_refactor/m594_m572_light_owner_trace_20261015.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m594_m572_light_trace_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-224256_13996.jsonl). M595:
+[flight report](../../bin/suite_reports/engine_refactor/m595_m572_provisional_relight_fix_20261015.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m595_m572_light_trace_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-224636_36248.jsonl).
+
+Дальше проверьте эту ветку на cold-but-repeatable коротком baseline и отдельно
+измерьте время от settlement до stale-remesh queue/admission/publication. Не
+запускайте длинный операторский M335 для подтверждения этого локального
+исправления; сначала достаточно target-lane, затем — только при необходимости
+ещё одного короткого повтора.

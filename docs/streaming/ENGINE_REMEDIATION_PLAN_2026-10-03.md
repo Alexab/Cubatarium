@@ -10614,3 +10614,51 @@ Next bounded work:
 4. Set a measured visual SLA for provisional-light age at the active ring and
    check it on short target lanes. Keep long M335 runs for questions that
    cannot be answered by the short corridor, not for operator monitoring.
+
+### M594–M595: give unsettled visible previews a relight owner (2026-10-15)
+
+The schema-2 M594 trace showed 11 exact opaque preview hits in six chunks. All
+11 lacked per-slice settlement, even though field/published/meshed revisions
+were `1/1/1`; none had an active render-demand attempt. The stale-light-remesh
+queue was correctly empty because those chunks were not settled yet. More
+critically, two sampled chunks had no mesh work owner, no relight queue/async
+owner, and no ColumnFlow ticket (`relight_owner_flags=96`,
+`column_flow_ticket_flags=0`). Thus the renderer was showing a fallback while
+the visible slice had no concrete work owner at the sampled instant.
+
+Static tracing found a demand-accounting gap: `NoteDemand` considers equal
+desired/published geometry and light revisions satisfied, without considering
+the exact-slice settlement proof. `AdmitUnfinishedVisualDemand` also only
+requested relight for a first mesh, an explicit defer, or a stale/dark mesh.
+A drawable provisional preview with equal revisions and no settlement could
+therefore take the `AlreadySatisfied` path and skip `ensure_slice_relight`.
+
+Commit `3668f891` closes that handoff for visible work: when lighting is
+required and `ShouldDrawProvisionalLightPreview(coord)` is true while the exact
+slice is unsettled, demand admission calls `ensure_slice_relight` and asks for
+a concrete relight owner. This does not change the shader fallback, settled
+preview remesh policy, or far-preview activation radius.
+
+M595 repeated the 176-block short lane after the fix, using the same saved world
+immediately after M594. It captured one opaque provisional hit; that slice was
+unsettled at capture, had revisions `1/1/1`, carried a RelightThenMesh ColumnFlow
+ticket (`column_flow_ticket_flags=1`, `relight_owner_flags=195`), and was later
+sampled without preview. This confirms that the new path can attach an owner to
+the observed state. It is not a controlled A/B: the same world had been warmed
+by M594, so the reduction from 11 hits to one cannot be attributed to the code
+change alone. Both suite runs completed the route but ended `pass=false` on
+existing composite eye-proxy/readiness gates. The broad metrics varied and do
+not establish a performance or whole-renderer improvement.
+
+M595: [flight report](../../bin/suite_reports/engine_refactor/m595_m572_provisional_relight_fix_20261015.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m595_m572_light_trace_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-224636_36248.jsonl). M594 baseline:
+[flight report](../../bin/suite_reports/engine_refactor/m594_m572_light_owner_trace_20261015.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m594_m572_light_trace_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-224256_13996.jsonl).
+
+Next: make a cold-but-repeatable short baseline without another long operator
+route; confirm that visible unsettled previews acquire an owner, settle, and
+leave preview. Then measure the separate post-settlement remesh queue latency
+using the new queue-membership and ColumnFlow pixel fields. Do not declare the
+streaming debt closed from these small samples.
