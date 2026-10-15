@@ -10252,12 +10252,15 @@ versus 30.2 for RGB-changing samples. At frame 50160, flight telemetry reports
 `fog_pull_in_rd=3`, margin 120, start ratio 0.28, `unfinished_visual=29`, but
 `focus_missing_mesh=0`, `visual_holes=0`, and `focus_unfinished_ahead=0`. The
 actual pixel-probe fog uniforms were horizontal air fog from 16 to 32 blocks,
-with fog color (0.458, 0.640, 0.913). Several unchanged samples had exactly
-that RGB before and after transparency: the water shader and background had
-both converged to the sky/fog color. This makes the long-distance “no water”
-appearance consistent with fog hiding an otherwise present surface; fog
-pull-in is being driven by readiness debt even when the sampled near-focus
-mesh-hole counters are zero.
+with fog color (0.458, 0.640, 0.913). Exactly 99/102 RGB-unchanged samples
+had that color both before and after transparency, and all 99 ended with
+stencil 1: the water shader and background had both converged to the
+sky/fog color. The other three unchanged samples are exactly the three
+stencil-zero samples. Thus fog accounts for every unchanged sample except the
+three shell-mask misses. This makes the long-distance “no water” appearance
+consistent with fog hiding an otherwise present surface; fog pull-in is being
+driven by readiness debt even when the sampled near-focus mesh-hole counters
+are zero.
 
 M582 also sampled water blocks for which no source fluid triangle matched:
 174/541. All had corresponding saved block files; 127 had no render-ready
