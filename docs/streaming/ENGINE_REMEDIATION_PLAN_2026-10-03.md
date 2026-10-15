@@ -10271,11 +10271,35 @@ this count must not be read as 174 missing near-focus water meshes. Together,
 the two effects are distinct: distant water outside the render-ready radius
 has no draw geometry, while in-range water can be washed into the fog color.
 
-M583 is an A/B control on the exact M335 route/world/pixel window and normal
-water shader. It changes only `fog_pull_in_enabled` (off for the run, restored
-by the harness afterwards). Compare captured fog start/end, near-water RGB,
-and render-ready/source-triangle coverage. This will show whether fog debt
-pull-in is the main driver of the operator-visible loss. If water remains
-indistinguishable with pull-in off, continue with the ordinary fog/render
-distance and the effective distance cap; do not change water meshing or
-stencil rendering based on the current evidence alone.
+M583 completed the same visible no-teleport M335 route/world/pixel window and
+ordinary water shader with `fog_pull_in_enabled=false` for the run. It
+completed 909 periods (907 steady) at the established 5.18555 blocks/s,
+`process_rc=0`; the streaming suite remained red on its existing gates. The
+probe recorded 459 water/source-triangle matches, 342 RGB changes (74.5%),
+and final stencil counts `1:456, 0:3`. Pixel fog uniforms showed horizontal
+air fog from 17.28 to 36 blocks. Of 117 unchanged water matches, 93 had the
+same RGB as the per-frame fog color and 22 were within one 8-bit channel
+value; far-water convergence persists with pull-in disabled. The pull-in
+control widened the fog end only four blocks (M582 32, M583 36), so pull-in
+is not the sole cause.
+
+The run manifest records render distance 4 chunks, i.e. 64 blocks, and the
+config's normal fog end margin is 28. With pull-in off, the fog end is still
+only 36 blocks. At the M335 eye height 70, the water plane at Y≈48.5 meets the
+center view ray (pitch −30°) about 37 blocks ahead; it is already at the fog
+end and becomes indistinguishable from the sky. The join's 245 water-block
+samples without a matched source triangle are also mostly outside active
+render coverage: 157 had no render-ready chunk, 160 lay beyond 64 horizontal
+blocks, and the source-triangle ray test remains a proxy. Do not classify
+these far-field samples as near-focus mesh loss.
+
+M584 is a controlled config-only A/B: keep the full M335 route and all render
+settings fixed, disable pull-in as in M583, and set only
+`distance_fog_end_margin_blocks=0` for the duration of the run. The
+64-block fog end should align with the four-chunk render radius. The helper
+`tools/run_m335_water_visibility_ab.ps1` saves/restores `bin/config.json`
+byte-for-byte and restores process environment even after a runner error.
+Compare actual fog uniforms, RGB/stencil joins, and render-ready coverage
+before deciding whether the production fix belongs in fog policy, render
+distance, or streaming readiness. Keep water meshing and shell passes
+unchanged until that A/B is measured.

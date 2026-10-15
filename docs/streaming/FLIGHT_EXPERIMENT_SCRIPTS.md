@@ -9256,3 +9256,51 @@ Run the usual water pixel join on the resulting perf JSONL and same persisted
 world, with X bounds `[-4710,-4550]`. Interpret pre/post RGB alongside final
 stencil and the three `pass_ordinal` witness rows; no marker coverage is
 expected in this run.
+
+#### M582 result, M583 fog-pull-in control, and M584 fog-margin control
+
+M582 completed M335 with ordinary water shading: 10 captures/600 samples,
+367 water/source-triangle matches, 265 RGB changes (72.2%), and final stencil
+`1:364, 0:3`. At all 99/99 stencil-covered samples that did not change RGB,
+the framebuffer RGB was exactly the captured atmospheric fog color. The other
+three unchanged samples had stencil 0. The fog was horizontal air fog from 16
+to 32 blocks. This is direct evidence that most unchanged far-water samples
+were rendered and then blended into the same RGB as the sky/fog.
+
+M583 repeats M335 with only the run-time `fog_pull_in_enabled` setting off.
+The runner restored the original config afterward. It completed 909 periods
+(907 steady), `process_rc=0`, and median movement stayed at 5.18555 blocks/s.
+Pixel join: 13 captures/780 samples, 459 water/source-triangle matches, 342
+RGB changes (74.5%), and final stencil `1:456, 0:3`. The actual fog range was
+17.28–36 blocks. Of 117 unchanged matches, 93 exactly equaled the per-frame
+fog color and 22 were within one 8-bit channel value; most were beyond the
+36-block fog end. Disabling pull-in widened the range by only four blocks and
+did not remove the far-water convergence.
+
+The run used render distance 4 chunks (64 blocks) and end margin 28. M583's
+same horizontal view therefore ended fog at 36 blocks even without pull-in;
+the M335 camera at eye Y=70, viewing a water plane at Y≈48.5 with pitch −30°,
+meets that plane around 37 blocks ahead on the center ray. The camera is
+looking at water just beyond the fog end, so its color converges to the sky.
+The join also found saved water blocks without matching source triangles, but
+157/245 had no render-ready chunk and 160/245 lay beyond 64 blocks; those
+samples are not evidence of a missing near-focus mesh.
+
+M584 changes only `distance_fog_end_margin_blocks` to 0 for the same M335
+route, while keeping pull-in off. With RD=4 this should move the fog end to
+the 64-block render radius. The helper saves and restores `bin/config.json`
+byte-for-byte and restores its process environment in `finally`; it does not
+build. Use the Release binary already built for M581–M583:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 `
+  -World World_M572_Cold_20261014 `
+  -Report bin/suite_reports/engine_refactor/m584_m572_water_fog_margin0_20261015.json
+```
+
+After completion, run the same water join command used for M582/M583 with
+X bounds `[-4710,-4550]`. Compare the measured fog end, water RGB changes,
+source-triangle coverage, and stencil. This is a temporary config A/B, not a
+permanent rendering change; use its result before changing fog policy or
+default settings.
