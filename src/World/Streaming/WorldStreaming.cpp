@@ -2477,12 +2477,14 @@ void UWorldStreaming::RefreshStreamingPressure(
       focus_horiz.x != rp.last_unfinished_focus.x ||
       focus_horiz.z != rp.last_unfinished_focus.z ||
       focus_radius != rp.last_unfinished_radius;
+  bool unfinished_census_invalidated = false;
   int unfinished_visual = 0;
   int focus_pressure = 0;
   const auto unfinished_t0 = std::chrono::high_resolution_clock::now();
   if (unfinished_focus_jumped)
   {
     world.InvalidateUnfinishedVisualCache();
+    unfinished_census_invalidated = true;
     rp.last_unfinished_focus = focus_horiz;
     rp.last_unfinished_radius = focus_radius;
     rp.unfinished_sample_cd = 0;
@@ -2496,6 +2498,7 @@ void UWorldStreaming::RefreshStreamingPressure(
   if (witness_retarget_delta > 0 || pt.FocusDirtyReconcileDelta > 0)
   {
     world.InvalidateUnfinishedVisualCache();
+    unfinished_census_invalidated = true;
     rp.unfinished_sample_cd = 0;
     rp.unfinished_reuse_age = 0;
   }
@@ -2506,8 +2509,13 @@ void UWorldStreaming::RefreshStreamingPressure(
   const bool near_mh_unfinished_reuse =
       in.visual_holes && miss_horiz >= 1 && miss_horiz <= 2 &&
       !pending_underfeet && !missing_underfeet && rp.unfinished_reuse_age < 2;
+  // Never take a cadence-reuse path after invalidating the cache: the held
+  // scalar belongs to the previous focus/ownership epoch, while the detailed
+  // readiness-class census has just been cleared. Rebuild both from the same
+  // focus before publishing telemetry or making downstream budget decisions.
   bool force_full_unfinished =
-      !diet_cruise_cadence_final || pending_underfeet || capture_backlog ||
+      unfinished_census_invalidated || !diet_cruise_cadence_final ||
+      pending_underfeet || capture_backlog ||
       (in.visual_holes && !near_mh_unfinished_reuse);
   const bool unfinished_sample_due = --rp.unfinished_sample_cd <= 0;
   // R4.2: under calm cruise rim, reuse unfinished sample for K frames before
