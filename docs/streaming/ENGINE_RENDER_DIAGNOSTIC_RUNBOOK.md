@@ -510,3 +510,85 @@ M604.
 в поле `runtime_resources` отчёта. Следующий контроль — короткий холодный вход
 при спокойной host CPU; не запускать длинный acceptance flight до стабильности
 короткого cold-start handoff.
+
+### M605/M607: cold-entry и классификация тёмных pixel probes
+
+В M605/M607 использовался только короткий проверенный GUI no-teleport маршрут
+(35 s cruise + 20 s stop + 15 s idle). M605 оказался перегружен: host CPU
+median/p95 73.9/99.4%. Для M607 свежая карта того же seed/radius создалась за
+59.827 s (597 chunk files); cold-run host CPU составил 41.0/85.5%, warm-run
+75.5/99.5%. Поэтому пара cold/warm несопоставима, несмотря на одинаковую
+траекторию. Новое правило сравнения включает host median <=50%, p95 <=75%,
+разницу обеих статистик <=15 процентных пунктов и разницу median app CPU <=15.
+
+M607 cold имел `enter_unlit_max=50`, `enter_pending_max=44` и 16 provisional
+preview chunks; warm M600 имел 0/0 и 3 preview chunks. В обоих `visual_holes_rate`
+остался 0. Это согласуется с тем, что сохранённый light-complete state снижает
+работу при входе, но метрики сами по себе не доказывают, что это причина
+конкретного наблюдения оператора.
+
+Важно: `dark_pixel_count` — порог яркости по итоговому composited RGB, поэтому
+включает и samples, чей RGB отличается от pretransparent sample. В M605 таких
+samples было 349 из 383, а в M607 cold — 29 из 42.
+`analyze_renderer_pixel_trace.py` теперь отдельно
+показывает `dark_pixel_classification`: unchanged RGB, совпадение с drawable
+visible opaque depth surface и состояние light/preview. M605 дал 34 opaque
+candidates, все с unsettled/preview light evidence, 16 с preview marker и 7 с
+light-revision mismatch; M607 cold — 13 (4 с pending/preview, без revision
+mismatch), warm — 6. Это точнее для диагностики, но всё ещё не прямое
+доказательство отсутствующего чанка: проверяйте `depth_surface`, MDI visibility,
+light revisions и операторский вид отдельно.
+
+Трасса конкретного startup pixel в chunk `(-3,3,4)` локализовала длинное
+ожидание M605: preview наблюдался на одной и той же камере не менее 11 s,
+light settlement пришёл через 14.854 s от первого sample, mesh build начался
+ещё через 0.746 s, занял 2.788 ms, GPU publication наступил через 11.927 ms,
+а install event — через 36.292 ms после публикации (51 ms после начала build).
+В M607 на той же позиции и chunk свет settled за 231 ms, а
+preview закончился к 400 ms. Следовательно, в M605 mesh build не был основным
+узким местом; задержка была до/в очереди light service. Но M605 host был
+перегружен, а cold/warm M607 не прошёл load gate, поэтому пока нельзя выбрать
+между scheduler delay и нехваткой worker CPU. Следующий аудит должен связать
+pending note этой near-focus колонки с FIFO age/admission и фактическим началом
+relight worker; policy менять только после такого сопоставления.
+
+Для следующего короткого старта снимайте узкий участок вокруг spawn/точно
+наблюдавшихся координат и сохраняйте отдельные lifecycle и pixel traces. Не
+расширяйте маршрут, чтобы компенсировать невалидную пару; повторяйте только arm,
+который не прошёл host-load gate, когда median и p95 снова в заданном диапазоне.
+
+Static event audit for M605: 97 sampled capture rows contained no hot-frame
+stop reason 5. Stop reason 8 appeared 14 times, each with an empty relight FIFO;
+11 of those samples still had at least two async jobs in flight. Stop reason 3
+appeared 66 times and reports the capture cap being consumed, including 25
+samples whose cap was zero. It is not the hot-frame skip path. At 10:49:33.746
+an aged deferred-far key was admitted after 14.707 s; the next admission audit
+reported `age_service_wait_previous=1` while the prior key remained in the
+deque. This is a queue-policy lead, not yet a proven cause for the target
+column.
+
+For column `(-3,4)`, the void-dark pending note arrived at 10:49:19.038 and its
+first capture began at 10:49:35.683 (16.645 s later). The async worker started
+1.146 ms after the capture snapshot, so this sample's delay was before worker
+service. A wider second capture followed at 10:49:42.763. Existing logs do not
+identify the target's owner state throughout the gap. M608 adds an audit-only
+`void_dark_owner` record at note acceptance; correlate its FIFO/deferred/flow/
+in-flight fields with `capture submit` and `worker_start`. Keep the scheduler
+unchanged until that short Release trace identifies the stage.
+
+M608 exercised the owner snapshot under non-comparable load: host CPU
+median/p95 was 91.2/100%, the process exited normally, `visual_holes_rate` was
+0, while readiness-debt rate was 1 and entry unlit/pending maxima were 50/42.
+Pixel analysis found 33 unchanged-RGB drawable opaque samples; all had
+unsettled/preview evidence. No geometric hole was reproduced by the near-focus
+proxy.
+
+For `(-3,3)`, the first accepted note had a priority FIFO owner at index 0 of 1
+and a column-flow owner. First capture came 16.759 s later. Interim perf samples
+reported an empty FIFO; a repeated note at 11:17:13.515 had FIFO index 5 of 18
+and no flow owner, followed by capture at 11:17:15.035. The run emitted 396
+owner snapshots: 346 keyed in the FIFO, 50 deferred-far-only, 387 with a flow
+owner (overlapping flags). `relight_false_clear_n` stayed at zero. This points
+to an owner transition or requeue before capture, but the overloaded host
+precludes timing conclusions. The next trace should log clear, cancel, trim,
+and defer transitions with column keys; do not change admission limits yet.

@@ -2249,6 +2249,26 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
     }
     return;
   }
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    const auto queue_info =
+        Persistence->GetTerrainColumnRelightQueueInfo(world_block_key);
+    CubatariumLogInfo(
+        "RelightAudit",
+        "void_dark_owner column=(" + std::to_string(col_xz.x) + "," +
+            std::to_string(col_xz.y) + ") band=" +
+            std::to_string(relight_min_y) + ":" +
+            std::to_string(relight_max_y) + " keyed=" +
+            std::to_string(queue_info.keyed) + " in_deque=" +
+            std::to_string(queue_info.in_deque) + " priority=" +
+            std::to_string(queue_info.priority) + " queue_index=" +
+            std::to_string(queue_info.queue_index) + " queue_size=" +
+            std::to_string(queue_info.queue_size) + " deferred_far=" +
+            std::to_string(queue_info.deferred_far) + " deferred_visible=" +
+            std::to_string(queue_info.deferred_visible) + " flow=" +
+            std::to_string(flow_owned) + " inflight=" +
+            std::to_string(IsAsyncRelightColumnInFlight(col_xz)));
+  }
   // Match RecoverUnlit: light path owns heal — drop StickyRemesh ghost only
   // after an executable relight owner has accepted the work.
   StickyRemeshAfterLight.erase(col_xz);

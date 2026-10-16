@@ -9848,3 +9848,213 @@ Artifacts: [M604 create](../../bin/suite_reports/engine_refactor/m604a_world_cre
 [M604 flight](../../bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_20261016.json),
 [M604 pixel analysis](../../bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_pixels_20261016.json),
 [M604 perf](../../bin/logs/perf_20261016-103531_29408.jsonl).
+
+## M605/M607 — cold entry with runtime load samples (2026-10-16)
+
+This experiment addresses the report of black-looking chunks immediately after
+entering a newly created world. It uses the established short route only: visible
+GUI, no teleport, start `(-32,56,56)`, eye Y 70, yaw 180, pitch -30, 35 seconds
+cruise, 20 seconds stop, 15 seconds idle, pixel camera-X range `[-300,0]`, and
+fog pull-in. No long-distance acceptance flight was run.
+
+M605 used a fresh radius-4 world with seed `3650482197`; its create report has
+597 chunk files, but that invocation did not capture elapsed wall time. M605
+flight completed with process rc 0 and 101 resource samples, but host CPU was
+73.9% median / 99.4% p95, so it is diagnostic only. `enter_unlit_max=49`,
+`enter_pending_max=44`, `visual_holes_rate=0`, and provisional preview covered
+31 chunks. The aggregate suite returned false on visual/readiness gates.
+
+M607 repeated cold on a fresh map and added a stopwatch to world creation: 597
+chunk files in 59.827 seconds. Its flight had host CPU 41.0% median / 85.5%
+p95 and app CPU 29.675% median-of-machine; startup reached
+`enter_unlit_max=50`, `enter_pending_max=44`, with `visual_holes_rate=0` and 16
+provisional preview chunks. The saved M600 warm arm had host CPU 75.5% median /
+99.5% p95, app CPU 21.05% median-of-machine, zero startup unlit/pending, and 3
+provisional preview chunks. This cold/warm pair fails the load gate: median host
+CPU differs by 34.5 points and the warm arm is above the 50% limit. Its apparent
+startup advantage is consistent with persisted light state, not a causal A/B
+result. Both runs returned process rc 0; aggregate suite exit code was 2 due to
+acceptance gates, with A24 passing and the spatial eye-proxy segment untested.
+
+M605's pixel analyzer originally reported 383 samples below luma 96. The updated
+`dark_pixel_classification` shows 349 final RGB samples differed from the
+pretransparent sample;
+the remaining 34 joined drawable visible opaque surfaces, and all 34 had
+unsettled or preview light evidence; 16 had a preview marker and 7 had a light
+revision mismatch. M607 cold: 42 total, 29 transparency-affected, 13
+unchanged-RGB drawable opaque candidates, 4 with pending/preview evidence and
+none with a revision mismatch. M607 warm: 68 total, 62 transparency-affected,
+6 unchanged-RGB drawable opaque candidates. The near-focus geometry-hole proxy
+remained zero. Therefore the luma count alone is not a black-chunk metric; this
+trace did not reproduce a confirmed geometric hole.
+
+M605 had one same-view preview handoff interval of 5.4 s from first preview, of
+which 1.4 s followed observed light settlement. M607 cold had 28 such intervals
+(median 2.0 s, max 3.9 s); warm had three provisional chunks but no sampled
+same-view handoff. These lifecycle timings are sparse sample bounds and were
+captured under unequal host pressure.
+
+The exact startup pixel in chunk `(-3,3,4)` gives a more useful stage split.
+M605 preview remained at the same camera through its last pixel sample at 11 s;
+the linked light-settlement event arrived 14.854 s after first preview. Mesh
+work started 0.746 s after settlement, built in 2.788 ms, reached GPU
+publication 11.927 ms later, and the install event followed 36.292 ms after
+publication. M607 cold observed this same chunk/camera settle in 231 ms and
+leave preview by 400 ms. M605's observed delay is therefore concentrated
+before/around light service, not in mesh building. The high host pressure in
+M605 leaves scheduler delay and worker CPU availability as competing causes;
+the next source-level audit must connect the pending-note event to queue age,
+admission, and the relight worker start before changing service policy.
+
+M605 flight used the same route options as M607, substituting
+`World_M605A_Cold_20261016`, phase `m605b_cold_resource_control`, and report
+`bin/suite_reports/engine_refactor/m605b_cold_resource_control_20261016.json`.
+Its create report is `m605a_world_create_20261016.json`; elapsed create time
+was not measured in that invocation.
+
+Cold create + flight commands:
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M607A_Cold_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m607a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+$sw.Stop()
+Write-Output ('world_create_elapsed_sec={0:N3}' -f $sw.Elapsed.TotalSeconds)
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M607A_Cold_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m607b_cold_resource_repeat `
+  -Report bin/suite_reports/engine_refactor/m607b_cold_resource_repeat_20261016.json
+```
+
+Matched warm-arm command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M600A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m607c_warm_resource_control `
+  -Report bin/suite_reports/engine_refactor/m607c_warm_resource_control_20261016.json
+```
+
+Recompute pixel analysis after the `dark_pixel_classification` update:
+
+```powershell
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-104856_39876.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m605b_cold_resource_control_pixels_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-105500_19000.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m607b_cold_resource_repeat_pixels_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-105743_9068.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m607c_warm_resource_control_pixels_20261016.json
+```
+
+Artifacts: [M605 flight](../../bin/suite_reports/engine_refactor/m605b_cold_resource_control_20261016.json),
+[M605 pixels](../../bin/suite_reports/engine_refactor/m605b_cold_resource_control_pixels_20261016.json),
+[M605 perf](../../bin/logs/perf_20261016-104856_39876.jsonl),
+[M607 create](../../bin/suite_reports/engine_refactor/m607a_world_create_20261016.json),
+[M607 cold flight](../../bin/suite_reports/engine_refactor/m607b_cold_resource_repeat_20261016.json),
+[M607 cold pixels](../../bin/suite_reports/engine_refactor/m607b_cold_resource_repeat_pixels_20261016.json),
+[M607 warm flight](../../bin/suite_reports/engine_refactor/m607c_warm_resource_control_20261016.json),
+[M607 warm pixels](../../bin/suite_reports/engine_refactor/m607c_warm_resource_control_pixels_20261016.json),
+[M607 cold perf](../../bin/logs/perf_20261016-105500_19000.jsonl),
+[M607 warm perf](../../bin/logs/perf_20261016-105743_9068.jsonl).
+
+Do not modify streaming or rendering policy from this pair. The next sample
+should target spawn/observed-problem columns and pass both host median and p95
+gates before a causal cold/warm conclusion is made.
+
+### M608: cold-entry relight-owner trace
+
+M605 had a 16.645 s gap between the void-dark note and first capture for
+column `(-3,4)`, while the async worker started only 1.146 ms after capture.
+The existing logs cannot say whether the note stayed in the FIFO, deferred-far
+storage, or a flow owner during that gap. M608 adds an audit-only
+`void_dark_owner` event at accepted note time with FIFO position/size,
+deferred-far/deferred-visible state, and flow/in-flight ownership. It does not
+change scheduling. Use the same short GUI no-teleport route and load gates; do
+not expand to the long acceptance route.
+
+Cold-world creation command (measure elapsed wall time as in M607):
+
+```powershell
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M608A_Cold_QueueOwner_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m608a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+$sw.Stop()
+Write-Output ('world_create_elapsed_sec={0:N3}' -f $sw.Elapsed.TotalSeconds)
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+```
+
+M608 flight command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M608A_Cold_QueueOwner_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m608b_cold_queue_owner `
+  -Report bin/suite_reports/engine_refactor/m608b_cold_queue_owner_20261016.json
+```
+
+After M608, correlate `void_dark_owner` → `capture submit` → `worker_start` by
+column. The owner event is observational only. Keep build mode Release and
+record host CPU p50/p95 before interpreting timing.
+
+M608 results: world creation took 61.286 s. The flight process exited normally
+but the suite was non-comparable (`host CPU median/p95 = 91.2/100%`). It
+reported `enter_unlit_max=50`, `enter_pending_max=42`, readiness-debt rate 1,
+and near-focus visual-hole rate 0. Pixel analysis found 33 dark samples that
+joined drawable opaque surfaces; all had unsettled/preview light evidence.
+
+The trace contained 396 `void_dark_owner` events. Column `(-3,3)` initially
+entered priority FIFO index 0/size 1 and also had a column-flow owner; its first
+capture followed 16.759 s later. Perf sampled an empty FIFO during the gap. A
+repeated note at 11:17:13.515 saw FIFO index 5/size 18 and no flow owner, then
+capture followed at 11:17:15.035. Across all snapshots, 346 were keyed in the
+FIFO, 50 were deferred-far-only, and 387 also had flow ownership. These states
+overlap. `relight_false_clear_n` remained zero. This is a queue-owner transition
+lead, not a valid performance result.
+
+Artifacts: [M608 create](../../bin/suite_reports/engine_refactor/m608a_world_create_20261016.json),
+[M608 flight](../../bin/suite_reports/engine_refactor/m608b_cold_queue_owner_20261016.json),
+[M608 pixels](../../bin/suite_reports/engine_refactor/m608b_cold_queue_owner_pixels_20261016.json),
+[M608 perf](../../bin/logs/perf_20261016-111637_40300.jsonl),
+[M608 info log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-111634.40300).
+
+`capture_dequeue`, `clear_pending_relights`, per-column cancellation, and FIFO
+trim/defer events are the next diagnostic additions. Do not interpret a long
+flight under M608's load as evidence for a rendering or streaming regression.

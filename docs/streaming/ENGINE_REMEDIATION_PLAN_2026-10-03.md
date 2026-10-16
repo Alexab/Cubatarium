@@ -10933,7 +10933,7 @@ produced a failed visual stability gate. Host CPU was not sampled during that
 run; resource sampling has now been added to the harness before another
 comparison is attempted.
 
-## M605/M606 — controlled cold-entry versus saved-world check
+## M605–M607 — controlled cold-entry versus saved-world check
 
 The current operator report is dark/black-looking chunks immediately after
 entering a newly generated world. A cold map is a plausible amplifier because
@@ -10953,11 +10953,13 @@ and report fields for both arms. Do not change render settings between arms.
 The flight harness now records host CPU, app CPU, estimated non-app CPU, app
 RSS, process thread count, and available system memory at one-second intervals.
 Interpret a cold/warm pair as a controlled comparison only if both runs have
-complete host samples, their median host CPU differs by at most 15 percentage
-points, neither has a sustained host median above 50%, and their median app
-CPU differs by at most 15 percentage points. These are comparability gates,
-not engine performance targets. If a gate fails, retain the run as diagnostic
-and repeat only the mismatched arm later; do not extend either flight.
+complete host samples, each host median is at most 50%, each host p95 is at
+most 75%, the median and p95 host CPU differ by at most 15 percentage points,
+and median app CPU differs by at most 15 percentage points. M607 showed that a
+reasonable median can hide repeated 85%+ host spikes, so the p95 gate is now
+part of comparability. These are comparability gates, not engine performance
+targets. If a gate fails, retain the run as diagnostic and repeat only the
+mismatched arm later; do not extend either flight.
 
 Read the evidence in this order:
 
@@ -10981,3 +10983,124 @@ single clearly isolated lifecycle defect may justify a small code change,
 followed by one same-route short cold repeat. Do not run the 8,192-block
 acceptance flight until startup entry has a stable, explainable lifecycle and
 the paired comparison has passed the host-load gates.
+
+### M605/M607 execution and current interpretation
+
+M605 repeated the short cold route, but host CPU median was 73.9% (p95 99.4%),
+so the run failed the load gate. It showed `enter_unlit_max=49`,
+`enter_pending_max=44`, `visual_holes_rate=0`, and 31 chunks with provisional
+light preview. M607 then created a second cold world using the same seed and
+radius: 597 chunk files in 59.827 s. Its cold run had host CPU median 41.0%,
+but p95 85.5%; the saved-world arm had median 75.5%, p95 99.5%. The pair is
+also invalid under the revised host-load gate (and differed by 34.5 points in
+median host CPU), so it does not establish a cold-versus-warm causal effect.
+
+The run-level startup counters nevertheless point to cold-entry relight debt:
+M607 cold reached `enter_unlit_max=50` / `enter_pending_max=44`, while the
+saved M600 world reported zero for both. Near-focus mesh holes stayed at zero
+in both runs. Provisional preview coverage was also 16 chunks cold versus 3
+warm. Treat this as evidence that persisted light-complete state reduces
+startup work, not proof that it is the sole cause of the operator's report.
+
+M605's original `dark_pixel_count=383` was misleading as a dark-chunk measure:
+349 samples had final RGB different from the pretransparent sample. The analyzer emits
+`dark_pixel_classification`, separating final-RGB threshold hits from samples
+whose RGB was unchanged by transparency and which join a drawable visible
+opaque surface. M605 classified 34 such opaque candidates; all had unsettled or
+preview light evidence, while only 16 were directly marked as preview and 7
+also had a published/meshed-versus-field light revision mismatch. M607 cold
+classified 13 opaque candidates (4 with pending/preview evidence, none with a
+revision mismatch); warm classified 6. These sparse sampled candidates still
+do not prove a geometric hole or reproduce an operator-visible black chunk.
+Use the new classification for future pixel comparisons and inspect the exact
+entry camera/columns.
+
+The M605 pixel trace observed one exact-view provisional handoff after 5.4 s
+from first preview and 1.4 s from its observed light settlement to the first
+nonpreview sample. M607 cold had 28 same-view preview-to-nonpreview intervals
+(median 2.0 s, max 3.9 s); warm had only three provisional chunks and no
+same-view handoff sample. This is consistent with the cold startup path waiting
+for relight and matching mesh publication, but the sample count and load
+mismatch prevent a timing claim.
+
+For the exact startup pixel in chunk `(-3,3,4)`, M605 retained preview through
+the last same-camera pixel sample at 11 s. The correlated event timeline placed
+light settlement 14.854 s after first preview; mesh work started 0.746 s later,
+took 2.788 ms to build, 11.927 ms from build to GPU publication, and installed
+the settled image about 51 ms after mesh start. M607 cold observed that same
+chunk and camera settle in 231 ms and leave preview by 400 ms. Thus the long
+M605 tail is before/around light settlement and queue service; mesh construction
+itself is a small part of the observed wait. M605's host was heavily loaded,
+while M607's was not equivalently loaded, so the data localizes the stage but
+does not yet establish whether the cause is scheduler priority, worker CPU
+availability, or both. The next engine-level audit must connect the initial
+pending note to age/admission/FIFO selection and the relight worker start for
+this exact near-focus column before changing queue policy.
+
+Next: use a short, narrowly captured cold-entry view at the spawn/observed
+problem columns, with a matched warm run only when both host median and p95
+gates pass. Measure world-create time with a stopwatch. Do not change renderer
+or relight scheduling based on the M605/M607 pair; it did not isolate the
+operator-visible dark-chunk event.
+
+### M605 static queue-service audit
+
+The M605 RelightAudit confirms that hot-frame skipping was not the observed
+capture stop: among 97 sampled capture rows, stop reason 5 occurred zero times.
+Stop reason 8 occurred 14 times; all 14 had an empty terrain-relight FIFO and
+11 still had at least two async jobs in flight. Stop reason 3 occurred 66 times
+and means the per-frame capture cap was reached (including 25 samples with cap
+zero), not that hot-frame policy skipped capture. At 10:49:33.746, one
+deferred-far candidate was admitted after 14.707 s; the next admission audit
+saw `age_service_wait_previous=1` while that key remained queued. This suggests
+a serialized age-service path under FIFO pressure, but does not prove it caused
+the exact target's delay.
+
+For target column `(-3,4)`, the audit logged the initial void-dark note at
+10:49:19.038 and the first capture at 10:49:35.683, a 16.645 s gap. Its worker
+started 1.146 ms after capture, so that gap accrued before worker service. A
+second, wider capture for the same column began at 10:49:42.763. Existing logs
+do not expose whether the original note spent that interval in the FIFO,
+deferred-far storage, or another column-flow owner. The next Release
+diagnostic adds a `void_dark_owner` event at note acceptance to record this
+ownership state; it changes no scheduling behavior. Do not change the
+scheduler from M605 because that flight failed the host-load gate.
+
+Next: inspect M608's `void_dark_owner` event against its first capture and
+worker start for each sampled column. Use a short, narrowly captured cold-entry
+view at the spawn/observed-problem columns; run a matched warm arm only when
+both host median and p95 gates pass. Measure world-create time with a
+stopwatch. Do not change renderer or relight scheduling from the M605/M607
+pair; it did not isolate the operator-visible dark-chunk event.
+
+### M608: owner snapshot and cold-start repeat
+
+M608 created a new same-seed/radius world in 61.286 s, then ran the established
+short GUI route. The game process exited normally (`process_rc=0`), but the
+suite was not green: host CPU median/p95 reached 91.2/100%, so this flight is
+not valid for timing or load comparisons. It reported `enter_unlit_max=50`,
+`enter_pending_max=42`, `readiness_debt_rate=1`, and
+`visual_holes_rate=0`. The pixel trace classified 33 unchanged-RGB samples on
+drawable opaque surfaces; all had unsettled/preview light evidence, 15 had a
+preview marker, and 7 had a light-revision mismatch. This again finds startup
+lighting debt without proving a missing mesh or an operator-visible black
+chunk.
+
+The new audit emitted 396 `void_dark_owner` snapshots. At the first note for
+column `(-3,3)`, the owner was both in the priority FIFO at index 0/size 1 and
+owned by column flow. Its first capture was logged 16.759 s later. During the
+interval, startup perf samples repeatedly reported an empty FIFO; the same
+column was noted again at 11:17:13.515 with FIFO index 5/size 18 and no flow
+owner, then captured at 11:17:15.035. The first column-flow and FIFO states
+therefore did not persist unchanged until capture. Across the run, 346 owner
+snapshots had a keyed FIFO entry, 50 were deferred-far-only, and 387 also had a
+column-flow owner; these state flags overlap. `relight_false_clear_n` stayed at
+zero. The source paths that can wholesale clear or cancel FIFO ownership do
+not yet emit a coordinate/reason audit, so this does not identify the exact
+transition.
+
+Next diagnostic: add audit-only records for `ClearPendingRelights`, per-column
+relight cancellation and FIFO trim/defer transitions, then correlate those
+with `void_dark_owner` and `capture submit`. Keep them observational. Repeat
+only a short cold entry if host median and p95 gates pass; compare against a
+warm saved world only under the same gates. Do not tune FIFO policy from M608.

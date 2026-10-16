@@ -426,6 +426,12 @@ def main() -> int:
                     "luminance": round(luma, 2),
                     "pretransparent_rgb": pre,
                     "transparent_changed_rgb": rgb != pre,
+                    "surface_preview_shader_override": row.get(
+                        "renderer_pixel_surface_preview_shader_override"
+                    ),
+                    "opaque_preview_shader_override": row.get(
+                        "renderer_pixel_opaque_preview_shader_override"
+                    ),
                     "voxel_ray_state": ray_state,
                     "voxel_ray_gap": row.get("renderer_pixel_voxel_ray_gap"),
                     "voxel_hit": [row.get("renderer_pixel_voxel_hit_x"),
@@ -614,6 +620,9 @@ def main() -> int:
                     "opaque_chunk_light": {
                         "published_revision": row.get(
                             "renderer_pixel_opaque_published_light_rev"
+                        ),
+                        "meshed_revision": row.get(
+                            "renderer_pixel_opaque_meshed_light_rev"
                         ),
                         "field_revision": row.get(
                             "renderer_pixel_opaque_field_light_rev"
@@ -1496,12 +1505,117 @@ def main() -> int:
             delta > 2.0 for delta in distance_deltas
         ),
     }
+
+    def as_int(value: Any) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    dark_post_pretransparent_changed = [
+        pixel for pixel in dark_pixels if pixel["transparent_changed_rgb"]
+    ]
+    dark_post_pretransparent_unchanged = [
+        pixel for pixel in dark_pixels if not pixel["transparent_changed_rgb"]
+    ]
+
+    def has_drawable_opaque_surface(pixel: dict[str, Any]) -> bool:
+        surface = pixel["depth_surface"]
+        return (
+            as_int(surface["valid"]) == 1
+            and as_int(surface["drawable"]) == 1
+            and as_int(surface["opaque_mdi_visible_pass_flags"]) != 0
+        )
+
+    def has_unsettled_opaque_light(pixel: dict[str, Any]) -> bool:
+        demand = pixel["opaque_chunk_light"]
+        voxel = pixel["voxel_chunk_light"]
+        published = demand["published_revision"]
+        meshed = demand["meshed_revision"]
+        field = demand["field_revision"]
+        return (
+            (
+                as_int(demand["demand_present"]) == 1
+                and as_int(demand["demand_settled"]) != 1
+            )
+            or as_int(voxel["pending"]) == 1
+            or (
+                published is not None
+                and field is not None
+                and as_int(published) < as_int(field)
+            )
+            or (
+                meshed is not None
+                and field is not None
+                and as_int(meshed) < as_int(field)
+            )
+            or as_int(pixel["surface_preview_shader_override"]) == 1
+            or as_int(pixel["opaque_preview_shader_override"]) == 1
+            or as_int(pixel["opaque_vertex_light"]["preview"]) == 1
+        )
+
+    dark_opaque_surface = [
+        pixel for pixel in dark_post_pretransparent_unchanged
+        if has_drawable_opaque_surface(pixel)
+    ]
+    dark_opaque_unsettled_light = [
+        pixel for pixel in dark_opaque_surface
+        if has_unsettled_opaque_light(pixel)
+    ]
+    dark_opaque_preview = [
+        pixel for pixel in dark_opaque_surface
+        if as_int(pixel["surface_preview_shader_override"]) == 1
+        or as_int(pixel["opaque_preview_shader_override"]) == 1
+        or as_int(pixel["opaque_vertex_light"]["preview"]) == 1
+    ]
+    dark_opaque_revision_mismatch = [
+        pixel for pixel in dark_opaque_surface
+        if (
+            pixel["opaque_chunk_light"]["field_revision"] is not None
+            and pixel["opaque_chunk_light"]["published_revision"] is not None
+            and as_int(pixel["opaque_chunk_light"]["published_revision"])
+            < as_int(pixel["opaque_chunk_light"]["field_revision"])
+        )
+        or (
+            pixel["opaque_chunk_light"]["field_revision"] is not None
+            and pixel["opaque_chunk_light"]["meshed_revision"] is not None
+            and as_int(pixel["opaque_chunk_light"]["meshed_revision"])
+            < as_int(pixel["opaque_chunk_light"]["field_revision"])
+        )
+    ]
+    dark_pixel_classification = {
+        "luma_below_threshold_total_n": len(dark_pixels),
+        "pretransparent_to_final_rgb_changed_n": len(
+            dark_post_pretransparent_changed
+        ),
+        "pretransparent_to_final_rgb_unchanged_n": len(
+            dark_post_pretransparent_unchanged
+        ),
+        "unchanged_rgb_with_drawable_opaque_surface_n": len(dark_opaque_surface),
+        "unchanged_rgb_opaque_light_unsettled_or_preview_n": len(
+            dark_opaque_unsettled_light
+        ),
+        "unchanged_rgb_opaque_preview_n": len(dark_opaque_preview),
+        "unchanged_rgb_opaque_light_revision_mismatch_n": len(
+            dark_opaque_revision_mismatch
+        ),
+        "opaque_surface_join_missing_n": len(dark_post_pretransparent_unchanged)
+        - len(dark_opaque_surface),
+        "semantics": (
+            "Luma threshold applies to final sampled RGB. This separates RGB "
+            "changed after the pretransparent sample from unchanged RGB; unchanged "
+            "RGB is only an opaque dark-surface candidate when it joins a drawable "
+            "visible opaque depth surface. Light state narrows that candidate but "
+            "does not prove the operator-visible defect."
+        ),
+    }
     report = {
         "perf_jsonl": str(args.perf_jsonl),
         "pixel_probe_count": probe_count,
         "absolute_steady_clock_pixel_probe_count": absolute_timestamp_probe_count,
         "dark_threshold_luma": args.threshold,
         "dark_pixel_count": len(dark_pixels),
+        "dark_pixel_classification": dark_pixel_classification,
         "opaque_unsettled_demand_sample_count": len(opaque_unsettled_seen),
         "surface_preview_shader_override_sample_count": surface_preview_sample_n,
         "provisional_light_preview_sample_count": provisional_preview_sample_n,
@@ -1546,7 +1660,9 @@ def main() -> int:
             "framebuffer depth-hit surface (for example, with cutout geometry). The depth "
             "surface has separate chunk, MDI, source-light, dirty-queue, and work-owner "
             "witnesses. These joins localize mismatches but do not by themselves prove the "
-            "responsible draw path. New traces use renderer_pixel_sample_steady_ms to align "
+            "responsible draw path. The dark-pixel threshold applies to final composed RGB; "
+            "use dark_pixel_classification to separate post-pretransparent RGB changes from an "
+            "opaque drawable-surface candidate. New traces use renderer_pixel_sample_steady_ms to align "
             "pixel observations with absolute steady-clock lifecycle events; older traces "
             "fall back to renderer_pixel_sample_time_ms, which cannot join absolute event_ms. "
             "Preview-to-settled intervals are observation bounds from sparse route "
