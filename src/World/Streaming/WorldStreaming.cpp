@@ -517,7 +517,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               }
               world.Persistence->EnqueueTerrainColumnRelight(
                   ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
-                  enqueue_relight_min, enqueue_relight_max);
+                  enqueue_relight_min, enqueue_relight_max,
+                  "stream_column_commit", &world);
               world.TryNotePendingLightBeforeMesh(
                   ground, enqueue_relight_min, enqueue_relight_max,
                   __FUNCTION__);
@@ -1697,7 +1698,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             {
               world.Persistence->EnqueueTerrainColumnRelight(
                   miss_coord.x * CHUNK_SIZE, miss_coord.z * CHUNK_SIZE,
-                  /*priority=*/true);
+                  /*priority=*/true, 0, -1, "miss_witness", &world);
             }
             GetColumnFlowExecutor().RequestPromoteRelight(miss_xz, 55);
           }
@@ -6007,7 +6008,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         else
         {
           world.Persistence->EnqueueTerrainColumnRelight(
-              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus);
+              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
+              /*min_y=*/0, /*max_y=*/-1, "stream_dirty_callback", &world);
         }
       });
 }

@@ -235,7 +235,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           {
             Persistence->EnqueueTerrainColumnRelight(
                 coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE, /*priority=*/true,
-                coord.y * CHUNK_SIZE, (coord.y + 1) * CHUNK_SIZE - 1);
+                coord.y * CHUNK_SIZE, (coord.y + 1) * CHUNK_SIZE - 1,
+                __FUNCTION__, this);
             ++PhysicsTelemetryData.MarkRelitScheduleN;
             return;
           }
@@ -967,7 +968,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           {
             Persistence->EnqueueTerrainColumnRelight(
                 key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true,
-                band.min_y, band.max_y);
+                band.min_y, band.max_y, __FUNCTION__, this);
             ++PhysicsTelemetryData.MarkRelitScheduleN;
           }
         }

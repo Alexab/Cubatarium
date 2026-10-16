@@ -1011,7 +1011,8 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
   {
     for (const glm::ivec3 &pos : block_positions)
     {
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false, 0, -1,
+                                               __FUNCTION__, this);
     }
   }
   const auto t1 = std::chrono::high_resolution_clock::now();
@@ -1286,7 +1287,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           {
             Persistence->EnqueueTerrainColumnRelight(
                 world_block_key.x, world_block_key.y, /*priority=*/true,
-                enqueue_min, enqueue_max);
+                enqueue_min, enqueue_max, __FUNCTION__, this);
           }
           const bool queued_after =
               Persistence->IsTerrainColumnRelightQueued(world_block_key);
@@ -1571,7 +1572,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             StickyRemeshAfterLight.erase(glm::ivec2(ground.x, ground.z));
             Persistence->EnqueueTerrainColumnRelight(
                 ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
-                remesh_min, remesh_max);
+                remesh_min, remesh_max, __FUNCTION__, this);
             if (remesh_heal)
             {
               // A24 R2: always Invalidate so equal-rev Capture cannot no-op
@@ -1708,7 +1709,7 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     }
     Persistence->EnqueueTerrainColumnRelight(
         ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
-        enqueue_min, enqueue_max);
+        enqueue_min, enqueue_max, __FUNCTION__, this);
     if (IsColumnLitReady(ground))
     {
       MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
@@ -1876,7 +1877,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
       }
       Persistence->EnqueueTerrainColumnRelight(
           ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
-          enqueue_min, enqueue_max);
+          enqueue_min, enqueue_max, __FUNCTION__, this);
     }
     int marked = 0;
     int mark_min = 0;
@@ -2243,7 +2244,8 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
                                            col_xz.y * CHUNK_SIZE,
                                            /*priority=*/true,
-                                           relight_min_y, relight_max_y);
+                                           relight_min_y, relight_max_y,
+                                           __FUNCTION__, this);
   const glm::ivec2 world_block_key(col_xz.x * CHUNK_SIZE,
                                    col_xz.y * CHUNK_SIZE);
   const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
@@ -5423,7 +5425,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           {
             Persistence->EnqueueTerrainColumnRelight(
                 cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
-                cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+                cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1, __FUNCTION__,
+                this);
             if (Persistence->IsTerrainColumnRelightQueued(slice_block_key) ||
                 IsAsyncRelightColumnInFlight(slice_column))
             {
@@ -6169,7 +6172,7 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
     }
     Persistence->EnqueueTerrainColumnRelight(
         c.key.x * CHUNK_SIZE, c.key.y * CHUNK_SIZE, /*priority=*/true,
-        c.min_y, c.max_y);
+        c.min_y, c.max_y, __FUNCTION__, this);
     ++drained;
   }
   return drained;
@@ -8342,7 +8345,8 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
     }
     Persistence->EnqueueTerrainColumnRelight(
         entry.first.x * CHUNK_SIZE, entry.first.y * CHUNK_SIZE,
-        /*priority=*/true, entry.second.min_y, entry.second.max_y);
+        /*priority=*/true, entry.second.min_y, entry.second.max_y,
+        __FUNCTION__, this);
     ++promoted;
   }
 
@@ -8573,7 +8577,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   {
     for (const glm::ivec3 &pos : AsyncRelight->TakeOverflowSourcePositions())
     {
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false, 0, -1,
+                                               __FUNCTION__, this);
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
       AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
     }
@@ -9369,7 +9374,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
       AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false, 0, -1,
+                                               __FUNCTION__, this);
     }
   }
   return applied;
@@ -10060,7 +10066,8 @@ void UWorld::CancelAsyncRelightWork()
   {
     for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
     {
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false, 0, -1,
+                                               __FUNCTION__, this);
     }
   }
 }
@@ -11514,7 +11521,8 @@ void UWorld::EnqueueEnterLitSnapshotRelight()
       return;
     }
     Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
-                                             band_min, band_max);
+                                             band_min, band_max, __FUNCTION__,
+                                             this);
   };
 
   for (int dx = -fov_r; dx <= fov_r; ++dx)
@@ -11570,7 +11578,8 @@ void UWorld::RepairEnterLitSnapshotFifoGhosts()
         std::abs(col.y - UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock()).z));
     const bool priority = horiz <= EnterVisualWarmupRadiusChunks();
     Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
-                                             band_min, band_max);
+                                             band_min, band_max, __FUNCTION__,
+                                             this);
   }
 }
 
@@ -12493,7 +12502,8 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
       return;
     }
     Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
-                                             band_min, band_max);
+                                             band_min, band_max, __FUNCTION__,
+                                             this);
     // FZ2.1-B1c: skip follow-up if Enqueue put column in flight this frame.
     if (IsAsyncRelightColumnInFlight(col))
     {

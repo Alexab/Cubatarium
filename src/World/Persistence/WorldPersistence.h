@@ -131,7 +131,9 @@ public:
   bool AbortAsyncChunkIoFor(std::chrono::milliseconds timeout);
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
                                    bool priority = false, int min_y = 0,
-                                   int max_y = -1);
+                                   int max_y = -1,
+                                   const char *producer = nullptr,
+                                   UWorld *world_context = nullptr);
   /// Admit bounded visible relight work with far-victim replacement/reserve
   /// when normal near-ring FIFO admission is backpressured.
   bool EnqueueVisibleRelight(int world_x, int world_z, int min_y, int max_y,
@@ -267,7 +269,9 @@ private:
                                       PendingAsyncColumnLoadState state);
   void EnqueueTerrainColumnRelightImpl(int world_x, int world_z,
                                        bool priority, int min_y, int max_y,
-                                       bool visible_admission);
+                                       bool visible_admission,
+                                       const char *producer = nullptr,
+                                       UWorld *world_context = nullptr);
   void PreserveRelightFifoVictimAsDeferred(glm::ivec2 world_block_key,
                                            bool priority,
                                            const char *reason = nullptr);
