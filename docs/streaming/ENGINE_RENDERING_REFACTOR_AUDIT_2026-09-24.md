@@ -5728,3 +5728,11 @@ Artifacts remain local under `bin/suite_reports/engine_refactor` and `bin/logs`:
 `m619a_promote_owned_geometry_debt_20261016.json`,
 `perf_20261016-132510_14976.jsonl`, and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-132505.14976`.
+
+### M620A: neighbor-halo invalidation gap
+
+M620A produced eight CPU stale-light boundary witnesses for which the consumer geometry revision was fully published and its own meshed, field, and published light revisions agreed. Each witness sampled current nonzero light from an adjacent source chunk. This makes the mesh's neighbor halo the discriminating dependency; it does not prove a visible framebuffer defect. The run was resource-invalid for performance acceptance (host CPU median/p95/max 82.0/99.8/100.0%) and operator framebuffer verdict was not recorded.
+
+Static call-site review found that light relight deltas invalidate 26 adjacent drawable slices, but chunk materialization did not consistently notify the same dependency queue: procedural commits used a horizontal band conditional on focus/pressure, while disk slices were applied before their finalization dirtying. A dependency queue entry is appropriate here because `ChunkMeshSnapshot` includes neighboring halo data and publication can otherwise retain an already drawable mesh captured before a neighbor appeared or changed.
+
+The current change queues dependency invalidations at procedural commit and after each successful disk slice apply. The queue is deduplicated and its drain respects existing live-owner checks and bounded schedule budget. This is a targeted correction to input invalidation; it does not change lighting values, priority budgets, or GPU publication policy. Confirm with a Release build and a short repeated M335 trace; if seam witnesses remain after those dependency remeshes publish, inspect the halo signature and light sampling contract next.

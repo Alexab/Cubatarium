@@ -10412,3 +10412,13 @@ python tools/analyze_geometry_lifecycle.py `
 - `suite_reports/engine_refactor/m619a_promote_owned_geometry_debt_20261016.json`
 - `logs/perf_20261016-132510_14976.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-132505.14976`
+
+M620A ran the established short M335 no-teleport route on `World_M613A_Cold_FlagLifecycle_20261016`, with `CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`. It finished normally; runtime CPU made the suite fail. The saved traces contained eight exact-geometry CPU boundary witnesses sampling live light from adjacent chunks. The repeated rows with geometry ahead of publication are in-flight state, not independent settled failures.
+
+Static inspection found inconsistent dependency invalidation at input arrival. The Release implementation now queues neighbor-mesh dependency debt immediately at procedural commits and successful disk-slice applications, relying on the existing bounded deduplicating drain. Rebuild Release, then use the same short route only after the normal host CPU preflight; do not turn this into a long operator-monitoring run.
+
+Artifacts:
+
+- `suite_reports/engine_refactor/m620a_stale_light_repair_cycle_20261016.json`
+- `logs/perf_20261016-134426_34608.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-134422.34608`

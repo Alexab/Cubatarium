@@ -11377,3 +11377,15 @@ Eye-proxy отклонил stale-visual delta 31, а temporal mid-flight сег�
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md) и
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+### M620A: M620 visual-light witness follow-up and missing commit dependency invalidation
+
+M620A repeated the established 35-second no-teleport M335 segment with the stale-light and visual-black traces enabled. The process completed normally, but runtime host CPU was 82.0/99.8/100.0% median/p95/max, so the run is diagnostic only. Counters were `visual_holes_rate=0`, `fly_visible_black_max=3`, `post_stop_mesh_missing_max=0`, `post_stop_visible_black_max=1`, and readiness debt max 30; none is a direct framebuffer verdict. The suite rejected the run and the operator did not provide a framebuffer assessment.
+
+The trace contained 194 CPU stale-light witness rows. 185 were sampled while desired geometry was ahead of published geometry. Eight valid rows had exact geometry publication and aligned own-chunk meshed/field/published light revisions, yet the mesh's boundary sample found nonzero current light in an adjacent chunk. All eight were chunk-seam samples. This is evidence that own-chunk revision equality alone does not guarantee a mesh still matches its neighbor halo; it does not establish that the operator saw a dark pixel. The other rows overlap in-flight revisions and must not be counted as independent confirmed defects.
+
+Static review found that relight field changes call `QueueMeshDependencyInvalidations` for the 26 adjacent drawable slices. The procedural generation commit callback, however, relied on a horizontal dirty band whose fanout is conditional on distance/pressure and does not cover vertical neighbors. The disk loader applies slices incrementally, while dependent meshes are dirtied only later through column finalization. Thus a mesh built against the old or absent neighbor halo could remain drawable until another repair path discovers the stale face.
+
+The implementation now queues bounded mesh dependency debt immediately when a procedural chunk is committed and after each successful disk-slice apply. The existing drain deduplicates coordinates, skips chunks that already have Dirty/remesh ownership, keeps drawable meshes, and transfers at most the existing per-frame budget into priority dirty work. This targets the missing input-dependency notification without expanding mesh admission/build budgets. Release validation and one short repeated route are the next checks; runtime resource gates remain mandatory.
+
+M620 artifacts are local: `bin/suite_reports/engine_refactor/m620a_stale_light_repair_cycle_20261016.json`, `bin/logs/perf_20261016-134426_34608.jsonl`, and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-134422.34608`.

@@ -4309,6 +4309,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       const bool token_valid = load.token.IsValidFor(ground, current_sequence);
 
       const auto world_apply_started = std::chrono::steady_clock::now();
+      bool chunk_input_changed = false;
       const auto apply_started_at =
           trace_async_io ? std::chrono::steady_clock::now()
                          : std::chrono::steady_clock::time_point{};
@@ -4318,6 +4319,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         if (buffer && !buffer->IsEmpty())
         {
           buffer->ApplyToChunk(world.BlockWorld, load.coord);
+          chunk_input_changed = true;
           if (buffer->HasChunkLightData())
           {
             state.had_disk_light = true;
@@ -4326,11 +4328,13 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         else
         {
           world.BlockWorld.GetChunkManager().EnsureChunk(load.coord);
+          chunk_input_changed = true;
         }
       }
       else if (disk_format == ChunkDiskFormat::Absent)
       {
         world.BlockWorld.GetChunkManager().EnsureChunk(load.coord);
+        chunk_input_changed = true;
       }
       else if (!token_valid)
       {
@@ -4339,6 +4343,16 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       else
       {
         state.had_disk_read_failure = true;
+      }
+      if (chunk_input_changed && world.MeshService)
+      {
+        // Disk slices are applied incrementally, before column finalization.
+        // Invalidate dependent drawable meshes at each successful slice so
+        // neighbors cannot keep a mesh captured against the old halo while
+        // the rest of this column is still loading.
+        const std::vector<glm::ivec3> changed_input_chunks{load.coord};
+        world.MeshService->QueueMeshDependencyInvalidations(
+            world.BlockWorld, changed_input_chunks);
       }
       metrics.world_apply_ms +=
           std::chrono::duration<double, std::milli>(

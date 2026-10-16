@@ -883,3 +883,13 @@ python tools/analyze_geometry_lifecycle.py `
   bin/logs/perf_20261016-132510_14976.jsonl `
   --coord=-17,2,2
 ```
+
+### M620A: boundary stale-light trace
+
+The short repeated M335 run completed without process timeout but failed the runtime resource gate: host CPU median/p95/max was 82.0/99.8/100.0%. It is diagnostic, not performance acceptance. Proxy counters were `visual_holes_rate=0`, `fly_visible_black_max=3`, `post_stop_mesh_missing_max=0`, `post_stop_visible_black_max=1`, readiness debt max 30; there is no operator framebuffer verdict.
+
+Join `visual_black_trace` rows to renderer revisions before calling a witness persistent. In M620A, 185/194 rows had desired geometry newer than the published geometry and are therefore in-flight observations. Eight rows had matching geometry and own-chunk light revisions, and all eight were CPU chunk-seam witnesses that sampled nonzero light in an adjacent source chunk. This isolates neighbor input invalidation as a plausible missed lifecycle event, not a confirmed pixel defect.
+
+Static review: the relight result apply path queues dependencies when light values change; the procedural commit path can skip neighbor dirty fanout for far/pressured columns, and persistence applies each slice before its finalization dirty step. The code now queues 26-neighbor drawable mesh dependency debt at procedural commit and on every successful disk slice apply. The normal drain remains deduplicated, skips work already owned or in flight, and obeys its existing per-frame budget.
+
+Next validation: build the Release `Cubatarium` target only. If a fresh CPU preflight passes, repeat one short M335 route with `CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`; inspect whether seam dependency entries precede the repaired publication and whether exact-revision witnesses recur after publication. Do not use the M620A runtime as a performance baseline.

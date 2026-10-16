@@ -72,6 +72,7 @@
 #include <cstdlib>
 #include <limits>
 #include <string>
+#include <vector>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -351,6 +352,17 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
       [this, &world](glm::ivec3 coord, int min_y, int max_y, bool fluid_sealed)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
+        // A newly committed chunk changes the padded block/light inputs of
+        // already drawable meshes across all 26 neighboring slices. The
+        // terrain dirty band below only covers a horizontal column band and
+        // can intentionally skip far commits; preserve an explicit bounded
+        // dependency debt for every committed input chunk.
+        if (world.MeshService)
+        {
+          const std::vector<glm::ivec3> changed_input_chunks{coord};
+          world.MeshService->QueueMeshDependencyInvalidations(
+              world.BlockWorld, changed_input_chunks);
+        }
         if (Streamer)
         {
           Streamer->NotifyChunkCommitted(coord);
