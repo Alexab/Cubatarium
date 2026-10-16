@@ -10286,6 +10286,9 @@ witness имел source chunk `(-20,2,5)`, свет 10 в sample `(-305,42,80)`,
 Geometry publication snapshots двигались 3/2 → 4/3 → 5/4 → 6/5; в последнем
 repair trace срез был в RemeshQ на позиции 0/4 с owner flags 3 (Dirty + active
 build). Этот witness был получен до наблюдения публикации следующего repair.
+Eye-proxy gate дополнительно отказал по stale-visual delta 2.0, stale activity
+без hole counters и непокрытому temporal mid-flight сегменту; это диагностические
+ограничения и churn-сигнал, не пиксельное доказательство.
 
 Commit `e39de9df` исправляет полноту trace: opt-in visual watch теперь
 открывается при первой bounded admission drawable geometry debt в h5, до того

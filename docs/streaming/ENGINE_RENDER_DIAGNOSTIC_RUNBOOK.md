@@ -793,7 +793,10 @@ that build publish, so do not count it as a post-repair persistent defect.
 M617A's host CPU was 65.1/99.5/100% median/p95/max; suite `pass=false`, so it
 is not performance acceptance. `visual_holes_rate=0`, fly visible-black max=3,
 post-stop visible-black max=1, readiness-debt max=46. These counters are not
-framebuffer evidence. The report contains only four renderer rows and no target
+framebuffer evidence. Its eye-proxy gate also failed on stale-visual delta 2.0,
+stale activity without hole counters, and an untested temporal mid-flight segment;
+this is a coverage gap plus a churn signal, not proof of a pixel hole. The report
+contains only four renderer rows and no target
 `demand_transition_trace` rows: the watch began when the renderer census found
 the target, after its revision changes.
 

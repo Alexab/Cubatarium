@@ -5668,5 +5668,7 @@ M617A runtime host CPU median/p95/max was 65.1/99.5/100%, so it is not a
 performance acceptance run. Its suite reported `visual_holes_rate=0`,
 `fly_visible_black_max=3`, `post_stop_visible_black_max=1`, and
 `post_stop_readiness_debt_max=46`; these proxies describe separate scopes and
-do not replace operator framebuffer observation. No operator image verdict was
-captured.
+do not replace operator framebuffer observation. The eye-proxy gate also failed
+on stale-visual delta 2.0, stale activity without hole counters, and missing
+temporal mid-flight coverage; this is not pixel proof. No operator image verdict
+was captured.

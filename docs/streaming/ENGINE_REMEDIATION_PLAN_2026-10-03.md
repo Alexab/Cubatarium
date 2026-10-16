@@ -11315,8 +11315,11 @@ M617A не прошёл runtime resource gate: host CPU 65.1/99.5/100%
 (median/p95/max), suite `pass=false`; визуальные proxy были
 `visual_holes_rate=0`, `fly_visible_black_max=3`, `post_stop_visible_black_max=1`,
 при `post_stop_readiness_debt_max=46`. Эти счетчики не дают операторской
-оценки изображения. Несмотря на включённый visual trace, для целевого среза
-сохранились только четыре renderer trace rows и ноль `demand_transition_trace`
+оценки изображения. Дополнительно eye-proxy gate отказал по stale-visual delta
+2.0, stale activity без hole counters и непокрытому temporal mid-flight сегменту.
+Это повод закрыть coverage gaps и найти связь с повторным geometry churn, но не
+доказательство пиксельной дыры. Несмотря на включённый visual trace, для целевого
+среза сохранились только четыре renderer trace rows и ноль `demand_transition_trace`
 revision-bump событий: slice был добавлен в watch слишком поздно, при выборе
 рендерного census. Исправлено в `e39de9df`: при включённой диагностике h5
 geometry debt начинает watch прямо в bounded admission. Release build прошёл;
