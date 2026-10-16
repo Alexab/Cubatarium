@@ -10790,3 +10790,40 @@ Artifacts:
 Host CPU never blocks a diagnostic route or decides whether it passes. When
 Codex/build work is active it includes that work; record app CPU and game frame
 stages separately. The sampler script's `advisory_only` field is intentional.
+
+### M622J: validate active mesh owner in stale-light debt drain
+
+This is the compact established M335 route used to verify the active-owner
+accounting change. It is a short diagnostic, not the long-distance streaming
+monitoring flight. Host CPU is recorded as context only.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622J_Cold_ActiveMeshOwner_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622J_ActiveMeshOwnerDebt_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622j_active_mesh_owner_debt_20261016.json
+```
+
+M622J completed 35 periods (`process_rc=0`, no timeout) but the analyzer
+returned `pass=false`. It reported readiness-debt rate 1.0, mesh-coverage proxy
+rate 0.1212, fly visible-black proxy max 24, post-stop visible-black max 1,
+post-stop readiness-debt max 45, and median wall time 36.77 ms. Proxy metrics
+are not a screenshot or framebuffer verdict. Host CPU reached 100%; app CPU
+was 18.35/34.96/42.66% median/p95/max, so host CPU is not a valid gate.
+
+The `stale_light_debt event=cancel_lease` trace means a pending repair ticket
+protected an active mesh/GPU lease from cancellation. It does not report a
+canceled build. The trace showed repeated relight-only dependency invalidation
+at `(-11,2,2)` alongside growing `desired_geom` revisions; see the M622J entry
+in `ENGINE_REMEDIATION_PLAN_2026-10-03.md`. The next experiment should check
+whether preserving dependency cause prevents geometry revision churn.
+
+Artifact: `suite_reports/engine_refactor/m622j_active_mesh_owner_debt_20261016.json`.

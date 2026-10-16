@@ -11584,3 +11584,47 @@ runtime evidence is needed; keep all CPU samples advisory.
 
 Reports: `bin/suite_reports/engine_refactor/m622h_halo_debt_retention_20261016.json`
 and `bin/suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json`.
+
+### M622J: runtime check of active-owner accounting and dependency churn
+
+Commit `7c8b2a9f` changed stale-light repair ownership checks to use
+`HasInflightMeshBuild()`, which includes an accepted mesh result waiting for
+apply, instead of checking only the async worker. M622J ran the same compact
+visible no-teleport M335 route on a fresh world. The route completed
+(`process_rc=0`, 35 periods, no timeout), but the suite remained `pass=false`
+on engine/visual readiness checks: `readiness_debt_rate=1.0`,
+`visual_holes_rate=0.1212`, fly visible-black proxy max 24, post-stop visible
+black max 1, post-stop readiness-debt max 45, and median frame wall time
+36.77 ms. The analyzer's eye-proxy and A24 stop-lines failed. These are
+telemetry/proxy results, not a framebuffer verdict; no operator visual verdict
+was recorded.
+
+The INFO trace contains 917 stale-light-debt queue events, 1,126 admissions,
+800 publication closures, and a maximum pending debt backlog of 314. These are
+event counts across repeated lifecycles, not unique chunks. `cancel_lease`
+means the active mesh/GPU work was protected from cancellation while a stale
+repair ticket remained inside the bounded visual radius; it does not mean the
+work was canceled. The owner-accounting fix is therefore in effect, but the
+run does not establish that repeated repair churn is solved.
+
+The most useful new static/runtime clue is cause loss in
+`PendingMeshDependencyInvalidations_`: `relight_light_change` and
+`enter_open_sky_boundary` are light-only input changes, but the queue currently
+retains only a coordinate and drains every dependency through the ordinary
+geometry-priority dirty path. At `(-11,2,2)`, the trace shows repeated
+`relight_light_change` invalidations and an unowned geometry-debt retry with
+`desired_geom=8` while `published_geom=4`; later retries advance desired
+geometry as high as 16 while published geometry remains 4. This is strong
+evidence of unnecessary geometry revision churn during light repair, although
+the counters alone do not prove it is the only cause of the incomplete mesh.
+Next change: preserve a coalesced dependency reason, let geometry-capable
+inputs dominate light-only inputs, and use a light-dependency repair reason for
+light-only invalidations. Then rebuild Release and repeat only the compact M335
+route to compare geometry revision churn and publication closure.
+
+M622J host CPU was 99.8/100/100% median/p95/max while application CPU was
+18.35/34.96/42.66% of machine capacity. Host load remains advisory only and is
+never a preflight, pass/fail gate, or reason to discard a run while Codex is
+active.
+
+Report: `bin/suite_reports/engine_refactor/m622j_active_mesh_owner_debt_20261016.json`.
