@@ -10193,6 +10193,9 @@ then repeat the same short M335 route at resource-qualified load; confirm the
 target obtains an owner and publishes current geometry. Do not extend the route
 or use a dark-pixel proxy as the operator-image verdict.
 
+The first post-build M616 preflight (2026-10-16, app stopped) had host CPU
+median/p95 57.5/93.6%; the run was correctly deferred by the resource gate.
+
 The M613 trace suggests a separate cross-chunk repair question: stale-dark
 consumer slices `(-19,2,0)` and `(-19,2,5)` had lit face samples in source chunks
 `(-20,2,0)` and `(-20,2,5)` while consumer revisions matched. Mesh capture hashes

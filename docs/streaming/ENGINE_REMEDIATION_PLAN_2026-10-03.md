@@ -11278,7 +11278,9 @@ performance acceptance-проверкой. Процесс завершился �
    approach ring h5: при исчерпанном dirty-admit ему разрешается использовать
    существующий ограниченный world-admission слот. Обычные кандидаты остаются
    под прежним бюджетом; повторить точку `(-19,2,5)` коротким M335 только при
-   host CPU median <=50% и p95 <=75%. Требовать выдачу owner и publication
+   host CPU median <=50% и p95 <=75%. Последний preflight после Release build
+   дал median 57.5%, p95 93.6% при остановленном приложении; M616 flight поэтому
+   не запускался. Требовать выдачу owner и publication
    актуальной geometry revision; отдельно следить за пост-стоп debt и GPU
    witness типом.
 

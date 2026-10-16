@@ -753,6 +753,11 @@ preflight did not predict runtime load. Keep GPU-only witness ambiguity separate
 the current chunk-wide proxy may mistake unrelated sky-lit blocks for proof that
 a dark cave face is stale. No long operator-monitoring flight is needed.
 
+The post-M616-build preflight on 2026-10-16 sampled host CPU at median 57.5% and
+p95 93.6% with the application stopped, so no M616 flight was launched. A short
+process sample showed RustDesk and OneDrive activity, but that does not attribute
+the full host load. Recheck the resource gate later instead of weakening it.
+
 M615A artifacts:
 
 - `suite_reports/engine_refactor/m615a_stale_debt_approach_ring_20261016.json`
