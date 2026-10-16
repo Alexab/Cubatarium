@@ -5020,6 +5020,14 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool unowned_geometry_debt =
           current_mesh_revision > current_published_revs.geom_rev &&
           !has_slice_work_owner(coord);
+      // A drawable with an unpublished geometry revision is a repair
+      // obligation, not ordinary approach-ring prefetch. Preserve the normal
+      // dirty-admission budget, but let an otherwise unowned debt item in the
+      // first-mesh relight approach ring use the bounded world-admission slot
+      // below instead of retrying forever behind the h4-only fallback.
+      const bool approach_geometry_debt =
+          unowned_geometry_debt &&
+          col_horiz <= kVisualStageFirstMeshRelightApproachHoriz;
       const auto note_unowned_geometry_retry_attempt =
           [&](const char *action) {
             if (!unowned_geometry_debt)
@@ -5452,11 +5460,16 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                   orec.visual_deadline_ms, now_ms))
           {
             const bool dirty_admit_allowed = consume_dirty_admit();
-            if (dirty_admit_allowed || col_horiz <= 4)
+            if (dirty_admit_allowed ||
+                col_horiz <= kVisualStageLitDrawableHoriz ||
+                approach_geometry_debt)
             {
               MeshService->GetCache().InvalidateMeshCapture(coord);
               mark_slice_dirty_without_reordering_first_mesh(coord);
-              note_unowned_geometry_retry_attempt("light_repair_mesh");
+              note_unowned_geometry_retry_attempt(
+                  !dirty_admit_allowed && approach_geometry_debt
+                      ? "geometry_debt_approach_reserved"
+                      : "light_repair_mesh");
               if (has_slice_work_owner(coord))
               {
                 static uint64_t next_admit_lr = 1;
@@ -5513,13 +5526,19 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       {
         if (!MeshService->HasMeshSatisfyingColumnReady(coord))
         {
-          if (!consume_dirty_admit() && col_horiz > 4)
+          const bool dirty_admit_allowed = consume_dirty_admit();
+          if (!dirty_admit_allowed &&
+              col_horiz > kVisualStageLitDrawableHoriz &&
+              !approach_geometry_debt)
           {
             note_unowned_geometry_retry_attempt("dirty_admit_denied");
             continue;
           }
           mark_slice_dirty_without_reordering_first_mesh(coord);
-          note_unowned_geometry_retry_attempt("already_satisfied_mesh");
+          note_unowned_geometry_retry_attempt(
+              !dirty_admit_allowed && approach_geometry_debt
+                  ? "geometry_debt_approach_reserved"
+                  : "already_satisfied_mesh");
           uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
           if (attempt_id == 0)
           {
@@ -5544,13 +5563,19 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         }
         continue;
       }
-      if (!consume_dirty_admit() && col_horiz > 4)
+      const bool dirty_admit_allowed = consume_dirty_admit();
+      if (!dirty_admit_allowed &&
+          col_horiz > kVisualStageLitDrawableHoriz &&
+          !approach_geometry_debt)
       {
         note_unowned_geometry_retry_attempt("dirty_admit_denied");
         continue;
       }
       mark_slice_dirty_without_reordering_first_mesh(coord);
-      note_unowned_geometry_retry_attempt("mesh");
+      note_unowned_geometry_retry_attempt(
+          !dirty_admit_allowed && approach_geometry_debt
+              ? "geometry_debt_approach_reserved"
+              : "mesh");
       uint64_t attempt_id = 0;
       if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
       {

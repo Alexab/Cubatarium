@@ -10170,16 +10170,28 @@ not performance acceptance. Pixel dark-candidate totals also differed and are
 not an operator-image verdict. Use a resource-qualified repeat before drawing a
 causal visual conclusion.
 
-M615 addresses the observed no-owner stale repair retries without changing the
-flight profile: the durable stale-light repair service now includes stale-dark
-face witnesses with current own-slice revisions and extends its bounded service
-ring from LitDrawable radius 4 to the screen-visible approach radius 5. The
-existing reserved cadence remains one repair per four scheduler frames when
-ordinary dirty admission is exhausted. Release build succeeded; no test or
-flight was run after this policy change. At the next resource-qualified short
-M335 run, inspect `stale_light_debt` queued/admitted/published events and confirm
-the edge witness is cleared after mesh publication. Do not use the analyzer's
-dark-pixel count as an operator-image verdict.
+M615 addresses stale-light repair debt by including stale-dark face witnesses
+with current own-slice revisions and extending bounded service from LitDrawable
+radius 4 to approach radius 5. The repair service retains its one-slot-per-four-
+scheduler-frames reserve when ordinary dirty admission is exhausted.
+
+M615A used the established visible GUI no-teleport M335 profile on the same
+M613 cold-start world. It completed without timeout, but runtime host CPU was
+73.7/100/100% (median/p95/max), so this is not performance acceptance. At focus
+`(-14,3)`, chunk `(-19,2,5)` remained drawable with geometry desired revision
+4→9 versus published 3 and logged 66 no-owner `dirty_admit_denied` attempts at
+h5. Its stale-light debt was queued then cleared without an admission event.
+Aggregate event totals (404 queued, 131 admitted, 389 published) include other
+chunks and must not be treated as matched work items. This run had no `gpu=1`
+witness. Pixel/readiness metrics do not represent the operator's framebuffer.
+
+M616 changes the world admission gate only for drawable unowned geometry debt
+inside approach radius 5, allowing it through the existing bounded admission
+loop when the ordinary dirty-admit budget is exhausted. The expected audit action
+is `geometry_debt_approach_reserved`. Build and commit before using the runner,
+then repeat the same short M335 route at resource-qualified load; confirm the
+target obtains an owner and publishes current geometry. Do not extend the route
+or use a dark-pixel proxy as the operator-image verdict.
 
 The M613 trace suggests a separate cross-chunk repair question: stale-dark
 consumer slices `(-19,2,0)` and `(-19,2,5)` had lit face samples in source chunks
@@ -10190,7 +10202,7 @@ dependent mesh gets an owner, then reaches capture, GPU publish, and stale-witne
 clear. Do not infer missing geometry from the general stalled visible-black
 counter; M613 `fully_dark_stalled` stayed zero.
 
-Артефакты M613 (локальные):
+Артефакты M613/M614/M615A (локальные):
 
 - `suite_reports/engine_refactor/m613a_world_create_20261016.json`
 - `suite_reports/engine_refactor/m613b_cold_flag_lifecycle_20261016.json`
@@ -10201,3 +10213,6 @@ counter; M613 `fully_dark_stalled` stayed zero.
 - `suite_reports/engine_refactor/m614a_warm_flag_revisit_pixels_20261016.json`
 - `logs/perf_20261016-121314_37496.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-121310.37496`
+- `suite_reports/engine_refactor/m615a_stale_debt_approach_ring_20261016.json`
+- `logs/perf_20261016-124231_41960.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-124224.41960`

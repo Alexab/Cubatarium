@@ -11245,12 +11245,12 @@ performance acceptance-проверкой. Процесс завершился �
 
 #### Следующие шаги
 
-1. M615 Release build прошёл. Не запускать flight на текущих ресурсах: оба
-   предыдущих arm превысили CPU gates, а M614 дал 23 denied retries на краю
-   кольца. На первом коротком ресурсно-валидном M335 проверить в trace
-   `stale_light_debt event=queued/admitted/published`, повторные отказанные
-   admissions на `focus_horiz=5`, stale witness после publish и короткое
-   операторское изображение. Длинный полёт не нужен.
+1. M615A прошёл на установленном M335-маршруте без timeout, но runtime host CPU
+   оказался 73.7/100/100% (median/p95/max), поэтому это не performance
+   acceptance. Внешний срез `(-19,2,5)` при focus `(-14,3)` оставался без
+   владельца: `desired_geom` рос 4→9 при `published_geom=3`, а
+   `dirty_admit_denied` повторился 66 раз на расстоянии h5. Сохранить этот
+   срез как точечную проверку следующего изменения.
 2. Если cross-chunk witness сохраняется после M615, продолжить lifecycle join:
    source border light/incarnation/revision → dependent slice owner → capture
    stamp → GPU publish → stale witness clear. Проверить, требуется ли более
@@ -11268,15 +11268,26 @@ performance acceptance-проверкой. Процесс завершился �
    число chunk-файлов, наличие/наполнение `column_light.json`, startup debt и
    поведение первой визуальной полосы. Это не заменяет повторяемый M335 маршрут.
 
-6. Перед M615 post-fix flight дождаться не только приемлемого среднего CPU, но и
-   host p95 <=75% на короткой серии замеров. В preflight 2026-10-16 приложение
-   не было запущено; десять секундных CPU samples дали median 33.7%, но верхний
-   диапазон достиг 79.5–93.1%, поэтому resource gate не пройден и flight отложен.
-   Статический review также выявил, что GPU-only stale-dark witness — chunk-wide
-   proxy, не привязанный к конкретной тёмной грани. В M615 flight записать поле
-   `gpu` у witness и проверить, не повторяется ли тот же ремонт после publish
-   при неизменных source/consumer revisions. При повторе исследовать точную
-   face provenance или halo invalidation до расширения cadence/очереди.
+6. M615A получил `stale_light_debt queued/published` для
+   `(-19,2,5)`, но не `admitted`; спустя 30 ms световой долг очистился, тогда
+   как геометрический долг продолжил повторно отклоняться. В 404/131/389 общих
+   событиях queued/admitted/published есть другие чанки, поэтому эти суммы не
+   являются парным lifecycle конкретного долга. В flight не встретилось
+   `gpu=1`; качество GPU-only witness остаётся непроверенным.
+7. M616 меняет world admission только для drawable unowned geometry debt в
+   approach ring h5: при исчерпанном dirty-admit ему разрешается использовать
+   существующий ограниченный world-admission слот. Обычные кандидаты остаются
+   под прежним бюджетом; повторить точку `(-19,2,5)` коротким M335 только при
+   host CPU median <=50% и p95 <=75%. Требовать выдачу owner и publication
+   актуальной geometry revision; отдельно следить за пост-стоп debt и GPU
+   witness типом.
+
+8. Во время M615A десятисекундный preflight был 9.8/39.8% (median/p95), но
+   runtime поднялся до 73.7/100/100%; next-run gate должен проверять не только
+   preflight, но и runtime после запуска. Операторского подтверждения кадров
+   нет: `visual_holes_rate=0`, `post_stop_visible_black_max=0`, одновременно
+   `post_stop_missing_max=33`, focus mesh-missing=22 и face-debt=11. Эти метрики
+   описывают разные области/виды долга и не дают визуальной acceptance-оценки.
 
 Артефакты M609–M614 сохранены локально в `bin/suite_reports/engine_refactor`,
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в

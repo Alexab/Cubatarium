@@ -5593,11 +5593,23 @@ face. A valid cave face in a chunk that also has a sky-lit surface can therefore
 look stale to this probe and keep durable debt alive after a no-op repair.
 
 M613/M614's logged witnesses were `gpu=0`, so this limitation does not invalidate
-the observed CPU-batch witnesses or the approach-ring admission gap. It is a
-separate risk introduced when M615 broadens discovery to drawable meshes that may
-already be GPU-only. No flight has validated M615 yet. The next short run must
-record whether each stale witness is CPU- or GPU-probed, and whether a GPU-probed
-debt item is re-admitted after a current mesh publication without a source or
-consumer revision change. If it is, do not increase repair cadence; replace the
-chunk-wide GPU proxy with face-correlated provenance or rely on targeted
-halo-change invalidation for already-published meshes.
+the observed CPU-batch witnesses or the approach-ring admission gap. M615A also
+had no `gpu=1` witness, so the GPU-only approximation remains unvalidated.
+
+M615A reproduced a distinct outer-ring geometry-admission gap at
+`(-19,2,5)`, focus `(-14,3)`: the light debt was queued and later cleared
+without an `admitted` event, while geometry revision advanced from 4 to 9 against
+published revision 3. World admission logged 66 `dirty_admit_denied` retries and
+no owner. The renderer's near-focus visual-hole proxy remained zero, but broader
+post-stop focus telemetry reported 22 missing meshes and 11 face debts. The
+runtime host CPU was 73.7/100/100% (median/p95/max), so this flight diagnoses
+queue behavior, not performance acceptance.
+
+M616 narrowly permits an otherwise unowned drawable geometry debt through the
+existing bounded admission loop when it is in the h5 first-mesh approach ring and
+the ordinary dirty-admit budget is exhausted. It records
+`geometry_debt_approach_reserved`; ordinary work keeps its budget. Verify on the
+same short M335 route that this exact coordinate receives a work owner and
+publishes its current geometry revision. If a current face witness survives that
+publish, join source border-light/incarnation/revision to dependent invalidation,
+capture and GPU publication before adding broader queue policy.

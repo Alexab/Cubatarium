@@ -1,25 +1,11 @@
 # Диагностика стриминга и видимости мира
 
-Обновлено: 2026-10-15. Этот runbook фиксирует повторяемые сценарии и порядок
+Обновлено: 2026-10-16. Этот runbook фиксирует повторяемые сценарии и порядок
 сопоставления состояния мира с тем, что реально попало в framebuffer. Полный
 каталог исторических запусков и вспомогательных анализаторов остаётся в
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md); выводы по
 рефакторингу и незакрытые критерии — в
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
-
-#### M615 preflight follow-up (2026-10-16)
-
-M615 Release executable exists and Cubatarium was not running during preflight.
-A ten-sample host CPU window had median 33.7%, but burst samples reached 79.5%
-and 93.1%; do not treat the average alone as a pass for the <=75% p95 gate. No
-post-M615 flight was started. The same static review found the GPU-only stale-dark
-probe is chunk-wide and may confuse a valid dark cave face with unrelated sky-lit
-blocks in that chunk. Preserve the established short M335 profile; next run should
-join `gpu_probe` / `gpu` witness type with stale-debt queued/admitted/published
-events and source/consumer revisions. A repeated GPU-only witness after a fresh
-publish is a signal to improve witness provenance or halo invalidation, not to
-increase repair rate. Do not launch a long operator-monitoring flight for this
-check.
 
 ## Порядок доказательств для пропавшей поверхности
 
@@ -746,3 +732,29 @@ stale debt на approach ring теперь остаётся durable до publish
 
 Полные выводы, ограничения сравнения и дальнейшие действия находятся в
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+
+#### M615A / M616 geometry admission follow-up (2026-10-16)
+
+The M615A run used the established visible GUI M335 no-teleport profile. Its
+preflight host CPU median/p95 was 9.8/39.8%, but runtime rose to 73.7/100/100%
+(median/p95/max), so do not use it for performance acceptance. It exited normally.
+At focus `(-14,3)`, drawable chunk `(-19,2,5)` had current light revision 1604
+but geometry `desired=4..9 / published=3`; the world gate denied 66 attempts at
+h5 without creating an owner. A stale-light debt event for that coord was queued
+then cleared without admission. The flight log recorded zero `gpu=1` witnesses.
+
+M616 changes only this unowned drawable geometry-debt admission path in the h5
+approach ring. To verify, commit the change before launching the runner (its
+build-tree hash rejects tracked dirt), then repeat the same short profile and
+inspect action `geometry_debt_approach_reserved`, work ownership, published
+geometry revision, and post-stop focus debt. Require fresh CPU median <=50% and
+p95 <=75% before starting; also judge the run from runtime CPU, since M615A's
+preflight did not predict runtime load. Keep GPU-only witness ambiguity separate:
+the current chunk-wide proxy may mistake unrelated sky-lit blocks for proof that
+a dark cave face is stale. No long operator-monitoring flight is needed.
+
+M615A artifacts:
+
+- `suite_reports/engine_refactor/m615a_stale_debt_approach_ring_20261016.json`
+- `logs/perf_20261016-124231_41960.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-124224.41960`
