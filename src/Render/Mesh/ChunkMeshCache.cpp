@@ -5690,6 +5690,26 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     return 0;
   }
   LastGpuKickDeferReason_.clear();
+  const auto retain_published_light_halo =
+      [this](const PendingGpuApply &pending)
+  {
+    const auto mesh = GreedyCache.find(pending.coord);
+    if (mesh == GreedyCache.end())
+    {
+      return;
+    }
+    mesh->second.MeshedLightHaloSignaturesValid =
+        pending.snapshot.inputStampsValid;
+    if (pending.snapshot.inputStampsValid)
+    {
+      mesh->second.MeshedLightHaloSignatures =
+          pending.snapshot.lightHaloSignatures;
+    }
+    else
+    {
+      mesh->second.MeshedLightHaloSignatures = {};
+    }
+  };
 
   using GpuProfileClock = std::chrono::steady_clock;
   static std::ofstream gpu_process_profile_file;
@@ -6236,6 +6256,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       if (committed)
       {
+        retain_published_light_halo(pending);
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
         ++finished;
@@ -6378,6 +6399,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (committed)
     {
+      retain_published_light_halo(pending);
       NoteGpuPipelineProgress(pending.coord);
       ++processed;
       ++finished;
@@ -6875,6 +6897,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       if (committed)
       {
+        retain_published_light_halo(pending);
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
         ++finished;
