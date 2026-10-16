@@ -11216,12 +11216,15 @@ from the startup operation; `period_warmup_stamp` is a separate warm-period
 label. Do not infer cache state from `resume`, the report filename, or the period
 stamp.
 
-M622Z verified this procedure on existing `World_164` with a pinned product
-start `(120,56,56)`. It completed 35 periods, process exit 0, no timeout. The
-manifest reports `load`, 121/121 loaded spatial columns, zero generated
-columns, 5.371 seconds startup, and focus `(7,3)` to `(-3,3)`. Individual chunk
-file reads were zero, so record the actual loader fields rather than guessing
-how the world data is stored.
+M622Z exercised this procedure on existing `World_164` with requested product
+start `(120,56,56)`. The users file already held that position and its report
+predates an expected-versus-actual runtime start assertion, so matching focus
+does not prove that the start pin was honored. Commit `cd606d3d` adds that
+assertion. It completed 35 periods, process exit 0, no timeout. The manifest
+reports `load`, 121/121 loaded spatial columns, zero generated columns, 5.371
+seconds startup, and focus `(7,3)` to `(-3,3)`. Individual chunk file reads
+were zero, so record the actual loader fields rather than guessing how the
+world data is stored.
 
 To repeat the short saved-world screen-ray probe:
 
@@ -11260,3 +11263,59 @@ Historical artifacts:
 - M622Z report: `bin/suite_reports/engine_refactor/m622z_warm_world164_screenray_probe_20261016.json`.
 - M622Z parity and renderer analyses: `m622z_screen_ray_parity_20261016.json`, `m622z_renderer_pixel_trace_20261016.json`.
 - M622Z perf and INFO: `bin/logs/perf_20261016-205417_39284.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-205413.39284`.
+
+### M622AA–AE: product start and fixed-view relight probe
+
+M622AA/AB used the named `product-174657-far` route and moved the camera; their
+report names containing `stationary` are misleading. M622AA requested focus
+`(7,3)` but `World_192` started at `(-3,1)`; its route flag claimed a position
+pin, but no runtime check existed. M622AB verified its requested `(120,56,56)`
+start as expected/actual focus `(7,3)` with the user-position file pinned, then
+ended at `(-1,3)`. Use the checked manifest fields added by `cd606d3d` instead
+of trusting a request or route label.
+
+For a short static probe, keep the scenario empty. Do not pass
+`product-174657-far`: it selects the named long route even when `--no-fly` is
+present. This was the exact M622AE command setup (35 seconds, visible GUI,
+existing `World_164`, camera held in place):
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='110'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='130'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+python tools/flight_sim_run.py --world World_164 --require-existing-world `
+  --scenario '' --no-fly --visible --seconds 35 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622ae_world164_shortpath_relight_20261016.json `
+  --process-timeout 120
+```
+
+M622AC is the pre-fix baseline: 18 perf periods, focus pending-light median 36,
+and 28 seconds with near-zero relight drain. In its static pixel trace, 124 of
+1,600 probes had luma below 32; all joined drawable opaque surfaces. Chunks
+`(5,3,5)` and `(5,3,6)` stayed in preview during the captured interval.
+
+M622AD confirmed that cooperative load was not blocking streaming (`0` in all
+29 samples). It also showed the 5 ms streaming-budget short path: async scheduler
+tick was zero in 17/18 periods while pending light was 30–34 and a drawable
+underfeet mesh already existed.
+
+Commit `3b6ea7d7` services one queued relight capture from this early-return
+path when focus or underfeet light is pending. M622AE kept the camera fixed;
+focus pending-light median was 0 (maximum 5), post-stop pending median 0, and
+final relight apply was recorded in six frames. The outer preview chunks were no
+longer sampled as preview at the five-second follow-up. This is not final
+acceptance: the analyzer retained readiness and missing-mesh debt, reported no
+explicit demand-light-settlement event, and no operator framebuffer verdict was
+collected. Static no-fly reports also fail movement-related acceptance gates by
+design. Host CPU is logged for context only and never decides whether the run
+starts.
+
+Keep flight probes short. After this fix, the next validation is one short
+visible no-teleport route on a freshly generated world, then replay that exact
+runtime world with `--require-existing-world`. Use the manifest's actual start
+focus and inspect pixel/relight traces at fixed coordinates; don't infer cold or
+warm provenance from the route name or report filename.

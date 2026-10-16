@@ -12001,10 +12001,13 @@ world (`World_189`), so M622V/W/X/Y were not a controlled cold/warm pair.
 
 M622Z is the first verified saved-world replay. It used the established short
 visible, no-teleport M335 route with `-RequireExistingWorld` against existing
-`World_164`, pinning the product start at `(120,56,56)`. The runtime confirmed
+`World_164`, requesting product start `(120,56,56)`. The runtime confirmed
 the requested world, `WorldLoadPerf kind=load`, all 121/121 spatial columns,
-zero generation columns, and a 5.371-second startup operation. The trace shows
-zero individual chunk files read; therefore report the observed loaded spatial
+zero generation columns, and a 5.371-second startup operation. The users file
+already held `(120,56,56)`, and this report predates an expected-versus-actual
+product-start assertion; the matching focus therefore did not prove that the
+pin was honored. Commit `cd606d3d` adds that runtime check. The trace shows zero
+individual chunk files read; therefore report the observed loaded spatial
 state and no-generation result without assuming the storage representation.
 The route completed 35 periods (process exit 0, no timeout); it covered focus
 `(7,3)` to `(-3,3)`.
@@ -12056,3 +12059,79 @@ M622Z report/perf/INFO: `m622z_warm_world164_screenray_probe_20261016.json`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-205413.39284`. Pixel
 analyses: `m622z_screen_ray_parity_20261016.json` and
 `m622z_renderer_pixel_trace_20261016.json`.
+
+### M622AA–AE: start verification and the relight budget exit
+
+M622AA exposed a harness error. The requested start `(120,56,56)` implies focus
+`(7,3)`, but the runtime on `World_192` started at `(-3,1)` and then moved to
+`(-11,1)`. Although the route record said `product_start_position_pinned=true`,
+the old report did not record expected and actual product-start focuses, so it
+did not prove runtime placement. Commit `cd606d3d` now records both values and
+fails the start check when they differ.
+The report name contains `stationary`, but the runtime focus proves this was a
+moving scenario.
+
+M622AB used existing `World_164` and the moving product route. Its manifest
+verified requested start `(120,56,56)`, expected/actual focus `(7,3)`, and a
+successful user-position-file pin; focus later moved to `(-1,3)`. Its 2,740
+pixel probes included 74 low-luminance samples;
+all 74 joined drawable opaque surfaces, with zero missing opaque-surface joins
+or light-revision mismatches. The paired screen-ray trace recorded 400 stream
+rays, 100 exact joins, and 53 matching opaque-hit blocks. No same-view preview
+transition could be measured while the camera moved. The process completed, but
+non-CPU readiness/stop gates failed and no operator framebuffer verdict was
+recorded. This is evidence against a sampled geometric gap at those locations,
+not proof that the whole view was correct.
+
+M622AC then held the camera still on `World_164` for 35 seconds. Focus remained
+`(7,3)`. Of 1,600 pixel probes, 124 had final luma below 32; all joined drawable
+opaque surfaces, with no missing joins or light-revision mismatch. Two outer
+chunks, `(5,3,5)` and `(5,3,6)`, remained in preview in every captured sample
+through the run; their horizontal columns were two and three chunks from focus,
+near the fog boundary. The trace recorded no light-settlement event for them.
+These are shader-light-state and queue witnesses, not an operator verdict or a
+confirmed black pixel gap. In the same run the focus pending-light median was
+36, deferred-far peak 34, and near-zero relight drain while visible-black was
+28 seconds. `visual_holes_rate` was zero while the broader readiness debt rate
+was one, so the readiness proxy must not be described as pixel holes.
+
+M622AD added `cooperative_streaming_tick_blocked` to each perf sample. It was
+zero in all 29 samples, excluding the cooperative load gate as the reason for
+the steady-state stall. A different early return was visible: in 17/18 period
+samples the async scheduler tick was zero, pre-scheduler work had a median of
+about 7.1 ms against the 5 ms streaming budget, `focus_missing_mesh` was zero,
+and the underfeet mesh existed while focus pending-light remained 30–34. The
+normal relight capture drain sits after that early-return branch. This is the
+identified starvation path: light debt can remain while the mesh is drawable,
+so the old early-return predicate skipped its only steady-state capture path.
+
+Commit `3b6ea7d7` adds a narrow short-path service. When the streaming budget
+early return fires and near-focus or underfeet light is pending, it drains at
+most one already-queued relight capture before returning. The drain's existing
+hot-frame and wall-time checks remain active; the full scheduler still returns
+early. A new 35-second static M622AE run kept the same `World_164` focus `(7,3)`.
+It recorded `pending_light_focus` median 0 (maximum 5), post-stop pending median
+0, six frames with final relight apply, and no visible-mesh proxy holes. The
+preview-pixel trace had 1,440 probes and 147 low-luminance samples; all joined
+drawable opaque surfaces, with no missing surface joins or revision mismatches.
+The outer chunks `(5,3,5)` and `(5,3,6)` were no longer sampled as preview by
+the five-second follow-up probe. However, the trace still recorded zero
+explicit demand-light-settlement events, the report retained readiness debt and
+post-stop missing-mesh debt, and no operator framebuffer verdict was recorded.
+Treat this as evidence the drain fix services the stranded light debt, not as
+final acceptance.
+
+The comparison is not a strict A/B: saved-world state and host load varied.
+Host CPU is retained only as context and never gates a run. M622AE had host CPU
+median/p95/max of 59.6/97.2/98.8% while app CPU on machine capacity was
+22.1/32.4/36.6%; the test still ran. Only Release builds were used; no tests
+were run.
+
+Next validation is one short visible route from a freshly generated world,
+followed by a `-RequireExistingWorld` replay of that exact runtime world. Check
+the expected/actual start focus, pending-light and relight-apply progress, and
+pixel preview transitions at the same fixed probes. Then repeat a short segment
+of the established M335 route to check moving-focus fairness. Keep the CPU gate
+disabled and do not use a long operator-monitoring flight. M622AA/AB–AE reports,
+pixel analyses, perf files, and INFO logs are listed in the diagnostic runbook
+and flight-script catalog.

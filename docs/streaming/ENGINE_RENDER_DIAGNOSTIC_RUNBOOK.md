@@ -1332,7 +1332,10 @@ M622V/W/X/Y do not form a controlled cold/warm pair.
 
 M622Z is the first verified saved-world replay. It used existing `World_164`,
 `-RequireExistingWorld`, the established short visible no-teleport M335 route,
-and a pinned `(120,56,56)` product start. Its manifest and INFO log agree on
+and requested `(120,56,56)` as the product start. The users file already held
+that position and the report predates a runtime expected-versus-actual start
+assertion, so its matching focus did not prove the pin was honored. The later
+`cd606d3d` runner change checks that explicitly. Its manifest and INFO log agree on
 requested/runtime world `World_164` and `WorldLoadPerf kind=load`: 121/121
 spatial columns were present, zero generation columns ran, and startup took
 5.371 seconds. The loader read zero individual chunk files, so use the recorded
@@ -1372,3 +1375,64 @@ analysis
 `bin/suite_reports/engine_refactor/m622z_renderer_pixel_trace_20261016.json`,
 perf `bin/logs/perf_20261016-205417_39284.jsonl`, and INFO
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-205413.39284`.
+
+### M622AA–AE: start validation and relight short-path diagnosis
+
+M622AA requested a product start whose focus should be `(7,3)`, but the
+`World_192` runtime started at `(-3,1)` and moved to `(-11,1)`. Although the
+route record said `product_start_position_pinned=true`, the report had no
+expected-versus-actual start fields; this is a failed pin verification even
+though process exit was zero. Its filename says `stationary`, but it was a
+moving product route. Commit `cd606d3d` adds actual runtime focus verification.
+
+M622AB also used a moving product route on `World_164`. Its manifest verified
+requested start `(120,56,56)`, expected/actual focus `(7,3)`, and a successful
+user-position-file pin; the route later moved to `(-1,3)`. The pixel trace had
+2,740 probes, 74 low-luminance samples, all
+attached to drawable opaque depth; there were no missing surface joins or
+light-revision mismatches. The paired trace had 400 streaming rays and 100
+exact joins, with 53 matching opaque-hit blocks. Since the camera moved, it did
+not measure preview settlement at one fixed view. It is not a static lighting
+probe or a complete framebuffer verdict.
+
+M622AC was a 35-second fixed-camera `--no-fly` probe on existing `World_164`,
+focus `(7,3)`. It produced 1,600 pixel probes; 124 were low-luminance, all
+joined drawable opaque surfaces. No mesh-ray gap or light-revision mismatch
+was sampled. Chunks `(5,3,5)` and `(5,3,6)` remained preview through the captured
+interval, while focus pending-light median was 36 and relight drain was near
+zero for 28 seconds. This is the baseline for the short-path change.
+
+M622AD added `cooperative_streaming_tick_blocked` to perf samples. It stayed
+zero across 29 samples. In 17/18 periods the async scheduler did not tick after
+pre-scheduler work exceeded the 5 ms budget; `focus_missing_mesh=0`, the
+underfeet mesh existed, and pending-light was 30–34. Since the normal capture
+drain follows that early return, the queue could be stranded without a coop
+block. Keep this field when collecting future traces.
+
+Commit `3b6ea7d7` now services at most one relight capture on that early-return
+path when near-focus or underfeet light debt exists. M622AE kept focus `(7,3)`
+for 35 seconds. Pending-light median fell from 34 in M622AD to 0 (max 5),
+post-stop pending median was 0, and final relight apply was recorded in six
+frames.
+The renderer trace had 1,440 probes and 147 low-luminance samples, all on
+drawable opaque surfaces, with no missing surface joins or light revision
+mismatch. The two outer chunks were no longer sampled as preview at the
+five-second follow-up. The analyzer still found readiness and mesh debt, and
+recorded no explicit demand-light-settlement event. No operator verdict was
+captured, so this is a promising mechanism check, not acceptance.
+
+The M622AC/AD/AE reports use an empty scenario with `--no-fly`; the analyzer's
+flight acceptance gates therefore fail by design on movement-related metrics.
+Do not run `--scenario product-174657-far` for a short static trace: that named
+scenario supplies its long route timing even with `--no-fly`. Keep host CPU as
+context only; the M622AE host reached 98.8%, but the run was not gated or
+withheld. See the exact short probe command in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+Artifacts:
+
+- M622AA report/perf/INFO: `m622aa_world192_stationary_light_trace_20261016.json`, `perf_20261016-210605_14756.jsonl`, and `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-210601.14756`.
+- M622AB report/perf/INFO: `m622ab_world164_stationary_light_trace_20261016.json`, `perf_20261016-211730_48924.jsonl`, and `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-211726.48924`.
+- M622AB pixel and parity analyses: `m622ab_renderer_pixel_trace_20261016.json`, `m622ab_screen_ray_parity_20261016.json`.
+- M622AC report/perf/INFO/pixel analysis: `m622ac_world164_stationary_light_trace_20261016.json`, `perf_20261016-212350_40976.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-212347.40976`, and `m622ac_renderer_pixel_trace_20261016.json`.
+- M622AD report/perf/INFO: `m622ad_world164_coop_tick_light_trace_20261016.json`, `perf_20261016-213741_41508.jsonl`, and `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-213736.41508`.
+- M622AE report/perf/INFO/pixel analysis: `m622ae_world164_shortpath_relight_20261016.json`, `perf_20261016-214318_46276.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-214314.46276`, and `m622ae_renderer_pixel_trace_20261016.json`.
