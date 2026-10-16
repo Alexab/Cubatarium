@@ -11152,3 +11152,55 @@ Artifacts:
 - Report: `bin/suite_reports/engine_refactor/m622u_stable_face_debt_trace_20261016.json`.
 - Perf: `bin/logs/perf_20261016-193322_30696.jsonl`.
 - INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-193318.30696`.
+
+### M622V: frustum and camera-band peak correlation
+
+The run used the same short visible, no-teleport route on a cold world. Keep
+the CPU counters as context; there is no CPU-load preflight gate.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622V_FrustumStableFaceDebt_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622V `
+  -Report bin/suite_reports/engine_refactor/m622v_frustum_stable_face_debt_20261016.json
+```
+
+M622V completed 35 periods (`process_rc=0`, no timeout) on runtime `World_189`;
+the analyzer returned `pass=false`. The stable-face-debt field appeared in the
+frustum and peak render probes. Of 74 stable-debt frustum rows, 72 had ready
+refs and visible MDI work. Two had no ready ref or visible command, but their
+nearest AABB distance was about 79 units against fog end 32, and both had a
+repair ticket.
+
+Sixteen unique projected peak targets all obtained an accepted mesh schedule
+within 27 frames, and each had a drawable mesh by the end of its 64-frame
+scheduler watch. Eleven still had priority-remesh queue entries aged 41–60
+frames; five had no dirty queue. Among the 151 frustum rows without render-ready
+refs, 22 were within 32 units. Four samples across three coordinates had an
+active FirstMesh ticket (queue age at most seven frames); same-incarnation
+lifecycle traces later showed publication for each target. Eighteen other
+near samples had a satisfying mesh despite no drawable batch. No selected pixel
+ray hit these target chunks, so these traces show scheduler progress, not
+complete pixel coverage.
+
+There were 320 peak-triggered `glReadPixels` samples and no exact voxel-mesh
+triangle gaps. The 36 provisional opaque-depth mismatches over the full 2,960
+pixel samples were beyond fog end (44.7–56.8 units versus 32); all nine
+unloaded-before-hit samples were also beyond fog end. The pixel grid did not
+hit the camera-band target chunks, so do not treat these candidates as a
+visible defect without a target-specific pixel or exact screen-ray witness.
+Next, rerun this same short route on the saved
+`World_M622V_FrustumStableFaceDebt_20261016` to compare disk-backed warm load
+with the cold run. See the runbook for interpretation and limits.
+
+Artifacts:
+
+- Report: `bin/suite_reports/engine_refactor/m622v_frustum_stable_face_debt_20261016.json`.
+- Perf: `bin/logs/perf_20261016-194951_22784.jsonl`.
+- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-194947.22784`.

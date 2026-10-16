@@ -3478,6 +3478,8 @@ void NoteFrustumCoverageGaps(
     record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
     record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
     record.frame_epoch = frame_epoch;
+    record.stable_published_face_debt =
+        world.HasStablePublishedFaceDebt(coord) ? 1u : 0u;
     if (candidate.peak_kind != 0)
     {
       fill_projected_screen_rect(coord, record);

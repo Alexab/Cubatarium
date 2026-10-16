@@ -5115,6 +5115,8 @@ void UFramePerfMonitor::Shutdown()
                  << ((r.renderer_gate_flags & (1u << 5)) ? 1 : 0)
                  << ",\"draw_gate_ready\":"
                  << static_cast<int>(r.draw_gate_ready)
+                 << ",\"stable_published_face_debt\":"
+                 << static_cast<int>(r.stable_published_face_debt)
                  << ",\"runtime_cull_visible\":"
                  << static_cast<int>(r.renderer_runtime_cull_visible)
                  << ",\"column_draw_ok\":"

@@ -1273,3 +1273,56 @@ operator-monitoring flight for this question.
 M622U report/perf/INFO: `m622u_stable_face_debt_trace_20261016.json`,
 `perf_20261016-193322_30696.jsonl`, and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-193318.30696`.
+
+### M622V: frustum, peak lifecycle, and sparse pixel evidence
+
+M622V adds `stable_published_face_debt` to `view_frustum_coverage_trace` and
+`camera_band_peak_render_probe`. The marker is a diagnostic classification;
+do not equate it with a pixel defect. In the short cold `World_189` M335 run,
+74/256 broad-frustum samples had stable face debt. Seventy-two passed drawable,
+render-ready, and visible-MDI checks. The two exceptions had a repair ticket,
+no ready ref or visible MDI command, and nearest AABB distance about 79 units;
+the measured fog end was 32.
+
+There were 151/256 samples without a render-ready ref. Twenty-two were within
+32 units of the camera, across seven coordinates. All had no drawable mesh;
+18 were mesh-satisfying, and four samples across three coordinates had
+`MissingMesh` plus an active FirstMesh ticket with queue age at most seven
+frames. Same-incarnation lifecycle rows later ended in successful publication
+for those three targets at frames 889–962. These are owned startup samples, not
+ownerless queue debt. No selected pixel ray hit these target chunks.
+
+The 19 camera-band render rows represented 16 unique chunks. Eighteen rows
+were non-stable exact-frustum candidates; their rectangles are conservative
+projected chunk AABBs. Scheduler traces show all 16 unique targets eventually
+had an accepted mesh schedule within 27 frames (median 14). At the last sample
+of their 64-frame watch, all 16 had drawable meshes; 11 still had priority
+remesh entries aged 41–60 frames, and five had no dirty entry. Scheduler
+admission and drawable presence establish progress, not that every pixel in a
+rectangle was covered.
+
+The pixel probe used `glReadPixels` on 320 pixels in the four peak-triggered
+frames. It found zero exact voxel-mesh triangle gaps. Across the 2,960 pixel
+samples, 36 provisional opaque-depth mismatches were all farther than the
+configured fog end (44.7–56.8 versus 32); all nine unloaded-before-hit rays
+were farther still (59.1–63.1). These are outside the measured fog horizon and
+do not support an in-fog hole. Sampling is sparse: no sampled ray hit the
+camera-band candidate chunk itself, so use a targeted projected-pixel or exact
+screen-ray witness before calling the candidate visible or missing.
+
+Analyzer `pass=false` is retained in the report. Relevant values are
+`visual_holes_rate=0.0909`, `post_stop_mesh_missing_max=0`,
+`post_stop_readiness_debt_max=31`, and
+`post_stop_visible_black_stalled_max=1`. The analyzer's readiness and stop
+gates describe unfinished work, not a framebuffer verdict. Host CPU remains a
+context metric only and must not gate a run.
+
+Next: repeat the same short M335 route against the saved
+`World_M622V_FrustumStableFaceDebt_20261016` to test
+disk-backed warm load, then compare its in-fog FirstMesh lifecycle and pixel
+gap counters with M622V. Keep CPU informational. Do not use a long
+operator-monitoring flight for this question.
+
+Artifacts: report `bin/suite_reports/engine_refactor/m622v_frustum_stable_face_debt_20261016.json`,
+perf `bin/logs/perf_20261016-194951_22784.jsonl`, INFO
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-194947.22784`.

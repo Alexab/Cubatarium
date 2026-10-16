@@ -288,7 +288,7 @@ struct VisualBlackTraceRecord
   uint8_t face_debt_mask{0};
   uint8_t overlay_face_debt_mask{0};
   uint8_t peer_face_debt_mask{0};
-  /// sample_kind=1: current published mesh whose only unsettled state is
+  /// sample_kind=1/8/16: current published mesh whose only unsettled state is
   /// face debt.
   uint8_t stable_published_face_debt{0};
   /// sample_kind=1: per-face debt requirements and six-face neighbor census.

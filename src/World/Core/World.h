@@ -1378,6 +1378,8 @@ public:
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;
   FocusRingVisualCensus GetFocusRingVisualCensus() const;
+  /// True when current geometry/light publication has only unsettled face debt.
+  bool HasStablePublishedFaceDebt(glm::ivec3 coord) const;
   /// A37 H2: owned desire→admit for unfinished keys (replaces Kick as writer).
   /// Returns number of NewDemand/MarkDirty admits this call.
   int AdmitUnfinishedVisualDemand(int max_n = 8);
@@ -1477,8 +1479,7 @@ public:
 private:
   void AdjustColumnEmergeTelemetryCount(ColumnEmergeState state, int delta);
 
-  /// Requeue a live per-slice visual demand without minting another mesh revision.
-  bool HasStablePublishedFaceDebt(glm::ivec3 coord) const;
+  /// Keep generic FirstMesh recovery off stable peer-waiting coverage debt.
   void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
 
   friend class UWorldCooperativeSession;

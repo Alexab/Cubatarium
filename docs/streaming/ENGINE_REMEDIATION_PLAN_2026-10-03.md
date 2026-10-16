@@ -11941,3 +11941,60 @@ out of this phase.
 Report: `bin/suite_reports/engine_refactor/m622u_stable_face_debt_trace_20261016.json`.
 Perf: `bin/logs/perf_20261016-193322_30696.jsonl`. INFO:
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-193318.30696`.
+
+### M622V: correlate camera-band peaks with renderer and scheduler state
+
+M622V extends the stable-face-debt marker to exact-frustum and camera-band
+render probes. The Release build and static executable verification passed.
+The established short visible M335 flight completed 35 periods on cold runtime
+`World_189` (`process_rc=0`, no timeout); analyzer `pass=false`. The run recorded
+`visual_holes_rate=0.0909`, `fly_visible_black_max=17`,
+`post_stop_mesh_missing_max=0`, `post_stop_readiness_debt_max=31`, and
+`post_stop_visible_black_stalled_max=1`. Readiness debt remains a proxy, and
+there was no operator framebuffer verdict.
+
+Of 256 `view_frustum_coverage_trace` rows, 74 carried stable published face
+debt. Seventy-two passed the render-ready gate and had visible MDI work. Two
+were cull-visible but had no render-ready ref or visible MDI command; both had
+a repair ticket and their nearest chunk-AABB points were about 79 units from
+the camera, while fog ended at 32. Stable face debt can therefore overlap the
+broad camera frustum without being an in-fog render failure. This still does
+not prove pixel coverage. The camera-band probe recorded 19 rows across 16
+unique coordinates: 18 non-stable peaks were exact-frustum candidates with
+conservative projected rectangles. Every unique target received an accepted
+scheduler outcome within 0–27 frames (median 14). At the end of the 64-frame
+watch, all 16 had drawable meshes; 11 remained in priority-remesh queues aged
+41–60 frames, and five had no dirty queue.
+
+There were also 151 frustum rows without a render-ready ref. Twenty-two were
+within 32 units of the camera across seven coordinates. All 22 had no drawable
+mesh; 18 were still classified as mesh-satisfying, while four samples across
+three coordinates reported `MissingMesh` with an active FirstMesh ticket and
+queue age no greater than seven frames. Same-incarnation lifecycle traces later
+showed successful publication for those three targets at frames 889–962. This
+is evidence of owned cold-start work and eventual progress, not a sampled
+framebuffer gap. The selected pixel grid did not hit these target chunks.
+
+The 320 peak-triggered pixel samples contain no exact voxel-mesh triangle gap.
+Across all 2,960 sampled pixels, 36 provisional voxel-to-opaque-depth
+mismatches placed the voxel hit 44.7–56.8 units away while fog ended at 32;
+all nine rays that crossed an unloaded chunk before a hit were also beyond the
+fog end. This short run provides no pixel-level evidence of a visible streaming
+hole. The grid is sparse and its sampled rays did not hit the candidate chunks,
+so it cannot clear every projected area. Keep CPU usage informational, without
+a hard admission gate.
+
+**Current next step:** repeat the established short route on the saved
+`World_M622V_FrustumStableFaceDebt_20261016` from M622V. This exercises
+disk-backed warm load. Compare the in-fog FirstMesh candidates, their
+same-incarnation lifecycle, and exact pixel gap counters with the cold M622V
+run. Do not gate admission on CPU load. If the warm run also shows no in-fog
+exact mesh/depth gap and owned work converges, stop changing renderer queue
+policy on the strength of readiness proxies. Only reopen that policy if a
+target remains missing at a sampled pixel after its bounded lifecycle window
+or repeats an in-fog exact mesh/depth gap. Avoid a long operator-monitoring
+flight.
+
+M622V report/perf/INFO: `m622v_frustum_stable_face_debt_20261016.json`,
+`perf_20261016-194951_22784.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-194947.22784`.
