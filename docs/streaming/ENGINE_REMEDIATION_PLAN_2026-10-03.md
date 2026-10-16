@@ -11512,3 +11512,75 @@ window, focusing on a matching publication or durable owner for `(3,4,3)`.
 Only run another compact route if needed to exercise a different caller or
 validate that exact lifecycle. Report:
 `bin/suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`.
+
+### M622G: startup lifecycle retention and remaining dependency question
+
+Commit `1a8b899c` retains bounded worker/GPU and demand-owner traces for
+open-sky source/dependent coordinates independently of the generic watched
+rings. M622G verified the new trace on the same short visible route: 131 job
+lifecycle rows across 18 coordinates and 339 demand transitions across 21.
+The run completed 35 periods (`process_rc=0`); suite `pass=false` on
+non-CPU gates. Host CPU was 99.8/100/100% median/p95/max, while app CPU was
+15.25/31.25/40.63% of machine capacity. No CPU preflight was used or needed.
+
+The first effective enter snapshot changed source chunks `(3,3,2)` and
+`(3,3,3)`; a later pass changed `(3,3,1)` and `(3,3,2)`. The two sources with
+retained job lifecycle completed matching publications: `(3,3,2)` attempt 45
+at frame 1 (geometry/light 5/19) and `(3,3,1)` attempt 52 at frame 4
+(geometry/light 6/5). The dependency invalidation drain reported `applied`
+for `(3,3,3)` and `(3,4,3)`, with durable dirty-revision bumps captured at
+epoch 0. No valid attempt/publication closure is present for those dependent
+chunks; later zero-identity install rows must be excluded. Since both x=3
+dependents were behind the camera on the westbound route, this does not establish
+a visible defect. Static review found that the ordinary dependency set retires
+a coordinate as soon as a Dirty/remesh owner exists, even though downstream
+queue pressure can later prune that owner. The existing stale-light debt set is
+the durable lane that can preserve a proven published-halo mismatch until the
+repair really publishes.
+
+M622G report: `bin/suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20261016.json`.
+Trace output names are `open_sky_lifecycle_trace` and
+`open_sky_demand_transition_trace`; enabling them requires
+`CUBA_VISUAL_BLACK_TRACE=1` plus the existing relight audit for queue/drain
+context.
+
+### M622H–M622I: retain published light-halo repair debt
+
+Commit `71525147` adds a durable stale-light remesh ticket when a dependency
+invalidation proves that the dependent drawable mesh's retained light-halo
+signature no longer matches the changed neighbor. The repair ticket is
+independent of the ordinary Dirty owner, remains while lighting is unsettled
+or another owner is active, and retires only after own-light revisions and the
+published halo are current. The source-specific comparison checks only the
+changed neighbor's signature. Commit `5c91ce32` moves settled-demand and
+active-owner checks ahead of the full completion hash, avoiding repeated
+26-neighbor hashing while a mesh/GPU owner is already working. Both changes
+preserve existing shared admission and one-slot repair bounds; they do not add
+a per-frame scan over all cached chunks.
+
+M622H exercised an earlier full-state comparison on a fresh world. It logged
+659 `published_halo_changed` queue rows; 392 unique coordinates appeared, of
+which 285 later had a current-halo publication row and 107 had no such closure
+in the short observation. M622I exercised the source-specific comparison on a
+second fresh world: 846 queue rows covered 461 unique coordinates; 323 unique
+coordinates later closed with a publication carrying `halo_state=1`, while 138
+had no observed closure before the route ended. These closures are INFO
+lifecycle evidence, not proof that all debt originated from this cause or that
+the operator saw a defect. Unclosed coordinates may have remained outside the
+active route/focus window.
+
+M622I completed 35 periods (`process_rc=0`, no timeout). The analyzer remained
+`pass=false` on non-CPU gates; `visual_holes_rate=0.0909`, fly visible-black
+max 14, post-stop visible-black max 1, readiness debt max 34, and median frame
+wall time 46.70 ms. No operator framebuffer verdict was captured. Host CPU was
+86.9/100/100% median/p95/max while app CPU was 16.45/39.70/50.85% of machine
+capacity. This run must not be rejected on host CPU; the report's failures are
+the engine/visual readiness and frame gates shown in the report.
+
+Commit `5c91ce32` was Release-compiled and static executable verification
+passed after M622I. The final owner-before-hash ordering has not yet had a
+separate runtime route. Use one short same-route diagnostic only if that
+runtime evidence is needed; keep all CPU samples advisory.
+
+Reports: `bin/suite_reports/engine_refactor/m622h_halo_debt_retention_20261016.json`
+and `bin/suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json`.

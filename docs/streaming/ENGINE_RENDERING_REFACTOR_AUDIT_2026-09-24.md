@@ -5850,3 +5850,64 @@ route only if instrumentation cannot answer that lifecycle or a different
 caller needs runtime coverage. Detailed report:
 `bin/suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`;
 the experiment log index is maintained in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622G: pinned startup lifecycle trace
+
+The general `visual_lifecycle_trace` and `demand_transition_trace` rings had
+reached their fixed capacities in M622F, obscuring early enter-snapshot work.
+Commit `1a8b899c` adds bounded open-sky-specific job and demand rings and pins
+the changed source/dependent coordinates for the lifetime of the trace. Release
+build passed. The same short visible route completed 35 periods; the suite
+failed non-CPU gates. Host CPU was 99.8/100/100% median/p95/max and app CPU was
+15.25/31.25/40.63% machine capacity, reinforcing that CPU totals are not a run
+gate. There is no operator framebuffer verdict.
+
+The dedicated trace retained 131 lifecycle rows for 18 chunks and 339 demand
+transitions for 21 chunks, including epoch-zero events. Two changed source
+chunks `(3,3,2)` and `(3,3,1)` have matching job publications at frames 1 and
+4, respectively. The two observed dependency drains applied for `(3,3,3)` and
+`(3,4,3)`, with their revision bumps retained; neither has a valid
+attempt/publication closure in the trace. The later rows with zero world
+identity and attempt ID are stale/default demand records, not successful
+publication proof. Both x=3 coordinates were behind the camera as the tested
+route headed west. Determine from owner and scheduler state whether their
+Dirty work remained durably queued outside visual focus; do not classify this
+as an on-screen rendering regression without a route that brings them into
+view.
+
+M622G report:
+`bin/suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20261016.json`.
+The flight wrapper and raw log paths are documented in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622H–M622I: published halo mismatch can outlive its ordinary owner
+
+The ordinary mesh-dependency queue only needs to transfer an invalidation to
+an existing Dirty/remesh owner, so it erases its entry as soon as that owner is
+observed. Queue ownership alone does not prove that the owner survives later
+queue pruning. A retained published-light-halo signature provides a direct
+condition for preserving repair debt: the dependent mesh sampled a changed
+neighbor boundary and remains drawable against that old input.
+
+Commit `71525147` records that condition in the existing durable stale-light
+remesh set. It checks the exact changed neighbor's sampled signature, waits for
+settled demand and the absence of another active owner, and closes the ticket
+only when the own light revisions and all published halo signatures match.
+The one-neighbor check avoids recomputing all 26 signatures at each source
+invalidation. Commit `5c91ce32` further defers the full completion hash until
+the dependent has settled light and no active Dirty, CPU/GPU mesh owner.
+
+On M622I, 846 queue events represented 461 coordinates; 323 coordinates later
+had a `stale_light_debt event=published` with `halo_state=1`. Another 138 had
+no such closure in the bounded short route. The event-order join proves that
+some durable tickets reached a current-halo closure after being queued. It does
+not establish why every unclosed coordinate remained pending, nor does it
+establish a pixel-level defect. A route that brings a selected unresolved
+coordinate into active focus is the next runtime follow-up if needed.
+
+The analyzer was diagnostic only: process completed without timeout, but
+`pass=false` on frame/readiness and other non-CPU gates. Host CPU median/p95/max
+was 86.9/100/100%; app CPU was 16.45/39.70/50.85% of machine capacity. Host CPU
+must remain advisory because Codex and other tools share the host total. There
+is no operator framebuffer verdict. M622I report:
+`bin/suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json`.

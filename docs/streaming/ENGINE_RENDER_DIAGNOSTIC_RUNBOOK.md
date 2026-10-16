@@ -142,6 +142,12 @@ cd bin
 | `tools/flight_sim_fixed_day.py` | Фиксирует время суток для воспроизводимых сравнений цвета/освещения. |
 | `tools/capture_flight_sim_window.ps1` | Сохраняет визуальные window-captures; смотрите рядом с app-side probes, учитывая compositor и overlay. |
 
+Host CPU is context only. Never block a diagnostic flight, mark it invalid, or
+set its PASS/FAIL from total host load: Codex, a compiler, and other processes
+share that number with the game. Record host and app CPU samples when useful,
+but interpret engine performance from the application's own frame/stage
+measurements and compare only runs with adequate measurement conditions.
+
 Для каждого run сохраняйте perf JSONL, flight report, pixel-join JSON, Release
 commit SHA, world/seed, фактический camera-x диапазон, render distance, fog
 margin/pull-in и краткую отметку пользователя о видимой воде. Не объединяйте
@@ -1020,3 +1026,27 @@ short diagnostic should preserve coordinate-scoped lifecycle evidence through
 the pre-first-frame window, especially to resolve `(3,4,3)`, then exercise the
 other two callsites only if a compact route naturally reaches them. Do not add
 a host-CPU admission threshold.
+
+### M622G: startup trace retention verified
+
+Commit `1a8b899c` adds bounded open-sky-specific lifecycle and demand-owner
+rings so startup dependency coordinates survive saturation of the generic
+8,192-row ring. The same short, visible route completed 35 periods. Analyzer
+acceptance remained false on non-CPU gates; host CPU was 99.8/100/100%
+median/p95/max while game CPU was 15.25/31.25/40.63% of machine capacity.
+CPU remains contextual only. No operator framebuffer verdict was recorded.
+
+The new trace emitted 131 worker/GPU lifecycle rows for 18 coordinates and
+339 demand transitions for 21 coordinates. It preserved frame-zero source and
+dependent activity. Source meshes `(3,3,2)` and `(3,3,1)` reached matching
+published geometry/light revisions at frames 1 and 4. Dependencies `(3,3,3)`
+and `(3,4,3)` were drained as `applied` and had epoch-zero revision bumps, but
+no valid build attempt/publication closure was retained. Later zero-identity
+`install_published` rows are not valid completion evidence. Both targets were
+behind the westbound camera path, so investigate owner persistence and
+out-of-focus scheduling before treating this as a rendering defect.
+
+Report: `bin/suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20261016.json`.
+Raw logs are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`. For subsequent
+diagnostics, preserve the short route and use the pinned trace to determine
+whether dirty ownership survives until a dependency enters the visual focus.

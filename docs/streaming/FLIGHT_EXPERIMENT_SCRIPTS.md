@@ -10631,8 +10631,162 @@ The next audit should retain coordinate-scoped lifecycle evidence for the
 pre-first-frame epoch-zero window, especially to establish a publication or
 durable owner for `(3,4,3)`. Do not gate a short diagnostic run on host CPU.
 
+### M622G: retain startup open-sky lifecycle
+
+Commit `1a8b899c` adds independent bounded traces for job lifecycle and render-
+demand transitions on source/dependent chunks touched by
+`enter_open_sky_boundary`. The existing watched rings had reached their 8,192
+record capacity in M622F. M622G repeated the same 35-period visible no-teleport
+route with `CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`; no CPU
+preflight or host-load gate was applied.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622G_OpenSkyLifecycleRetention_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20261016.json
+```
+
+The run completed (`process_rc=0`, 35 periods), while the analyzer returned
+`pass=false` on non-CPU performance/readiness gates. Host CPU was 99.8/100/100%
+median/p95/max; game CPU was 15.25/31.25/40.63% of machine capacity. This is
+another direct example that host utilization and the game's own utilization
+diverge. Proxy metrics were `visual_holes_rate=0.0303`, fly visible-black max
+6, post-stop visible-black max 1, and post-stop readiness debt max 44. No
+operator framebuffer verdict was captured.
+
+The new rings retained 131 `open_sky_lifecycle_trace` rows across 18 chunks and
+339 `open_sky_demand_transition_trace` rows across 21 chunks, including startup
+frame-zero state. The enter snapshot changed `(3,3,2)` and `(3,3,3)` on its
+first effective pass, then `(3,3,1)` and `(3,3,2)` on a later pass. The source
+chunks have successful lifecycle publications: `(3,3,2)` attempt 45 published
+geometry 5/light 19 at frame 1, and `(3,3,1)` attempt 52 published geometry
+6/light 5 at frame 4. This shows the startup source remesh is carried through
+publication.
+
+The dependency drain reported `applied` for `(3,3,3)` and `(3,4,3)`, and the
+pinned demand trace retained their epoch-zero mesh-revision bumps. It did not
+retain a valid attempt/publication closure for those dependent chunks; a later
+`install_published` record at frame 576/578 has zero world identity and attempt
+ID, so it is not evidence of a real publication. These x=3 targets lie behind
+the westbound route from start focus x=-2, so their lack of a build attempt in
+this run is not itself a visible defect. The next focused review should verify
+whether they retain a durable dirty owner and defer scheduling because they
+are outside the visual focus, without extending the operator flight.
+
+M622G report and raw artifacts:
+
+- `suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20261016.json`
+- `logs/perf_20261016-161557_21484.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-161549.21484`
+
+The new trace kinds are emitted only when the renderer visual trace is enabled;
+dependency cause and drain messages still require the relight audit flag.
+
 M622C artifacts:
 
 - `suite_reports/engine_refactor/m622c_halo_availability_20261016.json`
 - `logs/perf_20261016-150329_39812.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-150325.39812`
+
+### M622H: retain a proven stale published halo
+
+The first implementation queued durable remesh debt when the current published
+mesh's full halo signature differed from the loaded world's signatures. The
+route used a fresh world and the established 35-second visible M335 no-teleport
+segment. The first attempt was blocked by the runner's dirty-tree guard; the
+actual run used the supported `CUBA_ALLOW_DIRTY_AF=1` diagnostic override. Do
+not treat it as a clean A/B result.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622H_Cold_HaloDebt_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622H_HaloDebtRetention_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622h_halo_debt_retention_20261016.json
+```
+
+The app completed the 35-period route (`process_rc=0`, no timeout), though
+Windows briefly reported its window as not responding while frame and INFO
+logs continued to advance. The suite failed non-CPU gates; proxies were
+`visual_holes_rate=0.2727`, fly visible-black max 12, post-stop visible-black
+max 4, readiness debt max 37, and median wall time 51.09 ms. No operator
+framebuffer verdict was captured. Host CPU was 95/100/100% median/p95/max and
+app CPU was 15.93/35.65/45.89% of machine capacity; host CPU did not gate the
+route.
+
+The INFO log recorded 659 `published_halo_changed` queue rows over 392 unique
+coordinates. Of those, 285 had a later current-halo publication row and 107
+had no observed closure within this short route. This full-state comparison
+was then narrowed to the exact changed neighbor to avoid redundant signature
+work. Artifacts:
+
+- `suite_reports/engine_refactor/m622h_halo_debt_retention_20261016.json`
+- `logs/perf_20261016-163317_22696.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-163313.22696`
+
+### M622I: verify source-specific halo debt on a second fresh world
+
+Commit `71525147` compares only the published signature for the changed
+neighbor, queues a durable remesh ticket on proven mismatch, and closes debt
+only when the published halo matches. It uses the same route without a CPU
+preflight or host-load gate:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622I_Cold_OneNeighborHalo_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622I_OneNeighborHaloDebt_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json
+```
+
+The 35-period route completed (`process_rc=0`, no timeout); analyzer `pass`
+remained false on non-CPU gates. It recorded `visual_holes_rate=0.0909`, fly
+visible-black max 14, post-stop visible-black max 1, readiness max 34, and
+median wall time 46.70 ms. These metrics do not provide a framebuffer verdict,
+and the fresh-world runs are not a controlled A/B pair. There is no operator
+visual verdict. Host CPU was 86.9/100/100% median/p95/max; app CPU was
+16.45/39.70/50.85% of machine capacity. Keep host load informational only.
+
+The INFO trace recorded 846 `published_halo_changed` events on 461 unique
+coordinates. A later `stale_light_debt event=published` with `halo_state=1`
+was found for 323 queued coordinates; 138 had no observed closure by stop.
+This confirms durable current-halo closure for a subset while the remaining
+coordinates need owner/focus analysis. Commit `5c91ce32` subsequently moved
+settled-light and active-owner checks ahead of the expensive full-halo closure
+hash; this scheduling-order change has Release-build verification but no
+separate flight yet.
+
+Artifacts:
+
+- `suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json`
+- `logs/perf_20261016-164422_33324.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-164417.33324`
+
+Host CPU never blocks a diagnostic route or decides whether it passes. When
+Codex/build work is active it includes that work; record app CPU and game frame
+stages separately. The sampler script's `advisory_only` field is intentional.
