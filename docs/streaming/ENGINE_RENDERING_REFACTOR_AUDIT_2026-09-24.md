@@ -5791,6 +5791,26 @@ deferral, and 1,312 existing-owner coverage events. No operator framebuffer
 verdict is available. Runtime host CPU was 69.9/100/100% median/p95/max and is
 advisory, not an acceptance condition.
 
-The next instrumentation adds `frame_epoch` to dependency queue/drain events for
-a direct stale-witness chronology join. After the Release rebuild, repeat the
-same short route as M622E; no CPU threshold is required.
+Commit `45f04f6a` adds `frame_epoch` to dependency queue/drain events; M622E
+confirms direct frame joins. The flight completed with `process_rc=0`, 35
+periods, and 12 columns; the analyzer returned `pass=false` on non-CPU checks.
+Runtime host CPU 81.7/100/100% median/p95/max is advisory; app CPU was
+21.36/50.16/59.86% of machine capacity. There is no operator framebuffer
+verdict.
+
+M622E had 178 nonzero stale-light rows across 51 chunks (177 state 2, one state
+1 with stale own-light revision and frame 0). Nine rows across eight chunks
+had exact geometry/own-light agreement; every row joined to same-frame
+dependency queue/drain events. Six drains were applied and three were covered
+by existing ownership. Each exact witness had a matching successful
+publication within 8–31 frames. Three coordinates later had another stale
+sample alongside new relight activity and further lifecycle work, consistent
+with repeated neighbor-light changes and repair. Seven startup log events
+still had frame 0 and are not joinable; all nine exact witness joins had
+nonzero epochs. No open-sky or disk-slice cause occurred, leaving M623
+unverified at runtime.
+
+The next review should trace repeated light-change and publication cycles for
+the three re-staled coordinates and find a short scenario that actually
+exercises `ApplyEnterOpenSkyBoundary`. Keep CPU advisory and leave queue budgets
+unchanged until coordinate/frame evidence shows a persistent unresolved mesh.

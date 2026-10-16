@@ -926,7 +926,7 @@ The route completed (`process_rc=0`, 35 periods, 12 chunk columns). Runtime host
 
 The run recorded 340 `visual_black_trace` rows, 158 with nonzero CPU stale samples, and seven with equal desired/published geometry plus aligned own-light revisions. The focus-slice query was incorrectly guarded by pre-existing watch membership, while the separate per-column attribution writer did not query halo state at all. `d2869ef0` removes the watch guard only from the focus-slice writer; M622C later showed that most stale samples came from the uninstrumented attribution path. None of the M622A zero values establishes signature availability.
 
-`RelightAudit` confirms source-aware dependency events are emitted for watched chunks. The log contains procedural and relight causes, and drain outcomes including `covered_by_existing_owner` and `applied`. The old run cannot prove those owners captured the current halo because the halo state was omitted. Repeat only after a passing fresh CPU preflight; use M622A's same route/flags and inspect coordinate+frame rows.
+`RelightAudit` confirms source-aware dependency events are emitted for watched chunks. The log contains procedural and relight causes, and drain outcomes including `covered_by_existing_owner` and `applied`. The old run cannot prove those owners captured the current halo because the halo state was omitted. M622D later repeated the same route after the trace fixes; CPU preflight is advisory only.
 
 ### M622C finding and M622D gate
 
@@ -961,9 +961,27 @@ The observed dependency causes were `relight_light_change`,
 M623-specific path. Commit `2f95b9cc` remains a statically justified fix whose
 runtime effect is unverified.
 
-The INFO dependency events previously lacked a frame identifier, making exact
-chronology harder to join to `visual_black_trace`. The next diagnostic change
-adds `frame_epoch` to queue and drain events. Rebuild Release and repeat only
-the same short route as M622E; do not wait for a host CPU threshold. The JSON
-report is `bin/suite_reports/engine_refactor/m622d_halo_attribution_path_20261016.json`;
-raw traces are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+The INFO dependency events previously lacked a frame identifier. Commit
+`45f04f6a` adds `frame_epoch` to queue and drain events; M622E confirmed the
+field can be joined directly to stale-witness frames. Its short route completed
+with `process_rc=0` and 35 periods. The analyzer returned `pass=false` on
+non-CPU checks; CPU remained advisory. Runtime host CPU was 81.7/100/100%
+median/p95/max; app CPU was 21.36/50.16/59.86% of machine capacity.
+
+M622E produced 178 nonzero stale-light records over 51 chunks: 177 halo state
+2 and one state 1. The latter had stale own-light revision and `frame_epoch=0`,
+so it is not a seam witness. Nine rows over eight chunks had current geometry
+and own-light revisions; all nine had same-coordinate/same-frame dependency
+queue and drain events, then a matching publication within 8–31 frames. Six
+drains were `applied`, three `covered_by_existing_owner`. Three coordinates
+later became stale again alongside new relight activity, with subsequent
+publications in the lifecycle trace. This looks like repeated invalidation and
+repair, not a demonstrated permanently stale mesh. No operator framebuffer
+verdict was captured; no M623 open-sky cause occurred.
+
+The detailed JSON report is
+`bin/suite_reports/engine_refactor/m622e_dependency_frame_join_20261016.json`;
+raw perf and INFO traces are indexed in `FLIGHT_EXPERIMENT_SCRIPTS.md`. Next
+review the repeated light-change schedule for those three coordinates and
+exercise the open-sky path only in a scenario where that mutation actually
+occurs. Keep the diagnostic route short; no host CPU threshold is required.

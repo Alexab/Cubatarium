@@ -11420,7 +11420,7 @@ M622A emitted 340 visual-black trace rows, including 158 rows with a nonzero CPU
 
 The dependency audit did log watched `procedural_chunk_commit` and `relight_light_change` source→dependent entries and drain outcomes. Some relevant dependents were already Dirty and reported `covered_by_existing_owner`; others were newly queued and applied. Because the M622A halo values were not measured, these events cannot yet establish whether the existing owner captured the newest halo.
 
-M622A artifacts: `bin/suite_reports/engine_refactor/m622a_halo_stamp_lifecycle_20261016.json`, `bin/logs/perf_20261016-144017_33868.jsonl`, and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-144013.33868`. Re-run this same short route only after a fresh CPU preflight passes; the route and flags are documented below. Interpret the result by exact coordinate/frame, not by aggregate counts.
+M622A artifacts: `bin/suite_reports/engine_refactor/m622a_halo_stamp_lifecycle_20261016.json`, `bin/logs/perf_20261016-144017_33868.jsonl`, and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-144013.33868`. M622D later repeated this short route with corrected trace coverage; CPU preflight is now advisory only. Interpret the result by exact coordinate/frame, not by aggregate counts.
 
 ### M622C: stale-witness trace-path correction
 
@@ -11454,8 +11454,24 @@ live owner, and 1,312 covered by existing ownership. No
 `enter_open_sky_boundary` event was observed, leaving the M623-specific runtime
 path unverified. No operator framebuffer verdict is available.
 
-The next step adds `frame_epoch` to dependency queue/drain log events, rebuilds
-Release, and repeats the same short route as M622E. CPU sampling remains
-advisory: it must not block the run or determine its result. Use the joined
-coordinate/frame lifecycle to identify witnesses that remain stale after
-publication before changing scheduler budgets.
+M622E rebuilt Release and repeated the same route. It completed (`process_rc=0`,
+35 periods, 12 columns); the analyzer returned `pass=false` on non-CPU checks.
+Runtime host CPU was 81.7/100/100% median/p95/max and app CPU was
+21.36/50.16/59.86% of machine capacity. Both remain advisory.
+
+The trace contained 178 nonzero stale-light rows across 51 chunks: 177 had
+state 2 (changed published halo), and one had state 1 but stale own-light
+revisions and frame 0. Nine exact-geometry/own-light witnesses across eight
+chunks all joined to dependency queue/drain events at the same coordinate and
+frame. Six were applied and three covered by existing ownership; each had a
+matching later publication within 8–31 frames. Three coordinates became stale
+again after publication with new relight activity, followed by more lifecycle
+events. This is evidence of repeated invalidation and repair, not of a
+permanently stale mesh. No operator framebuffer verdict is available, and no
+open-sky or disk-slice cause occurred in this run.
+
+The frame join validates the new diagnostic and narrows the next review to the
+three repeated light-change coordinates and the unexercised M623 open-sky
+path. Keep CPU advisory, preserve the short route, and do not change scheduler
+budgets from aggregate counters alone. Full findings and M622E artifacts are in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`.

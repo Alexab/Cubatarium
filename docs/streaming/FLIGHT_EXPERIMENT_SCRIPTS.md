@@ -10527,10 +10527,9 @@ M622D artifacts:
 - `logs/perf_20261016-152255_14364.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-152251.14364`
 
-The following diagnostic adds `frame_epoch` to queued and drained dependency
-events so they can be joined directly to stale-witness frames. After the
-Release build, repeat only this same short route as M622E; no host CPU gate is
-required.
+Commit `45f04f6a` adds `frame_epoch` to queued and drained dependency events so
+they can be joined directly to stale-witness frames. The same short route was
+repeated as M622E; no host CPU gate was used.
 
 ```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
@@ -10546,6 +10545,48 @@ $env:CUBA_VISUAL_BLACK_TRACE='1'
   -PhaseId M622E_DependencyFrameJoin_20261016 `
   -Report bin/suite_reports/engine_refactor/m622e_dependency_frame_join_20261016.json
 ```
+
+M622E completed with `process_rc=0`, 35 periods, and 12 traveled chunk
+columns. The analyzer returned `pass=false` on non-CPU acceptance checks; this
+does not invalidate the run as a diagnostic. Runtime host CPU was
+81.7/100/100% median/p95/max; app CPU was 21.36/50.16/59.86% of machine
+capacity, all advisory. Proxies were `visual_holes_rate=0`, fly visible-black
+max 6, post-stop visible-black max 0, and post-stop readiness-debt/missing max
+40. No operator framebuffer verdict was recorded.
+
+The attribution trace contained 178 nonzero stale-light rows across 51 chunks.
+177 had a present cache entry, valid halo stamp, and state 2; one had state 1,
+but its own mesh light revision was stale (`meshed_light_rev=1`,
+`field_light_rev=3`) and its `frame_epoch` was 0, so it is not a current-halo
+seam witness. Nine rows across eight chunks had matching desired/published
+geometry and own-light revisions. Every one had dependency queue/drain events
+for the same coordinate and frame: six drained as `applied`, three as
+`covered_by_existing_owner`. A successful matching publication followed all
+nine within 8–31 frames. For `(-14,2,4)`, the witness and two relight
+invalidations occurred at frame 1462; the dirty remesh advanced through queue
+positions 26, 15, and 3 before revision 5 published at frame 1493.
+
+Three of the nine exact-witness coordinates later produced another stale sample
+after a publication, each alongside newer relight/dependency activity; this is
+consistent with repeated neighbor-light changes and does not show a permanently
+stale mesh. The log had 3,167 queued dependency events, 960 applied, 5,349
+live-owner deferrals, 1,527 covered by existing ownership, and one
+`drop_not_drawable`. Causes were `relight_light_change` and
+`procedural_chunk_commit`; there were no disk-slice or open-sky events. Seven
+startup dependency log entries had `frame_epoch=0`; the nine exact witness
+joins all used nonzero epochs.
+
+M622E artifacts:
+
+- `suite_reports/engine_refactor/m622e_dependency_frame_join_20261016.json`
+- `logs/perf_20261016-154528_38700.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-154523.38700`
+
+The frame join validates the dependency log instrumentation and shows the
+observed exact-revision halo witnesses enter and leave the remesh lifecycle.
+It does not provide a visual verdict or exercise the M623 open-sky side path.
+Next review repeated light-change events and remesh scheduling for the three
+re-staled coordinates, while keeping CPU advisory and the route short.
 
 M622C artifacts:
 
