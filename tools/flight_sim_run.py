@@ -79,6 +79,34 @@ FAR_DISTANCE_CHECKPOINTS_BLOCKS = (0, 1 << 13, 1 << 16, 1 << 19)
 CHUNK_SIZE_BLOCKS = 16
 
 
+def expected_product_start_focus(args: argparse.Namespace) -> list[int] | None:
+    product_scenarios = {
+        "product-174657",
+        "product-174657-dive",
+        "product-174657-far",
+    }
+    position = getattr(args, "product_start_position", None)
+    if (
+        args.scenario not in product_scenarios
+        or not position
+        or len(position) < 3
+    ):
+        return None
+    return [
+        math.floor(float(position[0]) / CHUNK_SIZE_BLOCKS),
+        math.floor(float(position[2]) / CHUNK_SIZE_BLOCKS),
+    ]
+
+
+def normalize_focus(value: object) -> list[int] | None:
+    if not isinstance(value, (list, tuple)) or len(value) < 2:
+        return None
+    try:
+        return [int(value[0]), int(value[1])]
+    except (TypeError, ValueError):
+        return None
+
+
 def build_flight_route_identity(args: argparse.Namespace) -> dict:
     """Return the readable, route-affecting inputs used for manifest hashing."""
     product_scenarios = {
@@ -104,6 +132,7 @@ def build_flight_route_identity(args: argparse.Namespace) -> dict:
             if product_route
             else None
         ),
+        "product_start_focus_expected": expected_product_start_focus(args),
         "cruise_chunk": [args.cruise_cx, args.cruise_cz],
         "cruise_eye_y": args.cruise_eye_y,
         "yaw_deg": args.yaw,
@@ -124,7 +153,7 @@ def build_flight_route_identity(args: argparse.Namespace) -> dict:
         "require_existing_world": bool(
             getattr(args, "require_existing_world", False)
         ),
-        "product_start_position_pinned": bool(
+        "product_start_position_file_pinned": bool(
             getattr(args, "_product174657_users_restore", None)
         ),
     }
@@ -3472,6 +3501,14 @@ def main() -> int:
             info_log,
             t0,
         )
+        expected_start_focus = expected_product_start_focus(args)
+        actual_start_focus = normalize_focus(
+            world_startup_identity.get("start_focus")
+        )
+        product_start_focus_matches = (
+            expected_start_focus is not None
+            and actual_start_focus == expected_start_focus
+        )
         annotate_report_run(report_path, hang_killed, rc, perf, info_log)
         # Phase55 fidelity: expose teleport flag for AnalyzePhase55Scorecard.
         if report_path.is_file():
@@ -3617,6 +3654,23 @@ def main() -> int:
                             ),
                         },
                     )
+                    manifest_route = _ann["run_manifest"].get("route")
+                    if (
+                        isinstance(manifest_route, dict)
+                        and expected_start_focus is not None
+                    ):
+                        manifest_route["product_start_focus_expected"] = (
+                            expected_start_focus
+                        )
+                        manifest_route["product_start_focus_actual"] = (
+                            actual_start_focus
+                        )
+                        manifest_route["product_start_focus_matches"] = (
+                            product_start_focus_matches
+                        )
+                        manifest_route["product_start_position_pinned"] = bool(
+                            getattr(args, "_product174657_users_restore", None)
+                        ) and product_start_focus_matches
                     from a21_run_manifest import manifest_acceptance_ok
 
                     _ann["manifest_acceptance"] = manifest_acceptance_ok(
@@ -3765,6 +3819,18 @@ def main() -> int:
                     result["a31_progress_snapshot"] = compute_a31_progress_snapshot(
                         result, a24_safety, west
                     )
+                    if expected_start_focus is not None:
+                        result["product_start_focus_verification"] = {
+                            "expected": expected_start_focus,
+                            "actual": actual_start_focus,
+                            "matches": product_start_focus_matches,
+                            "users_file_pinned": bool(
+                                getattr(args, "_product174657_users_restore", None)
+                            ),
+                        }
+                        result["product_start_focus_integrity_pass"] = (
+                            product_start_focus_matches
+                        )
                     pad = result.get("proxy_adequacy") or {}
                     warm_replay_claimed = warm or args.require_existing_world
                     replay_fails: list[str] = []
@@ -3793,8 +3859,33 @@ def main() -> int:
                             replay_fails.append(
                                 "requested_product_start_position_not_pinned"
                             )
+                        if (
+                            expected_start_focus is not None
+                            and not product_start_focus_matches
+                        ):
+                            replay_fails.append(
+                                "runtime_start_focus_does_not_match_requested_position"
+                            )
                     result["world_replay_integrity_pass"] = not replay_fails
                     result["world_replay_integrity_fails"] = replay_fails
+                    if (
+                        expected_start_focus is not None
+                        and not product_start_focus_matches
+                        and not warm_replay_claimed
+                    ):
+                        reason = (
+                            "runtime_start_focus_does_not_match_requested_position"
+                        )
+                        result["pass"] = False
+                        pad = dict(pad)
+                        pad["start_focus_integrity_fail"] = True
+                        pad["adequacy_pass"] = False
+                        fails = list(pad.get("adequacy_fails") or [])
+                        if reason not in fails:
+                            fails.append(reason)
+                        pad["adequacy_fails"] = fails
+                        result["proxy_adequacy"] = pad
+                        adequacy = pad
                     if replay_fails:
                         pad = dict(pad)
                         pad["warm_replay_integrity_fail"] = True
