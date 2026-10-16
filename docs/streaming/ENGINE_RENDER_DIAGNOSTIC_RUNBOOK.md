@@ -1325,20 +1325,59 @@ had 30 missing-mesh and two face-debt focus labels, but zero post-stop sampled
 visual holes and zero no-ticket visible-black rows. CPU stays informational;
 there is no CPU-load gate.
 
-The warm run produced zero exact voxel-mesh ray gaps. Its one in-fog
-voxel/opaque-depth discrepancy at frame 1620, pixel `(416,90)`, matched a
-transparent-fluid triangle (block 575 at 0.097 units), so it does not prove a
-terrain hole. Fixed-grid samples overlapped some of the 27 conservative
-camera-band rectangles, but no sampled ray entered those candidate chunk
-AABBs. To close that evidence gap, add bounded target-aligned pixel positions
-to the existing probe, or wait until an operator identifies a concrete pixel
-region. Use the short M335 route for that capture; do not run a long
-operator-monitoring flight. Do not change queue policy unless an exact
-in-fog target ray still has a mesh/depth gap after its lifecycle window.
+M622X/M622Y add framebuffer samples at the streaming screen-ray coordinates.
+M622X took this on every source event and produced a 277 MB perf log. M622Y
+limits the opt-in capture to one in eight source frames and records the warm
+protocol explicitly. Across M622X and M622Y, 184 in-fog screen-ray candidates
+had synchronized pixel samples; every sample hit the same voxel chunk as the
+streaming ray, with zero opaque-depth or exact mesh gaps. The three additional
+M622Y candidate samples without voxel hits were beyond fog. M622X's single
+in-fog opaque-depth proxy matched transparent water and was not an exact mesh
+gap. These runs do not justify queue-policy changes.
+
+Use `-EnableScreenRayPixelProbes` for this additional pixel capture and
+`-StampWarmPeriods` when the route is a warm replay. The M335 wrapper restores
+both environment settings after the run. CPU remains contextual; do not add a
+CPU admission gate. Avoid long operator-monitoring flights. Reopen queue
+policy only after an operator identifies a concrete visible area or a future
+synchronized in-fog sample reports an exact mesh/depth gap.
 
 Artifacts: report `bin/suite_reports/engine_refactor/m622v_frustum_stable_face_debt_20261016.json`,
 perf `bin/logs/perf_20261016-194951_22784.jsonl`, INFO
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-194947.22784`.
+
+### M622X/M622Y: screen-ray pixel correlation
+
+Run the established M335 route with `-EnableScreenRayPixelProbes` to capture
+pixel/depth data on the same five vertical bands and twenty horizontal columns
+used by the renderer's pixel witness. For a warm replay, also pass
+`-StampWarmPeriods`; this writes `CUBA_FLIGHT_WARM=1` and
+`CUBA_WARM_PROTOCOL=warmup_sec_stamp` into the child process explicitly. The
+optional screen-ray capture samples one in eight source frames to keep its
+readback bounded.
+
+M622Y completed 35 periods on the saved world with `cold_warm_mode=warm`,
+process exit 0, and no timeout. It matched all 25 streaming-ray coordinates in
+each of seven captured frames (175 samples). Of 39 candidates requesting
+refresh, 18 were within fog and every one hit the exact target chunk in the
+framebuffer voxel witness. There were zero opaque-depth and exact voxel-mesh
+gaps. Three remaining candidates had no voxel hit and were beyond fog. The
+analyzer returned `pass=false` on non-CPU gates; symptom reproduction was
+false, and there is no operator framebuffer verdict. Treat this as evidence
+about the sampled rays, not proof about every screen location.
+
+M622X ran the same probe without the one-in-eight limit. Its report was
+classified cold because the filename omitted `warm`, despite `resume=true`.
+It captured 63 frames/9,940 pixel rows (277 MB), so do not repeat that
+unbounded setting. Its 166 in-fog candidate rays also matched their target
+voxel chunks with no exact gaps.
+
+Artifacts: M622X report `bin/suite_reports/engine_refactor/m622x_screenray_pixel_probe_20261016.json`,
+perf `bin/logs/perf_20261016-202639_32496.jsonl`, INFO
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-202635.32496`.
+M622Y report `bin/suite_reports/engine_refactor/m622y_warm_screenray_probe_bounded_20261016.json`,
+perf `bin/logs/perf_20261016-203440_38520.jsonl`, INFO
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-203436.38520`.
 
 ### M622W: warm replay and pixel-probe interpretation
 

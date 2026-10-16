@@ -11206,11 +11206,13 @@ gap was found. The single in-fog opaque-depth discrepancy at frame 1620, pixel
 `(416,90)`, matched a transparent-fluid triangle, so it is not a confirmed
 terrain gap.
 
-The fixed grid did not ray through the 27 candidate chunk AABBs even where
-sample positions overlapped their conservative projected rectangles. The next
-instrumentation step is bounded target-aligned sampling, followed by the same
-short route if a target requires runtime evidence. Keep CPU contextual; never
-gate admission on it. Avoid another long operator-monitoring flight.
+The fixed grid did not ray through the candidate chunk AABBs even where sample
+positions overlapped their conservative projected rectangles. M622X/Y added
+synchronized pixel samples at the streaming screen-ray coordinates. Of 184
+in-fog candidate rays across both runs, every pixel ray hit the same target
+voxel chunk; there were zero opaque-depth or exact mesh gaps. Keep CPU
+contextual; never gate admission on it. Avoid another long operator-monitoring
+flight.
 
 M622W warm replay:
 
@@ -11237,6 +11239,42 @@ Artifacts:
 - Report: `bin/suite_reports/engine_refactor/m622w_warm_frustum_stable_face_debt_20261016.json`.
 - Perf: `bin/logs/perf_20261016-201046_45928.jsonl`.
 - INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-201043.45928`.
+
+M622X initial screen-ray capture took every source event. It found 166 in-fog
+screen-ray candidates, each with a synchronized pixel hit in the same voxel
+chunk and zero exact mesh gaps. The run's report was classified cold because
+the filename did not contain `warm`, even though the route resumed the saved
+world. It wrote 9,940 pixel rows (277 MB), so its capture rate is historical
+only; current code samples one in eight source frames.
+
+M622Y bounded warm screen-ray replay:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -EnableScreenRayPixelProbes -StampWarmPeriods `
+  -World World_M622V_FrustumStableFaceDebt_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622Y `
+  -Report bin/suite_reports/engine_refactor/m622y_warm_screenray_probe_bounded_20261016.json
+```
+
+The run completed 35 periods on warm cache mode (`warmup_sec_stamp`), process
+exit 0, no timeout. It captured 175 screen-ray-matched pixels over seven
+frames. Of 39 refresh candidates, 18 were inside fog and every one hit its
+target voxel chunk in the pixel witness; there were zero opaque-depth and exact
+mesh gaps. The remaining three candidates with no voxel hit were beyond fog.
+The analyzer returned `pass=false` on non-CPU gates; this is diagnostic, not
+an operator framebuffer verdict. CPU measurements are never a launch gate.
+
+Artifacts:
+
+- Report: `bin/suite_reports/engine_refactor/m622y_warm_screenray_probe_bounded_20261016.json`.
+- Perf: `bin/logs/perf_20261016-203440_38520.jsonl` (221 MB).
+- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-203436.38520`.
 
 Artifacts:
 

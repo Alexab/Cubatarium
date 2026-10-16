@@ -12008,15 +12008,18 @@ fixed-grid pixels sometimes fell inside their conservative projected AABB
 rectangles, but none of the sampled rays entered the target chunk AABB. The
 rectangles therefore did not provide target-specific pixel coverage.
 
-Do not change renderer queue policy from these readiness proxies. The cold
-M622V and warm M622W traces both show owned work reaching drawable meshes and
-no in-fog exact mesh gap, while the fixed pixel grid still misses the candidate
-chunks. The next evidence step is a bounded, target-aligned pixel probe for a
-camera-band candidate, or a short replay if an operator identifies a concrete
-dark/empty pixel region. Reopen queue policy only if a target-aligned in-fog
-pixel ray reports an exact mesh/depth gap after its bounded lifecycle window.
-Do not add a CPU-load admission gate; CPU remains contextual. Avoid long
-operator-monitoring flights.
+Do not change renderer queue policy from these readiness proxies. M622X and
+M622Y now correlate the streaming screen-ray coordinates with matching
+framebuffer pixels. Across their selected captures, 184 screen-ray candidates
+were inside the configured fog horizon; every matching pixel ray hit the same
+voxel chunk as the streaming trace, with zero opaque-depth gaps and zero exact
+voxel-mesh gaps. Candidate rays outside fog sometimes had no voxel hit, which
+is outside the visible horizon. M622V/W/X/Y therefore provide no sampled
+in-fog evidence for a missing terrain mesh. Reopen queue policy only if an
+operator identifies a concrete visible region or a future synchronized
+in-fog pixel reports an exact mesh/depth gap after its bounded lifecycle
+window. Do not add a CPU-load admission gate; CPU remains contextual. Avoid
+long operator-monitoring flights.
 
 M622V report/perf/INFO: `m622v_frustum_stable_face_debt_20261016.json`,
 `perf_20261016-194951_22784.jsonl`, and
@@ -12059,3 +12062,55 @@ before treating a readiness counter as a renderer defect.
 M622W report/perf/INFO: `m622w_warm_frustum_stable_face_debt_20261016.json`,
 `perf_20261016-201046_45928.jsonl`, and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-201043.45928`.
+
+### M622X/M622Y: synchronized screen-ray pixel verification
+
+M622X enabled the existing streaming screen-ray pixel trigger on the saved
+M622V world. Its route resumed that save, but the report was named without
+`warm`; the harness therefore stamped it `cold`/`cold_or_unspecified`. This
+was a harness metadata issue, not a different route. The M335 wrapper now has
+an explicit `-StampWarmPeriods` switch so warm evidence no longer depends on
+the report filename.
+
+M622X captured every screen-ray event: 63 synchronized frames and 9,940 pixel
+rows (277 MB perf JSONL). Of 329 streaming candidates that requested refresh,
+166 were within the 32-unit fog horizon. Each of those 166 framebuffer rays
+hit the same voxel chunk as the streaming trace. Across all synchronized
+candidate samples there were zero opaque-depth gaps and zero exact voxel-mesh
+gaps. One separate in-fog opaque-depth proxy at frame 1290, pixel `(416,90)`,
+matched a transparent-water triangle and had no exact mesh gap. The full
+capture was too large to repeat at that rate, so M622Y bounds this opt-in
+readback to one in eight screen-ray source frames.
+
+M622Y used the same 35-period no-teleport route against the saved world. The
+Release build and static executable check passed. The report confirms
+`cold_warm_mode=warm`, `warm_protocol=warmup_sec_stamp`, input adequacy, process
+exit 0, and no timeout. The analyzer returned `pass=false` on non-CPU gates;
+symptom reproduction was false (`focus_missing_mesh_med=0`, visible-black
+below its product threshold). `visual_holes_rate=0.1212`,
+`fly_visible_black_max=8`, `post_stop_missing_max=36`,
+`post_stop_visible_black_stalled_max=1`, and
+`post_stop_visual_holes_max=0` remain diagnostic/readiness counters, with no
+operator framebuffer verdict. The manifest's dirty-source check is expected
+because this run validated the in-progress instrumentation change.
+
+M622Y captured 175 pixels at seven synchronized screen-ray frames. Thirty-nine
+candidate rays requested refresh; 18 were inside fog, and all 18 pixel samples
+hit the exact target voxel chunk with zero opaque-depth and exact mesh gaps.
+The three remaining candidate samples had no voxel hit and were all beyond
+fog. Host CPU was 77/100/100% median/p95/max while app CPU was 23.46/49.89/61.43%
+of machine capacity; CPU was not a gate. The additional probes and host load
+make these runs unsuitable for performance comparisons.
+
+This completes the planned cold/warm, screen-ray-to-pixel check. Do not change
+streaming or renderer queue policy based on focus-ring readiness labels alone.
+Continue with the remaining static plan items and use another short visible
+route only when an operator identifies a concrete region or instrumentation
+records an exact in-fog gap. Do not use a long operator-monitoring flight.
+
+M622X report/perf/INFO: `m622x_screenray_pixel_probe_20261016.json`,
+`perf_20261016-202639_32496.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-202635.32496`.
+M622Y report/perf/INFO: `m622y_warm_screenray_probe_bounded_20261016.json`,
+`perf_20261016-203440_38520.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-203436.38520`.
