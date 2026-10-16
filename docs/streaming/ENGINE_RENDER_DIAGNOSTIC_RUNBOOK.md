@@ -916,3 +916,11 @@ M622 instrumentation Release build passed. Its preflight was 60.3/87.7% median/p
 GPU-path correction: `CommitGpuMeshResult` is a separate publication route from `ApplyMeshResult`. Commit `a3493579` retains the captured `PendingGpuApply.snapshot.lightHaloSignatures` after each successful GPU commit (including validated empty output), and Release rebuilt successfully. This makes `stale_mesh_halo_state` meaningful for `gpu_greedy` rather than returning unavailable for all GPU meshes.
 
 Latest preflight: host CPU median/p95 56.4/72.0%, gate failed. No M622 flight has been launched. Wait for a fresh passing sample before using the documented M622A route.
+
+### M622A trace outcome
+
+The route completed (`process_rc=0`, 35 periods, 12 chunk columns). Runtime host CPU was 83.2/100.0/100.0% median/p95/max; suite `pass=false`, so this is not performance acceptance. Proxies: in-flight visual mesh coverage 0, fly visible-black max 4, stop mesh missing and visible-black max 0, readiness debt max 31. No operator framebuffer verdict was captured.
+
+The run recorded 340 `visual_black_trace` rows, 158 with nonzero CPU stale samples, and seven with equal desired/published geometry plus aligned own-light revisions. All reported halo state 0 because state sampling was incorrectly guarded by pre-existing watch membership. `d2869ef0` removes that guard; the recorded zeros must not be interpreted as unavailable published signatures.
+
+`RelightAudit` confirms source-aware dependency events are emitted for watched chunks. The log contains procedural and relight causes, and drain outcomes including `covered_by_existing_owner` and `applied`. The old run cannot prove those owners captured the current halo because the halo state was omitted. Repeat only after a passing fresh CPU preflight; use M622A's same route/flags and inspect coordinate+frame rows.

@@ -10455,3 +10455,13 @@ The JSONL records `stale_mesh_halo_state` (0 unavailable, 1 current halo equals 
 Static review after M622 found GPU publication uses `CommitGpuMeshResult`; commit `a3493579` now stores the halo signatures from its accepted pending snapshot after a successful commit. Release rebuild passed. This is necessary for `gpu_greedy`, otherwise halo-state values would be unavailable in watched traces.
 
 Latest preflight failed (56.4/72.0% median/p95), so M622A remains unrun. After a fresh passing sample, run the short documented route and inspect `stale_mesh_halo_state` plus `mesh_dependency` lifecycle events.
+
+M622A completed the route with `process_rc=0` but failed runtime resource acceptance (host CPU 83.2/100.0/100.0% median/p95/max). Proxies: visual mesh coverage 0 in flight and at stop, fly visible-black max 4, post-stop missing and visible-black max 0, readiness debt max 31. No operator screen verdict was recorded.
+
+The trace contained seven settled CPU seam witnesses, but their halo state field was incorrectly left at zero when no prior watch existed. Commit `d2869ef0` fixes this by sampling the retained signature for each stale row under `CUBA_VISUAL_BLACK_TRACE`. M622A artifacts:
+
+- `suite_reports/engine_refactor/m622a_halo_stamp_lifecycle_20261016.json`
+- `logs/perf_20261016-144017_33868.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-144013.33868`
+
+Repeat the same short M335 route with both trace flags after a fresh passing preflight. Correlate exact witness coordinates and frames with dependency source/cause, drain outcome, and state 1/2. State 1 plus a current nonzero stale sample implicates sampling or witness mapping; state 2 with an unresolved dependent points to queue/owner/publication lifecycle.

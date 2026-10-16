@@ -5756,3 +5756,11 @@ Release build passed, but post-build host preflight was 60.3/87.7% median/p95; n
 Follow-up to M622: static call-path review found that GPU meshes publish through `CommitGpuMeshResult` rather than the CPU `ApplyMeshResult` path. Commit `a3493579` copies the accepted `PendingGpuApply.snapshot.lightHaloSignatures` into the cache after each successful GPU commit; the Release target was rebuilt successfully. This covers the active GPU greedy backend, including empty commits. Before the fix, its watched halo state would have stayed unavailable.
 
 The latest host preflight is still over the gate at 56.4/72.0% median/p95. Do not run M622A until a fresh sample passes. The first diagnostic acceptance condition is simply that watched GPU meshes emit halo states 1/2, allowing a seam witness to be classified; it is not itself a visual acceptance result.
+
+### M622A result and trace guard correction
+
+The repeated short route completed (`process_rc=0`, 35 periods, 12 chunk columns), but host CPU was 83.2/100.0/100.0% median/p95/max, so the suite failed and this is diagnostic only. Mesh coverage proxy was zero in flight and at stop; fly visible-black proxy max was 4, stop missing/visible-black max were zero, readiness debt max was 31. There is no operator framebuffer verdict.
+
+M622A logged 340 visual trace rows, 158 with nonzero CPU stale samples, and seven exact geometry/own-light-current observations. Every halo state was zero because the new query mistakenly required a prior chunk watch. The first witness can be emitted before that watch opens. Commit `d2869ef0` now samples halo state for every retained stale row when visual tracing is enabled; prior zero states are unavailable measurements, not root-cause evidence.
+
+Queue tracing was active: it recorded both procedural commit and relight light-change causes, with dependents either applied or `covered_by_existing_owner`. Since halo state was missing, the validity of those existing owners is not established. Repeat the same short M335 route after a fresh passing preflight and join each exact witness to its source, drain outcome, and published halo state. Do not interpret M622A as performance or visual acceptance.
