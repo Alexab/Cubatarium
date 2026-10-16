@@ -10932,3 +10932,52 @@ and fell to 3 out-of-horizon records, but high streaming/emergence pressure
 produced a failed visual stability gate. Host CPU was not sampled during that
 run; resource sampling has now been added to the harness before another
 comparison is attempted.
+
+## M605/M606 — controlled cold-entry versus saved-world check
+
+The current operator report is dark/black-looking chunks immediately after
+entering a newly generated world. A cold map is a plausible amplifier because
+generated geometry can become available before persisted light-complete state
+exists, but the M602 warm run showed that saved state does not eliminate all
+readiness debt. The next experiment is a short, paired cold/warm entry check;
+it is not a long-distance acceptance flight.
+
+Keep the established M603/M604 route exactly: Release binary, visible GUI,
+`--no-teleport-cruise` through the existing runner, seed `3650482197`, radius
+4, start `(-32,56,56)`, eye Y 70, yaw 180, pitch -30, 35 seconds cruise, 20
+seconds stopped, and 15 seconds idle. Cold arm: create a new map and capture
+world-create timings; warm arm: reuse `World_M600A_Cold_20261015`. Use the same
+pixel probe range `[-300,0]`, fog pull-in, renderer pixel trace, relight audit,
+and report fields for both arms. Do not change render settings between arms.
+
+The flight harness now records host CPU, app CPU, estimated non-app CPU, app
+RSS, process thread count, and available system memory at one-second intervals.
+Interpret a cold/warm pair as a controlled comparison only if both runs have
+complete host samples, their median host CPU differs by at most 15 percentage
+points, neither has a sustained host median above 50%, and their median app
+CPU differs by at most 15 percentage points. These are comparability gates,
+not engine performance targets. If a gate fails, retain the run as diagnostic
+and repeat only the mismatched arm later; do not extend either flight.
+
+Read the evidence in this order:
+
+1. Check cold world creation duration and its reported generated-column / chunk
+   counts against prior M603/M604 create reports; a large regression here is a
+   separate generation or storage problem.
+2. Compare the same startup slices' first pixel sample, light-pending and
+   unlit lifecycle, preview shader overrides, and time to settled pixels.
+3. Correlate dark pixel probes with relight queue admissions and mesh
+   publication. Pixel darkness alone is not a geometric hole; the near-focus
+   mesh-hole proxy and operator observation remain separate evidence.
+4. Compare the warm arm. If the symptom is materially reduced only on warm
+   entry, prioritize cold generation/light persistence and the provisional
+   preview path. If both arms show it under comparable host pressure, inspect
+   shared streaming publication, mesh invalidation, and shader/light inputs.
+   If chunk lifecycle is settled while pixels remain dark, move the next
+   investigation to render inputs / shader and capture-path validity.
+
+Do not make a scheduler or rendering change from a non-comparable pair. A
+single clearly isolated lifecycle defect may justify a small code change,
+followed by one same-route short cold repeat. Do not run the 8,192-block
+acceptance flight until startup entry has a stable, explainable lifecycle and
+the paired comparison has passed the host-load gates.
