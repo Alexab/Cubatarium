@@ -11268,6 +11268,16 @@ performance acceptance-проверкой. Процесс завершился �
    число chunk-файлов, наличие/наполнение `column_light.json`, startup debt и
    поведение первой визуальной полосы. Это не заменяет повторяемый M335 маршрут.
 
+6. Перед M615 post-fix flight дождаться не только приемлемого среднего CPU, но и
+   host p95 <=75% на короткой серии замеров. В preflight 2026-10-16 приложение
+   не было запущено; десять секундных CPU samples дали median 33.7%, но верхний
+   диапазон достиг 79.5–93.1%, поэтому resource gate не пройден и flight отложен.
+   Статический review также выявил, что GPU-only stale-dark witness — chunk-wide
+   proxy, не привязанный к конкретной тёмной грани. В M615 flight записать поле
+   `gpu` у witness и проверить, не повторяется ли тот же ремонт после publish
+   при неизменных source/consumer revisions. При повторе исследовать точную
+   face provenance или halo invalidation до расширения cadence/очереди.
+
 Артефакты M609–M614 сохранены локально в `bin/suite_reports/engine_refactor`,
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md) и

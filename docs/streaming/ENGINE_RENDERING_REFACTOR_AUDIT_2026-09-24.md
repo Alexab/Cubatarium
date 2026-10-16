@@ -5580,3 +5580,24 @@ See the exact short-run profiles, artifacts, and resource-gate limits in the
 [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md),
 [diagnostic runbook](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md), and
 [flight experiment notes](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+### M615 static follow-up: GPU-only witness quality
+
+Before the M615 flight, static review found that the GPU-only branch of
+`ChunkHasStaleDarkFaces` is an approximation: it sees `GpuHasDarkFace`, then
+returns stale when any sampled solid or block above it anywhere in the chunk has
+sky light. `GpuHasDarkFace` means at least one non-bottom dark face, not that the
+whole chunk is dark. The CPU-batch branch checks the actual dark quad's adjacent
+air/solid samples; the GPU-only branch does not associate its lit probe with that
+face. A valid cave face in a chunk that also has a sky-lit surface can therefore
+look stale to this probe and keep durable debt alive after a no-op repair.
+
+M613/M614's logged witnesses were `gpu=0`, so this limitation does not invalidate
+the observed CPU-batch witnesses or the approach-ring admission gap. It is a
+separate risk introduced when M615 broadens discovery to drawable meshes that may
+already be GPU-only. No flight has validated M615 yet. The next short run must
+record whether each stale witness is CPU- or GPU-probed, and whether a GPU-probed
+debt item is re-admitted after a current mesh publication without a source or
+consumer revision change. If it is, do not increase repair cadence; replace the
+chunk-wide GPU proxy with face-correlated provenance or rely on targeted
+halo-change invalidation for already-published meshes.

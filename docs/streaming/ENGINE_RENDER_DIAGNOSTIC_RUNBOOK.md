@@ -7,6 +7,20 @@
 рефакторингу и незакрытые критерии — в
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
 
+#### M615 preflight follow-up (2026-10-16)
+
+M615 Release executable exists and Cubatarium was not running during preflight.
+A ten-sample host CPU window had median 33.7%, but burst samples reached 79.5%
+and 93.1%; do not treat the average alone as a pass for the <=75% p95 gate. No
+post-M615 flight was started. The same static review found the GPU-only stale-dark
+probe is chunk-wide and may confuse a valid dark cave face with unrelated sky-lit
+blocks in that chunk. Preserve the established short M335 profile; next run should
+join `gpu_probe` / `gpu` witness type with stale-debt queued/admitted/published
+events and source/consumer revisions. A repeated GPU-only witness after a fresh
+publish is a signal to improve witness provenance or halo invalidation, not to
+increase repair rate. Do not launch a long operator-monitoring flight for this
+check.
+
 ## Порядок доказательств для пропавшей поверхности
 
 Проверять этапы последовательно, сохраняя один и тот же мир, маршрут, камеру и
