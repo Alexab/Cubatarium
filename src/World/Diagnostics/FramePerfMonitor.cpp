@@ -1130,6 +1130,8 @@ struct FrameNumbers
   int pending_light_trim_emerge_n{0};
   int pending_light_trim_memory_n{0};
   uint64_t relight_fifo_dropped{0};
+  uint64_t relight_fifo_trim_deferred_total{0};
+  uint64_t relight_fifo_overflow_dropped_total{0};
   uint64_t relight_false_clear_n{0};
   double gpu_pool_used_mb{0.0};
   double gpu_pool_cap_mb{0.0};
@@ -2303,6 +2305,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.pending_light_trim_emerge_n = phys.PendingLightTrimEmergeN;
   n.pending_light_trim_memory_n = phys.PendingLightTrimMemoryN;
   n.relight_fifo_dropped = phys.RelightFifoDropped;
+  n.relight_fifo_trim_deferred_total = phys.RelightFifoTrimDeferredTotal;
+  n.relight_fifo_overflow_dropped_total =
+      phys.RelightFifoOverflowDroppedTotal;
   n.relight_false_clear_n = phys.RelightFalseClearN;
   n.gpu_pool_used_mb = phys.GpuPoolUsedMb;
   n.gpu_pool_cap_mb = phys.GpuPoolCapMb;
@@ -3692,6 +3697,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pending_light_trim_emerge_n\":" << n.pending_light_trim_emerge_n
           << ",\"pending_light_trim_memory_n\":" << n.pending_light_trim_memory_n
           << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
+          << ",\"relight_fifo_trim_deferred_total\":"
+          << n.relight_fifo_trim_deferred_total
+          << ",\"relight_fifo_overflow_dropped_total\":"
+          << n.relight_fifo_overflow_dropped_total
           << ",\"relight_false_clear_n\":" << n.relight_false_clear_n
           << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb
           << ",\"gpu_pool_cap_mb\":" << n.gpu_pool_cap_mb

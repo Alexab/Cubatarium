@@ -2406,6 +2406,8 @@ int UWorld::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz,
   PhysicsTelemetryData.RelightFifoProtectBlockN += protect_block;
   PhysicsTelemetryData.RelightFifoDropped +=
       static_cast<uint64_t>(std::max(0, overflow));
+  PhysicsTelemetryData.RelightFifoOverflowDroppedTotal +=
+      static_cast<uint64_t>(std::max(0, overflow));
   return dropped;
 }
 

@@ -3078,6 +3078,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int dropped = world.TrimFarRelightFifoFarthest(
           focus_ground_horiz, mtune.RelightFifoSoftCap);
       phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, dropped));
+      phys.RelightFifoTrimDeferredTotal +=
+          static_cast<uint64_t>(std::max(0, dropped));
       phys.RelightTrimFarN += std::max(0, dropped);
       phys.RelightFifoDropN += std::max(0, dropped);
       // P4: under Red+holes+fifo pressure, trim again toward soft-cap aggressively.
@@ -3102,6 +3104,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int drop2 = world.TrimFarRelightFifoFarthest(
             focus_ground_horiz, std::max(8, mtune.RelightFifoSoftCap * 3 / 4));
         phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, drop2));
+        phys.RelightFifoTrimDeferredTotal +=
+            static_cast<uint64_t>(std::max(0, drop2));
         phys.RelightTrimFarN += std::max(0, drop2);
         phys.RelightFifoDropN += std::max(0, drop2);
       }

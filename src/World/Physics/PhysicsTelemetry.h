@@ -1155,6 +1155,10 @@ struct PhysicsTelemetry
   int PendingLightTrimEmergeN{0};
   int PendingLightTrimMemoryN{0};
   uint64_t RelightFifoDropped{0};
+  /// Cumulative pressure trims moved into deferred-far storage.
+  uint64_t RelightFifoTrimDeferredTotal{0};
+  /// Cumulative relight FIFO capacity-overflow evictions.
+  uint64_t RelightFifoOverflowDroppedTotal{0};
   /// P1: pin-key drops this frame (gate: stay 0).
   int RelightFifoPinDropN{0};
   double GpuPoolUsedMb{0.0};

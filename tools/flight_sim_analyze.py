@@ -1215,6 +1215,23 @@ def analyze(
         cruise_fifo_dropped_delta = (
             cruise_fifo_dropped_vals[-1] - cruise_fifo_dropped_vals[0]
         )
+    cruise_fifo_trim_deferred_vals = col(
+        cruise_src, "relight_fifo_trim_deferred_total"
+    )
+    cruise_fifo_trim_deferred_delta = None
+    if len(cruise_fifo_trim_deferred_vals) >= 2:
+        cruise_fifo_trim_deferred_delta = (
+            cruise_fifo_trim_deferred_vals[-1] - cruise_fifo_trim_deferred_vals[0]
+        )
+    cruise_fifo_overflow_dropped_vals = col(
+        cruise_src, "relight_fifo_overflow_dropped_total"
+    )
+    cruise_fifo_overflow_dropped_delta = None
+    if len(cruise_fifo_overflow_dropped_vals) >= 2:
+        cruise_fifo_overflow_dropped_delta = (
+            cruise_fifo_overflow_dropped_vals[-1]
+            - cruise_fifo_overflow_dropped_vals[0]
+        )
     cruise_false_clear_vals = col(cruise_src, "relight_false_clear_n")
     cruise_false_clear_delta = None
     if len(cruise_false_clear_vals) >= 2:
@@ -2084,6 +2101,8 @@ def analyze(
             cruise_relight_completion_ring_occupancy_med
         ),
         "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,
+        "cruise_fifo_trim_deferred_delta": cruise_fifo_trim_deferred_delta,
+        "cruise_fifo_overflow_dropped_delta": cruise_fifo_overflow_dropped_delta,
         "cruise_false_clear_delta": cruise_false_clear_delta,
         "gates_stop": gates_stop,
         "stop_segment_periods": len(stop_segment),
@@ -2325,6 +2344,8 @@ def analyze(
             "dark_face_stale_near_n": dark_face_stale_near_med,
             "dirty_ghost_n": dirty_ghost_n,
             "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,
+            "cruise_fifo_trim_deferred_delta": cruise_fifo_trim_deferred_delta,
+            "cruise_fifo_overflow_dropped_delta": cruise_fifo_overflow_dropped_delta,
             "cruise_false_clear_delta": cruise_false_clear_delta,
             "mesh_sync_fly_med": mesh_sync_fly_med,
             "wall_ms_no_holes_med": wall_ms_no_holes_med,

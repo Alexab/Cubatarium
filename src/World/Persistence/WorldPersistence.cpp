@@ -2115,6 +2115,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     telem.RelightFifoPriorityInsertN += priority_insert;
     telem.RelightFifoProtectBlockN += protect_block;
     telem.RelightFifoDropped += static_cast<uint64_t>(std::max(0, overflow));
+    telem.RelightFifoOverflowDroppedTotal +=
+        static_cast<uint64_t>(std::max(0, overflow));
   };
   int drained_player = 0;
   while (!PendingPlayerRelights.empty() && drained_player < max_player_jobs)
