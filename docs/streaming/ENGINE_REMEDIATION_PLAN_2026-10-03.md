@@ -11793,6 +11793,15 @@ negative-coordinate sample `column=(-1,2) band=0:-1` is consistent with the
 coordinate correction, but that audit event has no producer tag and does not
 isolate the miss-witness caller.
 
+Further M622R log correlation shows 103 of 116 no-op skips had a latest
+matching deferred-owner event with reason `fifo_admission_denied`, band
+`0:128`, and priority set. Column `(-11,4)` repeatedly cycled from defer to
+already-satisfied clear during the latter part of the route; later cycles were
+under 0.5 s apart. Nearby pending-note sources include
+`WorldStreaming::InitChunkScheduler`, `ChunkEmergeCoordinator`, and
+`AdmitUnfinishedVisualDemand`, but generic FIFO-denial events do not name their
+producer. The exact source of each recurrence remains unproven.
+
 The analyzer returned `pass=false` on non-CPU gates. Mesh-hole proxy was
 0.2121, fly visible-black max 18, and post-stop readiness debt ended at 34;
 post-stop mesh-missing and no-ticket visible-black maxima were both zero, with
@@ -11802,11 +11811,12 @@ age-service events show continued queue pressure. Host CPU median was 92.6%,
 while application CPU median was 19.1% of machine capacity. Host CPU remains
 context only and never gates experiments.
 
-Next, trace the producer that recreates already-satisfied deferred entries and
-determine whether it can reject redundant requests before deferral. Preserve
-FIFO backpressure and the underfeet pin. Use one compact M335 route after a
-causal change. Keep readiness and mesh proxies distinct from operator-visible
-pixels.
+Next, add producer and exact-slice-settlement fields to FIFO-denial traces and
+determine whether the repeated requests are redundant before deferral.
+Preserve first-mesh settlement checks, FIFO backpressure, and the underfeet pin
+until the trace identifies the responsible owner. Use one compact M335 route
+after a causal change. Keep readiness and mesh proxies distinct from
+operator-visible pixels.
 
 Report: `bin/suite_reports/engine_refactor/m622r_miss_witness_chunk_units_20261016.json`.
 Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:

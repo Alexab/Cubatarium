@@ -11014,6 +11014,17 @@ preserving both chunk axes after conversion. The audit event lacks a producer
 tag, so that sample alone does not prove it came from the miss-witness caller.
 The unit mismatch itself is confirmed from the API contracts and call site.
 
+Static correlation shows the no-op records are not all old leftovers: 103 of
+116 had a latest matching deferred-owner event with reason
+`fifo_admission_denied`, band `0:128`, and priority set. Column `(-11,4)` cycled
+through defer → already-satisfied clear repeatedly during the latter part of
+the route; later cycles were separated by less than 0.5 s. Nearby pending-light
+notes came from the streaming column commit, `ChunkEmergeCoordinator`, and
+`AdmitUnfinishedVisualDemand`, but generic FIFO-denial events do not identify
+their producer. The no-op check removes the stale queue entry, while the source
+of this repeated churn remains unresolved. Preserve first-mesh settlement
+checks until the exact slice owner is traced.
+
 The analyzer returned `pass=false` on non-CPU gates. Mesh-hole proxy was
 0.2121, fly visible-black max 18, and post-stop readiness debt ended at 34;
 post-stop mesh-missing max and no-ticket visible-black max were both 0, while
@@ -11031,5 +11042,6 @@ Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:
 
 Next, trace which producers recreate already-satisfied entries and whether
 their work is redundant before deferral. Preserve the FIFO cap and underfeet
-pin. Keep operator-visible pixels separate from mesh/readiness proxies, and
-use one compact route after a causal code change.
+pin. Add producer and slice-settlement tags to FIFO-denial traces before
+changing admission. Keep operator-visible pixels separate from
+mesh/readiness proxies, and use one compact route after a causal code change.
