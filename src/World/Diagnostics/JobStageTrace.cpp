@@ -76,6 +76,28 @@ VisualChunkWatches &GetVisualChunkWatches()
   return watches;
 }
 
+struct OpenSkyLifecycleWatches
+{
+  // Retain the first startup targets in this session even after the regular
+  // visible-chunk watch set rolls forward during a long flight.
+  static constexpr size_t kCapacity = 4096;
+  std::unordered_set<VisualChunkKey, VisualChunkKeyHash> chunks;
+  std::mutex mu;
+};
+
+OpenSkyLifecycleWatches &GetOpenSkyLifecycleWatches()
+{
+  static OpenSkyLifecycleWatches watches;
+  return watches;
+}
+
+bool IsOpenSkyLifecycleChunkWatched(int32_t cx, int32_t cy, int32_t cz)
+{
+  auto &watches = GetOpenSkyLifecycleWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  return watches.chunks.count({cx, cy, cz}) != 0;
+}
+
 struct CameraBandPeakWatch
 {
   uint64_t expires_after_frame{0};
@@ -99,13 +121,28 @@ CameraBandPeakWatches &GetCameraBandPeakWatches()
 bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz)
 {
   auto &watches = GetVisualChunkWatches();
-  std::lock_guard<std::mutex> lock(watches.mu);
-  return watches.chunks.count({cx, cy, cz}) != 0;
+  {
+    std::lock_guard<std::mutex> lock(watches.mu);
+    if (watches.chunks.count({cx, cy, cz}) != 0)
+    {
+      return true;
+    }
+  }
+  return IsOpenSkyLifecycleChunkWatched(cx, cy, cz);
 }
 
 struct WatchedJobRing
 {
   std::array<JobStageSpan, UJobStageTrace::kVisualLifecycleRingCapacity> slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+struct OpenSkyLifecycleRing
+{
+  std::array<JobStageSpan, UJobStageTrace::kOpenSkyLifecycleRingCapacity>
+      slots{};
   size_t write{0};
   size_t count{0};
   std::mutex mu;
@@ -130,6 +167,28 @@ DemandTransitionRing &GetDemandTransitionRing()
 WatchedJobRing &GetWatchedJobRing()
 {
   static WatchedJobRing r;
+  return r;
+}
+
+OpenSkyLifecycleRing &GetOpenSkyLifecycleRing()
+{
+  static OpenSkyLifecycleRing r;
+  return r;
+}
+
+struct OpenSkyDemandTransitionRing
+{
+  std::array<DemandTransitionSpan,
+             UJobStageTrace::kOpenSkyDemandTransitionRingCapacity>
+      slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+OpenSkyDemandTransitionRing &GetOpenSkyDemandTransitionRing()
+{
+  static OpenSkyDemandTransitionRing r;
   return r;
 }
 
@@ -378,13 +437,29 @@ void UJobStageTrace::Note(const JobStageSpan &span)
     return;
   }
 
-  auto &watched = GetWatchedJobRing();
-  std::lock_guard<std::mutex> lock(watched.mu);
-  watched.slots[watched.write % kVisualLifecycleRingCapacity] = stamped_span;
-  ++watched.write;
-  if (watched.count < kVisualLifecycleRingCapacity)
   {
-    ++watched.count;
+    auto &watched = GetWatchedJobRing();
+    std::lock_guard<std::mutex> lock(watched.mu);
+    watched.slots[watched.write % kVisualLifecycleRingCapacity] =
+        stamped_span;
+    ++watched.write;
+    if (watched.count < kVisualLifecycleRingCapacity)
+    {
+      ++watched.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(stamped_span.cx, stamped_span.cy,
+                                     stamped_span.cz))
+  {
+    auto &open_sky = GetOpenSkyLifecycleRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyLifecycleRingCapacity] =
+        stamped_span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyLifecycleRingCapacity)
+    {
+      ++open_sky.count;
+    }
   }
 }
 
@@ -424,6 +499,22 @@ void UJobStageTrace::WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz)
   {
     watches.chunks.erase(watches.order.front());
     watches.order.pop_front();
+  }
+}
+
+void UJobStageTrace::WatchOpenSkyLifecycleChunk(int32_t cx, int32_t cy,
+                                                int32_t cz)
+{
+  if (!VisualBlackTraceEnabled())
+  {
+    return;
+  }
+  WatchVisualChunk(cx, cy, cz);
+  auto &watches = GetOpenSkyLifecycleWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  if (watches.chunks.size() < OpenSkyLifecycleWatches::kCapacity)
+  {
+    watches.chunks.insert({cx, cy, cz});
   }
 }
 
@@ -860,6 +951,25 @@ void UJobStageTrace::ForEachWatchedNewest(
   }
 }
 
+void UJobStageTrace::ForEachOpenSkyLifecycleNewest(
+    size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetOpenSkyLifecycleRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kOpenSkyLifecycleRingCapacity - 1 - i) %
+        kOpenSkyLifecycleRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
 void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
 {
   if (!VisualBlackTraceEnabled() ||
@@ -873,13 +983,28 @@ void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
     stamped_span.frame_epoch =
         LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
   }
-  auto &r = GetDemandTransitionRing();
-  std::lock_guard<std::mutex> lock(r.mu);
-  r.slots[r.write % kDemandTransitionRingCapacity] = stamped_span;
-  ++r.write;
-  if (r.count < kDemandTransitionRingCapacity)
   {
-    ++r.count;
+    auto &r = GetDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(r.mu);
+    r.slots[r.write % kDemandTransitionRingCapacity] = stamped_span;
+    ++r.write;
+    if (r.count < kDemandTransitionRingCapacity)
+    {
+      ++r.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(stamped_span.cx, stamped_span.cy,
+                                     stamped_span.cz))
+  {
+    auto &open_sky = GetOpenSkyDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyDemandTransitionRingCapacity] =
+        stamped_span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyDemandTransitionRingCapacity)
+    {
+      ++open_sky.count;
+    }
   }
 }
 
@@ -916,13 +1041,27 @@ void UJobStageTrace::NoteMeshRevisionBump(
   span.event_ms = std::chrono::duration<double, std::milli>(
                       std::chrono::steady_clock::now().time_since_epoch())
                       .count();
-  auto &r = GetDemandTransitionRing();
-  std::lock_guard<std::mutex> lock(r.mu);
-  r.slots[r.write % kDemandTransitionRingCapacity] = span;
-  ++r.write;
-  if (r.count < kDemandTransitionRingCapacity)
   {
-    ++r.count;
+    auto &r = GetDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(r.mu);
+    r.slots[r.write % kDemandTransitionRingCapacity] = span;
+    ++r.write;
+    if (r.count < kDemandTransitionRingCapacity)
+    {
+      ++r.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(span.cx, span.cy, span.cz))
+  {
+    auto &open_sky = GetOpenSkyDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyDemandTransitionRingCapacity] =
+        span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyDemandTransitionRingCapacity)
+    {
+      ++open_sky.count;
+    }
   }
 }
 
@@ -940,6 +1079,25 @@ void UJobStageTrace::ForEachDemandTransitionNewest(
   {
     const size_t abs = (r.write + kDemandTransitionRingCapacity - 1 - i) %
                        kDemandTransitionRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+void UJobStageTrace::ForEachOpenSkyDemandTransitionNewest(
+    size_t max_n, void (*fn)(const DemandTransitionSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetOpenSkyDemandTransitionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kOpenSkyDemandTransitionRingCapacity - 1 - i) %
+        kOpenSkyDemandTransitionRingCapacity;
     fn(r.slots[abs], ctx);
   }
 }

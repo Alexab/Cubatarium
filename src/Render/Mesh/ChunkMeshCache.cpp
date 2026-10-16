@@ -42,6 +42,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <limits>
 #include <sstream>
@@ -3422,8 +3423,15 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
     const std::vector<glm::ivec3> &changed_input_chunks, const char *cause)
 {
   const UChunkManager &chunks = world.GetChunkManager();
+  const bool retain_open_sky_lifecycle =
+      cause && std::strcmp(cause, "enter_open_sky_boundary") == 0;
   for (const glm::ivec3 changed_coord : changed_input_chunks)
   {
+    if (retain_open_sky_lifecycle)
+    {
+      UJobStageTrace::WatchOpenSkyLifecycleChunk(
+          changed_coord.x, changed_coord.y, changed_coord.z);
+    }
     for (int dy = -1; dy <= 1; ++dy)
     {
       for (int dz = -1; dz <= 1; ++dz)
@@ -3440,6 +3448,11 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
               !HasDrawableGreedyMesh(dependent_coord))
           {
             continue;
+          }
+          if (retain_open_sky_lifecycle)
+          {
+            UJobStageTrace::WatchOpenSkyLifecycleChunk(
+                dependent_coord.x, dependent_coord.y, dependent_coord.z);
           }
           const bool inserted =
               PendingMeshDependencyInvalidations_.insert(dependent_coord)

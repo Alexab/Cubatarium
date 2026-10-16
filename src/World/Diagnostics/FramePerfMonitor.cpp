@@ -4849,10 +4849,20 @@ void UFramePerfMonitor::Shutdown()
       UJobStageTrace::ForEachWatchedNewest(
           UJobStageTrace::kVisualLifecycleRingCapacity, dumpTrace,
           &visualLifecycleCtx);
+      DumpCtx openSkyLifecycleCtx{&s.Jsonl, "open_sky_lifecycle_trace"};
+      UJobStageTrace::ForEachOpenSkyLifecycleNewest(
+          UJobStageTrace::kOpenSkyLifecycleRingCapacity, dumpTrace,
+          &openSkyLifecycleCtx);
+      struct DemandTransitionDumpCtx
+      {
+        std::ofstream *out;
+        const char *kind;
+      };
       const auto dumpDemandTransition = [](const DemandTransitionSpan &sp,
                                            void *p) {
-        auto *out = static_cast<std::ofstream *>(p);
-        (*out) << "{\"kind\":\"demand_transition_trace\""
+        auto *ctx = static_cast<DemandTransitionDumpCtx *>(p);
+        auto *out = ctx->out;
+        (*out) << "{\"kind\":\"" << ctx->kind << "\""
                << ",\"event\":\""
                << UJobStageTrace::DemandTransitionName(sp.kind) << "\""
                << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
@@ -4949,9 +4959,16 @@ void UFramePerfMonitor::Shutdown()
         (*out) << std::setprecision(17) << sp.event_ms
                << std::setprecision(previous_precision) << "}\n";
       };
+      DemandTransitionDumpCtx demandTransitionCtx{
+          &s.Jsonl, "demand_transition_trace"};
       UJobStageTrace::ForEachDemandTransitionNewest(
           UJobStageTrace::kDemandTransitionRingCapacity,
-          dumpDemandTransition, &s.Jsonl);
+          dumpDemandTransition, &demandTransitionCtx);
+      DemandTransitionDumpCtx openSkyDemandTransitionCtx{
+          &s.Jsonl, "open_sky_demand_transition_trace"};
+      UJobStageTrace::ForEachOpenSkyDemandTransitionNewest(
+          UJobStageTrace::kOpenSkyDemandTransitionRingCapacity,
+          dumpDemandTransition, &openSkyDemandTransitionCtx);
       DumpCtx cullCtx{&s.Jsonl, "cull_trace"};
       UJobStageTrace::ForEachCullDecisionNewest(64, dumpTrace, &cullCtx);
       const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,

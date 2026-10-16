@@ -923,6 +923,9 @@ public:
   static constexpr size_t kVisualLifecycleRingCapacity = 8192;
   /// Bounded demand-owner transitions for slices sampled by the renderer trace.
   static constexpr size_t kDemandTransitionRingCapacity = 16384;
+  /// Independent retention for open-sky inputs/dependents across startup.
+  static constexpr size_t kOpenSkyLifecycleRingCapacity = 8192;
+  static constexpr size_t kOpenSkyDemandTransitionRingCapacity = 8192;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   /// Keep the narrow opt-in M483 draw-state window independently bounded.
@@ -978,6 +981,8 @@ public:
                            JobTerminalReason reason);
   /// Retain lifecycle events for a chunk selected by the opt-in frustum trace.
   static void WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz);
+  /// Pin open-sky source/dependent coordinates in a bounded diagnostic set.
+  static void WatchOpenSkyLifecycleChunk(int32_t cx, int32_t cy, int32_t cz);
   static bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz);
   /// Retain peak chunks as scheduler targets for a bounded frame window.
   static void WatchCameraBandPeakChunk(int32_t cx, int32_t cy, int32_t cz,
@@ -991,6 +996,8 @@ public:
       void (*fn)(int32_t, int32_t, int32_t, uint8_t, void *), void *ctx);
   static void ForEachWatchedNewest(
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
+  static void ForEachOpenSkyLifecycleNewest(
+      size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   /// Publish the world's current streaming frame for asynchronous demand traces.
   static void SetStreamingFrameEpoch(uint64_t frame_epoch);
   /// Read the current streaming frame for coordinate-scoped diagnostic events.
@@ -1002,6 +1009,9 @@ public:
                                    MeshRevisionBumpReason reason,
                                    uint32_t owner_flags);
   static void ForEachDemandTransitionNewest(
+      size_t max_n, void (*fn)(const DemandTransitionSpan &, void *),
+      void *ctx);
+  static void ForEachOpenSkyDemandTransitionNewest(
       size_t max_n, void (*fn)(const DemandTransitionSpan &, void *),
       void *ctx);
   static size_t Size();
