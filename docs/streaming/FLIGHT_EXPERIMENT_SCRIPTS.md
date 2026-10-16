@@ -10943,7 +10943,7 @@ Raw perf/INFO logs are `perf_20261016-173233_41228.jsonl` and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-173227.41228` under
 `bin/logs`.
 
-### M622O–M622P: saved-world and same-world replay
+### M622O–M622P: saved-world reference and fresh-world run
 
 Both runs used the established visible 35-second M335 no-teleport route. M622O
 used the long-lived `World_164`; it completed 35 periods with process exit 0.
@@ -10952,7 +10952,9 @@ visible-black max 0, and readiness-debt max 36. No deferred-far relight was
 observed (peak 0, FIFO median 1, no age-service events). This is a saved-world
 baseline, not a control for the separately generated M622N map.
 
-M622P repeated M622N's route on the map produced by M622N. It also completed 35
+M622P did not replay on the map produced by M622N. Its requested alias created
+runtime `World_183` with `light_flags event=load outcome=missing`; M622N used
+runtime `World_182` and also recorded `outcome=missing`. M622P completed 35
 periods with process exit 0. Deferred-far peaked at 38 and FIFO median was 15;
 31 aged entries were admitted, all at priority index 0 or 1, with ages 1.504–
 14.929 s (median 2.889 s). The INFO trace gives a concrete stale-work case for
@@ -10972,11 +10974,11 @@ the deferred band, the stale entry is cleared and logged as
 `deferred_far_skip reason=already_satisfied`. The Release build and static EXE
 verification passed; no test suite was run.
 
-M622Q repeated the short route on the same evolving map. It completed 35
-periods with process exit 0 and recorded 205 already-satisfied skips, 6 age
-service events, and deferred-far peak 17 (M622P: 31 age-service events and
-peak 38). The route state and world had advanced, so this is not a controlled
-A/B. Analyzer `pass=false` remained on non-CPU gates: mesh-hole proxy 0.1212,
+M622Q used runtime `World_184`, with `light_flags event=load outcome=missing`,
+so it also ran on a new world. It completed 35 periods with process exit 0 and
+recorded 205 already-satisfied skips, 6 age-service events, and deferred-far
+peak 17 (M622P: 31 age-service events and peak 38). These fresh-world runs do
+not form a controlled A/B. Analyzer `pass=false` remained on non-CPU gates: mesh-hole proxy 0.1212,
 fly visible-black max 14, post-stop visible-black/stalled max 1, readiness-debt
 max 34. Proxies did not improve and no framebuffer verdict was collected; the
 change is retained only for eliminating work proven unnecessary at admission.
@@ -10994,8 +10996,40 @@ Artifacts: reports `m622o_saved_world_relight_queue_20261016.json`,
 `perf_20261016-175647_41492.jsonl`; INFO logs end in `174610.19104`,
 `174848.18544`, and `175643.41492` under `bin/logs`.
 
-Next, identify which direct enqueue callers repeatedly re-create
-already-satisfied deferred entries (205 skips in M622Q) and route those callers
-through the existing no-op predicate where safe. Preserve the FIFO cap and
-underfeet pin. Verify on one compact M335 route after a Release build; keep CPU
-informational and keep operator framebuffer evidence separate from proxies.
+### M622R: miss-witness coordinate units and deferred no-op clear reason
+
+Static review found that `FindNearestMissingGreedyMesh` returns chunk
+coordinates, while `EnqueueTerrainColumnRelight` accepts block-space X/Z. The
+miss-witness repair path now multiplies both axes by `CHUNK_SIZE` before
+enqueueing. The no-op deferred clear uses the explicit `already_satisfied`
+lifecycle reason.
+
+The compact visible M335 route completed 35 periods with process exit 0 on
+runtime `World_185`; `light_flags event=load outcome=missing` confirms a cold
+world despite the requested alias. The INFO trace recorded 116
+`deferred_far_skip reason=already_satisfied` events and exactly 116 matching
+`deferred_far owner=clear ... reason=already_satisfied` events. It also recorded
+a negative-coordinate deferred entry `column=(-1,2) band=0:-1`, consistent with
+preserving both chunk axes after conversion. The audit event lacks a producer
+tag, so that sample alone does not prove it came from the miss-witness caller.
+The unit mismatch itself is confirmed from the API contracts and call site.
+
+The analyzer returned `pass=false` on non-CPU gates. Mesh-hole proxy was
+0.2121, fly visible-black max 18, and post-stop readiness debt ended at 34;
+post-stop mesh-missing max and no-ticket visible-black max were both 0, while
+raw post-stop visible-black/stalled max was 1. These signals do not establish
+a user-visible black frame, and no operator framebuffer verdict was captured.
+Deferred-far peak was 22, FIFO median 23, and FIFO drop delta 90; there were 13
+age-service events. This shows substantial queue pressure and continued
+recreation of already-satisfied deferred work. Host CPU median was 92.6% while
+the application used 19.1% of machine capacity at median; host CPU remains
+context only and is never a run gate.
+
+Report: `bin/suite_reports/engine_refactor/m622r_miss_witness_chunk_units_20261016.json`.
+Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-180801.35700`.
+
+Next, trace which producers recreate already-satisfied entries and whether
+their work is redundant before deferral. Preserve the FIFO cap and underfeet
+pin. Keep operator-visible pixels separate from mesh/readiness proxies, and
+use one compact route after a causal code change.

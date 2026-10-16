@@ -11748,8 +11748,11 @@ service. The mesh-hole proxy was 0.0303, fly visible-black max 4, post-stop
 visible-black max 0, and readiness-debt max 36. This world is not a controlled
 pair for the separately generated M622N map.
 
-M622P replayed the M335 route on M622N's resulting map. It still produced
-deferred-far peak 38, FIFO median 15, and 31 accepted aged admissions. The
+M622P was not a replay on M622N's resulting map. Its requested alias resolved
+to runtime `World_183`, and INFO recorded `light_flags event=load
+outcome=missing`; M622N used `World_182` with the same missing-load outcome.
+M622P still produced deferred-far peak 38, FIFO median 15, and 31 accepted
+aged admissions. The
 admitted entries reached priority index 0 or 1, but their age reached 14.929 s.
 The INFO trace for `(-7,2)` shows a specific stale request: an accepted relight
 capture covered `0:103`, including deferred band `32:47`; after that capture
@@ -11762,10 +11765,12 @@ M622Q changes `AdmitDeferredFarRelightColumns` to re-evaluate an in-range entry
 with the existing no-op policy before it consumes queue capacity. If the column
 is lit-ready, has no pending-light owner, and no drawable dark face remains in
 the deferred band, the entry is cleared. Release build and static EXE checks
-passed. A compact same-map replay completed 35 periods and recorded 205
+passed. M622Q used runtime `World_184`, and INFO recorded
+`light_flags event=load outcome=missing`, so it was another fresh world, not a
+same-map replay. It completed 35 periods and recorded 205
 `already_satisfied` skips; aged-service events fell from 31 to 6 and deferred
-peak from 38 to 17. Since the world and run state had advanced, these deltas
-are not a controlled A/B. The mesh-hole proxy increased 0.0606→0.1212,
+peak from 38 to 17. These are cross-world results and not a controlled A/B.
+The mesh-hole proxy increased 0.0606→0.1212,
 fly visible-black max was 15→14, and post-stop visible-black/stalled max stayed
 1. Thus the change removes proven no-op queue work, but visual improvement is
 not established. No operator framebuffer verdict was recorded.
@@ -11776,13 +11781,36 @@ machine capacity. Each route completed and analyzer failure was on
 non-CPU gates. Host CPU remains informational and must not block diagnostic
 runs.
 
-Next: trace the source/cause for repeated direct enqueues that recreate
-already-satisfied deferred entries (M622Q observed 205 skip events). Apply the
-existing no-op policy upstream only where caller state proves safety; preserve
-FIFO backpressure and the underfeet pin. Rebuild Release and use one compact
-M335 route to verify queue behavior. Keep mesh/readiness proxies distinct from
-operator-visible pixels; defer long flights until the compact causal check is
-clear.
+M622R verifies the miss-witness fix by API and call-site review:
+`FindNearestMissingGreedyMesh` returns chunk coordinates, while
+`EnqueueTerrainColumnRelight` accepts block-space X/Z; the call now multiplies
+both axes by `CHUNK_SIZE`. The no-op deferred clear logs the explicit
+`already_satisfied` lifecycle reason. One compact Release M335 route completed
+35 periods with process exit 0 on runtime `World_185`; INFO recorded
+`light_flags event=load outcome=missing`, so this was a new cold world. The
+trace contained 116 no-op skips and 116 matching clear events. A deferred
+negative-coordinate sample `column=(-1,2) band=0:-1` is consistent with the
+coordinate correction, but that audit event has no producer tag and does not
+isolate the miss-witness caller.
+
+The analyzer returned `pass=false` on non-CPU gates. Mesh-hole proxy was
+0.2121, fly visible-black max 18, and post-stop readiness debt ended at 34;
+post-stop mesh-missing and no-ticket visible-black maxima were both zero, with
+raw visible-black/stalled max 1. No operator framebuffer verdict was
+collected. Deferred-far peak 22, FIFO median 23, FIFO drop delta 90, and 13
+age-service events show continued queue pressure. Host CPU median was 92.6%,
+while application CPU median was 19.1% of machine capacity. Host CPU remains
+context only and never gates experiments.
+
+Next, trace the producer that recreates already-satisfied deferred entries and
+determine whether it can reject redundant requests before deferral. Preserve
+FIFO backpressure and the underfeet pin. Use one compact M335 route after a
+causal change. Keep readiness and mesh proxies distinct from operator-visible
+pixels.
+
+Report: `bin/suite_reports/engine_refactor/m622r_miss_witness_chunk_units_20261016.json`.
+Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-180801.35700`.
 
 Reports: `bin/suite_reports/engine_refactor/m622o_saved_world_relight_queue_20261016.json`,
 `bin/suite_reports/engine_refactor/m622p_warm_replay_relight_queue_20261016.json`,

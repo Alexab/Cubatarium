@@ -1253,6 +1253,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   const auto admission_now = std::chrono::steady_clock::now();
   std::vector<glm::ivec2> to_erase;
   to_erase.reserve(DeferredFarRelightColumns.size());
+  std::vector<glm::ivec2> already_satisfied_to_erase;
   for (const auto &kv : DeferredFarRelightColumns)
   {
     const glm::ivec2 ground_xz = kv.first;
@@ -1288,7 +1289,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
                                             band_needs_relight))
     {
       ++world.GetPhysicsTelemetryMutable().RelightSkippedNoOpEnqueueN;
-      to_erase.push_back(ground_xz);
+      already_satisfied_to_erase.push_back(ground_xz);
       if (audit_admission)
       {
         CubatariumLogInfo(
@@ -1481,6 +1482,10 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   for (const glm::ivec2 &key : to_erase)
   {
     ClearDeferredFarRelightColumn(key, "deferred_far_admitted");
+  }
+  for (const glm::ivec2 &key : already_satisfied_to_erase)
+  {
+    ClearDeferredFarRelightColumn(key, "already_satisfied");
   }
   auto &telem = world.GetPhysicsTelemetryMutable();
   telem.RelightDeferredFarPendingN =

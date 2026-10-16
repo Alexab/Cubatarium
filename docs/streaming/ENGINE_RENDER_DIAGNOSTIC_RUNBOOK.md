@@ -1119,9 +1119,11 @@ events. Mesh-hole proxy was 0.0303, fly visible-black max 4, post-stop
 visible-black max 0, and readiness-debt max 36. This is a saved-world reference,
 not a controlled comparison with the M622N map.
 
-M622P replayed M622N's route on its resulting map. It recorded 31 accepted
-age-service events, deferred-far peak 38, and FIFO median 15. The aged requests
-were placed at priority index 0 or 1, but age ranged up to 14.929 s. For
+M622P was not a replay on M622N's map. Its requested world alias resolved to
+new runtime `World_183`; INFO recorded `light_flags event=load outcome=missing`.
+M622N used runtime `World_182`, also with `outcome=missing`. M622P recorded 31
+accepted age-service events, deferred-far peak 38, and FIFO median 15. The aged
+requests were placed at priority index 0 or 1, but age ranged up to 14.929 s. For
 `(-7,2)`, INFO shows a validated capture of band `0:103` completing after a new
 deferred request for `32:47`; that deferred entry survived until a later
 age-service admission, whose capture was discarded as
@@ -1132,10 +1134,12 @@ M622Q added a Release-path check in `AdmitDeferredFarRelightColumns`: before
 admission, use the existing no-op policy to discard a deferred record when the
 column is already lit-ready, has no pending-light owner, and no drawable dark
 face remains in the saved Y band. The Release build and static EXE verification
-passed. The compact M335 replay completed 35 periods with process exit 0 and
-logged 205 `deferred_far_skip reason=already_satisfied` events. Compared with
-M622P, aged-service events fell 31→6 and deferred-far peak 38→17, but the world
-and run state had advanced, so this is not a controlled A/B. The mesh-hole
+passed. M622Q used runtime `World_184`, with `light_flags event=load
+outcome=missing`, so it was not a replay on M622P's map. The compact M335 run
+completed 35 periods with process exit 0 and logged 205
+`deferred_far_skip reason=already_satisfied` events. Compared with M622P,
+aged-service events fell 31→6 and deferred-far peak 38→17, but these were
+separate fresh worlds and this is not a controlled A/B. The mesh-hole
 proxy increased 0.0606→0.1212, fly visible-black max changed 15→14, and
 post-stop visible-black/stalled max remained 1. Do not claim a visual
 improvement; no operator framebuffer verdict was recorded.
@@ -1146,9 +1150,33 @@ CPU median/p95/max for M622O/P/Q was 93.7/100/100%, 86.2/100/100%, and
 capacity. All three routes completed. Host CPU is informational, never an
 admission gate.
 
-The 205 no-op skips also show that a producer repeatedly re-creates work after
-it is already satisfied. Next trace the source/cause at the direct relight
-enqueue sites and apply the same no-op predicate upstream where the caller has
-enough state to do so. Keep the existing FIFO cap and pin policy. Use one
-compact M335 route after a Release rebuild; do not start a long operator
-monitoring run for this check.
+M622R verified the miss-witness unit correction by static call-site/API review:
+`FindNearestMissingGreedyMesh` returns chunk coordinates, and
+`EnqueueTerrainColumnRelight` takes block-space X/Z; the call now multiplies
+both axes by `CHUNK_SIZE`. The no-op deferred clear reports its precise
+`already_satisfied` reason. One compact Release M335 route completed 35 periods
+with process exit 0 on runtime `World_185`. The requested alias was a new cold
+world (`light_flags event=load outcome=missing`). INFO contained 116 no-op skip
+events and 116 matching clear events. A `column=(-1,2) band=0:-1` deferred
+entry is consistent with preserving negative chunk coordinates after
+conversion, though the event has no producer tag and does not isolate this
+call.
+
+M622R's analyzer returned `pass=false` on non-CPU gates: mesh-hole proxy 0.2121,
+fly visible-black max 18, post-stop readiness debt 34. Post-stop mesh-missing
+and no-ticket visible-black maxima were both zero; raw visible-black/stalled
+max was 1. No operator framebuffer verdict was captured, so these are not
+proof of an on-screen black frame. Deferred-far peak 22, FIFO median 23, FIFO
+drop delta 90, and 13 age-service events show ongoing queue pressure; 116
+already-satisfied clears also show repeat production of no-op deferred work.
+Host CPU median was 92.6%, with application CPU median 19.1% of machine
+capacity. Host CPU is context only and must not block a run.
+
+Next, trace the producer that re-creates already-satisfied entries and prove
+whether its request is redundant before it reaches deferred admission. Keep the
+FIFO cap and pin policy. Use one compact M335 route after a causal change, and
+keep framebuffer evidence separate from mesh/readiness proxies.
+
+Report: `bin/suite_reports/engine_refactor/m622r_miss_witness_chunk_units_20261016.json`.
+Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-180801.35700`.

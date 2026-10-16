@@ -1696,7 +1696,8 @@ void UWorldStreaming::RefreshStreamingPressure(
             if (!already_in_fifo)
             {
               world.Persistence->EnqueueTerrainColumnRelight(
-                  miss_coord.x, miss_coord.z, /*priority=*/true);
+                  miss_coord.x * CHUNK_SIZE, miss_coord.z * CHUNK_SIZE,
+                  /*priority=*/true);
             }
             GetColumnFlowExecutor().RequestPromoteRelight(miss_xz, 55);
           }
