@@ -11811,12 +11811,12 @@ age-service events show continued queue pressure. Host CPU median was 92.6%,
 while application CPU median was 19.1% of machine capacity. Host CPU remains
 context only and never gates experiments.
 
-Next, add producer and exact-slice-settlement fields to FIFO-denial traces and
-determine whether the repeated requests are redundant before deferral.
-Preserve first-mesh settlement checks, FIFO backpressure, and the underfeet pin
-until the trace identifies the responsible owner. Use one compact M335 route
-after a causal change. Keep readiness and mesh proxies distinct from
-operator-visible pixels.
+M622S/T completed the planned producer and slice-settlement trace. FIFO-denial
+events now include the producer, world readiness, loaded slice count, current
+light settlement count, and pending slice count. M622T also applies the
+existing deferred no-op predicate at the FIFO-denial boundary. See the entries
+below for the evidence and remaining work. Keep readiness and mesh proxies
+distinct from operator-visible pixels.
 
 Report: `bin/suite_reports/engine_refactor/m622r_miss_witness_chunk_units_20261016.json`.
 Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:
@@ -11825,3 +11825,74 @@ Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:
 Reports: `bin/suite_reports/engine_refactor/m622o_saved_world_relight_queue_20261016.json`,
 `bin/suite_reports/engine_refactor/m622p_warm_replay_relight_queue_20261016.json`,
 and `bin/suite_reports/engine_refactor/m622q_recheck_deferred_noop_20261016.json`.
+
+### M622S: trace FIFO producers and per-slice settlement
+
+The Release build added producer tags to terrain-relight enqueue call sites and
+logged the column's pending/light-ready state plus loaded, currently settled,
+and pending vertical slices on FIFO denial. A compact visible M335 route
+completed 35 periods with process exit 0 on cold runtime `World_186`
+(`light_flags event=load outcome=missing`). There were 1,077 denial events;
+none lacked world context. The largest producer groups were
+`DrainIdleFocusPendingLight` (326), `DrainRelightQueues` (163), its retry lambda
+(135), `EnqueueVoidDarkColumnRelightNote` (134), `RecoverUnlitFocusMeshes`
+(127), and `AdmitUnfinishedVisualDemand` (98).
+
+The trace recorded 102 deferred no-op skips and matching clears. Ninety-four
+were last deferred for `fifo_admission_denied`; eight came from
+`visible_exact_replacement`. For the 28 `miss_witness` denials, every sample
+had no column pending-light owner; 27 were lit-ready. Thirteen of the 28 had
+all 4–5 resident slices carrying current settlement stamps, while no sampled
+slice was in the pending band. This identifies a repeatable no-light-debt
+shape behind some forced witness requests, but FIFO-denial producers are
+broader than `miss_witness`.
+
+Analyzer `pass=false` on non-CPU gates. Mesh-hole proxy was 0.1212, fly
+visible-black max 14, post-stop mesh-missing max 0, readiness debt max 35, and
+post-stop visible-black/stalled max 0. Deferred-far peak was 19 and FIFO-drop
+delta 73. No framebuffer verdict was collected. Host CPU median/p95 was
+82.2/100%; app median/p95 was 20.8/44.1% of machine capacity. CPU remains
+context only and never gates a run.
+
+### M622T: drop already-satisfied requests before deferral
+
+When a FIFO request is denied and has a world context, the enqueue path now
+uses the same `ShouldSkipNoOpTerrainRelightEnqueue` predicate used later by
+deferred admission. It evaluates the union of the requested Y band and any
+existing deferred band. If the column is lit-ready, has no pending-light owner,
+and has no drawable dark face in that range, it increments the existing no-op
+counter, clears any matching deferred owner, and returns without creating new
+far work. Requests with actual lighting debt continue through FIFO deferral.
+This matches the existing eventual-discard rule at the earlier decision
+point; it does not change queue capacity or pinned/underfeet admission.
+
+The Release build and static EXE check passed. M622T completed 35 periods with
+process exit 0 and no runner timeout on cold runtime `World_187`. The new path
+logged 190 early no-op skips, primarily from `DrainRelightQueues` (72),
+`EnqueueVoidDarkColumnRelightNote` (60), `miss_witness` (30), and its retry
+lambda (26). Forty-two deferred entries were still recognized as no-op on
+later admission; 43 clears were marked `already_satisfied`. The
+remaining work comes through separate deferred producers, including the
+visible-exact replacement path.
+
+This was not a controlled A/B: M622S/T used different cold runtime worlds and
+had different host load. M622T's mesh-hole proxy was 0.0909 and fly
+visible-black max 10, while readiness debt max was 39 and post-stop
+visible-black/stalled max was 2 (M622S: 0 and 0). Deferred-far peak was 22 and
+FIFO-drop delta 163. Both analyzers returned `pass=false` on non-CPU gates;
+neither run supplied a framebuffer verdict. These metrics do not establish a
+visual improvement or regression. In one process sample Windows marked the
+window unresponsive while it continued writing logs; the runner completed
+with `timed_out=false` and process exit 0.
+
+Next: trace the remaining deferred no-op path for
+`visible_exact_replacement` and the other 42 admission-time no-ops; check
+whether their exact geometry/light owners still need work before changing that
+path. Then keep the compact M335 route for causal checks. Resume longer flights
+only when a specific long-distance question cannot be answered by short runs.
+
+Artifacts: `bin/suite_reports/engine_refactor/m622s_fifo_producer_slice_settlement_20261016.json`,
+`bin/logs/perf_20261016-190703_43384.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-190659.43384`;
+M622T artifacts use `m622t_noop_before_deferred_20261016.json`,
+`perf_20261016-191404_43720.jsonl`, and INFO suffix `191400.43720`.

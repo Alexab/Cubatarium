@@ -11040,8 +11040,76 @@ Report: `bin/suite_reports/engine_refactor/m622r_miss_witness_chunk_units_202610
 Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-180801.35700`.
 
-Next, trace which producers recreate already-satisfied entries and whether
-their work is redundant before deferral. Preserve the FIFO cap and underfeet
-pin. Add producer and slice-settlement tags to FIFO-denial traces before
-changing admission. Keep operator-visible pixels separate from
-mesh/readiness proxies, and use one compact route after a causal code change.
+M622S/T completed producer/slice-settlement tracing and added an early no-op
+check at FIFO denial. See the entries below for the exact runs, findings, and
+remaining queue owners. Preserve the FIFO cap and underfeet pin; keep
+operator-visible pixels separate from mesh/readiness proxies.
+
+### M622S: FIFO producer and slice-settlement trace
+
+M622S added producer/world context to terrain relight enqueue calls and
+recorded loaded, currently settled, and pending vertical slices for every
+FIFO denial. It used the established short visible M335 profile:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622S_FifoProducerSliceSettlement_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622S `
+  -Report bin/suite_reports/engine_refactor/m622s_fifo_producer_slice_settlement_20261016.json
+```
+
+It completed 35 periods with process exit 0 on cold runtime `World_186`.
+INFO contained 1,077 tagged FIFO denials, 102 deferred no-op skips, and 102
+matching clears. Ninety-four no-op clears followed `fifo_admission_denied`;
+eight followed `visible_exact_replacement`. For `miss_witness`, 27/28 samples
+had no pending-light owner and were lit-ready; 13/28 had every loaded slice
+settled. The analyzer returned `pass=false` on non-CPU gates. Mesh-hole proxy
+was 0.1212, fly visible-black max 14, stop mesh-missing max 0, readiness debt
+max 35, and post-stop visible-black/stalled max 0. These proxies do not confirm
+or deny an operator-visible pixel defect.
+
+### M622T: skip proven no-op work before FIFO deferral
+
+After M622S, denied requests with world context use the existing deferred
+no-op predicate before creating a far-deferred entry. The short route used the
+same profile on a new cold world:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622T_NoOpBeforeDeferred_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622T `
+  -Report bin/suite_reports/engine_refactor/m622t_noop_before_deferred_20261016.json
+```
+
+M622T completed 35 periods with process exit 0 and no runner timeout on
+runtime `World_187`. It logged 190 early no-op skips, 42 deferred-admission
+no-op skips, and 43 clears marked `already_satisfied`. Its analyzer also
+returned `pass=false` on non-CPU gates: mesh-hole proxy 0.0909, fly
+visible-black max 10, stop mesh-missing max 0, readiness debt max 39, and
+post-stop visible-black/stalled max 2. M622S/T are different cold worlds with
+different host load and are not a controlled A/B; these metrics do not
+establish visual improvement or regression. At one check Windows marked the
+process unresponsive while it continued logging; the runner completed with
+`timed_out=false` and exit 0.
+Host CPU remains informational and is never a launch gate. No further long
+operator-monitoring flight was run.
+
+Artifacts:
+
+- M622S: `bin/suite_reports/engine_refactor/m622s_fifo_producer_slice_settlement_20261016.json`, `bin/logs/perf_20261016-190703_43384.jsonl`, INFO suffix `190659.43384`.
+- M622T: `bin/suite_reports/engine_refactor/m622t_noop_before_deferred_20261016.json`, `bin/logs/perf_20261016-191404_43720.jsonl`, INFO suffix `191400.43720`.
+
+Next: investigate the remaining 42 deferred-admission no-op records and the
+`visible_exact_replacement` producer. Preserve the FIFO cap and underfeet pin;
+make further policy changes only when the exact owner and required mesh/light
+work are identified.
