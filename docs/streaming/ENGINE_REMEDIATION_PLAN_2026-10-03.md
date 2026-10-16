@@ -11300,14 +11300,36 @@ M616A завершился без timeout, но runtime host CPU был 68.6/98.
 строка `gpu=1` была first-mesh audit event с `enter_gpu=1`, а не GPU-only
 stale-face witness.
 
-Следующий короткий M335 должен включить `CUBA_VISUAL_BLACK_TRACE=1` и
-сопоставить точные revision-bump reasons целевого среза с dirty dequeue,
-async capture, stale-input reject и GPU publish. При стабильной revision и
-отсутствии scheduling owner исправлять scheduler handoff/fairness; при
-продолжающихся bump искать источник повторной invalidation. Сохранять ресурсный
-gate host CPU median <=50%, p95 <=75%; длинный мониторинговый маршрут не нужен.
+M617A повторил короткий M335 с `CUBA_VISUAL_BLACK_TRACE=1`. На
+`(-19,2,5)` light debt прошёл lifecycle queued→admitted→published и
+`meshed_light_rev` догнал `field_light_rev=1604`. Геометрия при этом публиковалась
+поступательно: retry snapshots показали desired/published `3/2`, `4/3`, `5/4`,
+`6/5`, то есть один revision оставался впереди. В финальном visual trace был
+CPU stale-face witness: sample `(-305,42,80)` имел текущий свет 10 в source
+chunk `(-20,2,5)`, face 3; у consumer own light revisions совпадали на 1604.
+Срез стоял в RemeshQ `0/4`; mesh repair owner flags `3` означают Dirty + active
+build. Это подтверждает работающий repair handoff, но не его последующую
+публикацию/снятие witness.
 
-Артефакты M609–M616A сохранены локально в `bin/suite_reports/engine_refactor`,
+M617A не прошёл runtime resource gate: host CPU 65.1/99.5/100%
+(median/p95/max), suite `pass=false`; визуальные proxy были
+`visual_holes_rate=0`, `fly_visible_black_max=3`, `post_stop_visible_black_max=1`,
+при `post_stop_readiness_debt_max=46`. Эти счетчики не дают операторской
+оценки изображения. Несмотря на включённый visual trace, для целевого среза
+сохранились только четыре renderer trace rows и ноль `demand_transition_trace`
+revision-bump событий: slice был добавлен в watch слишком поздно, при выборе
+рендерного census. Исправлено в `e39de9df`: при включённой диагностике h5
+geometry debt начинает watch прямо в bounded admission. Release build прошёл;
+есть прежнее предупреждение C4335 о формате строк `WorldBlockPhysicsService.h`.
+
+Следующий шаг — один короткий M618A M335 после host CPU median <=50%, p95
+<=75%, с теми же условиями и обоими флагами audit. Проверить, что proactive
+watch даёт целевые `mesh_revision_bumped` строки с reason и ownership на каждом
+переходе. Только после этого решать, нужна ли правка источника invalidation или
+scheduler handoff. Длинный мониторинговый маршрут и расширение scheduler budget
+не нужны.
+
+Артефакты M609–M617A сохранены локально в `bin/suite_reports/engine_refactor`,
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md) и
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).

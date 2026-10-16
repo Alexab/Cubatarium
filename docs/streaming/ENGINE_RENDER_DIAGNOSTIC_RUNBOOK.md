@@ -781,12 +781,31 @@ only `gpu=1` text match was a first-mesh audit row with `enter_gpu=1`, not a
 GPU-only stale-face witness. Check event type and source fields instead of
 grepping `gpu=1` alone.
 
-Next diagnostic: repeat only the same short M335 route after host CPU median is
-<=50% and p95 <=75%, with `CUBA_VISUAL_BLACK_TRACE=1`. Join each target geometry
-revision bump to dirty-queue dequeue, async capture, stale-input rejection, and
-GPU publication. If revision changes continue, trace the invalidation producer;
-if it stabilizes without scheduling, trace scheduler ownership. Do not extend
-this into a long operator-monitoring flight.
+M617A repeated the short M335 route with `CUBA_VISUAL_BLACK_TRACE=1`. For the
+target, light debt was queued, admitted and published; the consumer's own field
+and meshed light revisions both reached 1604. Geometry desired/published snapshots
+progressed 3/2 → 4/3 → 5/4 → 6/5. A final CPU stale-face witness sampled light
+10 at `(-305,42,80)` in source chunk `(-20,2,5)`, face 3, while the consumer's
+own revisions matched. It was already in RemeshQ at position 0/4; repair owner
+flags 3 indicate Dirty + active build. The witness was sampled before observing
+that build publish, so do not count it as a post-repair persistent defect.
+
+M617A's host CPU was 65.1/99.5/100% median/p95/max; suite `pass=false`, so it
+is not performance acceptance. `visual_holes_rate=0`, fly visible-black max=3,
+post-stop visible-black max=1, readiness-debt max=46. These counters are not
+framebuffer evidence. The report contains only four renderer rows and no target
+`demand_transition_trace` rows: the watch began when the renderer census found
+the target, after its revision changes.
+
+Commit `e39de9df` starts the opt-in visual watch when bounded admission first
+identifies h5 geometry debt. Release build passed. Next diagnostic: repeat only
+the same short M335 route after host CPU median <=50% and p95 <=75%, with both
+`CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`. Confirm target
+`mesh_revision_bumped` events contain bump reason plus queue/owner state, then
+join them to dirty dequeue, async capture, stale-input rejection, and GPU
+publication. If revision changes continue, trace the invalidation producer; if
+it stabilizes without scheduling, trace scheduler ownership. Do not extend this
+into a long operator-monitoring flight.
 
 M615A artifacts:
 
@@ -799,3 +818,9 @@ M616A artifacts:
 - `suite_reports/engine_refactor/m616a_outer_geometry_debt_repair_20261016.json`
 - `logs/perf_20261016-125253_29904.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-125249.29904`
+
+M617A artifacts:
+
+- `suite_reports/engine_refactor/m617a_geometry_revision_cause_20261016.json`
+- `logs/perf_20261016-130222_31232.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-130218.31232`

@@ -5644,3 +5644,29 @@ revisions keep changing, identify and coalesce the repeated invalidation source.
 If the revision stabilizes but the queued item is not scheduled, trace and repair
 the scheduler handoff. Preserve the existing short-route and operator-visible
 verification policy.
+
+M617A ran the same short route with `CUBA_VISUAL_BLACK_TRACE=1`. Target light
+debt for `(-19,2,5)` was admitted and published, bringing its own field/meshed
+light revisions to 1604. Geometry publication advanced in steps while the next
+revision stayed one ahead: desired/published snapshots were 3/2, 4/3, 5/4, then
+6/5. A final CPU stale-face witness sampled light 10 at `(-305,42,80)` in
+neighbor source chunk `(-20,2,5)`, face 3, while the consumer's own light
+revisions matched. The consumer was at RemeshQ index 0/4 and its repair trace
+had owner flags 3 (Dirty + async build). The witness was sampled before that
+owner's follow-up publication, so it does not establish a persistent post-repair
+artifact.
+
+The targeted geometry bump history was missing despite visual tracing: only four
+renderer trace rows and no `demand_transition_trace` rows survived for the target.
+The visual-chunk watch had been opened by the late renderer census, after the
+revision changes. Commit `e39de9df` now starts the watch when bounded admission
+first identifies drawable h5 geometry debt, but only when visual tracing is
+enabled. Release build passed. The next short M618A should confirm bump reason
+and ownership events on the same M335 route.
+
+M617A runtime host CPU median/p95/max was 65.1/99.5/100%, so it is not a
+performance acceptance run. Its suite reported `visual_holes_rate=0`,
+`fly_visible_black_max=3`, `post_stop_visible_black_max=1`, and
+`post_stop_readiness_debt_max=46`; these proxies describe separate scopes and
+do not replace operator framebuffer observation. No operator image verdict was
+captured.

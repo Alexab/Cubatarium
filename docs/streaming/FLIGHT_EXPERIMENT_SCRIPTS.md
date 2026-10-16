@@ -10251,8 +10251,9 @@ Relight handoff был помечен `stale_mesh_input=1` при `field_light_r
 Это audit-поле описывает отношение ревизий света и mesh и не означает, что был
 отклонён async mesh capture.
 
-Следующий точечный run — только после свежего host CPU gate median <=50%,
-p95 <=75%, с теми же параметрами и дополнительным revision trace:
+M617A был запущен после локального 10-секундного host CPU preflight
+median/p95 27.8/58.4%; с теми же параметрами была включена дополнительная
+revision trace:
 
 ```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
@@ -10269,14 +10270,56 @@ $env:CUBA_VISUAL_BLACK_TRACE='1'
   -Report bin/suite_reports/engine_refactor/m617a_geometry_revision_cause_20261016.json
 ```
 
-Для `(-19,2,5)` объединить `mesh_revision_bump_reason` из perf trace с Dirty
-dequeue/scheduling, capture input revision, stale-input rejection и GPU publish.
-Если bump продолжаются — искать producer инвалидизации; если revision устойчива,
-но задача не планируется — исследовать scheduler handoff. Не запускать длинный
-операторский мониторинговый маршрут.
+Для `(-19,2,5)` планировалось объединить `mesh_revision_bump_reason` из perf
+trace с Dirty dequeue/scheduling, capture input revision, stale-input rejection
+и GPU publish; целевой bump trace не появился из-за позднего открытия watch.
+Причина churn осталась открытой. Не запускать длинный операторский
+мониторинговый маршрут.
+
+M617A команда выше была выполнена. Runtime host CPU достиг median/p95/max
+65.1/99.5/100%, поэтому это не performance acceptance; process завершился с
+`process_rc=0`, timeout отсутствовал, но suite `pass=false`. Для целевого chunk
+сохранилось только четыре trace rows, без `demand_transition_trace` bump rows:
+watch включился поздно, при выборке визуальным census. При этом exact stale-face
+witness имел source chunk `(-20,2,5)`, свет 10 в sample `(-305,42,80)`, face 3,
+`stale_sample_gpu_path=0`. Consumer light revisions совпадали на 1604.
+Geometry publication snapshots двигались 3/2 → 4/3 → 5/4 → 6/5; в последнем
+repair trace срез был в RemeshQ на позиции 0/4 с owner flags 3 (Dirty + active
+build). Этот witness был получен до наблюдения публикации следующего repair.
+
+Commit `e39de9df` исправляет полноту trace: opt-in visual watch теперь
+открывается при первой bounded admission drawable geometry debt в h5, до того
+как renderer census выберет его позднее. Release build прошёл. Для следующей
+точечной проверки использовать M618A после свежих host CPU ворот median <=50%,
+p95 <=75%:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M618A_ProactiveRevisionWatch_20261016 `
+  -Report bin/suite_reports/engine_refactor/m618a_proactive_revision_watch_20261016.json
+```
+
+M618A должен показать целевые `mesh_revision_bumped` events с reason, queue и
+owner state до/во время ремонта. Сопоставить с scheduling, capture reject и GPU
+publish; изменения должны оставаться в рамках короткого повторяемого маршрута.
 
 Артефакты M616A (локальные):
 
 - `suite_reports/engine_refactor/m616a_outer_geometry_debt_repair_20261016.json`
 - `logs/perf_20261016-125253_29904.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-125249.29904`
+
+Артефакты M617A:
+
+- `suite_reports/engine_refactor/m617a_geometry_revision_cause_20261016.json`
+- `logs/perf_20261016-130222_31232.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-130218.31232`
