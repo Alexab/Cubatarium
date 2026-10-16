@@ -12414,6 +12414,16 @@ measured time spent rendering one pixel in the provisional state. The data
 shows the startup fallback path is active, but does not yet prove the late-route
 dim-chunk symptom or justify suppressing preview geometry.
 
+The INFO chronology bounds queue service more tightly than the sparse pixel
+interval. For `(7,3)`, the pending note was inserted at 02:20:31.668, its
+priority position moved from 10/11 to 3/12 at 02:20:32.015, capture dequeued
+it at 02:20:32.055, and light flags finalized at 02:20:32.128. For `(5,4)`
+through `(5,6)`, FIFO denials created deferred-far owners; visible admission
+cleared them 39–123 ms later, then exact first-mesh capture and light
+finalization followed 0.26–0.45 s after that. The queue recovered quickly in
+this startup window. This does not establish when a same-view replacement mesh
+reached the screen.
+
 M622AY counted 369 active FIFO overflow evictions and at most eight deferred
 far columns. The overflow path preserves each victim as deferred work, so do
 not interpret the counter as lost requests or change queue capacity from this
@@ -12422,21 +12432,59 @@ controlled comparison with M622AW/AX.
 
 Static review of M622AY's exact chronology found no queue-starvation defect in
 the startup window. The priority deque is reordered by current focus distance,
-and `EnqueueVisibleRelight` promotes exact visible repair requests. For column
-`(7,3)`, its queue position moved from 10/11 to 3/12 in 347 ms; capture
-dequeued it 387 ms after the pending note, with light flags finalized 460 ms
-after the note. Columns `(5,4)` through `(5,6)` hit FIFO admission backpressure,
-were retained as deferred-far owners, and were restored by visible admission
-within 39–123 ms. Their first-mesh capture and light finalization followed
-0.26–0.45 s later. This trace shows bounded queue pressure with successful
-visible re-admission, not starvation or proven work loss.
+and `EnqueueVisibleRelight` promotes exact visible repair requests. The target
+did not remain stuck behind older priority work; FIFO-denied work was retained
+as deferred-far and returned to the visible lane. This trace shows bounded
+queue pressure with successful visible re-admission, not starvation or proven
+work loss.
 
 Do not change the FIFO cap, visible-lane budget, or preview gate from this
-evidence. The remaining diagnostic target is the interval after light-field
-finalization: stale-halo detection, dirty admission, mesh publication, and GPU
-apply. M622AY's pixel trace did not join its startup preview chunks to exact
-lifecycle events; its first settled sample can lag the actual replacement due
-to sparse sampling and camera movement. Follow one late-route target through
-those stages, then use the established short M335 route only when a fresh
-pixel/lifecycle witness can be captured. Keep CPU as context and avoid long
-operator flights.
+evidence. M622AY's pixel trace did not join its startup preview chunks to exact
+lifecycle events, so its later settled sample could not identify the screen
+handoff.
+
+### M622AZ: early preview lifecycle capture
+
+M622AZ repeated the established 30 s visible M335 route on warm `World_164`
+with 20 s stop, 8 s idle, no teleport, and the relight audit. The product gate
+failed; the process exited successfully, traveled nine chunks, and did not
+time out. Readiness debt remained in every analyzed period, while
+`visual_holes_rate` and post-stop visual-hole proxy were zero. Treat this as
+unfinished streaming work, not a confirmed blank framebuffer. Host CPU
+median/p95 was 59.9/82.2% and remains context only.
+
+M622AY showed that pixel tracing could start after a chunk's relight queue
+events had already happened. `EnqueueVoidDarkColumnRelightNote` now registers
+the visual lifecycle watcher for the nearest unsettled dark slice before
+relight admission. The watcher remains opt-in through
+`VisualBlackTraceEnabled()`. The pixel analyzer also retains a unique
+attempt-zero first-mesh job only when its world/incarnation matches and its
+source light and geometry revisions are compatible with the sampled chunk.
+This recovered the startup job for `(7,3,3)` without guessing among multiple
+jobs.
+
+The 2,080 pixel probes contained 47 samples below luma 32; all 47 joined a
+drawable opaque surface. Five dark samples had provisional preview lighting.
+The run recorded 63 provisional-light samples across seven chunks. The first
+post-preview CPU mesh publication was observed 0.269–1.302 s after each
+chunk's first preview sample. These are mesh-job publication times, not a
+measured framebuffer replacement time. The first later settled/non-preview
+pixel sample was 3.67–12.02 s later at a different camera pose, and there were
+zero same-view handoffs.
+
+The lifecycle rows for all seven chunks now join to a mesh job: six by exact
+attempt and job identity, and `(7,3,3)` by the conservative incarnation and
+revision fallback. No matching `install_published` or GPU queue/kick/ready
+stage was present in those selected timelines. The later settled/non-preview
+pixel for each chunk nevertheless joined a visible MDI pass with a published
+geometry revision equal to or newer than that job's published revision. This
+shows that the chunk had a drawable mesh at that revision or a successor when
+it was sampled. The camera had moved, so it does not timestamp when the
+replacement appeared at the original screen pixel. GPU queue/kick/ready stages
+describe the compute-meshing route and their absence alone is not a failure.
+
+The analyzer now carries mesh publication revisions beside the later pixel's
+published revision, mesh revision, and MDI visible-pass state. Next, use one
+short repeatable capture with a fixed camera long enough to observe the
+same-view handoff and bound its delay. Do not add a CPU threshold, extend the
+operator flight, or tune queue budgets from this evidence.

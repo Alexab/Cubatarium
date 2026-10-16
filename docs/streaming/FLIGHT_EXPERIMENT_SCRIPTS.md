@@ -11819,3 +11819,52 @@ later cleared by visible admission and capture reaches final light install.
 Record the interval from note to dequeue, then from visible re-admission to
 final install; do not use the sparse pixel observation interval as a substitute
 for those pipeline timings.
+
+### M622AZ: capture the early preview lifecycle
+
+M622AZ uses the same established warm `World_164` route as M622AY. The source
+adds an opt-in lifecycle watch at the relight-note admission point; no flight
+parameters change. Preserve the prior audit environment value:
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622AZ `
+    -Report bin/suite_reports/engine_refactor/m622az_world164_m335_early_lifecycle_watch_20261017.json
+} finally {
+  if ($hadPreviousAudit) {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit
+  } else {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  }
+}
+```
+
+Re-run the pixel analyzer after any analyzer changes:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622az_world164_m335_early_lifecycle_watch_20261017.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622az_renderer_pixel_trace_20261017.json
+```
+
+M622AZ completed, traveled nine chunks, and had zero visual-hole proxy samples,
+but readiness debt persisted through the analyzed route. The pixel trace had
+47 low-luma pixels and all joined drawable opaque surfaces. Seven provisional
+chunks now join to mesh jobs; CPU mesh publication occurred 0.269–1.302 s after
+the first preview samples. No same-view handoff was captured. Keep these values
+as lifecycle bounds, not proof of an operator-visible defect. The analyzer
+joins each later pixel to its visible MDI state and compares its geometry
+revision with the causal mesh publication. Every later sample had an equal or
+newer visible revision, but the camera had moved before that sample. GPU
+queue/kick/counters-ready/ready stages describe the compute-meshing route and
+their absence alone is not failure evidence. See M622AZ in the diagnostic
+runbook for interpretation and artifacts.

@@ -2246,6 +2246,12 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
     relight_min_y = nearest_unsettled_dark_cy * CHUNK_SIZE;
     relight_max_y = std::min(
         max_y, (nearest_unsettled_dark_cy + 1) * CHUNK_SIZE - 1);
+    // Register the lifecycle watcher before relight admission. Renderer pixel
+    // probes run after streaming work in a frame and can otherwise discover a
+    // provisional image only after its queue/capture/install events have
+    // already passed.
+    UJobStageTrace::WatchVisualChunk(col_xz.x, nearest_unsettled_dark_cy,
+                                     col_xz.y);
   }
   Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
                                            col_xz.y * CHUNK_SIZE,

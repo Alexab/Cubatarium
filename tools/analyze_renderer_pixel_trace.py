@@ -181,6 +181,18 @@ def main() -> int:
                                 "field_light_revision": row.get(
                                     "renderer_pixel_opaque_field_light_rev"
                                 ),
+                                "published_geometry_revision": row.get(
+                                    "renderer_pixel_opaque_published_geom_rev"
+                                ),
+                                "mesh_revision": row.get(
+                                    "renderer_pixel_opaque_mesh_revision"
+                                ),
+                                "mdi_visible_pass_flags": row.get(
+                                    "renderer_pixel_opaque_mdi_visible_pass_flags"
+                                ),
+                                "mdi_visible_index_count": row.get(
+                                    "renderer_pixel_opaque_mdi_visible_index_count"
+                                ),
                                 "meshed_light_revision": row.get(
                                     "renderer_pixel_opaque_meshed_light_rev"
                                 ),
@@ -254,6 +266,18 @@ def main() -> int:
                             ),
                             "live_face_light_packed": row.get(
                                 "renderer_pixel_opaque_live_face_light_packed"
+                            ),
+                            "published_geometry_revision": row.get(
+                                "renderer_pixel_opaque_published_geom_rev"
+                            ),
+                            "mesh_revision": row.get(
+                                "renderer_pixel_opaque_mesh_revision"
+                            ),
+                            "mdi_visible_pass_flags": row.get(
+                                "renderer_pixel_opaque_mdi_visible_pass_flags"
+                            ),
+                            "mdi_visible_index_count": row.get(
+                                "renderer_pixel_opaque_mdi_visible_index_count"
                             ),
                             "published_light_revision": row.get(
                                 "renderer_pixel_opaque_published_light_rev"
@@ -342,6 +366,18 @@ def main() -> int:
                                     "published_light_revision": row.get(
                                         "renderer_pixel_opaque_published_light_rev"
                                     ),
+                                    "published_geometry_revision": row.get(
+                                        "renderer_pixel_opaque_published_geom_rev"
+                                    ),
+                                    "mesh_revision": row.get(
+                                        "renderer_pixel_opaque_mesh_revision"
+                                    ),
+                                    "mdi_visible_pass_flags": row.get(
+                                        "renderer_pixel_opaque_mdi_visible_pass_flags"
+                                    ),
+                                    "mdi_visible_index_count": row.get(
+                                        "renderer_pixel_opaque_mdi_visible_index_count"
+                                    ),
                                     "stale_light_remesh_pending": bool(
                                         row.get(
                                             "renderer_pixel_opaque_stale_light_remesh_pending",
@@ -398,6 +434,18 @@ def main() -> int:
                             ),
                             "live_face_light_packed": row.get(
                                 "renderer_pixel_opaque_live_face_light_packed"
+                            ),
+                            "published_geometry_revision": row.get(
+                                "renderer_pixel_opaque_published_geom_rev"
+                            ),
+                            "mesh_revision": row.get(
+                                "renderer_pixel_opaque_mesh_revision"
+                            ),
+                            "mdi_visible_pass_flags": row.get(
+                                "renderer_pixel_opaque_mdi_visible_pass_flags"
+                            ),
+                            "mdi_visible_index_count": row.get(
+                                "renderer_pixel_opaque_mdi_visible_index_count"
                             ),
                             "meshed_light_revision": row.get(
                                 "renderer_pixel_opaque_meshed_light_rev"
@@ -736,7 +784,13 @@ def main() -> int:
                             "job_id": row.get("job_id"),
                             "attempt_id": row.get("attempt_id"),
                             "source_geom_rev": row.get("source_geom_rev"),
+                            "published_geom_rev": row.get(
+                                "published_geom_rev"
+                            ),
                             "source_light_rev": row.get("source_light_rev"),
+                            "published_light_rev": row.get(
+                                "published_light_rev"
+                            ),
                             "terminal_reason": row.get("terminal_reason"),
                         }
                     )
@@ -904,6 +958,8 @@ def main() -> int:
         events: list[dict[str, Any]],
         start_ms: float,
         end_ms: float,
+        fallback_source_light_rev: int | None = None,
+        fallback_min_geom_rev: int | None = None,
     ) -> tuple[list[dict[str, Any]], int | None, int | None]:
         """Keep one demand attempt and its mesh job from a chunk time window.
 
@@ -954,6 +1010,50 @@ def main() -> int:
                 attempt_id = event_id(owners[0], "attempt_id")
 
         if attempt_id <= 0:
+            # Some legitimate first-mesh jobs precede creation of a render-
+            # demand attempt and therefore carry attempt_id=0. If the watched
+            # chunk incarnation has exactly one post-preview job at the
+            # sampled light revision (and no older geometry source), retain
+            # that job by its stable job identity instead of dropping the
+            # lifecycle altogether.
+            fallback_jobs: dict[int, dict[str, Any]] = {}
+            for event in window:
+                if event.get("event") != "mesh_job_started":
+                    continue
+                if event_id(event, "attempt_id") > 0:
+                    continue
+                if float(event["event_ms"]) < anchor_ms:
+                    continue
+                job_id = event_id(event, "job_id")
+                if job_id <= 0:
+                    continue
+                if fallback_source_light_rev is not None:
+                    try:
+                        source_light_rev = int(event.get("source_light_rev"))
+                    except (TypeError, ValueError):
+                        continue
+                    if source_light_rev != int(fallback_source_light_rev):
+                        continue
+                if fallback_min_geom_rev is not None:
+                    try:
+                        source_geom_rev = int(event.get("source_geom_rev"))
+                    except (TypeError, ValueError):
+                        continue
+                    if source_geom_rev < int(fallback_min_geom_rev):
+                        continue
+                fallback_jobs.setdefault(job_id, event)
+            if len(fallback_jobs) == 1:
+                fallback_job_id = next(iter(fallback_jobs))
+                fallback_events = [
+                    event
+                    for event in window
+                    if event_id(event, "job_id") == fallback_job_id
+                    and str(event.get("event", "")).startswith("mesh_job_")
+                ]
+                fallback_events.sort(
+                    key=lambda event: float(event["event_ms"])
+                )
+                return fallback_events, None, fallback_job_id
             # A light-settled sample can be useful even if no subsequent mesh
             # attempt was observed in the bounded trace window.
             return ([settlement] if settlement is not None else []), None, None
@@ -1152,6 +1252,11 @@ def main() -> int:
                         "stale_light_remesh_dirty_admitted",
                         "mesh_job_started",
                         "mesh_job_built",
+                        "mesh_job_uploaded",
+                        "mesh_job_gpu_queued",
+                        "mesh_job_gpu_kicked",
+                        "mesh_job_gpu_counters_ready",
+                        "mesh_job_gpu_ready",
                         "mesh_job_published",
                         "install_published",
                     )
@@ -1195,6 +1300,30 @@ def main() -> int:
                         "mesh_build_to_publish_ms": stage_interval(
                             "mesh_job_built", "mesh_job_published"
                         ),
+                        "mesh_build_to_gpu_queue_ms": stage_interval(
+                            "mesh_job_built", "mesh_job_gpu_queued"
+                        ),
+                        "gpu_queue_to_kick_ms": stage_interval(
+                            "mesh_job_gpu_queued", "mesh_job_gpu_kicked"
+                        ),
+                        "gpu_kick_to_counters_ready_ms": stage_interval(
+                            "mesh_job_gpu_kicked",
+                            "mesh_job_gpu_counters_ready",
+                        ),
+                        "gpu_counters_ready_to_gpu_ready_ms": stage_interval(
+                            "mesh_job_gpu_counters_ready",
+                            "mesh_job_gpu_ready",
+                        ),
+                        "gpu_ready_to_nonpreview_ms": (
+                            round(
+                                float(end_ms)
+                                - milestone_times["mesh_job_gpu_ready"],
+                                3,
+                            )
+                            if milestone_times["mesh_job_gpu_ready"]
+                            is not None
+                            else None
+                        ),
                         "publish_to_nonpreview_ms": (
                             round(
                                 float(end_ms)
@@ -1225,6 +1354,10 @@ def main() -> int:
                         "mesh_work_owner_flags",
                         "relight_owner_flags",
                         "column_flow_ticket_flags",
+                        "published_geometry_revision",
+                        "mesh_revision",
+                        "mdi_visible_pass_flags",
+                        "mdi_visible_index_count",
                     )
                     return {key: event.get(key) for key in keys}
 
@@ -1292,6 +1425,11 @@ def main() -> int:
         "mesh_job_admitted",
         "mesh_job_started",
         "mesh_job_built",
+        "mesh_job_uploaded",
+        "mesh_job_gpu_queued",
+        "mesh_job_gpu_kicked",
+        "mesh_job_gpu_counters_ready",
+        "mesh_job_gpu_ready",
         "mesh_job_published",
         "install_published",
     }
@@ -1358,6 +1496,12 @@ def main() -> int:
                 event_timeline,
                 float(first_time or 0.0),
                 event_window_end_ms,
+                fallback_source_light_rev=first_preview.get(
+                    "field_light_revision"
+                ),
+                fallback_min_geom_rev=first_preview.get(
+                    "published_geometry_revision"
+                ),
             )
         )
 
@@ -1395,6 +1539,18 @@ def main() -> int:
         mesh_published_ms = next_event_time(
             "mesh_job_published", mesh_built_ms
         )
+        mesh_gpu_queued_ms = next_event_time(
+            "mesh_job_gpu_queued", mesh_built_ms
+        )
+        mesh_gpu_kicked_ms = next_event_time(
+            "mesh_job_gpu_kicked", mesh_gpu_queued_ms
+        )
+        mesh_gpu_counters_ready_ms = next_event_time(
+            "mesh_job_gpu_counters_ready", mesh_gpu_kicked_ms
+        )
+        mesh_gpu_ready_ms = next_event_time(
+            "mesh_job_gpu_ready", mesh_gpu_counters_ready_ms
+        )
         install_published_ms = next_event_time(
             "install_published", mesh_published_ms
         )
@@ -1416,9 +1572,31 @@ def main() -> int:
                 "first_preview_demand_settled": first_preview.get(
                     "demand_settled"
                 ),
+                "first_preview_draw_state": {
+                    key: first_preview.get(key)
+                    for key in (
+                        "published_geometry_revision",
+                        "mesh_revision",
+                        "mdi_visible_pass_flags",
+                        "mdi_visible_index_count",
+                    )
+                },
                 "first_settled_nonpreview_sample_ms": end_time,
                 "first_settled_nonpreview_camera_world_pos": (
                     settled_nonpreview.get("camera_world_pos")
+                    if settled_nonpreview
+                    else None
+                ),
+                "first_settled_nonpreview_draw_state": (
+                    {
+                        key: settled_nonpreview.get(key)
+                        for key in (
+                            "published_geometry_revision",
+                            "mesh_revision",
+                            "mdi_visible_pass_flags",
+                            "mdi_visible_index_count",
+                        )
+                    }
                     if settled_nonpreview
                     else None
                 ),
@@ -1429,12 +1607,25 @@ def main() -> int:
                 "chunk_observation_event_count": len(event_timeline),
                 "causal_attempt_id": causal_attempt_id,
                 "causal_job_id": causal_job_id,
+                "causal_join_mode": (
+                    "attempt_and_job"
+                    if causal_attempt_id is not None
+                    else (
+                        "incarnation_revision_job_fallback"
+                        if causal_job_id is not None
+                        else "none"
+                    )
+                ),
                 "light_settlement_observed_ms": light_settled_ms,
                 "stale_remesh_queue_ms": queue_ms,
                 "stale_remesh_dirty_admitted_ms": dirty_admitted_ms,
                 "mesh_job_started_ms": mesh_start_ms,
                 "mesh_job_built_ms": mesh_built_ms,
                 "mesh_job_published_ms": mesh_published_ms,
+                "mesh_job_gpu_queued_ms": mesh_gpu_queued_ms,
+                "mesh_job_gpu_kicked_ms": mesh_gpu_kicked_ms,
+                "mesh_job_gpu_counters_ready_ms": mesh_gpu_counters_ready_ms,
+                "mesh_job_gpu_ready_ms": mesh_gpu_ready_ms,
                 "install_published_ms": install_published_ms,
                 "stage_intervals_ms": {
                     "preview_to_light_settlement_ms": elapsed_to(
@@ -1452,6 +1643,21 @@ def main() -> int:
                     "mesh_build_ms": elapsed_to(mesh_built_ms, mesh_start_ms),
                     "mesh_publish_ms": elapsed_to(
                         mesh_published_ms, mesh_built_ms
+                    ),
+                    "mesh_build_to_gpu_queue_ms": elapsed_to(
+                        mesh_gpu_queued_ms, mesh_built_ms
+                    ),
+                    "gpu_queue_to_kick_ms": elapsed_to(
+                        mesh_gpu_kicked_ms, mesh_gpu_queued_ms
+                    ),
+                    "gpu_kick_to_counters_ready_ms": elapsed_to(
+                        mesh_gpu_counters_ready_ms, mesh_gpu_kicked_ms
+                    ),
+                    "gpu_counters_ready_to_gpu_ready_ms": elapsed_to(
+                        mesh_gpu_ready_ms, mesh_gpu_counters_ready_ms
+                    ),
+                    "gpu_ready_to_nonpreview_ms": elapsed_to(
+                        end_time, mesh_gpu_ready_ms
                     ),
                     "mesh_publish_to_nonpreview_ms": elapsed_to(
                         end_time, mesh_published_ms
@@ -1670,7 +1876,10 @@ def main() -> int:
             "one exact screen pixel in one chunk and require camera positions within 0.01 "
             "world units; light settlement means the demand reports settled while its "
             "preview remains active, and handoff ends at the first settled nonpreview sample "
-            "after the last preview observation."
+            "after the last preview observation. Provisional-light lifecycle rows also compare "
+            "the mesh job's published geometry revision with the first and later pixel's "
+            "published revision, mesh revision, and visible MDI state; a matching chunk revision "
+            "at a moved camera does not establish a same-view handoff."
         ),
     }
     rendered = json.dumps(report, ensure_ascii=False, indent=2)

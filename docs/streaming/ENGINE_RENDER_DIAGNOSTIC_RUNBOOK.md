@@ -1838,6 +1838,16 @@ operator observation. Source inspection confirms the render path intentionally
 keeps drawable geometry visible with an ambient fallback while its light
 replacement is pending.
 
+The INFO chronology bounds the actual queue service more tightly than the
+sparse pixel interval. For `(7,3)`, the pending note was inserted at 02:20:31.668,
+its priority position changed from 10/11 to 3/12 at 02:20:32.015, capture
+dequeued it at 02:20:32.055, and light flags finalized at 02:20:32.128. For
+`(5,4)` through `(5,6)`, admission denials created deferred-far owners;
+`visible_relight_admitted` cleared them 39–123 ms later, then exact first-mesh
+capture and light finalization followed 0.26–0.45 s after that. This confirms
+fast queue recovery in the sampled startup window. It does not timestamp when
+the replacement mesh became visible at the same screen pixel.
+
 M622AY recorded 369 active-FIFO overflow evictions and a deferred-far high
 water mark of eight. The eviction path preserves victims in the deferred-far
 map, so this is queue churn/backlog evidence, not 369 proven lost requests.
@@ -1847,13 +1857,9 @@ bounded and do not tune its size from this count alone.
 Static review and the M622AY INFO chronology found no queue-starvation defect
 in this startup window. `DrainRelightQueues` reorders the priority deque by
 current focus distance, and `EnqueueVisibleRelight` promotes exact visible
-repairs. For `(7,3)`, the priority position moved from 10/11 to 3/12 in 347 ms;
-capture dequeued the column 387 ms after its pending note, and light flags
-finalized 460 ms after the note. For `(5,4)` through `(5,6)`, FIFO admission
-denials created deferred-far owners; visible admission cleared those owners in
-39–123 ms, and first-mesh capture/light finalization followed 0.26–0.45 s later.
-This is bounded queue pressure with successful visible re-admission in this
-sample, not evidence that FIFO work was lost.
+repairs. The priority position and service timings below show that the target
+did not remain stuck behind older work. FIFO denial became deferred work and
+was returned to the visible lane; it was not evidence that FIFO work was lost.
 
 Do not change the FIFO capacity, visible lane budget, or preview gate from this
 run. The remaining diagnostic gap is after light-field finalization: M622AY's
@@ -1871,3 +1877,46 @@ Artifacts:
 - M622AX report/pixel trace: `m622ax_world164_m335_relight_audit_20261016.json`, `m622ax_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-234824_28028.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-234820.28028`.
 - M622AX analyzer re-run with fresh-probe semantics: `m622ax_world164_m335_relight_audit_semantics_20261016.json` (`1/2` positive proxy samples had a fresh clear probe).
 - M622AY report/pixel trace: `m622ay_world164_m335_same_view_audit_20261017.json`, `m622ay_renderer_pixel_trace_20261017.json`; perf/INFO `perf_20261017-022026_5628.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-022023.5628`.
+
+### M622AZ: capture the first preview chunk's mesh lifecycle
+
+M622AZ repeated the warm `World_164` M335 route (30 s fly, 20 s stop, 8 s
+idle, no teleport) with `CUBATARIUM_RELIGHT_AUDIT=1`. The process completed
+without timeout and traveled nine chunks, but the aggregate convergence gate
+failed. Readiness debt occurred in every analyzed period; visual-hole and
+post-stop visual-hole proxies were zero. Host CPU median/p95 was 59.9/82.2%,
+for context only.
+
+The early watcher in `UWorld::EnqueueVoidDarkColumnRelightNote` registers the
+nearest unsettled slice before relight admission. This captures lifecycle rows
+that could finish before the renderer's pixel probe runs. The offline analyzer
+now has a narrow attempt-zero fallback: it accepts a unique post-preview job
+only when chunk incarnation and sampled source revisions agree.
+
+The 2,080 pixel probes contained 47 samples below luma 32, all joined to
+drawable opaque depth surfaces; five had provisional preview light. There were
+63 preview samples across seven chunks. All seven now join to a mesh job (six
+by attempt/job identity, one via the constrained attempt-zero fallback). CPU
+mesh publication followed first preview by 0.269–1.302 s. The later settled
+pixel observation was 3.67–12.02 s later with a moved camera; same-view
+handoffs remained zero. This bounds CPU job publication only. No matching
+`install_published` or GPU queue/kick/ready event was present in the selected
+timelines. Each later settled pixel did join a visible MDI pass, and its
+published geometry revision was equal to or newer than the causal job's
+published revision. The mesh therefore reached a drawable chunk revision by
+that later sample, but the camera had moved and the original screen-pixel
+handoff remains unmeasured. GPU queue/kick/ready events describe the compute
+meshing route; their absence alone is not failure evidence.
+
+The analyzer now joins mesh-job published revisions with the later pixel's
+published revision, mesh revision, and MDI visible-pass state. It also includes
+`mesh_job_uploaded`, `mesh_job_gpu_queued`, `mesh_job_gpu_kicked`,
+`mesh_job_gpu_counters_ready`, and `mesh_job_gpu_ready` when present. Next use a
+short fixed-camera capture to measure a same-view handoff. Keep the established
+route and avoid a CPU admission threshold or a long operator-monitoring flight.
+
+Artifacts: report/pixel trace
+`m622az_world164_m335_early_lifecycle_watch_20261017.json`,
+`m622az_renderer_pixel_trace_20261017.json`; perf/INFO
+`perf_20261017-023407_46844.jsonl`,
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-023404.46844`.
