@@ -985,3 +985,33 @@ raw perf and INFO traces are indexed in `FLIGHT_EXPERIMENT_SCRIPTS.md`. Next
 review the repeated light-change schedule for those three coordinates and
 exercise the open-sky path only in a scenario where that mutation actually
 occurs. Keep the diagnostic route short; no host CPU threshold is required.
+
+### M622F: open-sky snapshot call accounting
+
+M622F repeated the same short visible route after adding callsite accounting
+to `ApplyEnterOpenSkyBoundary`. The process completed (`process_rc=0`, 35
+periods), while suite acceptance remained false on non-CPU quality checks.
+Host CPU was 100/100/100% median/p95/max, while the application used
+15.91/30.58/33.09% of machine capacity. This confirms that host CPU can be
+saturated by work outside the game; CPU samples are context only and must not
+gate route execution or be described as engine performance acceptance.
+
+The trace observed six `enter_lit_snapshot` calls: four changed no chunks, and
+two changed one loaded slice each at `(3,3,2)` from world column `(48,32)`.
+The later mutation queued dependencies `(3,3,3)` and `(3,4,3)` with
+`enter_open_sky_boundary`; both were drained as `applied`. These startup events
+had `frame_epoch=0`, before the first streaming epoch was published. This
+verifies execution and dependency transfer at the snapshot callsite, but the
+perf lifecycle trace did not capture a matching publication for these exact
+coordinates, and no operator framebuffer verdict was collected. The
+`enter_visual_repair` and `relight_terrain_column` callsites remain untested.
+
+Proxy results were `visual_holes_rate=0.0303`, fly visible-black max 4,
+post-stop visible-black max 0, and post-stop readiness debt max 57. These are
+diagnostic proxies, not evidence that the operator saw blank chunks. Report:
+`bin/suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`;
+raw perf and INFO paths are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`. The next
+short diagnostic should correlate the epoch-zero dependency drains with mesh
+publication, or add a startup-safe correlation key, then exercise the other
+two callsites only if a compact route naturally reaches them. Do not add a
+host-CPU admission threshold.

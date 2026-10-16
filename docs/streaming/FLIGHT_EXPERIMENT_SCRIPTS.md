@@ -10588,6 +10588,42 @@ It does not provide a visual verdict or exercise the M623 open-sky side path.
 Next review repeated light-change events and remesh scheduling for the three
 re-staled coordinates, while keeping CPU advisory and the route short.
 
+### M622F: account for the open-sky boundary path
+
+M622F repeated the same short route on the cold-mode `World_M613A` world after
+adding opt-in call accounting for `ApplyEnterOpenSkyBoundary`. The process
+completed (`process_rc=0`, 35 periods); suite acceptance was false on non-CPU
+quality checks. Runtime host CPU was 100/100/100% median/p95/max, while app CPU
+was 15.91/30.58/33.09% of machine capacity. This is a concrete example of why
+host CPU cannot be a run gate while Codex or other work is active. Proxies were
+visual holes 0.0303, fly visible-black max 4, post-stop visible-black max 0,
+and post-stop missing/readiness debt max 57. No operator framebuffer verdict
+was recorded.
+
+The call trace contained six `enter_lit_snapshot` invocations. Four reported
+zero changed chunks. Two invocations each changed one slice, both at
+`(3,3,2)` from world column `(48,32)` with 15 loaded slices. On the later
+change, two dependent meshes were newly queued with
+`cause=enter_open_sky_boundary`: `(3,3,3)` and `(3,4,3)`. Both reached the
+dependency drain; the log records `applied` for each, with existing-owner
+coverage also observed around the same startup work. The queue and drain
+messages are timestamped in the INFO log but have `frame_epoch=0`: the enter
+snapshot runs before `WorldViewBinding` publishes the first streaming epoch.
+This confirms that the M623 snapshot callsite can mutate light and transfer
+neighbor debt into mesh work, but does not prove the resulting meshes were
+published or that the operator saw a change. The `enter_visual_repair` and
+`relight_terrain_column` callsites remain unexercised by this run.
+
+M622F artifacts:
+
+- `suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`
+- `logs/perf_20261016-155650_39588.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-155646.39588`
+
+The next audit should join the startup dependency drains to actual publication
+for `(3,3,2)`, `(3,3,3)`, and `(3,4,3)`, and account for the pre-first-frame
+epoch-zero window. Do not gate a short diagnostic run on host CPU.
+
 M622C artifacts:
 
 - `suite_reports/engine_refactor/m622c_halo_availability_20261016.json`

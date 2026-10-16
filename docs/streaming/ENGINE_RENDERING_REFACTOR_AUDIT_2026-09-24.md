@@ -5814,3 +5814,33 @@ The next review should trace repeated light-change and publication cycles for
 the three re-staled coordinates and find a short scenario that actually
 exercises `ApplyEnterOpenSkyBoundary`. Keep CPU advisory and leave queue budgets
 unchanged until coordinate/frame evidence shows a persistent unresolved mesh.
+
+### M622F: runtime evidence for the open-sky snapshot caller
+
+M622F ran the established short, visible, no-teleport route and completed
+normally (`process_rc=0`, 35 periods). The analyzer remained `pass=false` on
+non-CPU checks; host CPU was 100/100/100% median/p95/max while app CPU was
+15.91/30.58/33.09% of machine capacity. This is direct evidence that system
+CPU load is not a useful flight admission gate while Codex or other processes
+are active. Continue to record host/app samples as context, but do not block
+diagnostic work on a CPU threshold.
+
+The opt-in call trace saw six `enter_lit_snapshot` invocations. Four were
+no-ops; two changed one loaded chunk `(3,3,2)` from column `(48,32)`, with 15
+loaded slices. The second mutation generated open-sky dependency invalidations
+for `(3,3,3)` and `(3,4,3)`, and both drains reported `applied`. They occurred
+before the first streaming epoch (`frame_epoch=0`). The current perf lifecycle
+trace does not contain matching publication rows for these coordinates, so
+this confirms callsite execution and dependency scheduling, not completed mesh
+publication or a visual fix. The other callers (`enter_visual_repair` and
+`relight_terrain_column`) remain unexercised.
+
+M622F proxy metrics: `visual_holes_rate=0.0303`, fly visible-black max 4,
+post-stop visible-black max 0, readiness debt max 57. The route has no operator
+framebuffer verdict, and these proxies are not proof of a user-visible hole.
+Prioritize a startup-safe correlation key or narrowly scoped capture/publication
+trace for the two epoch-zero dependents. Run another short route only if that
+instrumentation cannot answer the lifecycle or a different caller needs
+runtime coverage. Detailed report:
+`bin/suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`;
+the experiment log index is maintained in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
