@@ -5744,3 +5744,11 @@ The committed chunk-input invalidation change exercised the shared queue during 
 M621A emitted 18 exact-geometry, own-light-current CPU boundary witnesses with nonzero adjacent light, compared with 8 in M620A. Cross-run counts are not comparable acceptance evidence; cache state and runtime conditions differed. For target `(-19,2,-2)`, exact witnesses at frames 2474 and 2611 were followed by geometry bumps at 2479 and 2612, respectively. This is consistent with eventual repair but does not identify whether a dependency invalidation caused it or whether the next published snapshot captured the live neighbor halo.
 
 Keep the commit notification fix provisionally because loaded chunk input is a legitimate mesh dependency. Next add opt-in coordinate-scoped queue/drain telemetry for watched dependent meshes and correlate it with snapshot halo signatures at build capture and GPU publication. Do not tune budgets or alter `FaceLightPacked` until this lifecycle is attributable. Any acceptance run must be resource-qualified; M621A is not a performance baseline.
+
+### M622 instrumentation
+
+Commit `127d43ca` stores the published light-halo signatures with each valid mesh result. Under the opt-in visual trace, a stale CPU witness now includes `stale_mesh_halo_state`: 0 unavailable, 1 last-published halo equals current neighbor halo, 2 current neighbor halo differs from the one used by the last published mesh. This lets the next trace distinguish invalidation debt from a mesh generated incorrectly from its captured inputs.
+
+The same opt-in trace records watched dependency source→dependent queue events with cause and drain outcome (`defer_live_owner`, `covered_by_existing_owner`, `applied`, `admission_failed`, or `drop_not_drawable`). Interpret state 2 together with source cause and drain chronology. State 1 directs review toward `FaceLightPacked`, packed GPU provenance, or the stale witness's vertex/sample mapping. State 0 is inconclusive. No queue or build budgets changed.
+
+Release build passed, but post-build host preflight was 60.3/87.7% median/p95; no follow-up flight was launched. Keep the short established M335 route and wait for a passing runtime-resource preflight.

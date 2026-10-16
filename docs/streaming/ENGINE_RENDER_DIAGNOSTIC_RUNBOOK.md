@@ -899,3 +899,16 @@ M621A rebuilt Release and ran the same visible no-teleport M335 route. Preflight
 The shared dependency queue recorded 158 queued / 73 applied counters, but these totals include relight invalidations. The flight log had 18 exact geometry + own-light-current CPU seam witness signatures sampling nonzero light from an adjacent chunk. M620A had 8; these cross-run counts alone cannot establish regression because the runs differ in cache state, runtime load, and trace coverage. The fix is not yet validated as a resolution.
 
 A target `(-19,2,-2)` had exact seam witnesses at frames 2474 and 2611 and subsequent geometry bumps at 2479 and 2612. The next diagnostic should trace, only for watched chunks: changed source coordinate and cause, dependent queue insertion, drain outcome (deferred / already owned / applied / rejected), snapshot halo signature at capture, and published geometry/light revisions. This distinguishes a missed notification from a snapshot/commit validation gap without lengthening the operator flight.
+
+### M622: use the halo stamp to classify a seam witness
+
+For a watched CPU stale-light witness, `stale_mesh_halo_state` in JSONL now classifies the last published mesh's neighbor halo: 0 means no valid retained signature, 1 means it still matches current neighbor light cells, and 2 means it differs. This field is not a pixel-level verdict.
+
+With both `CUBA_VISUAL_BLACK_TRACE=1` and `CUBATARIUM_RELIGHT_AUDIT=1`, parse `RelightAudit` lines matching `mesh_dependency`. Each queued event names `cause`, changed `source`, dependent coordinate, insertion status, and backlog. Drain events say whether that dependent was deferred behind a live owner, covered by existing dirty/remesh work, applied, rejected, or no longer drawable. Correlate them to the `visual_black_trace` frame and coordinate:
+
+- Halo state 2 + no applicable post-change dependency lifecycle points to an invalidation gap.
+- Halo state 2 + deferred/applied events points to queue fairness, owner, or publication completion.
+- Halo state 1 with a current nonzero stale sample points to mesher sampling or witness-to-mesh attribution.
+- Halo state 0 cannot distinguish those cases.
+
+M622 instrumentation Release build passed. Its preflight was 60.3/87.7% median/p95 and failed the flight gate; no flight was started. Re-sample after CPU load falls before any run.

@@ -10432,3 +10432,22 @@ Artifacts:
 - `suite_reports/engine_refactor/m621a_commit_halo_invalidation_20261016.json`
 - `logs/perf_20261016-141422_13608.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-141418.13608`
+
+M622 introduces opt-in queue/lifecycle and published-halo diagnostics. Release build passed; the immediate preflight was 60.3/87.7% host CPU median/p95 and failed, so do not run yet. After a fresh passing preflight, repeat the established short visible route:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622A_HaloStampLifecycle_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622a_halo_stamp_lifecycle_20261016.json
+```
+
+The JSONL records `stale_mesh_halo_state` (0 unavailable, 1 current halo equals the last published input, 2 halo changed after publication). The INFO log records watched `mesh_dependency` queue sources/causes and drain outcomes. These diagnose engine state; they do not substitute for direct framebuffer observation.

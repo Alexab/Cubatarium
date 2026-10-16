@@ -11399,3 +11399,11 @@ The dependency counters recorded 158 queued and 73 applied entries over the run 
 A target `(-19,2,-2)` had exact-geometry seam witnesses at frames 2474 and 2611, then geometry advanced at frames 2479 and 2612. The existing trace does not identify which changed neighbor queued that dependent, whether the dependency drain deferred/skipped it due to another owner, nor whether the subsequent published snapshot contained the current sampled halo. Add coordinate-scoped dependency queue/drain evidence and compare mesh halo state at capture/publication before changing repair budgets or sampling rules.
 
 M621A artifacts: `bin/suite_reports/engine_refactor/m621a_commit_halo_invalidation_20261016.json`, `bin/logs/perf_20261016-141422_13608.jsonl`, and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-141418.13608`.
+
+### M622 instrumentation for seam witness attribution
+
+Commit `127d43ca` adds two opt-in diagnostics without changing streaming budgets. The last published mesh now retains the 26 exact neighbor-light halo signatures that were accepted at publication. When a watched CPU stale-light witness is emitted, `stale_mesh_halo_state` reports: `0` = no valid published signature was retained; `1` = the published halo still matches the live world; `2` = neighbor halo changed since that mesh publication. This is sampled only for watched chunks under `CUBA_VISUAL_BLACK_TRACE`.
+
+With both `CUBA_VISUAL_BLACK_TRACE=1` and `CUBATARIUM_RELIGHT_AUDIT=1`, `RelightAudit` also records watched dependent coordinates when dependency debt is queued, including source coordinate and cause (`procedural_chunk_commit`, `disk_slice_apply`, or `relight_light_change`). Drain events distinguish `defer_live_owner`, `covered_by_existing_owner`, `applied`, `admission_failed`, and `drop_not_drawable`. Join these events to the witness frame and published halo state: state 2 points to an invalidation lifecycle gap; state 1 points toward the mesher/sampling/witness-to-vertex mapping; state 0 is inconclusive.
+
+The Release build passed. The immediate host CPU preflight after build was 60.3/87.7% median/p95 and failed the default gate, so no M622 flight has been run. Re-sample only after host load settles; keep the same short M335 route when it passes.
