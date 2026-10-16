@@ -552,7 +552,8 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
       // A FIFO admission denial is backpressure, not completion. Keep the
       // exact column/band as durable work so PendingLight cannot outlive every
       // executable or retryable owner.
-      DeferFarRelightColumn(ground_xz, min_y, max_y, priority);
+      DeferFarRelightColumn(ground_xz, min_y, max_y, priority,
+                            "fifo_admission_denied");
       return;
     }
   }
@@ -632,7 +633,8 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
       break;
     }
     const glm::ivec2 victim = *victim_it;
-    PreserveRelightFifoVictimAsDeferred(victim, /*priority=*/false);
+    PreserveRelightFifoVictimAsDeferred(victim, /*priority=*/false,
+                                        "soft_cap_overflow");
     PendingTerrainColumnRelights.erase(victim_it);
     PendingTerrainColumnRelightKeys.erase(victim);
     PendingTerrainColumnRelightYBands.erase(victim);
@@ -685,7 +687,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     max_y = std::max(max_y, deferred_far->second.y_band.y);
   }
   const auto clear_deferred_far = [&]()
-  { DeferredFarRelightColumns.erase(ground_xz); };
+  { ClearDeferredFarRelightColumn(ground_xz, "visible_relight_admitted"); };
 
   if (auto deferred = DeferredVisibleDrawGateRelightYBands.find(key);
       deferred != DeferredVisibleDrawGateRelightYBands.end())
@@ -922,7 +924,8 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   }
   const glm::ivec2 victim = *victim_it;
   PreserveRelightFifoVictimAsDeferred(
-      victim, victim_queue == &PendingTerrainColumnRelightsPriority);
+      victim, victim_queue == &PendingTerrainColumnRelightsPriority,
+      "visible_exact_replacement");
   victim_queue->erase(victim_it);
   PendingTerrainColumnRelightKeys.erase(victim);
   PendingTerrainColumnRelightYBands.erase(victim);
@@ -1005,19 +1008,23 @@ bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_
 }
 
 void UWorldPersistence::DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y,
-                                              int max_y, bool priority)
+                                              int max_y, bool priority,
+                                              const char *reason)
 {
   auto it = DeferredFarRelightColumns.find(ground_xz);
+  const bool inserted = it == DeferredFarRelightColumns.end();
+  const glm::ivec2 old_band =
+      inserted ? glm::ivec2(min_y, max_y) : it->second.y_band;
+  const bool old_priority = inserted ? false : it->second.priority;
   if (it == DeferredFarRelightColumns.end())
   {
     DeferredFarRelightEntry entry{};
     entry.y_band = glm::ivec2(min_y, max_y);
     entry.priority = priority;
     entry.first_deferred_at = std::chrono::steady_clock::now();
-    DeferredFarRelightColumns.emplace(ground_xz, entry);
-    return;
+    it = DeferredFarRelightColumns.emplace(ground_xz, entry).first;
   }
-  if (max_y >= min_y)
+  else if (max_y >= min_y)
   {
     if (it->second.y_band.y < it->second.y_band.x)
     {
@@ -1030,15 +1037,82 @@ void UWorldPersistence::DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y,
     }
   }
   it->second.priority = it->second.priority || priority;
+
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT") &&
+      (inserted || old_band != it->second.y_band ||
+       old_priority != it->second.priority))
+  {
+    int priority_index = -1;
+    int fifo_index = -1;
+    for (size_t i = 0; i < PendingTerrainColumnRelightsPriority.size(); ++i)
+    {
+      if (PendingTerrainColumnRelightsPriority[i] ==
+          glm::ivec2(ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE))
+      {
+        priority_index = static_cast<int>(i);
+        break;
+      }
+    }
+    for (size_t i = 0; i < PendingTerrainColumnRelights.size(); ++i)
+    {
+      if (PendingTerrainColumnRelights[i] ==
+          glm::ivec2(ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE))
+      {
+        fifo_index = static_cast<int>(i);
+        break;
+      }
+    }
+    const char *queue = priority_index >= 0
+                            ? "priority"
+                            : (fifo_index >= 0 ? "fifo" : "none");
+    const int queue_index =
+        priority_index >= 0 ? priority_index : fifo_index;
+    CubatariumLogInfo(
+        "RelightAudit",
+        "deferred_far owner=defer column=(" + std::to_string(ground_xz.x) +
+            "," + std::to_string(ground_xz.y) + ") reason=" +
+            std::string(reason ? reason : "unspecified") +
+            " outcome=" + (inserted ? "insert" : "merge") +
+            " band=" + std::to_string(it->second.y_band.x) + ":" +
+            std::to_string(it->second.y_band.y) +
+            " priority=" + std::to_string(it->second.priority) +
+            " keyed=" +
+            std::to_string(PendingTerrainColumnRelightKeys.count(glm::ivec2(
+                ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE))) +
+            " queue=" + queue + " queue_index=" +
+            std::to_string(queue_index) + " priority_n=" +
+            std::to_string(PendingTerrainColumnRelightsPriority.size()) +
+            " fifo_n=" + std::to_string(PendingTerrainColumnRelights.size()) +
+            " deferred_far_n=" +
+            std::to_string(DeferredFarRelightColumns.size()));
+  }
 }
 
-void UWorldPersistence::ClearDeferredFarRelightColumn(glm::ivec2 ground_xz)
+void UWorldPersistence::ClearDeferredFarRelightColumn(glm::ivec2 ground_xz,
+                                                     const char *reason)
 {
-  DeferredFarRelightColumns.erase(ground_xz);
+  const auto it = DeferredFarRelightColumns.find(ground_xz);
+  if (it == DeferredFarRelightColumns.end())
+  {
+    return;
+  }
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    CubatariumLogInfo(
+        "RelightAudit",
+        "deferred_far owner=clear column=(" + std::to_string(ground_xz.x) +
+            "," + std::to_string(ground_xz.y) + ") reason=" +
+            std::string(reason ? reason : "unspecified") +
+            " band=" + std::to_string(it->second.y_band.x) + ":" +
+            std::to_string(it->second.y_band.y) + " priority=" +
+            std::to_string(it->second.priority) + " deferred_far_n=" +
+            std::to_string(DeferredFarRelightColumns.size()));
+  }
+  DeferredFarRelightColumns.erase(it);
 }
 
 void UWorldPersistence::PreserveRelightFifoVictimAsDeferred(
-    glm::ivec2 world_block_key, bool priority)
+    glm::ivec2 world_block_key, bool priority, const char *reason)
 {
   int min_y = 0;
   int max_y = -1;
@@ -1076,7 +1150,7 @@ void UWorldPersistence::PreserveRelightFifoVictimAsDeferred(
   }
   const glm::ivec2 ground_xz(FloorDiv(world_block_key.x, CHUNK_SIZE),
                              FloorDiv(world_block_key.y, CHUNK_SIZE));
-  DeferFarRelightColumn(ground_xz, min_y, max_y, priority);
+  DeferFarRelightColumn(ground_xz, min_y, max_y, priority, reason);
 }
 
 int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
@@ -1309,7 +1383,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   }
   for (const glm::ivec2 &key : to_erase)
   {
-    DeferredFarRelightColumns.erase(key);
+    ClearDeferredFarRelightColumn(key, "deferred_far_admitted");
   }
   auto &telem = world.GetPhysicsTelemetryMutable();
   telem.RelightDeferredFarPendingN =
@@ -1506,7 +1580,7 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     if (!already_queued && distance > service_radius)
     {
       DeferFarRelightColumn(column, entry.second.x, entry.second.y,
-                            /*priority=*/true);
+                            /*priority=*/true, "visible_gate_expired");
       PendingVisibleDrawGateRelightYBands.erase(world_key);
       expired_visible.push_back(world_key);
       continue;
@@ -1611,9 +1685,10 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
           visible_band.x, visible_band.y, /*visible_admission=*/true);
       if (PendingTerrainColumnRelightKeys.count(visible_target) != 0)
       {
-        ClearDeferredFarRelightColumn(glm::ivec2(
-            FloorDiv(visible_target.x, CHUNK_SIZE),
-            FloorDiv(visible_target.y, CHUNK_SIZE)));
+        ClearDeferredFarRelightColumn(
+            glm::ivec2(FloorDiv(visible_target.x, CHUNK_SIZE),
+                       FloorDiv(visible_target.y, CHUNK_SIZE)),
+            "visible_target_admitted");
       }
       if (PendingVisibleFirstMeshRelightYBands.count(visible_target) == 0)
       {
@@ -2751,20 +2826,37 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     PrioritizeNearestTerrainColumnRelight(
         world, focus_chunk, RelightMissPinMaxHoriz(), /*scan_cap=*/64);
     glm::ivec2 col;
+    bool dequeued_priority = false;
+    int queue_size_after_dequeue = 0;
     if (!PendingTerrainColumnRelightsPriority.empty())
     {
       col = PendingTerrainColumnRelightsPriority.front();
       PendingTerrainColumnRelightsPriority.pop_front();
+      dequeued_priority = true;
+      queue_size_after_dequeue =
+          static_cast<int>(PendingTerrainColumnRelightsPriority.size());
     }
     else if (!PendingTerrainColumnRelights.empty())
     {
       col = PendingTerrainColumnRelights.front();
       PendingTerrainColumnRelights.pop_front();
+      queue_size_after_dequeue =
+          static_cast<int>(PendingTerrainColumnRelights.size());
     }
     else
     {
       capture_telem.RelightCaptureStopReason = 8;
       return false;
+    }
+    if (audit_relight)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "capture dequeue column=(" +
+              std::to_string(FloorDiv(col.x, CHUNK_SIZE)) + "," +
+              std::to_string(FloorDiv(col.y, CHUNK_SIZE)) + ") queue=" +
+              (dequeued_priority ? "priority" : "fifo") +
+              " remaining=" + std::to_string(queue_size_after_dequeue));
     }
     int relight_min = 0;
     int relight_max = max_y;
@@ -2883,6 +2975,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       }
       else
       {
+        if (audit_relight)
+        {
+          CubatariumLogInfo(
+              "RelightAudit",
+              "capture discard column=(" +
+                  std::to_string(ground_xz.x) + "," +
+                  std::to_string(ground_xz.y) +
+                  ") reason=surface_band_no_relight_needed requested=" +
+                  std::to_string(requested_relight_min) + ":" +
+                  std::to_string(requested_relight_max));
+        }
         world.ClearPendingLightBeforeMesh(ground_xz);
         ++telem.RelightFalseClearN;
         PendingTerrainColumnRelightKeys.erase(col);
@@ -3032,6 +3135,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         else
         {
           PromoteTerrainColumnRelight(col);
+        }
+        if (audit_relight)
+        {
+          CubatariumLogInfo(
+              "RelightAudit",
+              "capture requeue column=(" +
+                  std::to_string(ground_xz.x) + "," +
+                  std::to_string(ground_xz.y) + ") reason=inflight queue=" +
+                  std::to_string(PendingTerrainColumnRelightKeys.count(col)) +
+                  " fifo=" +
+                  std::to_string(GetPendingTerrainColumnRelightCount()));
         }
         ++skipped_inflight;
         capture_telem.RelightCaptureStopReason = 9;
@@ -3239,12 +3353,24 @@ int UWorldPersistence::CancelTerrainColumnRelight(
   removed += PendingVisibleFirstMeshRelightYBands.erase(world_block_key);
   removed += DeferredVisibleDrawGateRelightYBands.erase(world_block_key);
   removed += RelightLastFinalizeEpoch_.erase(world_block_key);
-  removed += DeferredFarRelightColumns.erase(ground_xz);
+  if (DeferredFarRelightColumns.count(ground_xz) != 0)
+  {
+    ClearDeferredFarRelightColumn(ground_xz, "column_evicted");
+    ++removed;
+  }
   if (RelightFifoPinValid && RelightFifoPinCx == ground_xz.x &&
       RelightFifoPinCz == ground_xz.y)
   {
     RelightFifoPinValid = false;
     ++removed;
+  }
+  if (removed > 0 && IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    CubatariumLogInfo(
+        "RelightAudit",
+        "cancel relight column=(" + std::to_string(ground_xz.x) + "," +
+            std::to_string(ground_xz.y) + ") removed=" +
+            std::to_string(removed));
   }
   return removed;
 }
@@ -3425,7 +3551,7 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       }
       else
       {
-        PreserveRelightFifoVictimAsDeferred(key, priority);
+        PreserveRelightFifoVictimAsDeferred(key, priority, "farthest_trim");
         PendingTerrainColumnRelightKeys.erase(key);
         PendingTerrainColumnRelightYBands.erase(key);
       }
@@ -3437,8 +3563,48 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
   return static_cast<int>(victims.size());
 }
 
-void UWorldPersistence::ClearPendingRelights()
+void UWorldPersistence::ClearPendingRelights(const char *reason)
 {
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    const std::string reason_text = reason ? reason : "unspecified";
+    CubatariumLogInfo(
+        "RelightAudit",
+        "clear pending relights reason=" + reason_text + " priority=" +
+            std::to_string(PendingTerrainColumnRelightsPriority.size()) +
+            " fifo=" + std::to_string(PendingTerrainColumnRelights.size()) +
+            " keyed=" + std::to_string(PendingTerrainColumnRelightKeys.size()) +
+            " deferred_far=" +
+            std::to_string(DeferredFarRelightColumns.size()) +
+            " deferred_visible=" +
+            std::to_string(DeferredVisibleDrawGateRelightYBands.size()));
+    const auto log_key = [&](const char *owner, glm::ivec2 world_key)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "clear pending relight key reason=" + reason_text + " owner=" +
+              owner + " column=(" +
+              std::to_string(FloorDiv(world_key.x, CHUNK_SIZE)) + "," +
+              std::to_string(FloorDiv(world_key.y, CHUNK_SIZE)) + ")");
+    };
+    for (const auto &key : PendingTerrainColumnRelightsPriority)
+    {
+      log_key("priority", key);
+    }
+    for (const auto &key : PendingTerrainColumnRelights)
+    {
+      log_key("fifo", key);
+    }
+    for (const auto &entry : DeferredFarRelightColumns)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "clear pending relight key reason=" + reason_text +
+              " owner=deferred_far column=(" +
+              std::to_string(entry.first.x) + "," +
+              std::to_string(entry.first.y) + ")");
+    }
+  }
   PendingPlayerRelights.clear();
   PendingTerrainColumnRelights.clear();
   PendingTerrainColumnRelightsPriority.clear();
@@ -3713,7 +3879,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       if (ShouldDeferFarRelightEnqueueOnFifoPressure(
               horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap, fifo_frac))
       {
-        DeferFarRelightColumn(col_xz, dirty_min, dirty_max, near_focus);
+        DeferFarRelightColumn(col_xz, dirty_min, dirty_max, near_focus,
+                              "disk_load_commit_fifo_pressure");
         note_commit_pl(dirty_min, dirty_max);
         ++world.GetPhysicsTelemetryMutable().RelightDeferredFarEnqueueN;
       }

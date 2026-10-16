@@ -592,3 +592,64 @@ owner (overlapping flags). `relight_false_clear_n` stayed at zero. This points
 to an owner transition or requeue before capture, but the overloaded host
 precludes timing conclusions. The next trace should log clear, cancel, trim,
 and defer transitions with column keys; do not change admission limits yet.
+
+### M609–M612: cold entry, saved-light flags, and queue ownership
+
+Все четыре прогона использовали один короткий проверенный M335 GUI
+no-teleport маршрут, seed `3650482197` и одну карту. M609 создавал карту заново;
+M610 повторил маршрут по прогретым файлам terrain, но до M611 у карты не было
+`column_light.json`. Поэтому M610 — disk-warm terrain, а не saved-light control.
+M611 создал 144 complete light flags; M612 стартовал с этим сохранённым
+состоянием.
+
+| Run | Host CPU median/p95 | Важные признаки | Интерпретация |
+| --- | ---: | --- | --- |
+| M609 fresh | 78.8/100% | create 71.756 s; enter unlit/pending 41/41; holes proxy 0; 34 dark pixel candidates | Свет не был помечен complete; нагрузка выше ворот |
+| M610 terrain-warm | 72.5/98% | 27/18; holes proxy 0; 5 candidates | Не saved-light control; не сравнивать как парный результат |
+| M611 owner trace | 89.5/100% | 25/16; holes proxy 0; 144 flags появились во время запуска | Высокая нагрузка; часть deferred clear ещё не логировалась |
+| M612 saved-light | 99.8/100% | старт 144 flags, конец 128; 8/8; holes proxy 0; 32 candidates | Высокая нагрузка; timing и улучшение визуального результата не доказаны |
+
+Пиксельные candidates обозначают неизменившийся тёмный RGB на drawable opaque
+depth surface, а не отсутствующую геометрию. Они сохранялись в тех же восьми
+chunk columns в M609 и M612; все имели незавершённый light evidence. При этом
+число samples сильно менялось (M609 34, M610 5, M612 32), поэтому этот сигнал
+нужно использовать для локализации, а операторский кадр и revision trace — для
+подтверждения. Нулевой `visual_holes_rate` говорит только об отсутствии hole в
+текущем proxy.
+
+Статический кодовый путь `ShouldDrawProvisionalLightPreview` выдаёт preview для
+drawable mesh с preview-тегом, устаревшей mesh revision после settlement или
+активным light repair. `fshader_greedy.glsl` поднимает освещение до floor 0.42
+только для помеченного preview. Не считать каждый тёмный candidate защищённым
+этим fallback: отдельно проверять preview marker, field/mesh/published light
+revisions и действующего владельца. Полностью тёмный image проходит gate только
+при совпадении settled light field, meshed revision и published revision.
+
+M612 добавил недостающие записи для прямых clear-путей из deferred map.
+Получено: 50 defer, 37 clear, 5 cancel, 2,012 capture requeue. Колонка `(-3,4)`
+получила capture через ~15.1 s после первой dark-owner note. Это подтверждает
+видимые handoff-переходы, но не доказывает потерю работы; нагрузка 99.8/100%
+делает интервалы непригодными для оценки SLA.
+
+Для следующего короткого парного прогона требовать одновременно host CPU
+median <=50%, p95 <=75%, разницу median/p95 пары <=15 п.п. и разницу median app
+CPU <=15 п.п. Использовать существующий M335 сценарий и те же параметры; менять
+маршрут лишь для точечного короткого кадра по известной координате. Если ворота
+не пройдены, сохранить лог и повторить только соответствующий arm позже. Новые
+seed-проверки проводить периодически отдельно от повторяемой пары.
+
+Артефакты M609–M612 (локальные, не включены в исходники):
+
+- M609: `m609a_world_create_20261016.json`, `m609b_cold_owner_drop_20261016.json`,
+  `m609b_cold_owner_drop_pixels_20261016.json`,
+  `perf_20261016-112812_12632.jsonl`.
+- M610: `m610a_warm_revisit_20261016.json`,
+  `m610a_warm_revisit_pixels_20261016.json`, `perf_20261016-113458_37732.jsonl`.
+- M611: `m611a_queue_handoff_20261016.json`,
+  `perf_20261016-114313_23848.jsonl`.
+- M612: `m612a_saved_light_revisit_20261016.json`,
+  `m612a_saved_light_revisit_pixels_20261016.json`,
+  `perf_20261016-115016_20008.jsonl`.
+
+Полные выводы, ограничения сравнения и дальнейшие действия находятся в
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md).

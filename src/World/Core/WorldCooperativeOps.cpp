@@ -342,7 +342,8 @@ void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
   world.CancelAsyncRelightWork();
   if (world.Persistence)
   {
-    world.Persistence->ClearPendingRelights();
+    world.Persistence->ClearPendingRelights(
+        "cooperative_deferred_relight_start");
   }
   BeginColumnRelightQueue(world);
 }

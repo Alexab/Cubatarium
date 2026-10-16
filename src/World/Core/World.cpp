@@ -2284,7 +2284,8 @@ void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
       StickyRemeshAfterLight.erase(ground_xz) > 0 || visual_state_changed;
   if (Persistence)
   {
-    Persistence->ClearDeferredFarRelightColumn(ground_xz);
+    Persistence->ClearDeferredFarRelightColumn(
+        ground_xz, "pending_light_before_mesh_cleared");
     Persistence->ClearVisibleFirstMeshRelightIfNotQueued(
         glm::ivec2(ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE));
   }

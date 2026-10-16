@@ -493,7 +493,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               {
                 world.Persistence->DeferFarRelightColumn(
                     glm::ivec2(ground.x, ground.z), enqueue_relight_min,
-                    enqueue_relight_max, relight_priority);
+                    enqueue_relight_max, relight_priority,
+                    "stream_load_fifo_pressure");
                 world.TryNotePendingLightBeforeMesh(
                     ground, enqueue_relight_min, enqueue_relight_max,
                     __FUNCTION__);
@@ -5304,7 +5305,7 @@ void UWorldStreaming::QuiesceBackgroundWork(
   PauseChunkGeneration(async_io_timeout);
   if (world.Persistence)
   {
-    world.Persistence->ClearPendingRelights();
+    world.Persistence->ClearPendingRelights("streaming_quiesce");
     for (int pass = 0; pass < 64; ++pass)
     {
       if (world.Persistence->TickDrainAsyncChunkIo(world, 8))
@@ -5982,7 +5983,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           world.Persistence->DeferFarRelightColumn(glm::ivec2(ground.x, ground.z),
                                                    relight_min, relight_max,
-                                                   near_focus);
+                                                   near_focus,
+                                                   "stream_dirty_fifo_pressure");
           world.TryNotePendingLightBeforeMesh(ground, relight_min, relight_max,
                                               __FUNCTION__);
           ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;

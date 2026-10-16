@@ -159,8 +159,9 @@ public:
                                       bool priority = false, int min_y = 0,
                                       int max_y = -1);
   void DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y, int max_y,
-                             bool priority);
-  void ClearDeferredFarRelightColumn(glm::ivec2 ground_xz);
+                             bool priority, const char *reason = nullptr);
+  void ClearDeferredFarRelightColumn(glm::ivec2 ground_xz,
+                                     const char *reason = nullptr);
   int AdmitDeferredFarRelightColumns(UWorld &world, glm::ivec3 focus_ground,
                                      int pin_horiz);
   /// Move an already-queued world-block-key column from far to priority FIFO.
@@ -193,7 +194,7 @@ public:
   int TakeRelightFifoPinSaved();
   int TakeRelightFifoPriorityInsert();
   int TakeRelightFifoProtectBlock();
-  void ClearPendingRelights();
+  void ClearPendingRelights(const char *reason = nullptr);
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
                                      uint64_t demand_id = 0);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
@@ -266,7 +267,8 @@ private:
                                        bool priority, int min_y, int max_y,
                                        bool visible_admission);
   void PreserveRelightFifoVictimAsDeferred(glm::ivec2 world_block_key,
-                                           bool priority);
+                                           bool priority,
+                                           const char *reason = nullptr);
   bool PrioritizeNearestTerrainColumnRelight(UWorld &world,
                                              glm::ivec3 focus_ground,
                                              int radius_chunks, int scan_cap);

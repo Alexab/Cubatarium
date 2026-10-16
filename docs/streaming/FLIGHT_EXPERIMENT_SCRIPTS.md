@@ -10058,3 +10058,68 @@ Artifacts: [M608 create](../../bin/suite_reports/engine_refactor/m608a_world_cre
 `capture_dequeue`, `clear_pending_relights`, per-column cancellation, and FIFO
 trim/defer events are the next diagnostic additions. Do not interpret a long
 flight under M608's load as evidence for a rendering or streaming regression.
+
+## M609–M612 — cold and saved-light entry checks (2026-10-16)
+
+### Reusable flight invocation
+
+Сценарий запуска остался прежним: `tools/run_m335_water_visibility_ab.ps1`,
+короткий GUI no-teleport flight, никаких новых параметров траектории.
+Использованные параметры:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M609A_Cold_OwnerDrop_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m609b_cold_owner_drop `
+  -Report bin/suite_reports/engine_refactor/m609b_cold_owner_drop_20261016.json
+```
+
+Для M610–M612 менять `-World`, `-PhaseId` и `-Report` на идентификаторы
+соответствующего запуска. Не создавать новый мир для warm arm: он должен
+использовать карту cold arm с уже сохранёнными light-complete flags. Перед
+запуском и после завершения фиксировать количество записей и состояние целевых
+колонок в `worlds/<world>/column_light.json`. Terrain-warm карта без этого файла
+не является saved-light control.
+
+Свежую карту этого seed создавали через Release executable командой из M608
+(имя `World_M609A_Cold_OwnerDrop_20261016`, seed `3650482197`, radius 4), с
+замером времени через `Stopwatch`. M609 завершился за 71.756 s и создал 597
+chunk files. Создание мира — отдельная операция, не flight и не performance
+параметр маршрута.
+
+### Что сохранять и как интерпретировать
+
+- Flight JSON, perf JSONL, `Cubatarium.exe...INFO` лог, pixel analyzer JSON и
+  до/после snapshot light flags.
+- Для сравнения записать host CPU median/p95, process CPU, world-create time,
+  `enter_unlit_max`, `enter_pending_max`, visible black/hole proxies и pixel
+  candidate classification.
+- Признавать пару сопоставимой только при host median <=50%, p95 <=75%, различии
+  host median/p95 arm-ов <=15 п.п. и median app CPU <=15 п.п. Run всё равно
+  сохраняется как диагностический, но не performance evidence.
+- Pixel candidate — тёмный unchanged RGB на drawable opaque surface. Он не
+  подтверждает ни чёрный кадр оператора, ни геометрическую дыру. Сопоставлять
+  preview marker, settled/meshed/published light revisions, очередь/flow owner и
+  кадр оператора.
+- `CUBATARIUM_RELIGHT_AUDIT=1` включает lifecycle записи. `deferred_far clear`
+  показывает причину удаления owner; `capture dequeue`, `capture requeue`,
+  `worker_start`, `settle` и mesh/GPU publish нужно связать по координате.
+  Само наличие `clear` не равно потере работы: `deferred_far_admitted`
+  означает передачу в активную очередь.
+
+M609–M612 использовали перегруженный host (median/p95 соответственно 78.8/100,
+72.5/98, 89.5/100 и 99.8/100%). Поэтому ни один запуск не годится для timing
+acceptance. M610 прогрел terrain, но не имел сохранённых light flags; M612 был
+первым saved-light revisit. Последний сохранил 32 dark pixel candidates против
+34 у M609 и 5 у M610; разброс исключает вывод об исправлении. Подробности и
+артефакты перечислены в
+[`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md).
