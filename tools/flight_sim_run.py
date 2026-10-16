@@ -1534,11 +1534,84 @@ def kill_process_tree(pid: int) -> None:
             pass
 
 
-def run_with_timeout(cmd: list[str], cwd: Path, timeout_sec: float) -> int:
+def run_with_timeout(
+    cmd: list[str], cwd: Path, timeout_sec: float
+) -> tuple[int, dict]:
+    """Run flight-sim while sampling host and app CPU/memory when psutil exists."""
     proc = subprocess.Popen(cmd, cwd=str(cwd))
+    monitor = {
+        "schema": "flight-runtime-resources.v1",
+        "available": False,
+        "sample_interval_sec": 1.0,
+        "sample_count": 0,
+        "logical_cpu_count": None,
+        "samples": [],
+    }
+    psutil_module = None
+    app_process = None
     try:
-        return proc.wait(timeout=timeout_sec)
-    except subprocess.TimeoutExpired:
+        import psutil
+    except ImportError as exc:
+        monitor["unavailable_reason"] = type(exc).__name__
+    else:
+        psutil_module = psutil
+        try:
+            monitor["logical_cpu_count"] = psutil_module.cpu_count(logical=True) or 1
+            app_process = psutil_module.Process(proc.pid)
+            # Prime psutil's interval counters so the first recorded sample spans
+            # the first second of the actual flight process.
+            psutil_module.cpu_percent(interval=None)
+            app_process.cpu_percent(interval=None)
+            monitor["available"] = True
+        except (OSError, psutil_module.Error) as exc:
+            monitor["unavailable_reason"] = type(exc).__name__
+            psutil_module = None
+            app_process = None
+
+    started_at = time.monotonic()
+    deadline = started_at + max(0.0, timeout_sec)
+    timed_out = False
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0.0:
+            if proc.poll() is None:
+                timed_out = True
+            break
+        try:
+            proc.wait(
+                timeout=min(1.0, remaining) if monitor["available"] else remaining
+            )
+            break
+        except subprocess.TimeoutExpired:
+            if psutil_module is None or app_process is None:
+                continue
+            try:
+                host_cpu = float(psutil_module.cpu_percent(interval=None))
+                app_cpu_one_core = float(app_process.cpu_percent(interval=None))
+                app_memory = app_process.memory_info().rss
+                app_threads = app_process.num_threads()
+                memory = psutil_module.virtual_memory()
+                cpu_count = max(1, int(monitor["logical_cpu_count"] or 1))
+                monitor["samples"].append(
+                    {
+                        "elapsed_sec": round(time.monotonic() - started_at, 3),
+                        "host_cpu_percent": host_cpu,
+                        "app_cpu_one_core_percent": app_cpu_one_core,
+                        "app_cpu_machine_percent": app_cpu_one_core / cpu_count,
+                        "other_cpu_machine_percent_estimate": max(
+                            0.0, host_cpu - app_cpu_one_core / cpu_count
+                        ),
+                        "app_rss_mb": app_memory / (1024.0 * 1024.0),
+                        "app_threads": app_threads,
+                        "system_available_memory_mb": memory.available
+                        / (1024.0 * 1024.0),
+                    }
+                )
+            except psutil_module.Error:
+                # The app may exit between wait() timing out and this sample.
+                pass
+
+    if timed_out:
         print(
             f"WARN: flight-sim hung after {timeout_sec:.0f}s, killing pid={proc.pid}",
             flush=True,
@@ -1550,7 +1623,36 @@ def run_with_timeout(cmd: list[str], cwd: Path, timeout_sec: float) -> int:
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-        return 124
+
+    samples = monitor["samples"]
+    monitor["sample_count"] = len(samples)
+    for source_key, summary_key in (
+        ("host_cpu_percent", "host_cpu_percent_summary"),
+        ("app_cpu_machine_percent", "app_cpu_machine_percent_summary"),
+        ("other_cpu_machine_percent_estimate", "other_cpu_machine_percent_estimate_summary"),
+    ):
+        values = sorted(float(sample[source_key]) for sample in samples)
+        if values:
+            p95_index = min(
+                len(values) - 1, max(0, math.ceil(len(values) * 0.95) - 1)
+            )
+            monitor[summary_key] = {
+                "median": values[len(values) // 2],
+                "p95": values[p95_index],
+                "max": values[-1],
+            }
+        else:
+            monitor[summary_key] = None
+    rss_values = [float(sample["app_rss_mb"]) for sample in samples]
+    monitor["app_rss_mb_max"] = max(rss_values) if rss_values else None
+    available_memory = [
+        float(sample["system_available_memory_mb"]) for sample in samples
+    ]
+    monitor["system_available_memory_mb_min"] = (
+        min(available_memory) if available_memory else None
+    )
+    monitor["timed_out"] = timed_out
+    return (124 if timed_out else int(proc.returncode or 0)), monitor
 
 
 def append_phase_history(entry: dict) -> None:
@@ -3101,7 +3203,30 @@ def main() -> int:
             process_timeout = max(process_timeout, args.seconds + 180.0)
 
         print("running:", " ".join(sim_cmd), flush=True)
-        rc = run_with_timeout(sim_cmd, BIN, process_timeout)
+        rc, runtime_resources = run_with_timeout(sim_cmd, BIN, process_timeout)
+        runtime_resources_summary = {
+            "available": runtime_resources.get("available"),
+            "sample_count": runtime_resources.get("sample_count"),
+            "host_cpu_percent": runtime_resources.get(
+                "host_cpu_percent_summary"
+            ),
+            "app_cpu_machine_percent": runtime_resources.get(
+                "app_cpu_machine_percent_summary"
+            ),
+            "other_cpu_machine_percent_estimate": runtime_resources.get(
+                "other_cpu_machine_percent_estimate_summary"
+            ),
+            "app_rss_mb_max": runtime_resources.get("app_rss_mb_max"),
+            "system_available_memory_mb_min": runtime_resources.get(
+                "system_available_memory_mb_min"
+            ),
+            "timed_out": runtime_resources.get("timed_out"),
+        }
+        print(
+            "runtime resources: "
+            + json.dumps(runtime_resources_summary, ensure_ascii=False),
+            flush=True,
+        )
         hang_killed = rc == 124
         kill_cubatarium_orphans()
 
@@ -3125,6 +3250,7 @@ def main() -> int:
                     "perf": None,
                     "report": str(report_path),
                     "repeat": rep,
+                    "runtime_resources_summary": runtime_resources_summary,
                 }
             )
             last_rc = 3 if hang_killed else 1
@@ -3189,6 +3315,7 @@ def main() -> int:
                 _ann = json.loads(report_path.read_text(encoding="utf-8"))
                 _ann["teleport_cruise"] = bool(args.teleport_cruise)
                 _ann["process_timeout_s"] = float(process_timeout)
+                _ann["runtime_resources"] = runtime_resources
                 # A21 P0.1: bind report to binary/world/route identity.
                 try:
                     from a21_run_manifest import build_run_manifest
@@ -3659,6 +3786,7 @@ def main() -> int:
                 "report": str(report_path),
                 "repeat": rep,
                 "summary": metrics_summary,
+                "runtime_resources_summary": runtime_resources_summary,
             }
         )
 

@@ -9620,7 +9620,7 @@ pattern. M599 used `World_M599A_Cold_20261015`; M600 used
 The experimental flight commands were:
 
 ```powershell
-$env:CUBATARIUM_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
 $env:CUBATARIUM_RELIGHT_AUDIT = '1'
 $env:CUBA_ALLOW_DIRTY_AF = '1' # required only because these flights used uncommitted code
 pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
@@ -9675,7 +9675,7 @@ $proc = Start-Process -FilePath $exe -ArgumentList @(
   '--report-json', 'suite_reports/engine_refactor/m601a_world_create_20261016.json'
 ) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
 if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
-$env:CUBATARIUM_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
 $env:CUBATARIUM_RELIGHT_AUDIT = '1'
 $env:CUBA_ALLOW_DIRTY_AF = '1'
 pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
@@ -9708,7 +9708,7 @@ M602 used the existing saved `World_M600A_Cold_20261015` to isolate warm entry
 from the new-world startup condition. It reused the exact 35 s route:
 
 ```powershell
-$env:CUBATARIUM_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
 $env:CUBATARIUM_RELIGHT_AUDIT = '1'
 $env:CUBA_ALLOW_DIRTY_AF = '1'
 pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
@@ -9758,7 +9758,7 @@ $proc = Start-Process -FilePath $exe -ArgumentList @(
   '--report-json', 'suite_reports/engine_refactor/m603a_world_create_20261016.json'
 ) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
 if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
-$env:CUBATARIUM_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
 $env:CUBATARIUM_RELIGHT_AUDIT = '1'
 $env:CUBA_ALLOW_DIRTY_AF = '1'
 pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
@@ -9792,3 +9792,59 @@ Artifacts: [M603 create](../../bin/suite_reports/engine_refactor/m603a_world_cre
 [M603 flight](../../bin/suite_reports/engine_refactor/m603b_age_service_fairness_20261016.json),
 [M603 pixel analysis](../../bin/suite_reports/engine_refactor/m603b_age_service_fairness_pixels_20261016.json),
 [M603 perf](../../bin/logs/perf_20261016-030600_27816.jsonl).
+
+## M604 — cold fairness repeat under high runtime pressure (2026-10-16)
+
+M604 rebuilt Release with `tools/build_release.ps1 -Jobs 8`, created a fresh
+radius-4 map with the M601/M603 seed, and used the same short visible-GUI,
+no-teleport route. Create-world produced 597 chunk files. The runner completed
+the application process (`run_outcome=success`, `process_rc=0`) but returned
+analysis code 2 because stale-visual / hole-blink acceptance gates failed.
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M604A_Cold_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m604a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M604A_Cold_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m604b_cold_fairness_confirm `
+  -Report bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-103531_29408.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_pixels_20261016.json
+```
+
+The run produced 33 spikes across 35 periods, fly wall median 36.8865 ms,
+streaming phase median 24.5761 ms, emergence median 11.8964 ms, and frontier
+pressure in 86.96% of cruise periods. Deferred-far pending peaked at 46 and
+fell to 3; at the end the three remaining entries were 5–7 chunks away, beyond
+the four-column service horizon. The audit recorded two age admissions. Pixel
+analysis found 52 low-luma samples / 2,880 probes, 306 unsettled opaque samples,
+252 provisional-preview samples in 24 chunks, and 168 preview shader overrides.
+Near-focus `visual_holes_rate` was zero and A24 passed, but the visible-black
+proxy peaked at 16 and startup unlit/pending maxima reached 50.
+
+The suite result is not a clean pacing comparison: M603 had 3 spikes, fly wall
+median 13.7338 ms, and no frontier-pressure periods. M604 did not record host
+CPU, so it cannot distinguish engine workload from unrelated host load. A later
+two short idle-process harness smokes measured 30.8–65.4% host CPU while the
+child process was mostly idle; treat external pressure as plausible, not proven.
+The runner now samples host/app CPU, RSS, thread count, and available memory
+once per second in `runtime_resources`; use that evidence on the next short cold
+run.
+
+Artifacts: [M604 create](../../bin/suite_reports/engine_refactor/m604a_world_create_20261016.json),
+[M604 flight](../../bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_20261016.json),
+[M604 pixel analysis](../../bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_pixels_20261016.json),
+[M604 perf](../../bin/logs/perf_20261016-103531_29408.jsonl).

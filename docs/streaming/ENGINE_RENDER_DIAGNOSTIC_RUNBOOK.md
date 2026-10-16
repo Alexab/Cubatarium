@@ -486,3 +486,27 @@ cold прогоне точные стартовые срезы `(-4,2,1/2)` sett
 временные чанки при входе. Warm M602 сократил именно startup provisional set,
 однако readiness debt сохранялся и на других активных срезах; это фактор, а не
 полное объяснение.
+
+M604 повторил холодный seed/маршрут после коммита pacing. Процесс завершил
+полёт (`process_rc=0`), но suite не прошёл stale-visual / hole-blink gate:
+33/35 периодов классифицированы как spikes, fly wall median 36.9 ms, streaming
+phase 24.6 ms, emergence 11.9 ms, frontier pressure 0.87. Deferred-far peak
+составил 46 и к остановке снизился до 3; оставшиеся колонки находились в
+5–7 чанках при service horizon 4. Зафиксировано 2 age admissions. Это не
+показывает устойчивый рост очереди в зоне обслуживания.
+
+Pixel trace M604: 52 low-luma samples / 2,880 probes, 306 unsettled opaque
+demand samples, 252 provisional-preview samples в 24 чанках, 168 preview shader
+overrides. `visual_holes_rate=0` и A24 safety stop-line прошёл, но visible-black
+proxy достиг 16, а startup unlit/pending max — 50. M603 был заметно спокойнее
+(3 spikes, fly wall median 13.7 ms, frontier pressure 0), поэтому M604 нельзя
+использовать как чистое сравнение scheduler. В нём host CPU не измерялся; сразу
+после него два кратких idle-process smoke измерили 30.8–65.4% общей host CPU,
+что делает внешнюю нагрузку правдоподобной, но не доказывает её уровень в момент
+M604.
+
+`tools/flight_sim_run.py` теперь записывает раз в секунду host CPU, CPU самого
+процесса игры, оценку остальной загрузки, RSS, число потоков и доступную память
+в поле `runtime_resources` отчёта. Следующий контроль — короткий холодный вход
+при спокойной host CPU; не запускать длинный acceptance flight до стабильности
+короткого cold-start handoff.

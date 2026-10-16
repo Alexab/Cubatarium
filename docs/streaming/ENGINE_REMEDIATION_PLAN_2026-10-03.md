@@ -10874,11 +10874,37 @@ newly active slices still had readiness debt. A cold map is therefore a
 credible contributor to dark/black-looking chunks at entry, not a complete
 explanation for every occurrence.
 
-Next, keep the short cold/warm route and per-age-admission audit as the control
-for any further scheduler or publication changes. First check that the paced
-age queue does not create growing deferred-far debt over repeated short runs;
-then address the remaining readiness debt separately. Defer the 8,192-block
-acceptance flight until short-run cold entry and queue debt are stable.
+M604 repeated the same cold seed and route after the pacing commit. The process
+completed the route, but the suite failed its stale-visual / hole-blink gate.
+This run had 33/35 periods classified as spikes, fly wall median 36.9 ms,
+streaming phase median 24.6 ms, emergence median 11.9 ms, and frontier pressure
+in 87% of cruise periods. Deferred-far peaked at 46 then drained to 3; all three
+remaining entries were outside the four-column service horizon. The queue audit
+recorded two age admissions. Unlike M603, this run is unsuitable for comparing
+the scheduler because its execution pressure was much higher; the report did
+not sample host CPU, so it cannot distinguish engine work from external load.
+Two short harness smoke samples after M604 measured 30.8–65.4% host CPU while
+the child process was mostly idle, making external load plausible but not
+proving what occurred during M604.
+
+The M604 pixel trace found 52 low-luma samples in 2,880 probes, 306 unsettled
+opaque demand samples, 252 provisional-preview samples across 24 chunks, and
+168 preview shader overrides. Near-focus mesh-hole rate remained zero and the
+A24 safety stop-line passed, while visible-black proxy peaked at 16 and the
+startup unlit/pending maxima reached 50. This is evidence of underlit
+provisional presentation under a high-pressure run, not proof of a geometric
+hole. M603's lower-pressure run had 39 low-luma samples in 4,800 probes and
+unlit maximum 30; the different probe counts and runtime pressure prevent a
+direct image-quality comparison.
+
+The M603/M604 deferred queue histories do not show a growing in-range tail:
+both runs drained deferred work as the focus advanced, then retained only
+out-of-horizon entries at shutdown (M603: 9 at distance 5; M604: 3 at distance
+5–7 with service horizon 4). Keep the age-pacing change. The immediate next step
+is to use the new host/app resource samples in the flight harness and repeat
+only a short cold entry run when the host is not saturated. Then evaluate the
+remaining readiness debt separately. Defer the 8,192-block acceptance flight
+until the short-run startup state is stable.
 
 M599/M600 artifacts: [M599 world](../../bin/suite_reports/engine_refactor/m599a_world_create_20261015.json),
 [M599 flight](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_20261015.json),
@@ -10900,3 +10926,9 @@ startup slices returned to ~4.0 s settlement and age admissions dropped from
 19 to 6, while the global readiness gates still failed. See the M603 run record
 for its metrics and artifacts; this result does not establish a global queue
 throughput improvement.
+
+M604 repeated the cold route after the pacing change. Queue debt peaked at 46
+and fell to 3 out-of-horizon records, but high streaming/emergence pressure
+produced a failed visual stability gate. Host CPU was not sampled during that
+run; resource sampling has now been added to the harness before another
+comparison is attempted.
