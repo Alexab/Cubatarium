@@ -5672,3 +5672,22 @@ do not replace operator framebuffer observation. The eye-proxy gate also failed
 on stale-visual delta 2.0, stale activity without hole counters, and missing
 temporal mid-flight coverage; this is not pixel proof. No operator image verdict
 was captured.
+
+M618A verified the early watch and exposed a second scheduler gap. The target
+recorded five geometry bumps: `priority_world_streaming_commit` advanced 12→13
+and 13→14, then `priority_dirty_enqueued` advanced 14→15, 15→16, and 16→17.
+Every bump snapshot found the slice already Dirty in ordinary RemeshQ (`kind=3`),
+with no async build, capture, or GPU owner. Queue positions reached 6/7. The
+renderer did publish geometry revision 13, then 15, but the last revision 17
+remained queued at the end of the route. This is evidence of an owned, low-priority
+queue handoff rather than the earlier missing-owner admission gap.
+
+Commit `7e5a9634` promotes already-owned drawable geometry debt within h5 to
+priority RemeshQ in place. It changes queue ordering and preserves existing
+global work budgets. Release build passed. M618A runtime host CPU was
+70.7/99.3/99.6% median/p95/max, so it is not performance acceptance. Its
+`visual_holes_rate=0`, fly visible-black max=4, post-stop visible-black max=0,
+and readiness debt max=49 are separate proxies; eye-proxy stale delta was 2.5
+with temporal mid-flight coverage still untested. No operator framebuffer
+verdict was recorded. Next verify promotion and publication in one short M619A
+only after a fresh resource preflight; no long monitoring flight is warranted.

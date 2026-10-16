@@ -10292,9 +10292,8 @@ Eye-proxy gate дополнительно отказал по stale-visual delta
 
 Commit `e39de9df` исправляет полноту trace: opt-in visual watch теперь
 открывается при первой bounded admission drawable geometry debt в h5, до того
-как renderer census выберет его позднее. Release build прошёл. Для следующей
-точечной проверки использовать M618A после свежих host CPU ворот median <=50%,
-p95 <=75%:
+как renderer census выберет его позднее. Release build прошёл. M618A запущен
+после свежего host CPU preflight median/p95=35.3/66.9%:
 
 ```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
@@ -10311,9 +10310,47 @@ $env:CUBA_VISUAL_BLACK_TRACE='1'
   -Report bin/suite_reports/engine_refactor/m618a_proactive_revision_watch_20261016.json
 ```
 
-M618A должен показать целевые `mesh_revision_bumped` events с reason, queue и
-owner state до/во время ремонта. Сопоставить с scheduling, capture reject и GPU
-publish; изменения должны оставаться в рамках короткого повторяемого маршрута.
+M618A показал пять целевых `mesh_revision_bumped` events:
+
+- frame 2407, 12→13, `priority_world_streaming_commit`, ordinary RemeshQ `2/3`;
+- frame 2439, 13→14, `priority_world_streaming_commit`, ordinary RemeshQ `0/1`;
+- frame 2680, 14→15, `priority_dirty_enqueued`, ordinary RemeshQ `5/6`;
+- frame 2785, 15→16, `priority_dirty_enqueued`, ordinary RemeshQ `2/3`;
+- frame 2931, 16→17, `priority_dirty_enqueued`, ordinary RemeshQ `6/7`.
+
+Все снимки имели `mesh_owner_flags=1` (Dirty only), без active async
+build/capture/GPU. Geometry публикация достигла 13 и затем 15; revision 17
+осталась в обычной очереди к концу прогона. Commit `7e5a9634` продвигает уже
+owned drawable h5 geometry debt из ordinary в priority RemeshQ, не увеличивая
+общий budget.
+
+M618A завершился с `process_rc=0`, без timeout, но runtime host CPU был
+70.7/99.3/99.6% median/p95/max, suite `pass=false`; это не performance
+acceptance. Proxy: `visual_holes_rate=0`, fly visible-black max=4, post-stop
+visible-black max=0, readiness-debt max=49. Eye-proxy gate отказал по
+stale-visual delta 2.5, stale activity без hole counters и непокрытому temporal
+mid-flight сегменту. Прямой operator framebuffer verdict отсутствует.
+
+Для проверки promotion нужен M619A, только после свежего host CPU preflight
+median <=50%, p95 <=75%:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M619A_PromoteOwnedGeometryDebt_20261016 `
+  -Report bin/suite_reports/engine_refactor/m619a_promote_owned_geometry_debt_20261016.json
+```
+
+Проверить, что target h5 revisions, имеющие Dirty owner, переходят из queue
+kind=3 в kind=2 и публикуют текущую geometry revision. Длинный маршрут не нужен.
 
 Артефакты M616A (локальные):
 
@@ -10326,3 +10363,9 @@ publish; изменения должны оставаться в рамках к
 - `suite_reports/engine_refactor/m617a_geometry_revision_cause_20261016.json`
 - `logs/perf_20261016-130222_31232.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-130218.31232`
+
+Артефакты M618A:
+
+- `suite_reports/engine_refactor/m618a_proactive_revision_watch_20261016.json`
+- `logs/perf_20261016-131122_38316.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-131118.38316`

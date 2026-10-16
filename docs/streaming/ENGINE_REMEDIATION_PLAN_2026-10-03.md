@@ -11318,21 +11318,38 @@ M617A не прошёл runtime resource gate: host CPU 65.1/99.5/100%
 оценки изображения. Дополнительно eye-proxy gate отказал по stale-visual delta
 2.0, stale activity без hole counters и непокрытому temporal mid-flight сегменту.
 Это повод закрыть coverage gaps и найти связь с повторным geometry churn, но не
-доказательство пиксельной дыры. Несмотря на включённый visual trace, для целевого
-среза сохранились только четыре renderer trace rows и ноль `demand_transition_trace`
-revision-bump событий: slice был добавлен в watch слишком поздно, при выборе
-рендерного census. Исправлено в `e39de9df`: при включённой диагностике h5
-geometry debt начинает watch прямо в bounded admission. Release build прошёл;
-есть прежнее предупреждение C4335 о формате строк `WorldBlockPhysicsService.h`.
+доказательство пиксельной дыры. Несмотря на включённый visual trace, M617A
+сохранил только четыре renderer trace rows и ноль `demand_transition_trace`
+revision-bump событий: slice попал в watch слишком поздно, при выборе renderer
+census. Исправлено в `e39de9df`: opt-in watch теперь начинается при bounded
+admission h5 geometry debt. M618A подтвердил результат: для целевого среза
+появились пять bump events с точными reason и owner state.
 
-Следующий шаг — один короткий M618A M335 после host CPU median <=50%, p95
-<=75%, с теми же условиями и обоими флагами audit. Проверить, что proactive
-watch даёт целевые `mesh_revision_bumped` строки с reason и ownership на каждом
-переходе. Только после этого решать, нужна ли правка источника invalidation или
-scheduler handoff. Длинный мониторинговый маршрут и расширение scheduler budget
-не нужны.
+M618A показал `priority_world_streaming_commit` для bumps 12→13 и 13→14, затем
+`priority_dirty_enqueued` для 14→15, 15→16 и 16→17. Все пять snapshots сообщали
+обычный RemeshQ (`kind=3`) и только Dirty owner (`owner_flags=1`), без async
+build/capture/GPU owner; позиции были 2/3, 0/1, 5/6, 2/3 и 6/7. Geometry
+publication успела достичь revision 13, затем 15; на конце revision 17 осталась
+в обычной очереди. Это объясняет предыдущий неразрешённый debt точнее: work
+получала owner, но drawable h5 remesh не попадал в priority RemeshQ.
 
-Артефакты M609–M617A сохранены локально в `bin/suite_reports/engine_refactor`,
+Исправлено в `7e5a9634`: `AdmitUnfinishedVisualDemand` теперь продвигает уже
+owned drawable geometry debt в h5 в priority RemeshQ. Это меняет только порядок
+в bounded очереди, не общий dirty/scheduler budget. Release build прошёл;
+сохранилось предупреждение C4335 о формате строк
+`WorldBlockPhysicsService.h`. Следующий короткий M619A должен проверить, что
+ordinary kind=3 promotion становится kind=2 и final geometry revision
+публикуется.
+
+M618A resource gate не пройден: preflight median/p95 35.3/66.9%, но runtime
+host CPU вырос до 70.7/99.3/99.6% (median/p95/max); suite `pass=false`.
+Proxy показывали `visual_holes_rate=0`, `fly_visible_black_max=4`,
+`post_stop_visible_black_max=0`, `post_stop_readiness_debt_max=49`. Eye-proxy gate
+не прошёл из-за stale-visual delta 2.5, активности без hole counters и
+непокрытого temporal mid-flight сегмента. Не трактовать это как performance или
+framebuffer acceptance; операторского verdict нет.
+
+Артефакты M609–M618A сохранены локально в `bin/suite_reports/engine_refactor`,
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md) и
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).

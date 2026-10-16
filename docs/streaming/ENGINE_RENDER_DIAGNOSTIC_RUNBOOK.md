@@ -801,14 +801,28 @@ contains only four renderer rows and no target
 the target, after its revision changes.
 
 Commit `e39de9df` starts the opt-in visual watch when bounded admission first
-identifies h5 geometry debt. Release build passed. Next diagnostic: repeat only
-the same short M335 route after host CPU median <=50% and p95 <=75%, with both
-`CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`. Confirm target
-`mesh_revision_bumped` events contain bump reason plus queue/owner state, then
-join them to dirty dequeue, async capture, stale-input rejection, and GPU
-publication. If revision changes continue, trace the invalidation producer; if
-it stabilizes without scheduling, trace scheduler ownership. Do not extend this
-into a long operator-monitoring flight.
+identifies h5 geometry debt. M618A confirmed this: five target
+`mesh_revision_bumped` rows carried reasons and owner state. Two bumps were
+`priority_world_streaming_commit` (12→13, 13→14); three were
+`priority_dirty_enqueued` (14→15, 15→16, 16→17). Every snapshot showed ordinary
+RemeshQ (`kind=3`), Dirty owner only, no active build/capture/GPU, and indices up
+to 6/7. Geometry publication reached revisions 13 and 15, but 17 remained in the
+ordinary queue at stop.
+
+Commit `7e5a9634` promotes already-owned drawable geometry debt in h5 to priority
+RemeshQ in place; it changes queue ordering without adding scheduler budget.
+Release build passed. M618A preflight host median/p95 was 35.3/66.9%, but runtime
+reached 70.7/99.3/99.6%, so it is not performance acceptance. The suite reported
+`visual_holes_rate=0`, fly visible-black max=4, post-stop visible-black max=0,
+readiness-debt max=49. Eye-proxy stale delta was 2.5 with no temporal mid-flight
+coverage; no framebuffer verdict was captured.
+
+Next diagnostic M619A: repeat only the same short M335 route after fresh host CPU
+median <=50% and p95 <=75%, with both `CUBATARIUM_RELIGHT_AUDIT=1` and
+`CUBA_VISUAL_BLACK_TRACE=1`. Confirm owned h5 geometry debt changes from ordinary
+queue kind=3 to priority kind=2 and the final geometry revision publishes. Join
+that to dirty dequeue, capture, stale-input handling, and GPU publish. Do not
+extend this into a long operator-monitoring flight.
 
 M615A artifacts:
 
@@ -827,3 +841,9 @@ M617A artifacts:
 - `suite_reports/engine_refactor/m617a_geometry_revision_cause_20261016.json`
 - `logs/perf_20261016-130222_31232.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-130218.31232`
+
+M618A artifacts:
+
+- `suite_reports/engine_refactor/m618a_proactive_revision_watch_20261016.json`
+- `logs/perf_20261016-131122_38316.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-131118.38316`
