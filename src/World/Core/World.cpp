@@ -7625,6 +7625,13 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
         trace.stale_face_index = stale_witness.face_index;
         trace.stale_sample_light = stale_witness.packed_light;
         trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
+        bool cache_entry_present = false;
+        bool halo_stamp_valid = false;
+        trace.stale_mesh_halo_state = static_cast<uint8_t>(
+            MeshService->GetCache().GetPublishedLightHaloState(
+                coord, BlockWorld, &cache_entry_present, &halo_stamp_valid));
+        trace.stale_mesh_cache_entry_present = cache_entry_present ? 1 : 0;
+        trace.stale_mesh_halo_stamp_valid = halo_stamp_valid ? 1 : 0;
       }
       UJobStageTrace::NoteVisualBlack(trace);
     }
