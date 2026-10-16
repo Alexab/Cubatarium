@@ -12352,3 +12352,37 @@ repeatable, flights short, and CPU utilization contextual only.
 
 Detailed M622AV setup, interpretation, and artifact names are recorded in
 `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` and `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622AW–AX: focus change and first-mesh lifecycle
+
+M622AW validates the M622AV cache fix on the established short M335 route:
+all nine focus transitions had a consistent `FocusNotRenderReady` count and
+unfinished-class histogram. A single startup sample remained out of sync, so
+do not claim the telemetry lifecycle is fully closed yet. Release build passed.
+
+M622AX captured one fresh resident-mesh miss at `(1,3,5)` in the camera
+vertical band. It had no mesh, draw readiness, dirty/build/GPU owner,
+SoftDefer, or active ColumnFlow ticket at detection. The existing
+`OnLitPendingNeeded` path then inserted exact first-mesh relight work, the
+slice became drawable/satisfying in about 0.32 s, and column light flags
+finalized about 1.25 s after admission. A neighbour halo change created a
+later stale-light repair. A second positive proxy sample was only the held
+tail after a fresh clear. No sampled pixel had a missing drawable-surface
+join, but the exact chunk was not joined to a same-view pixel transition and
+there is no operator verdict.
+
+The same audit showed FIFO overflow victims are re-deferred and can return via
+aged service. M622AX had 47 evictions with at most five deferred-far entries;
+its audit logged 27 visible exact replacements, 35 FIFO admission denials, and
+two aged-service admissions. M622AW had 443 evictions. These sequential runs
+mutate the saved world and are not an A/B. The route's aggregate gate still
+fails; post-stop mesh holes clear while readiness debt (35 in M622AX) does not
+converge. Keep flight duration at 30 s and avoid CPU thresholds or long
+operator-monitoring runs.
+
+Next, correlate the exact missing witness with its persistence queue state,
+first drawable publication, final light revision, and a same-view pixel
+sample. Then decide whether the bounded visible lane should spend more budget
+on first-mesh work or whether the remaining dark appearance is a later halo
+lighting transition. Record deferred-far age/re-admission, but do not change
+the FIFO soft cap based on the run-to-run eviction count alone.

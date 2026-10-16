@@ -11716,3 +11716,53 @@ new `visual_holes_fresh_clear_probe_n` analyzer metric before treating such a
 sample as missing geometry. Pixel trace showed zero missing opaque-surface
 joins. It is not an operator framebuffer verdict. Full interpretation and
 artifact filenames are in the runbook's M622AV section.
+
+### M622AW–AX: short first-mesh ownership audit
+
+Keep the same saved-world M335 route, but use a 30 s flight to reduce test
+time. M622AW was the Release validation immediately after the cache
+invalidation fix. M622AX enabled the existing relight audit so an exact
+missing-mesh witness can be joined to relight admission and capture records.
+The wrapper restores the config and saved user position when it exits.
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622AX `
+    -Report bin/suite_reports/engine_refactor/m622ax_world164_m335_relight_audit_20261016.json
+} finally {
+  if ($null -eq $previousAudit) {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  } else {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit
+  }
+}
+```
+
+The M622AW counterpart uses the same command without the environment wrapper,
+`-PhaseId M622AW`, and report
+`bin/suite_reports/engine_refactor/m622aw_world164_m335_focus_invalidation_20261016.json`.
+After M622AX, render the sparse pixel trace and re-run the summary analyzer:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622ax_world164_m335_relight_audit_20261016.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622ax_renderer_pixel_trace_20261016.json
+python -X utf8 tools/flight_sim_analyze.py $report.perf_jsonl `
+  --report bin/suite_reports/engine_refactor/m622ax_world164_m335_relight_audit_semantics_20261016.json
+```
+
+For M622AX, fresh miss chunk `(1,3,5)` was queued for first-mesh relight,
+became drawable/satisfying in the slice audit, and finalized lighting after
+about 1.25 s. A second positive proxy sample had a fresh clear probe and was
+the held hysteresis tail. The aggregate product gate still failed and the
+operator framebuffer verdict remains unrecorded; consult the M622AW–AX
+runbook section before interpreting the two proxy samples or FIFO eviction
+counts.

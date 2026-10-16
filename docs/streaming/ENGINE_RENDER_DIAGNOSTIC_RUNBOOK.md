@@ -1761,3 +1761,62 @@ Artifacts:
 - M622AV report/pixel trace: `m622av_world164_m335_post_visible_priority_20261016.json`, `m622av_renderer_pixel_trace_20261016.json`.
 - M622AV re-analysis with explicit hysteresis fields: `m622av_world164_m335_post_visible_priority_semantics_20261016.json` (2 positive proxy samples also had a fresh clear probe; share 1.0).
 - M622AV perf/INFO: `perf_20261016-232752_43592.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-232748.43592`.
+
+### M622AW–AX: refresh focus census and trace first-mesh ownership
+
+The M622AV source review found that an explicit unfinished-census invalidation
+could be followed by the near-miss reuse branch. M622AW added the invalidation
+bit to `force_full_unfinished`. The Release build passed. On M622AW, all nine
+observed focus transitions had matching `focus_not_render_ready` and
+unfinished-class totals; one startup sample still had a stale scalar/class
+snapshot mismatch. The route stopped at focus `(-2,3)` and did not cover the
+far-route acceptance boundary. The analyzer still failed the product safety
+line on one mesh-hole proxy period.
+
+M622AX repeated the same 30 s M335 moving segment with
+`CUBATARIUM_RELIGHT_AUDIT=1`. It ended at focus `(-1,3)`, exited successfully
+at the process level, and did not time out. Its two positive `visual_holes`
+periods split into one fresh miss and one held-positive sample whose fresh
+probe had cleared (`visual_holes_fresh_clear_probe_n=1`, share `0.5`). At the
+fresh miss, the probe identified resident solid chunk `(1,3,5)` in the camera
+vertical band with no drawable mesh, no satisfying mesh, no dirty/build/GPU
+owner, no SoftDefer hold, no ColumnFlow ticket, and stage `Absent`. The camera
+band census independently showed one missing drawable slice with one pending
+work owner and zero unowned slices.
+
+The audit then followed that same column: `OnLitPendingNeeded` inserted its
+exact first-mesh relight request at 23:48:44.713; priority capture submitted
+the upper first-mesh band at 23:48:44.973; a slice record reported drawable
+and satisfying at 23:48:45.034; the lower band was submitted at 23:48:45.926;
+and light flags finalized at 23:48:45.960. A halo change later queued stale
+light debt at 23:48:47.543 and published it at 23:48:48.055. This is evidence
+of a short, owned first-mesh/light transition for this instance, followed by a
+neighbour-light repair. It is not an operator-visible frame verdict. The
+stride-15 trace sampled 2,960 pixels: all 60 pixels below luma 32 joined
+drawable opaque surfaces, with zero missing opaque-surface joins; it did not
+join this lifecycle to a same-view pixel handoff.
+
+M622AX recorded 47 FIFO overflow evictions and at most five deferred-far
+columns. The audit contained 27 `visible_exact_replacement` deferrals, 35
+`fifo_admission_denied` deferrals, and two aged-service admissions; one was
+re-admitted after 1.529 s. Source inspection confirms overflow victims are
+preserved in the deferred-far map and can be re-admitted; do not count these
+evictions as lost work. M622AW recorded 443, so the two sequential runs show
+state/workload sensitivity, not a controlled queue benchmark. Keep the queue
+bounded and add a per-witness owner/lifecycle join before changing its
+capacity or replacement policy.
+
+Both runs ended with zero post-stop mesh-missing and visual-hole proxy counts,
+but readiness/convergence remained false (M622AX post-stop readiness debt
+peaked at 35). The moving product gate still fails and no operator verdict was
+recorded. The next short run should keep the same M335 setup, retain the
+relight audit, and correlate each fresh missing witness with queued/deferred
+owner state, first drawable publication, stale-light repair, and a visible
+same-view pixel sample where available. Do not expand to a long monitoring
+flight or add a CPU threshold.
+
+Artifacts:
+
+- M622AW report/pixel trace: `m622aw_world164_m335_focus_invalidation_20261016.json`, `m622aw_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-234304_37980.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-234301.37980`.
+- M622AX report/pixel trace: `m622ax_world164_m335_relight_audit_20261016.json`, `m622ax_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-234824_28028.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-234820.28028`.
+- M622AX analyzer re-run with fresh-probe semantics: `m622ax_world164_m335_relight_audit_semantics_20261016.json` (`1/2` positive proxy samples had a fresh clear probe).
