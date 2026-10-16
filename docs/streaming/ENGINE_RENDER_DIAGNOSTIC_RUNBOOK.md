@@ -136,6 +136,7 @@ cd bin
 | `tools/analyze_renderer_pixel_trace.py` | Фильтрует подробные renderer pixel trace записи. |
 | `tools/flight_sim_timeline_analyze.py` | Сопоставляет переходы и короткие визуальные/streaming события по timeline. |
 | `tools/analyze_framebuffer_pixel_grid.py` | Сводит пространственную сетку framebuffer probes. |
+| `tools/analyze_geometry_lifecycle.py` | Join для geometry revision bump → queue schedule → точная публикация по координате и attempt id. |
 | `tools/analyze_hole_event_pixels.py` | Разбирает pixel probes вокруг hole/stall событий. |
 | `tools/run_with_host_cpu_sampler.py` | Записывает host/process CPU нагрузку; используйте для performance baseline, а не для доказательства изображения. |
 | `tools/flight_sim_fixed_day.py` | Фиксирует время суток для воспроизводимых сравнений цвета/освещения. |
@@ -817,24 +818,33 @@ reached 70.7/99.3/99.6%, so it is not performance acceptance. The suite reported
 readiness-debt max=49. Eye-proxy stale delta was 2.5 with no temporal mid-flight
 coverage; no framebuffer verdict was captured.
 
-Next diagnostic M619A: repeat only the same short M335 route after fresh host CPU
-median <=50% and p95 <=75%, with both `CUBATARIUM_RELIGHT_AUDIT=1` and
-`CUBA_VISUAL_BLACK_TRACE=1`. Confirm owned h5 geometry debt changes from ordinary
-queue kind=3 to priority kind=2 and the final geometry revision publishes. Join
-that to dirty dequeue, capture, stale-input handling, and GPU publish. Do not
-extend this into a long operator-monitoring flight.
+M619A completed the same short M335 route with both
+`CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`. For target
+`(-17,2,2)`, all 20 geometry revisions 3…22 eventually published exactly; 15
+had a watched schedule row in priority RemeshQ (`kind=2`). The final revision 22
+was scheduled at frame 2126 and published at frame 2127. This confirms promotion
+and publication on the observed target; missing schedule rows are bounded-trace
+coverage gaps, not evidence that those revisions failed.
 
-M619A is deferred. Two post-M618A host samples were 63.8/75.8% and
-59.0/86.9% median/p95. Use the saved Windows-API sampler for future resource
-gates; it avoids the missing localized `Get-Counter` set on this machine:
+After M618A, two samples (63.8/75.8% and 59.0/86.9% median/p95) deferred the
+flight. A later sample was 46.8/63.1%, so M619A ran. Its runtime host CPU rose
+to 71.6/93.0/100.0% median/p95/max: useful for queue diagnosis, not performance
+acceptance. Use the saved Windows-API sampler for future preflight; it avoids the
+missing localized `Get-Counter` set on this machine:
 
 ```powershell
 .\tools\sample_host_cpu_gate.ps1 -SampleCount 10 -IntervalMs 1000
 ```
 
-Require `passes_default_flight_gate=True` before launching M619A. Runtime resource
-telemetry remains the final performance verdict because preflight has not
-predicted runtime load reliably.
+Require `passes_default_flight_gate=True` before a short diagnostic flight.
+Runtime resource telemetry remains the final performance verdict because
+preflight has not predicted runtime load reliably. M619A had zero mesh-coverage
+holes and zero post-stop mesh missing, while readiness debt reached 50 and did
+not converge; suite `pass=false`. Those proxies do not establish the displayed
+framebuffer. Eye-proxy stale-visual delta was 31 and temporal mid-flight coverage
+was untested. No operator visual verdict was captured. Next investigate the
+repeated `priority_world_core_repair` / relight revisions and cold-start
+readiness debt with a resource-qualified trace; keep the short established route.
 
 M615A artifacts:
 
@@ -859,3 +869,17 @@ M618A artifacts:
 - `suite_reports/engine_refactor/m618a_proactive_revision_watch_20261016.json`
 - `logs/perf_20261016-131122_38316.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-131118.38316`
+
+M619A artifacts:
+
+- `suite_reports/engine_refactor/m619a_promote_owned_geometry_debt_20261016.json`
+- `logs/perf_20261016-132510_14976.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-132505.14976`
+
+Повторить целевой lifecycle join можно без ручного разбора JSONL:
+
+```powershell
+python tools/analyze_geometry_lifecycle.py `
+  bin/logs/perf_20261016-132510_14976.jsonl `
+  --coord=-17,2,2
+```

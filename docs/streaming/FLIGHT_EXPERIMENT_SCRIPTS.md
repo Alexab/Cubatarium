@@ -10331,16 +10331,18 @@ visible-black max=0, readiness-debt max=49. Eye-proxy gate отказал по
 stale-visual delta 2.5, stale activity без hole counters и непокрытому temporal
 mid-flight сегменту. Прямой operator framebuffer verdict отсутствует.
 
-Для проверки promotion нужен M619A, только после свежего host CPU preflight
+Для проверки promotion нужен короткий M619A после свежего host CPU preflight
 median <=50%, p95 <=75%:
 
 ```powershell
 .\tools\sample_host_cpu_gate.ps1 -SampleCount 10 -IntervalMs 1000
 ```
 
-После M618A preflight был 63.8/75.8%; повтор с сохранённым sampler дал
-59.0/86.9% median/p95. Оба gate verdict отрицательные, поэтому M619A был
-отложен. Параметры M619A ниже оставлены для следующего подходящего окна.
+Сразу после M618A preflight был 63.8/75.8%; повтор с сохранённым sampler дал
+59.0/86.9% median/p95, и M619A тогда отложили. Позже sampler вернул
+46.8/63.1% median/p95 (`passes_default_flight_gate=True`), поэтому выполнен
+один короткий M619A. Runtime оказался заметно тяжелее preflight; результат
+остаётся диагностическим, без performance acceptance.
 
 ```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
@@ -10357,8 +10359,35 @@ $env:CUBA_VISUAL_BLACK_TRACE='1'
   -Report bin/suite_reports/engine_refactor/m619a_promote_owned_geometry_debt_20261016.json
 ```
 
-Проверить, что target h5 revisions, имеющие Dirty owner, переходят из queue
-kind=3 в kind=2 и публикуют текущую geometry revision. Длинный маршрут не нужен.
+M619A подтвердил исправление на chunk `(-17,2,2)`: его 20 geometry revisions
+(3…22) все дошли до точной публикации. Для 15 из этих revisions trace также
+сохранил расписание через priority RemeshQ (`kind=2`); последняя revision 22
+была поставлена в kind=2 в frame 2126 (index 0/17, age 6) и опубликована в
+frame 2127. Остальные переходы не следует считать провалом promotion: некоторые
+не попали в bounded watched-schedule trace, а часть revisions возникла из
+world-streaming commits до наблюдаемого admission. Проверка подтвердила очередь
+и публикацию, но не прямое изображение.
+
+Прогон завершился с `process_rc=0`, без timeout, за 35 секунд движения и
+12 chunk columns. Host CPU preflight был 46.8/63.1%, runtime — 71.6/93.0/100.0%
+median/p95/max; performance acceptance не пройдена. `visual_holes_rate=0`,
+`post_stop_visual_holes_rate=0`, `post_stop_mesh_missing_max=0`,
+`post_stop_visible_black_max=0`, но readiness debt достиг 50 и не сошёлся на
+stop; это несовпадающие proxy-сигналы, не доказательство пиксельной дыры.
+Eye-proxy gate отказал (stale-visual delta 31, temporal mid-flight coverage
+untested), прямого operator framebuffer verdict нет. Следующий разбор должен
+отделить продолжающиеся `priority_world_core_repair`/relight revisions от
+остаточного cold-start readiness debt; не расширять scheduler budget без
+причинной трассы и resource-qualified повтора.
+
+Повторяемый lifecycle join для ревизий, queue-kind и публикаций сохранён в
+`tools/analyze_geometry_lifecycle.py`:
+
+```powershell
+python tools/analyze_geometry_lifecycle.py `
+  bin/logs/perf_20261016-132510_14976.jsonl `
+  --coord=-17,2,2
+```
 
 Артефакты M616A (локальные):
 
@@ -10377,3 +10406,9 @@ kind=3 в kind=2 и публикуют текущую geometry revision. Дли�
 - `suite_reports/engine_refactor/m618a_proactive_revision_watch_20261016.json`
 - `logs/perf_20261016-131122_38316.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-131118.38316`
+
+Артефакты M619A:
+
+- `suite_reports/engine_refactor/m619a_promote_owned_geometry_debt_20261016.json`
+- `logs/perf_20261016-132510_14976.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-132505.14976`

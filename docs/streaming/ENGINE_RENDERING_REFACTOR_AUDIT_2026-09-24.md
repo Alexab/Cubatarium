@@ -5689,11 +5689,42 @@ global work budgets. Release build passed. M618A runtime host CPU was
 `visual_holes_rate=0`, fly visible-black max=4, post-stop visible-black max=0,
 and readiness debt max=49 are separate proxies; eye-proxy stale delta was 2.5
 with temporal mid-flight coverage still untested. No operator framebuffer
-verdict was recorded. Next verify promotion and publication in one short M619A
-only after a fresh resource preflight; no long monitoring flight is warranted.
+verdict was recorded. The planned short M619A promotion check is recorded below;
+no long monitoring flight is warranted.
 
 The immediate preflight after M618A was 63.8/75.8% host CPU median/p95; a
-second run through `tools/sample_host_cpu_gate.ps1` measured 59.0/86.9%. Both
-miss the default flight gate, so M619A was deferred. The reusable sampler uses
-Windows `GetSystemTimes` because the localized processor performance-counter
-set is unavailable on this host.
+second run through `tools/sample_host_cpu_gate.ps1` measured 59.0/86.9%, so
+M619A was initially deferred. A later preflight measured 46.8/63.1% and passed
+the default gate. The reusable sampler uses Windows `GetSystemTimes` because
+the localized processor performance-counter set is unavailable on this host.
+
+M619A verified the `7e5a9634` owned h5 geometry-debt promotion on the repeated
+short M335 GUI/no-teleport route. For target `(-17,2,2)`, trace contained 20
+geometry revision bumps, 3→22. Each revision was eventually published exactly;
+15 watched scheduler records explicitly showed priority RemeshQ (`kind=2`). The
+last revision 22 was scheduled at frame 2126 with queue index 0/17 and age 6,
+then published at frame 2127. This closes the specific ordinary-queue handoff
+gap for the observed target. It does not prove a framebuffer defect was visible.
+
+The target also received 13 `priority_world_core_repair` bumps among those 20
+revisions. Some followed successful publication within a frame or two. The
+available trace does not identify the caller's readiness predicate for each
+repair, and `renderer_pixel_probe` had no opaque hit in this exact chunk, so this
+churn is an investigation lead rather than a confirmed redundant-remesh bug.
+The next static/short-run analysis should join those bumps to the selected
+`AdmitUnfinishedVisualDemand` branch, exact-slice light-settlement proof, flow
+ticket, and previous publication; do not suppress repairs based on this evidence
+alone.
+
+M619A runtime host CPU was 71.6/93.0/100.0% median/p95/max, despite preflight
+46.8/63.1%; this run is not performance acceptance. `visual_holes_rate=0`,
+`post_stop_visual_holes_rate=0`, `post_stop_mesh_missing_max=0`, and
+`post_stop_visible_black_max=0`, while readiness debt reached 50 and did not
+converge. Eye-proxy stale-visual delta was 31 and its temporal mid-flight scope
+remained untested. These are proxy and coverage results, not a direct screen or
+operator verdict. Keep the next investigation short and resource-qualified.
+
+Artifacts remain local under `bin/suite_reports/engine_refactor` and `bin/logs`:
+`m619a_promote_owned_geometry_debt_20261016.json`,
+`perf_20261016-132510_14976.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-132505.14976`.

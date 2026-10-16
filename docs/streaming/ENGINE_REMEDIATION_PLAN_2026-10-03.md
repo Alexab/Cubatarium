@@ -11337,9 +11337,9 @@ publication успела достичь revision 13, затем 15; на кон�
 owned drawable geometry debt в h5 в priority RemeshQ. Это меняет только порядок
 в bounded очереди, не общий dirty/scheduler budget. Release build прошёл;
 сохранилось предупреждение C4335 о формате строк
-`WorldBlockPhysicsService.h`. Следующий короткий M619A должен проверить, что
-ordinary kind=3 promotion становится kind=2 и final geometry revision
-публикуется.
+`WorldBlockPhysicsService.h`. Короткий M619A подтвердил, что owned drawable h5
+geometry debt действительно попадает в priority RemeshQ и публикует текущую
+revision.
 
 M618A resource gate не пройден: preflight median/p95 35.3/66.9%, но runtime
 host CPU вырос до 70.7/99.3/99.6% (median/p95/max); suite `pass=false`.
@@ -11349,13 +11349,31 @@ Proxy показывали `visual_holes_rate=0`, `fly_visible_black_max=4`,
 непокрытого temporal mid-flight сегмента. Не трактовать это как performance или
 framebuffer acceptance; операторского verdict нет.
 
-После Release build и M618A два свежих CPU preflight также не прошли gate:
-63.8/75.8%, затем 59.0/86.9% median/p95. M619A не запускался. Локализованный
-счётчик `Get-Counter` на этой Windows отсутствует; сохранён
+После Release build и M618A два свежих CPU preflight не прошли gate:
+63.8/75.8%, затем 59.0/86.9% median/p95. Позже sampler показал 46.8/63.1%, и
+M619A был запущен. Локализованный счётчик `Get-Counter` на этой Windows отсутствует; сохранён
 `tools/sample_host_cpu_gate.ps1`, который читает системные времена через
 `GetSystemTimes` и печатает median/p95/max вместе с gate verdict.
 
-Артефакты M609–M618A сохранены локально в `bin/suite_reports/engine_refactor`,
+M619A прошёл 35-секундный no-teleport M335 отрезок (`process_rc=0`, 12 chunk
+columns) и подтвердил queue fix: на `(-17,2,2)` 20 последовательных geometry
+revisions 3…22 в итоге были точно опубликованы. У 15 revisions сохранён
+watched-scheduler event с `mesh_dirty_queue_kind=2`; последняя revision 22
+перешла через priority RemeshQ в frame 2126 и опубликована в frame 2127.
+Остальные revisions не полностью покрыты bounded schedule trace, поэтому вывод
+ограничен конкретно наблюдаемыми публикациями.
+
+Ресурсный gate прогона всё равно не пройден: runtime host CPU 71.6/93.0/100.0%
+median/p95/max. У mesh coverage proxy holes=0, `post_stop_mesh_missing_max=0`,
+`post_stop_visible_black_max=0`; readiness debt достиг 50 и не сошёлся на stop.
+Eye-proxy отклонил stale-visual delta 31, а temporal mid-flight сегмент
+остался непроверенным. Эти сигналы не заменяют операторскую framebuffer
+оценку, которой для M619A нет. Следующий шаг — по короткой трассе исследовать,
+почему target получал 13 `priority_world_core_repair` bumps между revisions,
+и отдельно определить владельцев оставшегося readiness debt; не менять budgets
+по перегруженному runtime.
+
+Артефакты M609–M619A сохранены локально в `bin/suite_reports/engine_refactor`,
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md) и
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).
