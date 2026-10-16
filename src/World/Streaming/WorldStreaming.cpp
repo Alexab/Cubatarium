@@ -3396,6 +3396,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       // too; otherwise repeated early returns leave ownerless Created attempts
       // active indefinitely because finish_telemetry is below this return.
       world.MaintainChunkRenderDemandStore();
+      // RefreshStreamingPressure may have queued first-light work. The normal
+      // relight capture drain is below the scheduler, so a frame-budget return
+      // here would leave PendingLightFocus without a consumer even while the
+      // focus mesh is drawable. Service at most one queued capture; the
+      // relight drain still applies its own hot-frame and wall-time limits.
+      if (pt.PendingLightFocus > 0 || pt.UnderfeetPendingLight != 0)
+      {
+        world.DrainRelightQueuesBudget(/*max_player_jobs=*/0,
+                                       /*max_bg_columns=*/1);
+      }
       world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs = elapsed_main_ms();
       return;
     }

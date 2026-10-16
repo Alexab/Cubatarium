@@ -1060,6 +1060,7 @@ struct FrameNumbers
   int relight_capture_finalize{0};
   int relight_capture_hot_skip_draw_gate{0};
   int relight_capture_stop_reason{0};
+  int cooperative_streaming_tick_blocked{0};
   int relight_inflight_n{0};
   int relight_capture_inflight_n{0};
   int relight_capture_inflight_limit{0};
@@ -2230,6 +2231,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_capture_finalize = phys.RelightCaptureFinalize;
   n.relight_capture_hot_skip_draw_gate = phys.RelightCaptureHotSkipDrawGate;
   n.relight_capture_stop_reason = phys.RelightCaptureStopReason;
+  n.cooperative_streaming_tick_blocked =
+      world.BlocksAsyncRelightDrain() ? 1 : 0;
   n.relight_inflight_n = world.GetAsyncRelightInFlightCount();
   n.relight_capture_inflight_n = phys.RelightCaptureInFlightN;
   n.relight_capture_inflight_limit = phys.RelightCaptureInFlightLimit;
@@ -3601,6 +3604,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.relight_capture_hot_skip_draw_gate
           << ",\"relight_capture_stop_reason\":"
           << n.relight_capture_stop_reason
+          << ",\"cooperative_streaming_tick_blocked\":"
+          << n.cooperative_streaming_tick_blocked
           << ",\"relight_inflight_n\":" << n.relight_inflight_n
           << ",\"relight_capture_inflight_n\":"
           << n.relight_capture_inflight_n
