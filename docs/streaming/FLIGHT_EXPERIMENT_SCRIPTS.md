@@ -11195,9 +11195,48 @@ pixel samples were beyond fog end (44.7–56.8 units versus 32); all nine
 unloaded-before-hit samples were also beyond fog end. The pixel grid did not
 hit the camera-band target chunks, so do not treat these candidates as a
 visible defect without a target-specific pixel or exact screen-ray witness.
-Next, rerun this same short route on the saved
-`World_M622V_FrustumStableFaceDebt_20261016` to compare disk-backed warm load
-with the cold run. See the runbook for interpretation and limits.
+M622W completed the warm replay, so the cold/warm comparison step is done.
+Route input adequacy passed; symptom reproduction did not
+(`focus_missing_mesh_med=0`, visible-black below the product threshold), and
+the analyzer's overall `pass=false` reflects multiple non-CPU gates rather
+than a confirmed visual hole. The stop census had 30 missing-mesh and two
+face-debt labels, zero sampled post-stop visual holes, and three
+visible-black-stalled proxy rows, all with a ticket. No exact voxel-mesh ray
+gap was found. The single in-fog opaque-depth discrepancy at frame 1620, pixel
+`(416,90)`, matched a transparent-fluid triangle, so it is not a confirmed
+terrain gap.
+
+The fixed grid did not ray through the 27 candidate chunk AABBs even where
+sample positions overlapped their conservative projected rectangles. The next
+instrumentation step is bounded target-aligned sampling, followed by the same
+short route if a target requires runtime evidence. Keep CPU contextual; never
+gate admission on it. Avoid another long operator-monitoring flight.
+
+M622W warm replay:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622V_FrustumStableFaceDebt_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622W `
+  -Report bin/suite_reports/engine_refactor/m622w_warm_frustum_stable_face_debt_20261016.json
+```
+
+The route resumed the saved world (`cache_mode=warm`, `teleport_cruise=false`),
+completed 35 periods, and exited 0 without timeout. The report remains
+`pass=false`; treat readiness and analyzer gates as diagnostic until a
+target-aligned ray or operator observation ties them to a visible defect.
+
+Artifacts:
+
+- Report: `bin/suite_reports/engine_refactor/m622w_warm_frustum_stable_face_debt_20261016.json`.
+- Perf: `bin/logs/perf_20261016-201046_45928.jsonl`.
+- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-201043.45928`.
 
 Artifacts:
 

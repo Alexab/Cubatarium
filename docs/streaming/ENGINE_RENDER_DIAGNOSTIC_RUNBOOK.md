@@ -1317,12 +1317,60 @@ Analyzer `pass=false` is retained in the report. Relevant values are
 gates describe unfinished work, not a framebuffer verdict. Host CPU remains a
 context metric only and must not gate a run.
 
-Next: repeat the same short M335 route against the saved
-`World_M622V_FrustumStableFaceDebt_20261016` to test
-disk-backed warm load, then compare its in-fog FirstMesh lifecycle and pixel
-gap counters with M622V. Keep CPU informational. Do not use a long
-operator-monitoring flight for this question.
+M622W completed the warm replay. Its input-adequacy check passed, but symptom
+reproduction did not: focus missing-mesh median was zero and visible-black was
+below the product-class threshold. The analyzer still returned `pass=false`
+on several non-CPU gates; this is not a framebuffer verdict. The stop census
+had 30 missing-mesh and two face-debt focus labels, but zero post-stop sampled
+visual holes and zero no-ticket visible-black rows. CPU stays informational;
+there is no CPU-load gate.
+
+The warm run produced zero exact voxel-mesh ray gaps. Its one in-fog
+voxel/opaque-depth discrepancy at frame 1620, pixel `(416,90)`, matched a
+transparent-fluid triangle (block 575 at 0.097 units), so it does not prove a
+terrain hole. Fixed-grid samples overlapped some of the 27 conservative
+camera-band rectangles, but no sampled ray entered those candidate chunk
+AABBs. To close that evidence gap, add bounded target-aligned pixel positions
+to the existing probe, or wait until an operator identifies a concrete pixel
+region. Use the short M335 route for that capture; do not run a long
+operator-monitoring flight. Do not change queue policy unless an exact
+in-fog target ray still has a mesh/depth gap after its lifecycle window.
 
 Artifacts: report `bin/suite_reports/engine_refactor/m622v_frustum_stable_face_debt_20261016.json`,
 perf `bin/logs/perf_20261016-194951_22784.jsonl`, INFO
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-194947.22784`.
+
+### M622W: warm replay and pixel-probe interpretation
+
+M622W resumed `World_M622V_FrustumStableFaceDebt_20261016` on the same short
+visible, no-teleport M335 route. It completed 35 periods with process exit 0,
+no timeout, and accepted input adequacy. The report confirms warm cache mode.
+The analyzer returned `pass=false`, but symptom reproduction was false because
+focus missing-mesh median was zero and the visible-black median was below its
+product-class threshold. The result is diagnostic only; it has no operator
+framebuffer verdict.
+
+The stop census reported `post_stop_missing_max=32` (30 focus missing-mesh
+labels plus two face-debt labels), `post_stop_visual_holes_max=0`,
+`post_stop_visible_black_stalled_max=3`, and
+`post_stop_visible_black_no_ticket_max=0`. No pending-light or GPU-in-flight
+labels remained. Do not interpret the focus-ring readiness count as 32 blank
+pixels. CPU measurements are contextual, not a gate.
+
+There were zero exact voxel-mesh triangle gaps. One sample at frame 1620,
+pixel `(416,90)`, reported voxel id 549 at 27.27 units with fog ending at 32
+and opaque depth 85.57, but the fluid probe matched block 575 at 0.097 units.
+The sample therefore points to transparent water at that screen position and
+does not establish missing opaque terrain. The 27 camera-band candidate rows
+had conservative screen rectangles; fixed-grid samples overlapped some
+rectangles but none of their rays entered the candidate chunk AABB. A
+rectangle overlap is not target-pixel evidence.
+
+Next, add a bounded target-aligned pixel sample to the existing diagnostic or
+capture a short replay when an operator identifies a concrete region. Avoid
+long operator-monitoring flights. Require an exact in-fog target-ray gap after
+its lifecycle window before changing queue policy.
+
+Artifacts: report `bin/suite_reports/engine_refactor/m622w_warm_frustum_stable_face_debt_20261016.json`,
+perf `bin/logs/perf_20261016-201046_45928.jsonl`, INFO
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-201043.45928`.

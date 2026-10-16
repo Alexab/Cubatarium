@@ -11984,17 +11984,78 @@ hole. The grid is sparse and its sampled rays did not hit the candidate chunks,
 so it cannot clear every projected area. Keep CPU usage informational, without
 a hard admission gate.
 
-**Current next step:** repeat the established short route on the saved
-`World_M622V_FrustumStableFaceDebt_20261016` from M622V. This exercises
-disk-backed warm load. Compare the in-fog FirstMesh candidates, their
-same-incarnation lifecycle, and exact pixel gap counters with the cold M622V
-run. Do not gate admission on CPU load. If the warm run also shows no in-fog
-exact mesh/depth gap and owned work converges, stop changing renderer queue
-policy on the strength of readiness proxies. Only reopen that policy if a
-target remains missing at a sampled pixel after its bounded lifecycle window
-or repeats an in-fog exact mesh/depth gap. Avoid a long operator-monitoring
-flight.
+M622W completed that warm-load comparison on the saved
+`World_M622V_FrustumStableFaceDebt_20261016`: 35 periods, accepted input
+adequacy, process exit 0, no timeout. The analyzer returned `pass=false`, but
+its symptom-reproduction check also returned false because focus missing-mesh
+median was 0 and the visible-black value was below the required product class.
+The run therefore did not reproduce the reported symptom. Its aggregate
+`visual_holes_rate=0.1515`, `fly_visible_black_max=12`,
+`post_stop_missing_max=32`, and `post_stop_visible_black_stalled_max=3` remain
+readiness/diagnostic counters, not an operator framebuffer verdict. At stop,
+the focus debt split was 30 missing-mesh labels and two face-debt labels, with
+no pending-light or GPU-in-flight labels; `post_stop_visual_holes_max=0` and
+`post_stop_visible_black_no_ticket_max=0` show that the broad stop counters do
+not by themselves establish a persistent pixel hole.
+
+The warm trace had no exact voxel-mesh triangle gap. One in-fog ray at frame
+1620, pixel `(416,90)`, found voxel id 549 at 27.27 units while the opaque
+depth probe reported 85.57 units; the same sample matched a fluid triangle
+(block id 575, distance 0.097) and had `renderer_pixel_voxel_mesh_ray_gap=0`.
+Treat this as an opaque-only depth discrepancy with transparent water at that
+pixel, not a proven missing terrain mesh. For the 27 camera-band target rows,
+fixed-grid pixels sometimes fell inside their conservative projected AABB
+rectangles, but none of the sampled rays entered the target chunk AABB. The
+rectangles therefore did not provide target-specific pixel coverage.
+
+Do not change renderer queue policy from these readiness proxies. The cold
+M622V and warm M622W traces both show owned work reaching drawable meshes and
+no in-fog exact mesh gap, while the fixed pixel grid still misses the candidate
+chunks. The next evidence step is a bounded, target-aligned pixel probe for a
+camera-band candidate, or a short replay if an operator identifies a concrete
+dark/empty pixel region. Reopen queue policy only if a target-aligned in-fog
+pixel ray reports an exact mesh/depth gap after its bounded lifecycle window.
+Do not add a CPU-load admission gate; CPU remains contextual. Avoid long
+operator-monitoring flights.
 
 M622V report/perf/INFO: `m622v_frustum_stable_face_debt_20261016.json`,
 `perf_20261016-194951_22784.jsonl`, and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-194947.22784`.
+
+### M622W: warm replay and limits of the fixed pixel grid
+
+M622W resumed the M622V world using the unchanged short visible M335 route.
+The process completed 35 periods (`process_rc=0`, no timeout); route input
+adequacy passed and the report identifies `cache_mode=warm`. The analyzer's
+overall `pass=false` is not a symptom reproduction: `symptom_pass=false` with
+`focus_missing_mesh_med=0` and a visible-black median below its product-class
+threshold. Non-CPU gates also failed, including visual-hole proxy rate 0.1515,
+median frame wall time 26.10 ms, and post-stop readiness convergence. CPU
+measurements are context only; there is no CPU admission gate.
+
+The stop census reported 32 missing/readiness labels, split into 30 focus
+missing-mesh labels and two face-debt labels. It reported no post-stop
+visual-hole pixels, no no-ticket visible-black rows, no pending light, and no
+GPU-in-flight rows. Three rows still met the visible-black-stalled proxy.
+These counters disagree in scope: focus-ring and stop labels can persist
+without a measured framebuffer gap.
+
+The warm run found zero `renderer_pixel_voxel_mesh_ray_gap` samples. At frame
+1620, pixel `(416,90)` had a CPU voxel hit at 27.27 units (fog end 32) and an
+opaque-depth distance of 85.57, but the transparent-fluid probe matched block
+575 at distance 0.097. The terrain-mesh ray gap stayed zero. This is not proof
+of a missing terrain mesh because transparent water occupied the sampled ray.
+Across 27 camera-band target rows, some fixed-grid pixels fell inside the
+conservative screen rectangles, but none of those rays entered the candidate
+chunk AABBs. A rectangle overlap is insufficient to claim the actual target
+chunk was pixel-sampled.
+
+The warm replay therefore does not justify queue-policy changes. Before any
+more long flight, improve the bounded pixel probe to sample a projected
+camera-band target or wait for a user-identified region, then use the established
+short route. Require an exact in-fog ray gap after the target's lifecycle window
+before treating a readiness counter as a renderer defect.
+
+M622W report/perf/INFO: `m622w_warm_frustum_stable_face_debt_20261016.json`,
+`perf_20261016-201046_45928.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-201043.45928`.
