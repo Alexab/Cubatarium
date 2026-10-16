@@ -1949,3 +1949,47 @@ Artifacts: report/pixel trace `m622ba_world164_static_start_same_view_20261017.j
 `m622ba_renderer_pixel_trace_20261017.json`; perf/INFO
 `perf_20261017-024721_35260.jsonl`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-024717.35260`.
+
+#### M622BA follow-up: fog and light are confounded in the pixel transition
+
+A follow-up analysis added the recorded fog state to each same-pixel lifecycle
+sample. This corrects any reading of M622BA's RGB/luminance deltas as evidence
+that provisional-light removal caused the pixel to brighten. The two large
+same-view deltas also changed fog:
+
+- `(5,3,5)`, pixel `(224,495)`: luma changed by `+53.877`; air fog stayed
+  enabled with start/end `30.72/64`, while fog color changed from
+  `(0.131557,0.247836,0.462329)` to `(0.443451,0.621815,0.891517)`.
+- `(5,3,6)`, pixel `(32,495)`: luma changed by `+97.541`; air fog stayed
+  enabled, start/end changed from `30.72/64` to `16/43.3912`, and fog color
+  changed from `(0.131557,0.247836,0.462329)` to
+  `(0.457308,0.638268,0.910215)`.
+
+The pixel trace reports stable day factor (`1`), sky scale (`0.972`),
+precipitation (`0`), and weather fog multiplier (`1`) across these samples.
+`UUnderwaterFogPass` smooths the atmospheric fog color with a per-frame `0.2`
+mix. The observed color progression is consistent with that smoothing, though
+the exact target color is not currently recorded per sample. The measured RGB
+changes therefore do not isolate a lighting change. Other same-view pixels
+had zero luma delta despite the fog color change, so a fog-state difference
+alone does not prove that fog affected a given pixel.
+
+The five period snapshots show the presented range at `64`, then `32`, then
+expanding back to `64` blocks while the camera stayed fixed. `fog_hole_debt`
+was set in the two middle snapshots and clear in the first and last snapshots.
+At those middle snapshots, `focus_missing_mesh`, `miss_horiz`,
+`focus_unfinished_ahead`, `visual_holes`, and fully-dark-stalled count were
+zero; `visible_black_focus_n` was six and then two. These are period snapshots,
+not per-frame trigger chronology, and the policy does not use the black-focus
+census as a latch predicate. The current trace cannot identify which brief
+per-frame readiness signal initially set the latch. Treat the range change as
+a startup fog-pull-in transition associated with the streaming gate state;
+do not infer a black framebuffer or a lighting defect from it.
+
+The analyzer now stores fog enable flags, range, density, blend, color,
+weather multiplier, and underwater fog parameters in lifecycle rows. It marks
+a nonzero luma change as fog-confounded when these parameters also changed.
+Next, trace the fog-pull-in latch's input predicates at the same cadence as its
+state transitions, and record the target atmospheric fog color beside the
+smoothed color. Keep the fixed-camera probe short; defer behavior changes until
+the transient trigger and color initialization path are distinguished.

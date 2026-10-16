@@ -12511,3 +12511,31 @@ quickly while visible. Keep the next investigation on the intermittent
 late-route symptom. Use the established short M335 route and analyze only a
 fresh late-route preview witness; do not lengthen operator flights or adjust
 relight budgets from the startup result.
+
+### M622BA follow-up: disambiguate startup fog transitions
+
+The fixed-camera trace exposed a confound in RGB-based preview-light analysis.
+Two same-pixel preview-to-nonpreview transitions brightened by 53.877 and
+97.541 luma while the recorded fog color changed; one also changed the fog
+start/end range. These measurements cannot attribute the RGB changes to light
+settlement. The analyzer now carries fog parameters into each lifecycle sample
+and flags nonzero luminance changes that coincide with fog changes.
+
+M622BA's period snapshots also show the presented fog horizon changing
+64 → 32 → 64 blocks while the camera was stationary. `fog_hole_debt` tracked
+the contracted interval. The period cadence does not retain the per-frame input
+that set or cleared the latch; the black-focus census is not itself a latch
+predicate. The trace therefore supports a startup streaming-gate/fog-pull-in
+transition, but it does not identify the exact trigger or establish a
+framebuffer hole. The smoothed atmospheric color approached its later value
+while the recorded day, sky-scale, precipitation, and weather-multiplier
+inputs stayed stable; this is consistent with the fog pass's per-frame color
+smoothing, but its target color is not yet recorded.
+
+Next diagnostic step: capture the fog-pull-in input predicates and latch
+transitions at frame cadence, and record both target and presented atmospheric
+fog colors. Then use one short fixed-camera warm-start probe to verify whether
+the remaining startup motion comes from range hysteresis, color initialization,
+or both. Preserve the established M335 moving route for later-route renderer
+and streaming regressions. Do not change fog thresholds or light handoff based
+on M622BA alone.

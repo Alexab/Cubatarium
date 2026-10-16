@@ -20,6 +20,63 @@ def luminance(rgb: tuple[int, int, int]) -> float:
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue
 
 
+def fog_snapshot(row: dict[str, Any]) -> dict[str, Any] | None:
+    if not row.get("renderer_pixel_fog_state_valid"):
+        return None
+    return {
+        "fog_enabled": row.get("renderer_pixel_fog_enabled"),
+        "air_fog_enabled": row.get("renderer_pixel_air_fog_enabled"),
+        "horizontal": row.get("renderer_pixel_fog_horizontal"),
+        "start": row.get("renderer_pixel_fog_start"),
+        "end": row.get("renderer_pixel_fog_end"),
+        "min_blend": row.get("renderer_pixel_fog_min_blend"),
+        "density": row.get("renderer_pixel_fog_density"),
+        "weather_multiplier": row.get("renderer_pixel_fog_env_multiplier"),
+        "color": [
+            row.get("renderer_pixel_fog_color_r"),
+            row.get("renderer_pixel_fog_color_g"),
+            row.get("renderer_pixel_fog_color_b"),
+        ],
+        "underwater_enabled": row.get(
+            "renderer_pixel_underwater_fog_enabled"
+        ),
+        "underwater_submerged": row.get(
+            "renderer_pixel_underwater_fog_submerged"
+        ),
+        "underwater_start": row.get("renderer_pixel_underwater_fog_start"),
+        "underwater_end": row.get("renderer_pixel_underwater_fog_end"),
+        "underwater_min_blend": row.get(
+            "renderer_pixel_underwater_fog_min_blend"
+        ),
+    }
+
+
+def changed_fog_fields(
+    first: dict[str, Any] | None, second: dict[str, Any] | None
+) -> list[str] | None:
+    if first is None or second is None:
+        return None
+
+    changed: list[str] = []
+    for key in first:
+        left = first.get(key)
+        right = second.get(key)
+        if isinstance(left, list) and isinstance(right, list):
+            differs = len(left) != len(right) or any(
+                a != b
+                if a is None or b is None
+                else abs(float(a) - float(b)) > 0.001
+                for a, b in zip(left, right)
+            )
+        elif isinstance(left, (int, float)) and isinstance(right, (int, float)):
+            differs = abs(float(left) - float(right)) > 0.001
+        else:
+            differs = left != right
+        if differs:
+            changed.append(key)
+    return changed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("perf_jsonl", type=Path)
@@ -164,6 +221,9 @@ def main() -> int:
                                     row.get("renderer_pixel_camera_pos_z"),
                                 ],
                                 "pixel": [pixel_x, pixel_y],
+                                "rgb": rgb,
+                                "luminance": luma,
+                                "fog": fog_snapshot(row),
                                 "demand_present": demand_present,
                                 "demand_settled": demand_settled,
                                 "demand_active_attempt": bool(
@@ -357,6 +417,23 @@ def main() -> int:
                                         ),
                                     ],
                                     "pixel": [pixel_x, pixel_y],
+                                    "rgb": rgb,
+                                    "luminance": luma,
+                                    "fog": fog_snapshot(row),
+                                    "demand_present": demand_present,
+                                    "demand_settled": demand_settled,
+                                    "demand_active_attempt": bool(
+                                        row.get(
+                                            "renderer_pixel_opaque_demand_has_active_attempt",
+                                            0,
+                                        )
+                                    ),
+                                    "demand_attempt_age_ms": row.get(
+                                        "renderer_pixel_opaque_demand_attempt_age_ms"
+                                    ),
+                                    "demand_progress_age_ms": row.get(
+                                        "renderer_pixel_opaque_demand_progress_age_ms"
+                                    ),
                                     "field_light_revision": row.get(
                                         "renderer_pixel_opaque_field_light_rev"
                                     ),
@@ -1340,6 +1417,8 @@ def main() -> int:
                     keys = (
                         "probe_id",
                         "sample_time_ms",
+                        "rgb",
+                        "luminance",
                         "demand_present",
                         "demand_settled",
                         "demand_active_attempt",
@@ -1358,8 +1437,26 @@ def main() -> int:
                         "mesh_revision",
                         "mdi_visible_pass_flags",
                         "mdi_visible_index_count",
+                        "fog",
                     )
                     return {key: event.get(key) for key in keys}
+
+                fog_field_changes = changed_fog_fields(
+                    first_preview.get("fog"),
+                    first_nonpreview_after.get("fog"),
+                )
+                preview_luma = first_preview.get("luminance")
+                settled_luma = first_nonpreview_after.get("luminance")
+                luma_change_fog_confounded = (
+                    bool(
+                        fog_field_changes
+                        and preview_luma is not None
+                        and settled_luma is not None
+                        and abs(float(settled_luma) - float(preview_luma)) > 0.001
+                    )
+                    if fog_field_changes is not None
+                    else None
+                )
 
                 pixel_lifecycle_rows.append(
                     {
@@ -1377,6 +1474,41 @@ def main() -> int:
                         "causal_job_id": causal_job_id,
                         "stage_timeline": stage_timeline,
                         "stage_intervals_ms": stage_intervals,
+                        "same_pixel_camera_verified": True,
+                        "first_preview_rgb": first_preview.get("rgb"),
+                        "first_preview_luminance": first_preview.get(
+                            "luminance"
+                        ),
+                        "settled_nonpreview_rgb": first_nonpreview_after.get(
+                            "rgb"
+                        ),
+                        "settled_nonpreview_luminance": first_nonpreview_after.get(
+                            "luminance"
+                        ),
+                        "first_preview_fog": first_preview.get("fog"),
+                        "settled_nonpreview_fog": first_nonpreview_after.get(
+                            "fog"
+                        ),
+                        "changed_fog_fields": fog_field_changes,
+                        "fog_state_changed": (
+                            bool(fog_field_changes)
+                            if fog_field_changes is not None
+                            else None
+                        ),
+                        "luminance_delta_fog_context_changed": (
+                            luma_change_fog_confounded
+                        ),
+                        "luminance_delta": (
+                            round(
+                                float(first_nonpreview_after["luminance"])
+                                - float(first_preview["luminance"]),
+                                3,
+                            )
+                            if first_nonpreview_after.get("luminance")
+                            is not None
+                            and first_preview.get("luminance") is not None
+                            else None
+                        ),
                         "first_preview_state": stage_snapshot(first_preview),
                         "first_light_settled_preview_state": (
                             stage_snapshot(first_light_settled_preview)
@@ -1878,8 +2010,10 @@ def main() -> int:
             "preview remains active, and handoff ends at the first settled nonpreview sample "
             "after the last preview observation. Provisional-light lifecycle rows also compare "
             "the mesh job's published geometry revision with the first and later pixel's "
-            "published revision, mesh revision, and visible MDI state; a matching chunk revision "
-            "at a moved camera does not establish a same-view handoff."
+            "published revision, mesh revision, and visible MDI state. A matching chunk revision "
+            "at a moved camera does not establish a same-view handoff. RGB and luminance changes "
+            "are ambiguous when recorded fog parameters change; compare the per-sample fog "
+            "snapshots before attributing a pixel change to lighting."
         ),
     }
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
