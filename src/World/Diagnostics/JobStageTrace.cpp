@@ -888,6 +888,11 @@ void UJobStageTrace::SetStreamingFrameEpoch(uint64_t frame_epoch)
   LatestStreamingFrameEpoch.store(frame_epoch, std::memory_order_relaxed);
 }
 
+uint64_t UJobStageTrace::GetStreamingFrameEpoch()
+{
+  return LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+}
+
 void UJobStageTrace::NoteMeshRevisionBump(
     DemandTransitionSpan span, uint64_t revision_before,
     uint64_t revision_after, MeshRevisionBumpReason reason,

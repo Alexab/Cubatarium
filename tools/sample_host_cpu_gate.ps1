@@ -81,7 +81,8 @@ $result = [pscustomobject]@{
     median_percent = [math]::Round($median, 1)
     p95_percent = $ordered[$p95Index]
     max_percent = $ordered[-1]
-    passes_default_flight_gate = ([math]::Round($median, 1) -le 50.0 -and $ordered[$p95Index] -le 75.0)
+    advisory_only = $true
+    interpretation = 'Context only; host CPU does not block a diagnostic flight or determine performance acceptance.'
 }
 
 if ($Json) {

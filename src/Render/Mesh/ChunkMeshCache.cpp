@@ -3454,7 +3454,9 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
           {
             CubatariumLogInfo(
                 "RelightAudit",
-                std::string("mesh_dependency event=queued cause=") +
+                std::string("mesh_dependency event=queued frame_epoch=") +
+                    std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+                    " cause=" +
                     (cause ? cause : "unknown") + " source=(" +
                     std::to_string(changed_coord.x) + "," +
                     std::to_string(changed_coord.y) + "," +
@@ -3602,7 +3604,9 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
     }
     CubatariumLogInfo(
         "RelightAudit",
-        std::string("mesh_dependency event=") + event + " dependent=(" +
+        std::string("mesh_dependency event=") + event + " frame_epoch=" +
+            std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+            " dependent=(" +
             std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
             std::to_string(coord.z) + ") dirty=" +
             (Dirty.Contains(coord) ? "1" : "0") + " raa=" +

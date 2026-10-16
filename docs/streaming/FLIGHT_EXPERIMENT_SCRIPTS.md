@@ -10433,7 +10433,10 @@ Artifacts:
 - `logs/perf_20261016-141422_13608.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-141418.13608`
 
-M622 introduces opt-in queue/lifecycle and published-halo diagnostics. Release build passed; the immediate preflight was 60.3/87.7% host CPU median/p95 and failed, so do not run yet. After a fresh passing preflight, repeat the established short visible route:
+M622 introduces opt-in queue/lifecycle and published-halo diagnostics. Release
+build passed; the immediate host CPU sample was 60.3/87.7% median/p95. At the
+time the old workflow deferred the flight; this measurement is now only
+historical context. The established short route was subsequently run:
 
 ```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
@@ -10464,7 +10467,11 @@ The trace contained seven settled CPU seam witnesses, but their halo state field
 - `logs/perf_20261016-144017_33868.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-144013.33868`
 
-Repeat the same short M335 route with both trace flags after a fresh passing preflight. Correlate exact witness coordinates and frames with dependency source/cause, drain outcome, and state 1/2. State 1 plus a current nonzero stale sample implicates sampling or witness mapping; state 2 with an unresolved dependent points to queue/owner/publication lifecycle.
+Repeat the same short M335 route with both trace flags, without a CPU gate.
+Correlate exact witness coordinates and frames with dependency source/cause,
+drain outcome, and state 1/2. State 1 plus a current nonzero stale sample
+implicates sampling or witness mapping; state 2 with an unresolved dependent
+points to queue/owner/publication lifecycle.
 
 ### M622C: attribution-path coverage correction
 
@@ -10472,7 +10479,9 @@ M622C completed the documented 35-period route (`process_rc=0`) but failed suite
 
 All 144 stale-sample rows were `sample_kind=0`, emitted by the per-column attribution trace. That writer did not call the halo query, so state/cache/stamp zeros were defaults, not measured values. Five rows were exact geometry/own-light-current samples, still unclassified. Commit `57016e90` instruments this second writer and records cache presence and signature validity separately. Release rebuilt and the static executable dependency check passed.
 
-The immediate fresh CPU preflight was 70.4/89.9% median/p95 and failed. Do not run M622D until a new preflight passes. Then repeat exactly the established short visible route, changing only the phase/report IDs:
+The immediate preflight had measured 70.4/89.9% host CPU median/p95. This is
+historical context only: host load includes Codex and is not a run gate. M622D
+repeated exactly the established short visible route:
 
 ```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
@@ -10491,7 +10500,52 @@ $env:CUBA_VISUAL_BLACK_TRACE='1'
 
 For `sample_kind=0` rows, interpret the fields as follows: cache-entry 0 means no published mesh record at that coordinate; cache-entry 1/stamp-valid 0 means a mesh exists but its publication path did not retain an input halo; stamp-valid 1/state 1 means captured halo matches current light; stamp-valid 1/state 2 means it changed. Only then join against coordinate-specific `mesh_dependency` causes/drains and publication chronology.
 
-Before M622D is run, commit `2f95b9cc` adds change tracking and mesh invalidation for the `ApplyEnterOpenSkyBoundary` path. Its horizontal skylight flood may mutate multiple loaded chunks. Source slices now enter remesh ownership and their neighbors are queued with `cause=enter_open_sky_boundary`. Release rebuilt successfully. The post-build CPU preflight was 83.2/93.8% median/p95 and failed; defer M622D until a fresh gate pass. Keep the route unchanged and look for that new cause in the joined event timeline.
+Before M622D, commit `2f95b9cc` added change tracking and mesh invalidation for
+the `ApplyEnterOpenSkyBoundary` path. Its horizontal skylight flood may mutate
+multiple loaded chunks. Source slices now enter remesh ownership and their
+neighbors are queued with `cause=enter_open_sky_boundary`; Release rebuilt
+successfully. M622D emitted no event with that cause, so this route did not
+exercise the open-sky-specific mutation.
+
+M622D completed normally (`process_rc=0`, 35 periods); suite acceptance was
+false, but CPU is advisory and the run remains useful diagnostics. Runtime host
+CPU median/p95/max was 69.9/100.0/100.0%; app CPU was 22.85/52.43/56.56% of
+machine capacity. The trace had 165 nonzero stale-light rows over 56 chunks.
+Every row reported a present cache entry, valid halo stamp, and halo state 2
+(published signature differs from current neighbor light). Twenty-two rows over
+15 chunks also had matching desired/published geometry and own-light revisions;
+16 had a matching successful publication in the 30-frame follow-up window, and
+six had no such event in the bounded lifecycle trace. The INFO log contained
+3,353 dependency enqueues, 1,381 applied events, 6,542 live-owner deferrals,
+and 1,312 `covered_by_existing_owner` events; 55/56 stale chunks had at least
+one exact-coordinate dependency event. These are lifecycle observations, not a
+framebuffer verdict.
+
+M622D artifacts:
+
+- `suite_reports/engine_refactor/m622d_halo_attribution_path_20261016.json`
+- `logs/perf_20261016-152255_14364.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-152251.14364`
+
+The following diagnostic adds `frame_epoch` to queued and drained dependency
+events so they can be joined directly to stale-witness frames. After the
+Release build, repeat only this same short route as M622E; no host CPU gate is
+required.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622E_DependencyFrameJoin_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622e_dependency_frame_join_20261016.json
+```
 
 M622C artifacts:
 

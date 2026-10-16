@@ -993,6 +993,8 @@ public:
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   /// Publish the world's current streaming frame for asynchronous demand traces.
   static void SetStreamingFrameEpoch(uint64_t frame_epoch);
+  /// Read the current streaming frame for coordinate-scoped diagnostic events.
+  static uint64_t GetStreamingFrameEpoch();
   static void NoteDemandTransition(const DemandTransitionSpan &span);
   static void NoteMeshRevisionBump(DemandTransitionSpan span,
                                    uint64_t revision_before,

@@ -5763,7 +5763,7 @@ The repeated short route completed (`process_rc=0`, 35 periods, 12 chunk columns
 
 M622A logged 340 visual trace rows, 158 with nonzero CPU stale samples, and seven exact geometry/own-light-current observations. Every halo state was zero because the focus-slice query mistakenly required a prior chunk watch. The first witness can be emitted before that watch opens. Commit `d2869ef0` removes that gate for the focus-slice emission path, but did not cover the independent per-column attribution trace. M622C showed that its stale-light rows were emitted by that second path and that its halo fields remained default zero. Consequently neither run measured halo state; their zeros are not root-cause evidence.
 
-Queue tracing was active: it recorded both procedural commit and relight light-change causes, with dependents either applied or `covered_by_existing_owner`. Since halo state was missing, the validity of those existing owners is not established. Repeat the same short M335 route after a fresh passing preflight and join each exact witness to its source, drain outcome, and published halo state. Do not interpret M622A as performance or visual acceptance.
+Queue tracing was active: it recorded both procedural commit and relight light-change causes, with dependents either applied or `covered_by_existing_owner`. Since halo state was missing, the validity of those existing owners is not established. M622A was later repeated as M622D after the trace corrections. Do not interpret M622A as performance or visual acceptance.
 
 ### M622C/M622D: attribution trace coverage
 
@@ -5771,6 +5771,26 @@ M622C completed 35 periods with `process_rc=0`; suite acceptance failed under ru
 
 All 144 rows with nonzero stale samples had `sample_kind=0`, which is the per-column visible-black attribution ring. Five were exact geometry/own-light-current observations. The halo state, cache-entry, and stamp-validity fields all remained default zero because only the focus-slice path sampled them. Earlier interpretation of those zeros as an unavailable published signature was incorrect.
 
-Commit `57016e90` now records the three values on the attribution path. Release rebuild and static executable dependency verification passed. The next diagnostic is one M622D repetition of the documented short route after a fresh passing CPU gate. A post-M622C preflight failed (70.4/89.9% median/p95), so no M622D run is currently justified. The per-run runtime host CPU remains the acceptance signal; no proxy establishes a framebuffer defect or fix.
+Commit `57016e90` now records the three values on the attribution path. Release
+rebuild and static executable dependency verification passed. M622D has since
+repeated the documented short route; its findings and follow-up are recorded at
+the end of this audit. The 70.4/89.9% M622C preflight remains historical
+context only. Host CPU is advisory and does not block a diagnostic run or
+determine its result; no proxy establishes a framebuffer defect or fix.
 
-Follow-up static review found `ApplyEnterOpenSkyBoundary` mutates sky light in loaded chunks and horizontally propagates across chunk boundaries, but its callers only scheduled the initiating column or used a relit list captured before the open-sky mutation. Commit `2f95b9cc` returns the exact changed chunk coordinates and routes them into source-mesh remesh ownership plus neighbor dependency invalidation at all three call sites. The Release build passed. This closes an independent notification gap; it is not yet attributed to the M622C flight. The newest post-build CPU gate is 83.2/93.8% median/p95, so M622D remains deferred.
+Follow-up static review found `ApplyEnterOpenSkyBoundary` mutates sky light in loaded chunks and horizontally propagates across chunk boundaries, but its callers only scheduled the initiating column or used a relit list captured before the open-sky mutation. Commit `2f95b9cc` returns the exact changed chunk coordinates and routes them into source-mesh remesh ownership plus neighbor dependency invalidation at all three call sites. The Release build passed. This closes an independent notification gap; it is not yet attributed to the M622C witnesses. The 83.2/93.8% post-build CPU sample is historical context, not a gate. M622D later completed, but emitted no `enter_open_sky_boundary` event, so this route did not exercise the open-sky-specific mutation.
+
+M622D recorded 165 nonzero stale-light samples across 56 chunks. All had a
+present cache entry, valid retained halo stamp, and state 2 (the current
+neighbor-light halo differs from the published input). Twenty-two samples over
+15 chunks also had matching desired/published geometry and own-light revisions.
+The bounded lifecycle trace showed a matching successful publication within
+30 frames for 16; six had no such event recorded. Dependency logs matched 55 of
+56 stale coordinates and contained 3,353 queue, 1,381 applied, 6,542 live-owner
+deferral, and 1,312 existing-owner coverage events. No operator framebuffer
+verdict is available. Runtime host CPU was 69.9/100/100% median/p95/max and is
+advisory, not an acceptance condition.
+
+The next instrumentation adds `frame_epoch` to dependency queue/drain events for
+a direct stale-witness chronology join. After the Release rebuild, repeat the
+same short route as M622E; no CPU threshold is required.

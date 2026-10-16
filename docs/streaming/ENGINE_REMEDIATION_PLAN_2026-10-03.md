@@ -11406,7 +11406,7 @@ Commit `127d43ca` adds two opt-in diagnostics without changing streaming budgets
 
 With both `CUBA_VISUAL_BLACK_TRACE=1` and `CUBATARIUM_RELIGHT_AUDIT=1`, `RelightAudit` also records watched dependent coordinates when dependency debt is queued, including source coordinate and cause (`procedural_chunk_commit`, `disk_slice_apply`, or `relight_light_change`). Drain events distinguish `defer_live_owner`, `covered_by_existing_owner`, `applied`, `admission_failed`, and `drop_not_drawable`. Join these events to the witness frame and published halo state: state 2 points to an invalidation lifecycle gap; state 1 points toward the mesher/sampling/witness-to-vertex mapping; state 0 is inconclusive.
 
-The Release build passed. The immediate host CPU preflight after build was 60.3/87.7% median/p95 and failed the default gate, so no M622 flight has been run. Re-sample only after host load settles; keep the same short M335 route when it passes.
+The Release build passed. The immediate host CPU sample after build was 60.3/87.7% median/p95. At that point no M622 flight had run; this was a historical decision made under the former CPU gate. Host CPU is now advisory and does not block the documented short route.
 
 M622 static review found that GPU publication commits directly through `CommitGpuMeshResult`, bypassing the CPU `ApplyMeshResult` stamp write. Commit `a3493579` now transfers the halo signatures from the exact `PendingGpuApply.snapshot` after each successful GPU commit, including validated empty results. This is required for the active `gpu_greedy` backend; without it, halo-state samples would be unavailable for GPU-published meshes. The Release target was rebuilt successfully after the correction.
 
@@ -11428,7 +11428,7 @@ M622C completed the same 35-period short M335 no-teleport route (`process_rc=0`)
 
 The run contained 144 rows with a nonzero `stale_sample_light`; all were `sample_kind=0` per-column attribution records. The new halo-state/cache-presence fields remained default zero because the code sampled them only on the separate focus-slice path. Five rows had exact desired/published geometry and aligned own-light revisions, but none measured the neighbor halo. The M622C values therefore cannot be used to claim absent mesh cache entries or invalid GPU stamps.
 
-Static review found the second stale-witness writer at `World.cpp`'s visible-black attribution trace. Commit `57016e90` samples halo state, cache-entry presence, and stamp validity there too. Release rebuilt successfully. The same route is documented as M622D; a fresh preflight immediately after M622C failed at 70.4/89.9% median/p95, so do not launch M622D until a fresh sample passes. Preserve the route and correlate exact frame/coordinate rows with dependency events.
+Static review found the second stale-witness writer at `World.cpp`'s visible-black attribution trace. Commit `57016e90` samples halo state, cache-entry presence, and stamp validity there too. Release rebuilt successfully. M622D has since repeated the documented short route; the earlier 70.4/89.9% preflight remains historical CPU context only. Preserve the route and correlate exact frame/coordinate rows with dependency events.
 
 M622C artifacts: `bin/suite_reports/engine_refactor/m622c_halo_availability_20261016.json`, `bin/logs/perf_20261016-150329_39812.jsonl`, and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-150325.39812`.
 
@@ -11438,4 +11438,24 @@ Static call-site review found another loaded-light mutation path: `ApplyEnterOpe
 
 Commit `2f95b9cc` collects coordinates only when an open-sky light write changes a chunk revision. All three callers now account for those coordinates: `RelightTerrainColumn` includes them in the own-mesh relight set; the enter repair and enter snapshot paths queue changed source meshes and queue their 26-neighbor mesh dependencies with cause `enter_open_sky_boundary`. The existing deduplicated, bounded drain remains in use. Release build and static Windows executable verification passed. This is a statically identified lifecycle gap, not a proven cause of the M622C witnesses.
 
-The post-build CPU preflight was 83.2/93.8% median/p95 and failed the flight gate. Do not run M622D until a fresh sample passes. Then use the same short route documented in `FLIGHT_EXPERIMENT_SCRIPTS.md`; inspect `sample_kind=0` halo state and join queue events, including the new open-sky cause, to exact witness coordinates. Do not lengthen the operator flight.
+M622D completed the same 35-period route without a CPU preflight gate. Host
+CPU was 69.9/100/100% median/p95/max; app CPU was 22.85/52.43/56.56% of
+machine capacity. These values are context only because host CPU includes
+Codex and other system work.
+
+All 165 nonzero stale-light attribution rows had a present cache entry, valid
+published halo stamp, and changed current halo (state 2). Twenty-two rows over
+15 chunks also had matching desired/published geometry and own-light
+revisions. The bounded lifecycle trace showed a matching successful
+publication within 30 frames for 16 of those rows; six had no such event in
+the captured trace. Dependency events overlapped 55 of 56 stale chunk
+coordinates. Counts were 3,353 queued, 1,381 applied, 6,542 deferred behind a
+live owner, and 1,312 covered by existing ownership. No
+`enter_open_sky_boundary` event was observed, leaving the M623-specific runtime
+path unverified. No operator framebuffer verdict is available.
+
+The next step adds `frame_epoch` to dependency queue/drain log events, rebuilds
+Release, and repeats the same short route as M622E. CPU sampling remains
+advisory: it must not block the run or determine its result. Use the joined
+coordinate/frame lifecycle to identify witnesses that remain stale after
+publication before changing scheduler budgets.

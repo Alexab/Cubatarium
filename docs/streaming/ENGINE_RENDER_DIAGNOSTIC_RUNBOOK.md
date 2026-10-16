@@ -829,16 +829,17 @@ coverage gaps, not evidence that those revisions failed.
 After M618A, two samples (63.8/75.8% and 59.0/86.9% median/p95) deferred the
 flight. A later sample was 46.8/63.1%, so M619A ran. Its runtime host CPU rose
 to 71.6/93.0/100.0% median/p95/max: useful for queue diagnosis, not performance
-acceptance. Use the saved Windows-API sampler for future preflight; it avoids the
-missing localized `Get-Counter` set on this machine:
+acceptance. The saved Windows-API sampler avoids the missing localized
+`Get-Counter` set on this machine and may be used for optional context:
 
 ```powershell
 .\tools\sample_host_cpu_gate.ps1 -SampleCount 10 -IntervalMs 1000
 ```
 
-Require `passes_default_flight_gate=True` before a short diagnostic flight.
-Runtime resource telemetry remains the final performance verdict because
-preflight has not predicted runtime load reliably. M619A had zero mesh-coverage
+Do not require a CPU threshold before a diagnostic flight. Host CPU includes
+Codex and other system work, so it is advisory only; retain samples for context
+and record runtime host/app CPU separately. CPU readings do not block a run or
+determine its result. M619A had zero mesh-coverage
 holes and zero post-stop mesh missing, while readiness debt reached 50 and did
 not converge; suite `pass=false`. Those proxies do not establish the displayed
 framebuffer. Eye-proxy stale-visual delta was 31 and temporal mid-flight coverage
@@ -915,7 +916,9 @@ M622 instrumentation Release build passed. Its preflight was 60.3/87.7% median/p
 
 GPU-path correction: `CommitGpuMeshResult` is a separate publication route from `ApplyMeshResult`. Commit `a3493579` retains the captured `PendingGpuApply.snapshot.lightHaloSignatures` after each successful GPU commit (including validated empty output), and Release rebuilt successfully. This makes `stale_mesh_halo_state` meaningful for `gpu_greedy` rather than returning unavailable for all GPU meshes.
 
-Latest preflight: host CPU median/p95 56.4/72.0%, gate failed. No M622 flight has been launched. Wait for a fresh passing sample before using the documented M622A route.
+Historically, the latest preflight before M622A measured host CPU median/p95
+56.4/72.0%. This no longer blocks diagnostic flights; the measurement is
+retained as context only.
 
 ### M622A trace outcome
 
@@ -935,4 +938,32 @@ Of 144 nonzero stale-sample records, all were `sample_kind=0` per-column attribu
 
 Static review after M622C found `ApplyEnterOpenSkyBoundary` mutates light in more chunks than the initiating column: its horizontal BFS crosses into loaded neighbors. Before `2f95b9cc`, callers did not receive that changed-chunk set. The function now returns only coordinates whose light-field revision actually changed. All three call sites remesh those source slices and queue their neighboring mesh dependencies with `cause=enter_open_sky_boundary`; the bounded deduplicating drain remains unchanged. Release and static executable verification passed. This is a code-path correction, not yet tied to a visible seam.
 
-The fresh post-build preflight is host CPU median/p95 83.2/93.8%, gate failed. No M622D run was launched. After a fresh pass, use the M622D command in `FLIGHT_EXPERIMENT_SCRIPTS.md`; correlate exact halo states with dependency events, especially `enter_open_sky_boundary`.
+M622D completed the documented 35-period route (`process_rc=0`; suite
+`pass=false`) without a CPU preflight gate. Runtime host CPU was
+69.9/100/100% median/p95/max; app CPU was 22.85/52.43/56.56% of machine
+capacity. Treat both as context, not as a blocker or acceptance verdict.
+
+The attribution trace measured 165 nonzero stale-light records across 56
+chunks. All 165 had a mesh-cache entry and valid retained halo stamp, and all
+165 stamps differed from current neighbor light. Of these, 22 samples across
+15 chunks had matching desired/published geometry and own meshed/field light
+revisions. Sixteen of those 22 had a matching successful publication in the
+bounded lifecycle trace within 30 frames; six had no such publication event in
+that trace. The log recorded 3,353 dependency enqueues, 1,381 applied,
+6,542 deferred behind a live owner, and 1,312 covered by existing ownership.
+Dependency events shared an exact coordinate with 55 of the 56 stale chunks.
+These counts show the invalidation path is active, but do not prove the
+operator-visible result or that every changed halo is repaired promptly.
+
+The observed dependency causes were `relight_light_change`,
+`procedural_chunk_commit`, and `disk_slice_apply`; no
+`enter_open_sky_boundary` event occurred. M622D therefore does not exercise the
+M623-specific path. Commit `2f95b9cc` remains a statically justified fix whose
+runtime effect is unverified.
+
+The INFO dependency events previously lacked a frame identifier, making exact
+chronology harder to join to `visual_black_trace`. The next diagnostic change
+adds `frame_epoch` to queue and drain events. Rebuild Release and repeat only
+the same short route as M622E; do not wait for a host CPU threshold. The JSON
+report is `bin/suite_reports/engine_refactor/m622d_halo_attribution_path_20261016.json`;
+raw traces are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
