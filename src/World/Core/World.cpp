@@ -936,7 +936,8 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   {
     std::vector<glm::ivec3> changed_light_chunks;
     ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, world_x, world_z,
-                              min_y, max_y, &changed_light_chunks);
+                              min_y, max_y, &changed_light_chunks,
+                              "relight_terrain_column");
     for (const glm::ivec3 changed : changed_light_chunks)
     {
       if (std::find(relit_chunks.begin(), relit_chunks.end(), changed) ==
@@ -11682,7 +11683,8 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         std::vector<glm::ivec3> changed_light_chunks;
         ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry,
                                   col.x * CHUNK_SIZE, col.y * CHUNK_SIZE,
-                                  dirty_min, dirty_max, &changed_light_chunks);
+                                  dirty_min, dirty_max, &changed_light_chunks,
+                                  "enter_visual_repair");
         if (MeshService && !changed_light_chunks.empty())
         {
           for (const glm::ivec3 changed : changed_light_chunks)
@@ -11917,7 +11919,8 @@ void UWorld::BeginEnterLitGate()
       std::vector<glm::ivec3> changed_light_chunks;
       ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry,
                                 col.x * CHUNK_SIZE, col.y * CHUNK_SIZE,
-                                dirty_min, dirty_max, &changed_light_chunks);
+                                dirty_min, dirty_max, &changed_light_chunks,
+                                "enter_lit_snapshot");
       if (MeshService && !changed_light_chunks.empty())
       {
         for (const glm::ivec3 changed : changed_light_chunks)

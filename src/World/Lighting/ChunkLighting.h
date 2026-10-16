@@ -57,7 +57,8 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
 void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
                                int world_x, int world_z, int min_y, int max_y,
                                std::vector<glm::ivec3> *out_changed_chunks =
-                                   nullptr);
+                                   nullptr,
+                               const char *audit_source = nullptr);
 void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry);
 
 /// After ApplyGpuSkylightSeedToChunk: clear was done by caller; run horizontal

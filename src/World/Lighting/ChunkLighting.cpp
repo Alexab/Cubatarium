@@ -1,17 +1,21 @@
 #include "World/Lighting/ChunkLighting.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Core/Environment.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Lighting/GpuBlocklightFlood.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/GridMath.h"
+#include "App/Platform/Log.h"
 
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -1054,7 +1058,8 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
 
 void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
                                int world_x, int world_z, int min_y, int max_y,
-                               std::vector<glm::ivec3> *out_changed_chunks)
+                               std::vector<glm::ivec3> *out_changed_chunks,
+                               const char *audit_source)
 {
   if (out_changed_chunks)
   {
@@ -1068,6 +1073,17 @@ void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
   CollectColumnChunkCoords(world, world_x, world_z, min_y, max_y, coords);
   if (coords.empty())
   {
+    if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          std::string("enter_open_sky event=no_loaded_slices frame_epoch=") +
+              std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+              " source=" + (audit_source ? audit_source : "unknown") +
+              " world_column=(" + std::to_string(world_x) + "," +
+              std::to_string(world_z) + ") min_y=" +
+              std::to_string(min_y) + " max_y=" + std::to_string(max_y));
+    }
     return;
   }
   for (const glm::ivec3 &chunk_coord : coords)
@@ -1127,6 +1143,35 @@ void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
   if (out_changed_chunks)
   {
     out_changed_chunks->assign(changed_chunks.begin(), changed_chunks.end());
+  }
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    std::string changed_coords;
+    if (out_changed_chunks)
+    {
+      for (const glm::ivec3 coord : *out_changed_chunks)
+      {
+        if (!changed_coords.empty())
+        {
+          changed_coords.push_back(';');
+        }
+        changed_coords += std::to_string(coord.x) + "," +
+                          std::to_string(coord.y) + "," +
+                          std::to_string(coord.z);
+      }
+    }
+    CubatariumLogInfo(
+        "RelightAudit",
+        std::string("enter_open_sky event=complete frame_epoch=") +
+            std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+            " source=" + (audit_source ? audit_source : "unknown") +
+            " world_column=(" + std::to_string(world_x) + "," +
+            std::to_string(world_z) + ") min_y=" +
+            std::to_string(min_y) + " max_y=" + std::to_string(max_y) +
+            " loaded_slices=" + std::to_string(coords.size()) +
+            " changed_chunks=" + std::to_string(changed_chunks.size()) +
+            " changed_coords=" +
+            (changed_coords.empty() ? "-" : changed_coords));
   }
 }
 
