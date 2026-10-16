@@ -5747,7 +5747,7 @@ Keep the commit notification fix provisionally because loaded chunk input is a l
 
 ### M622 instrumentation
 
-Commit `127d43ca` stores the published light-halo signatures with each valid mesh result. Under the opt-in visual trace, a stale CPU witness now includes `stale_mesh_halo_state`: 0 unavailable, 1 last-published halo equals current neighbor halo, 2 current neighbor halo differs from the one used by the last published mesh. This lets the next trace distinguish invalidation debt from a mesh generated incorrectly from its captured inputs.
+Commit `127d43ca` stores the published light-halo signatures with each valid mesh result. Initially only stale CPU witnesses emitted by the focus-slice trace included `stale_mesh_halo_state`: 0 unavailable, 1 last-published halo equals current neighbor halo, 2 current neighbor halo differs from the one used by the last published mesh. M622C later found the separate per-column attribution writer did not populate this field; M622D adds that coverage so the trace can distinguish invalidation debt from a mesh generated incorrectly from captured inputs.
 
 The same opt-in trace records watched dependency source→dependent queue events with cause and drain outcome (`defer_live_owner`, `covered_by_existing_owner`, `applied`, `admission_failed`, or `drop_not_drawable`). Interpret state 2 together with source cause and drain chronology. State 1 directs review toward `FaceLightPacked`, packed GPU provenance, or the stale witness's vertex/sample mapping. State 0 is inconclusive. No queue or build budgets changed.
 
@@ -5755,12 +5755,20 @@ Release build passed, but post-build host preflight was 60.3/87.7% median/p95; n
 
 Follow-up to M622: static call-path review found that GPU meshes publish through `CommitGpuMeshResult` rather than the CPU `ApplyMeshResult` path. Commit `a3493579` copies the accepted `PendingGpuApply.snapshot.lightHaloSignatures` into the cache after each successful GPU commit; the Release target was rebuilt successfully. This covers the active GPU greedy backend, including empty commits. Before the fix, its watched halo state would have stayed unavailable.
 
-The latest host preflight is still over the gate at 56.4/72.0% median/p95. Do not run M622A until a fresh sample passes. The first diagnostic acceptance condition is simply that watched GPU meshes emit halo states 1/2, allowing a seam witness to be classified; it is not itself a visual acceptance result.
+At the time of this note, host preflight was over the gate at 56.4/72.0% median/p95, so M622A had not yet run. A later passing preflight enabled M622A, whose limitations are documented below. Halo state 1/2 only classifies the retained input signature; it is not visual acceptance.
 
 ### M622A result and trace guard correction
 
 The repeated short route completed (`process_rc=0`, 35 periods, 12 chunk columns), but host CPU was 83.2/100.0/100.0% median/p95/max, so the suite failed and this is diagnostic only. Mesh coverage proxy was zero in flight and at stop; fly visible-black proxy max was 4, stop missing/visible-black max were zero, readiness debt max was 31. There is no operator framebuffer verdict.
 
-M622A logged 340 visual trace rows, 158 with nonzero CPU stale samples, and seven exact geometry/own-light-current observations. Every halo state was zero because the new query mistakenly required a prior chunk watch. The first witness can be emitted before that watch opens. Commit `d2869ef0` now samples halo state for every retained stale row when visual tracing is enabled; prior zero states are unavailable measurements, not root-cause evidence.
+M622A logged 340 visual trace rows, 158 with nonzero CPU stale samples, and seven exact geometry/own-light-current observations. Every halo state was zero because the focus-slice query mistakenly required a prior chunk watch. The first witness can be emitted before that watch opens. Commit `d2869ef0` removes that gate for the focus-slice emission path, but did not cover the independent per-column attribution trace. M622C showed that its stale-light rows were emitted by that second path and that its halo fields remained default zero. Consequently neither run measured halo state; their zeros are not root-cause evidence.
 
 Queue tracing was active: it recorded both procedural commit and relight light-change causes, with dependents either applied or `covered_by_existing_owner`. Since halo state was missing, the validity of those existing owners is not established. Repeat the same short M335 route after a fresh passing preflight and join each exact witness to its source, drain outcome, and published halo state. Do not interpret M622A as performance or visual acceptance.
+
+### M622C/M622D: attribution trace coverage
+
+M622C completed 35 periods with `process_rc=0`; suite acceptance failed under runtime host CPU 66.2/88.9/97.1% median/p95/max. The near-focus mesh-coverage proxy was zero, fly visible-black proxy max was 3, post-stop mesh-missing/visible-black proxies were zero, and readiness debt reached 35. No operator framebuffer verdict is available.
+
+All 144 rows with nonzero stale samples had `sample_kind=0`, which is the per-column visible-black attribution ring. Five were exact geometry/own-light-current observations. The halo state, cache-entry, and stamp-validity fields all remained default zero because only the focus-slice path sampled them. Earlier interpretation of those zeros as an unavailable published signature was incorrect.
+
+Commit `57016e90` now records the three values on the attribution path. Release rebuild and static executable dependency verification passed. The next diagnostic is one M622D repetition of the documented short route after a fresh passing CPU gate. A post-M622C preflight failed (70.4/89.9% median/p95), so no M622D run is currently justified. The per-run runtime host CPU remains the acceptance signal; no proxy establishes a framebuffer defect or fix.

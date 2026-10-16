@@ -10454,7 +10454,7 @@ The JSONL records `stale_mesh_halo_state` (0 unavailable, 1 current halo equals 
 
 Static review after M622 found GPU publication uses `CommitGpuMeshResult`; commit `a3493579` now stores the halo signatures from its accepted pending snapshot after a successful commit. Release rebuild passed. This is necessary for `gpu_greedy`, otherwise halo-state values would be unavailable in watched traces.
 
-Latest preflight failed (56.4/72.0% median/p95), so M622A remains unrun. After a fresh passing sample, run the short documented route and inspect `stale_mesh_halo_state` plus `mesh_dependency` lifecycle events.
+At the time of this note, the latest preflight failed (56.4/72.0% median/p95), so M622A had not yet run. A later passing preflight led to the M622A run documented below.
 
 M622A completed the route with `process_rc=0` but failed runtime resource acceptance (host CPU 83.2/100.0/100.0% median/p95/max). Proxies: visual mesh coverage 0 in flight and at stop, fly visible-black max 4, post-stop missing and visible-black max 0, readiness debt max 31. No operator screen verdict was recorded.
 
@@ -10465,3 +10465,34 @@ The trace contained seven settled CPU seam witnesses, but their halo state field
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-144013.33868`
 
 Repeat the same short M335 route with both trace flags after a fresh passing preflight. Correlate exact witness coordinates and frames with dependency source/cause, drain outcome, and state 1/2. State 1 plus a current nonzero stale sample implicates sampling or witness mapping; state 2 with an unresolved dependent points to queue/owner/publication lifecycle.
+
+### M622C: attribution-path coverage correction
+
+M622C completed the documented 35-period route (`process_rc=0`) but failed suite acceptance. Runtime host CPU median/p95/max was 66.2/88.9/97.1%; proxies were visual holes 0, fly visible-black max 3, post-stop missing/visible-black max 0, readiness debt max 35. No operator framebuffer verdict was captured.
+
+All 144 stale-sample rows were `sample_kind=0`, emitted by the per-column attribution trace. That writer did not call the halo query, so state/cache/stamp zeros were defaults, not measured values. Five rows were exact geometry/own-light-current samples, still unclassified. Commit `57016e90` instruments this second writer and records cache presence and signature validity separately. Release rebuilt and the static executable dependency check passed.
+
+The immediate fresh CPU preflight was 70.4/89.9% median/p95 and failed. Do not run M622D until a new preflight passes. Then repeat exactly the established short visible route, changing only the phase/report IDs:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622D_HaloAttributionPath_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622d_halo_attribution_path_20261016.json
+```
+
+For `sample_kind=0` rows, interpret the fields as follows: cache-entry 0 means no published mesh record at that coordinate; cache-entry 1/stamp-valid 0 means a mesh exists but its publication path did not retain an input halo; stamp-valid 1/state 1 means captured halo matches current light; stamp-valid 1/state 2 means it changed. Only then join against coordinate-specific `mesh_dependency` causes/drains and publication chronology.
+
+M622C artifacts:
+
+- `suite_reports/engine_refactor/m622c_halo_availability_20261016.json`
+- `logs/perf_20261016-150329_39812.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-150325.39812`

@@ -902,7 +902,7 @@ A target `(-19,2,-2)` had exact seam witnesses at frames 2474 and 2611 and subse
 
 ### M622: use the halo stamp to classify a seam witness
 
-For a watched CPU stale-light witness, `stale_mesh_halo_state` in JSONL now classifies the last published mesh's neighbor halo: 0 means no valid retained signature, 1 means it still matches current neighbor light cells, and 2 means it differs. This field is not a pixel-level verdict.
+For a stale-light witness emitted through either instrumented path, `stale_mesh_halo_state` in JSONL classifies the last published mesh's neighbor halo: 0 means no valid retained signature, 1 means it still matches current neighbor light cells, and 2 means it differs. `stale_mesh_cache_entry_present` and `stale_mesh_halo_stamp_valid` distinguish an absent cache entry from an entry lacking a stamp. These fields are not pixel-level verdicts. Note: M622A/M622C predate full coverage of the `sample_kind=0` visible-black attribution path; their halo zeros there are default/unmeasured, not state 0 evidence.
 
 With both `CUBA_VISUAL_BLACK_TRACE=1` and `CUBATARIUM_RELIGHT_AUDIT=1`, parse `RelightAudit` lines matching `mesh_dependency`. Each queued event names `cause`, changed `source`, dependent coordinate, insertion status, and backlog. Drain events say whether that dependent was deferred behind a live owner, covered by existing dirty/remesh work, applied, rejected, or no longer drawable. Correlate them to the `visual_black_trace` frame and coordinate:
 
@@ -921,6 +921,12 @@ Latest preflight: host CPU median/p95 56.4/72.0%, gate failed. No M622 flight ha
 
 The route completed (`process_rc=0`, 35 periods, 12 chunk columns). Runtime host CPU was 83.2/100.0/100.0% median/p95/max; suite `pass=false`, so this is not performance acceptance. Proxies: in-flight visual mesh coverage 0, fly visible-black max 4, stop mesh missing and visible-black max 0, readiness debt max 31. No operator framebuffer verdict was captured.
 
-The run recorded 340 `visual_black_trace` rows, 158 with nonzero CPU stale samples, and seven with equal desired/published geometry plus aligned own-light revisions. All reported halo state 0 because state sampling was incorrectly guarded by pre-existing watch membership. `d2869ef0` removes that guard; the recorded zeros must not be interpreted as unavailable published signatures.
+The run recorded 340 `visual_black_trace` rows, 158 with nonzero CPU stale samples, and seven with equal desired/published geometry plus aligned own-light revisions. The focus-slice query was incorrectly guarded by pre-existing watch membership, while the separate per-column attribution writer did not query halo state at all. `d2869ef0` removes the watch guard only from the focus-slice writer; M622C later showed that most stale samples came from the uninstrumented attribution path. None of the M622A zero values establishes signature availability.
 
 `RelightAudit` confirms source-aware dependency events are emitted for watched chunks. The log contains procedural and relight causes, and drain outcomes including `covered_by_existing_owner` and `applied`. The old run cannot prove those owners captured the current halo because the halo state was omitted. Repeat only after a passing fresh CPU preflight; use M622A's same route/flags and inspect coordinate+frame rows.
+
+### M622C finding and M622D gate
+
+M622C completed 35 periods normally. It was diagnostic only: host CPU median/p95/max 66.2/88.9/97.1%, `visual_holes_rate=0`, fly visible-black max 3, post-stop missing and visible-black max 0, readiness debt max 35, suite `pass=false`. No operator screen verdict was collected.
+
+Of 144 nonzero stale-sample records, all were `sample_kind=0` per-column attribution rows. Five had exact geometry and own-light revisions, but their halo fields were not populated; the query added after M622A only covered focus-slice rows. Commit `57016e90` adds the query to the attribution writer and separates cache-entry presence from stamp validity. A fresh post-run preflight failed (70.4/89.9% median/p95), so wait for a passing sample before one same-route M622D run. Do not lengthen the route or use these proxies as a framebuffer verdict.
