@@ -3699,7 +3699,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
           << ",\"relight_fifo_trim_deferred_total\":"
           << n.relight_fifo_trim_deferred_total
-          << ",\"relight_fifo_overflow_dropped_total\":"
+          << ",\"relight_fifo_overflow_evicted_total\":"
           << n.relight_fifo_overflow_dropped_total
           << ",\"relight_false_clear_n\":" << n.relight_false_clear_n
           << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb
@@ -5575,9 +5575,12 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"frame_epoch\":" << r.frame_epoch
                  << ",\"renderer_pixel_sample_time_ms\":"
                  << r.renderer_pixel_sample_time_ms
-                 << ",\"renderer_pixel_sample_steady_ms\":"
+                 << ",\"renderer_pixel_sample_steady_ms\":";
+          const std::streamsize previous_precision = out->precision();
+          (*out) << std::setprecision(17)
                  << r.renderer_pixel_sample_steady_ms
-                 << ",\"world_epoch\":" << r.world_epoch
+                 << std::setprecision(previous_precision);
+          (*out) << ",\"world_epoch\":" << r.world_epoch
                  << ",\"incarnation\":" << r.incarnation
                  << ",\"renderer_pixel_probe_id\":"
                  << r.renderer_pixel_probe_id
@@ -6315,9 +6318,12 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_probe_id
                << ",\"renderer_pixel_sample_time_ms\":"
                << r.renderer_pixel_sample_time_ms
-               << ",\"renderer_pixel_sample_steady_ms\":"
+               << ",\"renderer_pixel_sample_steady_ms\":";
+        const std::streamsize previous_precision = out->precision();
+        (*out) << std::setprecision(17)
                << r.renderer_pixel_sample_steady_ms
-               << ",\"renderer_pixel_probe_trigger_flags\":"
+               << std::setprecision(previous_precision);
+        (*out) << ",\"renderer_pixel_probe_trigger_flags\":"
                << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
                << ",\"renderer_pixel_probe_event_frame_epoch\":"
                << r.renderer_pixel_probe_event_frame_epoch
