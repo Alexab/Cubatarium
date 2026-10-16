@@ -631,6 +631,33 @@ M612 добавил недостающие записи для прямых clea
 видимые handoff-переходы, но не доказывает потерю работы; нагрузка 99.8/100%
 делает интервалы непригодными для оценки SLA.
 
+M613 Release build добавляет light-flags lifecycle события под тем же
+`CUBATARIUM_RELIGHT_AUDIT=1`: `light_flags event=load` (включая `missing` и
+число entries), `event=clear` с причиной (`relight_enqueued` или
+`column_unload_with_relight_work`), `event=set`, `event=save_queued` и
+`event=save_result`. Это позволяет понять, почему saved-light флаг перестал
+действовать, а также отличить отсутствие/ошибку файла от штатного пересчёта.
+
+Результат M613: cold world создался за 61.673 s (597 chunk files), файл флагов
+при старте отсутствовал и загрузился как `missing/0`; к концу короткого маршрута
+в нём было 116 entries. Входная нагрузка оказалась выше ворот: host CPU
+median/p95/max 58.4/97.6/99.5%, хотя одиночный предзапусковой sample был 0%.
+Flight process завершился нормально, suite не прошёл. Метрические признаки:
+unlit/pending maxima 55/48, near-focus mesh-hole proxy 0, `black_proxy_rate=0`,
+no-ticket visible-black stop-line прошёл.
+
+Pixel trace: 55 final RGB samples ниже luma 96; 44 изменились при transparent
+composition. 11 unchanged samples присоединились к drawable opaque поверхности
+в одной колонке `(-3,3,4)`, luma 67–90; 4 имели preview/unfinished-light evidence,
+light-revision mismatch не выявлено. Эти samples описывают затемнённую поверхность,
+но не доказывают пользовательский black chunk.
+
+В light-flags журнале: 242 clear, 358 set, 432 save queue/result пар; по отдельным
+колонкам видны повторные relight invalidations. Средние writer wait/service —
+0.17/6.27 ms, максимальный service 55.42 ms. При таком host load нельзя делать
+вывод о performance. Разовый счётчик CPU перед запуском оказался недостаточным:
+ресурсный gate принимать только по runtime распределению из flight report.
+
 Для следующего короткого парного прогона требовать одновременно host CPU
 median <=50%, p95 <=75%, разницу median/p95 пары <=15 п.п. и разницу median app
 CPU <=15 п.п. Использовать существующий M335 сценарий и те же параметры; менять

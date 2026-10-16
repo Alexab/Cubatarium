@@ -492,7 +492,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     SetColumnEmergeState(ground, plan.fsm_after);
     if (Persistence && plan.persistence_light_complete)
     {
-      Persistence->SetColumnLightComplete(column, true);
+      Persistence->SetColumnLightComplete(column, true,
+                                          "relight_install_finalized");
     }
     if (plan.fsm_after == ColumnEmergeState::LitReady &&
         col_rec.visual == ColumnVisualState::Publishing)

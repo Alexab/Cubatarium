@@ -10116,10 +10116,38 @@ chunk files. Создание мира — отдельная операция, 
   Само наличие `clear` не равно потере работы: `deferred_far_admitted`
   означает передачу в активную очередь.
 
-M609–M612 использовали перегруженный host (median/p95 соответственно 78.8/100,
-72.5/98, 89.5/100 и 99.8/100%). Поэтому ни один запуск не годится для timing
-acceptance. M610 прогрел terrain, но не имел сохранённых light flags; M612 был
-первым saved-light revisit. Последний сохранил 32 dark pixel candidates против
-34 у M609 и 5 у M610; разброс исключает вывод об исправлении. Подробности и
-артефакты перечислены в
+M609–M613 использовали host выше timing gates (M613 runtime median/p95
+58.4/97.6%; процесс завершился штатно, suite вернул exit code 1 по stop-lines).
+Одиночная предзапусковая выборка CPU показывала 0% и не предсказала runtime
+нагрузки. M610 прогрел terrain, но не имел сохранённых light flags; M612 был
+первым saved-light revisit. M613 создал свежий мир за 61.673 s с 597 chunk files
+и подтвердил отсутствие `column_light.json` при старте; к концу было 116
+complete entries.
+
+M613 pixel trace классифицировал 55 final RGB samples ниже luma 96: 44 изменились
+на transparent pass, 11 unchanged попали на drawable opaque surface в chunk
+column `(-3,3,4)`. Их luminance 67–90, 4 имели preview evidence,
+light-revision mismatch не выявлено. Это не подтверждает полностью чёрный chunk.
+Relight audit записал 242 clear, 358 set и 432 save queue/result пары; на
+некоторых колонках видны повторные invalidation/requeue переходы. Средняя очередь
+save — 0.17 ms, writer service — 6.27 ms; из-за перегруженного host timing не
+принимать.
+
+M612 pixel trace сохранил 32 dark pixel candidates против 34 у M609 и 5 у M610;
+разброс исключает вывод об исправлении. Подробности и артефакты перечислены в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md).
+
+M613 Release build расширяет `CUBATARIUM_RELIGHT_AUDIT=1`: в `RelightAudit`
+появляются `light_flags event=load|clear|set|save_queued|save_result`. Снимайте
+события по колонке и revision вместе с queue ownership и pixel trace. Причины
+clear сейчас должны быть `relight_enqueued` либо
+`column_unload_with_relight_work`; событие load различает `missing`, `loaded`,
+`open_failed`, `invalid_schema` и `parse_failed`. M613 использовал эти события.
+
+Артефакты M613 (локальные):
+
+- `suite_reports/engine_refactor/m613a_world_create_20261016.json`
+- `suite_reports/engine_refactor/m613b_cold_flag_lifecycle_20261016.json`
+- `suite_reports/engine_refactor/m613b_cold_flag_lifecycle_pixels_20261016.json`
+- `logs/perf_20261016-120225_41932.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-120222.41932`

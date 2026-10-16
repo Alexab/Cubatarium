@@ -288,7 +288,8 @@ bool UWorldPersistence::IsColumnLightComplete(glm::ivec2 ground_xz) const
 }
 
 void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
-                                               bool complete)
+                                               bool complete,
+                                               const char *reason)
 {
   if (complete)
   {
@@ -296,20 +297,41 @@ void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
     {
       LightCompleteDirty = true;
       ++LightCompleteRevision;
+      if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+      {
+        CubatariumLogInfo(
+            "RelightAudit",
+            "light_flags event=set column=(" +
+                std::to_string(ground_xz.x) + "," +
+                std::to_string(ground_xz.y) + ") reason=" +
+                std::string(reason ? reason : "unspecified") +
+                " revision=" + std::to_string(LightCompleteRevision));
+      }
     }
   }
   else
   {
-    ClearColumnLightComplete(ground_xz);
+    ClearColumnLightComplete(ground_xz, reason ? reason : "set_incomplete");
   }
 }
 
-void UWorldPersistence::ClearColumnLightComplete(glm::ivec2 ground_xz)
+void UWorldPersistence::ClearColumnLightComplete(glm::ivec2 ground_xz,
+                                                 const char *reason)
 {
   if (LightCompleteColumns.erase(ground_xz) > 0)
   {
     LightCompleteDirty = true;
     ++LightCompleteRevision;
+    if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "light_flags event=clear column=(" +
+              std::to_string(ground_xz.x) + "," +
+              std::to_string(ground_xz.y) + ") reason=" +
+              std::string(reason ? reason : "unspecified") +
+              " revision=" + std::to_string(LightCompleteRevision));
+    }
   }
 }
 
@@ -318,13 +340,27 @@ void UWorldPersistence::LoadColumnLightFlags()
   LightCompleteColumns.clear();
   LightCompleteDirty = false;
   LightCompleteLoaded = true;
+  const bool audit = IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
+  const auto log_load = [&](const char *outcome)
+  {
+    if (audit)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "light_flags event=load outcome=" + std::string(outcome) +
+              " world=" + WorldFolderPath + " complete_n=" +
+              std::to_string(LightCompleteColumns.size()));
+    }
+  };
   if (WorldFolderPath.empty())
   {
+    log_load("empty_world_path");
     return;
   }
   const std::string path = WorldFolderPath + "/column_light.json";
   if (!std::filesystem::exists(path))
   {
+    log_load("missing");
     return;
   }
   try
@@ -332,11 +368,13 @@ void UWorldPersistence::LoadColumnLightFlags()
     std::ifstream file(path);
     if (!file.is_open())
     {
+      log_load("open_failed");
       return;
     }
     const json data = json::parse(file);
     if (!data.contains("complete") || !data["complete"].is_array())
     {
+      log_load("invalid_schema");
       return;
     }
     for (const auto &entry : data["complete"])
@@ -347,9 +385,11 @@ void UWorldPersistence::LoadColumnLightFlags()
       }
       LightCompleteColumns.emplace(entry[0].get<int>(), entry[1].get<int>());
     }
+    log_load("loaded");
   }
   catch (const json::exception &)
   {
+    log_load("parse_failed");
   }
 }
 
@@ -395,6 +435,15 @@ void UWorldPersistence::SaveColumnLightFlagsIfDirty(
   }
   LightCompleteSaveInFlight = true;
   const auto enqueue_started = std::chrono::steady_clock::now();
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    CubatariumLogInfo(
+        "RelightAudit",
+        "light_flags event=save_queued world=" +
+            LightCompleteSaveWorldFolder + " revision=" +
+            std::to_string(LightCompleteSaveRevision) + " complete_n=" +
+            std::to_string(complete_columns.size()));
+  }
   AsyncChunkIo->RequestSaveColumnLightFlags(
       LightCompleteSaveWorldFolder, LightCompleteSaveRevision,
       std::move(complete_columns));
@@ -435,6 +484,19 @@ void UWorldPersistence::ProcessColumnLightFlagSaveResults(
   }
   for (AsyncColumnLightFlagsSaveResult &result : results)
   {
+    if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "light_flags event=save_result outcome=" +
+              std::string(result.success ? "success" : "failure") +
+              " world=" + result.worldFolder + " revision=" +
+              std::to_string(result.revision) + " current_revision=" +
+              std::to_string(LightCompleteRevision) + " queue_wait_ms=" +
+              std::to_string(result.worker_queue_wait_ms) +
+              " worker_ms=" + std::to_string(result.worker_service_ms) +
+              (result.error.empty() ? "" : " error=" + result.error));
+    }
     if (tick_metrics)
     {
       tick_metrics->light_flags_last_result_revision = result.revision;
@@ -557,7 +619,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
       return;
     }
   }
-  ClearColumnLightComplete(ground_xz);
+  ClearColumnLightComplete(ground_xz, "relight_enqueued");
   if (max_y >= min_y)
   {
     auto &band = PendingTerrainColumnRelightYBands[key];

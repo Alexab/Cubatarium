@@ -5797,7 +5797,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const auto light_flags_started = std::chrono::steady_clock::now();
         if (needs_relight)
         {
-          world.Persistence->ClearColumnLightComplete(col);
+          world.Persistence->ClearColumnLightComplete(
+              col, "column_unload_with_relight_work");
         }
         const double light_flags_ms =
             std::chrono::duration<double, std::milli>(

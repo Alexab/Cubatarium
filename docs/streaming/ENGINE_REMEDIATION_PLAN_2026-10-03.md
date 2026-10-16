@@ -11157,12 +11157,44 @@ meshed и published light revisions. Эти проверки объясняют,
 подтверждает наблюдаемые переходы владельца, но пока не доказывает потерю или
 преждевременное завершение конкретного запроса.
 
+M613 добавил audit-only lifecycle для `column_light.json`: load outcome и число
+колонок, set/clear с координатой и причиной, queued save и worker result.
+Статический поиск подтвердил два штатных источника clear: relight admission и
+выгрузка колонки при незавершённой работе. Release-сборка успешна. Новый мир
+создан за 61.673 s, 597 chunk files; `column_light.json` отсутствовал. При входе
+лог подтвердил `load outcome=missing complete_n=0`; первая полоса флагов
+появилась примерно через 20 s, а к концу карта содержала 116 complete entries.
+
+M613 flight завершился с `process_rc=0`, но suite остался `pass=false`.
+Предварительный разовый CPU sample показывал 0%, тогда как 98 runtime samples
+дали host CPU median/p95/max = 58.4/97.6/99.5%; такой полёт не проходит
+ресурсные ворота. Он показал `enter_unlit_max=55`, `enter_pending_max=48`,
+`visual_holes_rate=0`, `fly_visible_black_max=12`, но `black_proxy_rate=0` и
+`post_stop_visible_black_no_ticket_zero=true`. Значит, телеметрия долга и
+visible-black не должна трактоваться как прямое доказательство отсутствующей
+геометрии или видимого оператором чёрного чанка.
+
+Pixel trace M613: из 55 samples ниже порога яркости 44 изменили RGB после
+transparent pass; 11 остались неизменными и попали на drawable opaque depth
+surface в одной колонке чанка `(-3,3,4)`. Их luminance был примерно 67–90; 4
+имели preview/неустановившийся light evidence, 7 — нет, revision mismatch не
+зафиксирован. Это тёмная поверхность в pixel probe, не подтверждённая чёрная
+дыра. Представление в сохранённом pixel trace не заменяет наблюдение окна.
+
+Lifecycle trace записал 242 clear, 358 set и 432 пары save queue/result. На
+колонке `(−4,2)` за 2.3 s наблюдались повторные set/clear/set/clear/set; это
+указывает на повторную инвалидизацию/постановку relight и требует анализа причин
+повторного запроса. Средняя очередь сохранения флагов была 0.17 ms, средняя
+работа writer — 6.27 ms (максимум 55.42 ms); измерения сделаны на перегруженном
+host и не локализуют причину визуального поведения. Для тёмной колонки `(-3,4)`
+лог показал `set reason=relight_install_finalized`.
+
 #### Следующие шаги
 
-1. Не менять streaming/render policy по M609–M612. Сначала записывать причину и
-   ревизию каждого light-flag invalidate/save, а для target-column связывать
-   dark-owner, deferred/FIFO/flow ownership, capture, worker start, settle и
-   GPU mesh publish.
+1. Не менять streaming/render policy по M609–M613. На следующем запуске включить
+   `CUBATARIUM_RELIGHT_AUDIT=1` и связать для target-column light-flag load,
+   clear/set/save, dark-owner, deferred/FIFO/flow ownership, capture, worker
+   start, settle и GPU mesh publish.
 2. Оставить короткий проверенный GUI no-teleport маршрут M335 и прежние
    координаты. Сначала провести короткий cold-entry arm и его saved-light
    контроль с теми же seed/маршрутом, только когда host CPU median <=50%, p95
@@ -11172,7 +11204,7 @@ meshed и published light revisions. Эти проверки объясняют,
    создания мира, число chunk-файлов и появление/наполнение light flags; эти
    проверки не заменяют повторяемый маршрут.
 4. Не запускать длинный операторский полёт, пока короткий вход не проходит
-   критерии и операторское изображение не подтверждено. Перегруженные M609–M612
+   критерии и операторское изображение не подтверждено. Перегруженные M609–M613
    оставить диагностическими, не performance acceptance.
 
 Артефакты M609–M612 сохранены локально в `bin/suite_reports/engine_refactor`,

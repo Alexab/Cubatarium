@@ -219,8 +219,10 @@ public:
 
   /// Minetest-style lighting_complete: disk lightmap trusted for this column.
   bool IsColumnLightComplete(glm::ivec2 ground_xz) const;
-  void SetColumnLightComplete(glm::ivec2 ground_xz, bool complete);
-  void ClearColumnLightComplete(glm::ivec2 ground_xz);
+  void SetColumnLightComplete(glm::ivec2 ground_xz, bool complete,
+                              const char *reason = nullptr);
+  void ClearColumnLightComplete(glm::ivec2 ground_xz,
+                                const char *reason = nullptr);
   void LoadColumnLightFlags();
   void SaveColumnLightFlagsIfDirty(
       double *snapshot_ms = nullptr, double *enqueue_ms = nullptr,
