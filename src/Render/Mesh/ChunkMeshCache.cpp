@@ -3614,22 +3614,54 @@ PublishedLightHaloState UChunkMeshCache::GetPublishedLightHaloState(
 void UChunkMeshCache::QueueMeshDependencyInvalidation(
     glm::ivec3 dependent_chunk)
 {
+  QueueMeshDependencyInvalidation(
+      dependent_chunk, MeshRevisionBumpReason::PriorityDirtyEnqueued);
+}
+
+void UChunkMeshCache::QueueMeshDependencyInvalidation(
+    glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason)
+{
   if (!HasDrawableGreedyMesh(dependent_chunk))
   {
     return;
   }
   const auto [pending, inserted] =
       PendingMeshDependencyInvalidations_.try_emplace(
-          dependent_chunk, MeshRevisionBumpReason::PriorityDirtyEnqueued);
+          dependent_chunk, reason);
   if (inserted)
   {
     ++MeshDependencyQueuedSinceDrain_;
   }
-  else
+  else if (reason != MeshRevisionBumpReason::PriorityLightDependencyRepair)
   {
     // This entry point is used for seam/coverage obligations, whose repair can
-    // also depend on geometry. Do not let a prior light-only cause weaken it.
-    pending->second = MeshRevisionBumpReason::PriorityDirtyEnqueued;
+    // also depend on geometry. Do not let a later light-only input weaken an
+    // existing geometry obligation. Geometry-capable input upgrades a
+    // coalesced light-only repair.
+    pending->second = reason;
+  }
+  if (UJobStageTrace::VisualBlackTraceEnabled() &&
+      UJobStageTrace::IsVisualChunkWatched(dependent_chunk.x,
+                                           dependent_chunk.y,
+                                           dependent_chunk.z))
+  {
+    const auto retained =
+        PendingMeshDependencyInvalidations_.find(dependent_chunk);
+    const MeshRevisionBumpReason retained_reason =
+        retained == PendingMeshDependencyInvalidations_.end()
+            ? reason
+            : retained->second;
+    CubatariumLogInfo(
+        "RelightAudit",
+        std::string("mesh_dependency event=queued_single frame_epoch=") +
+            std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+            " dependent=(" + std::to_string(dependent_chunk.x) + "," +
+            std::to_string(dependent_chunk.y) + "," +
+            std::to_string(dependent_chunk.z) + ") inserted=" +
+            (inserted ? "1" : "0") + " reason=" +
+            UJobStageTrace::MeshRevisionBumpReasonName(retained_reason) +
+            " backlog=" +
+            std::to_string(PendingMeshDependencyInvalidations_.size()));
   }
 }
 

@@ -123,6 +123,8 @@ public:
       const std::vector<glm::ivec3> &changed_input_chunks,
       const char *cause = nullptr);
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
+  void QueueMeshDependencyInvalidation(
+      glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason);
   void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
   int GetLastMeshDependencyQueuedN() const
   {

@@ -422,6 +422,12 @@ void UWorldMeshService::QueueMeshDependencyInvalidation(
   Cache.QueueMeshDependencyInvalidation(dependent_chunk);
 }
 
+void UWorldMeshService::QueueMeshDependencyInvalidation(
+    glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason)
+{
+  Cache.QueueMeshDependencyInvalidation(dependent_chunk, reason);
+}
+
 void UWorldMeshService::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
 {
   Cache.QueueStaleLightRemesh(chunk_coord, "settled_light_install");

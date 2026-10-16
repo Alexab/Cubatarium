@@ -11689,7 +11689,8 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         {
           for (const glm::ivec3 changed : changed_light_chunks)
           {
-            MeshService->QueueMeshDependencyInvalidation(changed);
+            MeshService->QueueMeshDependencyInvalidation(
+                changed, MeshRevisionBumpReason::PriorityLightDependencyRepair);
           }
           MeshService->QueueMeshDependencyInvalidations(
               BlockWorld, changed_light_chunks, "enter_open_sky_boundary");
@@ -11925,7 +11926,8 @@ void UWorld::BeginEnterLitGate()
       {
         for (const glm::ivec3 changed : changed_light_chunks)
         {
-          MeshService->QueueMeshDependencyInvalidation(changed);
+          MeshService->QueueMeshDependencyInvalidation(
+              changed, MeshRevisionBumpReason::PriorityLightDependencyRepair);
         }
         MeshService->QueueMeshDependencyInvalidations(
             BlockWorld, changed_light_chunks, "enter_open_sky_boundary");

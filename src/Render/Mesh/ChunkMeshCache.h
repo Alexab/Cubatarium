@@ -102,6 +102,8 @@ public:
       bool *cache_entry_present = nullptr,
       bool *signature_stamp_valid = nullptr) const;
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
+  void QueueMeshDependencyInvalidation(
+      glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason);
   void QueueStaleLightRemesh(glm::ivec3 chunk_coord,
                              const char *cause = nullptr);
   bool HasPendingStaleLightRemesh(glm::ivec3 chunk_coord) const
