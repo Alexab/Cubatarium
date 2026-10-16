@@ -1768,10 +1768,10 @@ The M622AV source review found that an explicit unfinished-census invalidation
 could be followed by the near-miss reuse branch. M622AW added the invalidation
 bit to `force_full_unfinished`. The Release build passed. On M622AW, all nine
 observed focus transitions had matching `focus_not_render_ready` and
-unfinished-class totals; one startup sample still had a stale scalar/class
-snapshot mismatch. The route stopped at focus `(-2,3)` and did not cover the
-far-route acceptance boundary. The analyzer still failed the product safety
-line on one mesh-hole proxy period.
+unfinished-class totals; one sample at the initial focus `(7,3)` still had a
+stale scalar/class snapshot mismatch. The route stopped at focus `(-2,3)` and
+did not cover the far-route acceptance boundary. The analyzer still failed
+the product safety line on one mesh-hole proxy period.
 
 M622AX repeated the same 30 s M335 moving segment with
 `CUBATARIUM_RELIGHT_AUDIT=1`. It ended at focus `(-1,3)`, exited successfully

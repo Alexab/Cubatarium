@@ -12357,8 +12357,9 @@ Detailed M622AV setup, interpretation, and artifact names are recorded in
 
 M622AW validates the M622AV cache fix on the established short M335 route:
 all nine focus transitions had a consistent `FocusNotRenderReady` count and
-unfinished-class histogram. A single startup sample remained out of sync, so
-do not claim the telemetry lifecycle is fully closed yet. Release build passed.
+unfinished-class histogram. A single sample at initial focus `(7,3)` remained
+out of sync, so do not claim the telemetry lifecycle is fully closed yet.
+Release build passed.
 
 M622AX captured one fresh resident-mesh miss at `(1,3,5)` in the camera
 vertical band. It had no mesh, draw readiness, dirty/build/GPU owner,
