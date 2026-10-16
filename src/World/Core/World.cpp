@@ -934,8 +934,22 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   // Era51: enter rim OpenSky — missing neighbors inject daytime sky (enter only).
   if (EnterLitGateActive && include_skylight)
   {
+    std::vector<glm::ivec3> changed_light_chunks;
     ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, world_x, world_z,
-                              min_y, max_y);
+                              min_y, max_y, &changed_light_chunks);
+    for (const glm::ivec3 changed : changed_light_chunks)
+    {
+      if (std::find(relit_chunks.begin(), relit_chunks.end(), changed) ==
+          relit_chunks.end())
+      {
+        relit_chunks.push_back(changed);
+      }
+    }
+    if (MeshService && !changed_light_chunks.empty())
+    {
+      MeshService->QueueMeshDependencyInvalidations(
+          BlockWorld, changed_light_chunks, "enter_open_sky_boundary");
+    }
     const glm::ivec3 primary =
         UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
     EnterVisualGateCtrl.NoteOpenSkyApplied(
@@ -11665,8 +11679,19 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         const int max_h = ProceduralTemplate.MaxHeight;
         const int dirty_min = std::max(0, sea - CHUNK_SIZE);
         const int dirty_max = std::min(max_h, sea + CHUNK_SIZE * 2);
-        ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, col.x * CHUNK_SIZE,
-                                  col.y * CHUNK_SIZE, dirty_min, dirty_max);
+        std::vector<glm::ivec3> changed_light_chunks;
+        ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry,
+                                  col.x * CHUNK_SIZE, col.y * CHUNK_SIZE,
+                                  dirty_min, dirty_max, &changed_light_chunks);
+        if (MeshService && !changed_light_chunks.empty())
+        {
+          for (const glm::ivec3 changed : changed_light_chunks)
+          {
+            MeshService->QueueMeshDependencyInvalidation(changed);
+          }
+          MeshService->QueueMeshDependencyInvalidations(
+              BlockWorld, changed_light_chunks, "enter_open_sky_boundary");
+        }
         EnterVisualGateCtrl.NoteOpenSkyApplied(col);
         StickyRemeshAfterLight.erase(col);
       }
@@ -11889,8 +11914,19 @@ void UWorld::BeginEnterLitGate()
     const int dirty_max = std::min(max_h, sea + CHUNK_SIZE * 2);
     for (const glm::ivec2 &col : EnterLitDebtSnapshot)
     {
-      ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, col.x * CHUNK_SIZE,
-                                col.y * CHUNK_SIZE, dirty_min, dirty_max);
+      std::vector<glm::ivec3> changed_light_chunks;
+      ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry,
+                                col.x * CHUNK_SIZE, col.y * CHUNK_SIZE,
+                                dirty_min, dirty_max, &changed_light_chunks);
+      if (MeshService && !changed_light_chunks.empty())
+      {
+        for (const glm::ivec3 changed : changed_light_chunks)
+        {
+          MeshService->QueueMeshDependencyInvalidation(changed);
+        }
+        MeshService->QueueMeshDependencyInvalidations(
+            BlockWorld, changed_light_chunks, "enter_open_sky_boundary");
+      }
       EnterVisualGateCtrl.NoteOpenSkyApplied(col);
       GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
                                       /*priority=*/80);
