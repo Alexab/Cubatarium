@@ -11675,3 +11675,37 @@ reason field and compare per-coordinate desired/published geometry revisions;
 the next functional question is whether reason-aware invalidation stops
 needless geometry revision advancement without leaving stale light debt
 unpublished.
+
+### M622M: applied-reason trace and remaining singleton light invalidation
+
+M622M used the established compact visible M335 no-teleport route on a fresh
+world. It completed 35 periods (`process_rc=0`, no timeout), but the analyzer
+returned `pass=false` on non-CPU gates. The near-focus mesh-coverage proxy was
+0.1212; fly visible-black proxy max was 16; post-stop visible-black proxy max
+was 0; post-stop readiness debt max was 37; median wall time was 36.10 ms and
+fly median was 41.66 ms. These signals are not a framebuffer verdict. Host CPU
+was 84.4/100/100% median/p95/max and application CPU was
+20.39/40.08/50.09%; host CPU remains context only.
+
+The applied-reason field worked: the run logged 1,631 applied light-only
+dependency rows over 510 coordinates, in addition to 1,919
+`covered_by_existing_owner` light-only rows over 510 coordinates. Geometry
+reasons were also applied to watched dependents. At `(-11,2,2)`, three drains
+at frames 1464, 1646, and 1833 retained `priority_dirty_enqueued`; the nearby
+retry snapshots show desired geometry revisions rising from 7 to 12 while the
+published revision remained 4. Static callsite review found that open-sky
+light mutations queue their changed source chunk through the singleton
+`QueueMeshDependencyInvalidation(coord)` API, which defaulted to a geometry
+reason, while only neighboring dependents used the reason-aware batch API.
+This is a concrete missed route and a plausible source of the residual
+geometry churn, but M622M lacked singleton-enqueue tracing and does not prove
+those three rows came from that callsite.
+
+Next: keep singleton seam/coverage callers geometry-capable, pass
+`PriorityLightDependencyRepair` for the two open-sky changed-source callsites,
+and trace singleton enqueue reasons. Rebuild Release and run one compact M335
+flight; confirm its queue and drain reasons agree, and inspect per-coordinate
+revision movement. Preserve a fresh-world caveat and do not infer pixel quality
+from analyzer proxies.
+
+Report: `bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json`.

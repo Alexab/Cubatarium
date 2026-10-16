@@ -5911,3 +5911,27 @@ was 86.9/100/100%; app CPU was 16.45/39.70/50.85% of machine capacity. Host CPU
 must remain advisory because Codex and other tools share the host total. There
 is no operator framebuffer verdict. M622I report:
 `bin/suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json`.
+
+### M622M: residual geometry reason on open-sky source chunks
+
+The short visible M335 run completed 35 periods (`process_rc=0`) but remained
+`pass=false` on analyzer gates. The mesh-coverage proxy was 0.1212, fly
+visible-black proxy max 16, post-stop visible-black proxy max 0, readiness
+debt max 37, and median frame time 36.10 ms. No framebuffer verdict was
+recorded; these values do not establish a visible hole. Host CPU was
+84.4/100/100% median/p95/max; app CPU was 20.39/40.08/50.09% and CPU remains
+advisory only.
+
+Applied dependency tracing verified 1,631 light-only applications across 510
+coordinates. It also recorded geometry-priority drains for `(-11,2,2)` at
+frames 1464, 1646, and 1833; the corresponding nearby retry snapshots advanced
+desired geometry 7→12 while publication stayed at 4. Static review found a
+distinct path missed by M622L: both open-sky callers enqueue their changed
+source chunks with the singleton dependency API, which defaulted to geometry,
+then queue neighbors via the reason-aware batch API. The singular API now
+accepts a reason; open-sky sources explicitly use the light-only reason, while
+its seam/coverage default stays geometric. Added `queued_single` trace rows to
+verify this path. Release rebuild and one short runtime confirmation are the
+next checks; M622M itself cannot attribute its geometry drains to this path.
+
+Report: `bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json`.

@@ -1073,3 +1073,24 @@ never blocks a run.
 
 Reports: `bin/suite_reports/engine_refactor/m622k_light_dependency_reason_20261016.json`
 and `bin/suite_reports/engine_refactor/m622l_light_dependency_reason_20261016.json`.
+
+### M622M–M622N: trace singleton open-sky invalidations
+
+M622M confirmed that reason-aware batch drains can apply light-only repairs,
+but watched dependents still received `priority_dirty_enqueued` at frames
+1464, 1646, and 1833. A static callsite audit found that each changed chunk
+from `ApplyEnterOpenSkyBoundary` also goes through the singleton invalidation
+API, whose default is intentionally geometry-capable for seam/coverage debt.
+The open-sky caller must pass `PriorityLightDependencyRepair` explicitly.
+M622M did not log singleton enqueue reasons, so it cannot establish that this
+path caused every geometry drain.
+
+The correction adds a reason-taking singleton overload while retaining the
+geometry default for seam/coverage callers. The two open-sky callsites pass the
+light-only reason; coalescing still lets any later geometry-capable cause win.
+The trace uses `mesh_dependency event=queued_single` and the drain's existing
+`applied` event. In the next compact M335 run, join those rows by coordinate
+and frame epoch and check whether singleton light-only queue entries drain as
+`priority_light_dependency_repair`. Revision movement and publication closure
+remain necessary checks; do not treat proxy pass/fail as operator pixel proof.
+Host CPU is informational and must not gate the route.

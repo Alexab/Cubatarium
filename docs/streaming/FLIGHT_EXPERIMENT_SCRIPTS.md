@@ -10865,3 +10865,39 @@ Reports:
 and `suite_reports/engine_refactor/m622l_light_dependency_reason_20261016.json`.
 The next diagnostic should verify the latest applied-event reason field and
 compare desired/published geometry revisions by coordinate.
+
+### M622M: verify applied dependency reasons
+
+M622M used the latest M622L reason-preserving binary on a fresh world:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622M_Cold_AppliedReasonTrace_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622M_AppliedReasonTrace_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json
+```
+
+It completed 35 periods (`process_rc=0`), analyzer `pass=false`: mesh-coverage
+proxy 0.1212, fly visible-black proxy max 16, post-stop visible-black proxy
+max 0, post-stop readiness debt max 37, median wall time 36.10 ms. No operator
+framebuffer verdict was recorded. Light-only drain reasons were observed on
+510 coordinates, but three geometry-priority drains at `(-11,2,2)` aligned
+with desired-geometry growth while published geometry remained 4. Static
+review then found the two open-sky source chunks also pass through the
+singleton invalidation API, whose default correctly remains geometric for
+seam/coverage callers. The open-sky callsites now pass the light-only reason,
+and the singleton enqueue reason is traced as `queued_single`.
+
+M622N should rebuild Release and repeat this compact route on a fresh world.
+Inspect `queued_single` and drain reasons by coordinate/frame, plus the exact
+desired/published geometry revisions. CPU is context only; do not add a host
+CPU gate. Report:
+`bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json`.
