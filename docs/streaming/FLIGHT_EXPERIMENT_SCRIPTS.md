@@ -11763,6 +11763,59 @@ For M622AX, fresh miss chunk `(1,3,5)` was queued for first-mesh relight,
 became drawable/satisfying in the slice audit, and finalized lighting after
 about 1.25 s. A second positive proxy sample had a fresh clear probe and was
 the held hysteresis tail. The aggregate product gate still failed and the
-operator framebuffer verdict remains unrecorded; consult the M622AW–AX
+operator framebuffer verdict remains unrecorded; consult the M622AW–AY
 runbook section before interpreting the two proxy samples or FIFO eviction
 counts.
+
+### M622AY: repeat M335 with a sparse preview-light pixel trace
+
+M622AY repeats the same short visible M335 route on existing `World_164` and
+keeps `CUBATARIUM_RELIGHT_AUDIT=1`. It uses the established 30 s flight,
+20 s stop, and 8 s idle tail; it does not add a CPU-load gate or teleport.
+Always restore the audit environment variable after the runner exits.
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622AY `
+    -Report bin/suite_reports/engine_refactor/m622ay_world164_m335_same_view_audit_20261017.json
+} finally {
+  if ($hadPreviousAudit) {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit
+  } else {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  }
+}
+```
+
+Analyze the saved sparse pixel trace and keep the full report outside console
+output:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622ay_world164_m335_same_view_audit_20261017.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622ay_renderer_pixel_trace_20261017.json
+```
+
+The pixel analyzer's preview-to-settled values are observation intervals, not
+transition timestamps. Require the same sampled pixel and camera pose before
+calling a preview-to-settled pair a same-view handoff. If the route ends with
+no fresh mesh-miss witness, do not infer that the readiness-debt proxy is a
+visible hole; inspect the pixel and lifecycle joins first.
+
+For an exact relight-owner audit, use the INFO log named by the report and
+follow the same `(cx,cz)` through `pending note`, `void_dark_owner`,
+`deferred_far owner=defer/clear`, `capture dequeue/submit`, `light_flags`, and
+`slice job`. A FIFO denial is not loss if the corresponding deferred owner is
+later cleared by visible admission and capture reaches final light install.
+Record the interval from note to dequeue, then from visible re-admission to
+final install; do not use the sparse pixel observation interval as a substitute
+for those pipeline timings.

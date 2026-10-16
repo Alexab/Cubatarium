@@ -1762,7 +1762,7 @@ Artifacts:
 - M622AV re-analysis with explicit hysteresis fields: `m622av_world164_m335_post_visible_priority_semantics_20261016.json` (2 positive proxy samples also had a fresh clear probe; share 1.0).
 - M622AV perf/INFO: `perf_20261016-232752_43592.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-232748.43592`.
 
-### M622AW–AX: refresh focus census and trace first-mesh ownership
+### M622AW–AY: refresh focus census, first-mesh owners, and preview-light pixels
 
 The M622AV source review found that an explicit unfinished-census invalidation
 could be followed by the near-miss reuse branch. M622AW added the invalidation
@@ -1809,14 +1809,65 @@ capacity or replacement policy.
 Both runs ended with zero post-stop mesh-missing and visual-hole proxy counts,
 but readiness/convergence remained false (M622AX post-stop readiness debt
 peaked at 35). The moving product gate still fails and no operator verdict was
-recorded. The next short run should keep the same M335 setup, retain the
-relight audit, and correlate each fresh missing witness with queued/deferred
-owner state, first drawable publication, stale-light repair, and a visible
-same-view pixel sample where available. Do not expand to a long monitoring
-flight or add a CPU threshold.
+recorded.
+
+M622AY repeated the same Release M335 route with the relight audit and sparse
+screen-ray pixel probes. The process succeeded without a timeout and traveled
+nine chunks. Moving-period speed was 4.42–5.20 blocks/s; the first period's
+734.9 speed sample is a launch discontinuity and is not representative of
+cruise. Host CPU median/p95 was 67.2/84.2%; this is workload context only and
+was not a pass/fail gate.
+
+The product report still failed: `readiness_debt_rate=1.0` and post-stop
+readiness debt peaked at 34, while `visual_holes_rate=0`, post-stop mesh misses
+were zero, and post-stop visual-hole proxy was zero. These values are not a
+framebuffer verdict. The 1,940 pixel probes contained 35 final pixels below
+luma 32; every one joined a drawable opaque depth surface. Nine of those dark
+samples had unsettled demand or preview-light state, and four had a preview
+shader override. The run recorded 56 preview-light samples across four chunks.
+
+The clearest startup sample was chunk `(7,3,3)`: at frame 1 it was drawable,
+its light demand was unsettled, and its relight request sat in the priority
+queue at index 10 of 12. The sample used the preview shader. The first later
+settled non-preview observation arrived 4.37 s later at a different camera
+height; the analyzer found no same-view handoff. Other chunks had first-preview
+to first-settled observation intervals of about 4.37 s and 11.31 s, also with
+camera movement. This matches a provisional-light startup transition, but does
+not establish how long a fixed visible pixel stayed dim or explain a late-route
+operator observation. Source inspection confirms the render path intentionally
+keeps drawable geometry visible with an ambient fallback while its light
+replacement is pending.
+
+M622AY recorded 369 active-FIFO overflow evictions and a deferred-far high
+water mark of eight. The eviction path preserves victims in the deferred-far
+map, so this is queue churn/backlog evidence, not 369 proven lost requests.
+The consecutive runs are not a controlled capacity comparison. Keep the FIFO
+bounded and do not tune its size from this count alone.
+
+Static review and the M622AY INFO chronology found no queue-starvation defect
+in this startup window. `DrainRelightQueues` reorders the priority deque by
+current focus distance, and `EnqueueVisibleRelight` promotes exact visible
+repairs. For `(7,3)`, the priority position moved from 10/11 to 3/12 in 347 ms;
+capture dequeued the column 387 ms after its pending note, and light flags
+finalized 460 ms after the note. For `(5,4)` through `(5,6)`, FIFO admission
+denials created deferred-far owners; visible admission cleared those owners in
+39–123 ms, and first-mesh capture/light finalization followed 0.26–0.45 s later.
+This is bounded queue pressure with successful visible re-admission in this
+sample, not evidence that FIFO work was lost.
+
+Do not change the FIFO capacity, visible lane budget, or preview gate from this
+run. The remaining diagnostic gap is after light-field finalization: M622AY's
+pixel trace has no exact lifecycle events for the preview chunks, and a sparse
+first-settled observation can trail the real replacement by several seconds.
+The next static step is to follow one target from final light install through
+stale-halo detection, dirty admission, mesh publication, and GPU apply. Use the
+established short M335 route only when that target can be joined to a fresh
+pixel/lifecycle witness; do not repeat an identical run just to add duration.
+Do not add a CPU threshold or a long operator-monitoring flight.
 
 Artifacts:
 
 - M622AW report/pixel trace: `m622aw_world164_m335_focus_invalidation_20261016.json`, `m622aw_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-234304_37980.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-234301.37980`.
 - M622AX report/pixel trace: `m622ax_world164_m335_relight_audit_20261016.json`, `m622ax_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-234824_28028.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-234820.28028`.
 - M622AX analyzer re-run with fresh-probe semantics: `m622ax_world164_m335_relight_audit_semantics_20261016.json` (`1/2` positive proxy samples had a fresh clear probe).
+- M622AY report/pixel trace: `m622ay_world164_m335_same_view_audit_20261017.json`, `m622ay_renderer_pixel_trace_20261017.json`; perf/INFO `perf_20261017-022026_5628.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-022023.5628`.

@@ -12353,7 +12353,7 @@ repeatable, flights short, and CPU utilization contextual only.
 Detailed M622AV setup, interpretation, and artifact names are recorded in
 `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` and `FLIGHT_EXPERIMENT_SCRIPTS.md`.
 
-### M622AW–AX: focus change and first-mesh lifecycle
+### M622AW–AY: focus change, first-mesh lifecycle, and preview-light pixels
 
 M622AW validates the M622AV cache fix on the established short M335 route:
 all nine focus transitions had a consistent `FocusNotRenderReady` count and
@@ -12387,3 +12387,56 @@ sample. Then decide whether the bounded visible lane should spend more budget
 on first-mesh work or whether the remaining dark appearance is a later halo
 lighting transition. Record deferred-far age/re-admission, but do not change
 the FIFO soft cap based on the run-to-run eviction count alone.
+
+M622AY repeated the same 30 s visible M335 route on `World_164`, with 20 s
+stop, 8 s idle, no teleport, and the existing relight audit. The process exited
+successfully without timeout and traveled nine chunks. Stable moving samples
+were 4.42–5.20 blocks/s; the first period's 734.9 speed sample is a launch
+discontinuity, not cruise. Host CPU median/p95 was 67.2/84.2%, retained only as
+context.
+
+The aggregate product report still failed to converge: readiness debt was
+present in every analyzed period and post-stop debt peaked at 34. At the same
+time, `visual_holes_rate` and post-stop mesh-missing/visual-hole proxies were
+zero. Treat this as streaming readiness debt, not proof of a blank visible
+chunk. The 1,940-pixel trace had 35 samples below luma 32; all 35 joined
+drawable opaque surfaces. Nine had unsettled light demand or a preview state,
+four had a preview-shader override, and 56 preview-light samples covered four
+chunks.
+
+The initial sample for `(7,3,3)` was drawable with unsettled light demand and a
+priority relight queue position of 10/12; the shader used a provisional-light
+preview. A later settled non-preview sample was observed 4.37 s later after the
+camera had climbed from y=50 to y=70. The analyzer found zero same-view
+handoffs. Other preview-to-settled observation intervals were 4.37 s and
+11.31 s while the camera moved. These are sparse observation bounds, not
+measured time spent rendering one pixel in the provisional state. The data
+shows the startup fallback path is active, but does not yet prove the late-route
+dim-chunk symptom or justify suppressing preview geometry.
+
+M622AY counted 369 active FIFO overflow evictions and at most eight deferred
+far columns. The overflow path preserves each victim as deferred work, so do
+not interpret the counter as lost requests or change queue capacity from this
+run. The high host load and sequential mutation of `World_164` also prevent a
+controlled comparison with M622AW/AX.
+
+Static review of M622AY's exact chronology found no queue-starvation defect in
+the startup window. The priority deque is reordered by current focus distance,
+and `EnqueueVisibleRelight` promotes exact visible repair requests. For column
+`(7,3)`, its queue position moved from 10/11 to 3/12 in 347 ms; capture
+dequeued it 387 ms after the pending note, with light flags finalized 460 ms
+after the note. Columns `(5,4)` through `(5,6)` hit FIFO admission backpressure,
+were retained as deferred-far owners, and were restored by visible admission
+within 39–123 ms. Their first-mesh capture and light finalization followed
+0.26–0.45 s later. This trace shows bounded queue pressure with successful
+visible re-admission, not starvation or proven work loss.
+
+Do not change the FIFO cap, visible-lane budget, or preview gate from this
+evidence. The remaining diagnostic target is the interval after light-field
+finalization: stale-halo detection, dirty admission, mesh publication, and GPU
+apply. M622AY's pixel trace did not join its startup preview chunks to exact
+lifecycle events; its first settled sample can lag the actual replacement due
+to sparse sampling and camera movement. Follow one late-route target through
+those stages, then use the established short M335 route only when a fresh
+pixel/lifecycle witness can be captured. Keep CPU as context and avoid long
+operator flights.
