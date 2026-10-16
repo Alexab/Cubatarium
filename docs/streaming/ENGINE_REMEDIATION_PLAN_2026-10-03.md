@@ -12209,10 +12209,32 @@ camera view, so it cannot confirm the operator-reported transient. No operator
 framebuffer verdict was captured. Host CPU was 68.8/86.5/97.1% median/p95/max
 and app CPU 31.3/39.4/44.9% of machine capacity; neither is an admission gate.
 
-The next diagnostic should use the same short M335 route and add a coordinate-
-scoped, same-pixel lifecycle join through light settlement, remesh ownership,
-and mesh publication for one frontier chunk. Avoid the unsupported cold-world
-pin and keep occasional cold/replay work static and bounded. No CPU threshold or
-long operator-monitoring flight is required. Artifact paths and the repeatable
-command are recorded in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` and
+M622AJ added stride-15 pixel sampling at a fixed saved-world entry view. Three
+frontier chunks left preview within 1–2 seconds after first preview, with
+light-settlement/install events in about 0.65–1.18 seconds. The fixed view had
+no missing surface joins or light-revision mismatches; the luma threshold still
+cannot classify a dark but drawable material as defective. M622AK repeated the
+short moving route with stride 15. Its start focus matched `(7,3)`, it reached
+`(-3,3)`, and it completed with no timeout. The analyzer remained `pass=false`
+on performance, scheduler, and readiness criteria; the targeted symptom check
+did not pass because focus-missing median was 0 and visible-black median 12.
+
+M622AK's 13,040 probes produced 256 low-luminance samples, all joined to
+drawable opaque surfaces. Nine had unsettled/preview state; six were preview.
+There were no missing joins or light-revision mismatches, but the moving camera
+yielded only one same-view preview transition in the same second-resolution
+bucket. This run does not bound the moving-frontier handoff or establish an
+operator-visible defect. No operator framebuffer verdict was captured.
+
+The run's combined `cruise_fifo_dropped_delta=44` mixes pressure trims with
+overflow. Source review shows pressure trims move far tickets to deferred-far
+storage; that counter is not a count of lost lighting work. The immediate
+instrumentation step separates cumulative trim-to-deferred and overflow counts.
+Then repeat the same short M335 route and use the separated values to decide if
+queue policy needs a behavioral change. Keep the unsupported `World_193` pin
+rejected, maintain bounded cold/replay static checks, and use no CPU admission
+threshold or long operator-monitoring flight. Host CPU stays contextual.
+
+Only Release builds are allowed; no tests were run. Artifact paths and the exact
+repeatable command are in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` and
 `FLIGHT_EXPERIMENT_SCRIPTS.md`.

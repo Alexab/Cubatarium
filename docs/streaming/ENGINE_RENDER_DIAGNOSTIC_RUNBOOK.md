@@ -1518,3 +1518,72 @@ M622AI artifacts: report `m622ai_world164_m335_short_20261016.json`, pixel
 analysis `m622ai_renderer_pixel_trace_20261016.json`, perf
 `perf_20261016-215807_42564.jsonl`, INFO
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215803.42564`.
+
+### M622AJ: higher-cadence fixed-view preview handoff
+
+The M622AJ Release build added the opt-in
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE` setting. At stride 15, the static
+`World_164` probe recorded 4,080 pixel samples in 25 seconds versus 1,440 in the
+35-second M622AE trace. The camera remained at `(120,50.12,56)` and focus
+`(7,3)`. Four chunks showed provisional-light pixels. Exact same-pixel/camera
+observations found preview-to-nonpreview by 1 second for `(5,3,4)` and `(5,3,5)`
+and by 2 seconds for `(5,3,6)`. Since the analyzer's pixel sample clock is
+second-granular, these are upper bounds, not exact shader handoff times.
+
+For the same chunks, lifecycle events recorded light settlement at 653, 695, and
+1,163 ms after the first preview. Install publication was recorded at 666, 742,
+and 1,176 ms; `(5,3,6)` also had mesh publication at 1,033 ms. This narrows the
+work path to roughly 0.65–1.18 seconds on this saved-world startup view. The
+trace found 248 luma-below-32 probes of 4,080; all joined drawable opaque depth,
+five had unsettled/preview state, and there were no missing surface joins or
+light-revision mismatches. `visual_holes_rate=0` and focus pending-light median
+was 0. The static analyzer returned `pass=false` on movement/readiness gates;
+host CPU 36.0/58.7/60.4% median/p95/max is context only. No operator framebuffer
+verdict was recorded.
+
+This bounds the visible preview on the tested entry view to at most 1–2 seconds.
+It does not cover the cruise-height frontier of a moving M335 route or establish
+whether the operator considers that interval acceptable. Next use the same short
+known-good M335 route with stride 15, retaining the start-integrity check and
+assessing runtime frame cost separately from host CPU. Do not expand the route
+or make a visual acceptance claim from the luma threshold.
+
+M622AJ artifacts: report `m622aj_world164_static_pixel_stride15_20261016.json`,
+pixel analysis `m622aj_renderer_pixel_trace_20261016.json`, perf
+`perf_20261016-221304_10076.jsonl`, INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-221300.10076`.
+
+### M622AK: moving M335 trace at stride 15
+
+The established visible no-teleport `World_164` route completed with a valid
+start focus `(7,3)` and reached `(-3,3)`: 35 periods, 18 fly periods, process
+exit 0, no timeout. Host CPU median/p95/max was 83.7/99.3/100%; application
+share was 29.9/40.1/43.7% of machine capacity. CPU remains context only and did
+not gate this diagnostic run.
+
+The aggregate analyzer returned `pass=false` on performance, scheduler, and
+readiness criteria. `visual_holes_rate=0.0606`, focus pending-light median 0,
+post-stop mesh-missing max 0, post-stop visible-black max 2, and readiness debt
+max 33. The targeted route symptom check did not pass because focus-missing
+median was 0 and visible-black median 12; this is not a visual acceptance.
+
+Stride 15 collected 13,040 pixel probes. All 256 luma-below-32 samples joined
+drawable opaque depth; nine carried unsettled/preview state, six were preview,
+and there were no missing surface joins or light-revision mismatches. Ten
+frontier chunks had provisional-light samples. Only one same-view
+preview-to-nonpreview candidate was joined, with both samples in the same
+second-resolution bucket; the moving route therefore did not provide a useful
+handoff interval or an operator framebuffer verdict. The dark-pixel threshold
+does not distinguish intentionally dark materials from a visible defect.
+
+The combined cumulative `cruise_fifo_dropped_delta=44` cannot be read as 44 lost
+light jobs. Pressure trim removes far tickets from the active FIFO while moving
+them to deferred-far storage; overflow is a separate path. M622AK's period
+samples do not attribute the cumulative delta reliably. The next code step adds
+cumulative trim-to-deferred and overflow counters, then repeats this exact short
+route. Use the split values to decide whether queue loss needs a behavioral fix.
+
+M622AK artifacts: report `m622ak_world164_m335_stride15_20261016.json`, pixel
+analysis `m622ak_renderer_pixel_trace_20261016.json`, perf
+`perf_20261016-221611_38804.jsonl`, INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-221607.38804`.

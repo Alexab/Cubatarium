@@ -11438,3 +11438,108 @@ Artifacts:
 - M622AI report: `bin/suite_reports/engine_refactor/m622ai_world164_m335_short_20261016.json`.
 - M622AI pixel analysis: `bin/suite_reports/engine_refactor/m622ai_renderer_pixel_trace_20261016.json`.
 - M622AI perf/INFO: `bin/logs/perf_20261016-215807_42564.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215803.42564`.
+
+### M622AJ: fixed-view pixel lifecycle at higher cadence
+
+Release commit `ea79e756` adds the opt-in
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE` setting, measured in render frames
+and clamped to 1–120. Unset preserves the old 120-frame cadence (60 frames in
+two legacy X bands). M622AJ used 15 frames, about 0.5 seconds at 30 FPS, with the
+visible camera X range bounded to 110–130. The saved `users.json` bytes and
+process environment were restored after the run.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE='15'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='110'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='130'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+python -X utf8 tools/flight_sim_run.py --world World_164 --require-existing-world `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622aj_world164_static_pixel_stride15_20261016.json `
+  --process-timeout 120
+```
+
+The run completed (`process_rc=0`, no timeout), with 13 perf periods and nine
+steady periods. It held focus `(7,3)` and camera `(120,50.12,56)`. Four chunks
+showed provisional-light pixels. Exact pixel/camera samples saw preview end by
+1 second for `(5,3,4)` and `(5,3,5)`, and by 2 seconds for `(5,3,6)`. Because the
+pixel sample clock is second-granular, these are upper bounds. Lifecycle joins
+recorded light settlement at +653, +695 and +1,163 ms; installation at +666,
++742 and +1,176 ms. Chunk `(5,3,6)` also had mesh publication at +1,033 ms.
+No same-view pixel sample captured a settled-light/preview intermediate state.
+
+There were 4,080 pixel probes and 248 luma-below-32 samples; every dark sample
+joined drawable opaque depth. Five had unsettled/preview state, and no surface
+joins or light revisions were missing. `visual_holes_rate=0`, focus pending-light
+median 0, post-stop mesh-missing max 0, post-stop visible-black max 5, readiness
+debt max 17. The analyzer failed static movement/readiness gates by design.
+Host CPU was 36.0/58.7/60.4% median/p95/max and app CPU 22.9/33.0/38.9% of
+machine capacity; both are context only. No operator framebuffer verdict was
+captured.
+
+This bounds the observed preview interval on the saved-world entry view, but it
+does not cover the cruise-height frontier on a moving route. Next repeat the
+same short established no-teleport M335 route with stride 15 and compare
+frontier light lifecycle to its pixel probes. Keep the route unchanged and do
+not use host CPU as an admission gate.
+
+Artifacts:
+
+- M622AJ report: `bin/suite_reports/engine_refactor/m622aj_world164_static_pixel_stride15_20261016.json`.
+- M622AJ pixel analysis: `bin/suite_reports/engine_refactor/m622aj_renderer_pixel_trace_20261016.json`.
+- M622AJ perf/INFO: `bin/logs/perf_20261016-221304_10076.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-221300.10076`.
+
+### M622AK: short moving M335 trace at stride 15
+
+This repeats M622AI's established visible route on `World_164`; only the pixel
+probe stride changed. Host CPU is informational. The wrapper's usual start-focus
+integrity check stays enabled, and no CPU threshold gates launch.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE='15'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+  -StampWarmPeriods -RequireExistingWorld -World World_164 `
+  -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622AK `
+  -Report bin/suite_reports/engine_refactor/m622ak_world164_m335_stride15_20261016.json
+```
+
+The run matched start focus `(7,3)`, reached `(-3,3)`, and finished 35 periods
+(18 fly) with process exit 0 and no timeout. The aggregate analyzer returned
+`pass=false` on performance, scheduler, and readiness criteria. It reported
+`visual_holes_rate=0.0606`, focus pending-light median 0, post-stop mesh-missing
+max 0, post-stop visible-black max 2, and readiness-debt max 33. The targeted
+far-symptom check did not pass because focus-missing median was 0 and
+visible-black median 12.
+
+The pixel analyzer joined 13,040 probes. All 256 luma-below-32 samples had a
+drawable opaque surface; nine had unsettled/preview light and six were preview.
+There were no missing surface joins or light-revision mismatches. Ten chunks
+showed provisional-light samples, but the moving camera yielded only one
+same-view preview-to-nonpreview candidate and both samples shared the same
+second-resolution timestamp. This does not bound the frontier handoff or
+confirm the operator-visible defect. No framebuffer verdict was captured.
+
+The aggregate `cruise_fifo_dropped_delta=44` combines pressure trim and FIFO
+overflow. Pressure trim preserves the evicted ticket in deferred-far storage,
+so the combined metric is not a count of lost relight work. Follow-up source
+instrumentation adds cumulative trim-to-deferred and overflow counters; use
+those on the next repeat before changing queue policy. Host CPU was
+83.7/99.3/100% median/p95/max and application CPU 29.9/40.1/43.7% of machine
+capacity; neither is an admission gate.
+
+Artifacts:
+
+- M622AK report: `bin/suite_reports/engine_refactor/m622ak_world164_m335_stride15_20261016.json`.
+- M622AK pixel analysis: `bin/suite_reports/engine_refactor/m622ak_renderer_pixel_trace_20261016.json`.
+- M622AK perf/INFO: `bin/logs/perf_20261016-221611_38804.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-221607.38804`.
