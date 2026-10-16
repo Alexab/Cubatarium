@@ -5613,3 +5613,34 @@ same short M335 route that this exact coordinate receives a work owner and
 publishes its current geometry revision. If a current face witness survives that
 publish, join source border-light/incarnation/revision to dependent invalidation,
 capture and GPU publication before adding broader queue policy.
+
+M616A repeated the same visible GUI no-teleport profile. For `(-19,2,5)` at
+focus `(-14,3)`, the previous h5 denial was gone: two
+`geometry_debt_approach_reserved` retries reported `owner_after=1`, and its
+RemeshQ position improved from `3/4` to `1/2`. This confirms admission and a
+queued owner, but not publication. The current geometry revision advanced
+12→13 against `published_geom=2`; both snapshots had no mesh build, capture,
+GPU, or RAA owner. A relight handoff was tagged `stale_mesh_input=1` while the
+field light revision was 1 and meshed light revision was 0; the stale-light debt
+later published light revision 1. This audit field describes a stale light/mesh
+relationship, not rejection of an async mesh capture.
+The chunk stayed drawable throughout the debt snapshots, so this is not evidence
+of an empty/black chunk. Exact geometry-bump reasons were not enabled in M616A;
+the next short M335 should set `CUBA_VISUAL_BLACK_TRACE=1` and correlate each
+bump with queue dequeue, capture, stale-input rejection, and publication.
+
+M616A completed normally, but host runtime CPU median/p95/max was
+68.6/98.6/100%, invalidating performance acceptance. The suite failed its
+readiness convergence gates (`post_stop_readiness_debt_max=36`) while the
+near-focus visual-hole proxy stayed zero, fly visible-black proxy peaked at 6,
+and post-stop visible-black proxy was zero. These proxies describe different
+scopes and do not establish the displayed image. The only `gpu=1` log match was
+a first-mesh event with `enter_gpu=1`; it was not a GPU-only stale-face witness.
+Do not treat a text search for `gpu=1` alone as a GPU witness.
+
+The M616 admission change is retained. Do not broaden scheduler budgets based on
+this overloaded run. First obtain a resource-qualified short trace; if geometry
+revisions keep changing, identify and coalesce the repeated invalidation source.
+If the revision stabilizes but the queued item is not scheduled, trace and repair
+the scheduler handoff. Preserve the existing short-route and operator-visible
+verification policy.

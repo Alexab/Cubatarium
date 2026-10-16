@@ -11276,13 +11276,13 @@ performance acceptance-проверкой. Процесс завершился �
    `gpu=1`; качество GPU-only witness остаётся непроверенным.
 7. M616 меняет world admission только для drawable unowned geometry debt в
    approach ring h5: при исчерпанном dirty-admit ему разрешается использовать
-   существующий ограниченный world-admission слот. Обычные кандидаты остаются
-   под прежним бюджетом; повторить точку `(-19,2,5)` коротким M335 только при
-   host CPU median <=50% и p95 <=75%. Последний preflight после Release build
-   дал median 57.5%, p95 93.6% при остановленном приложении; M616 flight поэтому
-   не запускался. Требовать выдачу owner и publication
-   актуальной geometry revision; отдельно следить за пост-стоп debt и GPU
-   witness типом.
+   существующий ограниченный world-admission слот. M616A подтвердил для
+   `(-19,2,5)` две записи `geometry_debt_approach_reserved`, обе с
+   `owner_after=1`; `dirty_admit_denied` для этой точки больше не было.
+   Очередь RemeshQ переместила срез с позиции 3/4 на 1/2. Но на момент двух
+   снимков geometry revision выросла 12→13, `published_geom` оставалась 2, а
+   активного mesh/capture/GPU владельца не было. Admission gap закрыт; публикация
+   актуальной геометрии пока не доказана.
 
 8. Во время M615A десятисекундный preflight был 9.8/39.8% (median/p95), но
    runtime поднялся до 73.7/100/100%; next-run gate должен проверять не только
@@ -11291,7 +11291,23 @@ performance acceptance-проверкой. Процесс завершился �
    `post_stop_missing_max=33`, focus mesh-missing=22 и face-debt=11. Эти метрики
    описывают разные области/виды долга и не дают визуальной acceptance-оценки.
 
-Артефакты M609–M614 сохранены локально в `bin/suite_reports/engine_refactor`,
+M616A завершился без timeout, но runtime host CPU был 68.6/98.6/100%
+(median/p95/max), поэтому suite вернул `pass=false` и performance acceptance
+не пройдена. Целевой chunk оставался drawable; `visual_holes_rate=0`,
+`fly_visible_black_max=6`, `post_stop_visible_black_max=0`, тогда как общий
+`post_stop_readiness_debt_max=36`. Это отдельные сигналы, не доказательство
+операторской дыры. Операторского подтверждения framebuffer нет. Единственная
+строка `gpu=1` была first-mesh audit event с `enter_gpu=1`, а не GPU-only
+stale-face witness.
+
+Следующий короткий M335 должен включить `CUBA_VISUAL_BLACK_TRACE=1` и
+сопоставить точные revision-bump reasons целевого среза с dirty dequeue,
+async capture, stale-input reject и GPU publish. При стабильной revision и
+отсутствии scheduling owner исправлять scheduler handoff/fairness; при
+продолжающихся bump искать источник повторной invalidation. Сохранять ресурсный
+gate host CPU median <=50%, p95 <=75%; длинный мониторинговый маршрут не нужен.
+
+Артефакты M609–M616A сохранены локально в `bin/suite_reports/engine_refactor`,
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md) и
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).

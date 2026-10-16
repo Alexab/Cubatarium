@@ -10219,3 +10219,64 @@ counter; M613 `fully_dark_stalled` stayed zero.
 - `suite_reports/engine_refactor/m615a_stale_debt_approach_ring_20261016.json`
 - `logs/perf_20261016-124231_41960.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-124224.41960`
+
+M616A повторяет M335 после admission fix для внешнего geometry debt. Это был
+короткий видимый GUI no-teleport маршрут; точная команда:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M616A_OuterGeometryDebtRepair_20261016 `
+  -Report bin/suite_reports/engine_refactor/m616a_outer_geometry_debt_repair_20261016.json
+```
+
+У целевого chunk `(-19,2,5)` admission прошёл дважды (`owner_after=1`), а
+`dirty_admit_denied` больше не наблюдался. Geometry revision выросла 12→13 при
+published revision 2; на двух retry snapshots текущей очередью был RemeshQ,
+но active mesh/capture/GPU owner не наблюдался. Chunk оставался drawable и
+`visual_holes_rate` был 0. Runtime host CPU median/p95/max составил
+68.6/98.6/100%, поэтому suite не является performance acceptance; короткий
+маршрут не подтвердил publication финальной revision и не содержит прямой
+операторской оценки изображения.
+
+Relight handoff был помечен `stale_mesh_input=1` при `field_light_rev=1` и
+`meshed_light_rev=0`, после чего stale-light debt опубликовал light revision 1.
+Это audit-поле описывает отношение ревизий света и mesh и не означает, что был
+отклонён async mesh capture.
+
+Следующий точечный run — только после свежего host CPU gate median <=50%,
+p95 <=75%, с теми же параметрами и дополнительным revision trace:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M617A_GeometryRevisionCause_20261016 `
+  -Report bin/suite_reports/engine_refactor/m617a_geometry_revision_cause_20261016.json
+```
+
+Для `(-19,2,5)` объединить `mesh_revision_bump_reason` из perf trace с Dirty
+dequeue/scheduling, capture input revision, stale-input rejection и GPU publish.
+Если bump продолжаются — искать producer инвалидизации; если revision устойчива,
+но задача не планируется — исследовать scheduler handoff. Не запускать длинный
+операторский мониторинговый маршрут.
+
+Артефакты M616A (локальные):
+
+- `suite_reports/engine_refactor/m616a_outer_geometry_debt_repair_20261016.json`
+- `logs/perf_20261016-125253_29904.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-125249.29904`

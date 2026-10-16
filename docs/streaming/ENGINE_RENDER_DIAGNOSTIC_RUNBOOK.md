@@ -754,12 +754,48 @@ the current chunk-wide proxy may mistake unrelated sky-lit blocks for proof that
 a dark cave face is stale. No long operator-monitoring flight is needed.
 
 The post-M616-build preflight on 2026-10-16 sampled host CPU at median 57.5% and
-p95 93.6% with the application stopped, so no M616 flight was launched. A short
-process sample showed RustDesk and OneDrive activity, but that does not attribute
-the full host load. Recheck the resource gate later instead of weakening it.
+p95 93.6% with the application stopped. A later fresh preflight admitted M616A,
+but runtime host CPU rose to median/p95/max 68.6/98.6/100%; this run cannot be
+used for performance acceptance. A short process sample showed RustDesk and
+OneDrive activity, but that does not attribute the full host load. Keep the
+resource gate and judge runtime load separately.
+
+M616A verified the admission repair on the same short M335 route. At focus
+`(-14,3)`, drawable chunk `(-19,2,5)` produced two
+`geometry_debt_approach_reserved` retries with `owner_after=1`; no
+`dirty_admit_denied` remained for that target. It appeared in RemeshQ at `3/4`
+then `1/2`. At those snapshots, desired geometry advanced 12→13 while published
+geometry remained 2, without an active mesh/capture/GPU/RAA owner. The target
+therefore got admitted but publication was not observed before stop. A relight
+handoff was tagged `stale_mesh_input=1` while its field light revision was 1 and
+the mesh light revision was 0; the stale-light debt later published revision 1.
+That audit field is a light/mesh staleness relationship, not an async mesh
+capture rejection. Exact geometry revision bump reasons were not enabled, so the
+source of the later geometry churn is open.
+
+The target remained drawable; the route had `visual_holes_rate=0`,
+`fly_visible_black_max=6`, and `post_stop_visible_black_max=0`. It also had
+`post_stop_readiness_debt_max=36`; these counters have different scopes and are
+not direct framebuffer evidence. No operator confirmation was captured. The
+only `gpu=1` text match was a first-mesh audit row with `enter_gpu=1`, not a
+GPU-only stale-face witness. Check event type and source fields instead of
+grepping `gpu=1` alone.
+
+Next diagnostic: repeat only the same short M335 route after host CPU median is
+<=50% and p95 <=75%, with `CUBA_VISUAL_BLACK_TRACE=1`. Join each target geometry
+revision bump to dirty-queue dequeue, async capture, stale-input rejection, and
+GPU publication. If revision changes continue, trace the invalidation producer;
+if it stabilizes without scheduling, trace scheduler ownership. Do not extend
+this into a long operator-monitoring flight.
 
 M615A artifacts:
 
 - `suite_reports/engine_refactor/m615a_stale_debt_approach_ring_20261016.json`
 - `logs/perf_20261016-124231_41960.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-124224.41960`
+
+M616A artifacts:
+
+- `suite_reports/engine_refactor/m616a_outer_geometry_debt_repair_20261016.json`
+- `logs/perf_20261016-125253_29904.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-125249.29904`
