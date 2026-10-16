@@ -11349,6 +11349,12 @@ Proxy показывали `visual_holes_rate=0`, `fly_visible_black_max=4`,
 непокрытого temporal mid-flight сегмента. Не трактовать это как performance или
 framebuffer acceptance; операторского verdict нет.
 
+После Release build и M618A два свежих CPU preflight также не прошли gate:
+63.8/75.8%, затем 59.0/86.9% median/p95. M619A не запускался. Локализованный
+счётчик `Get-Counter` на этой Windows отсутствует; сохранён
+`tools/sample_host_cpu_gate.ps1`, который читает системные времена через
+`GetSystemTimes` и печатает median/p95/max вместе с gate verdict.
+
 Артефакты M609–M618A сохранены локально в `bin/suite_reports/engine_refactor`,
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md) и

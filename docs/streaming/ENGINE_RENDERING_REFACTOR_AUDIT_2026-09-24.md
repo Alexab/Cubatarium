@@ -5691,3 +5691,9 @@ and readiness debt max=49 are separate proxies; eye-proxy stale delta was 2.5
 with temporal mid-flight coverage still untested. No operator framebuffer
 verdict was recorded. Next verify promotion and publication in one short M619A
 only after a fresh resource preflight; no long monitoring flight is warranted.
+
+The immediate preflight after M618A was 63.8/75.8% host CPU median/p95; a
+second run through `tools/sample_host_cpu_gate.ps1` measured 59.0/86.9%. Both
+miss the default flight gate, so M619A was deferred. The reusable sampler uses
+Windows `GetSystemTimes` because the localized processor performance-counter
+set is unavailable on this host.

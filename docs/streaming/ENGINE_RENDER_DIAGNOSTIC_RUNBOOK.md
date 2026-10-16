@@ -824,6 +824,18 @@ queue kind=3 to priority kind=2 and the final geometry revision publishes. Join
 that to dirty dequeue, capture, stale-input handling, and GPU publish. Do not
 extend this into a long operator-monitoring flight.
 
+M619A is deferred. Two post-M618A host samples were 63.8/75.8% and
+59.0/86.9% median/p95. Use the saved Windows-API sampler for future resource
+gates; it avoids the missing localized `Get-Counter` set on this machine:
+
+```powershell
+.\tools\sample_host_cpu_gate.ps1 -SampleCount 10 -IntervalMs 1000
+```
+
+Require `passes_default_flight_gate=True` before launching M619A. Runtime resource
+telemetry remains the final performance verdict because preflight has not
+predicted runtime load reliably.
+
 M615A artifacts:
 
 - `suite_reports/engine_refactor/m615a_stale_debt_approach_ring_20261016.json`

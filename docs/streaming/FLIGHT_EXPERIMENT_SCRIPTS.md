@@ -10335,6 +10335,14 @@ mid-flight сегменту. Прямой operator framebuffer verdict отсу�
 median <=50%, p95 <=75%:
 
 ```powershell
+.\tools\sample_host_cpu_gate.ps1 -SampleCount 10 -IntervalMs 1000
+```
+
+После M618A preflight был 63.8/75.8%; повтор с сохранённым sampler дал
+59.0/86.9% median/p95. Оба gate verdict отрицательные, поэтому M619A был
+отложен. Параметры M619A ниже оставлены для следующего подходящего окна.
+
+```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
 $env:CUBA_VISUAL_BLACK_TRACE='1'
 .\tools\run_m335_water_visibility_ab.ps1 `
