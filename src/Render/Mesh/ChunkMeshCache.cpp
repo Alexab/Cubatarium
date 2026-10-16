@@ -3425,6 +3425,49 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
   const UChunkManager &chunks = world.GetChunkManager();
   const bool retain_open_sky_lifecycle =
       cause && std::strcmp(cause, "enter_open_sky_boundary") == 0;
+  const auto published_halo_differs_from =
+      [this, &chunks](glm::ivec3 dependent_coord,
+                      glm::ivec3 changed_coord)
+  {
+    const auto mesh = GreedyCache.find(dependent_coord);
+    if (mesh == GreedyCache.end() ||
+        !mesh->second.MeshedLightHaloSignaturesValid)
+    {
+      return false;
+    }
+    const glm::ivec3 neighbor_offset = changed_coord - dependent_coord;
+    if ((neighbor_offset.x == 0 && neighbor_offset.y == 0 &&
+         neighbor_offset.z == 0) ||
+        std::abs(neighbor_offset.x) > 1 ||
+        std::abs(neighbor_offset.y) > 1 ||
+        std::abs(neighbor_offset.z) > 1)
+    {
+      return false;
+    }
+
+    size_t signature_index = 0;
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+      for (int dz = -1; dz <= 1; ++dz)
+      {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+          if (dx == 0 && dy == 0 && dz == 0)
+          {
+            continue;
+          }
+          if (neighbor_offset == glm::ivec3(dx, dy, dz))
+          {
+            const UChunk *neighbor = chunks.GetChunk(changed_coord);
+            return mesh->second.MeshedLightHaloSignatures[signature_index] !=
+                   ChunkMeshLightHaloSignature(neighbor, neighbor_offset);
+          }
+          ++signature_index;
+        }
+      }
+    }
+    return false;
+  };
   for (const glm::ivec3 changed_coord : changed_input_chunks)
   {
     if (retain_open_sky_lifecycle)
@@ -3460,6 +3503,15 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
           if (inserted)
           {
             ++MeshDependencyQueuedSinceDrain_;
+          }
+          // Dependency queue ownership is retired once a Dirty/remesh owner
+          // exists. Keep a separate durable repair ticket when the currently
+          // published mesh is proven to have sampled an older light halo, so
+          // pruning that ordinary owner cannot strand stale drawable output.
+          if (published_halo_differs_from(dependent_coord, changed_coord))
+          {
+            (void)QueueStaleLightRemesh(dependent_coord,
+                                        "published_halo_changed");
           }
           if (UJobStageTrace::VisualBlackTraceEnabled() &&
               UJobStageTrace::IsVisualChunkWatched(
@@ -3552,7 +3604,8 @@ void UChunkMeshCache::QueueMeshDependencyInvalidation(
   }
 }
 
-void UChunkMeshCache::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
+void UChunkMeshCache::QueueStaleLightRemesh(glm::ivec3 chunk_coord,
+                                            const char *cause)
 {
   if (!HasDrawableGreedyMesh(chunk_coord) ||
       !PendingStaleLightRemeshes_.insert(chunk_coord).second)
@@ -3566,7 +3619,8 @@ void UChunkMeshCache::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
         "stale_light_debt event=queued coord=(" +
             std::to_string(chunk_coord.x) + "," +
             std::to_string(chunk_coord.y) + "," +
-            std::to_string(chunk_coord.z) + ") backlog=" +
+            std::to_string(chunk_coord.z) + ") cause=" +
+            (cause ? cause : "unspecified") + " backlog=" +
             std::to_string(PendingStaleLightRemeshes_.size()));
   }
 }
@@ -3740,7 +3794,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     {
       continue;
     }
-    QueueStaleLightRemesh(coord);
+    QueueStaleLightRemesh(coord, "active_ring_light_probe");
   }
   std::vector<glm::ivec3> candidates;
   candidates.reserve(PendingStaleLightRemeshes_.size());
@@ -3801,24 +3855,58 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     const bool has_dark_face = ChunkHasFullyDarkFace(coord);
     const bool stale_dark_face =
         has_dark_face && ChunkHasStaleDarkFaces(coord, world);
-    if (meshed_light_rev >= field_light_rev &&
-        published_light_rev >= field_light_rev &&
-        !HasProvisionalLightPreview(coord) && !stale_dark_face)
+    const bool provisional_preview = HasProvisionalLightPreview(coord);
+    const bool own_light_current =
+        meshed_light_rev >= field_light_rev &&
+        published_light_rev >= field_light_rev && !provisional_preview &&
+        !stale_dark_face;
+    PublishedLightHaloState halo_state = PublishedLightHaloState::Unavailable;
+    bool halo_state_checked = false;
+    if (own_light_current)
+    {
+      halo_state = GetPublishedLightHaloState(coord, world);
+      halo_state_checked = true;
+      if (halo_state == PublishedLightHaloState::MatchesCurrent)
+      {
+        PendingStaleLightRemeshes_.erase(coord);
+        if (audit_relight)
+        {
+          CubatariumLogInfo(
+              "RelightAudit",
+              "stale_light_debt event=published coord=(" +
+                  std::to_string(coord.x) + "," + std::to_string(coord.y) +
+                  "," + std::to_string(coord.z) + ") field_light_rev=" +
+                  std::to_string(field_light_rev) + " meshed_light_rev=" +
+                  std::to_string(meshed_light_rev) +
+                  " published_light_rev=" +
+                  std::to_string(published_light_rev) + " halo_state=" +
+                  std::to_string(static_cast<int>(halo_state)) +
+                  " backlog=" +
+                  std::to_string(PendingStaleLightRemeshes_.size()));
+        }
+        continue;
+      }
+    }
+
+    const ChunkRenderDemandRecord *demand =
+        UChunkRenderDemandStore::Get().Find(coord);
+    if (!demand)
+    {
+      continue;
+    }
+    if (demand->world_epoch != CaptureStore.WorldEpoch() ||
+        demand->incarnation != chunk->GetIncarnation())
     {
       PendingStaleLightRemeshes_.erase(coord);
-      if (audit_relight)
-      {
-        CubatariumLogInfo(
-            "RelightAudit",
-            "stale_light_debt event=published coord=(" +
-                std::to_string(coord.x) + "," + std::to_string(coord.y) +
-                "," + std::to_string(coord.z) + ") field_light_rev=" +
-                std::to_string(field_light_rev) + " meshed_light_rev=" +
-                std::to_string(meshed_light_rev) +
-                " published_light_rev=" +
-                std::to_string(published_light_rev) + " backlog=" +
-                std::to_string(PendingStaleLightRemeshes_.size()));
-      }
+      continue;
+    }
+    // A neighboring mutation can queue this repair while the dependent chunk
+    // is still receiving its own settled light. Retain the debt, but do not
+    // build a mesh against an intermediate field revision.
+    if (!demand->has_settled_light ||
+        demand->settled_light_rev != field_light_rev ||
+        demand->desired_light_rev > field_light_rev)
+    {
       continue;
     }
 
@@ -3832,6 +3920,10 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     if (dirty || raa_pending || mesh_inflight || gpu_owned)
     {
       continue;
+    }
+    if (!halo_state_checked)
+    {
+      halo_state = GetPublishedLightHaloState(coord, world);
     }
     const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
                                std::abs(coord.z - MeshFocusGroundChunk.z));
@@ -3884,7 +3976,9 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
               std::to_string(RemeshAfterApply.count(coord) > 0) +
               " mesh_inflight=" +
               std::to_string(AsyncBuilder && AsyncBuilder->IsInFlight(coord)) +
-              " gpu_owned=" + std::to_string(gpu_owned) + " backlog=" +
+              " gpu_owned=" + std::to_string(gpu_owned) +
+              " halo_state=" +
+              std::to_string(static_cast<int>(halo_state)) + " backlog=" +
               std::to_string(PendingStaleLightRemeshes_.size()));
     }
   }

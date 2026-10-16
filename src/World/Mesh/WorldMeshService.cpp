@@ -424,7 +424,7 @@ void UWorldMeshService::QueueMeshDependencyInvalidation(
 
 void UWorldMeshService::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
 {
-  Cache.QueueStaleLightRemesh(chunk_coord);
+  Cache.QueueStaleLightRemesh(chunk_coord, "settled_light_install");
 }
 
 void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,
