@@ -11484,10 +11484,16 @@ loaded chunks, and two each changed `(3,3,2)` from world column `(48,32)`.
 The later mutation queued mesh dependencies `(3,3,3)` and `(3,4,3)` and both
 were drained as `applied`. These events occurred at `frame_epoch=0`, before the
 first streaming frame epoch; the perf trace did not show matching mesh
-publication for those exact coordinates. The callsite and invalidation path
-are now runtime-confirmed, while end-to-end publication and visual impact
-remain unverified. `enter_visual_repair` and `relight_terrain_column` were not
-exercised.
+publication for those exact coordinates. However, the INFO audit later
+records stale-light debt closed at matching field/meshed/published light
+revision 19 for `(3,3,2)` and revision 2 for `(3,3,3)`. This confirms those
+chunks reached current light state after startup repair activity, although
+concurrent relight invalidations prevent attributing closure solely to the
+open-sky dependency. For `(3,4,3)`, slice/handoff snapshots exist but no
+explicit matching publication or settled-debt closure was logged. Thus the
+snapshot caller and dependency scheduling are runtime-confirmed, with partial
+publication evidence; visual impact remains unverified. `enter_visual_repair`
+and `relight_terrain_column` were not exercised.
 
 The route completed 35 periods (`process_rc=0`); suite `pass=false` on
 non-CPU checks. Host CPU was 100/100/100% median/p95/max while application CPU
@@ -11501,8 +11507,8 @@ M622F proxies were `visual_holes_rate=0.0303`, fly visible-black max 4,
 post-stop visible-black max 0, and post-stop readiness debt max 57. No
 operator framebuffer verdict was recorded. These counters do not establish
 that the screen contained holes. The immediate next step is a narrowly scoped
-startup correlation from epoch-zero dependency drain through snapshot capture
-and publication; alternatively add a stable startup correlation identifier.
+coordinate-scoped lifecycle retention across the pre-first-frame epoch-zero
+window, focusing on a matching publication or durable owner for `(3,4,3)`.
 Only run another compact route if needed to exercise a different caller or
 validate that exact lifecycle. Report:
 `bin/suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`.

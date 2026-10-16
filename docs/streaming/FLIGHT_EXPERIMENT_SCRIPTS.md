@@ -10610,9 +10610,16 @@ coverage also observed around the same startup work. The queue and drain
 messages are timestamped in the INFO log but have `frame_epoch=0`: the enter
 snapshot runs before `WorldViewBinding` publishes the first streaming epoch.
 This confirms that the M623 snapshot callsite can mutate light and transfer
-neighbor debt into mesh work, but does not prove the resulting meshes were
-published or that the operator saw a change. The `enter_visual_repair` and
-`relight_terrain_column` callsites remain unexercised by this run.
+neighbor debt into mesh work. The INFO audit later records stale-light debt
+closed for `(3,3,2)` at field/meshed/published light revision 19 and for
+`(3,3,3)` at revision 2. This is evidence that those meshes reached current
+light state after the startup repair activity, though concurrent relight
+invalidations mean it does not isolate the open-sky dependency as the sole
+cause. For `(3,4,3)`, the INFO log has slice/handoff state snapshots but no
+explicit matching publication/settled-debt closure. The perf lifecycle ring
+did not retain these startup coordinates, and no operator framebuffer verdict
+was recorded. The `enter_visual_repair` and `relight_terrain_column` callsites
+remain unexercised by this run.
 
 M622F artifacts:
 
@@ -10620,9 +10627,9 @@ M622F artifacts:
 - `logs/perf_20261016-155650_39588.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-155646.39588`
 
-The next audit should join the startup dependency drains to actual publication
-for `(3,3,2)`, `(3,3,3)`, and `(3,4,3)`, and account for the pre-first-frame
-epoch-zero window. Do not gate a short diagnostic run on host CPU.
+The next audit should retain coordinate-scoped lifecycle evidence for the
+pre-first-frame epoch-zero window, especially to establish a publication or
+durable owner for `(3,4,3)`. Do not gate a short diagnostic run on host CPU.
 
 M622C artifacts:
 

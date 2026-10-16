@@ -5830,17 +5830,23 @@ no-ops; two changed one loaded chunk `(3,3,2)` from column `(48,32)`, with 15
 loaded slices. The second mutation generated open-sky dependency invalidations
 for `(3,3,3)` and `(3,4,3)`, and both drains reported `applied`. They occurred
 before the first streaming epoch (`frame_epoch=0`). The current perf lifecycle
-trace does not contain matching publication rows for these coordinates, so
-this confirms callsite execution and dependency scheduling, not completed mesh
-publication or a visual fix. The other callers (`enter_visual_repair` and
-`relight_terrain_column`) remain unexercised.
+trace does not retain matching publication rows for these startup coordinates.
+The INFO audit later records stale-light debt closed at matching
+field/meshed/published light revision 19 for `(3,3,2)` and revision 2 for
+`(3,3,3)`. Those are successful current-light outcomes after the startup
+repair activity, but concurrent relight invalidations prevent attributing the
+closure only to open-sky dependency work. For `(3,4,3)`, slice/handoff state
+was logged without an explicit publication or settled-debt closure. Runtime
+evidence therefore confirms dependency transfer and partial downstream
+completion, not a complete end-to-end result or visual fix. The other callers
+(`enter_visual_repair` and `relight_terrain_column`) remain unexercised.
 
 M622F proxy metrics: `visual_holes_rate=0.0303`, fly visible-black max 4,
 post-stop visible-black max 0, readiness debt max 57. The route has no operator
 framebuffer verdict, and these proxies are not proof of a user-visible hole.
-Prioritize a startup-safe correlation key or narrowly scoped capture/publication
-trace for the two epoch-zero dependents. Run another short route only if that
-instrumentation cannot answer the lifecycle or a different caller needs
-runtime coverage. Detailed report:
+Prioritize preserving coordinate-scoped lifecycle evidence for epoch-zero
+dependencies, with `(3,4,3)` as the unresolved witness. Run another short
+route only if instrumentation cannot answer that lifecycle or a different
+caller needs runtime coverage. Detailed report:
 `bin/suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`;
 the experiment log index is maintained in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
