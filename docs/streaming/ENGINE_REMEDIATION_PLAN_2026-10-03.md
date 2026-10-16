@@ -12238,3 +12238,88 @@ threshold or long operator-monitoring flight. Host CPU stays contextual.
 Only Release builds are allowed; no tests were run. Artifact paths and the exact
 repeatable command are in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` and
 `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622AL/AM: FIFO churn is not demonstrated work loss
+
+The split counters on M622AL attributed the combined FIFO delta 48 to 48
+overflow evictions and zero pressure trims; deferred-far peak was 3. Both
+overflow paths preserve the selected ticket in deferred storage before removing
+it from the active FIFO. This rules out interpreting the old counter as 48 lost
+lighting jobs. No queue-policy change is justified by this measurement.
+
+M622AM repeated the short M335 route with precise steady-clock pixel timestamps.
+Nine same-pixel/same-camera preview handoffs were bounded at 0.66–0.87 s. The
+previous one-second timestamp precision could not resolve those intervals.
+The run adds moving-frontier evidence, but the analyzer still failed other
+non-CPU criteria and there was no operator framebuffer verdict.
+
+### M622AN/AO: cold-create versus exact replay
+
+M622AN created runtime `World_194` from the requested cold alias in 40.917 s
+(43,264/43,264 generated columns). M622AO loaded that exact world in 5.417 s
+(121/121 spatial columns, zero generation). Both visible static probes held
+focus `(1,2)` for 25 seconds. Cold create had 83 low-luminance probes of 5,680,
+all drawable and settled; replay had zero low-luminance probes of 5,840. Neither
+trace had missing surface joins or light-revision mismatches. Thus the pair
+does not reproduce black/empty geometry in the sampled views.
+
+Replay did show four provisional-light chunks at the fixed entry view. Their
+same-view handoff bounds were 0.63–2.17 s. Three slow examples settled light
+1.34–2.05 s after first preview and left preview about 0.20 s later; the fast
+mesh path built/published in milliseconds. The evidence localizes this bounded
+entry-view preview delay primarily to light settlement. It does not demonstrate
+that the frame was black, that the water surface failed, or that an operator
+would see a defect.
+
+Static gate review found a false-clear. The worklist stores XZ columns and
+advances monotonically. `RefreshEnterVisualWorklistStates` considered a column
+terminal when *any* vertical slice had a lit drawable, even when
+`IsPendingLightBeforeMesh` was true. That let one settled slice hide pending
+preview-light work in another slice, after which the monotonic `Done` state
+could not recover. M622AO contains preview samples with pending-light
+ownership, while its entry gate reports zero aggregate snapshot debt. The gate
+trace does not show the per-column pending bit on the frame a column becomes
+terminal. The source now requires `!pending` before any visual terminal
+condition can mark a column Done. This is a source-invariant correction, not
+yet a runtime-proven explanation for M622AO. Existing abort walls and budgets
+remain the recovery path if that debt cannot settle.
+
+This does not cover the M622AO pixel at `(3,2,1)`: its demand record remained
+unsettled but the pixel trace showed no pending-light, FIFO, async-relight, or
+ColumnFlow owner. Treat that as a separate owner/provenance gap. The fix also
+does not expand the gate to the full rendered radius. No black/empty geometry
+was sampled, and there was no operator framebuffer verdict.
+
+### M622AP–AU: pending light was outside the visible repair scan
+
+Sequential static replays on exact saved `World_194` kept the same focus
+`(1,2)`, loaded 121/121 columns without generation, and exited zero. None
+sampled dark pixels. The aggregate analyzer's `pass=false` is expected for this
+no-fly route's movement/readiness gates and empty scenario manifest; no
+operator framebuffer verdict was recorded.
+
+M622AR linked a visible preview at `(0,-1)` to a deferred-far ticket that was
+serviced only after about 1.7 seconds. A local renderer cap and a column-level
+key mismatch were then found: `AdmitUnfinishedVisualDemand` only traversed
+`UnfinishedVisualCache`, although slice-level pending-light work could remain
+in a column omitted by that census. M622AS merged near pending-light columns
+into the bounded key set. The `(0,-1)` pixel first observed a priority ticket,
+but a second focus-pending path re-created far deferral immediately after
+dequeue. M622AT guarded that path's ordinary fallback for exact visible
+candidates; M622AU extended bounded visible admission to every pending-light
+column in the LitDrawable focus radius. In M622AU, 5,600 pixel samples contained
+zero dark pixels, 20 same-view preview handoffs measured 0.532–0.559 seconds,
+and audited `(0,-1)` was promoted and captured before deferred-far age service.
+The saved world changes lighting state on every run, so the sequence is not a
+controlled A/B and the trend is supporting evidence, not a benchmark claim.
+
+The implementation keeps the ordinary FIFO and visible-repair reserve bounded
+and adds no CPU-load threshold. The separate ownerless `(3,2,1)` observation
+from M622AO did not recur as a slow visible handoff in M622AU; do not treat that
+as proof that all owner-provenance gaps are closed.
+
+Next: keep one short repeatable moving-frontier check on `World_164` for the
+flight route, and use a brief visible operator check only when the user is
+present. If further queue changes are needed, add per-column admission outcome
+telemetry first. Continue to exclude CPU utilization from admission decisions;
+do not resume long operator-monitoring flights.

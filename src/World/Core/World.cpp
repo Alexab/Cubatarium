@@ -1274,8 +1274,9 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
               has_visible_first_mesh_candidate
                   ? std::min(max_y, visible_first_mesh_band_min + CHUNK_SIZE - 1)
                   : enqueue_max;
-          if (has_visible_first_mesh_candidate &&
-              r <= kVisualStageLitDrawableHoriz)
+          const bool focus_pending_visible =
+              r <= kVisualStageLitDrawableHoriz;
+          if (focus_pending_visible)
           {
             admitted_visible = Persistence->EnqueueVisibleRelight(
                 world_block_key.x, world_block_key.y, enqueue_min, enqueue_max,
@@ -1283,7 +1284,12 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                 protected_visible_columns, &visible_admission_outcome,
                 &visible_victim_horiz);
           }
-          if (!admitted_visible)
+          // A failed exact-visible admission must not fall back through the
+          // ordinary FIFO gate: that path can recreate the same far-deferred
+          // ticket immediately after the visible ticket was dequeued. The
+          // pending-light record remains the durable debt and this pass will
+          // retry bounded visible admission as queue capacity becomes free.
+          if (!admitted_visible && !focus_pending_visible)
           {
             Persistence->EnqueueTerrainColumnRelight(
                 world_block_key.x, world_block_key.y, /*priority=*/true,
@@ -4552,6 +4558,27 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
   std::vector<uint64_t> keys(raw_keys.begin(), raw_keys.end());
+  std::unordered_set<uint64_t> key_set(keys.begin(), keys.end());
+  // The unfinished-visual census is column-level. A column can look ready
+  // because one vertical slice has a drawable mesh while another visible
+  // slice still carries PendingLightBeforeMesh. Keep that exact light debt in
+  // the bounded near repair pass instead of letting the census hide it.
+  for (const auto &pending_entry : PendingLightBeforeMesh)
+  {
+    const glm::ivec2 column = pending_entry.first;
+    const int horiz =
+        (std::max)(std::abs(column.x - focus_g.x),
+                   std::abs(column.y - focus_g.z));
+    if (horiz > kVisualStageFirstMeshRelightApproachHoriz)
+    {
+      continue;
+    }
+    const uint64_t key = PackUnfinishedColKey(column.x, column.y);
+    if (key_set.insert(key).second)
+    {
+      keys.push_back(key);
+    }
+  }
   std::sort(keys.begin(), keys.end(), [&](uint64_t a, uint64_t b) {
     const int ax = static_cast<int>(static_cast<uint32_t>(a >> 32));
     const int az = static_cast<int>(static_cast<uint32_t>(a));
@@ -5390,6 +5417,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                first_mesh_needs_lighting || visible_light_repair_candidate) &&
               within_first_mesh_relight_horizon &&
               (reserved_outer_candidate ||
+               provisional_preview_needs_lighting ||
                first_mesh_visible_relight_columns.count(slice_column) != 0 ||
                first_mesh_visible_relight_columns.size() <
                    kFirstMeshVisibleRelightLimit);
@@ -11511,6 +11539,18 @@ void UWorld::EnqueueEnterLitSnapshotRelight()
   const int max_y = ProceduralTemplate.MaxHeight;
   const int band_min = 0;
   const int band_max = max_y;
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  std::vector<glm::ivec2> protected_visible_columns;
+  protected_visible_columns.reserve(EnterLitDebtSnapshot.size());
+  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  {
+    const int horiz = std::max(std::abs(col.x - center.x),
+                               std::abs(col.y - center.z));
+    if (horiz <= fov_r)
+    {
+      protected_visible_columns.push_back(col);
+    }
+  }
 
   auto try_enqueue = [&](glm::ivec2 col, bool priority)
   {
@@ -11519,8 +11559,29 @@ void UWorld::EnqueueEnterLitSnapshotRelight()
       return;
     }
     const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
-    if (Persistence->IsTerrainColumnRelightQueued(world_key) ||
-        IsAsyncRelightColumnInFlight(col))
+    if (IsAsyncRelightColumnInFlight(col))
+    {
+      return;
+    }
+    const bool already_queued =
+        Persistence->IsTerrainColumnRelightQueued(world_key);
+    if (priority)
+    {
+      // Entry FOV light debt is exact visible work. Use bounded visible
+      // admission so FIFO backpressure does not demote it to deferred-far
+      // storage, and so an existing far-FIFO ticket is promoted in place.
+      if (Persistence->EnqueueVisibleRelight(
+              world_key.x, world_key.y, band_min, band_max, focus_ground,
+              fov_r, protected_visible_columns))
+      {
+        return;
+      }
+      if (already_queued)
+      {
+        return;
+      }
+    }
+    else if (already_queued)
     {
       return;
     }
@@ -11864,8 +11925,13 @@ void UWorld::RefreshEnterVisualWorklistStates()
     const bool true_dark =
         fully_dark && !pending && lit_ready &&
         EnterVisualGateCtrl.WasOpenSkyApplied(col) && !stale;
+    // A lit drawable in one vertical slice is not enough to discharge a
+    // column-wide pending-light obligation. The worklist is monotonic, so
+    // marking Done while pending is true would permanently hide that debt
+    // from the entry gate even when another visible slice still uses preview
+    // light.
     const bool terminal =
-        IsColumnVisualReady(col) || has_lit || true_dark;
+        !pending && (IsColumnVisualReady(col) || has_lit || true_dark);
     bool gpu_busy = false;
     if (!terminal && MeshService)
     {
@@ -12498,10 +12564,44 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
     return ColumnFullyDarkSolidDrawable(col);
   };
 
+  std::vector<glm::ivec2> protected_visible_columns;
+  protected_visible_columns.reserve(
+      static_cast<size_t>((fov_r * 2 + 1) * (fov_r * 2 + 1)));
+  for (int dx = -fov_r; dx <= fov_r; ++dx)
+  {
+    for (int dz = -fov_r; dz <= fov_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (column_needs_light(col))
+      {
+        protected_visible_columns.push_back(col);
+      }
+    }
+  }
+
   auto enqueue_col = [&](glm::ivec2 col, bool priority) {
     const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
-    if (Persistence->IsTerrainColumnRelightQueued(world_key) ||
-        IsAsyncRelightColumnInFlight(col))
+    if (IsAsyncRelightColumnInFlight(col))
+    {
+      return;
+    }
+    const bool already_queued =
+        Persistence->IsTerrainColumnRelightQueued(world_key);
+    if (priority)
+    {
+      if (Persistence->EnqueueVisibleRelight(
+              world_key.x, world_key.y, band_min, band_max,
+              glm::ivec3(center.x, 0, center.z), fov_r,
+              protected_visible_columns))
+      {
+        return;
+      }
+      if (already_queued)
+      {
+        return;
+      }
+    }
+    else if (already_queued)
     {
       return;
     }

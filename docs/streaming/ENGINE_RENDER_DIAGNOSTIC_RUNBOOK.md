@@ -1587,3 +1587,133 @@ M622AK artifacts: report `m622ak_world164_m335_stride15_20261016.json`, pixel
 analysis `m622ak_renderer_pixel_trace_20261016.json`, perf
 `perf_20261016-221611_38804.jsonl`, INFO
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-221607.38804`.
+
+### M622AL/AM: classify FIFO eviction and time the moving preview handoff
+
+M622AL added separate cumulative counters for pressure trim and overflow
+eviction. On the established short `World_164` M335 route, the old combined
+`cruise_fifo_dropped_delta` was 48, split into zero trim-to-deferred events and
+48 overflow evictions. Source review shows both overflow enqueue paths preserve
+the victim ticket in deferred storage before removing it from the active FIFO.
+The metric therefore describes active-queue churn, not proven loss of relight
+work. Deferred-far peak was 3. Do not change FIFO policy from this count alone.
+
+M622AM retained the same short route and stride-15 pixel sampling. The new
+absolute steady-clock pixel timestamp (17-digit JSON precision) restored
+sub-second lifecycle joins that the old default stream precision had collapsed
+into one-second buckets. Nine same-pixel/same-camera preview handoffs were
+measured at about 0.66–0.87 seconds. This is a useful moving-route bound, but
+there was no operator framebuffer verdict and the run's aggregate analyzer
+still failed non-CPU performance/readiness gates. Host CPU remains context only.
+
+Artifacts:
+
+- M622AL report/pixel trace: `m622al_world164_m335_fifo_split_20261016.json`, `m622al_renderer_pixel_trace_20261016.json`.
+- M622AL perf/INFO: `perf_20261016-223913_44256.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-223910.44256`.
+- M622AM report/pixel trace: `m622am_world164_m335_pixel_clock_20261016.json`, `m622am_renderer_pixel_trace_20261016.json`.
+- M622AM perf/INFO: `perf_20261016-224707_44944.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-224703.44944`.
+
+### M622AN/AO: cold-create and exact saved-world replay
+
+M622AN created the fresh alias `World_M622AN_ColdEntry_20261016`, which the
+runtime assigned `World_194`. It generated 43,264/43,264 columns in 40.917 s.
+M622AO replayed that exact runtime world with `-RequireExistingWorld`: 121/121
+spatial columns, zero generation, and 5.417 s load. Both static visible probes
+held focus `(1,2)` for 25 seconds, completed with process exit zero and no
+timeout, and used the stride-15 pixel trace. Their static analyzer `pass=false`
+is expected for movement-oriented gates; CPU did not gate either run.
+
+Cold-create sampled 5,680 pixels: 83 had luma below 32, all joined to drawable
+opaque depth and none were unsettled or preview. There were no missing surface
+joins or light-revision mismatches. Replay sampled 5,840 pixels and had no
+luma-below-32 samples, missing joins, or revision mismatches. Four replay
+chunks showed preview pixels; same-view handoff bounds were 0.63–2.17 s. For
+three slow examples, light calculation settled 1.34–2.05 s after first preview,
+then the pixel became non-preview about 0.20 s later. A fast example settled
+and installed its mesh in roughly 0.32 s. These traces point to lighting
+settlement, rather than mesh construction time, as the main delay on this
+entry view. They do not prove a user-visible defect: the sampled replay had no
+dark pixels, and no operator framebuffer verdict was recorded.
+
+Static source audit found a false-clear in the entry worklist. The worklist is
+column-wide and monotonic, but its `terminal` predicate accepted any lit
+drawable slice before considering `pending-light`. A column could therefore
+be marked `Done` while another visible slice still had pending preview light;
+the gate would not revisit it. The source now allows a column to become
+terminal only after pending light clears. M622AO's gate trace contains only an
+aggregate snapshot/debt state, so it cannot establish that a sampled preview's
+pending bit was still set at the exact frame when that column became terminal.
+Treat this as a source-invariant correction awaiting per-column temporal
+instrumentation, not as a runtime-verified cause. It does not wait for
+unrelated future work or add a CPU admission gate.
+
+One replay sample at `(3,2,1)` had unsettled pixel demand without a pending-light
+owner in the pixel trace, so the narrow correction does not explain every
+preview transition. Keep that ownerless case as a separate follow-up; do not
+claim it is fixed by the gate predicate. The current evidence still shows no
+black/empty geometry or operator framebuffer verdict.
+
+Artifacts:
+
+- M622AN report/pixel trace: `m622an_cold_world_stride15_20261016.json`, `m622an_cold_renderer_pixel_trace_20261016.json`.
+- M622AN perf/INFO: `perf_20261016-225152_38176.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-225148.38176`.
+- M622AO report/pixel trace: `m622ao_world194_replay_stride15_20261016.json`, `m622ao_replay_renderer_pixel_trace_20261016.json`.
+- M622AO perf/INFO: `perf_20261016-225413_43916.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-225409.43916`; entry-gate JSONL `enter_lit_20261016-225417.jsonl` and `enter_lit_20261016-225418.jsonl`.
+
+### M622AP–AU: keep pending light in the visible repair path
+
+These are short 25-second visible, static replays of the same saved `World_194`
+at focus `(1,2)`, with stride-15 pixel sampling. Each process exited zero,
+loaded 121/121 spatial columns, generated none, and did not time out. The
+wrapper's aggregate analyzer returns `pass=false` for these no-fly runs because
+movement and readiness gates are outside this route's scope; an empty scenario
+also fails manifest acceptance. Use process outcome and pixel joins for this
+diagnostic, not that aggregate `pass` field. Host CPU is contextual only.
+
+M622AP retained zero dark pixels in 5,680 samples. Its aggregate entry gate
+reported zero snapshot debt, but no per-column timeline connected that state
+to the pixel observations. M622AQ routed entry-FOV snapshot work through the
+bounded visible-relight admission. It still sampled deferred-far tickets at
+some first-preview pixels. These runs show that neither aggregate gate state
+nor admission of the entry snapshot proves ownership for every later renderer
+preview.
+
+M622AR's 6,720 samples had zero dark pixels and 22 same-view handoffs at
+0.57–2.36 s. Pixel `(0,-1)` remained deferred-far until the age-based service
+dequeued it about 1.7 s later; the visible-deferred lane had no owners. Source
+review found that the renderer's local eight-column cap could route additional
+preview slices back through ordinary FIFO admission. M622AS merged near
+`PendingLightBeforeMesh` columns into the bounded visual-demand scan. In that
+run, `(0,-1)` first appeared with a priority queue ticket and handoff measured
+1.13 s, but a later `AdmitFocusVisibleMissing` retry re-deferred the same
+column through ordinary admission.
+
+M622AT prevented that ordinary fallback for exact visible first-mesh
+candidates. The main preview handoffs were 0.60–1.12 s, but its audit still
+showed `(3,1)` going through the focus-pending fallback. Source review found
+that this path attempted visible admission only when a separate first-mesh
+candidate was present. M622AU routes all pending-light columns in the
+LitDrawable focus radius through bounded visible admission. It sampled 5,600
+pixels, zero dark
+pixels, and 20 same-view handoffs at 0.532–0.559 s. The visible preview columns
+were priority-owned at first observation; the audit shows `(0,-1)` promoted
+and captured without waiting for deferred-far age service. The world mutates
+its light state between replays, so these are sequential observations rather
+than a controlled A/B. No operator framebuffer verdict was recorded.
+
+The three source changes address separate points in one path: (1) pending-light
+columns omitted from the visual key set, (2) exact visible work blocked by the
+renderer-local cap, and (3) focus-pending admission falling back into ordinary
+far deferral. The `EnqueueVisibleRelight` FIFO and visible reserve remain
+bounded. Continue with the established short moving route after this static
+check; retain an operator verdict only for a brief visible run where the user
+is present. Do not add a CPU-load admission threshold.
+
+Artifacts:
+
+- M622AP report/pixel trace: `m622ap_world194_pending_gate_stride15_20261016.json`, `m622ap_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-230503_34216.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-230459.34216`.
+- M622AQ report/pixel trace: `m622aq_world194_visible_admit_stride15_20261016.json`, `m622aq_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-230937_44504.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-230933.44504`.
+- M622AR report/pixel trace: `m622ar_world194_visible_preview_admit_20261016.json`, `m622ar_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-231458_46728.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-231455.46728`.
+- M622AS report/pixel trace: `m622as_world194_pending_scan_stride15_20261016.json`, `m622as_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-231912_36416.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-231909.36416`.
+- M622AT report/pixel trace: `m622at_world194_visible_requeue_guard_stride15_20261016.json`, `m622at_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-232140_19492.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-232136.19492`.
+- M622AU report/pixel trace: `m622au_world194_visible_pending_priority_stride15_20261016.json`, `m622au_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-232414_42856.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-232410.42856`.

@@ -11543,3 +11543,141 @@ Artifacts:
 - M622AK report: `bin/suite_reports/engine_refactor/m622ak_world164_m335_stride15_20261016.json`.
 - M622AK pixel analysis: `bin/suite_reports/engine_refactor/m622ak_renderer_pixel_trace_20261016.json`.
 - M622AK perf/INFO: `bin/logs/perf_20261016-221611_38804.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-221607.38804`.
+
+### M622AL: attribute FIFO active-queue evictions
+
+M622AL repeats the established short M335 route with the diagnostic split
+counters enabled in the Release executable. No route, speed, or CPU gate
+changes were made. On this run, the combined FIFO delta 48 was entirely
+overflow eviction; pressure trim-to-deferred was zero and deferred-far peak was
+3. Both overflow paths preserve the evicted ticket in deferred-far storage, so
+the counter does not mean 48 relight jobs were lost. Artifacts:
+
+- Report/pixel trace: `bin/suite_reports/engine_refactor/m622al_world164_m335_fifo_split_20261016.json`, `bin/suite_reports/engine_refactor/m622al_renderer_pixel_trace_20261016.json`.
+- Perf/INFO: `bin/logs/perf_20261016-223913_44256.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-223910.44256`.
+
+### M622AM: moving route with sub-second pixel clock
+
+This is the M622AK command and profile repeated after fixing JSON precision for
+the absolute steady-clock pixel sample timestamp. The analyzer could now join
+same-pixel/same-camera lifecycle intervals at sub-second resolution; nine
+moving-route preview handoffs measured about 0.66–0.87 s. Keep the absolute
+clock field at full floating precision when changing trace serialization.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE='15'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+  -StampWarmPeriods -RequireExistingWorld -World World_164 `
+  -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622AM `
+  -Report bin/suite_reports/engine_refactor/m622am_world164_m335_pixel_clock_20261016.json
+```
+
+Artifacts:
+
+- Report/pixel trace: `bin/suite_reports/engine_refactor/m622am_world164_m335_pixel_clock_20261016.json`, `bin/suite_reports/engine_refactor/m622am_renderer_pixel_trace_20261016.json`.
+- Perf/INFO: `bin/logs/perf_20261016-224707_44944.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-224703.44944`.
+
+### M622AN/AO: short cold-create and exact replay probes
+
+Each leg is a visible 25-second static probe using the stride-15 renderer pixel
+trace and no flight. M622AN creates the unique alias and records the actual
+runtime world; M622AO must replay that exact runtime name with
+`--require-existing-world`. Always verify `startup_operation`, generated vs
+loaded spatial columns, seed/metadata identity, and expected/actual focus in
+both manifests before treating the pair as controlled.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE='15'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+python -X utf8 tools/flight_sim_run.py --world World_M622AN_ColdEntry_20261016 `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622an_cold_world_stride15_20261016.json `
+  --process-timeout 120
+```
+
+The application assigned runtime `World_194`. Replay that actual name, not the
+requested alias:
+
+```powershell
+python -X utf8 tools/flight_sim_run.py --world World_194 --require-existing-world `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622ao_world194_replay_stride15_20261016.json `
+  --process-timeout 120
+```
+
+The users-position file and environment were restored after both runs. Cold
+create generated 43,264 columns in 40.917 s; replay loaded 121/121 spatial
+columns with zero generation in 5.417 s. The replay saw four preview chunks
+transition within 0.63–2.17 s, with slow cases dominated by light settlement.
+Neither static analyzer `pass=false` is a failed movement test; movement gates
+do not apply to `--no-fly`. CPU is context only. Artifacts:
+
+- Cold report/pixel trace: `bin/suite_reports/engine_refactor/m622an_cold_world_stride15_20261016.json`, `bin/suite_reports/engine_refactor/m622an_cold_renderer_pixel_trace_20261016.json`.
+- Cold perf/INFO: `bin/logs/perf_20261016-225152_38176.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-225148.38176`.
+- Replay report/pixel trace: `bin/suite_reports/engine_refactor/m622ao_world194_replay_stride15_20261016.json`, `bin/suite_reports/engine_refactor/m622ao_replay_renderer_pixel_trace_20261016.json`.
+- Replay perf/INFO: `bin/logs/perf_20261016-225413_43916.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-225409.43916`; gate JSONL `bin/logs/enter_lit_20261016-225417.jsonl` and `bin/logs/enter_lit_20261016-225418.jsonl`.
+
+### M622AP–AU: fixed-position visible light handoff check
+
+Use the saved-world replay to check pending-light ownership without changing
+the camera route. This is a short diagnostic, not a movement acceptance run.
+The blank scenario is accepted by the wrapper but causes its aggregate
+movement-oriented gate report to say `pass=false`; verify `process_rc=0`,
+`run_outcome=success`, exact world/focus, no timeout, and no generated columns.
+The analyzer's `pass` field is not the acceptance signal for this no-fly case.
+Pixel trace analysis is a separate step after the wrapper writes perf JSONL.
+
+Back up the current users-position file so the visible replay cannot change
+the saved start position, then run the exact saved world:
+
+```powershell
+$users = 'bin/worlds/World_194/users.json'
+$backup = 'bin/tmp/m622au_users.json.bak'
+Copy-Item -LiteralPath $users -Destination $backup -Force
+$env:CUBA_VISUAL_BLACK_TRACE = '1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE = '15'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS = '0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES = '1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY = '0'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+try {
+  python -X utf8 tools/flight_sim_run.py --world World_194 `
+    --require-existing-world --scenario '' --no-fly --visible `
+    --seconds 25 --warmup-sec 8 `
+    --report bin/suite_reports/engine_refactor/m622au_world194_visible_pending_priority_stride15_20261016.json `
+    --process-timeout 120
+} finally {
+  Copy-Item -LiteralPath $backup -Destination $users -Force
+}
+```
+
+Generate the renderer pixel trace from the report's perf path:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622au_world194_visible_pending_priority_stride15_20261016.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622au_renderer_pixel_trace_20261016.json
+```
+
+The release run exited zero, loaded 121/121 spatial columns without generation,
+and remained at focus `(1,2)`. The pixel trace had 5,600 probes, zero pixels
+below the dark threshold, four provisional-preview chunks, and 20 same-view
+handoffs at 0.532–0.559 s. The INFO audit showed `(0,-1)` promoted into the
+priority queue and captured without waiting for deferred-far age service. The
+exact saved world changes light state between replays, so M622AP–AU are
+sequential diagnostics, not a controlled A/B or operator framebuffer verdict.
+CPU usage is informational; no load threshold gates the probe.
+
+Source findings and all run artifacts are listed in
+`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` under M622AP–AU.
