@@ -10422,3 +10422,13 @@ Artifacts:
 - `suite_reports/engine_refactor/m620a_stale_light_repair_cycle_20261016.json`
 - `logs/perf_20261016-134426_34608.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-134422.34608`
+
+M621A: Release commit `e959f91f` was rebuilt and the established visible M335 no-teleport route completed. Preflight passed (15.0/20.2% median/p95), runtime host CPU was 61.9/97.3/100.0%, and suite acceptance failed. During-flight visual mesh-coverage proxy was 0.0303, stop mesh missing and visible-black max were zero, and readiness debt max was 37. The screen verdict was not collected.
+
+Trace analysis found 18 exact-geometry, own-light-current CPU seam signatures sampling adjacent nonzero light; M620A had 8, but the runs are not controlled enough to infer improvement or regression. Dependency counters showed 158 queued and 73 applied entries; they mix chunk-commit and relight invalidations. The current code change is provisionally retained, not marked solved. Next instrument watched dependent coordinates through queue/drain and compare captured versus published neighbor-halo signatures. Avoid longer operator-monitoring runs.
+
+Artifacts:
+
+- `suite_reports/engine_refactor/m621a_commit_halo_invalidation_20261016.json`
+- `logs/perf_20261016-141422_13608.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-141418.13608`
