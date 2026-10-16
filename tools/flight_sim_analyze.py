@@ -257,8 +257,9 @@ def analyze(
         )
     )
     visual_hole_signal_semantics = (
-        "missing greedy mesh in the near focus; this is a mesh-coverage proxy, "
-        "not direct framebuffer-pixel evidence"
+        "near-focus missing-mesh pressure proxy; the current miss probe can "
+        "return clear while a prior positive is retained briefly by the "
+        "streaming hysteresis; not direct framebuffer-pixel evidence"
         if visual_hole_key is not None
         else "not emitted; visual holes are unmeasured in this perf schema"
     )
@@ -281,6 +282,29 @@ def analyze(
         visual_holes_longest_run,
         visual_holes_longest_clear_run,
     ) = binary_transition_stats(visual_hole_flags)
+    has_fresh_miss_probe_fields = any(
+        "near_focus_hole_probe_ran" in r
+        and "near_focus_hole_probe_result" in r
+        for r in steady
+    )
+    visual_holes_fresh_clear_probe_n = (
+        sum(
+            1
+            for r in steady
+            if visual_hole_key is not None
+            and float(r.get(visual_hole_key) or 0.0) > 0.0
+            and float(r.get("near_focus_hole_probe_ran") or 0.0) > 0.0
+            and float(r.get("near_focus_hole_probe_result", -1.0)) == 0.0
+        )
+        if has_fresh_miss_probe_fields
+        else None
+    )
+    visual_holes_fresh_clear_probe_share = (
+        visual_holes_fresh_clear_probe_n / sum(visual_hole_flags)
+        if visual_holes_fresh_clear_probe_n is not None
+        and sum(visual_hole_flags) > 0
+        else None
+    )
     # Preserve the old series for diagnostic features and compatibility, while
     # naming it explicitly as readiness debt in new output fields.
     readiness_values = col(steady, readiness_key)
@@ -2220,6 +2244,12 @@ def analyze(
             "holes_rate": holes_rate,
             "readiness_debt_rate": readiness_debt_rate,
             "visual_holes_rate": visual_holes_rate,
+            "visual_holes_fresh_clear_probe_n": (
+                visual_holes_fresh_clear_probe_n
+            ),
+            "visual_holes_fresh_clear_probe_share": (
+                visual_holes_fresh_clear_probe_share
+            ),
             "visual_holes_sample_coverage": visual_hole_sample_coverage,
             "visual_holes_blink_rate": visual_holes_blink_rate,
             "visual_holes_blink_transitions": visual_holes_blink_transitions,

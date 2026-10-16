@@ -1717,3 +1717,47 @@ Artifacts:
 - M622AS report/pixel trace: `m622as_world194_pending_scan_stride15_20261016.json`, `m622as_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-231912_36416.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-231909.36416`.
 - M622AT report/pixel trace: `m622at_world194_visible_requeue_guard_stride15_20261016.json`, `m622at_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-232140_19492.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-232136.19492`.
 - M622AU report/pixel trace: `m622au_world194_visible_pending_priority_stride15_20261016.json`, `m622au_renderer_pixel_trace_20261016.json`; perf/INFO `perf_20261016-232414_42856.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-232410.42856`.
+
+### M622AV: moving-frontier check after visible pending-light admission
+
+M622AV used the established M335 route on saved `World_164`: visible GUI,
+no teleport, 35 s westbound flight, 20 s stop, and 15 s idle. It loaded the
+existing world (121/121 columns, zero generated columns) and traveled ten
+focus columns. The process completed with exit code 0 and no timeout. The
+aggregate analyzer still returned `pass=false`: its safety line counted two
+single-period near-focus mesh-proxy samples, while post-stop demand/readiness
+convergence also remained incomplete. Do not interpret that aggregate failure
+as proof of a blank framebuffer.
+
+The two flight samples were at frame epochs 901 and 1018. In both, a fresh
+near-focus miss probe ran and returned clear, while the policy-facing
+`visual_holes` / `focus_missing_mesh` signals remained positive. The associated
+focus-miss witness already had a drawable mesh satisfying column readiness.
+This follows the `miss_positive_hold` path in `WorldStreaming.cpp`: a previous
+positive is retained briefly after a fresh clear to avoid flicker. The
+analyzer now labels `visual_holes` as a hysteretic mesh-pressure proxy and
+reports `visual_holes_fresh_clear_probe_n` plus its share among positive
+samples. Those fields are diagnostic only; preserve existing scheduling and
+safety gates until an independent coverage signal justifies changing them.
+
+The independent stride-15 renderer trace collected 14,340 probes. Of 299
+samples below luma 32, every one joined a drawable opaque surface; none had a
+missing opaque-surface join. Ten dark samples were unsettled or preview-owned,
+and four were preview samples. Fifteen same-view preview-to-settled handoffs
+measured 677–1,367 ms (median 680 ms). These probes do not prove what the
+operator saw, and low-luma opaque geometry is not necessarily defective.
+`post_stop_mesh_missing_max` and `post_stop_visual_holes_max` were both zero,
+while post-stop unfinished readiness reached 29. This leaves a real
+readiness/convergence backlog to classify without conflating it with missing
+visible geometry.
+
+The next diagnostic should report, side by side, fresh radius-query state,
+held policy state, readiness debt, pixel-to-surface joins, and queue eviction
+reasons. Keep the M335 route and short duration. Do not add a host-CPU gate or
+change visible-relight admission based only on the two held samples.
+
+Artifacts:
+
+- M622AV report/pixel trace: `m622av_world164_m335_post_visible_priority_20261016.json`, `m622av_renderer_pixel_trace_20261016.json`.
+- M622AV re-analysis with explicit hysteresis fields: `m622av_world164_m335_post_visible_priority_semantics_20261016.json` (2 positive proxy samples also had a fresh clear probe; share 1.0).
+- M622AV perf/INFO: `perf_20261016-232752_43592.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-232748.43592`.

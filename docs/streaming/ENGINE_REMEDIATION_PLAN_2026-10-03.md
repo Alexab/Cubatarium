@@ -12323,3 +12323,32 @@ flight route, and use a brief visible operator check only when the user is
 present. If further queue changes are needed, add per-column admission outcome
 telemetry first. Continue to exclude CPU utilization from admission decisions;
 do not resume long operator-monitoring flights.
+
+### M622AV: distinguish fresh mesh misses from held pressure state
+
+The post-M622AU M335 moving check completed on saved `World_164` (10 focus
+columns; no generation). Two single-period `visual_holes` samples caused the
+aggregate A24 safety failure. Both had a fresh horizontal-radius probe result
+of clear; the prior focus-miss witness had a drawable mesh satisfying column
+readiness. `WorldStreaming.cpp` intentionally retains the previous positive
+miss briefly through `miss_positive_hold`, so these samples are policy
+hysteresis, not proof of missing framebuffer geometry. The stride-15 pixel
+trace also had no missing opaque-surface joins. Its 299 low-luma samples all
+matched drawable opaque surfaces; operator visibility remains unverified.
+
+The analyzer now describes `visual_holes` as a hysteretic pressure proxy and
+emits `visual_holes_fresh_clear_probe_n` / `visual_holes_fresh_clear_probe_share`
+when the perf schema includes fresh-probe fields. This is diagnostic metadata;
+it does not relax readiness or route gates and does not alter streaming.
+Re-analysis of M622AV found that both positive proxy periods had a fresh clear
+probe (`2 / 2`); the supplemental report is
+`m622av_world164_m335_post_visible_priority_semantics_20261016.json` under
+`bin/suite_reports/engine_refactor`.
+Post-stop visual mesh debt was zero, but unfinished readiness reached 29 and
+the convergence gate remained false. Continue by separating held miss state
+from live mesh coverage in the next short M335 report, then classify the
+unfinished readiness owners and the 47 FIFO overflow evictions. Keep the route
+repeatable, flights short, and CPU utilization contextual only.
+
+Detailed M622AV setup, interpretation, and artifact names are recorded in
+`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` and `FLIGHT_EXPERIMENT_SCRIPTS.md`.

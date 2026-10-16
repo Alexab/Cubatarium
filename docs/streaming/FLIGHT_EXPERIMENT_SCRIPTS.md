@@ -11681,3 +11681,38 @@ CPU usage is informational; no load threshold gates the probe.
 
 Source findings and all run artifacts are listed in
 `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` under M622AP–AU.
+
+### M622AV: short M335 moving-frontier check
+
+Use the established visible, no-teleport M335 route on saved `World_164`.
+This preserves the known start and camera setup while checking the moving
+streaming frontier after M622AU. The wrapper pins/restores the saved user
+position and records the run manifest. Do not add CPU-load admission gates.
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+  -StampWarmPeriods -RequireExistingWorld -World World_164 `
+  -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+  -Yaw 180 -Pitch -30 -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 -PhaseId M622AV
+```
+
+The wrapper wrote `bin/suite_reports/engine_refactor/m622av_world164_m335_post_visible_priority_20261016.json` and perf JSONL named in that report. Analyze the renderer evidence separately:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622av_world164_m335_post_visible_priority_20261016.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622av_renderer_pixel_trace_20261016.json
+python -X utf8 tools/flight_sim_analyze.py $report.perf_jsonl `
+  --report bin/suite_reports/engine_refactor/m622av_world164_m335_post_visible_priority_semantics_20261016.json
+```
+
+M622AV completed successfully at the process level, but the aggregate route
+gates failed. Two one-period visual-hole proxy samples coincide with a fresh
+clear radius probe and a drawable/satisfying previous witness; inspect the
+new `visual_holes_fresh_clear_probe_n` analyzer metric before treating such a
+sample as missing geometry. Pixel trace showed zero missing opaque-surface
+joins. It is not an operator framebuffer verdict. Full interpretation and
+artifact filenames are in the runbook's M622AV section.
