@@ -10491,6 +10491,8 @@ $env:CUBA_VISUAL_BLACK_TRACE='1'
 
 For `sample_kind=0` rows, interpret the fields as follows: cache-entry 0 means no published mesh record at that coordinate; cache-entry 1/stamp-valid 0 means a mesh exists but its publication path did not retain an input halo; stamp-valid 1/state 1 means captured halo matches current light; stamp-valid 1/state 2 means it changed. Only then join against coordinate-specific `mesh_dependency` causes/drains and publication chronology.
 
+Before M622D is run, commit `2f95b9cc` adds change tracking and mesh invalidation for the `ApplyEnterOpenSkyBoundary` path. Its horizontal skylight flood may mutate multiple loaded chunks. Source slices now enter remesh ownership and their neighbors are queued with `cause=enter_open_sky_boundary`. Release rebuilt successfully. The post-build CPU preflight was 83.2/93.8% median/p95 and failed; defer M622D until a fresh gate pass. Keep the route unchanged and look for that new cause in the joined event timeline.
+
 M622C artifacts:
 
 - `suite_reports/engine_refactor/m622c_halo_availability_20261016.json`

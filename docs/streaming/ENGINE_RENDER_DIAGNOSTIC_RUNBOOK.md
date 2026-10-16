@@ -930,3 +930,9 @@ The run recorded 340 `visual_black_trace` rows, 158 with nonzero CPU stale sampl
 M622C completed 35 periods normally. It was diagnostic only: host CPU median/p95/max 66.2/88.9/97.1%, `visual_holes_rate=0`, fly visible-black max 3, post-stop missing and visible-black max 0, readiness debt max 35, suite `pass=false`. No operator screen verdict was collected.
 
 Of 144 nonzero stale-sample records, all were `sample_kind=0` per-column attribution rows. Five had exact geometry and own-light revisions, but their halo fields were not populated; the query added after M622A only covered focus-slice rows. Commit `57016e90` adds the query to the attribution writer and separates cache-entry presence from stamp validity. A fresh post-run preflight failed (70.4/89.9% median/p95), so wait for a passing sample before one same-route M622D run. Do not lengthen the route or use these proxies as a framebuffer verdict.
+
+### Open-sky invalidation side path
+
+Static review after M622C found `ApplyEnterOpenSkyBoundary` mutates light in more chunks than the initiating column: its horizontal BFS crosses into loaded neighbors. Before `2f95b9cc`, callers did not receive that changed-chunk set. The function now returns only coordinates whose light-field revision actually changed. All three call sites remesh those source slices and queue their neighboring mesh dependencies with `cause=enter_open_sky_boundary`; the bounded deduplicating drain remains unchanged. Release and static executable verification passed. This is a code-path correction, not yet tied to a visible seam.
+
+The fresh post-build preflight is host CPU median/p95 83.2/93.8%, gate failed. No M622D run was launched. After a fresh pass, use the M622D command in `FLIGHT_EXPERIMENT_SCRIPTS.md`; correlate exact halo states with dependency events, especially `enter_open_sky_boundary`.

@@ -11431,3 +11431,11 @@ The run contained 144 rows with a nonzero `stale_sample_light`; all were `sample
 Static review found the second stale-witness writer at `World.cpp`'s visible-black attribution trace. Commit `57016e90` samples halo state, cache-entry presence, and stamp validity there too. Release rebuilt successfully. The same route is documented as M622D; a fresh preflight immediately after M622C failed at 70.4/89.9% median/p95, so do not launch M622D until a fresh sample passes. Preserve the route and correlate exact frame/coordinate rows with dependency events.
 
 M622C artifacts: `bin/suite_reports/engine_refactor/m622c_halo_availability_20261016.json`, `bin/logs/perf_20261016-150329_39812.jsonl`, and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-150325.39812`.
+
+### M623: invalidate open-sky light mutations
+
+Static call-site review found another loaded-light mutation path: `ApplyEnterOpenSkyBoundary` writes skylight directly and runs a horizontal propagation that can change already-loaded neighboring chunks. Its callers previously scheduled work for the initiating column (or passed a pre-open-sky relight list) without reporting all chunks actually changed by that propagation. Those chunks and their dependent meshes could retain bakes made from an earlier halo.
+
+Commit `2f95b9cc` collects coordinates only when an open-sky light write changes a chunk revision. All three callers now account for those coordinates: `RelightTerrainColumn` includes them in the own-mesh relight set; the enter repair and enter snapshot paths queue changed source meshes and queue their 26-neighbor mesh dependencies with cause `enter_open_sky_boundary`. The existing deduplicated, bounded drain remains in use. Release build and static Windows executable verification passed. This is a statically identified lifecycle gap, not a proven cause of the M622C witnesses.
+
+The post-build CPU preflight was 83.2/93.8% median/p95 and failed the flight gate. Do not run M622D until a fresh sample passes. Then use the same short route documented in `FLIGHT_EXPERIMENT_SCRIPTS.md`; inspect `sample_kind=0` halo state and join queue events, including the new open-sky cause, to exact witness coordinates. Do not lengthen the operator flight.
