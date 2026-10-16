@@ -11410,7 +11410,11 @@ The Release build passed. The immediate host CPU sample after build was 60.3/87.
 
 M622 static review found that GPU publication commits directly through `CommitGpuMeshResult`, bypassing the CPU `ApplyMeshResult` stamp write. Commit `a3493579` now transfers the halo signatures from the exact `PendingGpuApply.snapshot` after each successful GPU commit, including validated empty results. This is required for the active `gpu_greedy` backend; without it, halo-state samples would be unavailable for GPU-published meshes. The Release target was rebuilt successfully after the correction.
 
-At the time of this note, host preflight remained above the gate (56.4/72.0% median/p95) and M622A had not run. M622A was subsequently executed after a passing preflight; its outcome and instrumentation gaps are recorded below. Do not infer a visual fix from diagnostic counters alone.
+The historical note recorded host preflight at 56.4/72.0% median/p95 and M622A
+not yet run; that delay came from the former host-CPU gate. M622A was later
+executed, and its outcome and instrumentation gaps are recorded below. Host CPU
+is context only and never an admission condition. Do not infer a visual fix
+from diagnostic counters alone.
 
 ### M622A: first seam-halo attribution attempt
 
@@ -11735,3 +11739,51 @@ revision-churn symptom still needs same-world reproduction or a naturally
 recurring witness.
 
 Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.
+
+### M622O–M622Q: discard deferred relight work already satisfied
+
+M622O established a persistent-world reference on `World_164`: 35-period short
+M335 route, process exit 0, deferred-far peak 0, FIFO median 1, and no aged
+service. The mesh-hole proxy was 0.0303, fly visible-black max 4, post-stop
+visible-black max 0, and readiness-debt max 36. This world is not a controlled
+pair for the separately generated M622N map.
+
+M622P replayed the M335 route on M622N's resulting map. It still produced
+deferred-far peak 38, FIFO median 15, and 31 accepted aged admissions. The
+admitted entries reached priority index 0 or 1, but their age reached 14.929 s.
+The INFO trace for `(-7,2)` shows a specific stale request: an accepted relight
+capture covered `0:103`, including deferred band `32:47`; after that capture
+finalized, the deferred entry remained. It was admitted roughly 14.9 s later
+and its subsequent capture was discarded as `surface_band_no_relight_needed`.
+This points to stale deferred owners wasting queue capacity. It does not prove
+that the chunk looked wrong while it waited.
+
+M622Q changes `AdmitDeferredFarRelightColumns` to re-evaluate an in-range entry
+with the existing no-op policy before it consumes queue capacity. If the column
+is lit-ready, has no pending-light owner, and no drawable dark face remains in
+the deferred band, the entry is cleared. Release build and static EXE checks
+passed. A compact same-map replay completed 35 periods and recorded 205
+`already_satisfied` skips; aged-service events fell from 31 to 6 and deferred
+peak from 38 to 17. Since the world and run state had advanced, these deltas
+are not a controlled A/B. The mesh-hole proxy increased 0.0606→0.1212,
+fly visible-black max was 15→14, and post-stop visible-black/stalled max stayed
+1. Thus the change removes proven no-op queue work, but visual improvement is
+not established. No operator framebuffer verdict was recorded.
+
+Across M622O/P/Q, host CPU medians/p95/max were 93.7/100/100%, 86.2/100/100%,
+and 90.7/100/100%; application CPU medians were 19.36%, 19.48%, and 21.38% of
+machine capacity. Each route completed and analyzer failure was on
+non-CPU gates. Host CPU remains informational and must not block diagnostic
+runs.
+
+Next: trace the source/cause for repeated direct enqueues that recreate
+already-satisfied deferred entries (M622Q observed 205 skip events). Apply the
+existing no-op policy upstream only where caller state proves safety; preserve
+FIFO backpressure and the underfeet pin. Rebuild Release and use one compact
+M335 route to verify queue behavior. Keep mesh/readiness proxies distinct from
+operator-visible pixels; defer long flights until the compact causal check is
+clear.
+
+Reports: `bin/suite_reports/engine_refactor/m622o_saved_world_relight_queue_20261016.json`,
+`bin/suite_reports/engine_refactor/m622p_warm_replay_relight_queue_20261016.json`,
+and `bin/suite_reports/engine_refactor/m622q_recheck_deferred_noop_20261016.json`.

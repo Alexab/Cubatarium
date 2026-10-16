@@ -10331,18 +10331,20 @@ visible-black max=0, readiness-debt max=49. Eye-proxy gate отказал по
 stale-visual delta 2.5, stale activity без hole counters и непокрытому temporal
 mid-flight сегменту. Прямой operator framebuffer verdict отсутствует.
 
-Для проверки promotion нужен короткий M619A после свежего host CPU preflight
-median <=50%, p95 <=75%:
+Исторически promotion проверяли после host CPU preflight
+median <=50%, p95 <=75%; это условие снято, поскольку host sampler включает
+Codex и постороннюю работу. Скрипт ниже сохраняется только как измеритель
+контекста, запускать его перед диагностическим полётом не требуется:
 
 ```powershell
 .\tools\sample_host_cpu_gate.ps1 -SampleCount 10 -IntervalMs 1000
 ```
 
-Сразу после M618A preflight был 63.8/75.8%; повтор с сохранённым sampler дал
-59.0/86.9% median/p95, и M619A тогда отложили. Позже sampler вернул
-46.8/63.1% median/p95 (`passes_default_flight_gate=True`), поэтому выполнен
-один короткий M619A. Runtime оказался заметно тяжелее preflight; результат
-остаётся диагностическим, без performance acceptance.
+Сразу после M618A прежний preflight дал 63.8/75.8%; повтор — 59.0/86.9%, и
+M619A отложили по старому правилу. Позже он был запущен при sample 46.8/63.1%
+(`passes_default_flight_gate=True` в тогдашнем отчёте). Это историческое
+решение, не действующий admission gate; runtime оказался заметно тяжелее
+preflight, результат остаётся диагностическим, без performance acceptance.
 
 ```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
@@ -10457,7 +10459,9 @@ The JSONL records `stale_mesh_halo_state` (0 unavailable, 1 current halo equals 
 
 Static review after M622 found GPU publication uses `CommitGpuMeshResult`; commit `a3493579` now stores the halo signatures from its accepted pending snapshot after a successful commit. Release rebuild passed. This is necessary for `gpu_greedy`, otherwise halo-state values would be unavailable in watched traces.
 
-At the time of this note, the latest preflight failed (56.4/72.0% median/p95), so M622A had not yet run. A later passing preflight led to the M622A run documented below.
+The historical note recorded 56.4/72.0% median/p95 and said M622A had not yet
+run; that delay came from the former host-CPU gate. M622A later ran. Host CPU
+samples are context only and never an admission condition.
 
 M622A completed the route with `process_rc=0` but failed runtime resource acceptance (host CPU 83.2/100.0/100.0% median/p95/max). Proxies: visual mesh coverage 0 in flight and at stop, fly visible-black max 4, post-stop missing and visible-black max 0, readiness debt max 31. No operator screen verdict was recorded.
 
@@ -10938,3 +10942,60 @@ Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.js
 Raw perf/INFO logs are `perf_20261016-173233_41228.jsonl` and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-173227.41228` under
 `bin/logs`.
+
+### M622O–M622P: saved-world and same-world replay
+
+Both runs used the established visible 35-second M335 no-teleport route. M622O
+used the long-lived `World_164`; it completed 35 periods with process exit 0.
+Its mesh-hole proxy was 0.0303, fly visible-black max 4, post-stop
+visible-black max 0, and readiness-debt max 36. No deferred-far relight was
+observed (peak 0, FIFO median 1, no age-service events). This is a saved-world
+baseline, not a control for the separately generated M622N map.
+
+M622P repeated M622N's route on the map produced by M622N. It also completed 35
+periods with process exit 0. Deferred-far peaked at 38 and FIFO median was 15;
+31 aged entries were admitted, all at priority index 0 or 1, with ages 1.504–
+14.929 s (median 2.889 s). The INFO trace gives a concrete stale-work case for
+`(-7,2)`: deferred band `32:47` was recorded while a validated relight covering
+`0:103` was completing; the deferred request remained until age service about
+14.9 s later and its next capture was discarded as
+`surface_band_no_relight_needed`. This demonstrates avoidable deferred queue
+occupancy. It does not prove that the coordinate was visibly wrong during the
+wait; no framebuffer verdict was collected.
+
+### M622Q: drop already-satisfied deferred relights before admission
+
+The Release change rechecks an in-range deferred band with the existing
+`ShouldSkipNoOpTerrainRelightEnqueue` policy before admitting it. When the
+column is already lit-ready, has no pending-light owner, and has no dark face in
+the deferred band, the stale entry is cleared and logged as
+`deferred_far_skip reason=already_satisfied`. The Release build and static EXE
+verification passed; no test suite was run.
+
+M622Q repeated the short route on the same evolving map. It completed 35
+periods with process exit 0 and recorded 205 already-satisfied skips, 6 age
+service events, and deferred-far peak 17 (M622P: 31 age-service events and
+peak 38). The route state and world had advanced, so this is not a controlled
+A/B. Analyzer `pass=false` remained on non-CPU gates: mesh-hole proxy 0.1212,
+fly visible-black max 14, post-stop visible-black/stalled max 1, readiness-debt
+max 34. Proxies did not improve and no framebuffer verdict was collected; the
+change is retained only for eliminating work proven unnecessary at admission.
+
+M622O/P/Q host CPU median/p95/max was respectively 93.7/100/100%,
+86.2/100/100%, and 90.7/100/100%; app CPU medians were 19.36%, 19.48%, and
+21.38% of machine capacity. All flights completed without a CPU admission
+gate. Host CPU is context only; never require a host CPU preflight threshold.
+
+Artifacts: reports `m622o_saved_world_relight_queue_20261016.json`,
+`m622p_warm_replay_relight_queue_20261016.json`, and
+`m622q_recheck_deferred_noop_20261016.json` under
+`bin/suite_reports/engine_refactor/`. Corresponding perf logs are
+`perf_20261016-174614_19104.jsonl`, `perf_20261016-174855_18544.jsonl`, and
+`perf_20261016-175647_41492.jsonl`; INFO logs end in `174610.19104`,
+`174848.18544`, and `175643.41492` under `bin/logs`.
+
+Next, identify which direct enqueue callers repeatedly re-create
+already-satisfied deferred entries (205 skips in M622Q) and route those callers
+through the existing no-op predicate where safe. Preserve the FIFO cap and
+underfeet pin. Verify on one compact M335 route after a Release build; keep CPU
+informational and keep operator framebuffer evidence separate from proxies.

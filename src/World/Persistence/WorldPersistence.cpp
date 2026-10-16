@@ -1269,6 +1269,41 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
       continue;
     }
     ++in_range;
+    // A different in-flight relight may have satisfied this deferred request
+    // after it was recorded. Do not re-admit stale work just because its
+    // deferred owner has not yet been revisited; the capture path would later
+    // discard the same band as a no-op after it had occupied queue capacity.
+    const int band_min = std::max(0, kv.second.y_band.x);
+    const int band_max = std::max(
+        band_min, kv.second.y_band.y >= band_min
+                      ? kv.second.y_band.y
+                      : world.ProceduralTemplate.MaxHeight);
+    const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
+    const bool pending_light = world.IsPendingLightBeforeMesh(ground_xz);
+    const bool column_lit_ready = world.IsColumnLitReady(ground);
+    const bool band_needs_relight =
+        !pending_light && column_lit_ready &&
+        ColumnSurfaceBandNeedsRelight(world, ground_xz, band_min, band_max);
+    if (ShouldSkipNoOpTerrainRelightEnqueue(pending_light, column_lit_ready,
+                                            band_needs_relight))
+    {
+      ++world.GetPhysicsTelemetryMutable().RelightSkippedNoOpEnqueueN;
+      to_erase.push_back(ground_xz);
+      if (audit_admission)
+      {
+        CubatariumLogInfo(
+            "RelightAudit",
+            "deferred_far_skip coord=(" + std::to_string(ground_xz.x) +
+                "," + std::to_string(ground_xz.y) +
+                ") reason=already_satisfied band=" +
+                std::to_string(kv.second.y_band.x) + ":" +
+                std::to_string(kv.second.y_band.y) + " pending=" +
+                std::to_string(pending_light) + " lit_ready=" +
+                std::to_string(column_lit_ready) + " band_needs=" +
+                std::to_string(band_needs_relight));
+      }
+      continue;
+    }
     // Use the same live-FIFO predicate as EnqueueTerrainColumnRelightImpl.
     // The wider deferral pin (currently four) is a service horizon, not the
     // FIFO's tighter nh<=1 pressure admission rule.

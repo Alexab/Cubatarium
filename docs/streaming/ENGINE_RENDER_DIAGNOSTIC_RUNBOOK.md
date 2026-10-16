@@ -918,7 +918,11 @@ With both `CUBA_VISUAL_BLACK_TRACE=1` and `CUBATARIUM_RELIGHT_AUDIT=1`, parse `R
 - Halo state 1 with a current nonzero stale sample points to mesher sampling or witness-to-mesh attribution.
 - Halo state 0 cannot distinguish those cases.
 
-M622 instrumentation Release build passed. Its preflight was 60.3/87.7% median/p95 and failed the flight gate; no flight was started. Re-sample after CPU load falls before any run.
+M622 instrumentation Release build passed. The earlier workflow recorded a
+60.3/87.7% host CPU preflight and withheld M622A; that admission gate was too
+strict because host usage includes Codex and other system work. M622A was later
+run without a CPU threshold. Treat sampler output as context only; do not wait
+for a host CPU preflight to pass before a diagnostic flight.
 
 GPU-path correction: `CommitGpuMeshResult` is a separate publication route from `ApplyMeshResult`. Commit `a3493579` retains the captured `PendingGpuApply.snapshot.lightHaloSignatures` after each successful GPU commit (including validated empty output), and Release rebuilt successfully. This makes `stale_mesh_halo_state` meaningful for `gpu_greedy` rather than returning unavailable for all GPU meshes.
 
@@ -1106,3 +1110,45 @@ was captured. Keep the reason-aware route and do not interpret the changed
 aggregate proxy score as a visual regression or improvement.
 
 Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.
+
+### M622O–M622Q: deferred relight no-op reconciliation
+
+M622O ran the compact M335 route on the persistent `World_164`: 35 periods,
+process exit 0, no deferred-far entries, FIFO median 1, and no age-service
+events. Mesh-hole proxy was 0.0303, fly visible-black max 4, post-stop
+visible-black max 0, and readiness-debt max 36. This is a saved-world reference,
+not a controlled comparison with the M622N map.
+
+M622P replayed M622N's route on its resulting map. It recorded 31 accepted
+age-service events, deferred-far peak 38, and FIFO median 15. The aged requests
+were placed at priority index 0 or 1, but age ranged up to 14.929 s. For
+`(-7,2)`, INFO shows a validated capture of band `0:103` completing after a new
+deferred request for `32:47`; that deferred entry survived until a later
+age-service admission, whose capture was discarded as
+`surface_band_no_relight_needed`. The trace establishes stale queued work, not
+a user-visible bad frame.
+
+M622Q added a Release-path check in `AdmitDeferredFarRelightColumns`: before
+admission, use the existing no-op policy to discard a deferred record when the
+column is already lit-ready, has no pending-light owner, and no drawable dark
+face remains in the saved Y band. The Release build and static EXE verification
+passed. The compact M335 replay completed 35 periods with process exit 0 and
+logged 205 `deferred_far_skip reason=already_satisfied` events. Compared with
+M622P, aged-service events fell 31→6 and deferred-far peak 38→17, but the world
+and run state had advanced, so this is not a controlled A/B. The mesh-hole
+proxy increased 0.0606→0.1212, fly visible-black max changed 15→14, and
+post-stop visible-black/stalled max remained 1. Do not claim a visual
+improvement; no operator framebuffer verdict was recorded.
+
+The analyzer returned `pass=false` on non-CPU performance/readiness gates. Host
+CPU median/p95/max for M622O/P/Q was 93.7/100/100%, 86.2/100/100%, and
+90.7/100/100%; app CPU medians were 19.36%, 19.48%, and 21.38% of machine
+capacity. All three routes completed. Host CPU is informational, never an
+admission gate.
+
+The 205 no-op skips also show that a producer repeatedly re-creates work after
+it is already satisfied. Next trace the source/cause at the direct relight
+enqueue sites and apply the same no-op predicate upstream where the caller has
+enough state to do so. Keep the existing FIFO cap and pin policy. Use one
+compact M335 route after a Release rebuild; do not start a long operator
+monitoring run for this check.
