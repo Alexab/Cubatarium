@@ -176,6 +176,28 @@ bool PixelProbeOnScreenRayEnabled()
   return enabled;
 }
 
+uint32_t PixelProbePeriodicStride(float camera_x)
+{
+  static const uint32_t configured_stride = []() {
+    const float value = ReadPixelProbeEnvFloat(
+        "CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE", 0.0f);
+    if (value < 1.0f)
+    {
+      return 0u;
+    }
+    return static_cast<uint32_t>(
+        std::clamp(std::lround(value), 1l, 120l));
+  }();
+  const uint32_t route_stride =
+      ((camera_x >= -290.0f && camera_x <= -245.0f) ||
+       (camera_x >= -210.0f && camera_x <= -120.0f))
+          ? 60u
+          : 120u;
+  return configured_stride > 0
+             ? std::min(route_stride, configured_stride)
+             : route_stride;
+}
+
 int PixelProbeSampleY(int row, int height, int rows,
                       bool screen_ray_aligned_rows = false)
 {
@@ -4537,10 +4559,7 @@ void UGeometryEngine::DrawCubeGeometry()
           !have_last_probe_focus || last_probe_focus.x != probe_focus.x ||
           last_probe_focus.y != probe_focus.z;
       const uint32_t probe_stride =
-          ((probe_camera_x >= -290.0f && probe_camera_x <= -245.0f) ||
-           (probe_camera_x >= -210.0f && probe_camera_x <= -120.0f))
-              ? 60u
-              : 120u;
+          PixelProbePeriodicStride(probe_camera_x);
       const bool periodic_pixel_probe =
           pixel_probe_in_x_range && render_probe_count % probe_stride == 0u;
       const bool focus_change_pixel_probe = pixel_probe_in_x_range &&

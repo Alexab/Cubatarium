@@ -11226,7 +11226,7 @@ repair scan теперь также обнаруживает/сохраняет 
 работает до approach ring 5. Сервис остаётся ограниченным существующей квотой
 одного ремонта на четыре scheduler frames; безусловная очередь и общий dirty
 budget не расширялись. Это целевая правка наблюдаемой причины; нужен короткий
-M335 check после прохождения resource gates.
+M335 check без host-CPU admission gate.
 
 M614 повторил тот же короткий M335 no-teleport маршрут на том же мире после
 сохранения light flags. При старте было загружено `loaded/116`; входные maxima
@@ -11256,10 +11256,10 @@ performance acceptance-проверкой. Процесс завершился �
    stamp → GPU publish → stale witness clear. Проверить, требуется ли более
    явная точечная инвалидизация уже опубликованных halo-зависимых срезов.
 3. Считать M613/M614 предварительным cold-vs-warm сигналом: сохранённые flags
-   сильно снизили startup `unlit/pending`, но оба flight не прошли resource
-   gates. Повторить ту же пару только при host CPU median <=50%, p95 <=75%,
-   разнице median/p95 пары <=15 п.п. и разнице median app CPU <=15 п.п.; повторять
-   лишь arm, нарушивший ресурсные ворота.
+   сильно снизили startup `unlit/pending`, но общая нагрузка различалась.
+   Старые host-CPU gates отменены, поскольку sampler включает Codex и системную
+   работу. При повторе той же пары сохранять host/app CPU как контекст и
+   сравнивать engine runtime, кадр, queue и pixel/lifecycle evidence.
 4. В коротких прогонах сохранять прямое операторское наблюдение отдельно от
    pixel/readiness proxy. Не запускать длинный мониторинговый полёт; к нему
    возвращаться только после стабильного короткого входа и подтверждения
@@ -11311,8 +11311,9 @@ chunk `(-20,2,5)`, face 3; у consumer own light revisions совпадали н
 build. Это подтверждает работающий repair handoff, но не его последующую
 публикацию/снятие witness.
 
-M617A не прошёл runtime resource gate: host CPU 65.1/99.5/100%
-(median/p95/max), suite `pass=false`; визуальные proxy были
+M617A в прежней политике пометили как не прошедший runtime resource gate из-за
+host CPU 65.1/99.5/100% (median/p95/max); suite `pass=false`. Host CPU теперь
+только контекст; визуальные proxy были
 `visual_holes_rate=0`, `fly_visible_black_max=3`, `post_stop_visible_black_max=1`,
 при `post_stop_readiness_debt_max=46`. Эти счетчики не дают операторской
 оценки изображения. Дополнительно eye-proxy gate отказал по stale-visual delta
@@ -11341,19 +11342,22 @@ owned drawable geometry debt в h5 в priority RemeshQ. Это меняет то
 geometry debt действительно попадает в priority RemeshQ и публикует текущую
 revision.
 
-M618A resource gate не пройден: preflight median/p95 35.3/66.9%, но runtime
-host CPU вырос до 70.7/99.3/99.6% (median/p95/max); suite `pass=false`.
+M618A исторически отметили как не прошедший resource gate: preflight
+median/p95 35.3/66.9%, runtime host CPU вырос до 70.7/99.3/99.6%
+(median/p95/max); suite `pass=false`. Host CPU не является действующим
+admission gate.
 Proxy показывали `visual_holes_rate=0`, `fly_visible_black_max=4`,
 `post_stop_visible_black_max=0`, `post_stop_readiness_debt_max=49`. Eye-proxy gate
 не прошёл из-за stale-visual delta 2.5, активности без hole counters и
 непокрытого temporal mid-flight сегмента. Не трактовать это как performance или
 framebuffer acceptance; операторского verdict нет.
 
-После Release build и M618A два свежих CPU preflight не прошли gate:
-63.8/75.8%, затем 59.0/86.9% median/p95. Позже sampler показал 46.8/63.1%, и
-M619A был запущен. Локализованный счётчик `Get-Counter` на этой Windows отсутствует; сохранён
-`tools/sample_host_cpu_gate.ps1`, который читает системные времена через
-`GetSystemTimes` и печатает median/p95/max вместе с gate verdict.
+После Release build и M618A два свежих CPU preflight показали 63.8/75.8%, затем
+59.0/86.9% median/p95. По старой политике это задержало M619A; позднее он был
+запущен при sample 46.8/63.1%. Это исторический пример, почему порог снят:
+sampler включает Codex и прочую систему. Локализованный счётчик `Get-Counter`
+на этой Windows отсутствует; `tools/sample_host_cpu_gate.ps1` читает системные
+времена через `GetSystemTimes` и печатает median/p95/max с пометкой advisory.
 
 M619A прошёл 35-секундный no-teleport M335 отрезок (`process_rc=0`, 12 chunk
 columns) и подтвердил queue fix: на `(-17,2,2)` 20 последовательных geometry
@@ -11363,8 +11367,9 @@ watched-scheduler event с `mesh_dirty_queue_kind=2`; последняя revisio
 Остальные revisions не полностью покрыты bounded schedule trace, поэтому вывод
 ограничен конкретно наблюдаемыми публикациями.
 
-Ресурсный gate прогона всё равно не пройден: runtime host CPU 71.6/93.0/100.0%
-median/p95/max. У mesh coverage proxy holes=0, `post_stop_mesh_missing_max=0`,
+Runtime host CPU M619A составил 71.6/93.0/100.0% median/p95/max и остаётся
+контекстом, а не причиной отложить или отклонить диагностику. У mesh coverage
+proxy holes=0, `post_stop_mesh_missing_max=0`,
 `post_stop_visible_black_max=0`; readiness debt достиг 50 и не сошёлся на stop.
 Eye-proxy отклонил stale-visual delta 31, а temporal mid-flight сегмент
 остался непроверенным. Эти сигналы не заменяют операторскую framebuffer
@@ -11386,7 +11391,7 @@ The trace contained 194 CPU stale-light witness rows. 185 were sampled while des
 
 Static review found that relight field changes call `QueueMeshDependencyInvalidations` for the 26 adjacent drawable slices. The procedural generation commit callback, however, relied on a horizontal dirty band whose fanout is conditional on distance/pressure and does not cover vertical neighbors. The disk loader applies slices incrementally, while dependent meshes are dirtied only later through column finalization. Thus a mesh built against the old or absent neighbor halo could remain drawable until another repair path discovers the stale face.
 
-The implementation now queues bounded mesh dependency debt immediately when a procedural chunk is committed and after each successful disk-slice apply. The existing drain deduplicates coordinates, skips chunks that already have Dirty/remesh ownership, keeps drawable meshes, and transfers at most the existing per-frame budget into priority dirty work. This targets the missing input-dependency notification without expanding mesh admission/build budgets. Release validation and one short repeated route are the next checks; runtime resource gates remain mandatory.
+The implementation now queues bounded mesh dependency debt immediately when a procedural chunk is committed and after each successful disk-slice apply. The existing drain deduplicates coordinates, skips chunks that already have Dirty/remesh ownership, keeps drawable meshes, and transfers at most the existing per-frame budget into priority dirty work. This targets the missing input-dependency notification without expanding mesh admission/build budgets. Release validation and one short repeated route are the next checks; host CPU is informational and never blocks the route. Judge performance from engine frame/timing metrics and compare runtime app load as context.
 
 M620 artifacts are local: `bin/suite_reports/engine_refactor/m620a_stale_light_repair_cycle_20261016.json`, `bin/logs/perf_20261016-134426_34608.jsonl`, and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-134422.34608`.
 
@@ -12114,12 +12119,16 @@ It recorded `pending_light_focus` median 0 (maximum 5), post-stop pending median
 0, six frames with final relight apply, and no visible-mesh proxy holes. The
 preview-pixel trace had 1,440 probes and 147 low-luminance samples; all joined
 drawable opaque surfaces, with no missing surface joins or revision mismatches.
-The outer chunks `(5,3,5)` and `(5,3,6)` were no longer sampled as preview by
-the five-second follow-up probe. However, the trace still recorded zero
-explicit demand-light-settlement events, the report retained readiness debt and
-post-stop missing-mesh debt, and no operator framebuffer verdict was recorded.
-Treat this as evidence the drain fix services the stranded light debt, not as
-final acceptance.
+Four frontier chunks had provisional-light samples. The analyzer found 125
+same-pixel/same-camera preview-to-nonpreview observations, each five seconds
+apart; this is an observation bound, not an exact transition time. The lifecycle
+trace recorded 86 `light_calculation_settled` events and joined settlement to
+four preview chunks 0.7–1.7 seconds after first preview. For `(5,3,5)`, mesh
+publication and install were recorded at about 1.03 and 1.16 seconds. No same-view
+pixel sample caught a settled-light/preview intermediate state. The report
+retained readiness and post-stop missing-mesh debt, and no operator framebuffer
+verdict was recorded. Treat this as evidence the short-path services light work,
+not as final acceptance.
 
 The comparison is not a strict A/B: saved-world state and host load varied.
 Host CPU is retained only as context and never gates a run. M622AE had host CPU
@@ -12127,14 +12136,14 @@ median/p95/max of 59.6/97.2/98.8% while app CPU on machine capacity was
 22.1/32.4/36.6%; the test still ran. Only Release builds were used; no tests
 were run.
 
-Next validation is one short visible route from a freshly generated world,
-followed by a `-RequireExistingWorld` replay of that exact runtime world. Check
-the expected/actual start focus, pending-light and relight-apply progress, and
-pixel preview transitions at the same fixed probes. Then repeat a short segment
-of the established M335 route to check moving-focus fairness. Keep the CPU gate
-disabled and do not use a long operator-monitoring flight. M622AA/AB–AE reports,
-pixel analyses, perf files, and INFO logs are listed in the diagnostic runbook
-and flight-script catalog.
+The cold-create and exact replay pair are complete as static probes. A moving
+route on a newly generated world must start on generated terrain; M622AH exposed
+that the requested `(120,56,56)` point is unsupported in `World_193` and the
+player correctly falls back to spawn. Keep the established moving M335 route on
+known-good `World_164`, verify expected/actual focus, and compare same-view
+pixel/lifecycle evidence. Keep host CPU informational and do not use a long
+operator-monitoring flight. M622AA/AB–AI reports, pixel analyses, perf files,
+and INFO logs are listed in the diagnostic runbook and flight-script catalog.
 
 ### M622AF/AG: cold generation and replay on one runtime world
 
@@ -12159,14 +12168,51 @@ surfaces; none were unsettled/preview and there were no missing surface joins
 or light-revision mismatches. The replay trace had 1,920 probes and 147
 low-luminance samples, also all on drawable opaque surfaces. Fifteen replay
 dark samples had unsettled/preview light, five were preview; 59 same-view
-preview-to-nonpreview observations fell within 0–1 second. The replay trace
-recorded no explicit demand-light-settlement events. No sampled cold-entry
-geometry gap appeared, but the sparse fixed pixel grid and lack of an operator
-verdict cannot exclude a defect elsewhere on screen.
+preview-to-nonpreview observations fell within 0–1 second. The replay lifecycle
+trace recorded 154 `light_calculation_settled` events overall, but no same-view
+pixel sample caught a settled-light/preview intermediate state. No sampled
+cold-entry geometry gap appeared, but the sparse fixed pixel grid and lack of an
+operator verdict cannot exclude a defect elsewhere on screen.
 
 M622AF/AG does not show the pending-light plateau seen on `World_164` before
 the short-path fix. Keep the fix, then validate moving-focus fairness with one
-short established M335 segment on `World_193`, checking the expected/actual
-product start. Continue occasional new-world samples while keeping exact
-saved-world replay as the repeatable baseline. Host CPU remains context only;
-M622AF completed despite host p95 96.4% and max 100%.
+short established M335 segment on known-good `World_164`. Continue occasional
+new-world static samples while keeping exact saved-world replay as the repeatable
+baseline. Host CPU remains context only; M622AF completed despite host p95 96.4%
+and max 100%.
+
+### M622AH/AI: cold-route pin integrity and moving-focus light trace
+
+M622AH tried a visible no-teleport M335 segment on `World_193` from
+`(120,56,56)`, expected focus `(7,3)`. The requested world loaded 121/121
+spatial columns with no generation, but actual focus was `(-3,1)`. The saved
+spawn is `(-44,51.12,20)`, also `(-3,1)`. `EnsurePlayerOnGround` falls back to
+the spawn column when there is no solid surface under the requested point; the
+runtime focus and start-integrity check therefore correctly rejected this route.
+`World_193` remains suitable for the cold static pair, not for that moving start
+until route terrain exists.
+
+M622AI repeated the same short moving route on `World_164`. The start pin
+matched `(7,3)`, the route reached `(-3,3)`, and the process completed without
+timeout (35 periods, 18 fly periods). The analyzer returned `pass=false` on
+timing/scheduler/stop-line criteria, but the targeted far-route symptom check
+also failed because focus-missing median was 0 and visible-black median was 12.
+Pending-light focus median was 0; `visual_holes_rate=0.0606`, post-stop
+mesh-missing max 0, post-stop visible-black max 2, and readiness debt max 31.
+
+Pixel analysis found 62 luma-below-32 samples among 2,880; all joined drawable
+opaque depth, 55 were settled without preview, five had unsettled/preview shader
+state, and no surface joins or light revisions were missing. Ten chunks showed
+provisional-light samples. The sparse moving-camera trace bounded their observed
+preview-to-nonpreview window to 1–16 seconds but did not hold the same pixel and
+camera view, so it cannot confirm the operator-reported transient. No operator
+framebuffer verdict was captured. Host CPU was 68.8/86.5/97.1% median/p95/max
+and app CPU 31.3/39.4/44.9% of machine capacity; neither is an admission gate.
+
+The next diagnostic should use the same short M335 route and add a coordinate-
+scoped, same-pixel lifecycle join through light settlement, remesh ownership,
+and mesh publication for one frontier chunk. Avoid the unsupported cold-world
+pin and keep occasional cold/replay work static and bounded. No CPU threshold or
+long operator-monitoring flight is required. Artifact paths and the repeatable
+command are recorded in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` and
+`FLIGHT_EXPERIMENT_SCRIPTS.md`.

@@ -10103,9 +10103,11 @@ chunk files. Создание мира — отдельная операция, 
 - Для сравнения записать host CPU median/p95, process CPU, world-create time,
   `enter_unlit_max`, `enter_pending_max`, visible black/hole proxies и pixel
   candidate classification.
-- Признавать пару сопоставимой только при host median <=50%, p95 <=75%, различии
-  host median/p95 arm-ов <=15 п.п. и median app CPU <=15 п.п. Run всё равно
-  сохраняется как диагностический, но не performance evidence.
+- Сохранять host CPU median/p95, process CPU, world-create time,
+  `enter_unlit_max`, `enter_pending_max`, visible-black/hole proxies и pixel
+  classification. Host CPU включает Codex и другие процессы, поэтому он только
+  контекст: старые пороги сопоставимости (median <=50%, p95 <=75% и разница
+  arm-ов <=15 п.п.) отменены и не задерживают диагностический запуск.
 - Pixel candidate — тёмный unchanged RGB на drawable opaque surface. Он не
   подтверждает ни чёрный кадр оператора, ни геометрическую дыру. Сопоставлять
   preview marker, settled/meshed/published light revisions, очередь/flow owner и
@@ -10164,10 +10166,11 @@ python -X utf8 tools/analyze_renderer_pixel_trace.py `
 ```
 
 At load M614 reported `loaded/116`; `enter_unlit/pending` fell to 9/9 from
-M613 cold `55/48`, and visible-black maxima were lower. Both runs failed the
-runtime resource gate (M614 host CPU median/p95/max 65.9/99.4/100%), so this is
-not performance acceptance. Pixel dark-candidate totals also differed and are
-not an operator-image verdict. Use a resource-qualified repeat before drawing a
+M613 cold `55/48`, and visible-black maxima were lower. The former workflow
+marked both runs against a runtime resource gate (M614 host CPU median/p95/max
+65.9/99.4/100%); host CPU is no longer an admission or acceptance gate. Pixel
+dark-candidate totals also differed and are not an operator-image verdict. Use
+matching runtime app/frame metrics and pixel/lifecycle joins when drawing a
 causal visual conclusion.
 
 M615 addresses stale-light repair debt by including stale-dark face witnesses
@@ -10189,12 +10192,13 @@ M616 changes the world admission gate only for drawable unowned geometry debt
 inside approach radius 5, allowing it through the existing bounded admission
 loop when the ordinary dirty-admit budget is exhausted. The expected audit action
 is `geometry_debt_approach_reserved`. Build and commit before using the runner,
-then repeat the same short M335 route at resource-qualified load; confirm the
-target obtains an owner and publishes current geometry. Do not extend the route
-or use a dark-pixel proxy as the operator-image verdict.
+then repeat the same short M335 route without a host CPU gate; confirm the target
+obtains an owner and publishes current geometry. Do not extend the route or use
+a dark-pixel proxy as the operator-image verdict.
 
 The first post-build M616 preflight (2026-10-16, app stopped) had host CPU
-median/p95 57.5/93.6%; the run was correctly deferred by the resource gate.
+median/p95 57.5/93.6%; the former workflow deferred the run by its host CPU
+gate. That admission rule is retired; retain the sample only as history/context.
 
 The M613 trace suggests a separate cross-chunk repair question: stale-dark
 consumer slices `(-19,2,0)` and `(-19,2,5)` had lit face samples in source chunks
@@ -10380,7 +10384,7 @@ Eye-proxy gate отказал (stale-visual delta 31, temporal mid-flight covera
 untested), прямого operator framebuffer verdict нет. Следующий разбор должен
 отделить продолжающиеся `priority_world_core_repair`/relight revisions от
 остаточного cold-start readiness debt; не расширять scheduler budget без
-причинной трассы и resource-qualified повтора.
+причинной трассы и короткого повтора без host-CPU gate.
 
 Повторяемый lifecycle join для ревизий, queue-kind и публикаций сохранён в
 `tools/analyze_geometry_lifecycle.py`:
@@ -10417,7 +10421,7 @@ python tools/analyze_geometry_lifecycle.py `
 
 M620A ran the established short M335 no-teleport route on `World_M613A_Cold_FlagLifecycle_20261016`, with `CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`. It finished normally; runtime CPU made the suite fail. The saved traces contained eight exact-geometry CPU boundary witnesses sampling live light from adjacent chunks. The repeated rows with geometry ahead of publication are in-flight state, not independent settled failures.
 
-Static inspection found inconsistent dependency invalidation at input arrival. The Release implementation now queues neighbor-mesh dependency debt immediately at procedural commits and successful disk-slice applications, relying on the existing bounded deduplicating drain. Rebuild Release, then use the same short route only after the normal host CPU preflight; do not turn this into a long operator-monitoring run.
+Static inspection found inconsistent dependency invalidation at input arrival. The Release implementation now queues neighbor-mesh dependency debt immediately at procedural commits and successful disk-slice applications, relying on the existing bounded deduplicating drain. Rebuild Release, then use the same short route without host CPU admission checks; do not turn this into a long operator-monitoring run.
 
 Artifacts:
 
@@ -11293,6 +11297,14 @@ python tools/flight_sim_run.py --world World_164 --require-existing-world `
   --process-timeout 120
 ```
 
+The optional `CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE` controls periodic
+framebuffer-grid sampling in render frames when `CUBA_VISUAL_BLACK_TRACE=1`.
+Unset preserves the historical cadence (120 frames, or 60 in two legacy X
+bands); configured values are clamped to 1–120 and can only make sampling more
+frequent. A short static lifecycle probe can set 15 (about 0.5 seconds at 30 FPS)
+and narrow the camera X range. This adds readbacks and is a diagnostic setting;
+judge the run using engine timings and exact pixel/event joins.
+
 M622AC is the pre-fix baseline: 18 perf periods, focus pending-light median 36,
 and 28 seconds with near-zero relight drain. In its static pixel trace, 124 of
 1,600 probes had luma below 32; all joined drawable opaque surfaces. Chunks
@@ -11306,19 +11318,24 @@ underfeet mesh already existed.
 Commit `3b6ea7d7` services one queued relight capture from this early-return
 path when focus or underfeet light is pending. M622AE kept the camera fixed;
 focus pending-light median was 0 (maximum 5), post-stop pending median 0, and
-final relight apply was recorded in six frames. The outer preview chunks were no
-longer sampled as preview at the five-second follow-up. This is not final
-acceptance: the analyzer retained readiness and missing-mesh debt, reported no
-explicit demand-light-settlement event, and no operator framebuffer verdict was
-collected. Static no-fly reports also fail movement-related acceptance gates by
-design. Host CPU is logged for context only and never decides whether the run
-starts.
+final relight apply was recorded in six frames. Four frontier chunks had
+provisional-light samples. The pixel analyzer found 125 same-pixel/same-camera
+preview-to-nonpreview observations, each separated by five seconds; these bound
+the transition but do not give its exact time. The lifecycle trace recorded 86
+`light_calculation_settled` events and settlement joins for four preview chunks
+at 0.7–1.7 seconds after first preview. For `(5,3,5)`, mesh publication and
+install were recorded at about 1.03 and 1.16 seconds. No same-view pixel sample
+caught the intermediate settled-light/preview state. Readiness and mesh debt
+remained, and no operator framebuffer verdict was collected. Static no-fly
+reports also fail movement-related acceptance gates by design. Host CPU is
+logged for context only and never decides whether the run starts.
 
-Keep flight probes short. After this fix, the next validation is one short
-visible no-teleport route on a freshly generated world, then replay that exact
-runtime world with `--require-existing-world`. Use the manifest's actual start
-focus and inspect pixel/relight traces at fixed coordinates; don't infer cold or
-warm provenance from the route name or report filename.
+Keep flight probes short. M622AF/AG completed the cold-create and exact-world
+static replay pair. A moving route on that new world must start where generated
+terrain supports the player; use the manifest's actual start focus and reject
+any route whose start does not match. Keep the established moving M335 route on
+its known-good terrain, and inspect pixel/relight traces at fixed coordinates;
+don't infer cold or warm provenance from a route name or report filename.
 
 ### M622AF/AG: same-world cold/create and saved-world replay
 
@@ -11347,8 +11364,10 @@ fixed focus `(-3,1)`. Focus pending-light median was zero in both. Cold had 960
 pixel probes with 72 dark samples, all on drawable surfaces and none light
 unsettled/preview. Warm had 1,920 probes with 147 dark samples, all on drawable
 surfaces; 15 dark samples were unsettled/preview and five preview. The warm
-trace saw 59 same-view preview-to-nonpreview transitions within 0–1 second,
-but no explicit demand-light-settlement event. Neither report is acceptance:
+trace saw 59 same-view preview-to-nonpreview observations within 0–1 second.
+Its lifecycle trace recorded 154 `light_calculation_settled` events overall,
+but no same-view pixel sample caught the intermediate settled-light/preview
+state. Neither report is acceptance:
 both are static and fail movement/readiness gates, and no operator verdict was
 recorded.
 
@@ -11360,3 +11379,62 @@ Artifacts:
 - M622AG report: `bin/suite_reports/engine_refactor/m622ag_world193_warm_light_probe_20261016.json`.
 - M622AG pixel analysis: `bin/suite_reports/engine_refactor/m622ag_warm_renderer_pixel_trace_20261016.json`.
 - M622AG perf/INFO: `bin/logs/perf_20261016-215134_45964.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215130.45964`.
+
+### M622AH/AI: cold-world start fallback and repeated M335 route
+
+M622AH requested a visible no-teleport M335 route on `World_193` from
+`(120,56,56)`, which should map to focus `(7,3)`. The runtime loaded the named
+world with 121/121 spatial columns and no generation, but the actual start was
+`(-3,1)`. `world_data.json` places spawn at `(-44,51.12,20)`, also focus
+`(-3,1)`. `EnsurePlayerOnGround` falls back to the spawn column when the pinned
+column has no solid surface, so this is an invalid route start rather than a
+streaming-flight result. The manifest detected the mismatch and set
+`product_start_position_pinned=false`; keep that integrity check.
+
+M622AI repeated the short established route on `World_164` with the same
+`(120,56,56)`, eye Y 70, yaw 180, pitch -30, 35-second fly, 20-second stop, and
+15-second idle. Actual focus matched `(7,3)` and moved west to `(-3,3)`;
+process exit was zero and there was no timeout. Host CPU median/p95/max was
+68.8/86.5/97.1%, app CPU was 31.3/39.4/44.9% of machine capacity. Host values
+are context only and did not gate the run.
+
+The analyzer returned `pass=false` on timing/scheduler/stop lines. It recorded
+`visual_holes_rate=0.0606`, focus pending-light median 0, post-stop mesh-missing
+max 0, post-stop visible-black max 2, and readiness-debt max 31. Pixel analysis
+found 62 luma-below-32 probes among 2,880; every probe joined drawable opaque
+depth. Fifty-five had settled demand light without preview, five had unsettled
+or preview shader state, and there were no missing surface joins or light
+revision mismatches. Ten chunks had provisional-light samples. Their sparse
+moving-camera observations bounded preview-to-nonpreview visibility between
+1 and 16 seconds, but did not hold camera position fixed; the trace therefore
+does not prove a same-pixel transient. No operator framebuffer verdict was
+captured. This run did not reproduce the target far-route symptom: its focus
+missing mesh median was 0 and the named symptom-reproduction check failed its
+expected profile thresholds.
+
+The established short moving command is:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+  -StampWarmPeriods -RequireExistingWorld -World World_164 `
+  -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622AI `
+  -Report bin/suite_reports/engine_refactor/m622ai_world164_m335_short_20261016.json
+```
+
+If further visual evidence is needed, keep this route and require a
+same-pixel/same-camera trace joined to light settlement and mesh publication for
+one frontier chunk. Host CPU must never defer that diagnostic run. Do not repeat
+the pinned M622AH start on `World_193` until that route's columns are present.
+
+Artifacts:
+
+- M622AH report: `bin/suite_reports/engine_refactor/m622ah_world193_m335_moving_short_20261016.json`.
+- M622AH perf/INFO: `bin/logs/perf_20261016-215408_44256.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215404.44256`.
+- M622AI report: `bin/suite_reports/engine_refactor/m622ai_world164_m335_short_20261016.json`.
+- M622AI pixel analysis: `bin/suite_reports/engine_refactor/m622ai_renderer_pixel_trace_20261016.json`.
+- M622AI perf/INFO: `bin/logs/perf_20261016-215807_42564.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215803.42564`.
