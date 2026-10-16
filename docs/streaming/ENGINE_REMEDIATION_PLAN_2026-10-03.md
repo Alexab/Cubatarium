@@ -11170,9 +11170,12 @@ M613 flight завершился с `process_rc=0`, но suite остался `p
 дали host CPU median/p95/max = 58.4/97.6/99.5%; такой полёт не проходит
 ресурсные ворота. Он показал `enter_unlit_max=55`, `enter_pending_max=48`,
 `visual_holes_rate=0`, `fly_visible_black_max=12`, но `black_proxy_rate=0` и
-`post_stop_visible_black_no_ticket_zero=true`. Значит, телеметрия долга и
-visible-black не должна трактоваться как прямое доказательство отсутствующей
-геометрии или видимого оператором чёрного чанка.
+`post_stop_visible_black_max=5`, `post_stop_visible_black_stalled_max=2`,
+`post_stop_visible_black_no_ticket_max=0`, `post_stop_visible_black_fully_dark_stalled_max=0`.
+Общий stalled-счётчик включает stale-dark грани на mesh с другими освещёнными
+гранями и не равен полностью чёрному чанку. Pixel black proxy и near-focus
+mesh-hole proxy были равны нулю; ни один из них отдельно не доказывает, что
+оператор не видел тёмный участок.
 
 Pixel trace M613: из 55 samples ниже порога яркости 44 изменили RGB после
 transparent pass; 11 остались неизменными и попали на drawable opaque depth
@@ -11189,25 +11192,83 @@ Lifecycle trace записал 242 clear, 358 set и 432 пары save queue/res
 host и не локализуют причину визуального поведения. Для тёмной колонки `(-3,4)`
 лог показал `set reason=relight_install_finalized`.
 
+M613 `visual_black_trace` содержит два разных класса: stale-dark mesh с другими
+lit-гранями и fully-dark mesh под repair. В сохранённом хвосте было 718/306
+сэмплов этих классов. На epoch 2849 stale witnesses в срезах `(-19,2,0)` и
+`(-19,2,5)` указывали на световые ячейки в соседних чанках `(-20,2,0)` и
+`(-20,2,5)`. У consumer-срезов собственные field/meshed/published/demand/
+settled light revisions совпадали. Это конкретный сигнал межчанковой границы:
+запечённый в грани нулевой свет расходился с текущим светом соседней ячейки.
+Это не доказывает единственную причину операторского чёрного чанка, но требует
+проверить инвалидизацию уже опубликованных соседних mesh после изменения halo.
+
+Статически подтверждено, что `BuildMeshCaptureDependencyStamp` хэширует точные
+light cells в radius-2 halo всех 26 соседей, а `CaptureDependencyStillValid`
+отклоняет async capture, если halo изменился между capture и применением.
+Такая проверка защищает незавершённую задачу, но сама по себе не переиздаёт
+mesh, который уже опубликован до более позднего изменения соседнего света.
+Логи связывают это с дефицитом repair admission на внешнем краю кольца. В M613
+для stale drawable `(-19,2,5)` admission был отклонён как `denied_far` при
+`focus_horiz=5` и invalidation backlog 45. В M614 на том же расстоянии срез
+`(-19,2,5)` получил 23 `dirty_admit_denied` retries; в отдельных samples у него
+были `desired_geom=4`, `published_geom=3`, согласованные light revisions и
+пустая dirty queue/отсутствующий mesh owner. Соседний stale срез
+`(-19,2,0)`, когда admission прошёл, был опубликован примерно через 117 ms.
+Это подтверждает путь `stale witness → denied/no owner`, а не только
+теоретическую возможность пропуска межчанковой инвалидации.
+
+Статически `DrainStaleLightRemeshDebt` раньше активировал debt только до
+`kVisualStageLitDrawableHoriz=4` и снимал его, когда собственные mesh/light
+revisions совпадали и preview погас, даже если соседский face-light sample
+оставался stale. Между тем `kVisualStageFirstMeshRelightApproachHoriz=5`
+считается потенциально экранно-видимым. M615 исправляет этот разрыв: durable
+repair scan теперь также обнаруживает/сохраняет stale-dark face witness и
+работает до approach ring 5. Сервис остаётся ограниченным существующей квотой
+одного ремонта на четыре scheduler frames; безусловная очередь и общий dirty
+budget не расширялись. Это целевая правка наблюдаемой причины; нужен короткий
+M335 check после прохождения resource gates.
+
+M614 повторил тот же короткий M335 no-teleport маршрут на том же мире после
+сохранения light flags. При старте было загружено `loaded/116`; входные maxima
+снизились до `enter_unlit_max=9` и `enter_pending_max=9` против `55/48` в M613.
+`fly_visible_black_max` снизился с 12 до 6, `post_stop_visible_black_max` с 5
+до 1, `post_stop_visible_black_stalled_max` с 2 до 0; readiness debt всё ещё
+равен 1, near-focus mesh-hole proxy — 0. Это согласуется с тем, что холодная
+карта без сохранённого light-complete metadata усиливает стартовый lighting
+debt. Однако pixel analyzer M614 нашёл 92 сэмпла ниже luma 96, включая 31
+unchanged RGB на drawable opaque surface с unsettled/preview evidence; в M613
+было 55 таких dark-threshold probes, 11 unchanged opaque. Ни probes, ни экранные
+captures не равны операторскому восприятию, а host CPU M614 был 65.9/99.4/100%
+(median/p95/max), поэтому этот парный результат не является визуальной или
+performance acceptance-проверкой. Процесс завершился без timeout (`process_rc=0`),
+но составной suite вернул `pass=false`.
+
 #### Следующие шаги
 
-1. Не менять streaming/render policy по M609–M613. На следующем запуске включить
-   `CUBATARIUM_RELIGHT_AUDIT=1` и связать для target-column light-flag load,
-   clear/set/save, dark-owner, deferred/FIFO/flow ownership, capture, worker
-   start, settle и GPU mesh publish.
-2. Оставить короткий проверенный GUI no-teleport маршрут M335 и прежние
-   координаты. Сначала провести короткий cold-entry arm и его saved-light
-   контроль с теми же seed/маршрутом, только когда host CPU median <=50%, p95
-   <=75%, разница обоих host показателей <=15 п.п. и разница median app CPU
-   <=15 п.п. Повторять только arm, не прошедший ворота.
-3. Отдельно раз в несколько серий проверять новую карту/seed. Сравнивать время
-   создания мира, число chunk-файлов и появление/наполнение light flags; эти
-   проверки не заменяют повторяемый маршрут.
-4. Не запускать длинный операторский полёт, пока короткий вход не проходит
-   критерии и операторское изображение не подтверждено. Перегруженные M609–M613
-   оставить диагностическими, не performance acceptance.
+1. M615 Release build прошёл. Не запускать flight на текущих ресурсах: оба
+   предыдущих arm превысили CPU gates, а M614 дал 23 denied retries на краю
+   кольца. На первом коротком ресурсно-валидном M335 проверить в trace
+   `stale_light_debt event=queued/admitted/published`, повторные отказанные
+   admissions на `focus_horiz=5`, stale witness после publish и короткое
+   операторское изображение. Длинный полёт не нужен.
+2. Если cross-chunk witness сохраняется после M615, продолжить lifecycle join:
+   source border light/incarnation/revision → dependent slice owner → capture
+   stamp → GPU publish → stale witness clear. Проверить, требуется ли более
+   явная точечная инвалидизация уже опубликованных halo-зависимых срезов.
+3. Считать M613/M614 предварительным cold-vs-warm сигналом: сохранённые flags
+   сильно снизили startup `unlit/pending`, но оба flight не прошли resource
+   gates. Повторить ту же пару только при host CPU median <=50%, p95 <=75%,
+   разнице median/p95 пары <=15 п.п. и разнице median app CPU <=15 п.п.; повторять
+   лишь arm, нарушивший ресурсные ворота.
+4. В коротких прогонах сохранять прямое операторское наблюдение отдельно от
+   pixel/readiness proxy. Не запускать длинный мониторинговый полёт; к нему
+   возвращаться только после стабильного короткого входа и подтверждения
+   изображения.
+5. Раз в несколько серий отдельно проверять новый seed/мир: время генерации,
+   число chunk-файлов, наличие/наполнение `column_light.json`, startup debt и
+   поведение первой визуальной полосы. Это не заменяет повторяемый M335 маршрут.
 
-Артефакты M609–M612 сохранены локально в `bin/suite_reports/engine_refactor`,
+Артефакты M609–M614 сохранены локально в `bin/suite_reports/engine_refactor`,
 `bin/logs` и `bin/flight_captures`; индекс и повторяемые команды описаны в
 [`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md) и
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).

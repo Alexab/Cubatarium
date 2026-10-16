@@ -10144,6 +10144,52 @@ clear сейчас должны быть `relight_enqueued` либо
 `column_unload_with_relight_work`; событие load различает `missing`, `loaded`,
 `open_failed`, `invalid_schema` и `parse_failed`. M613 использовал эти события.
 
+M614 — короткий warm control к M613 на том же созданном мире и M335 маршруте:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M614A_Warm_FlagRevisit_20261016 `
+  -Report bin/suite_reports/engine_refactor/m614a_warm_flag_revisit_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-121314_37496.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m614a_warm_flag_revisit_pixels_20261016.json
+```
+
+At load M614 reported `loaded/116`; `enter_unlit/pending` fell to 9/9 from
+M613 cold `55/48`, and visible-black maxima were lower. Both runs failed the
+runtime resource gate (M614 host CPU median/p95/max 65.9/99.4/100%), so this is
+not performance acceptance. Pixel dark-candidate totals also differed and are
+not an operator-image verdict. Use a resource-qualified repeat before drawing a
+causal visual conclusion.
+
+M615 addresses the observed no-owner stale repair retries without changing the
+flight profile: the durable stale-light repair service now includes stale-dark
+face witnesses with current own-slice revisions and extends its bounded service
+ring from LitDrawable radius 4 to the screen-visible approach radius 5. The
+existing reserved cadence remains one repair per four scheduler frames when
+ordinary dirty admission is exhausted. Release build succeeded; no test or
+flight was run after this policy change. At the next resource-qualified short
+M335 run, inspect `stale_light_debt` queued/admitted/published events and confirm
+the edge witness is cleared after mesh publication. Do not use the analyzer's
+dark-pixel count as an operator-image verdict.
+
+The M613 trace suggests a separate cross-chunk repair question: stale-dark
+consumer slices `(-19,2,0)` and `(-19,2,5)` had lit face samples in source chunks
+`(-20,2,0)` and `(-20,2,5)` while consumer revisions matched. Mesh capture hashes
+exact neighbor light halo cells and rejects changed in-flight inputs. Next audit
+the lifecycle after a source border-light update: whether every already-published
+dependent mesh gets an owner, then reaches capture, GPU publish, and stale-witness
+clear. Do not infer missing geometry from the general stalled visible-black
+counter; M613 `fully_dark_stalled` stayed zero.
+
 Артефакты M613 (локальные):
 
 - `suite_reports/engine_refactor/m613a_world_create_20261016.json`
@@ -10151,3 +10197,7 @@ clear сейчас должны быть `relight_enqueued` либо
 - `suite_reports/engine_refactor/m613b_cold_flag_lifecycle_pixels_20261016.json`
 - `logs/perf_20261016-120225_41932.jsonl`
 - `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-120222.41932`
+- `suite_reports/engine_refactor/m614a_warm_flag_revisit_20261016.json`
+- `suite_reports/engine_refactor/m614a_warm_flag_revisit_pixels_20261016.json`
+- `logs/perf_20261016-121314_37496.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-121310.37496`

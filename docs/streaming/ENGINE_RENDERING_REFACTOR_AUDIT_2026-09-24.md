@@ -5516,3 +5516,67 @@ periods; only then consider a bounded age/visibility service guarantee. Full
 M598 evidence and the repeatable commands are recorded in the [remediation
 plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md) and
 [flight script notes](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+## M613–M614: cold-light entry and cross-chunk stale faces (2026-10-16)
+
+M613 created a fresh radius-4 world with 597 chunk files but no
+`column_light.json`. On cold entry the saved-light lifecycle reported `missing/0`;
+at the end of the route the file held 116 complete entries. Entry telemetry reached
+`unlit/pending=55/48`. The run had host CPU median/p95/max 58.4/97.6/99.5%, so its
+timing is not a clean performance result. It reported zero near-focus mesh-hole
+proxy and zero black pixel proxy, while the general post-stop visible-black stalled
+counter reached 2. The more specific fully-dark-stalled count remained zero; do not
+interpret the general counter as two fully black chunks.
+
+M614 revisited that same world with the same short M335 route. It loaded 116 saved
+light-complete flags and entered at `unlit/pending=9/9`; visible-black fly maximum
+fell from 12 to 6 and post-stop stalled maximum from 2 to 0. This supports cold
+lighting initialization as a contributor to larger startup light debt. It does not
+prove that cold initialization alone caused the operator-visible black chunks:
+M614 also had invalid timing conditions (host CPU median/p95/max 65.9/99.4/100%),
+and its pixel analyzer reported a different set of dark samples. Pixel candidates
+are not a substitute for the actual displayed image. The most defensible conclusion
+is that a new world starts without trusted saved light-complete metadata and must
+relight before those columns can be considered settled; cold entry can therefore
+make startup darkness more likely or longer-lived than a warmed revisit.
+
+The M613 visual trace gives a more specific repair lead. At epoch 2849, stale-dark
+face witnesses in consumer slices `(-19,2,0)` and `(-19,2,5)` sampled lit cells in
+neighbor source chunks `(-20,2,0)` and `(-20,2,5)`. Each consumer's own
+field/meshed/published/demand/settled revisions matched. The witness means a
+published face vertex carries zero baked light while the current world light at
+its adjacent face-air or solid sample is nonzero; it is a stale-light surface
+candidate, not evidence of a hole in geometry.
+
+The mesh capture stamp hashes exact light samples in the radius-2 halo of all 26
+neighbor chunks, and apply rejects in-flight captures whose halo changed. That
+closes the capture-to-apply race. It does not by itself dirty an already-published
+dependent mesh when a neighbor's border light changes later. The flight logs
+showed a more immediate admission gap at the approach-ring boundary: M613 denied
+stale remesh admission for `(-19,2,5)` at `focus_horiz=5` with invalidation
+backlog 45. M614 retried `(-19,2,5)` 23 times with `dirty_admit_denied`; a sample
+had desired geometry revision 4 versus published 3, settled/equal light revision,
+an empty dirty queue, and no mesh owner. A neighboring stale slice
+`(-19,2,0)` was admitted and published within about 117 ms. The coordinates were
+on the approach ring, one chunk beyond the settled LitDrawable ring.
+
+M615 changes `DrainStaleLightRemeshDebt` so it discovers and retains actual
+stale-dark face witnesses even after own-slice revisions match, and activates
+repairs through `kVisualStageFirstMeshRelightApproachHoriz`. It reuses the existing
+bounded reserve of one repair per four scheduler frames after ordinary dirty
+admission runs out. The Release build passes. No tests or flight were run after
+this change because both M613/M614 exceeded CPU resource gates and M614's GUI
+process temporarily appeared unresponsive. The next valid check is a short M335
+run that confirms an approach-ring witness remains queued until admission, receives
+a mesh owner, publishes, and clears; no long monitoring flight is required.
+
+The earlier halo invalidation question remains open if a current witness survives
+after M615 repair publication. In that case correlate source border-light update
+with dependent slice invalidation/capture/GPU publication; if the transition lacks
+an owner, prefer targeted halo-dependent remesh invalidation over broad relight or
+a new global queue policy.
+
+See the exact short-run profiles, artifacts, and resource-gate limits in the
+[remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md),
+[diagnostic runbook](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md), and
+[flight experiment notes](FLIGHT_EXPERIMENT_SCRIPTS.md).

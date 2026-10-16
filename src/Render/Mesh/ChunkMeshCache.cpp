@@ -3574,14 +3574,16 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
       IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   const UChunkManager &chunks = world.GetChunkManager();
   // A denied far repair remains durable but must not be injected into Dirty
-  // ahead of the normal admission budget. Activate it only in the lit-drawable
-  // ring; this keeps far debt from flooding the priority queue during travel.
+  // ahead of the normal admission budget. Include the one-chunk approach ring:
+  // it can already be on screen even though it is outside the settled publish
+  // ring. The existing one-slot-per-four-frames reserve bounds the extra work.
   const int activation_radius =
       std::max(0, std::min(MeshFocusRadiusChunks,
-                           kVisualStageLitDrawableHoriz));
-  // Discover settled provisional previews and revision-stale drawables only
-  // when they enter the active visual ring. Far previews retain their ambient
-  // fallback without filling the durable queue during long flights.
+                           kVisualStageFirstMeshRelightApproachHoriz));
+  // Discover settled provisional previews, revision-stale drawables, and
+  // drawable stale-dark witnesses only when they enter the active visual ring.
+  // Far previews retain their ambient fallback without filling the durable
+  // queue during long flights.
   for (const auto &entry : GreedyCache)
   {
     const glm::ivec3 coord = entry.first;
@@ -3597,7 +3599,11 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     const bool revision_stale =
         chunk && (GetMeshedLightRevision(coord) < field_light_rev ||
                   GetMeshPublishRevs(coord).light_rev < field_light_rev);
-    if (!entry.second.ProvisionalLightPreview && !revision_stale)
+    const bool has_dark_face = ChunkHasFullyDarkFace(coord);
+    const bool stale_dark_face =
+        has_dark_face && ChunkHasStaleDarkFaces(coord, world);
+    if (!entry.second.ProvisionalLightPreview && !revision_stale &&
+        !stale_dark_face)
     {
       continue;
     }
@@ -3670,9 +3676,12 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     const uint64_t field_light_rev = chunk->GetLightFieldRevision();
     const uint64_t meshed_light_rev = GetMeshedLightRevision(coord);
     const uint64_t published_light_rev = GetMeshPublishRevs(coord).light_rev;
+    const bool has_dark_face = ChunkHasFullyDarkFace(coord);
+    const bool stale_dark_face =
+        has_dark_face && ChunkHasStaleDarkFaces(coord, world);
     if (meshed_light_rev >= field_light_rev &&
         published_light_rev >= field_light_rev &&
-        !HasProvisionalLightPreview(coord))
+        !HasProvisionalLightPreview(coord) && !stale_dark_face)
     {
       PendingStaleLightRemeshes_.erase(coord);
       if (audit_relight)

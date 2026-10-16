@@ -658,14 +658,59 @@ light-revision mismatch не выявлено. Эти samples описывают
 вывод о performance. Разовый счётчик CPU перед запуском оказался недостаточным:
 ресурсный gate принимать только по runtime распределению из flight report.
 
-Для следующего короткого парного прогона требовать одновременно host CPU
+M614 повторил короткий маршрут в том же мире после появления сохранённых flags:
+load сообщил `loaded/116`. `enter_unlit_max/enter_pending_max` составили 9/9
+против 55/48 в холодном M613; `fly_visible_black_max` — 6 против 12,
+post-stop stalled — 0 против 2. Near-focus mesh-hole proxy оставался 0, но
+общий readiness debt не исчез. Pixel trace M614 дал 92 samples ниже luma 96;
+31 unchanged RGB совпали с drawable opaque surface и все имели unsettled/preview
+evidence. M613 дал 55 dark-threshold samples и 11 unchanged opaque candidates.
+Эти разные proxy не позволяют сделать вывод, что warm-визуальное изображение
+было хуже или лучше; сохранённый capture не заменяет оператора. В M614 runtime
+host CPU median/p95/max составили 65.9/99.4/100%, поэтому и его timing
+непригоден. Процесс закончен штатно, но aggregate suite `pass=false`.
+
+M613 stale-dark trace также выявил межчанковую границу. Для consumer chunk
+`(-19,2,0)` stale witness указывал на face-light sample в source chunk
+`(-20,2,0)`; для `(-19,2,5)` — на `(-20,2,5)`. Собственные consumer revisions
+были согласованы. `ChunkHasStaleDarkFaces` проверяет, что baked face light равен
+нулю, а текущий world sample на соседней face-air/solid ячейке уже lit. Capture
+dependency stamp включает точный radius-2 light halo 26 соседей и защищает
+in-flight mesh от изменения входа до apply. Отдельно нужно доказать, что уже
+опубликованный drawable mesh получает remesh owner, когда позже меняется
+neighbor halo; наличие ticket без прогресса зафиксировано, но источник
+задержки по M613 пока не установлен.
+
+M613/M614 дают предварительный сигнал о cold start: при отсутствии файла
+light-complete flags первая карта вошла с большим `unlit/pending` debt; warm
+карта загрузила 116 flags и имела существенно меньшие стартовые maxima. Оба
+прогона перегружены, поэтому причинность по изображению и performance ещё
+нужно подтвердить. Для повторной короткой пары требовать host CPU
 median <=50%, p95 <=75%, разницу median/p95 пары <=15 п.п. и разницу median app
 CPU <=15 п.п. Использовать существующий M335 сценарий и те же параметры; менять
 маршрут лишь для точечного короткого кадра по известной координате. Если ворота
 не пройдены, сохранить лог и повторить только соответствующий arm позже. Новые
 seed-проверки проводить периодически отдельно от повторяемой пары.
 
-Артефакты M609–M612 (локальные, не включены в исходники):
+M615 меняет только обслуживание подтверждённого stale-light debt:
+`DrainStaleLightRemeshDebt` теперь ищет и не снимает с очереди drawable
+`ChunkHasStaleDarkFaces`, даже если собственные mesh/light revisions совпали, и
+активирует такой ремонт до `kVisualStageFirstMeshRelightApproachHoriz` (один
+чанк за пределами LitDrawable ring). Сохраняется имеющийся предел: не более
+одного reserved repair за четыре scheduler frames, когда shared dirty budget
+исчерпан. Release build успешен; тесты и новый flight в M615 не запускались.
+
+Основание для правки — M613 `dirty_admit denied_far` для stale chunk на
+`focus_horiz=5` при backlog 45 и 23 `dirty_admit_denied` retries для
+`(-19,2,5)` в M614. При этом `desired_geom=4`, `published_geom=3`, light
+revision уже был settled, а dirty queue и mesh owner отсутствовали. Для соседнего
+среза `(-19,2,0)` admission прошёл, и новый mesh опубликовался примерно через
+117 ms. Следующий короткий M335 на ресурсно-валидном host должен проверить, что
+stale debt на approach ring теперь остаётся durable до publish и не копит
+повторные безвладельческие отказы. Длинный мониторинговый маршрут для этой
+проверки не нужен.
+
+Артефакты M609–M614 (локальные, не включены в исходники):
 
 - M609: `m609a_world_create_20261016.json`, `m609b_cold_owner_drop_20261016.json`,
   `m609b_cold_owner_drop_pixels_20261016.json`,
@@ -677,6 +722,13 @@ seed-проверки проводить периодически отдельн
 - M612: `m612a_saved_light_revisit_20261016.json`,
   `m612a_saved_light_revisit_pixels_20261016.json`,
   `perf_20261016-115016_20008.jsonl`.
+- M613: `m613a_world_create_20261016.json`,
+  `m613b_cold_flag_lifecycle_20261016.json`,
+  `m613b_cold_flag_lifecycle_pixels_20261016.json`,
+  `perf_20261016-120225_41932.jsonl`.
+- M614: `m614a_warm_flag_revisit_20261016.json`,
+  `m614a_warm_flag_revisit_pixels_20261016.json`,
+  `perf_20261016-121314_37496.jsonl`.
 
 Полные выводы, ограничения сравнения и дальнейшие действия находятся в
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
