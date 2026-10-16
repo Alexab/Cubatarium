@@ -4352,7 +4352,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         // the rest of this column is still loading.
         const std::vector<glm::ivec3> changed_input_chunks{load.coord};
         world.MeshService->QueueMeshDependencyInvalidations(
-            world.BlockWorld, changed_input_chunks);
+            world.BlockWorld, changed_input_chunks, "disk_slice_apply");
       }
       metrics.world_apply_ms +=
           std::chrono::duration<double, std::milli>(

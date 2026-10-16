@@ -6198,6 +6198,8 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.stale_sample_light)
                << ",\"stale_sample_gpu_path\":"
                << static_cast<int>(r.stale_sample_gpu_path)
+               << ",\"stale_mesh_halo_state\":"
+               << static_cast<int>(r.stale_mesh_halo_state)
                << ",\"renderer_path\":"
                << static_cast<int>(r.renderer_path)
                << ",\"renderer_cpu_index_count\":"

@@ -4206,6 +4206,13 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         trace.stale_face_index = stale_witness.face_index;
         trace.stale_sample_light = stale_witness.packed_light;
         trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
+        if (UJobStageTrace::VisualBlackTraceEnabled() &&
+            UJobStageTrace::IsVisualChunkWatched(coord.x, coord.y, coord.z))
+        {
+          trace.stale_mesh_halo_state = static_cast<uint8_t>(
+              MeshService->GetCache().GetPublishedLightHaloState(coord,
+                                                                 BlockWorld));
+        }
       }
       if (record_focus_slice)
       {
@@ -8976,7 +8983,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       if (light_changes.any_changed() && MeshService)
       {
         MeshService->QueueMeshDependencyInvalidations(
-            BlockWorld, light_changes.changed_coords);
+            BlockWorld, light_changes.changed_coords, "relight_light_change");
       }
       if (!light_changes.any_changed() && relit_coords.empty())
       {

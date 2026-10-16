@@ -361,7 +361,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         {
           const std::vector<glm::ivec3> changed_input_chunks{coord};
           world.MeshService->QueueMeshDependencyInvalidations(
-              world.BlockWorld, changed_input_chunks);
+              world.BlockWorld, changed_input_chunks,
+              "procedural_chunk_commit");
         }
         if (Streamer)
         {

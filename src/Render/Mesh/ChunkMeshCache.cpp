@@ -3419,7 +3419,7 @@ void UChunkMeshCache::ClearSatisfiedScreenRayRepairPin(
 
 void UChunkMeshCache::QueueMeshDependencyInvalidations(
     const UBlockWorld &world,
-    const std::vector<glm::ivec3> &changed_input_chunks)
+    const std::vector<glm::ivec3> &changed_input_chunks, const char *cause)
 {
   const UChunkManager &chunks = world.GetChunkManager();
   for (const glm::ivec3 changed_coord : changed_input_chunks)
@@ -3441,16 +3441,70 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
           {
             continue;
           }
-          if (PendingMeshDependencyInvalidations_
-                  .insert(dependent_coord)
-                  .second)
+          const bool inserted =
+              PendingMeshDependencyInvalidations_.insert(dependent_coord)
+                  .second;
+          if (inserted)
           {
             ++MeshDependencyQueuedSinceDrain_;
+          }
+          if (UJobStageTrace::VisualBlackTraceEnabled() &&
+              UJobStageTrace::IsVisualChunkWatched(
+                  dependent_coord.x, dependent_coord.y, dependent_coord.z))
+          {
+            CubatariumLogInfo(
+                "RelightAudit",
+                std::string("mesh_dependency event=queued cause=") +
+                    (cause ? cause : "unknown") + " source=(" +
+                    std::to_string(changed_coord.x) + "," +
+                    std::to_string(changed_coord.y) + "," +
+                    std::to_string(changed_coord.z) + ") dependent=(" +
+                    std::to_string(dependent_coord.x) + "," +
+                    std::to_string(dependent_coord.y) + "," +
+                    std::to_string(dependent_coord.z) + ") inserted=" +
+                    (inserted ? "1" : "0") + " backlog=" +
+                    std::to_string(
+                        PendingMeshDependencyInvalidations_.size()));
           }
         }
       }
     }
   }
+}
+
+PublishedLightHaloState UChunkMeshCache::GetPublishedLightHaloState(
+    glm::ivec3 chunk_coord, const UBlockWorld &world) const
+{
+  const auto mesh = GreedyCache.find(chunk_coord);
+  if (mesh == GreedyCache.end() ||
+      !mesh->second.MeshedLightHaloSignaturesValid)
+  {
+    return PublishedLightHaloState::Unavailable;
+  }
+
+  const UChunkManager &chunks = world.GetChunkManager();
+  size_t signature_index = 0;
+  for (int dy = -1; dy <= 1; ++dy)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        if (dx == 0 && dy == 0 && dz == 0)
+        {
+          continue;
+        }
+        const glm::ivec3 offset(dx, dy, dz);
+        const UChunk *neighbor = chunks.GetChunk(chunk_coord + offset);
+        if (mesh->second.MeshedLightHaloSignatures[signature_index++] !=
+            ChunkMeshLightHaloSignature(neighbor, offset))
+        {
+          return PublishedLightHaloState::DiffersFromCurrent;
+        }
+      }
+    }
+  }
+  return PublishedLightHaloState::MatchesCurrent;
 }
 
 void UChunkMeshCache::QueueMeshDependencyInvalidation(
@@ -3519,6 +3573,29 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
   const int enqueue_budget =
       std::clamp(std::max(1, max_schedule_per_frame) * 2, 4, 16);
   int enqueued = 0;
+  const auto trace_dependency = [&](const char *event, glm::ivec3 coord)
+  {
+    if (!UJobStageTrace::VisualBlackTraceEnabled() ||
+        !UJobStageTrace::IsVisualChunkWatched(coord.x, coord.y, coord.z))
+    {
+      return;
+    }
+    CubatariumLogInfo(
+        "RelightAudit",
+        std::string("mesh_dependency event=") + event + " dependent=(" +
+            std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
+            std::to_string(coord.z) + ") dirty=" +
+            (Dirty.Contains(coord) ? "1" : "0") + " raa=" +
+            (RemeshAfterApply.count(coord) > 0 ? "1" : "0") +
+            " live=" +
+            (((AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+              IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord))
+                 ? "1"
+                 : "0") +
+            " dep_backlog=" +
+            std::to_string(PendingMeshDependencyInvalidations_.size()) +
+            " applied=" + std::to_string(LastMeshDependencyAppliedN_));
+  };
   for (const glm::ivec3 coord : candidates)
   {
     if (enqueued >= enqueue_budget)
@@ -3528,6 +3605,7 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
     if (!world.GetChunkManager().HasChunk(coord) ||
         !HasDrawableGreedyMesh(coord))
     {
+      trace_dependency("drop_not_drawable", coord);
       PendingMeshDependencyInvalidations_.erase(coord);
       continue;
     }
@@ -3537,10 +3615,12 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
         IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord);
     if (live_pipeline)
     {
+      trace_dependency("defer_live_owner", coord);
       continue;
     }
     if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0)
     {
+      trace_dependency("covered_by_existing_owner", coord);
       PendingMeshDependencyInvalidations_.erase(coord);
       continue;
     }
@@ -3554,10 +3634,15 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
       PendingMeshDependencyInvalidations_.erase(coord);
       ++LastMeshDependencyAppliedN_;
       ++enqueued;
+      trace_dependency("applied", coord);
       if (OnMeshDependencyAppliedFn_)
       {
         OnMeshDependencyAppliedFn_(coord);
       }
+    }
+    else
+    {
+      trace_dependency("admission_failed", coord);
     }
   }
 }
@@ -7682,6 +7767,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (result.InputStampsValid)
   {
     chunkMesh.MeshedLightRevision = result.InputStamps[0].light;
+    chunkMesh.MeshedLightHaloSignatures = result.InputLightHaloSignatures;
+  }
+  chunkMesh.MeshedLightHaloSignaturesValid = result.InputStampsValid;
+  if (!result.InputStampsValid)
+  {
+    chunkMesh.MeshedLightHaloSignatures = {};
   }
   {
     std::vector<uint16_t> ids;
@@ -11264,6 +11355,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
           MeshPublishMaterialStamp(ids.data(), ids.size());
       chunkMesh.BoundaryOverlay = sync_snap.boundaryOverlay;
       chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
+      chunkMesh.MeshedLightHaloSignatures = sync_snap.lightHaloSignatures;
+      chunkMesh.MeshedLightHaloSignaturesValid =
+          sync_snap.inputStampsValid;
     }
     if (sync_snap.boundaryOverlay.active &&
         sync_snap.boundaryOverlay.missingNeighborFaces != 0)

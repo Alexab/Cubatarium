@@ -35,6 +35,13 @@
 namespace cutum
 {
 
+enum class PublishedLightHaloState : uint8_t
+{
+  Unavailable = 0,
+  MatchesCurrent = 1,
+  DiffersFromCurrent = 2,
+};
+
 enum class MeshRevisionBumpReason : uint8_t;
 struct Frustum;
 struct MeshBuildResult;
@@ -88,7 +95,10 @@ public:
   bool PrioritizeScreenRayRepairRemesh(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
-      const std::vector<glm::ivec3> &changed_input_chunks);
+      const std::vector<glm::ivec3> &changed_input_chunks,
+      const char *cause = nullptr);
+  PublishedLightHaloState GetPublishedLightHaloState(
+      glm::ivec3 chunk_coord, const UBlockWorld &world) const;
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
   void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
   bool HasPendingStaleLightRemesh(glm::ivec3 chunk_coord) const
@@ -1155,6 +1165,9 @@ private:
     bool CpuHasLitDrawableFace{false};
     bool ProvisionalLightPreview{false};
     uint64_t MeshedLightRevision{0};
+    std::array<uint64_t, kChunkMeshNeighborStampCount>
+        MeshedLightHaloSignatures{};
+    bool MeshedLightHaloSignaturesValid{false};
     /// Sysreset v2: Accept gate stamps (geom/light/material).
     MeshPublishRevs PublishRevs{};
     /// S4 versioned neighbor-missing overlay (independent of stamp).

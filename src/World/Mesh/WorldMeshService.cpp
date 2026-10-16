@@ -411,9 +411,9 @@ void UWorldMeshService::RequeueDirtyPriority(
 
 void UWorldMeshService::QueueMeshDependencyInvalidations(
     const UBlockWorld &world,
-    const std::vector<glm::ivec3> &changed_input_chunks)
+    const std::vector<glm::ivec3> &changed_input_chunks, const char *cause)
 {
-  Cache.QueueMeshDependencyInvalidations(world, changed_input_chunks);
+  Cache.QueueMeshDependencyInvalidations(world, changed_input_chunks, cause);
 }
 
 void UWorldMeshService::QueueMeshDependencyInvalidation(
