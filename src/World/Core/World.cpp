@@ -4211,9 +4211,16 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         // witness can be emitted before WatchVisualChunk is opened.
         if (UJobStageTrace::VisualBlackTraceEnabled())
         {
+          bool cache_entry_present = false;
+          bool halo_stamp_valid = false;
           trace.stale_mesh_halo_state = static_cast<uint8_t>(
               MeshService->GetCache().GetPublishedLightHaloState(coord,
-                                                                 BlockWorld));
+                                                                 BlockWorld,
+                                                                 &cache_entry_present,
+                                                                 &halo_stamp_valid));
+          trace.stale_mesh_cache_entry_present =
+              cache_entry_present ? 1 : 0;
+          trace.stale_mesh_halo_stamp_valid = halo_stamp_valid ? 1 : 0;
         }
       }
       if (record_focus_slice)

@@ -3473,13 +3473,33 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
 }
 
 PublishedLightHaloState UChunkMeshCache::GetPublishedLightHaloState(
-    glm::ivec3 chunk_coord, const UBlockWorld &world) const
+    glm::ivec3 chunk_coord, const UBlockWorld &world,
+    bool *cache_entry_present, bool *signature_stamp_valid) const
 {
+  if (cache_entry_present)
+  {
+    *cache_entry_present = false;
+  }
+  if (signature_stamp_valid)
+  {
+    *signature_stamp_valid = false;
+  }
   const auto mesh = GreedyCache.find(chunk_coord);
-  if (mesh == GreedyCache.end() ||
-      !mesh->second.MeshedLightHaloSignaturesValid)
+  if (mesh == GreedyCache.end())
   {
     return PublishedLightHaloState::Unavailable;
+  }
+  if (cache_entry_present)
+  {
+    *cache_entry_present = true;
+  }
+  if (!mesh->second.MeshedLightHaloSignaturesValid)
+  {
+    return PublishedLightHaloState::Unavailable;
+  }
+  if (signature_stamp_valid)
+  {
+    *signature_stamp_valid = true;
   }
 
   const UChunkManager &chunks = world.GetChunkManager();

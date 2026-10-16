@@ -312,6 +312,9 @@ struct VisualBlackTraceRecord
   uint8_t stale_sample_gpu_path{0};
   /// 0=unavailable, 1=published light halo still matches world, 2=changed.
   uint8_t stale_mesh_halo_state{0};
+  /// Split unavailable halo state into absent cache vs absent signature.
+  uint8_t stale_mesh_cache_entry_present{0};
+  uint8_t stale_mesh_halo_stamp_valid{0};
   /// sample_kind=2: 1=CPU opaque, 2=CPU transparent, 3=packed opaque,
   /// 4=packed transparent.
   uint8_t renderer_path{0};

@@ -98,7 +98,9 @@ public:
       const std::vector<glm::ivec3> &changed_input_chunks,
       const char *cause = nullptr);
   PublishedLightHaloState GetPublishedLightHaloState(
-      glm::ivec3 chunk_coord, const UBlockWorld &world) const;
+      glm::ivec3 chunk_coord, const UBlockWorld &world,
+      bool *cache_entry_present = nullptr,
+      bool *signature_stamp_valid = nullptr) const;
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
   void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
   bool HasPendingStaleLightRemesh(glm::ivec3 chunk_coord) const

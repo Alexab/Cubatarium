@@ -6200,6 +6200,10 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.stale_sample_gpu_path)
                << ",\"stale_mesh_halo_state\":"
                << static_cast<int>(r.stale_mesh_halo_state)
+               << ",\"stale_mesh_cache_entry_present\":"
+               << static_cast<int>(r.stale_mesh_cache_entry_present)
+               << ",\"stale_mesh_halo_stamp_valid\":"
+               << static_cast<int>(r.stale_mesh_halo_stamp_valid)
                << ",\"renderer_path\":"
                << static_cast<int>(r.renderer_path)
                << ",\"renderer_cpu_index_count\":"
