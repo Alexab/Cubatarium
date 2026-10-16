@@ -9658,3 +9658,86 @@ Artifacts: [M599 create](../../bin/suite_reports/engine_refactor/m599a_world_cre
 [M600 flight](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_20261016.json),
 [M600 pixel analysis](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_pixels_20261016.json),
 [M600 perf](../../bin/logs/perf_20261016-000013_23452.jsonl).
+
+## M601/M602 — age-service queue order and cold-versus-warm entry (2026-10-16)
+
+M601 added one bounded diagnostic line per aged deferred-relight admission. It
+records the world column, deferral age, FIFO occupancy before/after, queue index
+after prioritization, active pin identity, and whether the queue accepted the
+request. Build Release, create a unique radius-4 cold world with the same seed,
+wait for the create report, then use the same short route:
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M601A_Cold_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m601a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+$env:CUBATARIUM_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M601A_Cold_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m601b_deferred_far_age_audit `
+  -Report bin/suite_reports/engine_refactor/m601b_deferred_far_age_audit_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-025552_27436.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m601b_deferred_far_age_audit_pixels_20261016.json
+```
+
+M601 created 597 chunk files. The exact startup column `(-4,2)` was age-admitted
+at 2.498 s, FIFO `20→21`, priority index 0, with no active pin. Nineteen age
+admissions occurred, and each was inserted at index 0; later requests therefore
+could overtake earlier age-admitted work. The startup opaque slices `(-4,2,1/2)`
+settled light about 10.735/10.785 s after their first pixel sample; after that,
+the matching mesh build took 3.672 ms and publish took 8.066 ms. Pixel analysis
+found 230 unsettled-demand samples, 196 provisional-preview samples, and 28
+pixels below luma 96. The mesh-hole proxy stayed zero. Preview shader override
+was active for sampled unlit surfaces; no sampled RGB was exactly zero, so the
+operator's report of black chunks is not disproven by this finite pixel grid.
+
+M602 used the existing saved `World_M600A_Cold_20261015` to isolate warm entry
+from the new-world startup condition. It reused the exact 35 s route:
+
+```powershell
+$env:CUBATARIUM_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M600A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m602b_warm_light_compare `
+  -Report bin/suite_reports/engine_refactor/m602b_warm_light_compare_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-030103_5464.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m602b_warm_light_compare_pixels_20261016.json
+```
+
+The runner classified M602 as warm. The startup slices `(-4,2,1/2)` no longer
+appeared in the provisional pixel lifecycle and preview samples fell from 196
+to 18; other active slices still had readiness debt (`enter_unlit_max=13`). This
+supports cold-start relighting as a contributor to dark entry, but does not
+explain every dark sample. Both aggregate suites ended `pass=false` on unrelated
+readiness/eye-proxy gates; these short runs are diagnostic evidence, not
+acceptance runs.
+
+Artifacts: [M601 create](../../bin/suite_reports/engine_refactor/m601a_world_create_20261016.json),
+[M601 flight](../../bin/suite_reports/engine_refactor/m601b_deferred_far_age_audit_20261016.json),
+[M601 pixel analysis](../../bin/suite_reports/engine_refactor/m601b_deferred_far_age_audit_pixels_20261016.json),
+[M601 perf](../../bin/logs/perf_20261016-025552_27436.jsonl),
+[M602 flight](../../bin/suite_reports/engine_refactor/m602b_warm_light_compare_20261016.json),
+[M602 pixel analysis](../../bin/suite_reports/engine_refactor/m602b_warm_light_compare_pixels_20261016.json),
+[M602 perf](../../bin/logs/perf_20261016-030103_5464.jsonl).

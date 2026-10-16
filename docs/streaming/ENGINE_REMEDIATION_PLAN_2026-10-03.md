@@ -10826,12 +10826,41 @@ the frontier `(-20,2)` was a disk miss and procedural worker generation took
 89.811 ms. These runs support queue service as the larger startup delay, not
 slow disk reading or terrain generation.
 
-Next add an audit event for each age admission containing its column, age,
-FIFO occupancy, priority index after admission, and active pin identity. That
-will establish whether the exact on-screen provisional chunk received the age
-service or was reordered later by another scheduler pass. Keep the short
-control route; do not spend an 8,192-block acceptance flight until this causal
-link is verified.
+M601 added an event for each age admission with the column, age, FIFO before
+and after, resulting priority index, and active pin identity. The on-screen
+startup column `(-4,2)` was selected at age 2.498 s and inserted at priority
+index 0 (`20→21`, no active pin). It remained unsettled for about 10.785 s from
+the first pixel sample; once settled, its mesh build/publish took only 3.672/8.066
+ms. Later age admissions repeatedly entered at index 0 (19 total), meaning a
+newer age-selected column could move ahead of earlier queued work. This makes
+the M600 head-promotion policy vulnerable to starvation under sustained
+admission and explains why an exact target can still wait after its first
+promotion.
+
+M601 also recorded the operator's report of black chunks at world entry.
+Measured startup state had up to 32 unlit focus slices and 230 pixel samples
+with unsettled light demand; 28 sampled pixels were below luma 96, while the
+near-focus mesh-hole proxy remained zero. The preview shader override was active
+for sampled unlit opaque surfaces, and no sampled RGB was exactly black. Treat
+this as evidence of visibly underlit provisional rendering and a sampling
+limitation, not proof that the operator saw no black pixels.
+
+M602 repeated the same short route on the already-saved M600 world. The runner
+classified it as warm; the startup chunks `(-4,2,1/2)` no longer appeared in
+the provisional pixel lifecycle and preview samples fell from 196 to 18. Other
+newly active slices still produced readiness debt (`enter_unlit_max=13`), so
+saved light state improves cold-entry presentation without closing the general
+streaming issue. This controlled comparison supports a cold-start relight
+contribution to the entry regression, not an exclusive explanation.
+
+Next change the bounded age service so it does not insert another work item at
+the priority head while its prior age-admitted column is still queued. Let the
+current aged item reach dequeue/worker ownership before admitting the next;
+preserve the existing FIFO occupancy cap, pin rule, age horizon, and normal
+near-focus admission policy. Verify on one new cold radius-4 world using the
+established short route, and use the saved M600 world as the warm comparison.
+Do not spend an 8,192-block acceptance flight until the cold startup handoff
+improves without regressions.
 
 M599/M600 artifacts: [M599 world](../../bin/suite_reports/engine_refactor/m599a_world_create_20261015.json),
 [M599 flight](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_20261015.json),
@@ -10841,3 +10870,9 @@ M599/M600 artifacts: [M599 world](../../bin/suite_reports/engine_refactor/m599a_
 [M600 pixel analysis](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_pixels_20261016.json),
 [M599 perf](../../bin/logs/perf_20261015-235616_22728.jsonl),
 [M600 perf](../../bin/logs/perf_20261016-000013_23452.jsonl).
+
+M601/M602 artifacts and exact invocations are recorded in the
+[flight experiment notes](FLIGHT_EXPERIMENT_SCRIPTS.md). Keep their reports as
+diagnostic comparisons: M601 was a cold entry with prolonged unsettled
+relight, while M602 reused the saved M600 world and reduced the startup preview
+set but still carried readiness debt elsewhere.

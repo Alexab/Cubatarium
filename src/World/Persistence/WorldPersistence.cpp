@@ -1083,6 +1083,11 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
                                                       glm::ivec3 focus_ground,
                                                       int pin_horiz)
 {
+  static const bool audit_admission =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
+  static auto last_admission_audit = std::chrono::steady_clock::time_point{};
+  static auto last_aged_service_detail_audit =
+      std::chrono::steady_clock::time_point{};
   if (DeferredFarRelightColumns.empty())
   {
     world.GetPhysicsTelemetryMutable().RelightDeferredFarPendingN = 0;
@@ -1219,6 +1224,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     const bool async_owned =
         world.IsAsyncRelightColumnInFlight(aged_service_coord);
     const bool queued_before = IsTerrainColumnRelightQueued(world_key);
+    const int aged_service_fifo_before = GetPendingTerrainColumnRelightCount();
     if (!async_owned && !queued_before)
     {
       EnqueueTerrainColumnRelightImpl(
@@ -1244,6 +1250,45 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
       ++aged_service_admitted;
       ++world.GetPhysicsTelemetryMutable().RelightDeferredFarAgeAdmitN;
     }
+    if (audit_admission &&
+        (last_aged_service_detail_audit ==
+             std::chrono::steady_clock::time_point{} ||
+         admission_now - last_aged_service_detail_audit >=
+             kDeferredFarRelightAgeServiceInterval))
+    {
+      last_aged_service_detail_audit = admission_now;
+      const auto queue_info = GetTerrainColumnRelightQueueInfo(world_key);
+      const bool pin_valid = RelightFifoPinValid;
+      const glm::ivec2 pin_coord(RelightFifoPinCx, RelightFifoPinCz);
+      const bool pin_in_flight =
+          pin_valid && world.IsAsyncRelightColumnInFlight(pin_coord);
+      const auto age_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              admission_now -
+                              aged_service_entry.first_deferred_at)
+                              .count();
+      CubatariumLogInfo(
+          "RelightAudit",
+          std::string("deferred_far_age_service coord=(") +
+              std::to_string(aged_service_coord.x) + "," +
+              std::to_string(aged_service_coord.y) + ") age_ms=" +
+              std::to_string(age_ms) + " focus=(" +
+              std::to_string(focus_ground.x) + "," +
+              std::to_string(focus_ground.z) + ") horiz=" +
+              std::to_string(aged_service_horiz) + " fifo=" +
+              std::to_string(aged_service_fifo_before) + "->" +
+              std::to_string(GetPendingTerrainColumnRelightCount()) +
+              " async=" + (async_owned ? "1" : "0") +
+              " queued_before=" + (queued_before ? "1" : "0") +
+              " accepted=" + (accepted ? "1" : "0") +
+              " queue_keyed=" + (queue_info.keyed ? "1" : "0") +
+              " priority=" + (queue_info.priority ? "1" : "0") +
+              " queue_index=" + std::to_string(queue_info.queue_index) +
+              " queue_size=" + std::to_string(queue_info.queue_size) +
+              " pin_valid=" + (pin_valid ? "1" : "0") + " pin=(" +
+              std::to_string(pin_coord.x) + "," +
+              std::to_string(pin_coord.y) + ") pin_inflight=" +
+              (pin_in_flight ? "1" : "0"));
+    }
   }
   for (const glm::ivec2 &key : to_erase)
   {
@@ -1252,9 +1297,6 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   auto &telem = world.GetPhysicsTelemetryMutable();
   telem.RelightDeferredFarPendingN =
       static_cast<int>(DeferredFarRelightColumns.size());
-  static const bool audit_admission =
-      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
-  static auto last_admission_audit = std::chrono::steady_clock::time_point{};
   const auto audit_now = std::chrono::steady_clock::now();
   if (audit_admission &&
       (last_admission_audit == std::chrono::steady_clock::time_point{} ||
