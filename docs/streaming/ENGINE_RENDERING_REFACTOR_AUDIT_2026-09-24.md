@@ -5931,7 +5931,30 @@ source chunks with the singleton dependency API, which defaulted to geometry,
 then queue neighbors via the reason-aware batch API. The singular API now
 accepts a reason; open-sky sources explicitly use the light-only reason, while
 its seam/coverage default stays geometric. Added `queued_single` trace rows to
-verify this path. Release rebuild and one short runtime confirmation are the
-next checks; M622M itself cannot attribute its geometry drains to this path.
+verify this path. M622N later confirmed both light-only and geometry-capable
+singleton reasons reach the drain; M622M itself cannot attribute its geometry
+drains to the corrected callsite.
 
 Report: `bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json`.
+
+### M622N: source-light invalidation reason retained through drain
+
+The M622N Release binary completed the established short visible flight with
+35 periods and no timeout. The singleton trace retained 131
+`priority_light_dependency_repair` rows over 80 coordinates and 297
+`priority_dirty_enqueued` rows over 244 coordinates. Drain telemetry contained
+both reasons, confirming that light-only source invalidation no longer enters
+the geometry lane by default and that geometry seam/coverage work still does.
+
+At the selected witness `(-11,2,2)`, two geometry-debt retry samples remained
+at desired/published revision `2/1`; geometry singleton invalidations at
+frames 702 and 814 found an existing Dirty owner and showed no revision growth
+in those snapshots. This does not reproduce the M622M 7→12 growth on a
+controlled same-world basis. Keep the earlier churn report open; if it returns,
+join queue, drain, bump, build, and publish events for the exact coordinate.
+
+The analyzer reported mesh-coverage proxy 0.1515, fly visible-black proxy
+max 14, post-stop visible-black max 0, readiness debt max 31, median frame
+time 41.22 ms, and `pass=false` on non-CPU gates. No operator framebuffer
+verdict was recorded. Host CPU reached 100%, app CPU max was 45.63%; CPU is
+context only. Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.

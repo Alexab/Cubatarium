@@ -11709,3 +11709,29 @@ revision movement. Preserve a fresh-world caveat and do not infer pixel quality
 from analyzer proxies.
 
 Report: `bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json`.
+
+### M622N: singleton reason propagation verified
+
+After the source-specific correction, M622N completed the same compact M335
+route (`process_rc=0`, 35 periods, 33 steady); analyzer `pass=false` remained
+on non-CPU gates. It reported mesh-coverage proxy 0.1515, fly visible-black
+proxy max 14, post-stop visible-black proxy max 0, post-stop readiness debt
+max 31, median wall time 41.22 ms and fly median 45.82 ms. These are diagnostic
+proxies, not a pixel verdict. Host CPU was 93.4/100/100% median/p95/max and app
+CPU was 16.36/35.46/45.63%; host CPU did not gate the flight.
+
+The new singleton trace recorded 428 rows: 131 retained
+`priority_light_dependency_repair` across 80 coordinates, and 297 retained
+`priority_dirty_enqueued` across 244 coordinates. Drains included 3,569 light
+reason rows over 524 coordinates and 835 geometry reason rows over 277
+coordinates. This verifies that the two reasons coexist and survive queue
+coalescing; geometry-capable seam/coverage invalidations remain geometric.
+At `(-11,2,2)`, the two retry observations stayed at desired/published
+geometry revisions `2/1`; singleton geometry events at frames 702 and 814
+were covered by that existing Dirty owner. M622N did not reproduce M622M's rise
+to desired geometry 12, but it used a separate fresh world and is not a
+controlled A/B. The source-reason routing is verified; the original
+revision-churn symptom still needs same-world reproduction or a naturally
+recurring witness.
+
+Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.

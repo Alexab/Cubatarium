@@ -1091,6 +1091,18 @@ light-only reason; coalescing still lets any later geometry-capable cause win.
 The trace uses `mesh_dependency event=queued_single` and the drain's existing
 `applied` event. In the next compact M335 run, join those rows by coordinate
 and frame epoch and check whether singleton light-only queue entries drain as
-`priority_light_dependency_repair`. Revision movement and publication closure
-remain necessary checks; do not treat proxy pass/fail as operator pixel proof.
-Host CPU is informational and must not gate the route.
+`priority_light_dependency_repair`. M622N completed this check; its result is
+recorded below. Revision movement and publication closure remain necessary
+checks; do not treat proxy pass/fail as operator pixel proof. Host CPU is
+informational and must not gate the route.
+
+M622N completed the compact route and verified the singleton reason path:
+428 watched enqueue rows comprised 131 light-only rows over 80 coordinates
+and 297 geometry rows over 244 coordinates. The drain logged both retained
+classes. The `(-11,2,2)` retry samples stayed at geometry revisions 2/1, but
+this was a fresh world rather than a controlled replay of M622M. The analyzer
+remained `pass=false` on non-CPU proxy gates; no operator framebuffer verdict
+was captured. Keep the reason-aware route and do not interpret the changed
+aggregate proxy score as a visual regression or improvement.
+
+Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.

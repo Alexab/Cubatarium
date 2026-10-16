@@ -10896,8 +10896,45 @@ singleton invalidation API, whose default correctly remains geometric for
 seam/coverage callers. The open-sky callsites now pass the light-only reason,
 and the singleton enqueue reason is traced as `queued_single`.
 
-M622N should rebuild Release and repeat this compact route on a fresh world.
-Inspect `queued_single` and drain reasons by coordinate/frame, plus the exact
-desired/published geometry revisions. CPU is context only; do not add a host
-CPU gate. Report:
+M622N later rebuilt Release and repeated the compact route; its evidence is
+recorded in the following entry. CPU is context only; do not add a host CPU
+gate. M622M report:
 `bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json`.
+
+### M622N: verify light-only singleton source invalidations
+
+M622N rebuilt Release after the open-sky source-chunk correction and ran the
+same compact, visible, no-teleport M335 profile on a fresh world:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622N_Cold_LightSourceReason_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622N_LightSourceReason_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json
+```
+
+The 35-period run completed (`process_rc=0`); analyzer `pass=false` remained
+on non-CPU gates. Proxies were mesh coverage 0.1515, fly visible-black max 14,
+post-stop visible-black max 0, post-stop readiness debt max 31, median wall
+time 41.22 ms. No pixel verdict was recorded.
+
+The `queued_single` trace recorded 131 light-only rows over 80 coordinates
+and 297 geometry rows over 244 coordinates; drains retained both reason
+classes. At `(-11,2,2)`, the two retry rows stayed at desired/published
+geometry 2/1, while two geometry singleton invalidations at frames 702 and 814
+were covered by the existing Dirty owner. This is not a controlled A/B with
+M622M because each used a fresh world. Host CPU (93.4/100/100% median/p95/max)
+is context only and does not gate future runs.
+
+Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.
+Raw perf/INFO logs are `perf_20261016-173233_41228.jsonl` and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-173227.41228` under
+`bin/logs`.
