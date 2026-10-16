@@ -3866,7 +3866,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     // has either published or been pruned.
     const bool dirty = Dirty.Contains(coord);
     const bool raa_pending = RemeshAfterApply.count(coord) > 0;
-    const bool mesh_inflight = AsyncBuilder && AsyncBuilder->IsInFlight(coord);
+    const bool mesh_inflight = HasInflightMeshBuild(coord);
     const bool gpu_owned = IsGpuExtractInFlight(coord) ||
                            IsPendingGpuApply(coord) ||
                            IsPendingGpuQueued(coord) ||
@@ -3943,7 +3943,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     (void)PrioritizeVisibleLightRepairRemesh(coord);
     const bool has_owner =
         Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
-        (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+        HasInflightMeshBuild(coord) ||
         IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord) ||
         IsPendingGpuQueued(coord) || IsPendingGpuKickedOrDispatched(coord);
     if (!has_owner)
@@ -3968,7 +3968,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
               std::to_string(Dirty.Contains(coord)) + " raa=" +
               std::to_string(RemeshAfterApply.count(coord) > 0) +
               " mesh_inflight=" +
-              std::to_string(AsyncBuilder && AsyncBuilder->IsInFlight(coord)) +
+              std::to_string(HasInflightMeshBuild(coord)) +
               " gpu_owned=" + std::to_string(gpu_owned) +
               " halo_state=" +
               std::to_string(static_cast<int>(halo_state)) + " backlog=" +
