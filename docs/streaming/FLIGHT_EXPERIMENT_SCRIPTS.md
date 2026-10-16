@@ -9741,3 +9741,54 @@ Artifacts: [M601 create](../../bin/suite_reports/engine_refactor/m601a_world_cre
 [M602 flight](../../bin/suite_reports/engine_refactor/m602b_warm_light_compare_20261016.json),
 [M602 pixel analysis](../../bin/suite_reports/engine_refactor/m602b_warm_light_compare_pixels_20261016.json),
 [M602 perf](../../bin/logs/perf_20261016-030103_5464.jsonl).
+
+## M603 — pace age-service head admissions (2026-10-16)
+
+M603 retained the same Release executable, seed, radius, and 35 s visible-GUI
+no-teleport route, but created a fresh cold world. The scheduler now waits until
+the prior different age-admitted column leaves the relight FIFO before placing
+another age-selected column. Existing pin handling, age threshold, minimum
+interval, and FIFO occupancy cap remain unchanged.
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M603A_Cold_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m603a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+$env:CUBATARIUM_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M603A_Cold_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m603b_age_service_fairness `
+  -Report bin/suite_reports/engine_refactor/m603b_age_service_fairness_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-030600_27816.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m603b_age_service_fairness_pixels_20261016.json
+```
+
+The exact startup slices `(-4,2,1/2)` settled 3.985/4.149 s after their first
+pixel sample; observed preview-to-nonpreview was 4.4/4.3 s. M601's corresponding
+settlement was 10.735/10.785 s, while M600 had already shown about 3.983 s, so
+M603 is a return to the earlier result rather than evidence of a new best.
+Addressed age-service admissions fell from 19 in M601 to 6. Logs show the new
+`age_service_wait_previous` counter was nonzero while the prior item remained
+queued. However, deferred-far peak reached 44, `enter_unlit_max=30`, and
+post-stop readiness debt peaked at 23; aggregate suite `pass=false` remained due
+to readiness/eye-proxy gates. Pixel analysis reported no near-focus hole proxy,
+but still saw dark and unsettled samples. Keep the pacing change as a bounded
+candidate fix; it does not close the broader cold-start readiness issue.
+
+Artifacts: [M603 create](../../bin/suite_reports/engine_refactor/m603a_world_create_20261016.json),
+[M603 flight](../../bin/suite_reports/engine_refactor/m603b_age_service_fairness_20261016.json),
+[M603 pixel analysis](../../bin/suite_reports/engine_refactor/m603b_age_service_fairness_pixels_20261016.json),
+[M603 perf](../../bin/logs/perf_20261016-030600_27816.jsonl).

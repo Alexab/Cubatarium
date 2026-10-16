@@ -320,6 +320,8 @@ private:
       DeferredFarRelightColumns;
   std::chrono::steady_clock::time_point
       LastDeferredFarAgeServiceAttemptAt{};
+  glm::ivec2 LastDeferredFarAgeServiceWorldKey{};
+  bool LastDeferredFarAgeServiceWorldKeyValid{false};
   /// Columns whose disk lightmap is trusted (lighting_complete).
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
   bool LightCompleteDirty{false};

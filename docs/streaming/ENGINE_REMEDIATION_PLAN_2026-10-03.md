@@ -10853,14 +10853,32 @@ saved light state improves cold-entry presentation without closing the general
 streaming issue. This controlled comparison supports a cold-start relight
 contribution to the entry regression, not an exclusive explanation.
 
-Next change the bounded age service so it does not insert another work item at
-the priority head while its prior age-admitted column is still queued. Let the
-current aged item reach dequeue/worker ownership before admitting the next;
-preserve the existing FIFO occupancy cap, pin rule, age horizon, and normal
-near-focus admission policy. Verify on one new cold radius-4 world using the
-established short route, and use the saved M600 world as the warm comparison.
-Do not spend an 8,192-block acceptance flight until the cold startup handoff
-improves without regressions.
+M603 implemented that bounded pacing rule: an age-selected column must leave the
+FIFO before another different age-selected column can be admitted. Existing
+age, interval, occupancy, pin, and near-focus policies remain in place. In the
+short cold-world run, startup slices `(-4,2,1/2)` settled at 3.985/4.149 s after
+their first pixel sample, versus 10.735/10.785 s in M601; age admissions fell
+from 19 to 6. This is consistent with removing repeated overtaking and returns
+to the ~3.98 s seen in M600. It is not yet a general performance guarantee:
+M603's deferred-far peak was 44, `enter_unlit_max=30`, post-stop readiness debt
+peaked at 23, and the aggregate suite still failed readiness/eye-proxy gates.
+The sampled near-focus mesh-hole proxy remained zero. Keep the pacing change as
+a bounded fix, with its effect described as promising rather than fully
+validated; do not launch a long acceptance flight yet.
+
+The cold-versus-warm comparison also answers the reported entry regression:
+newly generated columns can have geometry available while their persisted
+light-complete proof is absent, so they enter relight service on startup. The
+saved M600 world reduced the exact startup provisional-preview set, but other
+newly active slices still had readiness debt. A cold map is therefore a
+credible contributor to dark/black-looking chunks at entry, not a complete
+explanation for every occurrence.
+
+Next, keep the short cold/warm route and per-age-admission audit as the control
+for any further scheduler or publication changes. First check that the paced
+age queue does not create growing deferred-far debt over repeated short runs;
+then address the remaining readiness debt separately. Defer the 8,192-block
+acceptance flight until short-run cold entry and queue debt are stable.
 
 M599/M600 artifacts: [M599 world](../../bin/suite_reports/engine_refactor/m599a_world_create_20261015.json),
 [M599 flight](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_20261015.json),
@@ -10876,3 +10894,9 @@ M601/M602 artifacts and exact invocations are recorded in the
 diagnostic comparisons: M601 was a cold entry with prolonged unsettled
 relight, while M602 reused the saved M600 world and reduced the startup preview
 set but still carried readiness debt elsewhere.
+
+M603 code and Release build were followed by one short cold-world run. The exact
+startup slices returned to ~4.0 s settlement and age admissions dropped from
+19 to 6, while the global readiness gates still failed. See the M603 run record
+for its metrics and artifacts; this result does not establish a global queue
+throughput improvement.

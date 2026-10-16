@@ -1105,6 +1105,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   int enqueue_rejected = 0;
   int enqueue_trimmed = 0;
   int aged_service_admitted = 0;
+  int aged_service_waiting_previous = 0;
   int nearest_horiz = -1;
   glm::ivec2 nearest_coord{};
   bool have_aged_service_candidate = false;
@@ -1214,13 +1215,27 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
           std::chrono::steady_clock::time_point{} ||
       admission_now - LastDeferredFarAgeServiceAttemptAt >=
           kDeferredFarRelightAgeServiceInterval;
+  const glm::ivec2 aged_service_world_key(
+      aged_service_coord.x * CHUNK_SIZE, aged_service_coord.y * CHUNK_SIZE);
+  const bool aged_service_previous_is_same =
+      LastDeferredFarAgeServiceWorldKeyValid &&
+      LastDeferredFarAgeServiceWorldKey == aged_service_world_key;
+  const bool aged_service_previous_waiting =
+      have_aged_service_candidate &&
+      LastDeferredFarAgeServiceWorldKeyValid &&
+      !aged_service_previous_is_same &&
+      GetTerrainColumnRelightQueueInfo(
+          LastDeferredFarAgeServiceWorldKey).in_deque;
+  if (aged_service_previous_waiting)
+  {
+    ++aged_service_waiting_previous;
+  }
   if (have_aged_service_candidate && aged_service_fifo_limit > 0 &&
       GetPendingTerrainColumnRelightCount() < aged_service_fifo_limit &&
-      aged_service_interval_elapsed)
+      aged_service_interval_elapsed && !aged_service_previous_waiting)
   {
     LastDeferredFarAgeServiceAttemptAt = admission_now;
-    const glm::ivec2 world_key(aged_service_coord.x * CHUNK_SIZE,
-                               aged_service_coord.y * CHUNK_SIZE);
+    const glm::ivec2 world_key = aged_service_world_key;
     const bool async_owned =
         world.IsAsyncRelightColumnInFlight(aged_service_coord);
     const bool queued_before = IsTerrainColumnRelightQueued(world_key);
@@ -1249,6 +1264,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
       ++admitted;
       ++aged_service_admitted;
       ++world.GetPhysicsTelemetryMutable().RelightDeferredFarAgeAdmitN;
+      LastDeferredFarAgeServiceWorldKey = world_key;
+      LastDeferredFarAgeServiceWorldKeyValid = true;
     }
     if (audit_admission &&
         (last_aged_service_detail_audit ==
@@ -1318,6 +1335,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
             " fifo_blocked=" + std::to_string(fifo_blocked) +
             " age_service_admitted=" +
             std::to_string(aged_service_admitted) +
+            " age_service_wait_previous=" +
+            std::to_string(aged_service_waiting_previous) +
             " queued=" + std::to_string(already_queued) +
             " inflight=" + std::to_string(already_inflight) +
             " enqueue=" + std::to_string(enqueue_attempts) +
@@ -3430,6 +3449,8 @@ void UWorldPersistence::ClearPendingRelights()
   DeferredVisibleDrawGateRelightYBands.clear();
   DeferredFarRelightColumns.clear();
   LastDeferredFarAgeServiceAttemptAt = {};
+  LastDeferredFarAgeServiceWorldKey = {};
+  LastDeferredFarAgeServiceWorldKeyValid = false;
 }
 
 int UWorldPersistence::GetPendingPlayerRelightCount() const
