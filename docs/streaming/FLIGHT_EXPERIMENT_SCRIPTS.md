@@ -11868,3 +11868,70 @@ newer visible revision, but the camera had moved before that sample. GPU
 queue/kick/counters-ready/ready stages describe the compute-meshing route and
 their absence alone is not failure evidence. See M622AZ in the diagnostic
 runbook for interpretation and artifacts.
+
+### M622BA: short fixed-view startup handoff
+
+Use the saved startup position on warm `World_164`, with an empty scenario so
+the runner holds the camera still. This uses the M622AE fixed-camera setup but
+reduces capture to 10 seconds and samples the narrow start view every 15
+frames. The no-fly report is for pixel/lifecycle evidence only; its movement
+acceptance gate is not applicable. Readiness-debt counters are not direct
+framebuffer evidence.
+
+```powershell
+$traceNames = @(
+  'CUBA_VISUAL_BLACK_TRACE',
+  'CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES',
+  'CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE',
+  'CUBATARIUM_RELIGHT_AUDIT'
+)
+$traceSaved = @{}
+foreach ($name in $traceNames) {
+  $old = Get-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
+  $traceSaved[$name] = @{
+    Exists = ($null -ne $old)
+    Value = if ($null -ne $old) { $old.Value } else { $null }
+  }
+}
+try {
+  $env:CUBA_VISUAL_BLACK_TRACE = '1'
+  $env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES = '1'
+  $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS = '1'
+  $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY = '1'
+  $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X = '110'
+  $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X = '130'
+  $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE = '15'
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  python -X utf8 tools/flight_sim_run.py --world World_164 `
+    --require-existing-world --scenario '' --no-fly --visible `
+    --seconds 10 --warmup-sec 8 `
+    --report bin/suite_reports/engine_refactor/m622ba_world164_static_start_same_view_20261017.json `
+    --process-timeout 90
+} finally {
+  foreach ($name in $traceNames) {
+    if ($traceSaved[$name].Exists) {
+      Set-Item -LiteralPath "Env:$name" -Value $traceSaved[$name].Value
+    } else {
+      Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
+    }
+  }
+}
+```
+
+Analyze the captured pixel and lifecycle evidence:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622ba_world164_static_start_same_view_20261017.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622ba_renderer_pixel_trace_20261017.json
+```
+
+M622BA found 125 same-pixel/same-camera preview-to-nonpreview observations
+across four chunks, bounded at 656 ms–1.314 s. All 220 pixels below luma 32
+joined drawable opaque surfaces; 14 had unsettled or preview light state. This
+calibrates warm startup only. Read the runbook section before interpreting the
+no-fly aggregate gate or comparing this result with a moving M335 route.

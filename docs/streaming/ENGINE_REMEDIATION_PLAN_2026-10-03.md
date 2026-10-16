@@ -12484,7 +12484,30 @@ replacement appeared at the original screen pixel. GPU queue/kick/ready stages
 describe the compute-meshing route and their absence alone is not a failure.
 
 The analyzer now carries mesh publication revisions beside the later pixel's
-published revision, mesh revision, and MDI visible-pass state. Next, use one
-short repeatable capture with a fixed camera long enough to observe the
-same-view handoff and bound its delay. Do not add a CPU threshold, extend the
-operator flight, or tune queue budgets from this evidence.
+published revision, mesh revision, and MDI visible-pass state.
+
+### M622BA: fixed-view startup handoff calibration
+
+M622BA held the saved `World_164` startup camera fixed for a 10 s visible
+no-fly capture after 8 s of warmup. The process exited successfully without
+timeout. Its aggregate `pass=false` is expected for this empty-scenario
+no-fly run; it had five periods, only one steady period, and no movement-route
+acceptance data. Readiness debt persisted in the sample while the visual-hole
+proxy stayed zero; readiness debt alone is not a framebuffer verdict. CPU
+usage remains contextual only.
+
+The higher-cadence pixel trace recorded 3,040 probes, 220 low-luma samples, and
+128 provisional-light samples across four chunks. All 220 low-luma pixels
+joined drawable opaque surfaces; 14 carried unsettled/preview light state.
+Across four chunks, 125 exact pixel-and-camera preview-to-nonpreview
+observations were bounded at 656 ms–1.314 s (median 657 ms). The analyzer
+captured no intermediate same-view sample where light was settled but the
+preview shader was still active. These are sparse-sample bounds for warm
+startup at the fixed camera, not exact transition times and not a late-route
+flight result.
+
+This completes the startup handoff check: the selected startup chunks settled
+quickly while visible. Keep the next investigation on the intermittent
+late-route symptom. Use the established short M335 route and analyze only a
+fresh late-route preview witness; do not lengthen operator flights or adjust
+relight budgets from the startup result.

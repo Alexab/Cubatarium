@@ -1920,3 +1920,32 @@ Artifacts: report/pixel trace
 `m622az_renderer_pixel_trace_20261017.json`; perf/INFO
 `perf_20261017-023407_46844.jsonl`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-023404.46844`.
+
+### M622BA: fixed-view startup handoff calibration
+
+M622BA held the saved `World_164` camera at `(120,50.12,56)` for a 10 s visible
+no-fly capture after an 8 s warmup. It exited successfully without timeout.
+The aggregate `pass=false` is not a product failure signal here: the empty
+scenario provides no moving-route acceptance data, and the run had five total
+periods with one steady period. Readiness debt was present while the
+visual-hole proxy stayed zero, so use the pixel/lifecycle trace for visual
+evidence. Host CPU median/p95 was 72.9/83.7%, retained only as context.
+
+The stride-15 pixel trace recorded 3,040 probes: 220 were below luma 32, all
+220 joined drawable opaque surfaces, and 14 had unsettled/preview light state.
+There were 128 provisional-light samples in four chunks. The analyzer found
+125 same-pixel/same-camera preview-to-nonpreview observations across those
+chunks, bounded at 656 ms–1.314 s with a 657 ms median. No sampled pixel caught
+the intermediate settled-light/preview state. Since samples were sparse, the
+intervals bound the visible handoff rather than give its exact transition
+time. This verifies a short warm-start transition at the fixed camera; it does
+not explain the late-route dim-chunk report.
+
+The analyzer now keeps per-chunk arrays for both preview-to-nonpreview and
+settled-preview-to-nonpreview observations separately. This avoids conflating
+the total preview interval with the narrower post-settlement shader handoff.
+
+Artifacts: report/pixel trace `m622ba_world164_static_start_same_view_20261017.json`,
+`m622ba_renderer_pixel_trace_20261017.json`; perf/INFO
+`perf_20261017-024721_35260.jsonl`,
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-024717.35260`.

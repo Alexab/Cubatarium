@@ -1414,7 +1414,7 @@ def main() -> int:
                 "same_view_light_interval_candidate_count": light_view_candidates,
                 "same_view_light_settlement_intervals_ms": light_intervals,
                 "same_view_preview_handoff_candidate_count": handoff_view_candidates,
-                "same_view_preview_to_nonpreview_intervals_ms": handoff_intervals,
+                "same_view_settled_preview_to_nonpreview_intervals_ms": handoff_intervals,
             }
         )
 
