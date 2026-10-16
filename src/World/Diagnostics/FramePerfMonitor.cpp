@@ -6793,7 +6793,9 @@ void UFramePerfMonitor::Shutdown()
                << ",\"overlay_face_debt_mask\":"
                << static_cast<int>(r.overlay_face_debt_mask)
                << ",\"peer_face_debt_mask\":"
-               << static_cast<int>(r.peer_face_debt_mask);
+               << static_cast<int>(r.peer_face_debt_mask)
+               << ",\"stable_published_face_debt\":"
+               << static_cast<int>(r.stable_published_face_debt);
         const auto dumpFaceArray = [&](const char *name, const auto &values) {
           (*out) << ",\"" << name << "\":[";
           for (size_t i = 0; i < 6; ++i)

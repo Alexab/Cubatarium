@@ -1229,3 +1229,47 @@ M622S report/perf/INFO: `m622s_fifo_producer_slice_settlement_20261016.json`,
 `perf_20261016-190703_43384.jsonl`, `...INFO.20261016-190659.43384`.
 M622T: `m622t_noop_before_deferred_20261016.json`,
 `perf_20261016-191404_43720.jsonl`, `...INFO.20261016-191400.43720`.
+
+### M622U: identify stable published face-debt samples
+
+Static review correlated M622T's remaining 42 deferred-admission no-op skips
+with same-coordinate history. Thirty-four were last seen deferred after FIFO
+denial and became satisfied before later admission. For eight, the latest
+same-coordinate `visible_exact_replacement` event describes a FIFO victim
+removed to admit exact visible work. Deferred entries do not retain their
+original identity or producer, so these joins are approximate. The observed
+no-op cleanup and exact-victim eviction provide no evidence for another
+queue-policy change.
+
+M622T also repeatedly sampled a fully solid chunk at `(-8,2,5)` with current
+geometry revisions, a resident zero-quad GPU mesh, `face_debt_mask=33`, and
+matching overlay mask. It sat at Chebyshev focus-ring distance 3–4 while the
+focus advanced. `HasStablePublishedFaceDebt()` explicitly recognizes this
+shape; `EnsureVisualRepairDirtyPriority()` leaves it to the face-debt repair
+path instead of repeatedly minting FirstMesh work. `MissingMesh` in the
+focus-ring census is therefore an unfinished-coverage label, not proof of a
+black framebuffer region.
+
+M622U adds `stable_published_face_debt` to opt-in `focus_slice_trace` and ran the
+same short visible M335 route on cold runtime `World_188` (`light_flags
+event=load outcome=missing`). The run completed 35 periods with process exit 0
+and no timeout. Of 1,024 focus-slice rows, 941 were stable published face-debt
+across 55 coordinates; all 941 had current published geometry, zero GPU quads,
+and an overlay mask covering the outstanding face debt. Those rows were at
+focus-ring distance 3 or 4. Analyzer `pass=false` on non-CPU gates: mesh-hole
+proxy 0.1515, fly visible-black max 12, post-stop mesh-missing max 0,
+readiness debt max 37, and post-stop visible-black/stalled max 1. No operator
+framebuffer verdict was collected. This is not evidence that the world looked
+wrong; it does show the focus-ring debt proxy is dominated by stable boundary
+coverage in this run.
+
+The M622U source change is diagnostic only. CPU usage is recorded as context,
+not used as a launch gate. Do not relax face-debt readiness or suppress its
+repair based on these samples. The next useful step is to correlate one
+camera-visible missing-slice witness with its exact renderer/pixel probe and
+repair owner on the established short cold-world route. Do not use a long
+operator-monitoring flight for this question.
+
+M622U report/perf/INFO: `m622u_stable_face_debt_trace_20261016.json`,
+`perf_20261016-193322_30696.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-193318.30696`.

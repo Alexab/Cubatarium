@@ -11872,8 +11872,8 @@ logged 190 early no-op skips, primarily from `DrainRelightQueues` (72),
 `EnqueueVoidDarkColumnRelightNote` (60), `miss_witness` (30), and its retry
 lambda (26). Forty-two deferred entries were still recognized as no-op on
 later admission; 43 clears were marked `already_satisfied`. The
-remaining work comes through separate deferred producers, including the
-visible-exact replacement path.
+later admission-time no-ops come through separate deferred producers; see the
+M622U static correlation below before changing their policy.
 
 This was not a controlled A/B: M622S/T used different cold runtime worlds and
 had different host load. M622T's mesh-hole proxy was 0.0909 and fly
@@ -11885,14 +11885,59 @@ visual improvement or regression. In one process sample Windows marked the
 window unresponsive while it continued writing logs; the runner completed
 with `timed_out=false` and process exit 0.
 
-Next: trace the remaining deferred no-op path for
-`visible_exact_replacement` and the other 42 admission-time no-ops; check
-whether their exact geometry/light owners still need work before changing that
-path. Then keep the compact M335 route for causal checks. Resume longer flights
-only when a specific long-distance question cannot be answered by short runs.
+Static review of M622T's remaining 42 admission-time no-ops found that 34 were
+last seen deferred after FIFO denial and became satisfied before later
+admission. For eight, the latest same-coordinate `visible_exact_replacement`
+event describes a FIFO victim removed to admit exact visible work. Deferred
+entries do not retain their original identity or producer, so same-coordinate
+joins are approximate. The observed no-op cleanup and exact-victim eviction
+provide no evidence for another queue-policy change.
+
+M622U showed a separate interpretation problem in readiness telemetry:
+941/1,024 focus-slice rows described stable published face-debt on 55 chunks at
+focus-ring distance 3–4. Each had matching current geometry, a zero-quad GPU
+mesh, and overlays covering the unresolved debt. The existing
+`HasStablePublishedFaceDebt()` / `EnsureVisualRepairDirtyPriority()` path
+recognizes these as face-debt work and prevents generic FirstMesh churn. They
+remain readiness debt until peers settle, but are not pixel-level evidence.
+
+Next: use the new `stable_published_face_debt` trace field to distinguish those
+states from missing mesh, then inspect a camera-visible missing-slice witness
+through the exact renderer/pixel probe and identify its repair owner. Keep the
+established short visible M335 route for causal checks; avoid long
+operator-monitoring flights. Continue recording host and app CPU as context
+only, without a hard load gate.
 
 Artifacts: `bin/suite_reports/engine_refactor/m622s_fifo_producer_slice_settlement_20261016.json`,
 `bin/logs/perf_20261016-190703_43384.jsonl`, and
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-190659.43384`;
 M622T artifacts use `m622t_noop_before_deferred_20261016.json`,
 `perf_20261016-191404_43720.jsonl`, and INFO suffix `191400.43720`.
+
+### M622U: make stable face-debt visible in the trace
+
+M622U adds the opt-in `stable_published_face_debt` field to each
+`focus_slice_trace`, computed by the existing `HasStablePublishedFaceDebt()`
+predicate. It does not change rendering or scheduling. The Release build and
+static executable verification passed.
+
+The short M335 route ran on cold runtime `World_188` (`light_flags event=load
+outcome=missing`), completed 35 periods, and exited 0 without a runner timeout.
+The new field was true on 941 of 1,024 focus-slice rows across 55 coordinates.
+All true rows had current geometry publication, zero GPU quads, and overlay
+faces covering the outstanding debt; their focus-ring distance was 3–4. The
+run's analyzer remained `pass=false` on non-CPU gates: mesh-hole proxy 0.1515,
+fly visible-black max 12, post-stop mesh-missing max 0, readiness debt max 37,
+and post-stop visible-black/stalled max 1. CPU is context only. No framebuffer
+verdict was collected.
+
+This confirms the focus-ring readiness debt includes stable boundary coverage
+that may be outside the camera-visible area. It does not establish a visual
+defect or justify weakening face-debt readiness. Next, follow a camera-visible
+missing-slice witness through its renderer/pixel probe and exact repair owner on
+the established short cold-world route. Keep long operator-monitoring flights
+out of this phase.
+
+Report: `bin/suite_reports/engine_refactor/m622u_stable_face_debt_trace_20261016.json`.
+Perf: `bin/logs/perf_20261016-193322_30696.jsonl`. INFO:
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-193318.30696`.

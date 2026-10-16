@@ -11109,7 +11109,46 @@ Artifacts:
 - M622S: `bin/suite_reports/engine_refactor/m622s_fifo_producer_slice_settlement_20261016.json`, `bin/logs/perf_20261016-190703_43384.jsonl`, INFO suffix `190659.43384`.
 - M622T: `bin/suite_reports/engine_refactor/m622t_noop_before_deferred_20261016.json`, `bin/logs/perf_20261016-191404_43720.jsonl`, INFO suffix `191400.43720`.
 
-Next: investigate the remaining 42 deferred-admission no-op records and the
-`visible_exact_replacement` producer. Preserve the FIFO cap and underfeet pin;
-make further policy changes only when the exact owner and required mesh/light
-work are identified.
+### M622U: stable published face-debt trace
+
+M622U added `stable_published_face_debt` to the opt-in focus-slice rows and
+reused the established visible, no-teleport M335 route on a cold world:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622U_StableFaceDebtTrace_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622U `
+  -Report bin/suite_reports/engine_refactor/m622u_stable_face_debt_trace_20261016.json
+```
+
+It completed 35 periods (`process_rc=0`, no timeout) on cold runtime
+`World_188`. Stable published face-debt was true on 941 of 1,024 focus-slice
+rows across 55 coordinates; all had current geometry publication, zero GPU
+quads, and overlay masks covering the remaining face debt. These were at
+focus-ring distance 3–4. The analyzer returned `pass=false` on non-CPU gates:
+mesh-hole proxy 0.1515, fly visible-black max 12, stop mesh-missing max 0,
+readiness debt max 37, and post-stop visible-black/stalled max 1. No operator
+framebuffer verdict was collected; these values do not establish a visible
+defect. Host CPU measurements are context only and are never run gates.
+
+The prior 42 deferred-admission no-ops need no further queue-policy change:
+34 were last seen deferred after FIFO denial and became satisfied before later
+admission. For eight, the latest same-coordinate `visible_exact_replacement`
+event describes an old far FIFO victim removed while admitting exact visible
+work. Producer joins remain approximate because deferred records do not store
+their original identity or producer.
+Next, use a short cold-world route to correlate a camera-visible missing slice
+with its exact renderer/pixel probe and repair owner. Avoid long operator-
+monitoring flights.
+
+Artifacts:
+
+- Report: `bin/suite_reports/engine_refactor/m622u_stable_face_debt_trace_20261016.json`.
+- Perf: `bin/logs/perf_20261016-193322_30696.jsonl`.
+- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-193318.30696`.

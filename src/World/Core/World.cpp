@@ -3999,6 +3999,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               std::max(0.0, now_ms - focus_demand->last_progress_ms);
         }
       }
+      trace.stable_published_face_debt =
+          HasStablePublishedFaceDebt(coord) ? 1 : 0;
       const auto count_boundary_non_air = [](const UChunk &boundary_chunk,
                                              int face, bool peer_side) {
         uint16_t count = 0;
