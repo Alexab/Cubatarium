@@ -912,3 +912,7 @@ With both `CUBA_VISUAL_BLACK_TRACE=1` and `CUBATARIUM_RELIGHT_AUDIT=1`, parse `R
 - Halo state 0 cannot distinguish those cases.
 
 M622 instrumentation Release build passed. Its preflight was 60.3/87.7% median/p95 and failed the flight gate; no flight was started. Re-sample after CPU load falls before any run.
+
+GPU-path correction: `CommitGpuMeshResult` is a separate publication route from `ApplyMeshResult`. Commit `a3493579` retains the captured `PendingGpuApply.snapshot.lightHaloSignatures` after each successful GPU commit (including validated empty output), and Release rebuilt successfully. This makes `stale_mesh_halo_state` meaningful for `gpu_greedy` rather than returning unavailable for all GPU meshes.
+
+Latest preflight: host CPU median/p95 56.4/72.0%, gate failed. No M622 flight has been launched. Wait for a fresh passing sample before using the documented M622A route.

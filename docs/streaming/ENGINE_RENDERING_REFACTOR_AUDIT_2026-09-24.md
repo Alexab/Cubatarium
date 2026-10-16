@@ -5752,3 +5752,7 @@ Commit `127d43ca` stores the published light-halo signatures with each valid mes
 The same opt-in trace records watched dependency source→dependent queue events with cause and drain outcome (`defer_live_owner`, `covered_by_existing_owner`, `applied`, `admission_failed`, or `drop_not_drawable`). Interpret state 2 together with source cause and drain chronology. State 1 directs review toward `FaceLightPacked`, packed GPU provenance, or the stale witness's vertex/sample mapping. State 0 is inconclusive. No queue or build budgets changed.
 
 Release build passed, but post-build host preflight was 60.3/87.7% median/p95; no follow-up flight was launched. Keep the short established M335 route and wait for a passing runtime-resource preflight.
+
+Follow-up to M622: static call-path review found that GPU meshes publish through `CommitGpuMeshResult` rather than the CPU `ApplyMeshResult` path. Commit `a3493579` copies the accepted `PendingGpuApply.snapshot.lightHaloSignatures` into the cache after each successful GPU commit; the Release target was rebuilt successfully. This covers the active GPU greedy backend, including empty commits. Before the fix, its watched halo state would have stayed unavailable.
+
+The latest host preflight is still over the gate at 56.4/72.0% median/p95. Do not run M622A until a fresh sample passes. The first diagnostic acceptance condition is simply that watched GPU meshes emit halo states 1/2, allowing a seam witness to be classified; it is not itself a visual acceptance result.

@@ -10451,3 +10451,7 @@ $env:CUBA_VISUAL_BLACK_TRACE='1'
 ```
 
 The JSONL records `stale_mesh_halo_state` (0 unavailable, 1 current halo equals the last published input, 2 halo changed after publication). The INFO log records watched `mesh_dependency` queue sources/causes and drain outcomes. These diagnose engine state; they do not substitute for direct framebuffer observation.
+
+Static review after M622 found GPU publication uses `CommitGpuMeshResult`; commit `a3493579` now stores the halo signatures from its accepted pending snapshot after a successful commit. Release rebuild passed. This is necessary for `gpu_greedy`, otherwise halo-state values would be unavailable in watched traces.
+
+Latest preflight failed (56.4/72.0% median/p95), so M622A remains unrun. After a fresh passing sample, run the short documented route and inspect `stale_mesh_halo_state` plus `mesh_dependency` lifecycle events.
