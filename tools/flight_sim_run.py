@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import time
@@ -120,6 +121,12 @@ def build_flight_route_identity(args: argparse.Namespace) -> dict:
             "CUBA_FLIGHT_MOVE_SPEED_SCALE", "1"
         ),
         "fog_pull_in_enabled": (force_fog_on if product_route else None),
+        "require_existing_world": bool(
+            getattr(args, "require_existing_world", False)
+        ),
+        "product_start_position_pinned": bool(
+            getattr(args, "_product174657_users_restore", None)
+        ),
     }
 
 
@@ -147,6 +154,128 @@ def read_perf_runtime_identity(perf_path: Path | None) -> dict:
     except OSError:
         return {}
     return {}
+
+
+def read_world_startup_identity(
+    requested_world: str,
+    app_report_path: Path,
+    info_log_path: Path | None,
+    started_at: float,
+) -> dict:
+    """Report the runtime world and whether startup loaded or generated terrain."""
+    runtime_world = None
+    try:
+        if (
+            app_report_path.is_file()
+            and app_report_path.stat().st_mtime >= started_at - 1.0
+        ):
+            app_report = json.loads(app_report_path.read_text(encoding="utf-8"))
+            runtime_world = app_report.get("world")
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    startup_rows: list[dict[str, str]] = []
+    if info_log_path is not None and info_log_path.is_file():
+        try:
+            with info_log_path.open("r", encoding="utf-8", errors="replace") as stream:
+                for line in stream:
+                    marker = "[WorldLoadPerf]"
+                    index = line.find(marker)
+                    if index < 0:
+                        continue
+                    fields = dict(
+                        re.findall(r"([A-Za-z_]+)=([^\s]+)", line[index + len(marker) :])
+                    )
+                    if fields.get("kind") in ("load", "create"):
+                        startup_rows.append(fields)
+        except OSError:
+            pass
+
+    init_row = next(
+        (row for row in startup_rows if row.get("phase") == "init"),
+        startup_rows[0] if startup_rows else {},
+    )
+    startup_kind = init_row.get("kind")
+    same_operation = [
+        row for row in startup_rows if row.get("kind") == startup_kind
+    ]
+    final_row = same_operation[-1] if same_operation else init_row
+
+    def read_int(row: dict[str, str], key: str) -> int | None:
+        try:
+            return int(row[key])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def read_pair(row: dict[str, str], key: str) -> tuple[int | None, int | None]:
+        value = row.get(key, "")
+        if "/" not in value:
+            return None, None
+        left, right = value.split("/", 1)
+        try:
+            return int(left), int(right)
+        except ValueError:
+            return None, None
+
+    spatial_done, spatial_total = read_pair(final_row, "spatial_columns")
+    generation_done, generation_total = read_pair(
+        final_row, "generation_columns"
+    )
+    chunk_files_read = read_int(final_row, "chunk_files_read")
+    voxels_from_files = read_int(final_row, "voxels_from_files")
+    has_saved_terrain = (
+        (chunk_files_read or 0) > 0
+        or (voxels_from_files or 0) > 0
+        or (spatial_done or 0) > 0
+    )
+    if startup_kind == "create":
+        storage_mode = "new_world_generated"
+        cache_mode = "cold"
+    elif startup_kind == "load" and has_saved_terrain:
+        storage_mode = "saved_world_terrain_loaded"
+        cache_mode = "warm"
+    elif startup_kind == "load":
+        storage_mode = "existing_world_loaded_without_terrain_evidence"
+        cache_mode = "unknown"
+    else:
+        storage_mode = "unknown"
+        cache_mode = "unknown"
+
+    try:
+        operation_ms = float(final_row["operation_ms"])
+    except (KeyError, TypeError, ValueError):
+        operation_ms = None
+
+    app_report = {}
+    try:
+        if (
+            app_report_path.is_file()
+            and app_report_path.stat().st_mtime >= started_at - 1.0
+        ):
+            app_report = json.loads(app_report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    return {
+        "requested_world": requested_world,
+        "runtime_world": runtime_world,
+        "runtime_world_matches_requested": (
+            runtime_world == requested_world if runtime_world else None
+        ),
+        "startup_operation": startup_kind,
+        "storage_mode": storage_mode,
+        "cache_mode": cache_mode,
+        "startup_operation_ms": operation_ms,
+        "chunk_files_seen": read_int(final_row, "chunk_files_seen"),
+        "chunk_files_read": chunk_files_read,
+        "voxels_from_files": voxels_from_files,
+        "spatial_columns_loaded": spatial_done,
+        "spatial_columns_total": spatial_total,
+        "generation_columns_completed": generation_done,
+        "generation_columns_total": generation_total,
+        "start_focus": app_report.get("start_focus"),
+        "end_focus": app_report.get("end_focus"),
+    }
 
 
 def newest_perf(after_ts: float) -> Path | None:
@@ -1748,6 +1877,11 @@ def annotate_report_hang_legacy(report: Path, hang_killed: bool, process_rc: int
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--world", default="World_164")
+    ap.add_argument(
+        "--require-existing-world",
+        action="store_true",
+        help="fail unless this exact saved world exists and is loaded",
+    )
     ap.add_argument("--seconds", type=float, default=45.0)
     ap.add_argument("--build", action="store_true")
     ap.add_argument("--no-fly", action="store_true")
@@ -1996,6 +2130,30 @@ def main() -> int:
         help="run scenario N times; write report, report_2..N, and report_agg.json",
     )
     args = ap.parse_args()
+    if os.environ.get("CUBA_FLIGHT_REQUIRE_EXISTING_WORLD", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
+        args.require_existing_world = True
+
+    if args.require_existing_world:
+        requested_world_dir = BIN / "worlds" / args.world
+        if not requested_world_dir.is_dir():
+            raise SystemExit(
+                "FAIL: --require-existing-world requested "
+                f"{args.world!r}, but {requested_world_dir} does not exist"
+            )
+        if args.scenario in (
+            "product-174657",
+            "product-174657-dive",
+            "product-174657-far",
+        ) and not (requested_world_dir / "users.json").is_file():
+            raise SystemExit(
+                "FAIL: --require-existing-world needs users.json to pin the "
+                f"product start position in {requested_world_dir}"
+            )
 
     if args.scenario == "break-stand":
         args.world = args.world or "World_164"
@@ -3308,6 +3466,12 @@ def main() -> int:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
                 info_log = mod.newest_info_log(t0)
+        world_startup_identity = read_world_startup_identity(
+            str(args.world),
+            BIN / "flight_sim_report.json",
+            info_log,
+            t0,
+        )
         annotate_report_run(report_path, hang_killed, rc, perf, info_log)
         # Phase55 fidelity: expose teleport flag for AnalyzePhase55Scorecard.
         if report_path.is_file():
@@ -3337,13 +3501,18 @@ def main() -> int:
                     if warm_claimed and not warm_env:
                         os.environ["CUBA_FLIGHT_WARM"] = "1"
                         warm_env = True
-                    cold_warm = "warm" if warm_claimed and warm_env else "cold"
                     if warm_claimed:
                         os.environ.setdefault("CUBA_WARM_PROTOCOL", "warmup_sec_stamp")
+                    cold_warm = world_startup_identity["cache_mode"]
+                    if cold_warm not in ("warm", "cold"):
+                        cold_warm = "unknown"
                     _perf_runtime_identity = read_perf_runtime_identity(perf)
                     _ann["run_manifest"] = build_run_manifest(
                         exe=resolve_exe(),
-                        world=getattr(args, "world", None),
+                        world=(
+                            world_startup_identity["runtime_world"]
+                            or getattr(args, "world", None)
+                        ),
                         scenario=getattr(args, "scenario", None),
                         cold_warm=cold_warm,
                         route_hash=hashlib.sha256(
@@ -3356,6 +3525,24 @@ def main() -> int:
                         source_identity=run_source_identity,
                         extra={
                             "route": build_flight_route_identity(args),
+                            "requested_world": str(args.world),
+                            "world_startup": world_startup_identity,
+                            "runtime_world": world_startup_identity["runtime_world"],
+                            "runtime_world_matches_requested": world_startup_identity[
+                                "runtime_world_matches_requested"
+                            ],
+                            "world_startup_operation": world_startup_identity[
+                                "startup_operation"
+                            ],
+                            "world_storage_mode": world_startup_identity[
+                                "storage_mode"
+                            ],
+                            "period_warmup_stamp": bool(warm_env),
+                            "period_warmup_protocol": (
+                                os.environ.get("CUBA_WARM_PROTOCOL")
+                                if warm_env
+                                else None
+                            ),
                             "config_file_sha256_before": getattr(
                                 args, "_product174657_config_sha256_before", None
                             ),
@@ -3454,12 +3641,16 @@ def main() -> int:
             run_reports.append(report_path)
             try:
                 result = json.loads(report_path.read_text(encoding="utf-8"))
+                result["world_startup"] = world_startup_identity
                 if args.scenario in (
                     "product-174657",
                     "product-174657-dive",
                     "product-174657-far",
                 ) and perf and Path(perf).is_file():
                     adequacy = compute_product_174657_proxy_adequacy(Path(perf))
+                    adequacy["warm_period_stamp_mode"] = adequacy.get("cache_mode")
+                    adequacy["cache_mode"] = world_startup_identity["cache_mode"]
+                    adequacy["cache_mode_source"] = "WorldLoadPerf startup operation"
                     result["proxy_adequacy"] = adequacy
                     warm = "warm" in report_path.stem.lower()
                     stop_line = compute_dual_lane_stop_line(Path(perf), warm=warm)
@@ -3574,17 +3765,63 @@ def main() -> int:
                     result["a31_progress_snapshot"] = compute_a31_progress_snapshot(
                         result, a24_safety, west
                     )
-                    # Warm honesty: reject cold_or_unspecified for warm reports.
                     pad = result.get("proxy_adequacy") or {}
-                    if warm and str(pad.get("cache_mode", "")).startswith("cold"):
+                    warm_replay_claimed = warm or args.require_existing_world
+                    replay_fails: list[str] = []
+                    if warm_replay_claimed:
+                        if world_startup_identity["cache_mode"] != "warm":
+                            replay_fails.append(
+                                "warm_claimed_but_saved_terrain_not_loaded"
+                            )
+                        if not world_startup_identity[
+                            "runtime_world_matches_requested"
+                        ]:
+                            replay_fails.append(
+                                "runtime_world_does_not_match_requested_world"
+                            )
+                        if (
+                            args.scenario
+                            in (
+                                "product-174657",
+                                "product-174657-dive",
+                                "product-174657-far",
+                            )
+                            and not getattr(
+                                args, "_product174657_users_restore", None
+                            )
+                        ):
+                            replay_fails.append(
+                                "requested_product_start_position_not_pinned"
+                            )
+                    result["world_replay_integrity_pass"] = not replay_fails
+                    result["world_replay_integrity_fails"] = replay_fails
+                    if replay_fails:
                         pad = dict(pad)
-                        pad["warm_protocol_fail"] = True
+                        pad["warm_replay_integrity_fail"] = True
                         pad["adequacy_pass"] = False
                         fails = list(pad.get("adequacy_fails") or [])
-                        fails.append("warm_claimed_but_cache_mode_cold_or_unspecified")
-                        pad["adequacy_fails"] = fails
+                        pad["adequacy_fails"] = fails + replay_fails
                         result["proxy_adequacy"] = pad
                         adequacy = pad
+                        result["pass"] = False
+                        acceptance = result.get("manifest_acceptance")
+                        if isinstance(acceptance, dict):
+                            acceptance = dict(acceptance)
+                            acceptance["manifest_acceptance_pass"] = False
+                            acceptance_fails = list(
+                                acceptance.get("manifest_acceptance_fails") or []
+                            )
+                            acceptance["manifest_acceptance_fails"] = (
+                                acceptance_fails + replay_fails
+                            )
+                            result["manifest_acceptance"] = acceptance
+                    if warm_replay_claimed:
+                        print(
+                            "flight-sim saved-world replay integrity: "
+                            + ("PASS" if not replay_fails else "FAIL")
+                            + f" {result['world_startup']}",
+                            flush=True,
+                        )
                     report_path.write_text(
                         json.dumps(result, indent=2) + "\n", encoding="utf-8"
                     )
