@@ -5017,18 +5017,25 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           MeshService->GetChunkMeshRevision(coord);
       const MeshPublishRevs current_published_revs =
           MeshService->GetCache().GetMeshPublishRevs(coord);
+      const bool geometry_revision_debt =
+          current_mesh_revision > current_published_revs.geom_rev;
+      const bool has_geometry_slice_owner = has_slice_work_owner(coord);
       const bool unowned_geometry_debt =
-          current_mesh_revision > current_published_revs.geom_rev &&
-          !has_slice_work_owner(coord);
+          geometry_revision_debt && !has_geometry_slice_owner;
+      const bool approach_geometry_revision_debt =
+          geometry_revision_debt &&
+          col_horiz <= kVisualStageFirstMeshRelightApproachHoriz;
       // A drawable with an unpublished geometry revision is a repair
       // obligation, not ordinary approach-ring prefetch. Preserve the normal
       // dirty-admission budget, but let an otherwise unowned debt item in the
       // first-mesh relight approach ring use the bounded world-admission slot
       // below instead of retrying forever behind the h4-only fallback.
       const bool approach_geometry_debt =
-          unowned_geometry_debt &&
+          unowned_geometry_debt && approach_geometry_revision_debt;
+      const bool approach_owned_geometry_debt =
+          geometry_revision_debt && has_geometry_slice_owner &&
           col_horiz <= kVisualStageFirstMeshRelightApproachHoriz;
-      if (approach_geometry_debt &&
+      if (approach_geometry_revision_debt &&
           UJobStageTrace::VisualBlackTraceEnabled())
       {
         // Start the detailed lifecycle watch as soon as bounded admission
@@ -5037,6 +5044,16 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         // already happened; without this early watch the trace has the final
         // revisions but misses the producers that advanced them.
         UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
+      }
+      if (approach_owned_geometry_debt &&
+          MeshService->HasDrawableGreedyMesh(coord))
+      {
+        // An existing Dirty owner is real work, but its drawable successor may
+        // be sitting in the ordinary RemeshQ lane after a world-streaming
+        // commit. Promote that bounded h5 geometry debt in place so it does not
+        // wait behind unrelated remeshes; this changes ordering, not the shared
+        // mesh-work budget.
+        (void)MeshService->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
       }
       const auto note_unowned_geometry_retry_attempt =
           [&](const char *action) {
