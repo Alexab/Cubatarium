@@ -11319,3 +11319,44 @@ visible no-teleport route on a freshly generated world, then replay that exact
 runtime world with `--require-existing-world`. Use the manifest's actual start
 focus and inspect pixel/relight traces at fixed coordinates; don't infer cold or
 warm provenance from the route name or report filename.
+
+### M622AF/AG: same-world cold/create and saved-world replay
+
+Reuse the M622AE environment setup above, then run these two short commands.
+The first requests a fresh alias; read the actual runtime ID from its report.
+Here that ID was `World_193`. The replay names that exact runtime ID and uses
+`--require-existing-world`.
+
+```powershell
+python tools/flight_sim_run.py --world World_M622AF_ColdEntry_20261016 `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622af_cold_world_short_light_probe_20261016.json `
+  --process-timeout 180
+
+python tools/flight_sim_run.py --world World_193 --require-existing-world `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622ag_world193_warm_light_probe_20261016.json `
+  --process-timeout 120
+```
+
+M622AF generated 43,264 columns in 40.563 seconds; M622AG loaded the exact
+`World_193` runtime world in 4.793 seconds with 121/121 spatial columns and no
+generation. Both used seed `3650471212`, metadata hash
+`3895b4396fa7b2ba040a5ee5622d5b00249b06e83f7041db8d5cc7524c5ea4e3`, and
+fixed focus `(-3,1)`. Focus pending-light median was zero in both. Cold had 960
+pixel probes with 72 dark samples, all on drawable surfaces and none light
+unsettled/preview. Warm had 1,920 probes with 147 dark samples, all on drawable
+surfaces; 15 dark samples were unsettled/preview and five preview. The warm
+trace saw 59 same-view preview-to-nonpreview transitions within 0–1 second,
+but no explicit demand-light-settlement event. Neither report is acceptance:
+both are static and fail movement/readiness gates, and no operator verdict was
+recorded.
+
+Artifacts:
+
+- M622AF report: `bin/suite_reports/engine_refactor/m622af_cold_world_short_light_probe_20261016.json`.
+- M622AF pixel analysis: `bin/suite_reports/engine_refactor/m622af_cold_renderer_pixel_trace_20261016.json`.
+- M622AF perf/INFO: `bin/logs/perf_20261016-214926_10140.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-214922.10140`.
+- M622AG report: `bin/suite_reports/engine_refactor/m622ag_world193_warm_light_probe_20261016.json`.
+- M622AG pixel analysis: `bin/suite_reports/engine_refactor/m622ag_warm_renderer_pixel_trace_20261016.json`.
+- M622AG perf/INFO: `bin/logs/perf_20261016-215134_45964.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215130.45964`.

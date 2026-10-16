@@ -1436,3 +1436,39 @@ Artifacts:
 - M622AC report/perf/INFO/pixel analysis: `m622ac_world164_stationary_light_trace_20261016.json`, `perf_20261016-212350_40976.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-212347.40976`, and `m622ac_renderer_pixel_trace_20261016.json`.
 - M622AD report/perf/INFO: `m622ad_world164_coop_tick_light_trace_20261016.json`, `perf_20261016-213741_41508.jsonl`, and `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-213736.41508`.
 - M622AE report/perf/INFO/pixel analysis: `m622ae_world164_shortpath_relight_20261016.json`, `perf_20261016-214318_46276.jsonl`, `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-214314.46276`, and `m622ae_renderer_pixel_trace_20261016.json`.
+
+### M622AF/AG: cold world and exact replay
+
+M622AF requested a fresh alias and the application created runtime `World_193`.
+The report shows `create`, 43,264/43,264 generated columns, 40.563 seconds,
+focus `(-3,1)`. M622AG replayed that exact runtime world with
+`-RequireExistingWorld`: requested/runtime names match, operation is `load`,
+121/121 spatial columns are present, generation is zero, and load took 4.793
+seconds. Both manifests have the same seed and metadata hash, so these two runs
+form a controlled world-identity cold/replay pair. Individual chunk-file reads
+were zero; retain the loader fields and do not infer storage layout.
+
+Both runs used a 25-second visible static no-fly probe. Each completed with
+process exit zero, no timeout, 13 periods and nine steady periods. Focus
+pending-light median was zero; final relight apply appeared in six cold frames
+and three replay frames. The cold pixel trace sampled 960 pixels, 72 below luma
+32; all had drawable opaque surfaces, with zero unsettled/preview dark samples,
+missing joins, or light-revision mismatches. The replay trace sampled 1,920
+pixels, 147 below luma 32; all had drawable opaque surfaces and no missing joins
+or revision mismatches. Fifteen replay dark samples were unsettled/preview and
+five were preview; 59 fixed-view preview-to-nonpreview observations were
+bounded by 0–1 second. It recorded zero explicit demand-light-settlement
+events. The analyzer returned `pass=false` on static movement/readiness gates.
+No operator framebuffer verdict was recorded, so these results do not clear
+unsampled pixels or human-visible defects.
+
+M622AF/AG reports and diagnostics:
+
+- Cold report/perf/INFO: `m622af_cold_world_short_light_probe_20261016.json`, `perf_20261016-214926_10140.jsonl`, and `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-214922.10140`.
+- Cold pixel analysis: `m622af_cold_renderer_pixel_trace_20261016.json`.
+- Replay report/perf/INFO: `m622ag_world193_warm_light_probe_20261016.json`, `perf_20261016-215134_45964.jsonl`, and `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215130.45964`.
+- Replay pixel analysis: `m622ag_warm_renderer_pixel_trace_20261016.json`.
+
+Next use one short M335 no-teleport segment on `World_193` with the expected
+product start `(120,56,56)` and verify actual focus `(7,3)`. Keep host CPU
+informational; M622AF ran at host p95 96.4% / max 100% without a CPU gate.

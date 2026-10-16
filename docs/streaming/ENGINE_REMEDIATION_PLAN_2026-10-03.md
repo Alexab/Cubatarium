@@ -12135,3 +12135,38 @@ of the established M335 route to check moving-focus fairness. Keep the CPU gate
 disabled and do not use a long operator-monitoring flight. M622AA/AB–AE reports,
 pixel analyses, perf files, and INFO logs are listed in the diagnostic runbook
 and flight-script catalog.
+
+### M622AF/AG: cold generation and replay on one runtime world
+
+The cold leg requested `World_M622AF_ColdEntry_20261016`; the application
+created runtime `World_193`. Both cold and replay manifests carry seed
+`3650471212` and metadata hash
+`3895b4396fa7b2ba040a5ee5622d5b00249b06e83f7041db8d5cc7524c5ea4e3`, and both
+held focus `(-3,1)`. M622AF generated 43,264/43,264 columns; the `create`
+operation took 40.563 seconds. M622AG replayed `World_193` with
+`-RequireExistingWorld`; `load` took 4.793 seconds, populated 121/121 spatial
+columns, and ran zero generation columns. The loader counted zero individual
+chunk-file reads in both legs, so this pair proves runtime world identity and
+create/load provenance, not the storage representation.
+
+Each leg held a visible GUI at fixed focus for 25 seconds. Process exit was
+zero with no timeout; both reports had 13 periods and nine steady periods. The
+analyzer returned `pass=false` on movement/readiness gates, as expected for a
+static no-fly probe. Focus pending-light median was zero on both legs; final
+relight apply was recorded in six cold frames and three replay frames. The cold
+pixel trace had 960 probes and 72 low-luminance samples, all on drawable opaque
+surfaces; none were unsettled/preview and there were no missing surface joins
+or light-revision mismatches. The replay trace had 1,920 probes and 147
+low-luminance samples, also all on drawable opaque surfaces. Fifteen replay
+dark samples had unsettled/preview light, five were preview; 59 same-view
+preview-to-nonpreview observations fell within 0–1 second. The replay trace
+recorded no explicit demand-light-settlement events. No sampled cold-entry
+geometry gap appeared, but the sparse fixed pixel grid and lack of an operator
+verdict cannot exclude a defect elsewhere on screen.
+
+M622AF/AG does not show the pending-light plateau seen on `World_164` before
+the short-path fix. Keep the fix, then validate moving-focus fairness with one
+short established M335 segment on `World_193`, checking the expected/actual
+product start. Continue occasional new-world samples while keeping exact
+saved-world replay as the repeatable baseline. Host CPU remains context only;
+M622AF completed despite host p95 96.4% and max 100%.
