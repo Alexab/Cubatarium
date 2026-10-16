@@ -5028,6 +5028,16 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool approach_geometry_debt =
           unowned_geometry_debt &&
           col_horiz <= kVisualStageFirstMeshRelightApproachHoriz;
+      if (approach_geometry_debt &&
+          UJobStageTrace::VisualBlackTraceEnabled())
+      {
+        // Start the detailed lifecycle watch as soon as bounded admission
+        // discovers this repair target. Renderer census can select the stale
+        // face later in the frame, after earlier geometry-revision bumps have
+        // already happened; without this early watch the trace has the final
+        // revisions but misses the producers that advanced them.
+        UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
+      }
       const auto note_unowned_geometry_retry_attempt =
           [&](const char *action) {
             if (!unowned_geometry_debt)
