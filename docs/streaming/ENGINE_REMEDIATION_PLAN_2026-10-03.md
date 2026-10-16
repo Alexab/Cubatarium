@@ -11984,133 +11984,75 @@ hole. The grid is sparse and its sampled rays did not hit the candidate chunks,
 so it cannot clear every projected area. Keep CPU usage informational, without
 a hard admission gate.
 
-M622W completed that warm-load comparison on the saved
-`World_M622V_FrustumStableFaceDebt_20261016`: 35 periods, accepted input
-adequacy, process exit 0, no timeout. The analyzer returned `pass=false`, but
-its symptom-reproduction check also returned false because focus missing-mesh
-median was 0 and the visible-black value was below the required product class.
-The run therefore did not reproduce the reported symptom. Its aggregate
-`visual_holes_rate=0.1515`, `fly_visible_black_max=12`,
-`post_stop_missing_max=32`, and `post_stop_visible_black_stalled_max=3` remain
-readiness/diagnostic counters, not an operator framebuffer verdict. At stop,
-the focus debt split was 30 missing-mesh labels and two face-debt labels, with
-no pending-light or GPU-in-flight labels; `post_stop_visual_holes_max=0` and
-`post_stop_visible_black_no_ticket_max=0` show that the broad stop counters do
-not by themselves establish a persistent pixel hole.
+### M622W/X/Y provenance correction and M622Z saved-world replay
 
-The warm trace had no exact voxel-mesh triangle gap. One in-fog ray at frame
-1620, pixel `(416,90)`, found voxel id 549 at 27.27 units while the opaque
-depth probe reported 85.57 units; the same sample matched a fluid triangle
-(block id 575, distance 0.097) and had `renderer_pixel_voxel_mesh_ray_gap=0`.
-Treat this as an opaque-only depth discrepancy with transparent water at that
-pixel, not a proven missing terrain mesh. For the 27 camera-band target rows,
-fixed-grid pixels sometimes fell inside their conservative projected AABB
-rectangles, but none of the sampled rays entered the target chunk AABB. The
-rectangles therefore did not provide target-specific pixel coverage.
+An audit of the original INFO logs invalidates the earlier claim that M622W,
+M622X, and M622Y were saved-world warm replays. Each requested the nonexistent
+alias `World_M622V_FrustumStableFaceDebt_20261016`; the game silently allocated
+a different numerical world. M622W created `World_190`, M622X created
+`World_191`, and M622Y created `World_192`. Each log records
+`[RelightAudit] ... outcome=missing`, `[WorldLoadPerf] kind=create`, zero chunk
+files, and 43,264/43,264 generated columns. M622X and M622Y's exact synchronized
+screen-ray-to-pixel observations remain valid for their generated worlds, but
+they are not warm-cache or saved-world evidence. `resume=true` describes the
+route's position intent; `warm_protocol=warmup_sec_stamp` marks warmup periods
+and does not prove that storage was loaded. M622V was itself a fresh generated
+world (`World_189`), so M622V/W/X/Y were not a controlled cold/warm pair.
 
-Do not change renderer queue policy from these readiness proxies. M622X and
-M622Y now correlate the streaming screen-ray coordinates with matching
-framebuffer pixels. Across their selected captures, 184 screen-ray candidates
-were inside the configured fog horizon; every matching pixel ray hit the same
-voxel chunk as the streaming trace, with zero opaque-depth gaps and zero exact
-voxel-mesh gaps. Candidate rays outside fog sometimes had no voxel hit, which
-is outside the visible horizon. M622V/W/X/Y therefore provide no sampled
-in-fog evidence for a missing terrain mesh. Reopen queue policy only if an
-operator identifies a concrete visible region or a future synchronized
-in-fog pixel reports an exact mesh/depth gap after its bounded lifecycle
-window. Do not add a CPU-load admission gate; CPU remains contextual. Avoid
-long operator-monitoring flights.
+M622Z is the first verified saved-world replay. It used the established short
+visible, no-teleport M335 route with `-RequireExistingWorld` against existing
+`World_164`, pinning the product start at `(120,56,56)`. The runtime confirmed
+the requested world, `WorldLoadPerf kind=load`, all 121/121 spatial columns,
+zero generation columns, and a 5.371-second startup operation. The trace shows
+zero individual chunk files read; therefore report the observed loaded spatial
+state and no-generation result without assuming the storage representation.
+The route completed 35 periods (process exit 0, no timeout); it covered focus
+`(7,3)` to `(-3,3)`.
+
+The bounded screen-ray capture produced 300 streaming rays, 2,500 pixel probes,
+and 100 exact coordinate joins. For the 14 synchronized refresh candidates
+inside that pixel's fog horizon, all 14 pixel rays hit the same voxel and there
+were zero voxel or mesh-ray gaps. Across the joined samples, all 52 pairs where
+both rays hit identified the same block. This supports agreement at the sampled
+coordinates, not complete framebuffer coverage.
+
+The renderer trace found 56 samples with luminance below 32. All had drawable,
+draw-ready opaque depth; none had a voxel-mesh ray gap. Sixteen samples had
+unsettled or preview light, including 13 preview samples. These dark pixels do
+not establish missing geometry or an operator-visible defect; no operator
+framebuffer verdict was recorded. The analyzer returned `pass=false` on
+non-CPU readiness/convergence gates (`visual_holes_rate=0.0303`,
+`fly_visible_black_max=18`, `post_stop_missing_max=29`,
+`post_stop_visual_holes_max=0`). Treat these as diagnostic signals, not pixel
+proof. Do not change queue policy from these counters alone. CPU remains
+informational and must not gate a run; avoid long operator-monitoring flights.
+
+The sampled pixel evidence across M622V/X/Y/Z contains no exact in-fog terrain
+mesh gap. M622Z verifies the saved-world side, while the supposed M622W/X/Y
+warm side was actually generated-world work. A controlled cold/warm comparison
+on one explicitly identified save remains open. For the next pair, first record
+the exact runtime world from a new-world run, then replay that exact existing
+folder with `-RequireExistingWorld`; accept the pair only when both manifests
+show the same runtime world and actual start focus. Keep CPU as context only.
 
 M622V report/perf/INFO: `m622v_frustum_stable_face_debt_20261016.json`,
 `perf_20261016-194951_22784.jsonl`, and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-194947.22784`.
 
-### M622W: warm replay and limits of the fixed pixel grid
 
-M622W resumed the M622V world using the unchanged short visible M335 route.
-The process completed 35 periods (`process_rc=0`, no timeout); route input
-adequacy passed and the report identifies `cache_mode=warm`. The analyzer's
-overall `pass=false` is not a symptom reproduction: `symptom_pass=false` with
-`focus_missing_mesh_med=0` and a visible-black median below its product-class
-threshold. Non-CPU gates also failed, including visual-hole proxy rate 0.1515,
-median frame wall time 26.10 ms, and post-stop readiness convergence. CPU
-measurements are context only; there is no CPU admission gate.
-
-The stop census reported 32 missing/readiness labels, split into 30 focus
-missing-mesh labels and two face-debt labels. It reported no post-stop
-visual-hole pixels, no no-ticket visible-black rows, no pending light, and no
-GPU-in-flight rows. Three rows still met the visible-black-stalled proxy.
-These counters disagree in scope: focus-ring and stop labels can persist
-without a measured framebuffer gap.
-
-The warm run found zero `renderer_pixel_voxel_mesh_ray_gap` samples. At frame
-1620, pixel `(416,90)` had a CPU voxel hit at 27.27 units (fog end 32) and an
-opaque-depth distance of 85.57, but the transparent-fluid probe matched block
-575 at distance 0.097. The terrain-mesh ray gap stayed zero. This is not proof
-of a missing terrain mesh because transparent water occupied the sampled ray.
-Across 27 camera-band target rows, some fixed-grid pixels fell inside the
-conservative screen rectangles, but none of those rays entered the candidate
-chunk AABBs. A rectangle overlap is insufficient to claim the actual target
-chunk was pixel-sampled.
-
-The warm replay therefore does not justify queue-policy changes. Before any
-more long flight, improve the bounded pixel probe to sample a projected
-camera-band target or wait for a user-identified region, then use the established
-short route. Require an exact in-fog ray gap after the target's lifecycle window
-before treating a readiness counter as a renderer defect.
-
+M622W/X/Y historical artifacts (generated worlds, not saved-world replays):
 M622W report/perf/INFO: `m622w_warm_frustum_stable_face_debt_20261016.json`,
-`perf_20261016-201046_45928.jsonl`, and
+`perf_20261016-201046_45928.jsonl`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-201043.45928`.
-
-### M622X/M622Y: synchronized screen-ray pixel verification
-
-M622X enabled the existing streaming screen-ray pixel trigger on the saved
-M622V world. Its route resumed that save, but the report was named without
-`warm`; the harness therefore stamped it `cold`/`cold_or_unspecified`. This
-was a harness metadata issue, not a different route. The M335 wrapper now has
-an explicit `-StampWarmPeriods` switch so warm evidence no longer depends on
-the report filename.
-
-M622X captured every screen-ray event: 63 synchronized frames and 9,940 pixel
-rows (277 MB perf JSONL). Of 329 streaming candidates that requested refresh,
-166 were within the 32-unit fog horizon. Each of those 166 framebuffer rays
-hit the same voxel chunk as the streaming trace. Across all synchronized
-candidate samples there were zero opaque-depth gaps and zero exact voxel-mesh
-gaps. One separate in-fog opaque-depth proxy at frame 1290, pixel `(416,90)`,
-matched a transparent-water triangle and had no exact mesh gap. The full
-capture was too large to repeat at that rate, so M622Y bounds this opt-in
-readback to one in eight screen-ray source frames.
-
-M622Y used the same 35-period no-teleport route against the saved world. The
-Release build and static executable check passed. The report confirms
-`cold_warm_mode=warm`, `warm_protocol=warmup_sec_stamp`, input adequacy, process
-exit 0, and no timeout. The analyzer returned `pass=false` on non-CPU gates;
-symptom reproduction was false (`focus_missing_mesh_med=0`, visible-black
-below its product threshold). `visual_holes_rate=0.1212`,
-`fly_visible_black_max=8`, `post_stop_missing_max=36`,
-`post_stop_visible_black_stalled_max=1`, and
-`post_stop_visual_holes_max=0` remain diagnostic/readiness counters, with no
-operator framebuffer verdict. The manifest's dirty-source check is expected
-because this run validated the in-progress instrumentation change.
-
-M622Y captured 175 pixels at seven synchronized screen-ray frames. Thirty-nine
-candidate rays requested refresh; 18 were inside fog, and all 18 pixel samples
-hit the exact target voxel chunk with zero opaque-depth and exact mesh gaps.
-The three remaining candidate samples had no voxel hit and were all beyond
-fog. Host CPU was 77/100/100% median/p95/max while app CPU was 23.46/49.89/61.43%
-of machine capacity; CPU was not a gate. The additional probes and host load
-make these runs unsuitable for performance comparisons.
-
-This completes the planned cold/warm, screen-ray-to-pixel check. Do not change
-streaming or renderer queue policy based on focus-ring readiness labels alone.
-Continue with the remaining static plan items and use another short visible
-route only when an operator identifies a concrete region or instrumentation
-records an exact in-fog gap. Do not use a long operator-monitoring flight.
-
 M622X report/perf/INFO: `m622x_screenray_pixel_probe_20261016.json`,
-`perf_20261016-202639_32496.jsonl`, and
+`perf_20261016-202639_32496.jsonl`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-202635.32496`.
 M622Y report/perf/INFO: `m622y_warm_screenray_probe_bounded_20261016.json`,
-`perf_20261016-203440_38520.jsonl`, and
+`perf_20261016-203440_38520.jsonl`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-203436.38520`.
+
+M622Z report/perf/INFO: `m622z_warm_world164_screenray_probe_20261016.json`,
+`perf_20261016-205417_39284.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-205413.39284`. Pixel
+analyses: `m622z_screen_ray_parity_20261016.json` and
+`m622z_renderer_pixel_trace_20261016.json`.

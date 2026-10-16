@@ -11195,89 +11195,68 @@ pixel samples were beyond fog end (44.7–56.8 units versus 32); all nine
 unloaded-before-hit samples were also beyond fog end. The pixel grid did not
 hit the camera-band target chunks, so do not treat these candidates as a
 visible defect without a target-specific pixel or exact screen-ray witness.
-M622W completed the warm replay, so the cold/warm comparison step is done.
-Route input adequacy passed; symptom reproduction did not
-(`focus_missing_mesh_med=0`, visible-black below the product threshold), and
-the analyzer's overall `pass=false` reflects multiple non-CPU gates rather
-than a confirmed visual hole. The stop census had 30 missing-mesh and two
-face-debt labels, zero sampled post-stop visual holes, and three
-visible-black-stalled proxy rows, all with a ticket. No exact voxel-mesh ray
-gap was found. The single in-fog opaque-depth discrepancy at frame 1620, pixel
-`(416,90)`, matched a transparent-fluid triangle, so it is not a confirmed
-terrain gap.
 
-The fixed grid did not ray through the candidate chunk AABBs even where sample
-positions overlapped their conservative projected rectangles. M622X/Y added
-synchronized pixel samples at the streaming screen-ray coordinates. Of 184
-in-fog candidate rays across both runs, every pixel ray hit the same target
-voxel chunk; there were zero opaque-depth or exact mesh gaps. Keep CPU
-contextual; never gate admission on it. Avoid another long operator-monitoring
-flight.
+### M622W/X/Y provenance correction and the verified M622Z replay
 
-M622W warm replay:
+The earlier M622W/X/Y entries were mislabeled as warm replays. They requested
+`World_M622V_FrustumStableFaceDebt_20261016`, which did not exist. Runtime
+allocation silently created `World_190`/`World_191`/`World_192`; the INFO logs
+record `RelightAudit outcome=missing`, `WorldLoadPerf kind=create`, no chunk
+files, and 43,264/43,264 generated columns. `resume=true` is route-position
+intent, and `warmup_sec_stamp` only labels periods. Keep their screen-ray pixel
+correlation as valid evidence for those generated worlds, but not as saved-world
+or cache-warm evidence. Thus M622V/W/X/Y did not produce a controlled cold/warm
+pair.
 
-```powershell
-$env:CUBATARIUM_RELIGHT_AUDIT='1'
-$env:CUBA_VISUAL_BLACK_TRACE='1'
-$env:CUBA_ALLOW_DIRTY_AF='1'
-.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
-  -World World_M622V_FrustumStableFaceDebt_20261016 `
-  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
-  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
-  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
-  -IdleSeconds 15 -PhaseId M622W `
-  -Report bin/suite_reports/engine_refactor/m622w_warm_frustum_stable_face_debt_20261016.json
-```
+The harness now has `-RequireExistingWorld`. Use it for replay runs and inspect
+`run_manifest.world_startup`: the requested and runtime names must match,
+`startup_operation` must be `load`, `generation_columns_completed` must be zero,
+and `start_focus` must match the pinned product start. `cache_mode` is derived
+from the startup operation; `period_warmup_stamp` is a separate warm-period
+label. Do not infer cache state from `resume`, the report filename, or the period
+stamp.
 
-The route resumed the saved world (`cache_mode=warm`, `teleport_cruise=false`),
-completed 35 periods, and exited 0 without timeout. The report remains
-`pass=false`; treat readiness and analyzer gates as diagnostic until a
-target-aligned ray or operator observation ties them to a visible defect.
+M622Z verified this procedure on existing `World_164` with a pinned product
+start `(120,56,56)`. It completed 35 periods, process exit 0, no timeout. The
+manifest reports `load`, 121/121 loaded spatial columns, zero generated
+columns, 5.371 seconds startup, and focus `(7,3)` to `(-3,3)`. Individual chunk
+file reads were zero, so record the actual loader fields rather than guessing
+how the world data is stored.
 
-Artifacts:
-
-- Report: `bin/suite_reports/engine_refactor/m622w_warm_frustum_stable_face_debt_20261016.json`.
-- Perf: `bin/logs/perf_20261016-201046_45928.jsonl`.
-- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-201043.45928`.
-
-M622X initial screen-ray capture took every source event. It found 166 in-fog
-screen-ray candidates, each with a synchronized pixel hit in the same voxel
-chunk and zero exact mesh gaps. The run's report was classified cold because
-the filename did not contain `warm`, even though the route resumed the saved
-world. It wrote 9,940 pixel rows (277 MB), so its capture rate is historical
-only; current code samples one in eight source frames.
-
-M622Y bounded warm screen-ray replay:
+To repeat the short saved-world screen-ray probe:
 
 ```powershell
 $env:CUBATARIUM_RELIGHT_AUDIT='1'
-$env:CUBA_ALLOW_DIRTY_AF='1'
 .\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
-  -EnableScreenRayPixelProbes -StampWarmPeriods `
-  -World World_M622V_FrustumStableFaceDebt_20261016 `
-  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -EnableScreenRayPixelProbes -StampWarmPeriods -RequireExistingWorld `
+  -World World_164 -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
   -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
   -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
-  -IdleSeconds 15 -PhaseId M622Y `
-  -Report bin/suite_reports/engine_refactor/m622y_warm_screenray_probe_bounded_20261016.json
+  -IdleSeconds 15 -PhaseId M622Z `
+  -Report bin/suite_reports/engine_refactor/m622z_warm_world164_screenray_probe_20261016.json
 ```
 
-The run completed 35 periods on warm cache mode (`warmup_sec_stamp`), process
-exit 0, no timeout. It captured 175 screen-ray-matched pixels over seven
-frames. Of 39 refresh candidates, 18 were inside fog and every one hit its
-target voxel chunk in the pixel witness; there were zero opaque-depth and exact
-mesh gaps. The remaining three candidates with no voxel hit were beyond fog.
-The analyzer returned `pass=false` on non-CPU gates; this is diagnostic, not
-an operator framebuffer verdict. CPU measurements are never a launch gate.
+M622Z produced 300 streaming rays, 2,500 pixel probes, and 100 exact coordinate
+joins. Fourteen synchronized refresh candidates inside the pixel-specific fog
+horizon all hit the same voxel; there were zero voxel or mesh-ray gaps. Of the
+52 joined pairs where both rays hit, all identified the same block. The
+renderer trace had 56 samples below luminance 32; all had drawable, draw-ready
+opaque depth and no voxel-mesh ray gap. Sixteen had unsettled/preview light,
+including 13 preview samples. No operator framebuffer verdict was recorded.
 
-Artifacts:
+The flight analyzer returned `pass=false` on non-CPU gates
+(`visual_holes_rate=0.0303`, `fly_visible_black_max=18`,
+`post_stop_missing_max=29`, `post_stop_visual_holes_max=0`). Keep these as
+readiness diagnostics, not proof of a pixel hole. CPU is informational; never
+use a host-CPU admission gate. No long operator-monitoring flight is needed.
+The saved-world replay side is verified; a controlled cold/warm pair on the
+same runtime world remains open.
 
-- Report: `bin/suite_reports/engine_refactor/m622y_warm_screenray_probe_bounded_20261016.json`.
-- Perf: `bin/logs/perf_20261016-203440_38520.jsonl` (221 MB).
-- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-203436.38520`.
+Historical artifacts:
 
-Artifacts:
-
-- Report: `bin/suite_reports/engine_refactor/m622v_frustum_stable_face_debt_20261016.json`.
-- Perf: `bin/logs/perf_20261016-194951_22784.jsonl`.
-- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-194947.22784`.
+- M622W report: `bin/suite_reports/engine_refactor/m622w_warm_frustum_stable_face_debt_20261016.json`; INFO shows creation of `World_190`.
+- M622X report: `bin/suite_reports/engine_refactor/m622x_screenray_pixel_probe_20261016.json`; INFO shows creation of `World_191`.
+- M622Y report: `bin/suite_reports/engine_refactor/m622y_warm_screenray_probe_bounded_20261016.json`; INFO shows creation of `World_192`.
+- M622Z report: `bin/suite_reports/engine_refactor/m622z_warm_world164_screenray_probe_20261016.json`.
+- M622Z parity and renderer analyses: `m622z_screen_ray_parity_20261016.json`, `m622z_renderer_pixel_trace_20261016.json`.
+- M622Z perf and INFO: `bin/logs/perf_20261016-205417_39284.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-205413.39284`.
