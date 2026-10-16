@@ -3849,45 +3849,6 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
       continue;
     }
 
-    const uint64_t field_light_rev = chunk->GetLightFieldRevision();
-    const uint64_t meshed_light_rev = GetMeshedLightRevision(coord);
-    const uint64_t published_light_rev = GetMeshPublishRevs(coord).light_rev;
-    const bool has_dark_face = ChunkHasFullyDarkFace(coord);
-    const bool stale_dark_face =
-        has_dark_face && ChunkHasStaleDarkFaces(coord, world);
-    const bool provisional_preview = HasProvisionalLightPreview(coord);
-    const bool own_light_current =
-        meshed_light_rev >= field_light_rev &&
-        published_light_rev >= field_light_rev && !provisional_preview &&
-        !stale_dark_face;
-    PublishedLightHaloState halo_state = PublishedLightHaloState::Unavailable;
-    bool halo_state_checked = false;
-    if (own_light_current)
-    {
-      halo_state = GetPublishedLightHaloState(coord, world);
-      halo_state_checked = true;
-      if (halo_state == PublishedLightHaloState::MatchesCurrent)
-      {
-        PendingStaleLightRemeshes_.erase(coord);
-        if (audit_relight)
-        {
-          CubatariumLogInfo(
-              "RelightAudit",
-              "stale_light_debt event=published coord=(" +
-                  std::to_string(coord.x) + "," + std::to_string(coord.y) +
-                  "," + std::to_string(coord.z) + ") field_light_rev=" +
-                  std::to_string(field_light_rev) + " meshed_light_rev=" +
-                  std::to_string(meshed_light_rev) +
-                  " published_light_rev=" +
-                  std::to_string(published_light_rev) + " halo_state=" +
-                  std::to_string(static_cast<int>(halo_state)) +
-                  " backlog=" +
-                  std::to_string(PendingStaleLightRemeshes_.size()));
-        }
-        continue;
-      }
-    }
-
     const ChunkRenderDemandRecord *demand =
         UChunkRenderDemandStore::Get().Find(coord);
     if (!demand)
@@ -3900,16 +3861,9 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
       PendingStaleLightRemeshes_.erase(coord);
       continue;
     }
-    // A neighboring mutation can queue this repair while the dependent chunk
-    // is still receiving its own settled light. Retain the debt, but do not
-    // build a mesh against an intermediate field revision.
-    if (!demand->has_settled_light ||
-        demand->settled_light_rev != field_light_rev ||
-        demand->desired_light_rev > field_light_rev)
-    {
-      continue;
-    }
-
+    // Do not hash a published halo while another pipeline stage already owns
+    // a replacement. Keep the durable debt and re-evaluate after that owner
+    // has either published or been pruned.
     const bool dirty = Dirty.Contains(coord);
     const bool raa_pending = RemeshAfterApply.count(coord) > 0;
     const bool mesh_inflight = AsyncBuilder && AsyncBuilder->IsInFlight(coord);
@@ -3921,9 +3875,48 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     {
       continue;
     }
-    if (!halo_state_checked)
+    // A neighboring mutation can queue this repair while the dependent chunk
+    // is still receiving its own settled light. Retain the debt, but do not
+    // build a mesh against an intermediate field revision.
+    const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+    if (!demand->has_settled_light ||
+        demand->settled_light_rev != field_light_rev ||
+        demand->desired_light_rev > field_light_rev)
     {
-      halo_state = GetPublishedLightHaloState(coord, world);
+      continue;
+    }
+
+    const uint64_t meshed_light_rev = GetMeshedLightRevision(coord);
+    const uint64_t published_light_rev = GetMeshPublishRevs(coord).light_rev;
+    const bool has_dark_face = ChunkHasFullyDarkFace(coord);
+    const bool stale_dark_face =
+        has_dark_face && ChunkHasStaleDarkFaces(coord, world);
+    const bool provisional_preview = HasProvisionalLightPreview(coord);
+    const bool own_light_current =
+        meshed_light_rev >= field_light_rev &&
+        published_light_rev >= field_light_rev && !provisional_preview &&
+        !stale_dark_face;
+    const PublishedLightHaloState halo_state =
+        GetPublishedLightHaloState(coord, world);
+    if (own_light_current &&
+        halo_state == PublishedLightHaloState::MatchesCurrent)
+    {
+      PendingStaleLightRemeshes_.erase(coord);
+      if (audit_relight)
+      {
+        CubatariumLogInfo(
+            "RelightAudit",
+            "stale_light_debt event=published coord=(" +
+                std::to_string(coord.x) + "," + std::to_string(coord.y) +
+                "," + std::to_string(coord.z) + ") field_light_rev=" +
+                std::to_string(field_light_rev) + " meshed_light_rev=" +
+                std::to_string(meshed_light_rev) +
+                " published_light_rev=" +
+                std::to_string(published_light_rev) + " halo_state=" +
+                std::to_string(static_cast<int>(halo_state)) + " backlog=" +
+                std::to_string(PendingStaleLightRemeshes_.size()));
+      }
+      continue;
     }
     const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
                                std::abs(coord.z - MeshFocusGroundChunk.z));
