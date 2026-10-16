@@ -149,7 +149,8 @@ enum class MeshRevisionBumpReason : uint8_t
   PriorityRelitInstallRepair,
   PriorityWorldStreamingCommit,
   PriorityWorldCoreCommit,
-  FaceDebtMaterialRetry
+  FaceDebtMaterialRetry,
+  PriorityLightDependencyRepair
 };
 
 struct DemandTransitionSpan

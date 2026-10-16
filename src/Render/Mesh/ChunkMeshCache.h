@@ -1543,7 +1543,7 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
   /// Published neighbor meshes awaiting input/coverage-dependent remesh. Kept
   /// separate from Dirty so filtered side effects cannot silently drop debt.
-  std::unordered_set<glm::ivec3, IVec3Hash>
+  std::unordered_map<glm::ivec3, MeshRevisionBumpReason, IVec3Hash>
       PendingMeshDependencyInvalidations_;
   /// Stale-light remesh requests survive Dirty admission until the replacement
   /// mesh publishes the current light-field revision.

@@ -10827,3 +10827,41 @@ in `ENGINE_REMEDIATION_PLAN_2026-10-03.md`. The next experiment should check
 whether preserving dependency cause prevents geometry revision churn.
 
 Artifact: `suite_reports/engine_refactor/m622j_active_mesh_owner_debt_20261016.json`.
+
+### M622K–M622L: light-only dependency reason route
+
+Use the same compact visible no-teleport M335 profile to inspect the
+reason-preserving dependency queue. Set `CUBA_ALLOW_DIRTY_AF=1` only for a
+deliberate working-tree experiment; no CPU threshold is used.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622L_Cold_LightDependencyReason_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622L_LightDependencyReason_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622l_light_dependency_reason_20261016.json
+```
+
+M622K exited before its first period because its initial diagnostic trace used
+`.at()` after removing the applied dependency from the map. The source now
+uses a safe lookup. M622L completed all 35 periods (`process_rc=0`) and logged
+light-only dependency reason rows across 369 unique coordinates. Analyzer
+`pass=false` persisted on non-CPU checks: mesh-coverage proxy rate 0.2424,
+fly visible-black proxy max 19, post-stop visible-black max 1, readiness debt
+max 48, median wall time 44.26 ms. No framebuffer verdict was recorded. Host
+CPU was 75.4/100/100% median/p95/max; app CPU was 18.35/35.53/44.53% of
+machine capacity. Host CPU never gates the route.
+
+Reports:
+`suite_reports/engine_refactor/m622k_light_dependency_reason_20261016.json`
+and `suite_reports/engine_refactor/m622l_light_dependency_reason_20261016.json`.
+The next diagnostic should verify the latest applied-event reason field and
+compare desired/published geometry revisions by coordinate.

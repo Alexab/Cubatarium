@@ -2924,16 +2924,17 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
 bool UChunkMeshCache::ShouldBumpChunkMeshRevisionOnDirty(
     glm::ivec3 chunk_coord, MeshRevisionBumpReason reason) const
 {
-  if (reason != MeshRevisionBumpReason::PriorityRelitInstallRepair)
+  if (reason != MeshRevisionBumpReason::PriorityRelitInstallRepair &&
+      reason != MeshRevisionBumpReason::PriorityLightDependencyRepair)
   {
     return true;
   }
 
-  // Relight installation changes the light input, not the voxel geometry
-  // source. If a newer geometry revision is already waiting for publication,
-  // retain that target and let its fresh light/input stamps cover the relight.
-  // Advancing the geometry revision again here only invalidates that pending
-  // repair and can keep the drawable predecessor permanently behind.
+  // Light-only repair changes a mesh input, not voxel geometry. If a newer
+  // geometry revision is already waiting for publication, retain that target
+  // and let its fresh light/input stamps cover the repair. Advancing geometry
+  // again only invalidates pending work and can keep the drawable predecessor
+  // permanently behind.
   return MeshRevisions.Current(chunk_coord) <=
          GetMeshPublishRevs(chunk_coord).geom_rev;
 }
@@ -3423,6 +3424,18 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
     const std::vector<glm::ivec3> &changed_input_chunks, const char *cause)
 {
   const UChunkManager &chunks = world.GetChunkManager();
+  // Relight and open-sky propagation change mesh light inputs without changing
+  // voxel geometry. Keep that distinction through the coalescing queue so a
+  // stream of neighbor light updates does not keep advancing the geometry
+  // target past the mesh already being built. Any geometry-capable cause wins
+  // when both kinds of input touch the same dependent before the drain.
+  const bool light_only_dependency =
+      cause && (std::strcmp(cause, "relight_light_change") == 0 ||
+                std::strcmp(cause, "enter_open_sky_boundary") == 0);
+  const MeshRevisionBumpReason dependency_reason =
+      light_only_dependency
+          ? MeshRevisionBumpReason::PriorityLightDependencyRepair
+          : MeshRevisionBumpReason::PriorityDirtyEnqueued;
   const bool retain_open_sky_lifecycle =
       cause && std::strcmp(cause, "enter_open_sky_boundary") == 0;
   const auto published_halo_differs_from =
@@ -3497,9 +3510,13 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
             UJobStageTrace::WatchOpenSkyLifecycleChunk(
                 dependent_coord.x, dependent_coord.y, dependent_coord.z);
           }
-          const bool inserted =
-              PendingMeshDependencyInvalidations_.insert(dependent_coord)
-                  .second;
+          const auto [pending, inserted] =
+              PendingMeshDependencyInvalidations_.try_emplace(
+                  dependent_coord, dependency_reason);
+          if (!inserted && !light_only_dependency)
+          {
+            pending->second = dependency_reason;
+          }
           if (inserted)
           {
             ++MeshDependencyQueuedSinceDrain_;
@@ -3597,10 +3614,22 @@ PublishedLightHaloState UChunkMeshCache::GetPublishedLightHaloState(
 void UChunkMeshCache::QueueMeshDependencyInvalidation(
     glm::ivec3 dependent_chunk)
 {
-  if (HasDrawableGreedyMesh(dependent_chunk) &&
-      PendingMeshDependencyInvalidations_.insert(dependent_chunk).second)
+  if (!HasDrawableGreedyMesh(dependent_chunk))
+  {
+    return;
+  }
+  const auto [pending, inserted] =
+      PendingMeshDependencyInvalidations_.try_emplace(
+          dependent_chunk, MeshRevisionBumpReason::PriorityDirtyEnqueued);
+  if (inserted)
   {
     ++MeshDependencyQueuedSinceDrain_;
+  }
+  else
+  {
+    // This entry point is used for seam/coverage obligations, whose repair can
+    // also depend on geometry. Do not let a prior light-only cause weaken it.
+    pending->second = MeshRevisionBumpReason::PriorityDirtyEnqueued;
   }
 }
 
@@ -3636,8 +3665,12 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
     return;
   }
 
-  std::vector<glm::ivec3> candidates(PendingMeshDependencyInvalidations_.begin(),
-                                    PendingMeshDependencyInvalidations_.end());
+  std::vector<glm::ivec3> candidates;
+  candidates.reserve(PendingMeshDependencyInvalidations_.size());
+  for (const auto &entry : PendingMeshDependencyInvalidations_)
+  {
+    candidates.push_back(entry.first);
+  }
   std::sort(candidates.begin(), candidates.end(), [this](glm::ivec3 a,
                                                          glm::ivec3 b)
   {
@@ -3662,12 +3695,23 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
   const int enqueue_budget =
       std::clamp(std::max(1, max_schedule_per_frame) * 2, 4, 16);
   int enqueued = 0;
-  const auto trace_dependency = [&](const char *event, glm::ivec3 coord)
+  const auto trace_dependency = [&](const char *event, glm::ivec3 coord,
+                                   const char *reason_override = nullptr)
   {
     if (!UJobStageTrace::VisualBlackTraceEnabled() ||
         !UJobStageTrace::IsVisualChunkWatched(coord.x, coord.y, coord.z))
     {
       return;
+    }
+    const auto pending_reason =
+        PendingMeshDependencyInvalidations_.find(coord);
+    const char *reason = reason_override;
+    if (!reason)
+    {
+      reason = pending_reason == PendingMeshDependencyInvalidations_.end()
+                   ? "already_drained"
+                   : UJobStageTrace::MeshRevisionBumpReasonName(
+                         pending_reason->second);
     }
     CubatariumLogInfo(
         "RelightAudit",
@@ -3685,6 +3729,7 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
                  : "0") +
             " dep_backlog=" +
             std::to_string(PendingMeshDependencyInvalidations_.size()) +
+            " reason=" + reason +
             " applied=" + std::to_string(LastMeshDependencyAppliedN_));
   };
   for (const glm::ivec3 coord : candidates)
@@ -3717,7 +3762,12 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
     }
 
     InvalidateMeshCapture(coord);
-    MarkDirtyPriority(coord);
+    const auto pending = PendingMeshDependencyInvalidations_.find(coord);
+    const MeshRevisionBumpReason reason =
+        pending == PendingMeshDependencyInvalidations_.end()
+            ? MeshRevisionBumpReason::PriorityDirtyEnqueued
+            : pending->second;
+    MarkDirtyPriority(coord, reason);
     if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
         (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
         IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord))
@@ -3725,7 +3775,8 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
       PendingMeshDependencyInvalidations_.erase(coord);
       ++LastMeshDependencyAppliedN_;
       ++enqueued;
-      trace_dependency("applied", coord);
+      trace_dependency("applied", coord,
+                       UJobStageTrace::MeshRevisionBumpReasonName(reason));
       if (OnMeshDependencyAppliedFn_)
       {
         OnMeshDependencyAppliedFn_(coord);

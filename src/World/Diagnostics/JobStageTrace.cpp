@@ -1244,6 +1244,8 @@ const char *UJobStageTrace::MeshRevisionBumpReasonName(
     return "priority_world_core_commit";
   case MeshRevisionBumpReason::FaceDebtMaterialRetry:
     return "face_debt_material_retry";
+  case MeshRevisionBumpReason::PriorityLightDependencyRepair:
+    return "priority_light_dependency_repair";
   }
   return "unknown";
 }

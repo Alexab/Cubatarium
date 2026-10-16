@@ -11628,3 +11628,50 @@ never a preflight, pass/fail gate, or reason to discard a run while Codex is
 active.
 
 Report: `bin/suite_reports/engine_refactor/m622j_active_mesh_owner_debt_20261016.json`.
+
+### M622K–M622L: preserve the reason for coalesced dependency repairs
+
+The M622K first attempt exited before the first perf period (`process_rc=1`,
+`run_outcome=harness_fail`). It did not produce flight evidence. Static review
+of the just-added diagnostic found that the successful dependency path erased
+its map entry and then the trace lambda used `.at(coord)` to print the reason.
+The first successful dependency drain therefore could throw from diagnostics.
+The trace now uses a safe lookup and an `already_drained` fallback. M622K is
+retained only as a harness-startup failure artifact, not a renderer result.
+
+The code change stores a `MeshRevisionBumpReason` alongside each coalesced
+dependency coordinate. `relight_light_change` and
+`enter_open_sky_boundary` use `PriorityLightDependencyRepair`; geometry-capable
+causes use `PriorityDirtyEnqueued`, which takes precedence if both touch one
+dependent before drain. The light-only reason reuses the existing rule that
+does not bump geometry when a newer geometry revision is already awaiting
+publication. The singular seam/coverage API remains geometry-capable. The
+drain trace includes the retained reason, including when the row is logged
+after removal from the queue.
+
+M622L used the same compact visible no-teleport M335 route on a fresh world.
+It completed 35 periods (`process_rc=0`, no timeout), confirming the diagnostic
+exception is fixed. Analyzer `pass=false` remained on non-CPU gates:
+`visual_holes_rate=0.2424`, fly visible-black proxy max 19, post-stop visible
+black max 1, post-stop readiness debt max 48, median frame wall time 44.26 ms.
+The run logged light-only dependency reasons across 369 unique dependents
+(1,956 observed reason rows: 1,939 already covered by a Dirty/remesh owner and
+17 deferred behind a live owner). These rows confirm reason propagation, but
+do not yet prove reduced geometry churn or a visual improvement. M622J and
+M622L are fresh-world runs, not a controlled A/B comparison; the higher M622L
+proxy rate cannot be attributed to this change. No operator framebuffer
+verdict was recorded.
+
+M622L host CPU was 75.4/100/100% median/p95/max; application CPU was
+18.35/35.53/44.53% of machine capacity. Host CPU remains context only and did
+not gate this run. Release compilation and static Windows executable
+verification passed after the safe trace lookup and applied-reason log change.
+
+Reports:
+`bin/suite_reports/engine_refactor/m622k_light_dependency_reason_20261016.json`
+and `bin/suite_reports/engine_refactor/m622l_light_dependency_reason_20261016.json`.
+The next compact route should use the latest binary to verify the applied-event
+reason field and compare per-coordinate desired/published geometry revisions;
+the next functional question is whether reason-aware invalidation stops
+needless geometry revision advancement without leaving stale light debt
+unpublished.

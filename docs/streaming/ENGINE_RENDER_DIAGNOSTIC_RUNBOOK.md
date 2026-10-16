@@ -1050,3 +1050,26 @@ Report: `bin/suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20
 Raw logs are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`. For subsequent
 diagnostics, preserve the short route and use the pinned trace to determine
 whether dirty ownership survives until a dependency enters the visual focus.
+
+### M622K–M622L: dependency reason and safe drain tracing
+
+The M622K attempt has zero perf periods and `run_outcome=harness_fail`; exclude
+it from renderer comparisons. The first implementation queried a dependency
+map entry with `.at()` after the successful drain branch had erased it. Use the
+safe trace in the current source, which emits the retained reason or
+`already_drained` without throwing. M622L completed the established compact
+35-period M335 route (`process_rc=0`) and confirmed that
+`priority_light_dependency_repair` reaches 369 dependent coordinates. The
+analyzer still returned `pass=false` on non-CPU checks. Its visual-hole and
+visible-black values are mesh/readiness proxies, not framebuffer proof.
+
+For reason-aware dependency admission, classify only
+`relight_light_change` and `enter_open_sky_boundary` as light-only. Coalescing
+must allow a geometry-capable cause to override a pending light-only cause.
+The singular seam/coverage invalidation API defaults to geometry-capable.
+When inspecting the next run, compare desired/published geometry revisions by
+coordinate and retain the applied-event reason. Host CPU is advisory only and
+never blocks a run.
+
+Reports: `bin/suite_reports/engine_refactor/m622k_light_dependency_reason_20261016.json`
+and `bin/suite_reports/engine_refactor/m622l_light_dependency_reason_20261016.json`.
