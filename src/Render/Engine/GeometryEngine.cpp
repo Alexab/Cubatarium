@@ -4478,6 +4478,11 @@ void UGeometryEngine::DrawCubeGeometry()
       static uint64_t last_camera_band_peak_probe_epoch = 0;
       static uint64_t last_screen_ray_probe_epoch = 0;
       static uint64_t last_visual_hole_event_probe_epoch = 0;
+      static uint32_t screen_ray_pixel_probe_event_count = 0;
+      // Screen-ray captures read back and trace a framebuffer grid. Sample one
+      // in eight source frames so the opt-in witness remains bounded over a
+      // full flight while still spanning its route.
+      constexpr uint32_t kScreenRayPixelProbeStride = 8;
       // Capture a bounded framebuffer sample for transient camera-band peaks
       // even when the operator's fixed X window does not include the event.
       static uint32_t camera_band_peak_pixel_probe_count = 0;
@@ -4518,11 +4523,16 @@ void UGeometryEngine::DrawCubeGeometry()
       const bool visual_hole_edge_pixel_probe =
           pixel_probe_in_x_range && probe_on_screen_ray &&
           new_visual_hole_event;
-      const bool screen_ray_probe =
+      const bool screen_ray_probe_event =
           probe_on_screen_ray &&
           UJobStageTrace::HasScreenRayTraceForFrame(
               pixel_probe_frame_epoch) &&
           last_screen_ray_probe_epoch != pixel_probe_frame_epoch;
+      const bool screen_ray_probe =
+          screen_ray_probe_event &&
+          (screen_ray_pixel_probe_event_count++ %
+               kScreenRayPixelProbeStride ==
+           0u);
       const bool focus_changed =
           !have_last_probe_focus || last_probe_focus.x != probe_focus.x ||
           last_probe_focus.y != probe_focus.z;

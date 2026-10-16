@@ -3,6 +3,8 @@ param(
     [ValidateRange(0, 512)]
     [int]$EndMarginBlocks = 0,
     [switch]$EnableFogPullIn,
+    [switch]$EnableScreenRayPixelProbes,
+    [switch]$StampWarmPeriods,
     [string]$World = "World_M572_Cold_20261014",
     [int]$ProbeMinCameraX = -4710,
     [int]$ProbeMaxCameraX = -4550,
@@ -51,7 +53,9 @@ $environmentNames = @(
     "CUBA_FOCUS_SLICE_TRACE_PER_STATE",
     "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY",
     "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS",
-    "CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES"
+    "CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES",
+    "CUBA_WARM_PROTOCOL",
+    "CUBA_FLIGHT_WARM"
 )
 $environmentOriginal = @{}
 foreach ($name in $environmentNames) {
@@ -96,13 +100,25 @@ try {
         "CUBA_FOCUS_SLICE_TRACE_PER_STATE",
         "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY",
         "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS",
-        "CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES"
+        "CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES",
+        "CUBA_WARM_PROTOCOL",
+        "CUBA_FLIGHT_WARM"
     )
     if ($EnableFogPullIn) {
         $environmentToClear = $environmentToClear | Where-Object { $_ -ne "CUBA_FLIGHT_FOG_ON" }
     }
     foreach ($name in $environmentToClear) {
         [Environment]::SetEnvironmentVariable($name, $null, "Process")
+    }
+    if ($EnableScreenRayPixelProbes) {
+        [Environment]::SetEnvironmentVariable(
+            "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY", "1", "Process")
+    }
+    if ($StampWarmPeriods) {
+        [Environment]::SetEnvironmentVariable(
+            "CUBA_WARM_PROTOCOL", "warmup_sec_stamp", "Process")
+        [Environment]::SetEnvironmentVariable(
+            "CUBA_FLIGHT_WARM", "1", "Process")
     }
 
     $pullInTag = if ($EnableFogPullIn) { "pullin_on" } else { "pullin_off" }
