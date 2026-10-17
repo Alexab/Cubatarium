@@ -6329,3 +6329,65 @@ adjacent `x+` face update, but no same-view pixel witness exists. The harness
 failed its existing gates and did not reach the west checkpoint. Queue/worker
 delay alone is insufficient to explain the older 17–33 s transition spacing;
 trace the upstream light-change producer and its relight notification next.
+
+### 2026-10-17 addendum: M623C horizontal boundary dependency handoff
+
+Static review found the missing ownership edge: a center-only relight reads
+neighbor face light as input but installs only the target column, and the
+`frontier_unfinished` retry does not schedule that neighboring column. The
+apply path now compares the four horizontal light faces before install. A
+changed face with a resident adjacent chunk queues one coalesced request for
+the neighbor column and that chunk's 16-block Y band. The request retains an
+explicit dependency owner through the existing FIFO/deferred work path,
+bypasses only the settled/no-op admission check, and is kept outside the
+surface-band clamp through capture. No work is spawned for unchanged faces.
+
+Release build and static executable verification passed. The M623C short M335
+run observed the intended chain: job 154 changed blocklight on `(4,3,6)`'s
+`x-` face; `(3,6)` was queued and captured 442 ms later. That neighbor's changed
+`x+` face queued `(4,6)` and `(3,5)`. The run submitted nine dependency jobs
+and eight light deltas; dependency submit-to-apply was 31.160 ms median,
+74.408 ms p95/max. Across 1,484 paired jobs, median was 25.295 ms, p95
+77.556 ms, max 196.062 ms. A short return wave is visible in the trace, but
+unchanged results stop producing dependencies. This is bounded local
+propagation by changed face, not unconditional neighbor-ring work; longer-term
+load behavior still needs a focused convergence regression.
+
+The harness completed without timeout and covered eight chunks, stopping at
+x=-1 before the west checkpoint. Readiness debt remained 1.0 and post-stop
+missing mesh/readiness reached 34 while the near-focus visual-hole proxy was
+zero. Existing gates failed; no same-view framebuffer proof was captured. The
+run is diagnostic evidence that the handoff executes, not acceptance or proof
+of a user-visible hole. The experiment procedure and artifacts are recorded
+under M623C in `FLIGHT_EXPERIMENT_SCRIPTS.md` and the diagnostic runbook.
+
+### 2026-10-17 addendum: M623D boundary return and bounded fixture
+
+M623D repeated the short warm route after extracting
+`ChangedHorizontalLightBoundaryMask`. The worker log recorded 14
+`boundary_dependency` jobs and 16 light deltas. In chunk `(4,3,6)`, blocklight
+at `(64,54,98)` changed `1->0` in a normal streaming job, then `0->1` about
+0.84 seconds later after the neighboring `(3,3,6)` relight changed its `x+`
+face. No further light delta was logged for `(4,3,6)` during that short run.
+This is a two-step boundary return wave in the observed trace, not evidence of
+an indefinite oscillation.
+
+One `(3,5)` dependency request was denied at FIFO capacity with `band_needs=0`;
+its durable dependency marker survived and later produced worker job 444 with
+a merged `0:80` band. This confirms deferral ownership in the exercised path.
+The Release test `TestHorizontalBoundaryDependencyWaveSettles` now uses a
+single torch beside a resident chunk, applies center-only relights, and drains
+source → neighbor → return-check work in exactly three jobs. The neighboring
+block reaches light level 13 and the fixture ends with an empty queue. It does
+not model a full-world boundary graph or sustained FIFO pressure.
+
+M623D passed adequacy and the eye-proxy stop-line, with a zero near-focus
+visual-hole proxy, but still failed post-stop convergence (readiness debt 1.0,
+missing mesh/readiness peak 46). It traveled eight chunks and did not reach the
+west checkpoint. Across 606 jobs, 604 submit/apply pairs were recorded and two
+applies were missing; paired latency was 37.105 ms median, 127.051 ms p95, and
+228.939 ms max. The boundary jobs had 44.714 ms median and 82.281 ms p95/max.
+Host CPU median/p95 was 80.6/100% and is context only. The run confirms local
+handoff and deferral, not global lighting convergence or an operator-visible
+defect. Before another visible route, audit whether any boundary dependency
+marker remained queued/deferred at shutdown, then do a short cold-world check.

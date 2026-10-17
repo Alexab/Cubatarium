@@ -2731,3 +2731,98 @@ p95, and maximum were 35.746, 137.600, and 262.919 ms. These intervals combine
 worker execution and completed-result waiting; they do not identify which part
 dominates. The run did not reach the west checkpoint and failed existing
 renderer/stop-line gates, so it remains diagnostic only.
+
+### M623C: horizontal light-boundary dependency handoff
+
+Static tracing showed that a center-only relight installs only its target
+column, even when the computed horizontal face changes. The apply path now
+queues a dependency relight for each resident cardinal neighbor whose face
+light actually changed. Requests merge by target column and Y band, preserve
+the normal bounded FIFO/deferred ownership, bypass the settled/no-op admission
+guard, and keep the dependency band out of the surface-band clamp until
+capture. No dependency is emitted for unchanged faces.
+
+Build only the Release target, then run one short visible M335 replay with the
+usual warm `World_164` settings and both audit opt-ins. Example:
+
+```powershell
+$oldAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$oldDirty = $env:CUBA_ALLOW_DIRTY_AF
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 `
+    -PhaseId M623C `
+    -Report bin/suite_reports/engine_refactor/m623c_boundary_dependency_20261017.json
+}
+finally {
+  if ($null -eq $oldAudit) { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  else { $env:CUBATARIUM_RELIGHT_AUDIT = $oldAudit }
+  if ($null -eq $oldDirty) { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+  else { $env:CUBA_ALLOW_DIRTY_AF = $oldDirty }
+}
+```
+
+For M623C, the short route completed without timeout and traveled eight chunks
+(focus x=7 to x=-1), short of the west checkpoint. The INFO log recorded nine
+dependency jobs and eight light deltas. Job 154 changed a blocklight voxel on
+chunk `(4,3,6)`'s `x-` face; the implementation queued `(3,6)`, captured it
+442 ms later, and its changed `x+` face then queued `(4,6)` and `(3,5)`. This
+confirms the handoff and a short return wave. The nine dependency jobs had
+31.160 ms median and 74.408 ms p95/max submit-to-apply. The full trace paired
+1,484 jobs (25.295 ms median, 77.556 ms p95, 196.062 ms max).
+
+The harness returned 2: readiness debt stayed at 1.0 and the post-stop missing
+count reached 34, even though its near-focus visual-hole proxy stayed zero.
+Those counters do not prove a framebuffer defect; the run also did not reach
+the west checkpoint. Keep it diagnostic only. Before another visible run,
+review bounded convergence under recurring boundary changes and add a focused
+deterministic regression. Do not increase flight duration. Run the offline
+correlation with:
+
+```powershell
+python tools/analyze_relight_queue_age.py `
+  bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-125615.44512 `
+  --column 3,6 --column 4,6 --jobs --job-events
+```
+
+### M623D: exercise the extracted boundary helper and deferred ownership
+
+After extracting the face comparison into `ChangedHorizontalLightBoundaryMask`
+and adding the two-column fixed-point fixture, build the Release app and
+`relight_result_install_test`. Run the test executable, then repeat only the
+short M335 route from M623C using `-PhaseId M623D` and report
+`bin/suite_reports/engine_refactor/m623d_boundary_dependency_m335_20261017.json`.
+The M623D app log is
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-130140.42972`;
+the full-run perf JSONL is `bin/logs/perf_20261017-130144_42972.jsonl`.
+
+M623D completed without timeout, covered eight chunks, and did not reach the
+west checkpoint. Adequacy and eye-proxy stop-lines passed, and the
+near-focus visual-hole proxy stayed zero; post-stop convergence still failed
+(readiness debt 1.0, missing mesh/readiness maximum 46). Keep it diagnostic.
+The audit recorded 14 boundary jobs and 16 light deltas. The initial streaming
+job changed `(4,3,6)` at `(64,54,98)` from blocklight 1 to 0; 0.84 s later a
+boundary-dependency result restored 0 to 1 after `(3,3,6)` had updated its
+`x+` face. No further light delta was recorded for `(4,3,6)` in this short
+trace, consistent with a two-step boundary return wave rather than a
+continuing oscillation.
+
+The bounded FIFO did deny a dependency request for `(3,5)` at capacity with
+`band_needs=0`. Its dependency owner remained durable and later submitted job
+444, with a merged `0:80` Y band. Across the run there were 606 paired submit /
+jobs (604 paired, two missing applies), median/p95/max
+37.105/127.051/228.939 ms;
+the 14 boundary jobs had 44.714 ms median and 82.281 ms p95/max. Host CPU was
+80.6% median / 100% p95 and is context only. The Release
+`TestHorizontalBoundaryDependencyWaveSettles` fixture passed: a torch lights
+the adjacent chunk to level 13 and a source → neighbor → return-check wave
+settles in three jobs. It does not model deferred FIFO pressure or a full
+world's boundary graph. Inspect pending/deferred dependency ownership before
+the next short route; do not extend flight duration.

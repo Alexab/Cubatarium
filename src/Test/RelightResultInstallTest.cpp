@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <deque>
 #include <iostream>
 
 namespace
@@ -53,6 +54,143 @@ void TestDomainsAndRevision()
          "both domains install");
   Expect(chunk.GetLightData() == computed,
          "full result installs byte-for-byte");
+}
+
+void TestHorizontalLightBoundaryChangeMask()
+{
+  using namespace cutum;
+  std::array<uint8_t, CHUNK_VOLUME> before{};
+  std::array<uint8_t, CHUNK_VOLUME> computed{};
+  const auto set = [&](glm::ivec3 local, int sky, int block)
+  {
+    computed[static_cast<size_t>(UChunk::LocalIndex(local))] =
+        PackLight(sky, block);
+  };
+
+  set({0, 4, 7}, 0, 1);
+  Expect(ChangedHorizontalLightBoundaryMask(before, computed, true, true) ==
+             kHorizontalLightBoundaryXNegative,
+         "x- blocklight changes identify only the x- face");
+
+  computed.fill(0);
+  set({8, 4, 7}, 0, 1);
+  Expect(ChangedHorizontalLightBoundaryMask(before, computed, true, true) ==
+             0,
+         "interior-only changes do not create neighbor dependencies");
+
+  computed.fill(0);
+  set({6, 4, CHUNK_SIZE - 1}, 0, 1);
+  Expect(ChangedHorizontalLightBoundaryMask(before, computed, true, false) ==
+             0,
+         "changes outside the installed light domains are ignored");
+  set({6, 4, CHUNK_SIZE - 1}, 1, 1);
+  Expect(ChangedHorizontalLightBoundaryMask(before, computed, true, false) ==
+             kHorizontalLightBoundaryZPositive,
+         "z+ skylight changes identify the z+ face");
+
+  computed.fill(0);
+  set({0, 4, CHUNK_SIZE - 1}, 1, 0);
+  Expect(ChangedHorizontalLightBoundaryMask(before, computed, true, true) ==
+             (kHorizontalLightBoundaryXNegative |
+              kHorizontalLightBoundaryZPositive),
+         "corner changes identify both horizontal neighbors");
+
+  computed.fill(0);
+  set({6, 0, 7}, 1, 0);
+  Expect(ChangedHorizontalLightBoundaryMask(before, computed, true, true) ==
+             0,
+         "vertical-only boundary changes do not schedule horizontal work");
+}
+
+void TestHorizontalBoundaryDependencyWaveSettles()
+{
+  using namespace cutum;
+  constexpr BlockId kStone = 8;
+  constexpr BlockId kTorch = 50;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = BlockPhysicsProfile::Solid();
+  BlockDefinition torch;
+  torch.Name = "torch";
+  torch.Physics = BlockPhysicsProfile::Solid();
+  torch.Render.Style = BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
+  definitions->ReplaceAll({{kStone, stone}, {kTorch, torch}},
+                          {{"stone", kStone}, {"torch", kTorch}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.SetBlock({CHUNK_SIZE, 1, 0}, kStone); // Ensure +x neighbor is resident.
+  world.SetBlock({CHUNK_SIZE - 1, 1, 8}, kTorch);
+
+  std::deque<glm::ivec2> pending{{0, 0}};
+  int submitted_jobs = 0;
+  constexpr int kMaxJobs = 8;
+  const std::array<glm::ivec3, 4> offsets = {
+      glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1)};
+  constexpr std::array<uint8_t, 4> face_bits = {
+      kHorizontalLightBoundaryXNegative, kHorizontalLightBoundaryXPositive,
+      kHorizontalLightBoundaryZNegative, kHorizontalLightBoundaryZPositive};
+  while (!pending.empty() && submitted_jobs < kMaxJobs)
+  {
+    const glm::ivec2 column = pending.front();
+    pending.pop_front();
+    RelightJobSpec spec;
+    spec.block_positions =
+        {glm::ivec3(column.x * CHUNK_SIZE, 0, column.y * CHUNK_SIZE)};
+    spec.min_world_y = 0;
+    spec.max_world_y = CHUNK_SIZE - 1;
+    spec.include_skylight = false;
+    spec.include_block_light = true;
+    spec.frontier_iterations = 1;
+    spec.column_center_only = true;
+    spec.job_id = static_cast<uint64_t>(++submitted_jobs);
+    const auto result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+    Expect(result.chunks.size() == 1,
+           "a center-only dependency job installs just its target column");
+
+    for (const RelightChunkLightData &chunk_data : result.chunks)
+    {
+      UChunk *chunk = world.GetChunkManager().GetChunk(chunk_data.coord);
+      Expect(chunk != nullptr, "dependency target remains resident");
+      const uint8_t face_mask = ChangedHorizontalLightBoundaryMask(
+          chunk->GetLightData(), chunk_data.light_packed,
+          result.include_skylight, result.include_block_light);
+      if (!InstallComputedLight(*chunk, chunk_data.light_packed,
+                                result.include_skylight,
+                                result.include_block_light))
+      {
+        continue;
+      }
+      for (size_t face = 0; face < offsets.size(); ++face)
+      {
+        if ((face_mask & face_bits[face]) == 0)
+        {
+          continue;
+        }
+        const glm::ivec3 neighbor = chunk_data.coord + offsets[face];
+        if (!world.GetChunkManager().HasChunk(neighbor))
+        {
+          continue;
+        }
+        const glm::ivec2 neighbor_column(neighbor.x, neighbor.z);
+        if (std::find(pending.begin(), pending.end(), neighbor_column) ==
+            pending.end())
+        {
+          pending.push_back(neighbor_column);
+        }
+      }
+    }
+  }
+
+  Expect(pending.empty(), "horizontal boundary dependency wave reaches a fixed point");
+  Expect(submitted_jobs == 3,
+         "source, neighbor, and one return check settle without a repeated ring");
+  const UChunk *neighbor = world.GetChunkManager().GetChunk({1, 0, 0});
+  Expect(neighbor != nullptr &&
+             neighbor->GetBlockLightLocal({0, 1, 8}) == 13,
+         "neighbor receives the torch light across the shared face");
 }
 
 void TestLateralSkylightSurvivesInstall()
@@ -287,6 +425,8 @@ void TestSkylightContextDoesNotExpandThreeByThreeWriteSet()
 int main()
 {
   TestDomainsAndRevision();
+  TestHorizontalLightBoundaryChangeMask();
+  TestHorizontalBoundaryDependencyWaveSettles();
   TestLateralSkylightSurvivesInstall();
   TestHorizontalSkylightBoundarySeedsAirAndWater();
   TestSkylightReadsGeometryAbovePartialBand();

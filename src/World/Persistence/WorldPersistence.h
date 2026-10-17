@@ -134,6 +134,11 @@ public:
                                    int max_y = -1,
                                    const char *producer = nullptr,
                                    UWorld *world_context = nullptr);
+  /// Queue a relight because an installed horizontal boundary light changed.
+  /// This dependency is real work even when the target has no existing visual
+  /// dark-face witness, so it bypasses only the settled/no-op admission guard.
+  void EnqueueBoundaryDependencyRelight(UWorld &world, int world_x,
+                                        int world_z, int min_y, int max_y);
   /// Admit bounded visible relight work with far-victim replacement/reserve
   /// when normal near-ring FIFO admission is backpressured.
   bool EnqueueVisibleRelight(int world_x, int world_z, int min_y, int max_y,
@@ -316,6 +321,10 @@ private:
   /// capture dequeue can promote one directly to the head.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
       DeferredVisibleDrawGateRelightYBands;
+  /// A queued boundary dependency must survive no-op admission checks and the
+  /// surface-band clamp until its exact Y band has been captured.
+  std::unordered_set<glm::ivec2, IVec2Hash>
+      PendingBoundaryDependencyRelightKeys;
   /// FZ2.3-O2: last StreamingFrameEpoch when finalize_gate Capture submitted.
   std::unordered_map<glm::ivec2, uint64_t, IVec2Hash> RelightLastFinalizeEpoch_;
   struct DeferredFarRelightEntry

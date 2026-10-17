@@ -619,6 +619,28 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
                                   world_context);
 }
 
+void UWorldPersistence::EnqueueBoundaryDependencyRelight(
+    UWorld &world, int world_x, int world_z, int min_y, int max_y)
+{
+  const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
+                             FloorDiv(world_z, CHUNK_SIZE));
+  const glm::ivec2 world_key(ground_xz.x * CHUNK_SIZE,
+                             ground_xz.y * CHUNK_SIZE);
+  PendingBoundaryDependencyRelightKeys.insert(world_key);
+
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  const int distance =
+      std::max(std::abs(ground_xz.x - focus.x),
+               std::abs(ground_xz.y - focus.z));
+  // Direct neighbors near the active view need prompt repair. Far work still
+  // uses the normal bounded FIFO/deferred path.
+  const bool priority = distance <= 1;
+  EnqueueTerrainColumnRelightImpl(
+      world_key.x, world_key.y, priority, min_y, max_y,
+      /*visible_admission=*/false, "boundary_dependency", &world);
+}
+
 void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     int world_x, int world_z, const bool priority, int min_y, int max_y,
     const bool visible_admission, const char *producer,
@@ -702,6 +724,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
   // queue is full. Otherwise normal-capacity producers can repeatedly capture
   // an already-lit column and create self-sustaining relight churn.
   if (!visible_admission && world_context &&
+      PendingBoundaryDependencyRelightKeys.count(key) == 0 &&
       PendingTerrainColumnRelightKeys.count(key) == 0)
   {
     const int world_max_y =
@@ -1633,7 +1656,10 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
         !pending_light && column_lit_ready &&
         ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
             world, ground_xz, band_min, band_max);
-    if (ShouldSkipNoOpTerrainRelightEnqueue(pending_light, column_lit_ready,
+    if (PendingBoundaryDependencyRelightKeys.count(
+            glm::ivec2(ground_xz.x * CHUNK_SIZE,
+                       ground_xz.y * CHUNK_SIZE)) == 0 &&
+        ShouldSkipNoOpTerrainRelightEnqueue(pending_light, column_lit_ready,
                                             band_needs_relight))
     {
       ++world.GetPhysicsTelemetryMutable().RelightSkippedNoOpEnqueueN;
@@ -3333,6 +3359,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                FloorDiv(col.y, CHUNK_SIZE));
     bool exact_draw_gate_band = false;
     bool exact_first_mesh_band = false;
+    const bool exact_boundary_dependency_band =
+        PendingBoundaryDependencyRelightKeys.count(col) != 0;
     int retained_band_min = -1;
     int retained_band_max = -1;
     if (async_bg)
@@ -3405,7 +3433,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int requested_relight_max = relight_max;
     bool surface_band_adjusted = false;
     const int col_top_y = ColumnTopBlockY(world, ground_xz, max_y);
-    if (!exact_draw_gate_band && !exact_first_mesh_band)
+    if (!exact_draw_gate_band && !exact_first_mesh_band &&
+        !exact_boundary_dependency_band)
     {
       const auto col_band = RelightSurfaceBandForColumn(
           focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min, relight_max);
@@ -3445,6 +3474,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         PendingTerrainColumnRelightKeys.erase(col);
         PendingVisibleDrawGateRelightYBands.erase(col);
         PendingVisibleFirstMeshRelightYBands.erase(col);
+        PendingBoundaryDependencyRelightKeys.erase(col);
         DeferredVisibleDrawGateRelightYBands.erase(col);
         return skipped_inflight < std::max(8, max_bg_columns * 4);
       }
@@ -3650,7 +3680,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               " finalize=" + std::to_string(finalize_gate) +
               " draw_gate=" + std::to_string(exact_draw_gate_band) +
               " first_mesh_exact=" +
-              std::to_string(exact_first_mesh_band) +
+              std::to_string(exact_first_mesh_band) + " boundary_exact=" +
+              std::to_string(exact_boundary_dependency_band) +
               " horiz=" + std::to_string(horiz_dist) +
               " fifo=" + std::to_string(GetPendingTerrainColumnRelightCount()) +
               " inflight=" + std::to_string(world.GetAsyncRelightInFlightCount()));
@@ -3661,11 +3692,21 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                              relight_max, true, true,
                                              finalize_gate,
                                              exact_draw_gate_band,
-                                             "streaming_fifo");
+                                             exact_boundary_dependency_band
+                                                 ? "boundary_dependency"
+                                                 : "streaming_fifo");
+      if (exact_boundary_dependency_band)
+      {
+        PendingBoundaryDependencyRelightKeys.erase(col);
+      }
     }
     else
     {
       world.RelightTerrainColumn(col.x, col.y, relight_min, relight_max, false);
+      if (exact_boundary_dependency_band)
+      {
+        PendingBoundaryDependencyRelightKeys.erase(col);
+      }
     }
     if (remainder_min >= 0)
     {
@@ -3808,6 +3849,7 @@ int UWorldPersistence::CancelTerrainColumnRelight(
   removed += PendingVisibleDrawGateRelightYBands.erase(world_block_key);
   removed += PendingVisibleFirstMeshRelightYBands.erase(world_block_key);
   removed += DeferredVisibleDrawGateRelightYBands.erase(world_block_key);
+  removed += PendingBoundaryDependencyRelightKeys.erase(world_block_key);
   removed += RelightLastFinalizeEpoch_.erase(world_block_key);
   if (DeferredFarRelightColumns.count(ground_xz) != 0)
   {
@@ -4069,6 +4111,7 @@ void UWorldPersistence::ClearPendingRelights(const char *reason)
   PendingVisibleDrawGateRelightYBands.clear();
   PendingVisibleFirstMeshRelightYBands.clear();
   DeferredVisibleDrawGateRelightYBands.clear();
+  PendingBoundaryDependencyRelightKeys.clear();
   DeferredFarRelightColumns.clear();
   LastDeferredFarAgeServiceAttemptAt = {};
   LastDeferredFarAgeServiceWorldKey = {};

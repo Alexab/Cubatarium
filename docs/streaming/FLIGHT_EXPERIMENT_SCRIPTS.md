@@ -12602,3 +12602,50 @@ The run found no same-view framebuffer witness and is diagnostic only. Artifacts
 are `bin/logs/perf_20261017-123024_45676.jsonl` and
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-123020.45676`;
 they remain local evidence, not committed outputs.
+
+### M623C: horizontal light-boundary dependency handoff
+
+After the M622BV job/face correlation, the apply path added a bounded relight
+request for a resident horizontal neighbor when its shared face light changes.
+Build Release, enable `CUBATARIUM_RELIGHT_AUDIT=1`, and use the established
+short visible M335 `World_164` warm route. Set `-PhaseId M623C` and report
+`bin/suite_reports/engine_refactor/m623c_boundary_dependency_20261017.json`.
+Temporarily set `CUBA_ALLOW_DIRTY_AF=1` only if the worktree is dirty, and
+restore process environment after the run. The full command and log analysis
+are in the M623C runbook entry.
+
+M623C completed 29 periods / 27 steady periods without timeout, traveled eight
+chunks (focus x=7 to x=-1), and did not reach the west checkpoint. It emitted
+nine boundary-dependency jobs and eight light deltas. Job 154 changed the
+`x-` blocklight boundary of `(4,3,6)`; the new request reached `(3,6)` 442 ms
+later, and that change queued `(4,6)` and `(3,5)`. The nine dependency jobs had
+31.160 ms median and 74.408 ms p95/max submit-to-apply. Readiness/renderer stop
+gates failed, while the near-focus visual-hole proxy stayed zero. This verifies
+the new queue handoff but not an operator-visible defect or a far-route pass.
+Artifacts remain local at `bin/logs/perf_20261017-125618_44512.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-125615.44512`,
+and `bin/suite_reports/engine_refactor/m623c_boundary_dependency_20261017.json`.
+
+### M623D: exercise the extracted face helper
+
+After extracting the horizontal boundary-face mask into
+`ChangedHorizontalLightBoundaryMask`, rebuilt the Release app and
+`relight_result_install_test`. The short visible M335 run reused M623C's warm
+`World_164` route with `-PhaseId M623D` and report
+`bin/suite_reports/engine_refactor/m623d_boundary_dependency_m335_20261017.json`.
+It completed without timeout, traveled eight chunks (x=7 to x=-1), and did not
+reach the west checkpoint. Adequacy and eye-proxy stop-lines passed, but
+post-stop convergence failed: readiness debt remained 1.0 and the missing
+mesh/readiness peak was 46. The near-focus visual-hole proxy stayed zero.
+
+M623D emitted 14 boundary-dependency jobs and 16 light deltas. In `(4,3,6)` the
+same target blocklight changed from 1 to 0, then back to 1 about 0.84 seconds
+later after its neighbor's `x+` boundary changed. There was no later light
+delta for that chunk in the short trace. One `(3,5)` dependency request was
+denied at FIFO capacity but remained deferred and later reached worker job
+444. The short two-column Release regression passes in three jobs; it does not
+cover world-scale deferred pressure. These results support the handoff and
+durable queue ownership, but do not establish global convergence or a visible
+defect. Artifacts remain local at `bin/logs/perf_20261017-130144_42972.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-130140.42972`,
+and the report above.

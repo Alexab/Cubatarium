@@ -13038,7 +13038,78 @@ maximum 262.919 ms. Queueing and async completion are therefore unlikely to
 explain a 17–33 second light-transition interval by themselves; this run did
 not observe a return transition and does not prove a rendering defect.
 
-Next inspect which producer changes the adjacent face, whether it schedules a
-relight for `(4,6)`, and whether that request is suppressed/coalesced or absent.
-Do not add recursive neighbor relighting until that notification path and a
-bounded convergence rule are established.
+### M623C — bounded horizontal boundary-dependency handoff
+
+Static review found that `column_center_only` relights install only the target
+column. The snapshot reads horizontal neighbor-face light as a boundary
+condition, but an installed change on the target's horizontal edge did not
+schedule the resident neighbor column. `frontier_unfinished` could requeue the
+original source column; it did not transfer ownership to the adjacent column.
+Queue latency and result-apply time from M622BQ/BR/BV were too small to explain
+the much longer observed light transition by themselves.
+
+The apply path now checks the four horizontal light faces before install. If a
+computed result actually changes a face and the adjacent chunk is resident, it
+coalesces an exact 16-block Y band into a dependency request for that neighbor
+column. The request has a durable owner in the existing bounded FIFO/DeferredFar
+path, bypasses only the settled/no-op admission guard, and bypasses the normal
+surface-band clamp until its band is captured. In-flight keys are still
+requeued by the existing queue owner. A follow-up relight that makes no
+boundary change emits no further dependency, so propagation stops at a stable
+light field rather than relighting the full 3x3 neighborhood unconditionally.
+
+Release build and static executable verification passed. The short visible M335
+M623C run completed without timeout, traveled eight chunks, and did not reach
+the west checkpoint. It emitted nine `boundary_dependency` worker jobs and
+eight `light_delta` events. The first observed source transition was job 154
+changing blocklight at `(64,54,98)` from `16` to `0` on chunk `(4,3,6)`'s `x-`
+face; it queued `(3,6)` and that request dequeued 442 ms later. The neighbor
+then changed its `x+` face and correctly queued `(4,6)` plus `(3,5)`. Targeted
+dependency requests for `(3,6)` waited at most 442 ms; the M623C boundary job
+median/p95/max submit-to-apply was 31.160/74.408/74.408 ms. This demonstrates
+that the ownership handoff executes. It also shows a short iterative return
+wave across adjacent columns, which needs bounded-load monitoring before the
+policy is accepted broadly.
+
+The M623C report still failed renderer/readiness stop gates: readiness debt was
+1.0 and post-stop missing mesh/readiness count was 34, while the near-focus
+visual-hole proxy stayed at zero. The route did not produce a same-view visual
+proof of a defect or of the fix. Keep the result diagnostic, not acceptance.
+The next validation was a deterministic queue/convergence regression followed
+by one short M335 run. Track dependency-job counts, coalescing,
+queue/deferred retention, and per-column light deltas; do not increase flight
+duration. Continue periodic fresh-world/source-lifecycle checks, because M623C
+and M623D used a warm saved world.
+
+The face-mask regression now also has an adjacent-column wave fixture:
+`TestHorizontalBoundaryDependencyWaveSettles` starts with a torch beside a
+resident neighboring chunk, applies center-only relights and queues changed
+cardinal faces, and asserts the neighbor reaches blocklight 13 and the work
+queue settles within three jobs. The Release executable passed. This covers a
+small single-source convergence case, not queue pressure or world-scale
+lighting.
+
+The follow-up M623D short route exercised the extracted production boundary
+mask helper. It again completed eight chunks without timeout; the eye-proxy
+stop-line passed and the near-focus visual-hole proxy was zero. Product
+post-stop convergence still failed, with readiness debt 1.0 and missing
+mesh/readiness peaking at 46. A same target light value changed `16->0` then
+`0->16` about 0.84 s later as the neighboring dependency wave ran; the target
+slice had no further light delta through the rest of the short trace. This is
+consistent with the neighbor handoff updating a stale boundary, not evidence of
+an indefinite oscillation. One
+dependency enqueue for `(3,5)` was denied at the normal FIFO cap with
+`band_needs=0`; the dependency owner survived deferral and later submitted job
+444. The run therefore confirms deferred ownership and a short return wave,
+but also shows a transient alternating boundary value that is not represented
+in the small deterministic fixture. Dependency-job count was 14; across 604
+paired jobs median/p95/max submit-to-apply was 37.105/127.051/228.939 ms. Host
+CPU median/p95 was 80.6/100%; this is context only. Do not claim world-scale
+convergence or a user-visible fix from these short warm runs. M623D's two-step
+target update is consistent with an expected boundary return wave; the
+deterministic fixture verifies one source/neighbor/return-check sequence, but
+does not cover deferred pressure across many columns or cold-world startup.
+Next, inspect the final `boundary_dependency` queues from M623D and confirm no
+dependency marker is stranded at shutdown; then perform a short cold-world
+lighting check before another operator-visible route. Keep long flights out of
+the plan.

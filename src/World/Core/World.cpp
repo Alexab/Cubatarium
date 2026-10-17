@@ -8896,6 +8896,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     stale_mesh_coords.reserve(result.chunks.size());
     std::vector<glm::ivec3> ownerless_first_mesh_coords;
     ownerless_first_mesh_coords.reserve(result.chunks.size());
+    std::unordered_map<glm::ivec2, glm::ivec2, GroundColumnHash>
+        boundary_dependency_bands;
     const auto has_mesh_or_first_mesh_owner = [&](glm::ivec3 coord) {
       const glm::ivec2 column(coord.x, coord.z);
       const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
@@ -8917,6 +8919,15 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
+        // A column relight reads neighboring face light as its boundary
+        // condition, but installs only its own column. If that installed
+        // boundary changes, explicitly enqueue the resident horizontal
+        // neighbor so it can consume the new boundary value. Vertical slices
+        // are already covered by the column request's Y band.
+        const uint8_t horizontal_dependency_mask =
+            ChangedHorizontalLightBoundaryMask(
+                chunk->GetLightData(), chunk_data.light_packed,
+                result.include_skylight, result.include_block_light);
         if (audit_relight)
         {
           const auto &before = chunk->GetLightData();
@@ -9046,6 +9057,41 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
             InstallComputedLight(*chunk, chunk_data.light_packed,
                                  result.include_skylight,
                                  result.include_block_light);
+        if (installed && Persistence)
+        {
+          const std::array<glm::ivec3, 4> horizontal_offsets = {
+              glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+              glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1)};
+          constexpr std::array<uint8_t, 4> horizontal_face_bits = {
+              kHorizontalLightBoundaryXNegative,
+              kHorizontalLightBoundaryXPositive,
+              kHorizontalLightBoundaryZNegative,
+              kHorizontalLightBoundaryZPositive};
+          const int band_min = chunk_data.coord.y * CHUNK_SIZE;
+          const int band_max = band_min + CHUNK_SIZE - 1;
+          for (size_t face = 0; face < horizontal_offsets.size(); ++face)
+          {
+            if ((horizontal_dependency_mask & horizontal_face_bits[face]) == 0)
+            {
+              continue;
+            }
+            const glm::ivec3 neighbor_coord =
+                chunk_data.coord + horizontal_offsets[face];
+            if (!BlockWorld.GetChunkManager().HasChunk(neighbor_coord))
+            {
+              continue;
+            }
+            const glm::ivec2 neighbor_column(neighbor_coord.x,
+                                            neighbor_coord.z);
+            const auto [band_it, inserted] = boundary_dependency_bands.emplace(
+                neighbor_column, glm::ivec2(band_min, band_max));
+            if (!inserted)
+            {
+              band_it->second.x = std::min(band_it->second.x, band_min);
+              band_it->second.y = std::max(band_it->second.y, band_max);
+            }
+          }
+        }
         // The async result has passed its world/catalog/read-set validation;
         // record the computed state even when it produced no light-byte delta.
         NoteChunkSliceLightCalculationSettled(chunk_data.coord);
@@ -9175,6 +9221,13 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                   std::to_string(meshed_light));
         }
       }
+    }
+    for (const auto &dependency : boundary_dependency_bands)
+    {
+      Persistence->EnqueueBoundaryDependencyRelight(
+          *this, dependency.first.x * CHUNK_SIZE,
+          dependency.first.y * CHUNK_SIZE, dependency.second.x,
+          dependency.second.y);
     }
     const auto light_t1 = std::chrono::high_resolution_clock::now();
     const double merge_ms =
