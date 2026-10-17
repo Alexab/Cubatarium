@@ -13331,3 +13331,24 @@ this closes only fresh-seed source and enter-order behavior. Artifacts:
 `bin/suite_reports/engine_refactor/m624ab_cold_budget_fix_m335_short_20261017.json`,
 `artifacts/research/rendering/m624ab_cold_budget_fix_m335_short_20261017/`,
 and `bin/worlds/World_M624AA_BudgetFix_20261017`.
+
+### M624AC — short cold-frontier metrics run and its limits
+
+M624AC is an example of a deliberately short metrics-enabled cold run, not an
+operator-visible acceptance run. It used a new radius-4 world
+`World_M624AC_ColdFrame_20261017` (seed `3650482221`), M335 pinned start and
+8/30/20 timing, visible no-teleport movement, source trace plus FramePerf
+metrics, and no pixel/black or fluid trace. The `flight_sim_run.py` invocation
+was direct (with the `--metrics` option) so unrelated pixel/fluid collectors
+did not run. See its run manifest in
+`bin/suite_reports/engine_refactor/m624ac_cold_frame_m335_short_20261017.json`
+and raw files under
+`artifacts/research/rendering/m624ac_cold_frame_m335_short_20261017/`.
+
+Host CPU p95 was 94%, so this run is not performance evidence. It reached only
+`(-2,3)` vs. the `(-3,3)` west target. The process succeeded, but proxy-based
+analyzer gates failed; since there is no framebuffer capture/operator verdict,
+those values cannot establish a visible hole or black chunk. Preserve the
+distinction among process/route outcome, source lifecycle, load validity, and
+visual acceptance in future reports. Avoid repeating long flights for this;
+use the established short route with only the required trace channels enabled.

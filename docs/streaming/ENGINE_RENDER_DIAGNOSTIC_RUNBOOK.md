@@ -3567,3 +3567,30 @@ Metrics/pixel tracing were off, so this is source and enter-order evidence only;
 use a separate short metrics lane if frame attribution is required. Do not
 interpret `cache_mode=warm` as a warmed M335 focus column: the saved startup
 radius is present, but `(7,0,3)` is a procedural miss.
+
+### M624AC: short cold-frontier metrics lane (diagnostic only)
+
+M624AC used a new radius-4 seed/world (`3650482221`,
+`World_M624AC_ColdFrame_20261017`) and the pinned M335 visible route, with
+FramePerf metrics and `CUBA_WORLD_COLUMN_SOURCE_TRACE` enabled. Pixel/black and
+fluid trace collection were explicitly disabled. The runner was invoked
+directly with the metrics option to avoid the wrapper's combined pixel/fluid
+tracing. The app/route exited successfully, but host CPU was heavily loaded
+(median/p95/max `63.2/94.0/98.6%`), so do not use its timings as a performance
+acceptance result or tune worker/commit caps from it. Analyzer readiness and
+coverage proxies failed while operator visual and framebuffer evidence were
+unavailable. Treat `pass=false` as analyzer stop-line failure, not a pixel
+verdict.
+
+The procedural focus column committed 28.4 seconds before the logged global
+first-paint snapshot; this shows source commit ordering only, not that this
+column was actually visible in the framebuffer. The route ended at `(-2,3)`
+and did not meet the west-coverage target `(-3,3)`. Source queues drained at
+shutdown. Full report and logs:
+`bin/suite_reports/engine_refactor/m624ac_cold_frame_m335_short_20261017.json`
+and `artifacts/research/rendering/m624ac_cold_frame_m335_short_20261017/`.
+
+Do not repeat this exact metrics run for operator monitoring. When host load
+is suitable, use a short cold-seed capture on the same pinned route, collect
+only the metric channels needed for frame attribution, and obtain a separate
+operator/pixel verdict. Keep metrics disabled by default.

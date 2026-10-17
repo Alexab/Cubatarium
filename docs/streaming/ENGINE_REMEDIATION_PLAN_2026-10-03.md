@@ -14030,3 +14030,64 @@ world-create report `bin/suite_reports/engine_refactor/m624aa_cold_budget_fix_wo
 flight report `bin/suite_reports/engine_refactor/m624ab_cold_budget_fix_m335_short_20261017.json`,
 INFO log `artifacts/research/rendering/m624ab_cold_budget_fix_m335_short_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-170603.38092`,
 and world `bin/worlds/World_M624AA_BudgetFix_20261017`.
+
+### M624AC — cold-frontier frame metrics are load-contaminated, not visual acceptance
+
+Created another separate radius-4 seed, `3650482221`, in
+`World_M624AC_ColdFrame_20261017`, then ran the established visible M335
+8/30/20 no-teleport route with `--metrics` and source tracing. Pixel/black and
+fluid tracing remained off. The application and route completed successfully
+(2,654 frames, 58 requested in-game seconds, 90.34 s wall time, no timeout,
+collision, clock gap, or heading deviation), but the analyzer acceptance
+`pass` is false and the west route stopped at focus `(-2,3)` rather than the
+`(-3,3)` coverage target.
+
+The fresh focus column `(7,0,3)` was a procedural miss, requested at 17:09:56.762,
+committed at 17:09:57.121, and the global first-paint snapshot was emitted at
+17:10:25.568. The trace contains 112 disk completions, 140 procedural
+`disk_miss` events, 58 procedural commits, and one sampled
+`scheduler_budget_limited_tick`; source shutdown drained to zero queued,
+active, and ready work. For committed procedural columns, scheduler queue
+p50/p95/max was `136.5/4,971.8/5,272.1 ms`; worker-pool queue
+`0/37.2/62.9 ms`; generation `135.8/296.9/385.4 ms`; ready wait
+`568.4/5,512.4/6,044.8 ms`; apply `17.3/34.2/43.0 ms`; total
+request-to-commit `931.9/7,127.4/7,257.4 ms`. Many high ready waits coincided
+with ready batches of 10–17 while the per-frame commit cap was one. This is a
+candidate service-rate/priority backlog to investigate, not a basis for
+changing caps from one run.
+
+This run cannot pass the performance gate: sampled host CPU median/p95/max was
+`63.2/94.0/98.6%` (application machine CPU p95 `63.0%`), so the source and
+frame timings are contaminated by host load. Analyzer readiness/near-focus
+proxy gates also failed, but those signals describe focus-ring state and mesh
+coverage proxies; no framebuffer/pixel evidence was collected and operator
+visual verdict is untested. Do not describe these analyzer values as visible
+black/empty terrain or as proof of a visual regression. The app process and
+flight succeeded; `pass=false` is an analyzer gate result. Artifacts:
+`bin/suite_reports/engine_refactor/m624ac_cold_frame_m335_short_20261017.json`,
+`artifacts/research/rendering/m624ac_cold_frame_m335_short_20261017/`, and
+`bin/worlds/World_M624AC_ColdFrame_20261017`.
+
+### Current completion blockers
+
+The bounded-progress implementation is built and exercised on warm and fresh
+source routes. The following are still needed before closing the refactor:
+
+1. Resolve and test the exact OpenSky equal-revision, fully-dark terminal
+   decision with per-slice attempt/publication identity; do not revive the
+   rejected sticky column-wide repair marker, which can repeatedly remint
+   legal dark cave work.
+2. Produce one runtime trace for a boundary dependency through admission
+   denial, deferred ownership, eviction, reload, and relight completion. The
+   M624P unload guard protects `boundary_dependency`, but no run has yet shown
+   that this marker was the sole outstanding owner at eviction.
+3. Run a short cold-frontier frame-attributed capture without heavy host CPU
+   contention, and pair it with one actual operator/pixel inspection before
+   making any visual acceptance claim. M624AC does not satisfy this: its
+   analyzer proxies failed under host CPU p95 94%, and no pixel trace was
+   collected. Use the existing repeatable M335 route; no long operator flight
+   is required.
+4. Once those lifecycle and short visual checks pass, run the focused Release
+   regression suite and verify metrics remain off by default and experiment
+   artifacts/runbooks remain reproducible. The six focused CTests in M624Z
+   passed, but they do not cover the two open runtime lifecycles.
