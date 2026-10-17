@@ -12890,3 +12890,44 @@ byte admission or replacing the snapshot representation. Keep geometry stamps
 if a compact sky-occlusion summary is later introduced. Continue with short
 M335 checks and periodic fresh-world checks; no long operator-monitoring route
 is needed for this static solver fix.
+
+### M622BP — active relight admission is bounded; edit path is dormant
+
+Static call-graph inspection supersedes the preceding bulk-edit queue concern
+for the current streaming path. `EnqueuePlayerRelight` has no producer in the
+tracked source, `RelightPlayerEdit` is only called by its pending-queue drain,
+and the generic async chunk-relight helper has no caller beyond an unused
+wrapper. The 3x3 context's 1.06 MiB/job estimate is therefore a latent API
+bound, not evidence of current streaming memory pressure.
+
+Actual streaming column relights are admitted in `DrainRelightQueues`, which
+stops capture at `max_inflight`. That counter includes work queued, executing,
+and completed but not yet drained, because the builder retires a job ID when
+its completion is consumed. This application-level limit bounds the otherwise
+unbounded low-level pool queue for this producer. M622BO's short M335 peak
+(two waiting, five live) is supporting observation only, not a load test.
+
+The relight producer still submits after a shared `WorkSlot` denial. This
+weakens the cross-pool CPU/concurrency envelope but does not bypass the
+per-world relight cap. Do not gate experiments on host CPU percentage; only
+change this behavior after a joined contention trace and a lossless retry path
+are designed.
+
+The active column solver's read closure is now derived: target-band chunks
+are writable; adjacent chunks' boundary-light planes seed propagation into
+the target; direct-sky occlusion reads up to 15 chunks above the target band's
+top, covered by the geometry-only context stamps. Water affects the chosen
+scheduled Y band and uses ordinary liquid attenuation; it does not enlarge
+the solver's vertical input interval independently. Keep the current
+conservative band policy.
+
+The unused async edit route also has a solver parity gap: frontier discovery
+uses `HasChunk`, which only recognizes captured full chunks, but generic
+capture contains only its initial 3x3 footprint. Its configured iterations
+therefore cannot add further loaded frontier chunks. This does not affect the
+active column path (zero frontier iterations). Before reconnecting async edit
+relighting, either capture and validate candidate frontier chunks or retire
+that API. No additional flight is required for this static finding. Continue
+with the documented short M335 route for routine smoke validation and periodic
+fresh-world/source-lifecycle checks; operator-monitored long flights remain
+unnecessary.

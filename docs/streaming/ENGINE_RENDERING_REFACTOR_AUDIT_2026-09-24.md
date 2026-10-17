@@ -6159,17 +6159,66 @@ instrumentation and investigate the discrepant wall sample only if it recurs.
 The M622BO audit joined 1,805 submit/start/done records: maximum two queued
 snapshots, five live snapshots, and four live copied context chunks (about
 32 KiB of context arrays, excluding target/light/shell storage). This route
-exercised the streaming center-column path. Static call-site review found the
-generic 3x3 capture on the async player-edit relight path; the chunk-relight
-helper has no other call-site in `src`. A new Release regression constructs
-nine target chunks and nine upper-context chunks, then verifies Compute returns
+exercised the streaming center-column path. Static call-site review found that
+generic 3x3 capture is reachable from the async player-edit API, but the queue
+feeding that API has no producer in the tracked source; the generic chunk
+helper likewise has no live caller. A new Release regression constructs nine
+target chunks and nine upper-context chunks, then verifies Compute returns
 only the nine targets and records geometry-only stamps for the context.
 
 A full resident 3x3 context can still copy up to 135 chunks (about 1.06 MiB at
-8 KiB per chunk) per snapshot. `UJobThreadPool::Enqueue` retains jobs in an
-unbounded deque even when the shared work-slot reservation is denied, so this
-is a per-snapshot bound, not a total queue-memory bound. M622BO's observed
-two-job wait is only the normal M335 streaming path, not a bulk-edit stress.
-Measure the edit path's request fan-out and retained snapshot bytes before
-considering a byte admission cap; do not optimize based on the isolated 31.74
-ms wall sample.
+8 KiB per chunk) per snapshot. This is a latent API bound, not an observed
+streaming allocation. The next M622BP static audit separates the active
+streaming admission from unused edit helpers; do not optimize based on the
+isolated 31.74 ms wall sample.
+
+### M622BP: relight queue bound and solver read-closure follow-up
+
+The M622BO queue concern is now split into active and dormant paths. In the
+tracked source, `UWorldPersistence::EnqueuePlayerRelight` has no caller;
+`RelightPlayerEdit` is reached only by draining that currently unpopulated
+queue. `EnqueueAsyncChunkRelight` is reached only through
+`EnqueueAsyncChunkSkylightRelight`, which itself has no caller. Thus the 3x3
+player-edit and generic chunk paths have no production call site in this
+checkout. The 1.06 MiB 3x3 context figure is a latent per-job upper bound, not
+an observed streaming allocation or evidence of current queue growth.
+
+The active streaming producer is `DrainRelightQueues` →
+`EnqueueAsyncTerrainColumnRelight`. Its drain loop stops before capture when
+`GetAsyncRelightInFlightCount() >= max_inflight`; the limit is derived from the
+configured relight worker count and a pressure-dependent multiplier. A job
+remains in `InFlight` after worker completion and is removed only when its
+completion is drained (or explicitly discarded), so queued, running, and
+completed-but-unapplied jobs all consume that limit. The low-level relight
+pool's `Enqueue` is unbounded, but the active producer's own admission bounds
+its total retained jobs. M622BO's peak of two queued and five live snapshots
+is consistent with that route, not a bulk-edit stress result.
+
+There is still a cross-pool admission caveat: relight attempts to acquire a
+shared work slot, but submits even when it is denied. That bypass does not
+remove the per-world relight in-flight bound, though it means the shared slot
+counter is not a hard global worker limit for relight. Do not treat CPU
+percentage as a launch gate. Revisit this only with joined evidence of
+cross-pool oversubscription or queue latency and a lossless way to return the
+relight demand to its owner.
+
+Static solver review confirms the active center-column contract: only loaded
+chunks in the requested Y band are writable; adjacent chunks' boundary-light
+planes seed propagation into the target, and skylight additionally reads
+geometry from up to 15 chunk slices above the target band's top. The
+sea-level/water policy selects which Y band is scheduled; water itself is
+handled through the normal transparent/liquid step costs and does not add a
+separate vertical read range.
+The read-only sky context and its content stamps cover that solver dependency.
+
+One dormant-path mismatch remains before async edit relighting can be
+re-enabled: `UChunkRelightSnapshot::HasChunk` is backed only by captured full
+`Blocks`, while its frontier expansion discovers neighbors only when
+`HasChunk(neighbor)` is true. Since the generic capture does not include
+additional frontier chunks beyond its initial 3x3 target set, its configured
+frontier iterations cannot extend the result into further loaded chunks. The
+active streaming-column path sets frontier iterations to zero, so this is not
+a current streaming regression. Either capture and validate candidate
+frontiers, or retire the unused async edit API before connecting a producer.
+No new flight is needed for these call-graph and solver-closure findings; keep
+routine validation on the established short M335 route.

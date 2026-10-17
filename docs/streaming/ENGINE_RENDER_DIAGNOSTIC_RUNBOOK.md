@@ -2602,6 +2602,37 @@ waiting and five snapshots were live, carrying four copied context chunks
 path, not the 3x3 player-edit path. The Release regression now constructs all
 nine target columns plus upper context and verifies context chunks are stamped
 read-only and never returned for apply. A full 3x3 context can hold 135 chunks
-(about 1.06 MiB) per snapshot, while the worker queue is unbounded and slot
-denial does not prevent submission. Follow up with one bounded bulk-edit
-fan-out/retained-byte audit before adding a new memory admission policy.
+(about 1.06 MiB) per snapshot; this is a latent API bound, not an observed
+streaming allocation.
+
+### M622BP: interpret relight queue depth correctly
+
+Static call-site review found no producer for `EnqueuePlayerRelight` in the
+tracked source, and no caller for the generic async chunk-relight helper.
+Treat the 3x3 capture size as a latent API bound; do not attribute it to the
+normal streaming workload. The active terrain-column producer is gated by
+`DrainRelightQueues`'s `max_inflight`, which covers queued, running, and
+completed-but-unapplied jobs. This application-level gate bounds the unbounded
+low-level relight pool queue for that producer. M622BO's short M335 queue
+depth is an observation under that route, not a stress result.
+
+Relight still submits on shared work-slot denial, so the counter is not a hard
+cross-pool concurrency ceiling. Do not use host CPU percentage as a test
+launch gate. Require an attributable contention trace and a lossless retry
+path before changing this policy.
+
+The active column solver's vertical geometry read closure is the requested
+target band plus up to 15 chunk slices above it for direct skylight occlusion.
+Adjacent chunks' boundary-light planes seed propagation into the target.
+Liquid attenuation is already part of the solver; the water/sea-level policy
+selects the scheduled band and does not imply additional solver input below
+the band. Keep current scheduling
+bands until a concrete mismatch is measured.
+
+Do not reconnect the dormant async edit API before fixing its frontier
+coverage: the snapshot's `HasChunk` sees full captured chunks only, and the
+generic capture includes only the initial 3x3 footprint. Its frontier
+iterations therefore cannot append further loaded chunks to the result. The
+active streaming-column path uses zero frontier iterations. These findings
+need no additional flight; continue with short M335 checks for runtime changes
+and periodic fresh-world/source-lifecycle checks.
