@@ -12767,3 +12767,30 @@ log lacks producer provenance. Next confirm whether that function submitted
 job 501 before narrowing its band policy, then retain the target in the
 established pixel trace across that update. This does not require changing the
 M335 route start or speed.
+
+### M622BK follow-up: broad-band provenance confirmed; validate scope before changing policy
+
+M622BK resolves the pending attribution question. In the same short M335 run,
+the exact `16:31` pending-light note for source column `(4,6)` was followed by
+ten coalesced `0:80` requests from `DrainIdleFocusPendingLight` and one
+full-band capture. Snapshot job 678 processed four slices, changed source
+chunk `(4,3,6)` to field light revision 3 while revision 2 was published, and
+queued stale-light debt for dependent `(3,3,6)`. The dependent later published
+matching field/mesh/published light revision 2. This is a complete producer →
+capture → source install → dependent invalidation → target publication chain.
+
+The short run did not provide a user-visible defect witness: all eight
+target-associated framebuffer depth samples were drawable, draw-ready,
+settled, and revision-matched; no same-view repeat or operator verdict exists.
+Readiness debt remained 1.0 while the mesh-coverage visual-hole proxy was
+zero, and the direct post-stop mesh/visual/black counters were zero. Keep those
+signals separate.
+
+Next inspect the water-aware band formula and the relight solver's true
+vertical dependency range, then decide whether `0:80` is required for this
+world/configuration. Also inspect whether repeated coalesces for a queued
+covered band count against `DrainIdleFocusPendingLight`'s `max_columns` budget.
+Do not narrow the range or launch another flight for provenance: the existing
+M622BK log proves the caller. If static review finds a safe bounded change,
+make it as a separate code step, build Release, and validate with the same
+short route and a watched `(3,3,6)` pixel trace.

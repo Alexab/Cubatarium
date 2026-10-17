@@ -5958,3 +5958,47 @@ max 14, post-stop visible-black max 0, readiness debt max 31, median frame
 time 41.22 ms, and `pass=false` on non-CPU gates. No operator framebuffer
 verdict was recorded. Host CPU reached 100%, app CPU max was 45.63%; CPU is
 context only. Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.
+
+### M622BK: accepted relight-request provenance identifies the broad-band producer
+
+Added opt-in `relight_admission event=queue_request` records to the accepted
+insert/coalesce paths in `EnqueueTerrainColumnRelightImpl`. With
+`CUBATARIUM_RELIGHT_AUDIT=1`, each record retains the caller, requested and
+merged Y bands, queue ownership/index, FIFO pressure, focus distance, and
+pending/lit-ready state. The Release build succeeded; the established short
+visible M335 route completed 29 periods/27 steady with exit zero and no
+timeout. This is an instrumentation run, not a clean performance comparison.
+
+For source column `(4,6)`, the log contains an exact
+`OnLitPendingNeeded` insertion for `16:31` at 11:04:26.679. At 11:04:26.714,
+`DrainIdleFocusPendingLight` coalesced a `0:80` request into the queued owner;
+the same producer repeated this coalesce ten times while the request waited.
+There was one corresponding full-band capture at 11:04:27.521. Snapshot job
+678 records `source=(64,0,96)`, band `0:80`, four slices, and 16 neighbor-light
+samples; it completed in 43.8 ms and changed one slice. That install advanced
+source chunk `(4,3,6)` from published light revision 2 to field revision 3
+and queued dependent `(3,3,6)` stale-light debt at 11:04:27.583. The target
+debt published with matching revisions at 11:04:27.791. This establishes the
+request/capture producer chain and downstream invalidation; it does not show
+that the broad band was incorrect or that the update caused a visible defect.
+
+The same target's earlier stale episode queued at 11:03:55.511 and published
+at 11:03:56.272. Its watched pixel report contains nine associations; all
+eight depth-surface joins were drawable, draw-ready, settled, and matched
+geometry/light revisions, with no preview or stale-remesh flag. No repeated
+same-view group was captured. Across the whole run, 45 low-luma probes joined
+drawable opaque surfaces; five had unsettled/preview state and none had a
+light-revision mismatch. The run still reported readiness debt 1.0 and
+`visual_holes_rate=0`, while direct post-stop missing-mesh, visual-hole,
+visible-black-no-ticket, and stalled-black counts were zero. There is no
+operator framebuffer verdict; these metrics neither establish nor refute a
+perceived defect.
+
+The producer is now identified, so do not repeat the flight just to answer
+that attribution question. Next statically verify why the water-aware focus
+band expands to `0:80`, what vertical neighborhood the relight calculation
+actually requires, and whether repeatedly coalescing an already-covered band
+consumes the idle-drain budget or starves other pending columns. Change band
+scope only if that analysis preserves light propagation and water correctness.
+Artifacts and exact replay/analysis commands are in
+`FLIGHT_EXPERIMENT_SCRIPTS.md` and `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`.

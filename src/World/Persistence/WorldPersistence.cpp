@@ -628,6 +628,76 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
   // Block-space key → column xz for light_complete invalidation.
   const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
                              FloorDiv(world_z, CHUNK_SIZE));
+  const bool audit_admission =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
+  const auto log_queue_request = [&](const char *outcome)
+  {
+    if (!audit_admission)
+    {
+      return;
+    }
+    int horiz = 0;
+    if (RelightFifoTrimFocusValid)
+    {
+      horiz = std::max(std::abs(ground_xz.x - RelightFifoTrimFocusCx),
+                       std::abs(ground_xz.y - RelightFifoTrimFocusCz));
+    }
+    int priority_index = -1;
+    int fifo_index = -1;
+    for (size_t i = 0; i < PendingTerrainColumnRelightsPriority.size(); ++i)
+    {
+      if (PendingTerrainColumnRelightsPriority[i] == key)
+      {
+        priority_index = static_cast<int>(i);
+        break;
+      }
+    }
+    for (size_t i = 0; i < PendingTerrainColumnRelights.size(); ++i)
+    {
+      if (PendingTerrainColumnRelights[i] == key)
+      {
+        fifo_index = static_cast<int>(i);
+        break;
+      }
+    }
+    const char *queue = priority_index >= 0
+                            ? "priority"
+                            : (fifo_index >= 0 ? "fifo" : "none");
+    const int queue_index =
+        priority_index >= 0 ? priority_index : fifo_index;
+    const auto queued_band = PendingTerrainColumnRelightYBands.find(key);
+    const bool has_queued_band =
+        queued_band != PendingTerrainColumnRelightYBands.end();
+    const bool pending_light =
+        world_context && world_context->IsPendingLightBeforeMesh(ground_xz);
+    const bool lit_ready =
+        world_context && world_context->IsColumnLitReady(
+                             glm::ivec3(ground_xz.x, 0, ground_xz.y));
+    CubatariumLogInfo(
+        "RelightAudit",
+        "relight_admission event=queue_request outcome=" +
+            std::string(outcome ? outcome : "unspecified") + " source=" +
+            std::string(producer ? producer : "unspecified") + " column=(" +
+            std::to_string(ground_xz.x) + "," +
+            std::to_string(ground_xz.y) + ") block_key=(" +
+            std::to_string(key.x) + "," + std::to_string(key.y) +
+            ") requested_band=" + std::to_string(min_y) + ":" +
+            std::to_string(max_y) + " queued_band=" +
+            (has_queued_band
+                 ? std::to_string(queued_band->second.x) + ":" +
+                       std::to_string(queued_band->second.y)
+                 : std::string("none")) +
+            " priority=" + std::to_string(priority) + " visible=" +
+            std::to_string(visible_admission) + " fifo_n=" +
+            std::to_string(GetPendingTerrainColumnRelightCount()) +
+            " horiz=" + std::to_string(horiz) + " keyed=" +
+            std::to_string(PendingTerrainColumnRelightKeys.count(key)) +
+            " queue=" + queue + " queue_index=" +
+            std::to_string(queue_index) + " deferred_far=" +
+            std::to_string(DeferredFarRelightColumns.count(ground_xz)) +
+            " pending=" + std::to_string(pending_light) + " lit_ready=" +
+            std::to_string(lit_ready));
+  };
   // Apply the settled/no-op guard before FIFO admission, not only when the
   // queue is full. Otherwise normal-capacity producers can repeatedly capture
   // an already-lit column and create self-sustaining relight churn.
@@ -908,6 +978,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     // Always run Promote so non-priority requeues cannot leave ghosts stuck
     // (those blocked MarkRelit forever with pending_light≈30, relight_drain≈0).
     PromoteTerrainColumnRelight(key);
+    log_queue_request("coalesced");
     return;
   }
   const int pin_cx = RelightFifoPinCx;
@@ -971,6 +1042,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     PendingTerrainColumnRelightYBands.erase(victim);
     ++RelightFifoOverflowDroppedN;
   }
+  log_queue_request("inserted");
 }
 
 bool UWorldPersistence::EnqueueVisibleRelight(

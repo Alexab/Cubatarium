@@ -12263,3 +12263,74 @@ with the focus band, but accepted enqueue records lack source provenance. Join
 the source before narrowing that band. Treat the coalescing counters as direct
 path evidence, not as a causal total-denial comparison or proof of a visible
 lighting defect.
+
+### M622BK: trace the accepted enqueue caller for the late neighbor relight
+
+M622BK added opt-in accepted-enqueue provenance to `EnqueueTerrainColumnRelightImpl`
+and repeated the established short warm `World_164` M335 route. The Release
+build command was:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+```
+
+Run command (audit flag and dirty-tree override are restored afterward):
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BK `
+    -Report bin/suite_reports/engine_refactor/m622bk_relight_enqueue_provenance_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+Analyze the global sparse framebuffer trace and retain every association to
+the stale-light target `(3,3,6)`:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622bk_relight_enqueue_provenance_20261017.json -Raw | ConvertFrom-Json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bk_renderer_pixel_trace_20261017.json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --watch-chunk 3,3,6 `
+  --json-out bin/suite_reports/engine_refactor/m622bk_renderer_pixel_trace_watch_3_3_6_20261017.json
+```
+
+The route completed 29 periods/27 steady with process exit zero and no timeout.
+It remained diagnostic-only: readiness debt was 1.0, visual-hole proxy 0.0,
+and direct post-stop mesh-missing, visual-hole, visible-black-no-ticket, and
+stalled-visible-black counts were zero. The global pixel trace had 2,420
+probes and 45 low-luma samples; all joined drawable opaque surfaces, five had
+unsettled/preview light, and none had a light-revision mismatch.
+
+For column `(4,6)`, `OnLitPendingNeeded` inserted `16:31` at 11:04:26.679.
+`DrainIdleFocusPendingLight` then logged ten `0:80` coalesces, starting
+34 ms later. One `0:80` capture at 11:04:27.521 became snapshot job 678 with
+four slices and 16 neighbor-light samples. It completed in 43.8 ms and changed
+`(4,3,6)` to field revision 3 against published revision 2; that install
+queued target `(3,3,6)` stale-light debt, which published at 11:04:27.791.
+The watched target had nine associations, eight depth-surface joins; all eight
+were drawable, draw-ready, settled, and revision-matched, without preview or
+stale-remesh state. There was no repeated same-view group or operator verdict.
+
+The new provenance closes the caller/capture question. Do not rerun M335 for
+that attribution. Next statically validate the water-aware full-height band
+against the solver's vertical dependency requirements and check whether
+repeated already-covered coalesces consume the idle drain's column budget.
+Keep the M335 route and speed unchanged for any later validation.

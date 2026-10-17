@@ -2491,3 +2491,33 @@ narrowing the band policy. Arrange the existing short pixel trace to remain on
 `(3,3,6)` across that neighbor update. Keep the M335 route and its known
 start/speed; do not use aggregate readiness as a substitute for a framebuffer
 transition.
+
+### M622BK: use accepted enqueue provenance to follow band widening
+
+Build the Release target, then use the M622BK short M335 command in
+`FLIGHT_EXPERIMENT_SCRIPTS.md` with `CUBATARIUM_RELIGHT_AUDIT=1`. The new
+`relight_admission event=queue_request` event reports `source`, requested and
+queued bands, priority/visibility, FIFO/key ownership and index, distance from
+the FIFO focus, and pending/lit-ready state. It is emitted only on actual
+insert/coalesce paths, so pair it with existing pending-note, deferred-owner,
+capture, snapshot, worker, and apply events for early returns and downstream
+completion.
+
+For the M622BK witness, inspect the exact column with:
+
+```powershell
+$log = 'bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-110345.41384'
+rg 'pending note source=ChunkEmergeCoordinator.OnLitPendingNeeded.*column=\(4,6\)' $log
+rg 'relight_admission event=queue_request.*column=\(4,6\).*requested_band=0:80' $log
+rg 'capture submit column=\(4,6\)|snapshot job=678|slice job=678 coord=\(4,3,6\)|stale_light_debt event=(queued|published).*coord=\(3,3,6\)' $log
+```
+
+The narrow `16:31` note was followed by ten coalesced `0:80` requests from
+`DrainIdleFocusPendingLight` and one full-band capture. Job 678 changed source
+`(4,3,6)` and queued stale-light debt for dependent `(3,3,6)`, which later
+published. This proves the request path, not that the expanded range is
+unnecessary. Inspect the water-aware band formula and the solver's vertical
+dependencies before changing it. The captured target pixels were all
+draw-ready and revision-matched; there was no same-view transition or operator
+verdict. See the M622BK audit entry and saved artifacts listed in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`.
