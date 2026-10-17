@@ -108,6 +108,10 @@ public:
   {
     return CapturedNeighborLightChunks;
   }
+  int GetCapturedSkyContextChunks() const
+  {
+    return CapturedSkyContextChunks;
+  }
 
   BlockId GetBlock(glm::ivec3 world_pos) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
@@ -125,6 +129,10 @@ public:
 private:
   std::unordered_map<glm::ivec3, std::array<BlockId, CHUNK_VOLUME>, IVec3Hash>
       Blocks;
+  /// Geometry read-only context above the relight target band. It participates
+  /// in skylight occlusion and input validation, but is never relit or applied.
+  std::unordered_map<glm::ivec3, std::array<BlockId, CHUNK_VOLUME>, IVec3Hash>
+      SkyContextBlocks;
   std::unordered_map<glm::ivec3, std::array<uint8_t, CHUNK_VOLUME>, IVec3Hash>
       Light;
   std::unordered_map<glm::ivec3, BlockId, IVec3Hash> ShellBlocks;
@@ -134,6 +142,7 @@ private:
   std::vector<ChunkInputStamp> ReadSet;
   int CapturedFullChunks{0};
   int CapturedNeighborLightChunks{0};
+  int CapturedSkyContextChunks{0};
 };
 
 } // namespace cutum

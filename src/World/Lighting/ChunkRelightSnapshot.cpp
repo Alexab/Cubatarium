@@ -17,7 +17,8 @@ namespace cutum
 namespace
 {
 
-constexpr int kSkyScanAboveBlocks = 15 * CHUNK_SIZE;
+constexpr int kSkyScanAboveChunkCount = 15;
+constexpr int kSkyScanAboveBlocks = kSkyScanAboveChunkCount * CHUNK_SIZE;
 
 void CollectColumnChunkCoords(const UBlockWorld &world, int world_x, int world_z,
                               int min_y, int max_y,
@@ -509,6 +510,12 @@ BlockId UChunkRelightSnapshot::GetBlock(glm::ivec3 world_pos) const
   {
     return it->second[local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z)];
   }
+  const auto sky_context = SkyContextBlocks.find(chunk_coord);
+  if (sky_context != SkyContextBlocks.end() && InChunkLocal(local))
+  {
+    return sky_context->second[local.x +
+                               CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z)];
+  }
   const auto shell = ShellBlocks.find(world_pos);
   if (shell != ShellBlocks.end())
   {
@@ -696,6 +703,49 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
         }
         snapshot.Light[neighbor_coord] = face_light;
         ++snapshot.CapturedNeighborLightChunks;
+      }
+    }
+  }
+
+  if (spec.include_skylight && !coords.empty())
+  {
+    // PropagateSkylightColumn scans up to 15 chunk slices above each target
+    // slice to decide whether direct sky reaches it. Capturing only the target
+    // band (plus the one-block shell) made all farther geometry look like air,
+    // so a roof or terrain slice above a partial capture could be ignored.
+    // The top of the requested band is sufficient for every lower target slice:
+    // its own 15-slice scan is contained in that band plus these 15 context
+    // slices. Context chunks are read-only and do not enter Compute's target set.
+    std::unordered_map<glm::ivec3, int, IVec3Hash> top_band_by_column;
+    for (const glm::ivec3 &coord : coords)
+    {
+      const glm::ivec3 column(coord.x, 0, coord.z);
+      auto [it, inserted] = top_band_by_column.emplace(column, coord.y);
+      if (!inserted)
+      {
+        it->second = std::max(it->second, coord.y);
+      }
+    }
+    std::unordered_set<glm::ivec3, IVec3Hash> sky_context_coords;
+    for (const auto &entry : top_band_by_column)
+    {
+      for (int cy = entry.second + 1;
+           cy <= entry.second + kSkyScanAboveChunkCount; ++cy)
+      {
+        sky_context_coords.emplace(entry.first.x, cy, entry.first.z);
+      }
+    }
+    for (const glm::ivec3 &coord : sky_context_coords)
+    {
+      const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+      // Geometry-only stamp: lighting edits above must not invalidate the
+      // result, while appearance, removal, reuse, or voxel edits must.
+      snapshot.ReadSet.push_back(
+          ChunkInputStamp::Capture(coord, chunk, false, true));
+      if (chunk && !chunk->IsAirOnly())
+      {
+        snapshot.SkyContextBlocks[coord] = chunk->GetData();
+        ++snapshot.CapturedSkyContextChunks;
       }
     }
   }

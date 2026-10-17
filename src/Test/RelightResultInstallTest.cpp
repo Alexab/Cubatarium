@@ -109,11 +109,68 @@ void TestLateralSkylightSurvivesInstall()
   Expect(chunk.GetLightFieldRevision() == revision,
          "repeated apply cannot stale meshes");
 }
+
+void TestSkylightReadsGeometryAbovePartialBand()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+
+  // Target only chunk y=0, with an opaque ceiling two chunks above it.
+  // The source light solver scans above each target slice, so this geometry
+  // must be part of the immutable read context even though it is not relit.
+  world.SetBlock({0, 0, 0}, 8);
+  for (int x = 0; x < CHUNK_SIZE; ++x)
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      world.SetBlock({x, 32, z}, 8);
+
+  RelightJobSpec spec;
+  spec.block_positions.push_back({8, 0, 8});
+  spec.min_world_y = 0;
+  spec.max_world_y = CHUNK_SIZE - 1;
+  spec.column_center_only = true;
+  spec.include_block_light = false;
+  auto snapshot = UChunkRelightSnapshot::Capture(world, spec);
+  Expect(snapshot.GetBlock({8, 32, 8}) == 8,
+         "upper opaque geometry is present in sky context");
+  Expect(snapshot.GetCapturedSkyContextChunks() >= 1,
+         "non-air sky context chunks are accounted");
+
+  const auto result = snapshot.Compute(registry);
+  Expect(result.chunks.size() == 1, "partial target computes only its chunk");
+  const auto index = static_cast<size_t>(UChunk::LocalIndex({8, 15, 8}));
+  Expect(UnpackSky(result.chunks.front().light_packed[index]) == 0,
+         "opaque geometry above partial band blocks direct skylight");
+
+  const ChunkInputStamp *roof_stamp = nullptr;
+  for (const auto &stamp : result.read_set)
+  {
+    if (stamp.coord == glm::ivec3(0, 2, 0))
+    {
+      roof_stamp = &stamp;
+      break;
+    }
+  }
+  Expect(roof_stamp != nullptr && roof_stamp->readsContent &&
+             !roof_stamp->readsLight,
+         "sky context validates geometry without depending on upper light");
+  Expect(roof_stamp->Matches(world.GetChunkManager().GetChunk({0, 2, 0})),
+         "unchanged upper geometry validates");
+  world.SetBlock({8, 32, 8}, BLOCK_AIR);
+  Expect(!roof_stamp->Matches(world.GetChunkManager().GetChunk({0, 2, 0})),
+         "upper geometry change invalidates the captured result");
+}
 } // namespace
 
 int main()
 {
   TestDomainsAndRevision();
   TestLateralSkylightSurvivesInstall();
+  TestSkylightReadsGeometryAbovePartialBand();
   std::cout << "relight_result_install_test: OK\n";
 }

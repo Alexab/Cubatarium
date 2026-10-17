@@ -137,6 +137,7 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
   const int captured_full_n = snapshot.GetCapturedFullChunks();
   const int captured_neighbor_light_n =
       snapshot.GetCapturedNeighborLightChunks();
+  const int captured_sky_context_n = snapshot.GetCapturedSkyContextChunks();
   if (audit_relight)
   {
     const glm::ivec3 source = spec.block_positions.empty()
@@ -151,7 +152,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
             std::to_string(spec.max_world_y) + " capture_ms=" +
             std::to_string(capture_ms) + " full=" +
             std::to_string(captured_full_n) + " neighbor_light=" +
-            std::to_string(captured_neighbor_light_n) + " finalize=" +
+            std::to_string(captured_neighbor_light_n) + " sky_context=" +
+            std::to_string(captured_sky_context_n) + " finalize=" +
             std::to_string(spec.finalize_pending_gate) + " draw_gate=" +
             std::to_string(spec.visible_draw_gate_repair));
   }
@@ -189,7 +191,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
   Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
                 catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
                 work_slot = std::move(work_slot), audit_relight,
-                captured_full_n, captured_neighbor_light_n]() mutable
+                captured_full_n, captured_neighbor_light_n,
+                captured_sky_context_n]() mutable
                {
                  (void)work_slot;
                  const auto compute_started = std::chrono::steady_clock::now();
@@ -211,6 +214,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
                            " full=" + std::to_string(captured_full_n) +
                            " neighbor_light=" +
                            std::to_string(captured_neighbor_light_n) +
+                           " sky_context=" +
+                           std::to_string(captured_sky_context_n) +
                            " chunks=" + std::to_string(result.chunks.size()) +
                            " read_set=" + std::to_string(result.read_set.size()) +
                            " frontier_unfinished=" +
