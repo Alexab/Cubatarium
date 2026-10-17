@@ -111,6 +111,63 @@ void TestLateralSkylightSurvivesInstall()
          "repeated apply cannot stale meshes");
 }
 
+void TestHorizontalSkylightBoundarySeedsAirAndWater()
+{
+  using namespace cutum;
+  constexpr BlockId kStone = 8;
+  constexpr BlockId kWater = 9;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = BlockPhysicsProfile::Solid();
+  BlockDefinition water;
+  water.Name = "water";
+  water.Physics = BlockPhysicsProfile::FromPreset("water");
+  water.Render.Transparent = true;
+  water.Render.Style = BlockRenderStyle::Fluid;
+  definitions->ReplaceAll({{kStone, stone}, {kWater, water}},
+                          {{"stone", kStone}, {"water", kWater}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+
+  // A complete opaque ceiling suppresses direct skylight in the target
+  // chunk. Only the pre-lit x- neighbor face can seed the two cells below it.
+  for (int x = 0; x < CHUNK_SIZE; ++x)
+  {
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+    {
+      world.SetBlock({x, 9, z}, kStone);
+    }
+  }
+  world.SetBlock({0, 8, 9}, kWater);
+  world.SetBlock({-CHUNK_SIZE, 0, 0}, kStone); // Materialize x- neighbor.
+  UChunk *neighbor = world.GetChunkManager().GetChunk({-1, 0, 0});
+  Expect(neighbor != nullptr, "neighbor chunk exists");
+  neighbor->SetLightLocal({CHUNK_SIZE - 1, 8, 8}, kMaxLightLevel, 0);
+  neighbor->SetLightLocal({CHUNK_SIZE - 1, 8, 9}, kMaxLightLevel, 0);
+
+  RelightJobSpec spec;
+  spec.block_positions = {{0, 8, 8}};
+  spec.min_world_y = 0;
+  spec.max_world_y = CHUNK_SIZE - 1;
+  spec.column_center_only = true;
+  spec.include_block_light = false;
+  spec.frontier_iterations = 0;
+  auto snapshot = UChunkRelightSnapshot::Capture(world, spec);
+  const auto result = snapshot.Compute(registry);
+  Expect(result.chunks.size() == 1,
+         "center-only boundary seed writes one target chunk");
+
+  const auto &light = result.chunks.front().light_packed;
+  const auto sky_at = [&light](glm::ivec3 local) {
+    return UnpackSky(light[static_cast<size_t>(UChunk::LocalIndex(local))]);
+  };
+  Expect(sky_at({0, 8, 8}) == kMaxLightLevel - 1,
+         "neighbor skylight attenuates once into an air boundary cell");
+  Expect(sky_at({0, 8, 9}) == kMaxLightLevel - 2,
+         "neighbor skylight uses liquid attenuation at a water boundary cell");
+}
+
 void TestSkylightReadsGeometryAbovePartialBand()
 {
   using namespace cutum;
@@ -231,6 +288,7 @@ int main()
 {
   TestDomainsAndRevision();
   TestLateralSkylightSurvivesInstall();
+  TestHorizontalSkylightBoundarySeedsAirAndWater();
   TestSkylightReadsGeometryAbovePartialBand();
   TestSkylightContextDoesNotExpandThreeByThreeWriteSet();
   std::cout << "relight_result_install_test: OK\n";

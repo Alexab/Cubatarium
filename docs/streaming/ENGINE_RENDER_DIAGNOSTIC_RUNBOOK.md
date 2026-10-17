@@ -2684,3 +2684,12 @@ process memory through its fallback no more often than every 30 frames,
 matching the monitor's normal sampling cadence instead of querying every
 frame. Do not interpret this smoke as product acceptance or as a visual
 regression result.
+
+### M622BT: horizontal skylight boundary contract
+
+`RelightResultInstallTest.cpp::TestHorizontalSkylightBoundarySeedsAirAndWater`
+blocks direct sky with an opaque target-chunk roof and seeds light only from a
+read-only `x-` neighbor face. Expected target values are air=14 and water=13;
+the water value specifically verifies the two-level horizontal liquid cost.
+The Release test executable passed. This validates the snapshot solver's
+boundary-seed contract, not a renderer or visible-flight symptom.

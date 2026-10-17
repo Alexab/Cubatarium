@@ -12970,8 +12970,23 @@ after adjacent `x+` face light changed. That observation supports a delayed
 boundary refresh path but does not justify recursive neighbor relight
 scheduling yet.
 
-Remaining in this area: add a deterministic air/water boundary-seed regression;
-trace queue age for affected columns; define bounded convergence for any
-neighbor-relight propagation; then repeat only the established short M335 route
-and periodic fresh-world/source-lifecycle checks. Long operator-monitoring
-flights remain excluded.
+The deterministic air/water boundary-seed regression is now recorded as
+M622BT below. Remaining in this area: trace queue age for affected columns;
+define bounded convergence for any neighbor-relight propagation; then repeat
+only the established short M335 route and periodic fresh-world/source-lifecycle
+checks. Long operator-monitoring flights remain excluded.
+
+### M622BT — deterministic horizontal skylight boundary regression
+
+Added `TestHorizontalSkylightBoundarySeedsAirAndWater` to
+`RelightResultInstallTest.cpp`. A fully opaque roof blocks direct sky across the
+target chunk; light exists only on the read-only `x-` neighbor face. The test
+asserts that an air boundary voxel receives level 14 and an adjacent water
+voxel receives level 13, proving the incoming level is written before the flood
+and material attenuation is applied once at the destination. The center-only
+result remains limited to one writable target chunk.
+
+Built `relight_result_install_test` with CMake `Release` and ran the Release
+executable; it passed. No flight was needed because this is a deterministic
+solver contract. The operator-visible delayed blocklight refresh remains a
+separate question and is not claimed fixed by this test.

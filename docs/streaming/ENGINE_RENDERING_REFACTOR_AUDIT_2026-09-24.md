@@ -6300,3 +6300,12 @@ process memory at a bounded 30-frame cadence. A Release build passed and a
 short M623A visible M335 smoke produced perf data; the report still failed
 existing product gates and only covered eight chunks, so it is not acceptance.
 The tooling handoff is in `ENGINE_REFACTOR_TOOLING.md` and `tools/README.md`.
+
+### 2026-10-17 addendum: deterministic boundary seed regression
+
+M622BT now covers horizontal skylight entering a cleared center-only snapshot
+through a read-only neighbor face. With direct sky blocked, the Release check
+asserts air receives level 14 and water level 13; it passes. This closes the
+solver-contract test item only. Queue age for the delayed blocklight boundary
+refresh and bounded convergence for any dependent relight remain open; no
+recursive neighbor relight was introduced.
