@@ -280,6 +280,7 @@ def main() -> int:
             "60",
             "--idle-sec",
             "8",
+            "--metrics",
             "--process-timeout",
             str(args.process_timeout),
             "--phase-id",

@@ -13746,19 +13746,44 @@ Release compilation and static EXE verification passed. Keep the M624I
 denial→deferred→admission witness separate from the still-open eviction/reload
 verification. Details are in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`.
 
-### Current remaining work after M624P
+### M624Q — bounded close-out of the rendering/streaming refactor
 
-1. Observe the rare `open_sky=1`, equal-revision fully-dark terminal decision
-   (`equal_rev_fd=1`) at runtime. M624O now captures the decision before the
-   enter-gate marker resets and confirmed stale OpenSky repair, but this exact
-   equal-revision branch did not occur.
-2. Exercise one exact boundary dependency through FIFO denial, deferred
-   ownership, eviction, reload, and successful relight admission.
-3. Validate one short distant lane with disk-miss/unload-reload provenance and
-   near-view evidence; do not use long operator-monitoring flights.
-4. Close the visual gate review with framebuffer/operator evidence distinct
-   from off-view backlog. Preserve recent reports that water/world appearance
-   look normal; only change water or fog for a matching witness.
-5. At close-out, verify research runners have explicit, disabled-by-default
-   metric/disk-output controls and preserve the current scripts/runbook so the
-   experiments can be resumed without reconstructing methodology.
+The planned implementation work is closed against confirmed defects:
+
+- M624L removed repeated no-op relight enqueue for a settled legal-dark slice;
+  the short route reduced that column/band from 176 submissions to zero.
+- M624O directly witnessed stale OpenSky dark work being assigned repair
+  before the enter gate resets. The rarer equal-revision OpenSky case did not
+  occur and remains an instrumented follow-up.
+- M624P includes boundary-dependency ownership in the unload light-debt
+  predicate, preserving the disk invalidation path before queue cancellation.
+- Research runner metrics are now opt-in. `--metrics` enables FramePerf,
+  perf JSONL output, and host sampling; `--no-metrics` disables them. The
+  `FramePerfMonitor` currently couples collection and disk output and has no
+  separate cheap in-memory mode. Metric-consuming maintained callers opt in
+  explicitly; the M335 visual wrapper opts in unless `-DisableMetrics` is used.
+- Repeatable routes, script inventory, evidence interpretation, and close-out
+  conditions are documented in the flight index, diagnostic runbook, and
+  script inventory.
+
+No current operator-reported visual defect remains: recent checks report
+normal terrain and water. Historical proxy/readiness debt is not a framebuffer
+failure by itself, and fog silhouettes remain an unresolved pre-existing
+behavior without a matching pixel/framebuffer witness. Do not change water or
+fog on proxy-only evidence.
+
+The following are evidence-gated follow-ups rather than active implementation
+blockers: (1) the rare OpenSky equal-revision fully-dark terminal decision;
+(2) one exact boundary request through denial, deferred ownership, eviction,
+reload, and relight admission; and (3) a short distant lane with disk-miss or
+unload/reload provenance and near-view evidence. M624O, M624I, and earlier
+source-trace routes provide partial evidence but do not prove these complete
+chains. Reopen only when a matching trace/visible symptom occurs or a targeted
+short run can exercise the branch; long operator-monitoring flights are not
+part of close-out.
+
+Release build verification of the engine changes is recorded with M624L–P.
+The final M624Q changes are runner/documentation-only and do not change the
+engine binary. Verification and invocation details are recorded in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`, `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`, and
+`ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md`.

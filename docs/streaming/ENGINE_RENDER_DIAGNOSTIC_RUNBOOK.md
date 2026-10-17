@@ -3412,3 +3412,28 @@ This is a static ownership fix, not a runtime eviction witness. The Release
 build and static EXE verification passed. Continue to use a short run that
 correlates the same boundary column across denial, deferred ownership, unload,
 reload, and relight admission before closing that lifecycle gate.
+
+### M624Q: bounded refactor close-out
+
+The implementation close-out is bounded to confirmed defects and repeatable
+tooling. M624L suppresses redundant relight enqueue for a settled legal-dark
+slice; M624O directly confirms that stale OpenSky dark work is classified for
+repair before the enter gate resets; M624P preserves boundary relight debt
+when unload cancels queue ownership. These fixes have Release build
+verification and route-level evidence recorded in the remediation plan. The
+user's recent operator checks report normal world and water appearance;
+proxy debt alone is not a framebuffer failure.
+
+The exact equal-revision OpenSky witness, combined boundary eviction/reload
+chain, and a distant disk-miss lane remain unobserved. Treat them as narrow
+follow-ups, not as evidence that the rendered world is broken. Reopen with a
+short targeted run when the corresponding trace or visible symptom occurs.
+Do not extend operator monitoring flights to force a rare branch.
+
+Research instrumentation now defaults off in `flight_sim_run.py`. Pass
+`--metrics` to enable FramePerf, perf JSONL disk output, and host sampling;
+`--no-metrics` disables them. These are deliberately coupled because the
+current monitor does not have a cheap in-memory-only collection path. The
+M335 wrapper opts in by default and supports `-DisableMetrics` for visual-only
+routes. See the script inventory for supported callers and the flight index
+for exact commands.

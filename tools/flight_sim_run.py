@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build (optional), run Cubatarium --flight-sim, analyze perf gates."""
+"""Build (optional), run Cubatarium --flight-sim, optionally analyze perf gates."""
 
 from __future__ import annotations
 
@@ -1984,11 +1984,20 @@ def main() -> int:
         default=None,
         help="optional per-run root for app report, INFO/perf logs, and run artifacts",
     )
-    ap.add_argument(
-        "--no-metrics",
+    metrics_group = ap.add_mutually_exclusive_group()
+    metrics_group.add_argument(
+        "--metrics",
+        dest="metrics_enabled",
         action="store_true",
-        help="disable FramePerf collection/disk output and host resource sampling; skip metric gates",
+        help="enable FramePerf collection, perf JSONL output, host sampling, and metric gates",
     )
+    metrics_group.add_argument(
+        "--no-metrics",
+        dest="metrics_enabled",
+        action="store_false",
+        help="disable FramePerf collection, perf JSONL output, and host sampling (default)",
+    )
+    ap.set_defaults(metrics_enabled=False)
     ap.add_argument(
         "--build-dir",
         type=Path,
@@ -2175,9 +2184,9 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    # Ordinary app launches keep FramePerf disabled. Research runs opt in unless
-    # the caller explicitly asks for an uninstrumented visible flight.
-    metrics_enabled = not args.no_metrics
+    # Instrumented flight analysis is explicit; visible route runs default to
+    # no FramePerf collection, perf disk output, or host-resource polling.
+    metrics_enabled = args.metrics_enabled
     os.environ["CUBATARIUM_PERF_LOG"] = "1" if metrics_enabled else "0"
     artifact_root = args.artifact_root
     if artifact_root is not None:
@@ -3467,7 +3476,7 @@ def main() -> int:
 
         ana = 1
         if perf is None:
-            if args.no_metrics:
+            if not metrics_enabled:
                 flight_report = flight_report_path
                 app_report = load_best(flight_report) or {}
                 info_log = None
@@ -4369,7 +4378,7 @@ def main() -> int:
                 )
                 last_rc = 2
 
-    if repeats > 1 and run_reports and not args.no_metrics:
+    if repeats > 1 and run_reports and metrics_enabled:
         agg_path = base_report.with_name(f"{base_report.stem}_agg{base_report.suffix}")
         write_repeat_aggregate(run_reports, agg_path)
         print(f"wrote aggregate: {agg_path}", flush=True)

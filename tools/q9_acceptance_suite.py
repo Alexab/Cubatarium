@@ -20,7 +20,7 @@ Example (after 6 manual flights with matching route):
 
 Autofly proxy for the same west corridor (not north --replay-manual yaw 90):
 
-  python tools/flight_sim_run.py --world World_164 --scenario product-174657
+  python tools/flight_sim_run.py --world World_164 --scenario product-174657 --metrics
   # route JSON: tools/manual_flight_world164_product_174657.json
 """
 from __future__ import annotations

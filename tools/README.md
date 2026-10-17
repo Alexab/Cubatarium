@@ -58,7 +58,10 @@ wrappers, and archived research scripts are listed in the
 Keep the established M335 camera, world, speed, and no-teleport settings fixed
 when comparing engine changes. Use short operator-visible runs for visual
 checks; do not use long operator-monitoring runs as a substitute for a short
-repeatable reproduction.
+repeatable reproduction. `flight_sim_run.py` disables FramePerf collection,
+perf JSONL output, and host-resource polling by default. Pass `--metrics` when
+the run consumes metric gates or perf JSONL; `--no-metrics` is an explicit
+alias for the default. The M335 wrapper opts in unless `-DisableMetrics` is set.
 
 ## Evidence and output locations
 
@@ -73,13 +76,13 @@ tree.
 Use explicit report/capture paths for every new experiment and record them in
 the flight index. Keep source scripts and interpretation rules in Git; keep
 large raw captures local unless a run is selected as a durable baseline. A
-normal direct game launch has `CUBATARIUM_PERF_LOG` unset (periodic perf
-sampling and `perf_*.jsonl` are off); the flight runner turns it on because its
-analysis requires that file. Runtime streaming counters remain available to the
-engine, and memory-budget process sampling stays bounded to one sample per 30
-streaming frames. A future path cleanup should first add configurable artifact
-roots and preserve the current command-line wrappers, because historical notes
-contain many references to today's paths.
+normal direct game launch and the flight runner both leave `CUBATARIUM_PERF_LOG`
+off unless `--metrics` is passed. This switch couples FramePerf collection with
+JSONL output and host sampling because the current monitor has no separate
+low-cost in-memory mode. Runtime streaming counters remain available to the
+engine. A future path cleanup should first add configurable artifact roots and
+preserve the current command-line wrappers, because historical notes contain
+many references to today's paths.
 
 ## Legacy research scripts
 

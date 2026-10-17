@@ -183,6 +183,8 @@ try {
     )
     if ($DisableMetrics) {
         $flightArgs += "--no-metrics"
+    } else {
+        $flightArgs += "--metrics"
     }
     & python -X utf8 tools\flight_sim_run.py @flightArgs
     $runExitCode = $LASTEXITCODE

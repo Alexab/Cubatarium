@@ -198,6 +198,7 @@ def main() -> int:
         args.scenario if args.scenario != "fly-heavy" else "fz-manual-long",
         "--world",
         args.world,
+        "--metrics",
         "--report",
         str(report),
     ]
@@ -208,6 +209,7 @@ def main() -> int:
             "--replay-manual-fly-heavy",
             "--world",
             args.world,
+            "--metrics",
             "--report",
             str(report),
         ]

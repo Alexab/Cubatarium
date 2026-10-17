@@ -124,6 +124,7 @@ def run_scenario(
         *extra_args,
         "--report", str(report_path),
         "--build-dir", str(build_dir),
+        "--metrics",
         "--phase-id", f"{phase_id}/{scenario}" if phase_id else scenario,
         "--update-best",
     ]

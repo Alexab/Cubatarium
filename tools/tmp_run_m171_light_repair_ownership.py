@@ -38,6 +38,7 @@ try:
     command = [
         sys.executable,
         str(ROOT / "tools" / "flight_sim_run.py"),
+        "--metrics",
         "--world", "World_164",
         "--scenario", "product-174657",
         "--visible",
