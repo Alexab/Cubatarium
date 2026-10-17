@@ -2467,6 +2467,16 @@ second stale episode, and no repeated same-view pixel group was captured. This
 is direct post-first-publication evidence, not a pre/post transition or proof
 of the second repair on screen.
 
+Job 501 captured the whole `(4,6)` band `0:80` (four full slices,
+`neighbor_light=16`). About 34 ms earlier, `OnLitPendingNeeded` had inserted a
+pending-light note for that same column's narrower `16:31` band. The existing
+`DrainIdleFocusPendingLight` code unions a short pending band with its focus
+vertical band before enqueue; with water enabled, the configured route height
+can widen that union to `0:80`. This timing and band match that path, but the
+accepted-enqueue and capture records do not include producer provenance, so the
+join is not proven. Before narrowing that policy, add an audit join or otherwise
+confirm which producer submitted job 501.
+
 Artifacts: report `m622bj_deferred_owner_coalesce_20261017.json`; perf
 `perf_20261017-105305_30268.jsonl`; INFO
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-105301.30268`; pixel
@@ -2474,8 +2484,10 @@ reports `m622bj_renderer_pixel_trace_20261017.json` and
 `m622bj_renderer_pixel_trace_watch_3_3_6_20261017.json`.
 
 Next trace the upstream owner/capture request for late source install job 501
-on `(4,3,6)` and determine whether the revision-3 update is expected streaming
-work or a repeated calculation. Arrange the existing short pixel trace to
-remain on `(3,3,6)` across that neighbor update. Keep the M335 route and its
-known start/speed; do not use aggregate readiness as a substitute for a
-framebuffer transition.
+on `(4,3,6)`, including whether `DrainIdleFocusPendingLight` expanded the exact
+`16:31` pending note into a full `0:80` capture. Determine whether the
+revision-3 update is expected streaming work or a repeated calculation before
+narrowing the band policy. Arrange the existing short pixel trace to remain on
+`(3,3,6)` across that neighbor update. Keep the M335 route and its known
+start/speed; do not use aggregate readiness as a substitute for a framebuffer
+transition.

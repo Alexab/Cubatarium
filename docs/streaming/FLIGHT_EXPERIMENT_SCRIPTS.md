@@ -12256,6 +12256,10 @@ at 10:53:45.279. Both target invalidations followed adjacent source
 `(3,3,6)` as a mesh dependency. The second source install reached field revision
 3 while revision 2 was still published. Target depth samples ended before the
 second episode; there was no fixed-view pre/post pair. Trace job 501's upstream
-request/capture to determine why the neighbor was recalculated. Treat the
-coalescing counters as direct path evidence, not as a causal total-denial
-comparison or proof of a visible lighting defect.
+request/capture to determine why the neighbor was recalculated. It captured the
+column's full `0:80` band across four slices about 34 ms after an exact `16:31`
+`OnLitPendingNeeded` note; `DrainIdleFocusPendingLight` can union a short note
+with the focus band, but accepted enqueue records lack source provenance. Join
+the source before narrowing that band. Treat the coalescing counters as direct
+path evidence, not as a causal total-denial comparison or proof of a visible
+lighting defect.

@@ -12759,7 +12759,11 @@ pending stale remesh. Both invalidations followed source-chunk `(4,3,6)` light
 installs that queued its dependent `(3,3,6)`: job 152 moved field revision 2
 against published 1; job 501 later moved field revision 3 against published 2.
 The target had no depth sample after the second publication and no fixed-view
-pre/post pair. Next trace the upstream request and capture for job 501 to decide
-whether the late neighbor install is expected streaming work or a repeated
-calculation, then retain the target in the established pixel trace across that
-update. This does not require changing the M335 route start or speed.
+pre/post pair. Job 501 captured band `0:80` across four full slices, while the
+same column's `OnLitPendingNeeded` note inserted band `16:31` about 34 ms
+earlier. `DrainIdleFocusPendingLight` unions short pending bands with its focus
+vertical band, which can explain this widening; however the accepted-enqueue
+log lacks producer provenance. Next confirm whether that function submitted
+job 501 before narrowing its band policy, then retain the target in the
+established pixel trace across that update. This does not require changing the
+M335 route start or speed.
