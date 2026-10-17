@@ -2521,3 +2521,25 @@ dependencies before changing it. The captured target pixels were all
 draw-ready and revision-matched; there was no same-view transition or operator
 verdict. See the M622BK audit entry and saved artifacts listed in
 `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622BL: skip only a queued owner that covers the whole idle-focus request
+
+`DrainIdleFocusPendingLight` queries `GetTerrainColumnRelightQueueInfo` before
+re-enqueue. It skips only if all of these hold: the key is present, the key is
+in a physical deque, the owner is priority, the Y band is defined, and that
+band covers the new candidate's complete range. A far-deferred owner, a
+key-without-deque ghost, a non-priority queued request, or a narrower Y band
+still reaches the existing enqueue path. Skips do not increment the
+`max_columns` drain count. With `CUBATARIUM_RELIGHT_AUDIT=1`, grep
+`event=idle_focus_skip_covered` to verify the decision and its queued/requested
+bands. M622BL logged 553 such decisions.
+
+This is independent of the breadth of the request. M622BK/M622BL traced a
+narrow `16:31` pending-light note to a water-aware `0:80` capture. Preserve that
+band while deriving the solver's required input: snapshot capture includes the
+requested chunk interval and face shells, and skylight scans up to 15 chunks
+above the processed chunk. The historical water-aware range includes sea
+level minus four chunks through sea level plus two chunks. A narrow request may
+therefore omit occluders or water-adjacent contributors. See M622BL in the
+remediation plan for the next static review and the flight script index for
+artifacts.

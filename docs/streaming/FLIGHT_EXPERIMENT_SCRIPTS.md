@@ -12334,3 +12334,57 @@ that attribution. Next statically validate the water-aware full-height band
 against the solver's vertical dependency requirements and check whether
 repeated already-covered coalesces consume the idle drain's column budget.
 Keep the M335 route and speed unchanged for any later validation.
+
+### M622BL: validate covered-owner idle-drain deduplication
+
+M622BL uses the same warm `World_164`, visible, no-teleport M335 parameters as
+M622BK; only the phase and report path differ. Build only the Release target:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+```
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BL `
+    -Report bin/suite_reports/engine_refactor/m622bl_idle_focus_queue_dedup_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+The new `idle_focus_skip_covered` event is emitted when the candidate's full
+Y range already has a keyed, in-deque priority owner. M622BL logged 553 such
+skips and 114 enqueue calls from `DrainIdleFocusPendingLight` (95 coalesced,
+19 inserted). For the watched `(3,3,6)` chunk, the pixel analyzer found 29
+associations with 19 drawable, ready depth samples; all matched geometry and
+light revisions, with no preview/stale-remesh samples or repeated same-view
+group. Global analysis found 2,840 probes and 71 low-luma samples, all on
+drawable opaque surfaces; five had unsettled/preview light and none had a
+light-revision mismatch.
+
+The route completed 29 periods/27 steady with process exit zero and no timeout,
+but remained diagnostic-only: readiness debt 1.0, visual-hole proxy 0.148,
+post-stop readiness debt 31, and direct post-stop mesh-missing, visual-hole,
+visible-black-no-ticket, and stalled-visible-black counts zero. Host CPU was
+76.0/97.2% median/p95 and remains context only. No operator framebuffer
+verdict was recorded. Reports: `m622bl_idle_focus_queue_dedup_20261017.json`,
+`m622bl_renderer_pixel_trace_20261017.json`, and
+`m622bl_renderer_pixel_trace_watch_3_3_6_20261017.json`. Perf log:
+`perf_20261017-111215_20952.jsonl`; INFO log:
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-111211.20952`.

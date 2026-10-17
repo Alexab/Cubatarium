@@ -6002,3 +6002,52 @@ consumes the idle-drain budget or starves other pending columns. Change band
 scope only if that analysis preserves light propagation and water correctness.
 Artifacts and exact replay/analysis commands are in
 `FLIGHT_EXPERIMENT_SCRIPTS.md` and `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`.
+
+### M622BL: do not spend idle-drain budget on already-covered queue owners
+
+M622BL adds a narrow guard to `DrainIdleFocusPendingLight`: it skips a
+candidate only when the same column has a keyed, in-deque priority owner whose
+queued Y band already covers the complete focus/pending union. A narrower
+owner still goes through enqueue to widen its band; a far/deferred owner is
+not skipped, so its normal admission/retry path remains intact. The skip does
+not count against `max_columns`, leaving that budget for another pending
+column. An opt-in `idle_focus_skip_covered` record makes the decision visible.
+
+The Release build succeeded. The established visible no-teleport M335 route
+completed 29 periods/27 steady, process exit zero, no timeout. M622BL emitted
+553 covered-owner skips; 114 queue requests still came from
+`DrainIdleFocusPendingLight` (95 coalesces and 19 inserts). This confirms that
+the guard is active while preserving requests that need an owner or band
+change. These totals are from one run and are not a controlled throughput
+comparison. For column `(4,6)`, one drain request led to full-band snapshot job
+172; the separate target `(3,3,6)` again logged stale-light debt episodes and
+matching-revision publications. This change does not narrow the relight band
+or claim to eliminate neighbor invalidations.
+
+The watched `(3,3,6)` trace contained 29 associations, including 19
+framebuffer depth joins. All 19 were drawable, draw-ready, settled, and had
+matching geometry/light revisions; none had preview or stale-remesh state.
+There was no same-view repeat or operator verdict. The full pixel trace found
+71 low-luma probes, all on drawable opaque surfaces; five showed unsettled or
+preview state and none showed a light-revision mismatch. Aggregate readiness
+debt remained 1.0 and the visual-hole proxy was 0.148; at stop, direct
+mesh-missing, visual-hole, visible-black-no-ticket, and stalled-visible-black
+counts were zero. The aggregate suite remained `pass=false`. Host CPU
+median/p95 76.0/97.2% is context only. These proxies do not establish a
+user-visible rendering defect.
+
+Static history/source review constrains the next band change. Commit
+`ee54b86d` introduced the water-aware range as focus slices union sea level
+minus four chunks through sea level plus two chunks. The relight snapshot
+captures the requested vertical chunk interval and only face shells outside
+it; its skylight solver scans up to 15 chunks above each processed slice.
+Narrowing a pending `16:31` note to that slice alone would omit upper occluder
+chunks from the captured read set and can treat missing snapshot blocks as
+air. Retain the conservative band until a dependency-correct lower/upper bound
+is derived; the skip optimization is safe independently of that policy.
+
+Artifacts and exact commands are in `FLIGHT_EXPERIMENT_SCRIPTS.md`. The next
+static step is to derive the required vertical read/propagation interval for a
+pending slice, including water and horizontal frontier effects, then decide
+whether the lower part of `0:80` can be excluded without changing light
+results. Keep future validation on the established short M335 route.

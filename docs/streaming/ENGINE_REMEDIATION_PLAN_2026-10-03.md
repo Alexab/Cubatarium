@@ -12794,3 +12794,31 @@ Do not narrow the range or launch another flight for provenance: the existing
 M622BK log proves the caller. If static review finds a safe bounded change,
 make it as a separate code step, build Release, and validate with the same
 short route and a watched `(3,3,6)` pixel trace.
+
+### M622BL follow-up: preserve covered-owner fairness; derive safe light bounds
+
+M622BL implements and exercises the queue-budget fix. `DrainIdleFocusPendingLight`
+now recognizes an existing priority queue owner only when it is physically in
+the deque and its Y band fully covers the candidate's requested band. Such a
+repeat is skipped without consuming `max_columns`; uncovered or far/deferred
+work follows the existing enqueue/admission path. Release build passed and the
+short M335 route completed. The audit logged 553 skips and 114 actual enqueue
+requests from this producer (95 coalesced, 19 inserted), so both branches are
+present. The run is not a controlled performance comparison.
+
+Pixel trace for `(3,3,6)` found 19 target depth samples, all drawable,
+draw-ready, settled, and revision-matched; no same-view comparison or operator
+verdict exists. Aggregate readiness debt remained 1.0 and visual-hole proxy
+0.148, while direct post-stop mesh/visual/black counters were zero. Do not
+interpret the proxy mismatch as a confirmed visual defect.
+
+The current `0:80` band should not be narrowed to the `16:31` pending note.
+`ChunkRelightSnapshot` captures chunks in the requested interval plus face
+shells, while vertical skylight propagation scans as much as 15 chunks above a
+processed slice. The historical water-aware union also reaches four chunks
+below sea level. A slice-only capture could miss occluders/light contributors.
+Next derive the minimum correct vertical input interval from the solver and
+frontier propagation, separate that from the focus/water scheduling band, and
+only then consider reducing capture work. Preserve source-chunk and dependent
+pixel witnesses if a change is made. No additional flight is needed to prove
+the queue skip; use one short M335 run only after a concrete band-policy change.
