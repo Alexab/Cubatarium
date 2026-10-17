@@ -111,6 +111,34 @@ bool ColumnSurfaceBandNeedsRelight(const UWorld &world, glm::ivec2 ground_xz,
   return world.IsPendingLightBeforeMesh(ground_xz);
 }
 
+bool ColumnSurfaceBandHasUnsettledOrStaleDarkFace(const UWorld &world,
+                                                  glm::ivec2 ground_xz,
+                                                  int band_min, int band_max)
+{
+  // A zero-light face is not automatically stale (caves and shaded faces are
+  // common). Keep relight work while that slice is unsettled, or when the
+  // current light field proves the baked dark face stale.
+  const UWorldMeshService &mesh = world.GetMeshService();
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (!mesh.HasGreedyMesh(coord) ||
+        !mesh.GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      continue;
+    }
+    if (!world.HasCurrentChunkSliceLightSettlement(coord) ||
+        mesh.GetCache().ChunkHasStaleDarkFaces(
+            coord, world.GetBlockWorld()))
+    {
+      return true;
+    }
+  }
+  return world.IsPendingLightBeforeMesh(ground_xz);
+}
+
 constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
 
@@ -647,8 +675,8 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
             glm::ivec3(ground_xz.x, 0, ground_xz.y));
         const bool band_needs_relight =
             !pending_light && column_lit_ready &&
-            ColumnSurfaceBandNeedsRelight(*world_context, ground_xz,
-                                          no_op_min_y, no_op_max_y);
+            ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
+                *world_context, ground_xz, no_op_min_y, no_op_max_y);
         if (ShouldSkipNoOpTerrainRelightEnqueue(
                 pending_light, column_lit_ready, band_needs_relight))
         {
@@ -688,6 +716,9 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
         int audit_max_y = -1;
         bool band_needs_relight = false;
         std::string dark_face_cy;
+        std::string unsettled_dark_face_cy;
+        std::string stale_dark_face_checked_cy;
+        std::string stale_dark_face_witness;
         bool pending_column = false;
         bool lit_ready = false;
         if (world_context)
@@ -714,8 +745,9 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
             audit_min_y = std::min(audit_min_y, deferred_min_y);
             audit_max_y = std::max(audit_max_y, deferred_max_y);
           }
-          band_needs_relight = ColumnSurfaceBandNeedsRelight(
-              *world_context, ground_xz, audit_min_y, audit_max_y);
+          band_needs_relight =
+              ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
+                  *world_context, ground_xz, audit_min_y, audit_max_y);
           const int min_cy = FloorDiv(audit_min_y, CHUNK_SIZE);
           const int max_cy = FloorDiv(audit_max_y, CHUNK_SIZE);
           const UChunkManager &chunks =
@@ -744,6 +776,36 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
                 dark_face_cy += ",";
               }
               dark_face_cy += std::to_string(cy);
+              if (!world_context->HasCurrentChunkSliceLightSettlement(coord))
+              {
+                if (!unsettled_dark_face_cy.empty())
+                {
+                  unsettled_dark_face_cy += ",";
+                }
+                unsettled_dark_face_cy += std::to_string(cy);
+              }
+              else
+              {
+                if (!stale_dark_face_checked_cy.empty())
+                {
+                  stale_dark_face_checked_cy += ",";
+                }
+                stale_dark_face_checked_cy += std::to_string(cy);
+                UChunkMeshCache::StaleDarkWitness witness{};
+                if (mesh.GetCache().ChunkHasStaleDarkFaces(
+                        coord, world_context->GetBlockWorld(), &witness))
+                {
+                  if (!stale_dark_face_witness.empty())
+                  {
+                    stale_dark_face_witness += ",";
+                  }
+                  stale_dark_face_witness +=
+                      std::to_string(cy) + "@" +
+                      std::to_string(witness.sampled_block.x) + "," +
+                      std::to_string(witness.sampled_block.y) + "," +
+                      std::to_string(witness.sampled_block.z);
+                }
+              }
             }
           }
         }
@@ -772,7 +834,19 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
                 " audit_band=" + std::to_string(audit_min_y) + ":" +
                 std::to_string(audit_max_y) + " band_needs=" +
                 std::to_string(band_needs_relight) + " dark_face_cy=" +
-                (dark_face_cy.empty() ? std::string("none") : dark_face_cy));
+                (dark_face_cy.empty() ? std::string("none") : dark_face_cy) +
+                " unsettled_dark_face_cy=" +
+                (unsettled_dark_face_cy.empty()
+                     ? std::string("none")
+                     : unsettled_dark_face_cy) +
+                " stale_dark_face_checked_cy=" +
+                (stale_dark_face_checked_cy.empty()
+                     ? std::string("none")
+                     : stale_dark_face_checked_cy) +
+                " stale_dark_face=" +
+                (stale_dark_face_witness.empty()
+                     ? std::string("none")
+                     : stale_dark_face_witness));
       }
       // A FIFO admission denial is backpressure, not completion. Keep the
       // exact column/band as durable work so PendingLight cannot outlive every
@@ -1220,10 +1294,15 @@ bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_
       max_y >= 0 ? max_y : world.ProceduralTemplate.MaxHeight;
   const int band_min = std::max(0, min_y);
   const int band_max = std::max(band_min, max_y_eff);
+  const bool pending_light = world.IsPendingLightBeforeMesh(ground_xz);
+  const bool column_lit_ready = world.IsColumnLitReady(
+      glm::ivec3(ground_xz.x, 0, ground_xz.y));
+  const bool band_needs_relight =
+      !pending_light && column_lit_ready &&
+      ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
+          world, ground_xz, band_min, band_max);
   if (ShouldSkipNoOpTerrainRelightEnqueue(
-          world.IsPendingLightBeforeMesh(ground_xz),
-          world.IsColumnLitReady(glm::ivec3(ground_xz.x, 0, ground_xz.y)),
-          ColumnSurfaceBandNeedsRelight(world, ground_xz, band_min, band_max)))
+          pending_light, column_lit_ready, band_needs_relight))
   {
     ++world.GetPhysicsTelemetryMutable().RelightSkippedNoOpEnqueueN;
     return false;
@@ -1448,7 +1527,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     const bool column_lit_ready = world.IsColumnLitReady(ground);
     const bool band_needs_relight =
         !pending_light && column_lit_ready &&
-        ColumnSurfaceBandNeedsRelight(world, ground_xz, band_min, band_max);
+        ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
+            world, ground_xz, band_min, band_max);
     if (ShouldSkipNoOpTerrainRelightEnqueue(pending_light, column_lit_ready,
                                             band_needs_relight))
     {

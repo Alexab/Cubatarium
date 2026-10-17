@@ -12075,3 +12075,65 @@ relight/mesh/GPU completion. Pixel analysis found 37 low-luma samples, all on
 drawable opaque depth surfaces, and no sampled unloaded-chunk-before-hit ray.
 The aggregate gate remained false on readiness and proxy metrics. See the
 M622BE runbook section before interpreting these queue and image samples.
+
+### M622BF/BG: stale-dark classification and no-op guard
+
+Both runs reuse the M622BE start, no-teleport movement, visible GUI, and
+30 s/20 s/8 s/8 s phases. M622BF adds a stale-face witness to each denied
+relight record. M622BG uses the same trace after narrowing no-op admission to
+unsettled or demonstrably stale dark faces. Both were built as Release with
+`tools/build_release.ps1 -Jobs 8`. Since each used the rebuilt working tree
+before commit, set `CUBA_ALLOW_DIRTY_AF=1`; always restore both it and
+`CUBATARIUM_RELIGHT_AUDIT` in `finally`.
+
+Change the report path and phase id for the two runs:
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BG `
+    -Report bin/suite_reports/engine_refactor/m622bg_settled_dark_noop_guard_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+M622BF report: `m622bf_stale_dark_face_witness_20261017.json`;
+perf/INFO are `perf_20261017-101926_43832.jsonl` and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-101922.43832`.
+M622BG completed with `process_rc=0` and no timeout. It recorded 166 FIFO
+denials, seven immediate no-op skips, and 13 deferred work entries later
+cleared as already satisfied. No remaining denial combined settled light,
+zero pending slices, and a dark-face witness. Its report/pixel trace are
+`m622bg_settled_dark_noop_guard_20261017.json` and
+`m622bg_renderer_pixel_trace_20261017.json`; perf/INFO are
+`perf_20261017-102307_36176.jsonl` and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-102304.36176`.
+The analyzer command is the same as M622BE with the M622BG report and output
+paths. The gate remains diagnostic-only; see the runbook for proxy and pixel
+coverage limits. A follow-up build adds `unsettled_dark_face_cy` and
+`stale_dark_face_checked_cy` to denied-relight audit rows and skips stale-face
+inspection until slice settlement. The saved M622BF/BG runs predate that field
+split; rerun the short route with a new phase/report id when collecting those
+separated counts. M622BH did this with the same parameters and report
+`m622bh_settled_dark_noop_audit_20261017.json`; set `-PhaseId M622BH` and use
+that report path in the command above. It completed 29 periods/27 steady, but
+all ten denied-relight rows had no cached dark face, so neither classifier
+branch was exercised. Five immediate no-op skips and nine deferred
+already-satisfied clears were recorded. Aggregate gates remained false and no
+operator framebuffer verdict was captured; see the runbook for exact metrics
+and interpretation.

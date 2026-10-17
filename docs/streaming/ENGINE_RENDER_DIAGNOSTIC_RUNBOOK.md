@@ -2247,3 +2247,95 @@ Artifacts: report/pixel trace `m622be_relight_denial_slices_20261017.json`,
 `m622be_renderer_pixel_trace_20261017.json`; perf
 `perf_20261017-100942_45864.jsonl`; INFO log
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-100937.45864`.
+
+### M622BF/BG: stale-dark witness and no-op admission
+
+M622BF added `stale_dark_face` witnesses to denied-relight audit events using
+`ChunkHasStaleDarkFaces`, which compares a baked zero-light face with current
+world light. Its Release route completed normally (`process_rc=0`, no timeout)
+with 100 FIFO denials and no stale-dark witness. Seventy-three denials still
+had dark cached faces; most were unsettled or pending. Four had all four
+loaded slices settled and no pending slice, but no stale witness. This run
+shows why `lit_ready` alone is not a settlement proof and why any dark face is
+too broad for a no-op decision. The original witness probe also ran on
+unsettled slices, so a missing witness there is inconclusive; only the four
+fully settled rows can be interpreted as an up-to-date-light check.
+
+M622BG narrows only no-op admission decisions: a cached dark face keeps relight
+work while its slice is unsettled or when `ChunkHasStaleDarkFaces` proves the
+baked face stale. A settled dark face with no stale witness may now be skipped
+when the column has no pending-light owner. The conservative surface-band
+fallback/closeout checks remain unchanged. Release build succeeded, and the
+same 30 s visible no-teleport M335 route completed normally. It logged 166 FIFO
+denials, seven immediate no-op skips, and 13 deferred-far skips as already
+satisfied. All 165 denials with `band_needs=1` were pending/unsettled or dark
+and unsettled; none had a stale witness. No denial had a fully-settled dark
+slice with zero pending slices. The one `band_needs=0` denial had
+`lit_ready=0` and three loaded-but-unsettled slices, so it correctly remained
+eligible for relight.
+
+The M622BG pixel trace sampled 2,760 probes and 72 low-luma pixels. All 72
+joined drawable, draw-ready opaque surfaces; five had unsettled/preview state
+and none had a light-revision mismatch. Ray states were 1=1,373 opaque hits and
+3=1,387 no opaque hit before the renderer horizon; there were no state-2
+unloaded-chunk-before-hit samples. The aggregate gate still failed on readiness
+and proxy metrics: `visual_holes_rate=0.074`, readiness-debt rate 1.0,
+post-stop debt 29, fly visible-black max 18, and post-stop stalled-black max
+0. M622BF/BG are adjacent diagnostics, not a controlled performance or visual
+comparison; host CPU is context only. These results support the no-op guard's
+classification but do not prove an operator-visible improvement.
+
+Follow-up audit instrumentation now emits `unsettled_dark_face_cy` and
+`stale_dark_face_checked_cy`; stale-face inspection is skipped until the
+slice has current light settlement. The M622BF/BG artifact files predate this
+field split, so use a later audit run to obtain separately attributable counts.
+
+Next inspect one unsettled/stale target through capture completion,
+`MarkRelit`, dirty-mesh scheduling, mesh publication, and GPU-ready state. Keep
+the focus on same-view pixel evidence; do not tune FIFO/deadline policy based
+only on denial counts.
+
+Artifacts: M622BF report/perf/INFO
+`m622bf_stale_dark_face_witness_20261017.json`,
+`perf_20261017-101926_43832.jsonl`,
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-101922.43832`; M622BG
+report/pixel trace `m622bg_settled_dark_noop_guard_20261017.json`,
+`m622bg_renderer_pixel_trace_20261017.json`; perf
+`perf_20261017-102307_36176.jsonl`; INFO log
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-102304.36176`.
+
+### M622BH: exercise settlement-aware audit on the established route
+
+The Release build passed after splitting unsettled dark faces from stale-face
+checks. The short visible M335 no-teleport replay on warm `World_164` completed
+normally (29 periods, 27 steady, no timeout). Replay integrity confirmed all
+121/121 spatial columns were loaded from the saved world with no terrain
+generation. The route met input adequacy, but the intended high symptom level
+was not reproduced; keep this as diagnostic evidence, not a fix acceptance
+run.
+
+The new fields executed, but all ten FIFO-denial rows had
+`dark_face_cy=none`, `unsettled_dark_face_cy=none`, and
+`stale_dark_face_checked_cy=none`. Thus this flight did not exercise either
+branch of the stale-dark classifier. It recorded five immediate no-op skips
+and nine deferred entries later cleared as already satisfied. Do not infer
+that dark-face repair is correct from this sample.
+
+The analyzer still failed aggregate acceptance: readiness-debt rate 1.0,
+near-focus visual-hole proxy 0.111 (threshold 0.10), and fly wall median
+39.66 ms (25.22 effective FPS). At stop, the readiness-debt max was 29 and
+focus-visual missing-mesh max/end was 26/26, while direct near-focus
+`post_stop_mesh_missing_max=0`, `post_stop_visual_holes_max=0`,
+black-sticky max=0, and stalled-visible-black max=0. These counters sample
+different scopes and do not establish an operator-visible hole; no operator
+frame verdict was recorded. Host CPU was 91.5/100% median/p95 and app CPU
+26.3/34.9%; retain these as context only, with no host-load admission gate.
+
+Next use a short route only when it reaches a cached fully-dark face. Correlate
+the same slice's settlement, stale witness, queue ownership, relight apply,
+mesh publication, and GPU readiness; retain same-view pixel evidence. The
+current run did not provide a target slice or proof of a rendering defect.
+
+Artifacts: report `m622bh_settled_dark_noop_audit_20261017.json`; perf
+`perf_20261017-102903_41892.jsonl`; INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-102859.41892`.

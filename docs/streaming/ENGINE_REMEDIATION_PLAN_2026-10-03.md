@@ -12649,5 +12649,43 @@ dirty-mesh admission, mesh publication, and GPU-ready state. Keep queue policy
 unchanged until that chain stalls or a same-view pixel transition reproduces a
 visible defect.
 
+### M622BF/BG: distinguish legal darkness from stale baked light
+
+M622BF logged the result of `ChunkHasStaleDarkFaces` beside each denied
+relight. None of 100 denials produced a stale witness. Most dark-face denials
+still involved unsettled or pending slices, and four were fully settled with
+no pending slice; this shows that the column-level `lit_ready` bit does not
+prove each resident slice is settled. The original witness probe ran even on
+unsettled slices, so only the four settled rows support a valid stale-light
+conclusion; absence of a witness on unsettled slices is inconclusive.
+
+M622BG changes only no-op relight admission. A dark face now retains the
+request while its light slice is unsettled or its baked zero conflicts with
+current light; a settled non-stale dark face may be skipped when no pending
+light owner exists. The old conservative surface-band fallback remains in
+place. The short Release M335 route recorded seven immediate and 13 deferred
+already-satisfied skips. Its aggregate gates remained false (readiness-debt
+rate 1.0, visual-holes proxy 0.074, post-stop readiness debt 29), but no
+sampled unloaded-chunk hit or light-revision mismatch appeared. Adjacent runs
+are not controlled comparisons. Do not claim a visual/performance fix from
+these counts; the next validation must correlate a specific unsettled/stale
+slice through light completion and GPU-ready publication at the same view.
+The follow-up audit now reports unsettled dark slices separately and invokes
+the stale-dark witness only after current slice settlement; the M622BF/BG logs
+pre-date that distinction and must not be used to claim a settled-light count.
+
+M622BH Release build and short warm-`World_164` M335 route completed. The route
+was input-adequate, but it did not reproduce a cached fully-dark face: all ten
+FIFO-denial records had `dark_face_cy=none`, so neither the unsettled nor stale
+classifier branch was exercised. Five immediate and nine deferred no-op
+relight skips were observed. Aggregate acceptance remained false (readiness
+debt 1.0, visual-hole proxy 0.111, fly wall median 39.66 ms); post-stop direct
+mesh-missing, visual-hole, black-sticky, and stalled-visible-black counts were
+zero. Focus-visual missing-mesh debt remained 26, which is a different scope
+and is not direct framebuffer evidence. No operator frame verdict was
+recorded. Treat this run as diagnostic only. The next useful run must hit a
+dark cached face and trace that exact slice through settlement, relight,
+remesh publication, and GPU-ready state at the same view.
+
 See M622BC/BD in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for measurements and
 artifact names, and `FLIGHT_EXPERIMENT_SCRIPTS.md` for the reproducible route.
