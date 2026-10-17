@@ -411,9 +411,9 @@ void UWorldMeshService::RequeueDirtyPriority(
 
 void UWorldMeshService::QueueMeshDependencyInvalidations(
     const UBlockWorld &world,
-    const std::vector<glm::ivec3> &changed_input_chunks)
+    const std::vector<glm::ivec3> &changed_input_chunks, const char *cause)
 {
-  Cache.QueueMeshDependencyInvalidations(world, changed_input_chunks);
+  Cache.QueueMeshDependencyInvalidations(world, changed_input_chunks, cause);
 }
 
 void UWorldMeshService::QueueMeshDependencyInvalidation(
@@ -422,9 +422,15 @@ void UWorldMeshService::QueueMeshDependencyInvalidation(
   Cache.QueueMeshDependencyInvalidation(dependent_chunk);
 }
 
+void UWorldMeshService::QueueMeshDependencyInvalidation(
+    glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason)
+{
+  Cache.QueueMeshDependencyInvalidation(dependent_chunk, reason);
+}
+
 void UWorldMeshService::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
 {
-  Cache.QueueStaleLightRemesh(chunk_coord);
+  Cache.QueueStaleLightRemesh(chunk_coord, "settled_light_install");
 }
 
 void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,
@@ -753,10 +759,13 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
 
 bool UWorldMeshService::HasMissingGreedyMeshInHorizontalRadius(
     const UBlockWorld &world, glm::ivec3 center_ground_chunk,
-    int radius_chunks) const
+    int radius_chunks, glm::ivec3 *missing_coord_out,
+    bool *memo_hit_out) const
 {
   return Cache.HasMissingGreedyMeshInHorizontalRadius(world, center_ground_chunk,
-                                                      radius_chunks);
+                                                      radius_chunks,
+                                                      missing_coord_out,
+                                                      memo_hit_out);
 }
 
 bool UWorldMeshService::FindNearestMissingGreedyMesh(

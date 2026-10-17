@@ -120,8 +120,11 @@ public:
                             MeshRevisionBumpReason reason);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
-      const std::vector<glm::ivec3> &changed_input_chunks);
+      const std::vector<glm::ivec3> &changed_input_chunks,
+      const char *cause = nullptr);
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
+  void QueueMeshDependencyInvalidation(
+      glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason);
   void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
   int GetLastMeshDependencyQueuedN() const
   {
@@ -375,7 +378,9 @@ public:
   uint64_t GetInflightSourceRevision(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
-                                              int radius_chunks) const;
+                                              int radius_chunks,
+                                              glm::ivec3 *missing_coord_out = nullptr,
+                                              bool *memo_hit_out = nullptr) const;
   bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,

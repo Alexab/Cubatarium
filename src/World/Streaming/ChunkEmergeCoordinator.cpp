@@ -2395,11 +2395,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             mesh_service.IsPendingGpuKickedOrDispatched(coord);
         const bool already_dirty = mesh_service.IsChunkMeshDirty(coord);
         const bool sticky_owned = SoftDeferEmptyOwned.count(coord) > 0;
+        // A current published mesh waiting only for peer-face coverage is not
+        // an empty placeholder that FirstMesh can repair. Peer changes are
+        // observed by RepairFaceDebt; do not repeatedly create generic owners
+        // for an unchanged target revision.
+        const bool stable_face_debt =
+            allow_own && world.HasStablePublishedFaceDebt(coord);
         // CheapRemesh C4: FirstMesh enqueue XOR MarkDirty — not both same frame.
         const bool will_enqueue_fm =
-            allow_own && !has_fm && empty_fm_enqueue_n < kEmptyOwnershipCap;
+            allow_own && !stable_face_debt && !has_fm &&
+            empty_fm_enqueue_n < kEmptyOwnershipCap;
         // Do not re-MarkDirtyPriority every scan on sticky Owned / already Dirty.
-        if (allow_own && !sticky_owned && !already_dirty && !will_enqueue_fm &&
+        if (allow_own && !stable_face_debt && !sticky_owned && !already_dirty &&
+            !will_enqueue_fm &&
             !BlockParallelMarkDirtyForColumnFlow(
                 GetColumnFlowExecutor().GetColumnJobStage(col),
                 will_enqueue_fm || has_fm) &&
@@ -2420,7 +2428,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           item.cy = coord.y;
           exec.Enqueue(item);
         }
-        if (allow_own)
+        if (allow_own && !stable_face_debt)
         {
           SoftDeferEmptyOwned.insert(coord);
           bool fully_dark_or_void =
@@ -2654,6 +2662,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           continue;
         }
+        if (world.HasStablePublishedFaceDebt(owned))
+        {
+          continue;
+        }
         mesh_service.MarkDirtyPriority(
             owned, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
         SoftDeferUnderfeetMarkEpoch[owned] = epoch;
@@ -2683,6 +2695,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int soft_age_max = phys_telem.SoftDeferEmptyAgeMaxFrames;
   auto try_stuck_escape_fm = [&](const glm::ivec3 &stuck, int priority) -> bool
   {
+    if (world.HasStablePublishedFaceDebt(stuck))
+    {
+      return false;
+    }
     if (stuck_escape_fm_budget <= 0)
     {
       return false;
@@ -3062,6 +3078,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int dropped = world.TrimFarRelightFifoFarthest(
           focus_ground_horiz, mtune.RelightFifoSoftCap);
       phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, dropped));
+      phys.RelightFifoTrimDeferredTotal +=
+          static_cast<uint64_t>(std::max(0, dropped));
       phys.RelightTrimFarN += std::max(0, dropped);
       phys.RelightFifoDropN += std::max(0, dropped);
       // P4: under Red+holes+fifo pressure, trim again toward soft-cap aggressively.
@@ -3086,6 +3104,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int drop2 = world.TrimFarRelightFifoFarthest(
             focus_ground_horiz, std::max(8, mtune.RelightFifoSoftCap * 3 / 4));
         phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, drop2));
+        phys.RelightFifoTrimDeferredTotal +=
+            static_cast<uint64_t>(std::max(0, drop2));
         phys.RelightTrimFarN += std::max(0, drop2);
         phys.RelightFifoDropN += std::max(0, drop2);
       }
@@ -4538,7 +4558,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         mesh_service.PreferKickPendingGpuQueued(hole);
       }
       else if (!mesh_service.HasDrawableGreedyMesh(hole) &&
-               !mesh_service.HasInflightMeshBuild(hole))
+               !mesh_service.HasInflightMeshBuild(hole) &&
+               !world.HasStablePublishedFaceDebt(hole))
       {
         mesh_service.MarkDirtyPriority(
             hole, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
@@ -4676,6 +4697,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               }
             }
             if (!any_solid)
+            {
+              continue;
+            }
+            if (world.HasStablePublishedFaceDebt(coord))
             {
               continue;
             }
@@ -5175,7 +5200,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           epoch == s_last_carve_epoch;
       if (same_hole_thrash || mesh_service.HasInflightMeshBuild(hole) ||
           mesh_service.IsPendingGpuApply(hole) ||
-          mesh_service.HasMeshSatisfyingColumnReady(hole))
+          mesh_service.HasMeshSatisfyingColumnReady(hole) ||
+          world.HasStablePublishedFaceDebt(hole))
       {
         return false;
       }
@@ -6001,7 +6027,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                     missing_visible_mesh, nh,
                     world.IsPendingLightBeforeMesh(miss_xz_pre)) &&
                 miss_resident && !miss_already_owned_pre &&
-                !miss_pending_gpu_pre)
+                !miss_pending_gpu_pre &&
+                !world.HasStablePublishedFaceDebt(isolated_hole))
             {
               mesh_service.MarkDirtyPriority(
                   isolated_hole,
@@ -6046,6 +6073,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   exec.Scheduler().Contains(miss_xz_sla,
                                             ColumnWorkKind::FirstMesh),
                   MissWitnessRemeshLatched) &&
+              !world.HasStablePublishedFaceDebt(isolated_hole) &&
               miss_resident)
           {
             MissWitnessRemeshLatched = true;
@@ -7342,7 +7370,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 mesh_service.IsPendingGpuApply(isolated_hole), already_dirty,
                 fm_ticket, MissWitnessAgeFrames,
                 MissWitnessRemeshAgeSla(moving, world.GetPhysicsTelemetry().MissHoriz),
-                MissStuckRunFrames))
+                MissStuckRunFrames) &&
+            !world.HasStablePublishedFaceDebt(isolated_hole))
         {
           mesh_service.MarkDirtyPriority(
               isolated_hole,
@@ -7476,6 +7505,38 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Phase 5.3.0: latch empty backlog / abort drip + DetectEmptyBatchEvent.
   {
     auto &pt = world.GetPhysicsTelemetryMutable();
+    pt.FocusMissFlowTicketKind = -1;
+    pt.FocusMissFlowTicketPriority = 0;
+    pt.FocusMissColumnJobStage = -1;
+    pt.FocusMissMeshDirty = 0;
+    pt.FocusMissBuildInFlight = 0;
+    pt.FocusMissPendingGpuApply = 0;
+    pt.FocusMissDrawableMesh = 0;
+    pt.FocusMissSatisfyingMesh = 0;
+    if (pt.FocusMissingMesh > 0)
+    {
+      const glm::ivec3 miss_chunk(pt.MissCx, pt.MissCy, pt.MissCz);
+      const glm::ivec2 miss_column(pt.MissCx, pt.MissCz);
+      auto &column_flow = GetColumnFlowExecutor();
+      ColumnWorkItem ticket{};
+      if (column_flow.Scheduler().GetLiveTicket(miss_column, ticket))
+      {
+        pt.FocusMissFlowTicketKind = static_cast<int>(ticket.kind);
+        pt.FocusMissFlowTicketPriority = ticket.priority;
+      }
+      pt.FocusMissColumnJobStage = static_cast<int>(
+          column_flow.GetColumnJobStage(miss_column));
+      pt.FocusMissMeshDirty =
+          mesh_service.IsChunkMeshDirty(miss_chunk) ? 1 : 0;
+      pt.FocusMissBuildInFlight =
+          mesh_service.HasInflightMeshBuild(miss_chunk) ? 1 : 0;
+      pt.FocusMissPendingGpuApply =
+          mesh_service.IsPendingGpuApply(miss_chunk) ? 1 : 0;
+      pt.FocusMissDrawableMesh =
+          mesh_service.HasDrawableGreedyMesh(miss_chunk) ? 1 : 0;
+      pt.FocusMissSatisfyingMesh =
+          mesh_service.HasMeshSatisfyingColumnReady(miss_chunk) ? 1 : 0;
+    }
     pt.EmptyBacklogN = EmptyBacklogN(pt);
     pt.PhaseAbortHeavy = phase_abort_heavy ? 1 : 0;
     pt.AbortScheduleFinal = mesh_schedule;

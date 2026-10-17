@@ -100,6 +100,8 @@ public:
                 bool scan_full_focus) const;
   /// True if any kind is queued for this column (exclusive mutex).
   bool ContainsColumn(glm::ivec2 column) const;
+  /// Copy the authoritative live ticket for diagnostics without draining it.
+  bool GetLiveTicket(glm::ivec2 column, ColumnWorkItem &out) const;
 
   template <typename Fn>
   void ForEachOccupiedColumn(Fn &&fn) const

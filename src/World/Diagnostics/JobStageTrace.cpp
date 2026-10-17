@@ -1,4 +1,5 @@
 #include "World/Diagnostics/JobStageTrace.h"
+#include "World/Streaming/VisibleBlackAttribution.h"
 
 #include <array>
 #include <atomic>
@@ -6,7 +7,9 @@
 #include <cstdlib>
 #include <deque>
 #include <mutex>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace cutum
@@ -16,6 +19,9 @@ namespace
 
 std::atomic<uint64_t> LatestCameraBandPeakFrameEpoch{0};
 std::atomic<uint64_t> LatestScreenRayTraceFrameEpoch{0};
+std::atomic<uint64_t> LatestVisualHoleEventFrameEpoch{0};
+std::atomic<uint64_t> LatestStalledVisualBlackFrameEpoch{0};
+std::atomic<uint64_t> LatestStreamingFrameEpoch{0};
 
 struct Ring
 {
@@ -70,16 +76,73 @@ VisualChunkWatches &GetVisualChunkWatches()
   return watches;
 }
 
+struct OpenSkyLifecycleWatches
+{
+  // Retain the first startup targets in this session even after the regular
+  // visible-chunk watch set rolls forward during a long flight.
+  static constexpr size_t kCapacity = 4096;
+  std::unordered_set<VisualChunkKey, VisualChunkKeyHash> chunks;
+  std::mutex mu;
+};
+
+OpenSkyLifecycleWatches &GetOpenSkyLifecycleWatches()
+{
+  static OpenSkyLifecycleWatches watches;
+  return watches;
+}
+
+bool IsOpenSkyLifecycleChunkWatched(int32_t cx, int32_t cy, int32_t cz)
+{
+  auto &watches = GetOpenSkyLifecycleWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  return watches.chunks.count({cx, cy, cz}) != 0;
+}
+
+struct CameraBandPeakWatch
+{
+  uint64_t expires_after_frame{0};
+  uint8_t peak_kind{0};
+};
+
+struct CameraBandPeakWatches
+{
+  std::unordered_map<VisualChunkKey, CameraBandPeakWatch,
+                     VisualChunkKeyHash>
+      chunks;
+  std::mutex mu;
+};
+
+CameraBandPeakWatches &GetCameraBandPeakWatches()
+{
+  static CameraBandPeakWatches watches;
+  return watches;
+}
+
 bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz)
 {
   auto &watches = GetVisualChunkWatches();
-  std::lock_guard<std::mutex> lock(watches.mu);
-  return watches.chunks.count({cx, cy, cz}) != 0;
+  {
+    std::lock_guard<std::mutex> lock(watches.mu);
+    if (watches.chunks.count({cx, cy, cz}) != 0)
+    {
+      return true;
+    }
+  }
+  return IsOpenSkyLifecycleChunkWatched(cx, cy, cz);
 }
 
 struct WatchedJobRing
 {
   std::array<JobStageSpan, UJobStageTrace::kVisualLifecycleRingCapacity> slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+struct OpenSkyLifecycleRing
+{
+  std::array<JobStageSpan, UJobStageTrace::kOpenSkyLifecycleRingCapacity>
+      slots{};
   size_t write{0};
   size_t count{0};
   std::mutex mu;
@@ -104,6 +167,28 @@ DemandTransitionRing &GetDemandTransitionRing()
 WatchedJobRing &GetWatchedJobRing()
 {
   static WatchedJobRing r;
+  return r;
+}
+
+OpenSkyLifecycleRing &GetOpenSkyLifecycleRing()
+{
+  static OpenSkyLifecycleRing r;
+  return r;
+}
+
+struct OpenSkyDemandTransitionRing
+{
+  std::array<DemandTransitionSpan,
+             UJobStageTrace::kOpenSkyDemandTransitionRingCapacity>
+      slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+OpenSkyDemandTransitionRing &GetOpenSkyDemandTransitionRing()
+{
+  static OpenSkyDemandTransitionRing r;
   return r;
 }
 
@@ -142,6 +227,23 @@ VisualBlackTraceRing<UJobStageTrace::kVisualPixelTraceRingCapacity> &
 GetVisualPixelTraceRing()
 {
   static VisualBlackTraceRing<UJobStageTrace::kVisualPixelTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kGpuDrawStateTraceRingCapacity> &
+GetGpuDrawStateTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kGpuDrawStateTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<
+    UJobStageTrace::kFluidDrawWitnessTraceRingCapacity> &
+GetFluidDrawWitnessTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFluidDrawWitnessTraceRingCapacity> r;
   return r;
 }
 
@@ -246,6 +348,16 @@ GetFirstMeshFrontierTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<
+    UJobStageTrace::kCameraBandPeakScheduleTraceRingCapacity> &
+GetCameraBandPeakScheduleTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakScheduleTraceRingCapacity>
+      r;
+  return r;
+}
+
 template <size_t Capacity>
 void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
                      const VisualBlackTraceRecord &record)
@@ -302,10 +414,16 @@ void DispatchCameraBandPeakFrameRecord(const VisualBlackTraceRecord &record,
 
 void UJobStageTrace::Note(const JobStageSpan &span)
 {
+  JobStageSpan stamped_span = span;
+  if (stamped_span.frame_epoch == 0)
+  {
+    stamped_span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+  }
   auto &r = GetRing();
   {
     std::lock_guard<std::mutex> lock(r.mu);
-    r.slots[r.write % kRingCapacity] = span;
+    r.slots[r.write % kRingCapacity] = stamped_span;
     ++r.write;
     if (r.count < kRingCapacity)
     {
@@ -313,18 +431,35 @@ void UJobStageTrace::Note(const JobStageSpan &span)
     }
   }
   if (!VisualBlackTraceEnabled() ||
-      !IsVisualChunkWatched(span.cx, span.cy, span.cz))
+      !IsVisualChunkWatched(stamped_span.cx, stamped_span.cy,
+                            stamped_span.cz))
   {
     return;
   }
 
-  auto &watched = GetWatchedJobRing();
-  std::lock_guard<std::mutex> lock(watched.mu);
-  watched.slots[watched.write % kVisualLifecycleRingCapacity] = span;
-  ++watched.write;
-  if (watched.count < kVisualLifecycleRingCapacity)
   {
-    ++watched.count;
+    auto &watched = GetWatchedJobRing();
+    std::lock_guard<std::mutex> lock(watched.mu);
+    watched.slots[watched.write % kVisualLifecycleRingCapacity] =
+        stamped_span;
+    ++watched.write;
+    if (watched.count < kVisualLifecycleRingCapacity)
+    {
+      ++watched.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(stamped_span.cx, stamped_span.cy,
+                                     stamped_span.cz))
+  {
+    auto &open_sky = GetOpenSkyLifecycleRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyLifecycleRingCapacity] =
+        stamped_span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyLifecycleRingCapacity)
+    {
+      ++open_sky.count;
+    }
   }
 }
 
@@ -364,6 +499,98 @@ void UJobStageTrace::WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz)
   {
     watches.chunks.erase(watches.order.front());
     watches.order.pop_front();
+  }
+}
+
+void UJobStageTrace::WatchOpenSkyLifecycleChunk(int32_t cx, int32_t cy,
+                                                int32_t cz)
+{
+  if (!VisualBlackTraceEnabled())
+  {
+    return;
+  }
+  WatchVisualChunk(cx, cy, cz);
+  auto &watches = GetOpenSkyLifecycleWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  if (watches.chunks.size() < OpenSkyLifecycleWatches::kCapacity)
+  {
+    watches.chunks.insert({cx, cy, cz});
+  }
+}
+
+void UJobStageTrace::WatchCameraBandPeakChunk(int32_t cx, int32_t cy,
+                                              int32_t cz,
+                                              uint64_t frame_epoch,
+                                              uint8_t peak_kind)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0)
+  {
+    return;
+  }
+  WatchVisualChunk(cx, cy, cz);
+  constexpr uint64_t kWatchWindowFrames = 64;
+  auto &watches = GetCameraBandPeakWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  CameraBandPeakWatch &watch = watches.chunks[{cx, cy, cz}];
+  watch.expires_after_frame =
+      std::max(watch.expires_after_frame, frame_epoch + kWatchWindowFrames);
+  watch.peak_kind = peak_kind;
+}
+
+bool UJobStageTrace::IsCameraBandPeakChunkWatched(
+    int32_t cx, int32_t cy, int32_t cz, uint64_t frame_epoch,
+    uint8_t *peak_kind)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0)
+  {
+    return false;
+  }
+  auto &watches = GetCameraBandPeakWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  const auto it = watches.chunks.find({cx, cy, cz});
+  if (it == watches.chunks.end())
+  {
+    return false;
+  }
+  if (frame_epoch > it->second.expires_after_frame)
+  {
+    watches.chunks.erase(it);
+    return false;
+  }
+  if (peak_kind)
+  {
+    *peak_kind = it->second.peak_kind;
+  }
+  return true;
+}
+
+void UJobStageTrace::ForEachCameraBandPeakChunkWatched(
+    uint64_t frame_epoch,
+    void (*fn)(int32_t, int32_t, int32_t, uint8_t, void *), void *ctx)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0 || !fn)
+  {
+    return;
+  }
+  std::vector<std::pair<VisualChunkKey, CameraBandPeakWatch>> active;
+  auto &watches = GetCameraBandPeakWatches();
+  {
+    std::lock_guard<std::mutex> lock(watches.mu);
+    for (auto it = watches.chunks.begin(); it != watches.chunks.end();)
+    {
+      if (frame_epoch > it->second.expires_after_frame)
+      {
+        it = watches.chunks.erase(it);
+        continue;
+      }
+      active.emplace_back(it->first, it->second);
+      ++it;
+    }
+  }
+  for (const auto &entry : active)
+  {
+    fn(entry.first.cx, entry.first.cy, entry.first.cz,
+       entry.second.peak_kind, ctx);
   }
 }
 
@@ -477,6 +704,28 @@ bool UJobStageTrace::HasScreenRayTraceForFrame(uint64_t frame_epoch)
              frame_epoch;
 }
 
+void UJobStageTrace::MarkVisualHoleEventForFrame(uint64_t frame_epoch)
+{
+  if (frame_epoch != 0)
+  {
+    LatestVisualHoleEventFrameEpoch.store(
+        frame_epoch, std::memory_order_release);
+  }
+}
+
+uint64_t UJobStageTrace::GetLatestVisualHoleEventFrameEpoch()
+{
+  return LatestVisualHoleEventFrameEpoch.load(std::memory_order_acquire);
+}
+
+bool UJobStageTrace::HasStalledVisualBlackTraceForFrame(
+    uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestStalledVisualBlackFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
 void UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
     uint64_t frame_epoch,
     void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
@@ -500,16 +749,50 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   // repair admission, repair scans, general mesh scheduling, and priority
   // remesh scheduling in separate rings so one workload cannot overwrite
   // another class of evidence.
+  if (record.sample_kind == 1 && record.focus_state == 1)
+  {
+    // These focus slices have neither a satisfying mesh nor a concrete work
+    // owner. Watch their subsequent lifecycle transitions so a bounded
+    // focus-state sample can be joined to any later demand cancellation,
+    // re-admission, mesh schedule, or worker/GPU handoff.
+    WatchVisualChunk(record.cx, record.cy, record.cz);
+  }
+  if (record.sample_kind == 9 &&
+      record.renderer_pixel_opaque_surface_valid != 0 &&
+      (record.renderer_pixel_opaque_preview_shader_override != 0 ||
+       record.renderer_pixel_opaque_vertex_light_preview > 0.0f))
+  {
+    // Pixel probe coordinates identify the opaque depth-hit chunk. The
+    // generic cx/cy/cz may instead identify the sea-plane intersection, so
+    // watch the explicit opaque coordinates for subsequent lifecycle events.
+    WatchVisualChunk(record.renderer_pixel_opaque_chunk_x,
+                     record.renderer_pixel_opaque_chunk_y,
+                     record.renderer_pixel_opaque_chunk_z);
+  }
   if ((record.sample_kind == 12 || record.sample_kind == 13) &&
       record.frame_epoch != 0)
   {
     LatestCameraBandPeakFrameEpoch.store(record.frame_epoch,
                                           std::memory_order_release);
+    WatchCameraBandPeakChunk(record.cx, record.cy, record.cz,
+                             record.frame_epoch, record.sample_kind);
   }
   if (record.sample_kind == 10 && record.frame_epoch != 0)
   {
     LatestScreenRayTraceFrameEpoch.store(record.frame_epoch,
                                          std::memory_order_release);
+  }
+  if (record.sample_kind == 0 && record.frame_epoch != 0 &&
+      record.cause == static_cast<uint8_t>(
+                          VisibleBlackCause::FullyDarkStalledTicket))
+  {
+    LatestStalledVisualBlackFrameEpoch.store(record.frame_epoch,
+                                             std::memory_order_release);
+    // Census samples are selected before the downstream renderer/scheduler
+    // traces are drained. Keep their exact slices watched so later demand and
+    // worker/GPU transitions can explain whether this was a persistent owner
+    // gap or a short handoff within the same rendered frame.
+    WatchVisualChunk(record.cx, record.cy, record.cz);
   }
   if (record.sample_kind == 0)
   {
@@ -565,6 +848,18 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetCameraBandPeakRenderProbeTraceRing(), record);
   }
+  else if (record.sample_kind == 17)
+  {
+    PushVisualTrace(GetGpuDrawStateTraceRing(), record);
+  }
+  else if (record.sample_kind == 19)
+  {
+    PushVisualTrace(GetFluidDrawWitnessTraceRing(), record);
+  }
+  else if (record.sample_kind == 18)
+  {
+    NoteCameraBandPeakSchedule(record);
+  }
   else if (record.sample_kind == 4 || record.sample_kind == 6)
   {
     PushVisualTrace(GetMeshScheduleTraceRing(), record);
@@ -573,6 +868,16 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetVisualBlackTraceRing(), record);
   }
+}
+
+void UJobStageTrace::NoteCameraBandPeakSchedule(
+    const VisualBlackTraceRecord &record)
+{
+  if (!VisualBlackTraceEnabled() || record.frame_epoch == 0)
+  {
+    return;
+  }
+  PushVisualTrace(GetCameraBandPeakScheduleTraceRing(), record);
 }
 
 void UJobStageTrace::ResetCameraBandPeakTrace(uint8_t sample_kind)
@@ -618,6 +923,10 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(), max_n, fn,
                            ctx);
   ForEachVisualTraceNewest(GetFirstMeshFrontierTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetCameraBandPeakScheduleTraceRing(), max_n, fn,
+                           ctx);
+  ForEachVisualTraceNewest(GetGpuDrawStateTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetFluidDrawWitnessTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);
@@ -642,6 +951,25 @@ void UJobStageTrace::ForEachWatchedNewest(
   }
 }
 
+void UJobStageTrace::ForEachOpenSkyLifecycleNewest(
+    size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetOpenSkyLifecycleRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kOpenSkyLifecycleRingCapacity - 1 - i) %
+        kOpenSkyLifecycleRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
 void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
 {
   if (!VisualBlackTraceEnabled() ||
@@ -649,14 +977,45 @@ void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
   {
     return;
   }
-  auto &r = GetDemandTransitionRing();
-  std::lock_guard<std::mutex> lock(r.mu);
-  r.slots[r.write % kDemandTransitionRingCapacity] = span;
-  ++r.write;
-  if (r.count < kDemandTransitionRingCapacity)
+  DemandTransitionSpan stamped_span = span;
+  if (stamped_span.frame_epoch == 0)
   {
-    ++r.count;
+    stamped_span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
   }
+  {
+    auto &r = GetDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(r.mu);
+    r.slots[r.write % kDemandTransitionRingCapacity] = stamped_span;
+    ++r.write;
+    if (r.count < kDemandTransitionRingCapacity)
+    {
+      ++r.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(stamped_span.cx, stamped_span.cy,
+                                     stamped_span.cz))
+  {
+    auto &open_sky = GetOpenSkyDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyDemandTransitionRingCapacity] =
+        stamped_span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyDemandTransitionRingCapacity)
+    {
+      ++open_sky.count;
+    }
+  }
+}
+
+void UJobStageTrace::SetStreamingFrameEpoch(uint64_t frame_epoch)
+{
+  LatestStreamingFrameEpoch.store(frame_epoch, std::memory_order_relaxed);
+}
+
+uint64_t UJobStageTrace::GetStreamingFrameEpoch()
+{
+  return LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
 }
 
 void UJobStageTrace::NoteMeshRevisionBump(
@@ -674,16 +1033,35 @@ void UJobStageTrace::NoteMeshRevisionBump(
   span.mesh_revision_after = revision_after;
   span.mesh_revision_bump_reason = reason;
   span.mesh_owner_flags = owner_flags;
+  if (span.frame_epoch == 0)
+  {
+    span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+  }
   span.event_ms = std::chrono::duration<double, std::milli>(
                       std::chrono::steady_clock::now().time_since_epoch())
                       .count();
-  auto &r = GetDemandTransitionRing();
-  std::lock_guard<std::mutex> lock(r.mu);
-  r.slots[r.write % kDemandTransitionRingCapacity] = span;
-  ++r.write;
-  if (r.count < kDemandTransitionRingCapacity)
   {
-    ++r.count;
+    auto &r = GetDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(r.mu);
+    r.slots[r.write % kDemandTransitionRingCapacity] = span;
+    ++r.write;
+    if (r.count < kDemandTransitionRingCapacity)
+    {
+      ++r.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(span.cx, span.cy, span.cz))
+  {
+    auto &open_sky = GetOpenSkyDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyDemandTransitionRingCapacity] =
+        span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyDemandTransitionRingCapacity)
+    {
+      ++open_sky.count;
+    }
   }
 }
 
@@ -701,6 +1079,25 @@ void UJobStageTrace::ForEachDemandTransitionNewest(
   {
     const size_t abs = (r.write + kDemandTransitionRingCapacity - 1 - i) %
                        kDemandTransitionRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+void UJobStageTrace::ForEachOpenSkyDemandTransitionNewest(
+    size_t max_n, void (*fn)(const DemandTransitionSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetOpenSkyDemandTransitionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kOpenSkyDemandTransitionRingCapacity - 1 - i) %
+        kOpenSkyDemandTransitionRingCapacity;
     fn(r.slots[abs], ctx);
   }
 }
@@ -766,6 +1163,14 @@ const char *UJobStageTrace::DemandTransitionName(DemandTransitionKind kind)
     return "mesh_revision_bumped";
   case DemandTransitionKind::IdentityReset:
     return "identity_reset";
+  case DemandTransitionKind::LightCalculationSettled:
+    return "light_calculation_settled";
+  case DemandTransitionKind::StaleLightRemeshQueued:
+    return "stale_light_remesh_queued";
+  case DemandTransitionKind::StaleLightRemeshDirtyAdmitted:
+    return "stale_light_remesh_dirty_admitted";
+  case DemandTransitionKind::OpenSkyRepairPublished:
+    return "open_sky_repair_published";
   }
   return "unknown";
 }
@@ -841,6 +1246,8 @@ const char *UJobStageTrace::MeshRevisionBumpReasonName(
     return "priority_world_core_commit";
   case MeshRevisionBumpReason::FaceDebtMaterialRetry:
     return "face_debt_material_retry";
+  case MeshRevisionBumpReason::PriorityLightDependencyRepair:
+    return "priority_light_dependency_repair";
   }
   return "unknown";
 }

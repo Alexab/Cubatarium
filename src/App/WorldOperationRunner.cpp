@@ -213,7 +213,8 @@ bool UWorldOperationRunner::EnterVisualCapReached() const
   // Soft-ready only: do NOT key off EnterLoadElapsedMs here — that timer
   // includes cooperative terrain load (seconds) and would abort/skip warmup
   // after 200ms with an unfinished world (stuck on "World loaded" 100%).
-  return !World.NeedsEnterGameMeshWarmup() && World.IsSpawnMeshRingReady() &&
+  return World.IsEnterFocusTerrainReady() &&
+         !World.NeedsEnterGameMeshWarmup() && World.IsSpawnMeshRingReady() &&
          World.IsEnterVisibilityReady();
 }
 
@@ -248,6 +249,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const int fov_peak = std::max(1, EnterGameFovLitPeakDebt);
 
   const bool coop_prepared = World.IsSpawnAreaPreparedByCooperativeLoad();
+  const bool focus_terrain_ready = World.IsEnterFocusTerrainReady();
   const bool ring_ready =
       coop_prepared || World.IsSpawnMeshRingReady();
   const bool mesh_blockers_clear =
@@ -284,12 +286,15 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
         EnterGameGpuWarmupElapsedMs >=
             static_cast<double>(tune.EnterMeshAbortMs)));
   const bool soft_ready =
-      mesh_blockers_for_exit && fov_ready && ring_ready_for_exit &&
-      visibility_ready_for_exit;
+      focus_terrain_ready && mesh_blockers_for_exit && fov_ready &&
+      ring_ready_for_exit && visibility_ready_for_exit;
 
-  const bool cap_reached = ShouldForceEnterVisualCap(
-      EnterGameGpuWarmupElapsedMs, soft_ready, EnterGameColdCreate,
-      tune.EnterFovLitHardWallMs, tune.EnterLitRequireZero);
+  const bool cap_reached =
+      focus_terrain_ready && ShouldForceEnterVisualCap(
+                                 EnterGameGpuWarmupElapsedMs, soft_ready,
+                                 EnterGameColdCreate,
+                                 tune.EnterFovLitHardWallMs,
+                                 tune.EnterLitRequireZero);
   if (!cap_reached && (fov_debt > 0 || visibility_debt > 0) &&
       EnterGameGpuWarmupElapsedMs >=
           static_cast<double>(tune.EnterFovLitHardWallMs) &&
@@ -383,12 +388,18 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   {
     World.MarkSpawnRingUnfinishedDirty(8);
   }
-  const bool abort_underfeet_cap = ShouldReleaseEnterAfterAbortUnderfeetCap(
-      EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
-      tune.EnterForceInGameMs, underfeet_present_cap, underfeet_gpu_pending_cap);
-  bool enter_ready = IsEnterGpuWarmupReady(
-      ring_ready_for_exit, fov_ready ? 0 : fov_debt, mesh_blockers_for_exit,
-      min_frames_done, visibility_ready_for_exit);
+  const bool abort_underfeet_cap =
+      focus_terrain_ready && ShouldReleaseEnterAfterAbortUnderfeetCap(
+                                 EnterGameAbortDrainMode,
+                                 EnterGameGpuWarmupElapsedMs,
+                                 tune.EnterForceInGameMs,
+                                 underfeet_present_cap,
+                                 underfeet_gpu_pending_cap);
+  bool enter_ready =
+      focus_terrain_ready &&
+      IsEnterGpuWarmupReady(ring_ready_for_exit, fov_ready ? 0 : fov_debt,
+                            mesh_blockers_for_exit, min_frames_done,
+                            visibility_ready_for_exit);
   if (!enter_ready && abort_underfeet_cap)
   {
     enter_ready = min_frames_done && fov_ready && underfeet_present_cap &&
@@ -405,8 +416,10 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     }
   }
   const int combined_debt = EnterWarmupCombinedDebt(lit_sample, fov_debt);
-  const bool soft_clean_cap = ShouldForceEnterLoadSoftCleanDebt(
-      EnterGameGpuWarmupElapsedMs, combined_debt, underfeet_present_cap);
+  const bool soft_clean_cap =
+      focus_terrain_ready && ShouldForceEnterLoadSoftCleanDebt(
+                                 EnterGameGpuWarmupElapsedMs, combined_debt,
+                                 underfeet_present_cap);
   if (soft_clean_cap && !enter_ready && min_frames_done)
   {
     enter_ready = true;
@@ -424,9 +437,11 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       CubatariumFlushLogs();
     }
   }
-  const bool soft_exit_cap = ShouldForceEnterLoadSoftExit(
-      EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
-      tune.EnterForceInGameMs, fov_debt);
+  const bool soft_exit_cap =
+      focus_terrain_ready && ShouldForceEnterLoadSoftExit(
+                                 EnterGameAbortDrainMode,
+                                 EnterGameGpuWarmupElapsedMs,
+                                 tune.EnterForceInGameMs, fov_debt);
   if (soft_exit_cap && !enter_ready && min_frames_done)
   {
     enter_ready = true;
@@ -465,7 +480,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       CubatariumFlushLogs();
     }
   }
-  else if (EnterGameAbortDrainMode &&
+  else if (focus_terrain_ready && EnterGameAbortDrainMode &&
            ShouldForceEnterInGameAfterAbortDrain(EnterGameGpuWarmupElapsedMs,
                                                  tune.EnterForceInGameMs) &&
            !enter_ready && !EnterGameForceInGameLogged)
@@ -503,6 +518,15 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   }
   if (World.IsEnterLitGateActive())
   {
+    // Preserve the blocker values which were used to authorize this exit.
+    // The post-End sample below intentionally records the transition result;
+    // fields such as visibility debt can change once the enter snapshot clears.
+    EnterLitSample gate_decision_sample{};
+    UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs,
+                                 gate_decision_sample);
+    UEnterLitDiagnostics::MaybeLog(gate_decision_sample,
+                                   /*frame_index=*/0,
+                                   /*every_n_frames=*/1);
     World.EndEnterLitGate();
     // 162400: sample after gate clears so enter_lit JSONL gets gate_end=1 and
     // settle_reason before EndSession closes the file (AnalyzeEnterLit SoT).
@@ -696,7 +720,18 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
   case Stage::EnterGameFinalize:
     if (World.IsEnterLitGateActive())
     {
+      EnterLitSample gate_decision_sample{};
+      UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs,
+                                   gate_decision_sample);
+      UEnterLitDiagnostics::MaybeLog(gate_decision_sample,
+                                     /*frame_index=*/0,
+                                     /*every_n_frames=*/1);
       World.EndEnterLitGate();
+      EnterLitSample gate_end_sample{};
+      UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs,
+                                   gate_end_sample);
+      UEnterLitDiagnostics::MaybeLog(gate_end_sample, /*frame_index=*/0,
+                                     /*every_n_frames=*/1);
       UEnterLitDiagnostics::EndSession();
     }
     Core.FinalizeEnterGameSession();

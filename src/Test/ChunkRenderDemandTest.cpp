@@ -50,6 +50,92 @@ int main()
   Expect(store.NoteDemand(c, 5, 7) == DemandResult::AlreadySatisfied,
          "published meets desired");
 
+  // OpenSky dark repair is owned per slice and closes only on a newer,
+  // identity-matched publication for the required light revision.
+  {
+    store.Clear();
+    const glm::ivec3 slice{4, 2, 9};
+    store.BindIdentity(slice, /*world_epoch=*/3, /*incarnation=*/71);
+    Expect(store.NoteDemand(slice, 10, 20, 0, 0.0, 3, 71) ==
+               DemandResult::NewDemand,
+           "OpenSky baseline demand");
+    const uint64_t first_attempt = DemandActiveAttemptId(store, slice);
+    Expect(store.NoteInstallResult(slice, InstallResult::Published, 10, 20,
+                                   first_attempt),
+           "OpenSky baseline publication");
+    store.NoteOpenSkyRepairRequired(slice, /*event_id=*/5,
+                                    /*target_light_rev=*/20);
+    Expect(store.IsOpenSkyRepairPending(slice, 5, 20),
+           "OpenSky repair starts pending");
+    Expect(!store.IsOpenSkyRepairPublished(slice, 5, 20),
+           "baseline publication cannot satisfy new repair");
+
+    Expect(store.NoteDemand(slice, 11, 20, 0, 0.0, 3, 71) ==
+               DemandResult::NewDemand,
+           "OpenSky repair creates successor demand");
+    const uint64_t repair_attempt = DemandActiveAttemptId(store, slice);
+    Expect(!store.NoteInstallResult(slice, InstallResult::Published, 11, 20,
+                                    first_attempt),
+           "pre-OpenSky attempt cannot close repair");
+    Expect(store.IsOpenSkyRepairPending(slice, 5, 20),
+           "stale publication leaves repair pending");
+    Expect(store.NoteInstallResult(slice, InstallResult::Published, 11, 20,
+                                   repair_attempt),
+           "matching successor publication accepted");
+    Expect(store.IsOpenSkyRepairPublished(slice, 5, 20),
+           "newer publication closes exact event");
+    const ChunkRenderDemandRecord *published_repair = store.Find(slice);
+    Expect(published_repair &&
+               published_repair->open_sky_repair_published_attempt_id ==
+                   repair_attempt &&
+               published_repair->open_sky_repair_published_geom_rev == 11 &&
+               published_repair->open_sky_repair_published_light_rev == 20,
+           "published repair keeps explicit attempt and revision witness");
+    store.NoteOpenSkyRepairRequired(slice, 5, 20);
+    Expect(store.IsOpenSkyRepairPublished(slice, 5, 20),
+           "duplicate event observation does not reopen repair");
+
+    store.NoteOpenSkyRepairRequired(slice, /*event_id=*/6,
+                                    /*target_light_rev=*/20);
+    Expect(store.IsOpenSkyRepairPending(slice, 6, 20),
+           "new gate event opens a new repair lifecycle");
+    store.NoteInstallResult(slice, InstallResult::Published, 11, 20,
+                            repair_attempt);
+    Expect(store.IsOpenSkyRepairPending(slice, 6, 20),
+           "previous event publication cannot close new event");
+    Expect(store.NoteDemand(slice, 12, 20, 0, 0.0, 3, 71) ==
+               DemandResult::NewDemand,
+           "second OpenSky event creates successor demand");
+    const uint64_t second_repair_attempt =
+        DemandActiveAttemptId(store, slice);
+    store.NoteInstallResult(slice, InstallResult::Published, 12, 20,
+                            second_repair_attempt);
+    Expect(store.IsOpenSkyRepairPublished(slice, 6, 20),
+           "second event closes on its own publication");
+
+    store.BindIdentity(slice, /*world_epoch=*/3, /*incarnation=*/72);
+    Expect(!store.HasOpenSkyRepairPending(slice, 20) &&
+               !store.HasOpenSkyRepairPublished(slice, 20),
+           "chunk reincarnation retires OpenSky repair state");
+
+    const glm::ivec3 zero_light_slice{5, 2, 9};
+    store.NoteDemand(zero_light_slice, 1, 0);
+    const uint64_t zero_light_baseline =
+        DemandActiveAttemptId(store, zero_light_slice);
+    store.NoteInstallResult(zero_light_slice, InstallResult::Published, 1, 0,
+                            zero_light_baseline);
+    store.NoteOpenSkyRepairRequired(zero_light_slice, 9, 0);
+    Expect(store.HasOpenSkyRepairPending(zero_light_slice, 0),
+           "zero light revision can still own OpenSky repair");
+    store.NoteDemand(zero_light_slice, 2, 0);
+    const uint64_t zero_light_attempt =
+        DemandActiveAttemptId(store, zero_light_slice);
+    store.NoteInstallResult(zero_light_slice, InstallResult::Published, 2, 0,
+                            zero_light_attempt);
+    Expect(store.IsOpenSkyRepairPublished(zero_light_slice, 9, 0),
+           "zero-revision publication closes OpenSky repair");
+  }
+
   store.NoteInstallResult(c, InstallResult::RetainedAwaitingSuccessor);
   Expect(store.NoteDemand(c, 8, 9) == DemandResult::NewDemand,
          "retain keeps successor NewDemand");
@@ -190,7 +276,8 @@ int main()
   const auto recon = store.ReconcileMaintenance(8);
   Expect(recon.checked >= 1, "reconcile scanned");
 
-  // A25/A31: orphan Created+no-progress is counted; A31 remints desire.
+  // A40: maintenance cancels an ownerless Created attempt; the next real
+  // producer re-admits the unchanged desired revisions with a fresh attempt.
   {
     store.Clear();
     const glm::ivec3 orphan{9, 0, 9};
@@ -202,10 +289,17 @@ int main()
     const auto r2 = store.ReconcileMaintenance(16);
     Expect(r2.orphan_active >= 1, "orphan counted");
     orec = store.Find(orphan);
-    Expect(orec && orec->has_active_attempt, "A31 remints orphan desire");
-    Expect(store.CancelOrphanActiveAttempts(16) >= 1, "orphan hard-cancelled");
+    const uint64_t cancelled_attempt_id = orec ? orec->active_attempt_id : 0;
+    Expect(orec && !orec->has_active_attempt,
+           "reconcile cancels orphan without an admission owner");
+    Expect(store.CancelOrphanActiveAttempts(16) == 0,
+           "reconcile leaves no orphan for secondary cleanup");
+    Expect(store.NoteDemand(orphan, 1, 2) == DemandResult::NewDemand,
+           "real producer re-admits unchanged desire");
     orec = store.Find(orphan);
-    Expect(orec && !orec->has_active_attempt, "orphan cancelled");
+    Expect(orec && orec->has_active_attempt &&
+               orec->active_attempt_id != cancelled_attempt_id,
+           "re-admitted desire owns a fresh attempt");
   }
 
   // A25 R1: unload/reload — CancelledSuperseded then new desire.

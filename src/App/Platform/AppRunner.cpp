@@ -1594,6 +1594,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     std::cout << "flight-sim: report written path=" << report_path.string()
               << " — shutting down (fast)" << std::endl;
     world->PrepareForShutdownFast();
+    // Flight-sim exits with std::_Exit to avoid unbounded worker joins. Flush
+    // the app log after cancellation so the final audit/shutdown records are
+    // persisted even though normal logging destructors will not run.
+    CubatariumFlushLogs();
 
     std::cout << "flight-sim: done exit=" << exit_code
               << " world=" << world_name << " frames=" << ingame_frames_seen

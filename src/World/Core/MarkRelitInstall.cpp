@@ -190,8 +190,22 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
             (dark_probe.gpu_has_dark_face ||
              mesh->GetCache().ChunkHasFullyDarkFace(coord)) &&
             mesh->ChunkHasStaleDarkFaces(coord, BlockWorld);
+        const glm::ivec2 col_xz(coord.x, coord.z);
+        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
+        const uint64_t open_sky_event =
+            EnterVisualGateCtrl.OpenSkyEventId(col_xz);
+        if (open_sky && fully_dark_drawable && target_chunk)
+        {
+          demand.NoteOpenSkyRepairRequired(
+              coord, open_sky_event, target_chunk->GetLightFieldRevision());
+        }
+        const bool open_sky_repair_published =
+            demand.HasOpenSkyRepairPublished(
+                coord, target_chunk ? target_chunk->GetLightFieldRevision()
+                                    : desired_light);
         const bool needs_dark_repair =
-            fully_dark_drawable || stale_dark_drawable;
+            stale_dark_drawable ||
+            (fully_dark_drawable && !open_sky_repair_published);
         if (dr == DemandResult::AlreadySatisfied && !needs_dark_repair &&
             !missing_first_mesh)
         {
@@ -200,11 +214,9 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         }
         if (dr == DemandResult::AlreadySatisfied && needs_dark_repair)
         {
-          // A41: open_sky equal-rev FD → LightRepair Dirty once (never +1).
-          // Cave (!open_sky) → RelightOnly / LegalDark path (no Dirty invent).
-          const glm::ivec2 col_xz(coord.x, coord.z);
-          const bool open_sky =
-              EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
+          // OpenSky equal-rev FullyDark persists until this exact slice gets a
+          // newer mesh publication. Enclosed cave darkness remains on its
+          // separate relight/legal-dark path and never invents a Dirty rev.
           mesh->GetCache().InvalidateMeshCapture(coord);
           if (open_sky)
           {
@@ -235,7 +247,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           {
             Persistence->EnqueueTerrainColumnRelight(
                 coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE, /*priority=*/true,
-                coord.y * CHUNK_SIZE, (coord.y + 1) * CHUNK_SIZE - 1);
+                coord.y * CHUNK_SIZE, (coord.y + 1) * CHUNK_SIZE - 1,
+                __FUNCTION__, this);
             ++PhysicsTelemetryData.MarkRelitScheduleN;
             return;
           }
@@ -268,7 +281,15 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           (provisional_preview || revision_stale);
       if (stale_drawable && (revision_stale || horiz <= 4))
       {
+        const bool had_stale_remesh_debt =
+            mesh->GetCache().HasPendingStaleLightRemesh(coord);
         mesh->QueueStaleLightRemesh(coord);
+        if (!had_stale_remesh_debt &&
+            mesh->GetCache().HasPendingStaleLightRemesh(coord))
+        {
+          UChunkRenderDemandStore::Get().NoteLifecycleEvent(
+              coord, DemandTransitionKind::StaleLightRemeshQueued);
+        }
       }
 
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
@@ -373,9 +394,42 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       {
         visible_remesh_priority =
             mesh->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
+        UChunkRenderDemandStore::Get().NoteLifecycleEvent(
+            coord, DemandTransitionKind::StaleLightRemeshDirtyAdmitted);
       }
       ++PhysicsTelemetryData.MarkRelitScheduleN;
       ++dirty_admitted_n;
+      UChunkRenderDemandStore &repair_demand =
+          UChunkRenderDemandStore::Get();
+      if (audit_relight && repair_demand.HasOpenSkyRepairPending(
+                               coord, field_light_rev))
+      {
+        int32_t dirty_queue_index = -1;
+        int32_t dirty_queue_size = 0;
+        const uint8_t dirty_queue_kind = mesh->GetCache().GetDirtyQueueTrace(
+            coord, dirty_queue_index, dirty_queue_size);
+        const ChunkRenderDemandRecord *repair = repair_demand.Find(coord);
+        CubatariumLogInfo(
+            "RelightAudit",
+            "open_sky_repair_admit coord=(" + std::to_string(coord.x) +
+                "," + std::to_string(coord.y) + "," +
+                std::to_string(coord.z) + ") event=" +
+                std::to_string(repair ? repair->open_sky_repair_event_id : 0) +
+                " target_light=" + std::to_string(field_light_rev) +
+                " published_geom=" +
+                std::to_string(mesh->GetCache().GetMeshPublishRevs(coord).geom_rev) +
+                " mesh_revision=" +
+                std::to_string(mesh->GetCache().GetChunkMeshRevision(coord)) +
+                " dirty=" + std::to_string(mesh->IsChunkMeshDirty(coord)) +
+                " dirty_queue=" + std::to_string(dirty_queue_kind) + ":" +
+                std::to_string(dirty_queue_index) + "/" +
+                std::to_string(dirty_queue_size) + " dirty_age_frames=" +
+                std::to_string(mesh->GetCache().GetDirtyQueueAgeFrames(coord)) +
+                " inflight=" +
+                std::to_string(mesh->HasInflightMeshBuild(coord)) +
+                " gpu_pending=" +
+                std::to_string(mesh->IsPendingGpuApply(coord)));
+      }
       {
         JobStageSpan span{};
         span.cx = coord.x;
@@ -482,7 +536,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     SetColumnEmergeState(ground, plan.fsm_after);
     if (Persistence && plan.persistence_light_complete)
     {
-      Persistence->SetColumnLightComplete(column, true);
+      Persistence->SetColumnLightComplete(column, true,
+                                          "relight_install_finalized");
     }
     if (plan.fsm_after == ColumnEmergeState::LitReady &&
         col_rec.visual == ColumnVisualState::Publishing)
@@ -518,6 +573,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     NoteChunkSliceLightCalculationSettled(coord);
   }
   const bool enter_gate = EnterLitGateActive;
+  static const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   // FZ2.7-B1e: CountEnterFovLitDebt is O(R²)×stale-probe — only needed for
   // enter quiesce latch. Cruise MarkRelit was paying ~17ms here every Apply.
   int lit_remaining = 0;
@@ -769,6 +826,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       in.force_stale_ticket = ShouldForceMarkRelitForTicketedStale(
           consume_mode, in.has_repair_ticket, any_fully_dark, any_still_stale,
           focus_horiz);
+      bool open_sky_repair_pending = false;
+      bool open_sky_repair_published = false;
+      bool open_sky_repair_required = false;
       // A41: Relight terminal — exclusive LegalDark vs LightRepair.
       // - !open_sky equal-rev FD → LegalDark (stamp, clear PL, no Dirty)
       // - open_sky equal-rev FD → LightRepair (keep PL, one Dirty, never +1)
@@ -777,6 +837,51 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       {
         ColumnRecord &rec = GetColumnRecords().GetOrCreate(key);
         const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(key);
+        const uint64_t open_sky_event =
+            EnterVisualGateCtrl.OpenSkyEventId(key);
+        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        const uint64_t world_epoch =
+            MeshService->GetCache().GetCaptureStore().WorldEpoch();
+        bool all_dark_slices_repaired = true;
+        int dark_drawable_slice_n = 0;
+        for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+        {
+          if (!snap.fully_dark || !snap.has_drawable)
+          {
+            continue;
+          }
+          ++dark_drawable_slice_n;
+          const UChunk *chunk =
+              BlockWorld.GetChunkManager().GetChunk(snap.coord);
+          if (open_sky && open_sky_event != 0 && chunk)
+          {
+            demand.BindIdentity(snap.coord, world_epoch,
+                                chunk->GetIncarnation());
+            const MeshPublishRevs published =
+                MeshService->GetCache().GetMeshPublishRevs(snap.coord);
+            demand.NotePublishedRevs(snap.coord, published.geom_rev,
+                                     published.light_rev);
+            demand.NoteOpenSkyRepairRequired(
+                snap.coord, open_sky_event, snap.light_field_rev);
+          }
+          open_sky_repair_pending =
+              open_sky_repair_pending ||
+              demand.HasOpenSkyRepairPending(snap.coord,
+                                              snap.light_field_rev);
+          if (open_sky &&
+              !demand.IsOpenSkyRepairPublished(snap.coord, open_sky_event,
+                                               snap.light_field_rev))
+          {
+            all_dark_slices_repaired = false;
+          }
+        }
+        open_sky_repair_published =
+            open_sky && dark_drawable_slice_n > 0 &&
+            all_dark_slices_repaired;
+        open_sky_repair_required =
+            open_sky_repair_pending ||
+            (open_sky && dark_drawable_slice_n > 0 &&
+             !open_sky_repair_published);
         const bool lit_or_lighting =
             IsColumnLitReady(ground) ||
             GetColumnEmergeState(ground) == ColumnEmergeState::Lighting;
@@ -784,8 +889,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         in.light_repair_once = false;
         if (equal_rev_fd && lit_or_lighting)
         {
-          if (IsLegalDarkEqualRevFullyDark(/*fully_dark=*/true,
-                                           /*still_stale=*/false, open_sky))
+          if (IsLegalDarkEqualRevFullyDark(
+                  /*fully_dark=*/true, /*still_stale=*/false, open_sky,
+                  open_sky_repair_pending, open_sky_repair_published))
           {
             rec.legal_dark_settled = true;
             rec.visual_obligation = VisualObligation::LegalDark;
@@ -793,9 +899,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             rec.visual_deadline_ms = 0;
             in.column_settled = true;
           }
-          else if (NeedsOpenSkyEqualRevLightRepair(/*fully_dark=*/true,
-                                                   /*still_stale=*/false,
-                                                   open_sky))
+          else if (NeedsOpenSkyEqualRevLightRepair(
+                       /*fully_dark=*/true, /*still_stale=*/false, open_sky,
+                       open_sky_repair_pending,
+                       open_sky_repair_published))
           {
             rec.legal_dark_settled = false;
             rec.visual_obligation = VisualObligation::LightRepair;
@@ -882,6 +989,67 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           rec.legal_dark_settled = false;
           in.column_settled = false;
         }
+
+        // Record the terminal decision while the enter-gate OpenSky marker is
+        // still available. The later visible-demand trace can run after
+        // EndEnterLitGate resets that transient map and would otherwise miss
+        // the exact equal-revision dark case this policy is meant to split.
+        if (audit_relight && (open_sky || open_sky_repair_pending) &&
+            any_fully_dark)
+        {
+          std::string dark_slices;
+          for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+          {
+            if (!snap.fully_dark)
+            {
+              continue;
+            }
+            if (!dark_slices.empty())
+            {
+              dark_slices += ";";
+            }
+            dark_slices += std::to_string(snap.coord.x) + "," +
+                           std::to_string(snap.coord.y) + "," +
+                           std::to_string(snap.coord.z) + "@" +
+                           std::to_string(snap.meshed_light_rev) + ":" +
+                           std::to_string(snap.light_field_rev) + ":" +
+                           std::to_string(snap.still_stale);
+            if (const ChunkRenderDemandRecord *slice_demand =
+                    demand.Find(snap.coord))
+            {
+              dark_slices += ":" +
+                             std::to_string(
+                                 slice_demand->open_sky_repair_event_id) +
+                             ":" +
+                             std::to_string(
+                                 slice_demand->open_sky_repair_pending) +
+                             ":" +
+                             std::to_string(
+                                 slice_demand->open_sky_repair_published) +
+                             ":" +
+                             std::to_string(slice_demand
+                                                ->open_sky_repair_published_attempt_id);
+            }
+          }
+          CubatariumLogInfo(
+              "RelightAudit",
+              "relight_terminal event=open_sky_dark column=(" +
+                  std::to_string(key.x) + "," + std::to_string(key.y) +
+                  ") fully_dark=1 stale_dark=" +
+                  std::to_string(any_still_stale) + " equal_rev_fd=" +
+                  std::to_string(equal_rev_fd) + " lit_or_lighting=" +
+                  std::to_string(lit_or_lighting) + " event=" +
+                  std::to_string(open_sky_event) + " repair_pending=" +
+                  std::to_string(open_sky_repair_pending) +
+                  " repair_published=" +
+                  std::to_string(open_sky_repair_published) +
+                  " repair_once=" +
+                  std::to_string(in.light_repair_once) + " settled=" +
+                  std::to_string(in.column_settled) + " obligation=" +
+                  std::to_string(static_cast<int>(rec.visual_obligation)) +
+                  " attempt=" + std::to_string(rec.visual_attempt_id) +
+                  " slices=" + dark_slices);
+        }
       }
       // A41: do not call ShouldCooldownForceEqualRevPendingFullyDark (replaced by
       // LightRepair). Keep ticketed still_stale force only.
@@ -943,11 +1111,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       }
       // A41: keep PL while LightRepair; clear on LegalDark / LitDrawable.
       {
-        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(key);
         const bool light_repair =
             any_still_stale || in.light_repair_once ||
-            NeedsOpenSkyEqualRevLightRepair(any_fully_dark, any_still_stale,
-                                            open_sky);
+            open_sky_repair_required;
         if (light_repair)
         {
           plan.erase_pending_light = false;
@@ -956,7 +1122,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           {
             Persistence->EnqueueTerrainColumnRelight(
                 key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true,
-                band.min_y, band.max_y);
+                band.min_y, band.max_y, __FUNCTION__, this);
             ++PhysicsTelemetryData.MarkRelitScheduleN;
           }
         }

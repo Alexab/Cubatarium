@@ -58,6 +58,7 @@ uniform float uOpaqueDepthGuard;
 uniform vec2 uOpaqueDepthScreenSize;
 uniform float uOpaqueDepthBias;
 uniform float uDebugTransparentFragmentMarker;
+uniform float uDebugFluidFragmentMarker;
 
 const int kCrossFaceIndex = 127;
 
@@ -259,6 +260,30 @@ void main()
     if (precip > 0.001) {
         float gray = dot(FragColor.rgb, vec3(0.299, 0.587, 0.114));
         FragColor.rgb = mix(FragColor.rgb, vec3(gray, gray, gray * 1.05), precip * 0.12);
+    }
+    // Keep the opt-in desktop/GLES fluid discard probe behavior aligned.
+    if (uDebugFluidFragmentMarker > 0.5 &&
+        uGreedyShaderMode == kGreedyModeColor) {
+        bool alpha_cutout_candidate =
+            uAlphaCutout != 0 && FragColor.a < 0.1;
+        bool depth_guard_candidate = false;
+        if (uOpaqueDepthGuard > 0.5 &&
+            uOpaqueDepthScreenSize.x > 0.0) {
+            vec2 depthUv = gl_FragCoord.xy / uOpaqueDepthScreenSize;
+            float opaqueDepth = texture(uOpaqueDepthMap, depthUv).r;
+            depth_guard_candidate =
+                gl_FragCoord.z > opaqueDepth + uOpaqueDepthBias;
+        }
+        if (alpha_cutout_candidate && depth_guard_candidate) {
+            FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+        } else if (alpha_cutout_candidate) {
+            FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        } else if (depth_guard_candidate) {
+            FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+        } else {
+            FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        }
+        return;
     }
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;

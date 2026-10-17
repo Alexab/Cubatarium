@@ -335,7 +335,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     # Era13 readiness contract (ROOT_CAUSE_2026-07 / plan D3).
     "ARCH_D1": [
         ("post_load_ring_idle_max", "le", 0.0),
-        ("effective_holes_rate", "le", 0.24),
+        ("readiness_debt_rate", "le", 0.24),
         ("mesh_async_med_when_dirty", "ge", 4.0),
         ("post_stop_not_ready_end", "le", 0.0),
         ("post_stop_black_sticky_max", "le", 0.0),
@@ -347,12 +347,12 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "ARCH_D3": [
         ("post_load_ring_idle_max", "le", 0.0),
         ("unfinished_idle_max", "le", 0.0),
-        ("effective_holes_rate", "le", 0.10),
+        ("readiness_debt_rate", "le", 0.10),
         ("wall_ms_med", "le", 30.0),
         ("mesh_async_med_when_dirty", "ge", 4.0),
         ("post_stop_not_ready_end", "le", 0.0),
         ("post_stop_black_sticky_max", "le", 0.0),
-        ("post_stop_effective_holes_rate", "le", 0.0),
+        ("post_stop_unresolved_visual_state_rate", "le", 0.0),
         ("stop_dark_face_stale_near_end", "lt", 100.0),
         ("cold_relight_holes_sec", "le", 3.0),
         ("chunks_traveled", "ge", 3.0),
@@ -367,13 +367,14 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("tail_focus_miss_max", "le", 0.0),
         ("tail_miss_low_cy_n", "le", 0.0),
         ("tail_underfeet_ok_miss_n", "le", 0.0),
-        ("effective_holes_rate", "le", 0.12),
+        ("readiness_debt_rate", "le", 0.12),
         ("nh_no_miss_rate", "le", 0.25),
         ("stop_dark_face_stale_near_end", "lt", 100.0),
         ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
-        # Era17 P1: hard heal — no orphan VisibleBlack; stalled queue=0.
-        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        # Exclude equal-revision legal dark geometry; raw no-ticket also counts
+        # unowned cave darkness, which is not orphan repair work.
+        ("post_stop_visible_black_no_ticket_excluding_legal_dark_max", "le", 0.0),
         # Stalled (=Contains without Dirty yet) is mid-queue; report-only.
         # ("post_stop_visible_black_stalled_max", "le", 0.0),
         # Soft 70: land density + remesh tax.
@@ -396,12 +397,12 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("stop_focus_dirty_delta", "le", 8.0),
         ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
-        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        ("post_stop_visible_black_no_ticket_excluding_legal_dark_max", "le", 0.0),
         # Era18: stalled (=Contains before Dirty/PendingLight lands) flickers
         # mid-heal on idle (stalled_max=9 with faces=0 / no_ticket=0) — report-only.
         # ("post_stop_visible_black_stalled_max", "le", 0.0),
         ("stop_dark_face_stale_near_end", "lt", 200.0),
-        ("post_stop_missing_max", "le", 0.0),
+        ("post_stop_readiness_debt_max", "le", 0.0),
         ("chunks_traveled", "ge", 3.0),
     ],
     # Contaminated idle (manual after place/fluid): report-only wall gates.
@@ -417,7 +418,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("calm_stop_stream_med", "le", 55.0),
         ("physics_block_ms_p95", "le", 5.0),
         ("edit_immediate_n_med", "le", 0.0),
-        ("post_stop_missing_max", "le", 0.0),
+        ("post_stop_readiness_debt_max", "le", 0.0),
         ("opaque_cmd_on_med", "ge", 200.0),
         ("chunks_traveled", "ge", 6.0),
     ],
@@ -435,7 +436,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("wall_ms_fly_med", "le", 200.0),
         ("mesh_sync_fly_med", "le", 5.0),
         ("physics_block_ms_p95", "le", 5.0),
-        ("effective_holes_rate", "le", 0.30),
+        ("readiness_debt_rate", "le", 0.30),
         ("fly_void_near_max", "le", 800.0),
         ("stop_dark_face_void_near_end", "le", 100.0),
         ("post_stop_visible_black_max", "le", 20.0),
@@ -446,13 +447,13 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("chunks_traveled", "ge", 6.0),
         ("wall_ms_fly_med", "le", 200.0),
         ("fly_void_near_max", "ge", 400.0),
-        ("effective_holes_rate", "ge", 0.40),
+        ("readiness_debt_rate", "ge", 0.40),
         ("fly_frontier_pressure_frac", "ge", 0.05),
     ],
     # Era30 DoD: analyze manual 104841-class log (post-fix targets).
     "OCEAN_MANUAL": [
         ("chunks_traveled", "ge", 6.0),
-        ("effective_holes_rate", "le", 0.30),
+        ("readiness_debt_rate", "le", 0.30),
         ("fly_void_near_max", "le", 800.0),
         ("stop_dark_face_void_near_end", "le", 100.0),
         ("post_stop_visible_black_max", "le", 20.0),
@@ -488,17 +489,17 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "FP3": [
         ("visible_black_focus_n", "le", 40.0),
         ("dark_face_stale_near_n", "le", 80.0),
-        ("holes_rate", "le", 0.30),
+        ("readiness_debt_rate", "le", 0.30),
         ("chunks_traveled", "ge", 3.0),
     ],
     "FP4": [
         ("visible_black_focus_n", "le", 40.0),
-        ("holes_rate", "le", 0.30),
+        ("readiness_debt_rate", "le", 0.30),
         ("dirty_ghost_n", "le", 5.0),
         ("chunks_traveled", "ge", 3.0),
     ],
     "FP5": [
-        ("holes_rate", "le", 0.10),
+        ("readiness_debt_rate", "le", 0.10),
         ("visible_black_focus_n", "le", 25.0),
         ("stream_ms", "le", 30.0),
         ("miss_stuck_max_run_sec", "le", 4.0),
@@ -507,7 +508,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "FP-manual": [
         ("cruise_schedule_ok_med", "ge", 3.0),
         ("cruise_capture_retarget_med", "le", 5.0),
-        ("holes_rate", "le", 0.55),
+        ("readiness_debt_rate", "le", 0.55),
         ("miss_stuck_max_run_sec", "le", 60.0),
         ("post_stop_visible_black_max", "le", 50.0),
         ("chunks_traveled", "ge", 5.0),
@@ -545,7 +546,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "MESH-M1-capture": [
         ("mesh_emerge_ms", "le", 35.0),
         ("mesh_waterfall_drain_med", "gt", 0.0),
-        ("holes_rate", "le", 0.50),
+        ("readiness_debt_rate", "le", 0.50),
         ("chunks_traveled", "ge", 3.0),
     ],
     "MESH-M2-worker": [
@@ -557,7 +558,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("chunks_traveled", "ge", 3.0),
     ],
     "MESH-M4-ownership": [
-        ("holes_rate", "le", 0.10),
+        ("readiness_debt_rate", "le", 0.10),
         ("witness_latch_diet_share", "ge", 0.70),
         ("chunks_traveled", "ge", 3.0),
     ],
@@ -579,14 +580,14 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     ],
     "MESH-SHIP-joint": [
         ("witness_latch_diet_share", "ge", 0.40),
-        ("holes_rate", "le", 0.30),
+        ("readiness_debt_rate", "le", 0.30),
         ("fm_dirty_to_gpu_finish_med", "gt", 0.0),
         ("visual_holes_telemetry_mismatch_rate", "le", 0.10),
         ("effective_fps_fly", "ge", 15.0),
         ("chunks_traveled", "ge", 3.0),
     ],
     "MESH-parity-manual": [
-        ("holes_rate", "le", 0.55),
+        ("readiness_debt_rate", "le", 0.55),
         ("chunks_traveled", "ge", 3.0),
     ],
 }
@@ -612,7 +613,7 @@ PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("cruise_fifo_dropped_delta", "le", 12.0),
         ("cruise_admission_mode3_share", "le", 0.60),
         ("stop_dark_face_near_end", "lt", 500.0),
-        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        ("post_stop_visible_black_no_ticket_excluding_legal_dark_max", "le", 0.0),
         ("emerge_spike_frac", "le", 0.08),
         ("mesh_emerge_ms", "le", 25.0),
         ("prep_untagged_gap_med", "le", 35.0),
@@ -641,11 +642,25 @@ PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
 }
 
 
+METRIC_COMPATIBILITY_ALIASES = {
+    # Reports produced before the explicit metric split used these legacy keys
+    # for the same readiness/debt signals.
+    "readiness_debt_rate": ("effective_holes_rate", "holes_rate"),
+    "post_stop_readiness_debt_max": ("post_stop_missing_max",),
+    "post_stop_unresolved_visual_state_rate": (
+        "post_stop_effective_holes_rate",
+    ),
+}
+
+
 def metric(data: dict, key: str):
     m = data.get("metrics") or {}
-    if key in m:
-        return m.get(key)
-    return data.get(key)
+    for candidate in (key, *METRIC_COMPATIBILITY_ALIASES.get(key, ())):
+        if candidate in m:
+            return m.get(candidate)
+        if candidate in data:
+            return data.get(candidate)
+    return None
 
 
 def check(op: str, val, limit: float) -> bool:
@@ -702,14 +717,19 @@ def main() -> int:
     arch = args.phase_id.startswith("ARCH_")
     if args.phase_id == "MESH-parity-manual" and args.baseline and args.baseline.is_file():
         base = json.loads(args.baseline.read_text(encoding="utf-8"))
-        manual_holes = metric(base, "holes_rate")
+        manual_holes = metric(base, "readiness_debt_rate")
         if manual_holes is not None:
-            holes_cap = min(0.55, float(manual_holes) * 1.15 + 0.05)
+            readiness_debt_cap = min(0.55, float(manual_holes) * 1.15 + 0.05)
             gates = [
-                g if g[0] != "holes_rate" else ("holes_rate", "le", holes_cap)
+                g
+                if g[0] != "readiness_debt_rate"
+                else ("readiness_debt_rate", "le", readiness_debt_cap)
                 for g in gates
             ]
-            print(f"  parity holes_cap={holes_cap:.3f} (manual={manual_holes})")
+            print(
+                "  parity readiness_debt_cap="
+                f"{readiness_debt_cap:.3f} (manual={manual_holes})"
+            )
     for key, op, limit in gates:
         val = metric(data, key)
         ok = check_arch(op, val, limit) if arch else check(op, val, limit)

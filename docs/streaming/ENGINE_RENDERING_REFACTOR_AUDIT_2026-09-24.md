@@ -5428,3 +5428,1371 @@ dominated frames are inconclusive. This agrees with the operator's current
 visual assessment without closing the internal readiness-debt investigation.
 Continue from the [M464 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m464-checkpoint--worker-logging-isolated-screen-ray-debt-reclassified-2026-10-08)
 and [M464 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m464--m335-worker-side-light-flag-result-logging-2026-10-08).
+
+### M568 targeted framebuffer follow-up (2026-10-14)
+
+M568's 45 positive A24 periods and 238 moving query-miss witnesses are still
+mesh/query telemetry, not observed empty pixels; all query witnesses were
+outside the configured fog horizon, and stop-tail `visual_holes` was zero. The
+run sampled every one of the nine edge events in the existing camera-X window
+with a 100-pixel OpenGL readback grid. None of the 900 points was RGB<=8.
+Across the ten calm stop periods, broad `chunk_not_ready` debt stayed at 30,
+while `visible_black_focus_n`, `near_focus_holes`, `pending_light_focus`, and
+dirty count all stayed at zero. Demand-stop convergence therefore failed on
+the broad readiness debt, without a matching stop-tail black-pixel or near-
+focus mesh-hole signal.
+The darkest sample in each grid had valid opaque depth and a depth-to-greedy-
+face match within `0.05` blocks. All nine matched mesh faces had sky light at
+level 15, block light zero, no provisional light preview, and current face-air
+light packed as 15; published and field light revisions matched. Seven face
+IDs map to `tree_leaves` (572) and two to `grass` (377) in the repository's
+`minetest_default_16` pack. The run manifest does not name the active pack, so
+this is a source-definition mapping, not registry-name telemetry.
+
+For eight of those nine samples, the independent DDA voxel candidate projected
+behind the framebuffer opaque depth. Pixel material attribution must use the
+depth-matched mesh face rather than that DDA ID. The sampled dark-green values
+are consistent with lit leaf/grass texture samples and do not support stale or
+missing light on those exact surfaces. They do not explain every dim region or
+prove full-frame completeness. The event-pixel analyzer now retains opaque
+face light, revision, fog, and shader context so later M335 traces can make the
+same distinction without manually joining raw rows. M568 ran with host CPU
+mean `87.6%` / p95 `100%`; do not use its frame times as a clean performance
+baseline. The refactor remains open on broad readiness debt and failed
+demand-stop convergence; see the [M568 plan record](ENGINE_REMEDIATION_PLAN_2026-10-03.md)
+and [raw flight analysis](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+The terminal census narrows the meaning of that failed gate. At camera
+`(-9065,70,56)`, the 121 focus columns were 60 ready, 31 terrain-incomplete,
+26 missing-mesh, and four face-debt. `unfinished_visual=30` is the sum of the
+last two classes; terrain-incomplete is excluded. Stop-tail direct
+`focus_missing_mesh`, `near_focus_holes`, `visual_holes`, and the
+`visible_black_focus_n` renderer proxy were zero; no pixel readback was
+collected at the stop point. Twenty-five traced no-owner missing-mesh slices were
+full-solid Y=1 chunks with active `Created` demands aged 20.8–28.4 s, no
+mesh/ColumnFlow owner, published geometry already current, and overlay debt to
+unloaded horizontal neighbors. Their chunk AABBs were at least 56 blocks
+horizontally from the camera, beyond the 32-block air-fog end. This is a real
+background ownership/boundary lifecycle debt, but not evidence those slices
+caused an on-screen hole. The global demand store's outstanding
+`62/4/213/213/1` geometry/light/face/coverage/retained counts explain why its
+all-record stop predicate remains false. Continue by separating global work
+completion from current-view and lookahead coverage, while tracing the
+ownerless Created attempts and preserving actual framebuffer evidence as the
+visual verdict.
+
+## M597–M598: provisional-light lifecycle join and startup queue latency
+
+M597 identified that the pixel analyzer keyed an opaque depth-hit chunk using
+the generic pixel row's incarnation, which could belong to the sea-plane hit.
+Release commit `c2cabbbb` adds explicit opaque-hit world epoch/incarnation,
+watches that exact chunk when it is rendered with provisional light, and
+filters lifecycle stages by demand attempt and mesh job. This closes a gap in
+the diagnostic, not in the renderer.
+
+M598B repeated the ordinary-speed, visible, no-teleport lane on a fresh
+radius-4 world. It crossed 12 chunk columns at `5.19653 blocks/s`; there were
+zero direct dark-threshold pixel probes and zero near-focus visual-hole rate.
+The aggregate readiness gate still failed and the spatial eye-proxy gate did
+not test a temporal mid-flight segment, so this is not a broad acceptance run.
+
+All 35 provisional pixel-hit chunks now joined lifecycle events. At the moving
+frontier sample `(-20,2,2)`, light settlement followed the first preview by
+about 64 ms, and the matching mesh job published within about 112 ms. The
+later settled sample was captured after the camera moved, so it cannot time
+same-view visual persistence. At stationary startup, `(-4,2,2)` was observed
+in deferred-far state while a RelightThenMesh ticket existed; the first
+settlement event arrived about 7.45 s after the preview sample. The matching
+mesh built in about 5 ms and published about 24 ms later. Period-level
+deferred-far count peaked at 44 while relight FIFO pressure was active.
+
+This points to lighting service/admission delay during the cold startup burst,
+while the moving-frontier sample's mesh path was fast. The sparse samples do
+not timestamp exact defer/admit transitions and do not prove a route-wide
+regression. Preserve the Phase 5.7R5 under-pressure limit until a per-column
+trace demonstrates that visible work remains deferred after FIFO pressure
+has eased. Next compare same-pixel queue-kind snapshots against FIFO/deferred
+periods; only then consider a bounded age/visibility service guarantee. Full
+M598 evidence and the repeatable commands are recorded in the [remediation
+plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md) and
+[flight script notes](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+## M613–M614: cold-light entry and cross-chunk stale faces (2026-10-16)
+
+M613 created a fresh radius-4 world with 597 chunk files but no
+`column_light.json`. On cold entry the saved-light lifecycle reported `missing/0`;
+at the end of the route the file held 116 complete entries. Entry telemetry reached
+`unlit/pending=55/48`. The run had host CPU median/p95/max 58.4/97.6/99.5%, so its
+timing is not a clean performance result. It reported zero near-focus mesh-hole
+proxy and zero black pixel proxy, while the general post-stop visible-black stalled
+counter reached 2. The more specific fully-dark-stalled count remained zero; do not
+interpret the general counter as two fully black chunks.
+
+M614 revisited that same world with the same short M335 route. It loaded 116 saved
+light-complete flags and entered at `unlit/pending=9/9`; visible-black fly maximum
+fell from 12 to 6 and post-stop stalled maximum from 2 to 0. This supports cold
+lighting initialization as a contributor to larger startup light debt. It does not
+prove that cold initialization alone caused the operator-visible black chunks:
+M614 also had invalid timing conditions (host CPU median/p95/max 65.9/99.4/100%),
+and its pixel analyzer reported a different set of dark samples. Pixel candidates
+are not a substitute for the actual displayed image. The most defensible conclusion
+is that a new world starts without trusted saved light-complete metadata and must
+relight before those columns can be considered settled; cold entry can therefore
+make startup darkness more likely or longer-lived than a warmed revisit.
+
+The M613 visual trace gives a more specific repair lead. At epoch 2849, stale-dark
+face witnesses in consumer slices `(-19,2,0)` and `(-19,2,5)` sampled lit cells in
+neighbor source chunks `(-20,2,0)` and `(-20,2,5)`. Each consumer's own
+field/meshed/published/demand/settled revisions matched. The witness means a
+published face vertex carries zero baked light while the current world light at
+its adjacent face-air or solid sample is nonzero; it is a stale-light surface
+candidate, not evidence of a hole in geometry.
+
+The mesh capture stamp hashes exact light samples in the radius-2 halo of all 26
+neighbor chunks, and apply rejects in-flight captures whose halo changed. That
+closes the capture-to-apply race. It does not by itself dirty an already-published
+dependent mesh when a neighbor's border light changes later. The flight logs
+showed a more immediate admission gap at the approach-ring boundary: M613 denied
+stale remesh admission for `(-19,2,5)` at `focus_horiz=5` with invalidation
+backlog 45. M614 retried `(-19,2,5)` 23 times with `dirty_admit_denied`; a sample
+had desired geometry revision 4 versus published 3, settled/equal light revision,
+an empty dirty queue, and no mesh owner. A neighboring stale slice
+`(-19,2,0)` was admitted and published within about 117 ms. The coordinates were
+on the approach ring, one chunk beyond the settled LitDrawable ring.
+
+M615 changes `DrainStaleLightRemeshDebt` so it discovers and retains actual
+stale-dark face witnesses even after own-slice revisions match, and activates
+repairs through `kVisualStageFirstMeshRelightApproachHoriz`. It reuses the existing
+bounded reserve of one repair per four scheduler frames after ordinary dirty
+admission runs out. The Release build passes. No tests or flight were run after
+this change because both M613/M614 exceeded CPU resource gates and M614's GUI
+process temporarily appeared unresponsive. The next valid check is a short M335
+run that confirms an approach-ring witness remains queued until admission, receives
+a mesh owner, publishes, and clears; no long monitoring flight is required.
+
+The earlier halo invalidation question remains open if a current witness survives
+after M615 repair publication. In that case correlate source border-light update
+with dependent slice invalidation/capture/GPU publication; if the transition lacks
+an owner, prefer targeted halo-dependent remesh invalidation over broad relight or
+a new global queue policy.
+
+See the exact short-run profiles, artifacts, and resource-gate limits in the
+[remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md),
+[diagnostic runbook](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md), and
+[flight experiment notes](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+### M615 static follow-up: GPU-only witness quality
+
+Before the M615 flight, static review found that the GPU-only branch of
+`ChunkHasStaleDarkFaces` is an approximation: it sees `GpuHasDarkFace`, then
+returns stale when any sampled solid or block above it anywhere in the chunk has
+sky light. `GpuHasDarkFace` means at least one non-bottom dark face, not that the
+whole chunk is dark. The CPU-batch branch checks the actual dark quad's adjacent
+air/solid samples; the GPU-only branch does not associate its lit probe with that
+face. A valid cave face in a chunk that also has a sky-lit surface can therefore
+look stale to this probe and keep durable debt alive after a no-op repair.
+
+M613/M614's logged witnesses were `gpu=0`, so this limitation does not invalidate
+the observed CPU-batch witnesses or the approach-ring admission gap. M615A also
+had no `gpu=1` witness, so the GPU-only approximation remains unvalidated.
+
+M615A reproduced a distinct outer-ring geometry-admission gap at
+`(-19,2,5)`, focus `(-14,3)`: the light debt was queued and later cleared
+without an `admitted` event, while geometry revision advanced from 4 to 9 against
+published revision 3. World admission logged 66 `dirty_admit_denied` retries and
+no owner. The renderer's near-focus visual-hole proxy remained zero, but broader
+post-stop focus telemetry reported 22 missing meshes and 11 face debts. The
+runtime host CPU was 73.7/100/100% (median/p95/max), so this flight diagnoses
+queue behavior, not performance acceptance.
+
+M616 narrowly permits an otherwise unowned drawable geometry debt through the
+existing bounded admission loop when it is in the h5 first-mesh approach ring and
+the ordinary dirty-admit budget is exhausted. It records
+`geometry_debt_approach_reserved`; ordinary work keeps its budget. Verify on the
+same short M335 route that this exact coordinate receives a work owner and
+publishes its current geometry revision. If a current face witness survives that
+publish, join source border-light/incarnation/revision to dependent invalidation,
+capture and GPU publication before adding broader queue policy.
+
+M616A repeated the same visible GUI no-teleport profile. For `(-19,2,5)` at
+focus `(-14,3)`, the previous h5 denial was gone: two
+`geometry_debt_approach_reserved` retries reported `owner_after=1`, and its
+RemeshQ position improved from `3/4` to `1/2`. This confirms admission and a
+queued owner, but not publication. The current geometry revision advanced
+12→13 against `published_geom=2`; both snapshots had no mesh build, capture,
+GPU, or RAA owner. A relight handoff was tagged `stale_mesh_input=1` while the
+field light revision was 1 and meshed light revision was 0; the stale-light debt
+later published light revision 1. This audit field describes a stale light/mesh
+relationship, not rejection of an async mesh capture.
+The chunk stayed drawable throughout the debt snapshots, so this is not evidence
+of an empty/black chunk. Exact geometry-bump reasons were not enabled in M616A;
+the next short M335 should set `CUBA_VISUAL_BLACK_TRACE=1` and correlate each
+bump with queue dequeue, capture, stale-input rejection, and publication.
+
+M616A completed normally, but host runtime CPU median/p95/max was
+68.6/98.6/100%, invalidating performance acceptance. The suite failed its
+readiness convergence gates (`post_stop_readiness_debt_max=36`) while the
+near-focus visual-hole proxy stayed zero, fly visible-black proxy peaked at 6,
+and post-stop visible-black proxy was zero. These proxies describe different
+scopes and do not establish the displayed image. The only `gpu=1` log match was
+a first-mesh event with `enter_gpu=1`; it was not a GPU-only stale-face witness.
+Do not treat a text search for `gpu=1` alone as a GPU witness.
+
+The M616 admission change is retained. Do not broaden scheduler budgets based on
+this overloaded run. First obtain a resource-qualified short trace; if geometry
+revisions keep changing, identify and coalesce the repeated invalidation source.
+If the revision stabilizes but the queued item is not scheduled, trace and repair
+the scheduler handoff. Preserve the existing short-route and operator-visible
+verification policy.
+
+M617A ran the same short route with `CUBA_VISUAL_BLACK_TRACE=1`. Target light
+debt for `(-19,2,5)` was admitted and published, bringing its own field/meshed
+light revisions to 1604. Geometry publication advanced in steps while the next
+revision stayed one ahead: desired/published snapshots were 3/2, 4/3, 5/4, then
+6/5. A final CPU stale-face witness sampled light 10 at `(-305,42,80)` in
+neighbor source chunk `(-20,2,5)`, face 3, while the consumer's own light
+revisions matched. The consumer was at RemeshQ index 0/4 and its repair trace
+had owner flags 3 (Dirty + async build). The witness was sampled before that
+owner's follow-up publication, so it does not establish a persistent post-repair
+artifact.
+
+The targeted geometry bump history was missing despite visual tracing: only four
+renderer trace rows and no `demand_transition_trace` rows survived for the target.
+The visual-chunk watch had been opened by the late renderer census, after the
+revision changes. Commit `e39de9df` now starts the watch when bounded admission
+first identifies drawable h5 geometry debt, but only when visual tracing is
+enabled. Release build passed. The next short M618A should confirm bump reason
+and ownership events on the same M335 route.
+
+M617A runtime host CPU median/p95/max was 65.1/99.5/100%, so it is not a
+performance acceptance run. Its suite reported `visual_holes_rate=0`,
+`fly_visible_black_max=3`, `post_stop_visible_black_max=1`, and
+`post_stop_readiness_debt_max=46`; these proxies describe separate scopes and
+do not replace operator framebuffer observation. The eye-proxy gate also failed
+on stale-visual delta 2.0, stale activity without hole counters, and missing
+temporal mid-flight coverage; this is not pixel proof. No operator image verdict
+was captured.
+
+M618A verified the early watch and exposed a second scheduler gap. The target
+recorded five geometry bumps: `priority_world_streaming_commit` advanced 12→13
+and 13→14, then `priority_dirty_enqueued` advanced 14→15, 15→16, and 16→17.
+Every bump snapshot found the slice already Dirty in ordinary RemeshQ (`kind=3`),
+with no async build, capture, or GPU owner. Queue positions reached 6/7. The
+renderer did publish geometry revision 13, then 15, but the last revision 17
+remained queued at the end of the route. This is evidence of an owned, low-priority
+queue handoff rather than the earlier missing-owner admission gap.
+
+Commit `7e5a9634` promotes already-owned drawable geometry debt within h5 to
+priority RemeshQ in place. It changes queue ordering and preserves existing
+global work budgets. Release build passed. M618A runtime host CPU was
+70.7/99.3/99.6% median/p95/max, so it is not performance acceptance. Its
+`visual_holes_rate=0`, fly visible-black max=4, post-stop visible-black max=0,
+and readiness debt max=49 are separate proxies; eye-proxy stale delta was 2.5
+with temporal mid-flight coverage still untested. No operator framebuffer
+verdict was recorded. The planned short M619A promotion check is recorded below;
+no long monitoring flight is warranted.
+
+The immediate preflight after M618A was 63.8/75.8% host CPU median/p95; a
+second run through `tools/sample_host_cpu_gate.ps1` measured 59.0/86.9%, so
+M619A was initially deferred. A later preflight measured 46.8/63.1% and passed
+the default gate. The reusable sampler uses Windows `GetSystemTimes` because
+the localized processor performance-counter set is unavailable on this host.
+
+M619A verified the `7e5a9634` owned h5 geometry-debt promotion on the repeated
+short M335 GUI/no-teleport route. For target `(-17,2,2)`, trace contained 20
+geometry revision bumps, 3→22. Each revision was eventually published exactly;
+15 watched scheduler records explicitly showed priority RemeshQ (`kind=2`). The
+last revision 22 was scheduled at frame 2126 with queue index 0/17 and age 6,
+then published at frame 2127. This closes the specific ordinary-queue handoff
+gap for the observed target. It does not prove a framebuffer defect was visible.
+
+The target also received 13 `priority_world_core_repair` bumps among those 20
+revisions. Some followed successful publication within a frame or two. The
+available trace does not identify the caller's readiness predicate for each
+repair, and `renderer_pixel_probe` had no opaque hit in this exact chunk, so this
+churn is an investigation lead rather than a confirmed redundant-remesh bug.
+The next static/short-run analysis should join those bumps to the selected
+`AdmitUnfinishedVisualDemand` branch, exact-slice light-settlement proof, flow
+ticket, and previous publication; do not suppress repairs based on this evidence
+alone.
+
+M619A runtime host CPU was 71.6/93.0/100.0% median/p95/max, despite preflight
+46.8/63.1%; this run is not performance acceptance. `visual_holes_rate=0`,
+`post_stop_visual_holes_rate=0`, `post_stop_mesh_missing_max=0`, and
+`post_stop_visible_black_max=0`, while readiness debt reached 50 and did not
+converge. Eye-proxy stale-visual delta was 31 and its temporal mid-flight scope
+remained untested. These are proxy and coverage results, not a direct screen or
+operator verdict. Keep the next investigation short and resource-qualified.
+
+Artifacts remain local under `bin/suite_reports/engine_refactor` and `bin/logs`:
+`m619a_promote_owned_geometry_debt_20261016.json`,
+`perf_20261016-132510_14976.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-132505.14976`.
+
+### M620A: neighbor-halo invalidation gap
+
+M620A produced eight CPU stale-light boundary witnesses for which the consumer geometry revision was fully published and its own meshed, field, and published light revisions agreed. Each witness sampled current nonzero light from an adjacent source chunk. This makes the mesh's neighbor halo the discriminating dependency; it does not prove a visible framebuffer defect. The run was resource-invalid for performance acceptance (host CPU median/p95/max 82.0/99.8/100.0%) and operator framebuffer verdict was not recorded.
+
+Static call-site review found that light relight deltas invalidate 26 adjacent drawable slices, but chunk materialization did not consistently notify the same dependency queue: procedural commits used a horizontal band conditional on focus/pressure, while disk slices were applied before their finalization dirtying. A dependency queue entry is appropriate here because `ChunkMeshSnapshot` includes neighboring halo data and publication can otherwise retain an already drawable mesh captured before a neighbor appeared or changed.
+
+The current change queues dependency invalidations at procedural commit and after each successful disk slice apply. The queue is deduplicated and its drain respects existing live-owner checks and bounded schedule budget. This is a targeted correction to input invalidation; it does not change lighting values, priority budgets, or GPU publication policy. Confirm with a Release build and a short repeated M335 trace; if seam witnesses remain after those dependency remeshes publish, inspect the halo signature and light sampling contract next.
+
+### M621A: validation limit and next diagnostic
+
+The committed chunk-input invalidation change exercised the shared queue during the short route (158 queued / 73 applied counter totals), but the run does not prove that all 26-neighbor updates came from the new call sites because the same counters include relight invalidations. The route completed, while suite acceptance failed on runtime host CPU 61.9/97.3/100.0% median/p95/max. Mesh-coverage proxy was 0.0303 in flight and zero at stop; readiness debt was 37. No operator framebuffer verdict was captured.
+
+M621A emitted 18 exact-geometry, own-light-current CPU boundary witnesses with nonzero adjacent light, compared with 8 in M620A. Cross-run counts are not comparable acceptance evidence; cache state and runtime conditions differed. For target `(-19,2,-2)`, exact witnesses at frames 2474 and 2611 were followed by geometry bumps at 2479 and 2612, respectively. This is consistent with eventual repair but does not identify whether a dependency invalidation caused it or whether the next published snapshot captured the live neighbor halo.
+
+Keep the commit notification fix provisionally because loaded chunk input is a legitimate mesh dependency. Next add opt-in coordinate-scoped queue/drain telemetry for watched dependent meshes and correlate it with snapshot halo signatures at build capture and GPU publication. Do not tune budgets or alter `FaceLightPacked` until this lifecycle is attributable. Any acceptance run must be resource-qualified; M621A is not a performance baseline.
+
+### M622 instrumentation
+
+Commit `127d43ca` stores the published light-halo signatures with each valid mesh result. Initially only stale CPU witnesses emitted by the focus-slice trace included `stale_mesh_halo_state`: 0 unavailable, 1 last-published halo equals current neighbor halo, 2 current neighbor halo differs from the one used by the last published mesh. M622C later found the separate per-column attribution writer did not populate this field; M622D adds that coverage so the trace can distinguish invalidation debt from a mesh generated incorrectly from captured inputs.
+
+The same opt-in trace records watched dependency source→dependent queue events with cause and drain outcome (`defer_live_owner`, `covered_by_existing_owner`, `applied`, `admission_failed`, or `drop_not_drawable`). Interpret state 2 together with source cause and drain chronology. State 1 directs review toward `FaceLightPacked`, packed GPU provenance, or the stale witness's vertex/sample mapping. State 0 is inconclusive. No queue or build budgets changed.
+
+Release build passed, but post-build host preflight was 60.3/87.7% median/p95; no follow-up flight was launched. Keep the short established M335 route and wait for a passing runtime-resource preflight.
+
+Follow-up to M622: static call-path review found that GPU meshes publish through `CommitGpuMeshResult` rather than the CPU `ApplyMeshResult` path. Commit `a3493579` copies the accepted `PendingGpuApply.snapshot.lightHaloSignatures` into the cache after each successful GPU commit; the Release target was rebuilt successfully. This covers the active GPU greedy backend, including empty commits. Before the fix, its watched halo state would have stayed unavailable.
+
+At the time of this note, host preflight was over the gate at 56.4/72.0% median/p95, so M622A had not yet run. A later passing preflight enabled M622A, whose limitations are documented below. Halo state 1/2 only classifies the retained input signature; it is not visual acceptance.
+
+### M622A result and trace guard correction
+
+The repeated short route completed (`process_rc=0`, 35 periods, 12 chunk columns), but host CPU was 83.2/100.0/100.0% median/p95/max, so the suite failed and this is diagnostic only. Mesh coverage proxy was zero in flight and at stop; fly visible-black proxy max was 4, stop missing/visible-black max were zero, readiness debt max was 31. There is no operator framebuffer verdict.
+
+M622A logged 340 visual trace rows, 158 with nonzero CPU stale samples, and seven exact geometry/own-light-current observations. Every halo state was zero because the focus-slice query mistakenly required a prior chunk watch. The first witness can be emitted before that watch opens. Commit `d2869ef0` removes that gate for the focus-slice emission path, but did not cover the independent per-column attribution trace. M622C showed that its stale-light rows were emitted by that second path and that its halo fields remained default zero. Consequently neither run measured halo state; their zeros are not root-cause evidence.
+
+Queue tracing was active: it recorded both procedural commit and relight light-change causes, with dependents either applied or `covered_by_existing_owner`. Since halo state was missing, the validity of those existing owners is not established. M622A was later repeated as M622D after the trace corrections. Do not interpret M622A as performance or visual acceptance.
+
+### M622C/M622D: attribution trace coverage
+
+M622C completed 35 periods with `process_rc=0`; suite acceptance failed under runtime host CPU 66.2/88.9/97.1% median/p95/max. The near-focus mesh-coverage proxy was zero, fly visible-black proxy max was 3, post-stop mesh-missing/visible-black proxies were zero, and readiness debt reached 35. No operator framebuffer verdict is available.
+
+All 144 rows with nonzero stale samples had `sample_kind=0`, which is the per-column visible-black attribution ring. Five were exact geometry/own-light-current observations. The halo state, cache-entry, and stamp-validity fields all remained default zero because only the focus-slice path sampled them. Earlier interpretation of those zeros as an unavailable published signature was incorrect.
+
+Commit `57016e90` now records the three values on the attribution path. Release
+rebuild and static executable dependency verification passed. M622D has since
+repeated the documented short route; its findings and follow-up are recorded at
+the end of this audit. The 70.4/89.9% M622C preflight remains historical
+context only. Host CPU is advisory and does not block a diagnostic run or
+determine its result; no proxy establishes a framebuffer defect or fix.
+
+Follow-up static review found `ApplyEnterOpenSkyBoundary` mutates sky light in loaded chunks and horizontally propagates across chunk boundaries, but its callers only scheduled the initiating column or used a relit list captured before the open-sky mutation. Commit `2f95b9cc` returns the exact changed chunk coordinates and routes them into source-mesh remesh ownership plus neighbor dependency invalidation at all three call sites. The Release build passed. This closes an independent notification gap; it is not yet attributed to the M622C witnesses. The 83.2/93.8% post-build CPU sample is historical context, not a gate. M622D later completed, but emitted no `enter_open_sky_boundary` event, so this route did not exercise the open-sky-specific mutation.
+
+M622D recorded 165 nonzero stale-light samples across 56 chunks. All had a
+present cache entry, valid retained halo stamp, and state 2 (the current
+neighbor-light halo differs from the published input). Twenty-two samples over
+15 chunks also had matching desired/published geometry and own-light revisions.
+The bounded lifecycle trace showed a matching successful publication within
+30 frames for 16; six had no such event recorded. Dependency logs matched 55 of
+56 stale coordinates and contained 3,353 queue, 1,381 applied, 6,542 live-owner
+deferral, and 1,312 existing-owner coverage events. No operator framebuffer
+verdict is available. Runtime host CPU was 69.9/100/100% median/p95/max and is
+advisory, not an acceptance condition.
+
+Commit `45f04f6a` adds `frame_epoch` to dependency queue/drain events; M622E
+confirms direct frame joins. The flight completed with `process_rc=0`, 35
+periods, and 12 columns; the analyzer returned `pass=false` on non-CPU checks.
+Runtime host CPU 81.7/100/100% median/p95/max is advisory; app CPU was
+21.36/50.16/59.86% of machine capacity. There is no operator framebuffer
+verdict.
+
+M622E had 178 nonzero stale-light rows across 51 chunks (177 state 2, one state
+1 with stale own-light revision and frame 0). Nine rows across eight chunks
+had exact geometry/own-light agreement; every row joined to same-frame
+dependency queue/drain events. Six drains were applied and three were covered
+by existing ownership. Each exact witness had a matching successful
+publication within 8–31 frames. Three coordinates later had another stale
+sample alongside new relight activity and further lifecycle work, consistent
+with repeated neighbor-light changes and repair. Seven startup log events
+still had frame 0 and are not joinable; all nine exact witness joins had
+nonzero epochs. No open-sky or disk-slice cause occurred, leaving M623
+unverified at runtime.
+
+The next review should trace repeated light-change and publication cycles for
+the three re-staled coordinates and find a short scenario that actually
+exercises `ApplyEnterOpenSkyBoundary`. Keep CPU advisory and leave queue budgets
+unchanged until coordinate/frame evidence shows a persistent unresolved mesh.
+
+### M622F: runtime evidence for the open-sky snapshot caller
+
+M622F ran the established short, visible, no-teleport route and completed
+normally (`process_rc=0`, 35 periods). The analyzer remained `pass=false` on
+non-CPU checks; host CPU was 100/100/100% median/p95/max while app CPU was
+15.91/30.58/33.09% of machine capacity. This is direct evidence that system
+CPU load is not a useful flight admission gate while Codex or other processes
+are active. Continue to record host/app samples as context, but do not block
+diagnostic work on a CPU threshold.
+
+The opt-in call trace saw six `enter_lit_snapshot` invocations. Four were
+no-ops; two changed one loaded chunk `(3,3,2)` from column `(48,32)`, with 15
+loaded slices. The second mutation generated open-sky dependency invalidations
+for `(3,3,3)` and `(3,4,3)`, and both drains reported `applied`. They occurred
+before the first streaming epoch (`frame_epoch=0`). The current perf lifecycle
+trace does not retain matching publication rows for these startup coordinates.
+The INFO audit later records stale-light debt closed at matching
+field/meshed/published light revision 19 for `(3,3,2)` and revision 2 for
+`(3,3,3)`. Those are successful current-light outcomes after the startup
+repair activity, but concurrent relight invalidations prevent attributing the
+closure only to open-sky dependency work. For `(3,4,3)`, slice/handoff state
+was logged without an explicit publication or settled-debt closure. Runtime
+evidence therefore confirms dependency transfer and partial downstream
+completion, not a complete end-to-end result or visual fix. The other callers
+(`enter_visual_repair` and `relight_terrain_column`) remain unexercised.
+
+M622F proxy metrics: `visual_holes_rate=0.0303`, fly visible-black max 4,
+post-stop visible-black max 0, readiness debt max 57. The route has no operator
+framebuffer verdict, and these proxies are not proof of a user-visible hole.
+Prioritize preserving coordinate-scoped lifecycle evidence for epoch-zero
+dependencies, with `(3,4,3)` as the unresolved witness. Run another short
+route only if instrumentation cannot answer that lifecycle or a different
+caller needs runtime coverage. Detailed report:
+`bin/suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`;
+the experiment log index is maintained in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622G: pinned startup lifecycle trace
+
+The general `visual_lifecycle_trace` and `demand_transition_trace` rings had
+reached their fixed capacities in M622F, obscuring early enter-snapshot work.
+Commit `1a8b899c` adds bounded open-sky-specific job and demand rings and pins
+the changed source/dependent coordinates for the lifetime of the trace. Release
+build passed. The same short visible route completed 35 periods; the suite
+failed non-CPU gates. Host CPU was 99.8/100/100% median/p95/max and app CPU was
+15.25/31.25/40.63% machine capacity, reinforcing that CPU totals are not a run
+gate. There is no operator framebuffer verdict.
+
+The dedicated trace retained 131 lifecycle rows for 18 chunks and 339 demand
+transitions for 21 chunks, including epoch-zero events. Two changed source
+chunks `(3,3,2)` and `(3,3,1)` have matching job publications at frames 1 and
+4, respectively. The two observed dependency drains applied for `(3,3,3)` and
+`(3,4,3)`, with their revision bumps retained; neither has a valid
+attempt/publication closure in the trace. The later rows with zero world
+identity and attempt ID are stale/default demand records, not successful
+publication proof. Both x=3 coordinates were behind the camera as the tested
+route headed west. Determine from owner and scheduler state whether their
+Dirty work remained durably queued outside visual focus; do not classify this
+as an on-screen rendering regression without a route that brings them into
+view.
+
+M622G report:
+`bin/suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20261016.json`.
+The flight wrapper and raw log paths are documented in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622H–M622I: published halo mismatch can outlive its ordinary owner
+
+The ordinary mesh-dependency queue only needs to transfer an invalidation to
+an existing Dirty/remesh owner, so it erases its entry as soon as that owner is
+observed. Queue ownership alone does not prove that the owner survives later
+queue pruning. A retained published-light-halo signature provides a direct
+condition for preserving repair debt: the dependent mesh sampled a changed
+neighbor boundary and remains drawable against that old input.
+
+Commit `71525147` records that condition in the existing durable stale-light
+remesh set. It checks the exact changed neighbor's sampled signature, waits for
+settled demand and the absence of another active owner, and closes the ticket
+only when the own light revisions and all published halo signatures match.
+The one-neighbor check avoids recomputing all 26 signatures at each source
+invalidation. Commit `5c91ce32` further defers the full completion hash until
+the dependent has settled light and no active Dirty, CPU/GPU mesh owner.
+
+On M622I, 846 queue events represented 461 coordinates; 323 coordinates later
+had a `stale_light_debt event=published` with `halo_state=1`. Another 138 had
+no such closure in the bounded short route. The event-order join proves that
+some durable tickets reached a current-halo closure after being queued. It does
+not establish why every unclosed coordinate remained pending, nor does it
+establish a pixel-level defect. A route that brings a selected unresolved
+coordinate into active focus is the next runtime follow-up if needed.
+
+The analyzer was diagnostic only: process completed without timeout, but
+`pass=false` on frame/readiness and other non-CPU gates. Host CPU median/p95/max
+was 86.9/100/100%; app CPU was 16.45/39.70/50.85% of machine capacity. Host CPU
+must remain advisory because Codex and other tools share the host total. There
+is no operator framebuffer verdict. M622I report:
+`bin/suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json`.
+
+### M622M: residual geometry reason on open-sky source chunks
+
+The short visible M335 run completed 35 periods (`process_rc=0`) but remained
+`pass=false` on analyzer gates. The mesh-coverage proxy was 0.1212, fly
+visible-black proxy max 16, post-stop visible-black proxy max 0, readiness
+debt max 37, and median frame time 36.10 ms. No framebuffer verdict was
+recorded; these values do not establish a visible hole. Host CPU was
+84.4/100/100% median/p95/max; app CPU was 20.39/40.08/50.09% and CPU remains
+advisory only.
+
+Applied dependency tracing verified 1,631 light-only applications across 510
+coordinates. It also recorded geometry-priority drains for `(-11,2,2)` at
+frames 1464, 1646, and 1833; the corresponding nearby retry snapshots advanced
+desired geometry 7→12 while publication stayed at 4. Static review found a
+distinct path missed by M622L: both open-sky callers enqueue their changed
+source chunks with the singleton dependency API, which defaulted to geometry,
+then queue neighbors via the reason-aware batch API. The singular API now
+accepts a reason; open-sky sources explicitly use the light-only reason, while
+its seam/coverage default stays geometric. Added `queued_single` trace rows to
+verify this path. M622N later confirmed both light-only and geometry-capable
+singleton reasons reach the drain; M622M itself cannot attribute its geometry
+drains to the corrected callsite.
+
+Report: `bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json`.
+
+### M622N: source-light invalidation reason retained through drain
+
+The M622N Release binary completed the established short visible flight with
+35 periods and no timeout. The singleton trace retained 131
+`priority_light_dependency_repair` rows over 80 coordinates and 297
+`priority_dirty_enqueued` rows over 244 coordinates. Drain telemetry contained
+both reasons, confirming that light-only source invalidation no longer enters
+the geometry lane by default and that geometry seam/coverage work still does.
+
+At the selected witness `(-11,2,2)`, two geometry-debt retry samples remained
+at desired/published revision `2/1`; geometry singleton invalidations at
+frames 702 and 814 found an existing Dirty owner and showed no revision growth
+in those snapshots. This does not reproduce the M622M 7→12 growth on a
+controlled same-world basis. Keep the earlier churn report open; if it returns,
+join queue, drain, bump, build, and publish events for the exact coordinate.
+
+The analyzer reported mesh-coverage proxy 0.1515, fly visible-black proxy
+max 14, post-stop visible-black max 0, readiness debt max 31, median frame
+time 41.22 ms, and `pass=false` on non-CPU gates. No operator framebuffer
+verdict was recorded. Host CPU reached 100%, app CPU max was 45.63%; CPU is
+context only. Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.
+
+### M622BK: accepted relight-request provenance identifies the broad-band producer
+
+Added opt-in `relight_admission event=queue_request` records to the accepted
+insert/coalesce paths in `EnqueueTerrainColumnRelightImpl`. With
+`CUBATARIUM_RELIGHT_AUDIT=1`, each record retains the caller, requested and
+merged Y bands, queue ownership/index, FIFO pressure, focus distance, and
+pending/lit-ready state. The Release build succeeded; the established short
+visible M335 route completed 29 periods/27 steady with exit zero and no
+timeout. This is an instrumentation run, not a clean performance comparison.
+
+For source column `(4,6)`, the log contains an exact
+`OnLitPendingNeeded` insertion for `16:31` at 11:04:26.679. At 11:04:26.714,
+`DrainIdleFocusPendingLight` coalesced a `0:80` request into the queued owner;
+the same producer repeated this coalesce ten times while the request waited.
+There was one corresponding full-band capture at 11:04:27.521. Snapshot job
+678 records `source=(64,0,96)`, band `0:80`, four slices, and 16 neighbor-light
+samples; it completed in 43.8 ms and changed one slice. That install advanced
+source chunk `(4,3,6)` from published light revision 2 to field revision 3
+and queued dependent `(3,3,6)` stale-light debt at 11:04:27.583. The target
+debt published with matching revisions at 11:04:27.791. This establishes the
+request/capture producer chain and downstream invalidation; it does not show
+that the broad band was incorrect or that the update caused a visible defect.
+
+The same target's earlier stale episode queued at 11:03:55.511 and published
+at 11:03:56.272. Its watched pixel report contains nine associations; all
+eight depth-surface joins were drawable, draw-ready, settled, and matched
+geometry/light revisions, with no preview or stale-remesh flag. No repeated
+same-view group was captured. Across the whole run, 45 low-luma probes joined
+drawable opaque surfaces; five had unsettled/preview state and none had a
+light-revision mismatch. The run still reported readiness debt 1.0 and
+`visual_holes_rate=0`, while direct post-stop missing-mesh, visual-hole,
+visible-black-no-ticket, and stalled-black counts were zero. There is no
+operator framebuffer verdict; these metrics neither establish nor refute a
+perceived defect.
+
+The producer is now identified, so do not repeat the flight just to answer
+that attribution question. Next statically verify why the water-aware focus
+band expands to `0:80`, what vertical neighborhood the relight calculation
+actually requires, and whether repeatedly coalescing an already-covered band
+consumes the idle-drain budget or starves other pending columns. Change band
+scope only if that analysis preserves light propagation and water correctness.
+Artifacts and exact replay/analysis commands are in
+`FLIGHT_EXPERIMENT_SCRIPTS.md` and `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`.
+
+### M622BL: do not spend idle-drain budget on already-covered queue owners
+
+M622BL adds a narrow guard to `DrainIdleFocusPendingLight`: it skips a
+candidate only when the same column has a keyed, in-deque priority owner whose
+queued Y band already covers the complete focus/pending union. A narrower
+owner still goes through enqueue to widen its band; a far/deferred owner is
+not skipped, so its normal admission/retry path remains intact. The skip does
+not count against `max_columns`, leaving that budget for another pending
+column. An opt-in `idle_focus_skip_covered` record makes the decision visible.
+
+The Release build succeeded. The established visible no-teleport M335 route
+completed 29 periods/27 steady, process exit zero, no timeout. M622BL emitted
+553 covered-owner skips; 114 queue requests still came from
+`DrainIdleFocusPendingLight` (95 coalesces and 19 inserts). This confirms that
+the guard is active while preserving requests that need an owner or band
+change. These totals are from one run and are not a controlled throughput
+comparison. For column `(4,6)`, one drain request led to full-band snapshot job
+172; the separate target `(3,3,6)` again logged stale-light debt episodes and
+matching-revision publications. This change does not narrow the relight band
+or claim to eliminate neighbor invalidations.
+
+The watched `(3,3,6)` trace contained 29 associations, including 19
+framebuffer depth joins. All 19 were drawable, draw-ready, settled, and had
+matching geometry/light revisions; none had preview or stale-remesh state.
+There was no same-view repeat or operator verdict. The full pixel trace found
+71 low-luma probes, all on drawable opaque surfaces; five showed unsettled or
+preview state and none showed a light-revision mismatch. Aggregate readiness
+debt remained 1.0 and the visual-hole proxy was 0.148; at stop, direct
+mesh-missing, visual-hole, visible-black-no-ticket, and stalled-visible-black
+counts were zero. The aggregate suite remained `pass=false`. Host CPU
+median/p95 76.0/97.2% is context only. These proxies do not establish a
+user-visible rendering defect.
+
+Static history/source review constrains the next band change. Commit
+`ee54b86d` introduced the water-aware range as focus slices union sea level
+minus four chunks through sea level plus two chunks. The relight snapshot
+captures the requested vertical chunk interval and only face shells outside
+it; its skylight solver scans up to 15 chunks above each processed slice.
+Narrowing a pending `16:31` note to that slice alone would omit upper occluder
+chunks from the captured read set and can treat missing snapshot blocks as
+air. Retain the conservative band until a dependency-correct lower/upper bound
+is derived; the skip optimization is safe independently of that policy.
+
+Artifacts and exact commands are in `FLIGHT_EXPERIMENT_SCRIPTS.md`. The next
+static step is to derive the required vertical read/propagation interval for a
+pending slice, including water and horizontal frontier effects, then decide
+whether the lower part of `0:80` can be excluded without changing light
+results. Keep future validation on the established short M335 route.
+
+### M622BM: deduplicate pending-light requests against DeferredFar owners too
+
+M622BL still had two durable-owner forms: a keyed priority/FIFO entry and an
+unkeyed `DeferredFar` record retained while FIFO pressure blocks admission.
+M622BM extends the covered-band guard to the latter only when the deferred
+owner is already priority and covers the entire candidate band. Uncovered
+ranges still merge through the existing admission path, and a keyed ghost is
+not mistaken for an executable deferred owner. `AdmitDeferredFarRelightColumns`
+remains responsible for retrying the durable work when the FIFO predicate
+allows it. The existing `idle_focus_skip_covered` audit event now names the
+owner kind.
+
+Release build passed; the same short visible no-teleport M335 route completed
+29 periods/27 steady, process exit zero, no timeout. It logged 405 covered
+owner skips (404 priority-queue, one DeferredFar), and 86 accepted requests
+from `DrainIdleFocusPendingLight` (81 coalesced, five inserted). Two
+`deferred_owner_skip` calls from that producer remained; current audit data
+only records the post-merge band, so it cannot say whether those calls widened
+coverage, promoted priority, or repaired ownership. No performance comparison
+is claimed because world state and host load are not controlled.
+
+The run remained `pass=false`: readiness debt 1.0, visual-hole proxy 0.037,
+post-stop readiness debt 26, while direct post-stop mesh-missing,
+visual-hole, visible-black-no-ticket, and stalled-visible-black counts were
+zero. Pixel trace contained 2,320 probes and 41 low-luma samples; all joined
+drawable opaque surfaces, five had unsettled/preview state, and none had a
+light-revision mismatch. The `(3,3,6)` watch returned eight associations, of
+which seven were depth-surface samples; all seven were drawable, ready,
+settled, and revision-matched, with no preview/stale-remesh state. There was
+no same-view repeat or operator verdict. Host CPU median/p95 53.6/98.7% is
+context only.
+
+This closes the idle-drain budget waste for both already-covered queue owners
+and already-covered DeferredFar owners. It does not address the still-wide
+relight band or claim a rendering fix. Next statically derive the smallest
+safe vertical capture interval from skylight and blocklight dependencies,
+water boundaries, and frontier propagation. If the two residual deferred
+coalesces recur, extend the audit record with pre-merge owner band/priority so
+we can distinguish necessary widening from stale ownership without another
+speculative change.
+
+Artifacts are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622BN: partial relight snapshots omitted upper skylight occluders
+
+Static review found a concrete mismatch between the relight solver's read
+closure and `UChunkRelightSnapshot::Capture`. `PropagateSkylightColumn` scans
+240 blocks (15 chunk slices) above every processed chunk to decide whether
+direct sky is blocked. Before M622BN, a partial capture held full geometry only
+inside its target Y band and one-block face shells outside it. Blocks in loaded
+chunks farther above the band therefore read as `BLOCK_AIR`; a roof or terrain
+slice there could be ignored and a shaded column could be seeded as open sky.
+This is a correctness defect in partial-band skylight, not proof that it caused
+the reported dim patches or missing-water observations.
+
+Commit `0b3f125b` separates the write target from the solver's vertical read
+context. Capture now copies non-air block data from the 15 chunk slices above
+the requested band's top, and adds geometry-only input stamps for present and
+absent context coordinates. Context is readable by the worker but is not part
+of its relight/apply set. A changed, unloaded, reused, or newly streamed upper
+chunk invalidates the result. `RelightAudit` reports `sky_context` so the
+additional copies can be observed. The partial-band regression test verifies
+both roof occlusion and invalidation on geometry mutation/stream-in.
+
+Release build and `relight_result_install_test` passed. M622BN ran the short
+visible no-teleport M335 route (29 periods, 27 steady, 128 blocks, process
+exit 0, no timeout); it did not reach the west checkpoint and its product
+runner returned 2, so it is only a smoke trace. Across 405 nonempty snapshots,
+206 copied one or more non-air context chunks (258 copies total, maximum 3 in
+one capture). Capture median/p95 were 0.418/1.054 ms; a single 7.571 ms sample
+had one context chunk. M622BM's unpaired baseline was 0.386/1.016 ms; different
+world state and load prevent a causal performance claim. Pixel tracing found
+272 `<96` luma samples among 1,920 probes; all hit drawable opaque depth, 52
+had unsettled/preview light, and none had a light-revision mismatch. The
+`(3,3,6)` watch had seven ready/current depth joins and no same-view repeat.
+There is no operator framebuffer verdict and no evidence this route reproduced
+the distant symptom.
+
+Keep scheduling/write-band policy unchanged. Next quantify worst-case context
+memory and the isolated capture cost for both center-only and 3x3 captures;
+the full-chunk representation has a theoretical upper bound of 15 context
+chunks per horizontal column. If that cost approaches the main-thread budget,
+replace copied context arrays with a compact opacity/sky-occlusion summary,
+preserving geometry-aware validation. Continue to treat pixel probes as
+supporting evidence and use only the established short route for routine
+validation.
+
+### M622BO: isolate sky-context capture cost
+
+M622BO added `sky_context_ms` to the existing relight audit event and repeated
+only the short visible M335 route. The run completed 29/27 periods, process
+exit 0, no timeout, and stopped at focus x=-2 before the west checkpoint; it is
+not far-route acceptance. Among 1,663 nonempty target captures, 1,458 copied
+context geometry (1,520 chunks total, maximum 3 in one capture). The context
+copy timer was 0.0111 ms median, 0.0152 ms p95, and 0.1271 ms maximum.
+
+One whole `capture_ms` sample reached 31.7404 ms while `sky_context_ms` was
+0.0193 ms. The per-frame telemetry's maxima were 0.0005 ms capture-lock wait,
+1.337 ms snapshot copy, and 0.0185 ms dependency stamp. This does not support
+the hypothesis that the new context copy or global capture mutex caused the
+outlier; the cross-granularity timing does not identify its cause. Host CPU
+median/p95 was 48.1/72.3%, not a performance acceptance run. Keep the
+instrumentation and investigate the discrepant wall sample only if it recurs.
+
+The M622BO audit joined 1,805 submit/start/done records: maximum two queued
+snapshots, five live snapshots, and four live copied context chunks (about
+32 KiB of context arrays, excluding target/light/shell storage). This route
+exercised the streaming center-column path. Static call-site review found that
+generic 3x3 capture is reachable from the async player-edit API, but the queue
+feeding that API has no producer in the tracked source; the generic chunk
+helper likewise has no live caller. A new Release regression constructs nine
+target chunks and nine upper-context chunks, then verifies Compute returns
+only the nine targets and records geometry-only stamps for the context.
+
+A full resident 3x3 context can still copy up to 135 chunks (about 1.06 MiB at
+8 KiB per chunk) per snapshot. This is a latent API bound, not an observed
+streaming allocation. The next M622BP static audit separates the active
+streaming admission from unused edit helpers; do not optimize based on the
+isolated 31.74 ms wall sample.
+
+### M622BP: relight queue bound and solver read-closure follow-up
+
+The M622BO queue concern is now split into active and dormant paths. In the
+tracked source, `UWorldPersistence::EnqueuePlayerRelight` has no caller;
+`RelightPlayerEdit` is reached only by draining that currently unpopulated
+queue. `EnqueueAsyncChunkRelight` is reached only through
+`EnqueueAsyncChunkSkylightRelight`, which itself has no caller. Thus the 3x3
+player-edit and generic chunk paths have no production call site in this
+checkout. The 1.06 MiB 3x3 context figure is a latent per-job upper bound, not
+an observed streaming allocation or evidence of current queue growth.
+
+The active streaming producer is `DrainRelightQueues` →
+`EnqueueAsyncTerrainColumnRelight`. Its drain loop stops before capture when
+`GetAsyncRelightInFlightCount() >= max_inflight`; the limit is derived from the
+configured relight worker count and a pressure-dependent multiplier. A job
+remains in `InFlight` after worker completion and is removed only when its
+completion is drained (or explicitly discarded), so queued, running, and
+completed-but-unapplied jobs all consume that limit. The low-level relight
+pool's `Enqueue` is unbounded, but the active producer's own admission bounds
+its total retained jobs. M622BO's peak of two queued and five live snapshots
+is consistent with that route, not a bulk-edit stress result.
+
+There is still a cross-pool admission caveat: relight attempts to acquire a
+shared work slot, but submits even when it is denied. That bypass does not
+remove the per-world relight in-flight bound, though it means the shared slot
+counter is not a hard global worker limit for relight. Do not treat CPU
+percentage as a launch gate. Revisit this only with joined evidence of
+cross-pool oversubscription or queue latency and a lossless way to return the
+relight demand to its owner.
+
+Static solver review confirms the active center-column contract: only loaded
+chunks in the requested Y band are writable; adjacent chunks' boundary-light
+planes seed propagation into the target, and skylight additionally reads
+geometry from up to 15 chunk slices above the target band's top. The
+sea-level/water policy selects which Y band is scheduled; water itself is
+handled through the normal transparent/liquid step costs and does not add a
+separate vertical read range.
+The read-only sky context and its content stamps cover that solver dependency.
+
+One dormant-path mismatch remains before async edit relighting can be
+re-enabled: `UChunkRelightSnapshot::HasChunk` is backed only by captured full
+`Blocks`, while its frontier expansion discovers neighbors only when
+`HasChunk(neighbor)` is true. Since the generic capture does not include
+additional frontier chunks beyond its initial 3x3 target set, its configured
+frontier iterations cannot extend the result into further loaded chunks. The
+active streaming-column path sets frontier iterations to zero, so this is not
+a current streaming regression. Either capture and validate candidate
+frontiers, or retire the unused async edit API before connecting a producer.
+No new flight is needed for these call-graph and solver-closure findings; keep
+routine validation on the established short M335 route.
+
+### M622BQ / M622BR: relight boundary deltas and delayed blocklight refresh
+
+An audit-only `light_delta` trace now reports changed voxel counts and up to
+12 concrete changed face voxels per installed chunk. Face counters are ordered
+`x-`, `x+`, `y-`, `y+`, `z-`, `z+`; this instrumentation is enabled only by
+`CUBATARIUM_RELIGHT_AUDIT=1` and does not change solver behavior.
+
+Two short M335 passes on warm `World_164` repeated a blocklight-only transition
+at `(64,54,98)` in chunk `(4,3,6)`: `16->0` (blocklight `1->0`, skylight
+unchanged), followed later by `0->16`. M622BQ restored it about 17.35 seconds
+later. In M622BR it restored about 32.8 seconds later. In the latter pass,
+between those events, chunk `(3,3,6)` changed 106 blocklight voxels, including
+32 on its `x+` face. This is consistent with a neighboring boundary-light
+input changing before the center column was relit again; the trace does not
+show that this exact face voxel supplied the changed target value, and the
+level-1 target transition is not proof of an operator-visible defect.
+
+The M622BQ pixel trace contained 3,020 probes: 82 had luma below 32, all
+joined a drawable opaque surface, nine were preview/unsettled, and none had a
+light-revision mismatch. For watched `(3,3,6)`, 32 drawable/depth joins all
+matched light revisions; a same-position pair varied by only one RGB unit per
+channel over 3.646 seconds, but did not bracket the light transition. M622BR
+repeated the light transition but still did not produce a same-view pixel pair
+across it. Keep the visual-light symptom unconfirmed and do not add a
+neighbor-relight cascade from this evidence alone.
+
+### M622BS: async snapshot horizontal skylight boundary seed
+
+Static review found a separate solver defect in
+`SeedSkylightHorizontalQueue` for async snapshots. It checked the neighboring
+face light and queued the target face position, but did not write the incoming
+attenuated value into the cleared target band. The queue consumer reads the
+target value from the grid, so an otherwise unlit target remained zero and
+could not propagate sideways. The previous fixed one-level subtraction also
+ignored the destination material's cost (liquid horizontal skylight costs two
+levels). The solver now writes the seed and subtracts
+`SkylightStepCost(destination)` before queuing it. This is a confirmed code
+correctness fix; the blocklight-only `(64,54,98)` transition above is a
+separate observation, not proof that this skylight bug caused it.
+
+Release build and static Windows EXE verification passed. The post-fix short
+M335 run M622BS completed 29 periods / 27 steady periods and did not time out,
+but ended at focus x=-2 instead of the west checkpoint; it is not far-route
+acceptance. Its pixel trace had 1,620 probes, 35 luma<32 samples (all drawable
+opaque), five preview/unsettled samples, and zero light-revision mismatches.
+Watched `(3,3,6)` had six drawable/current depth joins and `(4,3,6)` had two;
+both watches had matching light revisions and no same-view pair. No direct
+visual reproduction or confirmation of repair resulted. Do not use run-level
+readiness or luma aggregates as a framebuffer verdict.
+
+Next: add a deterministic solver regression for horizontal snapshot seeding
+through both air and liquid, then use the established short route and pixel
+joins to inspect a boundary-light transition only when a relevant sky delta is
+actually observed. Separately trace the durable column relight admission and
+queue age when neighboring blocklight faces change; do not recursively enqueue
+all neighboring relights until that work is bounded and its convergence is
+specified.
+
+### 2026-10-17 addendum: research tooling and perf collection
+
+The current harness and offline analyzers remain under `tools/`; product code
+is under `src/`, build helpers under `scripts/`, and protocols/history under
+`docs/streaming/`. Runtime evidence currently mixes into `bin/logs/`,
+`bin/suite_reports/`, and `bin/flight_captures/`, alongside tracked historical
+goldens. The initial inventory found 7,145 untracked items under `bin/`, mostly
+generated images, JSON, and world chunks. A curated set of analysis/flight
+source files, experiment wrappers, and research notes is now preserved
+explicitly; no raw output directory is staged wholesale.
+
+`FramePerfMonitor` previously collected and wrote periodic perf JSONL on every
+direct game launch. It is now opt-in via `CUBATARIUM_PERF_LOG=1`; the experiment
+harness enables it because its gates consume those metrics. With the monitor
+off, engine scheduler telemetry remains active and `WorldStreaming` samples
+process memory at a bounded 30-frame cadence. A Release build passed and a
+short M623A visible M335 smoke produced perf data; the report still failed
+existing product gates and only covered eight chunks, so it is not acceptance.
+The tooling handoff is in `ENGINE_REFACTOR_TOOLING.md` and `tools/README.md`.
+
+### 2026-10-17 addendum: deterministic boundary seed regression
+
+M622BT now covers horizontal skylight entering a cleared center-only snapshot
+through a read-only neighbor face. With direct sky blocked, the Release check
+asserts air receives level 14 and water level 13; it passes. This closes the
+solver-contract test item only. Queue wait and job latency are now measured;
+the cause of the delayed blocklight boundary refresh and a bounded dependent
+relight policy remain open. No recursive neighbor relight was introduced.
+
+### 2026-10-17 addendum: relight FIFO wait
+
+`tools/analyze_relight_queue_age.py` reconstructed queue wait from the existing
+M622BQ/BR glog files. The largest observed wait was 120.713 ms at `(3,6)` and
+2,106.248 ms at `(4,6)`, below the 17.35/32.8 second spacing of the repeated
+blocklight changes. A `(4,6)` dequeue preceded one `0->16` update by about
+53 ms. Queueing contributes to some delay but does not explain the full
+interval. The boundary refresh path remains under investigation.
+
+### 2026-10-17 addendum: relight job latency
+
+The short M622BV M335 trace added job-id correlation. At the affected columns,
+queue wait peaked below 0.7 s and five paired submit-to-apply jobs took at most
+69.105 ms; across the run, 560 paired jobs had a 35.746 ms median, 137.600 ms
+p95, and 262.919 ms maximum. The target boundary light changed before a later
+adjacent `x+` face update, but no same-view pixel witness exists. The harness
+failed its existing gates and did not reach the west checkpoint. Queue/worker
+delay alone is insufficient to explain the older 17–33 s transition spacing;
+trace the upstream light-change producer and its relight notification next.
+
+### 2026-10-17 addendum: M623C horizontal boundary dependency handoff
+
+Static review found the missing ownership edge: a center-only relight reads
+neighbor face light as input but installs only the target column, and the
+`frontier_unfinished` retry does not schedule that neighboring column. The
+apply path now compares the four horizontal light faces before install. A
+changed face with a resident adjacent chunk queues one coalesced request for
+the neighbor column and that chunk's 16-block Y band. The request retains an
+explicit dependency owner through the existing FIFO/deferred work path,
+bypasses only the settled/no-op admission check, and is kept outside the
+surface-band clamp through capture. No work is spawned for unchanged faces.
+
+Release build and static executable verification passed. The M623C short M335
+run observed the intended chain: job 154 changed blocklight on `(4,3,6)`'s
+`x-` face; `(3,6)` was queued and captured 442 ms later. That neighbor's changed
+`x+` face queued `(4,6)` and `(3,5)`. The run submitted nine dependency jobs
+and eight light deltas; dependency submit-to-apply was 31.160 ms median,
+74.408 ms p95/max. Across 1,484 paired jobs, median was 25.295 ms, p95
+77.556 ms, max 196.062 ms. A short return wave is visible in the trace, but
+unchanged results stop producing dependencies. This is bounded local
+propagation by changed face, not unconditional neighbor-ring work; longer-term
+load behavior still needs a focused convergence regression.
+
+The harness completed without timeout and covered eight chunks, stopping at
+x=-1 before the west checkpoint. Readiness debt remained 1.0 and post-stop
+missing mesh/readiness reached 34 while the near-focus visual-hole proxy was
+zero. Existing gates failed; no same-view framebuffer proof was captured. The
+run is diagnostic evidence that the handoff executes, not acceptance or proof
+of a user-visible hole. The experiment procedure and artifacts are recorded
+under M623C in `FLIGHT_EXPERIMENT_SCRIPTS.md` and the diagnostic runbook.
+
+### 2026-10-17 addendum: M623D boundary return and bounded fixture
+
+M623D repeated the short warm route after extracting
+`ChangedHorizontalLightBoundaryMask`. The worker log recorded 14
+`boundary_dependency` jobs and 16 light deltas. In chunk `(4,3,6)`, blocklight
+at `(64,54,98)` changed `1->0` in a normal streaming job, then `0->1` about
+0.84 seconds later after the neighboring `(3,3,6)` relight changed its `x+`
+face. No further light delta was logged for `(4,3,6)` during that short run.
+This is a two-step boundary return wave in the observed trace, not evidence of
+an indefinite oscillation.
+
+One `(3,5)` dependency request was denied at FIFO capacity with `band_needs=0`;
+its durable dependency marker survived and later produced worker job 444 with
+a merged `0:80` band. This confirms deferral ownership in the exercised path.
+The Release test `TestHorizontalBoundaryDependencyWaveSettles` now uses a
+single torch beside a resident chunk, applies center-only relights, and drains
+source → neighbor → return-check work in exactly three jobs. The neighboring
+block reaches light level 13 and the fixture ends with an empty queue. It does
+not model a full-world boundary graph or sustained FIFO pressure.
+
+M623D passed adequacy and the eye-proxy stop-line, with a zero near-focus
+visual-hole proxy, but still failed post-stop convergence (readiness debt 1.0,
+missing mesh/readiness peak 46). It traveled eight chunks and did not reach the
+west checkpoint. Across 606 jobs, 604 submit/apply pairs were recorded and two
+applies were missing; paired latency was 37.105 ms median, 127.051 ms p95, and
+228.939 ms max. The boundary jobs had 44.714 ms median and 82.281 ms p95/max.
+Host CPU median/p95 was 80.6/100% and is context only. The run confirms local
+handoff and deferral, not global lighting convergence or an operator-visible
+defect. Offline reconstruction of the complete M623D INFO log counted 16
+boundary-source enqueue/coalesce/denial events and 14 exact dependency
+captures, with no key left outstanding at the final complete audit event. The
+normal shutdown/save summary was present; this is event reconstruction, since
+there is no direct runtime counter for pending boundary markers.
+
+The M623E cold-runtime attempt used saved `World_188`, the same short 30/20/8
+no-teleport profile, and a requested start of `(120,56,56)`. The loader read
+121/121 spatial columns and generated none, but `EnsurePlayerOnGround` fell
+back to focus `(-3,1)` rather than the required `(7,3)`. The run's manifest
+integrity gate failed, so its route and readiness metrics are not acceptance
+evidence. Host CPU was 95.8% median / 100% p95. The INFO file was truncated
+mid-record before a shutdown summary. It contains 449 raw dependency request
+events, 241 exact dependency captures, 198 paired applies (43 submitted jobs
+had no logged apply), and 14 marker keys at the last complete relevant log
+line. Because of the start mismatch, host load, and truncated trace, these
+counts only indicate queue pressure during an invalid route; they do not show
+that markers were stranded at shutdown or that a visual regression occurred.
+For repeatable checks keep `World_164`; any future fresh-world route needs an
+integrity-verified start locus before comparing it with M335.
+
+The subsequent queue-audit instrumentation adds opt-in counters to each
+`capture phase=end` line: total dependency markers, markers also owned by the
+FIFO, markers with a deferred-far owner, and markers without either owner.
+It runs only when `CUBATARIUM_RELIGHT_AUDIT=1`.
+
+M623F rebuilt Release and completed the established short no-teleport M335
+route on `World_164` without timeout; start focus was `(7,3)` and end focus
+`(-1,3)`. Of 1,799 complete capture-end records, the marker high-water mark
+was 3, `boundary_without_owner` stayed zero, and the last complete record had
+zero total/FIFO/deferred/unowned markers. The run logged 7 boundary jobs and
+12 light deltas; 586 of 591 total jobs paired with apply. The final INFO file
+was truncated before its normal shutdown summary, but the last complete queue
+sample already showed no pending boundary work.
+
+The harness remained diagnostic (`pass=false`): readiness debt was 1.0 and
+the eye-proxy stop-line reported stale-visual activity/blinking. The sampled
+visual-hole proxy rate was 0.074 and post-stop maximum zero. No operator
+framebuffer verdict was recorded; these counters are not proof of a visible
+defect. This validates bounded queue ownership on the repeatable warm route,
+not global convergence or a fresh-world start. Keep host CPU as context and
+do not use an invalid-start cold route to tune propagation.
+
+The M623E/F partial INFO tails were explained by `RunFlightSim` calling
+`std::_Exit` after `PrepareForShutdownFast()` to avoid worker joins. It did not
+flush glog after shutdown preparation. M623G adds an explicit
+`CubatariumFlushLogs()` in this flight-sim-only exit path. The next short
+`World_164` Release run completed with the normal `kind=shutdown`,
+`WorldColumnSave`, and `shutdown_snapshot` records present.
+
+M623G again had 1,087 complete capture-end queue samples: boundary markers
+peaked at 3, had zero unowned markers throughout, and ended at zero. The
+process completed 29 periods with valid `(7,3) -> (-1,3)` start/route focus and
+no timeout. The harness failed only its unresolved post-stop readiness
+convergence gates (readiness debt 1.0, peak 36); visual-hole proxy rate and
+post-stop max were zero, and eye-proxy/A24 safety stop-lines passed. No human
+framebuffer verdict was captured. Host CPU was 82.1% median / 99.3% p95 and is
+context only. The shutdown flush improves evidence completeness; it does not
+change or certify normal game rendering.
+
+### 2026-10-17 addendum: M623H startup I/O policy
+
+The short integrity-valid M623H route on saved `World_M572_Cold_20261014`
+loaded 121/121 spatial columns from disk with no generation, but its
+`WorldLoadPerf` record had `async_chunk_io=0`. The `spatial_chunks` phase took
+43.353 s of a 48.219 s startup. The same startup path on `World_164` with async
+I/O enabled takes about 4.8–6.5 s in recent M623 observations. The saved
+`world_data.json` has async generation and async chunk I/O disabled, async
+relight enabled, and four relight workers.
+
+Static inspection found `UWorldCooperativeSession::Phase::SpatialChunks`
+calling `LoadTerrainColumn` synchronously for each startup column whenever the
+saved `AsyncChunkIo` flag is false; when true, it submits those columns to the
+asynchronous chunk-I/O service and drains them under a bounded budget.
+`UWorldLifecycleFacade::CreateWorldHeadless` also explicitly sets both async
+flags false before applying settings to its world instance. That is a likely
+source of the saved map's legacy setting, but the metadata write path has not
+yet been traced end to end. Do not silently change the setting on every world
+load until its persistence/configuration contract is confirmed. The next
+static step is to trace CLI world creation through metadata save, then choose
+between correcting the CLI's persisted runtime knobs and a versioned old-save
+default migration. Preserve explicit user-selected performance settings if
+they are supported.
+
+M623H's short flight was diagnostic only: route integrity passed, but product
+readiness/eye-proxy gates failed, it covered only about 144 blocks, and there
+was no operator framebuffer verdict. Its startup timing identifies a concrete
+load-path issue; it says nothing by itself about far-flight rendering. Keep
+startup timing and visible rendering acceptance as separate rows in the plan.
+
+### M623I follow-up: close the saved-world startup-policy trace
+
+The open M623H question is now traced end to end. `CreateWorldHeadless` runs
+creation with async chunk generation/I/O temporarily disabled, but previously
+serialized those temporary flags into the new world's `world_data.json`.
+Commit `c098d740` now reapplies the runtime policy from
+`core.ProceduralTemplate` before `Save`, and `UWorldCooperativeSession::BeginLoad`
+captures that policy before loading metadata and reapplies it immediately after
+`LoadWorldData`, before `SpatialChunks` starts. This avoids both persisting CLI
+execution choices and allowing old saved flags to force synchronous startup.
+
+The short M623I M335 route on `World_M572_Cold_20261014` read 121/121 columns,
+reported async chunk I/O/generation enabled, and measured 923 ms in
+`spatial_chunks` / 5.740 s total startup, down from M623H's 43.353 / 48.219 s.
+The fixed-day runner restored the map metadata byte for byte. This is a
+diagnostic before/after observation, not a controlled benchmark or rendering
+acceptance result: product readiness proxies failed and no operator framebuffer
+verdict was recorded.
+
+The accompanying CLI world-create profile produced 598 chunk files and correct
+persisted runtime flags, but took 68.343 s. Generation was serial (18.933 s),
+mesh warmup took 11.549 s, and prepare-view took 26.165 s. Build parallelism
+was explicitly requested with `--parallel 8`; runtime world generation still
+uses one worker because the headless CLI currently disables async generation.
+This is a separate performance debt. Evaluate enabling the existing parallel
+chunk-generation path for CLI creation, then profile the visual warmup phases
+before adding a headless fast path; do not skip lighting or change interactive
+world-creation behavior without a data-contract check.
+
+### M623J follow-up: CLI generation is parallel and saved output reloads
+
+Commit `d42313fc` enables the existing cooperative parallel generation policy
+for CLI world creation, while keeping chunk I/O synchronous during the initial
+in-memory generation and restoring runtime settings before save. A distinct
+seed/radius-4 world completed with 690 chunk files; its trace reports 43,264 /
+43,264 generation columns, `async_generation=1`, and four workers. Generation
+took 4.730 s. The whole create-plus-save operation took 48.500 s, compared with
+68.343 s in the M623I serial profile. Because the seeds differ, treat this as a
+directional result, not a controlled timing benchmark.
+
+The generated map was then loaded with the existing `--load-world` CLI path.
+It exited successfully and passed its terrain-mesh readiness check with
+1,038,001 non-air blocks, 338 greedy-cache entries, 333 mesh batches, and
+118,580 greedy vertices. This verifies that parallel generation did not
+produce an empty or unloadable save. Mesh warmup and prepare-view still took
+about 11.8 s and 21.4 s; removing those headless-only visual steps remains a
+separate optimization candidate and requires review of the lighting and save
+contract. Interactive creation has not changed.
+
+### M623K follow-up: headless CLI creation skips transient visual work
+
+The 33 s visual warmup debt was isolated to nonpersistent mesh/view
+preparation. Added `UWorld::CreateHeadless` and selected it only in
+`CreateWorldHeadless`. The headless operation retains cooperative parallel
+terrain generation, fluid sealing, full terrain-column relight, emissive
+block-light relight, and the normal save; it finishes before create mesh
+warmup and camera readiness. Interactive `UWorld::Create` continues through
+the existing visual stages.
+
+The M623K Release CLI run completed in 15.217 s and wrote 707 chunk files.
+Generation took 4.646 s using four workers; the completion phase had no greedy
+mesh cache. Persisted runtime async flags were true. The generated world then
+passed `--load-world`: 121/121 startup columns loaded without generation, with
+1,295,709 non-air blocks and regenerated mesh cache/batches/vertices
+(427/419/192,336). This supports the separation of CLI data creation from
+transient render caches. It checks the startup subset and mesh-readiness smoke,
+not byte-for-byte equality of every stored chunk.
+
+The Release build used `tools/build_release.ps1`'s equivalent explicit
+`CL_MPCount=8` override; the observed compiler response files had `/MP8`, with
+eight compiler workers. The previous `--parallel 8`-only attempt yielded
+`/MP1`; use the wrapper going forward. Build parallelism and runtime generation
+workers are separate settings.
+
+### 2026-10-17 addendum: M624H eviction ownership predicates
+
+M624H extends `CUBA_STREAMER_UNLOAD_TRACE` to report the individual predicates
+that make `needs_relight` true: pending-light notes, queue/deferred/in-flight
+owners, emerge and `ColumnRecord` visual states, record token/debt, flow repair
+tickets, and pending disk/generation requests. A short visible M335 Release run
+on warm `World_164` completed from focus `(7,3)` to `(-1,3)` in 2,522 frames,
+without collision. It recorded 66 evictions and one deferred-far owner eviction
+at `(7,8)`. The owner reason was `visible_exact_replacement`; the disk
+light-complete flag was already false, remained false through invalidation, and
+the owner was cleared. That record was `Publishing` / `LegalDark` with a live
+mesh token. The run did not encounter a boundary-dependency denial; it had five
+other FIFO denials. Thus deferred-far eviction is observed, while the exact
+boundary dependency → denial → eviction → reload sequence remains unverified.
+The M624H run manifest records the temporary diagnostic source diff; it is not
+clean-commit acceptance evidence.
+
+M624G's four earlier `needs_relight=1` evictions had no keyed/deferred/in-flight
+relight owner in its trace, but that older event did not expose the full
+`ColumnRecord`, visual obligation, or flow-ticket predicates. They remain
+unclassified; the aggregate event alone does not prove ownerless work.
+Artifacts and exact route settings are recorded in the remediation plan,
+diagnostic runbook, and `FLIGHT_EXPERIMENT_SCRIPTS.md` under M624H.
+
+### 2026-10-17 addendum: M624I boundary denial and repeated settled relight
+
+M624I adds `relight_boundary_dependency` to the opt-in column-unload trace.
+The visible reverse-course M335 route ended at its original focus `(7,3)`,
+traveled zero net chunks, and exited 1; its route-integrity gate failed. Do not
+use it as acceptance evidence. Its INFO trace did show one exact boundary
+denial at `(4,5)`: light-complete revision 116 was cleared, the request was
+retained in DeferredFar, then it was re-admitted about 42 ms later, captured
+with `boundary_exact=1`, submitted as a boundary job, and finalized at revision
+123. No deferred owner was evicted and no disk reload was seen.
+
+A separate high-volume pattern merits priority investigation. M624I submitted
+1,430 relight jobs; all 924 recorded slices for `(2,2,7)` were uninstalled but
+satisfying, settled at `1:1`, and had published/meshed light revision 1. M624G's
+standard one-way route recorded the same chunk slice 1,073 times in the same
+settled/uninstalled state. This confirms redundant relight computation on a
+settled slice across two runs. It does not identify the enqueuing producer or
+prove a framebuffer defect. Trace the visible-relight producer/gate predicate
+and stop needless recalculation without suppressing actual stale-light or
+mesh repair.
+
+M624I report and INFO log are preserved under
+`artifacts/research/rendering/m624i_boundary_owner_reload_20261017/`; the next
+step is to identify the producer behind these repeated no-op jobs.
+
+### 2026-10-17 addendum: M624J–M624L visible relight churn
+
+M624J threaded caller provenance through visible FIFO admission. Its standard
+M335 Release flight completed eight chunks without collision and identified
+`AdmitUnfinishedVisualDemand` as the repeated source. M624K logged the gate
+predicates on the same warm `World_164` corridor: slice `(2,2,7)` was repeatedly
+fully dark but not stale, with an exact current light-settlement proof and
+matching field/mesh light revision 1. M624K submitted 176 jobs for its band
+`32:47` and logged 177 slice reports in the 38-second route. This establishes
+redundant work; it does not establish a visual defect.
+
+M624L changes only the `relight_only` decision for a fully dark slice that
+passes `IsLegalDarkEqualRevFullyDark`, has current exact-slice settlement, and
+has published/meshed light revisions equal to the field. Open-sky darkness,
+stale-dark witnesses, and unsettled or mismatched revisions still take the
+repair path. The repeated short route completed five chunks without collision;
+the target band had zero submitted relight jobs versus 176 in M624K, with one
+initial slice report versus 177. The build was Release and its static EXE
+verification passed. Metrics were disabled and the trace produced no
+open-sky/stale-dark repair witness, so those cases remain a targeted check.
+
+M624J–M624L suite reports and full INFO traces are preserved under their
+matching `artifacts/research/rendering/` directories. The trace schema,
+reproducible runner command, and counting commands are in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`; exact run results and remaining steps are in
+the remediation plan and diagnostic runbook.
+
+### 2026-10-17 addendum: M624M open-sky and stale-dark repair check
+
+M624M reran the established M335 start/camera on the saved
+`World_M613A_Cold_FlagLifecycle_20261016` map under the M624L Release code.
+This was a warm-cache load, visible no-teleport route, and 8/30/20-second
+idle/fly/stop profile. It completed 3,074 frames and ten chunks without
+collision; metrics and disk sampling were disabled. The clean manifest points
+to commit `1da8592f`.
+
+The INFO trace recorded an `enter_open_sky` application that changed two
+loaded slices and created dependent stale-light work. It also recorded eight
+admissions with `stale_dark=1` and `legal_dark_current=0`. Slice `(3,3,1)` was
+admitted while field light revision 2 was ahead of mesh/published revision 1,
+then reached revision 2 on publication. This confirms actual stale-dark repair
+still executes after the legal-dark guard. The open-sky mutation/dependency
+path also executed.
+
+No admission had `open_sky=1`; the equal-revision open-sky fully-dark case
+therefore remains unverified at runtime. Static policy makes that state
+ineligible for LegalDark, but do not mark this gate closed until a short trace
+captures the exact decision. M624M's report and INFO log are preserved under
+`artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`; the
+command and count patterns are recorded in the flight script index.
+
+### 2026-10-17 addendum: M624AD per-slice OpenSky repair obligation
+
+The Release source tree subsequently committed as `771ab0f3` replaces the
+transient-only observation with a capture-scoped OpenSky event and per-slice
+publication proof. The flight manifest itself reports `git_sha=unknown`. A repair remains pending until
+a newer mesh attempt publishes geometry newer than its baseline at the required
+light revision; gate reset no longer makes an unresolved repair look settled.
+The seven focused Release tests passed after the change, and the Release app
+passed static dependency verification.
+
+The short visible M335 run M624AD completed 3,569 frames and 58 requested
+in-game seconds, reaching nine chunks without collision or heading deviation.
+It recorded 35 OpenSky-dark terminal observations: all remained pending and
+none recorded publication. Slice `(9,2,4)` ended its trace dirty with no mesh or
+GPU work in flight, after its source revision reached 6 while published
+geometry remained revision 5. This makes queue ownership/progress the next
+diagnostic target; it does not establish a visible hole, since no pixel trace
+or operator verdict was collected and the slice was not observed later in the
+route. Metrics were disabled. Exact command, caveats, and artifacts are in the
+remediation plan, diagnostic runbook, and experiment journal under M624AD.
+
+M624AE–M624AF isolated the queue handoff. Dirty-queue fields in M624AE were
+sampled before admission; M624AF added a post-admission opt-in event. The
+short M624AF route recorded 28 repair admissions: 22 entered priority remesh
+and 6 ordinary remesh, all dirty at insertion, with queue age up to 43 frames.
+This closes the missing-owner-at-admission hypothesis for those cases. For
+`(5,2,1)`, target light revision 2 / published geometry 1 at admission was
+followed by published geometry 3 / light revision 2 and `dirty=0`, consistent
+with a matching publication. The trace omits the attempt id and explicit
+repair-state transition, so the next small follow-up is to log that transition
+directly. Metrics and framebuffer capture were disabled; this is not visual
+acceptance evidence.
+
+M624AG combined the short route with boundary relight and unload ownership
+traces. It recorded boundary FIFO denials and an eviction of `(7,0,11)` while
+`relight_deferred_far=1` and `relight_boundary_dependency=1`; `needs_relight`
+stayed true and `light_complete` stayed zero before and after invalidation and
+unload. For `(7,11)`, the trace includes a boundary-exact capture followed by
+deferred-far ownership before eviction. M624I separately supplies the
+denial/deferred/re-admit/capture/finalize segment. The pinned route did not
+reload that same column, so same-column reload remains a low-frequency
+follow-up. This verifies that unload does not falsely persist complete light.
+No metrics or framebuffer verdict were collected.
+
+M624AH created a fresh radius-4 seed (679 chunk files) and ran the same short
+visible M335 flight with FramePerf enabled for that run only. The cold start
+column `(7,0,3)` was a procedural disk miss; the flight reached `(-3,3)` over
+ten chunks without collision. Host CPU p95/max was `93.8/98.9%`, so the run is
+not a performance baseline. Readiness proxy remained high, near-focus mesh
+proxy rate was 0.037, and black proxy rate was zero; no framebuffer/operator
+verdict was collected. This closes the cold-frontier source reproduction, not
+the clean-load performance or visual-acceptance gate. Metrics return to off by
+default.
+
+### 2026-10-17 addendum: M624AI sparse framebuffer evidence
+
+M624AI repeated the established visible, no-teleport M335 route on the warm
+M624AH cold-seed world with metrics and screen-ray pixel probes enabled only
+for that run. It completed 5,141 frames / 58 requested in-game seconds, ten
+chunks, with no collision, clock gap, teleport, or heading deviation. Host CPU
+median/p95/max was `32.3/77.2/83.6%`; this remains a contaminated performance
+sample.
+
+The `renderer_pixel_probe` event records framebuffer RGBA sampled through
+`glReadPixels`, rather than a synthetic renderer proxy. This run stored 3,540
+samples across 44 probes and 100 screen positions; none had RGB channels all
+below 12. That reduces concern about near-black at the sampled points, but is
+not a full-frame image or operator verdict. All 25 separate
+`screen_ray_candidate_trace` rows had `screen_ray_selected=0`; this means that
+specific candidate selector did not choose a world-geometry candidate. It does
+not mean the pixel probes lack geometry attribution: their own records include
+opaque depth surfaces and CPU water-triangle matches. In M624AI, 2,166 samples
+matched a ready water top-face triangle and 1,756 changed RGB after the
+transparent pass. This independently ties those framebuffer samples to water
+geometry, while still not claiming a full-frame water verdict. The analyzer
+reported zero visual-hole and black proxy rates while readiness debt remained
+1.0 and `pass=false`. These signals must stay separate: the proxy failure does
+not establish a visible hole, and sparse sampling does not establish complete
+visual correctness. M624AK adds a fresh cold-frontier sample below. Host CPU
+percent remains advisory and must not be an arbitrary merge gate. No long
+operator flight is justified. Full metrics and sample details are in
+`artifacts/research/rendering/m624ai_framebuffer_pixel_witness_m335_short_20261017/`.
+
+### 2026-10-17 addendum: M624AJ explicit repair publication
+
+The `OpenSkyRepairPublished` demand-transition event now fires at the exact
+`NoteInstallResult(Published)` that closes a per-slice OpenSky repair. Its JSONL
+record includes capture event ID, target light revision, baseline geometry
+and attempt IDs, and the actual publication attempt and geometry/light
+revisions. The Release build and focused `chunk_render_demand_test` passed;
+all seven focused Release CTests passed, and static EXE dependency verification
+passed.
+
+The short visible M335 route completed 3,441 frames / 58 requested in-game
+seconds and nine chunks on the warm M624AC world without collision, heading
+drift, teleport, or clock gap. It emitted 33 `open_sky_repair_published` rows
+for event 5; every row satisfied the exact close predicate. Host CPU
+median/p95/max was `48.1/80.9/86.1%`, so frame timing is advisory. Analyzer
+readiness debt was 1.0, while visual-hole and black proxies were zero; its
+overall `pass=false` does not identify a visible hole. Metrics were enabled
+for this short run only and return to off by default. Full report and trace:
+`artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.
+
+### 2026-10-17 addendum: M624AK cold-frontier framebuffer and water/light join
+
+M624AK created a unique radius-4 seed (`3650482223`) in Release; creation
+produced 695 chunk files and used four generation workers. The established
+start-focus column `(7,0,3)` was absent from the saved map and traced as a
+procedural `disk_miss`. The flight source trace contained 230 procedural
+misses, 130 disk queue/completion pairs, and 148 procedural commits. This gives
+a short cold-frontier run that exercises both disk-backed and procedurally
+generated columns.
+
+The visible no-teleport M335 8/30/20 route completed 3,669 frames / 58
+requested in-game seconds from focus `(7,3)` to `(-2,3)`, without collision,
+heading drift, or teleport. It did not reach the west target `(-3,3)`. Host CPU
+median/p95/max was `47.7/79.4/84.2%`; the sample is not a performance gate.
+Analyzer `pass=false` with readiness debt 1.0 and 39 post-stop focus-ring
+missing-mesh obligations, but `visual_holes_rate=0` and post-stop visible-black
+proxy zero. These signals describe readiness/coverage, not pixel color.
+
+The trace contains 3,200 real `glReadPixels` samples; none had all RGB
+channels below 12. The existing pixel analyzer found 190 samples below luma
+60, all with drawable opaque depth surfaces. Among 176 low-luma samples whose
+RGB stayed unchanged after the transparent pass, zero had stale opaque light
+revisions; two were preview samples. In contrast, the 66 samples with stale
+published light revisions all matched ready water triangles over submerged
+opaque surfaces and carried stale-light repair debt. Twenty-eight of those
+changed RGB and 58 changed RGBA after transparency. The water-surface join
+found 1,317 ready source-triangle matches and 891 post-transparent RGB changes;
+selected GPU batch readbacks matched source vertex and index payloads. Thus the
+run captures underwater light-revision debt but does not show it escaping the
+water layer as dark terrain. The bounded sample supports the existing visible
+assessment; it is not a whole-frame proof.
+
+The two existing analyzers were run without modifying their thresholds or
+classification rules. Their outputs and the trace are preserved in
+`artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/`.
+The earlier M624AI statement about no selected `screen_ray_candidate_trace`
+row should be read narrowly: that selector did not choose a candidate, while
+the pixel probe itself still carried opaque-depth and water-triangle geometry
+joins. Do not use either selector result as a claim that no geometry was
+associated with sampled framebuffer pixels.

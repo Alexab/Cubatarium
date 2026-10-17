@@ -68,6 +68,18 @@ def _dirty_diff_hash() -> str | None:
         return None
 
 
+def capture_source_identity() -> dict[str, str | None]:
+    """Snapshot source identity before a long-running flight begins."""
+    return {
+        "git_sha": _git(["rev-parse", "HEAD"]),
+        "git_branch": _git(["rev-parse", "--abbrev-ref", "HEAD"]),
+        "dirty_diff_hash": _dirty_diff_hash(),
+        "flight_runner_sha256": _sha256_file(ROOT / "tools" / "flight_sim_run.py"),
+        "analyzer_script_sha256": _sha256_file(ROOT / "tools" / "flight_sim_analyze.py"),
+        "manifest_helper_sha256": _sha256_file(Path(__file__)),
+    }
+
+
 def build_run_manifest(
     *,
     exe: Path | None = None,
@@ -76,11 +88,16 @@ def build_run_manifest(
     cold_warm: str | None = None,
     route_hash: str | None = None,
     extra: dict[str, Any] | None = None,
+    source_identity: dict[str, str | None] | None = None,
 ) -> dict[str, Any]:
     """Collect identity fields for a flight / scorecard run."""
-    git_sha = _git(["rev-parse", "HEAD"])
-    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"])
-    dirty = _dirty_diff_hash()
+    generated_git_sha = _git(["rev-parse", "HEAD"])
+    generated_branch = _git(["rev-parse", "--abbrev-ref", "HEAD"])
+    generated_dirty = _dirty_diff_hash()
+    identity = source_identity or {}
+    git_sha = identity.get("git_sha") or generated_git_sha
+    branch = identity.get("git_branch") or generated_branch
+    dirty = identity.get("dirty_diff_hash") or generated_dirty
     exe_path = Path(exe) if exe else None
     exe_hash = _sha256_file(exe_path) if exe_path else None
 
@@ -125,6 +142,14 @@ def build_run_manifest(
         "git_sha": git_sha,
         "git_branch": branch,
         "dirty_diff_hash": dirty,
+        # Reports are annotated after a flight, so HEAD may have moved during
+        # a long run. Preserve both the launch snapshot and annotation-time view.
+        "manifest_generated_git_sha": generated_git_sha,
+        "manifest_generated_branch": generated_branch,
+        "manifest_generated_dirty_diff_hash": generated_dirty,
+        "flight_runner_sha256": identity.get("flight_runner_sha256"),
+        "analyzer_script_sha256": identity.get("analyzer_script_sha256"),
+        "manifest_helper_sha256": identity.get("manifest_helper_sha256"),
         "exe_path": str(exe_path) if exe_path else None,
         "exe_hash": exe_hash,
         "build_flags": {

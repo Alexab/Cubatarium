@@ -35,6 +35,13 @@
 namespace cutum
 {
 
+enum class PublishedLightHaloState : uint8_t
+{
+  Unavailable = 0,
+  MatchesCurrent = 1,
+  DiffersFromCurrent = 2,
+};
+
 enum class MeshRevisionBumpReason : uint8_t;
 struct Frustum;
 struct MeshBuildResult;
@@ -88,9 +95,17 @@ public:
   bool PrioritizeScreenRayRepairRemesh(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
-      const std::vector<glm::ivec3> &changed_input_chunks);
+      const std::vector<glm::ivec3> &changed_input_chunks,
+      const char *cause = nullptr);
+  PublishedLightHaloState GetPublishedLightHaloState(
+      glm::ivec3 chunk_coord, const UBlockWorld &world,
+      bool *cache_entry_present = nullptr,
+      bool *signature_stamp_valid = nullptr) const;
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
-  void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
+  void QueueMeshDependencyInvalidation(
+      glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason);
+  void QueueStaleLightRemesh(glm::ivec3 chunk_coord,
+                             const char *cause = nullptr);
   bool HasPendingStaleLightRemesh(glm::ivec3 chunk_coord) const
   {
     return PendingStaleLightRemeshes_.count(chunk_coord) != 0;
@@ -459,6 +474,11 @@ public:
                             int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  size_t GetGreedyVertexCount(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyVertexCountByChunk.find(chunk_coord);
+    return it != GreedyVertexCountByChunk.end() ? it->second : 0;
+  }
   /// True only when the cache entry has GPU quads or non-empty CPU batches.
   /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
   /// (manual 215919: place-block remesh instantly fills "invisible" chunk).
@@ -663,12 +683,14 @@ public:
   bool GpuPassDirtyHitsChunk(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
-                                              int radius_chunks) const;
+                                              int radius_chunks,
+                                              glm::ivec3 *missing_coord_out = nullptr,
+                                              bool *memo_hit_out = nullptr) const;
   bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
                                     glm::ivec3 &out_coord) const;
-  /// Invalidate per-frame hole-query memo when focus moves (ColdPL-3D).
+  /// Start a query frame and requeue deferred remesh when focus moves.
   void BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk);
   void SetPendingLightFocusPressure(int n) { PendingLightFocusPressure_ = n; }
   void SetVisibleBlackNoTicketPressure(int n)
@@ -762,7 +784,10 @@ public:
   {
     return Dirty.GetEnqueueAgeFrames(chunk_coord);
   }
-  uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
+  uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const
+  {
+    return MeshRevisions.Current(chunk_coord);
+  }
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
   /// Drop stale async apply for this chunk (revision bump + clear RemeshAfterApply).
   void InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord);
@@ -1145,6 +1170,9 @@ private:
     bool CpuHasLitDrawableFace{false};
     bool ProvisionalLightPreview{false};
     uint64_t MeshedLightRevision{0};
+    std::array<uint64_t, kChunkMeshNeighborStampCount>
+        MeshedLightHaloSignatures{};
+    bool MeshedLightHaloSignaturesValid{false};
     /// Sysreset v2: Accept gate stamps (geom/light/material).
     MeshPublishRevs PublishRevs{};
     /// S4 versioned neighbor-missing overlay (independent of stamp).
@@ -1517,7 +1545,7 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
   /// Published neighbor meshes awaiting input/coverage-dependent remesh. Kept
   /// separate from Dirty so filtered side effects cannot silently drop debt.
-  std::unordered_set<glm::ivec3, IVec3Hash>
+  std::unordered_map<glm::ivec3, MeshRevisionBumpReason, IVec3Hash>
       PendingMeshDependencyInvalidations_;
   /// Stale-light remesh requests survive Dirty admission until the replacement
   /// mesh publishes the current light-field revision.
@@ -1557,7 +1585,8 @@ private:
   mutable std::function<void(glm::ivec3, uint8_t)> OnFaceDebtMask;
   mutable std::function<void(glm::ivec3)> OnGpuPipelineProgress;
   std::function<void(glm::ivec3)> OnPackedRepresentationSwitch;
-  // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
+  // Per-streaming-update-frame memo: HasMissing/FindNearest are called many
+  // times during one movement/update cycle.
   mutable uint64_t HoleQueryEpoch{0};
   struct MissingQueryMemo
   {
@@ -1565,6 +1594,7 @@ private:
     glm::ivec3 center{0};
     int radius{-1};
     bool result{false};
+    glm::ivec3 missing_coord{0};
   };
   mutable MissingQueryMemo MissingMemo{};
   struct NearestQueryMemo

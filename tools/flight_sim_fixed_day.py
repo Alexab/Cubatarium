@@ -39,6 +39,23 @@ def atomic_write(path: Path, payload: bytes, tag: str) -> None:
             temp.unlink()
 
 
+def fixed_day_payload(original: bytes, time_of_day: float) -> bytes:
+    document = json.loads(original.decode("utf-8"))
+    environment = document.setdefault("environment", {})
+    environment["time_frozen"] = True
+    environment["time_of_day"] = time_of_day
+    environment["weather"] = "clear"
+    environment["weather_target"] = "clear"
+    environment["cloud_coverage"] = 0.0
+    environment["cloud_coverage_override"] = 0.0
+    weather_auto = environment.setdefault("weather_auto", {})
+    weather_auto["auto_enabled"] = False
+    weather_auto["auto_change"] = False
+    return (json.dumps(document, ensure_ascii=False, indent=4) + "\n").encode(
+        "utf-8"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--world", required=True)
@@ -70,26 +87,33 @@ def main() -> int:
         parser.error(f"world metadata not found: {world_data}")
     backup = world_data.with_name(world_data.name + ".fixed-day-backup")
     if backup.exists():
-        parser.error(
-            f"stale backup exists at {backup}; restore it before starting another run"
+        stale_original = backup.read_bytes()
+        try:
+            stale_expected = fixed_day_payload(stale_original, args.time_of_day)
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            parser.error(f"cannot inspect stale fixed-day backup {backup}: {exc}")
+        if world_data.read_bytes() != stale_expected:
+            parser.error(
+                f"stale backup exists at {backup}, but world_data.json no longer "
+                "matches the fixed-day payload; preserve both files and inspect "
+                "them before another flight"
+            )
+        atomic_write(world_data, stale_original, ".recover.tmp")
+        restored = world_data.read_bytes()
+        if sha256(restored) != sha256(stale_original):
+            raise RuntimeError(
+                f"stale fixed-day backup recovery failed; backup retained at {backup}"
+            )
+        backup.unlink()
+        print(
+            "INFO: recovered world_data.json from an interrupted fixed-day run; "
+            f"sha256={sha256(restored)}",
+            flush=True,
         )
 
     original = world_data.read_bytes()
     try:
-        document = json.loads(original.decode("utf-8"))
-        environment = document.setdefault("environment", {})
-        environment["time_frozen"] = True
-        environment["time_of_day"] = args.time_of_day
-        environment["weather"] = "clear"
-        environment["weather_target"] = "clear"
-        environment["cloud_coverage"] = 0.0
-        environment["cloud_coverage_override"] = 0.0
-        weather_auto = environment.setdefault("weather_auto", {})
-        weather_auto["auto_enabled"] = False
-        weather_auto["auto_change"] = False
-        overridden = (
-            json.dumps(document, ensure_ascii=False, indent=4) + "\n"
-        ).encode("utf-8")
+        overridden = fixed_day_payload(original, args.time_of_day)
     except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
         parser.error(f"cannot prepare world metadata: {exc}")
 

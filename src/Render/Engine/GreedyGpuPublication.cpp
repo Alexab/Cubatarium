@@ -68,7 +68,14 @@ void UGreedyGpuBackend::DestroyBatchBuffers(GreedyGpuBatch &batch)
 {
   if (batch.pooled)
   {
+    // vbo/ebo are aliases of the shared pool buffers, not per-batch objects.
+    // Clear the aliases as well as the allocation metadata so a repeated
+    // cleanup cannot fall through and delete the pool's backing GL buffers.
     batch.pooled = false;
+    batch.vbo = 0;
+    batch.ebo = 0;
+    batch.vboCapacityBytes = 0;
+    batch.eboCapacityBytes = 0;
     batch.vboByteOffset = 0;
     batch.eboByteOffset = 0;
     batch.poolAllocationId = 0;
@@ -992,8 +999,9 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
   {
     if (batch.chunkCoord == delta.coord)
     {
+      // ReleasePooledBatch also performs the per-batch cleanup. A second
+      // DestroyBatchBuffers call here used to delete shared pool handles.
       ReleasePooledBatch(batch, cache.VertexPool);
-      DestroyBatchBuffers(batch);
       removed = true;
       continue;
     }

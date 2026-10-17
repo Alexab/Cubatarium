@@ -66,6 +66,7 @@ def main() -> int:
             args.world,
             "--scenario",
             scenario,
+            "--metrics",
             "--phase-id",
             args.phase_id,
             "--report",

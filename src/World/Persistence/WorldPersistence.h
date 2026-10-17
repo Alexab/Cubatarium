@@ -57,6 +57,14 @@ struct AsyncChunkIoTickMetrics
   double load_result_push_mutex_held_max_ms{0.0};
   double save_drain_ms{0.0};
   double light_flags_save_ms{0.0};
+  double light_flags_snapshot_ms{0.0};
+  double light_flags_enqueue_ms{0.0};
+  std::size_t light_flags_complete_columns_n{0};
+  uint64_t light_flags_saved_revision{0};
+  uint64_t light_flags_last_result_revision{0};
+  int light_flags_last_result_success{-1};
+  double light_flags_worker_queue_wait_ms{0.0};
+  double light_flags_worker_service_ms{0.0};
   uint64_t load_result_push_n{0};
   std::size_t cancelled_discard_n{0};
   std::size_t ready_loads_before_n{0};
@@ -86,6 +94,7 @@ public:
     bool in_deque{false};
     bool deferred_visible{false};
     bool deferred_far{false};
+    bool boundary_dependency{false};
     bool y_band_defined{false};
     int queue_index{-1};
     int queue_size{0};
@@ -123,7 +132,14 @@ public:
   bool AbortAsyncChunkIoFor(std::chrono::milliseconds timeout);
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
                                    bool priority = false, int min_y = 0,
-                                   int max_y = -1);
+                                   int max_y = -1,
+                                   const char *producer = nullptr,
+                                   UWorld *world_context = nullptr);
+  /// Queue a relight because an installed horizontal boundary light changed.
+  /// This dependency is real work even when the target has no existing visual
+  /// dark-face witness, so it bypasses only the settled/no-op admission guard.
+  void EnqueueBoundaryDependencyRelight(UWorld &world, int world_x,
+                                        int world_z, int min_y, int max_y);
   /// Admit bounded visible relight work with far-victim replacement/reserve
   /// when normal near-ring FIFO admission is backpressured.
   bool EnqueueVisibleRelight(int world_x, int world_z, int min_y, int max_y,
@@ -131,7 +147,8 @@ public:
                              const std::vector<glm::ivec2>
                                  &protected_visible_columns,
                              uint8_t *outcome = nullptr,
-                             int *victim_horiz = nullptr);
+                             int *victim_horiz = nullptr,
+                             const char *producer = nullptr);
   /// Preserve an exact FirstMesh light band through surface-range selection.
   /// The key is the block-space XZ column origin used by the relight queues.
   void NoteVisibleFirstMeshRelight(glm::ivec2 world_block_key, int min_y,
@@ -145,14 +162,16 @@ public:
                                      const std::vector<glm::ivec2>
                                          &protected_visible_columns,
                                      uint8_t *outcome = nullptr,
-                                     int *victim_horiz = nullptr);
+                                     int *victim_horiz = nullptr,
+                                     const char *producer = nullptr);
   /// F3b: enqueue only when column surface still needs relight.
   bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
                                       bool priority = false, int min_y = 0,
                                       int max_y = -1);
   void DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y, int max_y,
-                             bool priority);
-  void ClearDeferredFarRelightColumn(glm::ivec2 ground_xz);
+                             bool priority, const char *reason = nullptr);
+  void ClearDeferredFarRelightColumn(glm::ivec2 ground_xz,
+                                     const char *reason = nullptr);
   int AdmitDeferredFarRelightColumns(UWorld &world, glm::ivec3 focus_ground,
                                      int pin_horiz);
   /// Move an already-queued world-block-key column from far to priority FIFO.
@@ -185,8 +204,9 @@ public:
   int TakeRelightFifoPinSaved();
   int TakeRelightFifoPriorityInsert();
   int TakeRelightFifoProtectBlock();
-  void ClearPendingRelights();
-  void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
+  void ClearPendingRelights(const char *reason = nullptr);
+  void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
+                                     uint64_t demand_id = 0);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   void CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord);
   int CancelAsyncTerrainColumnLoadsOutsideRadius(UWorld &world,
@@ -209,14 +229,20 @@ public:
 
   /// Minetest-style lighting_complete: disk lightmap trusted for this column.
   bool IsColumnLightComplete(glm::ivec2 ground_xz) const;
-  void SetColumnLightComplete(glm::ivec2 ground_xz, bool complete);
-  void ClearColumnLightComplete(glm::ivec2 ground_xz);
+  void SetColumnLightComplete(glm::ivec2 ground_xz, bool complete,
+                              const char *reason = nullptr);
+  void ClearColumnLightComplete(glm::ivec2 ground_xz,
+                                const char *reason = nullptr);
   void LoadColumnLightFlags();
-  void SaveColumnLightFlagsIfDirty();
+  void SaveColumnLightFlagsIfDirty(
+      double *snapshot_ms = nullptr, double *enqueue_ms = nullptr,
+      std::size_t *complete_columns_n = nullptr,
+      uint64_t *saved_revision = nullptr);
 
 private:
   struct PendingAsyncColumnLoadState
   {
+    uint64_t demand_id{0};
     int remaining_results{0};
     int highest_cy_on_disk{-1};
     std::shared_ptr<std::atomic<bool>> cancellation;
@@ -251,16 +277,20 @@ private:
                                       PendingAsyncColumnLoadState state);
   void EnqueueTerrainColumnRelightImpl(int world_x, int world_z,
                                        bool priority, int min_y, int max_y,
-                                       bool visible_admission);
+                                       bool visible_admission,
+                                       const char *producer = nullptr,
+                                       UWorld *world_context = nullptr);
   void PreserveRelightFifoVictimAsDeferred(glm::ivec2 world_block_key,
-                                           bool priority);
+                                           bool priority,
+                                           const char *reason = nullptr);
   bool PrioritizeNearestTerrainColumnRelight(UWorld &world,
                                              glm::ivec3 focus_ground,
                                              int radius_chunks, int scan_cap);
   void ProcessColumnLightFlagSaveResults(
       double *queue_mutex_wait_ms = nullptr,
       double *queue_mutex_held_ms = nullptr,
-      std::size_t *result_count = nullptr);
+      std::size_t *result_count = nullptr,
+      AsyncChunkIoTickMetrics *tick_metrics = nullptr);
   bool FlushColumnLightFlagsForWorldSwitch();
 
   // Storage outlives AsyncChunkIo's worker pool: warmup jobs retain its
@@ -294,15 +324,24 @@ private:
   /// capture dequeue can promote one directly to the head.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
       DeferredVisibleDrawGateRelightYBands;
+  /// A queued boundary dependency must survive no-op admission checks and the
+  /// surface-band clamp until its exact Y band has been captured.
+  std::unordered_set<glm::ivec2, IVec2Hash>
+      PendingBoundaryDependencyRelightKeys;
   /// FZ2.3-O2: last StreamingFrameEpoch when finalize_gate Capture submitted.
   std::unordered_map<glm::ivec2, uint64_t, IVec2Hash> RelightLastFinalizeEpoch_;
   struct DeferredFarRelightEntry
   {
     glm::ivec2 y_band;
     bool priority{false};
+    std::chrono::steady_clock::time_point first_deferred_at{};
   };
   std::unordered_map<glm::ivec2, DeferredFarRelightEntry, IVec2Hash>
       DeferredFarRelightColumns;
+  std::chrono::steady_clock::time_point
+      LastDeferredFarAgeServiceAttemptAt{};
+  glm::ivec2 LastDeferredFarAgeServiceWorldKey{};
+  bool LastDeferredFarAgeServiceWorldKeyValid{false};
   /// Columns whose disk lightmap is trusted (lighting_complete).
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
   bool LightCompleteDirty{false};

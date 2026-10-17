@@ -2,6 +2,7 @@
 #define OPAQUE_DEPTH_CAPTURE_H
 
 #include "Render/GlIncludes.h"
+#include "Render/Pipeline/RenderTextureUnits.h"
 
 #include <memory>
 
@@ -13,7 +14,8 @@ class UShaderProgram;
 class UOpaqueDepthCapture
 {
 public:
-  static constexpr GLenum kTextureUnit = GL_TEXTURE3;
+  static constexpr GLenum kTextureUnit =
+      RenderTextureUnitEnum(RenderTextureUnit::OpaqueDepth);
 
   void DestroyGpuResources();
   void CaptureFromDefaultFramebuffer();

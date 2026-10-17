@@ -1976,7 +1976,7 @@ void UApplication::Update(double dt)
             // completion queues and presentation debt have been drained.
             if (!World->IsEnterLitGateActive() && drain_cpu)
             {
-              UEnterLitDiagnostics::BeginSession();
+              UEnterLitDiagnostics::BeginSession("application_gpu_warmup");
               World->BeginEnterLitGate();
             }
           }
@@ -2260,6 +2260,15 @@ void UApplication::NotifyAllScreensMetricsChanged(const GuiMetrics &metrics)
 
 void UApplication::RenderFrame(int width, int height, double viewDuration)
 {
+  const auto render_frame_begin = std::chrono::high_resolution_clock::now();
+  if (World)
+  {
+    World->SetLastRenderFrameSetupMs(0.0);
+    World->SetLastRenderEquipmentSetupMs(0.0);
+    World->SetLastGeometryPaintMs(0.0);
+    World->SetLastFpViewmodelMs(0.0);
+  }
+
   const auto notifyViewport = [&](UGuiScreenBase *screen)
   {
     if (screen)
@@ -2299,6 +2308,10 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     {
       camera->SetViewportSize(width, height);
     }
+    World->SetLastRenderFrameSetupMs(
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - render_frame_begin)
+            .count());
     const auto prepare_begin = std::chrono::high_resolution_clock::now();
     Geometry->PrepareFrameRendering();
     const glm::vec4 clearColor = Geometry->GetSkyColor();
@@ -2313,6 +2326,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
             std::chrono::high_resolution_clock::now() - prepare_begin)
             .count());
     {
+      const auto equipment_setup_begin =
+          std::chrono::high_resolution_clock::now();
       const WorldViewSettings &view = World->GetViewSettings();
       WornEquipmentDrawer::SetHidePossessedWield(ShouldDrawFpViewmodel(view));
       if (Core)
@@ -2322,11 +2337,23 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
           WornEquipmentDrawer::SetItemDefinitions(items.get());
         }
       }
+      World->SetLastRenderEquipmentSetupMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() -
+              equipment_setup_begin)
+              .count());
+      const auto geometry_paint_begin =
+          std::chrono::high_resolution_clock::now();
       Geometry->Paint(width, height, viewDuration);
+      World->SetLastGeometryPaintMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - geometry_paint_begin)
+              .count());
       WornEquipmentDrawer::SetHidePossessedWield(false);
     }
   }
 
+  const auto fp_viewmodel_begin = std::chrono::high_resolution_clock::now();
   if (State == AppState::InGame && World && !MinimalOverlayForBench &&
       !PaletteOpen && FpViewmodelRenderer)
   {
@@ -2346,6 +2373,13 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         FpViewmodelRenderer->DrawWorldOverlay(fpParams);
       }
     }
+  }
+  if (World)
+  {
+    World->SetLastFpViewmodelMs(
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - fp_viewmodel_begin)
+            .count());
   }
 
   const auto gui_begin = std::chrono::high_resolution_clock::now();

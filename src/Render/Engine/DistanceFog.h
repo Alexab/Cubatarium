@@ -24,7 +24,9 @@ DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
                                      glm::vec3 sky_color, float start_ratio,
                                      float effective_fog_start_ratio = -1.0f,
                                      float fog_density = 1.0f,
-                                     int end_margin_blocks = 12);
+                                     int end_margin_blocks = 12,
+                                     float effective_horizon_blocks = -1.0f,
+                                     float effective_start_blocks = -1.0f);
 
 } // namespace cutum
 

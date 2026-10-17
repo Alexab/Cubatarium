@@ -8,6 +8,7 @@
 #include "World/Math/GridMath.h"
 
 #include <algorithm>
+#include <chrono>
 #include <deque>
 #include <unordered_set>
 
@@ -17,7 +18,8 @@ namespace cutum
 namespace
 {
 
-constexpr int kSkyScanAboveBlocks = 15 * CHUNK_SIZE;
+constexpr int kSkyScanAboveChunkCount = 15;
+constexpr int kSkyScanAboveBlocks = kSkyScanAboveChunkCount * CHUNK_SIZE;
 
 void CollectColumnChunkCoords(const UBlockWorld &world, int world_x, int world_z,
                               int min_y, int max_y,
@@ -146,6 +148,15 @@ void SeedSkylightHorizontalQueue(UChunkRelightSnapshot &grid,
     {
       return;
     }
+    // The snapshot target band is cleared before the flood. Queueing a face
+    // position without writing its incoming level loses skylight that enters
+    // from a read-only neighbor chunk: the consumer reads the target's still
+    // zero value back from the grid. Install the attenuated boundary seed so
+    // the normal flood can continue from the actual incoming intensity.
+    if (sky_level > grid.GetSkyLight(world_pos))
+    {
+      grid.WriteSkyLight(world_pos, sky_level);
+    }
     queue.push_back(world_pos);
   };
 
@@ -200,7 +211,11 @@ void SeedSkylightHorizontalQueue(UChunkRelightSnapshot &grid,
         neighbor_local[v_axis] = v;
         const int incoming =
             grid.GetSkyLightLocal(neighbor_coord, neighbor_local);
-        try_seed(origin + center_local, incoming > 0 ? incoming - 1 : 0);
+        const glm::ivec3 center_world = origin + center_local;
+        const BlockId center_id = grid.GetBlock(center_world);
+        const int seed_level =
+            std::max(0, incoming - SkylightStepCost(registry, center_id));
+        try_seed(center_world, seed_level);
       }
     }
   }
@@ -509,6 +524,12 @@ BlockId UChunkRelightSnapshot::GetBlock(glm::ivec3 world_pos) const
   {
     return it->second[local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z)];
   }
+  const auto sky_context = SkyContextBlocks.find(chunk_coord);
+  if (sky_context != SkyContextBlocks.end() && InChunkLocal(local))
+  {
+    return sky_context->second[local.x +
+                               CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z)];
+  }
   const auto shell = ShellBlocks.find(world_pos);
   if (shell != ShellBlocks.end())
   {
@@ -698,6 +719,54 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
         ++snapshot.CapturedNeighborLightChunks;
       }
     }
+  }
+
+  if (spec.include_skylight && !coords.empty())
+  {
+    const auto sky_context_capture_started = std::chrono::steady_clock::now();
+    // PropagateSkylightColumn scans up to 15 chunk slices above each target
+    // slice to decide whether direct sky reaches it. Capturing only the target
+    // band (plus the one-block shell) made all farther geometry look like air,
+    // so a roof or terrain slice above a partial capture could be ignored.
+    // The top of the requested band is sufficient for every lower target slice:
+    // its 15-chunk scan is contained in that band plus these 15 context slices.
+    // Context chunks are read-only and do not enter Compute's target set.
+    std::unordered_map<glm::ivec3, int, IVec3Hash> top_band_by_column;
+    for (const glm::ivec3 &coord : coords)
+    {
+      const glm::ivec3 column(coord.x, 0, coord.z);
+      auto [it, inserted] = top_band_by_column.emplace(column, coord.y);
+      if (!inserted)
+      {
+        it->second = std::max(it->second, coord.y);
+      }
+    }
+    std::unordered_set<glm::ivec3, IVec3Hash> sky_context_coords;
+    for (const auto &entry : top_band_by_column)
+    {
+      for (int cy = entry.second + 1;
+           cy <= entry.second + kSkyScanAboveChunkCount; ++cy)
+      {
+        sky_context_coords.emplace(entry.first.x, cy, entry.first.z);
+      }
+    }
+    for (const glm::ivec3 &coord : sky_context_coords)
+    {
+      const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+      // Geometry-only stamp: lighting edits above must not invalidate the
+      // result, while appearance, removal, reuse, or voxel edits must.
+      snapshot.ReadSet.push_back(
+          ChunkInputStamp::Capture(coord, chunk, false, true));
+      if (chunk && !chunk->IsAirOnly())
+      {
+        snapshot.SkyContextBlocks[coord] = chunk->GetData();
+        ++snapshot.CapturedSkyContextChunks;
+      }
+    }
+    snapshot.SkyContextCaptureMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - sky_context_capture_started)
+            .count();
   }
   return snapshot;
 }

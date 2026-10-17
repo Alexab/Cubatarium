@@ -1,17 +1,21 @@
 #include "World/Lighting/ChunkLighting.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Core/Environment.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Lighting/GpuBlocklightFlood.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/GridMath.h"
+#include "App/Platform/Log.h"
 
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -41,10 +45,18 @@ void ClearChunkLight(UChunk &chunk)
   chunk.GetLightDataMutable().fill(0);
 }
 
-void WriteSkyLight(UChunk &chunk, glm::ivec3 local, int sky_level)
+void WriteSkyLight(
+    UChunk &chunk, glm::ivec3 local, int sky_level,
+    std::unordered_set<glm::ivec3, IVec3Hash> *changed_chunks = nullptr)
 {
   const int block_level = chunk.GetBlockLightLocal(local);
+  const uint64_t light_revision =
+      changed_chunks ? chunk.GetLightFieldRevision() : 0;
   chunk.SetLightLocal(local, sky_level, block_level);
+  if (changed_chunks && light_revision != chunk.GetLightFieldRevision())
+  {
+    changed_chunks->insert(chunk.GetCoord());
+  }
 }
 
 void WriteBlockLight(UChunk &chunk, glm::ivec3 local, int block_level)
@@ -81,7 +93,9 @@ void ClearChunkBlockLight(UChunk &chunk)
   }
 }
 
-void WriteSkyLightWorld(UBlockWorld &world, glm::ivec3 world_pos, int sky_level)
+void WriteSkyLightWorld(
+    UBlockWorld &world, glm::ivec3 world_pos, int sky_level,
+    std::unordered_set<glm::ivec3, IVec3Hash> *changed_chunks = nullptr)
 {
   const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
   UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
@@ -89,7 +103,8 @@ void WriteSkyLightWorld(UBlockWorld &world, glm::ivec3 world_pos, int sky_level)
   {
     return;
   }
-  WriteSkyLight(*chunk, UChunkManager::WorldToLocal(world_pos), sky_level);
+  WriteSkyLight(*chunk, UChunkManager::WorldToLocal(world_pos), sky_level,
+                changed_chunks);
 }
 
 void WriteBlockLightWorld(UBlockWorld &world, glm::ivec3 world_pos,
@@ -259,7 +274,9 @@ void SeedSkylightHorizontalQueue(UBlockWorld &world, UBlockRegistry &registry,
 }
 
 void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
-                                 glm::ivec3 chunk_coord)
+                                 glm::ivec3 chunk_coord,
+                                 std::unordered_set<glm::ivec3, IVec3Hash>
+                                     *changed_chunks = nullptr)
 {
   std::deque<glm::ivec3> queue;
   SeedSkylightHorizontalQueue(world, registry, chunk_coord, queue);
@@ -297,7 +314,7 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
       {
         continue;
       }
-      WriteSkyLightWorld(world, neighbor, next);
+      WriteSkyLightWorld(world, neighbor, next, changed_chunks);
       queue.push_back(neighbor);
     }
   }
@@ -1040,14 +1057,33 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
 }
 
 void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
-                               int world_x, int world_z, int min_y, int max_y)
+                               int world_x, int world_z, int min_y, int max_y,
+                               std::vector<glm::ivec3> *out_changed_chunks,
+                               const char *audit_source)
 {
+  if (out_changed_chunks)
+  {
+    out_changed_chunks->clear();
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> changed_chunks;
+  auto *changed = out_changed_chunks ? &changed_chunks : nullptr;
   // Era51: enter frozen rim — missing neighbor faces get open daytime sky
   // (no block-light invent). Then horizontal sky BFS within loaded chunks.
   std::unordered_set<glm::ivec3, IVec3Hash> coords;
   CollectColumnChunkCoords(world, world_x, world_z, min_y, max_y, coords);
   if (coords.empty())
   {
+    if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          std::string("enter_open_sky event=no_loaded_slices frame_epoch=") +
+              std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+              " source=" + (audit_source ? audit_source : "unknown") +
+              " world_column=(" + std::to_string(world_x) + "," +
+              std::to_string(world_z) + ") min_y=" +
+              std::to_string(min_y) + " max_y=" + std::to_string(max_y));
+    }
     return;
   }
   for (const glm::ivec3 &chunk_coord : coords)
@@ -1095,14 +1131,47 @@ void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
           {
             continue;
           }
-          WriteSkyLight(*chunk, local, kMaxLightLevel);
+          WriteSkyLight(*chunk, local, kMaxLightLevel, changed);
         }
       }
     }
   }
   for (const glm::ivec3 &coord : coords)
   {
-    PropagateSkylightHorizontal(world, registry, coord);
+    PropagateSkylightHorizontal(world, registry, coord, changed);
+  }
+  if (out_changed_chunks)
+  {
+    out_changed_chunks->assign(changed_chunks.begin(), changed_chunks.end());
+  }
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    std::string changed_coords;
+    if (out_changed_chunks)
+    {
+      for (const glm::ivec3 coord : *out_changed_chunks)
+      {
+        if (!changed_coords.empty())
+        {
+          changed_coords.push_back(';');
+        }
+        changed_coords += std::to_string(coord.x) + "," +
+                          std::to_string(coord.y) + "," +
+                          std::to_string(coord.z);
+      }
+    }
+    CubatariumLogInfo(
+        "RelightAudit",
+        std::string("enter_open_sky event=complete frame_epoch=") +
+            std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+            " source=" + (audit_source ? audit_source : "unknown") +
+            " world_column=(" + std::to_string(world_x) + "," +
+            std::to_string(world_z) + ") min_y=" +
+            std::to_string(min_y) + " max_y=" + std::to_string(max_y) +
+            " loaded_slices=" + std::to_string(coords.size()) +
+            " changed_chunks=" + std::to_string(changed_chunks.size()) +
+            " changed_coords=" +
+            (changed_coords.empty() ? "-" : changed_coords));
   }
 }
 

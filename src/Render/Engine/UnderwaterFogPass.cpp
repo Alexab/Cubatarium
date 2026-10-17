@@ -1,4 +1,5 @@
 #include "Render/Engine/UnderwaterFogPass.h"
+#include "Render/Pipeline/RenderTextureUnits.h"
 
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/DistanceFog.h"
@@ -140,6 +141,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   color_in.celestial_bodies = &env.CelestialBodies;
   const AtmosphericSkyColors atmospheric = ComputeAtmosphericSkyColors(color_in);
   glm::vec3 target_sky = atmospheric.sky_tint;
+  TargetFogColor = atmospheric.fog_color;
   FogEnabled = 0.0f;
   FogHorizontal = 0.0f;
   FogHorizonBlend = 0.0f;
@@ -158,6 +160,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
       if (registry.GetRenderStyle(eye_fluid) == BlockRenderStyle::Fluid)
       {
         target_sky = fv->FogColor;
+        TargetFogColor = fv->FogColor;
         if (entering_underwater)
         {
           SmoothedFogColor = fv->FogColor;
@@ -181,7 +184,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
           render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
           render.DistanceFogDensity,
           world.GetEffectiveFogEndMarginBlocks(
-              render.DistanceFogEndMarginBlocks));
+              render.DistanceFogEndMarginBlocks),
+          world.GetPresentedFogHorizonBlocks(),
+          world.GetPresentedFogStartBlocks());
       FogStart = distance_fog.Start;
       FogEnd = distance_fog.End;
       FogDensity = distance_fog.Density;
@@ -220,7 +225,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
         render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
         render.DistanceFogDensity,
         world.GetEffectiveFogEndMarginBlocks(
-            render.DistanceFogEndMarginBlocks));
+            render.DistanceFogEndMarginBlocks),
+        world.GetPresentedFogHorizonBlocks(),
+        world.GetPresentedFogStartBlocks());
     AirFogEnabled = 1.0f;
     FogStart = distance_fog.Start;
     FogEnd = distance_fog.End;
@@ -228,6 +235,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     FogMinBlend = 0.0f;
     FogHorizontal = render.DistanceFogHorizontal ? 1.0f : 0.0f;
     FogHorizonBlend = 1.0f;
+    TargetFogColor = distance_fog.Color;
     SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.2f);
     // B: blend already saturated at 1 — widen sky horizon band over unfinished
     // water so empty columns read as fog, not clear skydome.
@@ -314,18 +322,28 @@ void UUnderwaterFogPass::ApplyUniforms(
   {
     shader->SetVec2("uFluidSurfaceOrigin", surface_map.GetOriginBlockXZ());
     shader->SetVec2("uFluidSurfaceInvSize", surface_map.GetInvSizeBlocks());
-    shader->SetInt("uFluidSurfaceYMap", 1);
-    shader->SetInt("uFluidIndexMap", 2);
-    shader->SetInt("uFluidBottomBlockMap", 3);
-    surface_map.Bind(1, 2, 3);
+    const GLint surface_y_unit =
+        RenderTextureUnitIndex(RenderTextureUnit::FluidSurfaceY);
+    const GLint fluid_index_unit =
+        RenderTextureUnitIndex(RenderTextureUnit::FluidIndex);
+    const GLint fluid_bottom_unit =
+        RenderTextureUnitIndex(RenderTextureUnit::FluidBottomBlock);
+    shader->SetInt("uFluidSurfaceYMap", surface_y_unit);
+    shader->SetInt("uFluidIndexMap", fluid_index_unit);
+    shader->SetInt("uFluidBottomBlockMap", fluid_bottom_unit);
+    surface_map.Bind(surface_y_unit, fluid_index_unit, fluid_bottom_unit);
   }
   else
   {
     shader->SetVec2("uFluidSurfaceOrigin", glm::vec2(0.0f));
     shader->SetVec2("uFluidSurfaceInvSize", glm::vec2(0.0f));
-    shader->SetInt("uFluidSurfaceYMap", 1);
-    shader->SetInt("uFluidIndexMap", 2);
-    shader->SetInt("uFluidBottomBlockMap", 3);
+    shader->SetInt("uFluidSurfaceYMap",
+                   RenderTextureUnitIndex(RenderTextureUnit::FluidSurfaceY));
+    shader->SetInt("uFluidIndexMap",
+                   RenderTextureUnitIndex(RenderTextureUnit::FluidIndex));
+    shader->SetInt(
+        "uFluidBottomBlockMap",
+        RenderTextureUnitIndex(RenderTextureUnit::FluidBottomBlock));
   }
   const GLint color_loc = shader->GetUniformLocation("uUnderwaterFogColors");
   if (color_loc != -1)
@@ -345,6 +363,7 @@ void UUnderwaterFogPass::ResetAtmosphericColors(const glm::vec3 &sky_tint,
 {
   SmoothedSkyTint = sky_tint;
   SmoothedFogColor = fog_color;
+  TargetFogColor = fog_color;
 }
 
 } // namespace cutum

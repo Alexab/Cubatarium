@@ -1,10 +1,13 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/BoundaryOverlay.h"
 #include "Render/Mesh/MeshCaptureToken.h"
+#include "App/Platform/Log.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include <chrono>
 #include <cstdlib>
+#include <sstream>
 
 namespace cutum
 {
@@ -211,6 +214,26 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     const UBlockWorld &world, glm::ivec3 chunkCoord, uint64_t sourceRevision,
     NeighborVisualDrawableFn neighbor_drawable, void *neighbor_drawable_ctx)
 {
+  const auto capture_t0 = std::chrono::steady_clock::now();
+  auto stage_t0 = capture_t0;
+  const auto note_slow_stage = [&](const char *stage)
+  {
+    const auto now = std::chrono::steady_clock::now();
+    const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                  now - stage_t0)
+                                  .count();
+    constexpr double kSlowCaptureLogThresholdMs = 25.0;
+    if (elapsed_ms >= kSlowCaptureLogThresholdMs)
+    {
+      std::ostringstream message;
+      message << "stage=" << stage << " coord=(" << chunkCoord.x << ","
+              << chunkCoord.y << "," << chunkCoord.z
+              << ") elapsed_ms=" << elapsed_ms;
+      CubatariumLogInfo("MeshCaptureSlow", message.str());
+    }
+    stage_t0 = now;
+  };
+
   ChunkMeshSnapshot snapshot;
   snapshot.coord = chunkCoord;
   snapshot.sourceRevision = sourceRevision;
@@ -224,6 +247,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.inputStampsValid = true;
   snapshot.fluid_packed = chunk->GetFluidData();
   snapshot.light_packed = chunk->GetLightData();
+  note_slow_stage("center_chunk_copy");
 
   const glm::ivec3 origin = snapshot.ChunkOrigin();
   // Capture exactly the radius-2 light neighborhood read by FaceLightPacked.
@@ -279,6 +303,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       }
     }
   }
+  note_slow_stage("light_halo_capture");
 
   // Keep center + six face stamps at stable indices for existing consumers.
   uint8_t missing_faces = 0;
@@ -359,6 +384,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
         missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
     }
   }
+  note_slow_stage("face_shell_capture");
   size_t stamp_index = 7;
   for (int dy = -1; dy <= 1; ++dy)
   {
@@ -381,6 +407,18 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     }
   }
   BoundaryOverlaySetMissingFaces(snapshot.boundaryOverlay, missing_faces);
+  note_slow_stage("diagonal_stamps_and_overlay");
+  const double total_ms = std::chrono::duration<double, std::milli>(
+                              std::chrono::steady_clock::now() - capture_t0)
+                              .count();
+  if (total_ms >= 25.0)
+  {
+    std::ostringstream message;
+    message << "stage=snapshot_total coord=(" << chunkCoord.x << ","
+            << chunkCoord.y << "," << chunkCoord.z
+            << ") elapsed_ms=" << total_ms;
+    CubatariumLogInfo("MeshCaptureSlow", message.str());
+  }
   return snapshot;
 }
 

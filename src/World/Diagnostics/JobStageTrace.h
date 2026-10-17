@@ -61,6 +61,8 @@ struct JobStageSpan
   int32_t cx{0};
   int32_t cy{0};
   int32_t cz{0};
+  /// Streaming frame active when this worker/GPU lifecycle event was recorded.
+  uint64_t frame_epoch{0};
   /// Internal async mesh job identity, distinct from render-demand attempt ID.
   uint64_t job_id{0};
   uint64_t incarnation{0};
@@ -107,7 +109,11 @@ enum class DemandTransitionKind : uint8_t
   PublishedRevisionAdvanced,
   AttemptReminted,
   MeshRevisionBumped,
-  IdentityReset
+  IdentityReset,
+  LightCalculationSettled,
+  StaleLightRemeshQueued,
+  StaleLightRemeshDirtyAdmitted,
+  OpenSkyRepairPublished
 };
 
 enum class MeshRevisionBumpReason : uint8_t
@@ -144,7 +150,8 @@ enum class MeshRevisionBumpReason : uint8_t
   PriorityRelitInstallRepair,
   PriorityWorldStreamingCommit,
   PriorityWorldCoreCommit,
-  FaceDebtMaterialRetry
+  FaceDebtMaterialRetry,
+  PriorityLightDependencyRepair
 };
 
 struct DemandTransitionSpan
@@ -152,6 +159,9 @@ struct DemandTransitionSpan
   int32_t cx{0};
   int32_t cy{0};
   int32_t cz{0};
+  /// Streaming frame that was active when this lifecycle event was recorded.
+  /// This is separate from world_epoch, which identifies a world generation.
+  uint64_t frame_epoch{0};
   uint64_t world_epoch{0};
   uint64_t incarnation{0};
   uint64_t previous_attempt_id{0};
@@ -166,8 +176,20 @@ struct DemandTransitionSpan
   uint64_t published_geom_rev{0};
   uint64_t previous_published_light_rev{0};
   uint64_t published_light_rev{0};
+  uint64_t settled_light_rev{0};
+  uint8_t has_settled_light{0};
   uint64_t previous_published_coverage_gen{0};
   uint64_t published_coverage_gen{0};
+  uint64_t open_sky_repair_event_id{0};
+  uint64_t open_sky_repair_target_light_rev{0};
+  uint64_t open_sky_repair_baseline_geom_rev{0};
+  uint64_t open_sky_repair_baseline_attempt_id{0};
+  uint64_t open_sky_repair_baseline_published_attempt_id{0};
+  uint64_t open_sky_repair_published_geom_rev{0};
+  uint64_t open_sky_repair_published_light_rev{0};
+  uint64_t open_sky_repair_published_attempt_id{0};
+  uint8_t open_sky_repair_pending{0};
+  uint8_t open_sky_repair_published{0};
   uint64_t mesh_revision_before{0};
   uint64_t mesh_revision_after{0};
   uint8_t face_debt_mask{0};
@@ -218,7 +240,7 @@ struct VisualBlackTraceRecord
   /// 13=camera-band unowned peak slice, 14=surviving near-focus FirstMesh
   /// queue frontier with scheduler/capture budgets at the end of the tick,
   /// 15=frustum probe summary, 16=peak-slice render and screen-projection
-  /// witness.
+  /// witness, 17=targeted opaque GPU draw-state snapshot.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   /// sample_kind=1: FocusColumnVisualClass ordinal, 255 when outside cache.
@@ -257,6 +279,12 @@ struct VisualBlackTraceRecord
   uint64_t published_light_rev{0};
   uint64_t meshed_light_rev{0};
   uint64_t field_light_rev{0};
+  /// sample_kind=1: distinguish absent, zero-quad, and non-drawable cache data.
+  uint8_t focus_mesh_cache_entry_present{0};
+  uint8_t focus_mesh_gpu_resident{0};
+  uint8_t focus_mesh_boundary_overlay_mask{0};
+  uint32_t focus_mesh_cpu_vertex_count{0};
+  uint32_t focus_mesh_gpu_quad_count{0};
   int32_t stale_sample_x{0};
   int32_t stale_sample_y{0};
   int32_t stale_sample_z{0};
@@ -271,6 +299,9 @@ struct VisualBlackTraceRecord
   uint8_t face_debt_mask{0};
   uint8_t overlay_face_debt_mask{0};
   uint8_t peer_face_debt_mask{0};
+  /// sample_kind=1/8/16: current published mesh whose only unsettled state is
+  /// face debt.
+  uint8_t stable_published_face_debt{0};
   /// sample_kind=1: per-face debt requirements and six-face neighbor census.
   /// Face order matches ChunkMeshSnapshot: -X, +X, -Y, +Y, -Z, +Z.
   uint64_t face_waiting_peer_gen[6]{};
@@ -294,6 +325,11 @@ struct VisualBlackTraceRecord
   uint8_t stale_face_index{0};
   uint8_t stale_sample_light{0};
   uint8_t stale_sample_gpu_path{0};
+  /// 0=unavailable, 1=published light halo still matches world, 2=changed.
+  uint8_t stale_mesh_halo_state{0};
+  /// Split unavailable halo state into absent cache vs absent signature.
+  uint8_t stale_mesh_cache_entry_present{0};
+  uint8_t stale_mesh_halo_stamp_valid{0};
   /// sample_kind=2: 1=CPU opaque, 2=CPU transparent, 3=packed opaque,
   /// 4=packed transparent.
   uint8_t renderer_path{0};
@@ -309,6 +345,10 @@ struct VisualBlackTraceRecord
   uint16_t frustum_peak_unowned_in_view_count{0};
   /// sample_kind=16: bounded target-specific camera projection witness.
   uint8_t camera_band_peak_kind{0};
+  /// sample_kind=18: 0=end-of-tick target snapshot, 1=try_schedule outcome.
+  uint8_t camera_band_peak_schedule_phase{0};
+  /// sample_kind=18: renderer_target_resident reports whether the chunk is
+  /// loaded; flags bit 14 marks target admission during this scheduler tick.
   uint8_t renderer_target_resident{0};
   uint8_t renderer_exact_frustum_intersects{0};
   uint8_t renderer_projected_screen_rect_valid{0};
@@ -380,14 +420,100 @@ struct VisualBlackTraceRecord
   float renderer_pixel_fluid_block_light{-1.0f};
   float renderer_pixel_fluid_light_preview{-1.0f};
   float renderer_pixel_fluid_wetness{-1.0f};
+  /// sample_kind=9 distinguishes CPU fluid geometry in the raw mesh snapshot
+  /// from the ready transparent refs and resident/visible transparent MDI
+  /// command for the exact sea-plane surface chunk.
+  uint32_t renderer_pixel_fluid_raw_ref_count{0};
+  uint32_t renderer_pixel_fluid_ready_ref_count{0};
+  uint8_t renderer_pixel_fluid_chunk_render_ready{0};
+  uint8_t renderer_pixel_ready_fluid_triangle_match{0};
+  uint8_t renderer_pixel_fluid_mdi_probe_checked{0};
+  uint8_t renderer_pixel_fluid_payload_check_attempted{0};
+  uint8_t renderer_pixel_fluid_vertex_count_matches{0};
+  uint8_t renderer_pixel_fluid_index_count_matches{0};
+  uint8_t renderer_pixel_fluid_vertex_payload_matches{0};
+  uint8_t renderer_pixel_fluid_index_payload_matches{0};
+  uint8_t renderer_pixel_fluid_vertex_payload_readback_valid{0};
+  uint8_t renderer_pixel_fluid_index_payload_readback_valid{0};
+  uint8_t renderer_pixel_fluid_gpu_compact_active{0};
+  int32_t renderer_pixel_fluid_source_batch_index{-1};
+  int32_t renderer_pixel_fluid_gpu_batch_index{-1};
+  int32_t renderer_pixel_fluid_gpu_batch_vector_index{-1};
+  uint64_t renderer_pixel_fluid_gpu_vbo_byte_offset{0};
+  uint64_t renderer_pixel_fluid_gpu_ebo_byte_offset{0};
+  uint64_t renderer_pixel_fluid_gpu_vbo_buffer_bytes{0};
+  uint64_t renderer_pixel_fluid_gpu_ebo_buffer_bytes{0};
+  /// sample_kind=19: state at a successful fluid draw submission in a
+  /// transparent pass. The pass/path identify the actual GL submission path;
+  /// names, object validity, and sizes distinguish live pool storage from a
+  /// stale/empty backing buffer.
+  uint8_t renderer_fluid_draw_witness_valid{0};
+  uint8_t renderer_fluid_draw_witness_pass{255};
+  uint8_t renderer_fluid_draw_witness_pass_ordinal{255};
+  uint8_t renderer_fluid_draw_witness_submit_path{0};
+  uint8_t renderer_fluid_draw_witness_use_mdi{0};
+  uint8_t renderer_fluid_draw_witness_pooled{0};
+  uint8_t renderer_fluid_draw_witness_vbo_is_buffer{0};
+  uint8_t renderer_fluid_draw_witness_ebo_is_buffer{0};
+  uint8_t renderer_fluid_draw_witness_stencil_test{0};
+  uint8_t renderer_fluid_draw_witness_depth_test{0};
+  uint8_t renderer_fluid_draw_witness_depth_write{0};
+  uint8_t renderer_fluid_draw_witness_color_write_mask{0};
+  uint32_t renderer_fluid_draw_witness_block_id{0};
+  uint32_t renderer_fluid_draw_witness_pool_vbo{0};
+  uint32_t renderer_fluid_draw_witness_pool_ebo{0};
+  uint32_t renderer_fluid_draw_witness_pool_live_vbo{0};
+  uint32_t renderer_fluid_draw_witness_pool_live_ebo{0};
+  uint32_t renderer_fluid_draw_witness_vbo{0};
+  uint32_t renderer_fluid_draw_witness_ebo{0};
+  uint32_t renderer_fluid_draw_witness_vao{0};
+  uint32_t renderer_fluid_draw_witness_array_buffer{0};
+  uint32_t renderer_fluid_draw_witness_element_buffer{0};
+  uint32_t renderer_fluid_draw_witness_draw_framebuffer{0};
+  uint64_t renderer_fluid_draw_witness_vbo_bytes{0};
+  uint64_t renderer_fluid_draw_witness_ebo_bytes{0};
+  int32_t renderer_fluid_draw_witness_vbo_query_error{-1};
+  int32_t renderer_fluid_draw_witness_ebo_query_error{-1};
+  int32_t renderer_fluid_draw_witness_vbo_bind_error{-1};
+  int32_t renderer_fluid_draw_witness_ebo_bind_error{-1};
+  int32_t renderer_fluid_draw_witness_gl_error_after_submit{-1};
+  int32_t renderer_fluid_draw_witness_stencil_func{-1};
+  int32_t renderer_fluid_draw_witness_stencil_ref{-1};
+  int32_t renderer_fluid_draw_witness_stencil_value_mask{-1};
+  int32_t renderer_fluid_draw_witness_stencil_write_mask{-1};
+  int32_t renderer_fluid_draw_witness_stencil_fail{-1};
+  int32_t renderer_fluid_draw_witness_stencil_depth_fail{-1};
+  int32_t renderer_fluid_draw_witness_stencil_depth_pass{-1};
+  int32_t renderer_fluid_draw_witness_depth_func{-1};
+  int32_t renderer_pixel_fluid_vertex_payload_first_mismatch_byte{-1};
+  int32_t renderer_pixel_fluid_index_payload_first_mismatch{-1};
+  int64_t renderer_pixel_fluid_index_payload_source_value{-1};
+  int64_t renderer_pixel_fluid_index_payload_gpu_value{-1};
+  uint32_t renderer_pixel_fluid_source_vertex_count{0};
+  uint32_t renderer_pixel_fluid_source_index_count{0};
+  uint32_t renderer_pixel_fluid_gpu_vertex_count{0};
+  uint32_t renderer_pixel_fluid_gpu_index_count{0};
+  uint32_t renderer_pixel_fluid_gpu_index_count_gl{0};
   uint64_t renderer_pixel_probe_id{0};
+  /// Process-local monotonic time when the framebuffer pixel was sampled.
+  double renderer_pixel_sample_time_ms{0.0};
+  /// Absolute steady-clock milliseconds, aligned with event_ms lifecycle traces.
+  double renderer_pixel_sample_steady_ms{0.0};
   /// sample_kind=10: exact streaming screen-ray sample and selector decision.
   /// Screen coordinates use top-left pixel space. Columns map to the
   /// renderer's 20-tile X centers; row is an index in the selector's ordered
   /// vertical sample list (row 0 is topmost). Use screen_ray_y to join rows.
   float screen_ray_x{0.0f};
   float screen_ray_y{0.0f};
+  float screen_ray_origin_x{0.0f};
+  float screen_ray_origin_y{0.0f};
+  float screen_ray_origin_z{0.0f};
+  float screen_ray_direction_x{0.0f};
+  float screen_ray_direction_y{0.0f};
+  float screen_ray_direction_z{-1.0f};
   float screen_ray_distance{-1.0f};
+  float screen_ray_near_distance{0.0f};
+  uint8_t screen_ray_perspective{1};
   int32_t screen_ray_block_x{0};
   int32_t screen_ray_block_y{0};
   int32_t screen_ray_block_z{0};
@@ -410,6 +536,9 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_y{0};
   uint32_t renderer_pixel_rgba{0};
   uint32_t renderer_pixel_pretransparent_rgba{0};
+  /// sample_kind=9: stencil value left at this pixel by the transparent path.
+  /// 255 is reserved for a probe path that did not capture stencil.
+  uint8_t renderer_pixel_stencil_index{255};
   float renderer_pixel_pretransparent_depth{1.0f};
   float renderer_pixel_shader_min_ambient{0.12f};
   float renderer_pixel_shader_day_factor{1.0f};
@@ -427,6 +556,19 @@ struct VisualBlackTraceRecord
   float renderer_pixel_camera_pos_x{0.0f};
   float renderer_pixel_camera_pos_y{0.0f};
   float renderer_pixel_camera_pos_z{0.0f};
+  /// sample_kind=9: bit 0=periodic, bit 1=focus change, bit 2=screen ray,
+  /// bit 3=camera-band peak, bit 4=stalled census, bit 5=visual-hole edge.
+  uint8_t renderer_pixel_probe_trigger_flags{0};
+  /// Source epoch for a visual-hole edge probe; frame_epoch is the render
+  /// epoch whose framebuffer was actually sampled.
+  uint64_t renderer_pixel_probe_event_frame_epoch{0};
+  /// sample_kind=9: origin and direction of the renderer's exact DDA ray.
+  float renderer_pixel_ray_origin_x{0.0f};
+  float renderer_pixel_ray_origin_y{0.0f};
+  float renderer_pixel_ray_origin_z{0.0f};
+  float renderer_pixel_ray_direction_x{0.0f};
+  float renderer_pixel_ray_direction_y{0.0f};
+  float renderer_pixel_ray_direction_z{-1.0f};
   float renderer_pixel_fog_start{0.0f};
   float renderer_pixel_fog_end{1000.0f};
   float renderer_pixel_fog_min_blend{0.0f};
@@ -435,6 +577,9 @@ struct VisualBlackTraceRecord
   float renderer_pixel_fog_color_r{0.05f};
   float renderer_pixel_fog_color_g{0.15f};
   float renderer_pixel_fog_color_b{0.35f};
+  float renderer_pixel_fog_target_color_r{0.05f};
+  float renderer_pixel_fog_target_color_g{0.15f};
+  float renderer_pixel_fog_target_color_b{0.35f};
   float renderer_pixel_underwater_fog_start{0.0f};
   float renderer_pixel_underwater_fog_end{9.0f};
   float renderer_pixel_underwater_fog_min_blend{0.5f};
@@ -475,6 +620,104 @@ struct VisualBlackTraceRecord
   /// the CPU greedy source and its current opaque GPU command/material.
   uint8_t renderer_pixel_voxel_face_source_valid{0};
   float renderer_pixel_voxel_face_source_distance{-1.0f};
+  /// Exact ray/triangle witness for the same exposed face. A mesh-ray gap is
+  /// only raised when the screen ray crosses the triangle interior but the
+  /// sampled opaque depth is behind it (or absent).
+  uint8_t renderer_pixel_voxel_mesh_ray_intersects{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_interior{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gap{0};
+  float renderer_pixel_voxel_mesh_ray_distance{-1.0f};
+  uint8_t renderer_pixel_voxel_mesh_ray_projected_valid{0};
+  float renderer_pixel_voxel_mesh_ray_projected_x{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_y{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_depth{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_delta_x{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_delta_y{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_depth_delta{-1.0f};
+  uint8_t renderer_pixel_voxel_mesh_ray_projected_depth_would_pass{0};
+  float renderer_pixel_voxel_mesh_ray_origin_projected_delta_x{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_origin_projected_delta_y{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_direction_projected_delta_x{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_direction_projected_delta_y{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_edge_margin{-1.0f};
+  /// Optional, gap-only readback validating the exact source triangle against
+  /// the pooled GPU bytes and authoritative indirect command slot.
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_witness_attempted{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_batch_found{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_compact_active{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_command_readable{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_command_match{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_indices_readable{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_indices_match{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_vertices_readable{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_vertices_match{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_batch_index{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_slot{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_source_index_offset{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_source_index0{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_source_index1{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_source_index2{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_actual_index0{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_actual_index1{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_actual_index2{0};
+  uint64_t renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset{0};
+  uint64_t renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_count{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_instances{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_first_index{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex{0};
+  float renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta{-1.0f};
+  /// Opt-in snapshot of the opaque draw state for the exact M483 ray/triangle
+  /// witness. draw_path: 1=GPU-resident MDI, 2=CPU-built MDI,
+  /// 3=glDrawElementsBaseVertex fallback, 4=direct glDrawElements fallback.
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_valid{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_match{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_submitted{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_path{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_test{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_write{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_rasterizer_discard{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_blend{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_color_mask{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_func{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull_mode{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_front_face{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_viewport[4]{};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor_box[4]{};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_framebuffer{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_program{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_vao{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_array_buffer{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_element_buffer{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_2d{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_func{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_ref{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_value_mask{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_write_mask{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_front{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_back{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_indirect_buffer{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_checked{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_match{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_valid{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_valid{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_min{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_max{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_alpha_cutout{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_opaque_depth_guard{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_greedy_mode{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame_count{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_active_texture{0};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_max_delta{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_near{0.0f};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_far{1.0f};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_factor{0.0f};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_units{0.0f};
   uint8_t renderer_pixel_voxel_face_batch_ref{0};
   uint8_t renderer_pixel_voxel_face_gpu_command{0};
   uint8_t renderer_pixel_voxel_face_gpu_pooled{0};
@@ -550,6 +793,10 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_opaque_chunk_x{0};
   int32_t renderer_pixel_opaque_chunk_y{0};
   int32_t renderer_pixel_opaque_chunk_z{0};
+  /// Lifecycle identity for the opaque depth-hit chunk. The generic
+  /// world_epoch/incarnation fields may describe the sea-plane sample.
+  uint64_t renderer_pixel_opaque_world_epoch{0};
+  uint64_t renderer_pixel_opaque_incarnation{0};
   uint32_t renderer_pixel_opaque_chunk_nonair{0};
   uint64_t renderer_pixel_opaque_chunk_content_revision{0};
   uint64_t renderer_pixel_opaque_mesh_revision{0};
@@ -566,6 +813,10 @@ struct VisualBlackTraceRecord
   float renderer_pixel_opaque_vertex_sky_light{0.0f};
   float renderer_pixel_opaque_vertex_block_light{0.0f};
   float renderer_pixel_opaque_vertex_light_preview{0.0f};
+  /// Exact depth-hit chunk's mesh-gate preview, separate from the sea-plane
+  /// sample stored in renderer_gate_flags bit 22.
+  uint8_t renderer_pixel_opaque_preview_shader_override{0};
+  uint64_t renderer_pixel_opaque_meshed_light_rev{0};
   uint8_t renderer_pixel_opaque_live_face_light_valid{0};
   uint8_t renderer_pixel_opaque_live_face_light_packed{0};
   uint8_t renderer_pixel_opaque_live_face_light_source{2};
@@ -578,6 +829,8 @@ struct VisualBlackTraceRecord
   uint64_t renderer_pixel_opaque_demand_desired_light_rev{0};
   uint64_t renderer_pixel_opaque_demand_published_light_rev{0};
   uint64_t renderer_pixel_opaque_demand_settled_light_rev{0};
+  double renderer_pixel_opaque_demand_attempt_age_ms{0.0};
+  double renderer_pixel_opaque_demand_progress_age_ms{0.0};
   /// Ref bits: opaque CPU, transparent CPU, packed opaque, packed transparent.
   uint8_t renderer_pixel_opaque_ref_flags{0};
   uint8_t renderer_pixel_opaque_drawable{0};
@@ -588,6 +841,7 @@ struct VisualBlackTraceRecord
   uint8_t renderer_pixel_opaque_mdi_visible_pass_flags{0};
   uint32_t renderer_pixel_opaque_mdi_index_count{0};
   uint32_t renderer_pixel_opaque_mdi_visible_index_count{0};
+  uint8_t renderer_pixel_opaque_stale_light_remesh_pending{0};
   /// sample_kind=3: 1=settled field needs mesh-only repair; 0=relight target.
   uint8_t draw_gate_repair_mode{0};
   /// Persistence relight queue location/band for renderer, focus, and
@@ -687,8 +941,15 @@ public:
   static constexpr size_t kVisualLifecycleRingCapacity = 8192;
   /// Bounded demand-owner transitions for slices sampled by the renderer trace.
   static constexpr size_t kDemandTransitionRingCapacity = 16384;
+  /// Independent retention for open-sky inputs/dependents across startup.
+  static constexpr size_t kOpenSkyLifecycleRingCapacity = 8192;
+  static constexpr size_t kOpenSkyDemandTransitionRingCapacity = 8192;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
+  /// Keep the narrow opt-in M483 draw-state window independently bounded.
+  static constexpr size_t kGpuDrawStateTraceRingCapacity = 512;
+  /// Preserve fluid draw witnesses independently from high-rate census rows.
+  static constexpr size_t kFluidDrawWitnessTraceRingCapacity = 256;
   // M466 filled 65,536 pixel rows and retained only the last ~40.8k frame
   // epochs. Keep room for the full M335 route's synchronized 5x20 samples and
   // its periodic 4x20 probes, with headroom for focus/peak captures.
@@ -715,6 +976,8 @@ public:
   static constexpr size_t kCameraBandPeakTraceRingCapacity = 256;
   /// Retain enough opt-in frontier samples to cover a complete M335 route.
   static constexpr size_t kFirstMeshFrontierTraceRingCapacity = 4096;
+  /// Targeted scheduler history for active camera-band high-water slices.
+  static constexpr size_t kCameraBandPeakScheduleTraceRingCapacity = 4096;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
       kVisualBlackTraceRingCapacity +
       kRendererGateTraceRingCapacity +
@@ -726,7 +989,9 @@ public:
       kPriorityRemeshTraceRingCapacity +
       kWatchedMeshScheduleTraceRingCapacity + kVisualPixelTraceRingCapacity +
       kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity +
-      kFirstMeshFrontierTraceRingCapacity;
+      kFirstMeshFrontierTraceRingCapacity +
+      kCameraBandPeakScheduleTraceRingCapacity +
+      kGpuDrawStateTraceRingCapacity + kFluidDrawWitnessTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.
@@ -734,9 +999,27 @@ public:
                            JobTerminalReason reason);
   /// Retain lifecycle events for a chunk selected by the opt-in frustum trace.
   static void WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz);
+  /// Pin open-sky source/dependent coordinates in a bounded diagnostic set.
+  static void WatchOpenSkyLifecycleChunk(int32_t cx, int32_t cy, int32_t cz);
   static bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz);
+  /// Retain peak chunks as scheduler targets for a bounded frame window.
+  static void WatchCameraBandPeakChunk(int32_t cx, int32_t cy, int32_t cz,
+                                       uint64_t frame_epoch,
+                                       uint8_t peak_kind);
+  static bool IsCameraBandPeakChunkWatched(int32_t cx, int32_t cy, int32_t cz,
+                                           uint64_t frame_epoch,
+                                           uint8_t *peak_kind = nullptr);
+  static void ForEachCameraBandPeakChunkWatched(
+      uint64_t frame_epoch,
+      void (*fn)(int32_t, int32_t, int32_t, uint8_t, void *), void *ctx);
   static void ForEachWatchedNewest(
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
+  static void ForEachOpenSkyLifecycleNewest(
+      size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
+  /// Publish the world's current streaming frame for asynchronous demand traces.
+  static void SetStreamingFrameEpoch(uint64_t frame_epoch);
+  /// Read the current streaming frame for coordinate-scoped diagnostic events.
+  static uint64_t GetStreamingFrameEpoch();
   static void NoteDemandTransition(const DemandTransitionSpan &span);
   static void NoteMeshRevisionBump(DemandTransitionSpan span,
                                    uint64_t revision_before,
@@ -744,6 +1027,9 @@ public:
                                    MeshRevisionBumpReason reason,
                                    uint32_t owner_flags);
   static void ForEachDemandTransitionNewest(
+      size_t max_n, void (*fn)(const DemandTransitionSpan &, void *),
+      void *ctx);
+  static void ForEachOpenSkyDemandTransitionNewest(
       size_t max_n, void (*fn)(const DemandTransitionSpan &, void *),
       void *ctx);
   static size_t Size();
@@ -757,12 +1043,22 @@ public:
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static bool VisualBlackTraceEnabled();
   static void NoteVisualBlack(const VisualBlackTraceRecord &record);
+  static void NoteCameraBandPeakSchedule(
+      const VisualBlackTraceRecord &record);
   /// True when a camera-band peak was recorded during this render epoch.
   /// Lets the renderer take one synchronized sparse pixel/depth sample.
   static bool HasCameraBandPeakTraceForFrame(uint64_t frame_epoch);
   /// True when the streaming screen-ray grid was recorded during this render
   /// epoch. Lets an opt-in diagnostic pixel probe sample the same coordinates.
   static bool HasScreenRayTraceForFrame(uint64_t frame_epoch);
+  /// Mark a near-focus visual-hole rising edge. The renderer may observe it
+  /// after the streaming frame advances, so keep the source epoch available
+  /// until its next pixel-probe decision.
+  static void MarkVisualHoleEventForFrame(uint64_t frame_epoch);
+  static uint64_t GetLatestVisualHoleEventFrameEpoch();
+  /// True when the focus census found a FullyDarkStalledTicket slice during
+  /// this render epoch. Lets an opt-in pixel probe capture that exact frame.
+  static bool HasStalledVisualBlackTraceForFrame(uint64_t frame_epoch);
   static void ForEachCameraBandPeakTraceForFrame(
       uint64_t frame_epoch,
       void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx);

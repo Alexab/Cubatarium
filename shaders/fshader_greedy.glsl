@@ -60,6 +60,7 @@ uniform float uOpaqueDepthGuard;
 uniform vec2 uOpaqueDepthScreenSize;
 uniform float uOpaqueDepthBias;
 uniform float uDebugTransparentFragmentMarker;
+uniform float uDebugFluidFragmentMarker;
 
 const int kCrossFaceIndex = 127;
 
@@ -279,6 +280,33 @@ void main()
     if (wet > 0.001) {
         vec3 cooler = FragColor.rgb * vec3(0.78, 0.82, 0.9);
         FragColor.rgb = mix(FragColor.rgb, cooler, wet * 0.08);
+    }
+    // Opt-in fluid forensic marker. Unlike the regular transparent marker,
+    // this runs before alpha and opaque-depth discards so a missing surface
+    // can be classified without changing the normal render path. M578 uses a
+    // single-pass override to remove stencil-shell state from this probe.
+    if (uDebugFluidFragmentMarker > 0.5 &&
+        uGreedyShaderMode == kGreedyModeColor) {
+        bool alpha_cutout_candidate =
+            uAlphaCutout != 0 && FragColor.a < 0.1;
+        bool depth_guard_candidate = false;
+        if (uOpaqueDepthGuard > 0.5 &&
+            uOpaqueDepthScreenSize.x > 0.0) {
+            vec2 depthUv = gl_FragCoord.xy / uOpaqueDepthScreenSize;
+            float opaqueDepth = texture(uOpaqueDepthMap, depthUv).r;
+            depth_guard_candidate =
+                gl_FragCoord.z > opaqueDepth + uOpaqueDepthBias;
+        }
+        if (alpha_cutout_candidate && depth_guard_candidate) {
+            FragColor = vec4(1.0, 1.0, 0.0, 1.0); // yellow: both guards
+        } else if (alpha_cutout_candidate) {
+            FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red: alpha cutout
+        } else if (depth_guard_candidate) {
+            FragColor = vec4(0.0, 0.0, 1.0, 1.0); // blue: opaque depth guard
+        } else {
+            FragColor = vec4(1.0, 0.0, 1.0, 1.0); // magenta: reaches color pass
+        }
+        return;
     }
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;

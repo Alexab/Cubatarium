@@ -1,12 +1,35 @@
 # Experimental flight and analysis scripts
 
-Обновлено: 2026-10-08. Цель каталога — сохранить и объяснить поддерживаемые flight tools и одноразовые анализаторы, которые накопились в рабочем дереве во время streaming/rendering расследований.
+Обновлено: 2026-10-17. Цель каталога — сохранить и объяснить поддерживаемые flight tools и одноразовые анализаторы, которые накопились в рабочем дереве во время streaming/rendering расследований. Повторяемые water/streaming сценарии, evidence ladder и короткий target-lane описаны в [ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md); полный список версионируемых исследовательских скриптов находится в [ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md](ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md).
+
+С M624Q `flight_sim_run.py` по умолчанию не собирает FramePerf и не пишет
+perf JSONL. Воспроизводя историческую команду, которая разбирала метрики,
+добавляйте `--metrics`; поддерживаемые orchestration runners и сохранённые
+`tools/tmp_run_m*.py` wrappers уже передают этот флаг явно. M335 wrapper тоже
+по умолчанию отключает метрики и высокообъёмные трассы; для них используйте
+`-EnableMetrics`. Для проверки только disk/procedural source lifecycle без
+FramePerf, perf JSONL, host sampling, pixel и fluid trace используйте
+`-EnableSourceTrace`. `--no-metrics` и `-DisableMetrics` оставлены как явные
+переключатели метрик off.
 
 ## Поддерживаемый поток
 
+### Схема диагностических ID
+
+Устанавливайте `CUBA_WORLD_COLUMN_SOURCE_TRACE=1` до запуска приложения: переключатель читается один раз при первом обращении, чтобы не опрашивать окружение на каждом чанке.
+
+В procedural-событиях `demand_id` обозначает отдельный streaming demand и проходит через disk lookup. `request_id` создаётся scheduler при принятии новой procedural-работы и остаётся с ней до commit/cancel/discard. `priority_refreshed` связывает новый demand с уже активным request. Повторные вызовы для уже принадлежащей scheduler координаты не пишутся отдельными строками, чтобы не раздувать лог на каждом кадре. При сбросе scheduler пишется `shutdown_snapshot` с числом запросов в каждом состоянии, очередью worker и очередью результатов.
+
+Disk ledger анализатора группирует `disk/queued` и `disk/complete`, `disk/incomplete` либо cancellation по `demand_id`; `disk/retry` остаётся промежуточным событием. `demand_id` передаётся каждой асинхронной disk-slice и проверяется вместе с cancellation owner перед применением результата. Результат от прежнего владельца или уже отменённой загрузки отклоняется и записывается как `disk/stale_result`; анализатор учитывает его как завершение старого demand, если нет явного terminal-события. `disk_miss` намеренно классифицируется как `source=procedural`: это решение перейти от отсутствующего сохранённого столбца к генерации. Координатные итоги остаются более грубой сводкой, чем ledger по ID.
+
+Для периодического cold-seed прогона создавайте отдельный мир встроенным Release CLI после завершения текущего flight: из `bin` запустите `Cubatarium.exe --console --create-world --name <unique-world> --seed <uint32> --radius-chunks 4 --output worlds --report-json suite_reports/engine_refactor/<run>_world_create.json`. Перед полётом проверьте `success=true`, `world_path` и seed; запишите `chunk_files` как фактическое начальное покрытие диска. Если эксперимент требует строго пустую папку chunks, допускайте её только при `chunk_files=0`. Не переиспользуйте уже летавший cold-world как чистый seed. Пустой новый мир проверяет procedural fallback, но не disk-load ledger: для последнего нужен отдельный source-traced маршрут по уже сохранённому миру.
+
+JSONL входного gate содержит `gate_id` и `gate_owner`; снимок решения об окончании gate и post-transition `gate_end=1` записываются отдельно.
+
 - [`tools/flight_sim_run.py`](../../tools/flight_sim_run.py) — единственный общий запускатель. Он настраивает flight-sim, сохраняет perf JSONL/manifest/report, восстанавливает временно изменённые `config.json` и исходный `users.json`, повторно выставляет контрольную позицию перед каждым `--repeat` и вызывает анализатор.
+- [`tools/run_with_host_cpu_sampler.py`](../../tools/run_with_host_cpu_sampler.py) — необязательная обёртка для записи общей загрузки CPU и загрузки `Cubatarium.exe` в JSONL. Частые отсчёты опрашивают только хост и дерево процессов запускающей команды; список всех процессов выключен по умолчанию. Для разовой диагностики его можно включить редко через `--top-processes-interval-sec 60`. Пример: `python tools/run_with_host_cpu_sampler.py --output bin/logs/m545_host_cpu.jsonl --interval-sec 2 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m545_world164_m335_clean_perf_host_sampled --report bin/suite_reports/engine_refactor/m545_world164_m335_clean_perf_host_sampled.json --process-timeout 1800`.
 - [`tools/flight_sim_fixed_day.py`](../../tools/flight_sim_fixed_day.py) — контролируемый дневной запуск поверх общего runner. Временно задаёт `time_of_day=0.25`, `time_frozen=true`, clear weather, нулевую облачность и выключенную авто-погоду; в `finally` восстанавливает исходный `world_data.json` побайтно. Аргументы маршрута передаются после `--`. Пример: `python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m379_world164_m335_fixed_day --report bin/suite_reports/engine_refactor/m379_world164_m335_fixed_day.json`. Не менять профиль камеры ради «более красивого» кадра.
-- [`tools/flight_sim_analyze.py`](../../tools/flight_sim_analyze.py) — расчёт агрегатов и ворот из JSONL.
+- [`tools/flight_sim_analyze.py`](../../tools/flight_sim_analyze.py) — расчёт агрегатов и ворот из JSONL. `unfinished_visual` публикуется как readiness debt; `visual_holes` / `near_focus_holes` отдельно считаются mesh-coverage proxy и не являются доказательством пустого framebuffer-пикселя.
 - [`tools/analyze_renderer_pixel_trace.py`](../../tools/analyze_renderer_pixel_trace.py) — сводит pixel/ray witnesses, draw-state, pool OOM, screen-ray debt и для dark samples сохраняет отдельные DDA и framebuffer depth-hit evidence, включая mesh revisions, MDI draw state, dirty-queue ownership/age, work-owner flags и light/demand state; запускается как `python tools/analyze_renderer_pixel_trace.py bin/logs/perf_<run>.jsonl --threshold 96 --json-out bin/suite_reports/engine_refactor/<run>_renderer_pixel_trace.json`. M380 сохранил 32 768 pixel probes, 191 samples ниже luma 32; M388 сохранил 32 768 dense probes и связал sampled dark pixels с drawable MDI surface и low/provisional light: [M388 pixel/light analysis](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_20261004.json).
 - [`tools/compare_renderer_pixel_routes.py`](../../tools/compare_renderer_pixel_routes.py) — потоково сравнивает два или больше perf JSONL по одинаковым диапазонам camera X и пространственным бинам; считает несколько luma порогов, валидный opaque depth, stale published geometry, unsettled light demand и block IDs тёмных поверхностей. Нулевые sentinel probe IDs исключаются. Пример для M400/M401: `python tools/compare_renderer_pixel_routes.py --label M400 --perf-jsonl bin/logs/perf_20261005-084624_28876.jsonl --label M401 --perf-jsonl bin/logs/perf_20261005-103140_37252.jsonl --min-x -8192 --max-x -1024 --bin-width 512 --json-out bin/suite_reports/engine_refactor/m400_m401_pixel_x_bins_20261005.json`. Низкая яркость не считается пустым чанком без DDA/depth corroboration.
 - [`tools/analyze_world_column_source_trace.py`](../../tools/analyze_world_column_source_trace.py) — сводит `WorldColumnSource` INFO events отдельно для disk и procedural lifecycle: cancellations, completion, worker/read/apply latency, unmatched coordinates, top slow requests и раздельные `scheduler_queue_ms` / `worker_pool_queue_ms`. Использовать все INFO log parts одного PID. Для повторяемого маршрута добавлять `--focus-z 3 --z-radius 5`: summary содержит procedural latency только для этого горизонтального коридора, чтобы дальние фоновые coordinates не искажали вывод о видимых чанках. Пример исторического M392: `python tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-205456.34968 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-211013.34968 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-212859.34968 --json-out bin/suite_reports/engine_refactor/m392_world_column_source_trace_20261004.json`. Queued без completion нельзя считать живым владельцем без явного cancel event.
@@ -3669,3 +3692,9920 @@ $env:CUBA_GPU_PROCESS_PROFILE_PATH=''
 $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m467_world164_m335_full_pixel_ray_history --report bin/suite_reports/engine_refactor/m467_world164_m335_full_pixel_ray_history_20261008.json --process-timeout 7200
 ```
+
+## M468 — M335 readiness-vs-hole metric split (2026-10-08)
+
+M468 repeated the established visible/no-teleport M335 settings on `World_164`:
+eye height 70, yaw 180°, pitch -30°, and normal movement scale. The Release
+executable came from clean commit `7138be1045e0292abb11f199b54dd01338a9b4c5`
+with SHA-256 `3d45b7515fd72bd64b4ad5b852bb4bf101e4f356984ed45ba22ca0175d3c91ed`.
+Measured Y stayed at 70 and median movement speed was 5.19653 blocks/s. The app
+exited 0, but covered 14,224/14,300 required blocks, so the strict route gate
+failed by 76 blocks. Source tracing was disabled; this run cannot distinguish
+disk cache reads from procedural world generation.
+
+The flight recorded 1,405 periods, 1,403 steady periods, 353 spikes, 29.71 ms
+median wall time, and a 611.74 ms maximum spike. Its perf JSONL is 1,257,669,592
+bytes because the renderer pixel trace sampled 147,320 pixels. Keep these
+timings out of routine performance baselines; use the pixel profile only for
+diagnostic evidence and run a separate uninstrumented M335 for latency.
+
+The flight wrapper's embedded legacy `holes_rate=1.0` selects
+`unfinished_visual`, which represents readiness debt. A corrected analyzer run
+separates that from actual `visual_holes`: the latter is a near-focus
+missing-greedy-mesh proxy with 100% sample coverage, 7.20% nonzero periods, a
+four-period longest run, and zero at post-stop. Readiness debt remained 100%
+of flight periods and 27 items at stop. Neither proxy is pixel proof.
+
+The renderer-pixel analysis found 1,659 samples below luma 32; all had opaque
+depth and visible MDI indices, and none were below luma 10. The camera-band
+pixel join found 18 no-drawable peaks (nine unowned), but its 129 projected
+rectangles had zero target-depth samples; it remains inconclusive about actual
+visible empty space. No full-frame capture was saved. The user reported that
+the world looked good.
+
+Artifacts (generated reports and large traces are local, ignored run output;
+do not add the raw 1.26 GB perf trace to Git):
+
+- Flight report: `bin/suite_reports/engine_refactor/m468_world164_m335_clean_host_20261008.json`
+- Corrected flight analysis: `bin/suite_reports/engine_refactor/m468_world164_m335_analyzer_v2_20261008.json`
+- Renderer pixel summary: `bin/suite_reports/engine_refactor/m468_renderer_pixel_trace_20261008.json`
+- Camera-band/pixel join: `bin/suite_reports/engine_refactor/m468_camera_band_pixel_join_20261008.json`
+- Perf trace: `bin/logs/perf_20261008-142435_22496.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-142431.22496`
+
+Exact M468 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m468_world164_m335_clean_host --report bin/suite_reports/engine_refactor/m468_world164_m335_clean_host_20261008.json --process-timeout 7200
+```
+
+The metric correction was checked by re-running the analyzer on the saved
+M468 JSONL; `visual_holes_rate_le_0_10`, sample coverage, and post-stop
+visual-hole gates pass, while the run as a whole still fails route,
+performance/readiness, and convergence gates. The old readiness-debt alias is
+retained for compatibility and should not be presented as a visual-hole rate.
+
+## M469 — M335 source trace on full route (2026-10-08)
+
+M469 used the established visible/no-teleport M335 settings on `World_164`,
+with the flight window extended to 2,900 seconds to pass the existing route
+distance gate. Camera eye height remained the fixed absolute world coordinate
+Y=70; yaw was 180°, pitch -30°, and speed scale 1. The Release executable was
+built from commit `9ee1205759feb6269c9536064fb71daaae031532` and had SHA-256
+`3d45b7515fd72bd64b4ad5b852bb4bf101e4f356984ed45ba22ca0175d3c91ed`.
+
+The app exited normally (`process_rc=0`, `run_outcome=success`) and the route
+gate passed at 14,304/14,300 blocks (focus X 7 to -887). Median speed was
+5.19653 blocks/s, and the measured eye height stayed at Y=70. The flight
+contained 1,444 periods (1,442 steady), 769 spikes, 31.69 ms median wall time,
+and a 3,178.83 ms maximum spike. These timings are not a performance baseline:
+source tracing was enabled and successful save and detailed unload events were
+also coupled to the same flag, causing synchronous trace volume. The 667 MB
+perf JSONL must remain local and must not be committed.
+
+Corrected analyzer values: `visual_holes_rate=0.07212`, 100% sample coverage,
+longest run 6 periods, post-stop visual-hole proxy gate passed, and
+`unfinished_visual=26` at stop. This mesh-hole proxy is not framebuffer pixel
+proof. The full flight report failed other readiness/convergence gates.
+
+Source analysis found 8,061 disk requests and 8,061 completions, 99 procedural
+disk misses, and 8,052 evicted columns. Disk file-read time was p50 0.964 ms,
+p95 1.640 ms, max 46.6 ms. Recorded result-wait time was p50 469 ms, p95
+7.76 s, max 62.28 s, with up to 456 ready loads. These wait values are
+contaminated by synchronous logging and reflect result-queue delay as well as
+disk completion. At X≈-11,225, `visual_holes=1` coincided with 35 ready disk
+results and 31 remaining after four applications; this is a correlation, not
+proof of a blank rendered region. The x-bin analyzer also labels many unload
+events malformed because its parser expects only `disk` and `procedural`
+sources; this is a parser-accounting quirk, not missing log data.
+
+A separate perf sample near X≈-12,497 recorded a 248 ms wall frame, about
+218 ms in `streamer_unload`, and no async I/O. The cursor snapshot rebuild
+currently traverses every resident vertical slice and then sorts/deduplicates
+the repeated column coordinates. This is a plausible unload hitch source;
+snapshot-build time was not isolated in M469.
+
+Artifacts (reports and raw traces are generated, ignored local run output):
+
+- Flight report: `bin/suite_reports/engine_refactor/m469_world164_m335_source_trace_current_20261008.json`
+- Source trace summary: `bin/suite_reports/engine_refactor/m469_world164_column_source_trace_z3_20261008.json`
+- Source-by-X report: `bin/suite_reports/engine_refactor/m469_world164_source_by_x_20261008.json`
+- Perf trace: `bin/logs/perf_20261008-153433_29948.jsonl` (667,265,436 bytes)
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-153429.29948` (30,707,207 bytes)
+
+Exact M469 invocation (source trace was enabled; no pixel probe was enabled):
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2900 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m469_world164_m335_source_trace_current --report bin/suite_reports/engine_refactor/m469_world164_m335_source_trace_current_20261008.json --process-timeout 7200
+```
+
+Post-flight source analysis:
+
+```powershell
+python tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-153429.29948 --focus-z 3 --z-radius 5 --json-out bin/suite_reports/engine_refactor/m469_world164_column_source_trace_z3_20261008.json
+python tools/compare_world_column_sources_by_x.py --run M469=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-153429.29948 --min-chunk-x -900 --max-chunk-x 16 --bin-chunks 16 --json-out bin/suite_reports/engine_refactor/m469_world164_source_by_x_20261008.json
+```
+
+Treat M469 source wait and performance numbers as trace-contaminated. The next
+source run should use independent source/save/unload trace flags after the
+instrumentation split; performance acceptance requires a capture-disabled,
+source-trace-disabled M335 run.
+
+## M470 — M335 clean route after resident-column unload index (2026-10-08)
+
+M470 ran the established visible, no-teleport World_164/M335 route with
+absolute eye Y=70, yaw 180°, pitch -30°, and speed scale 1. The Release app
+was built from `4d57b2332a2e3c4de863af11d007dd7757ffe549`, SHA-256
+`e7c09f8adeec4e1003355899e042dd3e4dbefbe557c79249af64b551d74d08d2`. The
+app exited normally, traveled 14,784 blocks (focus X `7 -> -917`), and held
+median speed 5.19653 blocks/s. Measured camera eye Y stayed at 70.
+
+All diagnostic trace flags were off. The product report had 1,457 periods
+(1,455 steady), 177 spikes, wall median 25.9237 ms / p95 37.5732 ms, and a
+405.626 ms maximum single-frame spike. Unload time was 0.0717 ms median,
+0.3769 ms p95, and 21.5208 ms maximum. M469's comparison is instrumentation
+contaminated: its synchronous source/save/unload trace rows were coupled and
+filled a 667 MB log. M470 is a clean performance sample, but not a controlled
+A/B measurement of the unload-index change.
+
+Analyzer outcomes: `visual_holes_rate=0.0639175` with full sample coverage,
+longest proxy run 10 periods, and zero post-stop mesh-hole proxy. This is not
+framebuffer pixel evidence. `unfinished_visual=27` remained at stop, and the
+product run failed readiness/relight/convergence gates even though the route
+and app succeeded.
+
+Operator observation during the flight: a lighter square appeared underwater
+and passed beneath the camera, resembling unfinished lighting. M470 had no
+pixel/depth capture, so the appearance could not be tied to a rendered pixel.
+The nearest telemetry rows (645-646, approximately 2-second aggregates) were
+at X=-6,425/-6,436, focus CX=-402/-403, Y=70. Both showed
+`chunk_meshed_unlit=1`, `chunk_meshed_unlit_hidden=1`, and
+`pending_light_focus=1`; both showed `visual_holes=0` and
+`near_focus_holes=0`. The next period returned the unlit and pending-focus
+counts to zero. One final relight apply occurred in the latter interval. This
+is a temporal/spatial correlation only: aggregate focus counts do not identify
+the exact mesh, pixel, underwater state, or visible cause.
+
+Artifacts (raw reports and traces are local run outputs):
+
+- Flight report: `bin/suite_reports/engine_refactor/m470_world164_m335_uninstrumented_20261008.json`
+- Perf JSONL: `bin/logs/perf_20261008-170152_5632.jsonl` (55,606,457 bytes)
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-170148.5632` (956,271 bytes)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2900 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m470_world164_m335_uninstrumented --report bin/suite_reports/engine_refactor/m470_world164_m335_uninstrumented_20261008.json --process-timeout 7200
+```
+
+## M471 — M335 underwater light witness (2026-10-08)
+
+M471 repeats the same start, eye height, yaw, pitch, movement scale, world,
+and no-teleport behavior, and runs through X≈-6.4k. It enables
+`CUBA_VISUAL_BLACK_TRACE=1` and
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY=1`, with dense/focus probes and
+source/save/unload traces off. On selected screen-ray frames, this captures
+same-frame color/depth at a 20-column by five-row grid and records the aligned
+streaming ray/renderer pixel diagnostics. This is sparse sampling, not a full
+screenshot; the captured route is a diagnostic, not a clean performance
+baseline. The app exited 0, was not killed, and the 6,400-block minimum route
+gate passed. It traveled 6,704 blocks (focus X `7 -> -412`) at median speed
+5.19287 blocks/s with camera eye Y=70. The dual-lane product stop-line failed
+because near-focus mesh-hole proxy periods and stop convergence remain; that
+does not invalidate the app/route success.
+
+The trace retained 72,740 pixel probes and 10,625 screen-ray rows. Six pixel
+frames at camera X=-6,458, -6,451, -6,439, -6,434, -6,420, and -6,404
+contained 264 valid opaque voxel/depth hits. All 264 had matching published
+and current light revisions and none had pending-light ownership. 258 also
+matched a fluid triangle. Underwater fog was enabled in these frames while
+the camera `submerged` flag was false. In the same X interval, 60 screen-ray
+rows were opaque hits, with zero geometry/light-debt candidates. This is
+evidence that the sampled surfaces were drawn with settled light; it does not
+prove the user's exact square was absent because the pixel grid was sparse and
+no screenshot was captured. The M470 focus-ring light debt is still an
+unresolved correlation.
+
+The flight had 674 periods (672 steady), 164 spikes, median wall time
+26.86685 ms, and `visual_holes_rate=0.047619` with full sample coverage. These
+instrumented timings are not a performance baseline. The missing-mesh value is
+a near-focus proxy, not direct pixel proof.
+
+Analysis commands:
+
+```powershell
+python tools/analyze_visual_coverage_trace.py bin/logs/perf_20261008-175658_29548.jsonl --fog-end-distance 36 --json-out bin/suite_reports/engine_refactor/m471_visual_coverage_20261008.json
+python tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261008-175658_29548.jsonl --threshold 96 --json-out bin/suite_reports/engine_refactor/m471_renderer_pixel_20261008.json
+```
+
+Artifacts (generated raw output stays local):
+
+- Flight report: `bin/suite_reports/engine_refactor/m471_world164_m335_underwater_light_witness_20261008.json`
+- Visual-coverage summary: `bin/suite_reports/engine_refactor/m471_visual_coverage_20261008.json`
+- Renderer-pixel summary: `bin/suite_reports/engine_refactor/m471_renderer_pixel_20261008.json`
+- Perf JSONL: `bin/logs/perf_20261008-175658_29548.jsonl` (695,766,395 bytes)
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-175652.29548` (828,605 bytes)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1325 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m471_world164_m335_underwater_light_witness --report bin/suite_reports/engine_refactor/m471_world164_m335_underwater_light_witness_20261008.json --process-timeout 7200
+```
+
+## M472 — bounded full-frame underwater-light capture (executed, incomplete, 2026-10-08)
+
+M472 kept the M335 world, route, speed, height, yaw, pitch, visible GUI, and
+no-teleport settings unchanged. It was intended to save framebuffer PNGs only
+inside the X window around the M470 observation. Capture timing is diagnostic
+and must not be compared to M470's clean performance run.
+
+The capture helper landed in `5520ae889c8c3bba83d92595f458756b2cb857d1` and
+was built as Release target `Cubatarium`; executable SHA-256 is
+`D6D0420A1887974CFB6014E01FF0D59014990392205DDFBB040D40E37621F200`. The new
+environment variables are recorded in the run manifest. Omitted interval and
+X bounds preserve the old 15-second, unbounded behavior.
+
+Exact M472 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m472_underwater_light_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1325 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m472_world164_m335_underwater_capture --report bin/suite_reports/engine_refactor/m472_world164_m335_underwater_capture_20261008.json --process-timeout 7200
+```
+
+M472 exited successfully, but traveled only 6,032 blocks (focus X `7 -> -370`,
+camera X≈-5,912) against the 6,400-block minimum. The capture window
+[-6,460,-6,400] was never entered, so no PNG was saved. The report is
+`bin/suite_reports/engine_refactor/m472_world164_m335_underwater_capture_20261008.json`;
+the raw perf log is `bin/logs/perf_20261008-183133_24632.jsonl`. Its mesh-hole
+proxy was nonzero, which is not framebuffer evidence.
+
+## M473 — extended M335 capture interrupted by sleep (2026-10-08)
+
+M473 kept M472's world, start, eye height, yaw, pitch, scale, visible GUI, and
+capture window. Only the fly phase increased from 1,325 to 1,455 seconds so the
+route could reach the target corridor.
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m473_underwater_light_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_SAVE_TRACE='0'
+$env:CUBA_UNLOAD_TRACE='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m473_world164_m335_underwater_capture --report bin/suite_reports/engine_refactor/m473_world164_m335_underwater_capture_20261008.json --process-timeout 7200
+```
+
+Windows entered sleep about four minutes after launch due to a Button/Lid
+event and resumed about an hour later. The app stopped before the capture
+window at X=-2,347. The perf log
+`bin/logs/perf_20261008-185605_40568.jsonl` has 808 complete rows and one
+truncated row; there is no final flight report or PNG. On the partial rows,
+blocked substeps stayed at zero; the near-focus mesh-hole proxy reached 1 in
+57 records and visible-black focus reached 18 in 137 records. These are
+readiness/proxy values rather than framebuffer samples and do not cover the
+reported square.
+
+The fixed-day wrapper did not reach its cleanup after the interruption. The
+original `world_data.json` was restored from its backup and verified byte for
+byte (SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`). The
+`users.json` hash matched its preflight state. The wrapper now recovers a stale
+backup only when the current world metadata exactly matches the expected
+fixed-day payload; divergent data still stops for inspection.
+
+Repeat this capture on the same M335 route when a continuous awake session can
+reach the X window. A valid result requires both route completion and saved
+frames. Keep this diagnostic separate from performance baselines. Captures and
+flight reports are local artifacts and should not be staged with source changes.
+
+## M474 — completed M335 underwater-light capture (2026-10-08)
+
+M474 repeated the M335 route with enough flight time to reach the corridor and
+saved a full-frame PNG every 0.5 seconds while camera X was in
+`[-6460, -6400]`. It reused M473's longer flight phase, capture bounds, and
+route parameters.
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m474_underwater_light_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m474_world164_m335_underwater_capture --report bin/suite_reports/engine_refactor/m474_world164_m335_underwater_capture_20261008.json --process-timeout 7200
+```
+
+The Release application exited 0 and passed the route gate after 7,344 blocks
+(focus X `7 -> -452`, camera Y remained 70). It saved 49 frames from
+`frame_000.png` through `frame_048.png`, spanning camera X=-6,400.16 to
+-6,459.62. The images show low-contrast block silhouettes through blue
+underwater fog. No isolated bright square is apparent in the reviewed frames;
+this does not rule out a brief or smaller event between captures.
+
+The report is
+`bin/suite_reports/engine_refactor/m474_world164_m335_underwater_capture_20261008.json`;
+the perf log is `bin/logs/perf_20261008-202037_41976.jsonl`; INFO log is
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-202032.41976`.
+The dual-lane stop line passed, while the eye-proxy stop line failed on stale
+visual/apply and effective-hole-blink counters. Median fly wall time was
+29.66 ms and is diagnostic only because screenshots were enabled. Treat the
+reported square as not reproduced, not disproven. The next useful capture is a
+denser on-screen pixel witness restricted to this same X interval, retaining
+the hit chunk's light revisions and preview flag for every candidate pixel.
+Do not stage the PNGs, raw logs, or run report as source changes.
+
+## M476/M477 — overlay repair churn validation (2026-10-08)
+
+These runs checked a narrow repair-scheduler change on the established visible,
+no-teleport World_164/M335 flight. Route parameters remained fixed: start at
+`(120,56,56)`, eye Y=70, yaw 180°, pitch -30°, movement scale 1, 1,455-second
+flight, 20-second stop, and at least 6,400 blocks. Dense pixel/capture tracing
+was enabled to preserve comparable diagnostics; the captures are historical
+artifacts, not grounds for further lighting-only investigation.
+
+M476 ran Release executable SHA-256
+`7A402A8471EE4C1B4ACBC5F24EEC621210CDEFCD3CAF3865D9E10A44F9EB5EB8`, after
+commit `19912bc6`. Its report is
+`bin/suite_reports/engine_refactor/m476_world164_m335_overlay_debt_repair_20261008.json`,
+raw log `bin/logs/perf_20261008-214459_30676.jsonl`, and 56 screenshots are in
+`bin/flight_captures/m476_overlay_debt_repair_20261008`. It completed 7,344
+blocks with normal app exit and route pass. Core repair bumps fell from 2,324
+in M475 to 323; overlay-only bumps fell from 2,312 to 209. Most of the
+remaining overlay-only bumps had lifecycle stage `Admitted`, exposing that the
+first guard still treated a non-owning lifecycle label as a reason to retry.
+The quality and stop-convergence gates remained red.
+
+Exact M476 invocation (the trace settings match M477; artifact names differ):
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-6460'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-6400'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m476_overlay_debt_repair_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m476_world164_m335_overlay_debt_repair --report bin/suite_reports/engine_refactor/m476_world164_m335_overlay_debt_repair_20261008.json --process-timeout 7200
+```
+
+M477 tested the follow-up guard in Release executable SHA-256
+`935DD89C9223AFAF525ACAA3A39080205E0DCB4C19D4A59F5C50A15676EB04F`, after
+commit `05def3e1`. It completed 7,392 blocks (focus X `7 -> -455`) at median
+5.19287 blocks/s; the app exited 0 and the route gate passed. Overlay-only
+core-repair bumps fell from 209 to 1, and all 226 other repair bumps had zero
+face/overlay/peer debt masks. Total core-repair bumps were 227. The previous
+hot west-route overlay coordinates had no overlay-only repeats.
+
+M477 passed the dual-lane stop line, but is not an acceptance pass. The
+eye-proxy gate failed on stale-apply/effective-hole signals; A24 recorded
+near-focus mesh holes in 23 periods (one in its eye corridor); stop convergence
+failed with `unfinished_visual=27`, `not_ready=23`, pending median 6 and no
+pending decline. Post-stop `visual_holes` itself was zero. These counters
+describe different readiness/coverage signals and do not by themselves prove
+that the user saw blank terrain. M477's 87 spikes and 429.049 ms maximum also
+make its timing diagnostic rather than a clean baseline; median fly wall time
+was 24.62 ms.
+
+Exact M477 invocation and diagnostic environment:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-6460'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-6400'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m477_overlay_debt_owner_guard_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m477_world164_m335_overlay_debt_owner_guard --report bin/suite_reports/engine_refactor/m477_world164_m335_overlay_debt_owner_guard_20261008.json --process-timeout 7200
+```
+
+The paired M476 and M477 runs used the same flight settings and trace profile.
+The report and raw log for M477 are
+`bin/suite_reports/engine_refactor/m477_world164_m335_overlay_debt_owner_guard_20261008.json`
+and `bin/logs/perf_20261008-221655_4784.jsonl`; 46 screenshots are in
+`bin/flight_captures/m477_overlay_debt_owner_guard_20261008`. Do not stage
+captures, reports, or raw logs. The next active work is stale-apply/coverage
+ownership and stop-time readiness convergence, then a clean repeated-world
+acceptance run; the rare light-square investigation is parked unless it recurs.
+
+## M478 — clean M335 route after overlay-repair guard (2026-10-09)
+
+M478 is the uninstrumented Release timing control for the current code
+(`05def3e1`, executable SHA-256
+`935DD89C9223AFAF525ACAA3A39080205E0DCB4C19D4A59F5C50A15676EB04F`). It used
+the exact established visible, no-teleport M335 route and left detailed visual,
+pixel, source, unload, and relight traces disabled. The app exited normally
+(`process_rc=0`, `hang_killed=false`), traveled 7,440 blocks (focus X `7 ->
+-458`) at median 5.19287 blocks/s and eye Y=70. Median fly wall time was
+22.4419 ms; median streaming phase was 9.2916 ms. This is a clean timing
+measurement, though it does not pass every acceptance/performance gate.
+
+The dual-lane route/stop line passed. There were 22 short periods with
+`visual_holes=1` (2.98% of steady samples, longest run two periods). The
+nearest missing-mesh witness was 0–2 horizontal chunks away; 21 of the 22
+periods also had `miss_screen_ray_candidate=1`. This is stronger evidence than
+a broad-ring readiness count, but it still does not prove a hole in the final
+frame: the candidate flag means a bounded screen ray selected a mesh-repair
+candidate, not that the framebuffer pixel was blank. The earlier M477 ray
+capture covered a different, far-west interval and cannot classify these
+M478 coordinates.
+
+At the end/stop, `visual_holes=0`, `focus_missing_mesh=0`, black-sticky was
+zero, pending-light median was zero, dirty focus count fell by 88, and
+`focus_not_render_ready` fell by nine to 23. `unfinished_visual` remained 27
+median/23 at the end. The analyzer's legacy `post_stop_missing_max` and
+`effective_holes` still inherit this readiness debt, so their names must not be
+read as framebuffer or direct missing-mesh measurements. The M478 report
+passes 31/40 steady gates and 9/13 stop gates; outstanding gates include
+render-readiness debt, streaming/emerge spikes, idle opaque churn, and several
+performance/attribution policy checks. The 40 spikes (maximum 333.437 ms) are
+not hidden by the good median. Do not call M478 a full refactor acceptance.
+
+Exact clean invocation:
+
+```powershell
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m478_world164_m335_clean_overlay_guard --report bin/suite_reports/engine_refactor/m478_world164_m335_clean_overlay_guard_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m478_world164_m335_clean_overlay_guard_20261009.json`;
+raw performance log: `bin/logs/perf_20261009-093823_4340.jsonl`. The current
+follow-up M479 repeats the same route with geometry probes and full-frame
+captures limited to X `[-2920,-2670]`, the first repeated near-focus candidate
+cluster. It is diagnostic, not a timing baseline; inspect geometry/pixel
+evidence only, not lighting fields.
+
+## M479 — geometry-pixel witness (2026-10-09)
+
+M479 repeated the visible/no-teleport World_164/M335 route using the Release
+binary from `05def3e1`, SHA-256
+`935DD89C9223AFAF525ACAA3A39080205E0DCB4C19D4A59F5C50A15676EB04F`. The
+route exited normally, traveled 6,944 blocks at 5.19287 blocks/s, and held eye
+Y=70. This was a diagnostic run: detailed probes generated 308 spikes with a
+730.6 ms maximum, so its timing is not an acceptance baseline. The route and
+post-stop convergence lines failed.
+
+The CPU-voxel/depth comparison emitted 21 candidates. The air-fog shader uses
+horizontal distance; after correcting the initial 3D-distance classification,
+six candidates were within the 36-block air-fog range. Fifteen were beyond
+that horizontal range or on the underwater-fog path, and five samples had no
+opaque depth. The five no-depth samples were outside the applicable visible
+fog range. None of these counters alone proves a framebuffer gap. The six
+in-range cases still need an exact ray/triangle intersection to distinguish a
+missing rendered surface from a voxel-ray/rasterization mismatch. One sand
+candidate had stale published geometry revision with an active dirty owner,
+while adjacent samples from the same chunk matched depth. Captures show
+continuous scenery; do not patch the draw path based on this candidate alone.
+
+At the stop, `visual_holes=0`, `focus_missing_mesh=0`, pending light=0, and
+focus dirty=0. The camera band had 90 solid slices, all satisfying, with zero
+camera-band missing drawable slices, unowned slices, or pending work. The
+broader vertical census retained 26 readiness items and 25 unowned slices;
+the final captured slice witnesses were at `cy=1` (Y=16–31), below the camera
+at Y=70. Keep this as an off-camera readiness/ownership residual, separate
+from displayed coverage.
+
+Re-analysis now exposes `readiness_debt_rate`,
+`post_stop_readiness_debt_max/rate`, and `post_stop_mesh_missing_max` beside
+`visual_holes_rate`. Legacy `holes_rate` and `post_stop_missing_max` remain
+compatibility aliases. M479 values are readiness debt rate 1.0, visual mesh
+coverage proxy rate 0.0666, post-stop readiness count 26, post-stop focus mesh
+missing 0, and post-stop visual-hole proxy rate 0. The measured full-run
+`visual_holes` periods are transient near-focus coverage signals, not
+framebuffer-hole counts.
+
+Exact M479 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m479_m335_geometry_witness_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m479_world164_m335_geometry_witness --report bin/suite_reports/engine_refactor/m479_world164_m335_geometry_witness_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m479_world164_m335_geometry_witness_20261009.json`;
+perf log: `bin/logs/perf_20261009-100805_41032.jsonl`; app log:
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-100802.41032`;
+captures: `bin/flight_captures/m479_m335_geometry_witness_20261009` (284 frames).
+Keep these artifacts local; do not commit them.
+
+The next run adds an exact screen-ray/greedy-triangle witness to the same
+bounded probe. It will preserve the legacy voxel/depth flag for comparison and
+report intersection, triangle-interior, and depth-gap results separately.
+Run this as a Release-only build and the same M335 route; if a ray crosses the
+triangle interior but no corresponding depth is written, trace culling,
+submission, and publication for that slice. If not, correct the diagnostic
+classification before changing the renderer.
+
+## M480 — exact mesh-ray witness (2026-10-09)
+
+M480 used the Release binary built from `bb1fe1f2`, SHA-256
+`51203C00EEBA81300F67CDF1F1C48142E30D355436546B504AB967EBFC5CDCDD`. It ran
+the established visible/no-teleport World_164/M335 route with probes and
+framebuffer captures limited to X `[-2920,-2670]`. The app exited normally
+(`process_rc=0`, `hang_killed=false`), held eye Y=70, and measured a median
+5.19607 blocks/s. The route traveled 6,032 of the required 6,400 blocks, so the
+wrapper returned failure for route completion. This was a dense diagnostic,
+not a timing acceptance: median fly wall time was 49.0109 ms, effective fly
+rate 20.4 FPS, and 1,772 spikes reached 1,414.21 ms.
+
+The ray/depth analysis sampled 18,261 screen rays: the legacy voxel/depth proxy
+flagged 19; exact ray/triangle intersections numbered 4,215, with 3,757
+interior hits; four interior hits had opaque depth more than 0.75 blocks behind
+the mesh triangle. Three of the four were inside the 36-block horizontal
+air-fog end:
+
+| Camera X | Hit block | Horizontal distance | Triangle / opaque depth | Mesh state |
+| ---: | --- | ---: | ---: | --- |
+| -2914.22 | sand (549), `(-2926,41,81)` | 27.53 | 39.570 / 40.684 | desired geom 4, published 2; dirty owner age 7 |
+| -2763.86 | tree log (573), `(-2783,69,50)` | 19.84 | 20.211 / 21.245 | desired/published 2/2; no dirty owner; visible MDI range 3,108 indices |
+| -2763.86 | tree log (573), `(-2778,66,35)` | 24.67 | 24.898 / 33.431 | desired/published 2/2; no dirty owner; visible MDI range 2,046 indices |
+| -2676.89 | grass (377), `(-2718,52,44)` | 42.83 | 46.575 / 49.374 | beyond air fog end 36 |
+
+The first in-fog sample points to a stale mesh revision. The two tree-log
+samples are more concerning because their CPU mesh revisions match desired
+geometry and their MDI ranges are marked visible. Their sampled colors are
+not black; captured frames show continuous forest/ocean scenery and no
+obvious large hole. Exact intersection plus a behind-surface depth is a
+pixel-level mismatch witness, but the trace does not yet prove the corresponding
+GPU buffer bytes or indirect-command offsets are correct. Continue by
+comparing the source triangle to the uploaded vertex/index range and the
+submitted `firstIndex`/`baseVertex` for those exact candidates. Keep that
+readback opt-in and triggered only by a confirmed interior gap.
+
+At stop, `visual_holes_rate=0.07862` at full sample coverage, while
+`post_stop_visual_holes_rate=0` and `post_stop_mesh_missing_max=0`.
+`readiness_debt_rate=1.0` and `post_stop_readiness_debt_max=27` remain a separate
+broad readiness signal. Do not treat it as displayed-hole evidence.
+
+Exact M480 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m480_m335_triangle_witness_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m480_world164_m335_triangle_witness --report bin/suite_reports/engine_refactor/m480_world164_m335_triangle_witness_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m480_world164_m335_triangle_witness_20261009.json`;
+perf log: `bin/logs/perf_20261009-113003_10124.jsonl` (about 277 MB);
+app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-112949.10124`;
+captures: `bin/flight_captures/m480_m335_triangle_witness_20261009` (326
+frames). Keep all artifacts local and out of Git.
+
+### M481 — exact-route GPU-range witness repeat (2026-10-09)
+
+Repeated the established M335 `World_164` route without teleport, using the
+same Release executable as commit `9f78cd47`. Enabled the opt-in GPU buffer and
+indirect-command readback, which only runs after an exact interior mesh/depth
+gap. The route passed speed/height/distance checks: 5.19287 blocks/s, eye Y=70,
+6,896 blocks traveled. The app exited normally (`process_rc=0`, not killed);
+the analysis wrapper returned 1 because the overall stop-line acceptance
+remains open.
+
+This run recorded 5,920 pixel probes and 10,200 screen-ray candidates. Twelve
+legacy voxel-ray gap candidates were not confirmed by the exact triangle test;
+there were 4,032 ray/triangle intersections, 3,593 interior intersections,
+zero interior mesh/depth gaps, and no GPU readback attempt. M480's four exact
+gaps therefore did not recur. The GPU storage and indirect command remain
+unverified until a qualifying pixel occurs.
+
+At stop, all 90 resident solid slices in the current camera band were
+mesh-satisfying, with zero camera-band no-drawable/pending/unowned slices. The
+wider visual/water band still had 25 unowned and two pending solid slices; the
+last retained unresolved samples were `cy=1`, below the current camera band,
+with overlay-only face-coverage debt. M481 ended with 26 broad readiness items,
+but zero stop-tail visual-hole proxy, zero camera-band mesh misses, and zero
+visible-black counters. The wrapper's red result must be read alongside these
+separate metrics.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m481_m335_gpu_range_witness_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m481_world164_m335_gpu_range_witness --report bin/suite_reports/engine_refactor/m481_world164_m335_gpu_range_witness_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m481_world164_m335_gpu_range_witness_20261009.json`;
+perf log: `bin/logs/perf_20261009-122220_39956.jsonl` (about 260 MB);
+app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-122216.39956`;
+captures: `bin/flight_captures/m481_m335_gpu_range_witness_20261009` (297
+frames). Keep raw artifacts local and out of Git.
+
+### M482 — exact-route GPU-range witness repeat (2026-10-09)
+
+Repeated M335 on the same `World_164` start, eye height, yaw, pitch, duration,
+and no-teleport mode. Release route adequacy passed at 5.19653 blocks/s and
+6,432 blocks traveled; the app exited normally. The overall analyzer returned
+1 because the eye-proxy/A24 and stop-tail gates remain open.
+
+This pass recorded 5,760 pixel probes and 9,875 screen-ray candidates. Nine
+legacy voxel-ray gap candidates did not become exact interior mesh/depth gaps:
+4,009 ray/triangle intersections, 3,522 interior hits, zero exact gaps, and no
+GPU readback attempt. In combination, M481 and M482 produced 11,680 probes
+without reproducing M480's four exact gaps. Actual GPU buffer/MDI delivery is
+still unverified. One near-focus mesh miss appeared at the start of the stop
+tail with pending work and cleared by the next period; the next 12 stop periods
+had no camera-band no-drawable slices. The wider band retained 23–24 unowned
+slices.
+
+The 0.5-second full-frame PNG capture caused a severe local performance hit.
+For 112 period rows inside X `[-2920,-2670]`, median `wall_ms` was 438.161 and
+p90 was 649.589 ms; outside it, median was 24.421 ms. Camera blocked-substep
+count was zero. `WindowManager.cpp` currently performs full-frame `glReadPixels`
+and PNG encoding synchronously on the render thread, so M482 wall-time and
+route-geography measurements are contaminated in that interval. The capture
+path is the next instrumentation fix.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m482_m335_gpu_range_witness_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m482_world164_m335_gpu_range_witness --report bin/suite_reports/engine_refactor/m482_world164_m335_gpu_range_witness_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m482_world164_m335_gpu_range_witness_20261009.json`;
+perf log: `bin/logs/perf_20261009-125540_18680.jsonl` (about 262 MB);
+app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-125536.18680`;
+captures: `bin/flight_captures/m482_m335_gpu_range_witness_20261009` (436
+frames). Keep raw artifacts local and out of Git.
+
+### M483 — async capture and GPU range witness (2026-10-09)
+
+M483 validates Release commit `4cc13c73` (SHA-256
+`7A6CD44670B9ADFFC7DD7DB2E63E3F0D0A1C984E15B690F19179E87E5E4FAFE1`) with
+the unchanged visible/no-teleport M335 route. Route adequacy passed: 7,424
+blocks, 5.19287 blocks/s, eye Y=70, process exit 0, no hang, collision, or
+ground contact. Overall analyzer acceptance remains false because the
+eye-proxy/A24 and stop-convergence gates are unresolved.
+
+The exact gap-only GPU witness fired once during 6,240 pixel probes. For the
+tree-log block at `(−2701,52,75)`, it confirmed an active compact MDI command,
+matching command fields and indices (`56,59,58`), and matching pooled vertex
+positions (max delta 0). The target triangle ray distance was 27.2945; sampled
+opaque depth represented a farther surface at about 30.2514. Geometry revision
+was desired/published 8/8 with settled light revision 1. This candidate needs
+draw-state/rasterization/depth inspection; it is not evidence of a bad GPU
+upload. The nearby saved frame shows continuous forest/shore scenery through
+the route fog, without an obvious large hole.
+
+The asynchronous capture produced 101 queued and 101 saved PNGs, with no
+readback, queue, or write failures. In the capture X window, 26 perf periods
+had median/p90/max wall time 37.412/44.462/69.304 ms. M482 had
+438.161/649.589/803.505 ms in the same window. Outside it M483 measured
+23.018/34.483 ms. Dense pixel and screen-ray instrumentation remains enabled,
+so this is not the clean capture-disabled performance control.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m483_m335_async_capture_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m483_world164_m335_async_capture --report bin/suite_reports/engine_refactor/m483_world164_m335_async_capture_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m483_world164_m335_async_capture_20261009.json`;
+perf trace: `bin/logs/perf_20261009-150758_1408.jsonl`;
+app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-150753.1408`;
+captures: `bin/flight_captures/m483_m335_async_capture_20261009` (101 frames).
+The closest frame to the exact ray event is `frame_009.png`. Keep raw artifacts
+local and out of Git.
+
+### M484 — capture-disabled M335 timing attempt (2026-10-09)
+
+M484 ran the same visible Release/no-teleport start, heading, pitch, and cruise
+height with screenshots and pixel tracing disabled. The app report has
+`exit_code=0`, 1,496.06 active seconds, eye Y=70, and 397 chunks / about 6,352
+blocks traveled. It ended just short of the established 6,400-block adequacy
+gate, so this is not a complete route control. The app recorded two predicted
+obstacles; both detours completed, with zero blocked movement substeps and zero
+ground contacts.
+
+This run is not a clean performance comparison. Its app clock excluded five
+gaps totalling 35.63 seconds. Median/p90 wall time was 46.785/99.169 ms versus
+M483's 23.303/36.270 ms; streaming-phase median/p90 was 22.996/50.612 ms versus
+10.109/20.321 ms. Async I/O drain median/p90 was 0.998/3.565 ms, while render
+median/p90 was 6.589/42.185 ms. The capture-disabled path therefore still had
+large frame-time tails, but the clock gaps and missing route distance prevent
+attributing that difference to a renderer or streaming regression.
+
+The analyzer's near-focus `visual_holes_rate` was 0.07735 with full sample
+coverage; it stayed below the 0.10 proxy gate. Post-stop visual-hole and mesh-
+missing proxies were zero, while broad readiness debt remained 25 and
+stop-convergence gates failed. These readiness counters do not establish a
+visible framebuffer hole. No screenshots or pixel probes were collected.
+
+The supervision script disappeared before the app; the visible app continued
+and exited with code 0. Its raw report was copied here from the app report, and
+the temporary clear-day override was restored from the saved backup and
+verified byte-for-byte (SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`). For the
+next timing control, keep the same route but use the existing keep-awake helper,
+set an explicit 6,400-block minimum and 7,200-second process timeout, and retain
+runner stdout/stderr so both app and analysis reports are finalized.
+
+Artifacts: [app report](../../bin/suite_reports/engine_refactor/m484_world164_m335_clean_timing_control_20261009.json),
+[analyzer report](../../bin/suite_reports/engine_refactor/m484_world164_m335_clean_timing_analysis_20261009.json),
+and [perf trace](../../bin/logs/perf_20261009-180906_1820.jsonl). Raw artifacts
+remain local and out of Git.
+
+### M485 — full capture-disabled M335 with background CPU load (2026-10-09)
+
+M485 used the exact visible Release/no-teleport M335 setup and passed the
+6,400-block route gate: 7,216 blocks at the established 5.19287 blocks/s,
+eye Y=70, yaw 180°, pitch −30°, no teleport. App exit and runner outcome were
+successful, with no clock gaps. Two predicted obstacles produced two completed
+detours; there were no collision stops, blocked movement substeps, or ground
+contacts. The stop tail completed, and `world_data.json` was restored to its
+original SHA-256. The user reported high background CPU load during this run,
+so its performance figures are contextual only, not a clean engine baseline.
+
+The full-run median/p90 wall time was 32.917/52.406 ms; streaming phase was
+16.854/33.899 ms, async chunk systems 4.572/10.136 ms, and I/O drain
+1.068/2.540 ms. At the same X window sampled with probes/captures in M483
+(`−2920..−2670`), M485 had median/p90 wall 43.319/50.211 ms and streaming
+29.913/36.350 ms; M483 measured 37.412/44.462 and 20.322/30.636 ms. Since the
+background CPU load differs and M483's instrumentation was active, neither
+comparison isolates renderer or streaming cost.
+
+The analyzer reports `visual_holes_rate=0.05730` with full sample coverage,
+below the 0.10 near-focus mesh-coverage proxy threshold. Post-stop visual-hole
+and mesh-missing proxies were zero; broad readiness debt was 27 and
+stop-convergence, eye-proxy, and A24 gates remained red. M485 had no pixel
+probes or screenshots, so it provides no direct framebuffer-hole evidence.
+Keep these readiness and presentation signals separate.
+
+The existing `flight_sim_keep_awake.ps1` ran alongside the visible app. The
+runner was started detached with stdout/stderr files so its post-run analyzer
+and restoration completed normally. This is the preferred long-flight launch
+pattern. Artifacts: [flight/analyzer report](../../bin/suite_reports/engine_refactor/m485_world164_m335_clean_timing_control_20261009.json),
+[app report](../../bin/flight_sim_report.json), [perf trace](../../bin/logs/perf_20261009-184634_6168.jsonl),
+and [runner output](../../bin/logs/m485_runner_20261009.stdout.log). Keep all
+raw artifacts local and out of Git.
+
+### M486 — exact M335 draw-state follow-up (2026-10-09)
+
+M486 used the same visible Release/no-teleport M335 profile on `World_164`
+with dense pixel and screen-ray probes limited to camera X `[-2702,-2685]`.
+The built commit was `5cd8665b` (executable SHA-256
+`474753D80FAD94BED46B64CE3920FDBDE8757FF7FC7EBF8C2E2C0150231A7C20`), and
+the run manifest reports a clean source tree. It exited normally
+(`run_outcome=success`, `process_rc=0`, `hang_killed=false`), passed the
+6,400-block route gate with 7,440 blocks, held eye Y=70, and measured
+5.19287 blocks/s. `world_data.json` was restored byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+
+The targeted trace recorded 800 pixel rows in five probe epochs and 9,900
+screen-ray candidates. M483's exact ray/triangle/depth gap did not recur.
+At the same OpenGL pixel `(224,90)` and nearby camera positions, M486 traced
+solid sand geometry at distances `30.2265` and `30.3636`; reconstructed opaque
+depth distances were `30.1929` and `30.3425` (differences of 0.0336 and 0.0211
+blocks). Both pixels had non-black opaque colors, matching mesh/published
+geometry revision `5`, settled light revision `1`, a visible pooled MDI
+command, and a ready texture. This is positive evidence for those two sampled
+frames, not a replay of M483's exact tree-log triangle or proof that every
+frame is correct.
+
+One `renderer_gpu_draw_state_probe` captured the M483 target tree-log batch in
+epoch 22400 at camera X `-2687`: chunk `(-169,3,4)`, log block
+`(-2701,52,75)`, batch `3`, command slot `281`, GPU-resident MDI path, and
+successful submission. Depth test/write were enabled with `LESS`; culling,
+scissor, stencil, rasterizer discard, and polygon offset were disabled; the
+viewport was `1280x720` on framebuffer 0. This state sample did not share an
+epoch with a pixel probe, so it does not establish which pixels the batch
+rasterized. The emitted polygon-mode pair `[6914,0]` is internally suspect
+and is excluded from interpretation.
+
+M486's analyzer remains red. The near-focus `visual_holes_rate` was `0.03528`
+at full sample coverage and the post-stop visual-hole and camera-band missing
+mesh proxies were zero. In contrast, broad `unfinished_visual`/readiness debt
+remained high, the stop tail did not converge, and A24/eye-proxy gates stayed
+open. Treat those as unresolved lifecycle/telemetry signals; they do not
+override the pixel evidence or establish a visible black hole. The user had
+reported high background CPU load for this run; unrelated active processes
+were observed, so its frame/stream timings are contextual and not a clean
+performance baseline.
+
+The final five `focus_slice_trace` epochs each retained 16 samples, all at
+vertical chunk `cy=1` while the camera was at Y=70 and focus `(-458,3)` in X/Z.
+The end period had `visual_holes=0`, `focus_missing_mesh=0`, and
+`underfeet_pending_light=0`; `focus_visual_missing_mesh_n` was 23 and broad
+`unfinished_visual` was 24. These records point to lower-band readiness debt,
+not a demonstrated camera-band hole. Because this is a capped sample rather
+than a complete frustum census, view membership remains to be verified before
+changing stop-line acceptance.
+
+The M483 pixel coordinates use the OpenGL lower-left origin. Its closest
+saved frame, `frame_009.png`, corresponds near PNG pixel `(224,629)` rather
+than `(224,90)`; that location is dark gray within continuous ground/tree
+geometry. The capture camera differs from the exact ray event by about 0.143
+blocks, so this visual check is supportive, not same-frame proof.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2702'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2685'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m486_world164_m335_draw_state_20261009 --report bin/suite_reports/engine_refactor/m486_world164_m335_draw_state_20261009.json --process-timeout 7200
+```
+
+Report: [M486 flight/analyzer report](../../bin/suite_reports/engine_refactor/m486_world164_m335_draw_state_20261009.json);
+perf trace: [JSONL](../../bin/logs/perf_20261009-204326_40832.jsonl);
+runner output: `bin/logs/m486_world164_m335_draw_state_20261009.stdout.log`.
+Raw artifacts remain local and out of Git.
+
+### M487 — low-instrumentation M335 timing control (2026-10-10)
+
+M487 repeated the established visible Release/no-teleport M335 route on
+`World_164` with the M486 executable and no dense pixels, screen-ray probes,
+GPU range witness, world-source traces, or screenshot capture. It completed
+normally (`process_rc=0`, no teleport), covered 7,456 blocks at 5.19287
+blocks/s, and held eye Y=70. The executable SHA-256 was
+`474753D80FAD94BED46B64CE3920FDBDE8757FF7FC7EBF8C2E2C0150231A7C20`; source
+tree was clean at `624856ee`. `world_data.json` was restored byte-for-byte to
+SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`,
+and the fixed-day backup was removed.
+
+The analyzer remains red (`30/40` gates; post-stop demand convergence failed).
+It reports median fly wall time 16.20 ms (61.73 FPS), 5.27% red pressure, and
+one 312.47 ms maximum spike. The raw 742 period rows have median/p95 wall time
+16.20/22.58 ms, median/p95 streaming phase 6.55/11.15 ms, and median/p95
+transparent pass 2.97/5.92 ms. This is a useful quiet, low-instrumentation
+timing baseline, not evidence that all draw work is correct. The `visual_holes`
+mesh-coverage proxy was nonzero in 8 periods (1.08%); none were in the sampled
+corridor window, and post-stop camera-band mesh/visual-hole proxies were zero.
+The wider readiness stop-line still ended with two unresolved items and did
+not converge. These metrics are not framebuffer-pixel evidence.
+
+During M487 the operator reported that the visible scene had no water surface.
+M487 had no screenshot and no fluid-specific visible-draw counter, so the
+position and exact frame are unknown. `backend_fluid=gpu_fluid_surface`,
+nonzero transparent batches, and `scene_transparent_ms` only prove that the
+fluid-map provider and transparent pass were active; they do not prove that
+water faces were present in those batches or reached the framebuffer. A
+no-focus screenshot attempt was skipped because the game was not the foreground
+window; the capture helper that raises/focuses the window was not used.
+
+The user clarified that water looked normal during the day on 2026-10-09, but
+did not identify M486 as that known-good run. Therefore the visual regression
+window is not pinned to M486 or to a specific commit. Git history for
+2026-10-09 contains diagnostic/capture changes but no direct fluid-face or
+transparent-pass change. A conditional risk remains in `d706e401` (2026-09-20):
+all faces toward an `Unknown` neighbor, including fluid faces, are suppressed.
+That reverses `aa1b54d4` (2026-08-05), which fixed missing water sides by
+emitting liquid faces toward unloaded neighbors. Treat this as a testable
+residency/seam hypothesis, not as the established cause of today's report.
+
+M488 should repeat the same route and Release executable with
+`CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=1`, saving one frame every 30 seconds via
+the asynchronous capture path. This bypasses the desktop stencil-shell passes
+while keeping the transparent batches, shader, and opaque-depth guard. If water
+appears only in that run, investigate stencil/GL state and driver behavior; if
+not, add fluid-specific mesh/publish/transparent-command counts and inspect
+Unknown-neighbor face culling. This A/B distinguishes a transparent-pass state
+fault from a mesh/residency fault; it is not by itself a GPU-vendor comparison.
+
+Exact M487 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m487_world164_m335_low_trace_20261010 --report bin/suite_reports/engine_refactor/m487_world164_m335_low_trace_20261010.json --process-timeout 7200
+```
+
+Report: [M487 flight/analyzer report](../../bin/suite_reports/engine_refactor/m487_world164_m335_low_trace_20261010.json);
+perf trace: [JSONL](../../bin/logs/perf_20261010-093825_33492.jsonl);
+runner output: `bin/logs/m487_world164_m335_low_trace_20261010.stdout.log`.
+Raw artifacts remain local and out of Git.
+
+### M488 — forced single-pass transparent M335 A/B (2026-10-10)
+
+M488 repeated the M335 Release/no-teleport route on `World_164` with the same
+executable and fixed-day world/configuration as M487. The only intentional
+render-path change was `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=1`; the run also
+saved a GL framebuffer image every 30 seconds. It completed normally
+(`process_rc=0`), traveled 7,472 blocks at 5.19287 blocks/s, held eye Y=70,
+and used executable SHA-256
+`474753D80FAD94BED46B64CE3920FDBDE8757FF7FC7EBF8C2E2C0150231A7C20`.
+The analyzer remained red (`31/40` gates), including A24 near-focus-hole and
+post-stop-convergence failures. Median fly wall time was 13.95 ms (71.69 FPS).
+The route/streaming proxies do not establish water mesh or pixel visibility.
+
+The operator later clarified that the water surface was already absent at the
+beginning of this run; the late M488 frame is not evidence that the problem
+starts only after a long flight. The exact onset position is therefore not
+known. The direct operator observation is more useful than the saved PNGs here.
+
+M488's forced branch bypasses the normal stencil-shell sequence and draws the
+transparent color pass with stencil disabled. The ordinary path performs a
+shell-depth prepass followed by behind-shell and shell-surface color passes.
+This makes the toggle a meaningful water-rendering A/B, but it is diagnostic
+only and must not be used as a product visual baseline.
+
+### M489 — default transparent-path M335 repeat (2026-10-10)
+
+M489 repeated the same `World_164` route and Release executable with
+`CUBA_DEBUG_TRANSPARENT_SINGLE_PASS` unset. Tracing stayed disabled as in M487;
+the existing asynchronous GL framebuffer capture saved one image every 30
+seconds. It completed normally (`process_rc=0`), traveled 7,456 blocks at
+5.19287 blocks/s, held eye Y=70, and used the same executable SHA-256,
+effective config hash, world seed, and route hash as M488. The fixed-day runner
+restored `world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415AC19DEE2F30C8500C737AC5EC2D344`.
+
+The operator reported that the water surface was present during M489. The
+analyzer remained red (`29/40` gates); A24 still found near-focus mesh-coverage
+proxy samples in 12 periods and post-stop convergence failed. Median fly wall
+time was 15.41 ms (64.88 FPS). Both runs therefore had similar route and
+readiness-proxy failures despite the different live water observations. These
+proxies cannot adjudicate the visible water result.
+
+The M488/M489 operator-visible pair is consistent with the forced single-pass
+branch contributing to missing water. However, M487 also used the default
+stencil-shell path and the operator reported no water there, while M489 used
+that default path and the operator reported water present. The observations
+therefore contradict a single-pass-only cause. Treat the mode difference as a
+lead, with run-to-run/render-state intermittency still open; there is no basis
+to attribute this to flight duration. Both paired runs used the same
+world/config, route, and binary, and no fluid-specific mesh-to-draw counter was
+collected. Prioritize review of transparent depth/stencil state and the fluid
+draw path; keep `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS` unset in normal visual
+runs.
+
+The operator also reported that the saved images darken the distant world more
+than the live display and appear to mix text from another application into the
+scene. The capture implementation reads only the game's `GL_BACK` framebuffer
+after render and before swap, then flips/writes those pixels asynchronously;
+it does not capture desktop composition. The yellow telemetry panel visible
+in the PNGs is drawn by the game. A separate Windows Graphics Capture attempt
+timed out twice, so there is no independent live-window screenshot to compare.
+Treat the M488/M489 PNGs as diagnostic framebuffer readbacks, not as a trusted
+visual oracle; the reported extra external text remains unverified.
+
+Exact M488 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m488_world164_m335_stencil_singlepass_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='30'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m488_world164_m335_stencil_singlepass_20261010 --report bin/suite_reports/engine_refactor/m488_world164_m335_stencil_singlepass_20261010.json --process-timeout 7200
+```
+
+Exact M489 invocation (same tracing settings; capture directory changed and
+the single-pass variable was unset):
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m489_world164_m335_baseline_repeat_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='30'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m489_world164_m335_baseline_repeat_20261010 --report bin/suite_reports/engine_refactor/m489_world164_m335_baseline_repeat_20261010.json --process-timeout 7200
+```
+
+Reports: [M488](../../bin/suite_reports/engine_refactor/m488_world164_m335_stencil_singlepass_20261010.json),
+[M489](../../bin/suite_reports/engine_refactor/m489_world164_m335_baseline_repeat_20261010.json).
+Runner logs and PNGs are in their corresponding `bin/logs/<phase>/` directories;
+raw artifacts remain local and out of Git.
+
+### M490 — low-trace M335 with framebuffer-stencil fallback guard (2026-10-10)
+
+M490 repeated the established visible Release/no-teleport M335 route on
+`World_164`, using the build from `002787fc` (`Cubatarium.exe` SHA-256
+`50cb2a0fb7e41bfbe2815092d75203c192d3fe126878f5b074605e9f2889430b`). It kept
+renderer/source/save tracing and frame capture disabled. The run used the
+default desktop transparent path; the code queried `GL_STENCIL_BITS` and
+selected the existing single-pass fallback only when the active framebuffer
+reported zero stencil bits. This fallback is defensive behavior, not an
+established cause or fix for the intermittent water observation.
+
+The application exited normally (`process_rc=0`, `hang_killed=false`), reached
+7,456 blocks at 5.19287 blocks/s with eye Y=70, and passed route completion.
+Median fly-frame time was 14.8833 ms. The analyzer reported 742 periods (740
+steady, 18 spikes). Its mesh-coverage proxy `visual_holes_rate` was 1.49% with
+full sample coverage; 11 periods had nonzero near-focus mesh holes, including
+one in the control corridor, so the A24 safety line failed. This is a mesh
+readiness/coverage proxy and does not establish that the operator saw a blank
+framebuffer area. The empty-world stop line passed (`opaque_cmd_on` median 212,
+minimum 60), which argues against an actually empty opaque draw set. The
+post-stop convergence gate failed: the ending readiness/missing count reached
+6 and several debt/trend counters did not settle. No full-dark no-ticket stop
+samples were reported. The report's water visibility remains unclassified:
+there was no fluid-specific draw counter and no captured visual evidence.
+
+Other failed analyzer gates were `post_load_ring_not_ready_eq_0`,
+`miss_stuck_max_run_sec_le_4`, `opaque_idle_churn_max_le_120`,
+`emerge_spike_frac_le_0_05`, `mesh_schedule_retry_after_capture_gt_0`,
+`witness_latch_diet_share_ge_0_70`, `effective_holes_blink_rate_le_0_05`,
+`policy_headers_have_budget`, `attribution_scene_self_ratio_le_0_10`, and
+`stream_phase_ms_le_5`. These include instrumentation/policy gates; they are
+not all independent correctness failures.
+
+M490 did not enable `CUBA_WORLD_COLUMN_SOURCE_TRACE`, so its manifest does not
+classify columns as disk-loaded versus procedural misses. The initial legacy
+chunk-file scan found no legacy chunk files, but that is not evidence that the
+column store was cold or that the whole route generated from scratch. The run
+also generated terrain at its far-west edge, which confirms procedural work
+occurred there but does not identify the source for every traversed column.
+The runtime stencil-bit value did not land in the structured app INFO log; the
+follow-up change routes that one-time diagnostic through `CubatariumLogInfo`
+so the next run records it with the normal app log.
+
+Exact M490 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m490_world164_m335_stencil_guard_20261010 --report bin/suite_reports/engine_refactor/m490_world164_m335_stencil_guard_20261010.json --process-timeout 7200
+```
+
+Report: [M490 flight/analyzer report](../../bin/suite_reports/engine_refactor/m490_world164_m335_stencil_guard_20261010.json).
+The perf stream and app INFO log are in `bin/logs/`; raw artifacts remain local
+and out of Git.
+
+### M491 — column source/save trace on the fixed M335 route (2026-10-10)
+
+M491 repeated the visible, no-teleport World_164 M335 route with source and
+save lifecycle traces enabled. It reached 7,440 blocks at `5.19287 blocks/s`
+with eye Y=70, `process_rc=0`, and no hang kill. The flight runner still
+returned failure because A24 found 13 near-focus missing-mesh proxy periods
+(none in its control corridor) and the post-stop convergence gate ended with
+readiness debt up to 4. These are mesh/readiness signals, not direct
+framebuffer-pixel evidence. The empty-world line passed (median opaque commands
+196.5, minimum 24). The visual-hole proxy rate was 1.7568% with full sample
+coverage.
+
+Source provenance: 7,023 unique columns completed from disk and 91 unique
+columns were procedural disk misses. All 91 procedural columns were lateral
+bands (`z=-4..-1` and `z=8..10`); none were at the camera's `z=3` focus column.
+77 of the 91 misses were in the final far-west x bin `-464..-448`, after the
+run moved beyond the previously persisted fringe. For each of the 13
+near-focus proxy periods, the exact focus column at `z=3` was in the
+disk-complete set. Thus this trace does not support a claim that the recurrent
+focus proxy came from an on-camera disk miss. It does show that a long route
+eventually reaches a procedural frontier outside the persisted corridor.
+
+Disk reads themselves were usually quick: `file_read_ms` median/p95/max
+`0.574/0.896/8.531 ms`, and deserialize/apply median/p95/max
+`3.826/6.109/35.634 ms`. The full disk-result elapsed time had a 15.685 ms
+median and 47.946 ms p95, while result wait was `35.765/150.769 ms` median/p95
+with a 2,002 ms maximum. Procedural generation on the lateral frontier took
+`45.560 ms` median, `68.996 ms` p95, and `82.708 ms` maximum; ready wait added
+`11.175/20.993/29.881 ms` median/p95/max. This points more toward queued-result
+wait and mesh/readiness publication than raw file-read speed.
+
+The recurrent focus proxy also tracked mesh-output backpressure. M490 had
+backpressure in all 11 proxy periods and 32/731 periods without the proxy;
+M491 had it in 11/13 proxy periods and 32/729 periods without the proxy.
+During proxy periods, requested mesh schedules were usually 16 while the
+backpressured FirstMesh cap ranged from 4 to 11. This is a strong correlation,
+not proof of causality: M491 also had two proxy periods without the fence, and
+the metric does not prove which specific column missed its queue slot. The
+next scheduler change must be based on per-column ownership/selection evidence,
+not on this aggregate correlation alone.
+
+Save trace: 6,881 columns were queued for full-column saves, 28,006 slices
+were written, and 54 incomplete-save requests were discarded. 6,871 of the
+6,881 queued coordinates intersected disk-loaded columns, so the current unload
+path rewrites almost every disk-loaded column. Do not use `ModifiedChunks`
+alone as a persistence-dirty test: it is also touched by visual remesh paths.
+First establish a block-data revision or equivalent persistence-specific dirty
+signal before removing these saves.
+
+M491 is not a performance baseline. Its verbose save trace logs each completed
+result from the main-thread drain, while `main.cpp` mirrored all Glog INFO
+messages to stderr for any command line. In M491, eight drained results took
+156.494 ms in one period and save-drain max reached about 277 ms; quiet M490
+drained eight in 0.139 ms. M491 had 83 frame spikes versus M490's 18. The
+newly disabled INFO mirror for `--flight-sim` removes one synchronous output
+path; the trace itself remains intrusive, so provenance runs must still be
+compared separately from quiet timing runs.
+
+The app INFO log recorded `framebuffer_stencil_bits=-1` and selected the
+single-pass fallback. M492 proved the query itself was invalid:
+`glGetIntegerv(GL_STENCIL_BITS)` returned `GL_INVALID_ENUM` (1280) in the
+OpenGL Core context, while draw framebuffer 0 reported complete status
+36053 and no prior GL errors. This is a removed context-framebuffer query in
+Core, not evidence that the framebuffer lacks a stencil plane. The pipeline
+now queries the default framebuffer's `GL_STENCIL` attachment (or an FBO's
+`GL_STENCIL_ATTACHMENT`) and reads its attachment stencil size. M493 verified
+8 stencil bits on the default framebuffer (`GL_FRAMEBUFFER_DEFAULT`, status
+36053, no GL query errors) and selected the desktop-shell path. The probe is
+valid, but water visibility still requires a fluid-specific draw chain and
+live observation.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m491_world164_m335_column_source_20261010.json),
+[source analysis](../../bin/suite_reports/engine_refactor/m491_source_trace_20261010.json),
+[x-binned source/save analysis](../../bin/suite_reports/engine_refactor/m491_source_by_x_20261010.json),
+[perf trace](../../bin/logs/perf_20261010-122102_5672.jsonl), and the app INFO
+log `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-122100.5672`.
+`world_data.json` was restored byte-for-byte to SHA
+`0ade40413ad4172777a59c2573809ed415AC19DEE2F30C8500C737AC5EC2D344`.
+
+Exact M491 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='1'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m491_world164_m335_column_source_20261010 --report bin/suite_reports/engine_refactor/m491_world164_m335_column_source_20261010.json --process-timeout 7200
+```
+
+### M492 — quiet M335 with invalid Core stencil query isolated (2026-10-10)
+
+M492 used the same visible fixed-day, no-teleport M335 route as M490/M491, with
+all high-volume source, save, visual, GPU-range, and unload traces disabled.
+The Release binary was the committed `f3039eba412ab3d5f6d53d14b31c911af4ba600a`
+build (SHA256
+`FF7F6C2EA6C3D253D97CC15DC1527B268DE00AE17005EE5BED8558B8B265A7FF`). The
+flight process exited normally and reached 7,408 blocks at 5.19287 blocks/s;
+741 periods were recorded (739 steady), with a 16.033 ms median wall frame.
+Route completion and the empty-world stop line passed. The A24 mesh-coverage
+proxy failed in 8 periods, all outside the control corridor; the eye-proxy
+stop line passed. Post-stop convergence failed because readiness debt, pending
+work, and focus dirty work did not converge. These remain readiness/mesh
+proxies, not direct evidence of a blank framebuffer. The report's overall gate
+therefore failed even though the route completed.
+
+The far-west segment exposed a separate severe frame-time anomaly. Near focus
+`cx=-439`, one sample had `render_total_ms=925.402`, `wall_ms=1006.92`, but
+`swap_wait_ms=0.125`, `scene_ms=4.175`, `prepare_frame_ms=0.479`,
+`post_scene_ms=0.609`, and `gui_overlay_ms=0.002`. Similar render stalls
+occurred around `cx=-436..-447`, despite little measured streaming work in
+several of those samples. This does not identify a driver, GPU, or scene root
+cause. The existing render timers leave the early `RenderFrame` setup
+(framebuffer/viewport/depth state and camera viewport update) unaccounted, so
+the next run adds `render_frame_setup_ms` to isolate that interval.
+
+The live operator reported the water surface was present in the current run;
+this is kept separate from automated evidence because captured images have
+previously disagreed with the live display.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m492_world164_m335_quiet_stderr_stencil_diag_20261010.json),
+[perf trace](../../bin/logs/perf_20261010-130132_9848.jsonl), and app INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-130130.9848`.
+The report records the M492 binary hash and source revision. `world_data.json`
+was restored byte-for-byte to SHA
+`0ade40413ad4172777a59c2573809ed415AC19DEE2F30C8500C737AC5EC2D344`.
+
+Exact M492 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m492_world164_m335_quiet_stderr_stencil_diag_20261010 --report bin/suite_reports/engine_refactor/m492_world164_m335_quiet_stderr_stencil_diag_20261010.json --process-timeout 7200
+```
+
+### M493 — attachment stencil and focus-miss lifecycle on quiet M335 (2026-10-10)
+
+M493 reused the visible fixed-day no-teleport M335 route and disabled all
+high-volume traces and framebuffer capture. It used Release binary SHA256
+`E945D9A2197FEF8A8C29F5446F9924D20715157650B1EF4E854ABB38C34033C6`, built
+from commit `7c2dd93e9a9b8dfe6abd95f9a74496c2c72b327e`. The app exited normally
+and the route completed 7,456 blocks at 5.18555 blocks/s; camera eye height
+stayed at 70. The analyzer recorded 742 periods, 740 steady, and 37 spike
+frames. Overall report gates failed: A24 found 13 periods with the near-focus
+mesh-coverage proxy (one in the control corridor), and post-stop convergence
+did not reach its readiness/pending-work conditions. Route completion, the
+eye-proxy stop line, empty-world stop line, enter-dirty stop line, and dual-lane
+stop line passed. `visual_holes_rate=1.7568%` is a mesh/readiness proxy, not
+pixel coverage or proof of a visually blank chunk.
+
+The new focus-miss lifecycle fields are terminal snapshots for each perf
+period, not a frame-aligned snapshot of the exact instant that raised its
+proxy. In all 13 proxy periods, the chosen miss column was already reported as
+drawable and satisfying at the terminal sample; 10 were dirty, 9 had job stage
+`Meshing`, and all 13 coincided with mesh-pipeline backpressure. These values
+are insufficient to establish that the queue caused a visible gap: the proxy
+and lifecycle fields may describe different moments in the period. Capture the
+same state at the instant `VisualHoles` is evaluated before changing scheduler
+policy.
+
+M493 verified the corrected stencil query: 8 bits, default framebuffer object
+type `GL_FRAMEBUFFER_DEFAULT` (33304), complete status 36053, and zero GL query
+errors. The transparent pipeline now uses the desktop-shell path. This confirms
+the attachment and path selection only; operator pixel observation was not
+recorded for M493, and no framebuffer captures were used.
+
+The `render_frame_setup_ms` field stayed below 0.037 ms on spike frames, so the
+early framebuffer/viewport setup did not explain M492's 925 ms render sample.
+That M492 anomaly did not recur as a 400+ ms render stall in M493. The largest
+far-west spike was at `cx=-418`: wall 135.438 ms, render 83.051 ms, scene
+80.498 ms, transparent 75.924 ms, swap 0.110 ms. Elsewhere, the largest render
+spike was at `cx=-357`: render 250.317 ms, scene 249.041 ms, including
+transparent pass 216.972 ms and 4,386 transparent GPU batches. These CPU-side
+pass timings point to a separate transparent-rendering throughput concern;
+the batch counter does not isolate water or prove GPU time.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m493_world164_m335_attachment_stencil_column_miss_20261010.json),
+[perf trace](../../bin/logs/perf_20261010-133921_27964.jsonl), and app INFO
+log `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-133919.27964`.
+The runner restored `bin/worlds/World_164/world_data.json` byte-for-byte to SHA
+`0ade40413ad4172777a59c2573809ed415AC19DEE2F30C8500C737AC5EC2D344`.
+
+Exact M493 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m493_world164_m335_attachment_stencil_column_miss_20261010 --report bin/suite_reports/engine_refactor/m493_world164_m335_attachment_stencil_column_miss_20261010.json --process-timeout 7200
+```
+
+## M494 — frame-aligned proxy lifecycle and west-frontier profile (2026-10-10)
+
+M494 used the same visible fixed-day M335 route with all high-volume traces and
+framebuffer capture disabled. It ran Release executable SHA-256
+`0B6E259CCA3701052E8A2375BC166C893529C2040CFFCE09B5E1957D2415583D`, built
+from commit `47304efdc7175f6c014a05221330cb1bf31f64bf`. The app exited normally
+(`process_rc=0`, `hang_killed=false`) and covered 7,456 blocks at 5.19287
+blocks/s. Eye height remained 70. The trace has 742 periods (740 steady) and
+54 spike periods; median wall time was 16.5688 ms. The fixed-day runner restored
+`world_data.json` byte-for-byte to SHA-256
+`0ADE40413AD4172777A59C2573809ED415AC19DEE2F30C8500C737AC5EC2D344`.
+
+The analyzer still reports `pass=false`: A24 found 14 near-focus mesh-proxy
+periods (zero in the control corridor), and post-stop convergence failed on
+readiness/pending-work conditions. `visual_holes_rate=1.8919%` had complete
+sample coverage, but it is not pixel evidence. The diagnostic symptom gate
+also lacked sufficient focus-missing/visible-black samples. In the new
+frame-aligned `visual_holes_enter` events, 129 proxy rises were recorded: 127
+selected a drawable mesh (125 with no build in flight, two during a build),
+one had no drawable while a GPU apply was pending, and one had neither a
+drawable mesh nor an active build. The two no-drawable witnesses were at focus
+`cx=-24` and `cx=-34`. The selected drawable cases are stale-geometry/remesh
+debt candidates, not proof of empty chunks; the radius-wide proxy can also be
+raised by another resident missing slice. Split these states in future A24
+reporting before interpreting its count as visible holes. No scheduler policy
+change is justified from this run alone.
+
+M494 found three independent far-west cost centers. At `cx=-396`, one frame
+spent 133.838 ms in `TickAsyncChunkIo` (145.246 ms in the enclosing async
+systems phase); 130.832 ms was attributed to `light_flags_save_ms`, with nine
+terrain-save results drained. A separate frame at the same focus spent
+129.316 ms in rendering, of which 121.654 ms was scene work and 111.391 ms was
+the transparent pass across 2,601 transparent batches. At `cx=-353`,
+`UpdateStreaming` reached 129.733 ms, almost all of it in the post-core interval
+(129.123 ms). These are separate observations; none identifies a single
+root cause. The transparent-pass scaling lead from M493 reproduced.
+
+There was also a 168.632 ms total render at `cx=-145` while the measured scene
+was 6.052 ms, frame setup 0.014 ms, preparation 0.105 ms, FP viewmodel 0.0002
+ms, post-scene 0.976 ms, and GUI 0.003 ms. Most of this render duration is not
+assigned by the current render subphase timers. At the `cx=-396` async-IO peak,
+the tick's unattributed remainder was only 0.764 ms, but the earlier
+`cx=-142` async-IO spike contained a 114.963 ms unattributed gap. More timing
+boundaries are needed in both subsystems.
+
+The INFO log reports two failed replacements of `column_light.json`:
+revisions 1513 and 6769 returned `MoveFileExW: Access is denied`; their worker
+service times were 11.066 and 9.164 ms. After the run the file parsed as format
+1 with 8,425 completed columns, but the success/retry sequence was not logged,
+so persistence of the latest revision is not established. The failed replace
+does not prove a cause for in-flight visual state; it does warrant checking
+save completion and Windows file-sharing/replace behavior.
+
+Artifacts: [report](../../bin/suite_reports/engine_refactor/m494_world164_m335_proxy_edge_fp_viewmodel_20261010.json),
+[perf trace](../../bin/logs/perf_20261010-141813_37940.jsonl), and app INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-141810.37940`.
+Capture stayed disabled, so M494 says nothing about screenshot fidelity or
+operator-visible water at its west endpoint.
+
+Exact M494 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m494_world164_m335_proxy_edge_fp_viewmodel_20261010 --report bin/suite_reports/engine_refactor/m494_world164_m335_proxy_edge_fp_viewmodel_20261010.json --process-timeout 7200
+```
+
+### M495 — final-segment water appearance and capture comparison (2026-10-10)
+
+M495 ran the established visible Release/no-teleport M335 on `World_164` with
+the same start, eye height, heading, pitch, speed, and 1,455-second flight.
+The only capture changes were sparse in-app GL frames every 15 seconds and a
+foreground-verified OS screenshot watcher at focus `cx=-448`, `-456`, and
+`-459`. Capture did not change camera input. The default transparent path was
+used (`CUBA_DEBUG_TRANSPARENT_SINGLE_PASS` unset); all detailed visual/source
+traces were disabled. The window helper rejected the exact `cx=-459` stop
+capture after the game stopped being the foreground window.
+
+The route completed normally (`process_rc=0`, no hang kill), traveled 7,456
+blocks at 5.19287 blocks/s, and held eye Y=70. The run manifest records Release
+binary SHA-256
+`1286e9c5ca16d5c90995c21a2fb7588f25e98eb839b2f709cbc7da3256c80b06`, source
+commit `214d71bba2121f22c6c7fcf1f61017173b207bad`, World_164 seed/hash
+`3650471197`, desktop GL 3.3 Core on AMD Radeon(TM) Graphics, and route hash
+`6a2bd434307148c4412d3663a45140efeeefef98978faa2adb5815a61575faeb`.
+`fog_pull_in_enabled=false`, render distance 4, and the established start
+ratio were preserved. The analyzer failed overall: 742 periods, 34 spikes,
+near-focus mesh proxy in 15 periods (one in the control corridor), and
+post-stop readiness debt up to 28 without convergence. These are not water
+draw counts.
+
+The operator reported that water looked broken at the very end. Internal
+frames `frame_096.png` and `frame_097.png` bracket the observed transition:
+the former at camera X≈−7,193 retains a textured blue water view; the latter
+at X≈−7,270 has a large flat navy region. The navy value is exactly fog RGB
+`(13,38,89)` and grows in `frame_098.png`/`frame_099.png` through the stop.
+`desktop/approach_cx-456.png` also shows this region inside the game window.
+It was taken about eight seconds after `frame_097`, so it corroborates the
+in-window appearance but is not a same-frame comparison. The exact stop OS
+capture was rejected because the app was no longer foreground. Do not infer
+from the fog-color pixels alone that water geometry is absent: distance fog,
+underwater fog, a missing/occluded surface, and transparent-pass behavior
+remain possible. `backend_fluid=gpu_fluid_surface` and generic transparent
+batch totals describe neither water mesh faces nor water draws. The stencil
+diagnostic recorded 8 default-framebuffer stencil bits and selected
+`desktop-shell`.
+
+Artifacts:
+
+- [M495 analyzer/report](../../bin/suite_reports/engine_refactor/m495_world164_m335_capture_compare_20261010.json)
+- [M495 perf JSONL](../../bin/logs/perf_20261010-151232_20528.jsonl)
+- [M495 app INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-151230.20528)
+- [Internal frame 097 at X≈−7,270](../../bin/flight_captures/m495_world164_capture_compare_20261010/frame_097.png)
+- [Window capture near focus `cx=-456`](../../bin/flight_captures/m495_world164_capture_compare_20261010/desktop/approach_cx-456.png)
+
+The runner restored `World_164/world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+Raw images/logs remain local and out of Git.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m495_world164_capture_compare_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='15'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m495_world164_m335_capture_compare_20261010 --report bin/suite_reports/engine_refactor/m495_world164_m335_capture_compare_20261010.json --process-timeout 7200
+```
+
+Next run: add fluid-specific occupancy → mesh faces/revision → transparent
+batch → per-pass submitted draw/state → framebuffer-coverage evidence before
+changing water, fog, or `Unknown`-neighbor rules. Keep the same M335 route and
+default desktop-shell path for the visual baseline.
+
+### M496 — fluid framebuffer witness on M335 (2026-10-10)
+
+M496 repeated M335 on `World_164` with the same visible, no-teleport route,
+Release build, clear fixed-day profile, start, eye height, yaw, pitch, and
+speed. Fluid diagnostics were spatially gated to camera X `[-7440,-7190]` so
+the long cruise remained visually unchanged. The application exited normally
+(`process_rc=0`, `run_outcome=success`, `hang_killed=false`), traveled 7,408
+blocks at `5.19287 blocks/s`, and held eye Y=70. The analyzer returned
+`pass=false` on separate readiness/near-focus mesh-coverage gates (740 periods,
+217 spikes); do not interpret that result as a water-pixel verdict.
+
+Frame 097 at camera X `-7215.170898` has 531,812 pure-magenta pixels (57.71%
+of the 1280×720 image). Frame 098 at camera X `-7283.620117` and frame 099 at
+the same stop position have no magenta pixels; frame 098 contains 122,339
+pixels at fog navy `(13,38,89)`. The symptom coordinate is close to M495 frame
+097 (`-7269.958984`), which also has a large fog-navy region. M496 perf samples
+around focus `cx=-456` nevertheless report 76 fluid refs, 1,194 fluid indices,
+2,365 `fluid_gpu_batch_n`, 87 fluid draw calls, 29 shell-depth calls, and 58
+aggregated color-pass calls. These are submission counters; they do not mean
+each submitted GPU batch emitted visible pixels.
+
+Interpretation: water-style fragments demonstrably reach the framebuffer at
+the preceding view. At the navy symptom view, instrumented fluid draw counts
+continue but the shader witness is absent. Since the marker follows alpha and
+opaque-depth rejection, this points to a later-view visibility/rejection issue
+or an affected path outside the marker's coverage. It does not yet prove the
+opaque-depth guard is the cause; stencil/state, indirect visibility, and a
+separate fluid draw path remain candidates. The next experiment is a short,
+visible local A/B near X `-7284`, changing only
+`CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD=1`, with the marker and default
+desktop-shell path retained. If marker pixels return, audit the depth capture
+and coordinate/bias comparison. If not, inspect stencil/color-pass state,
+indirect command visibility, and GPU fluid-surface path coverage. No fog or
+`Unknown` liquid-neighbor behavior should change before this classification.
+
+Artifacts:
+
+- [M496 report](../../bin/suite_reports/engine_refactor/m496_world164_m335_fluid_witness_20261010.json)
+- [M496 perf JSONL](../../bin/logs/perf_20261010-174912_27460.jsonl)
+- [M496 app INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-174907.27460)
+- [M496 frame 097 — marker visible](../../bin/flight_captures/m496_world164_m335_fluid_witness_20261010/frame_097.png)
+- [M496 frame 098 — symptom view, no marker](../../bin/flight_captures/m496_world164_m335_fluid_witness_20261010/frame_098.png)
+- [M495 frame 097 — normal-render symptom reference](../../bin/flight_captures/m495_world164_capture_compare_20261010/frame_097.png)
+
+The runner restored `World_164/world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+Raw logs and images remain local and out of Git.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m496_world164_m335_fluid_witness_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='15'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m496_world164_m335_fluid_witness_20261010 --report bin/suite_reports/engine_refactor/m496_world164_m335_fluid_witness_20261010.json --process-timeout 7200
+```
+
+### M497–M499 — sampler collision diagnosis and fix (2026-10-10)
+
+These were short, visible, no-teleport diagnostic segments centered on the
+M335 late-route water view. All kept `World_164`, eye Y=70, yaw 180°, pitch
+−30°, fixed-day weather, and the same `product-174657-far` controller. The
+start was camera/player X `-7215`, with 45 seconds of forward flight and 8
+seconds at the stop pose. Each run traveled about 240 blocks at `5.18555`
+blocks/s; the full M335 route remains the acceptance route.
+
+M497 disabled only the shader opaque-depth guard. At X `-7283.708496`, frame
+014 had 547,553 magenta pixels (59.41%). M498 disabled the same guard and
+selected the transparent single-pass path, so the live framebuffer's `GL_LESS`
+test provided the opaque-depth reference. At X `-7284.227051`, frame 014 had
+552,734 magenta pixels (59.98%). That result shows fluid fragments in this
+view pass the live depth buffer; M496's missing marker was not normal opaque
+geometry occlusion.
+
+The code audit found why the shader guard disagreed: `UOpaqueDepthCapture`
+bound its depth map at texture unit 3, and `UUnderwaterFogPass::ApplyUniforms`
+later bound `uFluidBottomBlockMap` to the same unit on the same greedy shader.
+When the underwater fog map was active, the opaque-depth sampler read fluid
+map data and discarded otherwise visible water. M499 moved fixed sampler
+allocations to shared `RenderTextureUnits.h` (fluid maps 1–3, weather depth 4,
+opaque depth 5) while keeping the depth guard enabled and using the default
+desktop-shell path. At X `-7283.708496`, frame 014 again had 542,596 magenta
+pixels (58.88%), close to the two independent references. Release build passed
+static dependency verification; executable SHA-256 was
+`22f81a904c3686ef66d0e36a1eeb16800d3d7fb584a74c75ce7743dcda4e1cc7`, source
+commit `60be076b`.
+
+The analyzer reports for these short routes are not full M335 acceptance
+results. M497 completed normally; M498 and M499 also exited normally, while
+short-run eye-proxy coverage can make aggregate `pass=false`. M499's A24 gate
+passed. The runner restored `World_164/world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344` after
+each run.
+
+Artifacts:
+
+- M497: [report](../../bin/suite_reports/engine_refactor/m497_world164_water_depth_guard_ab_20261010.json), [perf](../../bin/logs/perf_20261010-181842_48940.jsonl), [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-181838.48940), [frame 014](../../bin/flight_captures/m497_world164_water_depth_guard_ab_20261010/frame_014.png)
+- M498: [report](../../bin/suite_reports/engine_refactor/m498_world164_water_hardware_depth_reference_20261010.json), [perf](../../bin/logs/perf_20261010-182531_40832.jsonl), [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-182528.40832), [frame 014](../../bin/flight_captures/m498_world164_water_hardware_depth_reference_20261010/frame_014.png)
+- M499: [report](../../bin/suite_reports/engine_refactor/m499_world164_water_sampler_fix_20261010.json), [perf](../../bin/logs/perf_20261010-183547_46456.jsonl), [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-183542.46456), [frame 014](../../bin/flight_captures/m499_world164_water_sampler_fix_20261010/frame_014.png)
+
+Exact invocations:
+
+```powershell
+# M497: guard disabled, desktop-shell retained
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m497_world164_water_depth_guard_ab_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7440'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='1'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 8 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m497_world164_water_depth_guard_ab_20261010 --report bin/suite_reports/engine_refactor/m497_world164_water_depth_guard_ab_20261010.json --process-timeout 900
+
+# M498: guard disabled; single-pass GL_LESS is the live-depth reference
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m498_world164_water_hardware_depth_reference_20261010'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 8 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m498_world164_water_hardware_depth_reference_20261010 --report bin/suite_reports/engine_refactor/m498_world164_water_hardware_depth_reference_20261010.json --process-timeout 900
+
+# M499: post-fix, guard enabled, default desktop-shell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m499_world164_water_sampler_fix_20261010'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 8 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m499_world164_water_sampler_fix_20261010 --report bin/suite_reports/engine_refactor/m499_world164_water_sampler_fix_20261010.json --process-timeout 900
+```
+
+M497, M498, and M499 also set the capture interval and camera-X limits above;
+M499 used Release source commit `60be076b`. M500 is the full post-fix M335
+normal-view run documented below.
+
+### M500 — full M335 normal-view verification after sampler fix (2026-10-10)
+
+M500 repeated the established visible no-teleport M335 Release route on cold
+`World_164`, with the fragment marker and A/B overrides disabled. It traveled
+7,408 blocks at `5.19287` blocks/s and exited normally. The report marks the
+route and proxy adequacy as passed, but aggregate `pass=false` because of
+post-stop demand/readiness non-convergence and separate performance/scheduling
+gates.
+
+At the tail, frames 098 and 099 were captured at camera X `-7292.84`. The water
+texture was visible in both normal-view frames, with zero exact fog-navy
+`(13,38,89)` pixels. For comparison, M495 frames 097 and 098 near the same tail
+had 302,409 and 401,901 pixels of that color. The `FlightCapture` path reads
+back the default OpenGL framebuffer through a PBO before swap; these images do
+not include desktop windows composited over the game.
+
+Artifacts:
+
+- [M500 report](../../bin/suite_reports/engine_refactor/m500_world164_m335_water_sampler_fix_verify_20261010.json)
+- [M500 perf](../../bin/logs/perf_20261010-183955_49524.jsonl)
+- [M500 app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-183951.49524)
+- [M500 frame 098](../../bin/flight_captures/m500_world164_m335_water_sampler_fix_verify_20261010/frame_098.png), [frame 099](../../bin/flight_captures/m500_world164_m335_water_sampler_fix_verify_20261010/frame_099.png)
+- [M495 pre-fix frame 097](../../bin/flight_captures/m495_world164_capture_compare_20261010/frame_097.png), [frame 098](../../bin/flight_captures/m495_world164_capture_compare_20261010/frame_098.png)
+
+Exact standalone invocation:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m500_world164_m335_water_sampler_fix_verify_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='15'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FLIGHT_CAPTURE_MIN_X -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FLIGHT_CAPTURE_MAX_X -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m500_world164_m335_water_sampler_fix_verify_20261010 --report bin/suite_reports/engine_refactor/m500_world164_m335_water_sampler_fix_verify_20261010.json --process-timeout 7200
+```
+
+## M501–M503 — readiness-debt trace and stop drain (2026-10-10)
+
+These visible Release runs used the established local no-teleport tail segment
+on `World_164`, with start `(-7215,56,56)`, eye Y=70, yaw 180°, pitch -30°,
+and movement scale 1. They are diagnostic segments, not substitutes for the
+full 1,455-second M335 acceptance route.
+
+M501 used a 45-second flight, an 8-second stop phase, and 15 seconds of
+pre-flight idle. It traveled 240 blocks at `5.18555` blocks/s and exited 0.
+The final focus-slice trace contained 17 unresolved radius-4 shell slices;
+each had overlay face debt with absent peers. The last five periods had zero
+visual holes while broad unfinished/readiness counts remained 26–28.
+
+M502 was intended to test a 120-second post-flight drain, but used
+`--idle-sec 120`. That flag controls pre-flight idle; M502 therefore waited
+before flying and did not provide the intended stop-drain measurement. It still
+completed its 45-second/240-block local segment normally.
+
+M503 corrected the phase placement with a 120-second stop phase. It traveled
+240 blocks at `5.18555` blocks/s and exited 0. All 60 stop periods had zero
+`visual_holes`, but broad not-ready counts stayed near 27–28 and pending GPU
+applies ended at 11 (10 queued, 1 kicked). The aggregate report remained
+`pass=false` because the post-stop convergence gates failed.
+
+M503's demand trace recorded 519 `PriorityWorldCoreRepair` revision bumps.
+Three slices accounted for 517 of them: `(-456,1,2)` had 198, `(-456,1,3)` had
+187, and `(-456,1,4)` had 132. Every one carried peer-face debt bit 1, no
+overlay debt, and only a Dirty queue owner; the builder and GPU ownership
+fields were all zero when bumped. This identifies repeated generic repair
+admission over a stable peer dependency. The following code change broadens
+the no-owner debt guard from overlay-only to all face debt; M504 is the paired
+validation run.
+
+The previous capture X minimum was `-7440`, while M503 reached about `-7455`.
+Frames 009–011 show blue water, but the exact stopped endpoint was outside the
+capture window. The operator's end-of-run water report remains open.
+
+Artifacts:
+
+- M501: [report](../../bin/suite_reports/engine_refactor/m501_world164_tail_demand_trace_20261010.json), [perf](../../bin/logs/perf_20261010-191710_4668.jsonl), [captures](../../bin/flight_captures/m501_world164_tail_demand_trace_20261010)
+- M502: [report](../../bin/suite_reports/engine_refactor/m502_world164_tail_idle_convergence_20261010.json), [perf](../../bin/logs/perf_20261010-192745_49524.jsonl), [captures](../../bin/flight_captures/m502_world164_tail_idle_convergence_20261010)
+- M503: [report](../../bin/suite_reports/engine_refactor/m503_world164_tail_stop_drain_20261010.json), [perf](../../bin/logs/perf_20261010-193307_29392.jsonl), [frame 011](../../bin/flight_captures/m503_world164_tail_stop_drain_20261010/frame_011.png), [captures](../../bin/flight_captures/m503_world164_tail_stop_drain_20261010)
+
+M503 route and capture invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m503_world164_tail_stop_drain_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7440'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m503_world164_tail_stop_drain_20261010 --report bin/suite_reports/engine_refactor/m503_world164_tail_stop_drain_20261010.json --process-timeout 900
+```
+
+## M504 — peer-debt guard and endpoint water capture (2026-10-10)
+
+M504 used the same visible Release local segment as M503, on source commit
+`d84d7cdf` and executable SHA-256
+`e1fb46744c9d28cfe93f99a515d443e2c9f82d66b3b7cd7010903243e04b7c52`. It
+traveled 240 blocks at `5.18555` blocks/s and exited 0. The `PriorityWorldCoreRepair`
+revision-bump count fell from 519 in M503 (517 peer-debt bumps from three
+slices) to zero. All 60 stop periods had no visual-hole samples, but
+post-stop convergence still failed: pending GPU applies plateaued at 9, the
+last queue had 9 queued/0 kicked, focus not-ready was 32–33, and face debt was
+222.
+
+The capture range included the final stopped position and produced 65 frames.
+Frame 064 shows a visible blue water surface and island with no large solid
+navy patch. It contains 11 exact `(13,38,89)` pixels; this local run does not
+reproduce the end-of-run water report and does not replace the full M335 run.
+
+Artifacts:
+
+- [M504 report](../../bin/suite_reports/engine_refactor/m504_world164_tail_peer_debt_guard_20261010.json)
+- [M504 perf](../../bin/logs/perf_20261010-200051_45980.jsonl)
+- [M504 app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-200047.45980)
+- [M504 frame 064](../../bin/flight_captures/m504_world164_tail_peer_debt_guard_20261010/frame_064.png), [all captures](../../bin/flight_captures/m504_world164_tail_peer_debt_guard_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m504_world164_tail_peer_debt_guard_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7400'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m504_world164_tail_peer_debt_guard_20261010 --report bin/suite_reports/engine_refactor/m504_world164_tail_peer_debt_guard_20261010.json --process-timeout 900
+```
+
+## M505 — full M335 after the WorldCore peer-debt guard (2026-10-10)
+
+Visible Release run on cold `World_164`, the established no-teleport M335
+route: start `[120,56,56]`, eye Y=70, yaw 180°, pitch -30°, 1,455-second
+flight, 20-second stop, 15-second pre-idle. Source `d84d7cdf` (manifest SHA
+`8b16cf5a`, docs only), executable SHA-256
+`e1fb46744c9d28cfe93f99a515d443e2c9f82d66b3b7cd7010903243e04b7c52`.
+The app exited 0 and traveled 7,392 blocks at `5.19287` blocks/s. The suite
+returned `pass=false` on route/stop/performance gates.
+
+There were 740 telemetry periods (738 steady; 12 stop-idle). The full route
+had 29 periods with `visual_holes=1` and 29 with `near_focus_holes=1`, grouped
+at X ranges `-209`, `-2401`, `-2722..-2839`, `-4050..-4226`,
+`-4674..-4851`, `-5090`, `-5556..-5683`, and `-6153..-6324`. These are
+mesh-coverage proxy events. The eye-proxy corridor subrange had zero such
+samples. In the sampled hole periods, the recorded nearest witness often had a
+drawable and satisfying mesh, so it did not identify the missing slice. M505
+did not enable the expensive opt-in occupancy census; a follow-up route should
+enable it and preserve coordinate-level ownership evidence.
+
+Tail captures show a blue textured water surface, including stopped frame 018;
+fluid draw calls were recorded near the tail. This framebuffer readback did
+not reproduce the reported water defect. The operator-visible result remains
+open because the previous capture comparison showed that framebuffer readback
+and desktop-composited window images can differ. Do not use these captures as
+proof that the user's reported water appearance was false.
+
+At stop, `visual_holes=0` and mesh-missing max was 0, while not-ready debt
+remained 23 and pending-light idle debt was 32; convergence failed. Flight
+median wall time was 24.59 ms, mesh-emerge median 5.34 ms, 153
+emergence-classified spikes were counted, and maximum spike wall time was
+878.321 ms. Route completion and proxy adequacy passed; 11 other route gates
+and three stop gates failed.
+
+Artifacts:
+
+- [M505 report](../../bin/suite_reports/engine_refactor/m505_world164_m335_peer_debt_fix_tail_20261010.json)
+- [M505 perf log](../../bin/logs/perf_20261010-200703_28216.jsonl)
+- [M505 app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-200659.28216)
+- [M505 final stopped frame](../../bin/flight_captures/m505_world164_m335_peer_debt_fix_tail_20261010/frame_018.png), [captures](../../bin/flight_captures/m505_world164_m335_peer_debt_fix_tail_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m505_world164_m335_peer_debt_fix_tail_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7440'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m505_world164_m335_peer_debt_fix_tail_20261010 --report bin/suite_reports/engine_refactor/m505_world164_m335_peer_debt_fix_tail_20261010.json --process-timeout 7200
+```
+
+## M506–M507 — coordinator peer-debt retry guard (2026-10-10)
+
+These visible Release runs repeat the established local no-teleport tail
+segment on cold `World_164`: start `[-7215,56,56]`, eye Y=70, yaw 180°,
+pitch -30°, 45-second flight, 120-second stop, and 15-second pre-idle. Both
+traveled 240 blocks at `5.18555` blocks/s and the application process exited 0.
+The suite `pass=false` reflects separate readiness/scheduling/frame-time gates.
+
+M506 used source `c36c935e`, executable SHA-256
+`c0d67eb4fb3ce15f85bba622496653be69dcba43ec9e520d76b4a8a9d8fc6406`. Its
+trace contained 276 `PriorityChunkEmergeRepair` revision bumps, 231 with
+peer-only face debt. The first shared guard covered only one coordinator
+producer and did not fix the loop.
+
+M507 used source `2e6ce770`, executable SHA-256
+`b0308dd3bce71a04c6c7aebbd38620ef5da84df67c1d335e73b9a09e3e5921ca`. The
+trace contained 41 `PriorityChunkEmergeRepair` bumps and zero peer-only face
+debt bumps; all remaining 41 had `face_debt_mask=0`. `PriorityWorldCoreRepair`
+bumps fell from 5 to 1. This confirms the shared guard stops the measured
+stable peer-debt loop while leaving other repair requests eligible.
+
+Both runs had a clear stop-period mesh-hole proxy, but did not converge
+readiness: M506 ended with not-ready 28 and pending-light idle debt 17; M507
+ended with not-ready 34 and pending-light idle debt 10. M507's final
+framebuffer readback shows a blue water surface and island. It does not settle
+the difference previously reported between captures and the live game window.
+
+Artifacts:
+
+- M506 [report](../../bin/suite_reports/engine_refactor/m506_world164_tail_peer_debt_coordinator_guard_20261010.json), [perf](../../bin/logs/perf_20261010-205702_21272.jsonl), [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-205658.21272), [captures](../../bin/flight_captures/m506_world164_tail_peer_debt_coordinator_guard_20261010)
+- M507 [report](../../bin/suite_reports/engine_refactor/m507_world164_tail_all_peer_debt_guard_20261010.json), [perf](../../bin/logs/perf_20261010-210919_41640.jsonl), [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-210916.41640), [frame 064](../../bin/flight_captures/m507_world164_tail_all_peer_debt_guard_20261010/frame_064.png), [captures](../../bin/flight_captures/m507_world164_tail_all_peer_debt_guard_20261010)
+
+Exact M506 invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m506_world164_tail_peer_debt_coordinator_guard_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7400'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7400'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m506_world164_tail_peer_debt_coordinator_guard_20261010 --report bin/suite_reports/engine_refactor/m506_world164_tail_peer_debt_coordinator_guard_20261010.json --process-timeout 900
+```
+
+Exact M507 invocation (same flight settings, new source build and artifact
+directory):
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m507_world164_tail_all_peer_debt_guard_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7400'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7400'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m507_world164_tail_all_peer_debt_guard_20261010 --report bin/suite_reports/engine_refactor/m507_world164_tail_all_peer_debt_guard_20261010.json --process-timeout 900
+```
+
+### M508 — full M335 occupancy and framebuffer probe (2026-10-10)
+
+Cold, visible, no-teleport `World_164` M335 route on Release source
+`e900af9e`, executable SHA-256
+`b0308dd3bce71a04c6c7aebbd38620ef5da84df67c1d335e73b9a09e3e5921ca`.
+Route: start `120 56 56`, eye Y=70, yaw 180, pitch -30, 1,455 s flight,
+20 s stop, 15 s idle, minimum travel 6,400 blocks. GUI remained visible.
+Captures covered the full route every 10 seconds. Pixel/framebuffer probes and
+fluid-render telemetry were enabled; debug fragment markers and altered
+transparent/depth-guard modes were unset. The high-volume pixel trace produced
+a 1.18 GB perf JSONL; the next targeted probe should set
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X/MAX_X`.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m508_world164_m335_occupancy_census_20261010.json)
+- [perf JSONL, 1.18 GB](../../bin/logs/perf_20261010-211737_40528.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-211732.40528)
+- [149 captures](../../bin/flight_captures/m508_world164_m335_occupancy_census_20261010)
+- [last stopped frame 148](../../bin/flight_captures/m508_world164_m335_occupancy_census_20261010/frame_148.png)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m508_world164_m335_occupancy_census_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='10'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m508_world164_m335_occupancy_census_20261010 --report bin/suite_reports/engine_refactor/m508_world164_m335_occupancy_census_20261010.json --process-timeout 7200
+```
+
+The perf JSONL contains 112,540 direct framebuffer pixel probes and 9,475
+screen-ray candidate rows. M508's analyzer passed route execution but failed
+performance, readiness, scheduling, and stop-recovery gates. Keep the report's
+metric semantics with the artifacts: `visual_holes` is a near-focus
+mesh-coverage proxy; legacy `holes_rate` is readiness debt.
+
+### M509 — bounded GPU-range replay at the M508 hotspot (2026-10-10)
+
+Visible, local, no-teleport Release diagnostic on `World_164`, source
+`ca6a56aa`, executable SHA-256
+`b0308dd3bce71a04c6c7aebbd38620ef5da84df67c1d335e73b9a09e3e5921ca`.
+Start `-5500 56 56`, eye Y=70, yaw 180, pitch -30, 45 s flight, 20 s stop,
+15 s idle, minimum travel 150 blocks. The route completed 224 blocks at about
+5 blocks/s; process exit was 0 and run outcome was success. The local analyzer
+failed its strict visual, readiness, scheduling, and stop-convergence gates.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m509_world164_hotspot_gpu_range_witness_20261010.json)
+- [perf JSONL, about 161 MB](../../bin/logs/perf_20261010-220058_40188.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-220052.40188)
+- [40 captures](../../bin/flight_captures/m509_world164_hotspot_gpu_range_witness_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-5750'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-5480'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m509_world164_hotspot_gpu_range_witness_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-5750'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-5480'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -5500 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m509_world164_hotspot_gpu_range_witness_20261010 --report bin/suite_reports/engine_refactor/m509_world164_hotspot_gpu_range_witness_20261010.json --process-timeout 900
+```
+
+The report recorded 40 periods, 38 steady periods, 4 visual-hole-proxy
+periods, and readiness debt 1.0. The 4 GPU-range witnessed pixel gaps all
+traced to tree-log source triangles with ready textures and matching pooled
+GPU command/index/vertex data. Their exact same-frame draw-state join was
+missing, so this run narrows the problem to the draw/submission/raster boundary
+without identifying the failure. `World_164` and `bin/config.json` both select
+`minetest_default_16`; its tree side/top textures have alpha 255 throughout,
+so alpha cutout is not a plausible cause for these four samples. M509 did not
+cover the ocean endpoint and therefore does not settle the user's latest water
+report. The run is diagnostic, not a clean performance baseline.
+
+### M510 — same-frame MDI draw-state witness at hotspot (2026-10-10)
+
+Visible local no-teleport Release diagnostic on `World_164`, source
+`4350f0af`, executable SHA-256
+`EDAA57E843974A260492F91EA9AA5868AE61E5A025317FF243A82DFAE34B2DEA`.
+Start `-5500 56 56`, eye Y=70, yaw 180, pitch -30; 45 s flight, 20 s stop,
+15 s idle, and minimum travel 150 blocks. It completed 224 blocks at the
+established `5.18555 blocks/s`; application exit was 0 and route outcome was
+success. The strict analyzer still failed performance, scheduling, and
+stop-recovery gates.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m510_world164_hotspot_same_frame_draw_state_20261010.json)
+- [perf JSONL, 164.6 MB](../../bin/logs/perf_20261010-222920_46396.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-222916.46396)
+- [40 captures](../../bin/flight_captures/m510_world164_hotspot_same_frame_draw_state_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-5750'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-5480'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m510_world164_hotspot_same_frame_draw_state_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-5750'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-5480'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -5500 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m510_world164_hotspot_same_frame_draw_state_20261010 --report bin/suite_reports/engine_refactor/m510_world164_hotspot_same_frame_draw_state_20261010.json --process-timeout 900
+```
+
+Six pixel rows had a source-mesh-to-depth gap: five hit `tree_log` block 573,
+one hit block 549 and matched a fluid triangle. All five tree-log rows had a
+same-frame nested draw-state witness with `matched=1`, `submitted=1`, GPU MDI
+path, depth test/write enabled, `GL_LESS`, culling/scissor/stencil/discard
+disabled, and framebuffer 0 with viewport 1280×720. For those same five,
+the GPU command, indices, and vertex positions matched the CPU source. This
+rules out a missing or stale mesh range and disabled depth state for the
+sampled rows; it does not establish fragment coverage or actual sampled atlas
+alpha. The analyzer's visual-hole proxy rate was 3/38 (0.07895), readiness
+debt 1.0, and near-black proxy rate 0. Water was outside this local segment.
+
+### M511 — water endpoint direct framebuffer probe (2026-10-10)
+
+Visible local no-teleport Release diagnostic on `World_164`, source `4350f0af`,
+executable SHA-256
+`EDAA57E843974A260492F91EA9AA5868AE61E5A025317FF243A82DFAE34B2DEA`.
+Start `-7215 56 56`, eye Y=70, yaw 180, pitch -30; 45 s flight, 20 s stop,
+15 s idle, minimum travel 150 blocks. It passed route adequacy at
+`5.18555 blocks/s` and 240 blocks of travel. Process exit was 0; the analyzer
+returned 1 because strict eye-proxy/readiness and other product gates failed.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m511_world164_water_endpoint_pixel_probe_20261010.json)
+- [perf JSONL, 147.5 MiB](../../bin/logs/perf_20261010-224031_3928.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-224027.3928)
+- [captures](../../bin/flight_captures/m511_world164_water_endpoint_pixel_probe_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7445'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7445'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m511_world164_water_endpoint_pixel_probe_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7445'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m511_world164_water_endpoint_pixel_probe_20261010 --report bin/suite_reports/engine_refactor/m511_world164_water_endpoint_pixel_probe_20261010.json --process-timeout 900
+```
+
+The trace contained 13,624 direct pixel rows; 1,788 intersected fluid block
+575 triangles and 1,782 of those changed color after the transparent stage.
+At the last pixel-probed flight position, camera X `-7442`, 57/100 samples
+hit fluid geometry and all 57 changed color. Fluid submissions at that
+position were 105 total (35 shell-depth, 70 color). The configured diagnostic
+minimum was `-7445`, while the post-flight camera ended at `-7448`; values
+outside the bound are not measurements. Extend the same bounds for the next
+run to include the post-stop endpoint.
+
+### M512 — water endpoint post-stop direct framebuffer probe (2026-10-10)
+
+Visible local no-teleport Release replay of M511 on `World_164`, source
+`4350f0af`, executable SHA-256
+`EDAA57E843974A260492F91EA9AA5868AE61E5A025317FF243A82DFAE34B2DEA`.
+Camera profile and phases were unchanged; only the diagnostic and capture X
+bounds were extended to `[-7500,-7190]`. It passed route adequacy at
+`5.18555 blocks/s` over 240 blocks; process exit was 0. The strict product
+analyzer returned 1 on readiness, eye-proxy, performance, and stop-recovery
+gates.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m512_world164_water_endpoint_poststop_20261010.json)
+- [perf JSONL, 164.8 MiB](../../bin/logs/perf_20261010-224706_27008.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-224702.27008)
+- [40 captures](../../bin/flight_captures/m512_world164_water_endpoint_poststop_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m512_world164_water_endpoint_poststop_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m512_world164_water_endpoint_poststop_20261010 --report bin/suite_reports/engine_refactor/m512_world164_water_endpoint_poststop_20261010.json --process-timeout 900
+```
+
+At camera X `-7448`, the 15,608-row bounded trace had 2,094 pixel rows; 340
+intersected fluid block `575` triangles. Ten repeated probes each reported
+the same 34 water-covered sample positions, and every matched sample changed
+color after transparency. The adjacent period rows at player X `-7447` showed
+98 fluid refs / 3,216 indices and 132 fluid submissions (44 shell-depth,
+88 color). Across the full capture, 2,550 pixel rows matched fluid triangles
+and 2,534 changed color. Seven of the 34 terminal sample positions varied by
+one low-order color step between probes; the active resource pack defines
+water as a four-frame animation at six ticks per frame, consistent with that
+small variation. The direct readback did not reproduce a missing surface;
+these engine-buffer metrics do not establish that the desktop image matched
+the user-visible symptom.
+
+## M513–M519 — camera-space ray witness and framebuffer-pair capture (2026-10-10–11)
+
+These were bounded, visible, no-teleport Release flights on the established
+`World_164` `product-174657-far` profile. The route was held constant: start
+`-5500 56 56`, eye Y=70, yaw 180°, pitch −30°, 45 s fly, 20 s stop, 15 s
+idle, minimum travel 150 blocks. Actual movement remained `5.18555 blocks/s`
+and covered 224 blocks. Diagnostics/captures were bounded to camera X
+`[-5750,-5480]`. The application process completed successfully; the strict
+product analyzer returned 1 on readiness/eye-proxy/performance gates.
+
+The sequence was intended to locate a reported source-mesh-to-depth gap:
+
+- [M513 report](../../bin/suite_reports/engine_refactor/m513_world164_hotspot_mvp_vao_texture_alpha_20261010.json), [perf log](../../bin/logs/perf_20261010-231257_24048.jsonl): two block-573 rows. GPU command/index/vertex payload matched the source; VAO layout and MVP matched, alpha was 255, and cutout was enabled.
+- [M514 report](../../bin/suite_reports/engine_refactor/m514_world164_hotspot_screen_projection_20261010.json), [perf log](../../bin/logs/perf_20261010-232440_34060.jsonl): three block-573 rows. Projected hits sat about 0.3–1.8 pixels from the sample, which was taken as evidence that the source surface should cover it.
+- [M515 report](../../bin/suite_reports/engine_refactor/m515_world164_nearplane_ray_alignment_20261010.json), [perf log](../../bin/logs/perf_20261010-232950_47712.jsonl): four rows remained after moving the ray origin to the inverse-VP near plane; over 2,611 projected ray rows, screen delta p50 was ~1.03 px, p95 ~3.69 px, max ~6.03 px.
+- [M516 report](../../bin/suite_reports/engine_refactor/m516_world164_ray_origin_direction_20261010.json), [perf log](../../bin/logs/perf_20261010-233954_37952.jsonl): added projection of the near-plane origin and a point along the ray. Six gap rows across four pixels exposed up to ~3.5 px round-trip error in `inverse(Projection * View)` near-plane reconstruction at world X around −5,600.
+- [M517 report](../../bin/suite_reports/engine_refactor/m517_world164_camera_space_ray_20261010.json), [perf log](../../bin/logs/perf_20261010-234640_28224.jsonl): built ray direction in view space and camera origin from inverse view. There were 13,903 pixel-probe rows, 2,205 source mesh intersections, and zero `mesh_ray_gap` rows. Projected hit delta for intersections was p50 0.005 px, p95 0.018 px, max 0.129 px.
+
+M513–M517 correspond to diagnostic commits `bb9adb3f`, `43a86538`,
+`02fcd01d`, `d0567510`, and `d712b9b3`. M515/M516 demonstrate why the earlier
+CPU-ray gaps, including M508's four face-gap candidates and M509/M510's
+source-triangle associations, were not reliable proof of a rendering fault:
+converting an inverse-VP near-plane point back to single-precision world
+coordinates at a large world offset caused a measurable screen shift. The same
+pixel-attribution caveat applies to M508–M512's fluid-triangle hit counts;
+their color readbacks and fluid submission counters remain valid, and M518
+repeated the endpoint with the corrected ray. M517 only corrected the
+diagnostic witness; it made no change to mesh generation, streaming, GPU draw
+submission, or water rendering. Since M517 left zero corrected-ray gap rows,
+repeat M510's same-frame GPU-range/alpha witness only if a corrected-ray run or
+operator observation reproduces an actual pixel mismatch.
+
+Readiness metrics stayed red in all six reports. They remain readiness and
+coverage signals, not direct black framebuffer pixels. The most recent report
+also had `post_stop_mesh_missing_max=0` and `post_stop_visual_holes_rate=0`
+alongside `readiness_debt_rate=0.842` and `post_stop_effective_holes_rate=1`.
+The operator's report that water looked corrupted at the end of a visible run
+remains open despite the endpoint repetitions in M512 and M518.
+
+### M518 — corrected-ray water endpoint repeat
+
+M518 repeated the M512 visible/no-teleport ocean route from `-7215 56 56` with
+the same camera/speed/phase settings and expanded bounds `[-7500,-7190]`. It
+used the M517 camera-space ray and enabled `CUBA_FLUID_RENDER_TRACE`. The
+route passed adequacy at `5.18555 blocks/s` over 240 blocks; process exit was 0.
+The product analyzer returned 1 because readiness, eye-proxy, and performance
+gates remained open. Manifest source commit is `c841b824` (documentation-only
+change after the build); the Release EXE hash is identical to M517's build,
+`eaa8dc7bf996f01b9d57dd50fa31d8b21a84ce1bd91ca86535c0987884b15452`, and the
+manifest's tracked diff hash is clean.
+
+At post-stop camera X `-7448.21`, each of 11 pixel probes found the same 36
+sample positions intersecting fluid block `575`: 396/396 fluid-triangle hits
+changed the selected framebuffer color after the transparent pass. Period telemetry
+at focus chunk `-466` reported 94 fluid refs, 2,982 source indices, and 75
+fluid draw calls (25 shell-depth + 50 color-pass submissions). The readiness
+report still has `readiness_debt_rate=1`, while `visible_black_focus_n=0`,
+`post_stop_mesh_missing_max=0`, and `post_stop_visual_holes_rate=0`.
+
+The application capture is a full `GL_BACK` readback queued before
+`glfwSwapBuffers`, completed from a PBO, then written as PNG by
+`UFlightCaptureService`; it is not a desktop screenshot. [M518 frame 038](../../bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010/frame_038.png)
+was queued at camera X `-7448.21` and shows the water plane in the lower scene.
+This means complete water-surface loss did not reproduce in that framebuffer
+view. It does not resolve the operator's report of corrupted appearance because
+the observation's exact pixels/visual characteristic are unknown and these
+selected samples do not characterize every water pixel or animation frame. The
+operator previously saw foreign application text in some saved frames; their
+capture provenance is unresolved and should not be attributed to this internal
+`GL_BACK` PNG path without checking those specific files.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m518_world164_camera_space_water_endpoint_20261010.json)
+- [perf JSONL](../../bin/logs/perf_20261010-235410_47764.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-235406.47764)
+- [endpoint frame 038](../../bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010/frame_038.png)
+- [all flight captures](../../bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010)
+
+### M519 — compare GL_BACK before swap with GL_FRONT after swap
+
+M519 repeated M518's visible/no-teleport `World_164` route and capture bounds,
+with the same start, camera, speed, and phase durations. The Release app exited
+0 and completed the 240-block route at `5.18555 blocks/s`; the strict product
+analyzer returned `pass=false` on readiness/performance gates. A24 safety and
+the post-stop visual-hole proxy passed, while readiness debt remained 1.0
+(35 post-stop) and the eye-proxy gate remained open. This diagnostic run is
+not an acceptance or clean performance baseline.
+
+The new opt-in `CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP=1` path paired each
+pre-swap `GL_BACK` readback with a `GL_FRONT` readback immediately after
+`glfwSwapBuffers`. All 40 available pairs at 1280×720 had identical decoded
+RGBA pixels, including the endpoint frames. The endpoint water surface is
+visible in both buffers. This rules out a difference between the application's
+pre-swap back buffer and its post-swap front buffer for these sampled frames;
+it does not capture desktop composition or prove what was visible through the
+monitor/compositor.
+
+There are eight `renderer_pixel_voxel_ray_gap` rows among 4,840 M519 pixel
+probes. All eight hit sand (`549`) behind a transparent-fluid candidate and
+reported `renderer_pixel_voxel_mesh_ray_gap=0`. Six mapped exactly to a nearby
+water top-face triangle (`575`); two more had a nearest top-face point within
+0.5 blocks but did not pass the exact-match threshold. All eight final RGBA
+samples differed from their pre-transparent values. The gap flag compares the
+voxel ray with depth captured before transparent rendering, so these rows are
+not proof of missing opaque geometry or empty pixels. The two non-exact fluid
+associations still need a sample-aligned transparent-coverage witness.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m519_world164_front_back_water_endpoint_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-001535_47980.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-001531.47980)
+- [endpoint GL_BACK frame 039](../../bin/flight_captures/m519_world164_front_back_water_endpoint_20261011/frame_039.png)
+- [endpoint GL_FRONT frame 039](../../bin/flight_captures/m519_world164_front_back_water_endpoint_20261011/frame_039_front.png)
+
+Diagnostic commits: code `d4ad0f8f` (Release EXE SHA-256
+`b2e218b486493973841201392f504df9099c18ffed3869a2f29051aed106a57f`),
+documentation `857e3ce0` qualifies the M508–M512 ray-attribution claims.
+
+### Exact M519 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m519_world164_front_back_water_endpoint_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m519_world164_front_back_water_endpoint_20261011 --report bin/suite_reports/engine_refactor/m519_world164_front_back_water_endpoint_20261011.json --process-timeout 900
+```
+
+### M520 — repeat the endpoint route and inspect the long-flight symptom coordinate
+
+M520 repeated the same 240-block route and conditions after commit `6313bab8`.
+The app exited 0 and all 40 `GL_BACK`/`GL_FRONT` pairs matched pixel-for-pixel.
+At `frame_013`, camera X was `−7273.60`, near M495's navy-water symptom; the
+frame still shows textured water across the lower view. Endpoint `frame_039`
+at X=`−7447.94` also shows water. This short flight began directly at X=`−7215`
+and does not reproduce the long M335 streaming history, so it does not close
+the intermittent long-flight issue. The analyzer returned `pass=false` on
+readiness/performance and post-stop convergence gates, with zero near-focus
+mesh-hole proxy; those gates are not a water-pixel verdict.
+
+A Windows Graphics Capture attempt missed the live window: it closed between
+window enumeration and capture (`window id not found`). M520 therefore has no
+independent live-window/desktop capture.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m520_world164_window_capture_endpoint_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-004014_48064.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-004010.48064)
+- [symptom-coordinate GL_BACK frame 013](../../bin/flight_captures/m520_world164_window_capture_endpoint_20261011/frame_013.png)
+- [endpoint GL_BACK frame 039](../../bin/flight_captures/m520_world164_window_capture_endpoint_20261011/frame_039.png)
+
+### Exact M520 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m520_world164_window_capture_endpoint_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m520_world164_window_capture_endpoint_20261011 --report bin/suite_reports/engine_refactor/m520_world164_window_capture_endpoint_20261011.json --process-timeout 900
+```
+
+### M521 — retry live-window capture on the endpoint route
+
+M521 used the same Release binary, 240-block route, tracing bounds, 2-second
+paired framebuffer captures, and normal transparent pipeline as M520. The
+route exited 0. All 40 `GL_BACK`/`GL_FRONT` pairs matched pixel-for-pixel;
+`frame_013` at camera X=`−7273.60` and endpoint `frame_039` at
+X=`−7447.94` show textured water in the lower view. The analyzer returned
+`pass=false`: readiness debt was 45 after stop and one of 38 steady periods
+had `visual_holes=1`; the longest proxy run was one period, and the post-stop
+mesh-missing and visual-hole proxies were both zero. This proxy is not a
+water-specific pixel finding.
+
+An independent app-window capture was attempted while the visible window was
+running. `get_window_state` first returned `FrameArrived timed out`; after
+refreshing the returned window, `get_window` returned `window id not found`.
+No live-window or desktop image was obtained. This is a capture-tool failure,
+not a run failure.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m521_world164_live_window_endpoint_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-005215_4740.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-005212.4740)
+- [symptom-coordinate GL_BACK frame 013](../../bin/flight_captures/m521_world164_live_window_endpoint_20261011/frame_013.png)
+- [endpoint GL_BACK frame 039](../../bin/flight_captures/m521_world164_live_window_endpoint_20261011/frame_039.png)
+
+Exact environment and route were the same as M520, with the following
+phase/report/capture paths:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m521_world164_live_window_endpoint_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m521_world164_live_window_endpoint_20261011 --report bin/suite_reports/engine_refactor/m521_world164_live_window_endpoint_20261011.json --process-timeout 900
+```
+
+### Exact M518 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m518_world164_camera_space_water_endpoint_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m518_world164_camera_space_water_endpoint_20261010 --report bin/suite_reports/engine_refactor/m518_world164_camera_space_water_endpoint_20261010.json --process-timeout 900
+```
+
+### Exact M516 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-5750'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-5480'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m516_world164_ray_origin_direction_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-5750'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-5480'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -5500 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m516_world164_ray_origin_direction_20261010 --report bin/suite_reports/engine_refactor/m516_world164_ray_origin_direction_20261010.json --process-timeout 900
+```
+
+### Exact M517 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-5750'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-5480'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m517_world164_camera_space_ray_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-5750'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-5480'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -5500 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m517_world164_camera_space_ray_20261010 --report bin/suite_reports/engine_refactor/m517_world164_camera_space_ray_20261010.json --process-timeout 900
+```
+
+Artifacts:
+
+- M516 captures: `bin/flight_captures/m516_world164_ray_origin_direction_20261010`
+- M517 captures: `bin/flight_captures/m517_world164_camera_space_ray_20261010`
+- M518 captures: `bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010`
+- M516 manifest: clean Release, commit `d0567510`, EXE SHA-256 `541475ac68d4552c880b323b5d6a4df22278177b22f892616272e725868540f0`
+- M517 manifest: clean Release, commit `d712b9b3`, EXE SHA-256 `eaa8dc7bf996f01b9d57dd50fa31d8b21a84ce1bd91ca86535c0987884b15452`
+
+### M522 — повтор M335 после сообщения о порче воды (2026-10-11)
+
+M522 выполнил полный маршрут `World_164` без teleport на том же Release EXE
+(SHA-256 `d78da45f4d1dc8ec60dc77c533f594f461c45bcca806bd05813004fa9739648d`).
+Старт `(120,56,56)`, eye Y=70, yaw=180°, pitch=−30°, движение 1455 секунд,
+остановка 20 секунд и idle 15 секунд. Камера прошла 7 456 блоков; приложение
+завершилось штатно (`process_rc=0`, `hang_killed=false`), маршрутный gate
+прошёл. Строгий analyzer вернул `pass=false` по readiness/performance и
+post-stop convergence: из 40 общих gate прошли 31, из 13 stop-gate прошли 9.
+Это не свидетельство пропажи воды: mesh/near-focus счётчики в этом отчёте —
+прокси, а не оценка water pixels.
+
+В capture window попали 24 кадра между X=`−7190,08` и `−7334,41`; каждая
+пара `GL_BACK`/`GL_FRONT` полностью совпадает по RGBA. Кадры `007`–`010` около
+X=`−7263…−7294` показывают синюю текстурированную воду в нижней части сцены,
+и в них нет точного fog-navy цвета M495 `(13,38,89)`. В конечных кадрах
+`014` и `023` вода также видна; в каждом из этих кадров navy цвет занимает
+3 пикселя из 921 600. Для сравнения: M495 имел 302 409 и 401 901 таких пикселей в кадрах
+`097`/`098`, тогда как M500 и M522 около симптомной координаты имеют ноль.
+Большой navy-регион, связанный с прежним sampler alias, в этом долгом маршруте
+не воспроизвёлся.
+
+После фикса analyzer семантика `eye_proxy` уточнена на том же JSONL. Поле
+`mesh_apply_stale_visual` — cumulative count с начала процесса; его mid-corridor
+median `15` не является churn rate и больше не применяется как gate. Точное
+`mesh_apply_stale_delta` дало median `2` на семи выбранных periods при пороге
+`1,5`, поэтому остаётся сигнал stale-apply активности без hole proxy. Тестовый
+synthetic counter fixture подтверждает, что рост cumulative total сам по себе
+не проваливает gate, а повышенный interval delta — проваливает. В отчёте M522
+сохранены первоначальные поля старой версии analyzer; новые вычисленные поля
+можно получить повторным вызовом `compute_eye_proxy_stop_line` для того же
+perf JSONL.
+
+Это не закрывает новое сообщение оператора о «испорченной» воде у конца
+пролёта. M522 сохранил внутренние app framebuffer, но не получил независимый
+desktop/window frame во время активной сцены. Предыдущие попытки M520/M521
+потеряли окно до получения снимка. В кадрах заметны туманные силуэты дальних
+объектов, но их наличие само по себе не классифицируется как потеря водной
+поверхности. Повтор M335 стоит делать после подготовки live-window capture,
+чтобы тот же видимый момент сравнивался между окном и app framebuffer.
+
+Артефакты:
+
+- [report](../../bin/suite_reports/engine_refactor/m522_world164_m335_water_recurrence_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-010343_23224.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-010340.23224)
+- [symptom coordinate frame 008](../../bin/flight_captures/m522_world164_m335_water_recurrence_20261011/frame_008.png)
+- [endpoint frame 023](../../bin/flight_captures/m522_world164_m335_water_recurrence_20261011/frame_023.png)
+- [capture directory](../../bin/flight_captures/m522_world164_m335_water_recurrence_20261011)
+
+### Exact M522 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m522_world164_m335_water_recurrence_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m522_world164_m335_water_recurrence_20261011 --report bin/suite_reports/engine_refactor/m522_world164_m335_water_recurrence_20261011.json --process-timeout 7200
+```
+
+### M523 — M335 повтор и проверка расхождения окна с framebuffer (2026-10-11)
+
+M523 повторил тот же видимый/no-teleport маршрут `World_164` на том же Release
+EXE (SHA-256 `d78da45f4d1dc8ec60dc77c533f594f461c45bcca806bd05813004fa9739648d`).
+Камера прошла 7 456 блоков, приложение завершилось штатно, маршрутный gate
+прошёл. Скорость полёта — около 5,2 блока/с, `effective_fps_fly=47,10`,
+`wall_ms_fly_med=21,23`. Строгий общий analyzer вернул `pass=false` (32/40 общих
+gate и 7/13 stop-gate); post-stop convergence не прошёл. При этом
+`post_stop_mesh_missing_max=0`, `post_stop_visual_holes_rate=0`, readiness debt
+max `34`, а near-focus holes proxy пересёкся в 20 периодах по всему маршруту,
+но в corridor — в 0. Эти сигналы не являются water-pixel измерением.
+
+Получено 24 пары `GL_BACK`/`GL_FRONT`, все пары совпали по RGBA. В кадрах у
+прежней symptom-coordinate (`frame_008`/`009`) точный navy цвет M495 отсутствует;
+в проверенных endpoint `frame_014`/`023` он занимает по 1 пикселю из 921 600.
+В обоих кадрах видна синяя текстурированная вода. Значит, известный большой
+fog-navy участок повторно не проявился в app framebuffer. Это не опровергает
+операторское наблюдение: независимый снимок окна не получен. Во время активного
+пролёта CUA возвращал `apps=[]`; `cua.listWindows` и `cua.listApps` в данном
+сеансе не доступны, хотя у процесса игры было видимое окно.
+
+M523 стартовал на commit `561a1c47` в 01:35, затем в 01:41 был закоммичен
+analyzer fix `33eb149a`, пока полёт продолжался. Итоговый отчёт записал
+`run_manifest.git_sha=33eb149a`, то есть HEAD во время позднего annotation, а не
+код scorer, загруженный в начале. Его eye-proxy поля поэтому пересчитаны новой
+версией вручную: cumulative `mesh_apply_stale_visual` median `16` не является
+rate; точный `mesh_apply_stale_delta` median равен `3` на семи mid-corridor
+samples при пороге `1,5`, `near_focus_holes=0`, `visual_holes=0`. Eye-proxy
+остаётся FAIL по реальной stale-apply активности без hole proxy, а не из-за
+cumulative total. В последующем run manifest теперь будет сохранять исходные
+git/dirty identity и SHA-256 runner/analyzer до старта, отдельно от HEAD во
+время генерации отчёта.
+
+Артефакты:
+
+- [report](../../bin/suite_reports/engine_refactor/m523_world164_m335_live_window_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-013509_5384.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-013505.5384)
+- [symptom coordinate frame 008](../../bin/flight_captures/m523_world164_m335_live_window_20261011/frame_008.png)
+- [endpoint frame 023](../../bin/flight_captures/m523_world164_m335_live_window_20261011/frame_023.png)
+- [capture directory](../../bin/flight_captures/m523_world164_m335_live_window_20261011)
+
+### Exact M523 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m523_world164_m335_live_window_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m523_world164_m335_live_window_20261011 --report bin/suite_reports/engine_refactor/m523_world164_m335_live_window_20261011.json --process-timeout 7200
+```
+
+### M524 — полный M335 и проверка исходной identity в manifest (2026-10-11)
+
+Полный visible/no-teleport M335 на `World_164`, Release EXE SHA-256
+`d78da45f4d1dc8ec60dc77c533f594f461c45bcca806bd05813004fa9739648d`.
+Маршрут прошёл 7 408 блоков, `process_rc=0`; source SHA на старте совпал с
+SHA при создании отчёта (`05bcfe3e`, clean). Manifest зафиксировал SHA runner,
+analyzer, helper, EXE и точные route параметры. Незаданный `resolution` —
+единственное пустое поле из списка `manifest_required_empty`.
+
+Analyzer: 32/40 общих и 7/13 stop-gates, итоговый `pass=false`; это диагностический
+прогон, не visual acceptance. В corridor `focus_cx=-410…-456` 82/83 валидных
+census samples имели 121 drawable/satisfying camera-band solid slice и 0
+camera-band no-drawable. За пределами corridor были transient camera-band
+misses; на `frame_epoch=45506`, `focus_cx=-299` пик составил 14 no-drawable
+срезов, 12 без mesh-work owner. У последних оставались relight owner flags,
+но отсутствовали mesh queue entry/ColumnFlow ticket. Водный pixel window
+`X=-7500…-7190` не покрывал этот пик при `X≈-4769`, поэтому точной экранной
+привязки M524 нет.
+
+Артефакты:
+
+- [report](../../bin/suite_reports/engine_refactor/m524_world164_m335_manifest_debt_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-103048_5752.jsonl)
+- [capture directory](../../bin/flight_captures/m524_world164_m335_manifest_debt_20261011)
+
+#### Exact M524 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m524_world164_m335_manifest_debt_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m524_world164_m335_manifest_debt_20261011 --report bin/suite_reports/engine_refactor/m524_world164_m335_manifest_debt_20261011.json --process-timeout 7200
+```
+
+### M525 — secondary new-world smoke and short visible flight (2026-10-11)
+
+Created and retained seed `3650471311` as `bin/worlds/CI_3650471311` with the
+Release executable. Worldgen succeeded with 788 chunk files and spawn Y
+`51.12`. Then the visible no-teleport route passed 912 blocks (minimum 700) at
+`5.20 blocks/s`, with normal process exit. This is a short cold-world screen,
+not a substitute for M335. Analyzer remained red: readiness debt 34 after
+stop, one near-focus-hole proxy period, and post-stop convergence failed;
+post-stop mesh-missing and visual-hole proxies were both zero.
+
+The run manifest had a matching clean source identity at start and report
+generation (`05bcfe3e`) and the same Release EXE hash as M524. No source build
+was needed. The fixed-day wrapper restored the newly created world's original
+metadata byte-for-byte.
+
+Artifacts:
+
+- [worldgen report](../../bin/create_world_3650471311.json)
+- [flight report](../../bin/suite_reports/engine_refactor/m525_ci3650471311_newworld_short_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-110019_42492.jsonl)
+
+#### Exact M525 invocations
+
+```powershell
+python tools/integration_test_worldgen.py --seeds 3650471311 --radius-chunks 5 --keep-worlds --skip-determinism --smoke
+python tools/flight_sim_fixed_day.py --world CI_3650471311 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 180 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 700 --phase-id m525_ci3650471311_newworld_short_20261011 --report bin/suite_reports/engine_refactor/m525_ci3650471311_newworld_short_20261011.json --process-timeout 1800
+```
+
+### M526 — targeted camera-band and paired ray/pixel trace (2026-10-11)
+
+This was a continuous no-teleport run from the standard M335 start, on the same
+Release EXE and `World_164`, ending after 5 024 blocks (minimum 4 500). It
+focused framebuffer and screen-ray probes on world X `-4800…-4700`, covering
+the M524 ownerless-slice peak near `X=-4769`. `process_rc=0`; configured flight
+speed remained about `5.20 blocks/s`. Eleven captured `GL_BACK`/`GL_FRONT`
+frame pairs were byte-identical. World metadata was restored to its pre-run
+SHA-256 `0ade4041…d344`.
+
+At `focus_cx=-302` one period had two solid camera-band slices without drawable
+mesh and `near_focus_holes=1`; its next same-focus sample was clear. The
+per-anomaly slice coordinate record did not retain that brief event (only the
+startup peak was stored), while target-window pixel probes and ray candidates
+were present. Thus the trace showed why the peak-only ring must become an
+event-triggered bounded snapshot.
+
+One exact sample joined `screen_ray_candidate_trace` and renderer depth at
+`frame_epoch=44310`: selected chunk `(-303,3,6)` was reported without a
+satisfying mesh at 80.05 blocks, while the corresponding `GL_BACK` pixel's
+pre-transparent depth pointed to a drawable surface in `(-301,3,5)` at 55.15
+blocks. The pixel's opaque-UCube DDA reported no hit. This candidate is behind
+depth-tested geometry for that pixel, so it is not evidence of a visible hole.
+The full trace also has ray/pixel DDA disagreements; see the M526 analysis in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+
+The instrumented analyzer returned `pass=false` and stop convergence FAIL;
+`wall_ms_fly_med=20.97` / `47.7 FPS` includes pixel/depth readbacks and is not
+a clean performance baseline.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m526_world164_camera_band_ray_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-110619_42620.jsonl)
+- [targeted frames](../../bin/flight_captures/m526_world164_camera_band_ray_20261011)
+
+#### Exact M526 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m526_world164_camera_band_ray_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m526_world164_camera_band_ray_20261011 --report bin/suite_reports/engine_refactor/m526_world164_camera_band_ray_20261011.json --process-timeout 1800
+```
+
+### M527 — camera-space ray унификация и повтор camera-band участка (2026-10-11)
+
+После коммита `37334d92` screen-ray API и renderer pixel witness используют
+общую функцию inverse-projection + inverse-view. Восстановление opaque depth
+и ray до sea plane в pixel probe также переведены на раздельные матрицы.
+Сборка Release `Cubatarium.exe` имеет SHA-256
+`e5049608bd4a02513a00ee75794ebf0c7908916b528b206615471bf474f8ce6c`.
+
+Видимый no-teleport прогон M335 на `World_164` прошёл маршрутный gate:
+5 024 блока при минимуме 4 500, около `5,13 blocks/s`, `process_rc=0`.
+Manifest записал тот же clean commit `37334d92` на старте и при анализе;
+единственное незаполненное разрешённое поле — `resolution`. Analyzer завершил
+прогон с `pass=false`: A24 отметил 25 whole-route periods с ненулевым
+near-focus mesh-coverage proxy, но в mid-corridor их было 0; stop convergence
+также не сошёлся. Это counters готовности/mesh coverage, а не pixel verdict.
+`visible_black_focus_n=0`. Одиннадцать сохранённых `GL_BACK`/`GL_FRONT` пар
+побайтно совпали; это сравнение app buffers, не desktop compositor.
+
+В targeted окне `X=-4800…-4700` было 300 точных сопоставлений screen-ray grid
+и pixel-probe координат. В обоих путях UCube DDA hit совпал до block в 163
+случаях; в 45 случаях оба нашли блоки, но разные; 72 не нашли block ни в одном
+пути, а в 20 block был только у streaming ray. Оpaque depth присутствовал в
+233 из 300 pixel samples, и `renderer_pixel_voxel_ray_gap` был установлен
+только один раз. Эти результаты лучше объясняются разницей ray contract и
+состояния camera, чем видимым отсутствием поверхности: streaming API всё ещё
+возвращает near-plane origin, а renderer witness начинает DDA от camera origin.
+Следующий шаг — передавать общему streaming selector тот же `CameraSpaceRay`
+origin и записывать положение camera в trace для проверки frame-state parity.
+
+В `frame_epoch=44420`, около `X=-4770`, был сохранён новый high-water:
+7 solid camera-band slices без drawable и одновременно 7 unowned. Они лежали
+в `cx=-303`, `cy=3/4`, `cz=1…5`; `mesh_work_owner_flags=0`,
+`relight_owner_flags=96`, mesh dirty queue отсутствовал. Все семь chunk AABB
+пересекали exact frustum и имели projected screen rect; к render-probe frame
+две уже получили drawable, пять оставались без drawable. 14 pixel samples
+внутри пяти недостающих rect имели depth-tested поверхность в переднем chunk,
+и ray-gap для них был 0. Это подтверждает потерю mesh-work ownership, но не
+подтверждает, что именно эти slices создали экранную дыру.
+
+Instrumented performance: `wall_ms_fly_med=20.78` (`48,1 FPS`),
+`world_streaming_phase_ms=8.55`; было 57 spikes, максимум `283,27 ms`.
+Эти значения не заменяют capture-disabled performance M335.
+
+Артефакты:
+
+- [report](../../bin/suite_reports/engine_refactor/m527_world164_camera_space_ray_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-115526_33484.jsonl)
+- [11 targeted frame pairs](../../bin/flight_captures/m527_world164_camera_space_ray_20261011)
+
+#### Exact M527 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m527_world164_camera_space_ray_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m527_world164_camera_space_ray_20261011 --report bin/suite_reports/engine_refactor/m527_world164_camera_space_ray_20261011.json --process-timeout 1800
+```
+
+### M528 — renderer-origin streaming ray and camera-band follow-up (2026-10-11)
+
+M528 changed the streaming screen-ray selector to use the same
+`ScreenRayTransform`/`CameraSpaceRay` helper and camera-origin policy as the
+renderer. It records the streaming origin, direction, near distance, and
+perspective mode in the trace. The visible no-teleport M335 route completed
+5 008 blocks / 313 chunks at about `5.20 blocks/s`; `process_rc=0`, but the
+analyzer failed mesh-coverage, stale-visual-delta, and stop-convergence gates.
+This is a readiness result, not proof of an empty framebuffer region.
+
+At the two repeated frontier bands, `world_streaming_phase_ms` reached roughly
+38 ms and `mesh_emerge_prep_ms` roughly 16 ms. The unowned camera-band maximum
+was recorded at `X=-2754`, but the fixed pixel window was near `X=-4750`, so the
+two signals could not be joined in the same frame. The route also had 15
+whole-route near-focus mesh-miss periods, zero mid-corridor periods, zero
+stop-tail pixel-proxy holes, and readiness debt of 37 at stop. The stop debt
+does not establish visible geometry loss.
+
+At `X=-4750`, 300 exact coordinate joins compared streaming rays with pixel
+probes. M528 had no exact renderer camera-space ray fields yet; the fallback
+comparison used the raw camera position and depth line. Its 93 dark samples all
+had valid opaque depth and a visible MDI pass. Do not treat dark RGB or the
+whole-focus readiness counters as a hole verdict.
+
+Release source: commit `4c260eab`; executable SHA-256
+`FA28DBAF391F6BD006ED8ED706549B41BBAD0CD4327BAFB81A2C42B3FC728428`.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_visual_coverage_20261011.json)
+- [camera-band join](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_camera_band_join_20261011.json)
+- [ray parity](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_ray_parity_20261011.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_pixel_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-123113_44944.jsonl)
+- [targeted frames](../../bin/flight_captures/m528_world164_streaming_camera_origin_20261011)
+
+#### Exact M528 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m528_world164_streaming_camera_origin_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m528_world164_streaming_camera_origin_20261011 --report bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_20261011.json --process-timeout 1800
+```
+
+### M529 — bounded peak pixels and exact renderer ray witness (2026-10-11)
+
+M529 added renderer `CameraSpaceRay` origin/direction to each pixel probe and
+bounded event-triggered pixel capture for camera-band peaks, with a process
+limit of 24 frames. This let the fixed `X=-4800…-4700` pixel window coexist
+with peak capture elsewhere on the route.
+
+M335 completed 5 008 blocks / 313 chunks at about `5.20 blocks/s`, with source
+commit `d8ccd4c6`, Release executable SHA-256
+`2F5F7F062FBBBB34373FCA00EA30F0C4FEE6730C20228BED73C261FEF5296911`, and
+`process_rc=0`. The report's route gate passed; the full analyzer was `pass=false`
+because stop-tail readiness/debt gates did not converge. Mid-corridor
+near-focus miss count was zero. `post_stop_visual_holes_max=0` while
+`post_stop_readiness_debt_max=37` and `post_stop_mesh_missing_max=0`; those
+readiness signals remain distinct from pixel evidence.
+
+The peak instrumentation worked: 11 no-drawable and 6 unowned peak-slice
+records, with same-frame peak render probes. Eleven peak frames triggered 880
+renderer pixel records (`trigger_flags` bit 3), despite lying outside the
+fixed capture X window. Sampled coordinates inside the missing slices'
+projected rectangles had depth-tested foreground surfaces; none of those
+sampled depths belonged to the target chunk. This leaves those transient
+mesh misses unproven as visible holes; sparse sample coverage cannot exclude
+an unsampled gap.
+
+In the target window, 250 ray/pixel coordinates joined. Renderer and streaming
+directions matched within `1.5e-6°` at worst. Their camera-space origins
+differed only in Y, with median `0.1273` block and maximum `0.8578` block. The
+flight harness explains this phase skew: `StopPredicate` also changes
+autopilot orientation and enforces cruise Y, and `WindowManager::Run` called it
+after streaming and before rendering (and again after the frame). Thus the
+streaming repair selector could see a previous camera pose while the renderer
+used the updated pose. Commit `dc2cf72d` moves that callback to one invocation
+at frame start, before input, movement, and streaming. M530 is validating this
+change on the same route.
+
+M529 instrumented timing is not a clean performance baseline. In the repeated
+`X=-2900…-2500` band, median wall time was 33.94 ms and median streaming phase
+20.76 ms. For `X=-4300…-3900`, those medians were 37.27 ms and 24.56 ms. The
+same bands in M528 were 32.59/19.51 ms and 33.44/18.99 ms, respectively; two
+runs are not enough to attribute this difference to code.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011_visual_coverage.json)
+- [camera-band join](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011_camera_band_join.json)
+- [ray parity](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011_ray_parity.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011_pixel.json)
+- [perf JSONL](../../bin/logs/perf_20261011-130700_43232.jsonl)
+- [targeted frames](../../bin/flight_captures/m529_world164_bounded_peak_capture_20261011)
+
+#### Exact M529 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m529_world164_bounded_peak_capture_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m529_world164_bounded_peak_capture_20261011 --report bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011.json --process-timeout 1800
+```
+
+### M530 — pre-streaming autopilot pose parity
+
+Visible no-teleport M335 повторил M529 после `dc2cf72d`, который вызывает
+stateful `StopPredicate` один раз в начале кадра, до input, movement и
+streaming. Параметры мира и маршрута оставлены прежними.
+
+Результат: `process_rc=0`, 1 015 игровых секунд и 314 чанков вдоль маршрута
+(около 5,13 блока/с по продольной проекции на 980-секундный fly phase).
+Столкновение не остановило полёт: obstacle avoidance выполнил два обхода из
+двух, без replans и plan failures. Line tracking закончил с боковым отклонением
+`0.0154` блока. Анализатор пометил run `pass=false` из-за stop-tail и ряда
+стриминговых/performance gates, а не из-за route/process failure.
+
+Исправление устранило фазовый сдвиг луча: на полном маршруте 325 exact
+renderer/streaming joins имели нулевое origin delta по X/Y/Z; максимальная
+разница направлений — `1.48e-6°`. В target band `X=-4850…-4650` было 275 exact
+joins. Это подтверждает совпадение геометрии ray origins, но не гарантирует
+одинаковую chunk residency между streaming и render.
+
+Сохранились 13 no-drawable и 9 unowned camera-band peak slices. Из 76 sampled
+projected rectangles с пиксельными пробами только одна проба совпала с target
+depth; поэтому transient mesh miss остаётся наблюдаемым, но видимая дыра не
+доказана. Среди 2 900 renderer pixels было 120 с luma `<32`; все 120 имели
+opaque depth и видимый MDI pass, а voxel DDA gaps были равны нулю. Это не
+похоже на пропуск самого draw call, но редкая сетка проб не исключает локальную
+ошибку между sample points. Stop-tail сохранил readiness debt 37 и
+`chunk_not_ready` median/end 37 при нулевых mesh-missing и visual-hole proxy.
+
+11 sparse capture snapshots представлены 22 PNG (`frame_NNN.png` и
+`frame_NNN_front.png`); пары идентичны побайтно. Это проверка буферов самого
+приложения, не desktop compositor. `wall_ms_fly_med=23.85` и
+`world_streaming_phase_ms=10.21` получены с активными forensic traces и
+captures, поэтому их нельзя считать performance baseline.
+
+Артефакты:
+
+- [run report](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_visual_coverage.json)
+- [camera-band join](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_camera_band_join.json)
+- [ray parity, target band](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_ray_parity.json)
+- [ray parity, full route](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_ray_parity_full_route.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_pixel.json)
+- [perf JSONL](../../bin/logs/perf_20261011-133855_37916.jsonl)
+- [sparse frame pairs](../../bin/flight_captures/m530_world164_preupdate_autopilot_20261011)
+
+#### Exact M530 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m530_world164_preupdate_autopilot_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m530_world164_preupdate_autopilot_20261011 --report bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011.json --process-timeout 1800
+```
+
+### M531 — demand transition frame correlation
+
+Повтор M335 на `World_164` проверил M530 без изменения маршрута и скорости.
+Manifest чистый: commit `7da1052c0e3cc580204b8062f31425381e8bd86f`, Release
+EXE SHA-256
+`74c82d45e62e24dc20de50ec2d4d7258675e6eb32bc7e14fa76ced7cbec77687`.
+Run завершился с `process_rc=0`, 1 015 игровыми секундами и 314 чанками по
+продольной проекции (около 5,13 блока/с за 980 секунд fly phase). Collision
+stop не сработал; obstacle avoidance завершил оба обнаруженных обхода.
+Маршрут прошёл, но analyzer `pass=false` из-за readiness/stop-tail и других
+стриминговых/performance gates.
+Manifest `cold_warm_mode=cold` означает отсутствие warm-up protocol, а не
+гарантированно пустой OS/disk cache; источник дальних чанков (disk load или
+new generation) этот прогон не определяет.
+
+Трасса записала 15 392 demand transition с ненулевым `frame_epoch` (2…40 787).
+Для 11 no-drawable peak rows нашлось 3 same-frame и 5 adjacent-frame demand
+events на той же координате/incarnation; для 7 unowned peaks — 0 same-frame и
+3 adjacent-frame events.
+В окне ±32 кадра analyzer присоединил 101 и 67 demand-transition rows к этим
+двум наборам пиков. У четырёх no-mesh/no-owner slices первая attempt появилась
+через 2–4 кадра; публикация геометрии в наблюдавшихся случаях заняла 7–22
+кадра. `cx=-176, cy=4, cz=-1` показывает фазовую разницу внутри кадра: после
+streaming no-drawable sample renderer probe того же кадра уже считал slice
+drawable. `visual_lifecycle_trace` rows не имели `frame_epoch`, поэтому их
+нельзя было связать с пиками по времени; first-mesh frontier дал ноль
+совпадений для этих incarnations в окне ±32 кадра. Следующий диагностический
+коммит добавляет frame epoch в worker/GPU lifecycle и world epoch в renderer
+peak probes.
+
+Pixel evidence не подтвердил чёрные дыры: 140 из 2 740 sampled pixels имели
+luma `<32`, но все имели opaque depth и visible MDI pass, а voxel DDA gaps
+равнялись нулю. У 68 sampled projected rectangles не было target-depth samples.
+Stop-tail оставил readiness debt 35 и `chunk_not_ready` median 36 при нулевых
+mesh-missing и visual-hole proxy. `wall_ms_fly_med=23.42 ms` и streaming phase
+`9.92 ms` измерены с активными forensic traces/captures, не использовать их
+как performance baseline.
+
+Ray parity повторно подтвердила нулевую разницу origins на 225 exact
+renderer/streaming joins; максимальная разница направлений — `1.48e-6°`.
+11 frame snapshots дали 22 PNG: каждый `frame_NNN.png` побайтно совпал с
+`frame_NNN_front.png`. Это только app-buffer check, не проверка desktop
+compositor.
+
+Артефакты:
+
+- [run report](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_visual_coverage.json)
+- [camera-band/lifecycle join v13](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_camera_band_join.json)
+- [ray parity, target band](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_ray_parity.json)
+- [ray parity, full route](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_ray_parity_full_route.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_pixel.json)
+- [perf JSONL](../../bin/logs/perf_20261011-140644_17628.jsonl)
+- [sparse frames](../../bin/flight_captures/m531_world164_demand_frame_epoch_20261011)
+
+#### Exact M531 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m531_world164_demand_frame_epoch_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m531_world164_demand_frame_epoch_20261011 --report bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011.json --process-timeout 1800
+```
+
+### M532 — demand to worker lifecycle frame join
+
+Повтор M335 на `World_164` после добавления `frame_epoch` в worker lifecycle
+и `world_epoch` в peak renderer probes. Manifest чистый: commit
+`00dda93090005761c8c85204959fe0ec8e6c2d2c`, Release, EXE SHA-256
+`98f530760a82de9c24b7d5a6772b2db1fa95466f088e115dcc2b67a17062c4b7`.
+Run завершился с `process_rc=0`, 1 015 игровыми секундами, 314 чанками и
+5 024 блоками. Collision stop не сработал; оба обхода препятствий завершились.
+Analyzer `pass=false`: stop-tail readiness debt 37, `chunk_not_ready` median/end
+36/37, при `post_stop_mesh_missing_max=0` и `post_stop_visual_holes_max=0`.
+`effective_holes_rate` использует unfinished-visual proxy и не является
+независимым framebuffer свидетельством.
+
+В 9 unowned peak slices найдено 98 demand transition и 33 lifecycle rows в
+окне ±32 frame epochs; same-frame demand transition не было. В 8 срезах
+связанный job стартовал через 8–20 epochs после peak; worker pool wait по
+`Started.elapsed_ms` составлял 0,02–0,04 ms, meshing занимал 2–8 ms. Это
+указывает на задержку до создания job в main-thread admission/snapshot пути.
+Frame epoch асинхронного события отражает последнее значение streaming tick,
+поэтому точный wall-time этим сравнением не задаётся. Общий schedule trace
+ring на 1 024 записи к завершению перезаписал события участка frame 23 562;
+first-mesh frontier не выбрал ни одного из 9 unowned peak targets. Следующий
+шаг — отдельная адресная scheduler trace по пиковым incarnation, затем
+повтор M335 перед изменением лимитов/очередей.
+
+Pixel trace записал 3 200 проб: 118 имели `luma < 32`, все 118 — валидный
+opaque depth и visible MDI pass, voxel DDA gaps — 0. В 87 sampled projected
+rectangles только 2 пробы попали в depth целевого чанка — прямого framebuffer
+доказательства дыры по-прежнему нет. На 275 exact target-window ray joins
+origin delta равен нулю; max direction delta — `1.48e-6°`. Fly wall/stream
+medians `23.53/10.17 ms` измерены с tracing/captures и не являются
+performance baseline.
+
+Артефакты:
+
+- [run report](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_visual_coverage.json)
+- [camera-band/lifecycle join v13](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_camera_band_join.json)
+- [ray parity, target band](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_ray_parity.json)
+- [ray parity, full route](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_ray_parity_full_route.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_pixel.json)
+- [perf JSONL](../../bin/logs/perf_20261011-144151_11656.jsonl)
+- [sparse frames](../../bin/flight_captures/m532_world164_worker_lifecycle_frame_epoch_20261011)
+
+#### Exact M532 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m532_world164_worker_lifecycle_frame_epoch_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m532_world164_worker_lifecycle_frame_epoch_20261011 --report bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011.json --process-timeout 1800
+```
+
+### M533 — per-peak scheduler decisions and worker join
+
+M533 repeated the visible Release M335 profile on `World_164` after adding a
+bounded 64-epoch scheduler trace for camera-band peak coordinates. The run
+completed with `process_rc=0`, 312 chunks / 4 992 blocks, median speed 5.19653
+blocks/s, stable eye height 70, zero blocked movement substeps, and zero flight
+ground contacts. The suite summary still reports `pass=false`: stop-tail
+readiness debt and stale-visual safety lines remain separate from direct pixel
+evidence.
+
+All 19 traced no-drawable/unowned peak targets were joined to worker
+`Started/Built/Published` events. Scheduler pipeline occupancy peaked at 10 of
+42; no pipeline-full or pipeline-bytes defer was observed. Snapshot refresh
+defers and tick-budget skips occurred occasionally, while successful admission
+was the common outcome. This does not justify changing scheduler quotas.
+
+The run recorded 2 700 framebuffer samples; 152 had luma below 32 and all had
+valid opaque depth plus a visible MDI pass. Of 55 projected peak rectangles, 54
+contained sparse pixel samples and zero had target-chunk depth or DDA hits; the
+sampled depths belonged to nearer neighboring chunks. A visible hole is not
+established. Selected front-after-swap captures resemble M532 at the same route
+window; the same blue angular scene fragments appear in both.
+
+Artifacts:
+
+- [run report](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_visual_coverage.json)
+- [camera-band/pixel/scheduler join v14](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_camera_band_pixel_join_v14.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_renderer_pixel.json)
+- [ray parity, target window](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_target.json)
+- [ray parity, full route](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_full_route.json)
+- [perf JSONL](../../bin/logs/perf_20261011-174205_47172.jsonl)
+- [sparse frames](../../bin/flight_captures/m533_world164_peak_scheduler_trace_20261011)
+
+#### Exact M533 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m533_world164_peak_scheduler_trace_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m533_world164_peak_scheduler_trace_20261011 --report bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011.json --process-timeout 1800
+```
+
+#### M533 analysis commands
+
+```powershell
+$perf='bin/logs/perf_20261011-174205_47172.jsonl'
+python tools/analyze_visual_coverage_trace.py $perf --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_visual_coverage.json
+python tools/analyze_camera_band_pixel_join.py $perf --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_camera_band_pixel_join_v14.json
+python tools/analyze_renderer_pixel_trace.py $perf --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_renderer_pixel.json
+python tools/analyze_screen_ray_parity.py $perf --viewport-width 1280 --viewport-height 720 --camera-x-min -4800 --camera-x-max -4700 --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_target.json
+python tools/analyze_screen_ray_parity.py $perf --viewport-width 1280 --viewport-height 720 --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_full_route.json
+```
+
+## M534 capture-disabled performance baseline and M535 cadence validation
+
+M534 ran the established visible M335 route with capture and forensic trace
+environment variables unset. The report is
+`bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json`
+and its perf log is `bin/logs/perf_20261011-181137_37304.jsonl`. The clean
+manifest used Release commit `772e0679`, with executable SHA256
+`352024386b4c67f24bf87ca3126a61c407a0b7b71694d8be28262739c37618ef`.
+M534 completed 5,008 blocks at 5.20 blocks/s median. Its capture-disabled
+medians were wall 25.94 ms, streaming 11.09 ms, mesh emerge 5.04 ms, and total
+render 12.07 ms.
+
+M534 exposed a stop-mode counter bug: the last visible-black census cooldown
+was only decremented during cruise/diet mode. When the flight stopped with a
+cruise cooldown armed, the final raw/no-ticket value stayed frozen. The
+`WorldStreaming.cpp` change advances this remaining cooldown in stationary
+mode. The repeat must prove that `prep_refresh_vb_ms` becomes nonzero after
+stop and then use fresh counts to evaluate the stop gates.
+
+### M535 Release build
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 12 -- /p:CL_MPCount=12
+```
+
+### M535 visible M335, capture-disabled
+
+Remove M533 forensic capture/probe variables before invoking the runner. Keep
+the profile, world, start, eye height, heading, pitch, and phase lengths fixed:
+
+```powershell
+@(
+  'CUBA_VISUAL_BLACK_TRACE',
+  'CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X',
+  'CUBA_FLIGHT_CAPTURE_DIR',
+  'CUBA_FLIGHT_CAPTURE_INTERVAL_SEC',
+  'CUBA_FLIGHT_CAPTURE_MIN_X',
+  'CUBA_FLIGHT_CAPTURE_MAX_X',
+  'CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP'
+) | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m535_world164_stop_census_cadence_20261011 --report bin/suite_reports/engine_refactor/m535_world164_stop_census_cadence_20261011.json --process-timeout 1800
+```
+
+After the run, inspect the last stop-tail `period` rows in the reported perf
+JSONL for `movement_speed`, `visible_black_focus_raw_n`,
+`visible_black_no_ticket_n`, and `prep_refresh_vb_ms`. The fix is exercised only
+if a fresh scan occurs after stopping; an unchanged raw count with zero VB scan
+time means the validation failed. Preserve any remaining readiness debt as a
+separate finding from the visible-black scan result.
+
+### M535 result
+
+M535 completed with `process_rc=0`, 4,800 blocks traveled, and 5.19653
+blocks/s median. It ran with no forensic capture variables, so it is not pixel
+evidence. The final five period rows all had a nonzero `prep_refresh_vb_ms`,
+proving that the stop-mode cooldown no longer freezes. The final counts were
+`visible_black_focus_raw_n=6`, `visible_black_no_ticket_n=0`,
+`visible_black_stalled_n=3`, `visible_black_stale_lit_n=0`, and
+`focus_missing_mesh=0`. `unfinished_visual=37` remained; it is a broad
+readiness-debt count, not an observed framebuffer hole. The route did not
+reach the 5,000-block far-flight proxy. `nextcloud` and `OneDrive` were using
+about 4.4 CPU-seconds/second in a two-second system sample during this run, so
+do not compare its performance medians with the clean M534 baseline.
+
+M533's final fresh census had `no_ticket=6`, `legal_dark=6`,
+`stale_lit=0`, `fully_dark_no_ticket=0`, and `fully_dark_stalled=1`. Thus the
+raw no-ticket metric includes legal cave darkness. Current flight analysis
+also reports `post_stop_visible_black_no_ticket_excluding_legal_dark_max`;
+that is the field used by phase gates. M533's final focus-ring census had 128
+camera-band resident solid slices, all satisfying, with zero camera-band
+no-drawable, pending-work and unowned slices. Its broader focus/water band had
+127 solid slices with no drawable mesh, 23 unowned, while `unfinished_visual`
+was 33. Keep these scopes separate when reading reports.
+
+Artifacts:
+
+- M535 report: `bin/suite_reports/engine_refactor/m535_world164_stop_census_cadence_20261011.json`
+- M535 perf: `bin/logs/perf_20261011-183557_26004.jsonl`
+- M534 clean baseline: `bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json`
+- M533 camera-band/pixel/owner forensics are linked from the M533 checkpoint in the remediation plan.
+
+### M536 targeted far-end evidence pass
+
+Run only when the background sync load is quiet enough to reach the established
+far-flight endpoint. Keep the M335 route profile exactly the same; capture and
+trace only the final `x=-4900..-4800` window. Remove any prior experiment env
+vars first, then enable the following bounded diagnostics:
+
+```powershell
+@(
+  'CUBA_VISUAL_BLACK_TRACE',
+  'CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X',
+  'CUBA_FLIGHT_CAPTURE_DIR',
+  'CUBA_FLIGHT_CAPTURE_INTERVAL_SEC',
+  'CUBA_FLIGHT_CAPTURE_MIN_X',
+  'CUBA_FLIGHT_CAPTURE_MAX_X',
+  'CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP'
+) | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4900'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m536_world164_far_end_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4900'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m536_world164_far_end_20261011 --report bin/suite_reports/engine_refactor/m536_world164_far_end_20261011.json --process-timeout 1800
+```
+
+Analyze with the existing M533 tools, changing the perf/report prefix and
+window bounds to `-4900..-4800`: visual coverage, camera-band/pixel join,
+renderer pixel trace and target/full-route screen-ray parity. Inspect dark
+pixel `depth_surface` and `source_face` light/revision state, then join each
+fresh VB trace coordinate to relight/flow ownership and queue age. A valid
+streaming/render defect requires a dark or missing pixel mapped to the same
+target chunk; a nearby black census row alone is insufficient.
+
+### M536 result
+
+M536 completed with `process_rc=0`, 4,976 blocks traveled, median speed
+5.19653 blocks/s, and eye Y 70. It used commit `a819fe1e` and the Release
+executable with SHA-256
+`5cf19acf1589ba73033be3a37d0e6a8479d540765f9d84f769932896ea4ce458`. The
+route stopped 24 blocks short of the 5,000-block proxy; its route and flight
+speed were otherwise the established M335 profile.
+
+The renderer-pixel analyzer saw 2,140 pixel probes overall and 128 pixels
+below luminance 32. In the target x interval, 80 of 1,260 renderer pixels were
+below that threshold. All 80 had valid depth, drawable/draw-ready geometry and
+visible opaque MDI; none of their voxel rays reported a gap. Seventy-four had
+valid live-face light samples with sky light 1 and matching revisions. Six
+had no valid live-face sample but still had draw-ready geometry and matching
+chunk light revisions. Treat these as unexplained dim pixels, not evidence of
+blank chunks or stale light. The 75 exact-coordinate screen-ray joins had zero
+origin difference and at most `1.48e-6` degrees direction difference; 51 had
+the same opaque block hit. All 17 GL_BACK/pre-swap and GL_FRONT/post-swap PNG
+pairs were pixel-identical.
+
+The more actionable M536 anomaly was around `focus_cx=-262`: peak period
+streaming was 198.851 ms, mesh emergence 43.759 ms, and wall time 221.023 ms.
+Nearby counters reached 153 dirty focus chunks and 72 unfinished visual items,
+with a short run of `focus_missing_mesh=1`. The census did not report a
+fully-dark no-ticket or stale-lit column there, and the M536 far-end capture
+window did not include this hotspot. M536 did not tie the temporary mesh miss
+to a visible pixel. Its final stationary VB scans refreshed, focus mesh miss
+and stop visual-hole proxy were zero; broad readiness debt remained 33–34.
+
+Artifacts: report
+`bin/suite_reports/engine_refactor/m536_world164_far_end_20261011.json`, perf
+`bin/logs/perf_20261011-190815_25028.jsonl`, visual coverage and pixel/ray
+reports with the same `m536_world164_far_end_20261011` prefix, and 17 paired
+frames in `bin/flight_captures/m536_world164_far_end_20261011`.
+
+Next diagnostic run: repeat the exact M335 profile with the same tracing and
+paired captures bounded to `x=-4320..-4048`, so the transient
+`focus_cx=-262` period is directly joined to renderer pixels. Keep
+`--fly-phase-sec 980`, start position, eye height, heading, pitch, stop, and
+idle durations unchanged. Only the diagnostic capture window and `m537` output
+names change.
+
+### M537 result
+
+M537 completed the same visible no-teleport M335 route with `process_rc=0`,
+313 chunks / 5,008 blocks traveled, median speed 5.19653 blocks/s, and eye Y
+70. Its manifest confirms Release and the same executable SHA-256 as M536.
+
+In the captured hotspot window, 157 of 4,220 renderer pixel probes had luma
+below 32. All 157 had valid opaque depth, draw-ready geometry, visible MDI,
+settled matching light-field revisions, and no voxel-ray gap. There were 149
+valid live-face light samples at sky 1, one at sky 0.933, and seven pixel rays
+whose depth surface was nearer than the voxel DDA hit, so the live-face lookup
+could not identify the rasterized face. Thirty-one samples were rendered from
+an older geometry revision while a replacement revision was pending, but the
+old mesh remained drawable and no pixel showed a ray gap. Keep this as mesh
+freshness evidence; it does not prove a blank chunk.
+
+The target ray parity pass joined 475 renderer/stream rays with zero origin
+error and max direction error `1.48e-6` degrees; 277 had the same opaque block
+hit. All 28 GL_BACK/pre-swap and GL_FRONT/post-swap image pairs were
+byte-identical. Reviewed frames show continuous nearby terrain and coast/water.
+
+Across 41 periods around `cx=-275..-250`, peak streaming/emerge/wall were
+29.466/16.539/46.283 ms. `focus_missing_mesh=1` appeared in 8 periods,
+`focus_dirty_chunks` peaked at 141, and no stale-lit or fully-dark no-ticket
+columns appeared. The extreme M536 198.851 ms stream spike did not recur.
+M537 nevertheless recorded a separate six-second focus-missing run around
+`cx=-175` (dirty peak 176), outside the capture window. At stop, mesh-missing
+and visual-hole proxies were zero; readiness debt was 34 and one stalled
+visible-black census column kept stop gates open.
+
+Artifacts: report `bin/suite_reports/engine_refactor/m537_world164_hotspot_20261011.json`,
+perf `bin/logs/perf_20261011-193429_39596.jsonl`, analyzer outputs with the
+same prefix, and paired captures in
+`bin/flight_captures/m537_world164_hotspot_20261011`.
+
+The next M335 correctness pass should target only `x=-2864..-2720`, the
+`cx=-175` miss run. If a same-frame pixel confirms a missing or stale visible
+surface, fix and repeat that specific path. Otherwise proceed to the clean
+capture-disabled performance baseline and then the short new-seed load test.
+
+### M538 result
+
+M538 completed the same visible no-teleport M335 route with `process_rc=0`,
+312 chunks / 4,992 blocks, median speed 5.19653 blocks/s, and eye Y 70. The
+manifest confirms Release and the established route. It used the same
+executable as M537, with pixel probes and paired captures limited to
+`x=-2864..-2720`.
+
+In 17 periods from focus chunks `-180..-170`, `focus_missing_mesh=1` appeared
+in six periods, dirty focus peaked at 156, and `unfinished_visual` at 78.
+Streaming/emerge/wall peaked at 33.794/19.156/47.799 ms. The reported
+six-second M537 miss did not recur as a continuous run in this interval. No
+stale-lit or fully-dark no-ticket columns appeared; every target-band
+no-ticket count equaled the legal-dark count.
+
+There were 2,580 renderer pixel probes in the target window; 278 had luma
+below 32. Every one had opaque depth, draw-ready geometry, visible MDI,
+matching settled light-field revisions, and zero voxel-ray gaps. Sixty-two of
+those samples showed an older published geometry revision still being drawn;
+257 had valid live-face light samples at sky 1, while 21 did not resolve a
+live-face sample;
+they were render-ready, so this is freshness evidence rather than a blank
+pixel. The 325 ray joins had zero origin error and max direction error
+`1.48e-6` degrees, 256 matching opaque hits, and no gaps. All 15 GL_BACK/GL_FRONT
+capture pairs were byte-identical. The inspected frame shows dense tree leaves
+very close to camera and explains the dark-green screen samples.
+
+The run-wide report selected a different eight-second focus-mesh-missing run
+at `cx=-294`, outside M538's capture window. At stop, near-focus missing-mesh
+and visual-hole proxies were zero, readiness debt was 37, and two stalled
+census columns remained. No code fix is justified by M538's target window.
+
+Artifacts: report `bin/suite_reports/engine_refactor/m538_world164_miss175_20261011.json`,
+perf `bin/logs/perf_20261011-195724_49012.jsonl`, analyzer outputs with the
+same prefix, and paired captures in
+`bin/flight_captures/m538_world164_miss175_20261011`.
+
+Next: one final targeted pass for `cx=-294` using capture/probe bounds
+`x=-4800..-4580`. If same-frame pixels are drawable there too, stop chasing
+the readiness proxy and move on to the clean capture-disabled baseline and
+new-seed load/generation lane.
+
+### M539 / M539b: corrected `cx=-294` target instrumentation
+
+M539 was a configuration miss. The capture interval was active, but the pixel
+probe uses these exact environment-variable names:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4580'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m539b_world164_miss294_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4580'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+```
+
+M539 incorrectly used `CUBA_VISUAL_PIXEL_PROBE_ON_SCREEN_RAY` and
+`CUBA_VISUAL_PIXEL_PROBE_MIN_X/MAX_X`; its manifest proves pixel probing was
+off. It also stopped at `x=-4642`, short of `cx=-294`; do not use M539 as a
+target pixel result. It did record an eight-second route-wide miss at
+`cx=-173`.
+
+M539b used the names above and kept the established M335 world, start point,
+yaw, pitch, eye height, speed scale, visible window, and no-teleport route.
+The flight phase was increased from 980 to 1,025 seconds so the route crossed
+the full target interval despite the prior run's reduced net progress. The run
+completed at `x=-4966`, produced 22 matched capture pairs, and the manifest
+confirmed `visual_pixel_probe_on_screen_ray=true` with both target bounds.
+
+Results: the four-second route-wide focus-mesh-missing run selected `cx=-298`.
+Within the target band, 6/11 periods had `focus_missing_mesh`, 5/11 had the
+mesh-coverage `visual_holes` proxy, dirty focus peaked at 166 and
+`unfinished_visual` at 82. Yet all 172 target pixels below luma 32 had valid
+depth, drawable/draw-ready opaque MDI, matching light-field revisions and no
+voxel-ray gap. The same remained true for all 826 target samples below luma 96.
+The ray join had 475 exact-coordinate rows, zero origin error, max direction
+delta `1.48e-6` degrees and 313 matching opaque hits. Thirteen no-drawable and
+eight unowned camera-band candidates had zero same-frame pixel hits. All 22
+GL_BACK/GL_FRONT pairs were byte-identical. This closes the `cx=-294` pixel
+hole question as unconfirmed while retaining focus readiness/freshness debt as
+an open signal. The report returns `pass=false` because stop/readiness gates
+remain open; the app itself completed with `process_rc=0`.
+
+Artifacts: [M539 invalid attempt](../../bin/suite_reports/engine_refactor/m539_world164_miss294_20261011.json),
+[M539b report](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011.json),
+[perf log](../../bin/logs/perf_20261011-204021_16468.jsonl),
+[renderer pixels `<32`](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_renderer_pixel.json),
+[renderer pixels `<96`](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_renderer_pixel_l96.json),
+[ray parity](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_ray_parity.json),
+[camera-band join](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_camera_band_pixel_join.json),
+[target framebuffer](../../bin/flight_captures/m539b_world164_miss294_20261011/frame_012_front.png).
+
+Next: instrument the synchronous capture sub-stages behind the M540 stall and
+repeat the M335 route. Then run the planned short new-seed load/generation
+lane.
+
+### M540 clean M335 performance baseline
+
+M540 used the established visible no-teleport route on `World_164` with the
+Release build and no image/pixel tracing. It completed 4,992 blocks / 312
+chunks at the normal route speed. The app exited successfully; the report's
+acceptance gates remain false because global readiness debt did not converge.
+Fly median wall was 21.368 ms versus 25.941 ms in M534, although M540 had 82
+spikes versus 59.
+
+The largest frame took 904.213 ms at `x=-1898` (`cx=-119`). It reported
+`mesh_emerge_ms=854.790`, `mesh_emerge_coordinator_ms=854.758`,
+`mesh_dirty_tick_ms=852.835`, and `mesh_snapshot_ms=852.564`. Another frame at
+`x=-1539` reported a 100.327 ms snapshot acquisition. The production capture
+worker is compile-time disabled; `TryAcquireSnapshotForSchedule` therefore
+captures synchronously via `CaptureAndCommitOnMain` and
+`ReadChunkBandForCapture`. The long snapshot attempt occurs in the priority
+remesh pass before the schedule-stage timer reset, explaining why its duration
+is absent from `mesh_dirty_schedule_ms`. Current data cannot distinguish the
+band read/copy from dependency checks, store operations, or a process pause.
+
+M540's last five stop-tail periods have fresh VB refresh timings and zero
+focus-missing mesh, visual-hole proxy, and dirty-focus counts. Global readiness
+debt ends at 31, so stop convergence is still open. This capture-disabled run
+has no pixel evidence and does not establish a visual hole.
+
+Artifacts: report `bin/suite_reports/engine_refactor/m540_world164_clean_perf_baseline_20261011.json`,
+perf `bin/logs/perf_20261011-211506_45660.jsonl`, and M534 comparison
+`bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json`.
+
+Next: add low-overhead timing around each synchronous capture sub-stage and
+repeat the same M335 route. Use the measured call stack/stage before choosing
+between optimizing capture, reducing capture admission during hitches, or
+redesigning snapshots into resumable per-frame work. Then return to the planned
+new-seed load/generation lane.
+
+### M541 - capture-stage diagnostic repeat (2026-10-11)
+
+M541 used the visible no-teleport M335 `World_164` route with the capture-stage
+INFO diagnostics enabled. It exited normally and travelled 4,944 blocks / 309
+chunks. The report is `pass=false` because renderer readiness/performance and
+stop-convergence gates remain open. At the former M540 stall coordinate
+(`x≈−1890`, `cx≈−119`), snapshot was about 3.0 ms and dirty tick about 6.8 ms;
+the 852 ms event did not recur. Across the process, `MeshCaptureSlow` emitted
+673 events over 25 ms, with maximum main-capture/read-band stages around 64 ms.
+These log events are not frame-for-frame joins and do not establish a repeated
+M540 stall.
+
+The separate top wall spikes were presentation-call dominated: maximum
+wall/swap-wait was 1,245.8/1,178.6 ms, followed by 928.1/889.4 ms and
+875.5/819.0 ms. Swap interval was zero. This isolates a `glfwSwapBuffers`
+wait path from snapshot timing, without proving driver, compositor, scheduling,
+or GPU as the underlying cause. Machine CPU was heavily occupied during the
+run (median 77.8%, p95 89.3%, max 94.4%; game median 1.63 CPU cores), so M541
+is diagnostic only, not a clean performance acceptance run. Pixel probes and
+captures were disabled; no framebuffer-hole conclusion follows from this run.
+
+Artifacts: [M541 report](../../bin/suite_reports/engine_refactor/m541_world164_capture_stage_diagnostic_20261011.json),
+[perf log](../../bin/logs/perf_20261011-215214_25348.jsonl), host sampler
+`bin/logs/m541_host_cpu_20261011.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-215209.25348`.
+
+Next: replay the M435 seed with current Release and
+`CUBA_WORLD_COLUMN_SOURCE_TRACE=1` to compare disk reads, procedural generation,
+queue waits and main-thread apply. Treat this as an instrumented lifecycle run,
+not a clean performance baseline. Repeat capture-disabled M335 separately
+under quiet host conditions before deciding whether the synchronous capture
+stall needs architectural work.
+
+### M542 - current-Release M435 persisted-source replay (2026-10-11)
+
+Command profile: `World_M435_Cold_20261007`, fixed-day wrapper, visible GUI,
+M335 start/camera/speed, 600-second no-teleport flight, 20-second stop, and
+`CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. Release executable SHA-256:
+`5e399a9e22c9d87d951ec48e4b4a4c2475b58f97ebf83034eea393c672a244ca`.
+The app exited normally and reached 3,072 blocks / 192 chunks at
+`5.19653 blocks/s`; the report is `pass=false` on readiness/stop gates. The
+fixed-day wrapper restored metadata byte-for-byte. This is an instrumented
+3,072-block lifecycle run, not the long-distance or clean-performance lane.
+
+Source trace: 1,762 disk queued/completed pairs, 524 procedural misses/commits,
+zero unmatched/cancelled disk owners. Disk discovery/open/read medians were
+`0.019/1.57/2.94 ms`; p95s were `0.034/3.48/6.44 ms`. Column latency was
+`128 ms` median / `416 ms` p95. Result wait summed over vertical slices was
+`427 ms` median / `1.70 s` p95. Ready-result depth reached median 8 / p95 124 /
+max 469, mostly in the initial request burst; it was drained before exit.
+Procedural generation was `125.7/224.3 ms` median/p95, with worker-pool queue
+`0.03/142.3 ms`. The 4/5/6 ms apply-time checks were preserved. Twenty-nine
+period records began with over four ready results; 24 applied the four-item
+batch, and five stopped earlier under the time check. This supports testing a
+batch limit that follows the existing 4/6/10 adaptive slice limit while
+keeping the time budget. It does not justify increasing worker count.
+
+Artifacts: [M542 flight report](../../bin/suite_reports/engine_refactor/m542_world_m435_current_release_source_trace_20261011.json),
+[source summary](../../bin/suite_reports/engine_refactor/m542_world_column_source_trace_20261011.json),
+[perf log](../../bin/logs/perf_20261011-221531_1944.jsonl), INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-221528.1944`.
+
+### M543 - adaptive ready-result batch validation (2026-10-11)
+
+M543 repeated the visible 600-second M335 path on the current Release after
+the fixed four-result selection cap was replaced by the current call's
+`max_slice_applies` bound. The 4/5/6 ms time budgets, ranking, and requeue
+behavior stayed in place. It reached 3,088 blocks / 193 chunks at
+`5.19653 blocks/s` and exited normally. The report remains `pass=false` on
+readiness/stop gates. This replay used the same M435 seed after M542 had saved
+additional columns, so its source/cache mix is warmer and not a controlled A/B.
+
+Source trace: 2,005 disk queued/completed pairs and 379 procedural
+miss/commit pairs, with no unmatched/cancelled disk owners. Disk result wait
+was `253 ms` median / `1.72 s` p95; ready-result depth p95 was 66 (M542 124).
+Of 31 periods starting with more than four ready results, five selected more
+than four and two applied six. Seventeen hit the existing time budget before
+finishing their selected batch. This confirms the adaptive limit is active
+without bypassing the frame budget, but the changed persistence/cache state
+prevents attributing the lower queue metrics to the patch alone.
+
+Artifacts: [M543 flight report](../../bin/suite_reports/engine_refactor/m543_world_m435_adaptive_ready_batch_validation_20261011.json),
+[source summary](../../bin/suite_reports/engine_refactor/m543_world_column_source_trace_20261011.json),
+[perf log](../../bin/logs/perf_20261011-223542_35856.jsonl), INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-223537.35856`.
+
+Next: capture-disabled M335 with no source trace and host CPU sampling, then a
+long-distance M335 run if frame cost remains acceptable. Keep the current
+source-trace reports separate from clean performance measurements.
+
+### M544 - capture-disabled M335 under host saturation (2026-10-11)
+
+M544 ran the visible no-teleport M335 route on `World_164`, with a 980-second
+flight phase, source trace disabled, and no pixel/frame capture. It used the
+Release executable from `21cda2fc`, SHA-256
+`9d3d45207ca33183998c7134b826be6235ede1bbe1da398c2ff108364c0635f4`.
+The app exited normally and covered 4,928 blocks / 308 chunks at
+`5.19653 blocks/s`; the report remains `pass=false` on readiness/stop gates.
+
+The run is contaminated: host CPU was 100% in all 93 samples. Game usage was
+1.81 CPU cores median / 2.93 max; `cl.exe`, OneDrive, and Defender were also
+active. The wrapper's requested two-second sample interval became 9.58 seconds
+median / 20.94 p95 (29.06 max) because it enumerated every process each time.
+Do not compare M544's `36.53 ms` fly median and 417 spikes with M540's clean
+baseline. The sampler itself needs a low-overhead mode before the next clean
+measurement. The sampler now reads host CPU and the game PID on each interval;
+full process enumeration is opt-in and should be infrequent.
+
+The M540 capture stall did not repeat at `x=-1890`: wall `124.58 ms`,
+swap wait `0.12 ms`, snapshot `5.75 ms`, dirty tick `6.37 ms`. Across the run,
+snapshot max was `31.82 ms`; `MeshCaptureSlow` max was `43.86 ms` and read-band
+max `43.59 ms`. The largest overall frame was `941.28 ms`, of which `839.82 ms`
+was `glfwSwapBuffers`; another was `821.52/767.39 ms` wall/swap wait. This is
+separate from snapshot capture and does not prove a GPU fault.
+
+Artifacts: [M544 report](../../bin/suite_reports/engine_refactor/m544_world164_m335_clean_perf_host_sampled_20261011.json),
+[perf log](../../bin/logs/perf_20261011-225119_44060.jsonl), host CPU log
+`bin/logs/m544_host_cpu_20261011.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-225114.44060`.
+
+Next: use the revised target-only sampler to repeat the capture-disabled M335
+baseline after host load falls, then run the full long-distance route.
+
+### M545 - cold-world source-trace diagnostic (2026-10-11)
+
+M545 used the visible M335 camera and speed on an empty-chunk world with unique
+seed `3650480197`: `World_M545_Cold_20261011`. Source trace was enabled;
+pixel and frame capture were disabled. Release SHA-256 was
+`9d3d45207ca33183998c7134b826be6235ede1bbe1da398c2ff108364c0635f4`.
+Command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m545_host_cpu_20261011.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_M545_Cold_20261011 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 600 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m545_world_m545_cold_source_trace --report bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_20261011.json --process-timeout 1200
+```
+
+The wrapper exited `0`; the game completed 3,008 blocks at `5.19614 blocks/s`
+(305 periods / 303 steady), but the analyzer returned `pass=false` on
+readiness and stop gates. Host CPU stayed at 100% for all 357 samples. The
+wrapper in this run predated the `ca990593` process-tree discovery improvement;
+its sample interval was median 2.29 s, p95 4.58 s, max 10.48 s. Do not compare
+the `30.27 ms` fly median or 173 spikes with a quiet-host M335 baseline.
+
+The source trace contained only procedural generation: 2,021 disk misses,
+2,014 commits, and zero disk-load queue/completion events. Generation was
+`160/483 ms` median/p95; request-to-commit was `319 ms` median, `3.48 s` p95,
+`19.78 s` max. The worst event spent `16.98 s` in scheduler queue and `1.98 s`
+in the worker pool with 33 jobs pending and four active workers. Seven disk
+misses lacked a matching procedural commit by log end; no cancel event
+establishes their final state. The cold entry gate first recorded its
+presentable proxy after `204.6 s`, while the correct-proxy timer remained
+unreached at a later `279.5 s` sample. A subsequent gate sample ended with
+`live_blockers` and near-focus mesh/GPU-pending work. These source and readiness
+signals motivate a quiet-host reproduction before tuning generation
+concurrency or per-frame admission.
+
+The analyzer reported readiness-debt rate `1.0`, mesh-coverage proxy rate
+`0.066`, unlit maximum `32`, and `fly_void_near_max=704`. Pixel/frame capture
+was off; none of these values alone confirms a blank framebuffer region.
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_20261011.json),
+[source summary](../../bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_analysis_20261011.json),
+[perf log](../../bin/logs/perf_20261011-232019_47996.jsonl),
+[CPU samples](../../bin/logs/m545_host_cpu_20261011.jsonl),
+[entry-gate log](../../bin/logs/enter_lit_20261011-232022.jsonl), and INFO
+trace `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-232009.47996`.
+
+Next: wait for host load to fall; run capture-disabled M335 using the current
+sampler; then the unchanged full far-distance M335 route if the control is
+credible. Repeat a fresh-seed source-trace route under quieter host conditions
+before making a generation queue/concurrency change. Keep the repeated-world
+M335 route as the primary acceptance path.
+
+### M548 — full-distance M335 repeat (2026-10-13)
+
+M548 used the same visible, no-teleport M335 setup on `World_164`, with capture
+and source tracing disabled:
+
+```powershell
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m548_world164_m335_full_distance --report bin/suite_reports/engine_refactor/m548_world164_m335_full_distance_20261013.json --process-timeout 3600
+```
+
+The process exited normally and covered `14,368` blocks at `5.19653 blocks/s`,
+with no blocked substeps or ground contacts. Report acceptance is FAIL (`30/40`
+gates): near-focus mesh-hole proxy rate `1.984%`, longest run one period,
+28 affected whole-route periods and none in the A24 start band
+(`focus_cx[-6,6]`); post-stop proxy
+was zero. M547 measured `2.18%` on 504 steady periods, so this is comparable
+coverage telemetry, not pixel evidence. Post-stop readiness debt reached 17
+while mesh-missing proxy stayed zero.
+
+One `visual_holes_enter` event recorded an `88.69 ms` frame, mostly a
+`70.33 ms` streamer core update. Four of 14 ready disk results were selected
+and applied; async I/O tick time was `1.54 ms`. With source tracing disabled,
+the event cannot be attributed to disk discovery, format probing, cancellation
+scans, or procedural admission. M548's Release binary predates the disk-owner
+guard; M549 below is the follow-up on the rebuilt executable. Artifacts: [report](../../bin/suite_reports/engine_refactor/m548_world164_m335_full_distance_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-222237_17364.jsonl), host sampler
+`bin/logs/m548_host_cpu_20261013.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-222235.17364`.
+
+### M549 — persisted World_164 disk-owner trace (2026-10-13)
+
+Starting coverage was `83,882` `.cchunk` files under `bin/worlds/World_164/chunks`.
+The Release binary was SHA-256
+`8ab91683fdca4bb5d43217a1bd9c98031e6b97e9306859a44a558ee67e1a5a18`. M549
+ran the visible M335 route with source tracing enabled and pixel/frame capture
+disabled:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m549_host_cpu_20261013.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m549_world164_m335_disk_owner_trace --report bin/suite_reports/engine_refactor/m549_world164_m335_disk_owner_trace_20261013.json --process-timeout 1500
+```
+
+The run covered `5,040` blocks at `5.19653 blocks/s`, with no blocked movement
+or ground contact. It exited normally; acceptance remains FAIL (`31/40` gates)
+because 13 whole-route periods reported a near-focus mesh-hole proxy (`2.579%`,
+longest run one period), with none in the A24 start band (`focus_cx[-6,6]`)
+and none after stop.
+No pixels were captured, so this is not proof of a visible blank chunk.
+
+The source analyzer found `4,945` disk queued demands and `4,945` complete
+terminal outcomes; no retry, incomplete, cancellation, stale-result,
+unmatched, duplicate-terminal, or open demands. There were no procedural
+misses, so this validates the saved-world path only. Discovery p50/p95/max was
+`0.0135/0.0253/0.0889 ms`, format detect `0.698/1.049/2.840 ms`, file-read
+p95 `1.04 ms`, and result-wait `13.16/57.46/877.58 ms`. M548's 70 ms
+streamer-core hitch did not recur as a disk discovery/format-detect outlier on
+this persisted route; keep the late-frontier/dirty-index possibility open.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m549_world164_m335_disk_owner_trace_20261013.json),
+[source ledger](../../bin/suite_reports/engine_refactor/m549_world164_column_source_trace_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-231328_26936.jsonl), host sampler
+`bin/logs/m549_host_cpu_20261013.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-231327.26936`.
+
+### M550 — fresh-seed procedural frontier trace (2026-10-13)
+
+Create the unique seed from `bin` using the Release CLI:
+
+```powershell
+.\Cubatarium.exe --console --create-world --name World_M550_Cold_20261013 --seed 3650481197 --radius-chunks 4 --output worlds --report-json suite_reports/engine_refactor/m550_world_create_20261013.json
+```
+
+The creation report was successful and recorded `603` `.cchunk` files before
+flight. This is a fresh seed with a pre-generated radius-4 start area, not an
+empty `chunks` directory. Then run the visible source-traced M335 frontier
+route from the repository root:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m550_host_cpu_20261013.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_M550_Cold_20261013 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 600 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m550_world_m550_cold_procedural_trace --report bin/suite_reports/engine_refactor/m550_world_m550_cold_procedural_trace_20261013.json --process-timeout 1200
+```
+
+The flight completed normally (`process_rc=0`, `run_outcome=success`) and
+covered `3,072` blocks / `192` chunks at `5.19653 blocks/s`, with no blocked
+substeps or ground contact. Telemetry acceptance was FAIL. The procedural
+ledger closed all `2,893` accepted demand IDs exactly once as committed, with
+no open IDs, duplicate terminal rows, cancellations, or demand mismatches.
+All `104` disk demands completed. Procedural generation p50/p95/max was
+`54.83/109.64/176.47 ms`; scheduler queue p95 was `5.48 ms`, worker-pool
+queue p95 `0.338 ms`, apply p95 `16.07 ms`, and total request p95 `157.77 ms`.
+The four-worker runtime handled the frontier. For disk loads, discovery max
+was `0.025 ms`, format-detect p95 `1.12 ms`, file-read p95 `0.95 ms`, and
+result-wait p95 `4.25 s`; the observed wait is dominated by queued readiness,
+not file-read time.
+
+The near-focus mesh-hole proxy rate was `0.317%` with a one-period longest
+run; a separate A24 counter saw two affected periods, one in the A24 start
+band (`focus_cx[-6,6]`).
+Median visible-black focus was zero and the symptom classifier was false.
+No framebuffer pixels were captured, so this is not proof of a visible blank
+chunk. `unfinished_visual` stayed nonzero and post-stop convergence failed,
+while post-stop mesh-missing and visual-hole proxies were zero. Red pressure
+was present in `240/317` total period rows (analyzer `red_rate=0.762` over
+315 steady periods), but global pending-light p50/p95/max was `40/68/79`,
+near-focus pending-light `0/0/7`, dirty max `140`, and streaming
+phase max `18.13 ms`. The Red threshold was crossed by the global pending-light
+count in 127 periods; 113 additional Red periods were hysteresis. This points
+to background work debt in the pressure signal, not a demonstrated focus
+rendering failure.
+
+The entry spatial-load trace had 89 `disk_miss/purged_incomplete` events with
+`slices=0`, meaning no file slices were present. Static review found the
+telemetry label was inaccurate and also found `LoadTerrainColumn() == -1`
+(`save pending`) was treated as purgeable. Commit `89b258e8` now preserves
+save-owned columns and logs `absent` / `deferred_save_pending` separately.
+M550 predates that correction. The new Release executable SHA-256 is
+`237e13caf0d636ca63ec42e5a6bc3b45853e805bb1bba856358945c4d5b63126`.
+
+Host CPU was median `48.9%`, p95 `83.5%`, max `99.8%`; Cubatarium used median
+`2.65` and p95 `3.88` CPU cores. Treat this as lifecycle/functional evidence,
+not an uncontended performance benchmark. Artifacts: [world creation report](../../bin/suite_reports/engine_refactor/m550_world_create_20261013.json),
+[flight report](../../bin/suite_reports/engine_refactor/m550_world_m550_cold_procedural_trace_20261013.json),
+[source ledger](../../bin/suite_reports/engine_refactor/m550_world_m550_cold_source_trace_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-233323_1840.jsonl), host sampler
+`bin/logs/m550_host_cpu_20261013.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-233321.1840`.
+
+### M551 — full-distance M335 on the disk-owner fix (2026-10-13 UTC)
+
+M551 repeated the established visible, no-teleport 2,800-second route on
+`World_164`, with pixel/frame and source tracing disabled. It used Release SHA
+`237e13caf0d636ca63ec42e5a6bc3b45853e805bb1bba856358945c4d5b63126`. It
+completed normally (`process_rc=0`, `run_outcome=success`) and covered
+`14,368` blocks / `898` chunks at median `5.20019 blocks/s`, with no blocked
+movement or ground contact. Telemetry acceptance remained FAIL.
+
+There were 27 whole-route near-focus mesh-coverage periods (`1.9135%`, longest
+run one period), all at `focus_cx=-171…-890`; none fell in A24's start band
+`focus_cx[-6,6]`. The product eye-proxy `mid_corridor` is the spatial band
+`focus_cx[2,5]`, also near the start, not the temporal middle of this flight.
+For all 27 A24 hole periods the recorded focus proxy was drawable and
+satisfying, with no build in flight or pending GPU apply; 25/27 were dirty.
+This is a mismatch between the hole query and the selected proxy witness, not
+pixel evidence. Capture was off; the run does not establish a visible hole.
+
+Fly wall time was `14.444 ms` median (`~69.2 FPS`), streaming phase `6.733 ms`,
+and Red pressure rate `0.0163`; dirty peaked at `185`, while focus pending
+light median was zero. Readiness debt rate was `73.3%` and post-stop debt ended
+at `29`, although post-stop mesh-missing and visual-hole proxies were zero and
+the convergence gate failed. Host CPU was median `32.9%`, p95 `74.1%`, max
+`99.6%`; Cubatarium reached `3.29` cores. Treat this as route/telemetry
+evidence, not a clean performance baseline. M551 grew the persisted
+`.cchunk` count from `83,882` to `84,187`; later repeats use this modified
+world state.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m551_world164_m335_full_distance_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-235122_20852.jsonl), host samples
+`bin/logs/m551_host_cpu_20261013.jsonl`, and the runtime report. The current
+Release executable with hole-probe telemetry was rebuilt after M551.
+
+### M552 — M335 hole-probe/latch diagnostic (2026-10-14)
+
+M552 ran the visible, fixed-day, no-teleport M335 route for 600 seconds on the
+M551-modified `World_164`, using Release SHA
+`0ad5fe29430c59cf2408a593cc5d274c74668d05edf56a1a49e9936c2fb79536`.
+Capture and column-source tracing were disabled. It completed the flight
+normally at `5.19653 blocks/s`, covering `3,088` blocks / `193` chunks; the
+report is `pass=false` on telemetry gates. Wall median was `12.850 ms`,
+streaming phase `6.850 ms`, and readiness debt rate `50.79%`. Post-stop visual
+and mesh-missing proxies were zero, but readiness debt ended at `25` and
+convergence failed. Host CPU median/p95/max was `37/70.4/99.7%`; Cubatarium
+used median/p95/max `1.77/2.53/3.59` cores, so this is not a quiet-host
+performance baseline.
+
+The terminal sample in each interval produced two steady A24 near-focus
+hole periods: one query returned missing and one returned clear while the
+hole flag was latched. Both selected proxy witnesses were drawable and
+satisfying. The new frame-aligned `visual_holes_enter` analysis saw 52 rising
+edges during movement (40 query-returned-miss, 12 query-returned-clear; 12
+latched); all 52 witnesses were drawable and satisfying, with no build or GPU
+apply pending. Six events fell in the A24 start band `focus_cx[-6,6]`; 46 were
+outside it, down to `focus_cx=-181`. These are mesh-coverage proxy events, not
+confirmed framebuffer holes. No frame pixels were captured and the symptom
+classifier remained false.
+
+Static review explains why “query returned miss” is not necessarily a fresh
+scan: `HasMissingGreedyMeshInHorizontalRadius` memoizes by focus chunk and
+radius; `BeginHoleQueryFrame` advances its epoch only when the focus chunk
+changes. Mesh state can change after the query in `TickAsyncChunkSystems`,
+while the memo remains valid until the camera enters another chunk. A proxy
+probe may therefore report a stale missing result. A24 interval rows also
+sample the terminal frame only; the rising-edge events are now reported
+separately and remain diagnostic-only. This warrants fixing freshness and
+candidate identity before using the proxy as an acceptance gate.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m552_world164_m335_probe_latch_diagnostic_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-005042_2492.jsonl), [host sampler](../../bin/logs/m552_host_cpu_20261014.jsonl),
+and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261014-005039.2492`.
+
+### M553 — full-distance query-freshness control (2026-10-14)
+
+M553 completed the visible 2,800-second M335 route on the same persisted
+`World_164`, with capture and source tracing off, using the M552 Release
+executable (`0ad5fe29…`). It covered `14,368` blocks / `898` chunks at a median
+`5.20019 blocks/s`; the process returned success, while the telemetry report
+remained `pass=false`. The analyzer was rerun against the saved JSONL so the
+report includes rising-edge event counts.
+
+The whole route had 39 period-end near-focus hole proxy samples, `2.77%` visual
+hole proxy rate, and 76 proxy transitions. Across those 39 samples, the invoked
+radius query returned missing 28 times and clear 11 times; 11 samples were
+latched. The selected proxy witness was drawable and satisfying on 38/39
+samples. Frame-aligned rising-edge events numbered 318; 260 recorded a query
+returning missing, 57 clear, one unavailable, and 58 latched. Events spanned
+`focus_cx=-891…6`. These are mesh/readiness telemetry proxies, not framebuffer
+evidence. M553 predates raw query-witness and memo-hit telemetry, so it cannot
+tell whether the radius-query slice matches the selected proxy witness or
+whether the query used the memo.
+
+Host CPU median/p95/max was `36.6/64.2/97.6%`. The sampler emitted one impossible
+`679`-core process sample at elapsed `1,895 s`; treat that as a sampler anomaly.
+The route is not a clean performance baseline. The report also recorded a
+`38` visible-black telemetry peak and `1,204` near-void proxy peak; neither is
+direct pixel evidence, and the operator had not reported a visible hole.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m553_world164_m335_full_distance_probe_latch_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-010258_25292.jsonl), [host samples](../../bin/logs/m553_host_cpu_20261014.jsonl),
+and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261014-010258.25292`.
+
+The exact invocation was:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m553_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m553_world164_m335_full_distance_probe_latch --report bin/suite_reports/engine_refactor/m553_world164_m335_full_distance_probe_latch_20261014.json --process-timeout 3600
+```
+
+For M335 reports, A24's `corridor` means the start-locus band
+`focus_cx[-6,6]`; the eye-proxy `mid_corridor` means `focus_cx[2,5]`. Neither
+name denotes the temporal midpoint of a long flight. Preserve `World_164` as
+the repeated-condition control and continue periodic fresh-seed checks
+separately. M554 ran the 600-second visible fixed-day control on the new
+Release build SHA256
+`EA65FD5F3CAACE8330FDF735B9E3DC031FFBC7AF7A44F437E4F20844480CF399`. It
+completed normally at `5.19653 blocks/s`, covering `3,088` blocks / `193`
+chunks (`focus_cx=7…-186`), with no blocked substeps or ground contacts. It
+was a start-corridor control, not a repeat of M553's far coordinates.
+
+M554 reported two period-end near-focus hole proxy samples and 48 moving
+rising-edge events; A24 remained `pass=false`. On the period samples, the raw
+radius query returned missing twice and clear zero times. Across rising-edge
+events, it returned missing 38 times and clear 10 times. Memo hits were zero
+among 129 sampled probe invocations and zero on those events. The raw query
+witness differed from the separately selected focus proxy on all 38 miss
+events; all 48 selected proxies were drawable and satisfying. This confirms
+the two coordinates come from different selection paths, not that either one
+matches a blank framebuffer pixel. M554 still lacks readiness/owner state for
+the raw query witness; the next Release diagnostic records that state.
+
+Median query time was `0.0174 ms` (p95 `0.0354 ms`, max `0.0726 ms`). Wall
+median was `13.20 ms`; streaming phase median `7.00 ms`. Host CPU median/p95/max
+was `33.9/58.3/95.6%`; Cubatarium used `1.92/2.94/3.42` cores (median/p95/max),
+so do not treat this as a quiet-host benchmark. The report's A24 gate failed;
+dual-lane and eye-proxy gates passed. These remain telemetry gates, not
+operator-confirmed image defects.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m554_world164_m335_query_witness_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-015725_2392.jsonl), and [host samples](../../bin/logs/m554_host_cpu_20261014.jsonl).
+Exact command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m554_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 600 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m554_world164_m335_query_witness --report bin/suite_reports/engine_refactor/m554_world164_m335_query_witness_20261014.json --process-timeout 1200
+```
+
+### M555 — full-distance exact-witness lifecycle trace (2026-10-14)
+
+M555 completed the full 2,800-second visible no-teleport M335 route on the
+persisted `World_164`, using the Release executable from commit `be4fe1de`
+(SHA256 `DBFE5C871FA03EEA502DA72982BFE079649EE0E21EAD0F69399EE2C4507CD4B2`).
+The process returned `0` with `run_outcome=success`, no hang, and covered
+`14,352` blocks / `897` chunks (`focus_cx=7…-890`). Median movement speed was
+`5.19653 blocks/s`; median fly wall time was `14.47 ms` (`69.1` effective FPS).
+This is a warmed/persisted-world repeat, not the periodic fresh-seed check.
+
+Important run-condition correction: the M555 manifest records both
+`fog_on=false` and `route.fog_pull_in_enabled=false`. The 36-block value below
+is therefore the configured fog-distance model, not active fog in this run.
+"Beyond fog" classifications from M555/M556 must not be read as proof that a
+witness was hidden from the operator or outside the no-fog render range.
+
+The analyzer recorded 31 of 1,410 steady period samples with
+`near_focus_holes=1` (`visual_holes_rate=2.20%`, 62 transitions); none were in
+the A24 start corridor. The A24 gate remains `pass=false` on the whole-route
+mesh-readiness signal. There were 284 moving rising-edge events; 213 exact raw
+radius-query misses had valid witnesses, and the separately selected focus
+proxy was satisfying on 210 of those misses. This mismatch does not identify a
+blank framebuffer pixel.
+
+The new fog-scope analysis classifies all 37 whole-route exact-witness misses
+and all 213 rising-edge miss witnesses as beyond the configured fog horizon.
+For M555, `fog_pull_in_rd=4` and end margin `28` give
+`max(32, 4*16-28)=36` fog-horizon blocks. The nearest possible horizontal
+distance from any point in the focus chunk to each witness chunk's AABB was at
+least `48` blocks (chunk deltas were 4 or 5), so the witnesses were outside
+that fog horizon. This is a conservative geometric lower bound: it establishes
+that those exact witnesses were beyond configured fog range, not that all
+near-focus debt is harmless or that the renderer had no visible artifacts.
+The `near_focus_holes` query spans the streaming focus radius, which is wider
+than the fog horizon; retain A24 as a mesh-readiness stop-line while reporting
+this frontier class separately from pixel/eye evidence.
+
+Among the 37 exact misses, 26 snapshots reported repairable geometry debt, 18
+dirty state, three a flow ticket, and two had no identified owner among the
+reported fields; there were no build/GPU/SoftDefer owners in those miss
+snapshots. These are immediate snapshots, not proof of persistent ownership
+or abandonment. The period-level `visible_black_focus_n` is also a census, not
+a framebuffer measurement. No screenshot or pixel probe was collected, so
+operator-visible appearance remains unmeasured by M555.
+
+The host sampler recorded CPU median/p95/max of `37.8/83.5/100%`; the app used
+`1.94/2.66/4.14` CPU cores. Keep these measurements out of quiet-host
+performance comparisons. Post-stop convergence also failed (`post_stop_missing_max=3`),
+so this run does not demonstrate full settlement after the flight.
+
+The A24 analyzer now reports witness scope using the nearest possible horizontal
+distance from the focus-chunk AABB to the witness-chunk AABB. A witness whose
+lower bound exceeds the configured fog horizon is labeled `beyond_fog`; an
+intersection is only a visibility candidate. This classification does not
+change the A24 pass/fail gate.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m555_world164_m335_full_distance_witness_owner_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-021651_24024.jsonl), and [host samples](../../bin/logs/m555_host_cpu_20261014.jsonl).
+
+Exact invocation:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m555_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m555_world164_m335_full_distance_witness_owner --report bin/suite_reports/engine_refactor/m555_world164_m335_full_distance_witness_owner_20261014.json --process-timeout 3600
+```
+
+Keep operator-visible observations separate from mesh/readiness proxies.
+
+### M556 — full-distance raw-witness lifecycle trace (2026-10-14)
+
+M556 repeated the visible, no-teleport 2,800-second M335 route on persisted
+`World_164` using the Release executable from `1f307b48` (SHA256
+`0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`). The
+process returned `0`, `run_outcome=success`, and covered `14,368` blocks / `898`
+chunks (`focus_cx=7…-891`). Median movement speed was `5.19653 blocks/s`;
+median fly wall time was `14.05 ms` (`71.18` effective FPS). This is a warmed
+persisted-world repeat, not the periodic fresh-seed check or a clean host
+performance baseline.
+
+The A24 stop-line still failed: 27 of 1,411 steady periods had
+`near_focus_holes=1`, with none in the start corridor. The near-focus mesh
+coverage proxy was nonzero in `1.91%` of samples, with 54 transitions and a
+longest run of one sample. The exact raw radius query returned 25 valid miss
+witnesses over its sampled whole-route calls; those snapshots reported 14
+repairable geometry-debt owners, nine dirty states, one flow ticket, and four
+cases with no owner among the fields captured. These categories can overlap.
+The separate focus proxy was drawable+satisfying in all 27 periods flagged by
+the near-focus signal. This disagreement keeps the gate diagnostic; it does
+not establish a blank framebuffer pixel.
+
+The lifecycle tracker emitted 533 terminal events, all
+`resolved_before_fog`; it emitted no `entered_fog_unready`,
+`resolved_after_fog`, or `exited_fog_unready` events. The event distances were
+58–108.53 blocks (median 96.61) from the preferred-load focus block to the
+witness chunk AABB. However, M556 also records `fog_on=false` and
+`route.fog_pull_in_enabled=false`. With render distance 4, the configured fog
+horizon was 36 blocks while the no-fog render horizon was 64 blocks. Some
+resolved witnesses were therefore inside the no-fog render-distance bound;
+the 533 outcomes do not prove they cleared before becoming potentially
+visible. The tracker uses preferred-load focus and chunk-AABB distance, not
+camera frustum, occlusion, or framebuffer pixels. A follow-up with explicitly
+enabled fog is required to interpret the fog-entry lifecycle against active
+presentation.
+
+At the end of the flight, `post_stop_mesh_missing_max=0` and
+`post_stop_visual_holes_max=0`, but readiness debt remained at 8 and the
+post-stop convergence gate failed. `visible_black_focus_n` peaked at 38; this
+is a focus census, not pixel evidence. The host sampler reported machine CPU
+median/p95/max `36.2/69.9/98%` and app use `1.9/2.6/3.5` cores, so these are not
+quiet-host performance results.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m556_world164_m335_witness_to_fog_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-032651_25908.jsonl), and [host samples](../../bin/logs/m556_host_cpu_20261014.jsonl).
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m556_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m556_world164_m335_witness_to_fog --report bin/suite_reports/engine_refactor/m556_world164_m335_witness_to_fog_20261014.json --process-timeout 3600
+```
+
+### M557 — full M335 lifecycle trace with active fog (2026-10-14)
+
+M557 repeated the visible, no-teleport 2,800-second M335 route on persisted
+`World_164`, using the same Release executable as M556 (SHA256
+`0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`) and
+`CUBA_FLIGHT_FOG_ON=1`. The manifest records `fog_on=true` and
+`route.fog_pull_in_enabled=true`; the app exited normally (`process_rc=0`,
+`run_outcome=success`, no hang), covering `14,368` blocks / `898` chunks
+(`focus_cx=7…-891`) at median `5.19653 blocks/s`. The analyzer process returned
+1 because the route acceptance gates failed; this is not an application crash.
+
+The Windows console could not encode the Unicode arrow in the fog-pin status
+line. The runner caught the encoding error after the configuration file was
+read; `bin/config.json` was observed with `fog_pull_in_enabled=true` while the
+app was running, but the report consequently has `effective_settings=null`, no
+effective config hash, and lists `light_distance_settings` as untested. The
+route/environment flags and live config agree, but this metadata gap weakens
+the run manifest. The runner now uses ASCII `->` for that message so later runs
+can persist those fields.
+
+The fog horizon was dynamic: of 1,411 steady samples, 1,045 used RD3 with a
+pull-in margin large enough to clamp the modeled horizon to 32 blocks; 368
+used RD4/margin28 and a 36-block horizon. At debt zones such as `cx=-353` and
+`-519…-528`, the pull-in held RD3 and margin up to 123. `unfinished_visual`
+was 42 at the `-353` dark-census sample and 31–36 on the cited stalled-census
+samples at `-519…-528` (the full band peaked at 70). This confirms that
+unfinished outer-ring work can hold a shorter fog horizon well after an
+individual near-focus signal clears.
+
+The A24 stop-line failed on 24 of 1,411 periods with `near_focus_holes=1`, one
+in the start corridor. The near-focus mesh proxy was nonzero in `1.70%` of
+samples (48 transitions, longest run one sample). The exact query returned 32
+valid whole-route miss witnesses: 23 reported geometry debt, 11 dirty state,
+four flow tickets, and five with no owner among the fields sampled; categories
+overlap. All 32 conservative AABB lower bounds were beyond the *then-active*
+fog horizon. The lifecycle tracker emitted 563 terminal events, all
+`resolved_before_fog`, with none entering the active horizon unready. Their
+preferred-focus/AABB distances were 62–108.53 blocks (median 95.47); every
+terminal event had an active modeled horizon of 32 blocks. This does not prove
+camera-frustum or framebuffer visibility.
+
+At `cx=-353`, the focus census reached 36 fully-dark candidates, including up
+to six stalled-ticket columns; the reported dark-face distance was about 21.4
+blocks while active fog ended at 32. In `cx=-519…-528`, near-focus missing-mesh
+was zero while the census again saw up to six fully-dark stalled columns and
+`unfinished_visual=31…36`. These are light/remesh-owner candidates, not proof
+of a visible dark patch: M557 had no visual-black source trace, screenshot, or
+pixel probe. The visible-black census is a focus-radius scan and can include
+underground geometry outside the camera frustum.
+
+The stop tail ended with readiness debt 5, although
+`post_stop_mesh_missing_max=0` and `post_stop_visual_holes_max=0`; demand-stop
+convergence failed. The eye-proxy and dual-lane gates passed. Median fly wall
+time was `13.76 ms` (`72.65` effective FPS), but host CPU median/p95/max was
+`37.3/83.5/100%` (app `1.91/2.73/4.12` cores), so this is not a clean
+performance baseline.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m557_world164_m335_fog_on_witness_lifecycle_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-041640_26656.jsonl), and [host samples](../../bin/logs/m557_host_cpu_20261014.jsonl).
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m557_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m557_world164_m335_fog_on_witness_lifecycle --report bin/suite_reports/engine_refactor/m557_world164_m335_fog_on_witness_lifecycle_20261014.json --process-timeout 3600
+```
+
+### M558 — trace dark-census owners and framebuffer samples (2026-10-14)
+
+M558 ran the visible, no-teleport M335 route through both recurring dark-census
+zones on persisted `World_164`, with active fog and the Release executable
+(SHA256 `0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`).
+It reached `focus_cx=-570` (`9,232` blocks / `577` chunks) at median
+`5.18555 blocks/s`; the application exited normally. The analyzer returned 1
+because acceptance gates failed. The manifest records fog and effective
+settings correctly, and before/effective config hashes match.
+
+The 1.062 GB perf log retained the full 1,024-entry visual-black attribution
+ring. Cause ordinals are `0=StaleDarkWithLitField`,
+`1=FullyDarkPendingRepair`, `2=FullyDarkNoTicket`,
+`3=FullyDarkStalledTicket`, and `4=LegalDarkNoRepair`; the retained histogram
+was `18/13/0/122/871`. In the late zone, 122 stalled-ticket records span 78
+frame epochs and four exact slice coordinates: `(-529,2,2)`, `(-521,2,3)`,
+`(-520,2,2)`, and `(-520,2,3)`. Every one also had a `PromoteRelight` flow
+ticket; renderer-column draw state said `draw_ok=1`, reason `0`, and the
+meshed/field light revisions matched. Some records additionally had a keyed
+or deferred-far persistence relight owner. This describes census ownership
+without progress/sticky evidence; it does not establish that the ticket was
+eligible to run or that its slice was visible.
+
+There were 1,440 framebuffer pixel samples at each target zone (18 probe
+frames per zone). Surface-hit samples numbered 1,080 in each zone; the median
+sampled luma was `147.8` near `cx=-353` and `158.3` near `cx=-521`, with minima
+near `25`. However, pixel probes were not aligned to screen-ray selection and
+none of the 122 stalled-census slice coordinates matched a same-frame sampled
+opaque hit. The captures therefore do not confirm or disprove a visible
+artifact. Camera position and focus coordinates alone do not establish view
+membership; check exact frustum/ray intersection before changing lighting or
+scheduler policy. Pixel sampling was not a performance baseline.
+
+Other gates: A24 saw nine near-focus mesh-proxy periods (none in the start
+corridor), while `visual_holes_rate=0.9858%` and post-stop mesh-missing and
+near-focus visual-hole proxies were zero. Post-stop readiness debt remained
+10 and demand-stop convergence failed. The manifest's resolution remains
+untested. Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m558_world164_m335_dark_census_trace_20261014.json),
+[1.062 GB perf JSONL](../../bin/logs/perf_20261014-050719_25220.jsonl), and
+[host samples](../../bin/logs/m558_host_cpu_20261014.jsonl).
+
+M558 exposed a trace-volume issue: the default periodic pixel probe generated
+86,640 wide JSON records even with dense pixels disabled. M559 bounded
+framebuffer readback to the late census corridor and enabled pixel captures on
+screen-ray frames while retaining the same route and speed.
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m558_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m558_world164_m335_dark_census_trace --report bin/suite_reports/engine_refactor/m558_world164_m335_dark_census_trace_20261014.json --process-timeout 2600
+```
+
+### M559 — correlate the late stalled census with camera rays (2026-10-14)
+
+M559 repeated the visible, no-teleport, active-fog M335 route on persisted
+`World_164` using Release executable SHA256
+`0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`. The app
+exited normally with `process_rc=0` and `run_outcome=success`; the analyzer
+returned 1 because acceptance gates failed. It reached `cx=7…-570`
+(`9,232` blocks / `577` chunks) at median `5.18921 blocks/s`. Manifest values
+confirm fog enabled, effective configuration hash equal to the pre-run hash,
+screen-ray pixel probes enabled, and camera-X bounds `-8512…-8416`; resolution
+remains untested.
+
+The perf log is `231,814,660` bytes (about `221 MiB`), down from M558's `1.062`
+GB. The full attribution ring retained 955 `LegalDarkNoRepair`, 56
+`FullyDarkPendingRepair`, and 13 `FullyDarkStalledTicket` samples. The 13
+stalled records cover eight frames and two slice coordinates:
+`(-530,2,2)` and `(-523,2,0)`. They all had matching light revisions,
+renderer-column `draw_ok=1` / reason `0`, and a `PromoteRelight` flow ticket;
+the owner mask indicated column-lit, lit-gate, and repair-ticket bits, with
+the `(-530,2,2)` samples additionally marked deferred-far. This again finds
+repair ownership without establishing that the ticket is eligible to advance
+or that the slice is visible.
+
+Within camera focus `cx=-532…-526`, M559 retained 900 framebuffer samples from
+11 probe frames. Of these, 680 hit a surface and 547 had an opaque surface;
+surface luma ranged `26.1…210` with median `158.3`. Only one frame had the
+screen-ray-aligned trigger. The streaming trace retained 50 ray rows across
+two frames, with four candidates selected, but neither target stalled slice
+matched a same-frame pixel hit or any captured ray coordinate. The census
+frames also did not coincide with the sparse pixel-probe frames. These
+unmatched sparse samples do not prove the chunks lie outside the full camera
+frustum; they show the periodic/on-ray sampling cadence is still too sparse to
+join a brief census event reliably.
+
+The route had six whole-route near-focus mesh-proxy periods (zero in the start
+corridor); `visual_holes_rate=0.657%`, with 12 transitions and longest run one
+sample. The eye-proxy gate failed because stale-visual delta median was `2` and
+stale activity occurred without hole counters; dual-lane passed. Post-stop
+readiness debt was `2`, mesh-missing and near-focus visual-hole proxies were
+zero, but demand-stop convergence still failed. Median fly frame wall time was
+`13.40 ms` (`74.64` effective FPS). Host CPU median/p95/max was `35.0/57.5/97%`
+and app use `2.06/2.47/3.59` cores, so this is not a clean performance
+baseline. Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m559_world164_m335_screen_ray_aligned_pixels_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-054612_15308.jsonl), and
+[host samples](../../bin/logs/m559_host_cpu_20261014.jsonl).
+
+### M560 — synchronize a pixel probe to stalled census (2026-10-14)
+
+The screen-ray cadence did not overlap the eight stalled-census frames in
+M559. The Release diagnostic change now publishes the epoch of a
+`FullyDarkStalledTicket` census sample; when enabled, the renderer takes one
+five-row screen-aligned framebuffer sample in that exact epoch and sets
+trigger bit 4. Pixel readback stays bounded to camera X `-8512…-8416` blocks.
+The ordinary screen-ray trigger remains enabled to retain its independent
+cadence. Join same-frame census coordinates to pixel hit chunks, colors,
+revisions, and draw state. If no dark census occurs in the bounded corridor,
+the run still measures route/stop proxies but cannot validate this join.
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m560_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m560_world164_m335_stalled_census_pixel_sync --report bin/suite_reports/engine_refactor/m560_world164_m335_stalled_census_pixel_sync_20261014.json --process-timeout 2600
+```
+
+M560 used Release executable SHA256
+`C641D10BDC1257A04DA1625574A80A4CE0C0A4312F6C7E8F90CEFF67B51C0069` and
+completed the full `9,232`-block / `577`-chunk route at normal cruise speed
+(`5.19 blocks/s`) with fog on and exited normally. The analyzer still
+returned `pass=false`: A24 had 12 whole-route periods and a `1.314%` near-focus
+mesh-coverage proxy rate, post-stop readiness debt was 30, and demand-stop
+convergence failed. This proxy rate does not establish blank pixels. The run
+was not a quiet-host performance baseline: host CPU median/p95/max was
+`42/83.2/99.2%`, with application use `2.08/2.61/3.98` cores. The perf JSONL
+was `238,520,599` bytes (`227.5 MiB`); the report and logs are
+[flight report](../../bin/suite_reports/engine_refactor/m560_world164_m335_stalled_census_pixel_sync_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-062722_24772.jsonl), and
+[host samples](../../bin/logs/m560_host_cpu_20261014.jsonl).
+
+The synchronized trigger produced 400 framebuffer rows in four frames. All
+three late `FullyDarkStalledTicket` samples overlapped event pixels: one at
+`(-526,2,5)` and two at `(-529,2,2)`. The reproducible AABB join is:
+
+```powershell
+python tools/analyze_stalled_census_pixels.py bin/logs/perf_20261014-062722_24772.jsonl
+```
+
+Of 400 sampled rays, 289 missed those target slice boxes. Eleven rays
+intersected `(-529,2,2)`; all eleven had an opaque depth surface before box
+entry, in the upper terrain slice `(-529,3,2)` (ten rays) or adjacent
+`(-529,2,3)` (one ray). All 100 rays in the `(-526,2,5)` event frame missed
+that box. Thus the samples show occlusion for the intersecting rays and are
+inconclusive for the third slice; they do not certify the full camera frustum.
+The matching frustum summaries retained 217–259 candidates but only sampled
+6–9 candidates, and did not identify these exact slices.
+
+The census records themselves had no dirty queue or mesh work owner. The
+`(-529,2,2)` demand was at stage `Admitted`, attempt `154414`, with desired
+geometry revision 10 and published revision 9. `(-526,2,5)` had a cancelled
+demand stage and desired/published geometry revisions 12/8. A mesh-repair
+trace for `(-526,2,5)` in that frame has outcome 15, which source maps to an
+accepted asynchronous enqueue; it is a scheduler trace, not a draw-gate
+measurement. The zero-valued `renderer_column_draw_ok` field in that trace is
+unset and must not be compared to the populated census field. This exposes a
+same-frame ordering/window ambiguity, rather than a confirmed disagreement in
+the renderer. No demand-transition or worker/GPU lifecycle records for these
+coordinates were retained because census-selected slices were not added to
+the lifecycle watch set. A follow-up diagnostic now watches cause-3 slices so
+their subsequent transitions can be captured directly.
+
+### M561 — repeat M335 and retain cause-3 lifecycle (2026-10-14)
+
+The user reported that machine CPU is available again. M561 repeated the same
+persisted `World_164` M335 route and fog/pixel bounds, so route conditions
+remain comparable. This Release diagnostic build additionally watches each
+`FullyDarkStalledTicket` census slice for later demand and worker/GPU lifecycle
+transitions. It was built with `cmake --build bin --config Release --target
+Cubatarium --parallel 8`, SHA256
+`3753D4F78C29FEB84A02A4961FAA2C348E771AC2637F6894863F6317945E6910`. Capture
+host CPU continuously, then join the census, pixels, and lifecycle with the
+AABB analyzer. Keep proxy gates and framebuffer evidence separate.
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m561_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m561_world164_m335_cause3_lifecycle --report bin/suite_reports/engine_refactor/m561_world164_m335_cause3_lifecycle_20261014.json --process-timeout 2600
+$m561Report = Get-Content bin/suite_reports/engine_refactor/m561_world164_m335_cause3_lifecycle_20261014.json -Raw | ConvertFrom-Json
+python tools/analyze_stalled_census_pixels.py $m561Report.perf_jsonl --json-out bin/suite_reports/engine_refactor/m561_stalled_census_pixel_join_20261014.json
+```
+
+M561 completed normally (`process_rc=0`, `run_outcome=success`) and covered
+`9,232` blocks / `577` chunks at median `5.18555 blocks/s`. The analyzer
+reported 915 periods / 913 steady periods and median fly wall time
+`13.7909 ms`. Its quality gates did not pass: near-focus `visual_holes_rate`
+was `1.314%` with a longest run of one period, A24 failed on
+`near_focus_holes_periods_gt0`, post-stop mesh-missing was zero but readiness
+debt reached 20, and demand-stop convergence failed. These are mesh/readiness
+proxies; they do not report a blank framebuffer pixel. The detailed report is
+[`m561_world164_m335_cause3_lifecycle_20261014.json`](../../bin/suite_reports/engine_refactor/m561_world164_m335_cause3_lifecycle_20261014.json).
+
+The host sampler recorded CPU median/p95/max `36.6/67.0/95.0%`; Cubatarium
+used `2.053/2.468/3.186` cores at median/p95/max. This is lower than M560 but
+still has substantial host spikes, so it is not a quiet performance baseline.
+The sampler's optional process list was disabled; the source of aggregate host
+spikes is therefore unknown. Enable `--top-processes-interval-sec 60` on a
+future performance-baseline run if process attribution is needed.
+See [`m561_host_cpu_20261014.jsonl`](../../bin/logs/m561_host_cpu_20261014.jsonl)
+and [`perf_20261014-070809_15064.jsonl`](../../bin/logs/perf_20261014-070809_15064.jsonl).
+
+The lifecycle-aware join found 105 cause-3 trace rows on seven exact slice
+identities. Ninety rows shared an epoch with one of 60 event-pixel frames
+(6,000 unique pixel rows). There are 9,000 ray-to-slice comparisons because a
+pixel frame can be compared against more than one census slice: 8,975 rays
+missed the target AABBs, and 25 intersected only `(-528,2,2)`. Every one of
+those 25 had an opaque surface in the upper slices `(-528,3,2)` or `(-528,3,3)`
+before target-box entry. The samples do not show an unoccluded ray into a
+cause-3 target; they still do not prove full-frustum exclusion or visual
+absence. The compact join is saved at
+[`m561_stalled_census_pixel_join_20261014.json`](../../bin/suite_reports/engine_refactor/m561_stalled_census_pixel_join_20261014.json).
+
+For `(-528,2,2)`, world epoch 4 / incarnation 28529 / attempt 150691 completed
+`started → built → GPU queued/ready → published` at frames 118603–118604. Its
+geometry revision reached `9/9`, light revision was `1/1`, draw gate was 1,
+and the dirty queue and mesh owner flags were zero. The census nevertheless
+repeated the stalled-ticket attribution 45 more times through frame 118895.
+Those later rows had no active attempt, `column_flow_ticket_flags=8`
+(`PromoteRelight`), `relight_owner_flags=224`, and still had draw gate 1. This
+is consistent with a column-level ticket keeping a fully dark slice in the
+diagnostic debt census after its exact geometry demand completed; it is not
+evidence of a black pixel. For `(-521,2,3)`, attempt 149666 was cancelled at
+frame 118671 while the census continued through 118736. For
+`(-525,2,8)`, attempt 151417 remained an admitted FirstMesh request with
+desired/published geometry `7/1` in the census sample; its watched schedule
+row then advanced desired geometry to 8 and showed queue size 1, but no
+terminal event was captured before the route ended. Lifecycle rows without a
+matching nonzero world epoch and incarnation are now reported separately as
+unverified, not joined as exact ownership.
+
+Static follow-up: `CountVisibleBlackFocusMeshes` classifies any fully dark
+column with a live repair ticket and no column-level progress as
+`FullyDarkStalledTicket`; this branch runs before the equal-light-revision
+`LegalDarkNoRepair` fallback. `HasRepairTicket` is only live scheduler
+membership for the XZ column. `ColumnHasRepairProgress` checks pending light,
+eligible SoftDefer ownership, dirty mesh, GPU apply/queue/kick, and mesh-build
+in-flight states; it does not mean that the selected Y slice owns this ticket.
+For `PromoteRelight`, `AdvanceColumn` promotes near-terrain and pending-light
+queues, then requeues `RelightThenMesh` only if that column still has pending
+light without a persistence queue or async owner. It is not itself a mesh
+publication operation. M561's bit-8 PromoteRelight ticket can therefore be a
+column scheduling request alongside an already-published fully dark slice.
+The source has several producers (focus ingress, missing-hole recovery, and
+admission/pending-light paths), but `ColumnWorkItem` does not retain which
+producer requested it. If this scheduler attribution remains actionable,
+instrument ticket generation/age and requestor, then repeat the controlled
+route before policy changes. Continue to require a positive camera/pixel
+witness for any claim of a rendering defect.
+
+M561 stop-tail readiness debt is now decomposed by the already-emitted
+`focus_visual_*_n` class counters. All five final period rows had
+`unfinished_visual=20` and `focus_visual_missing_mesh_n=20`; every other
+unfinished class was zero, while `focus_visual_ready_n=101`. At the same time,
+`visual_holes=0` and `focus_missing_mesh=0`. Thus the unresolved count is 20
+XZ columns classified as `MissingMesh` in the broader streaming focus ring,
+not 20 demonstrated blank pixels or camera-near mesh gaps. In the latest
+captured `focus_slice_trace` epoch (`130410`), 11 sampled XZ coordinates were
+in this class; their sampled slices were non-air, had no drawable mesh, and
+were marked unresolved/no-owner. One example was `(-575,1,2)` with the camera
+at block `(-9114,70,56)`: the chunk center is about 80 blocks away horizontally
+and 92 in 3D, and the nearest point of its AABB is about 72 blocks away
+horizontally. This exceeds the 32–36 block effective fog horizon measured on
+the active-fog M335 repeat, but it does not classify all 20 columns or provide
+a frustum witness. The focus-ring `MissingMesh` census and
+the near-focus mesh-coverage proxy therefore answer different questions.
+
+The analyzer now reports stop-tail max/end/sample-count for each emitted
+`focus_visual_*_n` class. Use this breakdown together with the fog-horizon A24
+classification and exact frustum/pixel witnesses before changing the demand
+stop rule. The next useful audit is to identify which of the 20 unowned
+columns fall inside the effective visibility horizon; do not increase mesh
+admission for out-of-horizon debt based on the aggregate count alone.
+Reanalysis of the saved M561 log reports
+`post_stop_focus_visual_missing_mesh_max/end=20/20` and
+`post_stop_focus_visual_ready_max/end=101/101` across five stop samples; the
+full supplemental output is
+[`m561_readiness_class_reanalysis_20261014.json`](../../bin/suite_reports/engine_refactor/m561_readiness_class_reanalysis_20261014.json).
+
+### M562 — extend readiness-class coordinate capture (2026-10-14)
+
+M562 repeated the visible, no-teleport `World_164` M335 route and fog/pixel
+bounds on Release SHA256
+`1493F0FA3D06536685019E29CA3C362BA8FDAB7BEB60F9DE229B6CD63C89B12E`. The
+only diagnostic change was `CUBA_FOCUS_SLICE_TRACE_PER_STATE=32` (bounded to
+64 by the engine); the flight runner records this setting in its manifest.
+The run completed normally (`process_rc=0`, `run_outcome=success`), reached
+`focus_cx=-570`, and covered `9,232` blocks / `577` chunks at median
+`5.19287 blocks/s`. The run still failed A24: the mesh-coverage proxy was
+positive in 14 period samples (`visual_holes_rate=1.533%`, longest run one),
+but all 92 exact event-query miss witnesses were outside the configured fog
+horizon and all 92 paired proxy columns were drawable and satisfying. This is
+not a positive framebuffer-hole witness. Stop-tail mesh-hole proxies and
+`focus_missing_mesh` were zero, while readiness debt reached 34 and demand-stop
+convergence failed. The visible flight had no framebuffer capture enabled.
+
+The five final period rows decomposed readiness as 34 `MissingMesh` columns,
+87 `Ready`, and zero in the other unfinished classes. The widened slice trace
+captured 29 distinct unresolved/no-owner `MissingMesh` coordinates at the far
+focus (`cy=1`, 4,096 non-air blocks each). Using the same conservative AABB
+bound as the fog classifier, 27 were beyond the 32-block effective horizon;
+two were exactly at the horizon and remain visibility candidates, not proven
+visible pixels. Five of the 34 columns were not present in the bounded trace
+sample, so the next exact repeat uses cap 64. The pixel join found one
+same-epoch stalled-census slice; 100 sampled rays all missed its target AABB.
+No positive camera/pixel witness was captured. See
+[`m562_world164_m335_readiness_classes_20261014.json`](../../bin/suite_reports/engine_refactor/m562_world164_m335_readiness_classes_20261014.json),
+[`m562_stalled_census_pixel_join_20261014.json`](../../bin/suite_reports/engine_refactor/m562_stalled_census_pixel_join_20261014.json),
+[`perf_20261014-094858_31504.jsonl`](../../bin/logs/perf_20261014-094858_31504.jsonl),
+and [`m562_host_cpu_20261014.jsonl`](../../bin/logs/m562_host_cpu_20261014.jsonl).
+
+The host sampler recorded CPU median/p95/max `45.1/76.2/100%`; the app used
+`1.975/2.515` cores at median/p95 after excluding one invalid `507`-core sample.
+Minute process scans repeatedly showed `CompatTelRunner.exe`, with additional
+`MsMpEng.exe` and OneDrive load. This is not a clean performance baseline.
+
+Exact command:
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='32'
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m562_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m562_world164_m335_readiness_classes --report bin/suite_reports/engine_refactor/m562_world164_m335_readiness_classes_20261014.json --process-timeout 2600
+```
+
+### M563 — readiness trace cap 64 repeat (2026-10-14)
+
+M563 repeated the visible, no-teleport `World_164` M335 route on Release SHA256
+`1493F0FA3D06536685019E29CA3C362BA8FDAB7BEB60F9DE229B6CD63C89B12E`, with
+active fog, the established `-8512..-8416` pixel window, and
+`CUBA_FOCUS_SLICE_TRACE_PER_STATE=64`. The app completed successfully and the
+route reached `focus_cx=-570` / `9,232` blocks (`577` chunks). Period-end
+near-focus mesh-hole proxy was positive in 7 periods (`0.767%`, longest run
+one; none in the start corridor). A24 therefore remained a proxy-gate failure,
+not framebuffer evidence. Stop-tail mesh-missing and visual-hole proxies were
+zero; readiness debt max was 27 and stop convergence still failed. Exact
+artifacts: [report](../../bin/suite_reports/engine_refactor/m563_world164_m335_readiness_classes_cap64_20261014.json),
+[stalled-census join](../../bin/suite_reports/engine_refactor/m563_stalled_census_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-102438_8648.jsonl), and
+[host samples](../../bin/logs/m563_host_cpu_20261014.jsonl).
+
+### M564 — frame-aligned proxy transition snapshot (2026-10-14)
+
+M564 kept the same Release M335 conditions and added a snapshot of the exact
+screen-ray-selected mesh/debt state at each `visual_holes_enter` transition.
+The run covered `9,200` blocks (`575` chunks), with 26 positive A24 periods
+(`2.854%`, longest run two); the start corridor had one. All 202 correlated
+screen-ray selections were drawable and satisfying with repairable geometry
+debt, and the later same-coordinate state did not change. The trace therefore
+identified stale-but-drawable proxy geometry; it did not establish a missing
+framebuffer pixel. Only 14 event epochs had a same-epoch screen-ray trace and
+none had a same-epoch pixel row. Two events near the edge of the established X
+window also missed the sparse pixel schedule. Stop-tail mesh-missing and
+visual-hole proxies were zero; readiness debt max was 23 and demand-stop
+convergence failed. See [report](../../bin/suite_reports/engine_refactor/m564_world164_m335_proxy_transition_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-111052_28296.jsonl), and
+[host samples](../../bin/logs/m564_host_cpu_20261014.jsonl).
+
+### M565 — first same-frame proxy pixel witness (2026-10-14)
+
+M565 used Release SHA256
+`EE05A62355B34A5A0ED97A4E87813904DA3CE50E23E9555857EDBA08CDFA4742` and the
+same route/window. The app completed successfully and reached `focus_cx=-565`
+/ `9,152` blocks (`572` chunks) at median `5.18555 blocks/s`. A24 had 50
+positive periods (one in the start corridor); the mesh-hole proxy rate was
+`5.501%` with longest run three. Stop-tail visual holes were zero, readiness
+debt max was 36, and convergence failed.
+
+The transition logger emitted 388 moving rising edges. For one edge at epoch
+67413, the selected ray hit block `(-8481,48,58)` in candidate chunk
+`(-531,3,3)`, and the matching framebuffer pixel at `(608,315)` was RGB
+`(81,118,148)`, alpha 255, depth `0.996891`; pre-transparent and final colors
+matched. This is a normal visible pixel at that exact candidate sample, not a
+black/empty pixel. Four other rising edges inside the same camera-X window had
+no same-epoch screen-ray trace and were not captured because the first pixel
+trigger required that trace. The single positive color sample cannot establish
+that all proxy events are false positives or rule out another defect. Details:
+[M565 report](../../bin/suite_reports/engine_refactor/m565_world164_a24_pixel_witness_20261014.json),
+[event/pixel join](../../bin/suite_reports/engine_refactor/m565_a24_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-115947_33272.jsonl), and
+[host samples](../../bin/logs/m565_host_cpu_20261014.jsonl).
+
+M565's host sampler observed strong and varying host load, including
+Nextcloud/OneDrive and Defender activity. Do not treat its frame-time values as
+a clean performance baseline. M566 changes only the diagnostics so the exact
+raw focus-radius `visual_holes_enter` edge triggers the bounded 20x5 pixel grid
+inside the same established X window even when no screen-ray repair candidate
+is selected; the event report also summarizes grid luma and darkest samples.
+
+### M566 — raw edge pixel grid (2026-10-14)
+
+M566 used Release SHA256
+`0A9C9D82FAF3B9C802C9F4727204269BA036DF17E16C6A37A77F84F3555FD27E` with the
+unchanged visible, no-teleport M335 route and pixel window `[-8512,-8416]`.
+The app returned `process_rc=0` / `run_outcome=success` and reached
+`focus_cx=-562`, `9,104` blocks / `569` chunks at median `5.18555 blocks/s`.
+Active elapsed time was `1,852.64s`; the run excluded one `2,242.08s` clock
+gap from its `4,094.71s` wall duration. The route itself therefore ran at its
+normal established speed. The host sampler mean was `61.7%` CPU; top samples
+included Nextcloud (`251.2%`) and Cubatarium (`211.2%`), so timing is not a
+quiet-host performance baseline.
+
+The route logged 345 moving `visual_holes_enter` edges, of which five had
+player X inside the pixel window. Only one edge received the requested 100-pixel
+grid. That grid had RGB<=8 count zero, median luma 158, and minimum luma 26;
+three samples had luma<=32. The darkest samples had alpha 255 and identical
+pre-transparent/final colors, but this grid had no same-frame ray trace and
+does not identify the sampled geometry. Four in-window edges had no grid, so
+the capture is incomplete and proves neither a hole nor a clean view. The
+one-shot trigger previously required exact equality between the streaming and
+render epochs. Commit `0be1f224` keeps the edge pending until a later render
+observes it and records the edge-source epoch separately from the framebuffer
+epoch.
+
+M566 had 46 positive A24 periods (`5.061%`, longest run two), none in the start
+corridor. All 262 `visual_holes_enter` query-miss witnesses were beyond the
+configured fog horizon; all 327 same-epoch selected ray candidates were
+drawable and satisfying. Stop-tail visual-hole proxy was zero, but readiness
+debt max was 34 and demand-stop convergence failed. These remain diagnostic
+proxy results. Artifacts: [run report](../../bin/suite_reports/engine_refactor/m566_world164_a24_full_edge_pixels_20261014.json),
+[pixel join](../../bin/suite_reports/engine_refactor/m566_a24_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-125056_18136.jsonl), and
+[host samples](../../bin/logs/m566_host_cpu_20261014.jsonl).
+
+### M567 — pending-edge latch validation (2026-10-14)
+
+M567 completed on Release SHA256
+`1ED0DA755B018C759B869C24336419C5918619D8E7606A90D9C1CBE4BC6FAA54` with
+`process_rc=0`, no excluded clock gap, and the unchanged M335 route/window. It
+reached `focus_cx=-565`, `9,152` blocks / `572` chunks at `5.18555 blocks/s`.
+A24 was positive in 44 periods (`4.846%`, longest run two; one in the start
+corridor); all 250 event-query miss witnesses were beyond the configured fog
+horizon. Stop-tail visual holes were zero, readiness debt max was 36, and
+demand-stop convergence failed.
+
+The perf log contained 356 moving `visual_holes_enter` events, seven inside
+`[-8512,-8416]`. Only one received a 100-pixel grid, at source/capture epoch
+`59335`. Its luma median/minimum were `158/53`, with no RGB<=8 pixels and one
+sample at luma<=64; no same-epoch screen-ray trace accompanied it. The latch
+did not fix the six missed grids because the event marker was still published
+by an independent `UpdateStreaming` edge detector. Host mean CPU was `77.2%`
+(p95 `99.9%`) and app usage averaged `2.31` cores, so M567 is not a clean
+performance baseline. Artifacts: [run report](../../bin/suite_reports/engine_refactor/m567_world164_a24_latched_event_pixels_20261014.json),
+[pixel join](../../bin/suite_reports/engine_refactor/m567_a24_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-141855_29876.jsonl), and
+[host samples](../../bin/logs/m567_host_cpu_20261014.jsonl).
+
+Commit `eb992259` moves event-marker publication into the exact
+`FramePerfMonitor` branch that writes `visual_holes_enter`. The updated Release
+SHA256 is `54834F4E4BABBB30E8E3C1D1C403DC85E6B2F6E4E9927E842547CB3CAEDC3659`.
+
+### M568 — capture-epoch ray/pixel join (2026-10-14)
+
+M568 completed on that Release build with `process_rc=0`,
+`run_outcome=success`, and no excluded clock gap. It followed the same visible,
+no-teleport M335 route, reaching `focus_cx=-567`, `9,184` blocks / `574`
+chunks at `5.18555 blocks/s` (911 total periods / 909 steady). The diagnostic
+wrapper still failed gates. A24 was positive in 45 periods (`4.95%`, longest
+run two), with none in the start corridor. All 79 exact query-miss witnesses
+and all 238 moving event-query miss witnesses were outside the configured fog
+horizon. The stop-tail visual-hole proxy was zero; broad readiness debt peaked
+at 30 and demand-stop convergence failed.
+Across all ten calm stop periods, `chunk_not_ready` stayed at 30 while
+`visible_black_focus_n`, `near_focus_holes`, `pending_light_focus`, and dirty
+count stayed at zero. Thus the stop gate failed on persistent broad readiness
+debt, without a matching black-pixel or near-focus mesh-hole signal.
+
+M568 logged 318 moving `visual_holes_enter` events. All nine events in the
+unchanged `[-8512,-8416]` camera-X window received a 100-pixel grid, each at
+source epoch + 1. Across the 900 samples, RGB<=8 count was zero, luma<=32 was
+eight, luma<=64 was 45, and grid minima ranged from 26 to 83. The darkest
+sample in every grid had valid opaque depth. Its exact depth-to-mesh face
+match was valid in all nine: sky light `1.0` (level 15), block light `0`,
+preview off, and face-air packed light `15`; published/current light-field
+revision were both `1`, and every opaque chunk was drawable and render-ready.
+The matched face IDs were `572` seven times and `377` twice. Repository
+definitions in `minetest_default_16` map these to `tree_leaves` and `grass`;
+active pack identity is not stored in the run manifest. This makes the sampled
+dark-green values more consistent with textured leaf/grass surfaces than with
+stale or missing face lighting, while leaving other pixels and other flights
+open.
+
+Do not substitute the DDA `voxel_hit_block_id` for the surface visible at a
+pixel. For eight of the nine darkest samples, the DDA candidate's projected
+depth would fail against the framebuffer depth; the direct depth-to-mesh
+match was within `0.05` blocks. Three capture epochs had screen-ray traces;
+two had a selected ray for the exact candidate chunk; three ray/pixel matches
+were produced. Matched colors were `(139,173,216)`, `(63,90,41)`, and
+`(68,72,81)`, all with valid opaque depth and voxel hits. These local samples
+do not establish that every pixel/frame is complete.
+
+Fog fields are separate shader controls. Those rows recorded
+`uFogEnabled=0`, `uAirFogEnabled=1`, underwater fog disabled, and horizontal
+air fog over 16–32 blocks; the master fog field being zero does not mean air
+fog was off. Shader environment fields were day factor `1.0`, moon/night factor
+`0.22`, and minimum ambient `0.12`. The pixel context now carries shader,
+fog, opaque-depth, face-light, and revision fields; analyzer commits
+`b5747de0` and `782914a7` added capture-epoch ray matching and those per-pixel
+details. This M568 window provides no basis to change lighting, render, or
+scheduler policy.
+
+The event-pixel analyzer was extended in commit `b5747de0` to join ray rows at
+the actual framebuffer capture epoch and include fog, opaque-surface, and
+voxel-ray context for the darkest samples. M568 host CPU averaged `87.6%`
+(p95 `100%`) and the app averaged `1.75` cores, so treat it as a correctness
+trace, not a performance baseline. Run a capture-disabled performance pass
+only when the host is quiet.
+
+Exact M568 command and analysis:
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m568_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m568_world164_a24_same_source_event_pixels --report bin/suite_reports/engine_refactor/m568_world164_a24_same_source_event_pixels_20261014.json --process-timeout 2600
+python tools/analyze_hole_event_pixels.py bin/logs/perf_20261014-145813_25512.jsonl --json-out bin/suite_reports/engine_refactor/m568_a24_pixel_join_20261014.json
+```
+
+Artifacts: [run report](../../bin/suite_reports/engine_refactor/m568_world164_a24_same_source_event_pixels_20261014.json),
+[pixel/ray join](../../bin/suite_reports/engine_refactor/m568_a24_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-145813_25512.jsonl), and
+[host samples](../../bin/logs/m568_host_cpu_20261014.jsonl). Keep A24,
+readiness debt, framebuffer samples, and stop convergence separate. The
+block/light provenance audit is complete for the sampled pixels; next capture
+the exact CPU-cache/zero-quad state of the ownerless terminal focus slices
+before considering any mesh-admission or scheduler-policy change.
+
+#### M568 terminal readiness classification
+
+The terminal focus trace was epoch `70190`, camera `(-9065,70,56)`, focus
+`(-567,3)`. Across its 121 focus columns, readiness classes were 60 ready, 31
+terrain-incomplete, 26 missing-mesh, and four face-debt. The broad
+`unfinished_visual=chunk_not_ready=30` is the last two classes summed; terrain
+incomplete is excluded by `IsUnfinishedFocusColumnVisual`. Direct stop-tail
+`focus_missing_mesh`, `near_focus_holes`, `visual_holes`, and the
+`visible_black_focus_n` renderer proxy were all zero; no pixel readback was
+collected at the stop point.
+
+Twenty-five traced missing-mesh slices were state-1/no-owner candidates. Each
+was a full non-air chunk at Y=1 (4,096 blocks), with geometry revision already
+published, an active `Created` demand 20.8–28.4 s old, and zero mesh-work and
+ColumnFlow owner flags. Their overlay face debts (`1/16/17/32/33`) target
+unloaded horizontal neighbors; peer face debt is zero. Chunk-AABB geometry
+places all these samples at least 56 blocks horizontally from the camera,
+outside the 32-block end of configured air fog. One additional missing-mesh
+slice was classified as owned/pending. Treat this as unresolved background
+ownership and boundary-coverage work, not as proof of a visible hole. The
+global demand store still had 62 geometry, 4 light, 213 face, 213 coverage,
+and 1 retained unsatisfied obligations, so global demand-stop correctly
+remained false under its current all-record contract.
+
+Across preceding M335 controls, broad stop-tail not-ready counts varied:
+M562 `34` (34 missing-mesh, 0 face-debt), M563 `27` (24 + 3), M564 `23` (23
++ 0), and M568 `30` (26 + 4). Each had zero stop-tail visual-hole and
+visible-black maxima. This supports separating the broad column-ring and
+global-demand gates from current-view coverage. Static follow-up should find
+why ownerless Created attempts persist and determine whether boundary overlay
+debt is expected at unloaded stream edges before changing scheduler policy.
+
+#### M569 preparation — focus mesh cache-state trace (2026-10-14)
+
+Commit `e5dbfcbb` adds these fields to the bounded `focus_slice_trace` rows:
+`focus_mesh_cache_entry_present`, `focus_mesh_cpu_vertex_count`,
+`focus_mesh_gpu_resident`, `focus_mesh_gpu_quad_count`, and
+`focus_mesh_boundary_overlay_mask`. The earlier pre-census-cadence Release
+build had SHA-256
+`80A7F65F0800AF49B49BAF92BEB16F4701A93657CF10F8810BCE7A749A30560D`
+after commits `53d1681b` and `feb5b271` added watched lifecycle transitions
+for state-1 samples and cleanup on the streaming budget exit.
+
+Release-only build entry point:
+
+```powershell
+tools/build_release.ps1 -Jobs 8 -CleanFirst
+```
+
+The CMake Visual Studio generator otherwise passed `/p:CL_MPCount=1` despite
+`--parallel 8`. The command above overrides it; process inspection observed
+eight simultaneous `cl.exe` workers. The script preserves that override for
+future Release builds. Its exact underlying CMake command is:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --clean-first --parallel 8 -- /p:CL_MPCount=8
+```
+
+The M569 flight was not started after the build: host CPU samples were 88.7%,
+83.5%, and then 41.1% over five-second windows. The earlier high samples had
+`nextcloud` using about 13 CPU-seconds per five seconds; after the incremental
+build, multiple ChatGPT processes were still active. These are contaminated
+conditions for a long comparison. The M568 reread shows 16/911 period rows
+with zero scheduler and post-scheduler time, including nine consecutive
+terminal windows (epochs 69248–70090) whose 4.42–4.92 ms pre-scheduler time
+exceeded the 3 ms shared budget. The terminal ownerless `Created` attempt
+182634 was about 20.7 seconds old, matching the 942-frame short-path span.
+This strongly supports the cleanup bypass identified in code; M569 is the
+same-route confirmation of the budget-exit fix, not a performance baseline.
+When host load settles, rerun the fixed M335 profile and collect cache fields
+for the off-horizon state-1 candidates. Do not change the route or speed.
+
+Current binary update: commit `f070d9c1` rate-limits the heavy data-mesh census
+to one sample per 24 streaming frames and adds its age to JSONL. The Release
+rebuild used `tools/build_release.ps1 -Jobs 2`; static executable verification
+passed with seven system DLL dependencies. SHA-256:
+`E893A39836DA4CCFAAF91C16E9642B4B6896A4D8B148FF327CA27E5633328B6C`. A fresh
+five-second host sample was 47.7% CPU, led by OneDrive, ChatGPT, and Grok, so
+M569 remains deferred. This binary supersedes the earlier hash below.
+
+The zero-tick windows are also affected by diagnostic overhead. In those same
+nine rows, `PrepRefreshUnfinishedMs` consumed 3.409–3.737 ms of
+`PrepRefreshPressureMs` 4.417–4.916 ms (about 76–77%). M568 ran with
+`CUBA_VISUAL_BLACK_TRACE=1`; that flag enables a resident-slice data-mesh census
+inside `CountUnfinishedVisualNear`, including cache-hit calls. Treat M569 as a
+lifecycle probe only. The current source change limits this full census to one
+scan per 24 streaming frames and forces refresh on world/focus/radius/camera
+band changes. JSONL now records `focus_data_sample_age_frames`; the Release
+build and M569 run must still verify the reduction and preserve lifecycle
+transitions. Compare the fixed route with capture disabled before drawing
+performance conclusions.
+
+Prepared M569 command:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m569_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m569_world164_m335_cache_empty_state --report bin/suite_reports/engine_refactor/m569_world164_m335_cache_empty_state_20261014.json --process-timeout 2600
+```
+
+`CUBA_DEMAND_SHADOW=0` explicitly keeps demand lifecycle authority enabled;
+the value `1` disables these writers and would make the early-exit cleanup
+change inert during this validation.
+
+Keep the new trace focused on the original question: distinguish no CPU cache
+entry, a present zero-vertex cache result, and GPU-resident quads, alongside
+boundary-overlay debt. It will also include lifecycle transitions because
+`53d1681b` watches each bounded state-1 focus sample. Commit `feb5b271` adds the
+bounded demand maintenance to the 5 ms streaming-budget early-return path;
+check whether old `Created` attempts now cancel rather than remaining active.
+Interpret repeated `Created → InstallCancelled` cycles as persistent
+admission denial, not proof that chunk data or mesh generation is fixed;
+user-visible recovery requires concrete queue/worker/GPU ownership and
+progress.
+History points to `c390532d` (2026-10-07) as the likely regression: it moved
+demand upkeep out of the post-emerge telemetry call and left the budget-exit
+path without maintenance. M569 has now completed; its route and findings are
+recorded below. The exact M568 terminal attempt at `(-571,1,6)` was not reached
+by the 1,800-second M335 duration, so this does not yet close its lifecycle
+question.
+
+#### M569 result — cache-state and sparse framebuffer trace (2026-10-14)
+
+M569 ran with the exact M335 world/start/speed/altitude/heading and completed
+normally on Release commit `0a13572c` (executable SHA-256
+`E893A39836DA4CCFAAF91C16E9642B4B6896A4D8B148FF327CA27E5633328B6C`). It ran
+1,835 requested seconds / 1,870.14 wall seconds, moved 570 chunks
+(`[7,3]`→`[-563,3]`), had no clock gap or collision stop, and completed both
+obstacle detours. Artifacts:
+
+- [flight report](../../bin/flight_sim_report.json)
+- [suite report](../../bin/suite_reports/engine_refactor/m569_world164_m335_cache_empty_state_20261014.json)
+- [perf JSONL](../../bin/logs/perf_20261014-192505_20640.jsonl)
+- [host CPU samples](../../bin/logs/m569_host_cpu_20261014.jsonl)
+- [hole/pixel event join](../../bin/suite_reports/engine_refactor/m569_hole_pixel_join_20261014.json)
+- [framebuffer grid summary](../../bin/suite_reports/engine_refactor/m569_pixel_grid_20261014.json)
+
+Although the process returned zero, the suite report is not green: A24,
+eye-proxy, and post-stop convergence failed. Readiness scopes explain much of
+that result. All 77 period-level and 260 event-level classified raw misses
+were beyond their recorded fog horizon; all 669 tracked-witness events
+resolved before fog and none entered fog unready. The A24 counter reported 50
+whole-route periods but only one in the named M335 start corridor (`focus_cx`
+2–5). In that seven-period corridor, six samples had zero mesh-hole proxies;
+one had a transient count of one. The final 12 stop periods had zero visual
+holes, near-focus holes, and direct missing-mesh counts, while global
+`unfinished_visual` remained 29–31 and the post-stop focus missing-mesh
+maximum was 28. These readiness numbers are not framebuffer proof.
+
+M569 also captured 620 sparse renderer-framebuffer grids, 80 pixels each
+(49,600 direct color/depth samples): 611 periodic and nine camera-band peak
+captures. Sampled pixels had no RGB channel maximum ≤8 or ≤16; minimum
+Rec.709 luminance was 24.48. All five in-fog solid-ray samples with clear
+opaque depth had a valid sea-plane surface and blue pixel color, consistent
+with transparent water. The five unloaded-ray witnesses were past fog end.
+This is direct evidence about those samples, not a complete-frame guarantee.
+
+The event join found 358 moving `visual_holes_enter` events; 89 had a
+same-epoch screen-ray trace and 87 had a selected ray for the exact miss
+chunk, but none had an event-triggered pixel capture. M569 did not enable
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY`; it therefore did not resolve
+whether those edge events changed the rendered pixel. Use the analyzer pair
+below for future traces:
+
+```powershell
+python tools/analyze_framebuffer_pixel_grid.py bin/logs/perf_<run>.jsonl --json-out bin/suite_reports/engine_refactor/<run>_pixel_grid.json
+python tools/analyze_hole_event_pixels.py bin/logs/perf_<run>.jsonl --json-out bin/suite_reports/engine_refactor/<run>_hole_pixel_join.json
+```
+
+The age field was median 10 frames, p95 23, max 33; 31/911 samples were older
+than 23 frames. This indicates the census cadence is mostly met, not a strict
+24-frame maximum. All 992 retained `focus_slice_trace` state-1 rows described
+non-air zero-vertex/zero-quad slices 4–6.4 chunks from the terminal focus,
+outside the configured fog horizon. The exact prior candidate
+`(-571,1,6)` / attempt `182634` was absent because M335 ended at x=`-563`; it
+lies eight chunks beyond that endpoint. M569 therefore cannot confirm the
+budget-exit cleanup fix for that exact lifecycle.
+
+#### M570 result — same M335 flight with event-aligned framebuffer capture (2026-10-14)
+
+M570 used the same Release executable and unchanged M335 world/start/speed/
+altitude/heading/duration. It set
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY=1` to capture pixels in frames
+with screen-ray traces and visual-hole edges. The no-teleport route completed
+normally: 1,835 requested seconds / 1,944.73 wall seconds, 558 chunks from
+`[7,3]` to `[-551,3]`, no clock gap or collision stop, and two completed
+obstacle detours. The flight process returned 0; the suite returned
+`pass=false` with 29/40 gates. A24, eye-proxy stale-apply, and post-stop
+convergence gates failed.
+
+The event join found 318 rising edges and an event-triggered pixel capture for
+each. It matched 46 pixels to the exact selected miss-chunk screen ray; none
+was near-black (`RGB ≤8`; minimum channel max 33). In the full event grids,
+31,800 samples included no `RGB ≤8` pixels and had minimum luminance 24.
+There were darker samples (`luminance ≤32`), but retained darkest samples had
+opaque depth and valid surfaces, consistent with dim textured/illuminated
+geometry rather than absent geometry. This is sparse framebuffer evidence,
+not a guarantee for every pixel or frame.
+
+The A24 gate counted 71 whole-route periods with a near-focus mesh proxy, but
+only one in the M335 start corridor. All 81 periodic and 232 event-level raw
+miss witnesses were beyond configured fog; all 642 tracked witnesses
+resolved before fog and none entered it unready. In 300 visual-hole events,
+the selected screen-ray candidate matched the proxy coordinate and had a
+drawable/satisfying mesh even while the independent radius query returned a
+miss. That points to a telemetry/query-scope mismatch; it does not prove the
+entire view was clean. The ray/pixel join and aggregate grid summary are linked
+in the plan document above. Event readbacks expanded the perf JSONL to 1.73 GB
+and contaminated timing, so M570 is not a performance run.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m570_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m570_world164_m335_event_aligned_pixels --report bin/suite_reports/engine_refactor/m570_world164_m335_event_aligned_pixels_20261014.json --process-timeout 2600
+```
+
+The analyzer outputs are
+[`m570_hole_pixel_join_20261014.json`](../../bin/suite_reports/engine_refactor/m570_hole_pixel_join_20261014.json)
+and [`m570_pixel_grid_20261014.json`](../../bin/suite_reports/engine_refactor/m570_pixel_grid_20261014.json).
+Retain separate outcomes for exact event-pixel joins, the sparse route-wide
+grid, mesh/readiness proxies, and post-stop convergence. Do not call a
+proxy-only FAIL a verified framebuffer hole, or a clean sparse grid proof
+that every frame was clean.
+
+#### M571 — reach the prior exact lifecycle candidate
+
+M571 keeps the established M335 world, start, speed, altitude, heading, and
+no-teleport route. Extend the fly phase from 1,800 to 1,880 seconds, only to
+cross the prior westbound candidate at x=`-571`. Keep the bounded focus-slice
+trace and visual lifecycle trace; leave event-pixel readbacks off to reduce
+the 1.73 GB I/O/post-processing overhead observed in M570. After the run,
+check attempt `182634` at `(-571,1,6)` for cancellation, re-admission, cache
+vertices/quads, and concrete dirty-queue/worker/GPU ownership. A shorter
+orphan lifetime alone is not recovery; require ownership and stage progress.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m571_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1880 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m571_world164_m335_exact_lifecycle --report bin/suite_reports/engine_refactor/m571_world164_m335_exact_lifecycle_20261014.json --process-timeout 2700
+```
+
+#### M571 result
+
+M571 exited normally (`process_rc=0`) after 1,955.05 wall seconds / 72,088
+frames, covering 9,584 blocks / 599 chunks from `[7,3]` to `[-592,3]`.
+There were no clock gaps, teleports, collision stops, or heading deviation;
+both obstacle detours completed. Movement speed median was 5.19287 blocks/s,
+and altitude remained 70. The runner returned `pass=false` (29/40 gates),
+including A24, eye-proxy, and post-stop convergence. Host CPU
+median/p95/max was `75.8/99.9/100%`, so timings are diagnostic only.
+
+The sparse framebuffer grid contains 620 frames × 80 samples = 49,600 RGBA /
+depth samples. None had RGB channels all ≤8 or ≤16; minimum luminance was
+24.476. Six mesh-ray gaps and the single unloaded-ray witness were beyond
+fog. A24 counted 38 whole-route near-focus periods and none in the start
+corridor. All 68 period and 237 event raw query misses were beyond fog; all
+674 tracked witnesses resolved before fog, with zero entering fog unready.
+Of 315 edges with a screen-ray-selected candidate, each selected mesh was
+drawable/satisfying and matched the proxy coordinate.
+
+The watched coordinate `(-571,1,6)` was reached. Its previous attempt ID
+`182634` was process-local to M568; M571 recorded new attempt `188003` with
+incarnation `21753` / job `100267`. It progressed through mesh build and GPU
+publication in about 51 ms. A later no-owner attempt `188028` was cancelled
+after about 4.82 s, by then published coverage generation had caught up. There
+was no repeated create/cancel cycle. A zero-ID `install_published` row is
+unverified and excluded. M571 did not sample cache vertices/quads for this
+exact coordinate.
+
+The terminal full focus census had 46 ready, 26 terrain-incomplete, 41
+missing-mesh, and eight face-debt columns. The bounded terminal slice trace
+sampled 42 solid chunks; every one was at least 47 blocks from the camera,
+outside the 32-block fog end. Forty had a cache entry and GPU residency but
+zero CPU vertices/GPU quads; two had no cache entry. Most carried overlay
+boundary debt. Keep these off-horizon readiness records distinct from the
+near-focus visual-hole and framebuffer results. The pixel-grid output and
+report are linked from the remediation plan.
+
+#### M572 — periodic fresh-seed frontier route
+
+M572 keeps the M335 route conditions exactly and changes only the world to a
+new seed. Create a new world with the Release executable and a radius-four
+pre-generated start region; then fly 1,800 seconds west with source tracing
+enabled. This is the secondary fresh-seed lane; World_164 remains the primary
+repeatable control. The command below is the exact M572 invocation. Its
+`CUBA_VISUAL_BLACK_TRACE='0'` setting disabled the renderer pixel probes, so
+the original expectation of a sparse framebuffer grid was incorrect; the
+run is valid for source tracing but has no direct pixel evidence.
+
+```powershell
+# Run from the bin directory; use a unique name and seed.
+.\Cubatarium.exe --console --create-world --name World_M572_Cold_20261014 --seed 3650482197 --radius-chunks 4 --output worlds --report-json suite_reports/engine_refactor/m572_world_create_20261014.json
+
+# Run from the repository root.
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m572_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m572_world_m572_cold_frontier --report bin/suite_reports/engine_refactor/m572_world_m572_cold_frontier_20261014.json --process-timeout 2600
+```
+
+After completion, run `tools/analyze_framebuffer_pixel_grid.py` on the perf
+JSONL. Use the INFO log recorded by the flight report with
+`tools/analyze_world_column_source_trace.py --focus-z 3 --z-radius 5` to
+summarize procedural and disk-source latency separately. Record world-create
+time/column count, unique source attempts and terminal outcomes, route speed,
+fog-scoped pixel evidence, and host load. Do not compare its timing against a
+quiet-host performance baseline.
+
+#### M572 result and evidence limit
+
+The M572 flight exited normally, covered 9,072 blocks, and recorded a user
+observation that the water surface was absent at an unknown point in the run.
+The suite returned `pass=false` (26/40 gates). The pixel analyzer found no
+`renderer_pixel_probe` rows because `CUBA_VISUAL_BLACK_TRACE=0` disables the
+visual/pixel trace; backend fluid mode and scan counters cannot establish
+whether the surface was generated or drawn. The source ledger found 80/80
+disk demands complete and 5,141/5,141 procedural requests committed. The
+M572 world was subsequently persisted with 21,278 `.cchunk` files.
+
+#### M573 — persisted-world water replay with sparse pixels
+
+Replay the same M335 route in the now-persisted M572 world. Enable the default
+sparse renderer pixel grid with `CUBA_VISUAL_BLACK_TRACE=1`; do not enable
+`CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS`, focus-change probes, screen-ray
+readbacks, stalled-census readbacks, event-pixel readbacks, or focus-slice
+traces. Keep world-column source tracing enabled so this repeat records disk
+load lifecycle and timing. The key distinction is whether sampled rays over
+water see a valid sea-plane surface, what the post-transparent framebuffer
+color/depth contains, and whether that differs from the M572 operator report.
+Treat sparse pixels as sampled evidence, not full-frame coverage.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m573_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m573_m572_persisted_water_replay --report bin/suite_reports/engine_refactor/m573_m572_persisted_water_replay_20261014.json --process-timeout 2600
+```
+
+After exit, run `tools/analyze_framebuffer_pixel_grid.py` and
+`tools/analyze_world_column_source_trace.py` against the recorded perf and
+INFO logs. Record whether the route loaded M572's generated columns from disk,
+the number of actual pixel samples, sea-plane-ray-valid counts, opaque-depth
+and voxel-ray witnesses, and color/luminance distributions. If the sparse
+grid does not contain rays over visible water at the operator-reported
+location, record it as inconclusive and design the next capture bounds from
+an observed route coordinate; do not infer water correctness from aggregate
+GPU-fluid mode counters.
+
+#### M573 result
+
+The route exited normally, but its suite gate failed on the A24
+`near_focus_holes_periods_gt0` condition. The operator's first missing-water
+report was near the `focus_cx=-289` section. There, one sparse sample over
+saved water (`water` ID 575 at Y=48, air above) had no matching top-fluid
+triangle in the current transparent mesh references and showed blue
+background color with no pre-transparent depth. Across that sampled frame,
+33 of 48 sea-plane ray positions over saved water had a top triangle; 15 did
+not. A nearby disk load for column `(-294,0,-3)` was queued and completed at
+22:31:17, adjacent to the operator report. Treat this as a far-water
+mesh-availability candidate, not proof of a particular missing stage. M573
+host CPU median/p95 was 91.1/100%, and a leftover
+`analyze_world_chunks.py --help` world scan used about one CPU core during
+most of the flight; that process was stopped after exit. Do not use M573 as a
+clean performance result.
+
+#### M574 — repeat the persisted route with pixel samples bounded to the reported section
+
+Run the full, same no-teleport M335 route and keep column-source tracing on.
+Bound periodic sparse framebuffer readbacks to camera X `[-4710,-4550]`,
+which includes the approximate M573 observation at camera X=-4614. The
+renderer may still capture up to 24 camera-band peaks elsewhere in the route.
+Leave the pixel grid at its default 20 by 4 samples. Keep focus-change,
+screen-ray, stalled-census, event-pixel, and dense probes disabled. This preserves the
+route and streaming data while limiting the pixel log to the water-frontier
+section. Confirm no world-analysis helper is running before launch; do not
+pass `--help` to `tools/analyze_world_chunks.py`, which has no CLI help parser
+and proceeds into its full-world scan.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m574_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m574_m572_clear_cpu_replay --report bin/suite_reports/engine_refactor/m574_m572_clear_cpu_replay_20261014.json --process-timeout 2600
+```
+
+After normal exit, analyze the bounded pixel grid and full INFO source trace.
+Join each valid sea-plane position to its saved water block and current fluid
+top triangle, then compare M573's `(-4689,48,-47)` sample. If that water voxel
+has a triangle and the pixel changes under lower host load, CPU contention is
+a likely contributor. If it still lacks a triangle after the disk column and
+mesh have settled, inspect fluid mesh selection/upload and transparency for
+that chunk before changing water lighting.
+
+
+#### M574 result
+
+M574 exited normally but the suite was not a pass. In the bounded water
+window, 13 captures yielded 780 sea-plane-valid samples: 674 joined to saved
+water block ID 575, and 539 had raw CPU top-fluid-triangle matches (537 over
+saved water). No sampled RGB changed after the transparent pass, including
+those 537 water-plus-triangle samples. 515 samples had opaque depth from the
+scene below. Near camera X -4605, 46/60 samples had saved water, 33/60 had a
+raw triangle match, and 0/60 changed RGB. The source ledger completed
+5,314/5,314 disk demands and 436/436 procedural requests. Missing persisted
+water data is therefore unlikely at those sampled positions. The pass can
+still be lost in readiness filtering, MDI visibility/submission, or the
+fragment/blend path. M574's compact pixel rows did not separate those stages.
+
+#### M575 — trace transparent readiness and MDI visibility
+
+Use the Release binary containing the M575 instrumentation and repeat the
+same full, visible, no-teleport M335 route in `World_M572_Cold_20261014`.
+Keep the full source ledger enabled; bound sparse pixel, GPU witness, and
+fluid-render traces to camera X `[-4710,-4550]`. Leave dense pixel, focus
+state, screen-ray, stalled-census, and focus-probe tracing disabled.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m575_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m575_m572_water_mdi_trace --report bin/suite_reports/engine_refactor/m575_m572_water_mdi_trace_20261015.json --process-timeout 2600
+```
+
+Each fluid pixel row now records surface-chunk render readiness, raw and
+ready fluid-ref counts, raw/ready triangle match, chunk gate flags, transparent
+MDI resident/visible flags and counts, source top-face quads, and texture,
+payload, and command state. Compare a water pixel with the exact surface
+chunk's fluid-render trace. An unready chunk or no ready ref points to mesh
+gating; ready refs without a resident/visible MDI command point to upload,
+culling, or submission; a resident visible command with no pixel change moves
+the investigation to shader, blend, depth, and target state. These are
+branches to test, not assumed fixes.
+
+
+#### Release build used for M575
+
+Build only the application target in Release; the aggregate `build.ps1` target
+also links test executables and currently returns 1 for unresolved
+`cutum::CubatariumLogInfo` references in `ChunkMeshSnapshot.obj`. No tests were
+run. The successful application build command is:
+
+```powershell
+& 'C:\Program Files\CMake\bin\cmake.exe' --build bin --config Release --target Cubatarium --parallel 8 -- /p:CL_MPCount=8
+```
+
+
+#### M575 result
+
+The full visible M335 route completed normally (`process_rc=0`), covered
+9,136 blocks at median 5.18555 blocks/s, and returned `pass=false` on
+`near_focus_holes_periods_gt0` and `unlit_max_above_dual_lane`. These gates do
+not mean the process failed. In the bounded water window, 11 captures yielded
+660 samples: 564 hit saved water ID 575; 428 had a raw top-fluid triangle and
+all 428 had a ready chunk and ready fluid ref. None of the 660 samples changed
+RGB after transparency, including all 428 water-plus-triangle samples. There
+were 435 opaque-depth samples.
+
+The trace's MDI probe is capped at three unique chunks per capture. Only the
+selected rows have MDI fields populated; other rows with zero-valued MDI
+fields are unknown. The 30 selected rows had transparent MDI resident and
+visible flags, and valid indirect command readbacks, yet still had no RGB
+change. Their surface was nearer than the matched opaque hit. M575 did not
+record whether the payload equality comparison was attempted or whether
+source/GPU counts matched, so the payload bit field alone is inconclusive.
+The MDI telemetry now includes explicit check and count fields for M576.
+
+The source ledger closed 5,429/5,429 disk demands and 282/282 procedural
+requests with no open or duplicate terminal requests. Host CPU ranged about
+65–100%; OneDrive Sync reached roughly two cores, so do not use this run for a
+clean performance comparison. Full details are in the remediation plan's M575
+result section and the linked M575 artifacts there.
+
+#### M576 — transparent fragment marker
+
+Build the `Cubatarium` application target in Release, then repeat the same
+visible no-teleport M335 route in `World_M572_Cold_20261014`. The marker is
+scoped by the fluid-render camera-X bounds, so the magenta debug output only
+appears in `[-4710,-4550]`.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m576_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m576_m572_water_fragment_marker --report bin/suite_reports/engine_refactor/m576_m572_water_fragment_marker_20261015.json --process-timeout 2600
+```
+
+After shutdown, run the pixel-grid, world-column source, and water pixel/MDI
+join analyzers. Treat magenta pixel markers as proof of transparent fragment
+color output at that sample; combine them with the per-sample MDI probe flag,
+source/GPU vertex and index counts, payload equality results, opaque depth,
+and `renderer_pixel_marker_mode`. Do not treat unchecked MDI fields as zero
+commands.
+
+
+#### M576 result and M577 telemetry correction
+
+M576 completed the full established M335 route with `process_rc=0`, 9,136
+blocks, median speed 5.18555 blocks/s, and 913 periods. In 10 captures inside
+camera X `[-4710,-4550]`, the framebuffer probe joined 529/600 samples to
+saved water blocks and 342 to CPU top-fluid triangles; none changed RGB after
+the transparent pass and none of those 342 outputs was exact magenta. The
+payload byte comparison found 30 mismatches, but M576 selected the source
+batch by chunk and material only. Those mismatches are not conclusive until
+source and GPU `batchIndex` are proven equal. The compact pixel-row serializer
+also omitted the marker mode/visible/coverage fields. M577 adds both identity
+and serializer fixes plus bounded GPU-buffer readback metadata.
+
+Do not infer buffer corruption from M576's byte mismatches. The other logged
+evidence is stronger but still path-level: pixel samples joined saved water
+and CPU source triangles; candidate transparent MDI command readbacks had
+matching counts/offsets/instance state; sampled RGB did not change. Use M577's
+explicit marker fields and exact batch identity before choosing a renderer
+fix.
+
+#### M577 — exact water source/GPU payload identity
+
+Build the `Cubatarium` app target in Release, then repeat M335 on the same
+world, route, camera and bounded diagnostic interval:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m577_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m577_m572_water_payload_identity --report bin/suite_reports/engine_refactor/m577_m572_water_payload_identity_20261015.json --process-timeout 2600
+```
+
+Analyze the resulting perf JSONL with `analyze_framebuffer_pixel_grid.py`,
+`analyze_renderer_pixel_trace.py`, and
+`analyze_water_surface_pixel_join.py`; analyze the INFO log with
+`analyze_world_column_source_trace.py`. M577 records marker mode/visibility,
+exact source/GPU batch indexes, compact-cull state, buffer offsets/capacities,
+readback bounds, and first payload mismatch. Treat `mdi_visible_pass_flags`
+as the CPU draw-instance proxy. For actual MDI readback require command flag
+bit 0 (readback), bit 1 (command matches batch), and bit 2 (instance count
+matches the submitted GPU command state).
+
+#### M578 — classify water fragment rejection
+
+M577 found matching CPU/GPU batch IDs and visible indirect commands for sampled
+water tops, with water closer to the camera than the opaque hit, but its
+fragment marker remained absent. The marker ran after alpha cutout and opaque
+depth-guard discards, so it did not distinguish a discard from a fragment that
+never rasterized. M578 moves a fluid-only forensic branch before those
+discards, uses marker colors for alpha/depth-guard candidates, and forces the
+existing single-pass transparent path to remove stencil-shell state from this
+diagnostic. The marker changes only fluid in camera X `[-4710,-4550]`.
+
+Build the Release app target and repeat the exact M335 route/world:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='1'
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m578_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m578_m572_water_discard_probe --report bin/suite_reports/engine_refactor/m578_m572_water_discard_probe_20261015.json --process-timeout 2600
+```
+
+In the joined pixel report, red means the alpha cutout would discard the
+fragment, blue means the opaque-depth guard would discard it, and yellow means
+both conditions hold. Those colors are emitted only by the fluid-specific
+pre-discard branch. Magenta is ambiguous in this run: it can be the fluid
+branch reaching color output or an overdraw from another transparent material,
+because the generic transparent marker remains enabled for backward
+comparison. An unchanged pixel with no marker after forcing single-pass no
+longer implicates stencil; check framebuffer depth, GPU payload readback
+validity, and submitted vertex state. Buffer sizes in the M578 payload witness
+use `glGetBufferParameteri64v`.
+
+#### M578 result and M579 plan
+
+M578 completed the full visible no-teleport M335 route (`process_rc=0`, 913
+periods, 911 steady periods, 572 chunks traveled); collision stop did not
+trigger. The streaming suite remains `pass=false`, with post-stop readiness
+debt/stall gates still open. The host reached 99.9% CPU, so this run is not a
+quiet performance baseline. The app emitted a shutdown summary with no
+pending disk saves.
+
+The route-wide framebuffer grid contained 1,360 samples across 17 captures,
+including 1,000 valid sea-plane rays. There were 20 samples with luminance
+<=32 and none with all RGB <=16. In the target X interval, the water join found
+715 saved-water samples and 467 CPU fluid triangles. Of those, 464 water
+triangle samples changed RGB after the transparent pass and showed the marker.
+All 39 exact GPU payload probes had valid in-bounds VBO/EBO readback, matching
+CPU/GPU batch indexes and vertex/index bytes, and matching MDI commands. None
+of the 464 water samples was classified as an alpha-cutout or opaque-depth-
+guard candidate. This verifies water geometry and upload in this run's forced
+single-pass path; it does not explain the unchanged pixels under M577's default
+desktop-shell path. The marker is still ambiguous with generic transparent
+overdraw, although the CPU water triangle and exact GPU batch joins strongly
+associate the changed samples with water.
+
+Run M579 on the same M335 route/world, with the exact M578 environment and
+diagnostic shader, but set `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=0` so the normal
+desktop stencil-shell path is active. M579 additionally records the final
+stencil index at each sampled pixel. Interpret `0` as not marked by the shell
+depth pass and `1` as marked; `255` means stencil was not captured. Keep all
+other route and diagnostic bounds unchanged:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m579_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m579_m572_water_shell_stencil_probe --report bin/suite_reports/engine_refactor/m579_m572_water_shell_stencil_probe_20261015.json --process-timeout 2600
+```
+
+Join the `renderer_pixel_stencil_index` with water/source-triangle matches,
+payload-valid bits, exact MDI command flags, and fluid-call counts. A zero
+stencil value at a water sample would localize the shell-depth/stencil mark
+stage; value one with no color marker would move the investigation to the
+subsequent shell color passes and framebuffer state.
+
+#### M579 result and M580 actual draw witness
+
+M579 completed the visible no-teleport M335 route (`process_rc=0`, 913 periods,
+911 steady, 572 chunks; about 5.19 blocks/s). In its target window, 759 samples
+joined persisted water and 479 also joined source fluid triangles. None of
+those 479 changed RGB or showed the transparent fragment marker; all had final
+stencil zero. The desktop framebuffer had 8 stencil bits. Although 39 sampled
+MDI commands matched their batch command and were marked resident/visible,
+M579 did not have valid VBO/EBO byte witnesses and therefore did not prove
+submitted mesh data. The CPU opaque-depth ray proxy found a closer opaque hit
+for only 3/479 samples (32 had no opaque hit), so foreground geometry cannot
+account for the missing result at most sampled water pixels. M578 forced
+single pass with 464/467 source-fluid pixels
+changing RGB and 39/39 valid byte-identical GPU payload probes. Continue with
+M580 before changing rendering behavior.
+
+M580 repeats the same route, persisted world, diagnostic pixel window, and
+default desktop-shell path. It adds actual successful-draw witnesses for both
+ShellDepth and TransparentColor: submission path, buffer IDs and liveness,
+buffer byte sizes and query errors, VAO/bindings, framebuffer, stencil/depth/
+color-write state, and GL error after submit.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m580_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m580_m572_water_draw_witness --report bin/suite_reports/engine_refactor/m580_m572_water_draw_witness_20261015.json --process-timeout 2600
+```
+
+After the route, run `tools/analyze_water_surface_pixel_join.py` against its
+performance JSONL and the same world directory, restricting camera X to
+`[-4710,-4550]`. Compare witness rows by `frame_epoch` and pass; check whether
+the successful draw used live, nonempty buffers and whether its depth/stencil
+state can write the shell. A captured submit and state are not by themselves
+proof that a particular sample pixel was covered.
+
+#### M580 result and M581 trace-ring correction
+
+M580 completed the visible no-teleport M335 route (`process_rc=0`, 913 periods,
+911 steady, 572 chunks; median flight speed 5.18555 blocks/s). Host CPU median
+was 83.75% and peaked at 100%, so do not use these timings as a quiet-host
+performance baseline. Pixel join: 14 captures/840 samples; 759 water blocks,
+502 source-fluid matches; 499/502 water matches changed RGB after the
+transparent pass, with stencil counts `1:499`, `0:3`. Only one of the 502 had
+a closer positive opaque-depth-ray hit. M579 under the same default-shell
+route had 0/479 RGB changes and stencil `0:479`: the failure is intermittent.
+
+M580 had no serialized fluid draw witnesses. Shutdown retained 1,024 generic
+`visual_black_trace` rows, all sample kind 0; kind 19 was sharing and losing
+that ring. The next build gives fluid witnesses a dedicated 256-entry ring
+and stores a pass ordinal (`0=ShellDepth`, `1=BehindShell`, `2=ShellSurface`).
+After rebuilding Release, rerun the same full M335 environment/route above;
+change only the host log, phase, and report names as follows:
+
+```powershell
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m581_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m581_m572_water_draw_witness --report bin/suite_reports/engine_refactor/m581_m572_water_draw_witness_20261015.json --process-timeout 2600
+```
+
+Keep all M580 environment variables unchanged, including
+`CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=0`; use the same water join bounds and
+world directory. Expect separate witness rows for shell depth, behind shell,
+and shell surface submissions. The suite may remain red on its existing
+streaming stop-line gates; judge the water question from matched RGB/stencil
+samples and retained GL state.
+
+#### M581 result and M582 ordinary-water capture
+
+M581 completed the full visible no-teleport M335 route (`process_rc=0`, 913
+periods, 911 steady, 572 chunks; 5.18555 blocks/s median). Pixel join: 13
+captures/780 samples, 508 water/source-triangle matches, 506 RGB changes and
+final stencil `1` (two samples had stencil `0`). Its marker intentionally
+replaced the normal water color. All 39 new draw witnesses survived: 13 each
+for pass ordinal 0/1/2, all MDI GPU-range submits, VBO/EBO live and 48/16 MiB,
+no GL or buffer-query errors, and the expected stencil/depth/color-mask state
+for ShellDepth, BehindShell, and ShellSurface. All 39 sampled GPU payloads and
+indirect commands matched CPU source data. This verifies that the default
+shell can render water in sampled frames but does not answer why M579 failed
+or how the ordinary color appears.
+
+M582 is the same exact M335 route with only the two fragment markers disabled.
+It measures the unmodified color output while retaining pixel sampling and
+the new draw witnesses. Set up the same M581 environment, with these marker
+values and new run names:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='0'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m582_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m582_m572_water_natural_color --report bin/suite_reports/engine_refactor/m582_m572_water_natural_color_20261015.json --process-timeout 2600
+```
+
+Run the usual water pixel join on the resulting perf JSONL and same persisted
+world, with X bounds `[-4710,-4550]`. Interpret pre/post RGB alongside final
+stencil and the three `pass_ordinal` witness rows; no marker coverage is
+expected in this run.
+
+#### M582 result, M583 fog-pull-in control, and M584 fog-margin control
+
+M582 completed M335 with ordinary water shading: 10 captures/600 samples,
+367 water/source-triangle matches, 265 RGB changes (72.2%), and final stencil
+`1:364, 0:3`. At all 99/99 stencil-covered samples that did not change RGB,
+the framebuffer RGB was exactly the captured atmospheric fog color. The other
+three unchanged samples had stencil 0. The fog was horizontal air fog from 16
+to 32 blocks. This is direct evidence that most unchanged far-water samples
+were rendered and then blended into the same RGB as the sky/fog.
+
+M583 repeats M335 with only the run-time `fog_pull_in_enabled` setting off.
+The runner restored the original config afterward. It completed 909 periods
+(907 steady), `process_rc=0`, and median movement stayed at 5.18555 blocks/s.
+Pixel join: 13 captures/780 samples, 459 water/source-triangle matches, 342
+RGB changes (74.5%), and final stencil `1:456, 0:3`. The actual fog range was
+17.28–36 blocks. Of 117 unchanged matches, 93 exactly equaled the per-frame
+fog color and 22 were within one 8-bit channel value; most were beyond the
+36-block fog end. Disabling pull-in widened the range by only four blocks and
+did not remove the far-water convergence.
+
+The run used render distance 4 chunks (64 blocks) and end margin 28. M583's
+same horizontal view therefore ended fog at 36 blocks even without pull-in;
+the M335 camera at eye Y=70, viewing a water plane at Y≈48.5 with pitch −30°,
+meets that plane around 37 blocks ahead on the center ray. The camera is
+looking at water just beyond the fog end, so its color converges to the sky.
+The join also found saved water blocks without matching source triangles, but
+157/245 had no render-ready chunk and 160/245 lay beyond 64 blocks; those
+samples are not evidence of a missing near-focus mesh.
+
+M584 changes only `distance_fog_end_margin_blocks` to 0 for the same M335
+route, while keeping pull-in off. With RD=4 this should move the fog end to
+the 64-block render radius. The helper saves and restores `bin/config.json`
+byte-for-byte and restores its process environment in `finally`; it does not
+build. Use the Release binary already built for M581–M583:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 `
+  -World World_M572_Cold_20261014 `
+  -Report bin/suite_reports/engine_refactor/m584_m572_water_fog_margin0_20261015.json
+```
+
+M584 completed the visible, no-teleport M335 route normally (913 periods,
+`process_rc=0`, no hang kill). The runner restored the original config
+(`distance_fog_end_margin_blocks=28`, pull-in enabled) after the run. The
+actual horizontal air-fog range was 30.63–64 blocks. In 14 captures/840
+samples, 765 were water blocks and 502 also matched a source fluid triangle;
+469/502 (93.4%) changed framebuffer RGB after transparency, versus 74.5% in
+M583 and 72.2% in M582. Of the 33 unchanged source-triangle samples, 32 had
+stencil 1, all were farther than 64 blocks, and all were within one 8-bit
+channel of the fog color (21 exactly matched); the single remaining sample
+had stencil 0 at 38.5 blocks. All 469 RGB-changing samples were within
+59.1 blocks. The 42 retained fluid draw witnesses had matching GPU payloads
+and indirect commands.
+
+This supports fog/render-horizon convergence as the cause of the *far-field*
+water blending into the sky: with the fog end aligned to the 64-block render
+radius, matched water inside that radius changed the framebuffer in 93.4% of
+samples. It does not prove the whole surface is always visible. The user
+reported seeing no water during this investigation, while these sparse probes
+did see the surface in the selected X window; the discrepancy remains open.
+Of the 263/765 water-block samples without a source-triangle match, 86 were
+in render-ready chunks. The 81 such samples within 64 blocks were all
+render-ready, and 80/81 still had stencil 1 and changed framebuffer RGB after
+transparency. A source-triangle ray miss is therefore not proof that the
+actual GPU surface is absent. The suite still had its separate post-stop
+streaming gates red.
+
+M585 checks the same route with margin 0 and normal fog pull-in enabled. The
+helper accepts `-EnableFogPullIn` for this control and still restores config
+bytes and environment in `finally`:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 `
+  -EnableFogPullIn `
+  -World World_M572_Cold_20261014 `
+  -Report bin/suite_reports/engine_refactor/m585_m572_water_margin0_pullin_20261015.json
+```
+
+M585 completed the same full visible no-teleport route normally (913 periods,
+911 steady, movement median 5.18555 blocks/s, far distance 9152 blocks,
+`process_rc=0`, no hang kill). The runtime manifest confirmed margin 0 and
+pull-in enabled; afterward the helper restored the saved config (margin 28,
+pull-in enabled). The acceptance report remained red on existing A24/eye-proxy
+and post-stop convergence gates.
+
+The 14 water-window captures had 840 samples, 542 water/source-triangle
+matches, and 372 RGB changes (68.6%); 170 matched water pixels did not change.
+Actual fog uniforms were horizontal air fog start 16/end 32, while period
+telemetry at all 14 capture frames showed fog RD=3, margin=95, debt=1, and
+`unfinished_visual=35..49`. `focus_unfinished_ahead=0` in all 14 frames;
+`focus_missing_mesh` was nonzero in only one, `visual_holes=0` throughout, and
+`visible_black_fully_dark_stalled_n=0` throughout. Among the 170 unchanged
+water matches, 168 had stencil 1; 158 exactly equaled fog RGB and 167 were
+within one 8-bit channel value.
+
+Use horizontal distance here (the fog uniform has `horizontal=1`). In the
+32–64-block band, M584 with pull-in off/end=64 changed RGB in 140/141 water
+matches; M585 with pull-in on/end=32 changed only 50/189, leaving 136
+stencil-1 pixels unchanged inside the drawable radius. This directly explains
+why the user can see the water surface disappear with normal pull-in enabled:
+global unfinished ring debt keeps the fog end at its 32-block floor after the
+facing sector is ready. M584's 81 in-radius source-ray misses remain a weak
+proxy: 80 still changed RGB with stencil 1, so they are not proof of missing
+GPU water geometry.
+
+The production-policy change now under evaluation feeds `FocusUnfinishedAhead`
+to fog-debt latch, clear, margin scaling, and urgent-shrink decisions instead
+of the all-ring `UnfinishedVisual` count. Direct `FocusMissingMesh`, visual
+holes, and fully-dark stalled witnesses still retain the short protective
+latch. Build Release only, then repeat the same M335 flight as M586 with the
+normal pull-in enabled and margin 0. Check that fog returns to RD=4/end=64
+when the facing sector is clear, that short real holes can still pull it in,
+and that far/near water pixels respond as in M584 without worsening the
+existing stop-line behavior.
+
+### M587–M590: intermittent pool loss, target diagnosis, and short validation
+
+The exact full-route commands for M587/M588 differed mainly in their pixel
+windows; both used the visible no-teleport M335 route on
+`World_M572_Cold_20261014`, Release build, eye Y=70, yaw=180, pitch=-30,
+normal movement speed and a 1,800-second cruise. M587 used the narrower
+`[-4710,-4550]` interval and found water/source-triangle matches with no RGB
+change plus invalid shared pool handles. M588 widened the interval to
+`[-4900,-4450]`; it recorded healthy buffers and payloads in that window, so
+the failure was intermittent and its location differed from the latest
+operator report. Numerical details are in the plan's M587/M588 sections.
+
+M589 directly covered the subsequently reported `[-6800,-5500]` region using
+the same full M335 route:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M572_Cold_20261014 `
+  -ProbeMinCameraX -6800 -ProbeMaxCameraX -5500 `
+  -Report bin/suite_reports/engine_refactor/m589_m572_current_water_zone_20261015.json
+```
+
+M589 collected 136 captures/8,160 samples. Of 6,756 saved-water/source-fluid
+matches, 0 changed RGB after transparency; all 6,756 ended stencil=0. Among
+256 retained witnesses, pool EBO/VBO names matched the pool's live handle
+values but were not GL buffer objects in 130/63 rows; post-submit GL errors
+included 130 `GL_INVALID_OPERATION` and 41 `GL_INVALID_VALUE`.
+`ENGINE_REMEDIATION_PLAN_2026-10-03.md` records the source-level diagnosis:
+chunk `Remove`/`RepresentationSwitch` released a pooled batch and then
+performed a second generic destruction, deleting its aliased shared buffers.
+
+Commit `c478286f` removes that double destruction and clears pooled aliases.
+Release build succeeded. M590 used the newly parameterized short target-lane,
+with the same world, fog settings and pixel window:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M572_Cold_20261014 `
+  -ProbeMinCameraX -6800 -ProbeMaxCameraX -5500 `
+  -StartX -5450 -FlyPhaseSeconds 300 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m590_pool_release_fix_short_water_lane `
+  -Report bin/suite_reports/engine_refactor/m590_m572_pool_release_fix_water_20261015.json
+```
+
+M590 completed normally in 167 periods/165 steady. The 159 captures spanned
+camera X=-5505..-6797. Water/source-triangle samples changed RGB in 5,304/7,007
+(75.7%); 6,916/7,007 had stencil=1. All 256 draw witnesses showed valid VBO/EBO,
+correct live/cached pool handles, and no GL errors. All 477 exact MDI/payload
+checks matched, including 468 water samples. Of 1,703 unchanged water matches,
+1,681 were beyond fog end and 1,660 were within one 8-bit channel of fog RGB.
+The broad streaming suite still returned `pass=false` because of readiness and
+stop-line debt. M591 below completed the full-distance post-fix check. M589/M590
+direct data and remaining caveats are recorded in the plan and diagnostic
+runbook.
+
+## M591 full-distance post-fix water check (2026-10-15)
+
+M591 repeated the established M335 route after `c478286f`, using the same
+persisted world, fog-pull-in policy, and target X corridor. This was the final
+long operator-visible route; no further long flights should be started merely
+for operator visual confirmation. If a new visual symptom needs confirmation,
+use the 300-second target-lane from M590.
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M572_Cold_20261014 `
+  -ProbeMinCameraX -6800 -ProbeMaxCameraX -5500 `
+  -PhaseId m591_m572_pool_fix_full_m335 `
+  -Report bin/suite_reports/engine_refactor/m591_m572_pool_fix_full_m335_20261015.json
+```
+
+The route completed normally (`process_rc=0`, no hang kill, no teleport),
+travelled 9,184 blocks to the 8,192-block checkpoint, and maintained the
+expected 5.18555 blocks/s median. The operator confirmed that water remained
+visible throughout the route. Pixel join:
+
+```powershell
+python -X utf8 tools/analyze_water_surface_pixel_join.py `
+  bin/logs/perf_20261015-212358_30076.jsonl `
+  bin/worlds/World_M572_Cold_20261014 `
+  --min-camera-x -6800 --max-camera-x -5500 `
+  --json-out bin/suite_reports/engine_refactor/m591_m572_water_pixel_join_20261015.json
+```
+
+It processed 162 captures / 9,720 probes: 8,344 water blocks, 8,068 source
+fluid triangles, and 8,031 water/triangle matches. RGB changed after
+transparency for 6,025 matches; all 2,640 matched samples closer than 32 blocks
+changed RGB. All 256 fluid draw witnesses reported live pooled VBO/EBO handles
+and `GL error=0`; all 486 MDI/payload checks matched (481 water samples).
+The broad analyzer remains `pass=false`: post-stop mesh-missing and visual-hole
+metrics were zero, but readiness debt remained (`post_stop_readiness_debt_max`
+16, median `chunk_not_ready` 30) and the streaming-phase median was 7.86 ms
+against a 5 ms gate. Treat those as separate streaming/scheduler debt, not as
+evidence of missing water. Full metrics and limits are in the engine plan and
+the diagnostic runbook.
+
+## M596C/M596D — cold-frontier provisional-light lifecycle (2026-10-15)
+
+Create a new world with a unique name, seed `3650482197`, and radius 4. Invoke
+the GUI-subsystem Release executable with PowerShell `Start-Process -Wait
+-PassThru -WindowStyle Hidden`, then validate the create report before starting
+the flight. A radius-4 world only guarantees its initial spawn coverage; keep
+the no-teleport route start at X=-32 inside that area, then let the route reach
+the procedural frontier. A far start override such as X=-6070 falls back to
+spawn and is not a valid cold-frontier run. The failed pre-wait create attempt
+also is not evidence: the wrapper returned before world creation completed and
+the runner cleaned up the orphan process.
+
+M596D's flight invocation (visible GUI, 35-second route, then a short stopped
+tail) was:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M596C_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m596d_cold_world_west_frontier `
+  -Report bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_20261015.json
+```
+
+M596D moved from X=-32 to -214 (12 chunk columns), with no collision and
+`process_rc=0`; the composite suite still returned `pass=false` on readiness
+debt. Its 4,800 pixel probes had no dark-threshold pixels and captured 29
+provisional-preview chunks. The same-camera pixel report found 35 full
+preview-to-settled observations: 34 at the stationary spawn view, median
+2.728 s and maximum 9.269 s; only one was at the cold frontier. At that frontier
+chunk `(-20,2,2)`, the first preview sample already reported settled light and
+mesh/publish revision 0; 1.539 s later the identical view saw revision 1 with
+preview off. This one observation bounds a mesh/first-publication interval; it
+does not identify its queue stage. The startup-ring observations are warmup and
+must not be counted as cold-frontier service latency.
+
+Analyzer command:
+
+```powershell
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261015-230556_21480.jsonl `
+  --json-out bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_pixels_20261015.json
+```
+
+The diagnostic trace has now been extended to stamp an absolute steady-clock
+time on each pixel, plus watched-slice transition events for light settlement,
+stale-light-remesh queue insertion, dirty admission, and existing mesh
+started/built/published events. After the Release build, make one fresh world
+with the same seed under a new name and repeat the same short route. Check
+`absolute_steady_clock_pixel_probe_count`, demand lifecycle event counts, and
+per-pixel `stage_timeline` before changing any scheduler budget. Older traces
+only have flight-relative pixel time and cannot be joined to absolute event
+timestamps. M596 reports: [create](../../bin/suite_reports/engine_refactor/m596c_world_create_20261015.json),
+[flight](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_20261015.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_pixels_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-230556_21480.jsonl).
+
+## M598A/M598B — opaque-hit event join and cold light handoff (2026-10-15)
+
+M597 made clear that the pixel row's generic incarnation could belong to the
+sea-plane sample rather than the opaque depth-hit chunk, and that multiple mesh
+attempts for one chunk could be mixed by time-only joins. Release commit
+`c2cabbbb` records the exact opaque chunk identity, starts a bounded lifecycle
+watch when that hit is provisionally lit, and pairs demand attempts with a
+single mesh job in the offline analyzer.
+
+Create a fresh world after the Release build. This executable has a GUI
+subsystem; wait for completion so the runner cannot mistake an active world
+creation for an orphan:
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M598A_Cold_20261015',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m598a_world_create_20261015.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+```
+
+The report confirmed success, seed `3650482197`, radius 4, and 597 chunk
+files. The established visible no-teleport route was kept short:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M598A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m598b_cold_light_handoff `
+  -Report bin/suite_reports/engine_refactor/m598b_cold_light_handoff_20261015.json
+```
+
+M598B finished normally at 12 focus columns, speed `5.19653 blocks/s`,
+without collision or teleport. Composite `pass=false` was due readiness debt
+(rate 1, post-stop max 19); `visual_holes_rate=0` and direct dark pixels were
+zero. The eye-proxy mid-flight segment remained untested because this gate uses
+a spatial focus band. The 4,800 pixel probes recorded 35 chunks in provisional
+lighting, and the exact opaque-hit lifecycle joined for all 35.
+
+At moving frontier chunk `(-20,2,2)`, light settled about 64 ms after the first
+preview observation; matching stale-remesh admission followed immediately and
+the mesh job published about 112 ms after the preview. Its first settled
+non-preview sample came 1.6 s later after the camera moved about 2.1 blocks,
+so this is not a same-view latency. At stationary startup, chunk `(-4,2,2)` was
+observed first in `deferred_far` state with a RelightThenMesh ticket. Its light
+settled after about 7.45 s; the matching mesh build took about 5 ms and
+published about 24 ms later. Period snapshots show deferred-far pending peaking
+at 44 while FIFO pressure was active. This points to cold startup lighting
+service before mesh build, but the sparse trace does not pin exact defer/admit
+timestamps; do not expand the global admission policy yet.
+
+Re-run the pixel analyzer with the new causal attempt/job filtering:
+
+```powershell
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261015-233605_3608.jsonl `
+  --json-out bin/suite_reports/engine_refactor/m598b_cold_light_handoff_pixels_20261015.json
+```
+
+Artifacts: [create report](../../bin/suite_reports/engine_refactor/m598a_world_create_20261015.json),
+[flight report](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_20261015.json),
+[pixel/lifecycle analysis](../../bin/suite_reports/engine_refactor/m598b_cold_light_handoff_pixels_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-233605_3608.jsonl).
+
+## M599/M600 — bounded deferred-relight service probe (2026-10-15/16)
+
+These were short control runs, not far-flight acceptance. Both used the
+established 35 s flight + 20 s stop route on a fresh radius-4 world with seed
+`3650482197`. M599 tested age-gated admission; M600 added bounded priority
+promotion behind the underfeet pin. The Release binary only was built.
+
+For each build, create a new world with the Release CLI and wait for process
+completion, using the M598 `Start-Process -WindowStyle Hidden -PassThru -Wait`
+pattern. M599 used `World_M599A_Cold_20261015`; M600 used
+`World_M600A_Cold_20261015`. Each report recorded 597 initial chunk files.
+The experimental flight commands were:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1' # required only because these flights used uncommitted code
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M599A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m599b_aged_relight_service `
+  -Report bin/suite_reports/engine_refactor/m599b_aged_relight_service_20261015.json
+```
+
+For M600, substitute `World_M600A_Cold_20261015`, phase
+`m600b_aged_relight_priority`, and report
+`bin/suite_reports/engine_refactor/m600b_aged_relight_priority_20261016.json`.
+Run the pixel lifecycle analyzer against each emitted `perf_*.jsonl`, with
+`--threshold 96` and a separate `--json-out` report.
+
+M599 recorded 21 age admissions but startup chunk `(-4,2,2)` still settled
+light after 6.892 s. M600 recorded 11 admissions; that same disk-loaded chunk
+settled after 3.983 s and published mesh by +4.011 s. Queue pending peaks were
+40 and 37 respectively; the M598 baseline was 44. The runs indicate improvement
+but do not prove the age path serviced the exact sampled chunk: at ~3.15 s it
+was still observed at priority index 11. M600's aggregate suite verdict stayed
+false from readiness debt while near-focus mesh-hole rate stayed zero. Preserve
+all three reports as diagnostic outcomes, not merge-green acceptance.
+
+Artifacts: [M599 create](../../bin/suite_reports/engine_refactor/m599a_world_create_20261015.json),
+[M599 flight](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_20261015.json),
+[M599 pixel analysis](../../bin/suite_reports/engine_refactor/m599b_aged_relight_service_pixels_20261015.json),
+[M599 perf](../../bin/logs/perf_20261015-235616_22728.jsonl),
+[M600 create](../../bin/suite_reports/engine_refactor/m600a_world_create_20261015.json),
+[M600 flight](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_20261016.json),
+[M600 pixel analysis](../../bin/suite_reports/engine_refactor/m600b_aged_relight_priority_pixels_20261016.json),
+[M600 perf](../../bin/logs/perf_20261016-000013_23452.jsonl).
+
+## M601/M602 — age-service queue order and cold-versus-warm entry (2026-10-16)
+
+M601 added one bounded diagnostic line per aged deferred-relight admission. It
+records the world column, deferral age, FIFO occupancy before/after, queue index
+after prioritization, active pin identity, and whether the queue accepted the
+request. Build Release, create a unique radius-4 cold world with the same seed,
+wait for the create report, then use the same short route:
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M601A_Cold_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m601a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M601A_Cold_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m601b_deferred_far_age_audit `
+  -Report bin/suite_reports/engine_refactor/m601b_deferred_far_age_audit_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-025552_27436.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m601b_deferred_far_age_audit_pixels_20261016.json
+```
+
+M601 created 597 chunk files. The exact startup column `(-4,2)` was age-admitted
+at 2.498 s, FIFO `20→21`, priority index 0, with no active pin. Nineteen age
+admissions occurred, and each was inserted at index 0; later requests therefore
+could overtake earlier age-admitted work. The startup opaque slices `(-4,2,1/2)`
+settled light about 10.735/10.785 s after their first pixel sample; after that,
+the matching mesh build took 3.672 ms and publish took 8.066 ms. Pixel analysis
+found 230 unsettled-demand samples, 196 provisional-preview samples, and 28
+pixels below luma 96. The mesh-hole proxy stayed zero. Preview shader override
+was active for sampled unlit surfaces; no sampled RGB was exactly zero, so the
+operator's report of black chunks is not disproven by this finite pixel grid.
+
+M602 used the existing saved `World_M600A_Cold_20261015` to isolate warm entry
+from the new-world startup condition. It reused the exact 35 s route:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M600A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m602b_warm_light_compare `
+  -Report bin/suite_reports/engine_refactor/m602b_warm_light_compare_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-030103_5464.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m602b_warm_light_compare_pixels_20261016.json
+```
+
+The runner classified M602 as warm. The startup slices `(-4,2,1/2)` no longer
+appeared in the provisional pixel lifecycle and preview samples fell from 196
+to 18; other active slices still had readiness debt (`enter_unlit_max=13`). This
+supports cold-start relighting as a contributor to dark entry, but does not
+explain every dark sample. Both aggregate suites ended `pass=false` on unrelated
+readiness/eye-proxy gates; these short runs are diagnostic evidence, not
+acceptance runs.
+
+Artifacts: [M601 create](../../bin/suite_reports/engine_refactor/m601a_world_create_20261016.json),
+[M601 flight](../../bin/suite_reports/engine_refactor/m601b_deferred_far_age_audit_20261016.json),
+[M601 pixel analysis](../../bin/suite_reports/engine_refactor/m601b_deferred_far_age_audit_pixels_20261016.json),
+[M601 perf](../../bin/logs/perf_20261016-025552_27436.jsonl),
+[M602 flight](../../bin/suite_reports/engine_refactor/m602b_warm_light_compare_20261016.json),
+[M602 pixel analysis](../../bin/suite_reports/engine_refactor/m602b_warm_light_compare_pixels_20261016.json),
+[M602 perf](../../bin/logs/perf_20261016-030103_5464.jsonl).
+
+## M603 — pace age-service head admissions (2026-10-16)
+
+M603 retained the same Release executable, seed, radius, and 35 s visible-GUI
+no-teleport route, but created a fresh cold world. The scheduler now waits until
+the prior different age-admitted column leaves the relight FIFO before placing
+another age-selected column. Existing pin handling, age threshold, minimum
+interval, and FIFO occupancy cap remain unchanged.
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M603A_Cold_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m603a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M603A_Cold_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m603b_age_service_fairness `
+  -Report bin/suite_reports/engine_refactor/m603b_age_service_fairness_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-030600_27816.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m603b_age_service_fairness_pixels_20261016.json
+```
+
+The exact startup slices `(-4,2,1/2)` settled 3.985/4.149 s after their first
+pixel sample; observed preview-to-nonpreview was 4.4/4.3 s. M601's corresponding
+settlement was 10.735/10.785 s, while M600 had already shown about 3.983 s, so
+M603 is a return to the earlier result rather than evidence of a new best.
+Addressed age-service admissions fell from 19 in M601 to 6. Logs show the new
+`age_service_wait_previous` counter was nonzero while the prior item remained
+queued. However, deferred-far peak reached 44, `enter_unlit_max=30`, and
+post-stop readiness debt peaked at 23; aggregate suite `pass=false` remained due
+to readiness/eye-proxy gates. Pixel analysis reported no near-focus hole proxy,
+but still saw dark and unsettled samples. Keep the pacing change as a bounded
+candidate fix; it does not close the broader cold-start readiness issue.
+
+Artifacts: [M603 create](../../bin/suite_reports/engine_refactor/m603a_world_create_20261016.json),
+[M603 flight](../../bin/suite_reports/engine_refactor/m603b_age_service_fairness_20261016.json),
+[M603 pixel analysis](../../bin/suite_reports/engine_refactor/m603b_age_service_fairness_pixels_20261016.json),
+[M603 perf](../../bin/logs/perf_20261016-030600_27816.jsonl).
+
+## M604 — cold fairness repeat under high runtime pressure (2026-10-16)
+
+M604 rebuilt Release with `tools/build_release.ps1 -Jobs 8`, created a fresh
+radius-4 map with the M601/M603 seed, and used the same short visible-GUI,
+no-teleport route. Create-world produced 597 chunk files. The runner completed
+the application process (`run_outcome=success`, `process_rc=0`) but returned
+analysis code 2 because stale-visual / hole-blink acceptance gates failed.
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M604A_Cold_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m604a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M604A_Cold_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m604b_cold_fairness_confirm `
+  -Report bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-103531_29408.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_pixels_20261016.json
+```
+
+The run produced 33 spikes across 35 periods, fly wall median 36.8865 ms,
+streaming phase median 24.5761 ms, emergence median 11.8964 ms, and frontier
+pressure in 86.96% of cruise periods. Deferred-far pending peaked at 46 and
+fell to 3; at the end the three remaining entries were 5–7 chunks away, beyond
+the four-column service horizon. The audit recorded two age admissions. Pixel
+analysis found 52 low-luma samples / 2,880 probes, 306 unsettled opaque samples,
+252 provisional-preview samples in 24 chunks, and 168 preview shader overrides.
+Near-focus `visual_holes_rate` was zero and A24 passed, but the visible-black
+proxy peaked at 16 and startup unlit/pending maxima reached 50.
+
+The suite result is not a clean pacing comparison: M603 had 3 spikes, fly wall
+median 13.7338 ms, and no frontier-pressure periods. M604 did not record host
+CPU, so it cannot distinguish engine workload from unrelated host load. A later
+two short idle-process harness smokes measured 30.8–65.4% host CPU while the
+child process was mostly idle; treat external pressure as plausible, not proven.
+The runner now samples host/app CPU, RSS, thread count, and available memory
+once per second in `runtime_resources`; use that evidence on the next short cold
+run.
+
+Artifacts: [M604 create](../../bin/suite_reports/engine_refactor/m604a_world_create_20261016.json),
+[M604 flight](../../bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_20261016.json),
+[M604 pixel analysis](../../bin/suite_reports/engine_refactor/m604b_cold_fairness_confirm_pixels_20261016.json),
+[M604 perf](../../bin/logs/perf_20261016-103531_29408.jsonl).
+
+## M605/M607 — cold entry with runtime load samples (2026-10-16)
+
+This experiment addresses the report of black-looking chunks immediately after
+entering a newly created world. It uses the established short route only: visible
+GUI, no teleport, start `(-32,56,56)`, eye Y 70, yaw 180, pitch -30, 35 seconds
+cruise, 20 seconds stop, 15 seconds idle, pixel camera-X range `[-300,0]`, and
+fog pull-in. No long-distance acceptance flight was run.
+
+M605 used a fresh radius-4 world with seed `3650482197`; its create report has
+597 chunk files, but that invocation did not capture elapsed wall time. M605
+flight completed with process rc 0 and 101 resource samples, but host CPU was
+73.9% median / 99.4% p95, so it is diagnostic only. `enter_unlit_max=49`,
+`enter_pending_max=44`, `visual_holes_rate=0`, and provisional preview covered
+31 chunks. The aggregate suite returned false on visual/readiness gates.
+
+M607 repeated cold on a fresh map and added a stopwatch to world creation: 597
+chunk files in 59.827 seconds. Its flight had host CPU 41.0% median / 85.5%
+p95 and app CPU 29.675% median-of-machine; startup reached
+`enter_unlit_max=50`, `enter_pending_max=44`, with `visual_holes_rate=0` and 16
+provisional preview chunks. The saved M600 warm arm had host CPU 75.5% median /
+99.5% p95, app CPU 21.05% median-of-machine, zero startup unlit/pending, and 3
+provisional preview chunks. This cold/warm pair fails the load gate: median host
+CPU differs by 34.5 points and the warm arm is above the 50% limit. Its apparent
+startup advantage is consistent with persisted light state, not a causal A/B
+result. Both runs returned process rc 0; aggregate suite exit code was 2 due to
+acceptance gates, with A24 passing and the spatial eye-proxy segment untested.
+
+M605's pixel analyzer originally reported 383 samples below luma 96. The updated
+`dark_pixel_classification` shows 349 final RGB samples differed from the
+pretransparent sample;
+the remaining 34 joined drawable visible opaque surfaces, and all 34 had
+unsettled or preview light evidence; 16 had a preview marker and 7 had a light
+revision mismatch. M607 cold: 42 total, 29 transparency-affected, 13
+unchanged-RGB drawable opaque candidates, 4 with pending/preview evidence and
+none with a revision mismatch. M607 warm: 68 total, 62 transparency-affected,
+6 unchanged-RGB drawable opaque candidates. The near-focus geometry-hole proxy
+remained zero. Therefore the luma count alone is not a black-chunk metric; this
+trace did not reproduce a confirmed geometric hole.
+
+M605 had one same-view preview handoff interval of 5.4 s from first preview, of
+which 1.4 s followed observed light settlement. M607 cold had 28 such intervals
+(median 2.0 s, max 3.9 s); warm had three provisional chunks but no sampled
+same-view handoff. These lifecycle timings are sparse sample bounds and were
+captured under unequal host pressure.
+
+The exact startup pixel in chunk `(-3,3,4)` gives a more useful stage split.
+M605 preview remained at the same camera through its last pixel sample at 11 s;
+the linked light-settlement event arrived 14.854 s after first preview. Mesh
+work started 0.746 s after settlement, built in 2.788 ms, reached GPU
+publication 11.927 ms later, and the install event followed 36.292 ms after
+publication. M607 cold observed this same chunk/camera settle in 231 ms and
+leave preview by 400 ms. M605's observed delay is therefore concentrated
+before/around light service, not in mesh building. The high host pressure in
+M605 leaves scheduler delay and worker CPU availability as competing causes;
+the next source-level audit must connect the pending-note event to queue age,
+admission, and the relight worker start before changing service policy.
+
+M605 flight used the same route options as M607, substituting
+`World_M605A_Cold_20261016`, phase `m605b_cold_resource_control`, and report
+`bin/suite_reports/engine_refactor/m605b_cold_resource_control_20261016.json`.
+Its create report is `m605a_world_create_20261016.json`; elapsed create time
+was not measured in that invocation.
+
+Cold create + flight commands:
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M607A_Cold_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m607a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+$sw.Stop()
+Write-Output ('world_create_elapsed_sec={0:N3}' -f $sw.Elapsed.TotalSeconds)
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M607A_Cold_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m607b_cold_resource_repeat `
+  -Report bin/suite_reports/engine_refactor/m607b_cold_resource_repeat_20261016.json
+```
+
+Matched warm-arm command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M600A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m607c_warm_resource_control `
+  -Report bin/suite_reports/engine_refactor/m607c_warm_resource_control_20261016.json
+```
+
+Recompute pixel analysis after the `dark_pixel_classification` update:
+
+```powershell
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-104856_39876.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m605b_cold_resource_control_pixels_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-105500_19000.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m607b_cold_resource_repeat_pixels_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-105743_9068.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m607c_warm_resource_control_pixels_20261016.json
+```
+
+Artifacts: [M605 flight](../../bin/suite_reports/engine_refactor/m605b_cold_resource_control_20261016.json),
+[M605 pixels](../../bin/suite_reports/engine_refactor/m605b_cold_resource_control_pixels_20261016.json),
+[M605 perf](../../bin/logs/perf_20261016-104856_39876.jsonl),
+[M607 create](../../bin/suite_reports/engine_refactor/m607a_world_create_20261016.json),
+[M607 cold flight](../../bin/suite_reports/engine_refactor/m607b_cold_resource_repeat_20261016.json),
+[M607 cold pixels](../../bin/suite_reports/engine_refactor/m607b_cold_resource_repeat_pixels_20261016.json),
+[M607 warm flight](../../bin/suite_reports/engine_refactor/m607c_warm_resource_control_20261016.json),
+[M607 warm pixels](../../bin/suite_reports/engine_refactor/m607c_warm_resource_control_pixels_20261016.json),
+[M607 cold perf](../../bin/logs/perf_20261016-105500_19000.jsonl),
+[M607 warm perf](../../bin/logs/perf_20261016-105743_9068.jsonl).
+
+Do not modify streaming or rendering policy from this pair. The next sample
+should target spawn/observed-problem columns and pass both host median and p95
+gates before a causal cold/warm conclusion is made.
+
+### M608: cold-entry relight-owner trace
+
+M605 had a 16.645 s gap between the void-dark note and first capture for
+column `(-3,4)`, while the async worker started only 1.146 ms after capture.
+The existing logs cannot say whether the note stayed in the FIFO, deferred-far
+storage, or a flow owner during that gap. M608 adds an audit-only
+`void_dark_owner` event at accepted note time with FIFO position/size,
+deferred-far/deferred-visible state, and flow/in-flight ownership. It does not
+change scheduling. Use the same short GUI no-teleport route and load gates; do
+not expand to the long acceptance route.
+
+Cold-world creation command (measure elapsed wall time as in M607):
+
+```powershell
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M608A_Cold_QueueOwner_20261016',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m608a_world_create_20261016.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+$sw.Stop()
+Write-Output ('world_create_elapsed_sec={0:N3}' -f $sw.Elapsed.TotalSeconds)
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+```
+
+M608 flight command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M608A_Cold_QueueOwner_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m608b_cold_queue_owner `
+  -Report bin/suite_reports/engine_refactor/m608b_cold_queue_owner_20261016.json
+```
+
+After M608, correlate `void_dark_owner` → `capture submit` → `worker_start` by
+column. The owner event is observational only. Keep build mode Release and
+record host CPU p50/p95 before interpreting timing.
+
+M608 results: world creation took 61.286 s. The flight process exited normally
+but the suite was non-comparable (`host CPU median/p95 = 91.2/100%`). It
+reported `enter_unlit_max=50`, `enter_pending_max=42`, readiness-debt rate 1,
+and near-focus visual-hole rate 0. Pixel analysis found 33 dark samples that
+joined drawable opaque surfaces; all had unsettled/preview light evidence.
+
+The trace contained 396 `void_dark_owner` events. Column `(-3,3)` initially
+entered priority FIFO index 0/size 1 and also had a column-flow owner; its first
+capture followed 16.759 s later. Perf sampled an empty FIFO during the gap. A
+repeated note at 11:17:13.515 saw FIFO index 5/size 18 and no flow owner, then
+capture followed at 11:17:15.035. Across all snapshots, 346 were keyed in the
+FIFO, 50 were deferred-far-only, and 387 also had flow ownership. These states
+overlap. `relight_false_clear_n` remained zero. This is a queue-owner transition
+lead, not a valid performance result.
+
+Artifacts: [M608 create](../../bin/suite_reports/engine_refactor/m608a_world_create_20261016.json),
+[M608 flight](../../bin/suite_reports/engine_refactor/m608b_cold_queue_owner_20261016.json),
+[M608 pixels](../../bin/suite_reports/engine_refactor/m608b_cold_queue_owner_pixels_20261016.json),
+[M608 perf](../../bin/logs/perf_20261016-111637_40300.jsonl),
+[M608 info log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-111634.40300).
+
+`capture_dequeue`, `clear_pending_relights`, per-column cancellation, and FIFO
+trim/defer events are the next diagnostic additions. Do not interpret a long
+flight under M608's load as evidence for a rendering or streaming regression.
+
+## M609–M612 — cold and saved-light entry checks (2026-10-16)
+
+### Reusable flight invocation
+
+Сценарий запуска остался прежним: `tools/run_m335_water_visibility_ab.ps1`,
+короткий GUI no-teleport flight, никаких новых параметров траектории.
+Использованные параметры:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE = '1'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M609A_Cold_OwnerDrop_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m609b_cold_owner_drop `
+  -Report bin/suite_reports/engine_refactor/m609b_cold_owner_drop_20261016.json
+```
+
+Для M610–M612 менять `-World`, `-PhaseId` и `-Report` на идентификаторы
+соответствующего запуска. Не создавать новый мир для warm arm: он должен
+использовать карту cold arm с уже сохранёнными light-complete flags. Перед
+запуском и после завершения фиксировать количество записей и состояние целевых
+колонок в `worlds/<world>/column_light.json`. Terrain-warm карта без этого файла
+не является saved-light control.
+
+Свежую карту этого seed создавали через Release executable командой из M608
+(имя `World_M609A_Cold_OwnerDrop_20261016`, seed `3650482197`, radius 4), с
+замером времени через `Stopwatch`. M609 завершился за 71.756 s и создал 597
+chunk files. Создание мира — отдельная операция, не flight и не performance
+параметр маршрута.
+
+### Что сохранять и как интерпретировать
+
+- Flight JSON, perf JSONL, `Cubatarium.exe...INFO` лог, pixel analyzer JSON и
+  до/после snapshot light flags.
+- Для сравнения записать host CPU median/p95, process CPU, world-create time,
+  `enter_unlit_max`, `enter_pending_max`, visible black/hole proxies и pixel
+  candidate classification.
+- Сохранять host CPU median/p95, process CPU, world-create time,
+  `enter_unlit_max`, `enter_pending_max`, visible-black/hole proxies и pixel
+  classification. Host CPU включает Codex и другие процессы, поэтому он только
+  контекст: старые пороги сопоставимости (median <=50%, p95 <=75% и разница
+  arm-ов <=15 п.п.) отменены и не задерживают диагностический запуск.
+- Pixel candidate — тёмный unchanged RGB на drawable opaque surface. Он не
+  подтверждает ни чёрный кадр оператора, ни геометрическую дыру. Сопоставлять
+  preview marker, settled/meshed/published light revisions, очередь/flow owner и
+  кадр оператора.
+- `CUBATARIUM_RELIGHT_AUDIT=1` включает lifecycle записи. `deferred_far clear`
+  показывает причину удаления owner; `capture dequeue`, `capture requeue`,
+  `worker_start`, `settle` и mesh/GPU publish нужно связать по координате.
+  Само наличие `clear` не равно потере работы: `deferred_far_admitted`
+  означает передачу в активную очередь.
+
+M609–M613 использовали host выше timing gates (M613 runtime median/p95
+58.4/97.6%; процесс завершился штатно, suite вернул exit code 1 по stop-lines).
+Одиночная предзапусковая выборка CPU показывала 0% и не предсказала runtime
+нагрузки. M610 прогрел terrain, но не имел сохранённых light flags; M612 был
+первым saved-light revisit. M613 создал свежий мир за 61.673 s с 597 chunk files
+и подтвердил отсутствие `column_light.json` при старте; к концу было 116
+complete entries.
+
+M613 pixel trace классифицировал 55 final RGB samples ниже luma 96: 44 изменились
+на transparent pass, 11 unchanged попали на drawable opaque surface в chunk
+column `(-3,3,4)`. Их luminance 67–90, 4 имели preview evidence,
+light-revision mismatch не выявлено. Это не подтверждает полностью чёрный chunk.
+Relight audit записал 242 clear, 358 set и 432 save queue/result пары; на
+некоторых колонках видны повторные invalidation/requeue переходы. Средняя очередь
+save — 0.17 ms, writer service — 6.27 ms; из-за перегруженного host timing не
+принимать.
+
+M612 pixel trace сохранил 32 dark pixel candidates против 34 у M609 и 5 у M610;
+разброс исключает вывод об исправлении. Подробности и артефакты перечислены в
+[`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md).
+
+M613 Release build расширяет `CUBATARIUM_RELIGHT_AUDIT=1`: в `RelightAudit`
+появляются `light_flags event=load|clear|set|save_queued|save_result`. Снимайте
+события по колонке и revision вместе с queue ownership и pixel trace. Причины
+clear сейчас должны быть `relight_enqueued` либо
+`column_unload_with_relight_work`; событие load различает `missing`, `loaded`,
+`open_failed`, `invalid_schema` и `parse_failed`. M613 использовал эти события.
+
+M614 — короткий warm control к M613 на том же созданном мире и M335 маршруте:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M614A_Warm_FlagRevisit_20261016 `
+  -Report bin/suite_reports/engine_refactor/m614a_warm_flag_revisit_20261016.json
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261016-121314_37496.jsonl --threshold 96 `
+  --json-out bin/suite_reports/engine_refactor/m614a_warm_flag_revisit_pixels_20261016.json
+```
+
+At load M614 reported `loaded/116`; `enter_unlit/pending` fell to 9/9 from
+M613 cold `55/48`, and visible-black maxima were lower. The former workflow
+marked both runs against a runtime resource gate (M614 host CPU median/p95/max
+65.9/99.4/100%); host CPU is no longer an admission or acceptance gate. Pixel
+dark-candidate totals also differed and are not an operator-image verdict. Use
+matching runtime app/frame metrics and pixel/lifecycle joins when drawing a
+causal visual conclusion.
+
+M615 addresses stale-light repair debt by including stale-dark face witnesses
+with current own-slice revisions and extending bounded service from LitDrawable
+radius 4 to approach radius 5. The repair service retains its one-slot-per-four-
+scheduler-frames reserve when ordinary dirty admission is exhausted.
+
+M615A used the established visible GUI no-teleport M335 profile on the same
+M613 cold-start world. It completed without timeout, but runtime host CPU was
+73.7/100/100% (median/p95/max), so this is not performance acceptance. At focus
+`(-14,3)`, chunk `(-19,2,5)` remained drawable with geometry desired revision
+4→9 versus published 3 and logged 66 no-owner `dirty_admit_denied` attempts at
+h5. Its stale-light debt was queued then cleared without an admission event.
+Aggregate event totals (404 queued, 131 admitted, 389 published) include other
+chunks and must not be treated as matched work items. This run had no `gpu=1`
+witness. Pixel/readiness metrics do not represent the operator's framebuffer.
+
+M616 changes the world admission gate only for drawable unowned geometry debt
+inside approach radius 5, allowing it through the existing bounded admission
+loop when the ordinary dirty-admit budget is exhausted. The expected audit action
+is `geometry_debt_approach_reserved`. Build and commit before using the runner,
+then repeat the same short M335 route without a host CPU gate; confirm the target
+obtains an owner and publishes current geometry. Do not extend the route or use
+a dark-pixel proxy as the operator-image verdict.
+
+The first post-build M616 preflight (2026-10-16, app stopped) had host CPU
+median/p95 57.5/93.6%; the former workflow deferred the run by its host CPU
+gate. That admission rule is retired; retain the sample only as history/context.
+
+The M613 trace suggests a separate cross-chunk repair question: stale-dark
+consumer slices `(-19,2,0)` and `(-19,2,5)` had lit face samples in source chunks
+`(-20,2,0)` and `(-20,2,5)` while consumer revisions matched. Mesh capture hashes
+exact neighbor light halo cells and rejects changed in-flight inputs. Next audit
+the lifecycle after a source border-light update: whether every already-published
+dependent mesh gets an owner, then reaches capture, GPU publish, and stale-witness
+clear. Do not infer missing geometry from the general stalled visible-black
+counter; M613 `fully_dark_stalled` stayed zero.
+
+Артефакты M613/M614/M615A (локальные):
+
+- `suite_reports/engine_refactor/m613a_world_create_20261016.json`
+- `suite_reports/engine_refactor/m613b_cold_flag_lifecycle_20261016.json`
+- `suite_reports/engine_refactor/m613b_cold_flag_lifecycle_pixels_20261016.json`
+- `logs/perf_20261016-120225_41932.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-120222.41932`
+- `suite_reports/engine_refactor/m614a_warm_flag_revisit_20261016.json`
+- `suite_reports/engine_refactor/m614a_warm_flag_revisit_pixels_20261016.json`
+- `logs/perf_20261016-121314_37496.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-121310.37496`
+- `suite_reports/engine_refactor/m615a_stale_debt_approach_ring_20261016.json`
+- `logs/perf_20261016-124231_41960.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-124224.41960`
+
+M616A повторяет M335 после admission fix для внешнего geometry debt. Это был
+короткий видимый GUI no-teleport маршрут; точная команда:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M616A_OuterGeometryDebtRepair_20261016 `
+  -Report bin/suite_reports/engine_refactor/m616a_outer_geometry_debt_repair_20261016.json
+```
+
+У целевого chunk `(-19,2,5)` admission прошёл дважды (`owner_after=1`), а
+`dirty_admit_denied` больше не наблюдался. Geometry revision выросла 12→13 при
+published revision 2; на двух retry snapshots текущей очередью был RemeshQ,
+но active mesh/capture/GPU owner не наблюдался. Chunk оставался drawable и
+`visual_holes_rate` был 0. Runtime host CPU median/p95/max составил
+68.6/98.6/100%, поэтому suite не является performance acceptance; короткий
+маршрут не подтвердил publication финальной revision и не содержит прямой
+операторской оценки изображения.
+
+Relight handoff был помечен `stale_mesh_input=1` при `field_light_rev=1` и
+`meshed_light_rev=0`, после чего stale-light debt опубликовал light revision 1.
+Это audit-поле описывает отношение ревизий света и mesh и не означает, что был
+отклонён async mesh capture.
+
+M617A был запущен после локального 10-секундного host CPU preflight
+median/p95 27.8/58.4%; с теми же параметрами была включена дополнительная
+revision trace:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M617A_GeometryRevisionCause_20261016 `
+  -Report bin/suite_reports/engine_refactor/m617a_geometry_revision_cause_20261016.json
+```
+
+Для `(-19,2,5)` планировалось объединить `mesh_revision_bump_reason` из perf
+trace с Dirty dequeue/scheduling, capture input revision, stale-input rejection
+и GPU publish; целевой bump trace не появился из-за позднего открытия watch.
+Причина churn осталась открытой. Не запускать длинный операторский
+мониторинговый маршрут.
+
+M617A команда выше была выполнена. Runtime host CPU достиг median/p95/max
+65.1/99.5/100%, поэтому это не performance acceptance; process завершился с
+`process_rc=0`, timeout отсутствовал, но suite `pass=false`. Для целевого chunk
+сохранилось только четыре trace rows, без `demand_transition_trace` bump rows:
+watch включился поздно, при выборке визуальным census. При этом exact stale-face
+witness имел source chunk `(-20,2,5)`, свет 10 в sample `(-305,42,80)`, face 3,
+`stale_sample_gpu_path=0`. Consumer light revisions совпадали на 1604.
+Geometry publication snapshots двигались 3/2 → 4/3 → 5/4 → 6/5; в последнем
+repair trace срез был в RemeshQ на позиции 0/4 с owner flags 3 (Dirty + active
+build). Этот witness был получен до наблюдения публикации следующего repair.
+Eye-proxy gate дополнительно отказал по stale-visual delta 2.0, stale activity
+без hole counters и непокрытому temporal mid-flight сегменту; это диагностические
+ограничения и churn-сигнал, не пиксельное доказательство.
+
+Commit `e39de9df` исправляет полноту trace: opt-in visual watch теперь
+открывается при первой bounded admission drawable geometry debt в h5, до того
+как renderer census выберет его позднее. Release build прошёл. M618A запущен
+после свежего host CPU preflight median/p95=35.3/66.9%:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M618A_ProactiveRevisionWatch_20261016 `
+  -Report bin/suite_reports/engine_refactor/m618a_proactive_revision_watch_20261016.json
+```
+
+M618A показал пять целевых `mesh_revision_bumped` events:
+
+- frame 2407, 12→13, `priority_world_streaming_commit`, ordinary RemeshQ `2/3`;
+- frame 2439, 13→14, `priority_world_streaming_commit`, ordinary RemeshQ `0/1`;
+- frame 2680, 14→15, `priority_dirty_enqueued`, ordinary RemeshQ `5/6`;
+- frame 2785, 15→16, `priority_dirty_enqueued`, ordinary RemeshQ `2/3`;
+- frame 2931, 16→17, `priority_dirty_enqueued`, ordinary RemeshQ `6/7`.
+
+Все снимки имели `mesh_owner_flags=1` (Dirty only), без active async
+build/capture/GPU. Geometry публикация достигла 13 и затем 15; revision 17
+осталась в обычной очереди к концу прогона. Commit `7e5a9634` продвигает уже
+owned drawable h5 geometry debt из ordinary в priority RemeshQ, не увеличивая
+общий budget.
+
+M618A завершился с `process_rc=0`, без timeout, но runtime host CPU был
+70.7/99.3/99.6% median/p95/max, suite `pass=false`; это не performance
+acceptance. Proxy: `visual_holes_rate=0`, fly visible-black max=4, post-stop
+visible-black max=0, readiness-debt max=49. Eye-proxy gate отказал по
+stale-visual delta 2.5, stale activity без hole counters и непокрытому temporal
+mid-flight сегменту. Прямой operator framebuffer verdict отсутствует.
+
+Исторически promotion проверяли после host CPU preflight
+median <=50%, p95 <=75%; это условие снято, поскольку host sampler включает
+Codex и постороннюю работу. Скрипт ниже сохраняется только как измеритель
+контекста, запускать его перед диагностическим полётом не требуется:
+
+```powershell
+.\tools\sample_host_cpu_gate.ps1 -SampleCount 10 -IntervalMs 1000
+```
+
+Сразу после M618A прежний preflight дал 63.8/75.8%; повтор — 59.0/86.9%, и
+M619A отложили по старому правилу. Позже он был запущен при sample 46.8/63.1%
+(`passes_default_flight_gate=True` в тогдашнем отчёте). Это историческое
+решение, не действующий admission gate; runtime оказался заметно тяжелее
+preflight, результат остаётся диагностическим, без performance acceptance.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M619A_PromoteOwnedGeometryDebt_20261016 `
+  -Report bin/suite_reports/engine_refactor/m619a_promote_owned_geometry_debt_20261016.json
+```
+
+M619A подтвердил исправление на chunk `(-17,2,2)`: его 20 geometry revisions
+(3…22) все дошли до точной публикации. Для 15 из этих revisions trace также
+сохранил расписание через priority RemeshQ (`kind=2`); последняя revision 22
+была поставлена в kind=2 в frame 2126 (index 0/17, age 6) и опубликована в
+frame 2127. Остальные переходы не следует считать провалом promotion: некоторые
+не попали в bounded watched-schedule trace, а часть revisions возникла из
+world-streaming commits до наблюдаемого admission. Проверка подтвердила очередь
+и публикацию, но не прямое изображение.
+
+Прогон завершился с `process_rc=0`, без timeout, за 35 секунд движения и
+12 chunk columns. Host CPU preflight был 46.8/63.1%, runtime — 71.6/93.0/100.0%
+median/p95/max; performance acceptance не пройдена. `visual_holes_rate=0`,
+`post_stop_visual_holes_rate=0`, `post_stop_mesh_missing_max=0`,
+`post_stop_visible_black_max=0`, но readiness debt достиг 50 и не сошёлся на
+stop; это несовпадающие proxy-сигналы, не доказательство пиксельной дыры.
+Eye-proxy gate отказал (stale-visual delta 31, temporal mid-flight coverage
+untested), прямого operator framebuffer verdict нет. Следующий разбор должен
+отделить продолжающиеся `priority_world_core_repair`/relight revisions от
+остаточного cold-start readiness debt; не расширять scheduler budget без
+причинной трассы и короткого повтора без host-CPU gate.
+
+Повторяемый lifecycle join для ревизий, queue-kind и публикаций сохранён в
+`tools/analyze_geometry_lifecycle.py`:
+
+```powershell
+python tools/analyze_geometry_lifecycle.py `
+  bin/logs/perf_20261016-132510_14976.jsonl `
+  --coord=-17,2,2
+```
+
+Артефакты M616A (локальные):
+
+- `suite_reports/engine_refactor/m616a_outer_geometry_debt_repair_20261016.json`
+- `logs/perf_20261016-125253_29904.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-125249.29904`
+
+Артефакты M617A:
+
+- `suite_reports/engine_refactor/m617a_geometry_revision_cause_20261016.json`
+- `logs/perf_20261016-130222_31232.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-130218.31232`
+
+Артефакты M618A:
+
+- `suite_reports/engine_refactor/m618a_proactive_revision_watch_20261016.json`
+- `logs/perf_20261016-131122_38316.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-131118.38316`
+
+Артефакты M619A:
+
+- `suite_reports/engine_refactor/m619a_promote_owned_geometry_debt_20261016.json`
+- `logs/perf_20261016-132510_14976.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-132505.14976`
+
+M620A ran the established short M335 no-teleport route on `World_M613A_Cold_FlagLifecycle_20261016`, with `CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`. It finished normally; runtime CPU made the suite fail. The saved traces contained eight exact-geometry CPU boundary witnesses sampling live light from adjacent chunks. The repeated rows with geometry ahead of publication are in-flight state, not independent settled failures.
+
+Static inspection found inconsistent dependency invalidation at input arrival. The Release implementation now queues neighbor-mesh dependency debt immediately at procedural commits and successful disk-slice applications, relying on the existing bounded deduplicating drain. Rebuild Release, then use the same short route without host CPU admission checks; do not turn this into a long operator-monitoring run.
+
+Artifacts:
+
+- `suite_reports/engine_refactor/m620a_stale_light_repair_cycle_20261016.json`
+- `logs/perf_20261016-134426_34608.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-134422.34608`
+
+M621A: Release commit `e959f91f` was rebuilt and the established visible M335 no-teleport route completed. Preflight passed (15.0/20.2% median/p95), runtime host CPU was 61.9/97.3/100.0%, and suite acceptance failed. During-flight visual mesh-coverage proxy was 0.0303, stop mesh missing and visible-black max were zero, and readiness debt max was 37. The screen verdict was not collected.
+
+Trace analysis found 18 exact-geometry, own-light-current CPU seam signatures sampling adjacent nonzero light; M620A had 8, but the runs are not controlled enough to infer improvement or regression. Dependency counters showed 158 queued and 73 applied entries; they mix chunk-commit and relight invalidations. The current code change is provisionally retained, not marked solved. Next instrument watched dependent coordinates through queue/drain and compare captured versus published neighbor-halo signatures. Avoid longer operator-monitoring runs.
+
+Artifacts:
+
+- `suite_reports/engine_refactor/m621a_commit_halo_invalidation_20261016.json`
+- `logs/perf_20261016-141422_13608.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-141418.13608`
+
+M622 introduces opt-in queue/lifecycle and published-halo diagnostics. Release
+build passed; the immediate host CPU sample was 60.3/87.7% median/p95. At the
+time the old workflow deferred the flight; this measurement is now only
+historical context. The established short route was subsequently run:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622A_HaloStampLifecycle_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622a_halo_stamp_lifecycle_20261016.json
+```
+
+The JSONL records `stale_mesh_halo_state` (0 unavailable, 1 current halo equals the last published input, 2 halo changed after publication). The INFO log records watched `mesh_dependency` queue sources/causes and drain outcomes. These diagnose engine state; they do not substitute for direct framebuffer observation.
+
+Static review after M622 found GPU publication uses `CommitGpuMeshResult`; commit `a3493579` now stores the halo signatures from its accepted pending snapshot after a successful commit. Release rebuild passed. This is necessary for `gpu_greedy`, otherwise halo-state values would be unavailable in watched traces.
+
+The historical note recorded 56.4/72.0% median/p95 and said M622A had not yet
+run; that delay came from the former host-CPU gate. M622A later ran. Host CPU
+samples are context only and never an admission condition.
+
+M622A completed the route with `process_rc=0` but failed runtime resource acceptance (host CPU 83.2/100.0/100.0% median/p95/max). Proxies: visual mesh coverage 0 in flight and at stop, fly visible-black max 4, post-stop missing and visible-black max 0, readiness debt max 31. No operator screen verdict was recorded.
+
+The trace contained seven settled CPU seam witnesses, but their halo state field was incorrectly left at zero when no prior watch existed. Commit `d2869ef0` fixes this by sampling the retained signature for each stale row under `CUBA_VISUAL_BLACK_TRACE`. M622A artifacts:
+
+- `suite_reports/engine_refactor/m622a_halo_stamp_lifecycle_20261016.json`
+- `logs/perf_20261016-144017_33868.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-144013.33868`
+
+Repeat the same short M335 route with both trace flags, without a CPU gate.
+Correlate exact witness coordinates and frames with dependency source/cause,
+drain outcome, and state 1/2. State 1 plus a current nonzero stale sample
+implicates sampling or witness mapping; state 2 with an unresolved dependent
+points to queue/owner/publication lifecycle.
+
+### M622C: attribution-path coverage correction
+
+M622C completed the documented 35-period route (`process_rc=0`) but failed suite acceptance. Runtime host CPU median/p95/max was 66.2/88.9/97.1%; proxies were visual holes 0, fly visible-black max 3, post-stop missing/visible-black max 0, readiness debt max 35. No operator framebuffer verdict was captured.
+
+All 144 stale-sample rows were `sample_kind=0`, emitted by the per-column attribution trace. That writer did not call the halo query, so state/cache/stamp zeros were defaults, not measured values. Five rows were exact geometry/own-light-current samples, still unclassified. Commit `57016e90` instruments this second writer and records cache presence and signature validity separately. Release rebuilt and the static executable dependency check passed.
+
+The immediate preflight had measured 70.4/89.9% host CPU median/p95. This is
+historical context only: host load includes Codex and is not a run gate. M622D
+repeated exactly the established short visible route:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622D_HaloAttributionPath_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622d_halo_attribution_path_20261016.json
+```
+
+For `sample_kind=0` rows, interpret the fields as follows: cache-entry 0 means no published mesh record at that coordinate; cache-entry 1/stamp-valid 0 means a mesh exists but its publication path did not retain an input halo; stamp-valid 1/state 1 means captured halo matches current light; stamp-valid 1/state 2 means it changed. Only then join against coordinate-specific `mesh_dependency` causes/drains and publication chronology.
+
+Before M622D, commit `2f95b9cc` added change tracking and mesh invalidation for
+the `ApplyEnterOpenSkyBoundary` path. Its horizontal skylight flood may mutate
+multiple loaded chunks. Source slices now enter remesh ownership and their
+neighbors are queued with `cause=enter_open_sky_boundary`; Release rebuilt
+successfully. M622D emitted no event with that cause, so this route did not
+exercise the open-sky-specific mutation.
+
+M622D completed normally (`process_rc=0`, 35 periods); suite acceptance was
+false, but CPU is advisory and the run remains useful diagnostics. Runtime host
+CPU median/p95/max was 69.9/100.0/100.0%; app CPU was 22.85/52.43/56.56% of
+machine capacity. The trace had 165 nonzero stale-light rows over 56 chunks.
+Every row reported a present cache entry, valid halo stamp, and halo state 2
+(published signature differs from current neighbor light). Twenty-two rows over
+15 chunks also had matching desired/published geometry and own-light revisions;
+16 had a matching successful publication in the 30-frame follow-up window, and
+six had no such event in the bounded lifecycle trace. The INFO log contained
+3,353 dependency enqueues, 1,381 applied events, 6,542 live-owner deferrals,
+and 1,312 `covered_by_existing_owner` events; 55/56 stale chunks had at least
+one exact-coordinate dependency event. These are lifecycle observations, not a
+framebuffer verdict.
+
+M622D artifacts:
+
+- `suite_reports/engine_refactor/m622d_halo_attribution_path_20261016.json`
+- `logs/perf_20261016-152255_14364.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-152251.14364`
+
+Commit `45f04f6a` adds `frame_epoch` to queued and drained dependency events so
+they can be joined directly to stale-witness frames. The same short route was
+repeated as M622E; no host CPU gate was used.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622E_DependencyFrameJoin_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622e_dependency_frame_join_20261016.json
+```
+
+M622E completed with `process_rc=0`, 35 periods, and 12 traveled chunk
+columns. The analyzer returned `pass=false` on non-CPU acceptance checks; this
+does not invalidate the run as a diagnostic. Runtime host CPU was
+81.7/100/100% median/p95/max; app CPU was 21.36/50.16/59.86% of machine
+capacity, all advisory. Proxies were `visual_holes_rate=0`, fly visible-black
+max 6, post-stop visible-black max 0, and post-stop readiness-debt/missing max
+40. No operator framebuffer verdict was recorded.
+
+The attribution trace contained 178 nonzero stale-light rows across 51 chunks.
+177 had a present cache entry, valid halo stamp, and state 2; one had state 1,
+but its own mesh light revision was stale (`meshed_light_rev=1`,
+`field_light_rev=3`) and its `frame_epoch` was 0, so it is not a current-halo
+seam witness. Nine rows across eight chunks had matching desired/published
+geometry and own-light revisions. Every one had dependency queue/drain events
+for the same coordinate and frame: six drained as `applied`, three as
+`covered_by_existing_owner`. A successful matching publication followed all
+nine within 8–31 frames. For `(-14,2,4)`, the witness and two relight
+invalidations occurred at frame 1462; the dirty remesh advanced through queue
+positions 26, 15, and 3 before revision 5 published at frame 1493.
+
+Three of the nine exact-witness coordinates later produced another stale sample
+after a publication, each alongside newer relight/dependency activity; this is
+consistent with repeated neighbor-light changes and does not show a permanently
+stale mesh. The log had 3,167 queued dependency events, 960 applied, 5,349
+live-owner deferrals, 1,527 covered by existing ownership, and one
+`drop_not_drawable`. Causes were `relight_light_change` and
+`procedural_chunk_commit`; there were no disk-slice or open-sky events. Seven
+startup dependency log entries had `frame_epoch=0`; the nine exact witness
+joins all used nonzero epochs.
+
+M622E artifacts:
+
+- `suite_reports/engine_refactor/m622e_dependency_frame_join_20261016.json`
+- `logs/perf_20261016-154528_38700.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-154523.38700`
+
+The frame join validates the dependency log instrumentation and shows the
+observed exact-revision halo witnesses enter and leave the remesh lifecycle.
+It does not provide a visual verdict or exercise the M623 open-sky side path.
+Next review repeated light-change events and remesh scheduling for the three
+re-staled coordinates, while keeping CPU advisory and the route short.
+
+### M622F: account for the open-sky boundary path
+
+M622F repeated the same short route on the cold-mode `World_M613A` world after
+adding opt-in call accounting for `ApplyEnterOpenSkyBoundary`. The process
+completed (`process_rc=0`, 35 periods); suite acceptance was false on non-CPU
+quality checks. Runtime host CPU was 100/100/100% median/p95/max, while app CPU
+was 15.91/30.58/33.09% of machine capacity. This is a concrete example of why
+host CPU cannot be a run gate while Codex or other work is active. Proxies were
+visual holes 0.0303, fly visible-black max 4, post-stop visible-black max 0,
+and post-stop missing/readiness debt max 57. No operator framebuffer verdict
+was recorded.
+
+The call trace contained six `enter_lit_snapshot` invocations. Four reported
+zero changed chunks. Two invocations each changed one slice, both at
+`(3,3,2)` from world column `(48,32)` with 15 loaded slices. On the later
+change, two dependent meshes were newly queued with
+`cause=enter_open_sky_boundary`: `(3,3,3)` and `(3,4,3)`. Both reached the
+dependency drain; the log records `applied` for each, with existing-owner
+coverage also observed around the same startup work. The queue and drain
+messages are timestamped in the INFO log but have `frame_epoch=0`: the enter
+snapshot runs before `WorldViewBinding` publishes the first streaming epoch.
+This confirms that the M623 snapshot callsite can mutate light and transfer
+neighbor debt into mesh work. The INFO audit later records stale-light debt
+closed for `(3,3,2)` at field/meshed/published light revision 19 and for
+`(3,3,3)` at revision 2. This is evidence that those meshes reached current
+light state after the startup repair activity, though concurrent relight
+invalidations mean it does not isolate the open-sky dependency as the sole
+cause. For `(3,4,3)`, the INFO log has slice/handoff state snapshots but no
+explicit matching publication/settled-debt closure. The perf lifecycle ring
+did not retain these startup coordinates, and no operator framebuffer verdict
+was recorded. The `enter_visual_repair` and `relight_terrain_column` callsites
+remain unexercised by this run.
+
+M622F artifacts:
+
+- `suite_reports/engine_refactor/m622f_open_sky_call_accounting_20261016.json`
+- `logs/perf_20261016-155650_39588.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-155646.39588`
+
+The next audit should retain coordinate-scoped lifecycle evidence for the
+pre-first-frame epoch-zero window, especially to establish a publication or
+durable owner for `(3,4,3)`. Do not gate a short diagnostic run on host CPU.
+
+### M622G: retain startup open-sky lifecycle
+
+Commit `1a8b899c` adds independent bounded traces for job lifecycle and render-
+demand transitions on source/dependent chunks touched by
+`enter_open_sky_boundary`. The existing watched rings had reached their 8,192
+record capacity in M622F. M622G repeated the same 35-period visible no-teleport
+route with `CUBATARIUM_RELIGHT_AUDIT=1` and `CUBA_VISUAL_BLACK_TRACE=1`; no CPU
+preflight or host-load gate was applied.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622G_OpenSkyLifecycleRetention_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20261016.json
+```
+
+The run completed (`process_rc=0`, 35 periods), while the analyzer returned
+`pass=false` on non-CPU performance/readiness gates. Host CPU was 99.8/100/100%
+median/p95/max; game CPU was 15.25/31.25/40.63% of machine capacity. This is
+another direct example that host utilization and the game's own utilization
+diverge. Proxy metrics were `visual_holes_rate=0.0303`, fly visible-black max
+6, post-stop visible-black max 1, and post-stop readiness debt max 44. No
+operator framebuffer verdict was captured.
+
+The new rings retained 131 `open_sky_lifecycle_trace` rows across 18 chunks and
+339 `open_sky_demand_transition_trace` rows across 21 chunks, including startup
+frame-zero state. The enter snapshot changed `(3,3,2)` and `(3,3,3)` on its
+first effective pass, then `(3,3,1)` and `(3,3,2)` on a later pass. The source
+chunks have successful lifecycle publications: `(3,3,2)` attempt 45 published
+geometry 5/light 19 at frame 1, and `(3,3,1)` attempt 52 published geometry
+6/light 5 at frame 4. This shows the startup source remesh is carried through
+publication.
+
+The dependency drain reported `applied` for `(3,3,3)` and `(3,4,3)`, and the
+pinned demand trace retained their epoch-zero mesh-revision bumps. It did not
+retain a valid attempt/publication closure for those dependent chunks; a later
+`install_published` record at frame 576/578 has zero world identity and attempt
+ID, so it is not evidence of a real publication. These x=3 targets lie behind
+the westbound route from start focus x=-2, so their lack of a build attempt in
+this run is not itself a visible defect. The next focused review should verify
+whether they retain a durable dirty owner and defer scheduling because they
+are outside the visual focus, without extending the operator flight.
+
+M622G report and raw artifacts:
+
+- `suite_reports/engine_refactor/m622g_open_sky_lifecycle_retention_20261016.json`
+- `logs/perf_20261016-161557_21484.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-161549.21484`
+
+The new trace kinds are emitted only when the renderer visual trace is enabled;
+dependency cause and drain messages still require the relight audit flag.
+
+M622C artifacts:
+
+- `suite_reports/engine_refactor/m622c_halo_availability_20261016.json`
+- `logs/perf_20261016-150329_39812.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-150325.39812`
+
+### M622H: retain a proven stale published halo
+
+The first implementation queued durable remesh debt when the current published
+mesh's full halo signature differed from the loaded world's signatures. The
+route used a fresh world and the established 35-second visible M335 no-teleport
+segment. The first attempt was blocked by the runner's dirty-tree guard; the
+actual run used the supported `CUBA_ALLOW_DIRTY_AF=1` diagnostic override. Do
+not treat it as a clean A/B result.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622H_Cold_HaloDebt_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622H_HaloDebtRetention_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622h_halo_debt_retention_20261016.json
+```
+
+The app completed the 35-period route (`process_rc=0`, no timeout), though
+Windows briefly reported its window as not responding while frame and INFO
+logs continued to advance. The suite failed non-CPU gates; proxies were
+`visual_holes_rate=0.2727`, fly visible-black max 12, post-stop visible-black
+max 4, readiness debt max 37, and median wall time 51.09 ms. No operator
+framebuffer verdict was captured. Host CPU was 95/100/100% median/p95/max and
+app CPU was 15.93/35.65/45.89% of machine capacity; host CPU did not gate the
+route.
+
+The INFO log recorded 659 `published_halo_changed` queue rows over 392 unique
+coordinates. Of those, 285 had a later current-halo publication row and 107
+had no observed closure within this short route. This full-state comparison
+was then narrowed to the exact changed neighbor to avoid redundant signature
+work. Artifacts:
+
+- `suite_reports/engine_refactor/m622h_halo_debt_retention_20261016.json`
+- `logs/perf_20261016-163317_22696.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-163313.22696`
+
+### M622I: verify source-specific halo debt on a second fresh world
+
+Commit `71525147` compares only the published signature for the changed
+neighbor, queues a durable remesh ticket on proven mismatch, and closes debt
+only when the published halo matches. It uses the same route without a CPU
+preflight or host-load gate:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622I_Cold_OneNeighborHalo_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622I_OneNeighborHaloDebt_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json
+```
+
+The 35-period route completed (`process_rc=0`, no timeout); analyzer `pass`
+remained false on non-CPU gates. It recorded `visual_holes_rate=0.0909`, fly
+visible-black max 14, post-stop visible-black max 1, readiness max 34, and
+median wall time 46.70 ms. These metrics do not provide a framebuffer verdict,
+and the fresh-world runs are not a controlled A/B pair. There is no operator
+visual verdict. Host CPU was 86.9/100/100% median/p95/max; app CPU was
+16.45/39.70/50.85% of machine capacity. Keep host load informational only.
+
+The INFO trace recorded 846 `published_halo_changed` events on 461 unique
+coordinates. A later `stale_light_debt event=published` with `halo_state=1`
+was found for 323 queued coordinates; 138 had no observed closure by stop.
+This confirms durable current-halo closure for a subset while the remaining
+coordinates need owner/focus analysis. Commit `5c91ce32` subsequently moved
+settled-light and active-owner checks ahead of the expensive full-halo closure
+hash; this scheduling-order change has Release-build verification but no
+separate flight yet.
+
+Artifacts:
+
+- `suite_reports/engine_refactor/m622i_one_neighbor_halo_debt_20261016.json`
+- `logs/perf_20261016-164422_33324.jsonl`
+- `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-164417.33324`
+
+Host CPU never blocks a diagnostic route or decides whether it passes. When
+Codex/build work is active it includes that work; record app CPU and game frame
+stages separately. The sampler script's `advisory_only` field is intentional.
+
+### M622J: validate active mesh owner in stale-light debt drain
+
+This is the compact established M335 route used to verify the active-owner
+accounting change. It is a short diagnostic, not the long-distance streaming
+monitoring flight. Host CPU is recorded as context only.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622J_Cold_ActiveMeshOwner_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622J_ActiveMeshOwnerDebt_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622j_active_mesh_owner_debt_20261016.json
+```
+
+M622J completed 35 periods (`process_rc=0`, no timeout) but the analyzer
+returned `pass=false`. It reported readiness-debt rate 1.0, mesh-coverage proxy
+rate 0.1212, fly visible-black proxy max 24, post-stop visible-black max 1,
+post-stop readiness-debt max 45, and median wall time 36.77 ms. Proxy metrics
+are not a screenshot or framebuffer verdict. Host CPU reached 100%; app CPU
+was 18.35/34.96/42.66% median/p95/max, so host CPU is not a valid gate.
+
+The `stale_light_debt event=cancel_lease` trace means a pending repair ticket
+protected an active mesh/GPU lease from cancellation. It does not report a
+canceled build. The trace showed repeated relight-only dependency invalidation
+at `(-11,2,2)` alongside growing `desired_geom` revisions; see the M622J entry
+in `ENGINE_REMEDIATION_PLAN_2026-10-03.md`. The next experiment should check
+whether preserving dependency cause prevents geometry revision churn.
+
+Artifact: `suite_reports/engine_refactor/m622j_active_mesh_owner_debt_20261016.json`.
+
+### M622K–M622L: light-only dependency reason route
+
+Use the same compact visible no-teleport M335 profile to inspect the
+reason-preserving dependency queue. Set `CUBA_ALLOW_DIRTY_AF=1` only for a
+deliberate working-tree experiment; no CPU threshold is used.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622L_Cold_LightDependencyReason_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622L_LightDependencyReason_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622l_light_dependency_reason_20261016.json
+```
+
+M622K exited before its first period because its initial diagnostic trace used
+`.at()` after removing the applied dependency from the map. The source now
+uses a safe lookup. M622L completed all 35 periods (`process_rc=0`) and logged
+light-only dependency reason rows across 369 unique coordinates. Analyzer
+`pass=false` persisted on non-CPU checks: mesh-coverage proxy rate 0.2424,
+fly visible-black proxy max 19, post-stop visible-black max 1, readiness debt
+max 48, median wall time 44.26 ms. No framebuffer verdict was recorded. Host
+CPU was 75.4/100/100% median/p95/max; app CPU was 18.35/35.53/44.53% of
+machine capacity. Host CPU never gates the route.
+
+Reports:
+`suite_reports/engine_refactor/m622k_light_dependency_reason_20261016.json`
+and `suite_reports/engine_refactor/m622l_light_dependency_reason_20261016.json`.
+The next diagnostic should verify the latest applied-event reason field and
+compare desired/published geometry revisions by coordinate.
+
+### M622M: verify applied dependency reasons
+
+M622M used the latest M622L reason-preserving binary on a fresh world:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622M_Cold_AppliedReasonTrace_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622M_AppliedReasonTrace_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json
+```
+
+It completed 35 periods (`process_rc=0`), analyzer `pass=false`: mesh-coverage
+proxy 0.1212, fly visible-black proxy max 16, post-stop visible-black proxy
+max 0, post-stop readiness debt max 37, median wall time 36.10 ms. No operator
+framebuffer verdict was recorded. Light-only drain reasons were observed on
+510 coordinates, but three geometry-priority drains at `(-11,2,2)` aligned
+with desired-geometry growth while published geometry remained 4. Static
+review then found the two open-sky source chunks also pass through the
+singleton invalidation API, whose default correctly remains geometric for
+seam/coverage callers. The open-sky callsites now pass the light-only reason,
+and the singleton enqueue reason is traced as `queued_single`.
+
+M622N later rebuilt Release and repeated the compact route; its evidence is
+recorded in the following entry. CPU is context only; do not add a host CPU
+gate. M622M report:
+`bin/suite_reports/engine_refactor/m622m_applied_reason_trace_20261016.json`.
+
+### M622N: verify light-only singleton source invalidations
+
+M622N rebuilt Release after the open-sky source-chunk correction and ran the
+same compact, visible, no-teleport M335 profile on a fresh world:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622N_Cold_LightSourceReason_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId M622N_LightSourceReason_20261016 `
+  -Report bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json
+```
+
+The 35-period run completed (`process_rc=0`); analyzer `pass=false` remained
+on non-CPU gates. Proxies were mesh coverage 0.1515, fly visible-black max 14,
+post-stop visible-black max 0, post-stop readiness debt max 31, median wall
+time 41.22 ms. No pixel verdict was recorded.
+
+The `queued_single` trace recorded 131 light-only rows over 80 coordinates
+and 297 geometry rows over 244 coordinates; drains retained both reason
+classes. At `(-11,2,2)`, the two retry rows stayed at desired/published
+geometry 2/1, while two geometry singleton invalidations at frames 702 and 814
+were covered by the existing Dirty owner. This is not a controlled A/B with
+M622M because each used a fresh world. Host CPU (93.4/100/100% median/p95/max)
+is context only and does not gate future runs.
+
+Report: `bin/suite_reports/engine_refactor/m622n_light_source_reason_20261016.json`.
+Raw perf/INFO logs are `perf_20261016-173233_41228.jsonl` and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-173227.41228` under
+`bin/logs`.
+
+### M622O–M622P: saved-world reference and fresh-world run
+
+Both runs used the established visible 35-second M335 no-teleport route. M622O
+used the long-lived `World_164`; it completed 35 periods with process exit 0.
+Its mesh-hole proxy was 0.0303, fly visible-black max 4, post-stop
+visible-black max 0, and readiness-debt max 36. No deferred-far relight was
+observed (peak 0, FIFO median 1, no age-service events). This is a saved-world
+baseline, not a control for the separately generated M622N map.
+
+M622P did not replay on the map produced by M622N. Its requested alias created
+runtime `World_183` with `light_flags event=load outcome=missing`; M622N used
+runtime `World_182` and also recorded `outcome=missing`. M622P completed 35
+periods with process exit 0. Deferred-far peaked at 38 and FIFO median was 15;
+31 aged entries were admitted, all at priority index 0 or 1, with ages 1.504–
+14.929 s (median 2.889 s). The INFO trace gives a concrete stale-work case for
+`(-7,2)`: deferred band `32:47` was recorded while a validated relight covering
+`0:103` was completing; the deferred request remained until age service about
+14.9 s later and its next capture was discarded as
+`surface_band_no_relight_needed`. This demonstrates avoidable deferred queue
+occupancy. It does not prove that the coordinate was visibly wrong during the
+wait; no framebuffer verdict was collected.
+
+### M622Q: drop already-satisfied deferred relights before admission
+
+The Release change rechecks an in-range deferred band with the existing
+`ShouldSkipNoOpTerrainRelightEnqueue` policy before admitting it. When the
+column is already lit-ready, has no pending-light owner, and has no dark face in
+the deferred band, the stale entry is cleared and logged as
+`deferred_far_skip reason=already_satisfied`. The Release build and static EXE
+verification passed; no test suite was run.
+
+M622Q used runtime `World_184`, with `light_flags event=load outcome=missing`,
+so it also ran on a new world. It completed 35 periods with process exit 0 and
+recorded 205 already-satisfied skips, 6 age-service events, and deferred-far
+peak 17 (M622P: 31 age-service events and peak 38). These fresh-world runs do
+not form a controlled A/B. Analyzer `pass=false` remained on non-CPU gates: mesh-hole proxy 0.1212,
+fly visible-black max 14, post-stop visible-black/stalled max 1, readiness-debt
+max 34. Proxies did not improve and no framebuffer verdict was collected; the
+change is retained only for eliminating work proven unnecessary at admission.
+
+M622O/P/Q host CPU median/p95/max was respectively 93.7/100/100%,
+86.2/100/100%, and 90.7/100/100%; app CPU medians were 19.36%, 19.48%, and
+21.38% of machine capacity. All flights completed without a CPU admission
+gate. Host CPU is context only; never require a host CPU preflight threshold.
+
+Artifacts: reports `m622o_saved_world_relight_queue_20261016.json`,
+`m622p_warm_replay_relight_queue_20261016.json`, and
+`m622q_recheck_deferred_noop_20261016.json` under
+`bin/suite_reports/engine_refactor/`. Corresponding perf logs are
+`perf_20261016-174614_19104.jsonl`, `perf_20261016-174855_18544.jsonl`, and
+`perf_20261016-175647_41492.jsonl`; INFO logs end in `174610.19104`,
+`174848.18544`, and `175643.41492` under `bin/logs`.
+
+### M622R: miss-witness coordinate units and deferred no-op clear reason
+
+Static review found that `FindNearestMissingGreedyMesh` returns chunk
+coordinates, while `EnqueueTerrainColumnRelight` accepts block-space X/Z. The
+miss-witness repair path now multiplies both axes by `CHUNK_SIZE` before
+enqueueing. The no-op deferred clear uses the explicit `already_satisfied`
+lifecycle reason.
+
+The compact visible M335 route completed 35 periods with process exit 0 on
+runtime `World_185`; `light_flags event=load outcome=missing` confirms a cold
+world despite the requested alias. The INFO trace recorded 116
+`deferred_far_skip reason=already_satisfied` events and exactly 116 matching
+`deferred_far owner=clear ... reason=already_satisfied` events. It also recorded
+a negative-coordinate deferred entry `column=(-1,2) band=0:-1`, consistent with
+preserving both chunk axes after conversion. The audit event lacks a producer
+tag, so that sample alone does not prove it came from the miss-witness caller.
+The unit mismatch itself is confirmed from the API contracts and call site.
+
+Static correlation shows the no-op records are not all old leftovers: 103 of
+116 had a latest matching deferred-owner event with reason
+`fifo_admission_denied`, band `0:128`, and priority set. Column `(-11,4)` cycled
+through defer → already-satisfied clear repeatedly during the latter part of
+the route; later cycles were separated by less than 0.5 s. Nearby pending-light
+notes came from the streaming column commit, `ChunkEmergeCoordinator`, and
+`AdmitUnfinishedVisualDemand`, but generic FIFO-denial events do not identify
+their producer. The no-op check removes the stale queue entry, while the source
+of this repeated churn remains unresolved. Preserve first-mesh settlement
+checks until the exact slice owner is traced.
+
+The analyzer returned `pass=false` on non-CPU gates. Mesh-hole proxy was
+0.2121, fly visible-black max 18, and post-stop readiness debt ended at 34;
+post-stop mesh-missing max and no-ticket visible-black max were both 0, while
+raw post-stop visible-black/stalled max was 1. These signals do not establish
+a user-visible black frame, and no operator framebuffer verdict was captured.
+Deferred-far peak was 22, FIFO median 23, and FIFO drop delta 90; there were 13
+age-service events. This shows substantial queue pressure and continued
+recreation of already-satisfied deferred work. Host CPU median was 92.6% while
+the application used 19.1% of machine capacity at median; host CPU remains
+context only and is never a run gate.
+
+Report: `bin/suite_reports/engine_refactor/m622r_miss_witness_chunk_units_20261016.json`.
+Perf: `bin/logs/perf_20261016-180806_35700.jsonl`. INFO:
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-180801.35700`.
+
+M622S/T completed producer/slice-settlement tracing and added an early no-op
+check at FIFO denial. See the entries below for the exact runs, findings, and
+remaining queue owners. Preserve the FIFO cap and underfeet pin; keep
+operator-visible pixels separate from mesh/readiness proxies.
+
+### M622S: FIFO producer and slice-settlement trace
+
+M622S added producer/world context to terrain relight enqueue calls and
+recorded loaded, currently settled, and pending vertical slices for every
+FIFO denial. It used the established short visible M335 profile:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622S_FifoProducerSliceSettlement_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622S `
+  -Report bin/suite_reports/engine_refactor/m622s_fifo_producer_slice_settlement_20261016.json
+```
+
+It completed 35 periods with process exit 0 on cold runtime `World_186`.
+INFO contained 1,077 tagged FIFO denials, 102 deferred no-op skips, and 102
+matching clears. Ninety-four no-op clears followed `fifo_admission_denied`;
+eight followed `visible_exact_replacement`. For `miss_witness`, 27/28 samples
+had no pending-light owner and were lit-ready; 13/28 had every loaded slice
+settled. The analyzer returned `pass=false` on non-CPU gates. Mesh-hole proxy
+was 0.1212, fly visible-black max 14, stop mesh-missing max 0, readiness debt
+max 35, and post-stop visible-black/stalled max 0. These proxies do not confirm
+or deny an operator-visible pixel defect.
+
+### M622T: skip proven no-op work before FIFO deferral
+
+After M622S, denied requests with world context use the existing deferred
+no-op predicate before creating a far-deferred entry. The short route used the
+same profile on a new cold world:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622T_NoOpBeforeDeferred_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622T `
+  -Report bin/suite_reports/engine_refactor/m622t_noop_before_deferred_20261016.json
+```
+
+M622T completed 35 periods with process exit 0 and no runner timeout on
+runtime `World_187`. It logged 190 early no-op skips, 42 deferred-admission
+no-op skips, and 43 clears marked `already_satisfied`. Its analyzer also
+returned `pass=false` on non-CPU gates: mesh-hole proxy 0.0909, fly
+visible-black max 10, stop mesh-missing max 0, readiness debt max 39, and
+post-stop visible-black/stalled max 2. M622S/T are different cold worlds with
+different host load and are not a controlled A/B; these metrics do not
+establish visual improvement or regression. At one check Windows marked the
+process unresponsive while it continued logging; the runner completed with
+`timed_out=false` and exit 0.
+Host CPU remains informational and is never a launch gate. No further long
+operator-monitoring flight was run.
+
+Artifacts:
+
+- M622S: `bin/suite_reports/engine_refactor/m622s_fifo_producer_slice_settlement_20261016.json`, `bin/logs/perf_20261016-190703_43384.jsonl`, INFO suffix `190659.43384`.
+- M622T: `bin/suite_reports/engine_refactor/m622t_noop_before_deferred_20261016.json`, `bin/logs/perf_20261016-191404_43720.jsonl`, INFO suffix `191400.43720`.
+
+### M622U: stable published face-debt trace
+
+M622U added `stable_published_face_debt` to the opt-in focus-slice rows and
+reused the established visible, no-teleport M335 route on a cold world:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622U_StableFaceDebtTrace_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622U `
+  -Report bin/suite_reports/engine_refactor/m622u_stable_face_debt_trace_20261016.json
+```
+
+It completed 35 periods (`process_rc=0`, no timeout) on cold runtime
+`World_188`. Stable published face-debt was true on 941 of 1,024 focus-slice
+rows across 55 coordinates; all had current geometry publication, zero GPU
+quads, and overlay masks covering the remaining face debt. These were at
+focus-ring distance 3–4. The analyzer returned `pass=false` on non-CPU gates:
+mesh-hole proxy 0.1515, fly visible-black max 12, stop mesh-missing max 0,
+readiness debt max 37, and post-stop visible-black/stalled max 1. No operator
+framebuffer verdict was collected; these values do not establish a visible
+defect. Host CPU measurements are context only and are never run gates.
+
+The prior 42 deferred-admission no-ops need no further queue-policy change:
+34 were last seen deferred after FIFO denial and became satisfied before later
+admission. For eight, the latest same-coordinate `visible_exact_replacement`
+event describes an old far FIFO victim removed while admitting exact visible
+work. Producer joins remain approximate because deferred records do not store
+their original identity or producer.
+Next, use a short cold-world route to correlate a camera-visible missing slice
+with its exact renderer/pixel probe and repair owner. Avoid long operator-
+monitoring flights.
+
+Artifacts:
+
+- Report: `bin/suite_reports/engine_refactor/m622u_stable_face_debt_trace_20261016.json`.
+- Perf: `bin/logs/perf_20261016-193322_30696.jsonl`.
+- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-193318.30696`.
+
+### M622V: frustum and camera-band peak correlation
+
+The run used the same short visible, no-teleport route on a cold world. Keep
+the CPU counters as context; there is no CPU-load preflight gate.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M622V_FrustumStableFaceDebt_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622V `
+  -Report bin/suite_reports/engine_refactor/m622v_frustum_stable_face_debt_20261016.json
+```
+
+M622V completed 35 periods (`process_rc=0`, no timeout) on runtime `World_189`;
+the analyzer returned `pass=false`. The stable-face-debt field appeared in the
+frustum and peak render probes. Of 74 stable-debt frustum rows, 72 had ready
+refs and visible MDI work. Two had no ready ref or visible command, but their
+nearest AABB distance was about 79 units against fog end 32, and both had a
+repair ticket.
+
+Sixteen unique projected peak targets all obtained an accepted mesh schedule
+within 27 frames, and each had a drawable mesh by the end of its 64-frame
+scheduler watch. Eleven still had priority-remesh queue entries aged 41–60
+frames; five had no dirty queue. Among the 151 frustum rows without render-ready
+refs, 22 were within 32 units. Four samples across three coordinates had an
+active FirstMesh ticket (queue age at most seven frames); same-incarnation
+lifecycle traces later showed publication for each target. Eighteen other
+near samples had a satisfying mesh despite no drawable batch. No selected pixel
+ray hit these target chunks, so these traces show scheduler progress, not
+complete pixel coverage.
+
+There were 320 peak-triggered `glReadPixels` samples and no exact voxel-mesh
+triangle gaps. The 36 provisional opaque-depth mismatches over the full 2,960
+pixel samples were beyond fog end (44.7–56.8 units versus 32); all nine
+unloaded-before-hit samples were also beyond fog end. The pixel grid did not
+hit the camera-band target chunks, so do not treat these candidates as a
+visible defect without a target-specific pixel or exact screen-ray witness.
+
+### M622W/X/Y provenance correction and the verified M622Z replay
+
+The earlier M622W/X/Y entries were mislabeled as warm replays. They requested
+`World_M622V_FrustumStableFaceDebt_20261016`, which did not exist. Runtime
+allocation silently created `World_190`/`World_191`/`World_192`; the INFO logs
+record `RelightAudit outcome=missing`, `WorldLoadPerf kind=create`, no chunk
+files, and 43,264/43,264 generated columns. `resume=true` is route-position
+intent, and `warmup_sec_stamp` only labels periods. Keep their screen-ray pixel
+correlation as valid evidence for those generated worlds, but not as saved-world
+or cache-warm evidence. Thus M622V/W/X/Y did not produce a controlled cold/warm
+pair.
+
+The harness now has `-RequireExistingWorld`. Use it for replay runs and inspect
+`run_manifest.world_startup`: the requested and runtime names must match,
+`startup_operation` must be `load`, `generation_columns_completed` must be zero,
+and `start_focus` must match the pinned product start. `cache_mode` is derived
+from the startup operation; `period_warmup_stamp` is a separate warm-period
+label. Do not infer cache state from `resume`, the report filename, or the period
+stamp.
+
+M622Z exercised this procedure on existing `World_164` with requested product
+start `(120,56,56)`. The users file already held that position and its report
+predates an expected-versus-actual runtime start assertion, so matching focus
+does not prove that the start pin was honored. Commit `cd606d3d` adds that
+assertion. It completed 35 periods, process exit 0, no timeout. The manifest
+reports `load`, 121/121 loaded spatial columns, zero generated columns, 5.371
+seconds startup, and focus `(7,3)` to `(-3,3)`. Individual chunk file reads
+were zero, so record the actual loader fields rather than guessing how the
+world data is stored.
+
+To repeat the short saved-world screen-ray probe:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+.\tools\run_m335_water_visibility_ab.ps1 -EndMarginBlocks 0 -EnableFogPullIn `
+  -EnableScreenRayPixelProbes -StampWarmPeriods -RequireExistingWorld `
+  -World World_164 -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622Z `
+  -Report bin/suite_reports/engine_refactor/m622z_warm_world164_screenray_probe_20261016.json
+```
+
+M622Z produced 300 streaming rays, 2,500 pixel probes, and 100 exact coordinate
+joins. Fourteen synchronized refresh candidates inside the pixel-specific fog
+horizon all hit the same voxel; there were zero voxel or mesh-ray gaps. Of the
+52 joined pairs where both rays hit, all identified the same block. The
+renderer trace had 56 samples below luminance 32; all had drawable, draw-ready
+opaque depth and no voxel-mesh ray gap. Sixteen had unsettled/preview light,
+including 13 preview samples. No operator framebuffer verdict was recorded.
+
+The flight analyzer returned `pass=false` on non-CPU gates
+(`visual_holes_rate=0.0303`, `fly_visible_black_max=18`,
+`post_stop_missing_max=29`, `post_stop_visual_holes_max=0`). Keep these as
+readiness diagnostics, not proof of a pixel hole. CPU is informational; never
+use a host-CPU admission gate. No long operator-monitoring flight is needed.
+The saved-world replay side is verified; a controlled cold/warm pair on the
+same runtime world remains open.
+
+Historical artifacts:
+
+- M622W report: `bin/suite_reports/engine_refactor/m622w_warm_frustum_stable_face_debt_20261016.json`; INFO shows creation of `World_190`.
+- M622X report: `bin/suite_reports/engine_refactor/m622x_screenray_pixel_probe_20261016.json`; INFO shows creation of `World_191`.
+- M622Y report: `bin/suite_reports/engine_refactor/m622y_warm_screenray_probe_bounded_20261016.json`; INFO shows creation of `World_192`.
+- M622Z report: `bin/suite_reports/engine_refactor/m622z_warm_world164_screenray_probe_20261016.json`.
+- M622Z parity and renderer analyses: `m622z_screen_ray_parity_20261016.json`, `m622z_renderer_pixel_trace_20261016.json`.
+- M622Z perf and INFO: `bin/logs/perf_20261016-205417_39284.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-205413.39284`.
+
+### M622AA–AE: product start and fixed-view relight probe
+
+M622AA/AB used the named `product-174657-far` route and moved the camera; their
+report names containing `stationary` are misleading. M622AA requested focus
+`(7,3)` but `World_192` started at `(-3,1)`; its route flag claimed a position
+pin, but no runtime check existed. M622AB verified its requested `(120,56,56)`
+start as expected/actual focus `(7,3)` with the user-position file pinned, then
+ended at `(-1,3)`. Use the checked manifest fields added by `cd606d3d` instead
+of trusting a request or route label.
+
+For a short static probe, keep the scenario empty. Do not pass
+`product-174657-far`: it selects the named long route even when `--no-fly` is
+present. This was the exact M622AE command setup (35 seconds, visible GUI,
+existing `World_164`, camera held in place):
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='110'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='130'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+python tools/flight_sim_run.py --world World_164 --require-existing-world `
+  --scenario '' --no-fly --visible --seconds 35 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622ae_world164_shortpath_relight_20261016.json `
+  --process-timeout 120
+```
+
+The optional `CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE` controls periodic
+framebuffer-grid sampling in render frames when `CUBA_VISUAL_BLACK_TRACE=1`.
+Unset preserves the historical cadence (120 frames, or 60 in two legacy X
+bands); configured values are clamped to 1–120 and can only make sampling more
+frequent. A short static lifecycle probe can set 15 (about 0.5 seconds at 30 FPS)
+and narrow the camera X range. This adds readbacks and is a diagnostic setting;
+judge the run using engine timings and exact pixel/event joins.
+
+M622AC is the pre-fix baseline: 18 perf periods, focus pending-light median 36,
+and 28 seconds with near-zero relight drain. In its static pixel trace, 124 of
+1,600 probes had luma below 32; all joined drawable opaque surfaces. Chunks
+`(5,3,5)` and `(5,3,6)` stayed in preview during the captured interval.
+
+M622AD confirmed that cooperative load was not blocking streaming (`0` in all
+29 samples). It also showed the 5 ms streaming-budget short path: async scheduler
+tick was zero in 17/18 periods while pending light was 30–34 and a drawable
+underfeet mesh already existed.
+
+Commit `3b6ea7d7` services one queued relight capture from this early-return
+path when focus or underfeet light is pending. M622AE kept the camera fixed;
+focus pending-light median was 0 (maximum 5), post-stop pending median 0, and
+final relight apply was recorded in six frames. Four frontier chunks had
+provisional-light samples. The pixel analyzer found 125 same-pixel/same-camera
+preview-to-nonpreview observations, each separated by five seconds; these bound
+the transition but do not give its exact time. The lifecycle trace recorded 86
+`light_calculation_settled` events and settlement joins for four preview chunks
+at 0.7–1.7 seconds after first preview. For `(5,3,5)`, mesh publication and
+install were recorded at about 1.03 and 1.16 seconds. No same-view pixel sample
+caught the intermediate settled-light/preview state. Readiness and mesh debt
+remained, and no operator framebuffer verdict was collected. Static no-fly
+reports also fail movement-related acceptance gates by design. Host CPU is
+logged for context only and never decides whether the run starts.
+
+Keep flight probes short. M622AF/AG completed the cold-create and exact-world
+static replay pair. A moving route on that new world must start where generated
+terrain supports the player; use the manifest's actual start focus and reject
+any route whose start does not match. Keep the established moving M335 route on
+its known-good terrain, and inspect pixel/relight traces at fixed coordinates;
+don't infer cold or warm provenance from a route name or report filename.
+
+### M622AF/AG: same-world cold/create and saved-world replay
+
+Reuse the M622AE environment setup above, then run these two short commands.
+The first requests a fresh alias; read the actual runtime ID from its report.
+Here that ID was `World_193`. The replay names that exact runtime ID and uses
+`--require-existing-world`.
+
+```powershell
+python tools/flight_sim_run.py --world World_M622AF_ColdEntry_20261016 `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622af_cold_world_short_light_probe_20261016.json `
+  --process-timeout 180
+
+python tools/flight_sim_run.py --world World_193 --require-existing-world `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622ag_world193_warm_light_probe_20261016.json `
+  --process-timeout 120
+```
+
+M622AF generated 43,264 columns in 40.563 seconds; M622AG loaded the exact
+`World_193` runtime world in 4.793 seconds with 121/121 spatial columns and no
+generation. Both used seed `3650471212`, metadata hash
+`3895b4396fa7b2ba040a5ee5622d5b00249b06e83f7041db8d5cc7524c5ea4e3`, and
+fixed focus `(-3,1)`. Focus pending-light median was zero in both. Cold had 960
+pixel probes with 72 dark samples, all on drawable surfaces and none light
+unsettled/preview. Warm had 1,920 probes with 147 dark samples, all on drawable
+surfaces; 15 dark samples were unsettled/preview and five preview. The warm
+trace saw 59 same-view preview-to-nonpreview observations within 0–1 second.
+Its lifecycle trace recorded 154 `light_calculation_settled` events overall,
+but no same-view pixel sample caught the intermediate settled-light/preview
+state. Neither report is acceptance:
+both are static and fail movement/readiness gates, and no operator verdict was
+recorded.
+
+Artifacts:
+
+- M622AF report: `bin/suite_reports/engine_refactor/m622af_cold_world_short_light_probe_20261016.json`.
+- M622AF pixel analysis: `bin/suite_reports/engine_refactor/m622af_cold_renderer_pixel_trace_20261016.json`.
+- M622AF perf/INFO: `bin/logs/perf_20261016-214926_10140.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-214922.10140`.
+- M622AG report: `bin/suite_reports/engine_refactor/m622ag_world193_warm_light_probe_20261016.json`.
+- M622AG pixel analysis: `bin/suite_reports/engine_refactor/m622ag_warm_renderer_pixel_trace_20261016.json`.
+- M622AG perf/INFO: `bin/logs/perf_20261016-215134_45964.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215130.45964`.
+
+### M622AH/AI: cold-world start fallback and repeated M335 route
+
+M622AH requested a visible no-teleport M335 route on `World_193` from
+`(120,56,56)`, which should map to focus `(7,3)`. The runtime loaded the named
+world with 121/121 spatial columns and no generation, but the actual start was
+`(-3,1)`. `world_data.json` places spawn at `(-44,51.12,20)`, also focus
+`(-3,1)`. `EnsurePlayerOnGround` falls back to the spawn column when the pinned
+column has no solid surface, so this is an invalid route start rather than a
+streaming-flight result. The manifest detected the mismatch and set
+`product_start_position_pinned=false`; keep that integrity check.
+
+M622AI repeated the short established route on `World_164` with the same
+`(120,56,56)`, eye Y 70, yaw 180, pitch -30, 35-second fly, 20-second stop, and
+15-second idle. Actual focus matched `(7,3)` and moved west to `(-3,3)`;
+process exit was zero and there was no timeout. Host CPU median/p95/max was
+68.8/86.5/97.1%, app CPU was 31.3/39.4/44.9% of machine capacity. Host values
+are context only and did not gate the run.
+
+The analyzer returned `pass=false` on timing/scheduler/stop lines. It recorded
+`visual_holes_rate=0.0606`, focus pending-light median 0, post-stop mesh-missing
+max 0, post-stop visible-black max 2, and readiness-debt max 31. Pixel analysis
+found 62 luma-below-32 probes among 2,880; every probe joined drawable opaque
+depth. Fifty-five had settled demand light without preview, five had unsettled
+or preview shader state, and there were no missing surface joins or light
+revision mismatches. Ten chunks had provisional-light samples. Their sparse
+moving-camera observations bounded preview-to-nonpreview visibility between
+1 and 16 seconds, but did not hold camera position fixed; the trace therefore
+does not prove a same-pixel transient. No operator framebuffer verdict was
+captured. This run did not reproduce the target far-route symptom: its focus
+missing mesh median was 0 and the named symptom-reproduction check failed its
+expected profile thresholds.
+
+The established short moving command is:
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+  -StampWarmPeriods -RequireExistingWorld -World World_164 `
+  -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622AI `
+  -Report bin/suite_reports/engine_refactor/m622ai_world164_m335_short_20261016.json
+```
+
+If further visual evidence is needed, keep this route and require a
+same-pixel/same-camera trace joined to light settlement and mesh publication for
+one frontier chunk. Host CPU must never defer that diagnostic run. Do not repeat
+the pinned M622AH start on `World_193` until that route's columns are present.
+
+Artifacts:
+
+- M622AH report: `bin/suite_reports/engine_refactor/m622ah_world193_m335_moving_short_20261016.json`.
+- M622AH perf/INFO: `bin/logs/perf_20261016-215408_44256.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215404.44256`.
+- M622AI report: `bin/suite_reports/engine_refactor/m622ai_world164_m335_short_20261016.json`.
+- M622AI pixel analysis: `bin/suite_reports/engine_refactor/m622ai_renderer_pixel_trace_20261016.json`.
+- M622AI perf/INFO: `bin/logs/perf_20261016-215807_42564.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-215803.42564`.
+
+### M622AJ: fixed-view pixel lifecycle at higher cadence
+
+Release commit `ea79e756` adds the opt-in
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE` setting, measured in render frames
+and clamped to 1–120. Unset preserves the old 120-frame cadence (60 frames in
+two legacy X bands). M622AJ used 15 frames, about 0.5 seconds at 30 FPS, with the
+visible camera X range bounded to 110–130. The saved `users.json` bytes and
+process environment were restored after the run.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE='15'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='110'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='130'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+python -X utf8 tools/flight_sim_run.py --world World_164 --require-existing-world `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622aj_world164_static_pixel_stride15_20261016.json `
+  --process-timeout 120
+```
+
+The run completed (`process_rc=0`, no timeout), with 13 perf periods and nine
+steady periods. It held focus `(7,3)` and camera `(120,50.12,56)`. Four chunks
+showed provisional-light pixels. Exact pixel/camera samples saw preview end by
+1 second for `(5,3,4)` and `(5,3,5)`, and by 2 seconds for `(5,3,6)`. Because the
+pixel sample clock is second-granular, these are upper bounds. Lifecycle joins
+recorded light settlement at +653, +695 and +1,163 ms; installation at +666,
++742 and +1,176 ms. Chunk `(5,3,6)` also had mesh publication at +1,033 ms.
+No same-view pixel sample captured a settled-light/preview intermediate state.
+
+There were 4,080 pixel probes and 248 luma-below-32 samples; every dark sample
+joined drawable opaque depth. Five had unsettled/preview state, and no surface
+joins or light revisions were missing. `visual_holes_rate=0`, focus pending-light
+median 0, post-stop mesh-missing max 0, post-stop visible-black max 5, readiness
+debt max 17. The analyzer failed static movement/readiness gates by design.
+Host CPU was 36.0/58.7/60.4% median/p95/max and app CPU 22.9/33.0/38.9% of
+machine capacity; both are context only. No operator framebuffer verdict was
+captured.
+
+This bounds the observed preview interval on the saved-world entry view, but it
+does not cover the cruise-height frontier on a moving route. Next repeat the
+same short established no-teleport M335 route with stride 15 and compare
+frontier light lifecycle to its pixel probes. Keep the route unchanged and do
+not use host CPU as an admission gate.
+
+Artifacts:
+
+- M622AJ report: `bin/suite_reports/engine_refactor/m622aj_world164_static_pixel_stride15_20261016.json`.
+- M622AJ pixel analysis: `bin/suite_reports/engine_refactor/m622aj_renderer_pixel_trace_20261016.json`.
+- M622AJ perf/INFO: `bin/logs/perf_20261016-221304_10076.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-221300.10076`.
+
+### M622AK: short moving M335 trace at stride 15
+
+This repeats M622AI's established visible route on `World_164`; only the pixel
+probe stride changed. Host CPU is informational. The wrapper's usual start-focus
+integrity check stays enabled, and no CPU threshold gates launch.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE='15'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+  -StampWarmPeriods -RequireExistingWorld -World World_164 `
+  -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622AK `
+  -Report bin/suite_reports/engine_refactor/m622ak_world164_m335_stride15_20261016.json
+```
+
+The run matched start focus `(7,3)`, reached `(-3,3)`, and finished 35 periods
+(18 fly) with process exit 0 and no timeout. The aggregate analyzer returned
+`pass=false` on performance, scheduler, and readiness criteria. It reported
+`visual_holes_rate=0.0606`, focus pending-light median 0, post-stop mesh-missing
+max 0, post-stop visible-black max 2, and readiness-debt max 33. The targeted
+far-symptom check did not pass because focus-missing median was 0 and
+visible-black median 12.
+
+The pixel analyzer joined 13,040 probes. All 256 luma-below-32 samples had a
+drawable opaque surface; nine had unsettled/preview light and six were preview.
+There were no missing surface joins or light-revision mismatches. Ten chunks
+showed provisional-light samples, but the moving camera yielded only one
+same-view preview-to-nonpreview candidate and both samples shared the same
+second-resolution timestamp. This does not bound the frontier handoff or
+confirm the operator-visible defect. No framebuffer verdict was captured.
+
+The aggregate `cruise_fifo_dropped_delta=44` combines pressure trim and FIFO
+overflow. Pressure trim preserves the evicted ticket in deferred-far storage,
+so the combined metric is not a count of lost relight work. Follow-up source
+instrumentation adds cumulative trim-to-deferred and overflow counters; use
+those on the next repeat before changing queue policy. Host CPU was
+83.7/99.3/100% median/p95/max and application CPU 29.9/40.1/43.7% of machine
+capacity; neither is an admission gate.
+
+Artifacts:
+
+- M622AK report: `bin/suite_reports/engine_refactor/m622ak_world164_m335_stride15_20261016.json`.
+- M622AK pixel analysis: `bin/suite_reports/engine_refactor/m622ak_renderer_pixel_trace_20261016.json`.
+- M622AK perf/INFO: `bin/logs/perf_20261016-221611_38804.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-221607.38804`.
+
+### M622AL: attribute FIFO active-queue evictions
+
+M622AL repeats the established short M335 route with the diagnostic split
+counters enabled in the Release executable. No route, speed, or CPU gate
+changes were made. On this run, the combined FIFO delta 48 was entirely
+overflow eviction; pressure trim-to-deferred was zero and deferred-far peak was
+3. Both overflow paths preserve the evicted ticket in deferred-far storage, so
+the counter does not mean 48 relight jobs were lost. Artifacts:
+
+- Report/pixel trace: `bin/suite_reports/engine_refactor/m622al_world164_m335_fifo_split_20261016.json`, `bin/suite_reports/engine_refactor/m622al_renderer_pixel_trace_20261016.json`.
+- Perf/INFO: `bin/logs/perf_20261016-223913_44256.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-223910.44256`.
+
+### M622AM: moving route with sub-second pixel clock
+
+This is the M622AK command and profile repeated after fixing JSON precision for
+the absolute steady-clock pixel sample timestamp. The analyzer could now join
+same-pixel/same-camera lifecycle intervals at sub-second resolution; nine
+moving-route preview handoffs measured about 0.66–0.87 s. Keep the absolute
+clock field at full floating precision when changing trace serialization.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE='15'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+  -StampWarmPeriods -RequireExistingWorld -World World_164 `
+  -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 -StopAfterBlockedSeconds 8 `
+  -IdleSeconds 15 -PhaseId M622AM `
+  -Report bin/suite_reports/engine_refactor/m622am_world164_m335_pixel_clock_20261016.json
+```
+
+Artifacts:
+
+- Report/pixel trace: `bin/suite_reports/engine_refactor/m622am_world164_m335_pixel_clock_20261016.json`, `bin/suite_reports/engine_refactor/m622am_renderer_pixel_trace_20261016.json`.
+- Perf/INFO: `bin/logs/perf_20261016-224707_44944.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-224703.44944`.
+
+### M622AN/AO: short cold-create and exact replay probes
+
+Each leg is a visible 25-second static probe using the stride-15 renderer pixel
+trace and no flight. M622AN creates the unique alias and records the actual
+runtime world; M622AO must replay that exact runtime name with
+`--require-existing-world`. Always verify `startup_operation`, generated vs
+loaded spatial columns, seed/metadata identity, and expected/actual focus in
+both manifests before treating the pair as controlled.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE='15'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+python -X utf8 tools/flight_sim_run.py --world World_M622AN_ColdEntry_20261016 `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622an_cold_world_stride15_20261016.json `
+  --process-timeout 120
+```
+
+The application assigned runtime `World_194`. Replay that actual name, not the
+requested alias:
+
+```powershell
+python -X utf8 tools/flight_sim_run.py --world World_194 --require-existing-world `
+  --scenario '' --no-fly --visible --seconds 25 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622ao_world194_replay_stride15_20261016.json `
+  --process-timeout 120
+```
+
+The users-position file and environment were restored after both runs. Cold
+create generated 43,264 columns in 40.917 s; replay loaded 121/121 spatial
+columns with zero generation in 5.417 s. The replay saw four preview chunks
+transition within 0.63–2.17 s, with slow cases dominated by light settlement.
+Neither static analyzer `pass=false` is a failed movement test; movement gates
+do not apply to `--no-fly`. CPU is context only. Artifacts:
+
+- Cold report/pixel trace: `bin/suite_reports/engine_refactor/m622an_cold_world_stride15_20261016.json`, `bin/suite_reports/engine_refactor/m622an_cold_renderer_pixel_trace_20261016.json`.
+- Cold perf/INFO: `bin/logs/perf_20261016-225152_38176.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-225148.38176`.
+- Replay report/pixel trace: `bin/suite_reports/engine_refactor/m622ao_world194_replay_stride15_20261016.json`, `bin/suite_reports/engine_refactor/m622ao_replay_renderer_pixel_trace_20261016.json`.
+- Replay perf/INFO: `bin/logs/perf_20261016-225413_43916.jsonl`, `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261016-225409.43916`; gate JSONL `bin/logs/enter_lit_20261016-225417.jsonl` and `bin/logs/enter_lit_20261016-225418.jsonl`.
+
+### M622AP–AU: fixed-position visible light handoff check
+
+Use the saved-world replay to check pending-light ownership without changing
+the camera route. This is a short diagnostic, not a movement acceptance run.
+The blank scenario is accepted by the wrapper but causes its aggregate
+movement-oriented gate report to say `pass=false`; verify `process_rc=0`,
+`run_outcome=success`, exact world/focus, no timeout, and no generated columns.
+The analyzer's `pass` field is not the acceptance signal for this no-fly case.
+Pixel trace analysis is a separate step after the wrapper writes perf JSONL.
+
+Back up the current users-position file so the visible replay cannot change
+the saved start position, then run the exact saved world:
+
+```powershell
+$users = 'bin/worlds/World_194/users.json'
+$backup = 'bin/tmp/m622au_users.json.bak'
+Copy-Item -LiteralPath $users -Destination $backup -Force
+$env:CUBA_VISUAL_BLACK_TRACE = '1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE = '15'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS = '0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES = '1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY = '0'
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+try {
+  python -X utf8 tools/flight_sim_run.py --world World_194 `
+    --require-existing-world --scenario '' --no-fly --visible `
+    --seconds 25 --warmup-sec 8 `
+    --report bin/suite_reports/engine_refactor/m622au_world194_visible_pending_priority_stride15_20261016.json `
+    --process-timeout 120
+} finally {
+  Copy-Item -LiteralPath $backup -Destination $users -Force
+}
+```
+
+Generate the renderer pixel trace from the report's perf path:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622au_world194_visible_pending_priority_stride15_20261016.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622au_renderer_pixel_trace_20261016.json
+```
+
+The release run exited zero, loaded 121/121 spatial columns without generation,
+and remained at focus `(1,2)`. The pixel trace had 5,600 probes, zero pixels
+below the dark threshold, four provisional-preview chunks, and 20 same-view
+handoffs at 0.532–0.559 s. The INFO audit showed `(0,-1)` promoted into the
+priority queue and captured without waiting for deferred-far age service. The
+exact saved world changes light state between replays, so M622AP–AU are
+sequential diagnostics, not a controlled A/B or operator framebuffer verdict.
+CPU usage is informational; no load threshold gates the probe.
+
+Source findings and all run artifacts are listed in
+`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` under M622AP–AU.
+
+### M622AV: short M335 moving-frontier check
+
+Use the established visible, no-teleport M335 route on saved `World_164`.
+This preserves the known start and camera setup while checking the moving
+streaming frontier after M622AU. The wrapper pins/restores the saved user
+position and records the run manifest. Do not add CPU-load admission gates.
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+  -StampWarmPeriods -RequireExistingWorld -World World_164 `
+  -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+  -Yaw 180 -Pitch -30 -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 -PhaseId M622AV
+```
+
+The wrapper wrote `bin/suite_reports/engine_refactor/m622av_world164_m335_post_visible_priority_20261016.json` and perf JSONL named in that report. Analyze the renderer evidence separately:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622av_world164_m335_post_visible_priority_20261016.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622av_renderer_pixel_trace_20261016.json
+python -X utf8 tools/flight_sim_analyze.py $report.perf_jsonl `
+  --report bin/suite_reports/engine_refactor/m622av_world164_m335_post_visible_priority_semantics_20261016.json
+```
+
+M622AV completed successfully at the process level, but the aggregate route
+gates failed. Two one-period visual-hole proxy samples coincide with a fresh
+clear radius probe and a drawable/satisfying previous witness; inspect the
+new `visual_holes_fresh_clear_probe_n` analyzer metric before treating such a
+sample as missing geometry. Pixel trace showed zero missing opaque-surface
+joins. It is not an operator framebuffer verdict. Full interpretation and
+artifact filenames are in the runbook's M622AV section.
+
+### M622AW–AX: short first-mesh ownership audit
+
+Keep the same saved-world M335 route, but use a 30 s flight to reduce test
+time. M622AW was the Release validation immediately after the cache
+invalidation fix. M622AX enabled the existing relight audit so an exact
+missing-mesh witness can be joined to relight admission and capture records.
+The wrapper restores the config and saved user position when it exits.
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622AX `
+    -Report bin/suite_reports/engine_refactor/m622ax_world164_m335_relight_audit_20261016.json
+} finally {
+  if ($null -eq $previousAudit) {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  } else {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit
+  }
+}
+```
+
+The M622AW counterpart uses the same command without the environment wrapper,
+`-PhaseId M622AW`, and report
+`bin/suite_reports/engine_refactor/m622aw_world164_m335_focus_invalidation_20261016.json`.
+After M622AX, render the sparse pixel trace and re-run the summary analyzer:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622ax_world164_m335_relight_audit_20261016.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622ax_renderer_pixel_trace_20261016.json
+python -X utf8 tools/flight_sim_analyze.py $report.perf_jsonl `
+  --report bin/suite_reports/engine_refactor/m622ax_world164_m335_relight_audit_semantics_20261016.json
+```
+
+For M622AX, fresh miss chunk `(1,3,5)` was queued for first-mesh relight,
+became drawable/satisfying in the slice audit, and finalized lighting after
+about 1.25 s. A second positive proxy sample had a fresh clear probe and was
+the held hysteresis tail. The aggregate product gate still failed and the
+operator framebuffer verdict remains unrecorded; consult the M622AW–AY
+runbook section before interpreting the two proxy samples or FIFO eviction
+counts.
+
+### M622AY: repeat M335 with a sparse preview-light pixel trace
+
+M622AY repeats the same short visible M335 route on existing `World_164` and
+keeps `CUBATARIUM_RELIGHT_AUDIT=1`. It uses the established 30 s flight,
+20 s stop, and 8 s idle tail; it does not add a CPU-load gate or teleport.
+Always restore the audit environment variable after the runner exits.
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622AY `
+    -Report bin/suite_reports/engine_refactor/m622ay_world164_m335_same_view_audit_20261017.json
+} finally {
+  if ($hadPreviousAudit) {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit
+  } else {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  }
+}
+```
+
+Analyze the saved sparse pixel trace and keep the full report outside console
+output:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622ay_world164_m335_same_view_audit_20261017.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622ay_renderer_pixel_trace_20261017.json
+```
+
+The pixel analyzer's preview-to-settled values are observation intervals, not
+transition timestamps. Require the same sampled pixel and camera pose before
+calling a preview-to-settled pair a same-view handoff. If the route ends with
+no fresh mesh-miss witness, do not infer that the readiness-debt proxy is a
+visible hole; inspect the pixel and lifecycle joins first.
+
+For an exact relight-owner audit, use the INFO log named by the report and
+follow the same `(cx,cz)` through `pending note`, `void_dark_owner`,
+`deferred_far owner=defer/clear`, `capture dequeue/submit`, `light_flags`, and
+`slice job`. A FIFO denial is not loss if the corresponding deferred owner is
+later cleared by visible admission and capture reaches final light install.
+Record the interval from note to dequeue, then from visible re-admission to
+final install; do not use the sparse pixel observation interval as a substitute
+for those pipeline timings.
+
+### M622AZ: capture the early preview lifecycle
+
+M622AZ uses the same established warm `World_164` route as M622AY. The source
+adds an opt-in lifecycle watch at the relight-note admission point; no flight
+parameters change. Preserve the prior audit environment value:
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622AZ `
+    -Report bin/suite_reports/engine_refactor/m622az_world164_m335_early_lifecycle_watch_20261017.json
+} finally {
+  if ($hadPreviousAudit) {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit
+  } else {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  }
+}
+```
+
+Re-run the pixel analyzer after any analyzer changes:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622az_world164_m335_early_lifecycle_watch_20261017.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622az_renderer_pixel_trace_20261017.json
+```
+
+M622AZ completed, traveled nine chunks, and had zero visual-hole proxy samples,
+but readiness debt persisted through the analyzed route. The pixel trace had
+47 low-luma pixels and all joined drawable opaque surfaces. Seven provisional
+chunks now join to mesh jobs; CPU mesh publication occurred 0.269–1.302 s after
+the first preview samples. No same-view handoff was captured. Keep these values
+as lifecycle bounds, not proof of an operator-visible defect. The analyzer
+joins each later pixel to its visible MDI state and compares its geometry
+revision with the causal mesh publication. Every later sample had an equal or
+newer visible revision, but the camera had moved before that sample. GPU
+queue/kick/counters-ready/ready stages describe the compute-meshing route and
+their absence alone is not failure evidence. See M622AZ in the diagnostic
+runbook for interpretation and artifacts.
+
+### M622BA: short fixed-view startup handoff
+
+Use the saved startup position on warm `World_164`, with an empty scenario so
+the runner holds the camera still. This uses the M622AE fixed-camera setup but
+reduces capture to 10 seconds and samples the narrow start view every 15
+frames. The no-fly report is for pixel/lifecycle evidence only; its movement
+acceptance gate is not applicable. Readiness-debt counters are not direct
+framebuffer evidence.
+
+```powershell
+$traceNames = @(
+  'CUBA_VISUAL_BLACK_TRACE',
+  'CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES',
+  'CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE',
+  'CUBATARIUM_RELIGHT_AUDIT'
+)
+$traceSaved = @{}
+foreach ($name in $traceNames) {
+  $old = Get-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
+  $traceSaved[$name] = @{
+    Exists = ($null -ne $old)
+    Value = if ($null -ne $old) { $old.Value } else { $null }
+  }
+}
+try {
+  $env:CUBA_VISUAL_BLACK_TRACE = '1'
+  $env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES = '1'
+  $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS = '1'
+  $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY = '1'
+  $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X = '110'
+  $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X = '130'
+  $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE = '15'
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  python -X utf8 tools/flight_sim_run.py --world World_164 `
+    --require-existing-world --scenario '' --no-fly --visible `
+    --seconds 10 --warmup-sec 8 `
+    --report bin/suite_reports/engine_refactor/m622ba_world164_static_start_same_view_20261017.json `
+    --process-timeout 90
+} finally {
+  foreach ($name in $traceNames) {
+    if ($traceSaved[$name].Exists) {
+      Set-Item -LiteralPath "Env:$name" -Value $traceSaved[$name].Value
+    } else {
+      Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
+    }
+  }
+}
+```
+
+Analyze the captured pixel and lifecycle evidence:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622ba_world164_static_start_same_view_20261017.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622ba_renderer_pixel_trace_20261017.json
+```
+
+M622BA found 125 same-pixel/same-camera preview-to-nonpreview observations
+across four chunks, bounded at 656 ms–1.314 s. All 220 pixels below luma 32
+joined drawable opaque surfaces; 14 had unsettled or preview light state. This
+calibrates warm startup only. Read the runbook section before interpreting the
+no-fly aggregate gate or comparing this result with a moving M335 route.
+
+### M622BB: static startup fog-transition trace
+
+M622BB reused the exact visible no-fly camera, warmup, trace environment, and
+pixel-probe settings from M622BA. It changed only the report names and used the
+Release `Cubatarium` target rebuilt with fog transition and target-color
+telemetry. Run the M622BA PowerShell environment save/restore block unchanged,
+with this command in its `try` body:
+
+```powershell
+python -X utf8 tools/flight_sim_run.py --world World_164 `
+  --require-existing-world --scenario '' --no-fly --visible `
+  --seconds 10 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622bb_world164_fog_transition_trace_20261017.json `
+  --process-timeout 90
+```
+
+Analyze the same perf JSONL selected from the flight report:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622bb_world164_fog_transition_trace_20261017.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bb_renderer_pixel_trace_20261017.json
+```
+
+The flight returned `process_rc=0`, `run_outcome=success`, no timeout, and
+aggregate `pass=false` because a no-fly scenario has no movement-route gate
+data. The fog transition records are emitted only when latch/output state
+changes and include per-frame latch inputs. Pixel samples include presented and
+target fog color; the analyzer estimates the blend from opaque hit position,
+camera position, and the same distance-fog formula used by the shader. It also
+summarizes low-luma samples by exact depth-hit block and face. This is an
+attribution aid for above-water samples, not a substitute for framebuffer
+capture or exact atlas-texel reconstruction.
+
+See M622BB in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for the measured latch
+timeline, pixel-blend analysis, limitations, and next step. Artifacts:
+`m622bb_world164_fog_transition_trace_20261017.json`,
+`m622bb_renderer_pixel_trace_20261017.json`,
+`perf_20261017-030534_39796.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-030531.39796`.
+
+### M622BC/BD: short moving visible-black gate check
+
+These paired runs use the established pinned warm `World_164` M335 route:
+30 s no-teleport flight, 20 s stop, then 8 s idle. Keep the established start,
+cruise height, heading, pitch, and movement scale. M622BC captured the baseline
+after the fog/lifecycle trace changes. M622BD repeated it after commit
+`1be89710`, which changed visible-black attribution so a region-wide
+`PromoteRelight` ticket is not treated as a repair ticket for its anchor column.
+The runner manages trace variables for `-EnableScreenRayPixelProbes` and
+`-EnableFogPullIn`; `CUBATARIUM_RELIGHT_AUDIT` is saved/restored explicitly:
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BD `
+    -Report bin/suite_reports/engine_refactor/m622bd_world164_m335_targeted_black_gate_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+}
+```
+
+Analyze low-luma pixels from the perf file named by the flight report:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622bd_world164_m335_targeted_black_gate_20261017.json -Raw | ConvertFrom-Json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bd_renderer_pixel_trace_20261017.json
+```
+
+M622BD exited successfully without timeout and covered eight chunks. Its
+post-stop fully-dark stalled count was zero (M622BC: one), validating the
+ticket-classification change. The aggregate flight gate still failed on frame
+time, the near-focus missing-mesh proxy, and unresolved stop-state readiness.
+Pixel tracing found no sampled ray that hit an unloaded chunk; the route's
+`visual_holes` values are pressure-proxy evidence, not framebuffer proof. Do
+not use the aggregate status to reverse the targeted census fix. CPU
+observations remain context, without a host-load gate. Compare the reports
+using the meanings and limitations in the M622BC/BD runbook section.
+
+### M622BE: relight-denial slice audit
+
+M622BE extends the same established warm `World_164` M335 route. The Release
+binary was rebuilt with eight workers using `tools/build_release.ps1 -Jobs 8`.
+The experiment enabled `CUBATARIUM_RELIGHT_AUDIT=1`, screen-ray pixel probes,
+fog pull-in, and warm-period stamps. Because this run used the just-built
+working tree before commit, the harness source-hash guard was explicitly
+allowed with `CUBA_ALLOW_DIRTY_AF=1`; both variables were restored afterward.
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BE `
+    -Report bin/suite_reports/engine_refactor/m622be_relight_denial_slices_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+Analyze the recorded pixels after the run:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622be_relight_denial_slices_20261017.json -Raw | ConvertFrom-Json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622be_renderer_pixel_trace_20261017.json
+```
+
+M622BE completed with `process_rc=0` and no timeout. Its 73 denied FIFO
+requests all had `band_needs=1`; 64 named dark cached mesh slices and all 64
+were followed by a capture band covering those slices within five seconds.
+The remaining nine denials had one pending-light slice; eight reached capture
+within five seconds. This confirms short-term queue service, not downstream
+relight/mesh/GPU completion. Pixel analysis found 37 low-luma samples, all on
+drawable opaque depth surfaces, and no sampled unloaded-chunk-before-hit ray.
+The aggregate gate remained false on readiness and proxy metrics. See the
+M622BE runbook section before interpreting these queue and image samples.
+
+### M622BF/BG: stale-dark classification and no-op guard
+
+Both runs reuse the M622BE start, no-teleport movement, visible GUI, and
+30 s/20 s/8 s/8 s phases. M622BF adds a stale-face witness to each denied
+relight record. M622BG uses the same trace after narrowing no-op admission to
+unsettled or demonstrably stale dark faces. Both were built as Release with
+`tools/build_release.ps1 -Jobs 8`. Since each used the rebuilt working tree
+before commit, set `CUBA_ALLOW_DIRTY_AF=1`; always restore both it and
+`CUBATARIUM_RELIGHT_AUDIT` in `finally`.
+
+Change the report path and phase id for the two runs:
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BG `
+    -Report bin/suite_reports/engine_refactor/m622bg_settled_dark_noop_guard_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+M622BF report: `m622bf_stale_dark_face_witness_20261017.json`;
+perf/INFO are `perf_20261017-101926_43832.jsonl` and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-101922.43832`.
+M622BG completed with `process_rc=0` and no timeout. It recorded 166 FIFO
+denials, seven immediate no-op skips, and 13 deferred work entries later
+cleared as already satisfied. No remaining denial combined settled light,
+zero pending slices, and a dark-face witness. Its report/pixel trace are
+`m622bg_settled_dark_noop_guard_20261017.json` and
+`m622bg_renderer_pixel_trace_20261017.json`; perf/INFO are
+`perf_20261017-102307_36176.jsonl` and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-102304.36176`.
+The analyzer command is the same as M622BE with the M622BG report and output
+paths. The gate remains diagnostic-only; see the runbook for proxy and pixel
+coverage limits. A follow-up build adds `unsettled_dark_face_cy` and
+`stale_dark_face_checked_cy` to denied-relight audit rows and skips stale-face
+inspection until slice settlement. The saved M622BF/BG runs predate that field
+split; rerun the short route with a new phase/report id when collecting those
+separated counts. M622BH did this with the same parameters and report
+`m622bh_settled_dark_noop_audit_20261017.json`; set `-PhaseId M622BH` and use
+that report path in the command above. It completed 29 periods/27 steady, but
+all ten denied-relight rows had no cached dark face, so neither classifier
+branch was exercised. Five immediate no-op skips and nine deferred
+already-satisfied clears were recorded. Aggregate gates remained false and no
+operator framebuffer verdict was captured; see the runbook for exact metrics
+and interpretation.
+
+M622BI used the same command, changing only the phase id/report path to
+`M622BI` and `m622bi_pre_admission_noop_guard_20261017.json`. It completed 29
+periods/27 steady. The release source moves the no-op guard ahead of FIFO
+admission for new non-visible requests, and audit skip rows now use
+`relight_admission event=noop_skip`. Results: 1,929 no-op skips, 562 capture
+submissions, 104 FIFO denials, and two stale-dark witnesses for settled slice
+`(3,3,6)` at block `(62,48,100)`. That slice reached matching field/meshed/
+published light revision 2 with matching halo after relight; no same-view
+framebuffer verdict was captured. Aggregate gates remained false. Read the
+M622BI runbook entry before treating the earlier M622BG capture-count contrast
+as causal; these were sequential, non-controlled runs.
+
+To analyze the already-saved M622BI pixel probes without another flight:
+
+```powershell
+py -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261017-103559_47804.jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bi_renderer_pixel_trace_20261017.json
+```
+
+This produced 3,300 probes and 102 low-luma samples, all joined to drawable
+opaque surfaces; eight dark samples had unsettled/preview light and none had a
+light-revision mismatch. No same-view preview-to-nonpreview handoff was
+observed, and the stale target chunk `(3,3,6)` was not in the dark-pixel set.
+
+The dark-pixel filter omits bright observations of the stale target. To retain
+all framebuffer probes associated with one chunk, use the repeatable
+`--watch-chunk X,Y,Z` option without launching another flight:
+
+```powershell
+py -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261017-103559_47804.jsonl `
+  --watch-chunk 3,3,6 `
+  --json-out bin/suite_reports/engine_refactor/m622bi_renderer_pixel_trace_watch_3_3_6_20261017.json
+```
+
+The report found 38 associated sample records: 28 opaque depth-surface joins
+and 28 separate voxel-ray hits, with 18 appearing in both sets. All 28 depth
+joins were drawable, draw-ready, on a visible MDI pass, settled, and matched
+light revisions `2/2/2`; nine still had desired geometry revision 4 versus
+published revision 3. It found one repeated same-view sample at pixel
+`(416,450)` and camera `(120,70,56)`, 3.629 s apart, RGB
+`(117,163,232)` then `(117,162,231)`. Both observations followed the first
+stale-light publication. There is no matching pre-publication pixel sample, and
+the later stale-light publication at 10:36:23.553 has no target depth-surface
+probe after it; later voxel-ray-only hits resolved the framebuffer depth to
+adjacent `(2,3,6)`. Treat this as direct post-publication framebuffer/GPU-state
+evidence, not proof of a bad-to-good transition or operator-visible defect.
+
+### M622BJ: coalesce deferred-owner retries under FIFO pressure
+
+M622BJ rebuilt the Release target after changing `EnqueueTerrainColumnRelightImpl`
+to merge duplicate requests into an existing DeferredFar owner when the current
+FIFO rule still blocks admission. Visible admission and newly admissible
+requests keep their normal path. The build command was:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+```
+
+Use the same warm `World_164`, visible, no-teleport M335 route as M622BF/BG/BI;
+only change the phase id and report path. The exact run was:
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BJ `
+    -Report bin/suite_reports/engine_refactor/m622bj_deferred_owner_coalesce_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+Analyze global low-luma samples and the target stale-light chunk from the saved
+run, without another flight:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622bj_deferred_owner_coalesce_20261017.json -Raw | ConvertFrom-Json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bj_renderer_pixel_trace_20261017.json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --watch-chunk 3,3,6 `
+  --json-out bin/suite_reports/engine_refactor/m622bj_renderer_pixel_trace_watch_3_3_6_20261017.json
+```
+
+The route completed 29 periods/27 steady with process exit zero and no timeout.
+It logged 46 `deferred_owner_skip` decisions, including 26 from
+`DrainIdleFocusPendingLight`; that source had no FIFO denials. Total FIFO
+denials were 38, with 30 from `EnqueueVoidDarkColumnRelightNote`; no FIFO
+overflow drop was recorded. The run had readiness debt 1.0 and post-stop debt
+34, so aggregate gates remained false. Host CPU median/p95 61.2/86.5% is
+context only.
+
+The global pixel trace had 2,160 probes and 74 low-luma samples, all joined to
+drawable opaque surfaces; seven had unsettled/preview light and none had a
+light-revision mismatch. The watched target had nine associated probes: eight
+depth-surface matches and three voxel-ray hits. All eight depth samples were
+draw-ready with matching geometry and light revisions and no preview/stale
+remesh flag. The slice had a stale-light publication at 10:53:13.055 and again
+at 10:53:45.279. Both target invalidations followed adjacent source
+`(4,3,6)` light installs, jobs 152 and 501 respectively, which scheduled
+`(3,3,6)` as a mesh dependency. The second source install reached field revision
+3 while revision 2 was still published. Target depth samples ended before the
+second episode; there was no fixed-view pre/post pair. Trace job 501's upstream
+request/capture to determine why the neighbor was recalculated. It captured the
+column's full `0:80` band across four slices about 34 ms after an exact `16:31`
+`OnLitPendingNeeded` note; `DrainIdleFocusPendingLight` can union a short note
+with the focus band, but accepted enqueue records lack source provenance. Join
+the source before narrowing that band. Treat the coalescing counters as direct
+path evidence, not as a causal total-denial comparison or proof of a visible
+lighting defect.
+
+### M622BK: trace the accepted enqueue caller for the late neighbor relight
+
+M622BK added opt-in accepted-enqueue provenance to `EnqueueTerrainColumnRelightImpl`
+and repeated the established short warm `World_164` M335 route. The Release
+build command was:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+```
+
+Run command (audit flag and dirty-tree override are restored afterward):
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BK `
+    -Report bin/suite_reports/engine_refactor/m622bk_relight_enqueue_provenance_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+Analyze the global sparse framebuffer trace and retain every association to
+the stale-light target `(3,3,6)`:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622bk_relight_enqueue_provenance_20261017.json -Raw | ConvertFrom-Json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bk_renderer_pixel_trace_20261017.json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --watch-chunk 3,3,6 `
+  --json-out bin/suite_reports/engine_refactor/m622bk_renderer_pixel_trace_watch_3_3_6_20261017.json
+```
+
+The route completed 29 periods/27 steady with process exit zero and no timeout.
+It remained diagnostic-only: readiness debt was 1.0, visual-hole proxy 0.0,
+and direct post-stop mesh-missing, visual-hole, visible-black-no-ticket, and
+stalled-visible-black counts were zero. The global pixel trace had 2,420
+probes and 45 low-luma samples; all joined drawable opaque surfaces, five had
+unsettled/preview light, and none had a light-revision mismatch.
+
+For column `(4,6)`, `OnLitPendingNeeded` inserted `16:31` at 11:04:26.679.
+`DrainIdleFocusPendingLight` then logged ten `0:80` coalesces, starting
+34 ms later. One `0:80` capture at 11:04:27.521 became snapshot job 678 with
+four slices and 16 neighbor-light samples. It completed in 43.8 ms and changed
+`(4,3,6)` to field revision 3 against published revision 2; that install
+queued target `(3,3,6)` stale-light debt, which published at 11:04:27.791.
+The watched target had nine associations, eight depth-surface joins; all eight
+were drawable, draw-ready, settled, and revision-matched, without preview or
+stale-remesh state. There was no repeated same-view group or operator verdict.
+
+The new provenance closes the caller/capture question. Do not rerun M335 for
+that attribution. Next statically validate the water-aware full-height band
+against the solver's vertical dependency requirements and check whether
+repeated already-covered coalesces consume the idle drain's column budget.
+Keep the M335 route and speed unchanged for any later validation.
+
+### M622BL: validate covered-owner idle-drain deduplication
+
+M622BL uses the same warm `World_164`, visible, no-teleport M335 parameters as
+M622BK; only the phase and report path differ. Build only the Release target:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+```
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BL `
+    -Report bin/suite_reports/engine_refactor/m622bl_idle_focus_queue_dedup_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+The new `idle_focus_skip_covered` event is emitted when the candidate's full
+Y range already has a keyed, in-deque priority owner. M622BL logged 553 such
+skips and 114 enqueue calls from `DrainIdleFocusPendingLight` (95 coalesced,
+19 inserted). For the watched `(3,3,6)` chunk, the pixel analyzer found 29
+associations with 19 drawable, ready depth samples; all matched geometry and
+light revisions, with no preview/stale-remesh samples or repeated same-view
+group. Global analysis found 2,840 probes and 71 low-luma samples, all on
+drawable opaque surfaces; five had unsettled/preview light and none had a
+light-revision mismatch.
+
+The route completed 29 periods/27 steady with process exit zero and no timeout,
+but remained diagnostic-only: readiness debt 1.0, visual-hole proxy 0.148,
+post-stop readiness debt 31, and direct post-stop mesh-missing, visual-hole,
+visible-black-no-ticket, and stalled-visible-black counts zero. Host CPU was
+76.0/97.2% median/p95 and remains context only. No operator framebuffer
+verdict was recorded. Reports: `m622bl_idle_focus_queue_dedup_20261017.json`,
+`m622bl_renderer_pixel_trace_20261017.json`, and
+`m622bl_renderer_pixel_trace_watch_3_3_6_20261017.json`. Perf log:
+`perf_20261017-111215_20952.jsonl`; INFO log:
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-111211.20952`.
+
+### M622BM: include the DeferredFar owner in idle-drain deduplication
+
+M622BM uses the same Release build and M335 route as M622BL; change only the
+phase id to `M622BM` and report path to
+`bin/suite_reports/engine_refactor/m622bm_idle_focus_deferred_dedup_20261017.json`.
+The run retained the same warm `World_164`, visible, no-teleport route
+parameters and restored its environment/configuration after completion.
+
+The route completed 29 periods/27 steady, process exit zero, no timeout; the
+suite remained `pass=false` (readiness debt 1.0, visual-hole proxy 0.037,
+post-stop readiness debt 26). Direct post-stop mesh-missing, visual-hole,
+visible-black-no-ticket, and stalled-visible-black counts were zero. Audit
+counts: 405 `idle_focus_skip_covered` events (404 `priority_queue`, one
+`deferred_far`), 86 requests from `DrainIdleFocusPendingLight` (81 coalesced,
+five inserted), and two remaining `deferred_owner_skip` records from that
+producer. The two residual records show only the post-merge band and should not
+be interpreted as redundant until pre-merge ownership is recorded.
+
+Global renderer-pixel analysis found 2,320 probes and 41 low-luma samples; all
+joined drawable opaque surfaces, five had unsettled/preview state, and none
+had a light-revision mismatch. Watching `(3,3,6)` found eight associations,
+seven depth joins, all drawable/draw-ready and matching geometry/light
+revisions, with no preview/stale-remesh state and no same-view group. Host CPU
+median/p95 was 53.6/98.7%; record as context only. No operator framebuffer
+verdict was recorded.
+
+Artifacts: report `m622bm_idle_focus_deferred_dedup_20261017.json`; perf
+`perf_20261017-111826_47516.jsonl`; INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-111822.47516`; pixel
+reports `m622bm_renderer_pixel_trace_20261017.json` and
+`m622bm_renderer_pixel_trace_watch_3_3_6_20261017.json`.
+
+### M622BN: partial-band skylight context
+
+Build and run only the established short visible M335 route; keep the world,
+start, camera, height, speed scale, and no-teleport settings unchanged:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BN `
+    -Report bin/suite_reports/engine_refactor/m622bn_skylight_band_context_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+M622BN completed 29/27 periods with process exit 0 and no timeout, but the
+runner returned 2 because this intentionally short route did not reach the west
+checkpoint; do not classify it as far-route acceptance. `sky_context` appeared
+on 206/405 nonempty snapshots (258 non-air context chunk copies total, max 3
+per job). Capture median/p95 were 0.418/1.054 ms with one 7.571 ms sample; the
+previous M622BM figures are an uncontrolled comparison. The 1,920-probe pixel
+trace found 272 samples below luma 96, all on drawable opaque depth; 52 had
+unsettled/preview light and none had a light revision mismatch. Watch
+`(3,3,6)` found seven ready/current depth joins and no same-view repeat. This
+does not establish a long-flight visual fix or an operator verdict.
+
+Artifacts: `m622bn_skylight_band_context_20261017.json`,
+`m622bn_renderer_pixel_trace_20261017.json`,
+`m622bn_renderer_pixel_trace_watch_3_3_6_20261017.json`,
+`perf_20261017-113003_13036.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-112959.13036`.
+Next inspect context memory/copy costs for worst-case center-only and 3x3
+snapshots before considering a compact occlusion representation.
+
+### M622BO: separate context-copy time from total capture wall time
+
+Repeat the M622BN short route, changing only `-PhaseId M622BO` and the report to
+`bin/suite_reports/engine_refactor/m622bo_skylight_capture_cost_20261017.json`.
+The app completed 29/27 periods with process exit 0 and no timeout; the runner
+returned 2 because focus x=-2 did not reach the west checkpoint. It is not a
+far-route acceptance run.
+
+The new `sky_context_ms` field measured 1,458 context-bearing snapshots:
+median/p95/max 0.0111/0.0152/0.1271 ms. Total copied context was 1,520 chunks,
+at most three per snapshot. A 31.7404 ms `capture_ms` sample contained only
+0.0193 ms of sky context. Period telemetry reported max capture-lock wait
+0.0005 ms and snapshot copy 1.337 ms, so neither context copying nor the global
+capture lock explains that wall sample. Do not optimize either without a
+recurrent joined measurement. Host CPU median/p95 was 48.1/72.3% and is context
+only.
+
+Artifacts: report `m622bo_skylight_capture_cost_20261017.json`; perf
+`perf_20261017-113643_2368.jsonl`; INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-113639.2368`.
+The bounded full-context upper case for one 3x3 capture is 135 chunks, about
+1.06 MiB. Static call-site review finds generic 3x3 capture on the async
+player-edit relight path; M335 exercised streaming center-column jobs. In the
+M622BO log, all 1,805 jobs started and completed, with at most two waiting and
+five live snapshots carrying four context chunks (about 32 KiB context-only).
+The Release regression also verifies nine targets plus nine upper context
+chunks, with only targets returned for apply. This does not bound memory under
+bulk-edit fan-out: the worker queue is unbounded and a denied shared work slot
+does not stop `Enqueue`. The next useful check is one bounded edit burst with
+job count and retained context bytes recorded, not another flight.
+
+### M622BQ / M622BR / M622BS — boundary relight audit and skylight seed fix
+
+Use the existing short M335 visible no-teleport route unchanged. M622BQ and
+M622BR recorded the pre-fix boundary behavior; M622BS repeated it after the
+snapshot skylight fix. Only the phase and report names differ:
+
+```powershell
+$phaseId = 'M622BS'
+$report = 'bin/suite_reports/engine_refactor/m622bs_horizontal_skylight_seed_20261017.json'
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId $phaseId `
+    -Report $report
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+For the two pre-fix diagnostics set `$phaseId` to `M622BQ` or `M622BR` and use
+reports `m622bq_relight_delta_channels_20261017.json` and
+`m622br_relight_boundary_delta_20261017.json`. M622BQ repeated the same
+blocklight-only `16->0` then `0->16` transition at `(64,54,98)` in
+`(4,3,6)`, with about 17.35 seconds between writes. M622BR repeated it with
+about 32.8 seconds between writes; adjacent `(3,3,6)` changed 106 blocklight
+voxels including 32 on its `x+` face before the target returned to level 1.
+This is evidence of boundary-light changes and delayed target refresh, not
+proof that the particular face cell caused the target change.
+
+M622BS Release verification passed. The app completed 29 periods / 27 steady
+periods without timeout but stopped at x=-2, before the west checkpoint. Its
+1,620 pixel probes had 35 luma<32 samples, all on drawable opaque surfaces;
+five were preview/unsettled and none had a light-revision mismatch. The watched
+`(3,3,6)` and `(4,3,6)` observations were drawable/current, but did not include
+a same-view before/after pair. This remains a short smoke run, not far-route or
+operator-visual acceptance.
+
+Artifacts: `m622bq_relight_delta_channels_20261017.json`,
+`m622bq_renderer_pixel_trace_20261017.json`,
+`m622bq_renderer_pixel_trace_watch_3_3_6_20261017.json`,
+`m622br_relight_boundary_delta_20261017.json`,
+`m622bs_horizontal_skylight_seed_20261017.json`,
+`m622bs_renderer_pixel_trace_20261017.json`,
+`perf_20261017-115810_29908.jsonl`,
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-115807.29908`,
+`perf_20261017-120150_42784.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-120147.42784`.
+
+### M623A: verify opt-in FramePerf logging
+
+After the Release change that disables `FramePerfMonitor` for direct game
+launches, run the same short visible M335 warm replay. The flight harness sets
+`CUBATARIUM_PERF_LOG=1` because its acceptance analysis requires the JSONL;
+direct launches leave it unset. Command parameters and environment cleanup are
+the same as M622BS, with `-PhaseId M623A` and report
+`bin/suite_reports/engine_refactor/m623a_perf_optin_m335_20261017.json`.
+
+The Release app created and analyzed
+`bin/logs/perf_20261017-121507_40184.jsonl`; 29 periods and 27 steady periods
+were available, with 16 fly periods. The no-teleport route covered eight
+chunks (`focus x=7` to `x=-1`) and exited before the west checkpoint. The
+process did not time out. The harness returned exit code 2 because existing
+renderer and stop-line acceptance gates failed; this is a short harness/metric
+smoke, not a passing engine run or far-route check. The report is
+`m623a_perf_optin_m335_20261017.json`. Host CPU and app CPU are recorded there
+for context only. Current runners also support `-DisableMetrics` / `--no-metrics`
+for visual-only route checks. Those reports say `not_evaluated_metrics_disabled`
+and do not run acceptance analysis.
+
+### M622BV: short M335 relight job correlation
+
+After adding audit-only `job_submit` events, repeat the established short
+visible M335 replay with `CUBATARIUM_RELIGHT_AUDIT=1`, the same `World_164`
+warm route, and the same camera/speed parameters used for M622BS. Set
+`-PhaseId M622BV` and report
+`bin/suite_reports/engine_refactor/m622bv_relight_job_correlation_20261017.json`.
+The process-scoped `CUBA_ALLOW_DIRTY_AF=1` override is needed only while the
+worktree is dirty and must be restored after the run.
+
+M622BV completed 29 periods / 27 steady periods without timeout, traveled from
+focus x=7 to x=-1, and did not reach the west checkpoint. The harness returned
+2 because renderer/stop-line gates failed. In the INFO log, job 161 changed
+`(64,54,98)` from blocklight 1 to 0; 525 ms later job 182 changed the adjacent
+chunk's `x+` light face. For columns `(4,6)` and `(3,6)`, queue waits peaked at
+402.467 and 661.784 ms. Targeted submit-to-apply peaked at 69.105 ms. The full
+run had 560 paired jobs (median 35.746 ms, p95 137.600 ms, max 262.919 ms).
+The run found no same-view framebuffer witness and is diagnostic only. Artifacts
+are `bin/logs/perf_20261017-123024_45676.jsonl` and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-123020.45676`;
+they remain local evidence, not committed outputs.
+
+### M623C: horizontal light-boundary dependency handoff
+
+After the M622BV job/face correlation, the apply path added a bounded relight
+request for a resident horizontal neighbor when its shared face light changes.
+Build Release, enable `CUBATARIUM_RELIGHT_AUDIT=1`, and use the established
+short visible M335 `World_164` warm route. Set `-PhaseId M623C` and report
+`bin/suite_reports/engine_refactor/m623c_boundary_dependency_20261017.json`.
+Temporarily set `CUBA_ALLOW_DIRTY_AF=1` only if the worktree is dirty, and
+restore process environment after the run. The full command and log analysis
+are in the M623C runbook entry.
+
+M623C completed 29 periods / 27 steady periods without timeout, traveled eight
+chunks (focus x=7 to x=-1), and did not reach the west checkpoint. It emitted
+nine boundary-dependency jobs and eight light deltas. Job 154 changed the
+`x-` blocklight boundary of `(4,3,6)`; the new request reached `(3,6)` 442 ms
+later, and that change queued `(4,6)` and `(3,5)`. The nine dependency jobs had
+31.160 ms median and 74.408 ms p95/max submit-to-apply. Readiness/renderer stop
+gates failed, while the near-focus visual-hole proxy stayed zero. This verifies
+the new queue handoff but not an operator-visible defect or a far-route pass.
+Artifacts remain local at `bin/logs/perf_20261017-125618_44512.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-125615.44512`,
+and `bin/suite_reports/engine_refactor/m623c_boundary_dependency_20261017.json`.
+
+### M623D: exercise the extracted face helper
+
+After extracting the horizontal boundary-face mask into
+`ChangedHorizontalLightBoundaryMask`, rebuilt the Release app and
+`relight_result_install_test`. The short visible M335 run reused M623C's warm
+`World_164` route with `-PhaseId M623D` and report
+`bin/suite_reports/engine_refactor/m623d_boundary_dependency_m335_20261017.json`.
+It completed without timeout, traveled eight chunks (x=7 to x=-1), and did not
+reach the west checkpoint. Adequacy and eye-proxy stop-lines passed, but
+post-stop convergence failed: readiness debt remained 1.0 and the missing
+mesh/readiness peak was 46. The near-focus visual-hole proxy stayed zero.
+
+M623D emitted 14 boundary-dependency jobs and 16 light deltas. In `(4,3,6)` the
+same target blocklight changed from 1 to 0, then back to 1 about 0.84 seconds
+later after its neighbor's `x+` boundary changed. There was no later light
+delta for that chunk in the short trace. One `(3,5)` dependency request was
+denied at FIFO capacity but remained deferred and later reached worker job
+444. The short two-column Release regression passes in three jobs; it does not
+cover world-scale deferred pressure. These results support the handoff and
+durable queue ownership, but do not establish global convergence or a visible
+defect. Artifacts remain local at `bin/logs/perf_20261017-130144_42972.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-130140.42972`,
+and the report above.
+
+### M623E: cold-runtime route integrity probe
+
+Repeated the short visible no-teleport M335 timing on saved `World_188` with
+relight and perf audit enabled. The loader read 121/121 spatial columns and
+generated none, but the pinned `(120,56,56)` start fell back to focus `(-3,1)`
+instead of `(7,3)`. The manifest rejected the route; do not use it as a cold
+world or M335 acceptance result. It completed 29 periods without timeout
+under high host CPU load (95.8% median / 100% p95). The INFO trace ended
+mid-record before orderly shutdown; 449 raw boundary-source events and 241
+exact captures were logged, with 198 applies paired and 43 dependency submits
+missing an apply row. Fourteen marker keys were pending at the last complete
+relevant line, but the truncated trace cannot tell whether shutdown drained
+them. Treat these values as diagnostic queue-pressure data only.
+
+The exact command and interpretation are in the M623E runbook section.
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623e_boundary_dependency_cold_runtime_m335_20261017.json`,
+`bin/logs/perf_20261017-130919_43876.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-130914.43876`.
+
+### M623F: direct dependency-marker ownership probe
+
+After adding audit-only marker counters, built Release and repeated the short
+visible no-teleport M335 route on `World_164` with the established
+30/20/8-second timings. Start integrity passed; focus moved `(7,3) -> (-1,3)`
+over 29 periods without timeout. In 1,799 complete `capture phase=end` rows,
+the marker high-water mark was 3, `boundary_without_owner` stayed zero, and
+the last complete row reported all four marker counts as zero. Seven boundary
+jobs were logged; 586 of 591 total jobs had apply records. This validates
+queue ownership for the short warm route, not global convergence.
+
+The harness remained diagnostic (`pass=false`) on readiness/eye-proxy
+stop-lines. Readiness debt was 1.0, the visual-hole proxy rate was 0.074, and
+its post-stop maximum was zero. No operator framebuffer verdict was recorded.
+The INFO trace was truncated before the normal shutdown summary, although its
+last complete queue sample showed zero boundary markers. Host CPU was 51.5%
+median / 75.0% p95 and is context only. Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623f_boundary_marker_counts_world164_m335_20261017.json`,
+`bin/logs/perf_20261017-131539_40028.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-131535.40028`.
+
+### M623G: verify the fast-exit INFO flush
+
+After `RunFlightSim` gained an explicit glog flush after
+`PrepareForShutdownFast()`, reran the short visible no-teleport M335 route on
+`World_164`. Start integrity passed, focus moved `(7,3) -> (-1,3)`, and the
+process completed 29 periods without timeout. The INFO log now has complete
+`kind=shutdown`, `WorldColumnSave`, and `shutdown_snapshot` records. The
+1,087 complete queue samples peaked at 3 dependency markers, with zero
+`boundary_without_owner` values and a final `0/0/0/0` count. Job correlation
+paired 580/583 relights; 10 paired jobs were boundary dependencies and 12
+light deltas were logged.
+
+Post-stop readiness convergence still failed (debt rate 1.0, peak count 36),
+while visual-hole proxy rate/max were zero and eye-proxy/A24 safety lines
+passed. No operator framebuffer verdict was recorded. Host CPU was 82.1%
+median / 99.3% p95 and is context only. Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623g_flush_log_shutdown_world164_m335_20261017.json`,
+`bin/logs/perf_20261017-132034_22320.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-132030.22320`.
+
+### M623H: saved-world startup cost with async chunk I/O disabled
+
+M623H used the established short visible no-teleport M335 profile on the
+alternate saved map `World_M572_Cold_20261014`, with requested start
+`(120,56,56)`, eye Y=70, yaw 180, pitch −30, 30 s fly, 20 s stop, and an 8 s
+blocked-stop threshold. Start integrity passed. Focus moved `(7,3) -> (-2,3)`
+over 29 periods without timeout. This is a saved-map runtime-load check, not a
+new-world generation test: startup read all 121/121 spatial terrain columns
+and generated zero.
+
+The startup `WorldLoadPerf` record reports `async_chunk_io=0`. Spatial column
+loading took 43.353 s; the complete startup operation took 48.219 s. The
+subsequent relight phase took about 237 ms and mesh warmup about 1.479 s. The
+recent `World_164` startup path, with async chunk I/O enabled, took roughly
+4.8–6.5 s. M623H therefore found a specific saved-world configuration and
+startup-performance problem: 121 terrain columns load synchronously when the
+persisted flag is false. The map's `world_data.json` also stores
+`async_chunk_generation=false`, `async_chunk_io=false`, `async_relight=true`,
+and four relight workers. The CLI world-creation path currently sets both
+async chunk flags false; verify whether that path persisted those settings
+before changing old-save migration or runtime defaults. This latency is not a
+renderer defect.
+
+The route remained diagnostic (`pass=false` on readiness/eye proxies), with no
+operator framebuffer verdict. Host CPU was 71.9% median / 95.7% p95 and is
+context only. The route covered about 144 blocks / nine chunks and did not
+reach the west checkpoint, so it is not a long-route streaming acceptance
+result. Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623h_seed_variant_boundary_world_m572_m335_20261017.json`,
+`bin/logs/perf_20261017-132340_38580.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-132335.38580`.
+
+### M623I: runtime async policy and CLI world-create profile
+
+After commit `c098d740`, repeated the short visible no-teleport M335 route on
+`World_M572_Cold_20261014`. The route started at the established `(7,3)` focus,
+ended at `(-2,3)`, completed 29 periods without timeout, and loaded all 121/121
+spatial columns without generation. `WorldLoadPerf` reported async generation
+and chunk I/O enabled before the spatial-column phase. Startup `spatial_chunks`
+took 923 ms and the complete load operation 5.740 s, compared with M623H's
+43.353 s / 48.219 s when the saved metadata disabled async I/O. This is a
+single diagnostic comparison, not a controlled performance benchmark.
+
+The harness remained diagnostic (`pass=false`) on readiness, eye-proxy and A24
+gates. It produced no operator framebuffer verdict; the short route does not
+certify far-flight rendering. Host CPU was 80.3% median / 94.4% p95 and is
+context only. The fixed-day harness restored `World_M572` metadata byte for
+byte after the run.
+
+The same change was checked with a separate CLI-created world
+`World_M623I_AsyncRuntimePolicy_20261017` (seed 3650482211, radius 4). Creation
+succeeded and wrote 598 chunk files. Its persisted runtime metadata correctly
+has async generation and chunk I/O enabled. The operation took 68.343 s:
+18.933 s generation (37,249/37,249 columns, one worker), 4.303 s post-create,
+11.549 s mesh warmup, 26.165 s prepare-view, plus the final save. The Release
+binary was built using `cmake --build bin --config Release --target Cubatarium
+--parallel 8`; this is build parallelism and does not imply parallel runtime
+world generation. The CLI's creation path still explicitly disables async
+generation, so generation itself remains serial. Most total wall time is in
+visual readiness phases that headless CLI generation does not need for a GUI.
+Any optimization must preserve the full lighting/data contract and remain
+isolated from normal interactive world creation.
+
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623i_async_runtime_policy_load_m335_20261017.json`,
+`bin/logs/perf_20261017-135244_29564.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-135239.29564`,
+and `bin/suite_reports/engine_refactor/m623i_async_runtime_policy_world_create_20261017.json`.
+The created world is intentionally preserved under
+`bin/worlds/World_M623I_AsyncRuntimePolicy_20261017`.
+
+### M623J: parallel CLI world generation and reloadability
+
+After commit `d42313fc`, CLI world creation uses the configured cooperative
+generation pool instead of forcing serial column generation. A separate world
+`World_M623J_ParallelCliCreate_20261017` (seed 3650482212, radius 4) completed
+successfully and wrote 690 chunk files. The creation trace reported 43,264 of
+43,264 generation columns, `async_generation=1`, and four workers; generation
+took 4.730 s. Creation through `prepare_view` took 41.222 s and the complete
+create-plus-save operation took 48.500 s. The prior M623I serial profile took
+68.343 s with 18.933 s generation. Seeds differ, so this is a useful directional
+diagnostic rather than a controlled benchmark.
+
+Persisted metadata had `async_chunk_generation=true` and `async_chunk_io=true`.
+Then `--load-world World_M623J_ParallelCliCreate_20261017` exited 0 and reported
+`load-world: PASS`, 1,038,001 non-air blocks, 338 greedy-cache entries, 333
+mesh batches, and 118,580 greedy vertices. The generated save is therefore
+loadable and produced terrain meshes on reload.
+
+Parallel generation cut its measured phase by about 75% and total
+create-plus-save wall time by about 29% relative to the M623I one-shot sample.
+Mesh warmup/prepare-view still account for roughly 33.2 s of M623J's operation;
+whether those visual phases can be skipped in CLI-only creation requires a
+separate data/lighting invariant review. Keep GUI creation unchanged until that
+review is complete. Build `--parallel 8` remains compile-time parallelism,
+distinct from the four runtime generation workers reported by this run.
+
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623j_parallel_cli_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m623j_parallel_cli_load_20261017.txt`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140016.49208`,
+and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140138.24104`.
+Preserve the generated world at
+`bin/worlds/World_M623J_ParallelCliCreate_20261017` for follow-up load checks.
+
+### M623K: headless CLI creation without render-cache warmup
+
+Commit `f17b433d` adds a separate `UWorld::CreateHeadless` path used only by
+`--create-world`. It shares the regular cooperative generation and lighting
+phases, but ends after full terrain-column and emissive relight instead of
+building nonpersistent render meshes and a camera-ready view. `UWorld::Create`
+and the interactive GUI path keep their previous mesh/view preparation.
+
+Release was rebuilt with `/p:CL_MPCount=8`; compiler response files contained
+`/MP8` and eight compiler workers ran at once. The static Windows executable
+verification passed. The new M623K save
+`World_M623K_HeadlessCreate_20261017` (seed 3650482213, radius 4) completed
+successfully with 707 chunk files and `async_chunk_generation=true`,
+`async_chunk_io=true`, `async_relight=true`. Generation used four workers and
+took 4.646 s; full creation and save took 15.217 s. No mesh cache was built
+during creation (`greedy_cache=0` at the headless completion phase). Compared
+with M623J's 48.500 s parallel create that included visual warmup, this is a
+directional diagnostic, not a controlled benchmark because the seeds differ.
+
+The generated map was then loaded through `--load-world`: exit 0, `PASS`, 121/121
+startup columns loaded with zero procedural generation, 1,295,709 loaded
+non-air blocks, mesh cache 427, 419 batches, and 192,336 vertices. The reload
+validates the startup subset and mesh readiness; it is not a full-map bytewise
+comparison. The prior `load_world_report.txt` was preserved and restored.
+
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623k_headless_cli_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m623k_headless_cli_load_20261017.txt`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142330.32200`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142358.43332`,
+and the preserved save `bin/worlds/World_M623K_HeadlessCreate_20261017`.
+
+### M624A: preserve the saved start while the terrain frontier generates
+
+Release change: `EnsurePlayerOnGround` no longer treats an incomplete user
+column as an empty, complete column and falls back to the world spawn. The
+short visible M335 replay used `World_M623K_HeadlessCreate_20261017`, start
+`(120,56,56)`, cruise eye Y 70, yaw 180, pitch -30, speed scale 1, and
+8/30/20-second idle/fly/stop phases. Start integrity passed at focus `(7,3)`;
+the route completed 144 blocks to `(-2,3)` without timeout. The requested start
+column was absent from the saved chunks. INFO events show a procedural
+`disk_miss`, generation in 260 ms, and commit in 302 ms. This is a cold streaming
+frontier within a saved world, not a wholly unsaved-world load.
+
+The product harness still returned `pass=false` on readiness/visual-hole proxy
+gates, and its manifest correctly records a dirty worktree. Treat it as a
+diagnostic start-lifecycle verification, not clean acceptance. The app-side
+pixel-grid analyzer sampled 4,320 framebuffer pixels over 48 captures. It
+found 66 unloaded-voxel rays within the 32-block fog end in four captures, at
+30.5–31.8 blocks. Those 66 pixels had mean luminance 129.554/255, zero with
+luminance <=32, one <=64, and zero with RGB max <=16. Across all samples,
+RGB-max<=8 occurred zero times. These sparse samples show no black pixel
+witness, but they do show unresolved geometry just inside the modeled fog
+horizon and do not cover the full frame.
+
+Artifacts remain local:
+
+- report: `bin/suite_reports/engine_refactor/m624a_cold_start_no_spawn_fallback_20261017.json`;
+- framebuffer analysis: `bin/suite_reports/engine_refactor/m624a_framebuffer_pixel_analysis_20261017.json`;
+- perf log: `bin/logs/perf_20261017-143427_44800.jsonl`;
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-143423.44800`;
+- world: `bin/worlds/World_M623K_HeadlessCreate_20261017`.
+
+### M624B: cold saved-view first-paint ordering
+
+On a fresh radius-4 saved map, the start column `(7,0,3)` was absent from disk.
+All `121/121` spatial startup columns were visited, but the camera column was
+not requested until after `phase=first_paint`. `GetEnterWarmupFocusBlock()` was
+then changed to follow the saved/current user position during entry warmup.
+This is separate from the M624A player-retention fix.
+
+### M624C: first-paint still preceded terrain commit
+
+The clean Release replay used new seed `3650482215`, the same M335 camera and
+8/30/20-second phases. Route integrity passed from focus `(7,3)` to `(-2,3)`
+over 144 blocks. The focus change moved the request before first paint, but not
+the terminal result: request submitted at 14:47:23.129, first paint at
+14:47:23.176, worker finished at 14:47:23.256, and commit at 14:47:23.372.
+M624D below adds and verifies the generation/commit barrier. The product
+report failed readiness/visual-hole proxies, so this is diagnostic evidence
+only.
+
+The sparse pixel grid sampled 5,460 points over 59 captures and found 58
+unloaded-voxel rays within modeled fog end. None were RGB-max<=16; two had
+luminance<=32. This is not a full-frame defect witness. The 206 MB perf trace
+and high host CPU from this short run are not performance acceptance evidence.
+
+### M624C: verify metrics-off mode and isolated artifacts
+
+After M624C had generated/saved its start frontier, the same short visible route
+was repeated with `-DisableMetrics`. It traversed nine chunks from `(7,3)` to
+`(-2,3)`, process exit was 0, and the report explicitly states
+`not_evaluated_metrics_disabled`. It recorded 0 host samples and no FramePerf
+JSONL. The INFO log and app report were written under
+`artifacts/research/rendering/m624c_no_metrics_route_20261017/`; the control
+report remains at `bin/suite_reports/engine_refactor/`. This verifies the
+toggle and artifact-root behavior; it is not a product gate or cold-frontier
+check.
+
+The M335 wrapper defaults to
+`artifacts/research/rendering/<phase-id>/`; override it with `-ArtifactRoot`.
+The wrapper defaults to an operator-visible route without metrics. For a
+diagnostic run, pass `-EnableMetrics` and use a named phase ID so the manifest,
+INFO log, perf JSONL, and any explicitly requested captures remain associated.
+
+### M624D: cold focus terrain committed before first paint
+
+On fresh radius-4 seed `3650482216`, the saved M335 focus `(7,3)` had no terrain
+column on disk. The short visible route ran with FramePerf and host resource
+sampling disabled; only `CUBA_WORLD_COLUMN_SOURCE_TRACE` was explicitly
+enabled. Source order was request `123` at 15:09:05.920, worker finish at
+15:09:06.116, terrain commit at 15:09:06.190, cooperative gate settle at
+15:09:18.484, app gate settle at 15:09:23.376, and first paint at 15:09:23.496.
+The new pre-gate terrain barrier therefore moved first paint about 17.3 seconds
+past commit. The GUI was visible/responding; route integrity passed from
+`(7,3)` to `(-3,3)` over 10 chunks, without collision. It completed 3,136
+frames / 58 requested in-game seconds with process exit 0. The report is
+`not_evaluated_metrics_disabled`; this is lifecycle evidence only, not a visual
+or performance acceptance run.
+
+Artifacts: control report
+`bin/suite_reports/engine_refactor/m624d_clean_cold_focus_barrier_20261017.json`,
+create report `bin/suite_reports/engine_refactor/m624d_cold_world_create_20261017.json`,
+INFO trace
+`artifacts/research/rendering/m624d_cold_focus_barrier_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-150858.31160`,
+and saved world `bin/worlds/World_M624D_EnterBarrier_20261017`.
+
+### M624H — identify relight-debt predicates at eviction
+
+The opt-in unload trace now spells out each `needs_relight` source, including
+pending-light notes, `ColumnRecord` state and obligation, deferred owners,
+flow repair tickets, and disk/generation requests. Release build passed.
+The established visible no-teleport M335 replay on `World_164` ran with
+15/30/20-second idle/fly/stop phases, the unchanged `(120,56,56)` start, eye Y
+70, yaw 180, pitch -30, and speed scale 1. It covered eight chunks in 2,522
+frames with no collision; process exit was 0. Metrics were disabled.
+The run manifest records the diagnostic source diff, so this is not clean-
+commit acceptance evidence.
+
+There were 66 evictions, one carrying `relight_deferred_far=1`. That column
+`(7,8)` had a `visible_exact_replacement` deferred owner, `light_complete=0`
+before/after invalidation, and the owner was removed by the eviction callback.
+The record was `Publishing` / `LegalDark` with a live mesh token. This run had
+five FIFO denials but none from `boundary_dependency`; it did not exercise the
+full boundary-denial, deferred, eviction, and reload chain. The previous M624G
+debt rows cannot be called ownerless because its trace lacked these detailed
+predicates.
+
+Report: `bin/suite_reports/engine_refactor/m624h_owner_source_unload_20261017.json`.
+Preserved INFO log and report:
+`artifacts/research/rendering/m624h_owner_source_unload_20261017/`.
+
+### M624I — boundary denial, deferred owner, and reversal diagnostic
+
+Added `relight_boundary_dependency` to the unload trace. The Release run used
+the usual visible no-teleport M335 settings on `World_164`, with a course
+reversal after 15 seconds so the route returned toward already-streamed
+terrain. It ran 2,243 frames but ended at its original focus `(7,3)` with zero
+net chunks traveled; process exit was 1, so route integrity failed. Metrics
+were disabled and this is not acceptance evidence.
+
+There were 29 evictions and 24 FIFO denials. Boundary request `(4,5)` was denied
+at revision 116, retained in DeferredFar, readmitted about 42 ms later, captured
+with `boundary_exact=1`, submitted as `source=boundary_dependency`, and
+finalized at revision 123. No eviction carried a boundary marker or deferred
+owner; no reload was observed.
+
+The trace also recorded 1,430 relight jobs and 924 identical settled reports
+for slice `(2,2,7)` (`installed=0`, `satisfying=1`, settled `1:1`, published /
+meshed light revision 1). M624G's straight M335 route had 1,073 similarly
+settled reports for this same slice. Investigate redundant relight admission
+before treating relight queue volume as productive work.
+
+Report: `bin/suite_reports/engine_refactor/m624i_boundary_owner_reload_20261017.json`.
+Preserved INFO log and report:
+`artifacts/research/rendering/m624i_boundary_owner_reload_20261017/`.
+
+### M624J–M624L — repeated no-op relight investigation
+
+Use the existing runner; do not create a separate input script. All three runs
+used the saved `World_164`, visible GUI, no teleport, metrics disabled, and
+`CUBATARIUM_RELIGHT_AUDIT=1`. The M624J route used the established M335 profile
+with 8/30/20-second idle/fly/stop phases. M624K and M624L used the same start,
+camera, yaw, pitch, and speed with a shorter 8/20/10-second route. The shorter
+duration changes only how long the route runs, not its capture conditions.
+
+Example command for the M624L repeat (Release executable must already be
+built; `CUBA_ALLOW_DIRTY_AF=1` is required because this is a diagnostic source
+diff, not clean-commit acceptance):
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+$env:PYTHONIOENCODING='utf-8'
+python .\tools\flight_sim_run.py `
+  --world World_164 --require-existing-world `
+  --scenario product-174657-far `
+  --product-start-position 120 56 56 --yaw 180 --pitch -30 `
+  --idle-sec 8 --fly-phase-sec 20 --stop-phase-sec 10 `
+  --stop-after-blocked-sec 6 --visible --no-metrics `
+  --phase-id m624l_legal_dark_noop_suppression_20261017 `
+  --report bin/suite_reports/engine_refactor/m624l_legal_dark_noop_suppression_20261017.json `
+  --artifact-root artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017
+```
+
+The opt-in producer trace includes branch reason, `defer`, first-mesh/preview
+state, fully-dark and stale-dark predicates, open-sky state, field/published/
+meshed light revisions, and the legal-dark-current decision. Compare the
+following records with PowerShell (set `$log` to the INFO log under that run's
+artifact root):
+
+```powershell
+Select-String -Path $log -Pattern 'relight_admission event=queue_request.*column=\(2,7\)' |
+  Measure-Object
+Select-String -Path $log -Pattern 'job_submit.*column=\(2,7\).*band=32:47' |
+  Measure-Object
+Select-String -Path $log -Pattern 'slice job=.*coord=\(2,2,7\)' |
+  Measure-Object
+```
+
+M624K showed 176 submissions for `(2,7)` band `32:47` and 177 slice reports
+for `(2,2,7)`. M624L showed zero submissions for that band and one slice
+report after the current legal-dark guard. Both runs completed 1,167 frames,
+traveled five chunks, had no collision, and disabled performance gates. Keep
+both suite reports and INFO logs; the comparison demonstrates suppression of
+this specific repeated no-op loop, not visual or performance acceptance.
+
+Artifacts:
+
+- M624J: `artifacts/research/rendering/m624j_visible_relight_producer_20261017/`
+- M624K: `artifacts/research/rendering/m624k_visible_relight_trigger_20261017/`
+- M624L: `artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017/`
+
+### M624M — short open-sky/stale-dark check after the legal-dark guard
+
+This replay uses the existing M335 wrapper and the established M622G
+`World_M613A_Cold_FlagLifecycle_20261016` start and camera. The world is now a
+saved warm-cache load. Only the route duration is shorter (8/30/20 seconds).
+`-DisableMetrics` turns off perf/disk metrics and the higher-volume visual
+traces; `CUBATARIUM_RELIGHT_AUDIT` remains enabled to retain open-sky, queue,
+and stale-light lifecycle records.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:PYTHONIOENCODING='utf-8'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -RequireExistingWorld `
+  -DisableMetrics -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 8 `
+  -PhaseId m624m_open_sky_legal_dark_guard_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624m_open_sky_legal_dark_guard_20261017.json `
+  -ArtifactRoot artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017
+```
+
+### M624N–M624O — inspect OpenSky at relight terminal
+
+The demand-admission trace is too late to prove the startup OpenSky decision:
+`EndEnterLitGate()` resets `EnterVisualGateCtrl`, while the queued relight result
+is classified later in `MarkRelitInstall`. M624O adds the opt-in
+`relight_terminal event=open_sky_dark` record at that decision point. It is
+emitted only when OpenSky is still marked and the relight contains a fully-dark
+slice; each slice records mesh/field light revisions and stale state.
+
+Use the saved world, known camera and speed, and short M335 route. The start is
+aligned to the previously observed startup OpenSky column `(-3,6)`; speed,
+altitude, yaw, pitch, and streaming mode remain as established.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:PYTHONIOENCODING='utf-8'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -RequireExistingWorld `
+  -DisableMetrics -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -48 -StartY 56 -StartZ 96 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 8 `
+  -PhaseId m624o_open_sky_terminal_trace_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624o_open_sky_terminal_trace_20261017.json `
+  -ArtifactRoot artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017
+```
+
+Count terminal witnesses and the exact equal-revision branch with:
+
+```powershell
+$log = 'artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-160442.49796'
+Select-String -Path $log -Pattern 'relight_terminal event=open_sky_dark'
+Select-String -Path $log -Pattern 'relight_terminal event=open_sky_dark.*equal_rev_fd=1'
+```
+
+M624O completed 2,961 frames / ten chunks without collision and recorded one
+OpenSky fully-dark terminal witness. It was stale (`equal_rev_fd=0`) and chose
+`repair_once=1`, `settled=0`, obligation `LightRepair`; the exact equal-revision
+case did not occur. M624N ran the same route shape without the terminal trace;
+its later demand admissions had `open_sky=0` after the enter-gate marker reset.
+Preserve both runs under
+`artifacts/research/rendering/m624n_open_sky_direct_gate_20261017/` and
+`artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017/`.
+
+M624M completed 3,074 frames and traveled ten chunks from focus `(-2,3)` to
+`(-12,3)`, with no collision. It logged one open-sky application changing two
+slices, eight stale-dark admissions (`stale_dark=1`), and stale-light debt for
+`(3,3,1)` that published at the current light revision. It had no admission
+with `open_sky=1`, so use it to verify stale-dark repair and open-sky dependent
+work, not the equal-revision open-sky gate itself. Report and trace are kept in
+`artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`.
+
+### M624Q: metrics policy checkpoint and active evidence gaps
+
+The flight runner now defaults to an uninstrumented route: FramePerf collection,
+`perf_*.jsonl` disk writes, and host-resource polling are off unless
+`--metrics` is supplied. `--no-metrics` remains an explicit alias. Collection
+and disk output remain coupled because `FramePerfMonitor` gates both through
+one environment switch and does not expose a lightweight memory-only mode.
+Metric-consuming entry points (`flight_sim_suite`, `flight_sim_eval`,
+`flight_sim_iterate`, `perf_capture`, and GPU/bakeoff phase runners) now pass
+`--metrics`. The M335 wrapper opts in only with `-EnableMetrics`; otherwise it
+also disables its source/pixel/fluid traces and passes `--no-metrics`.
+
+Use a short route without metrics for operator-visible checks. Use `--metrics`
+only for a named diagnostic run whose analysis needs the perf stream. The
+equal-revision OpenSky fully-dark decision, complete boundary-denial/deferred/
+eviction/reload chain, a distant disk-miss lane, and a fresh-world lifecycle
+check remain open plan items. M624R's short warm route had no disk or procedural
+source requests and cannot close the distant lane. Recent operator reports show
+normal world and water appearance, but M624R captured no operator framebuffer
+verdict; its proxy signals are not themselves a visual failure. Do not schedule
+long operator-monitoring flights.
+
+M624S verified the default metrics-off wrapper on the same short 8/30/20-second
+M335 route: focus `(7,3) -> (-1,3)`, eight chunks, 58 in-game seconds, no
+collision or timeout, zero host samples, and no perf JSONL. Startup still had
+no chunk-file reads or procedural generation; this checks the runner contract
+and route integrity only, not distant streaming or the actual framebuffer
+image. Report and isolated INFO log are under
+`artifacts/research/rendering/m624s_closeout_metrics_off_m335_short_20261017/`.
+
+### M624T — short GUI route for the rejected sticky-LightRepair candidate
+
+Reproduce the launch/route check on the saved warm world. It is intentionally
+metrics-off and short; it does not target the rare OpenSky equal-revision
+transition and should not be used as distant-streaming acceptance.
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -World World_164 `
+  -StartX 120 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624t_sticky_light_repair_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624t_sticky_light_repair_short_20261017.json
+```
+
+M624T traversed from focus `(7,3)` to `(-2,3)` over nine chunks without
+collision or timeout. Metrics were disabled; startup had no disk reads or
+procedural generation, so only launch and route integrity were checked. The
+run used a dirty Release build containing a candidate sticky-obligation change;
+that source change was reverted after review found it could remint Dirty
+indefinitely for a legal-dark cave. The candidate policy test passing is not
+acceptance. The exact runtime OpenSky equal-revision and distant-source gates
+remain open. Report and INFO log are under
+`bin/suite_reports/engine_refactor/m624t_sticky_light_repair_short_20261017.json`
+and `artifacts/research/rendering/m624t_sticky_light_repair_short_20261017/`.
+
+### M624U — source-only short M335 lane outside the startup ring
+
+This route keeps the established world, start, camera, speed, and no-teleport
+settings. It extends only the fly phase to 60 seconds so the camera crosses the
+resident startup ring. `-EnableSourceTrace` records disk/procedural source
+events while FramePerf, perf JSONL, host sampling, pixel trace, and fluid trace
+stay disabled.
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_164 -StartX 120 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 60 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624u_source_only_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624u_source_only_m335_short_20261017.json
+```
+
+M624U completed from focus `(7,3)` to `(-11,3)` over 18 chunks, without
+collision or timeout. The trace recorded 288 disk requests/completions, all
+with persisted light valid, and no procedural generation completion. It
+reported five ChunkIO workers (four load, one background), disk-read p95
+3.42 ms, request-to-result p95 1.624 s, and a maximum one-column elapsed wait
+of 8.18 s; ready-load/pending-disk high water was 416/105 and drained at exit.
+No framebuffer verdict was captured. Artifacts:
+`bin/suite_reports/engine_refactor/m624u_source_only_m335_short_20261017.json`
+and `artifacts/research/rendering/m624u_source_only_m335_short_20261017/`.
+
+### M624V — cold-seed source-only frontier witness
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_M624D_EnterBarrier_20261017 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624v_cold_seed_source_frontier_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624v_cold_seed_source_frontier_m335_short_20261017.json
+```
+
+M624V used the fresh-seed `World_M624D_EnterBarrier_20261017` with the
+established start/camera/speed and metrics off. It traveled `(7,3)` to
+`(-3,3)` over 10 chunks with no collision or timeout. Trace counts were 180
+disk completions, 108 procedural disk misses, 82 procedural worker finishes,
+and 78 commits. Generation p95 was 233 ms, while scheduler/worker queue p95
+was 5.13 s and ready-to-commit p95 was 6.58 s. The shutdown snapshot retained
+one generating and three ready items, so it does not prove queue drain. There
+is no pixel/framebuffer verdict. Report and INFO log are under
+`bin/suite_reports/engine_refactor/m624v_cold_seed_source_frontier_m335_short_20261017.json`
+and `artifacts/research/rendering/m624v_cold_seed_source_frontier_m335_short_20261017/`.
+
+### M624W–M624Y — scheduler budget progress probes
+
+These use the same visible, no-teleport M335 start/camera/speed on
+`World_M624D_EnterBarrier_20261017`, with source tracing on and performance,
+host, pixel, and fluid metrics off. The only route difference is the fly
+duration: W and X used 60 seconds to cross the resident ring; Y used the
+short 30-second route. The source trace adds sparse
+`scheduler_budget_limited_tick` events; it does not sample frames.
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_M624D_EnterBarrier_20261017 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624y_budget_progress_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624y_budget_progress_m335_short_20261017.json
+```
+
+The corresponding IDs/reports are `m624w_budget_skip_trace_m335_short_20261017`
+and `m624x_budget_admission_m335_short_20261017` (both with
+`-FlyPhaseSeconds 60`), then `m624y_budget_progress_m335_short_20261017`.
+W sampled the unstarted scheduler queue; X isolated worker admission but left
+ready commits stalled; Y includes one bounded ready-result commit. Y completed
+58 in-game seconds / 10 chunks without collision, recorded 115 procedural
+commit events, reduced ready-wait p95 to 35.8 ms, and drained the source
+queues at exit. It reused a world modified by earlier runs, so it is a
+mechanism check rather than a fresh-seed visual acceptance run. Reports and
+logs live under `bin/suite_reports/engine_refactor/` and the matching
+`artifacts/research/rendering/m624w_*`, `m624x_*`, and `m624y_*` folders.
+M624Z repeated Y after the final Release rebuild with the same 30-second
+route, using phase/report ID `m624z_final_budget_progress_m335_short_20261017`.
+It completed 10 chunks without collision, recorded 82 procedural commit
+events, ready-wait p95 33.2 ms, and a zero-work shutdown snapshot. This final
+rerun checks the shared helper refactor; it remains a warm-route mechanism
+check without a framebuffer verdict. Its report and log are under
+`bin/suite_reports/engine_refactor/m624z_final_budget_progress_m335_short_20261017.json`
+and `artifacts/research/rendering/m624z_final_budget_progress_m335_short_20261017/`.
+
+### M624AA–M624AB — cold-seed bounded-progress check
+
+M624AA created a new radius-4 world; use a unique absent world name so an
+existing save is never overwritten. M624AB flew the same established M335
+route with metrics off and source tracing on.
+
+```powershell
+Push-Location bin
+try {
+  .\Cubatarium.exe --console --create-world `
+    --name World_M624AA_BudgetFix_20261017 --seed 3650482220 `
+    --radius-chunks 4 --output worlds `
+    --report-json suite_reports/engine_refactor/m624aa_cold_budget_fix_world_create_20261017.json
+} finally { Pop-Location }
+
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_M624AA_BudgetFix_20261017 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624ab_cold_budget_fix_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624ab_cold_budget_fix_m335_short_20261017.json
+```
+
+The start column `(7,0,3)` was absent from the generated radius and committed
+17.25 s before first paint. The route completed nine chunks without collision;
+98 procedural request/finish/commit events drained at shutdown. Queue p95s
+were 581 ms for scheduler admission, 891 ms for the worker pool, and 3.08 s
+from worker completion to commit. No metrics/pixel verdict was collected, so
+this closes only fresh-seed source and enter-order behavior. Artifacts:
+`bin/suite_reports/engine_refactor/m624aa_cold_budget_fix_world_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m624ab_cold_budget_fix_m335_short_20261017.json`,
+`artifacts/research/rendering/m624ab_cold_budget_fix_m335_short_20261017/`,
+and `bin/worlds/World_M624AA_BudgetFix_20261017`.
+
+### M624AC — short cold-frontier metrics run and its limits
+
+M624AC is an example of a deliberately short metrics-enabled cold run, not an
+operator-visible acceptance run. It used a new radius-4 world
+`World_M624AC_ColdFrame_20261017` (seed `3650482221`), M335 pinned start and
+8/30/20 timing, visible no-teleport movement, source trace plus FramePerf
+metrics, and no pixel/black or fluid trace. The `flight_sim_run.py` invocation
+was direct (with the `--metrics` option) so unrelated pixel/fluid collectors
+did not run. See its run manifest in
+`bin/suite_reports/engine_refactor/m624ac_cold_frame_m335_short_20261017.json`
+and raw files under
+`artifacts/research/rendering/m624ac_cold_frame_m335_short_20261017/`.
+
+Host CPU p95 was 94%, so this run is not performance evidence. It reached only
+`(-2,3)` vs. the `(-3,3)` west target. The process succeeded, but proxy-based
+analyzer gates failed; since there is no framebuffer capture/operator verdict,
+those values cannot establish a visible hole or black chunk. Preserve the
+distinction among process/route outcome, source lifecycle, load validity, and
+visual acceptance in future reports. Avoid repeating long flights for this;
+use the established short route with only the required trace channels enabled.
+
+### M624AD — per-slice OpenSky repair publication check
+
+Run the established short visible route with metrics off. Set and restore the
+extra audit environment variable explicitly; the wrapper does not own it:
+
+```powershell
+$oldRelightAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$oldDirtyAf = $env:CUBA_ALLOW_DIRTY_AF
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+    -World World_M624AC_ColdFrame_20261017 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+    -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 `
+    -PhaseId m624ad_open_sky_slice_repair_m335_short_20261017
+} finally {
+  if ($null -eq $oldRelightAudit) {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  } else {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $oldRelightAudit
+  }
+  if ($null -eq $oldDirtyAf) {
+    Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue
+  } else {
+    $env:CUBA_ALLOW_DIRTY_AF = $oldDirtyAf
+  }
+}
+```
+
+The Release source tree subsequently recorded as `771ab0f3` gives each
+qualifying slice a capture-scoped OpenSky repair event and completes it only
+after a newer attempt publishes newer geometry at or beyond the target light
+revision. The report manifest says `git_sha=unknown`, so it is not a source
+revision attestation. M624AD completed 3,569 frames
+and 58 requested in-game seconds, from focus `(7,3)` to `(-2,3)` over nine
+chunks, with no collision, heading deviation, or clock gap. No metrics or
+framebuffer/pixel trace were collected. The INFO trace has 35
+`relight_terminal event=open_sky_dark` observations; all 35 stayed pending, and
+none reported a matching publication. Slice `(9,2,4)` was dirty but not
+in-flight or GPU-pending at its last observation. Thus the route verifies that
+the obligation survives gate reset, but does not prove a near-visible repair
+publishes or show an operator-visible defect. Report and INFO log are in
+`artifacts/research/rendering/m624ad_open_sky_slice_repair_m335_short_20261017/`.
+
+M624AE added dirty queue fields to `slice job` snapshots, but those snapshots
+run before the install planner's dirty admission. M624AF therefore records
+`open_sky_repair_admit` immediately after `MarkDirty` and remesh promotion.
+Reuse the same command above, changing the phase to
+`m624af_open_sky_repair_owner_m335_short_20261017`; metrics remain disabled.
+M624AF completed 3,298 frames / 58 seconds and nine chunks without collision or
+heading deviation. It recorded 28 post-admission repairs: 22 priority-remesh
+queue entries (kind 2) and 6 ordinary-remesh entries (kind 3), all dirty, with
+queue age 0–43 frames. For `(5,2,1)`, admission had target light revision 2 and
+published geometry 1; a later snapshot showed geometry 3/light 2 and `dirty=0`,
+consistent with the required queue-to-publication sequence. The trace does not
+emit the repair attempt id or explicit `repair_published=1` transition, so add
+that small diagnostic before treating all lifecycle states as fully evidenced.
+M624AE and M624AF reports and
+INFO logs are under their same-named folders in `artifacts/research/rendering/`.
+
+### M624AG — boundary dependency eviction owner check
+
+Run the same pinned route with both relight and unload ownership traces; save
+and restore all environment variables explicitly:
+
+```powershell
+$oldRelightAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$oldDirtyAf = $env:CUBA_ALLOW_DIRTY_AF
+$oldUnloadTrace = $env:CUBA_STREAMER_UNLOAD_TRACE
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+$env:CUBA_STREAMER_UNLOAD_TRACE = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+    -World World_M624AC_ColdFrame_20261017 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+    -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 `
+    -PhaseId m624ag_boundary_owner_eviction_m335_short_20261017
+} finally {
+  if ($null -eq $oldRelightAudit) { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  else { $env:CUBATARIUM_RELIGHT_AUDIT = $oldRelightAudit }
+  if ($null -eq $oldDirtyAf) { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+  else { $env:CUBA_ALLOW_DIRTY_AF = $oldDirtyAf }
+  if ($null -eq $oldUnloadTrace) { Remove-Item Env:CUBA_STREAMER_UNLOAD_TRACE -ErrorAction SilentlyContinue }
+  else { $env:CUBA_STREAMER_UNLOAD_TRACE = $oldUnloadTrace }
+}
+```
+
+M624AG completed 3,552 frames / 58 seconds, nine chunks, no collision, and no
+teleport. Boundary FIFO denials were present. For `(7,11)`, the log shows a
+boundary-exact capture, then deferred-far ownership; eviction of `(7,0,11)`
+reported both deferred-far and boundary-dependency ownership, kept
+`needs_relight=1`, cancelled two relight requests, and left `light_complete=0`
+through unload. Metrics/pixel capture were off. Same-column reload did not
+occur on this route; M624I is the separate denial/defer/re-admit/finalize
+witness. Report and INFO trace:
+`artifacts/research/rendering/m624ag_boundary_owner_eviction_m335_short_20261017/`.
+
+### M624AH — cold-seed FramePerf lane (metrics enabled for one run)
+
+Create a new unique radius-4 seed with the Release CLI, verify its
+`--report-json` and chunk files, then run the established short M335 profile:
+
+```powershell
+$oldDirtyAf = $env:CUBA_ALLOW_DIRTY_AF
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EnableFogPullIn -EnableMetrics -RequireExistingWorld `
+    -World World_M624AH_ColdFrame_20261017 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+    -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 `
+    -PhaseId m624ah_cold_frame_m335_short_20261017 `
+    -Report bin/suite_reports/engine_refactor/m624ah_cold_frame_m335_short_20261017.json
+} finally {
+  if ($null -eq $oldDirtyAf) { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+  else { $env:CUBA_ALLOW_DIRTY_AF = $oldDirtyAf }
+}
+```
+
+M624AH seed `3650482222` created 679 chunk files. The flight completed 4,047
+frames / 58 seconds and ten chunks, reaching `(-3,3)` without collision or
+heading drift. The start focus column was a procedural miss; 268 misses were
+recorded. Host CPU median/p95/max was `70.9/93.8/98.9%`, so frame timings are
+load-contaminated. Analyzer readiness debt stayed high, but near-focus mesh
+proxy rate was 0.037 and black proxy rate zero; no pixel or operator verdict
+was collected. The wrapper restores metrics off by default after the run.
+Artifacts:
+`bin/suite_reports/engine_refactor/m624ah_cold_frame_world_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m624ah_cold_frame_m335_short_20261017.json`,
+`artifacts/research/rendering/m624ah_cold_frame_m335_short_20261017/`.
+
+### M624AI — warm M335 route with sparse RGBA probes
+
+Use the established route unchanged. `-EnableScreenRayPixelProbes` requires
+`-EnableMetrics`; metrics are enabled for this invocation only and the wrapper
+restores the prior process environment and config afterward.
+
+```powershell
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableMetrics `
+  -EnableScreenRayPixelProbes -World World_M624AH_ColdFrame_20261017 `
+  -ProbeMinCameraX -96 -ProbeMaxCameraX 160 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624ai_framebuffer_pixel_witness_m335_short_20261017
+```
+
+M624AI completed 5,141 frames / 58 requested seconds, ten chunks, and no
+collision or route deviation. Host CPU median/p95/max was `32.3/77.2/83.6%`,
+so it is not a performance baseline. The JSONL contains 3,540 direct RGBA
+framebuffer samples from 44 probe events at 100 unique positions; none had all
+RGB channels below 12. This is sparse sample evidence, not a full-frame or
+operator verdict. All 25 `screen_ray_candidate_trace` rows were unselected, so
+no pixel was tied to a selected world-geometry ray. `visual_holes_rate` and
+black proxy were zero while readiness debt was 1.0 and analyzer `pass=false`.
+Do not interpret that proxy failure as a visible hole. M624AI ran on the warm
+M624AH world and does not replace a clean-load cold-frontier run. Metrics are
+off by default. Preserve the route report and log folder at
+`artifacts/research/rendering/m624ai_framebuffer_pixel_witness_m335_short_20261017/`.
+
+### M624AJ — explicit OpenSky repair publication witness
+
+The implementation now records `open_sky_repair_published` in the opt-in
+demand-transition JSONL exactly when the per-slice publication predicate
+closes. The event includes the OpenSky event/target, baseline and published
+attempt IDs, and baseline/published geometry and light revisions. Metrics must
+be enabled for a persisted trace. For a dirty checkout, temporarily set
+`CUBA_ALLOW_DIRTY_AF=1` as shown in the runbook and restore its previous value.
+
+M624AJ completed 3,441 frames / 58 seconds and nine chunks on the warm
+M624AC world, with no collision, heading deviation, teleport, or clock gap.
+It emitted 33 explicit close events for event ID 5; every event satisfied the
+attempt, geometry, and light revision predicate. Host CPU median/p95/max was
+`48.1/80.9/86.1%`; analyzer readiness debt remained 1.0, but visual-hole and
+black proxies were zero. `pass=false` does not establish a visible defect.
+Artifacts are under
+`artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.
+
+### M624AK — cold-frontier framebuffer, water, and light-revision correlation
+
+Release CLI created the unique radius-4 world
+`World_M624AK_ColdPixel_20261017`, seed `3650482223`, with 695 chunk files and
+four generation workers. The established M335 focus column `(7,0,3)` was a
+procedural disk miss. Source trace totals: 230 procedural misses, 130 disk
+queue/completion pairs, 148 procedural commits.
+
+World-create command used (run once per unique world name):
+
+```powershell
+.\Cubatarium.exe --console --create-world --seed 3650482223 `
+  --name World_M624AK_ColdPixel_20261017 --radius-chunks 4 `
+  --preset balanced `
+  --report-json suite_reports/engine_refactor/m624ak_cold_frontier_pixel_world_create_20261017.json
+```
+
+The report JSON was not present after this invocation; the matching INFO log
+records successful creation, `generation_workers=4`, and all
+`generation_columns=43264/43264`. Treat that INFO log and the 695 chunk files as
+the creation evidence.
+
+Exact short visible no-teleport route (same established start and camera):
+
+```powershell
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableMetrics `
+  -EnableScreenRayPixelProbes `
+  -World World_M624AK_ColdPixel_20261017 `
+  -ProbeMinCameraX -96 -ProbeMaxCameraX 160 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624ak_cold_frontier_pixel_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624ak_cold_frontier_pixel_m335_short_20261017.json
+```
+
+The route completed 3,669 frames / 58 requested seconds and reached focus
+`(-2,3)` from `(7,3)` without collision, heading drift, or teleport; it did not
+reach west focus `(-3,3)`. Analyzer `pass=false` because readiness debt remained
+and route coverage was short. It reported `visual_holes_rate=0` and zero
+post-stop visible-black proxy, while 39 focus-ring missing-mesh obligations
+remained. Keep these readiness signals separate from sampled pixels.
+
+Offline analysis commands and outputs:
+
+```powershell
+python tools/analyze_renderer_pixel_trace.py `
+  artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/logs/perf_20261017-202316_45828.jsonl `
+  --threshold 60 `
+  --json-out artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/renderer_pixel_analysis.json
+python tools/analyze_water_surface_pixel_join.py `
+  artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/logs/perf_20261017-202316_45828.jsonl `
+  bin/worlds/World_M624AK_ColdPixel_20261017 `
+  --min-camera-x -96 --max-camera-x 160 `
+  --json-out artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/water_surface_pixel_join.json
+```
+
+The pixel analyzer found 3,200 framebuffer samples, no all-channel RGB below
+12, and 190 samples below luma 60; all 190 had drawable opaque depth surfaces.
+All 66 samples with stale published-light revisions matched ready water
+triangles over submerged terrain. Of those, 28 changed RGB and 58 changed RGBA
+after the transparent pass. None of the 176 low-luma samples whose RGB stayed
+unchanged had an opaque light-revision mismatch. The water join independently
+found 1,317 ready source-triangle matches, 891 with post-transparent RGB
+change, and matching GPU source/index payloads in selected water-batch
+readbacks. This is positive cold-frontier sampled evidence, not a full-frame
+visual guarantee. The analyzer outputs, route report, and 222.9 MB perf trace
+are preserved under
+`artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/`.

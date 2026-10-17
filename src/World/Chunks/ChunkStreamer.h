@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <glm/glm.hpp>
@@ -93,14 +94,15 @@ struct StreamingFrameStats
 class UChunkStreamer
 {
 public:
-  using LoadChunkFn = std::function<bool(glm::ivec3)>;
+  using LoadChunkFn = std::function<bool(glm::ivec3, uint64_t demand_id)>;
   using SaveChunkFn = std::function<void(glm::ivec3)>;
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
   /// Return false to refuse unload this frame (chunks stay loaded).
   using UnloadColumnFn = std::function<bool(glm::ivec3 ground, int max_cy)>;
   using GenerateColumnFn = std::function<void(int x, int z)>;
-  using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
+  using RequestAsyncChunkFn =
+      std::function<void(glm::ivec3, int priority, uint64_t demand_id)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
   using IsColumnPendingFn = std::function<bool(glm::ivec3)>;
   /// True while column awaits first light before mesh (visual hole).

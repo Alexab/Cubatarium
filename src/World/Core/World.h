@@ -117,8 +117,9 @@ struct FocusRingVisualCensus
   std::array<int, static_cast<size_t>(FocusColumnVisualClass::Count)> counts{};
 
   /// Bounded diagnostic census of actual voxel occupancy and mesh readiness.
-  /// Populated only when CUBA_VISUAL_BLACK_TRACE is enabled for a flight.
+  /// Sampled at a bounded cadence when CUBA_VISUAL_BLACK_TRACE is enabled.
   bool data_mesh_valid{false};
+  uint64_t data_mesh_sample_age_frames{0};
   int resident_solid_slice_n{0};
   int resident_air_slice_n{0};
   int absent_slice_n{0};
@@ -174,6 +175,7 @@ class UWorldMeshService;
 class UChunkStorageService;
 class UWorldPersistence;
 class UWorldStreaming;
+class UChunkEmergeCoordinator;
 class IUPhysicsScheduler;
 class UWorldBlockPhysicsService;
 class UWorldMovementPhysicsService;
@@ -314,6 +316,8 @@ public:
   void ApplyGameModeLocomotionPolicy();
 
   void Create(const std::string &world_name);
+  /// Create world data for CLI/tools without building render meshes or view readiness.
+  void CreateHeadless(const std::string &world_name);
   void Load(const std::string &world_folder_path);
   void Save(const std::string &world_folder_path);
   /// Fast save for exit/autosave: metadata plus modified terrain only.
@@ -329,7 +333,8 @@ public:
   void BeginCooperativeSave(const std::string &world_folder_path,
                             bool resume_streaming_after_save = true);
   bool TickCooperativeSave(class IUProgressSink &sink, int chunkBudget);
-  void BeginCooperativeCreate(const std::string &world_name);
+  void BeginCooperativeCreate(const std::string &world_name,
+                              bool prepare_visuals = true);
   bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);
   bool HasActiveCooperativeOperation() const;
   void CancelCooperativeOperation();
@@ -517,6 +522,8 @@ public:
   int TickEnterFovLitPass(int capture_budget = -1);
   /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
   bool IsSpawnMeshRingReady() const;
+  /// Current player camera column has a complete streamed terrain result.
+  bool IsEnterFocusTerrainReady() const;
   /// SRBR-P0.2: first blocking miss in spawn ring presentable band (HasMissing SoT).
   bool FindFirstSpawnRingMissingGreedy(glm::ivec3 &out_coord) const;
   int CountPostLoadRingNotReady() const;
@@ -828,6 +835,14 @@ public:
   void SetLastAppUpdateMs(double ms) { LastAppUpdateMs = ms; }
   void SetLastWorldTickMs(double ms) { LastWorldTickMs = ms; }
   void SetLastPrepareFrameMs(double ms) { LastPrepareFrameMs = ms; }
+  void SetLastRenderWindowSetupMs(double ms) { LastRenderWindowSetupMs = ms; }
+  void SetLastRenderFrameSetupMs(double ms) { LastRenderFrameSetupMs = ms; }
+  void SetLastRenderEquipmentSetupMs(double ms)
+  {
+    LastRenderEquipmentSetupMs = ms;
+  }
+  void SetLastGeometryPaintMs(double ms) { LastGeometryPaintMs = ms; }
+  void SetLastFpViewmodelMs(double ms) { LastFpViewmodelMs = ms; }
   void SetLastPostSceneMs(double ms) { LastPostSceneMs = ms; }
   void SetLastGuiOverlayMs(double ms) { LastGuiOverlayMs = ms; }
   void SetLastAutosaveMs(double ms) { LastAutosaveMs = ms; }
@@ -838,6 +853,14 @@ public:
   double GetLastAppUpdateMs() const { return LastAppUpdateMs; }
   double GetLastWorldTickMs() const { return LastWorldTickMs; }
   double GetLastPrepareFrameMs() const { return LastPrepareFrameMs; }
+  double GetLastRenderWindowSetupMs() const { return LastRenderWindowSetupMs; }
+  double GetLastRenderFrameSetupMs() const { return LastRenderFrameSetupMs; }
+  double GetLastRenderEquipmentSetupMs() const
+  {
+    return LastRenderEquipmentSetupMs;
+  }
+  double GetLastGeometryPaintMs() const { return LastGeometryPaintMs; }
+  double GetLastFpViewmodelMs() const { return LastFpViewmodelMs; }
   double GetLastPostSceneMs() const { return LastPostSceneMs; }
   double GetLastGuiOverlayMs() const { return LastGuiOverlayMs; }
 
@@ -977,6 +1000,17 @@ public:
   void SetEffectiveFogEndMarginBlocks(int margin)
   {
     EffectiveFogEndMarginBlocks = std::max(0, margin);
+  }
+  /// Smoothed fog range actually sent to the renderer; negative means unset.
+  float GetPresentedFogHorizonBlocks() const
+  {
+    return PresentedFogHorizonBlocks;
+  }
+  float GetPresentedFogStartBlocks() const { return PresentedFogStartBlocks; }
+  void SetPresentedFogRange(float start_blocks, float horizon_blocks)
+  {
+    PresentedFogStartBlocks = start_blocks;
+    PresentedFogHorizonBlocks = horizon_blocks;
   }
   /// Unfinished/holes while near water — stronger fog + wider sky horizon.
   bool GetNearWaterUnfinishedFog() const { return NearWaterUnfinishedFog; }
@@ -1131,7 +1165,8 @@ public:
                                         int max_y, bool include_skylight = true,
                                         bool include_block_light = true,
                                         bool finalize_pending_gate = true,
-                                        bool visible_draw_gate_repair = false);
+                                        bool visible_draw_gate_repair = false,
+                                        const char *audit_source = "unspecified");
   void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
                                         int frontier_iterations = 1);
   void EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord, bool include_skylight,
@@ -1349,6 +1384,8 @@ public:
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;
   FocusRingVisualCensus GetFocusRingVisualCensus() const;
+  /// True when current geometry/light publication has only unsettled face debt.
+  bool HasStablePublishedFaceDebt(glm::ivec3 coord) const;
   /// A37 H2: owned desire→admit for unfinished keys (replaces Kick as writer).
   /// Returns number of NewDemand/MarkDirty admits this call.
   int AdmitUnfinishedVisualDemand(int max_n = 8);
@@ -1448,12 +1485,17 @@ public:
 private:
   void AdjustColumnEmergeTelemetryCount(ColumnEmergeState state, int delta);
 
-  /// Requeue a live per-slice visual demand without minting another mesh revision.
+  /// Track dark drawable slices that must receive a post-OpenSky publication.
+  void NoteOpenSkyRepairTargets(glm::ivec2 column, int min_y, int max_y,
+                                uint64_t event_id);
+
+  /// Keep generic FirstMesh recovery off stable peer-waiting coverage debt.
   void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
 
   friend class UWorldCooperativeSession;
   friend class UWorldStreaming;
   friend class UWorldPersistence;
+  friend class UChunkEmergeCoordinator;
   bool CheckRayIntersection(
       const glm::vec3 &position, const glm::vec3 &front,
       std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>
@@ -1694,6 +1736,8 @@ private:
   int EffectiveFogRenderDistance{0};
   /// Dynamic fog end margin (pull-in boost); 0 → RenderSettings default.
   int EffectiveFogEndMarginBlocks{0};
+  float PresentedFogHorizonBlocks{-1.0f};
+  float PresentedFogStartBlocks{-1.0f};
   /// Hole/unfinished debt while near fluid / sea — fog A+B boost.
   bool NearWaterUnfinishedFog{false};
   float EffectiveFogStartRatio{0.85f};
@@ -1729,6 +1773,11 @@ private:
   double LastAppUpdateMs{0.0};
   double LastWorldTickMs{0.0};
   double LastPrepareFrameMs{0.0};
+  double LastRenderWindowSetupMs{0.0};
+  double LastRenderFrameSetupMs{0.0};
+  double LastRenderEquipmentSetupMs{0.0};
+  double LastGeometryPaintMs{0.0};
+  double LastFpViewmodelMs{0.0};
   double LastPostSceneMs{0.0};
   double LastGuiOverlayMs{0.0};
   double LastAutosaveMs{0.0};
@@ -1768,6 +1817,11 @@ private:
     int prep_hit_n{0};
     int prep_overflow_n{0};
     int prep_calls_n{0};
+    uint64_t data_mesh_sample_frame_epoch{0};
+    uint64_t data_mesh_sample_world_epoch{0};
+    glm::ivec3 data_mesh_sample_focus{0};
+    int data_mesh_sample_radius{-1};
+    int data_mesh_sample_camera_cy{-1};
     /// Run-wide maxima for the opt-in visible camera-band diagnostic. They
     /// persist as focus moves so a peak snapshot is not lost on the next ring.
     int camera_band_peak_no_drawable_n{0};

@@ -124,8 +124,30 @@ void UChunkRenderDemandStore::TraceDemandTransition(
   span.published_geom_rev = after.published_geom_rev;
   span.previous_published_light_rev = before.published_light_rev;
   span.published_light_rev = after.published_light_rev;
+  span.settled_light_rev = after.settled_light_rev;
+  span.has_settled_light = after.has_settled_light ? 1 : 0;
   span.previous_published_coverage_gen = before.published_coverage_gen;
   span.published_coverage_gen = after.published_coverage_gen;
+  if (kind == DemandTransitionKind::OpenSkyRepairPublished)
+  {
+    span.open_sky_repair_event_id = after.open_sky_repair_event_id;
+    span.open_sky_repair_target_light_rev =
+        after.open_sky_repair_target_light_rev;
+    span.open_sky_repair_baseline_geom_rev =
+        after.open_sky_repair_baseline_geom_rev;
+    span.open_sky_repair_baseline_attempt_id =
+        after.open_sky_repair_baseline_attempt_id;
+    span.open_sky_repair_baseline_published_attempt_id =
+        after.open_sky_repair_baseline_published_attempt_id;
+    span.open_sky_repair_published_geom_rev =
+        after.open_sky_repair_published_geom_rev;
+    span.open_sky_repair_published_light_rev =
+        after.open_sky_repair_published_light_rev;
+    span.open_sky_repair_published_attempt_id =
+        after.open_sky_repair_published_attempt_id;
+    span.open_sky_repair_pending = after.open_sky_repair_pending ? 1 : 0;
+    span.open_sky_repair_published = after.open_sky_repair_published ? 1 : 0;
+  }
   span.previous_stage = before.stage;
   span.stage = after.active_stage;
   span.kind = kind;
@@ -412,6 +434,77 @@ void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
   }
 }
 
+void UChunkRenderDemandStore::NoteOpenSkyRepairRequired(
+    glm::ivec3 coord, uint64_t event_id, uint64_t target_light_rev)
+{
+  if (event_id == 0)
+  {
+    return;
+  }
+  ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  if (rec.open_sky_repair_event_id == event_id &&
+      rec.open_sky_repair_target_light_rev == target_light_rev &&
+      (rec.open_sky_repair_pending || rec.open_sky_repair_published))
+  {
+    return;
+  }
+  rec.open_sky_repair_pending = true;
+  rec.open_sky_repair_published = false;
+  rec.open_sky_repair_event_id = event_id;
+  rec.open_sky_repair_target_light_rev = target_light_rev;
+  rec.open_sky_repair_baseline_geom_rev = rec.published_geom_rev;
+  rec.open_sky_repair_baseline_attempt_id =
+      rec.has_active_attempt ? rec.active_attempt_id : 0;
+  rec.open_sky_repair_baseline_published_attempt_id =
+      rec.last_published_attempt_id;
+  rec.open_sky_repair_published_geom_rev = 0;
+  rec.open_sky_repair_published_light_rev = 0;
+  rec.open_sky_repair_published_attempt_id = 0;
+}
+
+bool UChunkRenderDemandStore::IsOpenSkyRepairPending(
+    glm::ivec3 coord, uint64_t event_id, uint64_t target_light_rev) const
+{
+  const ChunkRenderDemandRecord *rec = Find(coord);
+  return rec && rec->open_sky_repair_pending &&
+         rec->open_sky_repair_event_id == event_id &&
+         rec->open_sky_repair_target_light_rev == target_light_rev;
+}
+
+bool UChunkRenderDemandStore::HasOpenSkyRepairPending(
+    glm::ivec3 coord, uint64_t target_light_rev) const
+{
+  const ChunkRenderDemandRecord *rec = Find(coord);
+  return rec && rec->open_sky_repair_pending &&
+         rec->open_sky_repair_target_light_rev == target_light_rev;
+}
+
+bool UChunkRenderDemandStore::IsOpenSkyRepairPublished(
+    glm::ivec3 coord, uint64_t event_id, uint64_t target_light_rev) const
+{
+  const ChunkRenderDemandRecord *rec = Find(coord);
+  return rec && !rec->open_sky_repair_pending &&
+         rec->open_sky_repair_published &&
+         rec->open_sky_repair_event_id == event_id &&
+         rec->open_sky_repair_target_light_rev == target_light_rev &&
+         rec->open_sky_repair_published_geom_rev >
+             rec->open_sky_repair_baseline_geom_rev &&
+         rec->open_sky_repair_published_light_rev >= target_light_rev &&
+         rec->open_sky_repair_published_attempt_id != 0 &&
+         rec->open_sky_repair_published_attempt_id >
+             rec->open_sky_repair_baseline_attempt_id &&
+         rec->open_sky_repair_published_attempt_id >
+             rec->open_sky_repair_baseline_published_attempt_id;
+}
+
+bool UChunkRenderDemandStore::HasOpenSkyRepairPublished(
+    glm::ivec3 coord, uint64_t target_light_rev) const
+{
+  const ChunkRenderDemandRecord *rec = Find(coord);
+  return rec && IsOpenSkyRepairPublished(
+                    coord, rec->open_sky_repair_event_id, target_light_rev);
+}
+
 void UChunkRenderDemandStore::NoteLightCalculationSettled(
     glm::ivec3 coord, uint64_t world_epoch, uint64_t incarnation,
     uint64_t light_field_rev)
@@ -426,8 +519,28 @@ void UChunkRenderDemandStore::NoteLightCalculationSettled(
   {
     return;
   }
+  const bool settlement_changed =
+      !rec.has_settled_light || rec.settled_light_rev != light_field_rev;
+  const DemandSnapshot before = SnapshotDemand(rec);
   rec.settled_light_rev = light_field_rev;
   rec.has_settled_light = true;
+  if (settlement_changed)
+  {
+    TraceDemandTransition(coord, before, rec,
+                          DemandTransitionKind::LightCalculationSettled);
+  }
+}
+
+void UChunkRenderDemandStore::NoteLifecycleEvent(
+    glm::ivec3 coord, DemandTransitionKind kind)
+{
+  ChunkRenderDemandRecord *rec = Find(coord);
+  if (!rec)
+  {
+    return;
+  }
+  const DemandSnapshot snapshot = SnapshotDemand(*rec);
+  TraceDemandTransition(coord, snapshot, *rec, kind);
 }
 
 void UChunkRenderDemandStore::InvalidateLightCalculationSettlement(
@@ -475,6 +588,7 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
                           static_cast<uint8_t>(result));
     return false; // stale completion
   }
+  bool open_sky_repair_published_now = false;
   switch (result)
   {
   case InstallResult::Published:
@@ -490,6 +604,23 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
     if (published_coverage_gen > 0)
     {
       rec.published_coverage_gen = published_coverage_gen;
+    }
+    if (attempt_id != 0)
+    {
+      rec.last_published_attempt_id = attempt_id;
+    }
+    if (rec.open_sky_repair_pending && attempt_id != 0 &&
+        attempt_id > rec.open_sky_repair_baseline_attempt_id &&
+        attempt_id > rec.open_sky_repair_baseline_published_attempt_id &&
+        published_geom_rev > rec.open_sky_repair_baseline_geom_rev &&
+        published_light_rev >= rec.open_sky_repair_target_light_rev)
+    {
+      rec.open_sky_repair_pending = false;
+      rec.open_sky_repair_published = true;
+      rec.open_sky_repair_published_geom_rev = published_geom_rev;
+      rec.open_sky_repair_published_light_rev = published_light_rev;
+      rec.open_sky_repair_published_attempt_id = attempt_id;
+      open_sky_repair_published_now = true;
     }
     rec.retained_awaiting_successor = false;
     rec.has_active_attempt = false;
@@ -529,6 +660,12 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
   }
   TraceDemandTransition(coord, before, rec, kind, 0.0,
                         static_cast<uint8_t>(result));
+  if (open_sky_repair_published_now)
+  {
+    TraceDemandTransition(coord, before, rec,
+                          DemandTransitionKind::OpenSkyRepairPublished, 0.0,
+                          static_cast<uint8_t>(result));
+  }
   return true;
 }
 

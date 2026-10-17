@@ -47,6 +47,158 @@ def coords(events: list[dict[str, str]]) -> set[str]:
     return result
 
 
+def summarize_procedural_request_ledger(
+    events: list[dict[str, str]],
+) -> dict[str, Any]:
+    procedural = [event for event in events if event.get("source") == "procedural"]
+    requests: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for event in procedural:
+        request_id = event.get("request_id", "")
+        if request_id and request_id != "0":
+            requests[request_id].append(event)
+
+    terminal_outcomes = {
+        "committed",
+        "cancelled",
+        "cancelled_out_of_range",
+        "discarded",
+    }
+    terminal_counts: Counter[str] = Counter()
+    open_requests: list[dict[str, str]] = []
+    multiple_terminal_requests: list[dict[str, str]] = []
+    accepted_ids: set[str] = set()
+    for request_id, rows in requests.items():
+        accepted = next(
+            (row for row in rows if row.get("outcome") == "requested"), None
+        )
+        if accepted is not None:
+            accepted_ids.add(request_id)
+        terminals = [row for row in rows if row.get("outcome") in terminal_outcomes]
+        if terminals:
+            terminal_counts[terminals[0]["outcome"]] += 1
+            if len(terminals) > 1:
+                multiple_terminal_requests.append(
+                    {"request_id": request_id, "coord": rows[0].get("coord", "")}
+                )
+        elif any(row.get("outcome") == "stale_worker_result" for row in rows):
+            terminal_counts["stale_worker_result"] += 1
+        elif accepted is not None:
+            open_requests.append(
+                {
+                    "request_id": request_id,
+                    "coord": accepted.get("coord", ""),
+                    "last_outcome": rows[-1].get("outcome", ""),
+                }
+            )
+
+    disk_miss_demands = {
+        row["demand_id"]
+        for row in procedural
+        if row.get("outcome") == "disk_miss"
+        and row.get("demand_id") not in (None, "", "0")
+    }
+    accepted_demands = {
+        row["demand_id"]
+        for row in procedural
+        if row.get("outcome") == "requested"
+        and row.get("demand_id") not in (None, "", "0")
+    }
+    return {
+        "schema": "procedural_request_ledger.v1",
+        "accepted_request_count": len(accepted_ids),
+        "terminal_request_counts": dict(sorted(terminal_counts.items())),
+        "open_at_log_end_count": len(open_requests),
+        "open_at_log_end": open_requests[:20],
+        "multiple_terminal_event_count": len(multiple_terminal_requests),
+        "multiple_terminal_events": multiple_terminal_requests[:20],
+        "request_id_event_count": len(requests),
+        "request_id_coverage_events": sum(len(rows) for rows in requests.values()),
+        "disk_miss_demand_count": len(disk_miss_demands),
+        "accepted_request_demand_count": len(accepted_demands),
+        "disk_miss_without_accepted_request_count": len(
+            disk_miss_demands - accepted_demands
+        ),
+        "accepted_request_without_disk_miss_count": len(
+            accepted_demands - disk_miss_demands
+        ),
+        "note": (
+            "A request is terminal after commit, cancellation, or discard. A "
+            "stale worker result closes an otherwise unclosed request only when "
+            "no explicit terminal event exists. Open requests may still be "
+            "running when the log ends. Demand mismatches are IDs without a "
+            "matching source event, not proof of lost terrain."
+        ),
+    }
+
+
+def summarize_disk_load_ledger(events: list[dict[str, str]]) -> dict[str, Any]:
+    disk_events = [
+        event
+        for event in events
+        if event.get("source") in ("disk", "empty-disk-column")
+    ]
+    demands: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for event in disk_events:
+        demand_id = event.get("demand_id", "")
+        if demand_id and demand_id != "0":
+            demands[demand_id].append(event)
+
+    terminal_outcomes = {
+        "complete",
+        "incomplete",
+        "cancelled_out_of_range",
+        "cancelled_unloaded",
+        "cancelled_abort",
+    }
+    accepted_ids: set[str] = set()
+    terminal_counts: Counter[str] = Counter()
+    open_demands: list[dict[str, str]] = []
+    multiple_terminal_demands: list[dict[str, str]] = []
+    retry_event_count = 0
+    for demand_id, rows in demands.items():
+        queued = next((row for row in rows if row.get("outcome") == "queued"), None)
+        if queued is not None:
+            accepted_ids.add(demand_id)
+        retry_event_count += sum(row.get("outcome") == "retry" for row in rows)
+        terminals = [
+            row for row in rows if row.get("outcome") in terminal_outcomes
+        ]
+        if terminals:
+            terminal_counts[terminals[-1]["outcome"]] += 1
+            if len(terminals) > 1:
+                multiple_terminal_demands.append(
+                    {"demand_id": demand_id, "coord": rows[0].get("coord", "")}
+                )
+        elif any(row.get("outcome") == "stale_result" for row in rows):
+            terminal_counts["stale_result"] += 1
+        elif queued is not None:
+            open_demands.append(
+                {
+                    "demand_id": demand_id,
+                    "coord": queued.get("coord", ""),
+                    "last_outcome": rows[-1].get("outcome", ""),
+                }
+            )
+
+    return {
+        "schema": "disk_load_demand_ledger.v1",
+        "queued_demand_count": len(accepted_ids),
+        "terminal_demand_counts": dict(sorted(terminal_counts.items())),
+        "retry_event_count": retry_event_count,
+        "open_at_log_end_count": len(open_demands),
+        "open_at_log_end": open_demands[:20],
+        "multiple_terminal_event_count": len(multiple_terminal_demands),
+        "multiple_terminal_events": multiple_terminal_demands[:20],
+        "demand_id_event_count": len(demands),
+        "note": (
+            "A disk demand stays open across retry events and is terminal after "
+            "complete, final incomplete, or cancellation. A stale worker result "
+            "closes it only when no explicit terminal event was logged. Open "
+            "demands may still be running when the log ends."
+        ),
+    }
+
+
 def summarize(
     paths: list[Path], focus_z: int | None = None, z_radius: int = 5
 ) -> dict[str, Any]:
@@ -115,8 +267,25 @@ def summarize(
         by_source[source] = outcomes
 
     disk_queued = coords(grouped.get(("disk", "queued"), []))
-    disk_complete = coords(grouped.get(("disk", "complete"), []))
-    disk_cancelled = coords(grouped.get(("disk", "cancelled_out_of_range"), []))
+    disk_complete_rows = grouped.get(("disk", "complete"), []) + grouped.get(
+        ("empty-disk-column", "complete"), []
+    )
+    disk_complete = coords(disk_complete_rows)
+    disk_incomplete = coords(grouped.get(("disk", "incomplete"), []))
+    disk_cancelled_out_of_range = coords(
+        grouped.get(("disk", "cancelled_out_of_range"), [])
+    )
+    disk_cancelled_unloaded = coords(
+        grouped.get(("disk", "cancelled_unloaded"), [])
+    )
+    disk_cancelled_abort = coords(grouped.get(("disk", "cancelled_abort"), []))
+    disk_stale_result = coords(grouped.get(("disk", "stale_result"), []))
+    disk_cancelled = (
+        disk_cancelled_out_of_range
+        | disk_cancelled_unloaded
+        | disk_cancelled_abort
+    )
+    disk_terminal = disk_complete | disk_incomplete | disk_cancelled | disk_stale_result
     proc_cancelled = coords(grouped.get(("procedural", "cancelled_out_of_range"), []))
     procedural_commits = grouped.get(("procedural", "committed"), [])
     slow_procedural_queue_events: list[dict[str, Any]] = []
@@ -176,19 +345,26 @@ def summarize(
         "by_source": by_source,
         "slow_procedural_queue_events": slow_procedural_queue_events,
         "procedural_focus_z_band": procedural_focus_z_band,
+        "procedural_request_ledger": summarize_procedural_request_ledger(events),
+        "disk_load_ledger": summarize_disk_load_ledger(events),
         "unique_disk_coordinates": {
             "queued": len(disk_queued),
             "completed": len(disk_complete),
-            "cancelled_out_of_range": len(disk_cancelled),
+            "incomplete": len(disk_incomplete),
+            "cancelled_out_of_range": len(disk_cancelled_out_of_range),
+            "cancelled_unloaded": len(disk_cancelled_unloaded),
+            "cancelled_abort": len(disk_cancelled_abort),
+            "stale_result": len(disk_stale_result),
             "queued_without_terminal_event": len(
-                disk_queued - disk_complete - disk_cancelled
+                disk_queued - disk_terminal
             ),
         },
         "unique_procedural_cancelled_out_of_range": len(proc_cancelled),
         "note": (
-            "Queued coordinates without a completion or cancellation log are an "
-            "unmatched-event count; they do not prove a live pending owner. "
-            "Timing values are source-log observations, not framebuffer-area metrics."
+            "Disk demand IDs provide the stronger lifecycle ledger; unique disk "
+            "coordinates are a coarse summary and may span retries/reloads. "
+            "Open demand IDs may still be running at log end. Timing values are "
+            "source-log observations, not framebuffer-area metrics."
         ),
     }
 

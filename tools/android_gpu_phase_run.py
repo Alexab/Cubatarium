@@ -128,6 +128,7 @@ def run_desktop_cruise(world: str, phase_id: str, report: str) -> None:
             "--teleport-cruise",
             "--seconds",
             "130",
+            "--metrics",
             "--fly-stop",
             "--fly-phase-sec",
             "45",

@@ -265,6 +265,7 @@ struct PhysicsTelemetry
   /// Coarse disjoint wall partitions around Streamer::Update and its cancels.
   double UpdateStreamingPreCoreMs{0.0};
   double UpdateStreamingPostCoreMs{0.0};
+  double UpdateStreamingPostCoreTelemetryMs{0.0};
   /// Time spent finding the terrain surface for altitude-adaptive fog.
   double AltitudeSurfaceQueryMs{0.0};
   /// Main-thread duration of the full TickAsyncChunkSystems phase.
@@ -303,6 +304,14 @@ struct PhysicsTelemetry
   double AsyncChunkIoLoadResultPushMutexHeldMaxMs{0.0};
   double AsyncChunkIoSaveDrainMs{0.0};
   double AsyncChunkIoLightFlagsSaveMs{0.0};
+  double AsyncChunkIoLightFlagsSnapshotMs{0.0};
+  double AsyncChunkIoLightFlagsEnqueueMs{0.0};
+  int AsyncChunkIoLightFlagsCompleteColumnsN{0};
+  uint64_t AsyncChunkIoLightFlagsSavedRevision{0};
+  uint64_t AsyncChunkIoLightFlagsLastResultRevision{0};
+  int AsyncChunkIoLightFlagsLastResultSuccess{-1};
+  double AsyncChunkIoLightFlagsWorkerQueueWaitMs{0.0};
+  double AsyncChunkIoLightFlagsWorkerServiceMs{0.0};
   int AsyncChunkIoLoadResultPushN{0};
   int AsyncChunkIoCancelledDiscardN{0};
   int AsyncChunkIoReadyLoadsBeforeN{0};
@@ -726,8 +735,9 @@ struct PhysicsTelemetry
   int FocusVisualNotReadyStateN{0};
   int FocusVisualFaceDebtN{0};
   int FocusVisualReadyN{0};
-  /// Diagnostic voxel/mesh census; populated with CUBA_VISUAL_BLACK_TRACE.
+  /// Diagnostic voxel/mesh census; sampled every 24 frames with visual trace.
   int FocusDataCensusValid{0};
+  uint64_t FocusDataSampleAgeFrames{0};
   int FocusDataSolidSliceN{0};
   int FocusDataAirSliceN{0};
   int FocusDataAbsentSliceN{0};
@@ -836,11 +846,88 @@ struct PhysicsTelemetry
   int FogPullInRd{0};
   int FogPullInMargin{0};
   float FogPullInStartRatio{0.0f};
+  float FogPresentedStartBlocks{-1.0f};
+  float FogPresentedHorizonBlocks{-1.0f};
   int FogHoleDebt{0};
+  /// Per-frame inputs and outputs for diagnosing fog pull-in latch edges.
+  int FogLatchFocusMissingMesh{0};
+  int FogLatchMissHoriz{0};
+  int FogLatchUnfinishedAhead{0};
+  int FogLatchVisibleBlackFullyDarkStalled{0};
+  int FogLatchVisibleBlackFocus{0};
+  int FogLatchNow{0};
+  int FogClearConditions{0};
+  int FogHoleHoldFrames{0};
+  double FogDebtQuietMs{-1.0};
   /// Missing mesh in focus (alias of VisualHoles). Dark/light debt are separate.
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).
   int VisualHoles{0};
+  /// Missing-mesh radius query was invoked this frame; it may hit a memo.
+  int NearFocusHoleProbeRan{0};
+  /// Query result: 1 = missing mesh, 0 = no missing mesh, -1 = not sampled.
+  /// An invoked query is not guaranteed to scan current mesh state.
+  int NearFocusHoleProbeResult{-1};
+  /// The query returned its memoized answer (1) rather than scanning chunks.
+  int NearFocusHoleProbeMemoHit{0};
+  /// Coordinate returned by the same radius scan/memo as ProbeResult.
+  int NearFocusHoleProbeWitnessValid{0};
+  int NearFocusHoleProbeWitnessCx{-1};
+  int NearFocusHoleProbeWitnessCy{-1};
+  int NearFocusHoleProbeWitnessCz{-1};
+  /// State sampled for the exact coordinate returned by the radius query.
+  /// -1 means no raw missing witness was returned this update.
+  int NearFocusHoleProbeWitnessResident{-1};
+  int NearFocusHoleProbeWitnessHasMesh{-1};
+  int NearFocusHoleProbeWitnessDrawable{-1};
+  int NearFocusHoleProbeWitnessSatisfying{-1};
+  int NearFocusHoleProbeWitnessDirty{-1};
+  int NearFocusHoleProbeWitnessBuildInFlight{-1};
+  int NearFocusHoleProbeWitnessPendingGpuApply{-1};
+  int NearFocusHoleProbeWitnessPendingGpuQueued{-1};
+  int NearFocusHoleProbeWitnessSoftDeferHeld{-1};
+  int NearFocusHoleProbeWitnessGeometryDebt{-1};
+  int NearFocusHoleProbeWitnessRepairableDebt{-1};
+  int NearFocusHoleProbeWitnessFlowTicketValid{-1};
+  int NearFocusHoleProbeWitnessFlowTicketKind{-1};
+  int NearFocusHoleProbeWitnessFlowTicketPriority{-1};
+  int NearFocusHoleProbeWitnessColumnJobStage{-1};
+  uint64_t NearFocusHoleProbeWitnessIncarnation{0};
+  uint64_t NearFocusHoleProbeWitnessContentRevision{0};
+  uint64_t NearFocusHoleProbeWitnessLightRevision{0};
+  uint64_t NearFocusHoleProbeWitnessMeshRevision{0};
+  uint64_t NearFocusHoleProbeWitnessInflightSourceRevision{0};
+  /// One raw missing-mesh witness tracked until ready or past fog range.
+  int NearFocusTrackedWitnessValid{0};
+  int NearFocusTrackedWitnessCx{-1};
+  int NearFocusTrackedWitnessCy{-1};
+  int NearFocusTrackedWitnessCz{-1};
+  int NearFocusTrackedWitnessAgeFrames{0};
+  float NearFocusTrackedWitnessDistanceBlocks{-1.0f};
+  float NearFocusTrackedWitnessFogHorizonBlocks{-1.0f};
+  int NearFocusTrackedWitnessInsideFog{0};
+  /// 0 inactive, 1 tracked outside fog, 2 tracked inside fog while unready.
+  int NearFocusTrackedWitnessOutcome{0};
+  int NearFocusTrackedWitnessResident{-1};
+  int NearFocusTrackedWitnessHasMesh{-1};
+  int NearFocusTrackedWitnessDrawable{-1};
+  int NearFocusTrackedWitnessSatisfying{-1};
+  int NearFocusTrackedWitnessDirty{-1};
+  int NearFocusTrackedWitnessBuildInFlight{-1};
+  int NearFocusTrackedWitnessPendingGpuApply{-1};
+  int NearFocusTrackedWitnessGeometryDebt{-1};
+  int NearFocusTrackedWitnessFlowTicketValid{-1};
+  int NearFocusTrackedWitnessColumnJobStage{-1};
+  /// Event pulse: 1 entered fog unready, 2 resolved before fog, 3 resolved
+  /// after entering fog, 4 left fog unready.
+  int NearFocusTrackedWitnessOutcomeEvent{0};
+  uint64_t NearFocusTrackedWitnessResolvedBeforeFogTotal{0};
+  uint64_t NearFocusTrackedWitnessEnteredFogUnreadyTotal{0};
+  uint64_t NearFocusTrackedWitnessResolvedAfterFogTotal{0};
+  uint64_t NearFocusTrackedWitnessExitedFogUnreadyTotal{0};
+  double NearFocusTrackedWitnessSampleMs{0.0};
+  /// NearFocusHoles held true without a positive raw probe this frame.
+  int NearFocusHolesLatched{0};
   /// Missing mesh or dark/unlit preview in focus (render contract).
   int UnfinishedVisual{0};
   /// PendingLightBeforeMesh in focus (light debt, not visual holes).
@@ -852,8 +939,38 @@ struct PhysicsTelemetry
   int MissCy{0};
   int MissCz{0};
   int MissHoriz{0};
+  /// Exact nearest-miss column owner/state snapshot for renderer triage.
+  /// Ticket kind and job stage are -1 when no focus miss was sampled.
+  int FocusMissFlowTicketKind{-1};
+  int FocusMissFlowTicketPriority{0};
+  int FocusMissColumnJobStage{-1};
+  int FocusMissMeshDirty{0};
+  int FocusMissBuildInFlight{0};
+  int FocusMissPendingGpuApply{0};
+  int FocusMissDrawableMesh{0};
+  int FocusMissSatisfyingMesh{0};
+  /// Same-frame focus miss lifecycle when the near-focus visual proxy is set.
+  int FocusProxyMissCx{-1};
+  int FocusProxyMissCy{-1};
+  int FocusProxyMissCz{-1};
+  int FocusProxyFlowTicketKind{-1};
+  int FocusProxyFlowTicketPriority{0};
+  int FocusProxyColumnJobStage{-1};
+  int FocusProxyMeshDirty{0};
+  int FocusProxyBuildInFlight{0};
+  int FocusProxyPendingGpuApply{0};
+  int FocusProxyDrawableMesh{0};
+  int FocusProxySatisfyingMesh{0};
+  int FocusProxyGeometryDebt{0};
+  int FocusProxyRepairableGeometryDebt{0};
   /// Current miss witness came from a camera screen-ray opaque voxel hit.
   int MissScreenRayCandidate{0};
+  /// Selection-time mesh state for the exact screen-ray candidate. -1 means
+  /// no candidate or inconsistent ray samples for that chunk in this frame.
+  int MissScreenRaySelectedStateValid{0};
+  int MissScreenRaySelectedDrawable{-1};
+  int MissScreenRaySelectedSatisfying{-1};
+  int MissScreenRaySelectedRepairableGeometryDebt{-1};
   /// Count of focus columns with mesh but no sky light sample.
   int FocusDarkMesh{0};
   /// Era39 A4: pending-dark (hidden until lit) vs sticky remesh (preview class).
@@ -956,6 +1073,7 @@ struct PhysicsTelemetry
   uint64_t RelightFalseClearN{0};
   uint64_t RelightSkippedNoOpEnqueueN{0};
   uint64_t RelightDeferredFarEnqueueN{0};
+  uint64_t RelightDeferredFarAgeAdmitN{0};
   int RelightDeferredFarPendingN{0};
   /// FZ2.2-O1: NotePendingLight skipped (inflight or already pending).
   uint64_t RelightNoteSkippedDupN{0};
@@ -1047,6 +1165,10 @@ struct PhysicsTelemetry
   int PendingLightTrimEmergeN{0};
   int PendingLightTrimMemoryN{0};
   uint64_t RelightFifoDropped{0};
+  /// Cumulative pressure trims moved into deferred-far storage.
+  uint64_t RelightFifoTrimDeferredTotal{0};
+  /// Cumulative relight FIFO capacity-overflow evictions.
+  uint64_t RelightFifoOverflowDroppedTotal{0};
   /// P1: pin-key drops this frame (gate: stay 0).
   int RelightFifoPinDropN{0};
   double GpuPoolUsedMb{0.0};
@@ -1134,6 +1256,20 @@ struct PhysicsTelemetry
   int TransparentOrderOnlyFailReason{0};
   /// S1: transparent GPU batch count after prepare.
   int TransparentBatchN{0};
+  /// Optional fluid-render trace: CPU fluid refs/indices before GPU publication.
+  uint64_t FluidTransparentRefN{0};
+  uint64_t FluidTransparentIndexN{0};
+  /// Optional fluid-render trace: published greedy fluid batches/indices.
+  uint64_t FluidGpuBatchN{0};
+  uint64_t FluidGpuIndexN{0};
+  /// Optional fluid-render trace: packed transparent ranges and quads.
+  uint64_t FluidPackedRangeN{0};
+  uint64_t FluidPackedQuadN{0};
+  /// Optional fluid-render trace: submitted GL calls/index capacity by mode.
+  uint64_t FluidDrawCallN{0};
+  uint64_t FluidSubmittedIndexCapacityN{0};
+  uint64_t FluidShellDepthCallN{0};
+  uint64_t FluidColorPassCallN{0};
   /// Focus column split: meshed-but-culled vs not ready / unlit preview.
   uint64_t ChunkMeshedCulled0{0};
   uint64_t ChunkMeshedUnlit{0};

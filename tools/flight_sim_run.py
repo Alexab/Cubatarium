@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Build (optional), run Cubatarium --flight-sim, analyze perf gates."""
+"""Build (optional), run Cubatarium --flight-sim, optionally analyze perf gates."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import math
 import os
+import re
 import subprocess
 import sys
 import time
@@ -54,11 +56,12 @@ A24_SAFETY_STOP_LINE = {
 }
 
 # Eye-proxy thrash stop-line (N08). Mid-corridor SoT (same band as dual-lane stalled).
-# Fly-only med greenwashed autofly 095545 (fly stale=2, mid=17). Four merge signals:
-# adequacy / dual-lane / eye_proxy / operator eye. Adequacy alone is not merge-green.
+# Cumulative stale totals are diagnostic only; interval activity and hole signals
+# are interpreted separately. Four merge signals: adequacy / dual-lane / eye_proxy
+# / operator eye. Adequacy alone is not merge-green.
 EYE_PROXY_STOP_LINE = {
-    # Post-N01: align with thrash ≤102527 class (mid stale≤8), not pre-fix 6.
-    "mesh_apply_stale_visual_mid_med_max": 8.0,
+    # mesh_apply_stale_visual is process-lifetime cumulative. Gate the exact
+    # per-period delta instead; an absolute mid-run median depends on flight age.
     "mesh_apply_stale_visual_delta_med_max": 1.5,
     "effective_holes_blink_rate_max": 0.05,
     "transparent_cmd_reorder_mid_med_max": 1.0,
@@ -74,6 +77,34 @@ WEST_COVERAGE_FOCUS_CX_MAX = -3.0
 # A31: west COVERED ≠ far-flight. Far checkpoints in world blocks (CHUNK_SIZE=16).
 FAR_DISTANCE_CHECKPOINTS_BLOCKS = (0, 1 << 13, 1 << 16, 1 << 19)
 CHUNK_SIZE_BLOCKS = 16
+
+
+def expected_product_start_focus(args: argparse.Namespace) -> list[int] | None:
+    product_scenarios = {
+        "product-174657",
+        "product-174657-dive",
+        "product-174657-far",
+    }
+    position = getattr(args, "product_start_position", None)
+    if (
+        args.scenario not in product_scenarios
+        or not position
+        or len(position) < 3
+    ):
+        return None
+    return [
+        math.floor(float(position[0]) / CHUNK_SIZE_BLOCKS),
+        math.floor(float(position[2]) / CHUNK_SIZE_BLOCKS),
+    ]
+
+
+def normalize_focus(value: object) -> list[int] | None:
+    if not isinstance(value, (list, tuple)) or len(value) < 2:
+        return None
+    try:
+        return [int(value[0]), int(value[1])]
+    except (TypeError, ValueError):
+        return None
 
 
 def build_flight_route_identity(args: argparse.Namespace) -> dict:
@@ -101,6 +132,7 @@ def build_flight_route_identity(args: argparse.Namespace) -> dict:
             if product_route
             else None
         ),
+        "product_start_focus_expected": expected_product_start_focus(args),
         "cruise_chunk": [args.cruise_cx, args.cruise_cz],
         "cruise_eye_y": args.cruise_eye_y,
         "yaw_deg": args.yaw,
@@ -118,6 +150,12 @@ def build_flight_route_identity(args: argparse.Namespace) -> dict:
             "CUBA_FLIGHT_MOVE_SPEED_SCALE", "1"
         ),
         "fog_pull_in_enabled": (force_fog_on if product_route else None),
+        "require_existing_world": bool(
+            getattr(args, "require_existing_world", False)
+        ),
+        "product_start_position_file_pinned": bool(
+            getattr(args, "_product174657_users_restore", None)
+        ),
     }
 
 
@@ -147,8 +185,130 @@ def read_perf_runtime_identity(perf_path: Path | None) -> dict:
     return {}
 
 
-def newest_perf(after_ts: float) -> Path | None:
-    logs = BIN / "logs"
+def read_world_startup_identity(
+    requested_world: str,
+    app_report_path: Path,
+    info_log_path: Path | None,
+    started_at: float,
+) -> dict:
+    """Report the runtime world and whether startup loaded or generated terrain."""
+    runtime_world = None
+    try:
+        if (
+            app_report_path.is_file()
+            and app_report_path.stat().st_mtime >= started_at - 1.0
+        ):
+            app_report = json.loads(app_report_path.read_text(encoding="utf-8"))
+            runtime_world = app_report.get("world")
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    startup_rows: list[dict[str, str]] = []
+    if info_log_path is not None and info_log_path.is_file():
+        try:
+            with info_log_path.open("r", encoding="utf-8", errors="replace") as stream:
+                for line in stream:
+                    marker = "[WorldLoadPerf]"
+                    index = line.find(marker)
+                    if index < 0:
+                        continue
+                    fields = dict(
+                        re.findall(r"([A-Za-z_]+)=([^\s]+)", line[index + len(marker) :])
+                    )
+                    if fields.get("kind") in ("load", "create"):
+                        startup_rows.append(fields)
+        except OSError:
+            pass
+
+    init_row = next(
+        (row for row in startup_rows if row.get("phase") == "init"),
+        startup_rows[0] if startup_rows else {},
+    )
+    startup_kind = init_row.get("kind")
+    same_operation = [
+        row for row in startup_rows if row.get("kind") == startup_kind
+    ]
+    final_row = same_operation[-1] if same_operation else init_row
+
+    def read_int(row: dict[str, str], key: str) -> int | None:
+        try:
+            return int(row[key])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def read_pair(row: dict[str, str], key: str) -> tuple[int | None, int | None]:
+        value = row.get(key, "")
+        if "/" not in value:
+            return None, None
+        left, right = value.split("/", 1)
+        try:
+            return int(left), int(right)
+        except ValueError:
+            return None, None
+
+    spatial_done, spatial_total = read_pair(final_row, "spatial_columns")
+    generation_done, generation_total = read_pair(
+        final_row, "generation_columns"
+    )
+    chunk_files_read = read_int(final_row, "chunk_files_read")
+    voxels_from_files = read_int(final_row, "voxels_from_files")
+    has_saved_terrain = (
+        (chunk_files_read or 0) > 0
+        or (voxels_from_files or 0) > 0
+        or (spatial_done or 0) > 0
+    )
+    if startup_kind == "create":
+        storage_mode = "new_world_generated"
+        cache_mode = "cold"
+    elif startup_kind == "load" and has_saved_terrain:
+        storage_mode = "saved_world_terrain_loaded"
+        cache_mode = "warm"
+    elif startup_kind == "load":
+        storage_mode = "existing_world_loaded_without_terrain_evidence"
+        cache_mode = "unknown"
+    else:
+        storage_mode = "unknown"
+        cache_mode = "unknown"
+
+    try:
+        operation_ms = float(final_row["operation_ms"])
+    except (KeyError, TypeError, ValueError):
+        operation_ms = None
+
+    app_report = {}
+    try:
+        if (
+            app_report_path.is_file()
+            and app_report_path.stat().st_mtime >= started_at - 1.0
+        ):
+            app_report = json.loads(app_report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    return {
+        "requested_world": requested_world,
+        "runtime_world": runtime_world,
+        "runtime_world_matches_requested": (
+            runtime_world == requested_world if runtime_world else None
+        ),
+        "startup_operation": startup_kind,
+        "storage_mode": storage_mode,
+        "cache_mode": cache_mode,
+        "startup_operation_ms": operation_ms,
+        "chunk_files_seen": read_int(final_row, "chunk_files_seen"),
+        "chunk_files_read": chunk_files_read,
+        "voxels_from_files": voxels_from_files,
+        "spatial_columns_loaded": spatial_done,
+        "spatial_columns_total": spatial_total,
+        "generation_columns_completed": generation_done,
+        "generation_columns_total": generation_total,
+        "start_focus": app_report.get("start_focus"),
+        "end_focus": app_report.get("end_focus"),
+    }
+
+
+def newest_perf(after_ts: float, logs_dir: Path | None = None) -> Path | None:
+    logs = logs_dir or BIN / "logs"
     if not logs.is_dir():
         return None
     cands = [
@@ -467,18 +627,152 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
     """A24/A25: holes + DirtyAdmit thrash stop-lines (before end-debt cosmetics)."""
     try:
         rows: list[dict] = []
+        visual_holes_enter_rows: list[dict] = []
+        tracked_witness_event_rows: list[dict] = []
         for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
             if not line.startswith("{"):
                 continue
             row = json.loads(line)
             if row.get("kind") == "period":
                 rows.append(row)
+            elif row.get("kind") == "visual_holes_enter":
+                visual_holes_enter_rows.append(row)
+            elif str(row.get("kind", "")).startswith(
+                "near_focus_witness_"
+            ):
+                tracked_witness_event_rows.append(row)
         fly = [
             r
             for r in rows
             if float(r.get("movement_speed") or 0) > 2.0
         ]
         use = fly if fly else rows
+        fly_hole_events = [
+            r
+            for r in visual_holes_enter_rows
+            if float(r.get("movement_speed") or 0) > 2.0
+        ]
+        hole_events = (
+            fly_hole_events if fly_hole_events else visual_holes_enter_rows
+        )
+
+        def event_flag(row: dict, key: str) -> bool:
+            try:
+                return int(float(row.get(key) or 0)) > 0
+            except (TypeError, ValueError):
+                return False
+
+        def event_probe_result(row: dict) -> int:
+            try:
+                return int(float(row.get("near_focus_hole_probe_result", -1)))
+            except (TypeError, ValueError):
+                return -1
+
+        def probe_witness_fog_scope(row: dict) -> str | None:
+            """Classify a raw miss by a conservative chunk-AABB fog bound.
+
+            Focus and witness coordinates are horizontal chunk coordinates. The
+            focus chunk may contain the camera anywhere, so subtract one whole
+            chunk from each axis delta before computing the nearest possible
+            horizontal distance to the witness chunk. A lower bound beyond the
+            fog horizon proves that the witness is outside the current fog
+            radius; an intersecting bound is only a candidate for visibility.
+            """
+            if (
+                event_probe_result(row) != 1
+                or not event_flag(row, "near_focus_hole_probe_witness_valid")
+            ):
+                return None
+            try:
+                focus_cx = int(float(row["focus_cx"]))
+                focus_cz = int(float(row["focus_cz"]))
+                witness_cx = int(
+                    float(row["near_focus_hole_probe_witness_cx"])
+                )
+                witness_cz = int(
+                    float(row["near_focus_hole_probe_witness_cz"])
+                )
+                fog_rd = float(row["fog_pull_in_rd"])
+                fog_margin = max(0.0, float(row["fog_pull_in_margin"]))
+            except (KeyError, TypeError, ValueError):
+                return None
+            if fog_rd <= 0:
+                return None
+            dx_blocks = max(
+                0, abs(witness_cx - focus_cx) - 1
+            ) * CHUNK_SIZE_BLOCKS
+            dz_blocks = max(
+                0, abs(witness_cz - focus_cz) - 1
+            ) * CHUNK_SIZE_BLOCKS
+            nearest_horizontal_blocks = math.hypot(dx_blocks, dz_blocks)
+            fog_horizon_blocks = max(
+                32.0, fog_rd * CHUNK_SIZE_BLOCKS - fog_margin
+            )
+            return (
+                "beyond_fog"
+                if nearest_horizontal_blocks > fog_horizon_blocks
+                else "intersects_fog"
+            )
+
+        def event_probe_witness_matches_proxy(row: dict) -> bool:
+            if not event_flag(row, "near_focus_hole_probe_witness_valid"):
+                return False
+            keys = (
+                ("near_focus_hole_probe_witness_cx", "focus_proxy_miss_cx"),
+                ("near_focus_hole_probe_witness_cy", "focus_proxy_miss_cy"),
+                ("near_focus_hole_probe_witness_cz", "focus_proxy_miss_cz"),
+            )
+            try:
+                return all(
+                    int(float(row.get(query_key)))
+                    == int(float(row.get(proxy_key)))
+                    for query_key, proxy_key in keys
+                )
+            except (TypeError, ValueError):
+                return False
+
+        def query_witness_has_identified_owner(row: dict) -> bool:
+            if not event_flag(row, "near_focus_hole_probe_witness_valid"):
+                return False
+            owner_keys = (
+                "near_focus_hole_probe_witness_dirty",
+                "near_focus_hole_probe_witness_build_in_flight",
+                "near_focus_hole_probe_witness_pending_gpu_apply",
+                "near_focus_hole_probe_witness_pending_gpu_queued",
+                "near_focus_hole_probe_witness_soft_defer_held",
+                "near_focus_hole_probe_witness_geometry_debt",
+                "near_focus_hole_probe_witness_repairable_debt",
+                "near_focus_hole_probe_witness_flow_ticket_valid",
+            )
+            return any(event_flag(row, key) for key in owner_keys)
+
+        event_focus_cx: list[float] = []
+        for row in hole_events:
+            try:
+                if row.get("focus_cx") is not None:
+                    event_focus_cx.append(float(row["focus_cx"]))
+            except (TypeError, ValueError):
+                continue
+        event_probe_rows = [
+            row for row in hole_events if "near_focus_hole_probe_ran" in row
+        ]
+        event_probe_returned_miss_n = sum(
+            event_flag(row, "near_focus_hole_probe_ran")
+            and event_probe_result(row) == 1
+            for row in event_probe_rows
+        )
+        event_probe_returned_clear_n = sum(
+            event_flag(row, "near_focus_hole_probe_ran")
+            and event_probe_result(row) == 0
+            for row in event_probe_rows
+        )
+        event_probe_unavailable_n = sum(
+            not event_flag(row, "near_focus_hole_probe_ran")
+            or event_probe_result(row) < 0
+            for row in event_probe_rows
+        )
+        # M335's named product corridor is the start locus around cx=0; it is
+        # not the temporal midpoint of the long westbound flight.
         west = [
             r
             for r in use
@@ -550,6 +844,79 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
         stalled_xs = vals("visible_black_fully_dark_stalled_n", mid_third)
         holes_gt0_corridor = sum(1 for h in holes_xs if h > 0)
         holes_gt0_whole = sum(1 for h in whole_holes if h > 0)
+        whole_rows = use if use else rows
+        hole_rows = [
+            row
+            for row in whole_rows
+            if float(row.get("near_focus_holes") or row.get("visual_holes") or 0)
+            > 0
+        ]
+        probe_rows = [
+            row for row in hole_rows if "near_focus_hole_probe_ran" in row
+        ]
+        probe_scan_rows = [
+            row
+            for row in whole_rows
+            if event_flag(row, "near_focus_hole_probe_ran")
+        ]
+        probe_scan_miss_rows = [
+            row
+            for row in probe_scan_rows
+            if event_probe_result(row) == 1
+            and event_flag(row, "near_focus_hole_probe_witness_valid")
+        ]
+        probe_scan_fog_scopes = [
+            probe_witness_fog_scope(row) for row in probe_scan_miss_rows
+        ]
+        event_probe_miss_rows = [
+            row
+            for row in hole_events
+            if event_flag(row, "near_focus_hole_probe_ran")
+            and event_probe_result(row) == 1
+            and event_flag(row, "near_focus_hole_probe_witness_valid")
+        ]
+        event_probe_fog_scopes = [
+            probe_witness_fog_scope(row) for row in event_probe_miss_rows
+        ]
+        probe_returned_miss_n = sum(
+            int(row.get("near_focus_hole_probe_ran", 0)) == 1
+            and int(row.get("near_focus_hole_probe_result", -1)) == 1
+            for row in probe_rows
+        )
+        probe_returned_clear_n = sum(
+            int(row.get("near_focus_hole_probe_ran", 0)) == 1
+            and int(row.get("near_focus_hole_probe_result", -1)) == 0
+            for row in probe_rows
+        )
+        latched_hole_n = sum(
+            int(row.get("near_focus_holes_latched", 0)) > 0
+            for row in probe_rows
+        )
+        proxy_drawable_n = sum(
+            int(row.get("focus_proxy_drawable_mesh", 0)) > 0 for row in hole_rows
+        )
+        proxy_satisfying_n = sum(
+            int(row.get("focus_proxy_satisfying_mesh", 0)) > 0
+            for row in hole_rows
+        )
+        screen_ray_hole_events = [
+            row for row in hole_events
+            if row.get("miss_screen_ray_candidate") == 1
+        ]
+        screen_ray_selection_state_rows = [
+            row for row in screen_ray_hole_events
+            if row.get("miss_screen_ray_selected_state_valid") == 1
+        ]
+        screen_ray_selection_proxy_pairs = [
+            row for row in screen_ray_selection_state_rows
+            if (
+                row.get("miss_cx"), row.get("miss_cy"), row.get("miss_cz")
+            ) == (
+                row.get("focus_proxy_miss_cx"),
+                row.get("focus_proxy_miss_cy"),
+                row.get("focus_proxy_miss_cz"),
+            )
+        ]
         dropped_per = median(corridor_deltas) if corridor_deltas else None
         # Admission breakdown (diagnostic; dirty_dropped alone ≠ correctness).
         def last_or_none(key: str) -> float | None:
@@ -560,6 +927,273 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             "near_focus_holes_periods_gt0": holes_gt0_whole,
             "near_focus_holes_periods_gt0_corridor": holes_gt0_corridor,
             "near_focus_holes_scope": "whole_route_mesh_telemetry",
+            "near_focus_holes_corridor_scope": (
+                "focus_cx[-6,6] around M335 start locus, not route midpoint"
+            ),
+            "near_focus_hole_probe_rows": len(probe_rows),
+            "near_focus_hole_probe_returned_miss_periods": probe_returned_miss_n,
+            "near_focus_hole_probe_returned_clear_periods": probe_returned_clear_n,
+            "near_focus_hole_probe_result_semantics": (
+                "result from an invoked HasMissingGreedyMeshInHorizontalRadius "
+                "query; it can hit a same-frame shared memo, so invocation "
+                "does not guarantee an uncached world scan"
+            ),
+            "near_focus_hole_probe_memo_hit_periods": sum(
+                event_flag(row, "near_focus_hole_probe_memo_hit")
+                for row in probe_rows
+            ),
+            "near_focus_hole_probe_witness_matches_proxy_periods": sum(
+                event_probe_witness_matches_proxy(row) for row in probe_rows
+            ),
+            "near_focus_hole_probe_invocations_whole_route": len(
+                probe_scan_rows
+            ),
+            "near_focus_hole_probe_memo_hits_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_memo_hit")
+                for row in probe_scan_rows
+            ),
+            "near_focus_hole_probe_returned_miss_whole_route": sum(
+                event_probe_result(row) == 1 for row in probe_scan_rows
+            ),
+            "near_focus_hole_probe_witness_valid_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_valid")
+                for row in probe_scan_rows
+            ),
+            "near_focus_hole_probe_witness_mesh_present_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_has_mesh")
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_drawable_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_drawable")
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_satisfying_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_satisfying")
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_dirty_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_dirty")
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_build_in_flight_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_build_in_flight"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_pending_gpu_apply_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_pending_gpu_apply"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_pending_gpu_queued_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_pending_gpu_queued"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_soft_defer_held_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_soft_defer_held"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_geometry_debt_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_geometry_debt"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_repairable_debt_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_repairable_debt"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_flow_ticket_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_flow_ticket_valid"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_no_identified_owner_whole_route": sum(
+                not query_witness_has_identified_owner(row)
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_state_scope": (
+                "immediate state snapshot for the exact raw radius-query "
+                "coordinate; owner status covers reported dirty, build, GPU, "
+                "SoftDefer, publication-debt, and flow-ticket fields only"
+            ),
+            "near_focus_hole_probe_witness_fog_scope_model": (
+                "classify raw miss witness using the nearest possible horizontal "
+                "distance from anywhere in the focus chunk to the witness chunk "
+                "AABB; beyond_fog proves the chunk lies outside the configured "
+                "fog horizon, while intersects_fog is only a visibility candidate"
+            ),
+            "near_focus_hole_probe_miss_witness_beyond_fog_horizon_whole_route": sum(
+                scope == "beyond_fog" for scope in probe_scan_fog_scopes
+            ),
+            "near_focus_hole_probe_miss_witness_intersects_fog_horizon_whole_route": sum(
+                scope == "intersects_fog" for scope in probe_scan_fog_scopes
+            ),
+            "near_focus_hole_probe_miss_witness_fog_scope_unavailable_whole_route": sum(
+                scope is None for scope in probe_scan_fog_scopes
+            ),
+            "visual_holes_enter_probe_miss_witness_beyond_fog_horizon": sum(
+                scope == "beyond_fog" for scope in event_probe_fog_scopes
+            ),
+            "visual_holes_enter_probe_miss_witness_intersects_fog_horizon": sum(
+                scope == "intersects_fog" for scope in event_probe_fog_scopes
+            ),
+            "visual_holes_enter_probe_miss_witness_fog_scope_unavailable": sum(
+                scope is None for scope in event_probe_fog_scopes
+            ),
+            "near_focus_tracked_witness_lifecycle_events": len(
+                tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_resolved_before_fog_events": sum(
+                row.get("kind") == "near_focus_witness_resolved_before_fog"
+                for row in tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_entered_fog_unready_events": sum(
+                row.get("kind") == "near_focus_witness_entered_fog_unready"
+                for row in tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_resolved_after_fog_events": sum(
+                row.get("kind") == "near_focus_witness_resolved_after_fog"
+                for row in tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_exited_fog_unready_events": sum(
+                row.get("kind") == "near_focus_witness_exited_fog_unready"
+                for row in tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_event_scope": (
+                "one exact radius-query witness followed across frames; fog is "
+                "the configured distance horizon, not camera-frustum or pixel proof"
+            ),
+            "near_focus_hole_latched_periods": latched_hole_n,
+            "near_focus_hole_proxy_drawable_periods": proxy_drawable_n,
+            "near_focus_hole_proxy_satisfying_periods": proxy_satisfying_n,
+            "near_focus_holes_period_semantics": (
+                "one terminal frame sample per interval; transient rising edges "
+                "are reported separately below"
+            ),
+            "visual_holes_enter_events_in_analysis_scope": len(hole_events),
+            "visual_holes_enter_events_scope": (
+                "frame-aligned rising edges with movement_speed > 2"
+                if fly_hole_events
+                else "all frame-aligned rising edges (no moving event rows)"
+            ),
+            "visual_holes_enter_events_semantics": (
+                "mesh-coverage proxy events, not framebuffer evidence"
+            ),
+            "visual_holes_enter_probe_returned_miss": event_probe_returned_miss_n,
+            "visual_holes_enter_probe_returned_clear": event_probe_returned_clear_n,
+            "visual_holes_enter_probe_unavailable": event_probe_unavailable_n,
+            "visual_holes_enter_probe_memo_hit": sum(
+                event_flag(row, "near_focus_hole_probe_memo_hit")
+                for row in hole_events
+            ),
+            "visual_holes_enter_probe_witness_valid": sum(
+                event_flag(row, "near_focus_hole_probe_witness_valid")
+                for row in hole_events
+            ),
+            "visual_holes_enter_probe_witness_matches_proxy": sum(
+                event_probe_witness_matches_proxy(row) for row in hole_events
+            ),
+            "visual_holes_enter_probe_witness_differs_from_proxy": sum(
+                event_flag(row, "near_focus_hole_probe_witness_valid")
+                and not event_probe_witness_matches_proxy(row)
+                for row in hole_events
+            ),
+            "visual_holes_enter_probe_miss_and_proxy_drawable": sum(
+                event_flag(row, "near_focus_hole_probe_ran")
+                and event_probe_result(row) == 1
+                and event_flag(row, "focus_proxy_drawable_mesh")
+                for row in hole_events
+            ),
+            "visual_holes_enter_probe_miss_and_proxy_satisfying": sum(
+                event_flag(row, "near_focus_hole_probe_ran")
+                and event_probe_result(row) == 1
+                and event_flag(row, "focus_proxy_satisfying_mesh")
+                for row in hole_events
+            ),
+            "visual_holes_enter_latched": sum(
+                event_flag(row, "near_focus_holes_latched")
+                for row in hole_events
+            ),
+            "visual_holes_enter_proxy_drawable": sum(
+                event_flag(row, "focus_proxy_drawable_mesh")
+                for row in hole_events
+            ),
+            "visual_holes_enter_proxy_satisfying": sum(
+                event_flag(row, "focus_proxy_satisfying_mesh")
+                for row in hole_events
+            ),
+            "visual_holes_enter_proxy_build_in_flight": sum(
+                event_flag(row, "focus_proxy_build_in_flight")
+                for row in hole_events
+            ),
+            "visual_holes_enter_proxy_pending_gpu_apply": sum(
+                event_flag(row, "focus_proxy_pending_gpu_apply")
+                for row in hole_events
+            ),
+            "visual_holes_enter_screen_ray_candidate_events": len(
+                screen_ray_hole_events
+            ),
+            "visual_holes_enter_screen_ray_selection_state_known": len(
+                screen_ray_selection_state_rows
+            ),
+            "visual_holes_enter_screen_ray_selection_drawable": sum(
+                row.get("miss_screen_ray_selected_drawable") == 1
+                for row in screen_ray_selection_state_rows
+            ),
+            "visual_holes_enter_screen_ray_selection_satisfying": sum(
+                row.get("miss_screen_ray_selected_satisfying") == 1
+                for row in screen_ray_selection_state_rows
+            ),
+            "visual_holes_enter_screen_ray_selection_repairable_geometry_debt": sum(
+                row.get("miss_screen_ray_selected_repairable_geometry_debt") == 1
+                for row in screen_ray_selection_state_rows
+            ),
+            "visual_holes_enter_screen_ray_selection_proxy_coordinate_match": len(
+                screen_ray_selection_proxy_pairs
+            ),
+            "visual_holes_enter_screen_ray_selection_drawable_changed_before_snapshot": sum(
+                row.get("miss_screen_ray_selected_drawable")
+                != row.get("focus_proxy_drawable_mesh")
+                for row in screen_ray_selection_proxy_pairs
+            ),
+            "visual_holes_enter_screen_ray_selection_satisfying_changed_before_snapshot": sum(
+                row.get("miss_screen_ray_selected_satisfying")
+                != row.get("focus_proxy_satisfying_mesh")
+                for row in screen_ray_selection_proxy_pairs
+            ),
+            "visual_holes_enter_screen_ray_selection_repairable_debt_changed_before_snapshot": sum(
+                row.get("miss_screen_ray_selected_repairable_geometry_debt")
+                != row.get("focus_proxy_repairable_geometry_debt")
+                for row in screen_ray_selection_proxy_pairs
+            ),
+            "visual_holes_enter_screen_ray_selection_state_scope": (
+                "selection-time mesh/debt sample from the chosen screen-ray "
+                "candidate; focus_proxy fields are sampled later in the same "
+                "streaming refresh, joined by the exact miss coordinates"
+            ),
+            "visual_holes_enter_start_band_events": sum(
+                -6.0 <= cx <= 6.0 for cx in event_focus_cx
+            ),
+            "visual_holes_enter_outside_start_band_events": sum(
+                cx < -6.0 or cx > 6.0 for cx in event_focus_cx
+            ),
+            "visual_holes_enter_focus_cx_min": (
+                min(event_focus_cx) if event_focus_cx else None
+            ),
+            "visual_holes_enter_focus_cx_max": (
+                max(event_focus_cx) if event_focus_cx else None
+            ),
+            "visual_holes_enter_is_diagnostic_only": True,
             "dirty_dropped_per_period": dropped_per,
             "dirty_dropped_per_period_mean": (
                 (sum(corridor_deltas) / float(len(corridor_deltas)))
@@ -876,9 +1510,18 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         stale_xs = values("mesh_apply_stale_visual")
         if not stale_xs:
             stale_xs = values("mesh_apply_stale")
-        deltas: list[float] = [
-            abs(stale_xs[i] - stale_xs[i - 1]) for i in range(1, len(stale_xs))
-        ]
+        # FramePerfMonitor emits an exact interval delta for this process-lifetime
+        # counter. Use it directly; differencing averaged snapshots loses events
+        # and makes the result depend on sample cadence. Older logs can fall back
+        # to adjacent counter differences.
+        stale_delta_xs = values("mesh_apply_stale_delta")
+        stale_delta_source = "mesh_apply_stale_delta"
+        if not stale_delta_xs:
+            stale_delta_source = "adjacent_counter_difference"
+            stale_delta_xs = [
+                max(0.0, stale_xs[i] - stale_xs[i - 1])
+                for i in range(1, len(stale_xs))
+            ]
 
         hole_flags: list[float] = []
         for row in use:
@@ -903,10 +1546,10 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         reorder_xs = values("transparent_cmd_reorder_n")
         incomplete_xs = values("publication_incomplete_material_n")
         oom_xs = values("publication_oom_retain_n")
-        stale_med = median(stale_xs)
+        stale_cumulative_med = median(stale_xs)
         holes_med = median(holes_xs)
         visual_holes_med = median(visual_holes_xs)
-        delta_med = median(deltas)
+        delta_med = median(stale_delta_xs)
         reorder_med = median(reorder_xs)
         incomplete_med = median(incomplete_xs)
         oom_med = median(oom_xs)
@@ -918,9 +1561,14 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "perf_path": str(perf_path),
             "eye_proxy_segment": segment,
             "eye_proxy_coverage": coverage_status,
-            "mesh_apply_stale_visual_mid_med": stale_med,
-            "mesh_apply_stale_visual_fly_med": stale_med,
+            "eye_proxy_scope": "M335 spatial focus_cx[2,5], not temporal mid-flight",
+            # Keep legacy keys for report readers, but document that these are
+            # cumulative diagnostics and are no longer a quality gate.
+            "mesh_apply_stale_visual_mid_med": stale_cumulative_med,
+            "mesh_apply_stale_visual_fly_med": stale_cumulative_med,
+            "mesh_apply_stale_visual_cumulative_mid_med": stale_cumulative_med,
             "mesh_apply_stale_visual_delta_med": delta_med,
+            "mesh_apply_stale_visual_delta_source": stale_delta_source,
             "effective_holes_blink_rate": blink_rate,
             "transparent_cmd_reorder_mid_med": reorder_med,
             "transparent_cmd_reorder_fly_med": reorder_med,
@@ -937,12 +1585,8 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             fails.append("missing_holes_fields_untested")
         if not field_present("publication_incomplete_material_n"):
             fails.append("missing_publication_incomplete_field_untested")
-        if not stale_xs:
+        if not stale_xs and not stale_delta_xs:
             fails.append("missing_stale_visual_field_untested")
-        if stale_med is None or float(stale_med) > EYE_PROXY_STOP_LINE[
-            "mesh_apply_stale_visual_mid_med_max"
-        ]:
-            fails.append("mesh_apply_stale_visual_mid_med_above_eye_proxy")
         if delta_med is None or float(delta_med) > EYE_PROXY_STOP_LINE[
             "mesh_apply_stale_visual_delta_med_max"
         ]:
@@ -966,15 +1610,17 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "visual_holes_mid_med_max"
         ]:
             fails.append("visual_holes_mid_med_above_eye_proxy")
-        # Holes telem = missing mesh only; thrash with holes==0 is still a defect.
+        # Holes telem = missing mesh only; stale apply activity without holes is
+        # still worth reporting, but base it on per-period activity, not a
+        # process-lifetime total.
         if (
             (holes_med is None or float(holes_med) == 0.0)
             and (visual_holes_med is None or float(visual_holes_med) == 0.0)
-            and stale_med is not None
-            and float(stale_med)
-            > EYE_PROXY_STOP_LINE["mesh_apply_stale_visual_mid_med_max"]
+            and delta_med is not None
+            and float(delta_med)
+            > EYE_PROXY_STOP_LINE["mesh_apply_stale_visual_delta_med_max"]
         ):
-            fails.append("stale_visual_without_hole_counters")
+            fails.append("stale_visual_activity_without_hole_counters")
         # Silent mid_third/fly_fallback must not look like a covered mid-corridor PASS.
         if segment in ("mid_third", "fly_fallback"):
             fails.append("eye_proxy_segment_coverage_untested")
@@ -1046,11 +1692,88 @@ def kill_process_tree(pid: int) -> None:
             pass
 
 
-def run_with_timeout(cmd: list[str], cwd: Path, timeout_sec: float) -> int:
+def run_with_timeout(
+    cmd: list[str], cwd: Path, timeout_sec: float, *, sample_resources: bool = True
+) -> tuple[int, dict]:
+    """Run flight-sim while sampling host and app CPU/memory when psutil exists."""
     proc = subprocess.Popen(cmd, cwd=str(cwd))
-    try:
-        return proc.wait(timeout=timeout_sec)
-    except subprocess.TimeoutExpired:
+    monitor = {
+        "schema": "flight-runtime-resources.v1",
+        "available": False,
+        "disabled_by_user": not sample_resources,
+        "sample_interval_sec": 1.0,
+        "sample_count": 0,
+        "logical_cpu_count": None,
+        "samples": [],
+    }
+    psutil_module = None
+    app_process = None
+    if not sample_resources:
+        monitor["unavailable_reason"] = "disabled_by_user"
+    else:
+        try:
+            import psutil
+        except ImportError as exc:
+            monitor["unavailable_reason"] = type(exc).__name__
+        else:
+            psutil_module = psutil
+            try:
+                monitor["logical_cpu_count"] = psutil_module.cpu_count(logical=True) or 1
+                app_process = psutil_module.Process(proc.pid)
+                # Prime psutil's interval counters so the first recorded sample spans
+                # the first second of the actual flight process.
+                psutil_module.cpu_percent(interval=None)
+                app_process.cpu_percent(interval=None)
+                monitor["available"] = True
+            except (OSError, psutil_module.Error) as exc:
+                monitor["unavailable_reason"] = type(exc).__name__
+                psutil_module = None
+                app_process = None
+
+    started_at = time.monotonic()
+    deadline = started_at + max(0.0, timeout_sec)
+    timed_out = False
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0.0:
+            if proc.poll() is None:
+                timed_out = True
+            break
+        try:
+            proc.wait(
+                timeout=min(1.0, remaining) if monitor["available"] else remaining
+            )
+            break
+        except subprocess.TimeoutExpired:
+            if psutil_module is None or app_process is None:
+                continue
+            try:
+                host_cpu = float(psutil_module.cpu_percent(interval=None))
+                app_cpu_one_core = float(app_process.cpu_percent(interval=None))
+                app_memory = app_process.memory_info().rss
+                app_threads = app_process.num_threads()
+                memory = psutil_module.virtual_memory()
+                cpu_count = max(1, int(monitor["logical_cpu_count"] or 1))
+                monitor["samples"].append(
+                    {
+                        "elapsed_sec": round(time.monotonic() - started_at, 3),
+                        "host_cpu_percent": host_cpu,
+                        "app_cpu_one_core_percent": app_cpu_one_core,
+                        "app_cpu_machine_percent": app_cpu_one_core / cpu_count,
+                        "other_cpu_machine_percent_estimate": max(
+                            0.0, host_cpu - app_cpu_one_core / cpu_count
+                        ),
+                        "app_rss_mb": app_memory / (1024.0 * 1024.0),
+                        "app_threads": app_threads,
+                        "system_available_memory_mb": memory.available
+                        / (1024.0 * 1024.0),
+                    }
+                )
+            except psutil_module.Error:
+                # The app may exit between wait() timing out and this sample.
+                pass
+
+    if timed_out:
         print(
             f"WARN: flight-sim hung after {timeout_sec:.0f}s, killing pid={proc.pid}",
             flush=True,
@@ -1062,7 +1785,36 @@ def run_with_timeout(cmd: list[str], cwd: Path, timeout_sec: float) -> int:
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-        return 124
+
+    samples = monitor["samples"]
+    monitor["sample_count"] = len(samples)
+    for source_key, summary_key in (
+        ("host_cpu_percent", "host_cpu_percent_summary"),
+        ("app_cpu_machine_percent", "app_cpu_machine_percent_summary"),
+        ("other_cpu_machine_percent_estimate", "other_cpu_machine_percent_estimate_summary"),
+    ):
+        values = sorted(float(sample[source_key]) for sample in samples)
+        if values:
+            p95_index = min(
+                len(values) - 1, max(0, math.ceil(len(values) * 0.95) - 1)
+            )
+            monitor[summary_key] = {
+                "median": values[len(values) // 2],
+                "p95": values[p95_index],
+                "max": values[-1],
+            }
+        else:
+            monitor[summary_key] = None
+    rss_values = [float(sample["app_rss_mb"]) for sample in samples]
+    monitor["app_rss_mb_max"] = max(rss_values) if rss_values else None
+    available_memory = [
+        float(sample["system_available_memory_mb"]) for sample in samples
+    ]
+    monitor["system_available_memory_mb_min"] = (
+        min(available_memory) if available_memory else None
+    )
+    monitor["timed_out"] = timed_out
+    return (124 if timed_out else int(proc.returncode or 0)), monitor
 
 
 def append_phase_history(entry: dict) -> None:
@@ -1158,6 +1910,11 @@ def annotate_report_hang_legacy(report: Path, hang_killed: bool, process_rc: int
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--world", default="World_164")
+    ap.add_argument(
+        "--require-existing-world",
+        action="store_true",
+        help="fail unless this exact saved world exists and is loaded",
+    )
     ap.add_argument("--seconds", type=float, default=45.0)
     ap.add_argument("--build", action="store_true")
     ap.add_argument("--no-fly", action="store_true")
@@ -1221,6 +1978,26 @@ def main() -> int:
         help="teleport to fixed cruise start chunk (legacy auto west)",
     )
     ap.add_argument("--report", type=Path, default=BIN / "flight_sim_gate_report.json")
+    ap.add_argument(
+        "--artifact-root",
+        type=Path,
+        default=None,
+        help="optional per-run root for app report, INFO/perf logs, and run artifacts",
+    )
+    metrics_group = ap.add_mutually_exclusive_group()
+    metrics_group.add_argument(
+        "--metrics",
+        dest="metrics_enabled",
+        action="store_true",
+        help="enable FramePerf collection, perf JSONL output, host sampling, and metric gates",
+    )
+    metrics_group.add_argument(
+        "--no-metrics",
+        dest="metrics_enabled",
+        action="store_false",
+        help="disable FramePerf collection, perf JSONL output, and host sampling (default)",
+    )
+    ap.set_defaults(metrics_enabled=False)
     ap.add_argument(
         "--build-dir",
         type=Path,
@@ -1406,6 +2183,52 @@ def main() -> int:
         help="run scenario N times; write report, report_2..N, and report_agg.json",
     )
     args = ap.parse_args()
+
+    # Instrumented flight analysis is explicit; visible route runs default to
+    # no FramePerf collection, perf disk output, or host-resource polling.
+    metrics_enabled = args.metrics_enabled
+    os.environ["CUBATARIUM_PERF_LOG"] = "1" if metrics_enabled else "0"
+    artifact_root = args.artifact_root
+    if artifact_root is not None:
+        if not artifact_root.is_absolute():
+            artifact_root = ROOT / artifact_root
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        logs_dir = artifact_root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["CUBATARIUM_LOG_DIR"] = str(logs_dir)
+        flight_report_path = artifact_root / "flight_sim_report.json"
+    else:
+        configured_logs = os.environ.get("CUBATARIUM_LOG_DIR", "").strip()
+        logs_dir = Path(configured_logs) if configured_logs else BIN / "logs"
+        if not logs_dir.is_absolute():
+            logs_dir = BIN / logs_dir
+        logs_dir = logs_dir.resolve()
+        os.environ["CUBATARIUM_LOG_DIR"] = str(logs_dir)
+        flight_report_path = BIN / "flight_sim_report.json"
+    if os.environ.get("CUBA_FLIGHT_REQUIRE_EXISTING_WORLD", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
+        args.require_existing_world = True
+
+    if args.require_existing_world:
+        requested_world_dir = BIN / "worlds" / args.world
+        if not requested_world_dir.is_dir():
+            raise SystemExit(
+                "FAIL: --require-existing-world requested "
+                f"{args.world!r}, but {requested_world_dir} does not exist"
+            )
+        if args.scenario in (
+            "product-174657",
+            "product-174657-dive",
+            "product-174657-far",
+        ) and not (requested_world_dir / "users.json").is_file():
+            raise SystemExit(
+                "FAIL: --require-existing-world needs users.json to pin the "
+                f"product start position in {requested_world_dir}"
+            )
 
     if args.scenario == "break-stand":
         args.world = args.world or "World_164"
@@ -1903,7 +2726,7 @@ def main() -> int:
                             json.dumps(cfg, indent=4) + "\n", encoding="utf-8"
                         )
                     print(
-                        f"INFO: {args.scenario} CUBA_FLIGHT_FOG_ON=1 → "
+                        f"INFO: {args.scenario} CUBA_FLIGHT_FOG_ON=1 -> "
                         f"fog_pull_in_enabled=true (was {prev_fog})",
                         flush=True,
                     )
@@ -2507,6 +3330,9 @@ def main() -> int:
             report_path = base_report
 
         t0 = time.time()
+        from a21_run_manifest import capture_source_identity
+
+        run_source_identity = capture_source_identity()
         if not args.skip_preflight:
             kill_cubatarium_orphans()
 
@@ -2527,7 +3353,7 @@ def main() -> int:
             "--seconds",
             str(args.seconds),
             "--report",
-            str(BIN / "flight_sim_report.json"),
+            str(flight_report_path),
         ]
         break_scenarios = ("break-stand", "visual-dig", "idle-edit-smoke")
         if args.scenario in break_scenarios:
@@ -2610,13 +3436,38 @@ def main() -> int:
             process_timeout = max(process_timeout, args.seconds + 180.0)
 
         print("running:", " ".join(sim_cmd), flush=True)
-        rc = run_with_timeout(sim_cmd, BIN, process_timeout)
+        rc, runtime_resources = run_with_timeout(
+            sim_cmd, BIN, process_timeout, sample_resources=metrics_enabled
+        )
+        runtime_resources_summary = {
+            "available": runtime_resources.get("available"),
+            "sample_count": runtime_resources.get("sample_count"),
+            "host_cpu_percent": runtime_resources.get(
+                "host_cpu_percent_summary"
+            ),
+            "app_cpu_machine_percent": runtime_resources.get(
+                "app_cpu_machine_percent_summary"
+            ),
+            "other_cpu_machine_percent_estimate": runtime_resources.get(
+                "other_cpu_machine_percent_estimate_summary"
+            ),
+            "app_rss_mb_max": runtime_resources.get("app_rss_mb_max"),
+            "system_available_memory_mb_min": runtime_resources.get(
+                "system_available_memory_mb_min"
+            ),
+            "timed_out": runtime_resources.get("timed_out"),
+        }
+        print(
+            "runtime resources: "
+            + json.dumps(runtime_resources_summary, ensure_ascii=False),
+            flush=True,
+        )
         hang_killed = rc == 124
         kill_cubatarium_orphans()
 
-        perf = newest_perf(t0)
-        if perf is None:
-            flight_report = BIN / "flight_sim_report.json"
+        perf = newest_perf(t0, logs_dir=logs_dir) if metrics_enabled else None
+        if perf is None and metrics_enabled:
+            flight_report = flight_report_path
             if flight_report.is_file():
                 data = json.loads(flight_report.read_text(encoding="utf-8"))
                 p = data.get("perf_jsonl") or ""
@@ -2625,6 +3476,107 @@ def main() -> int:
 
         ana = 1
         if perf is None:
+            if not metrics_enabled:
+                flight_report = flight_report_path
+                app_report = load_best(flight_report) or {}
+                info_log = None
+                if DIAG.is_file():
+                    import importlib.util
+
+                    spec = importlib.util.spec_from_file_location(
+                        "flight_sim_diag", DIAG
+                    )
+                    if spec and spec.loader:
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        info_log = mod.newest_info_log(t0, logs_dir=logs_dir)
+                world_startup_identity = read_world_startup_identity(
+                    str(args.world), flight_report, info_log, t0
+                )
+                from a21_run_manifest import build_run_manifest
+
+                cold_warm = world_startup_identity.get("cache_mode", "unknown")
+                run_manifest = build_run_manifest(
+                    exe=resolve_exe(),
+                    world=(world_startup_identity.get("runtime_world") or args.world),
+                    scenario=args.scenario,
+                    cold_warm=cold_warm,
+                    route_hash=hashlib.sha256(
+                        json.dumps(
+                            build_flight_route_identity(args),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode("utf-8")
+                    ).hexdigest(),
+                    source_identity=run_source_identity,
+                    extra={
+                        "route": build_flight_route_identity(args),
+                        "requested_world": str(args.world),
+                        "world_startup": world_startup_identity,
+                        "frame_perf_enabled": False,
+                        "host_resource_sampling_enabled": False,
+                        "perf_jsonl": None,
+                        "info_log": str(info_log) if info_log else None,
+                        "application_report": str(flight_report),
+                        "artifact_root": str(artifact_root) if artifact_root else None,
+                        "analysis_status": "skipped_metrics_disabled",
+                    },
+                )
+                app_report_ok = app_report.get("exit_code") == 0
+                report_data = {
+                    "schema": "flight_sim_uninstrumented_run.v1",
+                    "phase_id": args.phase_id or "unspecified",
+                    "scenario": args.scenario,
+                    "world": args.world,
+                    "process_rc": rc,
+                    "hang_killed": hang_killed,
+                    "process_success": rc == 0 and not hang_killed and app_report_ok,
+                    "verdict": "not_evaluated_metrics_disabled",
+                    "pass": None,
+                    "route_observation": {
+                        key: app_report.get(key)
+                        for key in (
+                            "loading_seen",
+                            "ingame_frames",
+                            "ingame_seconds_requested",
+                            "start_focus",
+                            "end_focus",
+                            "chunks_traveled_cheb",
+                            "collision_stop_triggered",
+                        )
+                    },
+                    "world_startup": world_startup_identity,
+                    "metrics": {
+                        "frame_perf_collection": False,
+                        "frame_perf_disk_logging": False,
+                        "host_resource_sampling": False,
+                        "perf_jsonl": None,
+                    },
+                    "runtime_resources": runtime_resources,
+                    "run_manifest": run_manifest,
+                }
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(
+                    json.dumps(report_data, indent=2) + "\n", encoding="utf-8"
+                )
+                append_phase_history(
+                    {
+                        "phase": args.phase_id or "unspecified",
+                        "rc": rc,
+                        "hang_killed": hang_killed,
+                        "perf": None,
+                        "report": str(report_path),
+                        "repeat": rep,
+                        "metrics_disabled": True,
+                    }
+                )
+                run_reports.append(report_path)
+                last_rc = 0 if report_data["process_success"] else (3 if hang_killed else 1)
+                print(
+                    "metrics disabled: route was executed; diagnostic gates were not evaluated",
+                    flush=True,
+                )
+                continue
             print("FAIL: no perf jsonl produced", file=sys.stderr)
             append_phase_history(
                 {
@@ -2634,6 +3586,7 @@ def main() -> int:
                     "perf": None,
                     "report": str(report_path),
                     "repeat": rep,
+                    "runtime_resources_summary": runtime_resources_summary,
                 }
             )
             last_rc = 3 if hang_killed else 1
@@ -2690,7 +3643,21 @@ def main() -> int:
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
-                info_log = mod.newest_info_log(t0)
+                info_log = mod.newest_info_log(t0, logs_dir=logs_dir)
+        world_startup_identity = read_world_startup_identity(
+            str(args.world),
+            flight_report_path,
+            info_log,
+            t0,
+        )
+        expected_start_focus = expected_product_start_focus(args)
+        actual_start_focus = normalize_focus(
+            world_startup_identity.get("start_focus")
+        )
+        product_start_focus_matches = (
+            expected_start_focus is not None
+            and actual_start_focus == expected_start_focus
+        )
         annotate_report_run(report_path, hang_killed, rc, perf, info_log)
         # Phase55 fidelity: expose teleport flag for AnalyzePhase55Scorecard.
         if report_path.is_file():
@@ -2698,6 +3665,7 @@ def main() -> int:
                 _ann = json.loads(report_path.read_text(encoding="utf-8"))
                 _ann["teleport_cruise"] = bool(args.teleport_cruise)
                 _ann["process_timeout_s"] = float(process_timeout)
+                _ann["runtime_resources"] = runtime_resources
                 # A21 P0.1: bind report to binary/world/route identity.
                 try:
                     from a21_run_manifest import build_run_manifest
@@ -2719,13 +3687,18 @@ def main() -> int:
                     if warm_claimed and not warm_env:
                         os.environ["CUBA_FLIGHT_WARM"] = "1"
                         warm_env = True
-                    cold_warm = "warm" if warm_claimed and warm_env else "cold"
                     if warm_claimed:
                         os.environ.setdefault("CUBA_WARM_PROTOCOL", "warmup_sec_stamp")
+                    cold_warm = world_startup_identity["cache_mode"]
+                    if cold_warm not in ("warm", "cold"):
+                        cold_warm = "unknown"
                     _perf_runtime_identity = read_perf_runtime_identity(perf)
                     _ann["run_manifest"] = build_run_manifest(
                         exe=resolve_exe(),
-                        world=getattr(args, "world", None),
+                        world=(
+                            world_startup_identity["runtime_world"]
+                            or getattr(args, "world", None)
+                        ),
                         scenario=getattr(args, "scenario", None),
                         cold_warm=cold_warm,
                         route_hash=hashlib.sha256(
@@ -2735,8 +3708,27 @@ def main() -> int:
                                 separators=(",", ":"),
                             ).encode("utf-8")
                         ).hexdigest(),
+                        source_identity=run_source_identity,
                         extra={
                             "route": build_flight_route_identity(args),
+                            "requested_world": str(args.world),
+                            "world_startup": world_startup_identity,
+                            "runtime_world": world_startup_identity["runtime_world"],
+                            "runtime_world_matches_requested": world_startup_identity[
+                                "runtime_world_matches_requested"
+                            ],
+                            "world_startup_operation": world_startup_identity[
+                                "startup_operation"
+                            ],
+                            "world_storage_mode": world_startup_identity[
+                                "storage_mode"
+                            ],
+                            "period_warmup_stamp": bool(warm_env),
+                            "period_warmup_protocol": (
+                                os.environ.get("CUBA_WARM_PROTOCOL")
+                                if warm_env
+                                else None
+                            ),
                             "config_file_sha256_before": getattr(
                                 args, "_product174657_config_sha256_before", None
                             ),
@@ -2754,6 +3746,9 @@ def main() -> int:
                                 "CUBA_VISUAL_BLACK_TRACE", ""
                             ).strip()
                             not in ("", "0"),
+                            "focus_slice_trace_per_state": os.environ.get(
+                                "CUBA_FOCUS_SLICE_TRACE_PER_STATE", "12"
+                            ),
                             "visual_black_trace_focus_probes": os.environ.get(
                                 "CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES", ""
                             ).strip()
@@ -2766,6 +3761,16 @@ def main() -> int:
                                 "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY", ""
                             ).strip()
                             not in ("", "0"),
+                            "visual_pixel_probe_on_stalled_census": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS", ""
+                            ).strip()
+                            not in ("", "0"),
+                            "visual_pixel_probe_min_x": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X"
+                            ),
+                            "visual_pixel_probe_max_x": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X"
+                            ),
                             "world_column_source_trace": os.environ.get(
                                 "CUBA_WORLD_COLUMN_SOURCE_TRACE", ""
                             ).strip()
@@ -2777,14 +3782,59 @@ def main() -> int:
                             "frame_capture_dir": os.environ.get(
                                 "CUBA_FLIGHT_CAPTURE_DIR"
                             ),
+                            "frame_capture_interval_sec": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_INTERVAL_SEC", "15"
+                            ),
+                            "frame_capture_min_x": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_MIN_X"
+                            ),
+                            "frame_capture_max_x": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_MAX_X"
+                            ),
+                            "frame_capture_front_after_swap": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP", ""
+                            ).strip()
+                            == "1",
                             **_perf_runtime_identity,
                             "perf_jsonl": str(perf) if perf else None,
+                            "artifact_root": (
+                                str(artifact_root) if artifact_root else None
+                            ),
+                            "artifact_paths": {
+                                "control_report": str(report_path.resolve()),
+                                "application_report": str(flight_report_path),
+                                "logs_directory": str(logs_dir),
+                                "perf_jsonl": str(perf) if perf else None,
+                                "info_log": str(info_log) if info_log else None,
+                                "captures_directory": os.environ.get(
+                                    "CUBA_FLIGHT_CAPTURE_DIR"
+                                ),
+                            },
+                            "frame_perf_enabled": metrics_enabled,
+                            "host_resource_sampling_enabled": metrics_enabled,
                             "schema_perf": "perf_jsonl.v2",
                             "flight_move_speed_scale": os.environ.get(
                                 "CUBA_FLIGHT_MOVE_SPEED_SCALE", "1"
                             ),
                         },
                     )
+                    manifest_route = _ann["run_manifest"].get("route")
+                    if (
+                        isinstance(manifest_route, dict)
+                        and expected_start_focus is not None
+                    ):
+                        manifest_route["product_start_focus_expected"] = (
+                            expected_start_focus
+                        )
+                        manifest_route["product_start_focus_actual"] = (
+                            actual_start_focus
+                        )
+                        manifest_route["product_start_focus_matches"] = (
+                            product_start_focus_matches
+                        )
+                        manifest_route["product_start_position_pinned"] = bool(
+                            getattr(args, "_product174657_users_restore", None)
+                        ) and product_start_focus_matches
                     from a21_run_manifest import manifest_acceptance_ok
 
                     _ann["manifest_acceptance"] = manifest_acceptance_ok(
@@ -2809,12 +3859,16 @@ def main() -> int:
             run_reports.append(report_path)
             try:
                 result = json.loads(report_path.read_text(encoding="utf-8"))
+                result["world_startup"] = world_startup_identity
                 if args.scenario in (
                     "product-174657",
                     "product-174657-dive",
                     "product-174657-far",
                 ) and perf and Path(perf).is_file():
                     adequacy = compute_product_174657_proxy_adequacy(Path(perf))
+                    adequacy["warm_period_stamp_mode"] = adequacy.get("cache_mode")
+                    adequacy["cache_mode"] = world_startup_identity["cache_mode"]
+                    adequacy["cache_mode_source"] = "WorldLoadPerf startup operation"
                     result["proxy_adequacy"] = adequacy
                     warm = "warm" in report_path.stem.lower()
                     stop_line = compute_dual_lane_stop_line(Path(perf), warm=warm)
@@ -2929,17 +3983,100 @@ def main() -> int:
                     result["a31_progress_snapshot"] = compute_a31_progress_snapshot(
                         result, a24_safety, west
                     )
-                    # Warm honesty: reject cold_or_unspecified for warm reports.
+                    if expected_start_focus is not None:
+                        result["product_start_focus_verification"] = {
+                            "expected": expected_start_focus,
+                            "actual": actual_start_focus,
+                            "matches": product_start_focus_matches,
+                            "users_file_pinned": bool(
+                                getattr(args, "_product174657_users_restore", None)
+                            ),
+                        }
+                        result["product_start_focus_integrity_pass"] = (
+                            product_start_focus_matches
+                        )
                     pad = result.get("proxy_adequacy") or {}
-                    if warm and str(pad.get("cache_mode", "")).startswith("cold"):
+                    warm_replay_claimed = warm or args.require_existing_world
+                    replay_fails: list[str] = []
+                    if warm_replay_claimed:
+                        if world_startup_identity["cache_mode"] != "warm":
+                            replay_fails.append(
+                                "warm_claimed_but_saved_terrain_not_loaded"
+                            )
+                        if not world_startup_identity[
+                            "runtime_world_matches_requested"
+                        ]:
+                            replay_fails.append(
+                                "runtime_world_does_not_match_requested_world"
+                            )
+                        if (
+                            args.scenario
+                            in (
+                                "product-174657",
+                                "product-174657-dive",
+                                "product-174657-far",
+                            )
+                            and not getattr(
+                                args, "_product174657_users_restore", None
+                            )
+                        ):
+                            replay_fails.append(
+                                "requested_product_start_position_not_pinned"
+                            )
+                        if (
+                            expected_start_focus is not None
+                            and not product_start_focus_matches
+                        ):
+                            replay_fails.append(
+                                "runtime_start_focus_does_not_match_requested_position"
+                            )
+                    result["world_replay_integrity_pass"] = not replay_fails
+                    result["world_replay_integrity_fails"] = replay_fails
+                    if (
+                        expected_start_focus is not None
+                        and not product_start_focus_matches
+                        and not warm_replay_claimed
+                    ):
+                        reason = (
+                            "runtime_start_focus_does_not_match_requested_position"
+                        )
+                        result["pass"] = False
                         pad = dict(pad)
-                        pad["warm_protocol_fail"] = True
+                        pad["start_focus_integrity_fail"] = True
                         pad["adequacy_pass"] = False
                         fails = list(pad.get("adequacy_fails") or [])
-                        fails.append("warm_claimed_but_cache_mode_cold_or_unspecified")
+                        if reason not in fails:
+                            fails.append(reason)
                         pad["adequacy_fails"] = fails
                         result["proxy_adequacy"] = pad
                         adequacy = pad
+                    if replay_fails:
+                        pad = dict(pad)
+                        pad["warm_replay_integrity_fail"] = True
+                        pad["adequacy_pass"] = False
+                        fails = list(pad.get("adequacy_fails") or [])
+                        pad["adequacy_fails"] = fails + replay_fails
+                        result["proxy_adequacy"] = pad
+                        adequacy = pad
+                        result["pass"] = False
+                        acceptance = result.get("manifest_acceptance")
+                        if isinstance(acceptance, dict):
+                            acceptance = dict(acceptance)
+                            acceptance["manifest_acceptance_pass"] = False
+                            acceptance_fails = list(
+                                acceptance.get("manifest_acceptance_fails") or []
+                            )
+                            acceptance["manifest_acceptance_fails"] = (
+                                acceptance_fails + replay_fails
+                            )
+                            result["manifest_acceptance"] = acceptance
+                    if warm_replay_claimed:
+                        print(
+                            "flight-sim saved-world replay integrity: "
+                            + ("PASS" if not replay_fails else "FAIL")
+                            + f" {result['world_startup']}",
+                            flush=True,
+                        )
                     report_path.write_text(
                         json.dumps(result, indent=2) + "\n", encoding="utf-8"
                     )
@@ -3141,6 +4278,7 @@ def main() -> int:
                 "report": str(report_path),
                 "repeat": rep,
                 "summary": metrics_summary,
+                "runtime_resources_summary": runtime_resources_summary,
             }
         )
 
@@ -3240,7 +4378,7 @@ def main() -> int:
                 )
                 last_rc = 2
 
-    if repeats > 1 and run_reports:
+    if repeats > 1 and run_reports and metrics_enabled:
         agg_path = base_report.with_name(f"{base_report.stem}_agg{base_report.suffix}")
         write_repeat_aggregate(run_reports, agg_path)
         print(f"wrote aggregate: {agg_path}", flush=True)

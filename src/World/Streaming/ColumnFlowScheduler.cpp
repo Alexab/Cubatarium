@@ -152,4 +152,22 @@ bool UColumnFlowScheduler::ContainsColumn(glm::ivec2 column) const
   return live_.count(ColumnCoord(column)) != 0;
 }
 
+bool UColumnFlowScheduler::GetLiveTicket(glm::ivec2 column,
+                                         ColumnWorkItem &out) const
+{
+  const auto it = live_.find(ColumnCoord(column));
+  if (it == live_.end())
+  {
+    return false;
+  }
+
+  out.column = column;
+  out.kind = it->second.kind;
+  out.priority = it->second.priority;
+  out.scan_full_focus = it->second.scan_full_focus;
+  out.cy = it->second.cy;
+  out.generation = it->second.generation;
+  return true;
+}
+
 } // namespace cutum

@@ -12,12 +12,15 @@ BIN = ROOT / "bin"
 LOGS = BIN / "logs"
 
 
-def newest_info_log(after_ts: float = 0.0) -> Path | None:
-    if not LOGS.is_dir():
+def newest_info_log(
+    after_ts: float = 0.0, logs_dir: Path | None = None
+) -> Path | None:
+    logs = logs_dir or LOGS
+    if not logs.is_dir():
         return None
     cands = [
         p
-        for p in LOGS.glob("Cubatarium.exe*.INFO.*")
+        for p in logs.glob("Cubatarium.exe*.INFO.*")
         if p.is_file() and p.stat().st_mtime >= after_ts - 2.0
     ]
     if not cands:

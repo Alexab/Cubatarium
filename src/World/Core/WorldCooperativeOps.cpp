@@ -342,7 +342,8 @@ void UWorldCooperativeSession::BeginDeferredRelightQueue(UWorld &world)
   world.CancelAsyncRelightWork();
   if (world.Persistence)
   {
-    world.Persistence->ClearPendingRelights();
+    world.Persistence->ClearPendingRelights(
+        "cooperative_deferred_relight_start");
   }
   BeginColumnRelightQueue(world);
 }
@@ -422,8 +423,27 @@ void UWorldCooperativeSession::FinishEmissiveBlockLightRelight(UWorld &world)
             << EmissiveChunkRelightQueue.size() << " chunks" << std::endl;
   EmissiveChunkRelightQueue.clear();
   EmissiveChunkRelightIndex = 0;
+  if (Kind == WorldCoopKind::Create && !PrepareCreateVisuals)
+  {
+    FinishHeadlessCreate(world);
+    return;
+  }
   world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
   BeginMeshWarmupInner(world);
+}
+
+void UWorldCooperativeSession::FinishHeadlessCreate(UWorld &world)
+{
+  world.SetLightingRelightDeferred(false);
+  world.SetLightingSkylightBulkComplete(false);
+  world.BlockCounter.MarkNeedsRecount();
+
+  bool has_terrain_chunks = false;
+  world.BlockWorld.GetChunkManager().ForEachChunk(
+      [&](const UChunk &) { has_terrain_chunks = true; });
+  world.BlockWorldReady = has_terrain_chunks || world.CachedBlockCount > 0;
+  CurrentPhase = Phase::Done;
+  Active = false;
 }
 
 void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
@@ -491,6 +511,11 @@ void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
 
   if (EmissiveChunkRelightQueue.empty())
   {
+    if (Kind == WorldCoopKind::Create && !PrepareCreateVisuals)
+    {
+      FinishHeadlessCreate(world);
+      return;
+    }
     world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
     BeginMeshWarmupInner(world);
     return;
@@ -801,11 +826,20 @@ bool UWorldCooperativeSession::IsEnterVisualWarmupActive() const
 void UWorldCooperativeSession::BeginLoad(UWorld &world,
                                          const std::string &world_folder_path)
 {
+  const ProceduralSettings &runtime_settings = world.GetProceduralSettings();
+  const bool runtime_async_chunk_generation =
+      runtime_settings.AsyncChunkGeneration;
+  const bool runtime_async_chunk_io = runtime_settings.AsyncChunkIo;
+  const int runtime_max_chunk_commits_per_frame =
+      runtime_settings.MaxChunkCommitsPerFrame;
   delete ParallelGen;
   *this = UWorldCooperativeSession{};
   ParallelGen = nullptr;
   Kind = WorldCoopKind::Load;
   Active = true;
+  RuntimeAsyncChunkGeneration = runtime_async_chunk_generation;
+  RuntimeAsyncChunkIo = runtime_async_chunk_io;
+  RuntimeMaxChunkCommitsPerFrame = runtime_max_chunk_commits_per_frame;
   FolderPath = world_folder_path;
   CurrentPhase = Phase::Init;
   TimedPhaseId = "init";
@@ -833,13 +867,15 @@ void UWorldCooperativeSession::BeginSave(UWorld &world,
 }
 
 void UWorldCooperativeSession::BeginCreate(UWorld &world,
-                                           const std::string &world_name)
+                                           const std::string &world_name,
+                                           const bool prepare_visuals)
 {
   delete ParallelGen;
   *this = UWorldCooperativeSession{};
   ParallelGen = nullptr;
   Kind = WorldCoopKind::Create;
   Active = true;
+  PrepareCreateVisuals = prepare_visuals;
   TargetWorldName = world_name;
   CurrentPhase = Phase::Init;
   TimedPhaseId = "init";
@@ -1331,6 +1367,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   case Phase::Metadata:
   {
     world.LoadWorldData(FolderPath + "/world_data.json");
+    ProceduralSettings settings = world.GetProceduralSettings();
+    settings.AsyncChunkGeneration = RuntimeAsyncChunkGeneration;
+    settings.AsyncChunkIo = RuntimeAsyncChunkIo;
+    settings.MaxChunkCommitsPerFrame = RuntimeMaxChunkCommitsPerFrame;
+    world.SetProceduralSettings(settings, /*rebuildPipeline=*/false);
     if (world.OnAfterWorldDataLoaded)
     {
       world.OnAfterWorldDataLoaded();
@@ -1447,7 +1488,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             ground, world.BlockWorld, FolderPath, *world.BlockRegistry,
             world.ProceduralTemplate.MaxHeight);
         bool purged_incomplete_column = false;
-        if (!IsTerrainChunkComplete(world.BlockWorld, ground,
+        // LoadTerrainColumn returns -1 when a save still owns this column.
+        // That is a deferred read, not an absent or torn disk column. Keep the
+        // in-memory/save owner intact instead of clearing its chunks and files.
+        if (loaded_slices >= 0 &&
+            !IsTerrainChunkComplete(world.BlockWorld, ground,
                                     world.ProceduralTemplate.MaxHeight))
         {
           // Stale/torn column: drop disk + RAM so streaming regenerates.
@@ -1455,7 +1500,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                    world.ProceduralTemplate.MaxHeight);
           world.GetChunkStorage().RemoveTerrainColumnFromDisk(
               FolderPath, ground, world.ProceduralTemplate.MaxHeight);
-          purged_incomplete_column = true;
+          purged_incomplete_column = loaded_slices > 0;
         }
         if (IsWorldColumnSourceTraceEnabled())
         {
@@ -1464,9 +1509,20 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                   std::chrono::steady_clock::now() - column_load_started)
                   .count();
           const std::string source =
-              loaded_slices > 0 ? "disk" : "disk_miss";
-          const std::string outcome =
-              purged_incomplete_column ? "purged_incomplete" : "spatial_load";
+              loaded_slices == 0 ? "disk_miss" : "disk";
+          std::string outcome = "spatial_load";
+          if (loaded_slices < 0)
+          {
+            outcome = "deferred_save_pending";
+          }
+          else if (loaded_slices == 0)
+          {
+            outcome = "absent";
+          }
+          else if (purged_incomplete_column)
+          {
+            outcome = "purged_incomplete";
+          }
           const std::string message =
               "source=" + source + " outcome=" + outcome + " coord=(" +
               std::to_string(ground.x) + ",0," + std::to_string(ground.z) +
@@ -1636,7 +1692,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         world.EnqueueAsyncTerrainColumnRelight(
             col.x * CHUNK_SIZE, col.y * CHUNK_SIZE, 0, max_y,
             /*include_skylight=*/true, /*include_block_light=*/false,
-            /*finalize_pending_gate=*/false);
+            /*finalize_pending_gate=*/false,
+            /*visible_draw_gate_repair=*/false, "world_load");
         --schedule_batch;
       }
       ColumnRelightIndex = ColumnRelightScheduledIndex;
@@ -1880,22 +1937,16 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else if (MeshWarmupFinalizeOnly)
       {
-        // SOTA: FinalizeOnly still owns ColumnFlow until Presentable — do not
-        // skip BeginEnterLitGate (Era51 0ms PrepareView / second GpuWarmup).
-        if (!world.IsEnterLitGateActive())
-        {
-          UEnterLitDiagnostics::BeginSession();
-          world.BeginEnterLitGate();
-        }
+        // Delay the visual gate until PrepareEnter has restored the player and
+        // its terrain column is complete. The pre-gate view tick can then
+        // request a cold focus column instead of freezing ingress around a
+        // missing column that the visual worklist would treat as N/A.
         BeginPrepareEnter();
       }
       else
       {
-        if (!world.IsEnterLitGateActive())
-        {
-          UEnterLitDiagnostics::BeginSession();
-          world.BeginEnterLitGate();
-        }
+        // The gate starts in PrepareView after the saved player's camera
+        // column has a terminal load/generation result.
         CurrentPhase = Phase::PostLoadAnalysis;
       }
     }
@@ -1931,7 +1982,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         {
           if (MeshWarmupFinalizeOnly && !world.IsEnterLitGateActive())
           {
-            UEnterLitDiagnostics::BeginSession();
+            UEnterLitDiagnostics::BeginSession("cooperative_timeout_finalize");
             world.BeginEnterLitGate();
           }
           BeginPrepareEnter();
@@ -2074,7 +2125,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         StreamingWarmupLitStallLogged = false;
         if (!world.IsEnterLitGateActive())
         {
-          UEnterLitDiagnostics::BeginSession();
+          UEnterLitDiagnostics::BeginSession("cooperative_create_prepare_view");
           world.BeginEnterLitGate();
         }
       }
@@ -2205,6 +2256,25 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     else
     {
+      if (!world.IsEnterLitGateActive())
+      {
+        if (!world.IsEnterFocusTerrainReady())
+        {
+          const glm::ivec3 focus = UChunkManager::WorldToChunk(
+              world.GetPreferredLoadFocusBlock());
+          world.TickEnterStreamingWarmup(std::max(1, budget / 2));
+          Report(sink, "prepare_view",
+                 ProceduralFillLoadPath
+                     ? (ProceduralFillMeshProgressBase() +
+                        kProceduralFillWeightMeshWarmup)
+                     : CooperativeLoadProgressAfterMesh(),
+                 "Loading player terrain (" + std::to_string(focus.x) + "," +
+                     std::to_string(focus.z) + ")...");
+          break;
+        }
+        UEnterLitDiagnostics::BeginSession("cooperative_load_prepare");
+        world.BeginEnterLitGate();
+      }
       WarnIfTerrainMeshesMissing(world, "PrepareView before warmup");
       if (world.IsEnterLitGateActive())
       {
@@ -2528,7 +2598,26 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     FinalizeCooperativeLoadForEnterGame(world, Kind);
     if (world.IsEnterLitGateActive())
     {
+      // Capture the exact pre-exit blockers before EndEnterLitGate changes the
+      // visibility snapshot and quiesce state. The following sample records
+      // the post-transition state and gate_end edge in the same session.
+      const double enter_elapsed_ms =
+          StreamingWarmupWallStart.time_since_epoch().count() == 0
+              ? world.GetEnterLitGateElapsedMs()
+              : std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - StreamingWarmupWallStart)
+                    .count();
+      EnterLitSample gate_decision_sample{};
+      UEnterLitDiagnostics::Sample(world, enter_elapsed_ms,
+                                   gate_decision_sample);
+      UEnterLitDiagnostics::MaybeLog(gate_decision_sample,
+                                     /*frame_index=*/0,
+                                     /*every_n_frames=*/1);
       world.EndEnterLitGate();
+      EnterLitSample gate_end_sample{};
+      UEnterLitDiagnostics::Sample(world, enter_elapsed_ms, gate_end_sample);
+      UEnterLitDiagnostics::MaybeLog(gate_end_sample, /*frame_index=*/0,
+                                     /*every_n_frames=*/1);
       UEnterLitDiagnostics::EndSession();
     }
     CurrentPhase = Phase::Done;
@@ -2731,7 +2820,21 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       world.Streaming->MarkPersistedColumnsFromWorld();
     }
-    BeginMeshWarmup(world);
+    if (PrepareCreateVisuals)
+    {
+      BeginMeshWarmup(world);
+    }
+    else if (world.IsLightingRelightDeferred() && world.BlockRegistry)
+    {
+      // CLI generation persists voxel and lighting data, not render caches or
+      // a camera-ready view. Keep full terrain relighting, then finish without
+      // scheduling the create-only mesh/view warmup.
+      BeginDeferredRelightQueue(world);
+    }
+    else
+    {
+      FinishHeadlessCreate(world);
+    }
     if (CurrentPhase == Phase::MeshWarmup)
     {
       Report(sink, "mesh_warmup", CooperativeCreateMeshProgressBase(),

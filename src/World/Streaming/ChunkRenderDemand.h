@@ -86,6 +86,7 @@ struct ChunkRenderDemandRecord
   uint64_t published_geom_rev{0};
   uint64_t published_light_rev{0};
   uint64_t published_coverage_gen{0};
+  uint64_t last_published_attempt_id{0};
   /// Last successfully computed chunk-light revision, including no-change
   /// results. This is distinct from mesh publication and column LitReady.
   uint64_t settled_light_rev{0};
@@ -119,6 +120,18 @@ struct ChunkRenderDemandRecord
   uint64_t overlay_repair_peer_incarnation[6]{};
   uint64_t overlay_repair_peer_coverage_gen[6]{};
   uint64_t overlay_repair_target_light_rev[6]{};
+  /// Per-slice OpenSky repair lifecycle. A dark slice settles only after a
+  /// newer attempt publishes the required light revision for this gate event.
+  bool open_sky_repair_pending{false};
+  bool open_sky_repair_published{false};
+  uint64_t open_sky_repair_event_id{0};
+  uint64_t open_sky_repair_target_light_rev{0};
+  uint64_t open_sky_repair_baseline_geom_rev{0};
+  uint64_t open_sky_repair_baseline_attempt_id{0};
+  uint64_t open_sky_repair_baseline_published_attempt_id{0};
+  uint64_t open_sky_repair_published_geom_rev{0};
+  uint64_t open_sky_repair_published_light_rev{0};
+  uint64_t open_sky_repair_published_attempt_id{0};
 };
 
 /// Per-chunk render demand store (process singleton for Cache + World callers).
@@ -173,10 +186,24 @@ public:
   /// Does not clear active/retain flags — use NoteInstallResult for lifecycle.
   void NotePublishedRevs(glm::ivec3 coord, uint64_t published_geom_rev,
                          uint64_t published_light_rev);
+  /// Start or refresh this slice's one repair obligation for an OpenSky event.
+  void NoteOpenSkyRepairRequired(glm::ivec3 coord, uint64_t event_id,
+                                 uint64_t target_light_rev);
+  bool IsOpenSkyRepairPending(glm::ivec3 coord, uint64_t event_id,
+                              uint64_t target_light_rev) const;
+  bool HasOpenSkyRepairPending(glm::ivec3 coord,
+                               uint64_t target_light_rev) const;
+  bool IsOpenSkyRepairPublished(glm::ivec3 coord, uint64_t event_id,
+                                uint64_t target_light_rev) const;
+  bool HasOpenSkyRepairPublished(glm::ivec3 coord,
+                                 uint64_t target_light_rev) const;
   /// Record a validated lighting computation for this chunk incarnation.
   void NoteLightCalculationSettled(glm::ivec3 coord, uint64_t world_epoch,
                                    uint64_t incarnation,
                                    uint64_t light_field_rev);
+  /// Emit a watched, timestamped marker for a visual-work lifecycle event
+  /// owned outside this store (for example stale-remesh queue/admission).
+  void NoteLifecycleEvent(glm::ivec3 coord, DemandTransitionKind kind);
   /// Invalidate settlement when a new relight obligation covers this slice.
   void InvalidateLightCalculationSettlement(glm::ivec3 coord,
                                             uint64_t world_epoch,

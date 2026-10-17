@@ -42,8 +42,10 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <limits>
+#include <sstream>
 #include <tuple>
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
@@ -56,6 +58,23 @@ namespace
 {
 
 constexpr int kRemeshDeferredRingMax = 64;
+
+void LogSlowMeshCaptureStage(
+    const char *stage, glm::ivec3 coord,
+    std::chrono::steady_clock::time_point started_at)
+{
+  const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                std::chrono::steady_clock::now() - started_at)
+                                .count();
+  constexpr double kSlowCaptureLogThresholdMs = 25.0;
+  if (elapsed_ms >= kSlowCaptureLogThresholdMs)
+  {
+    std::ostringstream message;
+    message << "stage=" << stage << " coord=(" << coord.x << ","
+            << coord.y << "," << coord.z << ") elapsed_ms=" << elapsed_ms;
+    CubatariumLogInfo("MeshCaptureSlow", message.str());
+  }
+}
 
 class MeshApplyProfileRecorder
 {
@@ -1810,11 +1829,6 @@ int UChunkMeshCache::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
       [this](glm::ivec3 c) { return !HasGreedyMesh(c); });
 }
 
-uint64_t UChunkMeshCache::GetChunkMeshRevision(glm::ivec3 chunk_coord) const
-{
-  return MeshRevisions.Current(chunk_coord);
-}
-
 bool UChunkMeshCache::HasInflightMeshBuild(glm::ivec3 chunk_coord) const
 {
   return ActiveMeshSourceRevision.find(chunk_coord) !=
@@ -1834,8 +1848,17 @@ uint64_t UChunkMeshCache::GetInflightSourceRevision(
 
 bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
     const UBlockWorld &world, glm::ivec3 center_ground_chunk,
-    int radius_chunks) const
+    int radius_chunks, glm::ivec3 *missing_coord_out,
+    bool *memo_hit_out) const
 {
+  if (missing_coord_out)
+  {
+    *missing_coord_out = glm::ivec3(0);
+  }
+  if (memo_hit_out)
+  {
+    *memo_hit_out = false;
+  }
   if (radius_chunks < 0)
   {
     return false;
@@ -1844,6 +1867,14 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
       MissingMemo.center == center_ground_chunk &&
       MissingMemo.radius == radius_chunks)
   {
+    if (memo_hit_out)
+    {
+      *memo_hit_out = true;
+    }
+    if (missing_coord_out && MissingMemo.result)
+    {
+      *missing_coord_out = MissingMemo.missing_coord;
+    }
     return MissingMemo.result;
   }
   // Presentable cy band — align with FindNearestMissingGreedyMesh / enter SoT
@@ -1857,6 +1888,7 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
     cy_scan_hi = std::min(kMissingScanMaxCy, center_ground_chunk.y + 1);
   }
   bool missing = false;
+  glm::ivec3 missing_coord{0};
   world.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
       {
@@ -1901,6 +1933,7 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
               if (chunk.GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
               {
                 missing = true;
+                missing_coord = coord;
                 return;
               }
             }
@@ -1911,6 +1944,11 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
   MissingMemo.center = center_ground_chunk;
   MissingMemo.radius = radius_chunks;
   MissingMemo.result = missing;
+  MissingMemo.missing_coord = missing_coord;
+  if (missing_coord_out && missing)
+  {
+    *missing_coord_out = missing_coord;
+  }
   return missing;
 }
 
@@ -1918,10 +1956,14 @@ void UChunkMeshCache::BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk)
 {
   if (focus_ground_chunk != LastHoleQueryFocus_)
   {
-    ++HoleQueryEpoch;
     LastHoleQueryFocus_ = focus_ground_chunk;
     RequeueDeferredRemesh(static_cast<int>(RemeshDeferredRing_.size()));
   }
+  // Share expensive missing/nearest queries within one streaming update, but
+  // refresh their memo at the next frame. Mesh state can change asynchronously
+  // while the focus remains in the same chunk; focus-only invalidation could
+  // otherwise preserve a stale hole result until the player crossed a border.
+  ++HoleQueryEpoch;
 }
 
 void UChunkMeshCache::DeferRemeshCoord(const glm::ivec3 &coord)
@@ -2882,16 +2924,17 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
 bool UChunkMeshCache::ShouldBumpChunkMeshRevisionOnDirty(
     glm::ivec3 chunk_coord, MeshRevisionBumpReason reason) const
 {
-  if (reason != MeshRevisionBumpReason::PriorityRelitInstallRepair)
+  if (reason != MeshRevisionBumpReason::PriorityRelitInstallRepair &&
+      reason != MeshRevisionBumpReason::PriorityLightDependencyRepair)
   {
     return true;
   }
 
-  // Relight installation changes the light input, not the voxel geometry
-  // source. If a newer geometry revision is already waiting for publication,
-  // retain that target and let its fresh light/input stamps cover the relight.
-  // Advancing the geometry revision again here only invalidates that pending
-  // repair and can keep the drawable predecessor permanently behind.
+  // Light-only repair changes a mesh input, not voxel geometry. If a newer
+  // geometry revision is already waiting for publication, retain that target
+  // and let its fresh light/input stamps cover the repair. Advancing geometry
+  // again only invalidates pending work and can keep the drawable predecessor
+  // permanently behind.
   return MeshRevisions.Current(chunk_coord) <=
          GetMeshPublishRevs(chunk_coord).geom_rev;
 }
@@ -3378,11 +3421,73 @@ void UChunkMeshCache::ClearSatisfiedScreenRayRepairPin(
 
 void UChunkMeshCache::QueueMeshDependencyInvalidations(
     const UBlockWorld &world,
-    const std::vector<glm::ivec3> &changed_input_chunks)
+    const std::vector<glm::ivec3> &changed_input_chunks, const char *cause)
 {
   const UChunkManager &chunks = world.GetChunkManager();
+  // Relight and open-sky propagation change mesh light inputs without changing
+  // voxel geometry. Keep that distinction through the coalescing queue so a
+  // stream of neighbor light updates does not keep advancing the geometry
+  // target past the mesh already being built. Any geometry-capable cause wins
+  // when both kinds of input touch the same dependent before the drain.
+  const bool light_only_dependency =
+      cause && (std::strcmp(cause, "relight_light_change") == 0 ||
+                std::strcmp(cause, "enter_open_sky_boundary") == 0);
+  const MeshRevisionBumpReason dependency_reason =
+      light_only_dependency
+          ? MeshRevisionBumpReason::PriorityLightDependencyRepair
+          : MeshRevisionBumpReason::PriorityDirtyEnqueued;
+  const bool retain_open_sky_lifecycle =
+      cause && std::strcmp(cause, "enter_open_sky_boundary") == 0;
+  const auto published_halo_differs_from =
+      [this, &chunks](glm::ivec3 dependent_coord,
+                      glm::ivec3 changed_coord)
+  {
+    const auto mesh = GreedyCache.find(dependent_coord);
+    if (mesh == GreedyCache.end() ||
+        !mesh->second.MeshedLightHaloSignaturesValid)
+    {
+      return false;
+    }
+    const glm::ivec3 neighbor_offset = changed_coord - dependent_coord;
+    if ((neighbor_offset.x == 0 && neighbor_offset.y == 0 &&
+         neighbor_offset.z == 0) ||
+        std::abs(neighbor_offset.x) > 1 ||
+        std::abs(neighbor_offset.y) > 1 ||
+        std::abs(neighbor_offset.z) > 1)
+    {
+      return false;
+    }
+
+    size_t signature_index = 0;
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+      for (int dz = -1; dz <= 1; ++dz)
+      {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+          if (dx == 0 && dy == 0 && dz == 0)
+          {
+            continue;
+          }
+          if (neighbor_offset == glm::ivec3(dx, dy, dz))
+          {
+            const UChunk *neighbor = chunks.GetChunk(changed_coord);
+            return mesh->second.MeshedLightHaloSignatures[signature_index] !=
+                   ChunkMeshLightHaloSignature(neighbor, neighbor_offset);
+          }
+          ++signature_index;
+        }
+      }
+    }
+    return false;
+  };
   for (const glm::ivec3 changed_coord : changed_input_chunks)
   {
+    if (retain_open_sky_lifecycle)
+    {
+      UJobStageTrace::WatchOpenSkyLifecycleChunk(
+          changed_coord.x, changed_coord.y, changed_coord.z);
+    }
     for (int dy = -1; dy <= 1; ++dy)
     {
       for (int dz = -1; dz <= 1; ++dz)
@@ -3400,11 +3505,50 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
           {
             continue;
           }
-          if (PendingMeshDependencyInvalidations_
-                  .insert(dependent_coord)
-                  .second)
+          if (retain_open_sky_lifecycle)
+          {
+            UJobStageTrace::WatchOpenSkyLifecycleChunk(
+                dependent_coord.x, dependent_coord.y, dependent_coord.z);
+          }
+          const auto [pending, inserted] =
+              PendingMeshDependencyInvalidations_.try_emplace(
+                  dependent_coord, dependency_reason);
+          if (!inserted && !light_only_dependency)
+          {
+            pending->second = dependency_reason;
+          }
+          if (inserted)
           {
             ++MeshDependencyQueuedSinceDrain_;
+          }
+          // Dependency queue ownership is retired once a Dirty/remesh owner
+          // exists. Keep a separate durable repair ticket when the currently
+          // published mesh is proven to have sampled an older light halo, so
+          // pruning that ordinary owner cannot strand stale drawable output.
+          if (published_halo_differs_from(dependent_coord, changed_coord))
+          {
+            (void)QueueStaleLightRemesh(dependent_coord,
+                                        "published_halo_changed");
+          }
+          if (UJobStageTrace::VisualBlackTraceEnabled() &&
+              UJobStageTrace::IsVisualChunkWatched(
+                  dependent_coord.x, dependent_coord.y, dependent_coord.z))
+          {
+            CubatariumLogInfo(
+                "RelightAudit",
+                std::string("mesh_dependency event=queued frame_epoch=") +
+                    std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+                    " cause=" +
+                    (cause ? cause : "unknown") + " source=(" +
+                    std::to_string(changed_coord.x) + "," +
+                    std::to_string(changed_coord.y) + "," +
+                    std::to_string(changed_coord.z) + ") dependent=(" +
+                    std::to_string(dependent_coord.x) + "," +
+                    std::to_string(dependent_coord.y) + "," +
+                    std::to_string(dependent_coord.z) + ") inserted=" +
+                    (inserted ? "1" : "0") + " backlog=" +
+                    std::to_string(
+                        PendingMeshDependencyInvalidations_.size()));
           }
         }
       }
@@ -3412,17 +3556,117 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
   }
 }
 
+PublishedLightHaloState UChunkMeshCache::GetPublishedLightHaloState(
+    glm::ivec3 chunk_coord, const UBlockWorld &world,
+    bool *cache_entry_present, bool *signature_stamp_valid) const
+{
+  if (cache_entry_present)
+  {
+    *cache_entry_present = false;
+  }
+  if (signature_stamp_valid)
+  {
+    *signature_stamp_valid = false;
+  }
+  const auto mesh = GreedyCache.find(chunk_coord);
+  if (mesh == GreedyCache.end())
+  {
+    return PublishedLightHaloState::Unavailable;
+  }
+  if (cache_entry_present)
+  {
+    *cache_entry_present = true;
+  }
+  if (!mesh->second.MeshedLightHaloSignaturesValid)
+  {
+    return PublishedLightHaloState::Unavailable;
+  }
+  if (signature_stamp_valid)
+  {
+    *signature_stamp_valid = true;
+  }
+
+  const UChunkManager &chunks = world.GetChunkManager();
+  size_t signature_index = 0;
+  for (int dy = -1; dy <= 1; ++dy)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        if (dx == 0 && dy == 0 && dz == 0)
+        {
+          continue;
+        }
+        const glm::ivec3 offset(dx, dy, dz);
+        const UChunk *neighbor = chunks.GetChunk(chunk_coord + offset);
+        if (mesh->second.MeshedLightHaloSignatures[signature_index++] !=
+            ChunkMeshLightHaloSignature(neighbor, offset))
+        {
+          return PublishedLightHaloState::DiffersFromCurrent;
+        }
+      }
+    }
+  }
+  return PublishedLightHaloState::MatchesCurrent;
+}
+
 void UChunkMeshCache::QueueMeshDependencyInvalidation(
     glm::ivec3 dependent_chunk)
 {
-  if (HasDrawableGreedyMesh(dependent_chunk) &&
-      PendingMeshDependencyInvalidations_.insert(dependent_chunk).second)
+  QueueMeshDependencyInvalidation(
+      dependent_chunk, MeshRevisionBumpReason::PriorityDirtyEnqueued);
+}
+
+void UChunkMeshCache::QueueMeshDependencyInvalidation(
+    glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason)
+{
+  if (!HasDrawableGreedyMesh(dependent_chunk))
+  {
+    return;
+  }
+  const auto [pending, inserted] =
+      PendingMeshDependencyInvalidations_.try_emplace(
+          dependent_chunk, reason);
+  if (inserted)
   {
     ++MeshDependencyQueuedSinceDrain_;
   }
+  else if (reason != MeshRevisionBumpReason::PriorityLightDependencyRepair)
+  {
+    // This entry point is used for seam/coverage obligations, whose repair can
+    // also depend on geometry. Do not let a later light-only input weaken an
+    // existing geometry obligation. Geometry-capable input upgrades a
+    // coalesced light-only repair.
+    pending->second = reason;
+  }
+  if (UJobStageTrace::VisualBlackTraceEnabled() &&
+      UJobStageTrace::IsVisualChunkWatched(dependent_chunk.x,
+                                           dependent_chunk.y,
+                                           dependent_chunk.z))
+  {
+    const auto retained =
+        PendingMeshDependencyInvalidations_.find(dependent_chunk);
+    const MeshRevisionBumpReason retained_reason =
+        retained == PendingMeshDependencyInvalidations_.end()
+            ? reason
+            : retained->second;
+    CubatariumLogInfo(
+        "RelightAudit",
+        std::string("mesh_dependency event=queued_single frame_epoch=") +
+            std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+            " dependent=(" + std::to_string(dependent_chunk.x) + "," +
+            std::to_string(dependent_chunk.y) + "," +
+            std::to_string(dependent_chunk.z) + ") inserted=" +
+            (inserted ? "1" : "0") + " reason=" +
+            UJobStageTrace::MeshRevisionBumpReasonName(retained_reason) +
+            " backlog=" +
+            std::to_string(PendingMeshDependencyInvalidations_.size()));
+  }
 }
 
-void UChunkMeshCache::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
+void UChunkMeshCache::QueueStaleLightRemesh(glm::ivec3 chunk_coord,
+                                            const char *cause)
 {
   if (!HasDrawableGreedyMesh(chunk_coord) ||
       !PendingStaleLightRemeshes_.insert(chunk_coord).second)
@@ -3436,7 +3680,8 @@ void UChunkMeshCache::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
         "stale_light_debt event=queued coord=(" +
             std::to_string(chunk_coord.x) + "," +
             std::to_string(chunk_coord.y) + "," +
-            std::to_string(chunk_coord.z) + ") backlog=" +
+            std::to_string(chunk_coord.z) + ") cause=" +
+            (cause ? cause : "unspecified") + " backlog=" +
             std::to_string(PendingStaleLightRemeshes_.size()));
   }
 }
@@ -3452,8 +3697,12 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
     return;
   }
 
-  std::vector<glm::ivec3> candidates(PendingMeshDependencyInvalidations_.begin(),
-                                    PendingMeshDependencyInvalidations_.end());
+  std::vector<glm::ivec3> candidates;
+  candidates.reserve(PendingMeshDependencyInvalidations_.size());
+  for (const auto &entry : PendingMeshDependencyInvalidations_)
+  {
+    candidates.push_back(entry.first);
+  }
   std::sort(candidates.begin(), candidates.end(), [this](glm::ivec3 a,
                                                          glm::ivec3 b)
   {
@@ -3478,6 +3727,43 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
   const int enqueue_budget =
       std::clamp(std::max(1, max_schedule_per_frame) * 2, 4, 16);
   int enqueued = 0;
+  const auto trace_dependency = [&](const char *event, glm::ivec3 coord,
+                                   const char *reason_override = nullptr)
+  {
+    if (!UJobStageTrace::VisualBlackTraceEnabled() ||
+        !UJobStageTrace::IsVisualChunkWatched(coord.x, coord.y, coord.z))
+    {
+      return;
+    }
+    const auto pending_reason =
+        PendingMeshDependencyInvalidations_.find(coord);
+    const char *reason = reason_override;
+    if (!reason)
+    {
+      reason = pending_reason == PendingMeshDependencyInvalidations_.end()
+                   ? "already_drained"
+                   : UJobStageTrace::MeshRevisionBumpReasonName(
+                         pending_reason->second);
+    }
+    CubatariumLogInfo(
+        "RelightAudit",
+        std::string("mesh_dependency event=") + event + " frame_epoch=" +
+            std::to_string(UJobStageTrace::GetStreamingFrameEpoch()) +
+            " dependent=(" +
+            std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
+            std::to_string(coord.z) + ") dirty=" +
+            (Dirty.Contains(coord) ? "1" : "0") + " raa=" +
+            (RemeshAfterApply.count(coord) > 0 ? "1" : "0") +
+            " live=" +
+            (((AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+              IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord))
+                 ? "1"
+                 : "0") +
+            " dep_backlog=" +
+            std::to_string(PendingMeshDependencyInvalidations_.size()) +
+            " reason=" + reason +
+            " applied=" + std::to_string(LastMeshDependencyAppliedN_));
+  };
   for (const glm::ivec3 coord : candidates)
   {
     if (enqueued >= enqueue_budget)
@@ -3487,6 +3773,7 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
     if (!world.GetChunkManager().HasChunk(coord) ||
         !HasDrawableGreedyMesh(coord))
     {
+      trace_dependency("drop_not_drawable", coord);
       PendingMeshDependencyInvalidations_.erase(coord);
       continue;
     }
@@ -3496,16 +3783,23 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
         IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord);
     if (live_pipeline)
     {
+      trace_dependency("defer_live_owner", coord);
       continue;
     }
     if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0)
     {
+      trace_dependency("covered_by_existing_owner", coord);
       PendingMeshDependencyInvalidations_.erase(coord);
       continue;
     }
 
     InvalidateMeshCapture(coord);
-    MarkDirtyPriority(coord);
+    const auto pending = PendingMeshDependencyInvalidations_.find(coord);
+    const MeshRevisionBumpReason reason =
+        pending == PendingMeshDependencyInvalidations_.end()
+            ? MeshRevisionBumpReason::PriorityDirtyEnqueued
+            : pending->second;
+    MarkDirtyPriority(coord, reason);
     if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
         (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
         IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord))
@@ -3513,10 +3807,16 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
       PendingMeshDependencyInvalidations_.erase(coord);
       ++LastMeshDependencyAppliedN_;
       ++enqueued;
+      trace_dependency("applied", coord,
+                       UJobStageTrace::MeshRevisionBumpReasonName(reason));
       if (OnMeshDependencyAppliedFn_)
       {
         OnMeshDependencyAppliedFn_(coord);
       }
+    }
+    else
+    {
+      trace_dependency("admission_failed", coord);
     }
   }
 }
@@ -3533,14 +3833,16 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
       IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   const UChunkManager &chunks = world.GetChunkManager();
   // A denied far repair remains durable but must not be injected into Dirty
-  // ahead of the normal admission budget. Activate it only in the lit-drawable
-  // ring; this keeps far debt from flooding the priority queue during travel.
+  // ahead of the normal admission budget. Include the one-chunk approach ring:
+  // it can already be on screen even though it is outside the settled publish
+  // ring. The existing one-slot-per-four-frames reserve bounds the extra work.
   const int activation_radius =
       std::max(0, std::min(MeshFocusRadiusChunks,
-                           kVisualStageLitDrawableHoriz));
-  // Discover settled provisional previews and revision-stale drawables only
-  // when they enter the active visual ring. Far previews retain their ambient
-  // fallback without filling the durable queue during long flights.
+                           kVisualStageFirstMeshRelightApproachHoriz));
+  // Discover settled provisional previews, revision-stale drawables, and
+  // drawable stale-dark witnesses only when they enter the active visual ring.
+  // Far previews retain their ambient fallback without filling the durable
+  // queue during long flights.
   for (const auto &entry : GreedyCache)
   {
     const glm::ivec3 coord = entry.first;
@@ -3556,7 +3858,11 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     const bool revision_stale =
         chunk && (GetMeshedLightRevision(coord) < field_light_rev ||
                   GetMeshPublishRevs(coord).light_rev < field_light_rev);
-    if (!entry.second.ProvisionalLightPreview && !revision_stale)
+    const bool has_dark_face = ChunkHasFullyDarkFace(coord);
+    const bool stale_dark_face =
+        has_dark_face && ChunkHasStaleDarkFaces(coord, world);
+    if (!entry.second.ProvisionalLightPreview && !revision_stale &&
+        !stale_dark_face)
     {
       continue;
     }
@@ -3571,7 +3877,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     {
       continue;
     }
-    QueueStaleLightRemesh(coord);
+    QueueStaleLightRemesh(coord, "active_ring_light_probe");
   }
   std::vector<glm::ivec3> candidates;
   candidates.reserve(PendingStaleLightRemeshes_.size());
@@ -3626,12 +3932,57 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
       continue;
     }
 
+    const ChunkRenderDemandRecord *demand =
+        UChunkRenderDemandStore::Get().Find(coord);
+    if (!demand)
+    {
+      continue;
+    }
+    if (demand->world_epoch != CaptureStore.WorldEpoch() ||
+        demand->incarnation != chunk->GetIncarnation())
+    {
+      PendingStaleLightRemeshes_.erase(coord);
+      continue;
+    }
+    // Do not hash a published halo while another pipeline stage already owns
+    // a replacement. Keep the durable debt and re-evaluate after that owner
+    // has either published or been pruned.
+    const bool dirty = Dirty.Contains(coord);
+    const bool raa_pending = RemeshAfterApply.count(coord) > 0;
+    const bool mesh_inflight = HasInflightMeshBuild(coord);
+    const bool gpu_owned = IsGpuExtractInFlight(coord) ||
+                           IsPendingGpuApply(coord) ||
+                           IsPendingGpuQueued(coord) ||
+                           IsPendingGpuKickedOrDispatched(coord);
+    if (dirty || raa_pending || mesh_inflight || gpu_owned)
+    {
+      continue;
+    }
+    // A neighboring mutation can queue this repair while the dependent chunk
+    // is still receiving its own settled light. Retain the debt, but do not
+    // build a mesh against an intermediate field revision.
     const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+    if (!demand->has_settled_light ||
+        demand->settled_light_rev != field_light_rev ||
+        demand->desired_light_rev > field_light_rev)
+    {
+      continue;
+    }
+
     const uint64_t meshed_light_rev = GetMeshedLightRevision(coord);
     const uint64_t published_light_rev = GetMeshPublishRevs(coord).light_rev;
-    if (meshed_light_rev >= field_light_rev &&
-        published_light_rev >= field_light_rev &&
-        !HasProvisionalLightPreview(coord))
+    const bool has_dark_face = ChunkHasFullyDarkFace(coord);
+    const bool stale_dark_face =
+        has_dark_face && ChunkHasStaleDarkFaces(coord, world);
+    const bool provisional_preview = HasProvisionalLightPreview(coord);
+    const bool own_light_current =
+        meshed_light_rev >= field_light_rev &&
+        published_light_rev >= field_light_rev && !provisional_preview &&
+        !stale_dark_face;
+    const PublishedLightHaloState halo_state =
+        GetPublishedLightHaloState(coord, world);
+    if (own_light_current &&
+        halo_state == PublishedLightHaloState::MatchesCurrent)
     {
       PendingStaleLightRemeshes_.erase(coord);
       if (audit_relight)
@@ -3644,21 +3995,10 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
                 std::to_string(field_light_rev) + " meshed_light_rev=" +
                 std::to_string(meshed_light_rev) +
                 " published_light_rev=" +
-                std::to_string(published_light_rev) + " backlog=" +
+                std::to_string(published_light_rev) + " halo_state=" +
+                std::to_string(static_cast<int>(halo_state)) + " backlog=" +
                 std::to_string(PendingStaleLightRemeshes_.size()));
       }
-      continue;
-    }
-
-    const bool dirty = Dirty.Contains(coord);
-    const bool raa_pending = RemeshAfterApply.count(coord) > 0;
-    const bool mesh_inflight = AsyncBuilder && AsyncBuilder->IsInFlight(coord);
-    const bool gpu_owned = IsGpuExtractInFlight(coord) ||
-                           IsPendingGpuApply(coord) ||
-                           IsPendingGpuQueued(coord) ||
-                           IsPendingGpuKickedOrDispatched(coord);
-    if (dirty || raa_pending || mesh_inflight || gpu_owned)
-    {
       continue;
     }
     const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
@@ -3686,7 +4026,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     (void)PrioritizeVisibleLightRepairRemesh(coord);
     const bool has_owner =
         Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
-        (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+        HasInflightMeshBuild(coord) ||
         IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord) ||
         IsPendingGpuQueued(coord) || IsPendingGpuKickedOrDispatched(coord);
     if (!has_owner)
@@ -3711,8 +4051,10 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
               std::to_string(Dirty.Contains(coord)) + " raa=" +
               std::to_string(RemeshAfterApply.count(coord) > 0) +
               " mesh_inflight=" +
-              std::to_string(AsyncBuilder && AsyncBuilder->IsInFlight(coord)) +
-              " gpu_owned=" + std::to_string(gpu_owned) + " backlog=" +
+              std::to_string(HasInflightMeshBuild(coord)) +
+              " gpu_owned=" + std::to_string(gpu_owned) +
+              " halo_state=" +
+              std::to_string(static_cast<int>(halo_state)) + " backlog=" +
               std::to_string(PendingStaleLightRemeshes_.size()));
     }
   }
@@ -4399,9 +4741,11 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
   work_token.chunk_incarnation = ChunkIncarnationAt(world, coord);
   const MeshCaptureToken token{work_token.world_epoch, source_revision,
                                work_token.generation};
+  const auto band_read_t0 = std::chrono::steady_clock::now();
   auto band = world.ReadChunkBandForCapture(
       coord, token, CaptureStore.GetNeighborDrawableFn(),
       CaptureStore.GetNeighborDrawableCtx());
+  LogSlowMeshCaptureStage("read_chunk_band", coord, band_read_t0);
   if (!band)
   {
     return deferred(SnapshotAcquireDeferReason::MissingCaptureBand);
@@ -4410,6 +4754,7 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
   deps.content_revision = source_revision;
   if (registry != nullptr)
   {
+    const auto dependency_check_t0 = std::chrono::steady_clock::now();
     deps = BuildMeshCaptureDependencyStamp(world, coord, source_revision,
                                            *registry);
     const DependencyStamp current = BuildMeshCaptureDependencyStamp(
@@ -4420,16 +4765,23 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
       {
         Dirty.MarkDirtyPriority(coord);
       }
+      LogSlowMeshCaptureStage("dependency_stamp_validation", coord,
+                              dependency_check_t0);
       return deferred(SnapshotAcquireDeferReason::DependencyChanged);
     }
+    LogSlowMeshCaptureStage("dependency_stamp_validation", coord,
+                            dependency_check_t0);
   }
   // Audit R12: move credit into Store entry (lifetime until eviction).
   auto owned = std::make_unique<UPipelineCreditGuard>(std::move(credit));
+  const auto store_commit_t0 = std::chrono::steady_clock::now();
   if (!CaptureStore.TryCommit(coord, source_revision, work_token.world_epoch,
                               std::move(*band), &deps, std::move(owned)))
   {
+    LogSlowMeshCaptureStage("store_commit", coord, store_commit_t0);
     return deferred(SnapshotAcquireDeferReason::StoreCommitRejected);
   }
+  LogSlowMeshCaptureStage("store_commit", coord, store_commit_t0);
   return true;
 }
 
@@ -4560,7 +4912,10 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
                                                uint64_t source_revision)
 {
   SnapshotAcquireResult out;
-  if (auto hit = CaptureStore.TryGet(world, coord, source_revision))
+  const auto store_lookup_t0 = std::chrono::steady_clock::now();
+  auto cached = CaptureStore.TryGet(world, coord, source_revision);
+  LogSlowMeshCaptureStage("store_lookup", coord, store_lookup_t0);
+  if (cached)
   {
     ++LastMeshCaptureStoreHitN;
     if (!Dirty.IsFirstMesh(coord) && HasDrawableGreedyMesh(coord))
@@ -4606,7 +4961,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
       }
     }
     out.kind = SnapshotAcquireKind::Ready;
-    out.snapshot = std::move(*hit);
+    out.snapshot = std::move(*cached);
     return out;
   }
   if (UMeshCaptureWorker::kWorkerCaptureEnabled)
@@ -4721,16 +5076,26 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     return out;
   }
   SnapshotAcquireDeferReason defer_reason = SnapshotAcquireDeferReason::None;
+  const auto main_capture_t0 = std::chrono::steady_clock::now();
   if (CaptureAndCommitOnMain(world, &registry, coord, source_revision,
                              &defer_reason))
   {
-    if (auto hit = CaptureStore.TryGet(world, coord, source_revision))
+    LogSlowMeshCaptureStage("main_capture_total", coord, main_capture_t0);
+    const auto committed_lookup_t0 = std::chrono::steady_clock::now();
+    auto committed = CaptureStore.TryGet(world, coord, source_revision);
+    LogSlowMeshCaptureStage("committed_store_lookup", coord,
+                            committed_lookup_t0);
+    if (committed)
     {
       out.kind = SnapshotAcquireKind::Ready;
-      out.snapshot = std::move(*hit);
+      out.snapshot = std::move(*committed);
       return out;
     }
     defer_reason = SnapshotAcquireDeferReason::DependencyChanged;
+  }
+  else
+  {
+    LogSlowMeshCaptureStage("main_capture_total", coord, main_capture_t0);
   }
   out.kind = SnapshotAcquireKind::Deferred;
   out.deferReason = defer_reason;
@@ -5532,6 +5897,26 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     return 0;
   }
   LastGpuKickDeferReason_.clear();
+  const auto retain_published_light_halo =
+      [this](const PendingGpuApply &pending)
+  {
+    const auto mesh = GreedyCache.find(pending.coord);
+    if (mesh == GreedyCache.end())
+    {
+      return;
+    }
+    mesh->second.MeshedLightHaloSignaturesValid =
+        pending.snapshot.inputStampsValid;
+    if (pending.snapshot.inputStampsValid)
+    {
+      mesh->second.MeshedLightHaloSignatures =
+          pending.snapshot.lightHaloSignatures;
+    }
+    else
+    {
+      mesh->second.MeshedLightHaloSignatures = {};
+    }
+  };
 
   using GpuProfileClock = std::chrono::steady_clock;
   static std::ofstream gpu_process_profile_file;
@@ -6078,6 +6463,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       if (committed)
       {
+        retain_published_light_halo(pending);
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
         ++finished;
@@ -6220,6 +6606,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (committed)
     {
+      retain_published_light_halo(pending);
       NoteGpuPipelineProgress(pending.coord);
       ++processed;
       ++finished;
@@ -6717,6 +7104,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       if (committed)
       {
+        retain_published_light_halo(pending);
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
         ++finished;
@@ -7609,6 +7997,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (result.InputStampsValid)
   {
     chunkMesh.MeshedLightRevision = result.InputStamps[0].light;
+    chunkMesh.MeshedLightHaloSignatures = result.InputLightHaloSignatures;
+  }
+  chunkMesh.MeshedLightHaloSignaturesValid = result.InputStampsValid;
+  if (!result.InputStampsValid)
+  {
+    chunkMesh.MeshedLightHaloSignatures = {};
   }
   {
     std::vector<uint16_t> ids;
@@ -8798,6 +9192,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           std::max(std::abs(schedule_coord.x - MeshFocusGroundChunk.x),
                    std::abs(schedule_coord.z - MeshFocusGroundChunk.z)) <=
               std::max(2, MeshFocusRadiusChunks);
+      uint8_t camera_band_peak_kind = 0;
+      const bool trace_camera_band_peak =
+          UJobStageTrace::IsCameraBandPeakChunkWatched(
+              schedule_coord.x, schedule_coord.y, schedule_coord.z,
+              MeshFocusFrameEpoch, &camera_band_peak_kind);
       const bool trace_watched_visual =
           UJobStageTrace::VisualBlackTraceEnabled() &&
           UJobStageTrace::IsVisualChunkWatched(
@@ -8808,21 +9207,30 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           [&](uint8_t outcome, uint8_t detail,
               uint8_t enqueue_reject_reason = 0)
       {
-        if ((!trace_visible_repair && !trace_normal_focus_remesh &&
+        if ((!trace_camera_band_peak && !trace_visible_repair &&
+             !trace_normal_focus_remesh &&
              !trace_first_mesh && !trace_watched_visual) ||
             !UJobStageTrace::VisualBlackTraceEnabled())
         {
           return;
         }
         VisualBlackTraceRecord trace{};
-        trace.sample_kind = trace_watched_visual
-                                ? 11
-                                : (trace_visible_repair
-                                       ? 7
-                                       : (trace_first_mesh ? 6 : 4));
+        trace.sample_kind =
+            trace_camera_band_peak
+                ? 18
+                : (trace_watched_visual
+                       ? 11
+                       : (trace_visible_repair
+                              ? 7
+                              : (trace_first_mesh ? 6 : 4)));
         trace.cx = schedule_coord.x;
         trace.cy = schedule_coord.y;
         trace.cz = schedule_coord.z;
+        if (trace_camera_band_peak)
+        {
+          trace.camera_band_peak_kind = camera_band_peak_kind;
+          trace.camera_band_peak_schedule_phase = 1;
+        }
         trace.frame_epoch = MeshFocusFrameEpoch;
         trace.focus_cx = MeshFocusGroundChunk.x;
         trace.focus_cz = MeshFocusGroundChunk.z;
@@ -10391,6 +10799,174 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     if (MeshFocusValid && UJobStageTrace::VisualBlackTraceEnabled())
     {
+      struct PeakScheduleCaptureContext
+      {
+        UChunkMeshCache *cache{nullptr};
+        UBlockWorld *world{nullptr};
+        int scheduled{0};
+        int max_schedule{0};
+        int pre_first_mesh_limit{0};
+        int max_pipeline{0};
+        double snapshot_budget_ms{0.0};
+        std::chrono::high_resolution_clock::time_point tick_started{};
+      } context{this,
+                &world,
+                scheduled,
+                max_schedule_per_frame,
+                pre_first_mesh_schedule_limit,
+                max_pipeline,
+                kSnapshotBudgetMs,
+                dirty_tick_t0};
+      const auto capture_peak_schedule =
+          [](int32_t cx, int32_t cy, int32_t cz, uint8_t peak_kind,
+             void *opaque)
+      {
+        auto *capture = static_cast<PeakScheduleCaptureContext *>(opaque);
+        if (!capture || !capture->cache || !capture->world)
+        {
+          return;
+        }
+        UChunkMeshCache &cache = *capture->cache;
+        const glm::ivec3 coord(cx, cy, cz);
+        const UChunk *chunk =
+            capture->world->GetChunkManager().GetChunk(coord);
+
+        VisualBlackTraceRecord trace{};
+        trace.sample_kind = 18;
+        trace.camera_band_peak_kind = peak_kind;
+        trace.camera_band_peak_schedule_phase = 0;
+        trace.cause = 255; // End-of-tick snapshot, no try_schedule result.
+        trace.cx = cx;
+        trace.cy = cy;
+        trace.cz = cz;
+        trace.focus_cx = cache.MeshFocusGroundChunk.x;
+        trace.focus_cz = cache.MeshFocusGroundChunk.z;
+        trace.frame_epoch = cache.MeshFocusFrameEpoch;
+        trace.renderer_target_resident = chunk ? 1 : 0;
+        trace.incarnation = chunk ? chunk->GetIncarnation() : 0;
+        trace.non_air_blocks = chunk ? chunk->GetNonAirCount() : 0;
+        trace.mesh_revision = cache.MeshRevisions.Current(coord);
+        const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+        trace.published_geom_rev = published.geom_rev;
+        trace.published_light_rev = published.light_rev;
+        trace.meshed_light_rev = cache.GetMeshedLightRevision(coord);
+        trace.field_light_rev = chunk->GetLightFieldRevision();
+        trace.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+            coord, trace.mesh_dirty_queue_index, trace.mesh_dirty_queue_size);
+        trace.mesh_dirty_queue_age_frames =
+            cache.Dirty.GetEnqueueAgeFrames(coord);
+
+        const bool drawable = cache.HasDrawableGreedyMesh(coord);
+        const bool builder_inflight = cache.AsyncBuilder &&
+                                      cache.AsyncBuilder->IsInFlight(coord);
+        const bool gpu_apply = cache.IsPendingGpuApply(coord);
+        const bool gpu_queued = cache.IsPendingGpuQueued(coord);
+        const bool gpu_kicked =
+            cache.IsPendingGpuKickedOrDispatched(coord);
+        const bool gpu_extract = cache.GpuExtractInFlight.find(coord) !=
+                                 cache.GpuExtractInFlight.end();
+        const bool soft_defer = cache.DeferMeshUntilLit &&
+                                cache.DeferMeshUntilLit(coord);
+        trace.mesh_work_owner_flags =
+            (cache.Dirty.Contains(coord) ? 1u << 0 : 0u) |
+            (builder_inflight ? 1u << 1 : 0u) |
+            (cache.IsRemeshAfterApplyPending(coord) ? 1u << 2 : 0u) |
+            (gpu_apply ? 1u << 3 : 0u) |
+            (gpu_queued ? 1u << 4 : 0u) |
+            (gpu_kicked ? 1u << 5 : 0u) |
+            (gpu_extract ? 1u << 6 : 0u) |
+            (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u);
+        trace.flags =
+            (drawable ? 1u << 0 : 0u) |
+            (cache.Dirty.IsPriorityRemesh(coord) ? 1u << 1 : 0u) |
+            (cache.Dirty.IsFirstMesh(coord) ? 1u << 2 : 0u) |
+            (cache.Dirty.Contains(coord) ? 1u << 3 : 0u) |
+            (builder_inflight ? 1u << 4 : 0u) |
+            (gpu_apply ? 1u << 5 : 0u) |
+            (gpu_queued ? 1u << 6 : 0u) |
+            (gpu_kicked ? 1u << 7 : 0u) |
+            (gpu_extract ? 1u << 8 : 0u) |
+            (soft_defer ? 1u << 9 : 0u) |
+            (cache.StarveRemeshForHoles ? 1u << 10 : 0u) |
+            (cache.EnterLitQuiesce ? 1u << 11 : 0u) |
+            (cache.EnterGpuQuiesceDrain ? 1u << 12 : 0u) |
+            (cache.AsyncBuilder &&
+                     cache.AsyncBuilder->GetInFlightCount() >=
+                         capture->max_pipeline
+                 ? 1u << 13
+                 : 0u);
+        trace.frontier_horiz_distance_chunks = std::max(
+            std::abs(cx - cache.MeshFocusGroundChunk.x),
+            std::abs(cz - cache.MeshFocusGroundChunk.z));
+        trace.frontier_vertical_distance_chunks =
+            std::abs(cy - cache.MeshFocusGroundChunk.y);
+        trace.frontier_max_schedule = capture->max_schedule;
+        trace.frontier_first_mesh_cap_base = cache.WorkAdmission.enforce_schedule_lanes
+            ? std::max(0, cache.WorkAdmission.first_mesh_schedule)
+            : cache.WorkAdmission.first_mesh_schedule;
+        trace.frontier_first_mesh_cap = cache.LastFirstMeshScheduleEffectiveCap_;
+        trace.frontier_pre_first_mesh_limit =
+            capture->pre_first_mesh_limit;
+        trace.frontier_scheduled_this_tick = capture->scheduled;
+        trace.frontier_pipeline_inflight =
+            cache.AsyncBuilder ? cache.AsyncBuilder->GetInFlightCount() : 0;
+        trace.frontier_pipeline_cap = capture->max_pipeline;
+        trace.frontier_soft_defer = soft_defer ? 1 : 0;
+        trace.frontier_snapshot_ms = cache.LastMeshSnapshotMs;
+        trace.frontier_snapshot_budget_ms = capture->snapshot_budget_ms;
+        trace.frontier_tick_elapsed_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() -
+                capture->tick_started)
+                .count();
+        trace.frontier_tick_budget_ms = cache.MeshEmergeTotalBudgetMs;
+        trace.frontier_snapshot_credits_left =
+            static_cast<int32_t>(cache.CaptureRefreshBudgetLeft);
+        trace.frontier_first_mesh_capture_reserve_left =
+            cache.FirstMeshCaptureReserveLeft;
+        trace.frontier_snapshot_time_defers =
+            cache.LastMeshSnapshotDeferStats.ScheduleTimeBudget;
+        trace.frontier_snapshot_refresh_defers =
+            cache.LastMeshSnapshotDeferStats.RefreshCountBudget;
+        trace.frontier_snapshot_pipeline_bytes_defers =
+            cache.LastMeshSnapshotDeferStats.PipelineBytes;
+        trace.frontier_snapshot_missing_band_defers =
+            cache.LastMeshSnapshotDeferStats.MissingCaptureBand;
+        trace.frontier_snapshot_dependency_defers =
+            cache.LastMeshSnapshotDeferStats.DependencyChanged;
+        trace.frontier_snapshot_publication_defers =
+            cache.LastMeshSnapshotDeferStats.PublicationRejected;
+        trace.frontier_snapshot_store_commit_defers =
+            cache.LastMeshSnapshotDeferStats.StoreCommitRejected;
+        if (cache.ScheduledThisFrame_.count(coord) != 0)
+        {
+          trace.flags |= 1u << 14;
+        }
+        if (const ChunkRenderDemandRecord *demand =
+                UChunkRenderDemandStore::Get().Find(coord))
+        {
+          trace.world_epoch = demand->world_epoch;
+          trace.demand_incarnation = demand->incarnation;
+          if (trace.incarnation == 0)
+          {
+            trace.incarnation = demand->incarnation;
+          }
+          trace.attempt_id = demand->has_active_attempt
+                                 ? demand->active_attempt_id
+                                 : 0;
+          trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+          trace.desired_geom_rev = demand->desired_geom_rev;
+          trace.desired_light_rev = demand->desired_light_rev;
+          trace.demand_published_geom_rev = demand->published_geom_rev;
+          trace.demand_published_light_rev = demand->published_light_rev;
+        }
+        UJobStageTrace::NoteVisualBlack(trace);
+      };
+      UJobStageTrace::ForEachCameraBandPeakChunkWatched(
+          MeshFocusFrameEpoch, capture_peak_schedule, &context);
+    }
+    if (MeshFocusValid && UJobStageTrace::VisualBlackTraceEnabled())
+    {
       constexpr size_t kFrontierScanLimit = 64;
       constexpr uint64_t kFrontierMinimumAgeFrames = 8;
       const int focus_radius = std::max(2, MeshFocusRadiusChunks);
@@ -11009,6 +11585,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
           MeshPublishMaterialStamp(ids.data(), ids.size());
       chunkMesh.BoundaryOverlay = sync_snap.boundaryOverlay;
       chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
+      chunkMesh.MeshedLightHaloSignatures = sync_snap.lightHaloSignatures;
+      chunkMesh.MeshedLightHaloSignaturesValid =
+          sync_snap.inputStampsValid;
     }
     if (sync_snap.boundaryOverlay.active &&
         sync_snap.boundaryOverlay.missingNeighborFaces != 0)

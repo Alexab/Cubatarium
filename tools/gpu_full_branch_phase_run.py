@@ -57,6 +57,7 @@ def main() -> int:
             "--teleport-cruise",
             "--seconds",
             "130",
+            "--metrics",
             "--fly-stop",
             "--fly-phase-sec",
             "45",

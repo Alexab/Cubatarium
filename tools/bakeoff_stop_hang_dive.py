@@ -38,6 +38,7 @@ def run_dive(label: str, report: Path) -> Path | None:
         str(FLIGHT),
         "--scenario",
         "product-174657-dive",
+        "--metrics",
         "--report",
         str(report),
         "--build-dir",
