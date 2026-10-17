@@ -12469,3 +12469,34 @@ Artifacts: `m622bn_skylight_band_context_20261017.json`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-112959.13036`.
 Next inspect context memory/copy costs for worst-case center-only and 3x3
 snapshots before considering a compact occlusion representation.
+
+### M622BO: separate context-copy time from total capture wall time
+
+Repeat the M622BN short route, changing only `-PhaseId M622BO` and the report to
+`bin/suite_reports/engine_refactor/m622bo_skylight_capture_cost_20261017.json`.
+The app completed 29/27 periods with process exit 0 and no timeout; the runner
+returned 2 because focus x=-2 did not reach the west checkpoint. It is not a
+far-route acceptance run.
+
+The new `sky_context_ms` field measured 1,458 context-bearing snapshots:
+median/p95/max 0.0111/0.0152/0.1271 ms. Total copied context was 1,520 chunks,
+at most three per snapshot. A 31.7404 ms `capture_ms` sample contained only
+0.0193 ms of sky context. Period telemetry reported max capture-lock wait
+0.0005 ms and snapshot copy 1.337 ms, so neither context copying nor the global
+capture lock explains that wall sample. Do not optimize either without a
+recurrent joined measurement. Host CPU median/p95 was 48.1/72.3% and is context
+only.
+
+Artifacts: report `m622bo_skylight_capture_cost_20261017.json`; perf
+`perf_20261017-113643_2368.jsonl`; INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-113639.2368`.
+The bounded full-context upper case for one 3x3 capture is 135 chunks, about
+1.06 MiB. Static call-site review finds generic 3x3 capture on the async
+player-edit relight path; M335 exercised streaming center-column jobs. In the
+M622BO log, all 1,805 jobs started and completed, with at most two waiting and
+five live snapshots carrying four context chunks (about 32 KiB context-only).
+The Release regression also verifies nine targets plus nine upper context
+chunks, with only targets returned for apply. This does not bound memory under
+bulk-edit fan-out: the worker queue is unbounded and a denied shared work slot
+does not stop `Enqueue`. The next useful check is one bounded edit burst with
+job count and retained context bytes recorded, not another flight.

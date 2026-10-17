@@ -6138,3 +6138,38 @@ replace copied context arrays with a compact opacity/sky-occlusion summary,
 preserving geometry-aware validation. Continue to treat pixel probes as
 supporting evidence and use only the established short route for routine
 validation.
+
+### M622BO: isolate sky-context capture cost
+
+M622BO added `sky_context_ms` to the existing relight audit event and repeated
+only the short visible M335 route. The run completed 29/27 periods, process
+exit 0, no timeout, and stopped at focus x=-2 before the west checkpoint; it is
+not far-route acceptance. Among 1,663 nonempty target captures, 1,458 copied
+context geometry (1,520 chunks total, maximum 3 in one capture). The context
+copy timer was 0.0111 ms median, 0.0152 ms p95, and 0.1271 ms maximum.
+
+One whole `capture_ms` sample reached 31.7404 ms while `sky_context_ms` was
+0.0193 ms. The per-frame telemetry's maxima were 0.0005 ms capture-lock wait,
+1.337 ms snapshot copy, and 0.0185 ms dependency stamp. This does not support
+the hypothesis that the new context copy or global capture mutex caused the
+outlier; the cross-granularity timing does not identify its cause. Host CPU
+median/p95 was 48.1/72.3%, not a performance acceptance run. Keep the
+instrumentation and investigate the discrepant wall sample only if it recurs.
+
+The M622BO audit joined 1,805 submit/start/done records: maximum two queued
+snapshots, five live snapshots, and four live copied context chunks (about
+32 KiB of context arrays, excluding target/light/shell storage). This route
+exercised the streaming center-column path. Static call-site review found the
+generic 3x3 capture on the async player-edit relight path; the chunk-relight
+helper has no other call-site in `src`. A new Release regression constructs
+nine target chunks and nine upper-context chunks, then verifies Compute returns
+only the nine targets and records geometry-only stamps for the context.
+
+A full resident 3x3 context can still copy up to 135 chunks (about 1.06 MiB at
+8 KiB per chunk) per snapshot. `UJobThreadPool::Enqueue` retains jobs in an
+unbounded deque even when the shared work-slot reservation is denied, so this
+is a per-snapshot bound, not a total queue-memory bound. M622BO's observed
+two-job wait is only the normal M335 streaming path, not a bulk-edit stress.
+Measure the edit path's request fan-out and retained snapshot bytes before
+considering a byte admission cap; do not optimize based on the isolated 31.74
+ms wall sample.

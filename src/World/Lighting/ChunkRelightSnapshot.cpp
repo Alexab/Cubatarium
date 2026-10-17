@@ -8,6 +8,7 @@
 #include "World/Math/GridMath.h"
 
 #include <algorithm>
+#include <chrono>
 #include <deque>
 #include <unordered_set>
 
@@ -709,6 +710,7 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
 
   if (spec.include_skylight && !coords.empty())
   {
+    const auto sky_context_capture_started = std::chrono::steady_clock::now();
     // PropagateSkylightColumn scans up to 15 chunk slices above each target
     // slice to decide whether direct sky reaches it. Capturing only the target
     // band (plus the one-block shell) made all farther geometry look like air,
@@ -748,6 +750,10 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
         ++snapshot.CapturedSkyContextChunks;
       }
     }
+    snapshot.SkyContextCaptureMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - sky_context_capture_started)
+            .count();
   }
   return snapshot;
 }

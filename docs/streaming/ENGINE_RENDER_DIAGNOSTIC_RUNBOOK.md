@@ -2582,3 +2582,26 @@ nor disprove the operator-visible long-flight symptom. Do not extend the route
 just to raise aggregate gates. Before changing band widths, measure
 `sky_context` copy count/cost for center-only and 3x3 captures and preserve the
 read-set invalidation behavior.
+
+### M622BO: distinguish context cost from capture stalls
+
+M622BO's new `sky_context_ms` measures map construction, context coordinate
+stamping, and non-air block copies inside `Capture`. On 1,458 context-bearing
+captures it was 0.0111 ms median, 0.0152 ms p95, 0.1271 ms max. One complete
+`capture_ms` sample was 31.7404 ms, but its context section was 0.0193 ms;
+period telemetry showed maxima of 0.0005 ms lock wait and 1.337 ms snapshot
+copy. Those measurements do not implicate either context copying or the global
+capture mutex, and they do not identify what occupied the rest of that wall
+interval. Leave the mutex and representation unchanged unless the same signal
+recurs with a joined cause. M622BO reached x=-2, so it did not complete the
+west-route acceptance segment.
+
+The 1,805 snapshot jobs in the run all started and completed; at peak, two were
+waiting and five snapshots were live, carrying four copied context chunks
+(about 32 KiB, context only). This is evidence for the center-column flight
+path, not the 3x3 player-edit path. The Release regression now constructs all
+nine target columns plus upper context and verifies context chunks are stamped
+read-only and never returned for apply. A full 3x3 context can hold 135 chunks
+(about 1.06 MiB) per snapshot, while the worker queue is unbounded and slot
+denial does not prevent submission. Follow up with one bounded bulk-edit
+fan-out/retained-byte audit before adding a new memory admission policy.

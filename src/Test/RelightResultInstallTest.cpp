@@ -5,6 +5,7 @@
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 
@@ -174,6 +175,56 @@ void TestSkylightReadsGeometryAbovePartialBand()
              world.GetChunkManager().GetChunk({0, 3, 0})),
          "newly streamed upper geometry invalidates the captured result");
 }
+
+void TestSkylightContextDoesNotExpandThreeByThreeWriteSet()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+
+  for (int cx = -1; cx <= 1; ++cx)
+  {
+    for (int cz = -1; cz <= 1; ++cz)
+    {
+      world.SetBlock({cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE}, 8);
+      world.SetBlock({cx * CHUNK_SIZE, 32, cz * CHUNK_SIZE}, 8);
+    }
+  }
+
+  RelightJobSpec spec;
+  spec.block_positions.push_back({8, 0, 8});
+  spec.min_world_y = 0;
+  spec.max_world_y = CHUNK_SIZE - 1;
+  spec.column_center_only = false;
+  spec.include_block_light = false;
+  spec.frontier_iterations = 0;
+  auto snapshot = UChunkRelightSnapshot::Capture(world, spec);
+  Expect(snapshot.GetCapturedFullChunks() == 9,
+         "3x3 target band captures all nine writable chunks");
+  Expect(snapshot.GetCapturedSkyContextChunks() == 9,
+         "3x3 target captures resident upper context per column");
+  Expect(snapshot.GetBlock({CHUNK_SIZE, 32, CHUNK_SIZE}) == 8,
+         "3x3 upper context geometry is readable");
+  Expect(!snapshot.HasChunk({1, 2, 1}),
+         "3x3 upper context does not become a writable target");
+
+  const auto result = snapshot.Compute(registry);
+  Expect(result.chunks.size() == 9,
+         "3x3 compute returns target chunks only");
+  const auto context_stamp = std::find_if(
+      result.read_set.begin(), result.read_set.end(),
+      [](const ChunkInputStamp &stamp) {
+        return stamp.coord == glm::ivec3(1, 2, 1);
+      });
+  Expect(context_stamp != result.read_set.end() &&
+             context_stamp->readsContent && !context_stamp->readsLight,
+         "3x3 context geometry is validated independently of its light");
+}
 } // namespace
 
 int main()
@@ -181,5 +232,6 @@ int main()
   TestDomainsAndRevision();
   TestLateralSkylightSurvivesInstall();
   TestSkylightReadsGeometryAbovePartialBand();
+  TestSkylightContextDoesNotExpandThreeByThreeWriteSet();
   std::cout << "relight_result_install_test: OK\n";
 }

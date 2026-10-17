@@ -12869,10 +12869,24 @@ the M622BM comparison is not controlled. Pixel witnesses did not reproduce a
 same-view defect. Do not narrow `0:80` or interpret dark/fog/readiness proxies
 as proof this issue caused the operator symptom.
 
-Next, measure capture-time attribution and memory for the worst supported
-capture shapes (center column and 3x3 columns). Keep the full-chunk read
-context if its bounded cost stays within capture budgets; otherwise replace it
-with a compact sky-occlusion representation whose stamps still cover every
-geometry input. Then retain the current short M335 replay and periodic fresh
-world checks; no long operator monitoring route is required for this static
-solver fix.
+M622BO isolated `sky_context_ms`: median/p95/max were 0.0111/0.0152/0.1271 ms
+over the repeated short M335 route. It is not the source of the 31.7404 ms
+whole-capture wall outlier: that sample's context part was 0.0193 ms, while
+per-frame telemetry reported at most 0.0005 ms capture-lock wait and 1.337 ms
+snapshot copy. The timing grains do not identify the outlier cause; do not
+change the capture mutex or replace the representation based on it. This
+completes the center-only path's immediate cost check.
+
+The 3x3 capture regression now verifies nine writable targets, nine upper
+context chunks, and output limited to the targets. Static call-site review
+places generic 3x3 capture on async player-edit relight; M335 uses the
+center-column streaming path. M622BO's log join saw at most two waiting and
+five live snapshots, with four live context chunks, so it does not represent
+bulk-edit fan-out. A fully resident 3x3 read context is bounded at 135 chunks
+(about 1.06 MiB) per snapshot. The worker pool's `Enqueue` queue is unbounded,
+and a failed shared work-slot reservation still submits the relight job; total
+retained context memory therefore needs a bulk-edit/queue audit before adding
+byte admission or replacing the snapshot representation. Keep geometry stamps
+if a compact sky-occlusion summary is later introduced. Continue with short
+M335 checks and periodic fresh-world checks; no long operator-monitoring route
+is needed for this static solver fix.

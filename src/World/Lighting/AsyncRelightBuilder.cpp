@@ -138,6 +138,7 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
   const int captured_neighbor_light_n =
       snapshot.GetCapturedNeighborLightChunks();
   const int captured_sky_context_n = snapshot.GetCapturedSkyContextChunks();
+  const double sky_context_capture_ms = snapshot.GetSkyContextCaptureMs();
   if (audit_relight)
   {
     const glm::ivec3 source = spec.block_positions.empty()
@@ -153,7 +154,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
             std::to_string(capture_ms) + " full=" +
             std::to_string(captured_full_n) + " neighbor_light=" +
             std::to_string(captured_neighbor_light_n) + " sky_context=" +
-            std::to_string(captured_sky_context_n) + " finalize=" +
+            std::to_string(captured_sky_context_n) + " sky_context_ms=" +
+            std::to_string(sky_context_capture_ms) + " finalize=" +
             std::to_string(spec.finalize_pending_gate) + " draw_gate=" +
             std::to_string(spec.visible_draw_gate_repair));
   }
@@ -192,7 +194,7 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
                 catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
                 work_slot = std::move(work_slot), audit_relight,
                 captured_full_n, captured_neighbor_light_n,
-                captured_sky_context_n]() mutable
+                captured_sky_context_n, sky_context_capture_ms]() mutable
                {
                  (void)work_slot;
                  const auto compute_started = std::chrono::steady_clock::now();
@@ -216,6 +218,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
                            std::to_string(captured_neighbor_light_n) +
                            " sky_context=" +
                            std::to_string(captured_sky_context_n) +
+                           " sky_context_ms=" +
+                           std::to_string(sky_context_capture_ms) +
                            " chunks=" + std::to_string(result.chunks.size()) +
                            " read_set=" + std::to_string(result.read_set.size()) +
                            " frontier_unfinished=" +
