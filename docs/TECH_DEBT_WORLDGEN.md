@@ -119,3 +119,25 @@ Infrastructure from the 2026-07 Overworld quality plan (spawn spiral, cave depth
 - Worldgen remains in maintenance/polish mode (core roadmap phases A–D already `done`).
 - Общий debt-remediation цикл добавил baseline/traceability для cross-module рисков (`15bbb00`, `8a0fcdb`), без изменения worldgen runtime contracts.
 - Незапирающие улучшения (pack dropdown UX, presets UX, biome/climate debug overlay) остаются в backlog и могут выполняться независимыми малыми PR без риска для генератора.
+
+## Minecraft 1.18.2-like worldgen implementation checklist
+
+Цель: структурное сходство с Overworld Minecraft Java 1.18.2 без seed parity.
+Отметки обновляются по завершении каждого логического этапа.
+
+- [x] Исследованы текущие генератор, объектная библиотека, feature pipeline,
+  resource packs и официальные изменения worldgen 1.18.2.
+- [ ] Добавить и подключить геологический CC0 pack для новых миров; зафиксировать
+  происхождение и лицензии новых и заимствованных ассетов.
+- [ ] Расширить биомную модель для surface/ocean/shore/mountain/cave биомов и
+  использовать климатические веса для переходов.
+- [ ] Сделать 3D density terrain основным backend и настроить крупные формы:
+  континенты, низины, плато, горы и переходы у побережий.
+- [ ] Добавить геологические глубинные слои, локальные aquifers, noise cave
+  формы и высотно-зависимое распределение руд.
+- [ ] Расширить feature pipeline: сохранить статические `UObjectLibrary`
+  шаблоны, добавить процедурные формы и размещение в surface/underwater/cave
+  контекстах; служебные шаблоны скрывать от каталога игрока.
+- [ ] Проверить генерацию на reference seed и множестве seed, стыки чанков,
+  метрики поверхности/биомов/пещер/руд, pack resolution и лицензионные notices;
+  записать результаты и остаточные ограничения.
