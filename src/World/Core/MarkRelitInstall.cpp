@@ -530,6 +530,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     NoteChunkSliceLightCalculationSettled(coord);
   }
   const bool enter_gate = EnterLitGateActive;
+  static const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   // FZ2.7-B1e: CountEnterFovLitDebt is O(R²)×stale-probe — only needed for
   // enter quiesce latch. Cruise MarkRelit was paying ~17ms here every Apply.
   int lit_remaining = 0;
@@ -893,6 +895,45 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         {
           rec.legal_dark_settled = false;
           in.column_settled = false;
+        }
+
+        // Record the terminal decision while the enter-gate OpenSky marker is
+        // still available. The later visible-demand trace can run after
+        // EndEnterLitGate resets that transient map and would otherwise miss
+        // the exact equal-revision dark case this policy is meant to split.
+        if (audit_relight && open_sky && any_fully_dark)
+        {
+          std::string dark_slices;
+          for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+          {
+            if (!snap.fully_dark)
+            {
+              continue;
+            }
+            if (!dark_slices.empty())
+            {
+              dark_slices += ";";
+            }
+            dark_slices += std::to_string(snap.coord.x) + "," +
+                           std::to_string(snap.coord.y) + "," +
+                           std::to_string(snap.coord.z) + "@" +
+                           std::to_string(snap.meshed_light_rev) + ":" +
+                           std::to_string(snap.light_field_rev) + ":" +
+                           std::to_string(snap.still_stale);
+          }
+          CubatariumLogInfo(
+              "RelightAudit",
+              "relight_terminal event=open_sky_dark column=(" +
+                  std::to_string(key.x) + "," + std::to_string(key.y) +
+                  ") fully_dark=1 stale_dark=" +
+                  std::to_string(any_still_stale) + " equal_rev_fd=" +
+                  std::to_string(equal_rev_fd) + " lit_or_lighting=" +
+                  std::to_string(lit_or_lighting) + " repair_once=" +
+                  std::to_string(in.light_repair_once) + " settled=" +
+                  std::to_string(in.column_settled) + " obligation=" +
+                  std::to_string(static_cast<int>(rec.visual_obligation)) +
+                  " attempt=" + std::to_string(rec.visual_attempt_id) +
+                  " slices=" + dark_slices);
         }
       }
       // A41: do not call ShouldCooldownForceEqualRevPendingFullyDark (replaced by

@@ -3321,9 +3321,10 @@ Reports and logs are preserved in:
 - `artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017/`
 
 The flight parameters and trace-count commands are recorded in
-`FLIGHT_EXPERIMENT_SCRIPTS.md`. Continue with a short stale/open-sky repair
-check, the boundary-denial → deferred owner → eviction → reload chain, and one
-short distant disk-miss lane. Keep long operator-monitoring flights out of the
+`FLIGHT_EXPERIMENT_SCRIPTS.md`. M624O below captured the stale OpenSky terminal
+repair. Remaining targeted work is the rare equal-revision OpenSky branch, the
+boundary-denial → deferred owner → eviction → reload chain, and one short
+distant disk-miss lane. Keep long operator-monitoring flights out of the
 close-out plan.
 
 ### M624M: open-sky mutation and stale-dark repair after M624L
@@ -3364,3 +3365,35 @@ Select-String -Path $log -Pattern 'enter_open_sky event=complete.*changed_chunks
 Select-String -Path $log -Pattern 'relight_admission event=queue_request.*stale_dark=1'
 Select-String -Path $log -Pattern 'stale_light_debt event=(admitted|published) coord=\(3,3,1\)'
 ```
+
+### M624N–M624O: inspect OpenSky at the relight terminal
+
+M624N used the M335 wrapper on the saved warm world
+`World_M613A_Cold_FlagLifecycle_20261016`, starting at `(-48,56,96)` to put
+the initial focus at `(-3,6)`. The established yaw, pitch, eye height, and
+speed were unchanged; idle/fly/stop were 8/30/20 seconds. It completed 2,932
+frames and ten chunks without collision. Although startup applied OpenSky,
+none of the 1,861 later producer-admission records had `open_sky=1`.
+`EndEnterLitGate()` resets `EnterVisualGateCtrl`, so inspect the terminal
+classification while the marker is live instead of using only later admission
+records.
+
+M624O added opt-in
+`relight_terminal event=open_sky_dark` instrumentation in
+`src/World/Core/MarkRelitInstall.cpp`. It is gated by
+`CUBATARIUM_RELIGHT_AUDIT`, logs only when the marker is live and the relight
+contains a fully-dark slice, and includes each slice's mesh/field light
+revisions and stale witness. Release compilation and static EXE verification
+passed. The same route completed 2,961 frames / ten chunks without collision.
+It produced one event for column `(1,10)`: `fully_dark=1`, `stale_dark=1`,
+`equal_rev_fd=0`, `repair_once=1`, `settled=0`, and obligation `LightRepair`.
+Slice `(1,4,10)` had mesh light revision 1 and field revision 5932. This is a
+direct runtime confirmation of the stale OpenSky repair path before gate reset.
+
+The equal-revision OpenSky case (`equal_rev_fd=1`) did not occur, so retain it
+as a narrow future witness rather than inferring it from the stale case. The
+new trace is low-volume and disabled unless the audit environment flag is set.
+Use the exact M624O command and log query in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+Reports and logs are preserved in
+`artifacts/research/rendering/m624n_open_sky_direct_gate_20261017/` and
+`artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017/`.

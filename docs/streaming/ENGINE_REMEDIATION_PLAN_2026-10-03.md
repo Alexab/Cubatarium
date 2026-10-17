@@ -13695,11 +13695,48 @@ Report and INFO log:
 and `artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`.
 Exact parameters and trace commands are in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
 
-### Current remaining work after M624M
+### M624N–M624O — inspect the OpenSky decision before enter-gate reset
 
-1. Confirm the direct `open_sky=1`, equal-revision fully-dark decision at
-   runtime. M624M exercised a changed open-sky mutation and stale-dark repairs,
-   but did not log this exact gate state.
+M624N repeated the visible M335 route on saved
+`World_M613A_Cold_FlagLifecycle_20261016`, with the M624M camera, speed, and
+8/30/20-second phases, starting at `(-48,56,96)` to put the initial focus at
+the previously observed OpenSky column `(-3,6)`. It completed 2,932 frames,
+traveled ten chunks, and had no collision. The warm-cache run recorded six
+startup OpenSky applications and 1,861 producer-admission traces, but none had
+`open_sky=1`. The source explains why the later producer trace cannot establish
+the startup decision: `EndEnterLitGate()` resets `EnterVisualGateCtrl`, while
+the queued relight result is classified in `MarkRelitInstall`.
+
+M624O added a low-volume, opt-in terminal trace at that classification point.
+It is enabled only by `CUBATARIUM_RELIGHT_AUDIT` and emits only when the live
+OpenSky marker and a fully-dark slice coexist. The Release build and static EXE
+check passed. Repeating the same route completed 2,961 frames / ten chunks
+without collision. It produced one terminal witness at column `(1,10)`:
+`fully_dark=1`, `stale_dark=1`, `equal_rev_fd=0`, `repair_once=1`,
+`settled=0`, obligation `LightRepair`, with slice `(1,4,10)` meshed at light
+revision 1 and field revision 5932. This confirms the real stale OpenSky case
+is assigned repair before the gate marker is cleared.
+
+Neither run observed the rarer equal-revision OpenSky fully-dark state
+(`open_sky=1`, `equal_rev_fd=1`). M624O does not close that exact policy
+branch; the new trace makes a future occurrence directly observable. These
+routes had perf/disk metrics disabled and were diagnostic, not visual or
+performance acceptance runs.
+
+Artifacts: M624N report
+`bin/suite_reports/engine_refactor/m624n_open_sky_direct_gate_20261017.json`
+and folder `artifacts/research/rendering/m624n_open_sky_direct_gate_20261017/`;
+M624O report
+`bin/suite_reports/engine_refactor/m624o_open_sky_terminal_trace_20261017.json`
+and folder `artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017/`.
+The exact repeat command and trace query are in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### Current remaining work after M624O
+
+1. Observe the rare `open_sky=1`, equal-revision fully-dark terminal decision
+   (`equal_rev_fd=1`) at runtime. M624O now captures the decision before the
+   enter-gate marker resets and confirmed stale OpenSky repair, but this exact
+   equal-revision branch did not occur.
 2. Exercise one exact boundary dependency through FIFO denial, deferred
    ownership, eviction, reload, and successful relight admission.
 3. Validate one short distant lane with disk-miss/unload-reload provenance and

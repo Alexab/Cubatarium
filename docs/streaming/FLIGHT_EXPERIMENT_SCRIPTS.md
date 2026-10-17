@@ -13076,6 +13076,52 @@ $env:PYTHONIOENCODING='utf-8'
   -ArtifactRoot artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017
 ```
 
+### M624N–M624O — inspect OpenSky at relight terminal
+
+The demand-admission trace is too late to prove the startup OpenSky decision:
+`EndEnterLitGate()` resets `EnterVisualGateCtrl`, while the queued relight result
+is classified later in `MarkRelitInstall`. M624O adds the opt-in
+`relight_terminal event=open_sky_dark` record at that decision point. It is
+emitted only when OpenSky is still marked and the relight contains a fully-dark
+slice; each slice records mesh/field light revisions and stale state.
+
+Use the saved world, known camera and speed, and short M335 route. The start is
+aligned to the previously observed startup OpenSky column `(-3,6)`; speed,
+altitude, yaw, pitch, and streaming mode remain as established.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:PYTHONIOENCODING='utf-8'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -RequireExistingWorld `
+  -DisableMetrics -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -48 -StartY 56 -StartZ 96 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 8 `
+  -PhaseId m624o_open_sky_terminal_trace_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624o_open_sky_terminal_trace_20261017.json `
+  -ArtifactRoot artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017
+```
+
+Count terminal witnesses and the exact equal-revision branch with:
+
+```powershell
+$log = 'artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-160442.49796'
+Select-String -Path $log -Pattern 'relight_terminal event=open_sky_dark'
+Select-String -Path $log -Pattern 'relight_terminal event=open_sky_dark.*equal_rev_fd=1'
+```
+
+M624O completed 2,961 frames / ten chunks without collision and recorded one
+OpenSky fully-dark terminal witness. It was stale (`equal_rev_fd=0`) and chose
+`repair_once=1`, `settled=0`, obligation `LightRepair`; the exact equal-revision
+case did not occur. M624N ran the same route shape without the terminal trace;
+its later demand admissions had `open_sky=0` after the enter-gate marker reset.
+Preserve both runs under
+`artifacts/research/rendering/m624n_open_sky_direct_gate_20261017/` and
+`artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017/`.
+
 M624M completed 3,074 frames and traveled ten chunks from focus `(-2,3)` to
 `(-12,3)`, with no collision. It logged one open-sky application changing two
 slices, eight stale-dark admissions (`stale_dark=1`), and stale-light debt for
