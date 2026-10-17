@@ -7450,7 +7450,11 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       return;
     }
     ++counts.focus_n;
-    const bool contains = GetColumnFlowExecutor().HasRepairTicket(key);
+    // PromoteRelight is a region-wide FIFO maintenance request; it does not
+    // own repair of this exact dark column. Only targeted work can keep a
+    // fully-dark, revision-matched column out of the LegalDark class.
+    const bool contains =
+        GetColumnFlowExecutor().HasTargetedRepairTicket(key);
     const bool progress = ColumnHasRepairProgress(key);
     const bool sticky = IsColumnStickyRemesh(key);
     const bool pending_replace = IsPendingLightBeforeMesh(key);

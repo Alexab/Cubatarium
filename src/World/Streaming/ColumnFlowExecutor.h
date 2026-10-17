@@ -98,6 +98,10 @@ public:
   /// True if column has a live ColumnFlow repair/admit/promote ticket queued
   /// or is inside post-dispatch cooldown.
   bool HasRepairTicket(glm::ivec2 column) const;
+  /// True when a ticket owns repair/admission for this exact column.
+  /// PromoteRelight is a region-wide queue-maintenance pass and is not a
+  /// per-column repair owner for visible-black attribution.
+  bool HasTargetedRepairTicket(glm::ivec2 column) const;
 
   /// Sticky/seam remesh budget (ColumnFlow-only; SyncIdle lives in Dispatch).
   void DrainRemeshSeamBudget(UWorld &world, int max_columns);

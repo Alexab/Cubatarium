@@ -459,6 +459,13 @@ bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
   return scheduler_.ContainsColumn(column);
 }
 
+bool UColumnFlowExecutor::HasTargetedRepairTicket(glm::ivec2 column) const
+{
+  return scheduler_.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+         scheduler_.Contains(column, ColumnWorkKind::FirstMesh) ||
+         scheduler_.Contains(column, ColumnWorkKind::RemeshSeam);
+}
+
 void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
 {
   // Q8: soft deadline — RemeshSeam is not FirstMesh critical progress.
