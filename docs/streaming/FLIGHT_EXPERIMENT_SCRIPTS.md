@@ -11976,3 +11976,49 @@ timeline, pixel-blend analysis, limitations, and next step. Artifacts:
 `m622bb_renderer_pixel_trace_20261017.json`,
 `perf_20261017-030534_39796.jsonl`, and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-030531.39796`.
+
+### M622BC/BD: short moving visible-black gate check
+
+These paired runs use the established pinned warm `World_164` M335 route:
+30 s no-teleport flight, 20 s stop, then 8 s idle. Keep the established start,
+cruise height, heading, pitch, and movement scale. M622BC captured the baseline
+after the fog/lifecycle trace changes. M622BD repeated it after commit
+`1be89710`, which changed visible-black attribution so a region-wide
+`PromoteRelight` ticket is not treated as a repair ticket for its anchor column.
+The runner manages trace variables for `-EnableScreenRayPixelProbes` and
+`-EnableFogPullIn`; `CUBATARIUM_RELIGHT_AUDIT` is saved/restored explicitly:
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BD `
+    -Report bin/suite_reports/engine_refactor/m622bd_world164_m335_targeted_black_gate_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+}
+```
+
+Analyze low-luma pixels from the perf file named by the flight report:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622bd_world164_m335_targeted_black_gate_20261017.json -Raw | ConvertFrom-Json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bd_renderer_pixel_trace_20261017.json
+```
+
+M622BD exited successfully without timeout and covered eight chunks. Its
+post-stop fully-dark stalled count was zero (M622BC: one), validating the
+ticket-classification change. The aggregate flight gate still failed on frame
+time and unresolved readiness signals; do not use that overall status to
+reverse the targeted census fix. CPU observations remain context, without a
+host-load gate. Compare the reports using the meanings and limitations in the
+M622BC/BD runbook section.

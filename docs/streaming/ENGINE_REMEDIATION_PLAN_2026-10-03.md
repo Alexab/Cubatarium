@@ -12568,3 +12568,32 @@ dark surface not explained by its material texture and light state. Keep long
 operator-monitoring flights out of the loop and preserve the distinction
 between readiness debt, fogged surfaces, and actual missing or stalled drawable
 geometry.
+
+### M622BC/BD update: black-gate ownership and queue fairness
+
+**Completed:** fixed the visible-black census so a region-wide `PromoteRelight`
+ticket no longer counts as repair ownership for its anchor column. M622BD
+replayed the established warm `World_164` M335 route against Release commit
+`1be89710`. The post-stop fully-dark stalled count moved from 1 in M622BC to 0;
+the stop gate now passes. Three remaining fully-dark/no-ticket columns met the
+equal-light-revision legal-dark rule. This is an attribution fix, not evidence
+that a visible black-chunk defect is resolved.
+
+**Still open:** M622BD retained 32 post-stop missing-mesh/readiness entries and
+`unfinished_visual_rate=1`, while the direct post-stop visual-hole rate was
+zero. The flight did not converge and the aggregate gate failed. Pixel trace
+found 55 low-luma samples, all on drawable opaque surfaces; most joined leaves
+and logs, so that count is not a blank-chunk signal. Both runs had high host
+load; CPU remains descriptive and does not gate acceptance.
+
+**New investigation:** `PromoteRelight` was live in 23/29 M622BD period samples;
+all 23 were deferred by the shared frame deadline and none dispatched. The
+deferred-far age-admission path still admitted nine entries, and the FIFO made
+43 priority inserts, so this does not by itself prove starvation. Trace a
+bounded service/age SLA for both paths before changing deadline reserves. Check
+whether promotion can be time-sliced without repeating an unbounded scan, then
+validate with the existing short route. Keep cold-world validation separate
+from warm route acceptance and keep host CPU as context only.
+
+See M622BC/BD in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for measurements and
+artifact names, and `FLIGHT_EXPERIMENT_SCRIPTS.md` for the reproducible route.

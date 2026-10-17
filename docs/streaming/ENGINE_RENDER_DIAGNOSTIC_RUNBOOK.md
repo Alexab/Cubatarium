@@ -2071,3 +2071,72 @@ Artifacts: report/pixel trace
 `m622bb_renderer_pixel_trace_20261017.json`; perf/INFO
 `perf_20261017-030534_39796.jsonl`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-030531.39796`.
+
+### M622BC/BD: targeted repair ownership and promote deadline deferral
+
+M622BC's final visible-black census attributed one fully-dark column to a
+`PromoteRelight` Flow ticket. Static inspection showed that this ticket is a
+region-wide maintenance pass: it calls `PromoteNearTerrainColumnRelights` for
+the focus radius and optionally promotes the nearby pending-light set. Its
+`work.column` is only the pass's anchor, not ownership of repair for that
+specific dark column. The census had treated any Flow ticket on that anchor as
+a per-column repair owner, producing `FullyDarkStalledTicket` without targeted
+repair.
+
+The fix in `1be89710` adds `HasTargetedRepairTicket`: only
+`RelightThenMesh`, `FirstMesh`, and `RemeshSeam` count as exact-column repair
+owners. General `HasRepairTicket` remains unchanged for scheduler clients that
+need to know whether any Flow work exists for the column. A Release
+`Cubatarium` target was rebuilt before M622BD.
+
+M622BD repeated the visible, no-teleport 30 s M335 route on the pinned warm
+`World_164` start, followed by 20 s stop and 8 s idle phases. It exited with
+`process_rc=0` and no timeout. The classification change is visible in the
+paired result: M622BC ended with `post_stop_visible_black_stalled_max=1`; M622BD
+ended at `0`, and the stalled stop gate changed from false to true. M622BD did
+have three fully-dark/no-ticket columns, but all three were excluded by the
+equal-light-revision legal-dark predicate
+(`post_stop_visible_black_no_ticket_max=3`,
+`post_stop_visible_black_no_ticket_excluding_legal_dark_max=0`). This validates
+the census ownership fix; it does not prove that a user-visible dark chunk was
+repaired.
+
+The route-level signals remain unsettled. M622BD reached eight chunks, with
+`fly_visible_black_max=18`, `visual_holes_rate=0.1111`,
+`unfinished_visual_rate=1`, `post_stop_missing_max=32`, and
+`post_stop_readiness_debt_max=32`. Its post-stop direct visual-hole rate was
+zero. M622BC had corresponding values 18, 0.0370, 1, 30, and 30. The reports
+are adjacent runs, not a controlled performance comparison: M622BC host CPU
+median was 75.3%, and M622BD was 77.3% (p95 100%). Host CPU is context only,
+never an acceptance gate. The fly-frame median rose from 32.09 ms to 38.62 ms;
+do not assign that difference to the classification-only patch.
+
+M622BD pixel tracing recorded 2,800 probes and 55 samples below luma 32. All
+55 joined drawable opaque depth surfaces and all had estimated fog blend zero.
+The depth-hit summary was 46 leaves (block 572), three logs (block 573), and
+six samples without a resolved material id. Eight samples had unsettled demand
+or preview state, including five with preview active. These are dark textured
+surfaces in the sampled pixels, not evidence of empty chunks; exact atlas texels
+and an operator framebuffer verdict are unavailable.
+
+The same run exposes a scheduling question worth investigating separately:
+the raw perf stream has 29 period snapshots. `PromoteRelight` work was live in
+23 snapshots; all 23 were probed and deferred, with zero dispatches. The queue
+reached 11 live tickets. The code path marks this work noncritical, so
+`UFrameDeadline::ShouldDeferProducer(false)` rejects it after the shared frame
+deadline is exhausted. This is not yet evidence of a relight stall: the run also
+recorded nine deferred-far age admissions and 43 relight FIFO priority inserts,
+with seven deferred-far entries remaining at the end. Do not widen the critical
+reserve or change the deadline policy from these counters alone. Next inspect
+the progress/age bounds on both admission paths and determine whether the
+region-wide promotion needs a bounded incremental scan or a measurable service
+guarantee.
+
+Artifacts: M622BC report/pixel trace and perf
+`m622bc_world164_m335_fog_latch_short_20261017.json`,
+`m622bc_renderer_pixel_trace_20261017.json`,
+`perf_20261017-031703_36216.jsonl`; M622BD report/pixel trace and perf
+`m622bd_world164_m335_targeted_black_gate_20261017.json`,
+`m622bd_renderer_pixel_trace_20261017.json`,
+`perf_20261017-032610_34308.jsonl`; INFO log
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-032607.34308`.
