@@ -2196,3 +2196,54 @@ Artifacts: M622BC report/pixel trace and perf
 `m622bd_renderer_pixel_trace_20261017.json`,
 `perf_20261017-032610_34308.jsonl`; INFO log
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-032607.34308`.
+
+### M622BE: expose denied-relight slice causes
+
+The M622BD correlation did not justify changing queue policy. Its
+`miss_witness` denial had `pending_column=0` and `lit_ready=1`, but the
+no-op-enqueue guard only permits that combination when the merged requested
+band has no fully-dark greedy face. Because the guard did not skip this request,
+the M622BD control flow implies that at least one such face existed (subject to
+state changing between the guard and audit log); that run did not record its
+slice. The `miss_witness` name alone therefore did not prove redundant
+geometry-only relighting.
+
+M622BE adds audit-only `audit_band`, `band_needs`, and `dark_face_cy` fields to
+the FIFO-denial log. Release build succeeded with
+`tools/build_release.ps1 -Jobs 8`. The established visible M335 route completed
+on `World_164` with no timeout and `process_rc=0`. It recorded 73 FIFO denials;
+all had `band_needs=1`. Sixty-four listed one or more cached fully-dark mesh
+slices (`cy=2`, `cy=3`, or both), while the remaining nine had no such cached
+face and each had one pending-light slice. A same-column capture followed 64
+of the dark-face denials within five seconds (34 within one second); every
+captured band overlapped all listed dark-face slices. Eight of the nine
+pending-only denials likewise had a capture within five seconds. Capture
+submission is evidence of queue service, not proof that relight, mesh
+publication, and GPU visibility completed.
+
+The moving pixel trace sampled 2,040 probes. Its 37 low-luma samples all joined
+drawable, draw-ready opaque surfaces outside fog; six had unsettled/preview
+state and none had a light-revision mismatch. The 990 ray state-1 hits and 1,050
+state-3 horizon misses included no state-2 unloaded-chunk-before-hit sample.
+Only nine dark pixels shared an XZ/slice coordinate with a logged denied
+dark-face event, and the nearest same-slice denial was at least 16.8 s earlier;
+this run does not show a time-aligned dark framebuffer surface caused by FIFO
+backpressure. Sparse probes still do not cover every pixel, and no operator
+framebuffer verdict was recorded.
+
+M622BE acceptance remained false: 29 periods/27 steady periods, readiness debt
+rate 1.0, `visual_holes_rate=0.037`, fly visible-black max 18, post-stop
+readiness-debt max 38, and post-stop stalled-black max 0. The nonzero readiness
+and near-focus mesh-coverage values remain proxies. Host CPU median/p95 was
+92.9/100%, while app CPU was 26.2/34.5% of machine capacity; CPU is context
+only. This is not a controlled performance comparison with M622BD.
+
+Next inspect the completion chain for a denied target with a logged dark slice:
+capture completion, `MarkRelit`, dirty-mesh admission, mesh publication, and
+GPU-ready state. Change queue/deadline policy only if a same-view pixel
+transition or a break in that completion chain is demonstrated.
+
+Artifacts: report/pixel trace `m622be_relight_denial_slices_20261017.json`,
+`m622be_renderer_pixel_trace_20261017.json`; perf
+`perf_20261017-100942_45864.jsonl`; INFO log
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-100937.45864`.

@@ -12024,3 +12024,54 @@ Pixel tracing found no sampled ray that hit an unloaded chunk; the route's
 not use the aggregate status to reverse the targeted census fix. CPU
 observations remain context, without a host-load gate. Compare the reports
 using the meanings and limitations in the M622BC/BD runbook section.
+
+### M622BE: relight-denial slice audit
+
+M622BE extends the same established warm `World_164` M335 route. The Release
+binary was rebuilt with eight workers using `tools/build_release.ps1 -Jobs 8`.
+The experiment enabled `CUBATARIUM_RELIGHT_AUDIT=1`, screen-ray pixel probes,
+fog pull-in, and warm-period stamps. Because this run used the just-built
+working tree before commit, the harness source-hash guard was explicitly
+allowed with `CUBA_ALLOW_DIRTY_AF=1`; both variables were restored afterward.
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BE `
+    -Report bin/suite_reports/engine_refactor/m622be_relight_denial_slices_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+Analyze the recorded pixels after the run:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622be_relight_denial_slices_20261017.json -Raw | ConvertFrom-Json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622be_renderer_pixel_trace_20261017.json
+```
+
+M622BE completed with `process_rc=0` and no timeout. Its 73 denied FIFO
+requests all had `band_needs=1`; 64 named dark cached mesh slices and all 64
+were followed by a capture band covering those slices within five seconds.
+The remaining nine denials had one pending-light slice; eight reached capture
+within five seconds. This confirms short-term queue service, not downstream
+relight/mesh/GPU completion. Pixel analysis found 37 low-luma samples, all on
+drawable opaque depth surfaces, and no sampled unloaded-chunk-before-hit ray.
+The aggregate gate remained false on readiness and proxy metrics. See the
+M622BE runbook section before interpreting these queue and image samples.

@@ -12621,5 +12621,33 @@ missing-drawable witness justifies another column-wide relight or can request a
 narrow mesh/light repair. Keep queue cadence unchanged until a short capture
 provides same-camera evidence or proves redundant relight work.
 
+### M622BE: queue denial causes and service
+
+Added audit-only `audit_band`, `band_needs`, and `dark_face_cy` fields to
+relight FIFO denial records and rebuilt the Release target with eight build
+workers. On the established short warm M335 route, all 73 denied requests had
+`band_needs=1`: 64 exposed cached fully-dark mesh slices, and nine had one
+pending-light slice but no dark cached face. A capture followed 64/64 dark-face
+denials within five seconds and overlapped every listed slice; eight of nine
+pending-only denials also reached capture within five seconds. Queue admission
+is progressing in this run, though capture submission is not relight or GPU
+completion.
+
+The pixel trace had 37 low-luma probes, all on drawable/draw-ready opaque
+surfaces outside fog; six had unsettled/preview state, none had a light
+revision mismatch, and no sampled ray hit an unloaded chunk before a surface.
+Only nine dark pixels shared an exact chunk slice with a denied dark-face
+record, and none was within five seconds of that denial. There is no
+time-aligned evidence of a visible blank/dark chunk caused by FIFO backpressure.
+The route still failed aggregate readiness/visual-proxy acceptance, with
+post-stop readiness debt 38; host CPU 92.9/100% and app CPU 26.2/34.5% are
+context only, and this sequential run is not a controlled performance
+comparison.
+
+**Next:** follow one dark-face denial through capture completion, `MarkRelit`,
+dirty-mesh admission, mesh publication, and GPU-ready state. Keep queue policy
+unchanged until that chain stalls or a same-view pixel transition reproduces a
+visible defect.
+
 See M622BC/BD in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for measurements and
 artifact names, and `FLIGHT_EXPERIMENT_SCRIPTS.md` for the reproducible route.

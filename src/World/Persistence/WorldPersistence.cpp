@@ -684,6 +684,10 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
         int loaded_slices = 0;
         int settled_slices = 0;
         int pending_slices = 0;
+        int audit_min_y = -1;
+        int audit_max_y = -1;
+        bool band_needs_relight = false;
+        std::string dark_face_cy;
         bool pending_column = false;
         bool lit_ready = false;
         if (world_context)
@@ -693,15 +697,30 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
               glm::ivec3(ground_xz.x, 0, ground_xz.y));
           const int world_max_y =
               std::max(0, world_context->ProceduralTemplate.MaxHeight);
-          const int audit_min_y = std::clamp(min_y, 0, world_max_y);
+          audit_min_y = std::clamp(min_y, 0, world_max_y);
           const int requested_max_y =
               max_y >= audit_min_y ? max_y : world_max_y;
-          const int audit_max_y = std::clamp(requested_max_y, audit_min_y,
-                                             world_max_y);
+          audit_max_y = std::clamp(requested_max_y, audit_min_y, world_max_y);
+          const auto deferred = DeferredFarRelightColumns.find(ground_xz);
+          if (deferred != DeferredFarRelightColumns.end())
+          {
+            const int deferred_min_y =
+                std::clamp(deferred->second.y_band.x, 0, world_max_y);
+            const int deferred_max_y =
+                deferred->second.y_band.y >= deferred_min_y
+                    ? std::clamp(deferred->second.y_band.y, deferred_min_y,
+                                 world_max_y)
+                    : world_max_y;
+            audit_min_y = std::min(audit_min_y, deferred_min_y);
+            audit_max_y = std::max(audit_max_y, deferred_max_y);
+          }
+          band_needs_relight = ColumnSurfaceBandNeedsRelight(
+              *world_context, ground_xz, audit_min_y, audit_max_y);
           const int min_cy = FloorDiv(audit_min_y, CHUNK_SIZE);
           const int max_cy = FloorDiv(audit_max_y, CHUNK_SIZE);
           const UChunkManager &chunks =
               world_context->BlockWorld.GetChunkManager();
+          const UWorldMeshService &mesh = world_context->GetMeshService();
           for (int cy = min_cy; cy <= max_cy; ++cy)
           {
             const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
@@ -716,6 +735,15 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
               {
                 ++pending_slices;
               }
+            }
+            if (mesh.HasGreedyMesh(coord) &&
+                mesh.GetCache().ChunkHasFullyDarkFace(coord))
+            {
+              if (!dark_face_cy.empty())
+              {
+                dark_face_cy += ",";
+              }
+              dark_face_cy += std::to_string(cy);
             }
           }
         }
@@ -740,7 +768,11 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
                 " lit_ready=" + std::to_string(lit_ready) +
                 " loaded_slices=" + std::to_string(loaded_slices) +
                 " settled_slices=" + std::to_string(settled_slices) +
-                " pending_slices=" + std::to_string(pending_slices));
+                " pending_slices=" + std::to_string(pending_slices) +
+                " audit_band=" + std::to_string(audit_min_y) + ":" +
+                std::to_string(audit_max_y) + " band_needs=" +
+                std::to_string(band_needs_relight) + " dark_face_cy=" +
+                (dark_face_cy.empty() ? std::string("none") : dark_face_cy));
       }
       // A FIFO admission denial is backpressure, not completion. Keep the
       // exact column/band as durable work so PendingLight cannot outlive every
