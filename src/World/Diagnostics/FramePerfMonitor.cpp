@@ -5054,6 +5054,26 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(sp.has_active_attempt)
                << ",\"retained_awaiting_successor\":"
                << static_cast<int>(sp.retained_awaiting_successor)
+               << ",\"open_sky_repair_event_id\":"
+               << sp.open_sky_repair_event_id
+               << ",\"open_sky_repair_target_light_rev\":"
+               << sp.open_sky_repair_target_light_rev
+               << ",\"open_sky_repair_baseline_geom_rev\":"
+               << sp.open_sky_repair_baseline_geom_rev
+               << ",\"open_sky_repair_baseline_attempt_id\":"
+               << sp.open_sky_repair_baseline_attempt_id
+               << ",\"open_sky_repair_baseline_published_attempt_id\":"
+               << sp.open_sky_repair_baseline_published_attempt_id
+               << ",\"open_sky_repair_pending\":"
+               << static_cast<int>(sp.open_sky_repair_pending)
+               << ",\"open_sky_repair_published\":"
+               << static_cast<int>(sp.open_sky_repair_published)
+               << ",\"open_sky_repair_published_geom_rev\":"
+               << sp.open_sky_repair_published_geom_rev
+               << ",\"open_sky_repair_published_light_rev\":"
+               << sp.open_sky_repair_published_light_rev
+               << ",\"open_sky_repair_published_attempt_id\":"
+               << sp.open_sky_repair_published_attempt_id
                << ",\"event_ms\":";
         const std::streamsize previous_precision = out->precision();
         (*out) << std::setprecision(17) << sp.event_ms

@@ -84,6 +84,13 @@ int main()
            "matching successor publication accepted");
     Expect(store.IsOpenSkyRepairPublished(slice, 5, 20),
            "newer publication closes exact event");
+    const ChunkRenderDemandRecord *published_repair = store.Find(slice);
+    Expect(published_repair &&
+               published_repair->open_sky_repair_published_attempt_id ==
+                   repair_attempt &&
+               published_repair->open_sky_repair_published_geom_rev == 11 &&
+               published_repair->open_sky_repair_published_light_rev == 20,
+           "published repair keeps explicit attempt and revision witness");
     store.NoteOpenSkyRepairRequired(slice, 5, 20);
     Expect(store.IsOpenSkyRepairPublished(slice, 5, 20),
            "duplicate event observation does not reopen repair");

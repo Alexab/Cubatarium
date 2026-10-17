@@ -13490,3 +13490,51 @@ Artifacts:
 `bin/suite_reports/engine_refactor/m624ah_cold_frame_world_create_20261017.json`,
 `bin/suite_reports/engine_refactor/m624ah_cold_frame_m335_short_20261017.json`,
 `artifacts/research/rendering/m624ah_cold_frame_m335_short_20261017/`.
+
+### M624AI — warm M335 route with sparse RGBA probes
+
+Use the established route unchanged. `-EnableScreenRayPixelProbes` requires
+`-EnableMetrics`; metrics are enabled for this invocation only and the wrapper
+restores the prior process environment and config afterward.
+
+```powershell
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableMetrics `
+  -EnableScreenRayPixelProbes -World World_M624AH_ColdFrame_20261017 `
+  -ProbeMinCameraX -96 -ProbeMaxCameraX 160 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624ai_framebuffer_pixel_witness_m335_short_20261017
+```
+
+M624AI completed 5,141 frames / 58 requested seconds, ten chunks, and no
+collision or route deviation. Host CPU median/p95/max was `32.3/77.2/83.6%`,
+so it is not a performance baseline. The JSONL contains 3,540 direct RGBA
+framebuffer samples from 44 probe events at 100 unique positions; none had all
+RGB channels below 12. This is sparse sample evidence, not a full-frame or
+operator verdict. All 25 `screen_ray_candidate_trace` rows were unselected, so
+no pixel was tied to a selected world-geometry ray. `visual_holes_rate` and
+black proxy were zero while readiness debt was 1.0 and analyzer `pass=false`.
+Do not interpret that proxy failure as a visible hole. M624AI ran on the warm
+M624AH world and does not replace a clean-load cold-frontier run. Metrics are
+off by default. Preserve the route report and log folder at
+`artifacts/research/rendering/m624ai_framebuffer_pixel_witness_m335_short_20261017/`.
+
+### M624AJ — explicit OpenSky repair publication witness
+
+The implementation now records `open_sky_repair_published` in the opt-in
+demand-transition JSONL exactly when the per-slice publication predicate
+closes. The event includes the OpenSky event/target, baseline and published
+attempt IDs, and baseline/published geometry and light revisions. Metrics must
+be enabled for a persisted trace. For a dirty checkout, temporarily set
+`CUBA_ALLOW_DIRTY_AF=1` as shown in the runbook and restore its previous value.
+
+M624AJ completed 3,441 frames / 58 seconds and nine chunks on the warm
+M624AC world, with no collision, heading deviation, teleport, or clock gap.
+It emitted 33 explicit close events for event ID 5; every event satisfied the
+attempt, geometry, and light revision predicate. Host CPU median/p95/max was
+`48.1/80.9/86.1%`; analyzer readiness debt remained 1.0, but visual-hole and
+black proxies were zero. `pass=false` does not establish a visible defect.
+Artifacts are under
+`artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.

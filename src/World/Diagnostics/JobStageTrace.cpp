@@ -1169,6 +1169,8 @@ const char *UJobStageTrace::DemandTransitionName(DemandTransitionKind kind)
     return "stale_light_remesh_queued";
   case DemandTransitionKind::StaleLightRemeshDirtyAdmitted:
     return "stale_light_remesh_dirty_admitted";
+  case DemandTransitionKind::OpenSkyRepairPublished:
+    return "open_sky_repair_published";
   }
   return "unknown";
 }

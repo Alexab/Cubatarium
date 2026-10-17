@@ -112,7 +112,8 @@ enum class DemandTransitionKind : uint8_t
   IdentityReset,
   LightCalculationSettled,
   StaleLightRemeshQueued,
-  StaleLightRemeshDirtyAdmitted
+  StaleLightRemeshDirtyAdmitted,
+  OpenSkyRepairPublished
 };
 
 enum class MeshRevisionBumpReason : uint8_t
@@ -179,6 +180,16 @@ struct DemandTransitionSpan
   uint8_t has_settled_light{0};
   uint64_t previous_published_coverage_gen{0};
   uint64_t published_coverage_gen{0};
+  uint64_t open_sky_repair_event_id{0};
+  uint64_t open_sky_repair_target_light_rev{0};
+  uint64_t open_sky_repair_baseline_geom_rev{0};
+  uint64_t open_sky_repair_baseline_attempt_id{0};
+  uint64_t open_sky_repair_baseline_published_attempt_id{0};
+  uint64_t open_sky_repair_published_geom_rev{0};
+  uint64_t open_sky_repair_published_light_rev{0};
+  uint64_t open_sky_repair_published_attempt_id{0};
+  uint8_t open_sky_repair_pending{0};
+  uint8_t open_sky_repair_published{0};
   uint64_t mesh_revision_before{0};
   uint64_t mesh_revision_after{0};
   uint8_t face_debt_mask{0};

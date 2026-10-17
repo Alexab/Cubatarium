@@ -6706,3 +6706,48 @@ proxy rate was 0.037, and black proxy rate was zero; no framebuffer/operator
 verdict was collected. This closes the cold-frontier source reproduction, not
 the clean-load performance or visual-acceptance gate. Metrics return to off by
 default.
+
+### 2026-10-17 addendum: M624AI sparse framebuffer evidence
+
+M624AI repeated the established visible, no-teleport M335 route on the warm
+M624AH cold-seed world with metrics and screen-ray pixel probes enabled only
+for that run. It completed 5,141 frames / 58 requested in-game seconds, ten
+chunks, with no collision, clock gap, teleport, or heading deviation. Host CPU
+median/p95/max was `32.3/77.2/83.6%`; this remains a contaminated performance
+sample.
+
+The `renderer_pixel_probe` event records the framebuffer RGBA sampled through
+`glReadPixels`, rather than a synthetic renderer proxy. This run stored 3,540
+samples across 44 probes and 100 screen positions; none had RGB channels all
+below 12. That reduces concern about near-black at the sampled points, but is
+not a full-frame image or operator verdict. All 25 screen-ray candidate trace
+rows had `screen_ray_selected=0`, so no pixel was linked to a selected
+world-geometry candidate. The analyzer reported zero visual-hole and black
+proxy rates while readiness debt remained 1.0 and `pass=false`. These signals
+must stay separate: the proxy failure does not establish a visible hole, and
+the sparse sample does not establish complete visual correctness. A
+cold-frontier framebuffer sample is useful coverage if a visual defect recurs,
+but it is not a current refactor blocker. Host CPU percent is advisory and must
+not be an arbitrary merge gate. No long operator flight is justified. Full
+metrics and sample details are in
+`artifacts/research/rendering/m624ai_framebuffer_pixel_witness_m335_short_20261017/`.
+
+### 2026-10-17 addendum: M624AJ explicit repair publication
+
+The `OpenSkyRepairPublished` demand-transition event now fires at the exact
+`NoteInstallResult(Published)` that closes a per-slice OpenSky repair. Its JSONL
+record includes capture event ID, target light revision, baseline geometry
+and attempt IDs, and the actual publication attempt and geometry/light
+revisions. The Release build and focused `chunk_render_demand_test` passed;
+all seven focused Release CTests passed, and static EXE dependency verification
+passed.
+
+The short visible M335 route completed 3,441 frames / 58 requested in-game
+seconds and nine chunks on the warm M624AC world without collision, heading
+drift, teleport, or clock gap. It emitted 33 `open_sky_repair_published` rows
+for event 5; every row satisfied the exact close predicate. Host CPU
+median/p95/max was `48.1/80.9/86.1%`, so frame timing is advisory. Analyzer
+readiness debt was 1.0, while visual-hole and black proxies were zero; its
+overall `pass=false` does not identify a visible hole. Metrics were enabled
+for this short run only and return to off by default. Full report and trace:
+`artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.

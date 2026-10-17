@@ -14068,50 +14068,45 @@ flight succeeded; `pass=false` is an analyzer gate result. Artifacts:
 `artifacts/research/rendering/m624ac_cold_frame_m335_short_20261017/`, and
 `bin/worlds/World_M624AC_ColdFrame_20261017`.
 
-### Current completion blockers
+### Current completion status (2026-10-17)
 
-The bounded-progress implementation is built and exercised on warm and fresh
-source routes. The following are still needed before closing the refactor:
+The bounded-progress implementation has now been built and exercised on warm
+and fresh source routes. M624AJ closes the remaining OpenSky publication-trace
+gap, so the core rendering/streaming refactor is ready to close. Evidence and
+residual follow-ups are separated below; these follow-ups do not justify
+another long operator flight.
 
-1. The exact OpenSky equal-revision, fully-dark case now has a durable
-   per-slice repair obligation keyed to a capture event and closed only by a
-   newer mesh publication at the target light revision (commit `771ab0f3`).
-   M624AD exercised the state: all 35 OpenSky-dark terminal observations
-   remained `repair_pending=1`; none had `repair_published=1`. In the sampled
-   slice `(9,2,4)`, the replacement geometry was dirty but not in flight or
-   GPU-pending at the end of the trace. This proves the obligation is retained,
-   but not that a near-visible repair reaches publication. M624AF then
-   witnessed 28 repair admissions (22 priority-remesh and 6 ordinary-remesh
-   queue entries); queue owner loss is not the explanation at admission. The
-   For `(5,2,1)`, M624AF captured target light revision 2 and baseline published
-   geometry 1 at priority-remesh admission, then later observed published
-   geometry 3 / light revision 2 and `dirty=0`. This is a queue-to-publication
-   witness consistent with the close predicate. The trace omits the repair
-   attempt id and explicit `repair_published` transition, so add that small
-   audit event before treating the lifecycle gate as fully evidenced across
-   captures.
-2. Boundary dependency lifecycle is now partly runtime-verified. M624I showed
-   denial → deferred → re-admission → exact-boundary capture → finalize.
-   M624AG showed boundary-denied requests and column `(7,0,11)` evicted while
-   both `relight_deferred_far=1` and `relight_boundary_dependency=1`; the
-   unload guard kept `needs_relight=1` and `light_complete=0` through removal.
-   The short pinned route did not revisit that column, so same-column reload
-   and post-reload relight completion remain a low-frequency follow-up. Do not
-   block the refactor on manufacturing a new route for this rare sequence;
-   retain the false-complete guard and keep the follow-up reproducible.
-3. Cold-frontier capture is now reproduced on M624AH: the first M335 focus
-   column `(7,0,3)` was a procedural `disk_miss`; the 58-second visible route
-   covered ten chunks and reached `(-3,3)`. It is not performance acceptance:
-   host CPU p95/max was 93.8/98.9%, and analyzer readiness proxies failed. The
-   near-focus mesh proxy was low and black proxy was zero, but no framebuffer
-   pixel/operator verdict was collected. One clean short frame-attributed
-   capture under lower host load plus the visual verdict remain the last visual
-   acceptance step; no long operator flight is needed.
-4. Once those lifecycle and short visual checks pass, rerun the focused Release
-   regression suite and verify metrics remain off by default and experiment
-   artifacts/runbooks remain reproducible. Seven focused CTests passed after
-   `771ab0f3`; they cover policy/store state but do not prove the two open
-   runtime lifecycles or visual acceptance.
+1. OpenSky repair now has direct runtime publication evidence. M624AJ records
+   33 `open_sky_repair_published` transitions for capture event 5. Every row
+   reports `pending=0`, `published=1`, a publication attempt newer than both
+   stored attempt baselines, geometry newer than its baseline, and light at or
+   above its target. This proves the implementation's per-slice queue-to-
+   publication close predicate in the established route. The event and all
+   revision/attempt fields are in the opt-in demand-transition trace.
+2. Boundary dependency lifecycle and false-complete prevention remain
+   runtime-verified by M624I and M624AG: denial → deferred → re-admission →
+   exact-boundary capture → finalize; then unload preserves
+   `needs_relight=1` and `light_complete=0`. Revisiting the exact evicted
+   column and observing its post-reload relight is still a rare, reproducible
+   follow-up, but it is not a blocker to closing this refactor.
+3. Cold-frontier source behavior is reproduced on M624AH. The first focus
+   column `(7,0,3)` was a procedural `disk_miss`; the visible route completed
+   ten chunks. M624AI collected 3,540 direct RGBA framebuffer samples on the
+   warm repeat; none was near-black, and the visual-hole/black proxies were
+   zero. This is sparse sampling, not a full-frame or operator verdict. Both
+   runs had elevated host load, so their timing is advisory. A cold-frontier
+   RGBA sample would add coverage if a defect recurs, but is not an active
+   correctness gate. Do not make an arbitrary host CPU percentage a merge
+   gate: other host work (including development tools) can keep that gate from
+   passing without indicating an engine defect. A clean baseline is useful
+   later for performance tuning but
+   is not required for the current correctness refactor.
+4. Release app and focused Release regression suite pass; the metrics flag
+   remains opt-in and the experiment routes and artifact locations are
+   documented. The seven focused CTests passed after the final source change.
+   An all-target Release test build still has unresolved symbols in unrelated
+   legacy test targets; it does not prevent building/running the Release app
+   or the focused streaming/rendering suite.
 
 ### M624AD — exercise per-slice OpenSky repair publication tracking
 
@@ -14198,6 +14193,29 @@ were explicitly enabled only for M624AH. Artifacts:
 `bin/suite_reports/engine_refactor/m624ah_cold_frame_m335_short_20261017.json`,
 and `artifacts/research/rendering/m624ah_cold_frame_m335_short_20261017/`.
 
+### M624AI — sparse framebuffer samples on the warm repeat
+
+M624AI repeated the short visible, no-teleport 8/30/20 M335 route on the now
+warm `World_M624AH_ColdFrame_20261017`, with metrics and screen-ray pixel
+probes enabled for this run only. It completed 5,141 frames / 58 requested
+in-game seconds in 63.67 s, traversed ten chunks from `(7,3)` to `(-3,3)`, and
+had no collision, teleport, heading deviation, or clock gap. Host CPU
+median/p95/max was `32.3/77.2/83.6%`; treat frame timing as contaminated, not
+as a performance pass.
+
+The JSONL contains 3,540 direct RGBA framebuffer samples from 44 probe events
+at 100 screen positions (20 horizontal positions across four/five sampled
+rows). No sampled RGB triplet had all channels below 12. This is sparse
+framebuffer evidence, not a full screenshot or operator verdict. The 25
+`screen_ray_candidate_trace` rows all had `screen_ray_selected=0`, so the run
+did not pair a sampled color with a selected world-geometry ray. Analyzer
+`visual_holes_rate` and black proxy were zero, while readiness debt remained
+1.0 and analyzer `pass=false`; those readiness values are not visible-hole
+proof. No operator visual verdict was recorded. The run was on a warm world, so
+a cold-frontier pixel sample remains a useful coverage follow-up if a visual
+defect recurs. Metrics return to off by default. Artifacts:
+`artifacts/research/rendering/m624ai_framebuffer_pixel_witness_m335_short_20261017/`.
+
 ### M624AG — verify boundary dependency survives column eviction
 
 The same visible no-teleport 8/30/20 M335 route ran with source, relight, and
@@ -14216,3 +14234,25 @@ same column; M624I provides the separate denial/deferred/re-admit/exact-capture
 completion segment. Full same-column reload is a rare follow-up, not a reason
 to extend operator monitoring. Artifacts are under
 `artifacts/research/rendering/m624ag_boundary_owner_eviction_m335_short_20261017/`.
+
+### M624AJ — explicit OpenSky repair publication transition
+
+`DemandTransitionKind::OpenSkyRepairPublished` now emits an opt-in transition
+at the exact `NoteInstallResult(Published)` that closes a per-slice OpenSky
+repair. Each trace row includes the event id, target light revision, both
+attempt baselines, geometry baseline, pending/published flags, and the actual
+publication attempt and revisions. This replaces M624AF's indirect inference
+from a later slice snapshot.
+
+The Release app and `chunk_render_demand_test` built successfully, static EXE
+verification passed, and all seven focused Release CTests passed. The visible
+M335 8/30/20 route on the warm `World_M624AC_ColdFrame_20261017` completed 3,441
+frames / 58 requested in-game seconds in 66.52 s, reached nine chunks from
+`(7,3)` to `(-2,3)`, and had no collision, teleport, clock gap, or heading
+deviation. The run recorded 33 explicit publication transitions for event 5;
+all 33 satisfied the close predicate. Host CPU median/p95/max was
+`48.1/80.9/86.1%`, so timings are advisory. Analyzer readiness debt was 1.0,
+but `visual_holes_rate` and black proxy were zero; `pass=false` is not a visible
+hole verdict. Metrics were enabled for this run only and return to off by
+default. Flight report and trace:
+`artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.

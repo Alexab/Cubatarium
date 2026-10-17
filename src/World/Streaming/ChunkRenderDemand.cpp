@@ -128,6 +128,26 @@ void UChunkRenderDemandStore::TraceDemandTransition(
   span.has_settled_light = after.has_settled_light ? 1 : 0;
   span.previous_published_coverage_gen = before.published_coverage_gen;
   span.published_coverage_gen = after.published_coverage_gen;
+  if (kind == DemandTransitionKind::OpenSkyRepairPublished)
+  {
+    span.open_sky_repair_event_id = after.open_sky_repair_event_id;
+    span.open_sky_repair_target_light_rev =
+        after.open_sky_repair_target_light_rev;
+    span.open_sky_repair_baseline_geom_rev =
+        after.open_sky_repair_baseline_geom_rev;
+    span.open_sky_repair_baseline_attempt_id =
+        after.open_sky_repair_baseline_attempt_id;
+    span.open_sky_repair_baseline_published_attempt_id =
+        after.open_sky_repair_baseline_published_attempt_id;
+    span.open_sky_repair_published_geom_rev =
+        after.open_sky_repair_published_geom_rev;
+    span.open_sky_repair_published_light_rev =
+        after.open_sky_repair_published_light_rev;
+    span.open_sky_repair_published_attempt_id =
+        after.open_sky_repair_published_attempt_id;
+    span.open_sky_repair_pending = after.open_sky_repair_pending ? 1 : 0;
+    span.open_sky_repair_published = after.open_sky_repair_published ? 1 : 0;
+  }
   span.previous_stage = before.stage;
   span.stage = after.active_stage;
   span.kind = kind;
@@ -568,6 +588,7 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
                           static_cast<uint8_t>(result));
     return false; // stale completion
   }
+  bool open_sky_repair_published_now = false;
   switch (result)
   {
   case InstallResult::Published:
@@ -599,6 +620,7 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
       rec.open_sky_repair_published_geom_rev = published_geom_rev;
       rec.open_sky_repair_published_light_rev = published_light_rev;
       rec.open_sky_repair_published_attempt_id = attempt_id;
+      open_sky_repair_published_now = true;
     }
     rec.retained_awaiting_successor = false;
     rec.has_active_attempt = false;
@@ -638,6 +660,12 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
   }
   TraceDemandTransition(coord, before, rec, kind, 0.0,
                         static_cast<uint8_t>(result));
+  if (open_sky_repair_published_now)
+  {
+    TraceDemandTransition(coord, before, rec,
+                          DemandTransitionKind::OpenSkyRepairPublished, 0.0,
+                          static_cast<uint8_t>(result));
+  }
   return true;
 }
 

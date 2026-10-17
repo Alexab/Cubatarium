@@ -3692,3 +3692,67 @@ Treat the analyzer failure as proxy/source evidence, not visible-hole proof.
 Metrics return to off on wrapper exit. Reports are in
 `bin/suite_reports/engine_refactor/` and
 `artifacts/research/rendering/m624ah_cold_frame_m335_short_20261017/`.
+
+### M624AI — sparse framebuffer pixel witness
+
+M624AI repeated the same short visible, no-teleport M335 8/30/20 route on the
+now-warm M624AH world, with FramePerf and `-EnableScreenRayPixelProbes` enabled
+for one run. It completed 5,141 frames / 58 requested in-game seconds in
+63.67 s, ten chunks from `(7,3)` to `(-3,3)`, without collision, heading drift,
+teleport, or clock gap. Host CPU median/p95/max was `32.3/77.2/83.6%`, so this
+is not a clean performance sample.
+
+Unlike source-only proxies, `renderer_pixel_probe` stores RGBA read from the
+active framebuffer with `glReadPixels`. M624AI recorded 3,540 samples across 44
+probe events and 100 unique screen positions; no sample had all three RGB
+channels below 12. This only rules out near-black at those sparse sample
+positions and is not a full-frame or operator verdict. The 25
+`screen_ray_candidate_trace` records all had `screen_ray_selected=0`; no
+sampled pixel was paired with a selected world-geometry candidate. The
+analyzer reported `visual_holes_rate=0` and black proxy zero, but readiness
+debt remained 1.0 and `pass=false`; treat those as separate stream/readiness
+signals, not as evidence of visible holes. Since this was a warm repeat, a
+cold-frontier RGBA sample is useful coverage if a visual defect recurs, but it
+is not a current closure blocker. Do not gate on a fixed host CPU percentage;
+use repeated timings for later performance tuning. Metrics return to off by
+default. Log and route report:
+`artifacts/research/rendering/m624ai_framebuffer_pixel_witness_m335_short_20261017/`.
+
+### M624AJ — prove the OpenSky repair publication terminal
+
+The repair tracker now emits `demand_transition_trace` and
+`open_sky_demand_transition_trace` with event `open_sky_repair_published` at
+the exact publication that settles the obligation. The row contains event and
+target revisions, baseline geometry and attempt IDs, final geometry/light
+revisions, and the publication attempt. This is gated by the existing visual
+trace; metrics are needed to persist JSONL. To run:
+
+```powershell
+$oldAllowDirtyAf = $env:CUBA_ALLOW_DIRTY_AF
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -RequireExistingWorld -EnableFogPullIn -EnableMetrics `
+    -World World_M624AC_ColdFrame_20261017 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+    -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 `
+    -PhaseId m624aj_open_sky_publication_transition_m335_short_20261017 `
+    -Report bin/suite_reports/engine_refactor/m624aj_open_sky_publication_transition_m335_short_20261017.json
+} finally {
+  if ($null -eq $oldAllowDirtyAf) { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+  else { $env:CUBA_ALLOW_DIRTY_AF = $oldAllowDirtyAf }
+}
+```
+
+The allow-dirty opt-in is needed only when replaying before the code is
+committed; restore its prior value as above. M624AJ completed 3,441 frames / 58
+requested in-game seconds and nine chunks without collision or route drift.
+It recorded 33 `open_sky_repair_published` rows for event 5. All 33 had
+`pending=0`, `published=1`, a publication attempt newer than both baselines,
+geometry above its baseline, and published light at or above target. Analyzer
+readiness debt remained 1.0, while visual-hole and black proxy rates were zero;
+the overall analyzer `pass=false` is not itself a visible-hole finding. Host
+CPU was elevated (`48.1/80.9/86.1%` median/p95/max), so timing is advisory.
+Artifacts:
+`artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.
