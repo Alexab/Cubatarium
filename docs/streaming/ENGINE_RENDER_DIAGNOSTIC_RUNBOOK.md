@@ -2636,3 +2636,33 @@ iterations therefore cannot append further loaded chunks to the result. The
 active streaming-column path uses zero frontier iterations. These findings
 need no additional flight; continue with short M335 checks for runtime changes
 and periodic fresh-world/source-lifecycle checks.
+
+### M622BQ–M622BS — boundary light and snapshot skylight
+
+Run the established short, visible M335 warm replay on `World_164`, with
+`CUBATARIUM_RELIGHT_AUDIT=1`, `CUBA_ALLOW_DIRTY_AF=1`, screen-ray pixel probes,
+warm-period stamps, and the same camera/route values recorded in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`. Keep these flags scoped to the process and
+restore their previous values in `finally`.
+
+`light_delta` is emitted only in relight audit mode. It records per-chunk sky
+and block voxel changes, the first changed voxel, counts of changed face cells
+in order `x-`, `x+`, `y-`, `y+`, `z-`, `z+`, and at most 12 boundary samples
+with packed old/new values. Face counts overlap at edges and corners. A
+boundary change is evidence of changed solver input/output, not by itself a
+visible defect or proof that a specific neighboring voxel caused it.
+
+M622BQ and M622BR repeated blocklight `1->0` / later `0->1` at `(64,54,98)`
+in `(4,3,6)`, while adjacent `(3,3,6)` had blocklight changes on its `x+`
+face. Their pixel joins did not bracket the transition. M622BS fixed a separate
+confirmed snapshot bug: incoming horizontal skylight was queued but not
+written into the cleared target; the boundary seed now applies the destination
+material's attenuation before it enters the flood. The M622BS short flight and
+pixel trace did not directly exercise a matching skylight boundary transition.
+
+After any solver change, first build Release and check the short-route log for
+the relevant channel and coordinates. Then inspect
+`analyze_renderer_pixel_trace.py` output for same-view framebuffer joins and
+light revisions. Readiness counters, dark luma, and pixel probes are supporting
+evidence only; do not report an operator-visible regression without a matching
+view or operator observation. Do not start long operator-monitoring flights.

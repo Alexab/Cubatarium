@@ -148,6 +148,15 @@ void SeedSkylightHorizontalQueue(UChunkRelightSnapshot &grid,
     {
       return;
     }
+    // The snapshot target band is cleared before the flood. Queueing a face
+    // position without writing its incoming level loses skylight that enters
+    // from a read-only neighbor chunk: the consumer reads the target's still
+    // zero value back from the grid. Install the attenuated boundary seed so
+    // the normal flood can continue from the actual incoming intensity.
+    if (sky_level > grid.GetSkyLight(world_pos))
+    {
+      grid.WriteSkyLight(world_pos, sky_level);
+    }
     queue.push_back(world_pos);
   };
 
@@ -202,7 +211,11 @@ void SeedSkylightHorizontalQueue(UChunkRelightSnapshot &grid,
         neighbor_local[v_axis] = v;
         const int incoming =
             grid.GetSkyLightLocal(neighbor_coord, neighbor_local);
-        try_seed(origin + center_local, incoming > 0 ? incoming - 1 : 0);
+        const glm::ivec3 center_world = origin + center_local;
+        const BlockId center_id = grid.GetBlock(center_world);
+        const int seed_level =
+            std::max(0, incoming - SkylightStepCost(registry, center_id));
+        try_seed(center_world, seed_level);
       }
     }
   }

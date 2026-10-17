@@ -12931,3 +12931,26 @@ that API. No additional flight is required for this static finding. Continue
 with the documented short M335 route for routine smoke validation and periodic
 fresh-world/source-lifecycle checks; operator-monitored long flights remain
 unnecessary.
+
+### M622BS — partial-band horizontal skylight seed fix
+
+Completed a confirmed snapshot-solver fix: horizontal skylight received from a
+read-only neighbor face was used to decide whether to queue the target face,
+but the attenuated value was never written into the cleared target band. The
+queue consumer then read zero from that target. The fix writes the seed and
+uses the destination block's `SkylightStepCost`, including the two-level water
+cost. Release build and static Windows EXE verification pass.
+
+The short M335 smoke completed 29 periods / 27 steady periods without timeout,
+but did not reach the west checkpoint. Pixel traces did not reproduce a
+same-view light defect, so runtime visual confirmation remains open. M622BQ
+and M622BR also repeated a separate blocklight-only change at `(64,54,98)`
+after adjacent `x+` face light changed. That observation supports a delayed
+boundary refresh path but does not justify recursive neighbor relight
+scheduling yet.
+
+Remaining in this area: add a deterministic air/water boundary-seed regression;
+trace queue age for affected columns; define bounded convergence for any
+neighbor-relight propagation; then repeat only the established short M335 route
+and periodic fresh-world/source-lifecycle checks. Long operator-monitoring
+flights remain excluded.

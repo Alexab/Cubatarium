@@ -6222,3 +6222,61 @@ a current streaming regression. Either capture and validate candidate
 frontiers, or retire the unused async edit API before connecting a producer.
 No new flight is needed for these call-graph and solver-closure findings; keep
 routine validation on the established short M335 route.
+
+### M622BQ / M622BR: relight boundary deltas and delayed blocklight refresh
+
+An audit-only `light_delta` trace now reports changed voxel counts and up to
+12 concrete changed face voxels per installed chunk. Face counters are ordered
+`x-`, `x+`, `y-`, `y+`, `z-`, `z+`; this instrumentation is enabled only by
+`CUBATARIUM_RELIGHT_AUDIT=1` and does not change solver behavior.
+
+Two short M335 passes on warm `World_164` repeated a blocklight-only transition
+at `(64,54,98)` in chunk `(4,3,6)`: `16->0` (blocklight `1->0`, skylight
+unchanged), followed later by `0->16`. M622BQ restored it about 17.35 seconds
+later. In M622BR it restored about 32.8 seconds later. In the latter pass,
+between those events, chunk `(3,3,6)` changed 106 blocklight voxels, including
+32 on its `x+` face. This is consistent with a neighboring boundary-light
+input changing before the center column was relit again; the trace does not
+show that this exact face voxel supplied the changed target value, and the
+level-1 target transition is not proof of an operator-visible defect.
+
+The M622BQ pixel trace contained 3,020 probes: 82 had luma below 32, all
+joined a drawable opaque surface, nine were preview/unsettled, and none had a
+light-revision mismatch. For watched `(3,3,6)`, 32 drawable/depth joins all
+matched light revisions; a same-position pair varied by only one RGB unit per
+channel over 3.646 seconds, but did not bracket the light transition. M622BR
+repeated the light transition but still did not produce a same-view pixel pair
+across it. Keep the visual-light symptom unconfirmed and do not add a
+neighbor-relight cascade from this evidence alone.
+
+### M622BS: async snapshot horizontal skylight boundary seed
+
+Static review found a separate solver defect in
+`SeedSkylightHorizontalQueue` for async snapshots. It checked the neighboring
+face light and queued the target face position, but did not write the incoming
+attenuated value into the cleared target band. The queue consumer reads the
+target value from the grid, so an otherwise unlit target remained zero and
+could not propagate sideways. The previous fixed one-level subtraction also
+ignored the destination material's cost (liquid horizontal skylight costs two
+levels). The solver now writes the seed and subtracts
+`SkylightStepCost(destination)` before queuing it. This is a confirmed code
+correctness fix; the blocklight-only `(64,54,98)` transition above is a
+separate observation, not proof that this skylight bug caused it.
+
+Release build and static Windows EXE verification passed. The post-fix short
+M335 run M622BS completed 29 periods / 27 steady periods and did not time out,
+but ended at focus x=-2 instead of the west checkpoint; it is not far-route
+acceptance. Its pixel trace had 1,620 probes, 35 luma<32 samples (all drawable
+opaque), five preview/unsettled samples, and zero light-revision mismatches.
+Watched `(3,3,6)` had six drawable/current depth joins and `(4,3,6)` had two;
+both watches had matching light revisions and no same-view pair. No direct
+visual reproduction or confirmation of repair resulted. Do not use run-level
+readiness or luma aggregates as a framebuffer verdict.
+
+Next: add a deterministic solver regression for horizontal snapshot seeding
+through both air and liquid, then use the established short route and pixel
+joins to inspect a boundary-light transition only when a relevant sky delta is
+actually observed. Separately trace the durable column relight admission and
+queue age when neighboring blocklight faces change; do not recursively enqueue
+all neighboring relights until that work is bounded and its convergence is
+specified.

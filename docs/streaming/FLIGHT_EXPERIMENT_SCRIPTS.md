@@ -12500,3 +12500,64 @@ chunks, with only targets returned for apply. This does not bound memory under
 bulk-edit fan-out: the worker queue is unbounded and a denied shared work slot
 does not stop `Enqueue`. The next useful check is one bounded edit burst with
 job count and retained context bytes recorded, not another flight.
+
+### M622BQ / M622BR / M622BS — boundary relight audit and skylight seed fix
+
+Use the existing short M335 visible no-teleport route unchanged. M622BQ and
+M622BR recorded the pre-fix boundary behavior; M622BS repeated it after the
+snapshot skylight fix. Only the phase and report names differ:
+
+```powershell
+$phaseId = 'M622BS'
+$report = 'bin/suite_reports/engine_refactor/m622bs_horizontal_skylight_seed_20261017.json'
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId $phaseId `
+    -Report $report
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+For the two pre-fix diagnostics set `$phaseId` to `M622BQ` or `M622BR` and use
+reports `m622bq_relight_delta_channels_20261017.json` and
+`m622br_relight_boundary_delta_20261017.json`. M622BQ repeated the same
+blocklight-only `16->0` then `0->16` transition at `(64,54,98)` in
+`(4,3,6)`, with about 17.35 seconds between writes. M622BR repeated it with
+about 32.8 seconds between writes; adjacent `(3,3,6)` changed 106 blocklight
+voxels including 32 on its `x+` face before the target returned to level 1.
+This is evidence of boundary-light changes and delayed target refresh, not
+proof that the particular face cell caused the target change.
+
+M622BS Release verification passed. The app completed 29 periods / 27 steady
+periods without timeout but stopped at x=-2, before the west checkpoint. Its
+1,620 pixel probes had 35 luma<32 samples, all on drawable opaque surfaces;
+five were preview/unsettled and none had a light-revision mismatch. The watched
+`(3,3,6)` and `(4,3,6)` observations were drawable/current, but did not include
+a same-view before/after pair. This remains a short smoke run, not far-route or
+operator-visual acceptance.
+
+Artifacts: `m622bq_relight_delta_channels_20261017.json`,
+`m622bq_renderer_pixel_trace_20261017.json`,
+`m622bq_renderer_pixel_trace_watch_3_3_6_20261017.json`,
+`m622br_relight_boundary_delta_20261017.json`,
+`m622bs_horizontal_skylight_seed_20261017.json`,
+`m622bs_renderer_pixel_trace_20261017.json`,
+`perf_20261017-115810_29908.jsonl`,
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-115807.29908`,
+`perf_20261017-120150_42784.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-120147.42784`.

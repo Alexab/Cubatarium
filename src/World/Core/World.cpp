@@ -8876,6 +8876,131 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
+        if (audit_relight)
+        {
+          const auto &before = chunk->GetLightData();
+          uint64_t sky_changed_n = 0;
+          uint64_t block_changed_n = 0;
+          int first_changed_index = -1;
+          uint8_t first_before = 0;
+          uint8_t first_after = 0;
+          std::array<uint64_t, 6> boundary_sky_changed{};
+          std::array<uint64_t, 6> boundary_block_changed{};
+          std::string boundary_samples;
+          int boundary_sample_n = 0;
+          for (int i = 0; i < CHUNK_VOLUME; ++i)
+          {
+            const uint8_t old_packed = before[static_cast<size_t>(i)];
+            const uint8_t new_packed =
+                chunk_data.light_packed[static_cast<size_t>(i)];
+            const int local_x = i % CHUNK_SIZE;
+            const int local_y = (i / CHUNK_SIZE) % CHUNK_SIZE;
+            const int local_z = i / (CHUNK_SIZE * CHUNK_SIZE);
+            bool relevant_changed = false;
+            const bool sky_changed =
+                result.include_skylight &&
+                (old_packed & 0x0F) != (new_packed & 0x0F);
+            const bool block_changed =
+                result.include_block_light &&
+                (old_packed >> 4) != (new_packed >> 4);
+            if (result.include_skylight &&
+                (old_packed & 0x0F) != (new_packed & 0x0F))
+            {
+              ++sky_changed_n;
+              relevant_changed = true;
+            }
+            if (result.include_block_light &&
+                (old_packed >> 4) != (new_packed >> 4))
+            {
+              ++block_changed_n;
+              relevant_changed = true;
+            }
+            if (first_changed_index < 0 && relevant_changed)
+            {
+              first_changed_index = i;
+              first_before = old_packed;
+              first_after = new_packed;
+            }
+            if (!sky_changed && !block_changed)
+            {
+              continue;
+            }
+            const std::array<bool, 6> on_boundary = {
+                local_x == 0, local_x == CHUNK_SIZE - 1, local_y == 0,
+                local_y == CHUNK_SIZE - 1, local_z == 0,
+                local_z == CHUNK_SIZE - 1};
+            const glm::ivec3 world_pos =
+                chunk_data.coord * CHUNK_SIZE +
+                glm::ivec3(local_x, local_y, local_z);
+            for (size_t face = 0; face < on_boundary.size(); ++face)
+            {
+              if (!on_boundary[face])
+              {
+                continue;
+              }
+              if (sky_changed)
+              {
+                ++boundary_sky_changed[face];
+              }
+              if (block_changed)
+              {
+                ++boundary_block_changed[face];
+              }
+              if (boundary_sample_n < 12)
+              {
+                if (!boundary_samples.empty())
+                {
+                  boundary_samples += ";";
+                }
+                boundary_samples +=
+                    "(" + std::to_string(world_pos.x) + "," +
+                    std::to_string(world_pos.y) + "," +
+                    std::to_string(world_pos.z) + ")=" +
+                    std::to_string(old_packed) + "->" +
+                    std::to_string(new_packed);
+                ++boundary_sample_n;
+              }
+            }
+          }
+          if (sky_changed_n > 0 || block_changed_n > 0)
+          {
+            const int local_x = first_changed_index % CHUNK_SIZE;
+            const int local_y = (first_changed_index / CHUNK_SIZE) % CHUNK_SIZE;
+            const int local_z =
+                first_changed_index / (CHUNK_SIZE * CHUNK_SIZE);
+            const glm::ivec3 first_world =
+                chunk_data.coord * CHUNK_SIZE +
+                glm::ivec3(local_x, local_y, local_z);
+            CubatariumLogInfo(
+                "RelightAudit",
+                "light_delta job=" + std::to_string(result.job_id) +
+                    " coord=(" + std::to_string(chunk_data.coord.x) + "," +
+                    std::to_string(chunk_data.coord.y) + "," +
+                    std::to_string(chunk_data.coord.z) + ") sky_voxels=" +
+                    std::to_string(sky_changed_n) + " block_voxels=" +
+                    std::to_string(block_changed_n) + " first=(" +
+                    std::to_string(first_world.x) + "," +
+                    std::to_string(first_world.y) + "," +
+                    std::to_string(first_world.z) + ") packed=" +
+                    std::to_string(first_before) + "->" +
+                    std::to_string(first_after) + " boundary_sky=" +
+                    std::to_string(boundary_sky_changed[0]) + "," +
+                    std::to_string(boundary_sky_changed[1]) + "," +
+                    std::to_string(boundary_sky_changed[2]) + "," +
+                    std::to_string(boundary_sky_changed[3]) + "," +
+                    std::to_string(boundary_sky_changed[4]) + "," +
+                    std::to_string(boundary_sky_changed[5]) +
+                    " boundary_block=" +
+                    std::to_string(boundary_block_changed[0]) + "," +
+                    std::to_string(boundary_block_changed[1]) + "," +
+                    std::to_string(boundary_block_changed[2]) + "," +
+                    std::to_string(boundary_block_changed[3]) + "," +
+                    std::to_string(boundary_block_changed[4]) + "," +
+                    std::to_string(boundary_block_changed[5]) +
+                    " boundary_samples=" +
+                    (boundary_samples.empty() ? "none" : boundary_samples));
+          }
+        }
         const bool installed =
             InstallComputedLight(*chunk, chunk_data.light_packed,
                                  result.include_skylight,
