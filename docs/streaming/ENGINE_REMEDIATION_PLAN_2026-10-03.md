@@ -13449,11 +13449,36 @@ update. This is a disk-freshness gap, not evidence that this path caused the
 visual defects. Release build verification passed. A deterministic
 denial/save/reload check is still required.
 
-Remaining work after M624E:
+### M624F — verify boundary denial and light-flag save on the short M335 lane
+
+Repeated the established visible no-teleport route on warm `World_164` with
+FramePerf and host sampling disabled and only `CUBATARIUM_RELIGHT_AUDIT`
+enabled. Route integrity passed: 58 requested in-game seconds, 2,184 frames,
+focus `(7,3) -> (-2,3)`, nine chunks traveled, no collision, process exit 0.
+The report correctly leaves visual/performance gates unevaluated.
+
+The run recorded 21 FIFO denials, including three `boundary_dependency`
+requests: `(4,5)`, `(3,5)`, and `(2,4)`. Each was followed immediately by
+`light_flags event=clear reason=relight_deferred_backpressure` and insertion
+into `DeferredFar`. Clear revisions 98 and 101 were covered by successful
+column-light save revision 107; clear revision 108 was covered by successful
+save revision 110. The first two deferred requests were later admitted and
+relit, setting their flags again. The last complete capture sample had zero
+boundary markers, zero unowned markers, zero pending light, and zero in-flight
+relights. This confirms the denial-to-deferred-to-save ordering on the real
+runtime path, not restart behavior or a visible-render acceptance result.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624e_deferred_light_flag_20261017.json`,
+`artifacts/research/rendering/m624e_deferred_light_flag_20261017/flight_sim_report.json`,
+and `artifacts/research/rendering/m624e_deferred_light_flag_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-151940.50968`.
+
+Remaining work after M624F:
 
 1. Exercise the boundary-dependency relight owner through a multi-column chain
-   with FIFO denial/deferred retention, saved-light invalidation, and column
-   eviction/reload. The existing
+   with FIFO denial/deferred retention and column eviction/reload. M624F
+   confirms denial and flag-save ordering on the existing route, but does not
+   force eviction while deferred work is outstanding or restart from that
+   intermediate saved state. The existing
    deterministic torch fixture settles one source-neighbor-return sequence;
    M623G's warm route ended with no pending/unowned boundary markers, but neither
    proves convergence under broader queue pressure.

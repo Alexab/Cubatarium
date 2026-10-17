@@ -3176,3 +3176,23 @@ flush dirty flags; abrupt termination before the asynchronous save completes
 can still lose that update. A deterministic check should force FIFO denial,
 wait for the flag save, restart/reload, and verify that the column schedules a
 fresh relight. The M624E source fix alone is not visual acceptance.
+
+### M624F: short-run boundary FIFO denial and light-flag persistence
+
+Run the established visible no-teleport M335 profile on `World_164`:
+8 seconds idle, 30 seconds fly, 20 seconds stop; start `[120,56,56]`, eye 70,
+yaw 180, pitch -30, speed scale 1. Keep FramePerf/host samples disabled and
+enable only `CUBATARIUM_RELIGHT_AUDIT`. M624F traveled from focus `(7,3)` to
+`(-2,3)` in nine chunks with no collision. It recorded 21 FIFO denials, three
+from `boundary_dependency`. For each, verify the adjacent event order:
+
+1. `relight_fifo event=deny source=boundary_dependency`
+2. `light_flags event=clear ... reason=relight_deferred_backpressure`
+3. `deferred_far owner=defer ... reason=fifo_admission_denied`
+
+Then match the clear revision to a successful `light_flags event=save_result`
+before the later `relight_install_finalized` sets completeness again. In M624F,
+clear revisions 98/101 were saved at revision 107; revision 108 was saved at
+110. The route report is `not_evaluated_metrics_disabled`; this is lifecycle
+evidence, not visual acceptance. It does not exercise eviction or a restart
+while the request remains deferred.
