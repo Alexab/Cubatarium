@@ -5797,6 +5797,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             (rec && (rec->pending_light ||
                      rec->visual == ColumnVisualState::NeedRelight ||
                      rec->visual_obligation == VisualObligation::LightRepair));
+        const bool light_complete_before_unload =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
 
         bool active_work = needs_relight || flow.HasRepairTicket(col) ||
                            (rec && ColumnHasActivePending(*rec)) ||
@@ -5833,6 +5835,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           world.Persistence->ClearColumnLightComplete(
               col, "column_unload_with_relight_work");
         }
+        const bool light_complete_after_invalidation =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
         const double light_flags_ms =
             std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - light_flags_started)
@@ -5841,9 +5845,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const auto invalidation_started = std::chrono::steady_clock::now();
         flow.ForgetColumnWork(col);
         bool invalidated_work = active_work;
-        invalidated_work =
-            world.Persistence->CancelTerrainColumnRelight(world_key) > 0 ||
-            invalidated_work;
+        const int canceled_relight_work =
+            world.Persistence->CancelTerrainColumnRelight(world_key);
+        invalidated_work = canceled_relight_work > 0 || invalidated_work;
         world.Persistence->CancelAsyncTerrainColumnLoad(ground);
         ChunkGenTokens.Bump(ground);
         if (ChunkScheduler)
@@ -5868,6 +5872,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - collision_cleanup_started)
                 .count();
+        const bool light_complete_after_unload =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
         if (ChunkScheduler)
         {
           ChunkScheduler->Invalidate(ground);
@@ -5886,6 +5892,21 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
               "evicted", ground,
               "max_cy=" + std::to_string(highest_cy) +
                   " needs_relight=" + std::to_string(needs_relight) +
+                  " relight_keyed=" + std::to_string(relight_queue.keyed) +
+                  " relight_deferred_far=" +
+                  std::to_string(relight_queue.deferred_far) +
+                  " relight_deferred_visible=" +
+                  std::to_string(relight_queue.deferred_visible) +
+                  " relight_inflight=" +
+                  std::to_string(world.IsAsyncRelightColumnInFlight(col)) +
+                  " relight_cancelled=" +
+                  std::to_string(canceled_relight_work) +
+                  " light_complete_before=" +
+                  std::to_string(light_complete_before_unload) +
+                  " light_complete_after_invalidation=" +
+                  std::to_string(light_complete_after_invalidation) +
+                  " light_complete_after_unload=" +
+                  std::to_string(light_complete_after_unload) +
                   " active_work=" + std::to_string(active_work) +
                   " invalidated_work=" + std::to_string(invalidated_work) +
                   " decision_ms=" + std::to_string(decision_ms) +
