@@ -13167,3 +13167,32 @@ no chunk-file reads or procedural generation; this checks the runner contract
 and route integrity only, not distant streaming or the actual framebuffer
 image. Report and isolated INFO log are under
 `artifacts/research/rendering/m624s_closeout_metrics_off_m335_short_20261017/`.
+
+### M624T — short GUI route for the rejected sticky-LightRepair candidate
+
+Reproduce the launch/route check on the saved warm world. It is intentionally
+metrics-off and short; it does not target the rare OpenSky equal-revision
+transition and should not be used as distant-streaming acceptance.
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -World World_164 `
+  -StartX 120 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624t_sticky_light_repair_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624t_sticky_light_repair_short_20261017.json
+```
+
+M624T traversed from focus `(7,3)` to `(-2,3)` over nine chunks without
+collision or timeout. Metrics were disabled; startup had no disk reads or
+procedural generation, so only launch and route integrity were checked. The
+run used a dirty Release build containing a candidate sticky-obligation change;
+that source change was reverted after review found it could remint Dirty
+indefinitely for a legal-dark cave. The candidate policy test passing is not
+acceptance. The exact runtime OpenSky equal-revision and distant-source gates
+remain open. Report and INFO log are under
+`bin/suite_reports/engine_refactor/m624t_sticky_light_repair_short_20261017.json`
+and `artifacts/research/rendering/m624t_sticky_light_repair_short_20261017/`.

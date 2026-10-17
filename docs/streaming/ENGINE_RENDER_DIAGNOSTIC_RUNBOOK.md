@@ -3441,3 +3441,21 @@ compatibility alias. See the script inventory for supported callers and the
 flight index for exact commands. M624S verified the default wrapper path ran
 the fixed short M335 route with no perf JSONL and no host-resource samples; it
 did not exercise disk/procedural streaming because the start ring was resident.
+
+### M624T: OpenSky obligation needs a publication terminal
+
+`EnterVisualGateCtrl` is transient, so `WasOpenSkyApplied()` becomes false
+after `EndEnterLitGate()`. A candidate change carried column-level
+`LightRepair` across that reset. Although its policy test passed, it was
+reverted: the current callback clears LightRepair only for a lit drawable, so
+a legitimate fully-dark cave could be Dirtied again every 3 s indefinitely.
+Do not make the marker durable or the repair sticky without a terminal path.
+
+The next safe implementation must correlate the repair attempt with the exact
+target slice's accepted mesh publication. Only then can a settled, equal-rev
+dark result become LegalDark; delayed/lost work must keep a repair owner. The
+current column-wide `visual_obligation` cannot make this distinction by itself.
+M624T's candidate Release route had 121 startup resident columns and made no
+disk/procedural requests; it is not streaming or runtime-policy evidence. Keep
+the OpenSky runtime witness and boundary denial/deferred/eviction/reload chain
+open.

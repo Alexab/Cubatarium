@@ -13848,3 +13848,35 @@ instrumented pixel run and should not be compared for performance.
 
 Artifacts: `bin/suite_reports/engine_refactor/m624s_closeout_metrics_off_m335_short_20261017.json`
 and `artifacts/research/rendering/m624s_closeout_metrics_off_m335_short_20261017/`.
+
+### M624T — bound the OpenSky repair obligation to a publication outcome
+
+Static review found a lifecycle ambiguity: `WasOpenSkyApplied()` is scoped to
+the enter gate, while `ColumnRecord::visual_obligation` can retain
+`LightRepair` after that marker resets. A candidate policy change preserved
+that obligation through the reset and passed its targeted Release policy test.
+It was not accepted: `LightRepair` is column-wide and the current completion
+callback clears it only for a lit drawable. A legitimately dark cave mesh may
+therefore retain the obligation and be Dirty-reminted at the 3 s SLA forever.
+The candidate source change was reverted before commit.
+
+The safe fix needs an explicit terminal for the one-shot repair: retain the
+obligation while its target mesh publication is outstanding, then classify a
+newly published dark mesh as LegalDark only after exact slice settlement and
+revision checks. That likely requires per-slice attempt/publication identity;
+the existing column-wide bit cannot distinguish a completed dark cave from a
+lost or delayed remesh. Do not solve this by extending the transient OpenSky
+marker or by keeping `LightRepair` sticky indefinitely.
+
+A candidate Release build passed compilation/static EXE verification and its
+policy test passed. A short visible no-teleport M335 run used the established
+warm `World_164` start/camera/speed and 8/30/20-second phases; it reached focus
+`(7,3) -> (-2,3)` over nine chunks with no collision. Metrics were off; startup
+had 121 resident columns and zero disk reads/procedural completions, so it did
+not exercise distant streaming or the rare OpenSky transition. The route is
+only a launch/route check against the uncommitted candidate build, not evidence
+for accepting that source change.
+
+Artifact: `bin/suite_reports/engine_refactor/m624t_sticky_light_repair_short_20261017.json`
+and `artifacts/research/rendering/m624t_sticky_light_repair_short_20261017/`.
+The exact runtime OpenSky witness and distant source lane remain open.
