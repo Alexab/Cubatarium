@@ -6678,7 +6678,10 @@ M624AE–M624AF isolated the queue handoff. Dirty-queue fields in M624AE were
 sampled before admission; M624AF added a post-admission opt-in event. The
 short M624AF route recorded 28 repair admissions: 22 entered priority remesh
 and 6 ordinary remesh, all dirty at insertion, with queue age up to 43 frames.
-This closes the missing-owner-at-admission hypothesis for those cases. Later
-dequeue, mesh build, GPU apply, and matching publication remain unverified;
-metrics and framebuffer capture were disabled, so no visual acceptance claim
-follows from this source trace.
+This closes the missing-owner-at-admission hypothesis for those cases. For
+`(5,2,1)`, target light revision 2 / published geometry 1 at admission was
+followed by published geometry 3 / light revision 2 and `dirty=0`, consistent
+with a matching publication. The trace omits the attempt id and explicit
+repair-state transition, so the next small follow-up is to log that transition
+directly. Metrics and framebuffer capture were disabled; this is not visual
+acceptance evidence.

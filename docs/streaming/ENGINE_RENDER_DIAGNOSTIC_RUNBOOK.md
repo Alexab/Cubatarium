@@ -3655,6 +3655,10 @@ without collision, heading drift, or clock gap. Metrics and pixel capture were
 off. Of 41 OpenSky-dark terminal observations, 28 reached the post-admission
 trace: 22 had priority-remesh queue kind 2 and 6 ordinary-remesh kind 3; all
 had `dirty=1`, and queue age at admission ranged from 0 to 43 frames. This
-confirms a dirty-queue owner at admission. It does not establish later dequeue,
-build completion, GPU apply, or matching publication. M624AE/AF artifacts are
-under the same-named folders in `artifacts/research/rendering/`.
+confirms a dirty-queue owner at admission. For `(5,2,1)`, admission recorded
+target light revision 2 and published geometry 1; a later slice snapshot
+recorded geometry 3/light 2 and `dirty=0`, consistent with the repair
+publishing. The trace omits the repair attempt id and explicit
+`repair_published=1` transition, so retain a small trace-completeness follow-up.
+M624AE/AF artifacts are under the same-named folders in
+`artifacts/research/rendering/`.

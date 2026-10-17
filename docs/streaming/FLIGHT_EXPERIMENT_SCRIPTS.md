@@ -13408,6 +13408,10 @@ Reuse the same command above, changing the phase to
 M624AF completed 3,298 frames / 58 seconds and nine chunks without collision or
 heading deviation. It recorded 28 post-admission repairs: 22 priority-remesh
 queue entries (kind 2) and 6 ordinary-remesh entries (kind 3), all dirty, with
-queue age 0–43 frames. Queue ownership is therefore established at admission;
-dequeue/build/GPU publication is still unproven. M624AE and M624AF reports and
+queue age 0–43 frames. For `(5,2,1)`, admission had target light revision 2 and
+published geometry 1; a later snapshot showed geometry 3/light 2 and `dirty=0`,
+consistent with the required queue-to-publication sequence. The trace does not
+emit the repair attempt id or explicit `repair_published=1` transition, so add
+that small diagnostic before treating all lifecycle states as fully evidenced.
+M624AE and M624AF reports and
 INFO logs are under their same-named folders in `artifacts/research/rendering/`.

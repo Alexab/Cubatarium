@@ -14083,8 +14083,13 @@ source routes. The following are still needed before closing the refactor:
    but not that a near-visible repair reaches publication. M624AF then
    witnessed 28 repair admissions (22 priority-remesh and 6 ordinary-remesh
    queue entries); queue owner loss is not the explanation at admission. The
-   matching publication/drain is still unverified. Close this item only after
-   observing that publication (or a documented cancellation/rebind lifecycle).
+   For `(5,2,1)`, M624AF captured target light revision 2 and baseline published
+   geometry 1 at priority-remesh admission, then later observed published
+   geometry 3 / light revision 2 and `dirty=0`. This is a queue-to-publication
+   witness consistent with the close predicate. The trace omits the repair
+   attempt id and explicit `repair_published` transition, so add that small
+   audit event before treating the lifecycle gate as fully evidenced across
+   captures.
 2. Produce one runtime trace for a boundary dependency through admission
    denial, deferred ownership, eviction, reload, and relight completion. The
    M624P unload guard protects `boundary_dependency`, but no run has yet shown
@@ -14155,8 +14160,13 @@ had `dirty=1`, queue kind 2 (priority remesh, 22 rows) or 3 (ordinary remesh,
 6 rows), with queue age 0–43 frames at admission. This disproves a missing
 dirty-queue owner at the admission point. It does not prove the queue later
 drained or that the corresponding attempt published: none of the terminal
-records contained a publication proof, and this run collected no framebuffer
-verdict. Flight report and INFO log are under
+records contained an explicit repair-state transition. For `(5,2,1)`, the
+trace shows target light revision 2 and published geometry 1 at repair
+admission, followed by published geometry 3/light 2 and `dirty=0`. This meets
+the geometry/light portion of the close predicate and is consistent with the
+newer attempt completing. The audit omits the repair attempt id at publication,
+so retain a small trace-completeness follow-up. No framebuffer verdict was
+collected. Flight report and INFO log are under
 `artifacts/research/rendering/m624ae_open_sky_dirty_queue_witness_m335_short_20261017/`
 and
 `artifacts/research/rendering/m624af_open_sky_repair_owner_m335_short_20261017/`.
