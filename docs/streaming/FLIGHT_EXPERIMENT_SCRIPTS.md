@@ -12018,7 +12018,9 @@ py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
 M622BD exited successfully without timeout and covered eight chunks. Its
 post-stop fully-dark stalled count was zero (M622BC: one), validating the
 ticket-classification change. The aggregate flight gate still failed on frame
-time and unresolved readiness signals; do not use that overall status to
-reverse the targeted census fix. CPU observations remain context, without a
-host-load gate. Compare the reports using the meanings and limitations in the
-M622BC/BD runbook section.
+time, the near-focus missing-mesh proxy, and unresolved stop-state readiness.
+Pixel tracing found no sampled ray that hit an unloaded chunk; the route's
+`visual_holes` values are pressure-proxy evidence, not framebuffer proof. Do
+not use the aggregate status to reverse the targeted census fix. CPU
+observations remain context, without a host-load gate. Compare the reports
+using the meanings and limitations in the M622BC/BD runbook section.

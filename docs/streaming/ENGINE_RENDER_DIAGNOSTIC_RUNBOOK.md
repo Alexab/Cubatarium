@@ -2102,14 +2102,26 @@ the census ownership fix; it does not prove that a user-visible dark chunk was
 repaired.
 
 The route-level signals remain unsettled. M622BD reached eight chunks, with
-`fly_visible_black_max=18`, `visual_holes_rate=0.1111`,
-`unfinished_visual_rate=1`, `post_stop_missing_max=32`, and
-`post_stop_readiness_debt_max=32`. Its post-stop direct visual-hole rate was
-zero. M622BC had corresponding values 18, 0.0370, 1, 30, and 30. The reports
-are adjacent runs, not a controlled performance comparison: M622BC host CPU
+`fly_visible_black_max=18`, a `visual_holes_rate=0.1111` near-focus
+missing-mesh pressure proxy, `unfinished_visual_rate=1`,
+`post_stop_missing_max=32`, and `post_stop_readiness_debt_max=32`. Its
+post-stop near-focus mesh-coverage proxy was zero; neither value is a direct
+framebuffer-hole measurement. M622BC had corresponding values 18, 0.0370, 1,
+30, and 30. The reports are adjacent runs, not a controlled performance
+comparison: M622BC host CPU
 median was 75.3%, and M622BD was 77.3% (p95 100%). Host CPU is context only,
 never an acceptance gate. The fly-frame median rose from 32.09 ms to 38.62 ms;
 do not assign that difference to the classification-only patch.
+
+M622BD's three `visual_holes=1` period samples were at frames 513, 675, and
+763. The miss-probe witness remained 63.0–73.0 blocks from focus while the
+presented fog horizon was 32 blocks; at frame 513 the current probe was clear
+and the short miss hysteresis still held. The screen-ray pixel probes recorded
+2,800 samples: 1,421 opaque-cube hits and 1,379 rays with no opaque cube before
+the renderer horizon. No sample had state 2 (an unloaded chunk before a hit).
+Probe frames adjacent to all three proxy positives likewise had no state-2
+sample. This weakens the interpretation of those proxy positives as visible
+holes, but the sparse screen-ray grid cannot prove every pixel was covered.
 
 M622BD pixel tracing recorded 2,800 probes and 55 samples below luma 32. All
 55 joined drawable opaque depth surfaces and all had estimated fog blend zero.
@@ -2126,11 +2138,19 @@ reached 11 live tickets. The code path marks this work noncritical, so
 `UFrameDeadline::ShouldDeferProducer(false)` rejects it after the shared frame
 deadline is exhausted. This is not yet evidence of a relight stall: the run also
 recorded nine deferred-far age admissions and 43 relight FIFO priority inserts,
-with seven deferred-far entries remaining at the end. Do not widen the critical
-reserve or change the deadline policy from these counters alone. Next inspect
-the progress/age bounds on both admission paths and determine whether the
-region-wide promotion needs a bounded incremental scan or a measurable service
-guarantee.
+with seven deferred-far entries remaining at the end. Static inspection found
+an explicit age-service path: a deferred entry becomes eligible after 1.5 s,
+at most one candidate is attempted every 250 ms, and this bypass is allowed
+while the relight FIFO is below three-quarters of its configured soft cap and
+the prior candidate is no longer waiting. The M622BD audit logged nine
+accepted age-service admissions at ages 1.513–4.257 s (median 1.541 s). The
+priority FIFO peaked at 35 entries and ended at one; deferred-far entries
+peaked at nine and ended at seven. This is evidence of service under the
+current queue, with a measured worst observed wait of 4.257 s; it is not proof
+of a stuck queue or of a user-visible delay. Do not widen the critical reserve
+or change the deadline policy from these counters alone. Next correlate a
+long-wait entry with its exact light preview/settlement and whether it enters
+the fog horizon before changing service policy.
 
 Artifacts: M622BC report/pixel trace and perf
 `m622bc_world164_m335_fog_latch_short_20261017.json`,

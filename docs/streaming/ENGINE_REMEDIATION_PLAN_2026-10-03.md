@@ -12580,20 +12580,32 @@ equal-light-revision legal-dark rule. This is an attribution fix, not evidence
 that a visible black-chunk defect is resolved.
 
 **Still open:** M622BD retained 32 post-stop missing-mesh/readiness entries and
-`unfinished_visual_rate=1`, while the direct post-stop visual-hole rate was
-zero. The flight did not converge and the aggregate gate failed. Pixel trace
-found 55 low-luma samples, all on drawable opaque surfaces; most joined leaves
-and logs, so that count is not a blank-chunk signal. Both runs had high host
-load; CPU remains descriptive and does not gate acceptance.
+`unfinished_visual_rate=1`, while the post-stop near-focus mesh-coverage proxy
+was zero. The flight did not converge and the aggregate gate failed. Its
+`visual_holes_rate=0.1111` is a near-focus missing-mesh pressure proxy, not a
+pixel-level hole rate. The three positive proxy samples tracked witnesses
+63–73 blocks from focus, beyond the 32-block fog horizon. Of 2,800 screen-ray
+pixel probes, none hit an unloaded chunk before an opaque surface. This weakens
+the claim of a framebuffer hole in this run, but does not cover every pixel or
+every frame. Pixel tracing also found 55 low-luma samples, all on drawable
+opaque surfaces; most joined leaves and logs, so that count is not a blank-chunk
+signal. Both runs had high host load; CPU remains descriptive and does not gate
+acceptance.
 
 **New investigation:** `PromoteRelight` was live in 23/29 M622BD period samples;
 all 23 were deferred by the shared frame deadline and none dispatched. The
 deferred-far age-admission path still admitted nine entries, and the FIFO made
-43 priority inserts, so this does not by itself prove starvation. Trace a
-bounded service/age SLA for both paths before changing deadline reserves. Check
-whether promotion can be time-sliced without repeating an unbounded scan, then
-validate with the existing short route. Keep cold-world validation separate
-from warm route acceptance and keep host CPU as context only.
+43 priority inserts. Its explicit service rule admits an aged candidate after
+1.5 s, on a 250 ms cadence, below three-quarters of the configured FIFO soft
+cap, while respecting an earlier waiting candidate. The audit measured
+1.513–4.257 s for those nine admissions; FIFO depth peaked at 35 and ended at
+one. This shows queue progress, though it leaves a 4.257 s worst observed wait
+to correlate with actual light settlement. Do not widen deadline reserves from
+the deferred-promote counters alone. Next compare the oldest serviced entries
+with visible preview/light settlement and fog horizon on the established short
+route; change policy only if a visible delay is reproduced. Keep cold-world
+validation separate from warm route acceptance and keep host CPU as context
+only.
 
 See M622BC/BD in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for measurements and
 artifact names, and `FLIGHT_EXPERIMENT_SCRIPTS.md` for the reproducible route.
