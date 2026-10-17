@@ -1485,6 +1485,10 @@ public:
 private:
   void AdjustColumnEmergeTelemetryCount(ColumnEmergeState state, int delta);
 
+  /// Track dark drawable slices that must receive a post-OpenSky publication.
+  void NoteOpenSkyRepairTargets(glm::ivec2 column, int min_y, int max_y,
+                                uint64_t event_id);
+
   /// Keep generic FirstMesh recovery off stable peer-waiting coverage debt.
   void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
 

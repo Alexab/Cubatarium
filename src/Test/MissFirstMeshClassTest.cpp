@@ -1413,6 +1413,22 @@ int main()
     using cutum::EnterVoidEdgeAction;
     using cutum::ShouldEscalateEnterWorklistGpuDrain;
     using cutum::ShouldTreatMissingNeighborAsOpenSky;
+    cutum::EnterVisualGate open_sky_gate;
+    open_sky_gate.BeginCapture();
+    const uint64_t first_open_sky_event =
+        open_sky_gate.NoteOpenSkyApplied(glm::ivec2(4, 7));
+    Expect(first_open_sky_event != 0, "OpenSky event has nonzero identity");
+    Expect(open_sky_gate.NoteOpenSkyApplied(glm::ivec2(4, 7)) ==
+               first_open_sky_event,
+           "same column reuses event within gate");
+    Expect(open_sky_gate.OpenSkyEventId(glm::ivec2(4, 7)) ==
+               first_open_sky_event,
+           "OpenSky marker exposes per-gate event id");
+    open_sky_gate.BeginCapture();
+    const uint64_t second_open_sky_event =
+        open_sky_gate.NoteOpenSkyApplied(glm::ivec2(4, 7));
+    Expect(second_open_sky_event != first_open_sky_event,
+           "new gate capture receives a new OpenSky event id");
     Expect(EnterGpuQuiesceDrainAllowed(true),
            "Era50: GpuQuiesceDrain on for whole gate");
     Expect(!EnterLitQuiesceAllowed(true, 5),
@@ -1542,12 +1558,20 @@ int main()
     Expect(ClassifyVisualObligation(false, true, true, true, false, false,
                                     false) == VisualObligation::LightRepair,
            "A41: still_stale → LightRepair");
-    Expect(NeedsOpenSkyEqualRevLightRepair(true, false, true),
-           "A41: open_sky FD needs repair");
-    Expect(!NeedsOpenSkyEqualRevLightRepair(true, false, false),
+    Expect(NeedsOpenSkyEqualRevLightRepair(true, false, true, false, false),
+           "OpenSky FD needs repair until its publication");
+    Expect(!NeedsOpenSkyEqualRevLightRepair(true, false, true, false, true),
+           "published OpenSky repair settles equal-rev FD");
+    Expect(NeedsOpenSkyEqualRevLightRepair(true, false, false, true, false),
+           "unpublished OpenSky repair remains owned after gate reset");
+    Expect(!NeedsOpenSkyEqualRevLightRepair(true, false, false, false, false),
            "A41: cave FD no open_sky repair");
-    Expect(IsLegalDarkEqualRevFullyDark(true, false, false),
+    Expect(IsLegalDarkEqualRevFullyDark(true, false, false, false, false),
            "A41: cave LegalDark predicate");
+    Expect(IsLegalDarkEqualRevFullyDark(true, false, true, false, true),
+           "published OpenSky dark result can settle");
+    Expect(!IsLegalDarkEqualRevFullyDark(true, false, false, true, false),
+           "pending per-slice OpenSky repair blocks legal dark");
     Expect(SoftDeferHoldAllowedWithTicket(true, true),
            "A41: SoftDefer hold with ticket OK");
     Expect(!SoftDeferHoldAllowedWithTicket(true, false),

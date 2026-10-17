@@ -1395,6 +1395,7 @@ target_link_libraries(mesh_publish_contract_test glm::glm)
 
 add_executable(miss_first_mesh_class_test
     src/Test/MissFirstMeshClassTest.cpp
+    src/World/Streaming/EnterVisualGate.cpp
     src/World/Streaming/MemoryBudgetController.cpp)
 target_include_directories(miss_first_mesh_class_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)

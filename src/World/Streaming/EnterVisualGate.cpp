@@ -12,6 +12,11 @@ void EnterVisualGate::Reset()
   peak_ = 0;
   phase_ = EnterVisualGatePhase::Idle;
   frames_without_gpu_finish_ = 0;
+  ++open_sky_capture_id_;
+  if (open_sky_capture_id_ == 0)
+  {
+    ++open_sky_capture_id_;
+  }
 }
 
 void EnterVisualGate::BeginCapture()
@@ -23,6 +28,11 @@ void EnterVisualGate::BeginCapture()
   peak_ = 0;
   phase_ = EnterVisualGatePhase::Capture;
   frames_without_gpu_finish_ = 0;
+  ++open_sky_capture_id_;
+  if (open_sky_capture_id_ == 0)
+  {
+    ++open_sky_capture_id_;
+  }
 }
 
 void EnterVisualGate::AddCapturedColumn(glm::ivec2 col,
@@ -110,14 +120,25 @@ bool EnterVisualGate::WasVoidRelightProbed(glm::ivec2 col) const
   return void_relight_probed_.find(col) != void_relight_probed_.end();
 }
 
-void EnterVisualGate::NoteOpenSkyApplied(glm::ivec2 col)
+uint64_t EnterVisualGate::NoteOpenSkyApplied(glm::ivec2 col)
 {
-  open_sky_applied_[col] = 1;
+  if (open_sky_capture_id_ == 0)
+  {
+    ++open_sky_capture_id_;
+  }
+  open_sky_applied_[col] = open_sky_capture_id_;
+  return open_sky_capture_id_;
 }
 
 bool EnterVisualGate::WasOpenSkyApplied(glm::ivec2 col) const
 {
   return open_sky_applied_.find(col) != open_sky_applied_.end();
+}
+
+uint64_t EnterVisualGate::OpenSkyEventId(glm::ivec2 col) const
+{
+  const auto it = open_sky_applied_.find(col);
+  return it == open_sky_applied_.end() ? 0 : it->second;
 }
 
 } // namespace cutum

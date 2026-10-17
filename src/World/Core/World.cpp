@@ -953,8 +953,10 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
     }
     const glm::ivec3 primary =
         UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
-    EnterVisualGateCtrl.NoteOpenSkyApplied(
-        glm::ivec2(primary.x, primary.z));
+    const glm::ivec2 primary_col(primary.x, primary.z);
+    const uint64_t open_sky_event =
+        EnterVisualGateCtrl.NoteOpenSkyApplied(primary_col);
+    NoteOpenSkyRepairTargets(primary_col, min_y, max_y, open_sky_event);
   }
   const glm::ivec3 primary_chunk =
       UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
@@ -963,6 +965,41 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   const auto t1 = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.FullRelightMs =
       std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
+void UWorld::NoteOpenSkyRepairTargets(glm::ivec2 column, int min_y, int max_y,
+                                      uint64_t event_id)
+{
+  if (!MeshService || event_id == 0 || max_y < min_y)
+  {
+    return;
+  }
+  const int min_cy = std::max(0, FloorDiv(min_y, CHUNK_SIZE));
+  const int max_cy = std::max(min_cy, FloorDiv(max_y, CHUNK_SIZE));
+  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const uint64_t world_epoch =
+      MeshService->GetCache().GetCaptureStore().WorldEpoch();
+  for (int cy = min_cy; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(column.x, cy, column.y);
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    UChunkMeshCache::LitApplyMeshProbe probe{};
+    MeshService->FillLitApplyMeshProbe(coord, probe);
+    if (!probe.has_drawable || !probe.fully_dark)
+    {
+      continue;
+    }
+    demand.BindIdentity(coord, world_epoch, chunk->GetIncarnation());
+    const MeshPublishRevs published =
+        MeshService->GetCache().GetMeshPublishRevs(coord);
+    demand.NotePublishedRevs(coord, published.geom_rev, published.light_rev);
+    demand.NoteOpenSkyRepairRequired(coord, event_id,
+                                     chunk->GetLightFieldRevision());
+  }
 }
 
 void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
@@ -5390,12 +5427,26 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           probe.has_drawable && probe.meshed_light_rev != 0 &&
           desired_light != 0 && probe.meshed_light_rev < desired_light;
       const bool light_surface_stale = still_stale || stale_dark_faces;
+      const glm::ivec2 column_xz(cx, cz);
       const bool open_sky =
-          EnterVisualGateCtrl.WasOpenSkyApplied(glm::ivec2(cx, cz));
+          EnterVisualGateCtrl.WasOpenSkyApplied(column_xz);
+      const uint64_t open_sky_event =
+          EnterVisualGateCtrl.OpenSkyEventId(column_xz);
+      if (open_sky && fully_dark)
+      {
+        demand.NoteOpenSkyRepairRequired(coord, open_sky_event,
+                                         desired_light);
+      }
+      const bool open_sky_repair_pending =
+          demand.HasOpenSkyRepairPending(coord, desired_light);
+      const bool open_sky_repair_published =
+          open_sky && demand.IsOpenSkyRepairPublished(
+                          coord, open_sky_event, desired_light);
       const bool legal_dark_current =
           slice_light_settled &&
           IsLegalDarkEqualRevFullyDark(fully_dark, stale_dark_faces,
-                                       open_sky) &&
+                                       open_sky, open_sky_repair_pending,
+                                       open_sky_repair_published) &&
           pub.light_rev == desired_light &&
           probe.meshed_light_rev == desired_light;
       const bool defer_until_lit =
@@ -5520,10 +5571,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                flow.Contains(slice_column, ColumnWorkKind::RelightThenMesh) ||
                flow.Contains(slice_column, ColumnWorkKind::PromoteRelight);
       };
-      const bool equal_rev_fd =
-          fully_dark && !still_stale && !mesh_behind_light &&
-          !(probe.has_drawable && probe.meshed_light_rev != 0 &&
-            desired_light != 0 && probe.meshed_light_rev != desired_light);
       // Visible admission intentionally bypasses the general no-op FIFO
       // guard. A settled, equal-revision dark cave slice is already a valid
       // terminal state; repeatedly relighting it leaves lit_ready false and
@@ -5576,10 +5623,14 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         // require a bounded LightRepair Dirty attempt. A stale-dark witness
         // means current world light is already available, so RelightThenMesh
         // alone can become a ticket without executable light work.
-        if (NeedsOpenSkyEqualRevLightRepair(fully_dark, light_surface_stale,
-                                            open_sky) ||
-            (fully_dark && open_sky && equal_rev_fd) ||
-            (fully_dark && open_sky && light_surface_stale) ||
+        const bool open_sky_repair_pending =
+            demand.HasOpenSkyRepairPending(coord, desired_light);
+        const bool open_sky_repair_published =
+            open_sky && demand.IsOpenSkyRepairPublished(
+                            coord, open_sky_event, desired_light);
+        if (NeedsOpenSkyEqualRevLightRepair(
+                fully_dark, light_surface_stale, open_sky,
+                open_sky_repair_pending, open_sky_repair_published) ||
             stale_dark_faces)
         {
           ColumnRecord &orec =
@@ -12098,7 +12149,9 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
           MeshService->QueueMeshDependencyInvalidations(
               BlockWorld, changed_light_chunks, "enter_open_sky_boundary");
         }
-        EnterVisualGateCtrl.NoteOpenSkyApplied(col);
+        const uint64_t open_sky_event =
+            EnterVisualGateCtrl.NoteOpenSkyApplied(col);
+        NoteOpenSkyRepairTargets(col, dirty_min, dirty_max, open_sky_event);
         StickyRemeshAfterLight.erase(col);
       }
       EnterVisualGateCtrl.NoteVoidRelightProbed(col);
@@ -12340,7 +12393,9 @@ void UWorld::BeginEnterLitGate()
         MeshService->QueueMeshDependencyInvalidations(
             BlockWorld, changed_light_chunks, "enter_open_sky_boundary");
       }
-      EnterVisualGateCtrl.NoteOpenSkyApplied(col);
+      const uint64_t open_sky_event =
+          EnterVisualGateCtrl.NoteOpenSkyApplied(col);
+      NoteOpenSkyRepairTargets(col, dirty_min, dirty_max, open_sky_event);
       GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
                                       /*priority=*/80);
       // OpenSky inject is a light delta — remesh via ColumnFlow (not direct MarkDirty).

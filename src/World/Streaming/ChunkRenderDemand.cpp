@@ -414,6 +414,77 @@ void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
   }
 }
 
+void UChunkRenderDemandStore::NoteOpenSkyRepairRequired(
+    glm::ivec3 coord, uint64_t event_id, uint64_t target_light_rev)
+{
+  if (event_id == 0)
+  {
+    return;
+  }
+  ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  if (rec.open_sky_repair_event_id == event_id &&
+      rec.open_sky_repair_target_light_rev == target_light_rev &&
+      (rec.open_sky_repair_pending || rec.open_sky_repair_published))
+  {
+    return;
+  }
+  rec.open_sky_repair_pending = true;
+  rec.open_sky_repair_published = false;
+  rec.open_sky_repair_event_id = event_id;
+  rec.open_sky_repair_target_light_rev = target_light_rev;
+  rec.open_sky_repair_baseline_geom_rev = rec.published_geom_rev;
+  rec.open_sky_repair_baseline_attempt_id =
+      rec.has_active_attempt ? rec.active_attempt_id : 0;
+  rec.open_sky_repair_baseline_published_attempt_id =
+      rec.last_published_attempt_id;
+  rec.open_sky_repair_published_geom_rev = 0;
+  rec.open_sky_repair_published_light_rev = 0;
+  rec.open_sky_repair_published_attempt_id = 0;
+}
+
+bool UChunkRenderDemandStore::IsOpenSkyRepairPending(
+    glm::ivec3 coord, uint64_t event_id, uint64_t target_light_rev) const
+{
+  const ChunkRenderDemandRecord *rec = Find(coord);
+  return rec && rec->open_sky_repair_pending &&
+         rec->open_sky_repair_event_id == event_id &&
+         rec->open_sky_repair_target_light_rev == target_light_rev;
+}
+
+bool UChunkRenderDemandStore::HasOpenSkyRepairPending(
+    glm::ivec3 coord, uint64_t target_light_rev) const
+{
+  const ChunkRenderDemandRecord *rec = Find(coord);
+  return rec && rec->open_sky_repair_pending &&
+         rec->open_sky_repair_target_light_rev == target_light_rev;
+}
+
+bool UChunkRenderDemandStore::IsOpenSkyRepairPublished(
+    glm::ivec3 coord, uint64_t event_id, uint64_t target_light_rev) const
+{
+  const ChunkRenderDemandRecord *rec = Find(coord);
+  return rec && !rec->open_sky_repair_pending &&
+         rec->open_sky_repair_published &&
+         rec->open_sky_repair_event_id == event_id &&
+         rec->open_sky_repair_target_light_rev == target_light_rev &&
+         rec->open_sky_repair_published_geom_rev >
+             rec->open_sky_repair_baseline_geom_rev &&
+         rec->open_sky_repair_published_light_rev >= target_light_rev &&
+         rec->open_sky_repair_published_attempt_id != 0 &&
+         rec->open_sky_repair_published_attempt_id >
+             rec->open_sky_repair_baseline_attempt_id &&
+         rec->open_sky_repair_published_attempt_id >
+             rec->open_sky_repair_baseline_published_attempt_id;
+}
+
+bool UChunkRenderDemandStore::HasOpenSkyRepairPublished(
+    glm::ivec3 coord, uint64_t target_light_rev) const
+{
+  const ChunkRenderDemandRecord *rec = Find(coord);
+  return rec && IsOpenSkyRepairPublished(
+                    coord, rec->open_sky_repair_event_id, target_light_rev);
+}
+
 void UChunkRenderDemandStore::NoteLightCalculationSettled(
     glm::ivec3 coord, uint64_t world_epoch, uint64_t incarnation,
     uint64_t light_field_rev)
@@ -512,6 +583,22 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
     if (published_coverage_gen > 0)
     {
       rec.published_coverage_gen = published_coverage_gen;
+    }
+    if (attempt_id != 0)
+    {
+      rec.last_published_attempt_id = attempt_id;
+    }
+    if (rec.open_sky_repair_pending && attempt_id != 0 &&
+        attempt_id > rec.open_sky_repair_baseline_attempt_id &&
+        attempt_id > rec.open_sky_repair_baseline_published_attempt_id &&
+        published_geom_rev > rec.open_sky_repair_baseline_geom_rev &&
+        published_light_rev >= rec.open_sky_repair_target_light_rev)
+    {
+      rec.open_sky_repair_pending = false;
+      rec.open_sky_repair_published = true;
+      rec.open_sky_repair_published_geom_rev = published_geom_rev;
+      rec.open_sky_repair_published_light_rev = published_light_rev;
+      rec.open_sky_repair_published_attempt_id = attempt_id;
     }
     rec.retained_awaiting_successor = false;
     rec.has_active_attempt = false;

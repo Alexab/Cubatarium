@@ -201,15 +201,17 @@ public:
   void NoteGpuFinishProgress(bool any_finish);
   void NoteVoidRelightProbed(glm::ivec2 col);
   bool WasVoidRelightProbed(glm::ivec2 col) const;
-  void NoteOpenSkyApplied(glm::ivec2 col);
+  uint64_t NoteOpenSkyApplied(glm::ivec2 col);
   bool WasOpenSkyApplied(glm::ivec2 col) const;
+  uint64_t OpenSkyEventId(glm::ivec2 col) const;
 
 private:
   std::unordered_map<glm::ivec2, EnterVisualItemState, EnterVisualGroundHash>
       items_;
   std::unordered_map<glm::ivec2, uint8_t, EnterVisualGroundHash>
       void_relight_probed_;
-  std::unordered_map<glm::ivec2, uint8_t, EnterVisualGroundHash> open_sky_applied_;
+  std::unordered_map<glm::ivec2, uint64_t, EnterVisualGroundHash> open_sky_applied_;
+  uint64_t open_sky_capture_id_{0};
   bool captured_{false};
   int peak_{0};
   EnterVisualGatePhase phase_{EnterVisualGatePhase::Idle};

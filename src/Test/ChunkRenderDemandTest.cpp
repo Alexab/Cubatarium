@@ -50,6 +50,85 @@ int main()
   Expect(store.NoteDemand(c, 5, 7) == DemandResult::AlreadySatisfied,
          "published meets desired");
 
+  // OpenSky dark repair is owned per slice and closes only on a newer,
+  // identity-matched publication for the required light revision.
+  {
+    store.Clear();
+    const glm::ivec3 slice{4, 2, 9};
+    store.BindIdentity(slice, /*world_epoch=*/3, /*incarnation=*/71);
+    Expect(store.NoteDemand(slice, 10, 20, 0, 0.0, 3, 71) ==
+               DemandResult::NewDemand,
+           "OpenSky baseline demand");
+    const uint64_t first_attempt = DemandActiveAttemptId(store, slice);
+    Expect(store.NoteInstallResult(slice, InstallResult::Published, 10, 20,
+                                   first_attempt),
+           "OpenSky baseline publication");
+    store.NoteOpenSkyRepairRequired(slice, /*event_id=*/5,
+                                    /*target_light_rev=*/20);
+    Expect(store.IsOpenSkyRepairPending(slice, 5, 20),
+           "OpenSky repair starts pending");
+    Expect(!store.IsOpenSkyRepairPublished(slice, 5, 20),
+           "baseline publication cannot satisfy new repair");
+
+    Expect(store.NoteDemand(slice, 11, 20, 0, 0.0, 3, 71) ==
+               DemandResult::NewDemand,
+           "OpenSky repair creates successor demand");
+    const uint64_t repair_attempt = DemandActiveAttemptId(store, slice);
+    Expect(!store.NoteInstallResult(slice, InstallResult::Published, 11, 20,
+                                    first_attempt),
+           "pre-OpenSky attempt cannot close repair");
+    Expect(store.IsOpenSkyRepairPending(slice, 5, 20),
+           "stale publication leaves repair pending");
+    Expect(store.NoteInstallResult(slice, InstallResult::Published, 11, 20,
+                                   repair_attempt),
+           "matching successor publication accepted");
+    Expect(store.IsOpenSkyRepairPublished(slice, 5, 20),
+           "newer publication closes exact event");
+    store.NoteOpenSkyRepairRequired(slice, 5, 20);
+    Expect(store.IsOpenSkyRepairPublished(slice, 5, 20),
+           "duplicate event observation does not reopen repair");
+
+    store.NoteOpenSkyRepairRequired(slice, /*event_id=*/6,
+                                    /*target_light_rev=*/20);
+    Expect(store.IsOpenSkyRepairPending(slice, 6, 20),
+           "new gate event opens a new repair lifecycle");
+    store.NoteInstallResult(slice, InstallResult::Published, 11, 20,
+                            repair_attempt);
+    Expect(store.IsOpenSkyRepairPending(slice, 6, 20),
+           "previous event publication cannot close new event");
+    Expect(store.NoteDemand(slice, 12, 20, 0, 0.0, 3, 71) ==
+               DemandResult::NewDemand,
+           "second OpenSky event creates successor demand");
+    const uint64_t second_repair_attempt =
+        DemandActiveAttemptId(store, slice);
+    store.NoteInstallResult(slice, InstallResult::Published, 12, 20,
+                            second_repair_attempt);
+    Expect(store.IsOpenSkyRepairPublished(slice, 6, 20),
+           "second event closes on its own publication");
+
+    store.BindIdentity(slice, /*world_epoch=*/3, /*incarnation=*/72);
+    Expect(!store.HasOpenSkyRepairPending(slice, 20) &&
+               !store.HasOpenSkyRepairPublished(slice, 20),
+           "chunk reincarnation retires OpenSky repair state");
+
+    const glm::ivec3 zero_light_slice{5, 2, 9};
+    store.NoteDemand(zero_light_slice, 1, 0);
+    const uint64_t zero_light_baseline =
+        DemandActiveAttemptId(store, zero_light_slice);
+    store.NoteInstallResult(zero_light_slice, InstallResult::Published, 1, 0,
+                            zero_light_baseline);
+    store.NoteOpenSkyRepairRequired(zero_light_slice, 9, 0);
+    Expect(store.HasOpenSkyRepairPending(zero_light_slice, 0),
+           "zero light revision can still own OpenSky repair");
+    store.NoteDemand(zero_light_slice, 2, 0);
+    const uint64_t zero_light_attempt =
+        DemandActiveAttemptId(store, zero_light_slice);
+    store.NoteInstallResult(zero_light_slice, InstallResult::Published, 2, 0,
+                            zero_light_attempt);
+    Expect(store.IsOpenSkyRepairPublished(zero_light_slice, 9, 0),
+           "zero-revision publication closes OpenSky repair");
+  }
+
   store.NoteInstallResult(c, InstallResult::RetainedAwaitingSuccessor);
   Expect(store.NoteDemand(c, 8, 9) == DemandResult::NewDemand,
          "retain keeps successor NewDemand");

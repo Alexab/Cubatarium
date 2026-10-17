@@ -153,17 +153,24 @@ inline bool SoftDeferAllowsLightRepairRemesh(bool soft_defer_active,
   return fully_dark || stale_vertex_light;
 }
 
-/// A41 LightRepair: open_sky equal-rev FullyDark needs one Dirty remesh.
+/// OpenSky equal-rev FullyDark remains a repair obligation until a mesh from a
+/// newer per-slice attempt is actually published for the target light revision.
 inline bool NeedsOpenSkyEqualRevLightRepair(bool fully_dark, bool still_stale,
-                                            bool open_sky)
+                                            bool open_sky,
+                                            bool repair_pending,
+                                            bool repair_published)
 {
-  return fully_dark && !still_stale && open_sky;
+  return fully_dark && !still_stale &&
+         (repair_pending || (open_sky && !repair_published));
 }
 
 inline bool IsLegalDarkEqualRevFullyDark(bool fully_dark, bool still_stale,
-                                         bool open_sky)
+                                         bool open_sky,
+                                         bool repair_pending,
+                                         bool repair_published)
 {
-  return fully_dark && !still_stale && !open_sky;
+  return fully_dark && !still_stale && !repair_pending &&
+         (!open_sky || repair_published);
 }
 
 /// Monotonic ms for VisualObligation SLA (process-local).
