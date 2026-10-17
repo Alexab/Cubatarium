@@ -13399,3 +13399,15 @@ in-flight or GPU-pending at its last observation. Thus the route verifies that
 the obligation survives gate reset, but does not prove a near-visible repair
 publishes or show an operator-visible defect. Report and INFO log are in
 `artifacts/research/rendering/m624ad_open_sky_slice_repair_m335_short_20261017/`.
+
+M624AE added dirty queue fields to `slice job` snapshots, but those snapshots
+run before the install planner's dirty admission. M624AF therefore records
+`open_sky_repair_admit` immediately after `MarkDirty` and remesh promotion.
+Reuse the same command above, changing the phase to
+`m624af_open_sky_repair_owner_m335_short_20261017`; metrics remain disabled.
+M624AF completed 3,298 frames / 58 seconds and nine chunks without collision or
+heading deviation. It recorded 28 post-admission repairs: 22 priority-remesh
+queue entries (kind 2) and 6 ordinary-remesh entries (kind 3), all dirty, with
+queue age 0–43 frames. Queue ownership is therefore established at admission;
+dequeue/build/GPU publication is still unproven. M624AE and M624AF reports and
+INFO logs are under their same-named folders in `artifacts/research/rendering/`.

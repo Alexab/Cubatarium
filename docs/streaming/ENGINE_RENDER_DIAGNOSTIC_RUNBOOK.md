@@ -3640,3 +3640,21 @@ without mesh/GPU work in flight when sampled; no later publication was
 observed. This confirms retention across gate reset, but leaves queue ownership
 and publication completion open. There is no pixel/operator verdict. Report
 and trace: `artifacts/research/rendering/m624ad_open_sky_slice_repair_m335_short_20261017/`.
+
+### M624AE–M624AF: identify the OpenSky dirty-mesh owner
+
+M624AE added `dirty_queue=kind:index/size` and `dirty_age_frames` to the
+per-slice result snapshot. That snapshot is emitted before MarkRelitInstall's
+dirty admission, so it only describes the pre-admission state. M624AF added
+`open_sky_repair_admit` immediately after admission/promotion; inspect that
+event for the actual owner at enqueue time.
+
+M624AF used the same short 8/30/20 visible no-teleport M335 route and world as
+M624AD. It completed 3,298 frames / 58 requested in-game seconds, nine chunks,
+without collision, heading drift, or clock gap. Metrics and pixel capture were
+off. Of 41 OpenSky-dark terminal observations, 28 reached the post-admission
+trace: 22 had priority-remesh queue kind 2 and 6 ordinary-remesh kind 3; all
+had `dirty=1`, and queue age at admission ranged from 0 to 43 frames. This
+confirms a dirty-queue owner at admission. It does not establish later dequeue,
+build completion, GPU apply, or matching publication. M624AE/AF artifacts are
+under the same-named folders in `artifacts/research/rendering/`.

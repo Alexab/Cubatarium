@@ -6673,3 +6673,12 @@ diagnostic target; it does not establish a visible hole, since no pixel trace
 or operator verdict was collected and the slice was not observed later in the
 route. Metrics were disabled. Exact command, caveats, and artifacts are in the
 remediation plan, diagnostic runbook, and experiment journal under M624AD.
+
+M624AE–M624AF isolated the queue handoff. Dirty-queue fields in M624AE were
+sampled before admission; M624AF added a post-admission opt-in event. The
+short M624AF route recorded 28 repair admissions: 22 entered priority remesh
+and 6 ordinary remesh, all dirty at insertion, with queue age up to 43 frames.
+This closes the missing-owner-at-admission hypothesis for those cases. Later
+dequeue, mesh build, GPU apply, and matching publication remain unverified;
+metrics and framebuffer capture were disabled, so no visual acceptance claim
+follows from this source trace.

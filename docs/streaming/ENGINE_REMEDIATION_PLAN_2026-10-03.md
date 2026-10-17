@@ -14080,9 +14080,11 @@ source routes. The following are still needed before closing the refactor:
    remained `repair_pending=1`; none had `repair_published=1`. In the sampled
    slice `(9,2,4)`, the replacement geometry was dirty but not in flight or
    GPU-pending at the end of the trace. This proves the obligation is retained,
-   but not that a near-visible repair reaches publication. Add stage/queue
-   ownership to the next short trace and close this item only after observing
-   the matching publication (or a documented cancellation/rebind lifecycle).
+   but not that a near-visible repair reaches publication. M624AF then
+   witnessed 28 repair admissions (22 priority-remesh and 6 ordinary-remesh
+   queue entries); queue owner loss is not the explanation at admission. The
+   matching publication/drain is still unverified. Close this item only after
+   observing that publication (or a documented cancellation/rebind lifecycle).
 2. Produce one runtime trace for a boundary dependency through admission
    denial, deferred ownership, eviction, reload, and relight completion. The
    M624P unload guard protects `boundary_dependency`, but no run has yet shown
@@ -14133,3 +14135,28 @@ passed. The all-target build still reports unresolved symbols in unrelated
 legacy test targets (`ChunkLighting.obj` / `ChunkMeshSnapshot.obj`); the app
 and selected refactor/test targets build successfully. Route report and INFO trace are under
 `artifacts/research/rendering/m624ad_open_sky_slice_repair_m335_short_20261017/`.
+
+### M624AE–M624AF — trace dirty queue ownership for OpenSky repairs
+
+M624AE added dirty-queue kind/index/size/age to the per-slice result snapshot.
+That snapshot occurs before MarkRelitInstall performs its dirty admission, so
+it did not answer whether the repair acquired a queue owner. M624AF added an
+opt-in `open_sky_repair_admit` event immediately after dirty admission and
+priority promotion, reporting publication/mesh revision and queue state. Both
+diagnostic changes were Release-built and passed static executable dependency
+verification.
+
+The same visible no-teleport 8/30/20 M335 route on
+`World_M624AC_ColdFrame_20261017` completed 3,298 frames / 58 requested game
+seconds in 63.32 s, reaching nine chunks with no clock gap, collision, or
+heading deviation. Metrics and pixel capture were off. M624AF recorded 41
+OpenSky-dark terminal observations and 28 repair admissions. All 28 admissions
+had `dirty=1`, queue kind 2 (priority remesh, 22 rows) or 3 (ordinary remesh,
+6 rows), with queue age 0–43 frames at admission. This disproves a missing
+dirty-queue owner at the admission point. It does not prove the queue later
+drained or that the corresponding attempt published: none of the terminal
+records contained a publication proof, and this run collected no framebuffer
+verdict. Flight report and INFO log are under
+`artifacts/research/rendering/m624ae_open_sky_dirty_queue_witness_m335_short_20261017/`
+and
+`artifacts/research/rendering/m624af_open_sky_repair_owner_m335_short_20261017/`.
