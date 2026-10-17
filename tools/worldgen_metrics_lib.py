@@ -137,7 +137,8 @@ def count_spawn_ground_logs(
             continue
         if id_to_name.get(bid, "") != "tree_log":
             continue
-        ground_y = terrain_surface_y(columns, wx, wz)
+        surface_entry = surface.get((wx, wz))
+        ground_y = surface_entry[0] if surface_entry is not None else None
         if ground_y is not None and wy == ground_y:
             count += 1
     return count
@@ -370,19 +371,14 @@ def terrain_surface_map(
     columns: dict[tuple[int, int, int], int],
     *,
     air_id: int = 0,
+    ignored_ids: set[int] | frozenset[int] = frozenset(),
 ) -> dict[tuple[int, int], int]:
     surface: dict[tuple[int, int], int] = {}
-    by_xz: dict[tuple[int, int], list[int]] = defaultdict(list)
     for (wx, wy, wz), bid in columns.items():
-        if bid == air_id:
+        if bid == air_id or bid in ignored_ids:
             continue
-        by_xz[(wx, wz)].append(wy)
-    for xz, heights in by_xz.items():
-        ground_y = terrain_surface_y(columns, xz[0], xz[1], air_id=air_id)
-        if ground_y is not None:
-            surface[xz] = ground_y
-        else:
-            surface[xz] = max(heights)
+        xz = (wx, wz)
+        surface[xz] = max(wy, surface.get(xz, wy))
     return surface
 
 
@@ -469,7 +465,7 @@ def cave_stats(
     chunks_with_caves: set[tuple[int, int]] = set()
     total_chunks: set[tuple[int, int]] = set()
 
-    for (wx, wy, wz), bid in columns.items():
+    for (wx, wz), ground_y in surface.items():
         if spawn_radius is not None and (
             abs(wx) > spawn_radius or abs(wz) > spawn_radius
         ):
@@ -477,19 +473,13 @@ def cave_stats(
         chunk_x = wx // CHUNK_SIZE if wx >= 0 else (wx - CHUNK_SIZE + 1) // CHUNK_SIZE
         chunk_z = wz // CHUNK_SIZE if wz >= 0 else (wz - CHUNK_SIZE + 1) // CHUNK_SIZE
         total_chunks.add((chunk_x, chunk_z))
-        if bid != air_id:
-            continue
-        ground_y = surface.get((wx, wz))
-        if ground_y is None:
-            continue
-        if wy >= ground_y:
-            continue
-        depth = ground_y - wy
-        if depth <= 0:
-            continue
-        cave_air += 1
-        max_depth = max(max_depth, depth)
-        chunks_with_caves.add((chunk_x, chunk_z))
+        for wy in range(1, ground_y):
+            if columns.get((wx, wy, wz), air_id) != air_id:
+                continue
+            depth = ground_y - wy
+            cave_air += 1
+            max_depth = max(max_depth, depth)
+            chunks_with_caves.add((chunk_x, chunk_z))
 
     chunk_coverage = (
         100.0 * len(chunks_with_caves) / max(1, len(total_chunks))
@@ -519,12 +509,12 @@ def vegetation_cluster_stats(
         if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
             continue
         name = id_to_name.get(bid, "")
+        surface_entry = surface.get((wx, wz))
+        ground_y = surface_entry[0] if surface_entry is not None else None
         if name in GROUND_COVER_BLOCK_NAMES:
-            ground_y = terrain_surface_y(columns, wx, wz)
             if ground_y is not None and wy <= ground_y + 2:
                 ground_cover_columns.add((wx, wz))
         if name in VEGETATION_BLOCK_NAMES:
-            ground_y = terrain_surface_y(columns, wx, wz)
             if ground_y is not None and wy >= ground_y:
                 tree_columns.add((wx, wz))
 
@@ -812,12 +802,16 @@ def analyze_world(
         )
     )
     columns = load_world_block_columns(world_dir)
-    terrain_surface = terrain_surface_map(columns)
+    non_terrain_ids = {
+        bid for bid, name in id_to_name.items() if name in {"water", "lava", "fire"}
+    }
+    terrain_surface = terrain_surface_map(columns, ignored_ids=non_terrain_ids)
     metrics.update(
         cave_stats(
             columns,
             terrain_surface,
-            spawn_radius=spawn_radius,
+            # Measure cave networks over the generated test area, not only at spawn.
+            spawn_radius=None,
         )
     )
     metrics.update(

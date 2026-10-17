@@ -98,7 +98,9 @@ WorldGenStageMask BuildWorldGenStageMask(
 
   const bool caves = StageEnabled(pack_pipeline, generator_config.Caves,
                                   pack_pipeline.Caves) &&
-                     settings.EnableCaves;
+                     settings.EnableCaves &&
+                     generator_config.TerrainMode !=
+                         ComposableTerrainMode::Density3D;
   mask.Set(WorldGenStageId::Caves, caves);
 
   const bool fluids = StageEnabled(pack_pipeline, generator_config.Fluids,

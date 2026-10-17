@@ -91,7 +91,7 @@ def main() -> int:
     parser.add_argument(
         "--terrain-backend",
         type=str,
-        default="heightmap",
+        default="density_3d",
         help="Terrain backend passed to --create-world (heightmap or density_3d)",
     )
     parser.add_argument(

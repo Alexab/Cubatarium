@@ -32,7 +32,8 @@
     "density_3d": {
       "flatness_pct_max": 55.0,
       "rolling_hill_pct_min": 5.0,
-      "cave_chunk_coverage_pct_min": 0.0,
+      "delta_ge_4_pct_max": 15.0,
+      "cave_chunk_coverage_pct_min": 15.0,
       "spawn_tree_blocks_min": 1500,
       "nn_distance_cv_min": 0.0
     }

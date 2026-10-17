@@ -356,6 +356,12 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       settings.SeedText = savedSeedText;
       settings.SeedKind = savedSeedKind;
     }
+    // World saves created before the 3D terrain backend was introduced must
+    // keep their original heightmap generation contract when they are read.
+    if (!p.contains("terrain_backend"))
+    {
+      settings.TerrainBackendMode = TerrainBackend::Heightmap;
+    }
     if (p.contains("vertical") && p["vertical"].is_string())
     {
       legacyVerticalMode = p["vertical"].get<std::string>();
@@ -566,7 +572,19 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
 
 ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
 {
-  return ParseProceduralSettings(root);
+  ProceduralSettings settings = ParseProceduralSettings(root);
+  const nlohmann::json *procedural =
+      (root.contains("procedural") && root["procedural"].is_object())
+          ? &root["procedural"]
+          : nullptr;
+  if (settings.Generator == ProceduralGenerator::Overworld &&
+      (!procedural || !procedural->contains("terrain_backend")))
+  {
+    // A stored app template controls future worlds, so legacy templates inherit
+    // the current new-world default. Per-world saves remain on heightmap above.
+    settings.TerrainBackendMode = TerrainBackend::Density3D;
+  }
+  return settings;
 }
 
 void WriteProceduralSettings(nlohmann::json &root,
@@ -632,6 +650,8 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
   nlohmann::json procedural;
   procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
   procedural["preset"] = settings.WorldGenPresetId;
+  procedural["terrain_backend"] =
+      TerrainBackendToString(settings.TerrainBackendMode);
   procedural["trees"] = settings.EnableTrees;
   procedural["ground_cover"] = settings.EnableGroundCover;
   procedural["decoration"] = settings.EnableDecoration;

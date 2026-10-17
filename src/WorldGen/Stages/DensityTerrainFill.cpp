@@ -15,10 +15,12 @@ void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
     return;
   }
   const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY, 0, surfaceY);
+  const UDensityFieldSampler::Column column =
+      sampler.PrepareColumn(x, z, surfaceY);
   int maxY = surfaceY;
   for (int y = 0; y <= ctx.Settings.MaxHeight; ++y)
   {
-    if (sampler.SampleDensity(x, y, z, surfaceY) <= 0.0f)
+    if (sampler.SampleDensity(column, y) <= 0.0f)
     {
       continue;
     }

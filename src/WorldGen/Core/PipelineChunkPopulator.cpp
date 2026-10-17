@@ -191,6 +191,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   ProceduralSettings settings = request.settings;
   if (settings.EnableCaves &&
+      settings.TerrainBackendMode != TerrainBackend::Density3D &&
       !ChunkPassesCaveGate(request.chunkCoord.x * CHUNK_SIZE,
                            request.chunkCoord.z * CHUNK_SIZE, settings.Seed,
                            settings.Caves))

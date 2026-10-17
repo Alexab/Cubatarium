@@ -73,14 +73,12 @@ Infrastructure phases A–D are complete. **Terrain visual quality** work (2026-
 
 | Backend | Default | Status |
 |---------|---------|--------|
-| `heightmap` | yes | Quality gates in `integration_test_worldgen.py` + `worldgen_baseline.json` |
-| `density_3d` | no | MVP: 3D FBM terrain density, Y-scan surface, `FillTerrainColumnFromDensity`, post-carve caves; optional CI via `--both-backends` |
+| `heightmap` | existing saves | Compatibility backend for worlds whose saved settings predate `terrain_backend` |
+| `density_3d` | new Overworld worlds | Climate-routed continental/regional/rolling/mountain terrain with unified 3D cave density; covered by `integration_test_worldgen.py` |
 
 ### Remaining backlog
 
 - Cross-chunk ravine/valley seams at chunk borders (intra-chunk carving is chunk-level; neighbor chunks do not share a single vmanip pass)
-- Unified cave density (disable post-carve, cheese/spaghetti in terrain density only)
-- MC-style density router (full offset/factor/jaggedness on 3D noise)
 - Overhangs tuning and perf budget for `density_3d`
 - Nightly `audit_worldgen_batch.py` on 20+ seeds
 - `worldgen_refs.json` refresh after baseline tuning stabilizes
@@ -133,8 +131,10 @@ Infrastructure from the 2026-07 Overworld quality plan (spawn spiral, cave depth
   `minetest_default_16` (CC-BY-SA-3.0) + `cubatarium_geology_cc0` (CC0).
 - [ ] Расширить биомную модель для surface/ocean/shore/mountain/cave биомов и
   использовать климатические веса для переходов.
-- [ ] Сделать 3D density terrain основным backend и настроить крупные формы:
-  континенты, низины, плато, горы и переходы у побережий.
+- [x] Сделать 3D density terrain основным backend для новых миров и настроить
+  крупные формы: континентальность, эрозионные низины, холмы и горы. Старые
+  world saves без `terrain_backend` сохраняют heightmap backend; климатические
+  береговые переходы и полноценные биомы остаются следующим этапом.
 - [ ] Добавить геологические глубинные слои, локальные aquifers, noise cave
   формы и высотно-зависимое распределение руд.
 - [ ] Расширить feature pipeline: сохранить статические `UObjectLibrary`

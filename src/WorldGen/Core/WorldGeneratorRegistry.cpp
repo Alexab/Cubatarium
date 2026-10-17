@@ -61,6 +61,7 @@ void ApplyOverworldDefaults(ProceduralSettings &s)
 {
   s.Generator = ProceduralGenerator::Overworld;
   ApplyGeneratorTierDefaults(s);
+  s.TerrainBackendMode = TerrainBackend::Density3D;
 }
 
 void ApplyBetaRetroDefaults(ProceduralSettings &s)

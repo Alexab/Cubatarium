@@ -26,7 +26,9 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
   if (Config.TerrainMode == ComposableTerrainMode::Density3D)
   {
     DensityFieldParams density_params;
-    density_params.cavesInDensity = false;
+    density_params.cavesInDensity = Config.Caves && ctx.Settings.EnableCaves;
+    density_params.caveAmplitude =
+        std::max(0.0f, ctx.Settings.Caves.densityCaveAmplitude * 320.0f);
     DensitySampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
                            ctx.Settings.MaxHeight,
                            ctx.Settings.Tuning.terrainRoughness, density_params,
