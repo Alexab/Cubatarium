@@ -6552,3 +6552,27 @@ The Release build used `tools/build_release.ps1`'s equivalent explicit
 eight compiler workers. The previous `--parallel 8`-only attempt yielded
 `/MP1`; use the wrapper going forward. Build parallelism and runtime generation
 workers are separate settings.
+
+### 2026-10-17 addendum: M624H eviction ownership predicates
+
+M624H extends `CUBA_STREAMER_UNLOAD_TRACE` to report the individual predicates
+that make `needs_relight` true: pending-light notes, queue/deferred/in-flight
+owners, emerge and `ColumnRecord` visual states, record token/debt, flow repair
+tickets, and pending disk/generation requests. A short visible M335 Release run
+on warm `World_164` completed from focus `(7,3)` to `(-1,3)` in 2,522 frames,
+without collision. It recorded 66 evictions and one deferred-far owner eviction
+at `(7,8)`. The owner reason was `visible_exact_replacement`; the disk
+light-complete flag was already false, remained false through invalidation, and
+the owner was cleared. That record was `Publishing` / `LegalDark` with a live
+mesh token. The run did not encounter a boundary-dependency denial; it had five
+other FIFO denials. Thus deferred-far eviction is observed, while the exact
+boundary dependency → denial → eviction → reload sequence remains unverified.
+The M624H run manifest records the temporary diagnostic source diff; it is not
+clean-commit acceptance evidence.
+
+M624G's four earlier `needs_relight=1` evictions had no keyed/deferred/in-flight
+relight owner in its trace, but that older event did not expose the full
+`ColumnRecord`, visual obligation, or flow-ticket predicates. They remain
+unclassified; the aggregate event alone does not prove ownerless work.
+Artifacts and exact route settings are recorded in the remediation plan,
+diagnostic runbook, and `FLIGHT_EXPERIMENT_SCRIPTS.md` under M624H.

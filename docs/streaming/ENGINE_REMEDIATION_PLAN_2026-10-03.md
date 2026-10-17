@@ -13515,3 +13515,57 @@ Remaining work after M624G:
    stable during this refactor; future migrations should use compatibility
    shims one family at a time. At refactor close-out, set research-runner
    defaults to metrics off and retain explicit opt-ins for later investigations.
+
+### M624H — decompose eviction debt ownership
+
+Expanded the opt-in `CUBA_STREAMER_UNLOAD_TRACE` event so it reports the exact
+predicates contributing to `needs_relight`: pending-light note, async relight,
+queue/deferred owners, emerge state, `ColumnRecord.pending_light`, visual state
+and obligation, record token/debt reason, flow repair tickets, disk load, and
+generation work. The fields are diagnostic; runtime decisions are unchanged.
+
+The Release build passed. A visible no-teleport M335 replay on warm `World_164`
+used the established start `(120,56,56)`, eye Y 70, yaw 180, pitch -30, speed
+scale 1, and 15/30/20-second idle/fly/stop phases. It reached focus `(-1,3)`
+from `(7,3)` over eight chunks in 2,522 frames, without collision; process exit
+was 0. Metrics were disabled, so no rendering or performance acceptance gate
+was evaluated. The run manifest records the temporary diagnostic source diff;
+this was not a clean-commit acceptance run.
+
+The 66 eviction events included one deferred-far owner eviction at column
+`(7,8)`. Its deferred owner had been created by `visible_exact_replacement`;
+the event reported `light_complete=0` before and after invalidation, and
+`CancelTerrainColumnRelight` cleared the owner. The record simultaneously had
+visual state `Publishing`, obligation `LegalDark`, and a nonzero pending mesh
+token. This shows why `needs_relight` is only a summary predicate and must not
+be used alone to infer an ownerless relight. The exact boundary-dependency
+denial → deferred → eviction → reload chain was not hit: this run had five FIFO
+denials and zero `boundary_dependency` denials. No eviction had
+`needs_relight=1` while keyed/deferred/in-flight relight fields were all zero.
+
+M624H therefore confirms deferred-far cancellation while retaining a
+conservative disk-light flag, but not that a boundary request is regenerated
+after reloading the same evicted column. The four M624G debt evictions remain
+unclassified by predicate because that earlier trace lacked the new breakdown;
+do not label them ownerless based on its aggregate fields.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624h_owner_source_unload_20261017.json`,
+`artifacts/research/rendering/m624h_owner_source_unload_20261017/flight_sim_report.json`,
+and `artifacts/research/rendering/m624h_owner_source_unload_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-153132.42512`.
+
+Remaining work after M624H:
+
+1. Exercise the specific boundary-dependency request through FIFO denial,
+   deferred ownership, eviction, reload, and relight admission. The M624F
+   boundary denials and M624H deferred eviction were separate events; neither
+   proves the combined chain.
+2. Validate one short target lane at a distant, previously problematic
+   coordinate with disk-miss/unload-reload provenance and a near-view/framebuffer
+   verdict. Do not run long operator-monitoring flights.
+3. Close the visual gate review with framebuffer/operator evidence distinct
+   from off-view backlog. Preserve the user's report that water and world
+   appearance have recently looked normal; do not alter water/fog without a
+   matching witness.
+4. At refactor close-out, make research-runner metrics opt-in by default while
+   retaining lightweight in-memory counters where useful and a switch to
+   disable disk logging.

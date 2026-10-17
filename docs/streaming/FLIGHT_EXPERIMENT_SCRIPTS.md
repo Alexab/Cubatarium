@@ -12944,3 +12944,28 @@ create report `bin/suite_reports/engine_refactor/m624d_cold_world_create_2026101
 INFO trace
 `artifacts/research/rendering/m624d_cold_focus_barrier_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-150858.31160`,
 and saved world `bin/worlds/World_M624D_EnterBarrier_20261017`.
+
+### M624H — identify relight-debt predicates at eviction
+
+The opt-in unload trace now spells out each `needs_relight` source, including
+pending-light notes, `ColumnRecord` state and obligation, deferred owners,
+flow repair tickets, and disk/generation requests. Release build passed.
+The established visible no-teleport M335 replay on `World_164` ran with
+15/30/20-second idle/fly/stop phases, the unchanged `(120,56,56)` start, eye Y
+70, yaw 180, pitch -30, and speed scale 1. It covered eight chunks in 2,522
+frames with no collision; process exit was 0. Metrics were disabled.
+The run manifest records the diagnostic source diff, so this is not clean-
+commit acceptance evidence.
+
+There were 66 evictions, one carrying `relight_deferred_far=1`. That column
+`(7,8)` had a `visible_exact_replacement` deferred owner, `light_complete=0`
+before/after invalidation, and the owner was removed by the eviction callback.
+The record was `Publishing` / `LegalDark` with a live mesh token. This run had
+five FIFO denials but none from `boundary_dependency`; it did not exercise the
+full boundary-denial, deferred, eviction, and reload chain. The previous M624G
+debt rows cannot be called ownerless because its trace lacked these detailed
+predicates.
+
+Report: `bin/suite_reports/engine_refactor/m624h_owner_source_unload_20261017.json`.
+Preserved INFO log and report:
+`artifacts/research/rendering/m624h_owner_source_unload_20261017/`.

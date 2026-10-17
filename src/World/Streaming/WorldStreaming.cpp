@@ -5788,23 +5788,32 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const UWorldPersistence::TerrainColumnRelightQueueInfo relight_queue =
             world.Persistence->GetTerrainColumnRelightQueueInfo(world_key);
         const ColumnEmergeState emerge = world.GetColumnEmergeState(ground);
+        const bool pending_light_before_mesh =
+            world.IsPendingLightBeforeMesh(col);
+        const bool relight_inflight = world.IsAsyncRelightColumnInFlight(col);
+        const bool record_pending_light = rec && rec->pending_light;
+        const bool record_visual_needs_relight =
+            rec && rec->visual == ColumnVisualState::NeedRelight;
+        const bool record_light_repair_obligation =
+            rec && rec->visual_obligation == VisualObligation::LightRepair;
+        const bool emerge_lighting = emerge == ColumnEmergeState::Lighting;
+        const bool flow_repair_ticket = flow.HasRepairTicket(col);
+        const bool disk_load_pending =
+            world.Persistence->IsTerrainColumnDiskLoadPending(ground);
+        const bool generation_pending =
+            ChunkScheduler && ChunkScheduler->IsPending(ground);
         const bool needs_relight =
-            world.IsPendingLightBeforeMesh(col) ||
-            world.IsAsyncRelightColumnInFlight(col) ||
+            pending_light_before_mesh || relight_inflight ||
             relight_queue.keyed || relight_queue.deferred_far ||
             relight_queue.deferred_visible || flow_relight_ticket ||
-            emerge == ColumnEmergeState::Lighting ||
-            (rec && (rec->pending_light ||
-                     rec->visual == ColumnVisualState::NeedRelight ||
-                     rec->visual_obligation == VisualObligation::LightRepair));
+            emerge_lighting || record_pending_light ||
+            record_visual_needs_relight || record_light_repair_obligation;
         const bool light_complete_before_unload =
             trace_unload && world.Persistence->IsColumnLightComplete(col);
 
-        bool active_work = needs_relight || flow.HasRepairTicket(col) ||
+        bool active_work = needs_relight || flow_repair_ticket ||
                            (rec && ColumnHasActivePending(*rec)) ||
-                           world.Persistence->IsTerrainColumnDiskLoadPending(
-                               ground) ||
-                           (ChunkScheduler && ChunkScheduler->IsPending(ground));
+                           disk_load_pending || generation_pending;
         const double ownership_ms =
             std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - ownership_started)
@@ -5897,8 +5906,34 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                   std::to_string(relight_queue.deferred_far) +
                   " relight_deferred_visible=" +
                   std::to_string(relight_queue.deferred_visible) +
-                  " relight_inflight=" +
-                  std::to_string(world.IsAsyncRelightColumnInFlight(col)) +
+                  " relight_inflight=" + std::to_string(relight_inflight) +
+                  " pending_light_before_mesh=" +
+                  std::to_string(pending_light_before_mesh) +
+                  " emerge_state=" + std::to_string(static_cast<int>(emerge)) +
+                  " emerge_lighting=" + std::to_string(emerge_lighting) +
+                  " record_pending_light=" +
+                  std::to_string(record_pending_light) +
+                  " record_visual=" +
+                  std::to_string(rec ? static_cast<int>(rec->visual) : -1) +
+                  " record_visual_needs_relight=" +
+                  std::to_string(record_visual_needs_relight) +
+                  " record_visual_obligation=" +
+                  std::to_string(rec ? static_cast<int>(rec->visual_obligation)
+                                     : -1) +
+                  " record_light_repair_obligation=" +
+                  std::to_string(record_light_repair_obligation) +
+                  " record_pending_token=" +
+                  std::to_string(rec ? rec->pending.token : 0) +
+                  " record_debt_reason=" +
+                  std::to_string(rec ? rec->debt.reason : 0) +
+                  " flow_relight_ticket=" +
+                  std::to_string(flow_relight_ticket) +
+                  " flow_repair_ticket=" +
+                  std::to_string(flow_repair_ticket) +
+                  " disk_load_pending=" +
+                  std::to_string(disk_load_pending) +
+                  " generation_pending=" +
+                  std::to_string(generation_pending) +
                   " relight_cancelled=" +
                   std::to_string(canceled_relight_work) +
                   " light_complete_before=" +

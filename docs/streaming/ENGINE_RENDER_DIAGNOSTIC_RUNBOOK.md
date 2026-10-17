@@ -3209,3 +3209,43 @@ were already marked light-incomplete. None overlapped a deferred-far request,
 so this is not the deferred-owner eviction test. The last capture sample also
 had one generic relight in flight; avoid interpreting zero boundary markers as
 full work convergence.
+
+### M624H: identify the exact relight-debt source at eviction
+
+The unload trace now includes each contributing state behind `needs_relight`:
+pending-light note, relight in-flight, keyed/deferred owners, emerge state,
+record pending-light, visual state/obligation, pending token/debt, flow repair
+ticket, disk load, and generation work. Repeat the same visible M335 route with
+`CUBA_STREAMER_UNLOAD_TRACE=1` and `CUBATARIUM_RELIGHT_AUDIT=1`.
+
+M624H completed 2,522 frames / 65 requested in-game seconds on warm `World_164`,
+from `(7,3)` to `(-1,3)`, eight chunks, no collision, process exit 0. The run
+recorded 66 evictions and one with `relight_deferred_far=1`. The matching owner
+was a `visible_exact_replacement` deferred band for `(7,8)`; before eviction,
+the persistent light-complete bit was already zero. Cancellation cleared that
+owner while leaving the bit zero. Its record was `Publishing` with a
+`LegalDark` obligation and a live pending mesh token. This is direct evidence
+that `needs_relight` includes deferred lighting even when the record's visual
+obligation is not `LightRepair`; the pending token independently records mesh
+publication work. The run had five FIFO denials
+but no `boundary_dependency` denial, so it does not prove boundary-owner
+eviction or post-reload admission. No eviction had `needs_relight=1` while
+keyed/deferred/in-flight relight fields were all zero.
+
+The four M624G debt evictions cannot be retrospectively classified because
+that trace did not report the predicates. Their `light_complete=0` result is
+safe, but absence of the logged queue owners is not enough to call the work
+ownerless. Metrics were disabled; the route report is not a visual acceptance
+result.
+
+Artifacts: report
+`bin/suite_reports/engine_refactor/m624h_owner_source_unload_20261017.json`,
+isolated report
+`artifacts/research/rendering/m624h_owner_source_unload_20261017/flight_sim_report.json`,
+and INFO log
+`artifacts/research/rendering/m624h_owner_source_unload_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-153132.42512`.
+
+Next, combine the boundary dependency denial, deferred owner, eviction,
+reload, and subsequent relight admission in one trace. M624F and M624H each
+cover only part of that chain. Keep the established M335 camera/speed/altitude;
+avoid long operator-monitoring runs.
