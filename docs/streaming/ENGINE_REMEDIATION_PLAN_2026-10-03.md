@@ -12607,5 +12607,19 @@ route; change policy only if a visible delay is reproduced. Keep cold-world
 validation separate from warm route acceptance and keep host CPU as context
 only.
 
+**M622BD correlation result:** the only age-service column overlapping a
+pixel-traced chunk was `(0,3)` / slice `(0,3,3)`. Its sampled preview was bright
+and already had settled demand/light revisions; its later nonpreview sample
+was 8.159 s later at a substantially different camera position. Adjacent
+`(0,3,4)` began with unsettled demand and published a mesh within 242 ms, but
+also has no same-camera settlement observation and does not share the aged
+column. These are not visible-delay measurements. The INFO chronology does
+show the `(0,3)` work admitted, displaced by `visible_exact_replacement`, and
+admitted again. Later, a `miss_witness` request for `(0,3)` was deferred even
+with all four loaded slices settled and `lit_ready=1`. Inspect whether the
+missing-drawable witness justifies another column-wide relight or can request a
+narrow mesh/light repair. Keep queue cadence unchanged until a short capture
+provides same-camera evidence or proves redundant relight work.
+
 See M622BC/BD in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for measurements and
 artifact names, and `FLIGHT_EXPERIMENT_SCRIPTS.md` for the reproducible route.

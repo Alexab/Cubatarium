@@ -2152,6 +2152,42 @@ or change the deadline policy from these counters alone. Next correlate a
 long-wait entry with its exact light preview/settlement and whether it enters
 the fog horizon before changing service policy.
 
+#### M622BD follow-up: age-service versus pixel lifecycle
+
+The saved pixel trace uses the absolute steady-clock field, so its lifecycle
+events can be compared with the INFO audit. The only exact XZ overlap between
+an age-service candidate and a sampled preview chunk was column `(0,3)` /
+slice `(0,3,3)`. Its first sampled preview pixel was bright (`RGB 117,161,227`)
+and already reported settled demand with published, meshed, and field light
+revision 1. The first later settled nonpreview observation was 8.159 s later,
+but at a camera position 34.6 blocks away; this is not an observed same-view
+handoff duration. The trace recorded no same-view preview-to-nonpreview
+handoff. It did record one zero-ms same-view light-settlement candidate for
+`(0,3,3)`, because demand was already settled on the first preview sample;
+this is not a measured transition time.
+
+The second preview chunk `(0,3,4)` first appeared at the same camera with
+unsettled demand but the same bright RGB. Its mesh job published at about
+242 ms; the first settled nonpreview observation was 7.333 s after the first
+preview, with the camera 31 blocks away. It is in adjacent XZ column `(0,4)`,
+so it does not match the deferred-far service records for `(0,3)`. Sparse
+moving-camera samples cannot tell when either chunk actually changed on
+screen, and these observations do not establish a visible-light defect.
+
+The `(0,3)` queue audit shows real backpressure and progress: at 03:26:34 it
+was deferred with one of four loaded slices settled; it was admitted at
+03:26:35.815, then displaced as `visible_exact_replacement` and admitted again
+at 03:26:37.759. By the 03:26:36.220 denial record all four slices were settled
+and none were pending, though `lit_ready` was still false. At 03:26:42.220 a
+`miss_witness` request for the same column was denied while all four slices
+were settled, `pending_column=0`, and `lit_ready=1`; it was retained in
+`deferred_far` and later admitted. This may be legitimate geometry-miss repair,
+but it is a concrete queue-churn path to inspect: verify whether a missing
+drawable mesh still needs a full relight after light readiness is true, and
+whether the request can be narrowed to the required slice. Do not change the
+age-service cadence or deadline reserve until a short route captures a
+same-camera pixel transition or proves this relight is redundant.
+
 Artifacts: M622BC report/pixel trace and perf
 `m622bc_world164_m335_fog_latch_short_20261017.json`,
 `m622bc_renderer_pixel_trace_20261017.json`,
