@@ -2889,3 +2889,30 @@ Artifacts remain local at
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-131535.40028`.
 For future boundary work reuse the M623C command and parameters, changing only
 phase id/report path; preserve the start-integrity check and short duration.
+
+### M623G: flush INFO logs before fast flight-sim exit
+
+M623E/F INFO files ended mid-record because `RunFlightSim` uses
+`std::_Exit` after `PrepareForShutdownFast()` to bypass potentially unbounded
+worker joins. Add an explicit `CubatariumFlushLogs()` after fast preparation
+and before `_Exit`; this affects only the flight-sim exit path.
+
+Release build and static EXE verification passed. The same short visible
+`World_164` M335 settings completed 29 periods without timeout and passed route
+integrity, focus `(7,3) -> (-1,3)`. The INFO file ends with full `kind=shutdown`,
+`WorldColumnSave`, and `shutdown_snapshot` events. Of 1,087 complete capture
+samples, boundary marker high-water was 3, `boundary_without_owner` stayed
+zero, and the final sample was `0/0/0/0`. Job correlation found 580/583
+submit/apply pairs and 10 paired boundary-dependency jobs; 12 light deltas
+were present.
+
+The harness failed its post-stop readiness convergence gate (readiness debt
+1.0, missing mesh/readiness max 36), while visual-hole proxy rate and post-stop
+max were zero. Eye-proxy and A24 safety lines passed. No operator framebuffer
+verdict was captured, so this is diagnostic. Host CPU was 82.1% median / 99.3%
+p95 and remains context only.
+
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623g_flush_log_shutdown_world164_m335_20261017.json`,
+`bin/logs/perf_20261017-132034_22320.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-132030.22320`.

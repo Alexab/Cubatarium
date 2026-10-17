@@ -6431,3 +6431,20 @@ framebuffer verdict was recorded; these counters are not proof of a visible
 defect. This validates bounded queue ownership on the repeatable warm route,
 not global convergence or a fresh-world start. Keep host CPU as context and
 do not use an invalid-start cold route to tune propagation.
+
+The M623E/F partial INFO tails were explained by `RunFlightSim` calling
+`std::_Exit` after `PrepareForShutdownFast()` to avoid worker joins. It did not
+flush glog after shutdown preparation. M623G adds an explicit
+`CubatariumFlushLogs()` in this flight-sim-only exit path. The next short
+`World_164` Release run completed with the normal `kind=shutdown`,
+`WorldColumnSave`, and `shutdown_snapshot` records present.
+
+M623G again had 1,087 complete capture-end queue samples: boundary markers
+peaked at 3, had zero unowned markers throughout, and ended at zero. The
+process completed 29 periods with valid `(7,3) -> (-1,3)` start/route focus and
+no timeout. The harness failed only its unresolved post-stop readiness
+convergence gates (readiness debt 1.0, peak 36); visual-hole proxy rate and
+post-stop max were zero, and eye-proxy/A24 safety stop-lines passed. No human
+framebuffer verdict was captured. Host CPU was 82.1% median / 99.3% p95 and is
+context only. The shutdown flush improves evidence completeness; it does not
+change or certify normal game rendering.

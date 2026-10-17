@@ -12690,3 +12690,23 @@ median / 75.0% p95 and is context only. Artifacts remain local at
 `bin/suite_reports/engine_refactor/m623f_boundary_marker_counts_world164_m335_20261017.json`,
 `bin/logs/perf_20261017-131539_40028.jsonl`, and
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-131535.40028`.
+
+### M623G: verify the fast-exit INFO flush
+
+After `RunFlightSim` gained an explicit glog flush after
+`PrepareForShutdownFast()`, reran the short visible no-teleport M335 route on
+`World_164`. Start integrity passed, focus moved `(7,3) -> (-1,3)`, and the
+process completed 29 periods without timeout. The INFO log now has complete
+`kind=shutdown`, `WorldColumnSave`, and `shutdown_snapshot` records. The
+1,087 complete queue samples peaked at 3 dependency markers, with zero
+`boundary_without_owner` values and a final `0/0/0/0` count. Job correlation
+paired 580/583 relights; 10 paired jobs were boundary dependencies and 12
+light deltas were logged.
+
+Post-stop readiness convergence still failed (debt rate 1.0, peak count 36),
+while visual-hole proxy rate/max were zero and eye-proxy/A24 safety lines
+passed. No operator framebuffer verdict was recorded. Host CPU was 82.1%
+median / 99.3% p95 and is context only. Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623g_flush_log_shutdown_world164_m335_20261017.json`,
+`bin/logs/perf_20261017-132034_22320.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-132030.22320`.

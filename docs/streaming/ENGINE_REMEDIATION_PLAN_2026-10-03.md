@@ -13159,3 +13159,29 @@ global convergence or a fresh-world start. M623E remains invalid as a cold
 route because its requested start did not match runtime focus. Keep the fresh
 world check secondary and require route integrity first; do not chase proxy
 failures without a visible or exact pixel witness.
+
+### M623G — preserve the flight-sim log tail
+
+Static inspection explained the incomplete M623E/F INFO files: `RunFlightSim`
+calls `std::_Exit` after `PrepareForShutdownFast()` to avoid unbounded worker
+joins, bypassing normal logging destructors. Added an explicit
+`CubatariumFlushLogs()` after fast shutdown preparation; this is isolated to
+the flight-sim path. Release build and static Windows EXE verification passed.
+
+The short M623G `World_164` route passed start integrity and completed 29
+periods without timeout, moving focus `(7,3) -> (-1,3)`. Its INFO log now ends
+with complete `kind=shutdown`, `WorldColumnSave`, and procedural
+`shutdown_snapshot` records. There were 1,087 complete queue samples: boundary
+markers peaked at 3, `boundary_without_owner` was always zero, and the final
+sample was `0/0/0/0`. The analyzer paired 580 of 583 relight jobs; 10 paired
+jobs had source `boundary_dependency`, and 12 light-delta records were logged.
+Host CPU was 82.1% median / 99.3% p95 (context only).
+
+The harness still failed post-stop convergence (readiness debt 1.0, missing
+mesh/readiness maximum 36), while its visual-hole proxy rate and post-stop
+maximum were zero. Eye-proxy and A24 safety stop-lines passed. No operator
+framebuffer verdict was recorded. This closes the queue-ownership and log-tail
+instrumentation checks on the repeatable warm route; it does not prove
+world-scale convergence or complete cold-world coverage. Keep the remaining
+open item to a short, route-integrity-verified fresh-world lifecycle check;
+do not use the invalid M623E World_188 start or increase flight duration.
