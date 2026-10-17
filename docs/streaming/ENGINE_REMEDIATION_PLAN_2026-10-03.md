@@ -12695,6 +12695,11 @@ rows, 80 contained unsettled dark slices; 22 inspected settled dark slices,
 with two stale-witness rows for the same `(3,3,6)` slice. Its light field,
 meshed, and published revisions converged to 2 with matching halo about 0.57 s
 after relight, though no same-view pixel/GPU-ready verdict was captured.
+The separate sparse renderer-pixel analysis found 102 low-luma pixels, all on
+drawable opaque surfaces; eight had unsettled/preview state and none had a
+light-revision mismatch. No same-view preview handoff was sampled, and the
+stale target did not appear in the dark-pixel set, so its visible effect stays
+unverified.
 Compared with the earlier M622BG run, captures for column `(2,7)` fell from
 1,141 to 13 under the same route parameters; world state and host load differed,
 so this is suggestive evidence rather than a controlled result. M622BI still

@@ -12149,3 +12149,16 @@ published light revision 2 with matching halo after relight; no same-view
 framebuffer verdict was captured. Aggregate gates remained false. Read the
 M622BI runbook entry before treating the earlier M622BG capture-count contrast
 as causal; these were sequential, non-controlled runs.
+
+To analyze the already-saved M622BI pixel probes without another flight:
+
+```powershell
+py -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261017-103559_47804.jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bi_renderer_pixel_trace_20261017.json
+```
+
+This produced 3,300 probes and 102 low-luma samples, all joined to drawable
+opaque surfaces; eight dark samples had unsettled/preview light and none had a
+light-revision mismatch. No same-view preview-to-nonpreview handoff was
+observed, and the stale target chunk `(3,3,6)` was not in the dark-pixel set.

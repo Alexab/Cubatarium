@@ -2375,6 +2375,15 @@ At stop, readiness debt was 33 while direct mesh-missing, visual-hole,
 black-sticky, and stalled-visible-black maxima were zero. Host CPU 55.1/74.9%
 median/p95 and app CPU 19.8/35.0% are context only.
 
+The separate sparse renderer-pixel analyzer processed 3,300 probes. All 102
+samples below luma 32 joined a drawable opaque depth surface; none lacked that
+join. Eight dark samples had unsettled/preview state, none had a light-revision
+mismatch, and the samples were 101 outside fog and one partly fogged. The
+trace found zero same-view preview-to-nonpreview handoffs, and its dark-pixel
+set did not include `(3,3,6)`. Low-luma drawable pixels alone do not establish
+a lighting defect; this leaves the stale witness's operator-visible effect
+unproven.
+
 Next correlate the `(3,3,6)` publication with GPU-ready and same-view pixel
 evidence, and inspect why FIFO denials coexist with many redundant-looking
 producer requests. Keep aggregate readiness debt separate from framebuffer
@@ -2382,4 +2391,5 @@ defects.
 
 Artifacts: report `m622bi_pre_admission_noop_guard_20261017.json`; perf
 `perf_20261017-103559_47804.jsonl`; INFO
-`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-103555.47804`.
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-103555.47804`; pixel
+trace `m622bi_renderer_pixel_trace_20261017.json`.
