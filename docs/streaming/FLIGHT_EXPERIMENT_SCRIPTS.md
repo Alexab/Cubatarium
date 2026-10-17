@@ -12137,3 +12137,15 @@ branch was exercised. Five immediate no-op skips and nine deferred
 already-satisfied clears were recorded. Aggregate gates remained false and no
 operator framebuffer verdict was captured; see the runbook for exact metrics
 and interpretation.
+
+M622BI used the same command, changing only the phase id/report path to
+`M622BI` and `m622bi_pre_admission_noop_guard_20261017.json`. It completed 29
+periods/27 steady. The release source moves the no-op guard ahead of FIFO
+admission for new non-visible requests, and audit skip rows now use
+`relight_admission event=noop_skip`. Results: 1,929 no-op skips, 562 capture
+submissions, 104 FIFO denials, and two stale-dark witnesses for settled slice
+`(3,3,6)` at block `(62,48,100)`. That slice reached matching field/meshed/
+published light revision 2 with matching halo after relight; no same-view
+framebuffer verdict was captured. Aggregate gates remained false. Read the
+M622BI runbook entry before treating the earlier M622BG capture-count contrast
+as causal; these were sequential, non-controlled runs.

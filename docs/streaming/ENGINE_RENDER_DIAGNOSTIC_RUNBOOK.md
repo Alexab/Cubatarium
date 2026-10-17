@@ -2339,3 +2339,47 @@ current run did not provide a target slice or proof of a rendering defect.
 Artifacts: report `m622bh_settled_dark_noop_audit_20261017.json`; perf
 `perf_20261017-102903_41892.jsonl`; INFO
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-102859.41892`.
+
+### M622BI: apply no-op classification before FIFO admission
+
+The M622BG trace exposed a path gap: the settled/no-op test in
+`EnqueueTerrainColumnRelightImpl` ran only after FIFO admission failed. A
+normal-capacity non-visible producer could therefore repeatedly queue work
+for a lit column. M622BI moved the same conservative test ahead of FIFO
+admission for new non-visible requests; visible-priority requests and already
+keyed work keep their existing paths. Release build passed.
+
+The established warm M335 route again completed normally (29 periods, 27
+steady, input adequacy passed; no timeout). Audit recorded 1,929
+`relight_admission event=noop_skip` decisions, 562 capture submissions, and
+104 FIFO denials. Among the denial rows, 82 contained dark cached faces; 80
+reported unsettled dark slices, 22 inspected settled slices, and two rows
+reported a stale witness for the same settled slice `(3,3,6)` at block
+`(62,48,100)`. The unsettled and stale cases therefore remain eligible for
+repair; the no-op guard did not classify that stale face as satisfied.
+
+For `(3,3,6)`, `slice job=175` installed changed light at field revision 2 and
+left the drawable mesh dirty at meshed/published revision 1. The stale-light
+debt was queued; at 10:36:05.720, `stale_light_debt event=published` observed
+field, meshed, and published light revision 2 with a matching halo. This
+verifies light/mesh publication convergence for that sample, but the trace did
+not join the chunk to an explicit same-view framebuffer pixel or operator
+verdict, so GPU-visible repair is not proven.
+
+One earlier M622BG run had 1,141 capture submissions to column `(2,7)`;
+M622BI had 13 to that column on the same route parameters. This is consistent
+with less duplicate relight work, but the runs are not a controlled comparison:
+the saved world and host load changed. M622BI still failed aggregate gates
+(readiness-debt rate 1.0, visual-hole proxy 0.111, fly wall median 31.06 ms).
+At stop, readiness debt was 33 while direct mesh-missing, visual-hole,
+black-sticky, and stalled-visible-black maxima were zero. Host CPU 55.1/74.9%
+median/p95 and app CPU 19.8/35.0% are context only.
+
+Next correlate the `(3,3,6)` publication with GPU-ready and same-view pixel
+evidence, and inspect why FIFO denials coexist with many redundant-looking
+producer requests. Keep aggregate readiness debt separate from framebuffer
+defects.
+
+Artifacts: report `m622bi_pre_admission_noop_guard_20261017.json`; perf
+`perf_20261017-103559_47804.jsonl`; INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-103555.47804`.

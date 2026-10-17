@@ -628,6 +628,69 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
   // Block-space key → column xz for light_complete invalidation.
   const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
                              FloorDiv(world_z, CHUNK_SIZE));
+  // Apply the settled/no-op guard before FIFO admission, not only when the
+  // queue is full. Otherwise normal-capacity producers can repeatedly capture
+  // an already-lit column and create self-sustaining relight churn.
+  if (!visible_admission && world_context &&
+      PendingTerrainColumnRelightKeys.count(key) == 0)
+  {
+    const int world_max_y =
+        std::max(0, world_context->ProceduralTemplate.MaxHeight);
+    int no_op_min_y = std::clamp(min_y, 0, world_max_y);
+    const int requested_max_y =
+        max_y >= no_op_min_y ? max_y : world_max_y;
+    int no_op_max_y =
+        std::clamp(requested_max_y, no_op_min_y, world_max_y);
+    const auto deferred = DeferredFarRelightColumns.find(ground_xz);
+    if (deferred != DeferredFarRelightColumns.end())
+    {
+      const int deferred_min_y =
+          std::clamp(deferred->second.y_band.x, 0, world_max_y);
+      const int deferred_max_y =
+          deferred->second.y_band.y >= deferred_min_y
+              ? std::clamp(deferred->second.y_band.y, deferred_min_y,
+                           world_max_y)
+              : world_max_y;
+      no_op_min_y = std::min(no_op_min_y, deferred_min_y);
+      no_op_max_y = std::max(no_op_max_y, deferred_max_y);
+    }
+
+    const bool pending_light =
+        world_context->IsPendingLightBeforeMesh(ground_xz);
+    const bool column_lit_ready = world_context->IsColumnLitReady(
+        glm::ivec3(ground_xz.x, 0, ground_xz.y));
+    const bool band_needs_relight =
+        !pending_light && column_lit_ready &&
+        ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
+            *world_context, ground_xz, no_op_min_y, no_op_max_y);
+    if (ShouldSkipNoOpTerrainRelightEnqueue(
+            pending_light, column_lit_ready, band_needs_relight))
+    {
+      ++world_context->GetPhysicsTelemetryMutable().RelightSkippedNoOpEnqueueN;
+      const bool cleared_deferred =
+          deferred != DeferredFarRelightColumns.end();
+      if (cleared_deferred)
+      {
+        ClearDeferredFarRelightColumn(ground_xz, "already_satisfied");
+      }
+      if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+      {
+        CubatariumLogInfo(
+            "RelightAudit",
+            "relight_admission event=noop_skip source=" +
+                std::string(producer ? producer : "unspecified") +
+                " column=(" + std::to_string(ground_xz.x) + "," +
+                std::to_string(ground_xz.y) + ") band=" +
+                std::to_string(no_op_min_y) + ":" +
+                std::to_string(no_op_max_y) + " pending=" +
+                std::to_string(pending_light) + " lit_ready=" +
+                std::to_string(column_lit_ready) + " band_needs=" +
+                std::to_string(band_needs_relight) +
+                " cleared_deferred=" + std::to_string(cleared_deferred));
+      }
+      return;
+    }
+  }
   // Phase 5.7R5: unified FIFO admit — new enqueues outside nh≤1 blocked under BP.
   // Already-keyed columns may still Promote (drain-owner / pin repair).
   if (PendingTerrainColumnRelightKeys.count(key) == 0)
@@ -643,70 +706,6 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     if (!visible_admission &&
         !ShouldAdmitRelightFifoEnqueue(fifo_n, horiz))
     {
-      // Match the deferred-admission no-op test before creating durable far
-      // work. Without this check, already-lit columns churn through defer →
-      // later no-op clear on every repeated producer request.
-      if (world_context)
-      {
-        const int world_max_y =
-            std::max(0, world_context->ProceduralTemplate.MaxHeight);
-        int no_op_min_y = std::clamp(min_y, 0, world_max_y);
-        const int requested_max_y =
-            max_y >= no_op_min_y ? max_y : world_max_y;
-        int no_op_max_y =
-            std::clamp(requested_max_y, no_op_min_y, world_max_y);
-        const auto deferred = DeferredFarRelightColumns.find(ground_xz);
-        if (deferred != DeferredFarRelightColumns.end())
-        {
-          const int deferred_min_y =
-              std::clamp(deferred->second.y_band.x, 0, world_max_y);
-          const int deferred_max_y =
-              deferred->second.y_band.y >= deferred_min_y
-                  ? std::clamp(deferred->second.y_band.y, deferred_min_y,
-                               world_max_y)
-                  : world_max_y;
-          no_op_min_y = std::min(no_op_min_y, deferred_min_y);
-          no_op_max_y = std::max(no_op_max_y, deferred_max_y);
-        }
-
-        const bool pending_light =
-            world_context->IsPendingLightBeforeMesh(ground_xz);
-        const bool column_lit_ready = world_context->IsColumnLitReady(
-            glm::ivec3(ground_xz.x, 0, ground_xz.y));
-        const bool band_needs_relight =
-            !pending_light && column_lit_ready &&
-            ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
-                *world_context, ground_xz, no_op_min_y, no_op_max_y);
-        if (ShouldSkipNoOpTerrainRelightEnqueue(
-                pending_light, column_lit_ready, band_needs_relight))
-        {
-          ++world_context->GetPhysicsTelemetryMutable()
-                .RelightSkippedNoOpEnqueueN;
-          const bool cleared_deferred =
-              deferred != DeferredFarRelightColumns.end();
-          if (cleared_deferred)
-          {
-            ClearDeferredFarRelightColumn(ground_xz, "already_satisfied");
-          }
-          if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
-          {
-            CubatariumLogInfo(
-                "RelightAudit",
-                "relight_fifo event=noop_skip source=" +
-                    std::string(producer ? producer : "unspecified") +
-                    " column=(" + std::to_string(ground_xz.x) + "," +
-                    std::to_string(ground_xz.y) + ") band=" +
-                    std::to_string(no_op_min_y) + ":" +
-                    std::to_string(no_op_max_y) + " pending=" +
-                    std::to_string(pending_light) + " lit_ready=" +
-                    std::to_string(column_lit_ready) + " band_needs=" +
-                    std::to_string(band_needs_relight) +
-                    " cleared_deferred=" +
-                    std::to_string(cleared_deferred));
-          }
-          return;
-        }
-      }
       if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
       {
         int loaded_slices = 0;

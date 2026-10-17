@@ -12687,5 +12687,20 @@ recorded. Treat this run as diagnostic only. The next useful run must hit a
 dark cached face and trace that exact slice through settlement, relight,
 remesh publication, and GPU-ready state at the same view.
 
+M622BI moved the settlement-aware no-op test ahead of FIFO admission for new
+non-visible requests; visible-priority admission and already-keyed work are
+unchanged. Release build and short M335 route completed. The route logged
+1,929 no-op skips, 562 capture submissions, and 104 FIFO denials. Of the denied
+rows, 80 contained unsettled dark slices; 22 inspected settled dark slices,
+with two stale-witness rows for the same `(3,3,6)` slice. Its light field,
+meshed, and published revisions converged to 2 with matching halo about 0.57 s
+after relight, though no same-view pixel/GPU-ready verdict was captured.
+Compared with the earlier M622BG run, captures for column `(2,7)` fell from
+1,141 to 13 under the same route parameters; world state and host load differed,
+so this is suggestive evidence rather than a controlled result. M622BI still
+fails aggregate readiness/visual-proxy gates. Next trace the published slice to
+GPU-ready and same-view pixel state, and inspect the remaining repeated
+producers/FIFO pressure without treating readiness debt as a framebuffer hole.
+
 See M622BC/BD in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for measurements and
 artifact names, and `FLIGHT_EXPERIMENT_SCRIPTS.md` for the reproducible route.
