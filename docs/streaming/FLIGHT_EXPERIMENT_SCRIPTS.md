@@ -12580,3 +12580,25 @@ renderer and stop-line acceptance gates failed; this is a short harness/metric
 smoke, not a passing engine run or far-route check. The report is
 `m623a_perf_optin_m335_20261017.json`. Host CPU and app CPU are recorded there
 for context only.
+
+### M622BV: short M335 relight job correlation
+
+After adding audit-only `job_submit` events, repeat the established short
+visible M335 replay with `CUBATARIUM_RELIGHT_AUDIT=1`, the same `World_164`
+warm route, and the same camera/speed parameters used for M622BS. Set
+`-PhaseId M622BV` and report
+`bin/suite_reports/engine_refactor/m622bv_relight_job_correlation_20261017.json`.
+The process-scoped `CUBA_ALLOW_DIRTY_AF=1` override is needed only while the
+worktree is dirty and must be restored after the run.
+
+M622BV completed 29 periods / 27 steady periods without timeout, traveled from
+focus x=7 to x=-1, and did not reach the west checkpoint. The harness returned
+2 because renderer/stop-line gates failed. In the INFO log, job 161 changed
+`(64,54,98)` from blocklight 1 to 0; 525 ms later job 182 changed the adjacent
+chunk's `x+` light face. For columns `(4,6)` and `(3,6)`, queue waits peaked at
+402.467 and 661.784 ms. Targeted submit-to-apply peaked at 69.105 ms. The full
+run had 560 paired jobs (median 35.746 ms, p95 137.600 ms, max 262.919 ms).
+The run found no same-view framebuffer witness and is diagnostic only. Artifacts
+are `bin/logs/perf_20261017-123024_45676.jsonl` and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-123020.45676`;
+they remain local evidence, not committed outputs.

@@ -6306,6 +6306,26 @@ The tooling handoff is in `ENGINE_REFACTOR_TOOLING.md` and `tools/README.md`.
 M622BT now covers horizontal skylight entering a cleared center-only snapshot
 through a read-only neighbor face. With direct sky blocked, the Release check
 asserts air receives level 14 and water level 13; it passes. This closes the
-solver-contract test item only. Queue age for the delayed blocklight boundary
-refresh and bounded convergence for any dependent relight remain open; no
-recursive neighbor relight was introduced.
+solver-contract test item only. Queue wait and job latency are now measured;
+the cause of the delayed blocklight boundary refresh and a bounded dependent
+relight policy remain open. No recursive neighbor relight was introduced.
+
+### 2026-10-17 addendum: relight FIFO wait
+
+`tools/analyze_relight_queue_age.py` reconstructed queue wait from the existing
+M622BQ/BR glog files. The largest observed wait was 120.713 ms at `(3,6)` and
+2,106.248 ms at `(4,6)`, below the 17.35/32.8 second spacing of the repeated
+blocklight changes. A `(4,6)` dequeue preceded one `0->16` update by about
+53 ms. Queueing contributes to some delay but does not explain the full
+interval. The boundary refresh path remains under investigation.
+
+### 2026-10-17 addendum: relight job latency
+
+The short M622BV M335 trace added job-id correlation. At the affected columns,
+queue wait peaked below 0.7 s and five paired submit-to-apply jobs took at most
+69.105 ms; across the run, 560 paired jobs had a 35.746 ms median, 137.600 ms
+p95, and 262.919 ms maximum. The target boundary light changed before a later
+adjacent `x+` face update, but no same-view pixel witness exists. The harness
+failed its existing gates and did not reach the west checkpoint. Queue/worker
+delay alone is insufficient to explain the older 17–33 s transition spacing;
+trace the upstream light-change producer and its relight notification next.

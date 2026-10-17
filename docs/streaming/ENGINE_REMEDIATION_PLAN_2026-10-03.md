@@ -12971,10 +12971,13 @@ boundary refresh path but does not justify recursive neighbor relight
 scheduling yet.
 
 The deterministic air/water boundary-seed regression is now recorded as
-M622BT below. Remaining in this area: trace queue age for affected columns;
-define bounded convergence for any neighbor-relight propagation; then repeat
-only the established short M335 route and periodic fresh-world/source-lifecycle
-checks. Long operator-monitoring flights remain excluded.
+M622BT below. Queue wait from the existing M622BQ/BR traces is measured in
+M622BU; it is not long enough to account for the full observed light-change
+interval. M622BV below adds job-id submit/apply correlation. Remaining: identify
+the upstream cause and missing dependency notification for boundary changes;
+define the smallest bounded convergence repair that addresses that path; then
+repeat only the established short M335 route and periodic fresh-world/source-
+lifecycle checks. Long operator-monitoring flights remain excluded.
 
 ### M622BT — deterministic horizontal skylight boundary regression
 
@@ -12990,3 +12993,52 @@ Built `relight_result_install_test` with CMake `Release` and ran the Release
 executable; it passed. No flight was needed because this is a deterministic
 solver contract. The operator-visible delayed blocklight refresh remains a
 separate question and is not claimed fixed by this test.
+
+### M622BU — offline relight FIFO wait reconstruction
+
+Added `tools/analyze_relight_queue_age.py` to reconstruct the observed time
+between a column's first logged queue insertion and its next capture dequeue.
+Coalesced requests preserve the original insertion time; dequeues without a
+visible insertion are reported as unknown rather than inferred. Applying it to
+the existing M622BQ/BR glog INFO files showed:
+
+- column `(3,6)`: 6/6 observed dequeue ages, median 59.665 ms, maximum
+  120.713 ms;
+- column `(4,6)`: 10/10 observed dequeue ages, median 75.374 ms, maximum
+  2,106.248 ms.
+
+The target blocklight changes in those runs were separated by about 17.35 s
+and 32.8 s. One matching `(4,6)` dequeue waited 2.106 s and preceded the
+`0->16` target update by about 53 ms. Other waits were under 0.4 s. FIFO wait
+contributes to some service delay but does not explain the full interval; these
+logs do not yet link dequeue to a specific async job's completion/apply. The
+next measurement is job-id timing from submission through apply; do not change
+scheduling based on queue-age correlation alone.
+
+### M622BV — short M335 job-id timing trace
+
+Added audit-only `job_submit` records keyed by the same job id already emitted
+by `light_delta` and `apply`, plus `tools/analyze_relight_queue_age.py --jobs`
+to pair submission and application. A short visible M335 no-teleport run used
+the established `World_164` route and completed 29 periods / 27 steady periods
+without timeout. It moved focus from x=7 to x=-1 but did not reach the west
+checkpoint; the harness returned 2 because existing renderer/stop-line gates
+failed. This is diagnostic evidence, not product acceptance. Host CPU was high
+(median 86.2%, p95 99.6%) while app CPU median was 18.9%; record this as run
+context, not an acceptance gate.
+
+The run reproduced the same boundary pair in audit data: job 161 changed one
+blocklight voxel at `(64,54,98)` (`16->0`) in chunk `(4,3,6)`; 525 ms later,
+job 182 changed 138 blocklight voxels in adjacent `(3,3,6)`, including 32 on
+its `x+` face. There was no same-view pixel witness. For the corresponding
+columns `(4,6)` and `(3,6)`, capture queue waits peaked at 402.467 and 661.784
+ms. Five of six targeted jobs paired; submit-to-apply had a 69.105 ms maximum.
+Across 560 paired jobs in the run, median was 35.746 ms, p95 137.600 ms, and
+maximum 262.919 ms. Queueing and async completion are therefore unlikely to
+explain a 17–33 second light-transition interval by themselves; this run did
+not observe a return transition and does not prove a rendering defect.
+
+Next inspect which producer changes the adjacent face, whether it schedules a
+relight for `(4,6)`, and whether that request is suppressed/coalesced or absent.
+Do not add recursive neighbor relighting until that notification path and a
+bounded convergence rule are established.

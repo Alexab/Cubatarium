@@ -1160,7 +1160,8 @@ public:
                                         int max_y, bool include_skylight = true,
                                         bool include_block_light = true,
                                         bool finalize_pending_gate = true,
-                                        bool visible_draw_gate_repair = false);
+                                        bool visible_draw_gate_repair = false,
+                                        const char *audit_source = "unspecified");
   void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
                                         int frontier_iterations = 1);
   void EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord, bool include_skylight,

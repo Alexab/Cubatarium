@@ -2693,3 +2693,41 @@ read-only `x-` neighbor face. Expected target values are air=14 and water=13;
 the water value specifically verifies the two-level horizontal liquid cost.
 The Release test executable passed. This validates the snapshot solver's
 boundary-seed contract, not a renderer or visible-flight symptom.
+
+### M622BU: reconstruct relight FIFO wait
+
+Run the offline analyzer on the M622BQ and M622BR application glog INFO files:
+
+```powershell
+python tools/analyze_relight_queue_age.py `
+  bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-115807.29908 `
+  bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-120147.42784 `
+  --column 3,6 --column 4,6 --events
+```
+
+Observed first-insert-to-dequeue waits were at most 120.713 ms for `(3,6)` and
+2,106.248 ms for `(4,6)`, below the 17.35/32.8 second spacing between the
+repeated target light changes. One `(4,6)` dequeue preceded its `0->16` target
+update by about 53 ms. Queueing contributes to some delay but is not a complete
+explanation. These older M622BQ/BR logs predate `job_submit`, so `--jobs` reports
+their affected light-delta records as unpaired.
+
+### M622BV: correlate relight submit and apply
+
+Newer `CUBATARIUM_RELIGHT_AUDIT` logs include `job_submit job=...` beside the
+existing `apply job=...` and `light_delta job=...` events. Use the same analyzer
+with `--jobs`, and select horizontal chunk columns in chunk coordinates:
+
+```powershell
+python tools/analyze_relight_queue_age.py `
+  bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-123020.45676 `
+  --column 3,6 --column 4,6 --jobs --job-events
+```
+
+The M622BV short M335 run paired five of six affected jobs. Targeted-column
+submit-to-apply maximum was 69.105 ms; queued waits peaked at 661.784 ms in
+`(3,6)` and 402.467 ms in `(4,6)`. Across the full run the paired-job median,
+p95, and maximum were 35.746, 137.600, and 262.919 ms. These intervals combine
+worker execution and completed-result waiting; they do not identify which part
+dominates. The run did not reach the west checkpoint and failed existing
+renderer/stop-line gates, so it remains diagnostic only.

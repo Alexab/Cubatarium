@@ -8559,7 +8559,8 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
                                               bool include_skylight,
                                               bool include_block_light,
                                               bool finalize_pending_gate,
-                                              bool visible_draw_gate_repair)
+                                              bool visible_draw_gate_repair,
+                                              const char *audit_source)
 {
   if (!BlockRegistry)
   {
@@ -8589,6 +8590,21 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
   spec.finalize_pending_gate = finalize_pending_gate;
   spec.visible_draw_gate_repair = visible_draw_gate_repair;
   spec.column_center_only = true;
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    CubatariumLogInfo(
+        "RelightAudit",
+        "job_submit job=" + std::to_string(spec.job_id) + " column=(" +
+            std::to_string(col.x) + "," + std::to_string(col.y) +
+            ") band=" + std::to_string(min_y) + ":" +
+            std::to_string(max_y) + " source=" +
+            std::string(audit_source ? audit_source : "unspecified") +
+            " sky=" +
+            std::to_string(include_skylight) + " block=" +
+            std::to_string(include_block_light) + " finalize=" +
+            std::to_string(finalize_pending_gate) + " visible=" +
+            std::to_string(visible_draw_gate_repair));
+  }
   AccumulateRelightEnqueueTimings(
       PhysicsTelemetryData,
       AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry));
@@ -8842,6 +8858,31 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       // Preserve exact Y band / light domains / finalization semantics, not a
       // generic terrain request. InFlight stays occupied by the replacement.
       result.retry_spec.job_id = ++NextAsyncRelightJobId;
+      if (audit_relight)
+      {
+        std::string column = "unknown";
+        if (!result.retry_spec.block_positions.empty())
+        {
+          const glm::ivec3 chunk = UChunkManager::WorldToChunk(
+              result.retry_spec.block_positions.front());
+          column = "(" + std::to_string(chunk.x) + "," +
+                   std::to_string(chunk.z) + ")";
+        }
+        CubatariumLogInfo(
+            "RelightAudit",
+            "job_submit job=" + std::to_string(result.retry_spec.job_id) +
+                " column=" + column + " band=" +
+                std::to_string(result.retry_spec.min_world_y) + ":" +
+                std::to_string(result.retry_spec.max_world_y) +
+                " source=stale_retry sky=" +
+                std::to_string(result.retry_spec.include_skylight) +
+                " block=" +
+                std::to_string(result.retry_spec.include_block_light) +
+                " finalize=" +
+                std::to_string(result.retry_spec.finalize_pending_gate) +
+                " visible=" + std::to_string(
+                                  result.retry_spec.visible_draw_gate_repair));
+      }
       AccumulateRelightEnqueueTimings(
           PhysicsTelemetryData,
           AsyncRelight->EnqueueJob(BlockWorld, std::move(result.retry_spec),

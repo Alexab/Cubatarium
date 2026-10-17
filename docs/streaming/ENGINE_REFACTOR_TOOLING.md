@@ -10,7 +10,7 @@ refactor without rebuilding its experiment harness from memory.
 | Engine and renderer | `src/World/`, `src/Render/` | Product implementation and runtime scheduling/telemetry |
 | Build and packaging | `scripts/build/`, `tools/build_release.ps1`, root CMake files | Release build setup |
 | Flight runners | `tools/flight_sim_run.py`, `tools/flight_sim_fixed_day.py`, `tools/run_m335_water_visibility_ab.ps1` | Visible GUI flight orchestration and report generation |
-| Offline analysis | `tools/flight_sim_analyze.py`, `tools/analyze_renderer_pixel_trace.py`, and the other `tools/analyze_*` / `tools/compare_*` utilities | Interpret saved evidence; they do not prove a visual defect without a joined framebuffer/depth/world witness |
+| Offline analysis | `tools/flight_sim_analyze.py`, `tools/analyze_renderer_pixel_trace.py`, `tools/analyze_relight_queue_age.py`, and the other `tools/analyze_*` / `tools/compare_*` utilities | Interpret saved evidence; they do not prove a visual defect without a joined framebuffer/depth/world witness |
 | Experiment method and history | `docs/streaming/FLIGHT_EXPERIMENT_SCRIPTS.md`, `docs/streaming/ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`, current audit and plan | Canonical route, procedures, evidence, caveats, and remaining work |
 | Runtime output | `bin/logs/`, `bin/suite_reports/`, `bin/flight_captures/`, `bin/iter_reports/` | Mixed build/runtime output, some tracked historical baselines and many local runs |
 
@@ -59,6 +59,12 @@ wrappers remain local and untracked.
    exercises the changed path, compare against the last matching baseline, and
    update the audit, plan, runbook, and script index. Commit source and curated
    evidence explicitly; never use `git add bin/`.
+7. For `CUBATARIUM_RELIGHT_AUDIT` runs, use
+   `tools/analyze_relight_queue_age.py` on the matching glog INFO file. It
+   estimates first-insert to next capture dequeue; coalesced requests do not
+   reset the age, and missing insert events remain explicitly unknown. Once
+   job-id submission records are available, `--jobs` pairs submit/apply; that
+   wall interval still combines worker execution and completed-result wait.
 
 ## Metrics and disk writes
 

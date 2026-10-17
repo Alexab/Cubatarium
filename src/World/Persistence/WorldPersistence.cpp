@@ -3660,7 +3660,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, relight_min,
                                              relight_max, true, true,
                                              finalize_gate,
-                                             exact_draw_gate_band);
+                                             exact_draw_gate_band,
+                                             "streaming_fifo");
     }
     else
     {

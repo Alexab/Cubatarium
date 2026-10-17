@@ -1652,7 +1652,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         world.EnqueueAsyncTerrainColumnRelight(
             col.x * CHUNK_SIZE, col.y * CHUNK_SIZE, 0, max_y,
             /*include_skylight=*/true, /*include_block_light=*/false,
-            /*finalize_pending_gate=*/false);
+            /*finalize_pending_gate=*/false,
+            /*visible_draw_gate_repair=*/false, "world_load");
         --schedule_batch;
       }
       ColumnRelightIndex = ColumnRelightScheduledIndex;

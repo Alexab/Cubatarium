@@ -45,6 +45,7 @@ Not wired in CI; run locally when investigating. See
 | Analyze flight and acceptance gates | `flight_sim_analyze.py`; `flight_sim_eval.py`; `flight_sim_phase_gate.py` |
 | Join image probes to published geometry/light | `analyze_renderer_pixel_trace.py`; `analyze_camera_band_pixel_join.py`; `analyze_hole_event_pixels.py`; `analyze_water_surface_pixel_join.py` |
 | Compare routes and source/readiness evidence | `compare_renderer_pixel_routes.py`; `analyze_world_column_source_trace.py`; `analyze_visual_coverage_trace.py` |
+| Estimate relight FIFO wait from glog | `analyze_relight_queue_age.py` |
 | Capture the actual application window | `capture_flight_sim_window.ps1` |
 | Collect an optional profiler trace | `perf_capture.py` |
 
