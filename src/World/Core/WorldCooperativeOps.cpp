@@ -1937,22 +1937,16 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else if (MeshWarmupFinalizeOnly)
       {
-        // SOTA: FinalizeOnly still owns ColumnFlow until Presentable — do not
-        // skip BeginEnterLitGate (Era51 0ms PrepareView / second GpuWarmup).
-        if (!world.IsEnterLitGateActive())
-        {
-          UEnterLitDiagnostics::BeginSession("cooperative_finalize_only");
-          world.BeginEnterLitGate();
-        }
+        // Delay the visual gate until PrepareEnter has restored the player and
+        // its terrain column is complete. The pre-gate view tick can then
+        // request a cold focus column instead of freezing ingress around a
+        // missing column that the visual worklist would treat as N/A.
         BeginPrepareEnter();
       }
       else
       {
-        if (!world.IsEnterLitGateActive())
-        {
-          UEnterLitDiagnostics::BeginSession("cooperative_load_prepare");
-          world.BeginEnterLitGate();
-        }
+        // The gate starts in PrepareView after the saved player's camera
+        // column has a terminal load/generation result.
         CurrentPhase = Phase::PostLoadAnalysis;
       }
     }
@@ -2262,6 +2256,25 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     else
     {
+      if (!world.IsEnterLitGateActive())
+      {
+        if (!world.IsEnterFocusTerrainReady())
+        {
+          const glm::ivec3 focus = UChunkManager::WorldToChunk(
+              world.GetPreferredLoadFocusBlock());
+          world.TickEnterStreamingWarmup(std::max(1, budget / 2));
+          Report(sink, "prepare_view",
+                 ProceduralFillLoadPath
+                     ? (ProceduralFillMeshProgressBase() +
+                        kProceduralFillWeightMeshWarmup)
+                     : CooperativeLoadProgressAfterMesh(),
+                 "Loading player terrain (" + std::to_string(focus.x) + "," +
+                     std::to_string(focus.z) + ")...");
+          break;
+        }
+        UEnterLitDiagnostics::BeginSession("cooperative_load_prepare");
+        world.BeginEnterLitGate();
+      }
       WarnIfTerrainMeshesMissing(world, "PrepareView before warmup");
       if (world.IsEnterLitGateActive())
       {

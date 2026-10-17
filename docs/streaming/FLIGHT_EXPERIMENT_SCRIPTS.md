@@ -12921,3 +12921,25 @@ The M335 wrapper defaults to
 For an operator-visible route without metrics, use `-DisableMetrics`. For a
 diagnostic run, keep metrics enabled and use a named phase ID so the manifest,
 INFO log, perf JSONL, and any explicitly requested captures remain associated.
+
+### M624D: cold focus terrain committed before first paint
+
+On fresh radius-4 seed `3650482216`, the saved M335 focus `(7,3)` had no terrain
+column on disk. The short visible route ran with FramePerf and host resource
+sampling disabled; only `CUBA_WORLD_COLUMN_SOURCE_TRACE` was explicitly
+enabled. Source order was request `123` at 15:09:05.920, worker finish at
+15:09:06.116, terrain commit at 15:09:06.190, cooperative gate settle at
+15:09:18.484, app gate settle at 15:09:23.376, and first paint at 15:09:23.496.
+The new pre-gate terrain barrier therefore moved first paint about 17.3 seconds
+past commit. The GUI was visible/responding; route integrity passed from
+`(7,3)` to `(-3,3)` over 10 chunks, without collision. It completed 3,136
+frames / 58 requested in-game seconds with process exit 0. The report is
+`not_evaluated_metrics_disabled`; this is lifecycle evidence only, not a visual
+or performance acceptance run.
+
+Artifacts: control report
+`bin/suite_reports/engine_refactor/m624d_clean_cold_focus_barrier_20261017.json`,
+create report `bin/suite_reports/engine_refactor/m624d_cold_world_create_20261017.json`,
+INFO trace
+`artifacts/research/rendering/m624d_cold_focus_barrier_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-150858.31160`,
+and saved world `bin/worlds/World_M624D_EnterBarrier_20261017`.

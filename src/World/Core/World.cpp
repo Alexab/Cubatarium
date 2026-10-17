@@ -12648,9 +12648,24 @@ bool UWorld::IsEnterVisibilityReady() const
   return IsEnterUnderfeetPresentReady();
 }
 
+bool UWorld::IsEnterFocusTerrainReady() const
+{
+  if (!IsStreamingEnabled() || !Streaming || !Streaming->HasStreamer())
+  {
+    return true;
+  }
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  return IsTerrainColumnCompleteFast(glm::ivec3(center.x, 0, center.z));
+}
+
 bool UWorld::IsEnterUnderfeetPresentReady() const
 {
   if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  if (!IsEnterFocusTerrainReady())
   {
     return false;
   }

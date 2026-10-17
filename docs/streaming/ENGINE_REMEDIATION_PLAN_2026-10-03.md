@@ -13402,26 +13402,53 @@ Artifacts: `bin/suite_reports/engine_refactor/m624c_clean_cold_enter_focus_20261
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-144707.8736`,
 and `bin/worlds/World_M624C_ColdEnterFocus_20261017`.
 
-Current remaining work after M624C:
+### M624D — keep the focus terrain barrier ahead of the first paint
+
+Changed the load sequence so it restores the player's saved position, allows
+the streamer to finish the active focus terrain column, and only then starts
+the enter visual gate. `IsEnterUnderfeetPresentReady()` now also requires the
+focus terrain column to be complete, and the enter-cap/soft-exit paths cannot
+release while that column is incomplete. This prevents a missing camera column
+from being treated as N/A by the visual worklist while the gate freezes
+streaming ingress.
+
+Built Release with `tools/build_release.ps1 -Jobs 8`. On a fresh radius-4 map
+`World_M624D_EnterBarrier_20261017` (seed `3650482216`, 693 saved chunk files),
+the fixed M335 start column `(7,0,3)` was absent. In the short visible
+no-teleport route, request `123` was submitted at 15:09:05.920, its worker
+finished at 15:09:06.116, and terrain committed at 15:09:06.190. The cooperative
+enter gate settled at 15:09:18.484, the application enter gate settled at
+15:09:23.376, and `phase=first_paint` occurred at 15:09:23.496. The commit
+therefore preceded the first paint by about 17.3 seconds. This directly closes
+the M624C ordering failure for a cold focus frontier.
+
+Route integrity passed: 58 requested in-game seconds, 3,136 frames, start focus
+`(7,3)`, end `(-3,3)`, 10 chunks traveled, no collision, process exit 0. The
+GUI window was visible and responding. FramePerf and host resource sampling
+were disabled; no perf JSONL was created. The report correctly says
+`not_evaluated_metrics_disabled`, so this run proves lifecycle ordering and
+route execution only, not visual or performance acceptance.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624d_clean_cold_focus_barrier_20261017.json`,
+`bin/suite_reports/engine_refactor/m624d_cold_world_create_20261017.json`,
+`artifacts/research/rendering/m624d_cold_focus_barrier_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-150858.31160`,
+and `bin/worlds/World_M624D_EnterBarrier_20261017`.
+
+Remaining work after M624D:
 
 1. Exercise the boundary-dependency relight owner through a multi-column chain
    with FIFO denial/deferred retention and column eviction. The existing
    deterministic torch fixture settles one source-neighbor-return sequence;
    M623G's warm route ended with no pending/unowned boundary markers, but neither
    proves convergence under broader queue pressure.
-2. Add an entry barrier for the saved-view column's load/generation and commit.
-   M624C proved that enqueue-before-`phase=first_paint` still allowed the first
-   frame to precede the column commit. Re-run a short clean fresh-seed M335
-   route and require commit-before-first-paint; keep framebuffer evidence
-   separate from readiness proxies.
-3. Validate a short target lane at a distant, already-problematic coordinate
+2. Validate a short target lane at a distant, already-problematic coordinate
    after the clean start check. This must exercise unload/reload or disk-miss
    provenance and end with a distinct near-view/framebuffer verdict. Do not use
    long operator-monitoring flights.
-4. Close the final gate review: separate visible geometry/light evidence from
+3. Close the final gate review: separate visible geometry/light evidence from
    backlog outside the active view. Do not change water or fog rendering unless
    a matching framebuffer/operator witness reproduces the defect.
-5. Tooling follow-up is non-blocking for engine correctness: keep script paths
+4. Tooling follow-up is non-blocking for engine correctness: keep script paths
    stable during this refactor; future migrations should use compatibility
    shims one family at a time. At refactor close-out, set research-runner
    defaults to metrics off and retain explicit opt-ins for later investigations.

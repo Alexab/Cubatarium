@@ -3089,12 +3089,12 @@ columns, but the saved camera frontier `(7,0,3)` was generated only after
 `first_paint`. This was a fresh saved world with an uncached target column, not
 a wholly unsaved world. The entry warmup focus has been changed to use the
 current/saved user's position (falling back to spawn only when no user exists).
-M624C on a new seed is the required clean verification. Do not interpret the
-suite's near-view hole or readiness proxy as a screenshot verdict. The 4,320
-M624B sampled pixels and their ray provenance did not yield a stable
-full-frame hole witness. The required M624C follow-up was run; it moved the
-request before first paint but the commit still completed after first paint,
-as recorded below.
+M624C showed that request-before-first-paint was insufficient: terrain still
+committed after the first frame. M624D moved the terrain-completion barrier
+ahead of the visual gate and verified commit-before-first-paint on a new seed.
+Do not interpret the suite's near-view hole or readiness proxy as a screenshot
+verdict. The 4,320 M624B sampled pixels did not yield a stable full-frame hole
+witness.
 
 M624B artifacts: `bin/suite_reports/engine_refactor/m624b_clean_cold_start_20261017.json`,
 `bin/suite_reports/engine_refactor/m624b_framebuffer_pixel_analysis_20261017.json`,
@@ -3132,3 +3132,32 @@ to `artifacts/research/rendering/<phase-id>/logs` and records explicit artifact
 paths in the manifest. Use `-DisableMetrics` when operator-visible behavior
 matters but FramePerf/source/pixel metrics are not needed; the output then
 states that metric gates were not evaluated.
+
+### M624D: wait for cold focus terrain before opening the enter visual gate
+
+The load path now restores the saved user/camera first, then lets streaming
+load or generate the focus terrain column before starting the enter visual
+gate. `IsEnterUnderfeetPresentReady()` and enter soft-exit caps also require
+that focus column to be complete. This closes the M624C false-N/A case where
+an absent column was skipped by the worklist while the gate froze streaming.
+
+M624D used fresh radius-4 seed `3650482216`; the fixed M335 start column
+`(7,0,3)` was absent. Source trace: request `123` submitted at 15:09:05.920,
+worker finished at 15:09:06.116, commit at 15:09:06.190; cooperative gate
+settled at 15:09:18.484, application gate at 15:09:23.376, and
+`phase=first_paint` at 15:09:23.496. Commit preceded first paint by about
+17.3 seconds. The GUI was visible and responsive. The short route passed
+integrity (focus `(7,3)` to `(-3,3)`, 10 chunks, no collision). FramePerf and
+host resource sampling were disabled; no metric acceptance was evaluated.
+
+For this lifecycle-only check, the direct runner used `--no-metrics` while
+explicitly enabling only `CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. The M335 wrapper's
+`-DisableMetrics` intentionally clears its source/pixel trace flags too.
+Artifacts: control report `bin/suite_reports/engine_refactor/m624d_clean_cold_focus_barrier_20261017.json`,
+world-create report `bin/suite_reports/engine_refactor/m624d_cold_world_create_20261017.json`,
+INFO trace `artifacts/research/rendering/m624d_cold_focus_barrier_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-150858.31160`,
+and world `bin/worlds/World_M624D_EnterBarrier_20261017`.
+
+Remaining rendering work is boundary-relight convergence under queue pressure,
+a short distant-coordinate unload/reload lane with a near-view framebuffer
+verdict, and final separation of active-view defects from off-view backlog.
