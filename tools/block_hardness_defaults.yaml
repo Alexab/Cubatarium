@@ -43,6 +43,14 @@ exact:
   sandstone_carved: 0.8
   sandstone_smooth: 0.8
   stone: 1.5
+  granite: 1.5
+  diorite: 1.5
+  andesite: 1.5
+  deepslate: 2.5
+  tuff: 1.5
+  calcite: 0.75
+  smooth_basalt: 1.25
+  amethyst_block: 1.5
   stoneMoss: 2
   stone_slab: 2
   stone_slab_top: 2
@@ -55,6 +63,8 @@ exact:
   quartz_block: 0.8
   quartz_chiseled: 0.8
   quartz_pillar: 0.8
+  moss_block: 0.6
+  rooted_dirt: 0.5
   obsidian: 50
 
   # --- Ores and mineral blocks ----------------------------------------------

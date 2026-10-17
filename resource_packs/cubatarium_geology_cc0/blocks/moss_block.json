@@ -1,0 +1,24 @@
+{
+  "name": "moss_block",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "rock_moss",
+    "rock_moss",
+    "rock_moss",
+    "rock_moss",
+    "rock_moss",
+    "rock_moss"
+  ],
+  "hardness": 0.6,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 1
+    }
+  },
+  "displayName": "Moss Block",
+  "render": {}
+}

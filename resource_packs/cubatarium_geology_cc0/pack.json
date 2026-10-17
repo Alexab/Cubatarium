@@ -1,0 +1,14 @@
+{
+  "id": "cubatarium_geology_cc0",
+  "name": "Cubatarium Geology CC0",
+  "version": 1,
+  "license": "CC0-1.0",
+  "resolution": 16,
+  "priority": 10,
+  "pack_format": 1,
+  "worldgen_role": "secondary",
+  "merge_mode": "skip_existing",
+  "depends": [],
+  "conflicts": [],
+  "min_game_version": "0.1.0"
+}

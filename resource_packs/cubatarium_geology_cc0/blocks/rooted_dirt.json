@@ -1,0 +1,24 @@
+{
+  "name": "rooted_dirt",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "dirt_grass",
+    "dirt_grass",
+    "dirt_grass",
+    "dirt_grass",
+    "dirt_grass",
+    "dirt_grass"
+  ],
+  "hardness": 0.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 1
+    }
+  },
+  "displayName": "Rooted Dirt",
+  "render": {}
+}

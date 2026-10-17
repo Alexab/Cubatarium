@@ -144,12 +144,20 @@ Unknown block names in saves/prefabs/worldgen get a synthetic solid block with l
 
 ## Configuration
 
+New worlds default to `minetest_default_16` as the primary pack and
+`cubatarium_geology_cc0` as the secondary pack. The geology pack supplies
+Minecraft-like strata and cave blocks while leaving the primary pack in charge
+of common terrain blocks. Its block textures are mapped from Kenney's Voxel
+Pack, which is CC0; the source and tile mapping are recorded in the pack's
+`LICENSE.txt` and `tools/geology_cc0_mapping.yaml`. The primary Minetest pack
+retains its CC-BY-SA-3.0 license and attribution notice.
+
 ### Global defaults — `config.json`
 
 ```json
 "resource_packs": {
-  "default_primary": ["kenney_voxel_16"],
-  "default_secondary": ["cubatarium_cc0_base"],
+  "default_primary": ["minetest_default_16"],
+  "default_secondary": ["cubatarium_geology_cc0"],
   "placeholder": { "tile_size": 16, "background": "#6b4a9e" }
 }
 ```
@@ -165,9 +173,9 @@ To change packs for the **loaded world** (after Escape to main menu): **Main men
 
 ```json
 "resource_packs": {
-  "primary": ["kenney_voxel_16"],
-  "secondary": ["cubatarium_cc0_base"],
-  "worldgen_owner": "kenney_voxel_16"
+  "primary": ["minetest_default_16"],
+  "secondary": ["cubatarium_geology_cc0"],
+  "worldgen_owner": "minetest_default_16"
 }
 ```
 

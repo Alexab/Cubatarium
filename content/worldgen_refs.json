@@ -99,6 +99,56 @@
       "block_names": [
         "tree_leaves"
       ]
+    },
+    "granite": {
+      "block_names": [
+        "granite"
+      ]
+    },
+    "diorite": {
+      "block_names": [
+        "diorite"
+      ]
+    },
+    "andesite": {
+      "block_names": [
+        "andesite"
+      ]
+    },
+    "deepslate": {
+      "block_names": [
+        "deepslate"
+      ]
+    },
+    "tuff": {
+      "block_names": [
+        "tuff"
+      ]
+    },
+    "calcite": {
+      "block_names": [
+        "calcite"
+      ]
+    },
+    "smooth_basalt": {
+      "block_names": [
+        "smooth_basalt"
+      ]
+    },
+    "amethyst_block": {
+      "block_names": [
+        "amethyst_block"
+      ]
+    },
+    "moss_block": {
+      "block_names": [
+        "moss_block"
+      ]
+    },
+    "rooted_dirt": {
+      "block_names": [
+        "rooted_dirt"
+      ]
     }
   }
 }

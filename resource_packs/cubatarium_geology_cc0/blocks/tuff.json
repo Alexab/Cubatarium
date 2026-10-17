@@ -1,0 +1,24 @@
+{
+  "name": "tuff",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "rock",
+    "rock",
+    "rock",
+    "rock",
+    "rock",
+    "rock"
+  ],
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "displayName": "Tuff",
+  "render": {}
+}

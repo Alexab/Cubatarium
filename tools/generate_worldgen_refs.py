@@ -28,16 +28,23 @@ def load_canonical(path: Path) -> dict:
 
 def build_slots(canonical: dict) -> dict:
     slots: dict[str, dict] = {}
-    tier_a = canonical.get("tier_a", {})
-    for block_name, spec in tier_a.items():
-        refs = spec.get("worldgen_refs") or [block_name]
-        if isinstance(refs, str):
-            refs = [refs]
-        entry: dict = {"block_names": list(refs)}
-        fallback = SLOT_FALLBACKS.get(block_name)
-        if fallback:
-            entry["fallback_slot"] = fallback
-        slots[block_name] = entry
+    for tier in ("tier_a", "tier_b"):
+        blocks = canonical.get(tier, {})
+        for block_name, spec in blocks.items():
+            # Tier A blocks retain their historical implicit slot. Tier B only
+            # participates when it explicitly opts in via worldgen_refs.
+            refs = spec.get("worldgen_refs")
+            if not refs and tier == "tier_a":
+                refs = [block_name]
+            if not refs:
+                continue
+            if isinstance(refs, str):
+                refs = [refs]
+            entry: dict = {"block_names": list(refs)}
+            fallback = SLOT_FALLBACKS.get(block_name)
+            if fallback:
+                entry["fallback_slot"] = fallback
+            slots[block_name] = entry
     return slots
 
 

@@ -171,6 +171,17 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
   {
     return false;
   }
+  for (const char *name : {"granite", "diorite", "andesite", "deepslate",
+                           "tuff", "calcite", "smooth_basalt",
+                           "amethyst_block", "moss_block", "rooted_dirt"})
+  {
+    if (!registry->HasBlock(name))
+    {
+      std::cerr << "ResourcePackSmoke: default selection is missing geology block '"
+                << name << "'" << std::endl;
+      return false;
+    }
+  }
 
   UResourcePackResolver resolver;
   const auto packs = resolver.Resolve(defaults, assetRoot, writableRoot);
@@ -339,6 +350,7 @@ int RunResourcePackSmoke(IUPlatformPaths &paths)
 
   ResourcePackSelection minetest;
   minetest.Primary = {"minetest_default_16"};
+  minetest.Secondary = {"cubatarium_geology_cc0"};
   minetest.WorldgenOwner = "minetest_default_16";
   if (!SmokeSelection(minetest, assetRoot, writableRoot, registry, placeholders))
   {
