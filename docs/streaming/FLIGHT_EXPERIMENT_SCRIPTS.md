@@ -13294,3 +13294,40 @@ rerun checks the shared helper refactor; it remains a warm-route mechanism
 check without a framebuffer verdict. Its report and log are under
 `bin/suite_reports/engine_refactor/m624z_final_budget_progress_m335_short_20261017.json`
 and `artifacts/research/rendering/m624z_final_budget_progress_m335_short_20261017/`.
+
+### M624AA–M624AB — cold-seed bounded-progress check
+
+M624AA created a new radius-4 world; use a unique absent world name so an
+existing save is never overwritten. M624AB flew the same established M335
+route with metrics off and source tracing on.
+
+```powershell
+Push-Location bin
+try {
+  .\Cubatarium.exe --console --create-world `
+    --name World_M624AA_BudgetFix_20261017 --seed 3650482220 `
+    --radius-chunks 4 --output worlds `
+    --report-json suite_reports/engine_refactor/m624aa_cold_budget_fix_world_create_20261017.json
+} finally { Pop-Location }
+
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_M624AA_BudgetFix_20261017 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624ab_cold_budget_fix_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624ab_cold_budget_fix_m335_short_20261017.json
+```
+
+The start column `(7,0,3)` was absent from the generated radius and committed
+17.25 s before first paint. The route completed nine chunks without collision;
+98 procedural request/finish/commit events drained at shutdown. Queue p95s
+were 581 ms for scheduler admission, 891 ms for the worker pool, and 3.08 s
+from worker completion to commit. No metrics/pixel verdict was collected, so
+this closes only fresh-seed source and enter-order behavior. Artifacts:
+`bin/suite_reports/engine_refactor/m624aa_cold_budget_fix_world_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m624ab_cold_budget_fix_m335_short_20261017.json`,
+`artifacts/research/rendering/m624ab_cold_budget_fix_m335_short_20261017/`,
+and `bin/worlds/World_M624AA_BudgetFix_20261017`.

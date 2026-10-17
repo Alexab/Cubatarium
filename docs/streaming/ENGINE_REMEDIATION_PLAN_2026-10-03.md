@@ -14004,3 +14004,29 @@ acceptance result. Six focused Release CTests passed:
 `cruise_sot_phase_test`, and `relight_result_install_test`. Artifact:
 `bin/suite_reports/engine_refactor/m624z_final_budget_progress_m335_short_20261017.json`
 and `artifacts/research/rendering/m624z_final_budget_progress_m335_short_20261017/`.
+
+### M624AA–M624AB — cold-seed source check after bounded-progress fix
+
+Created a new radius-4 seed `3650482220` with 682 saved chunk files; the M335
+camera column `(7,0,3)` was absent. The established 8/30/20 visible
+no-teleport route passed from focus `(7,3)` to `(-2,3)` across nine chunks,
+with no collision or timeout. The column emitted `disk_miss`, was submitted,
+finished, and committed at 17:06:10.208; `first_paint` occurred at
+17:06:27.455, so terrain commit preceded first paint by 17.25 s. Source tracing
+recorded 121 disk completions and 98 procedural request/finish/commit rows;
+the shutdown snapshot had no pending, active, or ready work.
+
+This is a fresh-seed lifecycle/source check, but metrics and pixel/framebuffer
+tracing were off (`not_evaluated_metrics_disabled`). One budget-limited sample
+admitted a queued job into a free worker; no sampled fallback commit occurred
+on this route, so M624Y/Z remain the fallback commit evidence. Procedural
+scheduler-queue p95/max was `581/2,507 ms`, worker queue `891/1,075 ms`,
+ready-wait `3,079/3,604 ms`, and total request-to-commit `3,694/4,169 ms`.
+Unlike M624V, this trace does not show a long sequence of skipped ticks; the
+remaining cold-frontier tail includes worker-pool queueing and delayed
+ready-result application and needs frame correlation before tuning. This does
+not establish a visible defect or visual acceptance. Artifacts:
+world-create report `bin/suite_reports/engine_refactor/m624aa_cold_budget_fix_world_create_20261017.json`,
+flight report `bin/suite_reports/engine_refactor/m624ab_cold_budget_fix_m335_short_20261017.json`,
+INFO log `artifacts/research/rendering/m624ab_cold_budget_fix_m335_short_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-170603.38092`,
+and world `bin/worlds/World_M624AA_BudgetFix_20261017`.

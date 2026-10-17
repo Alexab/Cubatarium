@@ -3533,3 +3533,37 @@ ready-wait p95 33.2 ms, and source queues were empty at shutdown. This confirms
 the exact committed shape of the helper on the replayed warm world. Report and
 log: `bin/suite_reports/engine_refactor/m624z_final_budget_progress_m335_short_20261017.json`
 and `artifacts/research/rendering/m624z_final_budget_progress_m335_short_20261017/`.
+
+### M624AA–M624AB: repeat the bounded-progress source check on a fresh seed
+
+Create a separate radius-4 seed under a world name verified absent first, then
+fly the unchanged M335 route with only source tracing enabled:
+
+```powershell
+Push-Location bin
+try {
+  .\Cubatarium.exe --console --create-world `
+    --name World_M624AA_BudgetFix_20261017 --seed 3650482220 `
+    --radius-chunks 4 --output worlds `
+    --report-json suite_reports/engine_refactor/m624aa_cold_budget_fix_world_create_20261017.json
+} finally { Pop-Location }
+
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_M624AA_BudgetFix_20261017 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624ab_cold_budget_fix_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624ab_cold_budget_fix_m335_short_20261017.json
+```
+
+The fresh-start focus column `(7,0,3)` was absent from the prebuilt radius.
+M624AB recorded its procedural commit 17.25 s before first paint, completed
+the nine-chunk route without collision, and ended with zero source backlog.
+Request queue p95 was 581 ms; worker queue p95 891 ms; ready-wait p95 3.08 s.
+Metrics/pixel tracing were off, so this is source and enter-order evidence only;
+use a separate short metrics lane if frame attribution is required. Do not
+interpret `cache_mode=warm` as a warmed M335 focus column: the saved startup
+radius is present, but `(7,0,3)` is a procedural miss.
