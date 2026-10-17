@@ -3073,3 +3073,29 @@ Artifacts: `bin/suite_reports/engine_refactor/m624a_cold_start_no_spawn_fallback
 `bin/suite_reports/engine_refactor/m624a_framebuffer_pixel_analysis_20261017.json`,
 `bin/logs/perf_20261017-143427_44800.jsonl`,
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-143423.44800`.
+
+### M624B: distinguish cold-view first-paint ordering from route integrity
+
+Create a unique radius-4 world with `--create-world`, then verify that the
+column under the saved route start is absent from its chunk files. Run the same
+short visible M335 settings with `-RequireExistingWorld`, app-side screen-ray
+probes, and source tracing. Preserve the INFO trace and compare the timestamp
+of the saved camera's `disk_miss` request/commit with `WorldLoadPerf
+phase=first_paint`. A successful route start alone is insufficient: the
+camera's requested terrain should be ready before the first in-game frame.
+
+M624B exposed this lifecycle gap: `SpatialChunks` loaded all `121/121` startup
+columns, but the saved camera frontier `(7,0,3)` was generated only after
+`first_paint`. This was a fresh saved world with an uncached target column, not
+a wholly unsaved world. The entry warmup focus has been changed to use the
+current/saved user's position (falling back to spawn only when no user exists).
+M624C on a new seed is the required clean verification. Do not interpret the
+suite's near-view hole or readiness proxy as a screenshot verdict. The 4,320
+M624B sampled pixels and their ray provenance did not yield a stable
+full-frame hole witness.
+
+M624B artifacts: `bin/suite_reports/engine_refactor/m624b_clean_cold_start_20261017.json`,
+`bin/suite_reports/engine_refactor/m624b_framebuffer_pixel_analysis_20261017.json`,
+`bin/logs/perf_20261017-144011_45236.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-144007.45236`,
+and `bin/worlds/World_M624B_ColdStart_20261017`.

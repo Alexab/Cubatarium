@@ -9842,6 +9842,28 @@ glm::vec3 UWorld::GetSpawnPoint() const { return SpawnPoint; }
 
 glm::ivec3 UWorld::GetEnterWarmupFocusBlock() const
 {
+  // A saved world may be resumed far from its original spawn point. The enter
+  // gate must prepare the user's actual view before the first in-game frame;
+  // otherwise the spawn ring is warmed while the restored camera looks into a
+  // column that has not yet been loaded or generated.
+  if (const auto user = GetCurrentUser())
+  {
+    return WorldPosToBlock(user->GetPosition());
+  }
+  if (!CurrentUserName.empty())
+  {
+    if (const auto user = const_cast<UWorld *>(this)->GetUser(CurrentUserName))
+    {
+      return WorldPosToBlock(user->GetPosition());
+    }
+  }
+  for (const auto &entry : Users)
+  {
+    if (entry.second)
+    {
+      return WorldPosToBlock(entry.second->GetPosition());
+    }
+  }
   return WorldPosToBlock(SpawnPoint);
 }
 

@@ -13328,17 +13328,49 @@ This identifies a generation frontier near the fog boundary, but does not
 establish a black framebuffer hole. Sparse probes still do not cover the full
 frame or operator-visible image.
 
-Current remaining work after M624A:
+### M624B — first-paint ordering at a cold saved-view frontier
+
+The M624B clean Release replay used a newly created radius-4 save and the
+established short M335 route. The saved start column `(7,0,3)` was absent from
+disk. The load trace reported all `121/121` startup spatial columns present,
+but the saved camera's `(7,3)` frontier was not requested until after
+`phase=first_paint`: the first in-game frame was therefore allowed to render
+before the camera column's disk-miss generation completed. That worker took
+about 274 ms and the commit followed about 446 ms after the request. This is a
+distinct entry-ordering defect from M624A's player relocation bug.
+
+`GetEnterWarmupFocusBlock()` now prefers the current/saved user's position and
+falls back to the spawn only when no user exists. This makes the enter visual
+warmup target the restored camera instead of the original spawn. The Release
+build passed, but the change is not accepted until M624C verifies that the
+start-column request/commit precedes `phase=first_paint` on a fresh clean save.
+
+M624B's app-side pixel analysis sampled 4,320 pixels across 48 captures. It
+found 122 unloaded-voxel rays within fog end; all four RGB-max<=16 witnesses
+were inspected against ray details and entry timing. Most dark state-2 samples
+were at the camera with zero unloaded distance and a valid opaque surface behind
+them; another was near fog range with an opaque hit behind. Since the column
+was generated only after first paint and probes are sparse, these samples do
+not establish a stable visible hole. Keep entry-ordering, framebuffer color,
+and readiness/backlog verdicts separate.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624b_clean_cold_start_20261017.json`,
+`bin/suite_reports/engine_refactor/m624b_framebuffer_pixel_analysis_20261017.json`,
+`bin/logs/perf_20261017-144011_45236.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-144007.45236`,
+and `bin/worlds/World_M624B_ColdStart_20261017`.
+
+Current remaining work after M624B:
 
 1. Exercise the boundary-dependency relight owner through a multi-column chain
    with FIFO denial/deferred retention and column eviction. The existing
    deterministic torch fixture settles one source-neighbor-return sequence;
    M623G's warm route ended with no pending/unowned boundary markers, but neither
    proves convergence under broader queue pressure.
-2. Repeat the cold-frontier M335 check on a clean committed Release build and a
-   fresh seed, keeping the established route parameters. Preserve source
-   attribution and app-side pixel analysis; do not accept readiness proxies as
-   framebuffer proof.
+2. Verify the M624B entry-focus change on a clean committed Release build and a
+   fresh seed. Require the saved camera column's request and commit to precede
+   `phase=first_paint`; preserve source attribution and app-side pixel analysis.
+   Do not accept readiness proxies as framebuffer proof.
 3. Validate a short target lane at a distant, already-problematic coordinate
    after the clean start check. This must exercise unload/reload or disk-miss
    provenance and end with a distinct near-view/framebuffer verdict. Do not use
