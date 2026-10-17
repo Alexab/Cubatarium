@@ -3,6 +3,7 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,9 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
                                 int surfaceY, BiomeId biome);
 bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
                                int surfaceY, BiomeId biome);
+bool TryPlaceCaveFeatures(
+    WorldGenContext &ctx, int x, int z, int surfaceY,
+    const std::function<BiomeId(int, int, int, int)> &biome_at_3d);
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                       BiomeId biome);

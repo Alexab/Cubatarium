@@ -71,6 +71,10 @@ ComposableWorldGenConfig ApplyPackPipelineMask(ComposableWorldGenConfig config)
       StageEnabled(pipeline, config.LavaPools, pipeline.LavaPools);
   config.FirePatch =
       StageEnabled(pipeline, config.FirePatch, pipeline.FirePatch);
+  config.Geology = StageEnabled(pipeline, config.Geology, pipeline.Geology);
+  config.Aquifers = StageEnabled(pipeline, config.Aquifers, pipeline.Aquifers);
+  config.CaveFeatures = StageEnabled(pipeline, config.CaveFeatures,
+                                     pipeline.CaveFeatures);
   return config;
 }
 
@@ -142,6 +146,21 @@ WorldGenStageMask BuildWorldGenStageMask(
                    pack_pipeline.FirePatch);
   mask.Set(WorldGenStageId::FirePatch, fire_patch);
 
+  const bool geology =
+      StageEnabled(pack_pipeline, generator_config.Geology,
+                   pack_pipeline.Geology);
+  mask.Set(WorldGenStageId::Geology, geology);
+
+  const bool aquifers =
+      StageEnabled(pack_pipeline, generator_config.Aquifers,
+                   pack_pipeline.Aquifers) && settings.EnableCaves;
+  mask.Set(WorldGenStageId::Aquifers, aquifers);
+
+  const bool cave_features =
+      StageEnabled(pack_pipeline, generator_config.CaveFeatures,
+                   pack_pipeline.CaveFeatures) && settings.EnableCaves;
+  mask.Set(WorldGenStageId::CaveFeatures, cave_features);
+
   return mask;
 }
 
@@ -196,14 +215,28 @@ std::optional<WorldGenStageId> WorldGenStageIdFromPipelineString(
   {
     return WorldGenStageId::FirePatch;
   }
+  if (stage == "geology")
+  {
+    return WorldGenStageId::Geology;
+  }
+  if (stage == "aquifers")
+  {
+    return WorldGenStageId::Aquifers;
+  }
+  if (stage == "cave_features")
+  {
+    return WorldGenStageId::CaveFeatures;
+  }
   std::cerr << "WorldGen: unknown pipeline stage '" << stage << "'" << std::endl;
   return std::nullopt;
 }
 
 std::vector<WorldGenStageId> DefaultPostTerrainStageOrder()
 {
-  return {WorldGenStageId::Ravines,     WorldGenStageId::Valleys,
-          WorldGenStageId::Caves,       WorldGenStageId::Fluids,
+  return {WorldGenStageId::Geology,     WorldGenStageId::Ravines,
+          WorldGenStageId::Valleys,     WorldGenStageId::Caves,
+          WorldGenStageId::Aquifers,    WorldGenStageId::CaveFeatures,
+          WorldGenStageId::Fluids,
           WorldGenStageId::Ores,        WorldGenStageId::Vegetation,
           WorldGenStageId::GroundCover, WorldGenStageId::Decoration,
           WorldGenStageId::Structures,  WorldGenStageId::LavaPools,

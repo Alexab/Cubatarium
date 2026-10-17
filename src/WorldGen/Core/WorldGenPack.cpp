@@ -233,6 +233,21 @@ bool ParsePipelineStage(const std::string &stage, WorldGenPackPipeline &pipeline
     pipeline.FirePatch = true;
     return true;
   }
+  if (stage == "geology")
+  {
+    pipeline.Geology = true;
+    return true;
+  }
+  if (stage == "aquifers")
+  {
+    pipeline.Aquifers = true;
+    return true;
+  }
+  if (stage == "cave_features")
+  {
+    pipeline.CaveFeatures = true;
+    return true;
+  }
   return false;
 }
 
@@ -449,13 +464,14 @@ void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
       }
       PackOreRule rule;
       rule.Slot = entry["slot"].get<std::string>();
-      rule.YPeak = entry.value("y_peak", rule.YPeak);
-      rule.YSpread = entry.value("y_spread", rule.YSpread);
-      rule.VeinSize = entry.value("vein_size", rule.VeinSize);
-      rule.Rarity = entry.value("rarity", rule.Rarity);
-      rule.MaxSurfaceOffset = entry.value("max_surface_offset", rule.MaxSurfaceOffset);
+      rule.YPeak = std::max(1, entry.value("y_peak", rule.YPeak));
+      rule.YSpread = std::max(1, entry.value("y_spread", rule.YSpread));
+      rule.VeinSize = std::clamp(entry.value("vein_size", rule.VeinSize), 1, 32);
+      rule.Rarity = std::clamp(entry.value("rarity", rule.Rarity), 0.0f, 1.0f);
+      rule.MaxSurfaceOffset =
+          std::max(0, entry.value("max_surface_offset", rule.MaxSurfaceOffset));
       rule.BelowSeaLevel = entry.value("below_sea_level", rule.BelowSeaLevel);
-      rule.SeedModulo = entry.value("seed_modulo", rule.SeedModulo);
+      rule.SeedModulo = std::max(0, entry.value("seed_modulo", rule.SeedModulo));
       pack.Ores.Rules.push_back(rule);
     }
     pack.Ores.Loaded = !pack.Ores.Rules.empty();

@@ -17,6 +17,7 @@
 #include <climits>
 #include <cmath>
 #include <cstdint>
+#include <array>
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
@@ -447,7 +448,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
 bool HasObjectFeatureRules(const ObjectFeatureConfig &cfg)
 {
   return !cfg.Vegetation.empty() || !cfg.GroundCover.empty() ||
-         !cfg.Decoration.empty() || !cfg.Structures.empty();
+         !cfg.Decoration.empty() || !cfg.Structures.empty() ||
+         !cfg.CaveFeatures.empty();
 }
 
 const ObjectFeatureConfig &GetObjectFeatures(const WorldGenContext &ctx)
@@ -646,6 +648,150 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
   return TryPlaceObjectPool(ctx, x, z, surfaceY, biome, cfg.Structures,
                             ObjectFeaturePool::Structures, 7001, true, false,
                             ctx.Settings.Tuning.structureDensity);
+}
+
+bool TryPlaceCaveFeatures(
+    WorldGenContext &ctx, int x, int z, int surfaceY,
+    const std::function<BiomeId(int, int, int, int)> &biome_at_3d)
+{
+  if (!ctx.Settings.EnableCaves || !biome_at_3d || surfaceY < 12)
+  {
+    return false;
+  }
+  const ObjectFeatureConfig &config = GetObjectFeatures(ctx);
+  if (config.CaveFeatures.empty())
+  {
+    return false;
+  }
+  const std::array<BlockId, 7> cave_rock = {
+      ctx.Blocks.Stone,
+      ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "granite"),
+      ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "diorite"),
+      ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "andesite"),
+      ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "deepslate"),
+      ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "tuff"),
+      ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "rooted_dirt")};
+  const auto is_cave_rock = [&cave_rock](BlockId id)
+  { return std::find(cave_rock.begin(), cave_rock.end(), id) != cave_rock.end(); };
+  const glm::ivec3 current_chunk = UChunkManager::WorldToChunk(glm::ivec3(x, 0, z));
+
+  for (int floor_y = 5; floor_y < surfaceY - 4; ++floor_y)
+  {
+    const glm::ivec3 floor_pos(x, floor_y, z);
+    if (!is_cave_rock(ctx.World.GetBlock(floor_pos)))
+    {
+      continue;
+    }
+    const glm::ivec3 first_air(x, floor_y + 1, z);
+    if (!ctx.World.IsAir(first_air) ||
+        ctx.Registry.IsLiquid(ctx.World.GetBlock(first_air)))
+    {
+      continue;
+    }
+
+    const BiomeId cave_biome = biome_at_3d(x, floor_y + 1, z, surfaceY);
+    if (cave_biome != BiomeId::LushCaves &&
+        cave_biome != BiomeId::DripstoneCaves &&
+        cave_biome != BiomeId::DeepDark)
+    {
+      continue;
+    }
+    for (const CaveFeatureRule &rule : config.CaveFeatures)
+    {
+      if (rule.Biome != cave_biome)
+      {
+        continue;
+      }
+      uint32_t hash = ColumnHash(x, z, ctx.Settings.Seed + rule.SeedOffset);
+      hash ^= static_cast<uint32_t>(floor_y) * 0x9e3779b9U;
+      hash ^= hash >> 16U;
+      if (hash % static_cast<uint32_t>(std::max(1, rule.Chance)) != 0U)
+      {
+        continue;
+      }
+
+      const BlockId feature_block = ResolvePackScatterBlockId(
+          ctx.Registry, ctx.WorldgenOwnerPackId, rule.BlockName);
+      if (feature_block == BLOCK_AIR)
+      {
+        continue;
+      }
+      int min_dirty_y = floor_y;
+      int max_dirty_y = floor_y + 1;
+      bool placed = false;
+
+      if (rule.Kind == CaveFeatureKind::MossPatch)
+      {
+        const int radius = std::max(0, rule.Radius);
+        for (int dz = -radius; dz <= radius; ++dz)
+        {
+          for (int dx = -radius; dx <= radius; ++dx)
+          {
+            if (dx * dx + dz * dz > radius * radius)
+            {
+              continue;
+            }
+            const glm::ivec3 target_floor(x + dx, floor_y, z + dz);
+            if (UChunkManager::WorldToChunk(target_floor) != current_chunk ||
+                !is_cave_rock(ctx.World.GetBlock(target_floor)) ||
+                !ctx.World.IsAir(target_floor + glm::ivec3(0, 1, 0)))
+            {
+              continue;
+            }
+            ctx.World.SetBlock(target_floor, feature_block);
+            placed = true;
+          }
+        }
+      }
+      else if (rule.Kind == CaveFeatureKind::Stalagmite)
+      {
+        const int requested_height =
+            1 + static_cast<int>((hash >> 8U) % static_cast<uint32_t>(rule.MaxHeight));
+        int height = 0;
+        for (int dy = 1; dy <= requested_height; ++dy)
+        {
+          if (!ctx.World.IsAir(glm::ivec3(x, floor_y + dy, z)))
+          {
+            break;
+          }
+          height = dy;
+        }
+        if (height > 0)
+        {
+          for (int dy = 1; dy <= height; ++dy)
+          {
+            ctx.World.SetBlock(glm::ivec3(x, floor_y + dy, z), feature_block);
+          }
+          max_dirty_y = floor_y + height;
+          placed = true;
+        }
+      }
+      else if (rule.Kind == CaveFeatureKind::AmethystCluster)
+      {
+        const glm::ivec3 center(x, floor_y + 1, z);
+        if (ctx.World.IsAir(center) &&
+            ctx.World.IsAir(center + glm::ivec3(0, 1, 0)))
+        {
+          ctx.World.SetBlock(center, feature_block);
+          if (rule.Radius > 0 && (hash & 1U) != 0U &&
+              ctx.World.IsAir(center + glm::ivec3(1, 0, 0)) &&
+              UChunkManager::WorldToChunk(center + glm::ivec3(1, 0, 0)) ==
+                  current_chunk)
+          {
+            ctx.World.SetBlock(center + glm::ivec3(1, 0, 0), feature_block);
+          }
+          placed = true;
+        }
+      }
+
+      if (placed)
+      {
+        ctx.AccumulateDirtyColumn(min_dirty_y, max_dirty_y);
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,

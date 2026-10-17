@@ -17,8 +17,11 @@ enum class WorldGenStageId
   Structures,
   LavaPools,
   FirePatch,
+  Geology,
+  Aquifers,
+  CaveFeatures,
 };
 
-constexpr int WorldGenStageIdCount = 12;
+constexpr int WorldGenStageIdCount = 15;
 
 } // namespace cutum

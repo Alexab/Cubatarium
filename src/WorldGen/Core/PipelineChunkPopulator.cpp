@@ -135,9 +135,12 @@ double ElapsedMs(std::chrono::steady_clock::time_point start)
 struct CaptureBufferScope
 {
   UBlockWorld &World;
-  explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer)
+  explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer,
+                              glm::ivec3 ownerChunk,
+                              const UBlockRegistry &registry)
       : World(world)
   {
+    buffer.SetWorldGenOwnerChunk(ownerChunk, registry);
     World.SetCaptureBuffer(&buffer);
   }
   ~CaptureBufferScope() { World.SetCaptureBuffer(nullptr); }
@@ -213,7 +216,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   // D1: write gen scratch + transfer buffer together (no final world→buffer scan).
   result.buffer.Clear();
-  CaptureBufferScope capture_scope(genWorld, result.buffer);
+  CaptureBufferScope capture_scope(genWorld, result.buffer, request.chunkCoord,
+                                   Registry);
 
   const int base_x = request.chunkCoord.x * CHUNK_SIZE;
   const int base_z = request.chunkCoord.z * CHUNK_SIZE;
@@ -377,25 +381,32 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
           WorldGenStageSkipBit(WorldGenStageId::Ravines);
 
       const auto post_start = std::chrono::steady_clock::now();
-      for (size_t i = 0; i < column_count; ++i)
+      // Tree/object placement can reject a feature when an earlier feature
+      // already occupies its footprint. Use a canonical order here so the
+      // result does not depend on the player-centered order used to prime the
+      // terrain cache above.
+      size_t post_index = 0;
+      for (int lz = 0; lz < CHUNK_SIZE && !cancelled; ++lz)
       {
-        if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
+        for (int lx = 0; lx < CHUNK_SIZE; ++lx, ++post_index)
         {
-          cancelled = true;
-          break;
+          if (request.shouldCancel && (post_index % 4) == 0 &&
+              request.shouldCancel())
+          {
+            cancelled = true;
+            break;
+          }
+          if (!sample_valid[lz][lx])
+          {
+            continue;
+          }
+          const int world_x = base_x + lx;
+          const int world_z = base_z + lz;
+          UBlockWorldColumnWriter writer(genWorld, Registry);
+          UColumnGenerationService::GenerateColumnPostTerrain(
+              *composable, writer, world_x, world_z, skip_chunk_stages,
+              samples[lz][lx]);
         }
-        const int lx = columns[i].first;
-        const int lz = columns[i].second;
-        const int world_x = base_x + lx;
-        const int world_z = base_z + lz;
-        if (!sample_valid[lz][lx])
-        {
-          continue;
-        }
-        UBlockWorldColumnWriter writer(genWorld, Registry);
-        UColumnGenerationService::GenerateColumnPostTerrain(
-            *composable, writer, world_x, world_z, skip_chunk_stages,
-            samples[lz][lx]);
       }
       timing.postMs = ElapsedMs(post_start);
     }

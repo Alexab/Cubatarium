@@ -38,6 +38,9 @@ struct ComposableWorldGenConfig
   bool Structures{false};
   bool LavaPools{false};
   bool FirePatch{false};
+  bool Geology{false};
+  bool Aquifers{false};
+  bool CaveFeatures{false};
 };
 
 class UComposableWorldGenerator : public IUWorldGenPipeline
@@ -49,6 +52,8 @@ public:
   int SurfaceYAt(int worldX, int worldZ) const override;
 
   ColumnSampleContext BuildColumnSample(int world_x, int world_z) const;
+  BiomeId BiomeAt3D(int world_x, int world_y, int world_z,
+                    int surface_y) const;
   ColumnLayerRule BuildTerrainRuleFromSample(
       int world_x, int world_z, const ColumnSampleContext &sample) const;
 

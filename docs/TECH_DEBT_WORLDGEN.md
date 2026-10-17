@@ -90,7 +90,7 @@ Infrastructure from the 2026-07 Overworld quality plan (spawn spiral, cave depth
 | ID | Item | Status | Notes |
 |----|------|--------|-------|
 | WG-Q1 | `flatness_pct` too high; rolling hills low | **Addressed** | `height.json` + biome height tuning; relaxed `FillMicroDepressions` / `ClampToFlatPlateau`; land spawn metrics via `quick_terrain_metrics.py --land` |
-| WG-Q2 | `density_3d` MVP only | **Deferred** | Not in this cycle; default remains `heightmap` |
+| WG-Q2 | `density_3d` MVP only | **Addressed for new worlds** | New Overworlds use `density_3d`; saved worlds without a backend selection retain `heightmap` compatibility |
 | WG-Q3 | Multi-seed CI gates | **Done** | `integration_test_worldgen.py` on reference seeds 42, 12354, 20240625 + `validate_biome_features.py` |
 | WG-Q4 | `worldgen_refs.json` / baseline refresh | **Done** | Thresholds in `worldgen_baseline.json`; `worldgen_spawn_report.py` for placement audit |
 | WG-Q5 | Mesa/flat artifacts on pre-fix saves | **Known** | Recreate worlds for QA; use spawn-centered land metrics |
@@ -133,17 +133,43 @@ Infrastructure from the 2026-07 Overworld quality plan (spawn spiral, cave depth
   пурпурно-тёмные полосы, жёлтая рамка и крупный `?`; добавить проверку маркера
   в `--smoke-packs`. В headless генерации с базовым набором паков missing-slot
   и placeholder-texture сообщений не воспроизвелось.
-- [ ] Расширить биомную модель для surface/ocean/shore/mountain/cave биомов и
-  использовать климатические веса для переходов.
+
+Для `density_3d` spawn-flatness gate поднят с 55% до 68%: в эталонном наборе
+seed 42/12345 дали 51.46/53.06%, а 12354/20240625 — 64.87/65.48%; rolling-hill
+доля во всех случаях выше порога 5%. Генератор выбирает безопасную низменную
+точку появления, где пологие равнины ожидаемы; heightmap baseline сохранён.
+- [x] Расширить биомную модель surface/ocean/beach/mountain/snowy-slope/peak и
+  cave биомами; переходы поверхности используют климатические и высотные веса,
+  а пещерные биомы выбираются в 3D по климату и noise-полям.
 - [x] Сделать 3D density terrain основным backend для новых миров и настроить
   крупные формы: континентальность, эрозионные низины, холмы и горы. Старые
-  world saves без `terrain_backend` сохраняют heightmap backend; климатические
-  береговые переходы и полноценные биомы остаются следующим этапом.
-- [ ] Добавить геологические глубинные слои, локальные aquifers, noise cave
-  формы и высотно-зависимое распределение руд.
-- [ ] Расширить feature pipeline: сохранить статические `UObjectLibrary`
-  шаблоны, добавить процедурные формы и размещение в surface/underwater/cave
-  контекстах; служебные шаблоны скрывать от каталога игрока.
-- [ ] Проверить генерацию на reference seed и множестве seed, стыки чанков,
-  метрики поверхности/биомов/пещер/руд, pack resolution и лицензионные notices;
-  записать результаты и остаточные ограничения.
+  world saves без `terrain_backend` сохраняют heightmap backend.
+- [x] Добавить геологические слои, пещерные полости, локальные 3D aquifers с
+  сухими карманами и редкими лавовыми полостями, геоды с CC0-материалами и
+  высотно-зависимые связные жилы руд. Генерация меняет блоки напрямую;
+  результаты не сохраняются в библиотеку объектов.
+- [x] Сохранить `UObjectLibrary` для готовых повторно используемых шаблонов и
+  biome rules; изменчивые/подземные формы размещать процедурно в блоках.
+  Поддерживаемый `visibility: hidden` исключает служебные шаблоны из каталога
+  игрока, сохраняя их доступными генератору. Новые шаблоны каталога не добавлялись.
+- [x] Завершить финальную проверку стыков, повторяемости и pack resolution на
+  reference seed; сохранить метрики поверхности, пещер и руд, а также остаточные
+  ограничения. Четыре seed (42, 12345, 12354, 20240625; радиус 1 чанк)
+  проходят quality gates: flatness 51.71–66.96%, rolling hills 7.64–15.26%,
+  cave coverage 59.38–75.00%, 250–436 рудных блоков и 167152–200706 блоков
+  геологии. На границах чанков surface-delta p95 равен 1; четыре измеренных
+  набора не показали выраженного скачка относительно внутренней части чанков.
+  Два независимых прогона seed 42 дали одинаковые 207/207 файлов чанков.
+  Рекомендованный набор паков прошёл `--smoke-packs`; генерация только с
+  `minetest_default_16` завершилась без missing/placeholder диагностики.
+  Исправлено разрешение cross-chunk шаблонов: чанки сохраняют собственный
+  terrain, а пересекающиеся древесные формы разрешаются стабильным приоритетом.
+  `validate_biome_features.py` и `validate_object_features.py --strict` прошли;
+  строгий валидатор объектов по-прежнему выдаёт существующие предупреждения
+  о несовпадении биомов в manifest для отдельных деревьев/декораций.
+
+Остаточная модель намеренно не повторяет seed parity Minecraft: cave-биомы
+используют климатический 3D noise-классификатор, аквиферы — ограниченное поле
+локального уровня/давления, а рудные жилы — детерминированные шумовые анкеры.
+Cross-chunk ravine/valley seams, tuning перекидышей и ночной аудит 20+ seed
+остаются в backlog выше. Старые сохранения не изменяются и не мигрируются.

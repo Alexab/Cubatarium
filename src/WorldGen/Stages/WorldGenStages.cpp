@@ -6,6 +6,8 @@
 #include "World/Objects/ObjectUtil.h"
 #include "World/Physics/FluidSpreadSystem.h"
 #include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/ColumnHash.h"
+#include "WorldGen/Core/WorldGenBlockResolver.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -13,6 +15,125 @@
 
 namespace cutum
 {
+
+namespace
+{
+
+BlockId ResolveGeologyBlock(WorldGenContext &ctx, const char *name)
+{
+  const BlockId resolved = ResolvePackScatterBlockId(
+      ctx.Registry, ctx.WorldgenOwnerPackId, name);
+  return resolved != BLOCK_AIR ? resolved : ctx.Blocks.Stone;
+}
+
+bool IsGeodeHost(BlockId id, BlockId stone, BlockId granite, BlockId diorite,
+                 BlockId andesite, BlockId deepslate, BlockId tuff)
+{
+  return id == stone || id == granite || id == diorite || id == andesite ||
+         id == deepslate || id == tuff;
+}
+
+bool TryGenerateGeode(WorldGenContext &ctx, int x, int z, uint32_t seed,
+                      BlockId granite, BlockId diorite, BlockId andesite,
+                      BlockId deepslate, BlockId tuff, BlockId smoothBasalt,
+                      BlockId calcite, BlockId amethyst)
+{
+  constexpr int kCellSize = 32;
+  const int cell_x = x >= 0 ? x / kCellSize : (x - kCellSize + 1) / kCellSize;
+  const int cell_z = z >= 0 ? z / kCellSize : (z - kCellSize + 1) / kCellSize;
+  const int anchor_x = cell_x * kCellSize + 8;
+  const int anchor_z = cell_z * kCellSize + 8;
+  if (x != anchor_x || z != anchor_z || smoothBasalt == ctx.Blocks.Stone ||
+      calcite == ctx.Blocks.Stone || amethyst == ctx.Blocks.Stone)
+  {
+    return false;
+  }
+
+  const uint32_t hash = ColumnHash(x, z, seed + 8301);
+  uint32_t candidate_hash = hash ^ (hash >> 16U);
+  candidate_hash *= 0x7feb352dU;
+  candidate_hash ^= candidate_hash >> 15U;
+  if (candidate_hash % 4U != 0U)
+  {
+    return false;
+  }
+  const int radius = 4 + static_cast<int>((hash >> 8U) % 3U);
+  const int highest_center = ctx.Settings.SeaLevel - radius - 2;
+  const int lowest_center = radius + 2;
+  if (highest_center < lowest_center)
+  {
+    return false;
+  }
+  const int center_y = lowest_center +
+                       static_cast<int>((hash >> 16U) % static_cast<uint32_t>(
+                           highest_center - lowest_center + 1));
+
+  for (int dy = -radius; dy <= radius; ++dy)
+  {
+    for (int dx = -radius; dx <= radius; ++dx)
+    {
+      for (int dz = -radius; dz <= radius; ++dz)
+      {
+        const int distance_squared = dx * dx + dy * dy + dz * dz;
+        if (distance_squared > radius * radius)
+        {
+          continue;
+        }
+        const BlockId host = ctx.World.GetBlock(
+            glm::ivec3(anchor_x + dx, center_y + dy, anchor_z + dz));
+        if (!IsGeodeHost(host, ctx.Blocks.Stone, granite, diorite, andesite,
+                         deepslate, tuff))
+        {
+          return false;
+        }
+      }
+    }
+  }
+
+  for (int dy = -radius; dy <= radius; ++dy)
+  {
+    for (int dx = -radius; dx <= radius; ++dx)
+    {
+      for (int dz = -radius; dz <= radius; ++dz)
+      {
+        const float distance = std::sqrt(static_cast<float>(dx * dx + dy * dy + dz * dz));
+        if (distance > static_cast<float>(radius))
+        {
+          continue;
+        }
+        BlockId shell = BLOCK_AIR;
+        if (distance >= static_cast<float>(radius) - 0.85f)
+        {
+          shell = smoothBasalt;
+        }
+        else if (distance >= static_cast<float>(radius) - 1.8f)
+        {
+          shell = calcite;
+        }
+        else if (distance >= static_cast<float>(radius) - 2.7f)
+        {
+          shell = amethyst;
+        }
+        else
+        {
+          const uint32_t interior_hash =
+              ColumnHash(anchor_x + dx + (center_y + dy) * 31,
+                         anchor_z + dz, seed + 8302);
+          if (interior_hash % 11U == 0U)
+          {
+            shell = amethyst;
+          }
+        }
+        ctx.World.SetBlock(
+            glm::ivec3(anchor_x + dx, center_y + dy, anchor_z + dz), shell);
+      }
+    }
+  }
+  ctx.AccumulateDirtyColumn(center_y - radius, center_y + radius);
+  return true;
+}
+
+} // namespace
 
 int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
                                  const ProceduralSettings &settings,
@@ -60,6 +181,142 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
   const int maxY = std::max(surfaceY, ctx.Settings.SeaLevel);
   ctx.AccumulateDirtyColumn(0, maxY);
+}
+
+bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
+                        uint32_t seed)
+{
+  if (ctx.Blocks.Stone == BLOCK_AIR || surfaceY < 1)
+  {
+    return false;
+  }
+
+  const BlockId granite = ResolveGeologyBlock(ctx, "granite");
+  const BlockId diorite = ResolveGeologyBlock(ctx, "diorite");
+  const BlockId andesite = ResolveGeologyBlock(ctx, "andesite");
+  const BlockId deepslate = ResolveGeologyBlock(ctx, "deepslate");
+  const BlockId tuff = ResolveGeologyBlock(ctx, "tuff");
+  const BlockId smooth_basalt = ResolveGeologyBlock(ctx, "smooth_basalt");
+  const BlockId calcite = ResolveGeologyBlock(ctx, "calcite");
+  const BlockId amethyst = ResolveGeologyBlock(ctx, "amethyst_block");
+  const float regional = FBM2D(static_cast<float>(x) * 0.009f,
+                               static_cast<float>(z) * 0.009f, seed + 8101,
+                               3, 0.5f, 2.0f);
+  const int deep_transition = std::max(4, ctx.Settings.SeaLevel / 4);
+  bool changed = false;
+  int min_dirty = surfaceY;
+  int max_dirty = 0;
+
+  for (int y = 1; y <= surfaceY; ++y)
+  {
+    const glm::ivec3 pos(x, y, z);
+    if (ctx.World.GetBlock(pos) != ctx.Blocks.Stone)
+    {
+      continue;
+    }
+
+    BlockId replacement = ctx.Blocks.Stone;
+    if (y <= deep_transition)
+    {
+      replacement = deepslate;
+    }
+    else
+    {
+      const float patch = FBM3D(static_cast<float>(x) * 0.032f,
+                                static_cast<float>(y) * 0.037f,
+                                static_cast<float>(z) * 0.032f, seed + 8102,
+                                2, 0.5f, 2.0f);
+      if (patch > 0.52f)
+      {
+        replacement = regional > 0.12f ? granite : diorite;
+      }
+      else if (patch < -0.60f)
+      {
+        replacement = andesite;
+      }
+      else if (patch < -0.47f && regional < -0.20f)
+      {
+        replacement = tuff;
+      }
+    }
+
+    if (replacement == ctx.Blocks.Stone)
+    {
+      continue;
+    }
+    ctx.World.SetBlock(pos, replacement);
+    min_dirty = std::min(min_dirty, y);
+    max_dirty = std::max(max_dirty, y);
+    changed = true;
+  }
+  if (changed)
+  {
+    ctx.AccumulateDirtyColumn(min_dirty, max_dirty);
+  }
+  const bool geode = TryGenerateGeode(ctx, x, z, seed, granite, diorite,
+                                      andesite, deepslate, tuff, smooth_basalt,
+                                      calcite, amethyst);
+  return changed || geode;
+}
+
+bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
+                       uint32_t seed)
+{
+  if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR || surfaceY < 4)
+  {
+    return false;
+  }
+
+  const float table_noise = FBM2D(static_cast<float>(x) * 0.021f,
+                                  static_cast<float>(z) * 0.021f, seed + 8201,
+                                  2, 0.5f, 2.0f);
+  const int local_water_table = std::clamp(
+      ctx.Settings.SeaLevel - 12 + static_cast<int>(std::lround(table_noise * 9.0f)),
+      3, std::max(3, ctx.Settings.SeaLevel - 2));
+  const int scan_top = std::min(surfaceY - 1, local_water_table + 5);
+  const bool can_fill_lava = ctx.Settings.FillLava && ctx.Blocks.Lava != BLOCK_AIR;
+  bool changed = false;
+  for (int y = 1; y <= scan_top; ++y)
+  {
+    const glm::ivec3 pos(x, y, z);
+    if (ctx.World.GetBlock(pos) != BLOCK_AIR)
+    {
+      continue;
+    }
+
+    const float pressure_noise =
+        FBM3D(static_cast<float>(x) * 0.037f, static_cast<float>(y) * 0.052f,
+              static_cast<float>(z) * 0.037f, seed + 8202, 2, 0.5f, 2.0f);
+    const int local_level = local_water_table +
+                            static_cast<int>(std::lround(pressure_noise * 5.0f));
+    if (y > local_level)
+    {
+      continue;
+    }
+
+    BlockId fluid_block = ctx.Blocks.Water;
+    FluidKind fluid_kind = FluidKind::Water;
+    if (can_fill_lava && y <= 10)
+    {
+      const float lava_noise =
+          FBM3D(static_cast<float>(x) * 0.061f,
+                static_cast<float>(y) * 0.073f,
+                static_cast<float>(z) * 0.061f, seed + 8203, 2, 0.5f, 2.0f);
+      if (lava_noise > 0.28f)
+      {
+        fluid_block = ctx.Blocks.Lava;
+        fluid_kind = FluidKind::Lava;
+      }
+    }
+    ctx.World.SetBlock(pos, fluid_block);
+    ctx.World.SetFluidState(pos, FluidCellState::Source().WithKind(fluid_kind));
+    changed = true;
+  }
+  if (changed)
+  {
+    ctx.AccumulateDirtyColumn(1, local_water_table);
+  }
+  return changed;
 }
 
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)

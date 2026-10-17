@@ -33,6 +33,24 @@ enum class SurfaceConstraintKind
   WaterSurface,
 };
 
+enum class CaveFeatureKind
+{
+  MossPatch,
+  Stalagmite,
+  AmethystCluster,
+};
+
+struct CaveFeatureRule
+{
+  BiomeId Biome{BiomeId::LushCaves};
+  CaveFeatureKind Kind{CaveFeatureKind::MossPatch};
+  std::string BlockName;
+  int Chance{96};
+  int Radius{1};
+  int MaxHeight{3};
+  uint32_t SeedOffset{0};
+};
+
 struct SurfaceConstraint
 {
   SurfaceConstraintKind Kind{SurfaceConstraintKind::AnyLand};
@@ -69,6 +87,7 @@ struct ObjectFeatureConfig
   std::vector<ObjectFeatureRule> GroundCover;
   std::vector<ObjectFeatureRule> Decoration;
   std::vector<ObjectFeatureRule> Structures;
+  std::vector<CaveFeatureRule> CaveFeatures;
   int structureCellSize{64};
   int structureChancePerCell{12};
   int structureMinSpacing{128};

@@ -41,6 +41,38 @@ BiomeId ParseBiomeId(const std::string &name)
   {
     return BiomeId::ColdSteppe;
   }
+  if (name == "ocean")
+  {
+    return BiomeId::Ocean;
+  }
+  if (name == "beach")
+  {
+    return BiomeId::Beach;
+  }
+  if (name == "mountains")
+  {
+    return BiomeId::Mountains;
+  }
+  if (name == "snowy_slopes")
+  {
+    return BiomeId::SnowySlopes;
+  }
+  if (name == "jagged_peaks")
+  {
+    return BiomeId::JaggedPeaks;
+  }
+  if (name == "lush_caves")
+  {
+    return BiomeId::LushCaves;
+  }
+  if (name == "dripstone_caves")
+  {
+    return BiomeId::DripstoneCaves;
+  }
+  if (name == "deep_dark")
+  {
+    return BiomeId::DeepDark;
+  }
   return BiomeId::Plains;
 }
 
@@ -64,6 +96,22 @@ const char *BiomeIdToStringImpl(BiomeId biome)
     return "scrubland";
   case BiomeId::ColdSteppe:
     return "cold_steppe";
+  case BiomeId::Ocean:
+    return "ocean";
+  case BiomeId::Beach:
+    return "beach";
+  case BiomeId::Mountains:
+    return "mountains";
+  case BiomeId::SnowySlopes:
+    return "snowy_slopes";
+  case BiomeId::JaggedPeaks:
+    return "jagged_peaks";
+  case BiomeId::LushCaves:
+    return "lush_caves";
+  case BiomeId::DripstoneCaves:
+    return "dripstone_caves";
+  case BiomeId::DeepDark:
+    return "deep_dark";
   case BiomeId::Plains:
   default:
     return "plains";
@@ -101,6 +149,14 @@ void UBiomeRegistry::LoadFromPack(const WorldGenPack &pack)
   register_biome("foothills");
   register_biome("scrubland");
   register_biome("cold_steppe");
+  register_biome("ocean");
+  register_biome("beach");
+  register_biome("mountains");
+  register_biome("snowy_slopes");
+  register_biome("jagged_peaks");
+  register_biome("lush_caves");
+  register_biome("dripstone_caves");
+  register_biome("deep_dark");
 }
 
 BiomeId UBiomeRegistry::IdFromString(const std::string &name) const

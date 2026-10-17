@@ -149,6 +149,20 @@
       "block_names": [
         "rooted_dirt"
       ]
+    },
+    "ore_coal": {
+      "block_names": [
+        "oreCoal",
+        "ore_coal",
+        "mtg_stone_with_coal"
+      ]
+    },
+    "ore_iron": {
+      "block_names": [
+        "oreIron",
+        "ore_iron",
+        "mtg_stone_with_iron"
+      ]
     }
   }
 }

@@ -48,6 +48,15 @@ using PostTerrainStageFn = void (*)(UComposableWorldGenerator &,
                                     const ColumnSampleContext &, int, int,
                                     PostTerrainState &);
 
+void RunGeologyStage(UComposableWorldGenerator &generator,
+                     const ColumnSampleContext &sample, int world_x,
+                     int world_z, PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  ApplyGeologyColumn(ctx, world_x, world_z, sample.SurfaceY,
+                     ctx.Settings.Seed);
+}
+
 void RunRavinesStage(UComposableWorldGenerator &generator,
                      const ColumnSampleContext &sample, int world_x,
                      int world_z, PostTerrainState &)
@@ -96,6 +105,25 @@ void RunFluidsStage(UComposableWorldGenerator &generator,
                     PostTerrainState &)
 {
   FillFluidColumn(generator.GetContext(), world_x, world_z, sample.SurfaceY);
+}
+
+void RunAquifersStage(UComposableWorldGenerator &generator,
+                      const ColumnSampleContext &sample, int world_x,
+                      int world_z, PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  FillAquiferColumn(ctx, world_x, world_z, sample.SurfaceY,
+                    ctx.Settings.Seed);
+}
+
+void RunCaveFeaturesStage(UComposableWorldGenerator &generator,
+                          const ColumnSampleContext &sample, int world_x,
+                          int world_z, PostTerrainState &)
+{
+  const auto biome_at_3d = [&generator](int x, int y, int z, int surface_y)
+  { return generator.BiomeAt3D(x, y, z, surface_y); };
+  TryPlaceCaveFeatures(generator.GetContext(), world_x, world_z,
+                       sample.SurfaceY, biome_at_3d);
 }
 
 void RunOresStage(UComposableWorldGenerator &generator,
@@ -155,9 +183,12 @@ void RunBuiltinStage(UComposableWorldGenerator &generator,
 const std::unordered_map<WorldGenStageId, PostTerrainStageFn> &StageFnMap()
 {
   static const std::unordered_map<WorldGenStageId, PostTerrainStageFn> map = {
+      {WorldGenStageId::Geology, RunGeologyStage},
       {WorldGenStageId::Ravines, RunRavinesStage},
       {WorldGenStageId::Valleys, RunValleysStage},
       {WorldGenStageId::Caves, RunCavesStage},
+      {WorldGenStageId::Aquifers, RunAquifersStage},
+      {WorldGenStageId::CaveFeatures, RunCaveFeaturesStage},
       {WorldGenStageId::Fluids, RunFluidsStage},
       {WorldGenStageId::Ores, RunOresStage},
       {WorldGenStageId::Vegetation, RunVegetationStage},

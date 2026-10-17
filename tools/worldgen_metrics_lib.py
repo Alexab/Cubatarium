@@ -308,21 +308,56 @@ def load_pack_blocks(pack_dir: Path) -> dict[str, int]:
     return out
 
 
+def load_pack_block_entries(pack_dir: Path) -> list[tuple[str, int | None]]:
+    """Return block names and optional stable ids from one resource pack."""
+    blocks_dir = pack_dir / "blocks"
+    if not blocks_dir.is_dir():
+        return []
+    out: list[tuple[str, int | None]] = []
+    for path in sorted(blocks_dir.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        name = data.get("name")
+        bid = data.get("id")
+        if isinstance(name, str) and name:
+            out.append((name, bid if isinstance(bid, int) else None))
+    return out
+
+
 def build_id_to_name_from_world(world_dir: Path, repo_root: Path) -> dict[int, str]:
     meta_path = world_dir / "world_data.json"
     if not meta_path.is_file():
         return {}
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     packs_cfg = meta.get("resource_packs", {})
-    primary = packs_cfg.get("primary", [])
-    if not isinstance(primary, list):
-        primary = []
+    selected_packs: list[str] = []
+    for tier in ("primary", "secondary"):
+        pack_ids = packs_cfg.get(tier, [])
+        if isinstance(pack_ids, list):
+            selected_packs.extend(str(pack_id) for pack_id in pack_ids)
     id_to_name: dict[int, str] = {}
+    names_without_stable_ids: set[str] = set()
     packs_root = repo_root / "resource_packs"
-    for pack_id in primary:
-        pack_blocks = load_pack_blocks(packs_root / str(pack_id))
-        for name, bid in pack_blocks.items():
-            id_to_name[bid] = name
+    for pack_id in selected_packs:
+        for name, bid in load_pack_block_entries(packs_root / pack_id):
+            if bid is None:
+                names_without_stable_ids.add(name)
+            else:
+                id_to_name[bid] = name
+
+    # BlockMergeRegistry gives id-less pack blocks deterministic fallback ids
+    # after the highest explicit pack id, sorted by block name. Mirror that
+    # assignment so metrics can classify blocks contributed by secondary packs.
+    next_id = max(1, max(id_to_name, default=0) + 1)
+    for name in sorted(names_without_stable_ids):
+        if name in id_to_name.values():
+            continue
+        while next_id in id_to_name:
+            next_id += 1
+        id_to_name[next_id] = name
+        next_id += 1
     return id_to_name
 
 

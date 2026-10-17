@@ -126,14 +126,11 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
                                 Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
     sample.DominantBiome = DominantBiome(sample.Biomes);
     const int raw_y = DensitySampler->SurfaceYAt(world_x, world_z);
+    sample.SurfaceY = raw_y;
     if (Ctx.Settings.Tuning.useDensityRefineParity)
     {
       sample.SurfaceY = BiomeSampler->RefineSurfaceY(world_x, world_z, raw_y,
-                                                       Ctx.Settings);
-    }
-    else
-    {
-      sample.SurfaceY = raw_y;
+                                                     Ctx.Settings);
     }
     const CoarseHeightCallback coarse_fn = [this](int hx, int hz)
     { return DensitySampler->CoarseSurfaceYAt(hx, hz); };
@@ -159,6 +156,18 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
   sample.DominantBiome = DominantBiome(sample.Biomes);
   sample.SurfaceBiome = PickSurfaceBiome(world_x, world_z, sample.Biomes);
   return sample;
+}
+
+BiomeId UComposableWorldGenerator::BiomeAt3D(int world_x, int world_y,
+                                             int world_z,
+                                             int surface_y) const
+{
+  if (!BiomeSampler)
+  {
+    return BiomeId::Plains;
+  }
+  return BiomeSampler->At3D(world_x, world_y, world_z, surface_y,
+                             Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
 }
 
 int UComposableWorldGenerator::SampleSurfaceY(int world_x, int world_z) const

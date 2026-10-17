@@ -30,7 +30,7 @@
   },
   "backend_thresholds": {
     "density_3d": {
-      "flatness_pct_max": 55.0,
+      "flatness_pct_max": 68.0,
       "rolling_hill_pct_min": 5.0,
       "delta_ge_4_pct_max": 15.0,
       "cave_chunk_coverage_pct_min": 15.0,

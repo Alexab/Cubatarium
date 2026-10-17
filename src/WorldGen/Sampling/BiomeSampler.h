@@ -11,15 +11,23 @@ namespace cutum
 
 enum class BiomeId
 {
-  Plains,
-  Forest,
-  Desert,
-  Hills,
-  Tundra,
-  Savanna,
-  Foothills,
-  Scrubland,
-  ColdSteppe,
+  Plains = 0,
+  Forest = 1,
+  Desert = 2,
+  Hills = 3,
+  Tundra = 4,
+  Savanna = 5,
+  Foothills = 6,
+  Scrubland = 7,
+  ColdSteppe = 8,
+  Ocean = 9,
+  Beach = 10,
+  Mountains = 11,
+  SnowySlopes = 12,
+  JaggedPeaks = 13,
+  LushCaves = 14,
+  DripstoneCaves = 15,
+  DeepDark = 16,
 };
 
 enum class SubBiomeId
@@ -36,7 +44,9 @@ enum class SubBiomeId
   ScrubWet,
 };
 
-constexpr int kBiomeCount = 9;
+// Surface-biome blend array. Cave biomes are resolved by UBiomeSampler::At3D
+// and intentionally do not participate in the surface climate weight vector.
+constexpr int kBiomeCount = 14;
 
 struct BiomeSurfaceRule
 {
@@ -90,6 +100,8 @@ public:
   int CoarseYAt(int x, int z, int fallback_y) const;
 
   BiomeId At(int x, int z, int surfaceY, int SeaLevel, int MaxHeight) const;
+  BiomeId At3D(int x, int y, int z, int surfaceY, int SeaLevel,
+               int MaxHeight) const;
   BiomeWeightSet WeightsAt(int x, int z, int surfaceY, int SeaLevel,
                            int MaxHeight) const;
   int RefineSurfaceY(int x, int z, int coarseY,

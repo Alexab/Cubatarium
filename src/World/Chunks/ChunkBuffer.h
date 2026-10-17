@@ -9,6 +9,7 @@ namespace cutum
 {
 
 class UBlockWorld;
+class UBlockRegistry;
 
 class UBlockWorldWriter : public IUBlockWriter
 {
@@ -30,6 +31,10 @@ public:
   void SetLightPacked(glm::ivec3 worldPos, uint8_t packed);
   void SetChunkLightData(glm::ivec3 chunkCoord,
                          const std::array<uint8_t, CHUNK_VOLUME> &light);
+  /// Mark a worker-generated buffer so object voxels crossing a chunk edge
+  /// cannot race with the owning chunk's terrain when results are committed.
+  void SetWorldGenOwnerChunk(glm::ivec3 chunkCoord,
+                             const UBlockRegistry &registry);
   BlockId GetBlock(glm::ivec3 worldPos) const override;
   uint8_t GetFluidPacked(glm::ivec3 worldPos) const;
   uint8_t GetLightPacked(glm::ivec3 worldPos) const;
@@ -53,6 +58,9 @@ private:
   bool HasBounds{false};
   int MinY{0};
   int MaxY{-1};
+  glm::ivec3 WorldGenOwnerChunk{0};
+  bool HasWorldGenOwnerChunk{false};
+  std::array<BlockId, 4> WorldGenTreeBlockIds{};
 };
 
 } // namespace cutum

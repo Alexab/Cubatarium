@@ -6,6 +6,7 @@
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
@@ -49,6 +50,24 @@ BlockId ResolveSlotBlock(const WorldGenContext &ctx, const std::string &slot,
   if (slot == "stone")
   {
     return ctx.Blocks.Stone;
+  }
+  if (const WorldGenSlotSpec *spec = UWorldGenRefs::GetSlot(slot))
+  {
+    for (const std::string &blockName : spec->BlockNames)
+    {
+      const BlockId id = ResolvePackScatterBlockId(
+          ctx.Registry, ctx.WorldgenOwnerPackId, blockName);
+      if (id != BLOCK_AIR)
+      {
+        return id;
+      }
+    }
+  }
+  const BlockId resolved =
+      ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, slot);
+  if (resolved != BLOCK_AIR)
+  {
+    return resolved;
   }
   return fallback;
 }
@@ -101,6 +120,20 @@ int BiomeIndex(BiomeId biome)
     return 7;
   case BiomeId::ColdSteppe:
     return 8;
+  case BiomeId::Ocean:
+    return 9;
+  case BiomeId::Beach:
+    return 10;
+  case BiomeId::Mountains:
+    return 11;
+  case BiomeId::SnowySlopes:
+    return 12;
+  case BiomeId::JaggedPeaks:
+    return 13;
+  case BiomeId::LushCaves:
+  case BiomeId::DripstoneCaves:
+  case BiomeId::DeepDark:
+    return 0;
   case BiomeId::Plains:
   default:
     return 0;
@@ -127,6 +160,16 @@ BiomeId BiomeFromIndex(int index)
     return BiomeId::Scrubland;
   case 8:
     return BiomeId::ColdSteppe;
+  case 9:
+    return BiomeId::Ocean;
+  case 10:
+    return BiomeId::Beach;
+  case 11:
+    return BiomeId::Mountains;
+  case 12:
+    return BiomeId::SnowySlopes;
+  case 13:
+    return BiomeId::JaggedPeaks;
   case 0:
   default:
     return BiomeId::Plains;
@@ -145,7 +188,11 @@ float AxisFitness(float value, float minV, float maxV)
 }
 
 float BiomeClimateFitness(BiomeId biome, const ClimateSample &climate,
-                          float localHeightNorm)
+                          float localHeightNorm, float oceanFactor = 0.0f,
+                          float beachFactor = 0.0f,
+                          float mountainFactor = 0.0f,
+                          float snowySlopeFactor = 0.0f,
+                          float jaggedPeakFactor = 0.0f)
 {
   switch (biome)
   {
@@ -173,6 +220,20 @@ float BiomeClimateFitness(BiomeId biome, const ClimateSample &climate,
   case BiomeId::ColdSteppe:
     return AxisFitness(climate.temperature, 0.2f, 0.45f) *
            AxisFitness(climate.moisture, 0.2f, 0.5f);
+  case BiomeId::Ocean:
+    return oceanFactor;
+  case BiomeId::Beach:
+    return beachFactor;
+  case BiomeId::Mountains:
+    return mountainFactor;
+  case BiomeId::SnowySlopes:
+    return snowySlopeFactor;
+  case BiomeId::JaggedPeaks:
+    return jaggedPeakFactor;
+  case BiomeId::LushCaves:
+  case BiomeId::DripstoneCaves:
+  case BiomeId::DeepDark:
+    return 0.0f;
   case BiomeId::Plains:
   default:
     return AxisFitness(climate.continentalness, 0.25f, 0.8f) *
@@ -501,6 +562,38 @@ BiomeHeightProfile BiomeHeightProfileFor(BiomeId biome)
     profile.amplitudeMultiplier = 0.8f;
     profile.volatilityMultiplier = 0.45f;
     break;
+  case BiomeId::Ocean:
+    profile.baseOffsetBlocks = -16.f;
+    profile.amplitudeMultiplier = 0.9f;
+    profile.volatilityMultiplier = 0.4f;
+    break;
+  case BiomeId::Beach:
+    profile.baseOffsetBlocks = 0.f;
+    profile.amplitudeMultiplier = 0.65f;
+    profile.volatilityMultiplier = 0.2f;
+    break;
+  case BiomeId::Mountains:
+    profile.baseOffsetBlocks = 9.f;
+    profile.amplitudeMultiplier = 1.45f;
+    profile.volatilityMultiplier = 0.95f;
+    break;
+  case BiomeId::SnowySlopes:
+    profile.baseOffsetBlocks = 7.f;
+    profile.amplitudeMultiplier = 1.35f;
+    profile.volatilityMultiplier = 0.85f;
+    break;
+  case BiomeId::JaggedPeaks:
+    profile.baseOffsetBlocks = 15.f;
+    profile.amplitudeMultiplier = 1.8f;
+    profile.volatilityMultiplier = 1.2f;
+    break;
+  case BiomeId::LushCaves:
+  case BiomeId::DripstoneCaves:
+  case BiomeId::DeepDark:
+    profile.baseOffsetBlocks = 0.f;
+    profile.amplitudeMultiplier = 1.f;
+    profile.volatilityMultiplier = 0.f;
+    break;
   case BiomeId::Forest:
     profile.baseOffsetBlocks = 0.f;
     profile.amplitudeMultiplier = 1.0f;
@@ -599,6 +692,16 @@ float BiomeTuningWeight(BiomeId biome, const WorldGenTuning &tuning)
     return tuning.biomeScrublandWeight;
   case BiomeId::ColdSteppe:
     return tuning.biomeColdSteppeWeight;
+  case BiomeId::Ocean:
+  case BiomeId::Beach:
+  case BiomeId::Mountains:
+  case BiomeId::SnowySlopes:
+  case BiomeId::JaggedPeaks:
+    return 1.0f;
+  case BiomeId::LushCaves:
+  case BiomeId::DripstoneCaves:
+  case BiomeId::DeepDark:
+    return 0.0f;
   case BiomeId::Plains:
   default:
     return tuning.biomePlainsWeight;
@@ -641,6 +744,25 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
           std::max(1.f, static_cast<float>(maxHeight - seaLevel)),
       0.f, 1.f);
   const float localHeightNorm = macro_h01 * 0.7f + height_norm * 0.3f;
+  const float seaDelta = static_cast<float>(coarseY - seaLevel);
+  const float coastalBand =
+      1.0f - Smoothstep(3.0f, 12.0f, std::fabs(seaDelta));
+  const float oceanFactor =
+      (1.0f - Smoothstep(0.34f, 0.55f, climate.continentalness)) *
+      (seaDelta < 0.0f ? 1.0f : 0.0f);
+  const float beachFactor =
+      coastalBand * Smoothstep(0.36f, 0.49f, climate.continentalness) *
+      (1.0f - Smoothstep(0.58f, 0.70f, climate.continentalness));
+  const float mountainFactor =
+      Smoothstep(0.48f, 0.78f, localHeightNorm) *
+      (1.0f - Smoothstep(0.58f, 0.86f, climate.erosion)) *
+      Smoothstep(0.48f, 0.76f, climate.ridge);
+  const float snowySlopeFactor =
+      mountainFactor * (1.0f - Smoothstep(0.22f, 0.52f, climate.temperature));
+  const float jaggedPeakFactor =
+      mountainFactor * Smoothstep(0.55f, 0.84f,
+                                  PeaksAndValleys(climate.weirdness)) *
+      Smoothstep(0.67f, 0.93f, localHeightNorm);
 
   BiomeWeightSet result;
   float total = 0.0f;
@@ -653,7 +775,10 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
       result.weights[i] = 0.0f;
       continue;
     }
-    float w = BiomeClimateFitness(biome, climate, localHeightNorm) * tuningWeight;
+    float w = BiomeClimateFitness(
+                  biome, climate, localHeightNorm, oceanFactor, beachFactor,
+                  mountainFactor, snowySlopeFactor, jaggedPeakFactor) *
+              tuningWeight;
     w *= SpawnBiomeWeightMul(biome, x, z);
     if (w < 0.01f)
     {
@@ -1009,7 +1134,9 @@ BiomeId PickWeightedBiome(int x, int z, uint32_t seed, float temperature,
   constexpr std::array<BiomeId, kBiomeCount> kBiomes = {
       BiomeId::Plains,    BiomeId::Forest,   BiomeId::Desert, BiomeId::Hills,
       BiomeId::Tundra,    BiomeId::Savanna,  BiomeId::Foothills,
-      BiomeId::Scrubland, BiomeId::ColdSteppe};
+      BiomeId::Scrubland, BiomeId::ColdSteppe, BiomeId::Ocean,
+      BiomeId::Beach,     BiomeId::Mountains, BiomeId::SnowySlopes,
+      BiomeId::JaggedPeaks};
 
   float total = 0.0f;
   std::array<float, kBiomeCount> weights{};
@@ -1080,6 +1207,37 @@ BiomeId UBiomeSampler::At(int x, int z, int surfaceY, int SeaLevel,
   return DominantBiome(WeightsAt(x, z, surfaceY, SeaLevel, MaxHeight));
 }
 
+BiomeId UBiomeSampler::At3D(int x, int y, int z, int surfaceY, int SeaLevel,
+                            int MaxHeight) const
+{
+  if (y >= surfaceY - 2)
+  {
+    return At(x, z, surfaceY, SeaLevel, MaxHeight);
+  }
+
+  const int depth = surfaceY - y;
+  const ClimateSample climate = SampleClimate(x, z, Seed);
+  const float cavePatch =
+      FBM3D(static_cast<float>(x) * 0.035f,
+            static_cast<float>(y) * 0.042f,
+            static_cast<float>(z) * 0.035f, Seed + 7721, 3, 0.5f, 2.0f);
+  if (y <= 16 && depth >= 24 && cavePatch > -0.05f)
+  {
+    return BiomeId::DeepDark;
+  }
+
+  if (depth < 5)
+  {
+    return At(x, z, surfaceY, SeaLevel, MaxHeight);
+  }
+  if (climate.moisture > 0.56f && climate.temperature > 0.34f &&
+      cavePatch > -0.28f)
+  {
+    return BiomeId::LushCaves;
+  }
+  return BiomeId::DripstoneCaves;
+}
+
 BiomeWeightSet UBiomeSampler::WeightsAt(int x, int z, int surfaceY,
                                         int SeaLevel, int MaxHeight) const
 {
@@ -1135,6 +1293,26 @@ BiomeSurfaceRule UBiomeSampler::SurfaceRule(BiomeId biome,
   case BiomeId::ColdSteppe:
     rule.surface = ctx.Blocks.Dirt;
     rule.subsurface = ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : ctx.Blocks.Dirt;
+    break;
+  case BiomeId::Ocean:
+    rule.surface = ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : ctx.Blocks.Sand;
+    rule.subsurface = ctx.Blocks.Stone;
+    break;
+  case BiomeId::Beach:
+    rule.surface = ctx.Blocks.Sand;
+    rule.subsurface = ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : ctx.Blocks.Sand;
+    break;
+  case BiomeId::Mountains:
+    rule.surface = ctx.Blocks.Stone;
+    rule.subsurface = ctx.Blocks.Dirt;
+    break;
+  case BiomeId::SnowySlopes:
+    rule.surface = ctx.Blocks.Snow != BLOCK_AIR ? ctx.Blocks.Snow : ctx.Blocks.Stone;
+    rule.subsurface = ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : ctx.Blocks.Dirt;
+    break;
+  case BiomeId::JaggedPeaks:
+    rule.surface = ctx.Blocks.Stone;
+    rule.subsurface = ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : ctx.Blocks.Stone;
     break;
   case BiomeId::Forest:
   case BiomeId::Plains:

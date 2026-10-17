@@ -135,6 +135,9 @@ std::unique_ptr<IUWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   config.Structures = ctx.Settings.EnableStructures;
   config.LavaPools = ctx.Settings.FillLava;
   config.FirePatch = ctx.Settings.FillFire;
+  config.Geology = true;
+  config.Aquifers = ctx.Settings.EnableCaves;
+  config.CaveFeatures = ctx.Settings.EnableCaves;
   ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }

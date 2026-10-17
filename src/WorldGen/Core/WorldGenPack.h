@@ -145,6 +145,9 @@ struct WorldGenPackPipeline
   bool Structures{false};
   bool LavaPools{false};
   bool FirePatch{false};
+  bool Geology{false};
+  bool Aquifers{false};
+  bool CaveFeatures{false};
   std::vector<WorldGenStageId> StageOrder;
 };
 

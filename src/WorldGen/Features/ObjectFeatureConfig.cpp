@@ -112,6 +112,70 @@ bool ParseRuleArray(const nlohmann::json &arr,
   return true;
 }
 
+void ParseCaveFeatureArray(const nlohmann::json &arr,
+                           std::vector<CaveFeatureRule> &out)
+{
+  if (!arr.is_array())
+  {
+    return;
+  }
+  for (const auto &item : arr)
+  {
+    if (!item.is_object())
+    {
+      continue;
+    }
+    CaveFeatureRule rule;
+    const std::string biome = item.value("biome", "");
+    if (biome == "lush_caves")
+    {
+      rule.Biome = BiomeId::LushCaves;
+    }
+    else if (biome == "dripstone_caves")
+    {
+      rule.Biome = BiomeId::DripstoneCaves;
+    }
+    else if (biome == "deep_dark")
+    {
+      rule.Biome = BiomeId::DeepDark;
+    }
+    else
+    {
+      continue;
+    }
+
+    const std::string kind = item.value("kind", "");
+    if (kind == "moss_patch")
+    {
+      rule.Kind = CaveFeatureKind::MossPatch;
+      rule.BlockName = item.value("block", "moss_block");
+    }
+    else if (kind == "stalagmite")
+    {
+      rule.Kind = CaveFeatureKind::Stalagmite;
+      rule.BlockName = item.value("block", "tuff");
+    }
+    else if (kind == "amethyst_cluster")
+    {
+      rule.Kind = CaveFeatureKind::AmethystCluster;
+      rule.BlockName = item.value("block", "amethyst_block");
+    }
+    else
+    {
+      continue;
+    }
+
+    rule.Chance = std::max(1, item.value("chance", rule.Chance));
+    rule.Radius = std::clamp(item.value("radius", rule.Radius), 0, 4);
+    rule.MaxHeight = std::clamp(item.value("max_height", rule.MaxHeight), 1, 6);
+    rule.SeedOffset = item.value("seed_offset", 0U);
+    if (!rule.BlockName.empty())
+    {
+      out.push_back(std::move(rule));
+    }
+  }
+}
+
 } // namespace
 
 SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name)
@@ -237,6 +301,8 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
                    next->Decoration);
     ParseRuleArray(root.value("structures", nlohmann::json::array()),
                    next->Structures);
+    ParseCaveFeatureArray(root.value("cave_features", nlohmann::json::array()),
+                          next->CaveFeatures);
     if (root.contains("structure_placement") && root["structure_placement"].is_object())
     {
       const auto &sp = root["structure_placement"];
@@ -252,7 +318,8 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
     return false;
   }
   const size_t rule_count = next->Vegetation.size() + next->GroundCover.size() +
-                            next->Decoration.size() + next->Structures.size();
+                            next->Decoration.size() + next->Structures.size() +
+                            next->CaveFeatures.size();
   std::atomic_store_explicit(
       &Active, std::shared_ptr<const ObjectFeatureConfig>(std::move(next)),
       std::memory_order_release);
@@ -289,7 +356,8 @@ bool UObjectFeatureConfigStorage::IsLoaded()
     return false;
   }
   return !(snap->Vegetation.empty() && snap->GroundCover.empty() &&
-           snap->Decoration.empty() && snap->Structures.empty());
+           snap->Decoration.empty() && snap->Structures.empty() &&
+           snap->CaveFeatures.empty());
 }
 
 } // namespace cutum
