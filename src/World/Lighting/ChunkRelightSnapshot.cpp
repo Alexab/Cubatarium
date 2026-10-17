@@ -714,8 +714,8 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
     // band (plus the one-block shell) made all farther geometry look like air,
     // so a roof or terrain slice above a partial capture could be ignored.
     // The top of the requested band is sufficient for every lower target slice:
-    // its own 15-slice scan is contained in that band plus these 15 context
-    // slices. Context chunks are read-only and do not enter Compute's target set.
+    // its 15-chunk scan is contained in that band plus these 15 context slices.
+    // Context chunks are read-only and do not enter Compute's target set.
     std::unordered_map<glm::ivec3, int, IVec3Hash> top_band_by_column;
     for (const glm::ivec3 &coord : coords)
     {

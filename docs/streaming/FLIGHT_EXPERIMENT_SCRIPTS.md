@@ -12420,3 +12420,52 @@ Artifacts: report `m622bm_idle_focus_deferred_dedup_20261017.json`; perf
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-111822.47516`; pixel
 reports `m622bm_renderer_pixel_trace_20261017.json` and
 `m622bm_renderer_pixel_trace_watch_3_3_6_20261017.json`.
+
+### M622BN: partial-band skylight context
+
+Build and run only the established short visible M335 route; keep the world,
+start, camera, height, speed scale, and no-teleport settings unchanged:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BN `
+    -Report bin/suite_reports/engine_refactor/m622bn_skylight_band_context_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+M622BN completed 29/27 periods with process exit 0 and no timeout, but the
+runner returned 2 because this intentionally short route did not reach the west
+checkpoint; do not classify it as far-route acceptance. `sky_context` appeared
+on 206/405 nonempty snapshots (258 non-air context chunk copies total, max 3
+per job). Capture median/p95 were 0.418/1.054 ms with one 7.571 ms sample; the
+previous M622BM figures are an uncontrolled comparison. The 1,920-probe pixel
+trace found 272 samples below luma 96, all on drawable opaque depth; 52 had
+unsettled/preview light and none had a light revision mismatch. Watch
+`(3,3,6)` found seven ready/current depth joins and no same-view repeat. This
+does not establish a long-flight visual fix or an operator verdict.
+
+Artifacts: `m622bn_skylight_band_context_20261017.json`,
+`m622bn_renderer_pixel_trace_20261017.json`,
+`m622bn_renderer_pixel_trace_watch_3_3_6_20261017.json`,
+`perf_20261017-113003_13036.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-112959.13036`.
+Next inspect context memory/copy costs for worst-case center-only and 3x3
+snapshots before considering a compact occlusion representation.

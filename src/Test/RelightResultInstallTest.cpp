@@ -148,13 +148,15 @@ void TestSkylightReadsGeometryAbovePartialBand()
          "opaque geometry above partial band blocks direct skylight");
 
   const ChunkInputStamp *roof_stamp = nullptr;
+  const ChunkInputStamp *absent_context_stamp = nullptr;
   for (const auto &stamp : result.read_set)
   {
     if (stamp.coord == glm::ivec3(0, 2, 0))
     {
       roof_stamp = &stamp;
-      break;
     }
+    if (stamp.coord == glm::ivec3(0, 3, 0))
+      absent_context_stamp = &stamp;
   }
   Expect(roof_stamp != nullptr && roof_stamp->readsContent &&
              !roof_stamp->readsLight,
@@ -164,6 +166,13 @@ void TestSkylightReadsGeometryAbovePartialBand()
   world.SetBlock({8, 32, 8}, BLOCK_AIR);
   Expect(!roof_stamp->Matches(world.GetChunkManager().GetChunk({0, 2, 0})),
          "upper geometry change invalidates the captured result");
+  Expect(absent_context_stamp != nullptr &&
+             absent_context_stamp->Matches(nullptr),
+         "absent upper context validates while still absent");
+  world.SetBlock({8, 48, 8}, 8);
+  Expect(!absent_context_stamp->Matches(
+             world.GetChunkManager().GetChunk({0, 3, 0})),
+         "newly streamed upper geometry invalidates the captured result");
 }
 } // namespace
 

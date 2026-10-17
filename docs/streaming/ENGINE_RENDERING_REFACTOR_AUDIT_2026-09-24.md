@@ -6094,3 +6094,47 @@ we can distinguish necessary widening from stale ownership without another
 speculative change.
 
 Artifacts are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### M622BN: partial relight snapshots omitted upper skylight occluders
+
+Static review found a concrete mismatch between the relight solver's read
+closure and `UChunkRelightSnapshot::Capture`. `PropagateSkylightColumn` scans
+240 blocks (15 chunk slices) above every processed chunk to decide whether
+direct sky is blocked. Before M622BN, a partial capture held full geometry only
+inside its target Y band and one-block face shells outside it. Blocks in loaded
+chunks farther above the band therefore read as `BLOCK_AIR`; a roof or terrain
+slice there could be ignored and a shaded column could be seeded as open sky.
+This is a correctness defect in partial-band skylight, not proof that it caused
+the reported dim patches or missing-water observations.
+
+Commit `0b3f125b` separates the write target from the solver's vertical read
+context. Capture now copies non-air block data from the 15 chunk slices above
+the requested band's top, and adds geometry-only input stamps for present and
+absent context coordinates. Context is readable by the worker but is not part
+of its relight/apply set. A changed, unloaded, reused, or newly streamed upper
+chunk invalidates the result. `RelightAudit` reports `sky_context` so the
+additional copies can be observed. The partial-band regression test verifies
+both roof occlusion and invalidation on geometry mutation/stream-in.
+
+Release build and `relight_result_install_test` passed. M622BN ran the short
+visible no-teleport M335 route (29 periods, 27 steady, 128 blocks, process
+exit 0, no timeout); it did not reach the west checkpoint and its product
+runner returned 2, so it is only a smoke trace. Across 405 nonempty snapshots,
+206 copied one or more non-air context chunks (258 copies total, maximum 3 in
+one capture). Capture median/p95 were 0.418/1.054 ms; a single 7.571 ms sample
+had one context chunk. M622BM's unpaired baseline was 0.386/1.016 ms; different
+world state and load prevent a causal performance claim. Pixel tracing found
+272 `<96` luma samples among 1,920 probes; all hit drawable opaque depth, 52
+had unsettled/preview light, and none had a light-revision mismatch. The
+`(3,3,6)` watch had seven ready/current depth joins and no same-view repeat.
+There is no operator framebuffer verdict and no evidence this route reproduced
+the distant symptom.
+
+Keep scheduling/write-band policy unchanged. Next quantify worst-case context
+memory and the isolated capture cost for both center-only and 3x3 captures;
+the full-chunk representation has a theoretical upper bound of 15 context
+chunks per horizontal column. If that cost approaches the main-thread budget,
+replace copied context arrays with a compact opacity/sky-occlusion summary,
+preserving geometry-aware validation. Continue to treat pixel probes as
+supporting evidence and use only the established short route for routine
+validation.

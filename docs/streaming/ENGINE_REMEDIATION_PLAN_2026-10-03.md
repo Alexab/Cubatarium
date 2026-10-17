@@ -12848,3 +12848,31 @@ blocklight contributors, water/sea-level slices, and horizontal frontier
 expansion before narrowing captures. Keep the current conservative band until
 that dependency analysis supports a safe bound. Any resulting behavior change
 gets a Release build and one short M335 replay, with the `(3,3,6)` pixel watch.
+
+### M622BN: capture the vertical skylight read closure
+
+M622BN resolved the static dependency gap without changing the scheduled or
+written Y band. `PropagateSkylightColumn` reads up to 15 chunks above each
+target slice; partial-band snapshots previously supplied only target geometry
+and a one-block shell. The worker could therefore treat un-captured upper
+terrain as air. Commit `0b3f125b` adds a read-only geometry context above the
+band and stamps all context coordinates, including currently absent chunks.
+Only target chunks are relit/applied. A targeted Release regression check
+confirms roof occlusion and stale-result rejection after upper geometry
+changes or streams in.
+
+The short M335 smoke reached eight chunks but not the west route gate, so it
+does not validate distant-flight rendering. It exercised the new context in
+206 of 405 nonempty snapshots, copying 258 non-air context chunks total (max 3
+per capture). Capture median/p95 were 0.418/1.054 ms with one 7.571 ms outlier;
+the M622BM comparison is not controlled. Pixel witnesses did not reproduce a
+same-view defect. Do not narrow `0:80` or interpret dark/fog/readiness proxies
+as proof this issue caused the operator symptom.
+
+Next, measure capture-time attribution and memory for the worst supported
+capture shapes (center column and 3x3 columns). Keep the full-chunk read
+context if its bounded cost stays within capture budgets; otherwise replace it
+with a compact sky-occlusion representation whose stamps still cover every
+geometry input. Then retain the current short M335 replay and periodic fresh
+world checks; no long operator monitoring route is required for this static
+solver fix.

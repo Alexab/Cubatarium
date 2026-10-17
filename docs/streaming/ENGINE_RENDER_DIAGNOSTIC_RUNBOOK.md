@@ -2561,3 +2561,24 @@ repeat only the established short M335 route. Pixel analysis for the target
 `(3,3,6)` is saved in the M622BM watch report; all seven depth-surface joins
 were ready and revision-matched. See the M622BM plan entry for remaining band
 analysis.
+
+### M622BN: validate partial-band skylight inputs
+
+`PropagateSkylightColumn` examines up to 15 chunk slices above each target
+chunk. The requested relight Y band is the write set; its solver input extends
+above that band. Since commit `0b3f125b`, snapshots copy non-air geometry from
+that upper interval into a read-only map and validate content/incarnation for
+both resident and absent context chunks. They still apply results only to
+target chunks. With `CUBATARIUM_RELIGHT_AUDIT=1`, `snapshot` and `worker_done`
+records include `sky_context` (resident non-air context chunks copied).
+
+The synthetic Release regression is `relight_result_install_test`; its partial
+band case checks an opaque roof above the target, then mutates and streams in
+upper geometry to verify stale-result invalidation. M622BN's short M335 run
+exercised the code but stopped at focus x=-1 and did not cover the distant west
+route. Treat it as a smoke run only. The captured `(3,3,6)` pixels were ready
+and revision-matched, with no repeated same-view sample; they neither confirm
+nor disprove the operator-visible long-flight symptom. Do not extend the route
+just to raise aggregate gates. Before changing band widths, measure
+`sky_context` copy count/cost for center-only and 3x3 captures and preserve the
+read-set invalidation behavior.
