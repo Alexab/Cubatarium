@@ -12896,8 +12896,9 @@ The clean Release replay used new seed `3650482215`, the same M335 camera and
 over 144 blocks. The focus change moved the request before first paint, but not
 the terminal result: request submitted at 14:47:23.129, first paint at
 14:47:23.176, worker finished at 14:47:23.256, and commit at 14:47:23.372.
-The entry path still needs a generation/commit barrier. The product report
-failed readiness/visual-hole proxies, so this is diagnostic evidence only.
+M624D below adds and verifies the generation/commit barrier. The product
+report failed readiness/visual-hole proxies, so this is diagnostic evidence
+only.
 
 The sparse pixel grid sampled 5,460 points over 59 captures and found 58
 unloaded-voxel rays within modeled fog end. None were RGB-max<=16; two had

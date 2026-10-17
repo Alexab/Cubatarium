@@ -13377,10 +13377,11 @@ trace shows the missing-column demand at 14:47:23.125 and generation request
 `request_id=123` submitted at 14:47:23.129. `phase=first_paint` followed at
 14:47:23.176. The worker finished at 14:47:23.256 and the column committed at
 14:47:23.372. Thus the request now precedes first paint, but the terrain was
-not generated/committed until about 196 ms after it. The first-paint path must
-wait for the saved-view column's terminal load/generation result, not only
-enqueue it. The route later reached the column normally; that does not prove
-the first frame was presentable.
+not generated/committed until about 196 ms after it. At M624C, the first-paint
+path still needed to wait for the saved-view column's terminal
+load/generation result, not only enqueue it. M624D below implements and
+verifies that barrier. The route later reached the column normally; that did
+not prove the first frame was presentable.
 
 Pixel-grid analysis sampled 5,460 pixels across 59 captures. It found 58
 unloaded-voxel witnesses within the modeled fog end; none of those had

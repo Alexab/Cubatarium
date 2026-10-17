@@ -3109,9 +3109,9 @@ M624C ran the same short visible no-teleport route on fresh seed
 product harness returned `pass=false` on readiness/visual-hole proxy gates.
 The request for absent start column `(7,0,3)` was submitted before
 `phase=first_paint`, but worker completion and commit followed first paint by
-about 80 ms and 196 ms. Continue tracing the entry path until the saved camera
-column is loaded/generated and committed before presenting the first in-game
-frame. Enqueue ordering alone does not meet the gate.
+about 80 ms and 196 ms. At M624C, the entry path still needed a saved-camera
+column load/generation/commit barrier; M624D below implements and verifies it.
+Enqueue ordering alone did not meet the gate.
 
 Pixel-grid analysis saw 58 unloaded-voxel witnesses within fog end among 5,460
 samples/59 captures. None were RGB-max<=16; two had luminance<=32. These
