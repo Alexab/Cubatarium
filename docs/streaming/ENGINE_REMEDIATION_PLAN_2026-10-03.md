@@ -13245,3 +13245,25 @@ order:
    `UWorld::Create` unchanged.
 4. Treat interactive startup and visible rendering as separate acceptance
    evidence; do not infer far-flight correctness from the CLI profile.
+
+### M623J update: parallel CLI generation and loadability verified
+
+Steps 1 and 2 are complete in commit `d42313fc`. The CLI creation path now uses
+the configured cooperative generation pool and still restores async runtime
+flags before save. A new radius-4 world created with four workers and wrote 690
+chunk files; generation took 4.730 s and create-plus-save took 48.500 s. The
+previous serial sample took 18.933 s in generation and 68.343 s total. The runs
+used distinct seeds, so this is directional evidence rather than a controlled
+benchmark.
+
+The generated world was successfully reopened by `--load-world`: 1,038,001
+non-air blocks, 338 greedy-cache entries, 333 batches, 118,580 vertices, exit
+code 0. This closes the basic output-integrity check for this experiment.
+
+Remaining work on world-create performance is isolated to headless CLI visual
+work: mesh warmup took 11.8 s and prepare-view 21.4 s. Before a dedicated
+headless fast path, review whether those stages perform any lighting or
+serialized-state work beyond rendering caches. Preserve interactive creation
+as-is and only proceed with a separately verified path if the contract is
+clear. This is an optimization follow-up, not a blocker to continue short
+streaming/rendering investigation.

@@ -12781,3 +12781,37 @@ Artifacts remain local at
 and `bin/suite_reports/engine_refactor/m623i_async_runtime_policy_world_create_20261017.json`.
 The created world is intentionally preserved under
 `bin/worlds/World_M623I_AsyncRuntimePolicy_20261017`.
+
+### M623J: parallel CLI world generation and reloadability
+
+After commit `d42313fc`, CLI world creation uses the configured cooperative
+generation pool instead of forcing serial column generation. A separate world
+`World_M623J_ParallelCliCreate_20261017` (seed 3650482212, radius 4) completed
+successfully and wrote 690 chunk files. The creation trace reported 43,264 of
+43,264 generation columns, `async_generation=1`, and four workers; generation
+took 4.730 s. Creation through `prepare_view` took 41.222 s and the complete
+create-plus-save operation took 48.500 s. The prior M623I serial profile took
+68.343 s with 18.933 s generation. Seeds differ, so this is a useful directional
+diagnostic rather than a controlled benchmark.
+
+Persisted metadata had `async_chunk_generation=true` and `async_chunk_io=true`.
+Then `--load-world World_M623J_ParallelCliCreate_20261017` exited 0 and reported
+`load-world: PASS`, 1,038,001 non-air blocks, 338 greedy-cache entries, 333
+mesh batches, and 118,580 greedy vertices. The generated save is therefore
+loadable and produced terrain meshes on reload.
+
+Parallel generation cut its measured phase by about 75% and total
+create-plus-save wall time by about 29% relative to the M623I one-shot sample.
+Mesh warmup/prepare-view still account for roughly 33.2 s of M623J's operation;
+whether those visual phases can be skipped in CLI-only creation requires a
+separate data/lighting invariant review. Keep GUI creation unchanged until that
+review is complete. Build `--parallel 8` remains compile-time parallelism,
+distinct from the four runtime generation workers reported by this run.
+
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623j_parallel_cli_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m623j_parallel_cli_load_20261017.txt`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140016.49208`,
+and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140138.24104`.
+Preserve the generated world at
+`bin/worlds/World_M623J_ParallelCliCreate_20261017` for follow-up load checks.

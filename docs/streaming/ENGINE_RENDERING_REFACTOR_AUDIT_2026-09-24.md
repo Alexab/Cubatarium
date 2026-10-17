@@ -6507,3 +6507,23 @@ This is a separate performance debt. Evaluate enabling the existing parallel
 chunk-generation path for CLI creation, then profile the visual warmup phases
 before adding a headless fast path; do not skip lighting or change interactive
 world-creation behavior without a data-contract check.
+
+### M623J follow-up: CLI generation is parallel and saved output reloads
+
+Commit `d42313fc` enables the existing cooperative parallel generation policy
+for CLI world creation, while keeping chunk I/O synchronous during the initial
+in-memory generation and restoring runtime settings before save. A distinct
+seed/radius-4 world completed with 690 chunk files; its trace reports 43,264 /
+43,264 generation columns, `async_generation=1`, and four workers. Generation
+took 4.730 s. The whole create-plus-save operation took 48.500 s, compared with
+68.343 s in the M623I serial profile. Because the seeds differ, treat this as a
+directional result, not a controlled timing benchmark.
+
+The generated map was then loaded with the existing `--load-world` CLI path.
+It exited successfully and passed its terrain-mesh readiness check with
+1,038,001 non-air blocks, 338 greedy-cache entries, 333 mesh batches, and
+118,580 greedy vertices. This verifies that parallel generation did not
+produce an empty or unloadable save. Mesh warmup and prepare-view still took
+about 11.8 s and 21.4 s; removing those headless-only visual steps remains a
+separate optimization candidate and requires review of the lighting and save
+contract. Interactive creation has not changed.

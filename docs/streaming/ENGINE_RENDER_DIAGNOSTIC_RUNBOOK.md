@@ -2961,3 +2961,38 @@ Artifacts: `bin/suite_reports/engine_refactor/m623i_async_runtime_policy_load_m3
 and `bin/suite_reports/engine_refactor/m623i_async_runtime_policy_world_create_20261017.json`.
 The generated `bin/worlds/World_M623I_AsyncRuntimePolicy_20261017` is an
 intentional preserved test fixture.
+
+### M623J: verify the parallel generation path
+
+The CLI-only `AsyncChunkGeneration` assignment now follows
+`core.ProceduralTemplate.AsyncChunkGeneration`; normal interactive creation
+still uses its existing cooperative policy. Chunk I/O remains synchronous
+during new-world generation, and `CreateWorldHeadless` restores the runtime
+async settings before the initial save.
+
+For the M623J check, use a fresh unique map name and seed, then inspect both the
+create report and `WorldLoadPerf`. Expected structural evidence is
+`success=true`, nonzero saved chunk files, `async_generation=1`, and a worker
+count greater than one. The sample used four workers, generated 43,264/43,264
+columns in 4.730 s, created 690 files, and completed create-plus-save in
+48.500 s. Its different seed makes comparison with M623I's 68.343 s serial
+sample directional only.
+
+Then run `--load-world <created-name>` and preserve the existing
+`load_world_report.txt` before invoking it because that command overwrites the
+file in the executable directory. The M623J reload exited 0 and passed its
+mesh-readiness check: 1,038,001 non-air blocks, cache 338, 333 batches, 118,580
+vertices. Restore the previous report and copy this run's result to a uniquely
+named artifact. Keep created worlds for future replay checks.
+
+Open performance debt: the M623J create operation still spent about 11.8 s in
+mesh warmup and 21.4 s in prepare-view. These are visual phases and may be
+unnecessary for headless creation, but review relight/metadata effects before
+skipping them. Do not change GUI creation as part of that optimization without
+a separate interactive check.
+
+Artifacts: `bin/suite_reports/engine_refactor/m623j_parallel_cli_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m623j_parallel_cli_load_20261017.txt`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140016.49208`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140138.24104`,
+and the preserved map `bin/worlds/World_M623J_ParallelCliCreate_20261017`.
