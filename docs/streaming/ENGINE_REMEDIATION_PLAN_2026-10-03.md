@@ -13731,7 +13731,22 @@ M624O report
 and folder `artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017/`.
 The exact repeat command and trace query are in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
 
-### Current remaining work after M624O
+### M624P — preserve boundary dependency debt at unload
+
+Static review of the unload ownership predicate found that
+`GetTerrainColumnRelightQueueInfo()` exposed `boundary_dependency`, and the
+unload trace logged it, but `needs_relight` did not include it. Unload then
+cancelled every relight marker. Added `relight_queue.boundary_dependency` to
+`needs_relight`, so the existing pre-cancel `ClearColumnLightComplete` path
+also protects a boundary marker if it is the remaining work owner during a
+queue transition. This is a defensive lifecycle correction; no runtime trace
+has yet shown a boundary marker as the sole owner at eviction.
+
+Release compilation and static EXE verification passed. Keep the M624I
+denial→deferred→admission witness separate from the still-open eviction/reload
+verification. Details are in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`.
+
+### Current remaining work after M624P
 
 1. Observe the rare `open_sky=1`, equal-revision fully-dark terminal decision
    (`equal_rev_fd=1`) at runtime. M624O now captures the decision before the

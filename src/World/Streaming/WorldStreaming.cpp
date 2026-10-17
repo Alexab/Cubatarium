@@ -5804,7 +5804,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             ChunkScheduler && ChunkScheduler->IsPending(ground);
         const bool needs_relight =
             pending_light_before_mesh || relight_inflight ||
-            relight_queue.keyed || relight_queue.deferred_far ||
+            relight_queue.keyed || relight_queue.boundary_dependency ||
+            relight_queue.deferred_far ||
             relight_queue.deferred_visible || flow_relight_ticket ||
             emerge_lighting || record_pending_light ||
             record_visual_needs_relight || record_light_repair_obligation;

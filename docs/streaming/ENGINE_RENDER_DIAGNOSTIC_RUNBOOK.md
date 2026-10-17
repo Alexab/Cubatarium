@@ -3397,3 +3397,18 @@ Use the exact M624O command and log query in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
 Reports and logs are preserved in
 `artifacts/research/rendering/m624n_open_sky_direct_gate_20261017/` and
 `artifacts/research/rendering/m624o_open_sky_terminal_trace_20261017/`.
+
+### M624P: count boundary markers as unload light debt
+
+Static inspection found that the unload callback already sampled and logged
+`relight_queue.boundary_dependency`, and `CancelTerrainColumnRelight()` removes
+that marker, but the callback's `needs_relight` predicate omitted it. The
+predicate now includes the marker before cancellation. If it is the only
+remaining owner during a queue transition, unload clears the persisted
+light-complete flag first, so a later disk load cannot trust a potentially
+stale lightmap.
+
+This is a static ownership fix, not a runtime eviction witness. The Release
+build and static EXE verification passed. Continue to use a short run that
+correlates the same boundary column across denial, deferred ownership, unload,
+reload, and relight admission before closing that lifecycle gate.
