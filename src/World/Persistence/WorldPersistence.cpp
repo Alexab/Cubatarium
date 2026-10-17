@@ -808,6 +808,10 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
       const auto deferred_owner = DeferredFarRelightColumns.find(ground_xz);
       if (deferred_owner != DeferredFarRelightColumns.end())
       {
+        // DeferredFar is only an in-memory retry owner. If the process exits
+        // before it is serviced, disk must not claim this column's light is
+        // complete and let a later load trust a stale lightmap.
+        ClearColumnLightComplete(ground_xz, "relight_deferred_backpressure");
         DeferFarRelightColumn(ground_xz, min_y, max_y, priority,
                               "deferred_owner_backpressure");
         if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
@@ -974,8 +978,11 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
                      : stale_dark_face_witness));
       }
       // A FIFO admission denial is backpressure, not completion. Keep the
-      // exact column/band as durable work so PendingLight cannot outlive every
-      // executable or retryable owner.
+      // exact column/band in DeferredFar so PendingLight cannot outlive every
+      // executable or retryable in-memory owner.
+      // The retry record itself is not persisted, so also invalidate the disk
+      // light-complete bit before returning from this admission path.
+      ClearColumnLightComplete(ground_xz, "relight_deferred_backpressure");
       DeferFarRelightColumn(ground_xz, min_y, max_y, priority,
                             "fifo_admission_denied");
       return;

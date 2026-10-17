@@ -3161,3 +3161,18 @@ and world `bin/worlds/World_M624D_EnterBarrier_20261017`.
 Remaining rendering work is boundary-relight convergence under queue pressure,
 a short distant-coordinate unload/reload lane with a near-view framebuffer
 verdict, and final separation of active-view defects from off-view backlog.
+
+### M624E: a deferred relight must invalidate saved light completeness
+
+When `EnqueueTerrainColumnRelightImpl` is denied by FIFO pressure, it records
+the exact column and Y band in the in-memory `DeferredFar` map. That retry
+owner is not serialized, so both the first denial and a merge into an existing
+deferred owner must mark the column's persisted `light_complete` flags dirty
+before returning. Look for `light_flags event=clear ...
+reason=relight_deferred_backpressure` alongside
+`deferred_far owner=defer`, then confirm a matching
+`light_flags event=save_result outcome=success` revision. Clean world switches
+flush dirty flags; abrupt termination before the asynchronous save completes
+can still lose that update. A deterministic check should force FIFO denial,
+wait for the flag save, restart/reload, and verify that the column schedules a
+fresh relight. The M624E source fix alone is not visual acceptance.

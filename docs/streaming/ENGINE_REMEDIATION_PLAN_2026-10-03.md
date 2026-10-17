@@ -13435,10 +13435,25 @@ Artifacts: `bin/suite_reports/engine_refactor/m624d_clean_cold_focus_barrier_202
 `artifacts/research/rendering/m624d_cold_focus_barrier_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-150858.31160`,
 and `bin/worlds/World_M624D_EnterBarrier_20261017`.
 
-Remaining work after M624D:
+### M624E — invalidate persisted light completeness when relight is deferred
+
+Static review of the M623C boundary handoff found that FIFO denial correctly
+kept the requested column and Y band in the in-memory `DeferredFar` owner, but
+returned before clearing the column's persisted `light_complete` flag. The
+deferred request itself is not serialized, so a restart can lose that owner;
+without the cleared flag, a later load could trust stale saved light. Both
+FIFO-pressure paths now mark the light flags dirty before retaining/merging
+deferred work. A normal shutdown flushes this metadata, but an abrupt process or
+machine failure before its asynchronous save completes can still lose the
+update. This is a disk-freshness gap, not evidence that this path caused the
+visual defects. Release build verification passed. A deterministic
+denial/save/reload check is still required.
+
+Remaining work after M624E:
 
 1. Exercise the boundary-dependency relight owner through a multi-column chain
-   with FIFO denial/deferred retention and column eviction. The existing
+   with FIFO denial/deferred retention, saved-light invalidation, and column
+   eviction/reload. The existing
    deterministic torch fixture settles one source-neighbor-return sequence;
    M623G's warm route ended with no pending/unowned boundary markers, but neither
    proves convergence under broader queue pressure.
