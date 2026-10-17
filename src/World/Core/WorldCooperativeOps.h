@@ -94,6 +94,14 @@ private:
   std::string FolderPath;
   std::string TargetWorldName;
 
+  // These options are supplied by the application runtime configuration and
+  // are applied after loading legacy world metadata by Core. Preserve them
+  // across LoadWorldData so the startup spatial-column phase uses the same
+  // async policy as the rest of the session.
+  bool RuntimeAsyncChunkGeneration{true};
+  bool RuntimeAsyncChunkIo{true};
+  int RuntimeMaxChunkCommitsPerFrame{3};
+
   std::vector<std::filesystem::path> ChunkFiles;
   size_t ChunkFileIndex{0};
   std::vector<glm::ivec3> SaveChunkCoords;

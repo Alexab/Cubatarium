@@ -802,11 +802,20 @@ bool UWorldCooperativeSession::IsEnterVisualWarmupActive() const
 void UWorldCooperativeSession::BeginLoad(UWorld &world,
                                          const std::string &world_folder_path)
 {
+  const ProceduralSettings &runtime_settings = world.GetProceduralSettings();
+  const bool runtime_async_chunk_generation =
+      runtime_settings.AsyncChunkGeneration;
+  const bool runtime_async_chunk_io = runtime_settings.AsyncChunkIo;
+  const int runtime_max_chunk_commits_per_frame =
+      runtime_settings.MaxChunkCommitsPerFrame;
   delete ParallelGen;
   *this = UWorldCooperativeSession{};
   ParallelGen = nullptr;
   Kind = WorldCoopKind::Load;
   Active = true;
+  RuntimeAsyncChunkGeneration = runtime_async_chunk_generation;
+  RuntimeAsyncChunkIo = runtime_async_chunk_io;
+  RuntimeMaxChunkCommitsPerFrame = runtime_max_chunk_commits_per_frame;
   FolderPath = world_folder_path;
   CurrentPhase = Phase::Init;
   TimedPhaseId = "init";
@@ -1332,6 +1341,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   case Phase::Metadata:
   {
     world.LoadWorldData(FolderPath + "/world_data.json");
+    ProceduralSettings settings = world.GetProceduralSettings();
+    settings.AsyncChunkGeneration = RuntimeAsyncChunkGeneration;
+    settings.AsyncChunkIo = RuntimeAsyncChunkIo;
+    settings.MaxChunkCommitsPerFrame = RuntimeMaxChunkCommitsPerFrame;
+    world.SetProceduralSettings(settings, /*rebuildPipeline=*/false);
     if (world.OnAfterWorldDataLoaded)
     {
       world.OnAfterWorldDataLoaded();

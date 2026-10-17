@@ -632,6 +632,17 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
       core.WorldInstance->SetCatalogFingerprint(
           core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
     }
+    // The CLI disables async terrain work while it creates the initial save.
+    // Those execution-only choices must not be persisted as the runtime policy
+    // for later cooperative loads. Normal loads apply this same Core policy in
+    // FinalizeLoadedWorld; set it before SaveWorldData serializes the settings.
+    settings.AsyncChunkGeneration =
+        core.ProceduralTemplate.AsyncChunkGeneration;
+    settings.AsyncChunkIo = core.ProceduralTemplate.AsyncChunkIo;
+    settings.MaxChunkCommitsPerFrame =
+        core.ProceduralTemplate.MaxChunkCommitsPerFrame;
+    core.WorldInstance->SetProceduralSettings(
+        settings, /*rebuildPipeline=*/false);
     core.WorldInstance->Save(core.ActiveWorldFolder.string());
   }
   catch (const std::exception &e)
