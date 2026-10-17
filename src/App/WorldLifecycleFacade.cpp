@@ -590,7 +590,10 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   settings.Seed = args.Seed;
   ApplyWorldGenPreset(settings, args.Preset);
   settings.TerrainBackendMode = args.TerrainBackendMode;
-  settings.AsyncChunkGeneration = false;
+  // CLI creation has no concurrent app-frame work to protect. Use the same
+  // bounded cooperative generation pool as interactive creation; the later
+  // save still restores the configured runtime policy before serialization.
+  settings.AsyncChunkGeneration = core.ProceduralTemplate.AsyncChunkGeneration;
   settings.AsyncChunkIo = false;
   ResolveProceduralDefaults(settings);
   ApplyGeneratorTierDefaults(settings);
