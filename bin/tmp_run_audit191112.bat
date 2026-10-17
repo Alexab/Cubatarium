@@ -1,0 +1,8 @@
+@echo off
+cd /d e:\Work\Home\Cubatarium
+python -X utf8 bin/tmp_audit_191112.py > bin/suite_reports/g1_a10_relight/manual_191112_audit.json
+python -X utf8 -c "import json;d=json.load(open('bin/suite_reports/g1_a10_relight/manual_191112_audit.json',encoding='utf-8'));c=d['current'];s=d['sot'];keys=['visible_black_focus','visible_black_fully_dark_repair','unfinished_visual','prior_lit_hold_n','publication_material_block_id_flip_n','pass_dual_backend_same_coord_n','transparent_cmd_reorder_n','dark_face_void_near','dark_face_stale','fog_pull_in_rd','gpu_kick_n','ok_remesh_n','mark_relit_invoked_n','stale_accepted_refresh','mesh_apply_stale_geom'];
+print('cx',c.get('focus_cx_range'),'periods',c['periods']);
+[print(k,'CUR fly',c[k]['fly_med'],c[k]['fly_max'],'tail',c[k]['tail_med'],c[k]['tail_max'],'| SOT fly',s[k]['fly_med'],s[k]['fly_max']) for k in keys];
+print('TAIL:');
+[print(t) for t in c['tail_timeline']]"

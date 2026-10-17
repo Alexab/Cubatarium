@@ -6280,3 +6280,23 @@ actually observed. Separately trace the durable column relight admission and
 queue age when neighboring blocklight faces change; do not recursively enqueue
 all neighboring relights until that work is bounded and its convergence is
 specified.
+
+### 2026-10-17 addendum: research tooling and perf collection
+
+The current harness and offline analyzers remain under `tools/`; product code
+is under `src/`, build helpers under `scripts/`, and protocols/history under
+`docs/streaming/`. Runtime evidence currently mixes into `bin/logs/`,
+`bin/suite_reports/`, and `bin/flight_captures/`, alongside tracked historical
+goldens. The initial inventory found 7,145 untracked items under `bin/`, mostly
+generated images, JSON, and world chunks. A curated set of analysis/flight
+source files, experiment wrappers, and research notes is now preserved
+explicitly; no raw output directory is staged wholesale.
+
+`FramePerfMonitor` previously collected and wrote periodic perf JSONL on every
+direct game launch. It is now opt-in via `CUBATARIUM_PERF_LOG=1`; the experiment
+harness enables it because its gates consume those metrics. With the monitor
+off, engine scheduler telemetry remains active and `WorldStreaming` samples
+process memory at a bounded 30-frame cadence. A Release build passed and a
+short M623A visible M335 smoke produced perf data; the report still failed
+existing product gates and only covered eight chunks, so it is not acceptance.
+The tooling handoff is in `ENGINE_REFACTOR_TOOLING.md` and `tools/README.md`.

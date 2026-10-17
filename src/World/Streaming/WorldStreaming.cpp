@@ -6312,10 +6312,20 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       sample.ingress_debt_level = world.PhysicsTelemetryData.IngressDebtLevel;
       sample.miss_horiz = world.PhysicsTelemetryData.MissHoriz;
       // Prefer FramePerf cached sample (every ~30 frames) — avoid per-tick
-      // GetProcessMemoryInfo on the streaming hot path (P0b).
+      // GetProcessMemoryInfo on the streaming hot path (P0b). When optional
+      // perf logging is disabled, keep the MemoryBudget fallback at the same
+      // low sampling rate rather than querying the OS every frame.
       sample.private_mb = UFramePerfMonitor::GetLastPrivateMb();
 #ifdef _WIN32
-      if (sample.private_mb <= 0.0)
+      static double fallback_private_mb = 0.0;
+      static uint64_t fallback_sample_frame = 0;
+      if (sample.private_mb > 0.0)
+      {
+        fallback_private_mb = sample.private_mb;
+        fallback_sample_frame = StreamingFrameCounter;
+      }
+      if (fallback_private_mb <= 0.0 ||
+          StreamingFrameCounter - fallback_sample_frame >= 30)
       {
         PROCESS_MEMORY_COUNTERS_EX pmc{};
         pmc.cb = sizeof(pmc);
@@ -6324,9 +6334,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                 reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc),
                 sizeof(pmc)))
         {
-          sample.private_mb =
+          fallback_private_mb =
               static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+          fallback_sample_frame = StreamingFrameCounter;
         }
+      }
+      if (sample.private_mb <= 0.0)
+      {
+        sample.private_mb = fallback_private_mb;
       }
 #endif
       MemoryBudgetDecision decision;

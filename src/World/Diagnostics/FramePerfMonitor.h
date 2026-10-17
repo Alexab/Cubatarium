@@ -8,8 +8,9 @@ namespace cutum
 
 class UWorld;
 
-/// Periodic InGame performance logging to glog + bin/logs/perf_*.jsonl.
-/// Does not require saving the world.
+/// Optional periodic InGame performance logging to glog +
+/// bin/logs/perf_*.jsonl. Enable with CUBATARIUM_PERF_LOG=1. Does not require
+/// saving the world.
 class UFramePerfMonitor
 {
 public:

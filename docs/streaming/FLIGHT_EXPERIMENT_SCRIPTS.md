@@ -12561,3 +12561,22 @@ Artifacts: `m622bq_relight_delta_channels_20261017.json`,
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-115807.29908`,
 `perf_20261017-120150_42784.jsonl`, and
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-120147.42784`.
+
+### M623A: verify opt-in FramePerf logging
+
+After the Release change that disables `FramePerfMonitor` for direct game
+launches, run the same short visible M335 warm replay. The flight harness sets
+`CUBATARIUM_PERF_LOG=1` because its acceptance analysis requires the JSONL;
+direct launches leave it unset. Command parameters and environment cleanup are
+the same as M622BS, with `-PhaseId M623A` and report
+`bin/suite_reports/engine_refactor/m623a_perf_optin_m335_20261017.json`.
+
+The Release app created and analyzed
+`bin/logs/perf_20261017-121507_40184.jsonl`; 29 periods and 27 steady periods
+were available, with 16 fly periods. The no-teleport route covered eight
+chunks (`focus x=7` to `x=-1`) and exited before the west checkpoint. The
+process did not time out. The harness returned exit code 2 because existing
+renderer and stop-line acceptance gates failed; this is a short harness/metric
+smoke, not a passing engine run or far-route check. The report is
+`m623a_perf_optin_m335_20261017.json`. Host CPU and app CPU are recorded there
+for context only.

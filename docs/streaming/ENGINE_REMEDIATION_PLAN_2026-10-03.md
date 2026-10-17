@@ -12849,6 +12849,27 @@ expansion before narrowing captures. Keep the current conservative band until
 that dependency analysis supports a safe bound. Any resulting behavior change
 gets a Release build and one short M335 replay, with the `(3,3,6)` pixel watch.
 
+### M623A — instrumentation default and research-tool handoff
+
+`FramePerfMonitor` is now opt-in with `CUBATARIUM_PERF_LOG=1`; normal direct
+launches do not collect its per-frame diagnostic record or write a perf JSONL.
+`flight_sim_run.py` opts in because its acceptance analyzers consume that
+artifact. World runtime telemetry remains active for scheduler and memory
+policy; when perf logging is disabled, process memory uses a 30-frame fallback
+sample. Release build and a short visible M335 harness smoke passed the build
+and report-generation checks. The runner exited 2 on existing product gates,
+traveled eight chunks, and did not test far-route acceptance.
+
+The new tooling handoff maps product code, build scripts, experiment drivers,
+analyzers, methodology documents, and output directories. The selected legacy
+analysis/flight scripts and notes found in `bin/` are preserved in Git at their
+original paths; commit-helper batch files and generated data are not part of
+that script archive. Do not clean `bin/` broadly. The remaining layout debt is
+to add a configurable artifact root and run manifest, then migrate stable
+entrypoints behind compatibility shims. Continue the rendering plan itself:
+deterministic air/water skylight validation, bounded dependency-triggered
+boundary relight, then short cold-load and far-route checks.
+
 ### M622BN: capture the vertical skylight read closure
 
 M622BN resolved the static dependency gap without changing the scheduled or

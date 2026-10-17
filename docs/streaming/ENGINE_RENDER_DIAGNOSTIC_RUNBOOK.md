@@ -2666,3 +2666,21 @@ the relevant channel and coordinates. Then inspect
 light revisions. Readiness counters, dark luma, and pixel probes are supporting
 evidence only; do not report an operator-visible regression without a matching
 view or operator observation. Do not start long operator-monitoring flights.
+
+### M623A: opt-in performance JSONL
+
+Direct game launches now leave `CUBATARIUM_PERF_LOG` unset, which disables
+`FramePerfMonitor` collection, periodic INFO summaries, and its disk session.
+The flight harness explicitly sets `CUBATARIUM_PERF_LOG=1` before launching
+the app, so analyzed flights still produce `bin/logs/perf_*.jsonl`. Its short
+M335 smoke produced 29 intervals, traveled eight chunks, and did not reach the
+west checkpoint. The harness returned 2 for existing renderer/stop-line gate
+failures; the run only confirms that the harness still opts in and parses the
+result. The report and trace are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+Runtime world/streaming telemetry used by scheduler decisions remains
+enabled. When the periodic monitor is off, `WorldStreaming` samples Windows
+process memory through its fallback no more often than every 30 frames,
+matching the monitor's normal sampling cadence instead of querying every
+frame. Do not interpret this smoke as product acceptance or as a visual
+regression result.

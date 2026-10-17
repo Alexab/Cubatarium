@@ -2159,6 +2159,10 @@ def main() -> int:
         help="run scenario N times; write report, report_2..N, and report_agg.json",
     )
     args = ap.parse_args()
+
+    # This harness evaluates saved FramePerfMonitor data. Ordinary application
+    # launches keep the monitor disabled by default; experiment runs opt in.
+    os.environ["CUBATARIUM_PERF_LOG"] = "1"
     if os.environ.get("CUBA_FLIGHT_REQUIRE_EXISTING_WORLD", "").strip().lower() in (
         "1",
         "true",

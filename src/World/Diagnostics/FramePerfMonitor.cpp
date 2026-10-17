@@ -226,9 +226,20 @@ Session &GetSession()
   return s;
 }
 
+bool IsPerfLogEnabled()
+{
+  const char *value = std::getenv("CUBATARIUM_PERF_LOG");
+  if (!value || value[0] == '\0')
+  {
+    return false;
+  }
+  return std::strcmp(value, "0") != 0 && std::strcmp(value, "false") != 0 &&
+         std::strcmp(value, "off") != 0 && std::strcmp(value, "no") != 0;
+}
+
 void OpenSessionLocked(Session &s)
 {
-  if (s.Opened)
+  if (s.Opened || !IsPerfLogEnabled())
   {
     return;
   }
@@ -4572,7 +4583,15 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
 {
   Session &s = GetSession();
   std::lock_guard<std::mutex> lock(s.Mutex);
+  if (!IsPerfLogEnabled())
+  {
+    return;
+  }
   OpenSessionLocked(s);
+  if (!s.Opened)
+  {
+    return;
+  }
 
   const auto collect_begin = std::chrono::steady_clock::now();
   FrameNumbers n = Compute(world, swap_wait_ms, frame_wall_ms, s);
@@ -4851,7 +4870,7 @@ void UFramePerfMonitor::Shutdown()
 {
   Session &s = GetSession();
   std::lock_guard<std::mutex> lock(s.Mutex);
-  if (s.Jsonl.is_open())
+  if (s.Jsonl.is_open() && IsPerfLogEnabled())
   {
     if (s.FrameCount > 0)
     {
@@ -6990,14 +7009,14 @@ std::string UFramePerfMonitor::GetLastSessionPath()
 {
   Session &s = GetSession();
   std::lock_guard<std::mutex> lock(s.Mutex);
-  return s.Path;
+  return IsPerfLogEnabled() ? s.Path : std::string{};
 }
 
 double UFramePerfMonitor::GetLastPrivateMb()
 {
   Session &s = GetSession();
   std::lock_guard<std::mutex> lock(s.Mutex);
-  return s.LastPrivateMb;
+  return IsPerfLogEnabled() ? s.LastPrivateMb : 0.0;
 }
 
 double UFramePerfMonitor::GetLastRssMb()
