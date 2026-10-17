@@ -316,6 +316,8 @@ public:
   void ApplyGameModeLocomotionPolicy();
 
   void Create(const std::string &world_name);
+  /// Create world data for CLI/tools without building render meshes or view readiness.
+  void CreateHeadless(const std::string &world_name);
   void Load(const std::string &world_folder_path);
   void Save(const std::string &world_folder_path);
   /// Fast save for exit/autosave: metadata plus modified terrain only.
@@ -331,7 +333,8 @@ public:
   void BeginCooperativeSave(const std::string &world_folder_path,
                             bool resume_streaming_after_save = true);
   bool TickCooperativeSave(class IUProgressSink &sink, int chunkBudget);
-  void BeginCooperativeCreate(const std::string &world_name);
+  void BeginCooperativeCreate(const std::string &world_name,
+                              bool prepare_visuals = true);
   bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);
   bool HasActiveCooperativeOperation() const;
   void CancelCooperativeOperation();

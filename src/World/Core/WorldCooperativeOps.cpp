@@ -423,8 +423,27 @@ void UWorldCooperativeSession::FinishEmissiveBlockLightRelight(UWorld &world)
             << EmissiveChunkRelightQueue.size() << " chunks" << std::endl;
   EmissiveChunkRelightQueue.clear();
   EmissiveChunkRelightIndex = 0;
+  if (Kind == WorldCoopKind::Create && !PrepareCreateVisuals)
+  {
+    FinishHeadlessCreate(world);
+    return;
+  }
   world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
   BeginMeshWarmupInner(world);
+}
+
+void UWorldCooperativeSession::FinishHeadlessCreate(UWorld &world)
+{
+  world.SetLightingRelightDeferred(false);
+  world.SetLightingSkylightBulkComplete(false);
+  world.BlockCounter.MarkNeedsRecount();
+
+  bool has_terrain_chunks = false;
+  world.BlockWorld.GetChunkManager().ForEachChunk(
+      [&](const UChunk &) { has_terrain_chunks = true; });
+  world.BlockWorldReady = has_terrain_chunks || world.CachedBlockCount > 0;
+  CurrentPhase = Phase::Done;
+  Active = false;
 }
 
 void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
@@ -492,6 +511,11 @@ void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
 
   if (EmissiveChunkRelightQueue.empty())
   {
+    if (Kind == WorldCoopKind::Create && !PrepareCreateVisuals)
+    {
+      FinishHeadlessCreate(world);
+      return;
+    }
     world.MeshService->MarkAllDirtyFromWorld(world.BlockWorld);
     BeginMeshWarmupInner(world);
     return;
@@ -843,13 +867,15 @@ void UWorldCooperativeSession::BeginSave(UWorld &world,
 }
 
 void UWorldCooperativeSession::BeginCreate(UWorld &world,
-                                           const std::string &world_name)
+                                           const std::string &world_name,
+                                           const bool prepare_visuals)
 {
   delete ParallelGen;
   *this = UWorldCooperativeSession{};
   ParallelGen = nullptr;
   Kind = WorldCoopKind::Create;
   Active = true;
+  PrepareCreateVisuals = prepare_visuals;
   TargetWorldName = world_name;
   CurrentPhase = Phase::Init;
   TimedPhaseId = "init";
@@ -2781,7 +2807,21 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       world.Streaming->MarkPersistedColumnsFromWorld();
     }
-    BeginMeshWarmup(world);
+    if (PrepareCreateVisuals)
+    {
+      BeginMeshWarmup(world);
+    }
+    else if (world.IsLightingRelightDeferred() && world.BlockRegistry)
+    {
+      // CLI generation persists voxel and lighting data, not render caches or
+      // a camera-ready view. Keep full terrain relighting, then finish without
+      // scheduling the create-only mesh/view warmup.
+      BeginDeferredRelightQueue(world);
+    }
+    else
+    {
+      FinishHeadlessCreate(world);
+    }
     if (CurrentPhase == Phase::MeshWarmup)
     {
       Report(sink, "mesh_warmup", CooperativeCreateMeshProgressBase(),

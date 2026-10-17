@@ -13385,6 +13385,15 @@ void UWorld::Create(const std::string &world_name)
   }
 }
 
+void UWorld::CreateHeadless(const std::string &world_name)
+{
+  UNullProgressSink sink;
+  BeginCooperativeCreate(world_name, /*prepare_visuals=*/false);
+  while (!TickCooperativeCreate(sink, 64))
+  {
+  }
+}
+
 void UWorld::ApplyGameModeLocomotionPolicy()
 {
   ForEachCreature(
@@ -13564,13 +13573,14 @@ bool UWorld::TickCooperativeSave(IUProgressSink &sink, int chunkBudget)
   return CoopSession->Tick(*this, sink, chunkBudget);
 }
 
-void UWorld::BeginCooperativeCreate(const std::string &world_name)
+void UWorld::BeginCooperativeCreate(const std::string &world_name,
+                                    const bool prepare_visuals)
 {
   if (!CoopSession)
   {
     CoopSession = std::make_unique<UWorldCooperativeSession>();
   }
-  CoopSession->BeginCreate(*this, world_name);
+  CoopSession->BeginCreate(*this, world_name, prepare_visuals);
 }
 
 bool UWorld::TickCooperativeCreate(IUProgressSink &sink, int columnBudget)

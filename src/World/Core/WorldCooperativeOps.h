@@ -28,6 +28,7 @@ public:
   WorldCoopKind Kind{WorldCoopKind::Load};
   bool Active{false};
   bool ResumeStreamingAfterSave{true};
+  bool PrepareCreateVisuals{true};
 
   ~UWorldCooperativeSession();
 
@@ -36,7 +37,8 @@ public:
   /// must not recreate streamer/worker pools before PrepareForShutdown.
   void BeginSave(UWorld &world, const std::string &world_folder_path,
                  bool resume_streaming_after_save = true);
-  void BeginCreate(UWorld &world, const std::string &world_name);
+  void BeginCreate(UWorld &world, const std::string &world_name,
+                   bool prepare_visuals = true);
   /// @return true when the operation finished successfully.
   bool Tick(UWorld &world, IUProgressSink &sink, int chunkBudget);
   /// Era31 I-T4: force-complete EnterGame load when visual cap reached.
@@ -163,6 +165,7 @@ private:
   void BeginColumnRelightQueue(UWorld &world);
   void BeginEmissiveBlockLightQueue(UWorld &world);
   void FinishEmissiveBlockLightRelight(UWorld &world);
+  void FinishHeadlessCreate(UWorld &world);
   void BeginMeshWarmupInner(UWorld &world);
   void BeginMeshWarmup(UWorld &world);
   void ReportMeshWarmupStart(IUProgressSink &sink) const;

@@ -628,7 +628,7 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
 
   try
   {
-    core.WorldInstance->Create(args.WorldName);
+    core.WorldInstance->CreateHeadless(args.WorldName);
     core.WorldInstance->GenerateUsers();
     if (core.BlockMergeRegistryInstance)
     {
