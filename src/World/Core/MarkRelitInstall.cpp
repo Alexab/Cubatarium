@@ -399,6 +399,37 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       }
       ++PhysicsTelemetryData.MarkRelitScheduleN;
       ++dirty_admitted_n;
+      UChunkRenderDemandStore &repair_demand =
+          UChunkRenderDemandStore::Get();
+      if (audit_relight && repair_demand.HasOpenSkyRepairPending(
+                               coord, field_light_rev))
+      {
+        int32_t dirty_queue_index = -1;
+        int32_t dirty_queue_size = 0;
+        const uint8_t dirty_queue_kind = mesh->GetCache().GetDirtyQueueTrace(
+            coord, dirty_queue_index, dirty_queue_size);
+        const ChunkRenderDemandRecord *repair = repair_demand.Find(coord);
+        CubatariumLogInfo(
+            "RelightAudit",
+            "open_sky_repair_admit coord=(" + std::to_string(coord.x) +
+                "," + std::to_string(coord.y) + "," +
+                std::to_string(coord.z) + ") event=" +
+                std::to_string(repair ? repair->open_sky_repair_event_id : 0) +
+                " target_light=" + std::to_string(field_light_rev) +
+                " published_geom=" +
+                std::to_string(mesh->GetCache().GetMeshPublishRevs(coord).geom_rev) +
+                " mesh_revision=" +
+                std::to_string(mesh->GetCache().GetChunkMeshRevision(coord)) +
+                " dirty=" + std::to_string(mesh->IsChunkMeshDirty(coord)) +
+                " dirty_queue=" + std::to_string(dirty_queue_kind) + ":" +
+                std::to_string(dirty_queue_index) + "/" +
+                std::to_string(dirty_queue_size) + " dirty_age_frames=" +
+                std::to_string(mesh->GetCache().GetDirtyQueueAgeFrames(coord)) +
+                " inflight=" +
+                std::to_string(mesh->HasInflightMeshBuild(coord)) +
+                " gpu_pending=" +
+                std::to_string(mesh->IsPendingGpuApply(coord)));
+      }
       {
         JobStageSpan span{};
         span.cx = coord.x;
