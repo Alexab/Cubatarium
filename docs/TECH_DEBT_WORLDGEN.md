@@ -129,6 +129,10 @@ Infrastructure from the 2026-07 Overworld quality plan (spawn spiral, cave depth
   происхождение и лицензии новых и заимствованных ассетов. Пак содержит 10
   геологических блоков на текстурах Kenney Voxel Pack (CC0); новые миры включают
   `minetest_default_16` (CC-BY-SA-3.0) + `cubatarium_geology_cc0` (CC0).
+- [x] Сделать текстуры отсутствующих ассетов заметными: диагональные
+  пурпурно-тёмные полосы, жёлтая рамка и крупный `?`; добавить проверку маркера
+  в `--smoke-packs`. В headless генерации с базовым набором паков missing-slot
+  и placeholder-texture сообщений не воспроизвелось.
 - [ ] Расширить биомную модель для surface/ocean/shore/mountain/cave биомов и
   использовать климатические веса для переходов.
 - [x] Сделать 3D density terrain основным backend для новых миров и настроить

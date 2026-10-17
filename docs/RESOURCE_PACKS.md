@@ -140,7 +140,7 @@ Cross sprites (torch, plants) sample the same chunk lightmap as greedy mesh vert
 
 ## Placeholder
 
-Unknown block names in saves/prefabs/worldgen get a synthetic solid block with labeled placeholder textures. Reserved names: `__missing__`, `__air__` (do not use in packs).
+Unknown block names in saves/prefabs/worldgen get a synthetic solid block with diagnostic placeholder textures: magenta/dark diagonal stripes, a yellow frame, and a large `?`. This makes fallback blocks easy to spot in generated terrain and saves. Reserved names: `__missing__`, `__air__` (do not use in packs).
 
 ## Configuration
 
