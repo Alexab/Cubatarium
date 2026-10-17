@@ -6051,3 +6051,46 @@ static step is to derive the required vertical read/propagation interval for a
 pending slice, including water and horizontal frontier effects, then decide
 whether the lower part of `0:80` can be excluded without changing light
 results. Keep future validation on the established short M335 route.
+
+### M622BM: deduplicate pending-light requests against DeferredFar owners too
+
+M622BL still had two durable-owner forms: a keyed priority/FIFO entry and an
+unkeyed `DeferredFar` record retained while FIFO pressure blocks admission.
+M622BM extends the covered-band guard to the latter only when the deferred
+owner is already priority and covers the entire candidate band. Uncovered
+ranges still merge through the existing admission path, and a keyed ghost is
+not mistaken for an executable deferred owner. `AdmitDeferredFarRelightColumns`
+remains responsible for retrying the durable work when the FIFO predicate
+allows it. The existing `idle_focus_skip_covered` audit event now names the
+owner kind.
+
+Release build passed; the same short visible no-teleport M335 route completed
+29 periods/27 steady, process exit zero, no timeout. It logged 405 covered
+owner skips (404 priority-queue, one DeferredFar), and 86 accepted requests
+from `DrainIdleFocusPendingLight` (81 coalesced, five inserted). Two
+`deferred_owner_skip` calls from that producer remained; current audit data
+only records the post-merge band, so it cannot say whether those calls widened
+coverage, promoted priority, or repaired ownership. No performance comparison
+is claimed because world state and host load are not controlled.
+
+The run remained `pass=false`: readiness debt 1.0, visual-hole proxy 0.037,
+post-stop readiness debt 26, while direct post-stop mesh-missing,
+visual-hole, visible-black-no-ticket, and stalled-visible-black counts were
+zero. Pixel trace contained 2,320 probes and 41 low-luma samples; all joined
+drawable opaque surfaces, five had unsettled/preview state, and none had a
+light-revision mismatch. The `(3,3,6)` watch returned eight associations, of
+which seven were depth-surface samples; all seven were drawable, ready,
+settled, and revision-matched, with no preview/stale-remesh state. There was
+no same-view repeat or operator verdict. Host CPU median/p95 53.6/98.7% is
+context only.
+
+This closes the idle-drain budget waste for both already-covered queue owners
+and already-covered DeferredFar owners. It does not address the still-wide
+relight band or claim a rendering fix. Next statically derive the smallest
+safe vertical capture interval from skylight and blocklight dependencies,
+water boundaries, and frontier propagation. If the two residual deferred
+coalesces recur, extend the audit record with pre-merge owner band/priority so
+we can distinguish necessary widening from stale ownership without another
+speculative change.
+
+Artifacts are listed in `FLIGHT_EXPERIMENT_SCRIPTS.md`.

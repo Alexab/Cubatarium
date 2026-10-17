@@ -12822,3 +12822,29 @@ frontier propagation, separate that from the focus/water scheduling band, and
 only then consider reducing capture work. Preserve source-chunk and dependent
 pixel witnesses if a change is made. No additional flight is needed to prove
 the queue skip; use one short M335 run only after a concrete band-policy change.
+
+### M622BM follow-up: covered DeferredFar owners no longer consume idle budget
+
+M622BM extends the M622BL guard to an unkeyed, priority `DeferredFar` owner
+whose saved band already covers the complete idle-focus candidate band. The
+persistence service continues to retry this durable owner when FIFO admission
+opens. Narrower/lower-priority deferred entries, keyed ghosts, and uncovered
+ranges still enter the normal enqueue path. Release build and short M335 route
+passed process completion (29/27 periods, exit zero, no timeout).
+
+The run logged 405 covered skips, including one DeferredFar owner, and 86
+accepted `DrainIdleFocusPendingLight` requests. Two DeferredFar backpressure
+coalesces from this producer remain; existing logs retain only the post-merge
+band, so add pre-merge owner detail only if that distinction blocks a concrete
+next decision. Pixel samples for `(3,3,6)` were all ready/current when depth
+resolved to the target; there was no same-view pair or operator verdict.
+Aggregate readiness remains unresolved (rate 1.0, post-stop debt 26), while
+direct post-stop visual/mesh/black counts were zero. Do not call this a visual
+fix or treat proxy gates as framebuffer evidence.
+
+The next implementation question remains band correctness, not queue
+ownership: derive the input range needed for vertical skylight scans,
+blocklight contributors, water/sea-level slices, and horizontal frontier
+expansion before narrowing captures. Keep the current conservative band until
+that dependency analysis supports a safe bound. Any resulting behavior change
+gets a Release build and one short M335 replay, with the `(3,3,6)` pixel watch.

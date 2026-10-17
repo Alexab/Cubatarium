@@ -12388,3 +12388,35 @@ verdict was recorded. Reports: `m622bl_idle_focus_queue_dedup_20261017.json`,
 `m622bl_renderer_pixel_trace_watch_3_3_6_20261017.json`. Perf log:
 `perf_20261017-111215_20952.jsonl`; INFO log:
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-111211.20952`.
+
+### M622BM: include the DeferredFar owner in idle-drain deduplication
+
+M622BM uses the same Release build and M335 route as M622BL; change only the
+phase id to `M622BM` and report path to
+`bin/suite_reports/engine_refactor/m622bm_idle_focus_deferred_dedup_20261017.json`.
+The run retained the same warm `World_164`, visible, no-teleport route
+parameters and restored its environment/configuration after completion.
+
+The route completed 29 periods/27 steady, process exit zero, no timeout; the
+suite remained `pass=false` (readiness debt 1.0, visual-hole proxy 0.037,
+post-stop readiness debt 26). Direct post-stop mesh-missing, visual-hole,
+visible-black-no-ticket, and stalled-visible-black counts were zero. Audit
+counts: 405 `idle_focus_skip_covered` events (404 `priority_queue`, one
+`deferred_far`), 86 requests from `DrainIdleFocusPendingLight` (81 coalesced,
+five inserted), and two remaining `deferred_owner_skip` records from that
+producer. The two residual records show only the post-merge band and should not
+be interpreted as redundant until pre-merge ownership is recorded.
+
+Global renderer-pixel analysis found 2,320 probes and 41 low-luma samples; all
+joined drawable opaque surfaces, five had unsettled/preview state, and none
+had a light-revision mismatch. Watching `(3,3,6)` found eight associations,
+seven depth joins, all drawable/draw-ready and matching geometry/light
+revisions, with no preview/stale-remesh state and no same-view group. Host CPU
+median/p95 was 53.6/98.7%; record as context only. No operator framebuffer
+verdict was recorded.
+
+Artifacts: report `m622bm_idle_focus_deferred_dedup_20261017.json`; perf
+`perf_20261017-111826_47516.jsonl`; INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-111822.47516`; pixel
+reports `m622bm_renderer_pixel_trace_20261017.json` and
+`m622bm_renderer_pixel_trace_watch_3_3_6_20261017.json`.

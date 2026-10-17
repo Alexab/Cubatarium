@@ -2543,3 +2543,21 @@ level minus four chunks through sea level plus two chunks. A narrow request may
 therefore omit occluders or water-adjacent contributors. See M622BL in the
 remediation plan for the next static review and the flight script index for
 artifacts.
+
+### M622BM: identify a covered DeferredFar idle-drain skip
+
+`idle_focus_skip_covered` now includes `owner=priority_queue` or
+`owner=deferred_far`. The latter is eligible only when the entry is unkeyed,
+priority, has a defined Y band, and fully covers the idle-focus request.
+`AdmitDeferredFarRelightColumns` continues to retry it; this guard only avoids
+re-enqueueing the same already-owned work and charging it to `max_columns`.
+Keyed-but-not-in-deque ghosts and bands that need widening are not skipped.
+
+For M622BM, the INFO log had 405 covered skips (404 queued, one DeferredFar)
+and two remaining `deferred_owner_skip` records from
+`DrainIdleFocusPendingLight`. Those records log the merged band only. If their
+pre-merge reason matters, add before/after fields to that audit event and
+repeat only the established short M335 route. Pixel analysis for the target
+`(3,3,6)` is saved in the M622BM watch report; all seven depth-surface joins
+were ready and revision-matched. See the M622BM plan entry for remaining band
+analysis.

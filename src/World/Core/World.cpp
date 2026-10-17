@@ -6211,12 +6211,19 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
     const glm::ivec2 world_block_key = c.key * CHUNK_SIZE;
     const auto queued_relight =
         Persistence->GetTerrainColumnRelightQueueInfo(world_block_key);
-    if (queued_relight.keyed && queued_relight.in_deque &&
-        queued_relight.priority && queued_relight.y_band_defined &&
+    const bool band_covered =
+        queued_relight.y_band_defined &&
         queued_relight.min_world_y <= c.min_y &&
-        queued_relight.max_world_y >= c.max_y)
+        queued_relight.max_world_y >= c.max_y;
+    const bool queued_priority_owner =
+        queued_relight.keyed && queued_relight.in_deque &&
+        queued_relight.priority && band_covered;
+    const bool deferred_priority_owner =
+        !queued_relight.keyed && queued_relight.deferred_far &&
+        queued_relight.priority && band_covered;
+    if (queued_priority_owner || deferred_priority_owner)
     {
-      // The queued priority owner already covers this exact focus/pending
+      // A durable priority owner already covers this exact focus/pending
       // union. Re-enqueueing it every frame cannot add work, and counting the
       // coalesce against max_columns lets one waiting column starve peers.
       if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
@@ -6225,7 +6232,10 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
             "RelightAudit",
             "relight_admission event=idle_focus_skip_covered column=(" +
                 std::to_string(c.key.x) + "," +
-                std::to_string(c.key.y) + ") requested_band=" +
+                std::to_string(c.key.y) + ") owner=" +
+                (queued_priority_owner ? std::string("priority_queue")
+                                       : std::string("deferred_far")) +
+                " requested_band=" +
                 std::to_string(c.min_y) + ":" + std::to_string(c.max_y) +
                 " queued_band=" +
                 std::to_string(queued_relight.min_world_y) + ":" +
