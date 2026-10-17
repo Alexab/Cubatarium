@@ -566,6 +566,9 @@ struct VisualBlackTraceRecord
   float renderer_pixel_fog_color_r{0.05f};
   float renderer_pixel_fog_color_g{0.15f};
   float renderer_pixel_fog_color_b{0.35f};
+  float renderer_pixel_fog_target_color_r{0.05f};
+  float renderer_pixel_fog_target_color_g{0.15f};
+  float renderer_pixel_fog_target_color_b{0.35f};
   float renderer_pixel_underwater_fog_start{0.0f};
   float renderer_pixel_underwater_fog_end{9.0f};
   float renderer_pixel_underwater_fog_min_blend{0.5f};

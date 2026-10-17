@@ -31,6 +31,7 @@ public:
 
   const glm::vec3 &GetSkyTint() const { return SmoothedSkyTint; }
   const glm::vec3 &GetFogColor() const { return SmoothedFogColor; }
+  const glm::vec3 &GetTargetFogColor() const { return TargetFogColor; }
   float GetFogStart() const { return FogStart; }
   float GetFogEnd() const { return FogEnd; }
   float GetFogMinBlend() const { return FogMinBlend; }
@@ -57,6 +58,7 @@ public:
 private:
   glm::vec3 SmoothedSkyTint{0.5f, 0.7f, 1.0f};
   glm::vec3 SmoothedFogColor{0.05f, 0.15f, 0.35f};
+  glm::vec3 TargetFogColor{0.05f, 0.15f, 0.35f};
   float FogStart{0.0f};
   float FogEnd{1000.0f};
   float FogMinBlend{0.0f};

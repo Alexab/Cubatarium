@@ -1657,6 +1657,11 @@ void CaptureTransparentPixelProbe(
       record.renderer_pixel_fog_color_r = pixel_fog_color.r;
       record.renderer_pixel_fog_color_g = pixel_fog_color.g;
       record.renderer_pixel_fog_color_b = pixel_fog_color.b;
+      const glm::vec3 &pixel_fog_target_color =
+          fog_pass.GetTargetFogColor();
+      record.renderer_pixel_fog_target_color_r = pixel_fog_target_color.r;
+      record.renderer_pixel_fog_target_color_g = pixel_fog_target_color.g;
+      record.renderer_pixel_fog_target_color_b = pixel_fog_target_color.b;
       record.renderer_pixel_underwater_fog_start =
           fog_pass.GetUnderwaterFogStart();
       record.renderer_pixel_underwater_fog_end =

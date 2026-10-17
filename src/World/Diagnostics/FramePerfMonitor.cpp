@@ -198,6 +198,11 @@ struct Session
   uint64_t SoftDeferWitnessRetargetAtPeriodStart{0};
   int LastPeriodUnfinishedVisual{0};
   bool LastFrameVisualHoles{false};
+  bool HasLastFogTraceState{false};
+  int LastFogTraceHoleDebt{0};
+  int LastFogTraceRenderDistance{0};
+  int LastFogTraceMargin{0};
+  float LastFogTraceStartRatio{0.0f};
   std::chrono::steady_clock::time_point LastEmit{
       std::chrono::steady_clock::now()};
   double LastRssMb{0.0};
@@ -4584,6 +4589,55 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
     UJobStageTrace::MarkVisualHoleEventForFrame(n.frame_epoch);
     WriteJsonl(s, n, "visual_holes_enter", /*flush=*/false);
   }
+  const bool fog_trace_changed =
+      !s.HasLastFogTraceState || n.fog_hole_debt != s.LastFogTraceHoleDebt ||
+      n.fog_pull_in_rd != s.LastFogTraceRenderDistance ||
+      n.fog_pull_in_margin != s.LastFogTraceMargin ||
+      std::abs(n.fog_pull_in_start_ratio - s.LastFogTraceStartRatio) > 0.001f;
+  if (fog_trace_changed)
+  {
+    const PhysicsTelemetry &fog_phys = world.GetPhysicsTelemetry();
+    const double steady_ms = std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now()
+                                     .time_since_epoch())
+                                 .count();
+    s.Jsonl << "{\"kind\":\"fog_state_transition\""
+            << ",\"frame_epoch\":" << n.frame_epoch
+            << ",\"steady_ms\":" << std::setprecision(17) << steady_ms
+            << std::setprecision(6)
+            << ",\"fog_hole_debt\":" << n.fog_hole_debt
+            << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
+            << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin
+            << ",\"fog_pull_in_start_ratio\":"
+            << n.fog_pull_in_start_ratio
+            << ",\"fog_presented_start_blocks\":"
+            << n.fog_presented_start_blocks
+            << ",\"fog_presented_horizon_blocks\":"
+            << n.fog_presented_horizon_blocks
+            << ",\"latch_focus_missing_mesh\":"
+            << fog_phys.FogLatchFocusMissingMesh
+            << ",\"latch_miss_horiz\":" << fog_phys.FogLatchMissHoriz
+            << ",\"latch_unfinished_ahead\":"
+            << fog_phys.FogLatchUnfinishedAhead
+            << ",\"latch_visible_black_stalled\":"
+            << fog_phys.FogLatchVisibleBlackFullyDarkStalled
+            << ",\"latch_visible_black_focus\":"
+            << fog_phys.FogLatchVisibleBlackFocus
+            << ",\"latch_now\":" << fog_phys.FogLatchNow
+            << ",\"clear_conditions\":" << fog_phys.FogClearConditions
+            << ",\"hold_frames\":" << fog_phys.FogHoleHoldFrames
+            << ",\"debt_quiet_ms\":" << fog_phys.FogDebtQuietMs
+            << ",\"visual_holes\":" << fog_phys.VisualHoles
+            << ",\"pending_gpu_applies\":"
+            << fog_phys.PendingGpuAppliesN
+            << ",\"stream_pressure\":" << fog_phys.StreamPressure
+            << "}\n";
+  }
+  s.HasLastFogTraceState = true;
+  s.LastFogTraceHoleDebt = n.fog_hole_debt;
+  s.LastFogTraceRenderDistance = n.fog_pull_in_rd;
+  s.LastFogTraceMargin = n.fog_pull_in_margin;
+  s.LastFogTraceStartRatio = n.fog_pull_in_start_ratio;
   switch (n.near_focus_tracked_witness_outcome_event)
   {
   case 1:
@@ -5668,6 +5722,12 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_fog_color_g
                  << ",\"renderer_pixel_fog_color_b\":"
                  << r.renderer_pixel_fog_color_b
+                 << ",\"renderer_pixel_fog_target_color_r\":"
+                 << r.renderer_pixel_fog_target_color_r
+                 << ",\"renderer_pixel_fog_target_color_g\":"
+                 << r.renderer_pixel_fog_target_color_g
+                 << ",\"renderer_pixel_fog_target_color_b\":"
+                 << r.renderer_pixel_fog_target_color_b
                  << ",\"renderer_pixel_underwater_fog_start\":"
                  << r.renderer_pixel_underwater_fog_start
                  << ",\"renderer_pixel_underwater_fog_end\":"

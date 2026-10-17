@@ -12532,10 +12532,39 @@ while the recorded day, sky-scale, precipitation, and weather-multiplier
 inputs stayed stable; this is consistent with the fog pass's per-frame color
 smoothing, but its target color is not yet recorded.
 
-Next diagnostic step: capture the fog-pull-in input predicates and latch
-transitions at frame cadence, and record both target and presented atmospheric
-fog colors. Then use one short fixed-camera warm-start probe to verify whether
-the remaining startup motion comes from range hysteresis, color initialization,
-or both. Preserve the established M335 moving route for later-route renderer
-and streaming regressions. Do not change fog thresholds or light handoff based
-on M622BA alone.
+### M622BB: fog gate and per-pixel blend evidence
+
+M622BB completed that diagnostic step with a fresh 10 s visible no-fly capture
+on warm `World_164`; the process exited successfully without timeout. The
+empty-scenario aggregate gate is not a renderer verdict. Frame-aligned records
+showed the fog latch entering at frame 3 with one fully-dark-stalled ticket,
+then receiving a focus mesh miss and a visual-hole signal at frame 16. It
+cleared at frame 246 after 4.012 s of quiet with the clear inputs satisfied.
+The presented fog range contracted and expanded smoothly while the camera was
+stationary. This is the intended streaming-debt cover path responding to real
+startup repair state; no fog threshold change is justified by this sample.
+
+Pixel-level capture separates the fog effect from preview lighting. Of 4,000
+probes, 277 were below luma 32; all joined drawable surfaces and their estimated
+shader fog blend was zero. Their depth-hit faces split into 251 leaves (block
+572) and 26 logs (block 573), with the recorded pack assigning
+`leaves_opaque`/`tree_side` textures. Their PNG minima are consistent with the
+captured low RGB values, though the trace does not retain the exact atlas
+texel. Twenty-three samples had unsettled demand or preview state, and ten had
+preview active. These pixels are textured surfaces, not a blank-chunk count.
+A far screen pixel did brighten by 97.541 luma across
+preview-to-nonpreview, but its fog blend was 0.9833 then 1.0, and its RGB
+tracked the fog color. Its target fog color was stable while presented color
+smoothed toward it. That measurement is not evidence of a lighting repair.
+
+The first fully-dark-stalled focus-column sample was `(6,2,2)` at frame 2. Its
+matching mesh job was built at frame 3 and GPU-ready/published at frame 4; a
+newer geometry revision reached GPU-ready/published at frame 10. This is an
+early startup witness, not coverage of the late-route symptom.
+
+Next, use the established short M335 route for a moving same-view witness.
+Escalate to exact atlas-texel/light reconstruction only if that trace contains a
+dark surface not explained by its material texture and light state. Keep long
+operator-monitoring flights out of the loop and preserve the distinction
+between readiness debt, fogged surfaces, and actual missing or stalled drawable
+geometry.

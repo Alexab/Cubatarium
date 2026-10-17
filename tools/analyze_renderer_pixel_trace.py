@@ -37,6 +37,11 @@ def fog_snapshot(row: dict[str, Any]) -> dict[str, Any] | None:
             row.get("renderer_pixel_fog_color_g"),
             row.get("renderer_pixel_fog_color_b"),
         ],
+        "target_color": [
+            row.get("renderer_pixel_fog_target_color_r"),
+            row.get("renderer_pixel_fog_target_color_g"),
+            row.get("renderer_pixel_fog_target_color_b"),
+        ],
         "underwater_enabled": row.get(
             "renderer_pixel_underwater_fog_enabled"
         ),
@@ -75,6 +80,60 @@ def changed_fog_fields(
         if differs:
             changed.append(key)
     return changed
+
+
+def fog_blend_estimate(row: dict[str, Any]) -> dict[str, float] | None:
+    if not row.get("renderer_pixel_opaque_surface_valid"):
+        return None
+
+    fog_enabled = bool(row.get("renderer_pixel_fog_enabled"))
+    air_fog_enabled = bool(row.get("renderer_pixel_air_fog_enabled"))
+    if not fog_enabled and not air_fog_enabled:
+        return None
+    if row.get("renderer_pixel_underwater_fog_submerged"):
+        return None
+
+    camera = [
+        row.get("renderer_pixel_camera_pos_x"),
+        row.get("renderer_pixel_camera_pos_y"),
+        row.get("renderer_pixel_camera_pos_z"),
+    ]
+    surface = [
+        row.get("renderer_pixel_opaque_surface_x"),
+        row.get("renderer_pixel_opaque_surface_y"),
+        row.get("renderer_pixel_opaque_surface_z"),
+    ]
+    if any(value is None for value in (*camera, *surface)):
+        return None
+
+    dx = float(surface[0]) - float(camera[0])
+    dy = float(surface[1]) - float(camera[1])
+    dz = float(surface[2]) - float(camera[2])
+    use_horizontal_air_distance = (
+        air_fog_enabled
+        and not fog_enabled
+        and bool(row.get("renderer_pixel_fog_horizontal"))
+    )
+    distance = (
+        (dx * dx + dz * dz) ** 0.5
+        if use_horizontal_air_distance
+        else (dx * dx + dy * dy + dz * dz) ** 0.5
+    )
+    fog_start = float(row.get("renderer_pixel_fog_start", 0.0))
+    fog_end = float(row.get("renderer_pixel_fog_end", 1000.0))
+    fog_min_blend = float(row.get("renderer_pixel_fog_min_blend", 0.0))
+    fog_density = float(row.get("renderer_pixel_fog_density", 1.0))
+    env_multiplier = float(row.get("renderer_pixel_fog_env_multiplier", 1.0))
+    normalized = min(
+        1.0,
+        max(0.0, (distance - fog_start) / max(fog_end - fog_start, 0.001)),
+    )
+    exponent = max(fog_density * max(env_multiplier, 0.05), 0.1)
+    factor = max(normalized**exponent, fog_min_blend)
+    return {
+        "distance": round(distance, 3),
+        "factor": round(min(1.0, max(0.0, factor)), 5),
+    }
 
 
 def main() -> int:
@@ -224,6 +283,7 @@ def main() -> int:
                                 "rgb": rgb,
                                 "luminance": luma,
                                 "fog": fog_snapshot(row),
+                                "fog_blend_estimate": fog_blend_estimate(row),
                                 "demand_present": demand_present,
                                 "demand_settled": demand_settled,
                                 "demand_active_attempt": bool(
@@ -420,6 +480,7 @@ def main() -> int:
                                     "rgb": rgb,
                                     "luminance": luma,
                                     "fog": fog_snapshot(row),
+                                    "fog_blend_estimate": fog_blend_estimate(row),
                                     "demand_present": demand_present,
                                     "demand_settled": demand_settled,
                                     "demand_active_attempt": bool(
@@ -549,6 +610,8 @@ def main() -> int:
                     "camera": [row.get("camera_x"), row.get("camera_y"), row.get("camera_z")],
                     "rgb": rgb,
                     "luminance": round(luma, 2),
+                    "fog": fog_snapshot(row),
+                    "fog_blend_estimate": fog_blend_estimate(row),
                     "pretransparent_rgb": pre,
                     "transparent_changed_rgb": rgb != pre,
                     "surface_preview_shader_override": row.get(
@@ -1438,6 +1501,7 @@ def main() -> int:
                         "mdi_visible_pass_flags",
                         "mdi_visible_index_count",
                         "fog",
+                        "fog_blend_estimate",
                     )
                     return {key: event.get(key) for key in keys}
 
@@ -1447,6 +1511,10 @@ def main() -> int:
                 )
                 preview_luma = first_preview.get("luminance")
                 settled_luma = first_nonpreview_after.get("luminance")
+                first_fog_blend = first_preview.get("fog_blend_estimate")
+                settled_fog_blend = first_nonpreview_after.get(
+                    "fog_blend_estimate"
+                )
                 luma_change_fog_confounded = (
                     bool(
                         fog_field_changes
@@ -1489,6 +1557,19 @@ def main() -> int:
                         "settled_nonpreview_fog": first_nonpreview_after.get(
                             "fog"
                         ),
+                        "first_preview_fog_blend_estimate": first_fog_blend,
+                        "settled_nonpreview_fog_blend_estimate": (
+                            settled_fog_blend
+                        ),
+                        "fully_fogged_in_both_samples": (
+                            first_fog_blend is not None
+                            and settled_fog_blend is not None
+                            and first_fog_blend["factor"] >= 0.99
+                            and settled_fog_blend["factor"] >= 0.99
+                        )
+                        if first_fog_blend is not None
+                        and settled_fog_blend is not None
+                        else None,
                         "changed_fog_fields": fog_field_changes,
                         "fog_state_changed": (
                             bool(fog_field_changes)
@@ -1947,6 +2028,68 @@ def main() -> int:
             "does not prove the operator-visible defect."
         ),
     }
+    dark_pixel_fog_blend_counts: Counter[str] = Counter()
+    dark_pixel_surface_groups: dict[str, dict[str, Any]] = {}
+    for pixel in dark_pixels:
+        blend = pixel.get("fog_blend_estimate")
+        if blend is None:
+            dark_pixel_fog_blend_counts["unknown"] += 1
+        elif blend["factor"] >= 0.99:
+            dark_pixel_fog_blend_counts["fully_fogged"] += 1
+        elif blend["factor"] >= 0.9:
+            dark_pixel_fog_blend_counts["heavily_fogged"] += 1
+        elif blend["factor"] > 0.0:
+            dark_pixel_fog_blend_counts["partly_fogged"] += 1
+        else:
+            dark_pixel_fog_blend_counts["outside_fog"] += 1
+
+        source_face = (pixel.get("depth_surface") or {}).get("source_face") or {}
+        block_id = source_face.get("block_id") if source_face.get("valid") else None
+        group_key = str(block_id) if block_id is not None else "unknown"
+        group = dark_pixel_surface_groups.setdefault(
+            group_key,
+            {
+                "sample_count": 0,
+                "face_counts": Counter(),
+                "luminance_min": None,
+                "luminance_max": None,
+                "preview_sample_count": 0,
+                "unsettled_demand_sample_count": 0,
+            },
+        )
+        group["sample_count"] += 1
+        face = source_face.get("face") if source_face.get("valid") else None
+        group["face_counts"][str(face) if face is not None else "unknown"] += 1
+        luma = float(pixel.get("luminance", 0.0))
+        group["luminance_min"] = (
+            luma if group["luminance_min"] is None
+            else min(group["luminance_min"], luma)
+        )
+        group["luminance_max"] = (
+            luma if group["luminance_max"] is None
+            else max(group["luminance_max"], luma)
+        )
+        vertex_light = pixel.get("opaque_vertex_light") or {}
+        chunk_light = pixel.get("opaque_chunk_light") or {}
+        group["preview_sample_count"] += int(
+            as_int(vertex_light.get("preview")) == 1
+            or as_int(pixel.get("opaque_preview_shader_override")) == 1
+            or as_int(pixel.get("surface_preview_shader_override")) == 1
+        )
+        group["unsettled_demand_sample_count"] += int(
+            not bool(chunk_light.get("demand_settled"))
+        )
+    dark_pixel_surface_summary = {
+        block_id: {
+            **{
+                key: value
+                for key, value in group.items()
+                if key != "face_counts"
+            },
+            "face_counts": dict(group["face_counts"]),
+        }
+        for block_id, group in sorted(dark_pixel_surface_groups.items())
+    }
     report = {
         "perf_jsonl": str(args.perf_jsonl),
         "pixel_probe_count": probe_count,
@@ -1954,6 +2097,8 @@ def main() -> int:
         "dark_threshold_luma": args.threshold,
         "dark_pixel_count": len(dark_pixels),
         "dark_pixel_classification": dark_pixel_classification,
+        "dark_pixel_fog_blend_counts": dict(dark_pixel_fog_blend_counts),
+        "dark_pixel_surface_summary": dark_pixel_surface_summary,
         "opaque_unsettled_demand_sample_count": len(opaque_unsettled_seen),
         "surface_preview_shader_override_sample_count": surface_preview_sample_n,
         "provisional_light_preview_sample_count": provisional_preview_sample_n,
@@ -2013,7 +2158,11 @@ def main() -> int:
             "published revision, mesh revision, and visible MDI state. A matching chunk revision "
             "at a moved camera does not establish a same-view handoff. RGB and luminance changes "
             "are ambiguous when recorded fog parameters change; compare the per-sample fog "
-            "snapshots before attributing a pixel change to lighting."
+            "snapshots and estimated per-pixel fog blend before attributing a pixel change to "
+            "lighting. A blend estimate at or above 0.99 means the surface is effectively hidden "
+            "by fog in the sampled shader path. Low-luma pixels with no fog blend remain "
+            "drawable surface samples; their RGB alone does not distinguish dark texture, "
+            "surface orientation, or a lighting problem."
         ),
     }
     rendered = json.dumps(report, ensure_ascii=False, indent=2)

@@ -11935,3 +11935,44 @@ across four chunks, bounded at 656 ms–1.314 s. All 220 pixels below luma 32
 joined drawable opaque surfaces; 14 had unsettled or preview light state. This
 calibrates warm startup only. Read the runbook section before interpreting the
 no-fly aggregate gate or comparing this result with a moving M335 route.
+
+### M622BB: static startup fog-transition trace
+
+M622BB reused the exact visible no-fly camera, warmup, trace environment, and
+pixel-probe settings from M622BA. It changed only the report names and used the
+Release `Cubatarium` target rebuilt with fog transition and target-color
+telemetry. Run the M622BA PowerShell environment save/restore block unchanged,
+with this command in its `try` body:
+
+```powershell
+python -X utf8 tools/flight_sim_run.py --world World_164 `
+  --require-existing-world --scenario '' --no-fly --visible `
+  --seconds 10 --warmup-sec 8 `
+  --report bin/suite_reports/engine_refactor/m622bb_world164_fog_transition_trace_20261017.json `
+  --process-timeout 90
+```
+
+Analyze the same perf JSONL selected from the flight report:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622bb_world164_fog_transition_trace_20261017.json -Raw | ConvertFrom-Json
+python -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bb_renderer_pixel_trace_20261017.json
+```
+
+The flight returned `process_rc=0`, `run_outcome=success`, no timeout, and
+aggregate `pass=false` because a no-fly scenario has no movement-route gate
+data. The fog transition records are emitted only when latch/output state
+changes and include per-frame latch inputs. Pixel samples include presented and
+target fog color; the analyzer estimates the blend from opaque hit position,
+camera position, and the same distance-fog formula used by the shader. It also
+summarizes low-luma samples by exact depth-hit block and face. This is an
+attribution aid for above-water samples, not a substitute for framebuffer
+capture or exact atlas-texel reconstruction.
+
+See M622BB in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for the measured latch
+timeline, pixel-blend analysis, limitations, and next step. Artifacts:
+`m622bb_world164_fog_transition_trace_20261017.json`,
+`m622bb_renderer_pixel_trace_20261017.json`,
+`perf_20261017-030534_39796.jsonl`, and
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-030531.39796`.

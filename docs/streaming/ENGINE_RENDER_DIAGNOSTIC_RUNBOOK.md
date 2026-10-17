@@ -1952,18 +1952,21 @@ Artifacts: report/pixel trace `m622ba_world164_static_start_same_view_20261017.j
 
 #### M622BA follow-up: fog and light are confounded in the pixel transition
 
-A follow-up analysis added the recorded fog state to each same-pixel lifecycle
-sample. This corrects any reading of M622BA's RGB/luminance deltas as evidence
-that provisional-light removal caused the pixel to brighten. The two large
-same-view deltas also changed fog:
+A follow-up analysis added the recorded fog state and shader fog-blend estimate
+to each same-pixel lifecycle sample. Six of the 125 same-view rows changed luma
+by more than 10 (`50.592`–`101.639`); every one also changed fog state. These
+RGB/luminance deltas do not isolate provisional-light removal:
 
 - `(5,3,5)`, pixel `(224,495)`: luma changed by `+53.877`; air fog stayed
   enabled with start/end `30.72/64`, while fog color changed from
-  `(0.131557,0.247836,0.462329)` to `(0.443451,0.621815,0.891517)`.
+  `(0.131557,0.247836,0.462329)` to `(0.443451,0.621815,0.891517)`. At
+  horizontal distance `48.293`, estimated fog blend was `0.58112` in both
+  samples.
 - `(5,3,6)`, pixel `(32,495)`: luma changed by `+97.541`; air fog stayed
   enabled, start/end changed from `30.72/64` to `16/43.3912`, and fog color
   changed from `(0.131557,0.247836,0.462329)` to
-  `(0.457308,0.638268,0.910215)`.
+  `(0.457308,0.638268,0.910215)`. At horizontal distance `63.347`, estimated
+  fog blend changed from `0.9833` to `1.0`.
 
 The pixel trace reports stable day factor (`1`), sky scale (`0.972`),
 precipitation (`0`), and weather fog multiplier (`1`) across these samples.
@@ -1987,9 +1990,84 @@ a startup fog-pull-in transition associated with the streaming gate state;
 do not infer a black framebuffer or a lighting defect from it.
 
 The analyzer now stores fog enable flags, range, density, blend, color,
-weather multiplier, and underwater fog parameters in lifecycle rows. It marks
-a nonzero luma change as fog-confounded when these parameters also changed.
-Next, trace the fog-pull-in latch's input predicates at the same cadence as its
-state transitions, and record the target atmospheric fog color beside the
-smoothed color. Keep the fixed-camera probe short; defer behavior changes until
-the transient trigger and color initialization path are distinguished.
+weather multiplier, and underwater fog parameters in lifecycle rows. It also
+estimates the shader fog blend from the captured opaque surface and camera
+position. M622BB below adds the latch inputs and target atmospheric color.
+
+### M622BB: frame-aligned fog latch and fogged-pixel attribution
+
+The Release `Cubatarium` target was rebuilt with sparse transition records for
+fog-latch inputs and target-color capture for pixel probes. A 10 s visible
+no-fly probe on warm `World_164` used the M622BA fixed camera and trace profile.
+It exited with `process_rc=0`, `run_outcome=success`, and no timeout. Its
+aggregate `pass=false` is expected for the empty no-fly scenario and is not a
+renderer failure verdict. CPU usage is contextual only.
+
+The four frame-aligned fog records explain the static-camera range change:
+
+- Frame 1: baseline range `30.72/64`, no latch.
+- Frame 3: `fog_hole_debt` latched with one fully-dark-stalled ticket. The
+  target became render distance `3`, margin `44`, start ratio `0.28`; presented
+  range moved smoothly to `28.073/61.353`.
+- Frame 16: latch remained set with `FocusMissingMesh=1`, `MissHoriz=1`, and
+  `visual_holes=1`. Presented range reached `16/32`; target margin increased
+  to `52`.
+- Frame 246: clear conditions were true and the latch cleared after
+  `4012 ms` of quiet. Focus-miss, miss-horizon, unfinished, and fully-dark
+  stalled inputs were zero. The census still reported three visible-black
+  focus columns, which are intentionally not a clear/latch predicate. The
+  presented range had begun its smooth expansion (`16.693/32.693`).
+
+This confirms that the startup fog movement at a fixed camera follows transient
+streaming debt and its hold/clear policy. It does not show an arbitrary fog
+teleport. Do not tune the fog pull-in from this run; it was covering a real
+startup repair interval.
+
+The analyzer recorded 4,000 pixel probes and 277 samples below luma 32. All
+277 joined drawable opaque surfaces, and all had estimated air-fog blend zero.
+The exact depth-hit source faces split into 251 block `572` samples and 26 block
+`573` samples. The active pack definitions identify these as `tree_leaves`
+(`leaves_opaque` on every face) and `tree_log` (`tree_side` on the sampled side
+face). The source `leaves_opaque.png` has a 16×16 opaque-pixel RGB minimum of
+`(22,29,20)`; `tree_side.png` has minimum `(34,23,14)`. Captured examples are
+near these low ends, which is consistent with the authored textures. The trace
+does not retain the exact atlas texel, so this is not an exact shader-output
+reconstruction.
+
+The low-luma summary had 10 preview samples and 13 unsettled-demand samples;
+23 samples had one or both conditions. The other samples mostly had sky light
+`1`, block light `0`, and settled demand. The dark-pixel count therefore
+describes dark leaf/log texels on valid drawable geometry in this view; it is
+not evidence of blank chunks or a general light failure. The new analyzer
+summary records depth-hit block and face counts for future captures.
+
+For a direct example of the RGB/fog confound, chunk `(5,3,6)`, pixel `(32,495)`
+brightened by `97.541` luma between its preview and settled samples. The
+estimated fog blend changed from `0.9833` to `1.0` at a horizontal distance of
+`63.347` blocks. The sampled surface RGB closely followed the fog color in
+both samples. The presented fog color approached an almost unchanged target:
+`(0.131557,0.247836,0.462330)` to `(0.457311,0.638226,0.910111)`, while target
+color stayed near `(0.4578,0.639,0.911)`. This explains the pixel's brightness
+change through startup color smoothing and range contraction; it is not
+evidence that the mesh's light changed. Same-view preview-to-nonpreview bounds
+were `95.551 ms`–`1.521 s` (median `848.6 ms`) across three chunks.
+
+An early focus-column trace also observed `(6,2,2)` as
+`FullyDarkStalledTicket` at frame 2, then `FullyDarkPendingRepair` at frame 3.
+Its first matching mesh job (attempt 12) was built at frame 3 and GPU-ready and
+published at frame 4; a newer geometry attempt was GPU-ready and published at
+frame 10. This is a short startup handoff for that witness, not proof that all
+startup dark surfaces are resolved.
+
+The next useful evidence is a same-view M335 pixel whose depth-hit material is
+not explained by the recorded block texture, or an exact atlas-texel/light
+reconstruction if the same dark leaf/log surface remains visually suspicious.
+Use the established short M335 route to gather a fresh moving witness; keep the
+dark-pixel threshold separate from actual visual-hole and visible-black
+stalled evidence.
+
+Artifacts: report/pixel trace
+`m622bb_world164_fog_transition_trace_20261017.json`,
+`m622bb_renderer_pixel_trace_20261017.json`; perf/INFO
+`perf_20261017-030534_39796.jsonl`,
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-030531.39796`.

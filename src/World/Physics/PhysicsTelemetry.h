@@ -849,6 +849,16 @@ struct PhysicsTelemetry
   float FogPresentedStartBlocks{-1.0f};
   float FogPresentedHorizonBlocks{-1.0f};
   int FogHoleDebt{0};
+  /// Per-frame inputs and outputs for diagnosing fog pull-in latch edges.
+  int FogLatchFocusMissingMesh{0};
+  int FogLatchMissHoriz{0};
+  int FogLatchUnfinishedAhead{0};
+  int FogLatchVisibleBlackFullyDarkStalled{0};
+  int FogLatchVisibleBlackFocus{0};
+  int FogLatchNow{0};
+  int FogClearConditions{0};
+  int FogHoleHoldFrames{0};
+  double FogDebtQuietMs{-1.0};
   /// Missing mesh in focus (alias of VisualHoles). Dark/light debt are separate.
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).

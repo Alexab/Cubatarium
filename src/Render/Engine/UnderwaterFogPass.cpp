@@ -141,6 +141,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   color_in.celestial_bodies = &env.CelestialBodies;
   const AtmosphericSkyColors atmospheric = ComputeAtmosphericSkyColors(color_in);
   glm::vec3 target_sky = atmospheric.sky_tint;
+  TargetFogColor = atmospheric.fog_color;
   FogEnabled = 0.0f;
   FogHorizontal = 0.0f;
   FogHorizonBlend = 0.0f;
@@ -159,6 +160,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
       if (registry.GetRenderStyle(eye_fluid) == BlockRenderStyle::Fluid)
       {
         target_sky = fv->FogColor;
+        TargetFogColor = fv->FogColor;
         if (entering_underwater)
         {
           SmoothedFogColor = fv->FogColor;
@@ -233,6 +235,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     FogMinBlend = 0.0f;
     FogHorizontal = render.DistanceFogHorizontal ? 1.0f : 0.0f;
     FogHorizonBlend = 1.0f;
+    TargetFogColor = distance_fog.Color;
     SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.2f);
     // B: blend already saturated at 1 — widen sky horizon band over unfinished
     // water so empty columns read as fog, not clear skydome.
@@ -360,6 +363,7 @@ void UUnderwaterFogPass::ResetAtmosphericColors(const glm::vec3 &sky_tint,
 {
   SmoothedSkyTint = sky_tint;
   SmoothedFogColor = fog_color;
+  TargetFogColor = fog_color;
 }
 
 } // namespace cutum

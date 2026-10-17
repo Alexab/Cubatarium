@@ -6062,6 +6062,15 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   world.PhysicsTelemetryData.UpdateStreamingPreCoreMs = 0.0;
   world.PhysicsTelemetryData.UpdateStreamingPostCoreMs = 0.0;
   world.PhysicsTelemetryData.UpdateStreamingPostCoreTelemetryMs = 0.0;
+  world.PhysicsTelemetryData.FogLatchFocusMissingMesh = 0;
+  world.PhysicsTelemetryData.FogLatchMissHoriz = 0;
+  world.PhysicsTelemetryData.FogLatchUnfinishedAhead = 0;
+  world.PhysicsTelemetryData.FogLatchVisibleBlackFullyDarkStalled = 0;
+  world.PhysicsTelemetryData.FogLatchVisibleBlackFocus = 0;
+  world.PhysicsTelemetryData.FogLatchNow = 0;
+  world.PhysicsTelemetryData.FogClearConditions = 0;
+  world.PhysicsTelemetryData.FogHoleHoldFrames = 0;
+  world.PhysicsTelemetryData.FogDebtQuietMs = -1.0;
   if (!Streamer || !StreamingEnabled)
   {
     return;
@@ -6516,11 +6525,24 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const bool clear_conditions = ShouldClearFogHoleDebtLatch(
             phys.FocusMissingMesh, phys.VisualHoles, unfinished_ahead,
             phys.VisibleBlackFullyDarkStalledN, phys.VisibleBlackFocusN);
+        world.PhysicsTelemetryData.FogLatchFocusMissingMesh =
+            phys.FocusMissingMesh;
+        world.PhysicsTelemetryData.FogLatchMissHoriz = phys.MissHoriz;
+        world.PhysicsTelemetryData.FogLatchUnfinishedAhead = unfinished_ahead;
+        world.PhysicsTelemetryData.FogLatchVisibleBlackFullyDarkStalled =
+            phys.VisibleBlackFullyDarkStalledN;
+        world.PhysicsTelemetryData.FogLatchVisibleBlackFocus =
+            phys.VisibleBlackFocusN;
+        world.PhysicsTelemetryData.FogLatchNow = hole_debt_now ? 1 : 0;
+        world.PhysicsTelemetryData.FogClearConditions =
+            clear_conditions ? 1 : 0;
         const double debt_quiet_sec =
             FogPullInLastDebtSeen.time_since_epoch().count() == 0
                 ? std::numeric_limits<double>::infinity()
                 : std::chrono::duration<double>(now - FogPullInLastDebtSeen)
                       .count();
+        world.PhysicsTelemetryData.FogDebtQuietMs =
+            std::isfinite(debt_quiet_sec) ? debt_quiet_sec * 1000.0 : -1.0;
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
@@ -6541,6 +6563,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         // else: miss still >0 — hold frames steady (SoT 115048 fog thrash).
         const bool hole_debt = FogPullInHoleHoldFrames > 0;
+        world.PhysicsTelemetryData.FogHoleHoldFrames =
+            FogPullInHoleHoldFrames;
         world.PhysicsTelemetryData.FogHoleDebt = hole_debt ? 1 : 0;
         const int sea = world.GetProceduralSettings().SeaLevel;
         const glm::ivec3 camera_block = glm::ivec3(glm::floor(eye));
