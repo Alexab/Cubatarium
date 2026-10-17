@@ -3280,3 +3280,48 @@ isolated report
 `artifacts/research/rendering/m624i_boundary_owner_reload_20261017/flight_sim_report.json`,
 and INFO log
 `artifacts/research/rendering/m624i_boundary_owner_reload_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-153624.17544`.
+
+### M624J–M624L: locate and suppress settled legal-dark relight churn
+
+M624J added producer provenance to visible-relight admissions and reran the
+standard visible M335 route. It completed 2,021 frames / 58 requested in-game
+seconds, traveled eight chunks from `(7,3)` to `(-1,3)`, and had no collision.
+Metrics were disabled. For column `(2,7)`, the queue producer was
+`AdmitUnfinishedVisualDemand`; the earlier records showed settled slices with
+matching light revisions repeatedly re-entering the relight path. This located
+the admission source but did not yet distinguish its gate predicates.
+
+M624K added those predicates to the opt-in producer trace. The same warm,
+visible, no-teleport route ran for 38 in-game seconds and traveled five chunks.
+For `(2,7)`, repeated `relight_only` admissions had `fully_dark=1`,
+`stale_dark=0`, `settled=1`, and field/meshed light revision `1`. The INFO log
+contains 176 `job_submit` records for band `32:47` and 177 slice reports for
+`(2,2,7)`. This confirms an already-settled, current-revision dark slice was
+being sent through visible admission repeatedly. It does not establish a
+framebuffer defect.
+
+M624L applies a narrow guard in `AdmitUnfinishedVisualDemand`: a fully dark
+slice is excluded from `relight_only` only when `IsLegalDarkEqualRevFullyDark`
+accepts it, the exact slice has current light settlement, and published plus
+meshed light revisions equal the current field revision. Open-sky darkness,
+stale-dark witnesses, unsettled light, and revision mismatches remain repair
+candidates. Release build and static EXE verification passed. On the same
+38-second, five-chunk M335 route, the log had five initial queue requests for
+`(2,7)`, zero submissions for its `32:47` band, and one slice report for
+`(2,2,7)`; M624K had 176 such submissions. This supports suppression of the
+repeated no-op loop on this route. Metrics were disabled, so do not call this a
+performance or visual acceptance run. The route did not produce an open-sky or
+stale-dark admission witness; those remain covered by the predicate's static
+conditions and need a short targeted regression before close-out.
+
+Reports and logs are preserved in:
+
+- `artifacts/research/rendering/m624j_visible_relight_producer_20261017/`
+- `artifacts/research/rendering/m624k_visible_relight_trigger_20261017/`
+- `artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017/`
+
+The flight parameters and trace-count commands are recorded in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`. Continue with a short stale/open-sky repair
+check, the boundary-denial → deferred owner → eviction → reload chain, and one
+short distant disk-miss lane. Keep long operator-monitoring flights out of the
+close-out plan.

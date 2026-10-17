@@ -147,7 +147,8 @@ public:
                              const std::vector<glm::ivec2>
                                  &protected_visible_columns,
                              uint8_t *outcome = nullptr,
-                             int *victim_horiz = nullptr);
+                             int *victim_horiz = nullptr,
+                             const char *producer = nullptr);
   /// Preserve an exact FirstMesh light band through surface-range selection.
   /// The key is the block-space XZ column origin used by the relight queues.
   void NoteVisibleFirstMeshRelight(glm::ivec2 world_block_key, int min_y,
@@ -161,7 +162,8 @@ public:
                                      const std::vector<glm::ivec2>
                                          &protected_visible_columns,
                                      uint8_t *outcome = nullptr,
-                                     int *victim_horiz = nullptr);
+                                     int *victim_horiz = nullptr,
+                                     const char *producer = nullptr);
   /// F3b: enqueue only when column surface still needs relight.
   bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
                                       bool priority = false, int min_y = 0,

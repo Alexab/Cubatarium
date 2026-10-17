@@ -6601,3 +6601,30 @@ mesh repair.
 M624I report and INFO log are preserved under
 `artifacts/research/rendering/m624i_boundary_owner_reload_20261017/`; the next
 step is to identify the producer behind these repeated no-op jobs.
+
+### 2026-10-17 addendum: M624J–M624L visible relight churn
+
+M624J threaded caller provenance through visible FIFO admission. Its standard
+M335 Release flight completed eight chunks without collision and identified
+`AdmitUnfinishedVisualDemand` as the repeated source. M624K logged the gate
+predicates on the same warm `World_164` corridor: slice `(2,2,7)` was repeatedly
+fully dark but not stale, with an exact current light-settlement proof and
+matching field/mesh light revision 1. M624K submitted 176 jobs for its band
+`32:47` and logged 177 slice reports in the 38-second route. This establishes
+redundant work; it does not establish a visual defect.
+
+M624L changes only the `relight_only` decision for a fully dark slice that
+passes `IsLegalDarkEqualRevFullyDark`, has current exact-slice settlement, and
+has published/meshed light revisions equal to the field. Open-sky darkness,
+stale-dark witnesses, and unsettled or mismatched revisions still take the
+repair path. The repeated short route completed five chunks without collision;
+the target band had zero submitted relight jobs versus 176 in M624K, with one
+initial slice report versus 177. The build was Release and its static EXE
+verification passed. Metrics were disabled and the trace produced no
+open-sky/stale-dark repair witness, so those cases remain a targeted check.
+
+M624J–M624L suite reports and full INFO traces are preserved under their
+matching `artifacts/research/rendering/` directories. The trace schema,
+reproducible runner command, and counting commands are in
+`FLIGHT_EXPERIMENT_SCRIPTS.md`; exact run results and remaining steps are in
+the remediation plan and diagnostic runbook.

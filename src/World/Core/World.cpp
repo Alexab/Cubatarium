@@ -1282,7 +1282,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                 world_block_key.x, world_block_key.y, enqueue_min, enqueue_max,
                 focus, kVisualStageLitDrawableHoriz,
                 protected_visible_columns, &visible_admission_outcome,
-                &visible_victim_horiz);
+                &visible_victim_horiz, __FUNCTION__);
           }
           // A failed exact-visible admission must not fall back through the
           // ordinary FIFO gate: that path can recreate the same far-deferred
@@ -5392,6 +5392,12 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool light_surface_stale = still_stale || stale_dark_faces;
       const bool open_sky =
           EnterVisualGateCtrl.WasOpenSkyApplied(glm::ivec2(cx, cz));
+      const bool legal_dark_current =
+          slice_light_settled &&
+          IsLegalDarkEqualRevFullyDark(fully_dark, stale_dark_faces,
+                                       open_sky) &&
+          pub.light_rev == desired_light &&
+          probe.meshed_light_rev == desired_light;
       const bool defer_until_lit =
           MeshService->GetCache().IsDeferMeshUntilLit(coord);
       const glm::ivec3 ground(cx, 0, cz);
@@ -5414,10 +5420,37 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const glm::ivec2 slice_column(cx, cz);
       const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
       const auto ensure_slice_relight =
-          [&](bool visible_light_repair_candidate = false) {
+          [&](bool visible_light_repair_candidate,
+              const char *trigger_reason) {
         if (Persistence)
         {
           const bool reserved_outer_candidate = outer_reserved_column;
+          const std::string admission_source =
+              std::string(__FUNCTION__) + ":" +
+              (trigger_reason ? trigger_reason : "unspecified") +
+              "|outer=" + std::to_string(reserved_outer_candidate) +
+              ",defer=" + std::to_string(defer_until_lit) +
+              ",first_mesh=" + std::to_string(first_mesh_needs_lighting) +
+              ",preview=" +
+              std::to_string(provisional_preview_needs_lighting) +
+              ",visible_candidate=" +
+              std::to_string(visible_light_repair_candidate) +
+              ",fully_dark=" + std::to_string(fully_dark) +
+              ",stale_dark=" + std::to_string(stale_dark_faces) +
+              ",behind_light=" + std::to_string(mesh_behind_light) +
+              ",rev_mismatch=" +
+              std::to_string(probe.has_drawable &&
+                             probe.meshed_light_rev != 0 &&
+                             desired_light != 0 &&
+                             probe.meshed_light_rev != desired_light) +
+              ",settled=" + std::to_string(slice_light_settled) +
+              ",open_sky=" + std::to_string(open_sky) +
+              ",published_light=" + std::to_string(pub.light_rev) +
+              ",field_light=" + std::to_string(desired_light) +
+              ",meshed_light=" +
+              std::to_string(probe.meshed_light_rev) +
+              ",legal_dark_current=" +
+              std::to_string(legal_dark_current);
           const bool use_visible_admission =
               (reserved_outer_candidate || defer_until_lit ||
                first_mesh_needs_lighting || visible_light_repair_candidate) &&
@@ -5439,7 +5472,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                     ? kVisualStageFirstMeshRelightForwardHoriz
                     : kVisualStageFirstMeshRelightApproachHoriz,
                 protected_visible_columns,
-                &visible_admission_outcome);
+                &visible_admission_outcome, nullptr, admission_source.c_str());
             if (reserved_outer_candidate)
             {
               outer_relight_admission_results[PackUnfinishedColKey(cx, cz)] =
@@ -5463,8 +5496,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           {
             Persistence->EnqueueTerrainColumnRelight(
                 cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
-                cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1, __FUNCTION__,
-                this);
+                cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1,
+                admission_source.c_str(), this);
             if (Persistence->IsTerrainColumnRelightQueued(slice_block_key) ||
                 IsAsyncRelightColumnInFlight(slice_column))
             {
@@ -5491,12 +5524,16 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           fully_dark && !still_stale && !mesh_behind_light &&
           !(probe.has_drawable && probe.meshed_light_rev != 0 &&
             desired_light != 0 && probe.meshed_light_rev != desired_light);
-      const bool relight_only = fully_dark || stale_dark_faces ||
-                                mesh_behind_light ||
-                                (probe.has_drawable &&
-                                 probe.meshed_light_rev != 0 &&
-                                 desired_light != 0 &&
-                                 probe.meshed_light_rev != desired_light);
+      // Visible admission intentionally bypasses the general no-op FIFO
+      // guard. A settled, equal-revision dark cave slice is already a valid
+      // terminal state; repeatedly relighting it leaves lit_ready false and
+      // creates an endless no-change job loop. Open-sky dark slices and any
+      // unsettled/stale/revision-mismatched slice remain repair candidates.
+      const bool relight_only =
+          (fully_dark && !legal_dark_current) || stale_dark_faces ||
+          mesh_behind_light ||
+          (probe.has_drawable && probe.meshed_light_rev != 0 &&
+           desired_light != 0 && probe.meshed_light_rev != desired_light);
       DemandResult dr =
           demand.NoteDemand(coord, desired_geom, desired_light,
                             desired_coverage, demand_now_ms,
@@ -5511,7 +5548,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         // satisfying demand. Create PendingLight debt only after a queue,
         // in-flight relight, or pending-light owner confirms executable work.
         const bool relight_enqueued = ensure_slice_relight(
-            provisional_preview_needs_lighting);
+            provisional_preview_needs_lighting, "lighting_gate");
         note_unowned_geometry_retry_attempt("defer_relight");
         if (relight_enqueued && first_mesh_needs_lighting &&
             !IsPendingLightBeforeMesh(slice_column))
@@ -5604,7 +5641,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             RequiresLightingLitGate() &&
             col_horiz <= kVisualStageFirstMeshRelightApproachHoriz;
         const bool relight_enqueued =
-            ensure_slice_relight(visible_light_repair_candidate);
+            ensure_slice_relight(visible_light_repair_candidate,
+                                 "relight_only");
         note_unowned_geometry_retry_attempt(
             visible_light_repair_candidate ? "relight_only_visible"
                                            : "relight_only");
@@ -11862,7 +11900,8 @@ void UWorld::EnqueueEnterLitSnapshotRelight()
       // storage, and so an existing far-FIFO ticket is promoted in place.
       if (Persistence->EnqueueVisibleRelight(
               world_key.x, world_key.y, band_min, band_max, focus_ground,
-              fov_r, protected_visible_columns))
+              fov_r, protected_visible_columns, nullptr, nullptr,
+              __FUNCTION__))
       {
         return;
       }
@@ -12897,7 +12936,7 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
       if (Persistence->EnqueueVisibleRelight(
               world_key.x, world_key.y, band_min, band_max,
               glm::ivec3(center.x, 0, center.z), fov_r,
-              protected_visible_columns))
+              protected_visible_columns, nullptr, nullptr, __FUNCTION__))
       {
         return;
       }

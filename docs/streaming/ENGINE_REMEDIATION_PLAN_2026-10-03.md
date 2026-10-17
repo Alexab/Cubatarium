@@ -13623,3 +13623,59 @@ Remaining work after M624I:
    look normal; do not alter water or fog without a matching witness.
 5. At close-out, make research-runner metrics opt-in by default while retaining
    explicit control over disk logging.
+
+### M624J–M624L — identify and stop settled legal-dark relight churn
+
+M624J threaded caller provenance through `EnqueueVisibleRelight` and ran the
+standard visible, no-teleport M335 profile on warm `World_164` (8-second idle,
+30-second flight, 20-second stop; `(120,56,56)`, eye Y 70, yaw 180, pitch -30,
+speed scale 1). The route completed 2,021 frames, traveled eight chunks, and
+had no collision. Metrics were disabled. The repeated relight source was
+`AdmitUnfinishedVisualDemand`; its trace still lacked the exact triggering
+predicate.
+
+M624K logged the admission predicates. On the same route shortened to 8/20/10
+seconds, it completed 1,167 frames and traveled five chunks. For column
+`(2,7)` and slice `(2,2,7)`, repeated `relight_only` admissions reported
+`fully_dark=1`, `stale_dark=0`, `settled=1`, and current field/mesh light
+revision 1. The run submitted 176 relight jobs for band `32:47` and reported
+that slice 177 times. This is scheduler churn on a current settled dark slice,
+not evidence of a visible hole.
+
+M624L changes the `relight_only` predicate so a fully dark slice is treated as
+already satisfied only when all of these hold: the shared
+`IsLegalDarkEqualRevFullyDark` policy accepts it (therefore no open-sky
+obligation or stale-dark witness), the exact slice has current light
+settlement, and the published and meshed light revisions equal the current
+field revision. Unsettled, open-sky, stale, and revision-mismatched cases still
+enter repair. Release compilation and static EXE dependency verification
+passed. The same short 8/20/10-second route completed 1,167 frames and traveled
+five chunks; it had zero `job_submit` entries for `(2,7)` band `32:47` versus
+176 in M624K. It retained one initial slice report, rather than the repeated
+reports. This is a focused route-level confirmation only: metrics were off,
+and the run did not witness an open-sky or stale-dark repair admission.
+
+Artifacts:
+
+- M624J: `bin/suite_reports/engine_refactor/m624j_visible_relight_producer_20261017.json`
+  and `artifacts/research/rendering/m624j_visible_relight_producer_20261017/`.
+- M624K: `bin/suite_reports/engine_refactor/m624k_visible_relight_trigger_20261017.json`
+  and `artifacts/research/rendering/m624k_visible_relight_trigger_20261017/`.
+- M624L: `bin/suite_reports/engine_refactor/m624l_legal_dark_noop_suppression_20261017.json`
+  and `artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017/`.
+
+### Current remaining work after M624L
+
+1. Run a short targeted route that exercises open-sky equal-revision darkness
+   and a stale-dark witness, confirming these states still enter the repair
+   path after the legal-dark guard.
+2. Exercise one exact boundary dependency through FIFO denial, deferred
+   ownership, eviction, reload, and successful relight admission.
+3. Validate one short distant lane with disk-miss/unload-reload provenance and
+   near-view evidence; do not use long operator-monitoring flights.
+4. Close the visual gate review with framebuffer/operator evidence distinct
+   from off-view backlog. Preserve recent reports that water/world appearance
+   look normal; only change water or fog for a matching witness.
+5. At close-out, verify research runners have explicit, disabled-by-default
+   metric/disk-output controls and preserve the current scripts/runbook so the
+   experiments can be resumed without reconstructing methodology.

@@ -12994,3 +12994,59 @@ before treating relight queue volume as productive work.
 Report: `bin/suite_reports/engine_refactor/m624i_boundary_owner_reload_20261017.json`.
 Preserved INFO log and report:
 `artifacts/research/rendering/m624i_boundary_owner_reload_20261017/`.
+
+### M624J–M624L — repeated no-op relight investigation
+
+Use the existing runner; do not create a separate input script. All three runs
+used the saved `World_164`, visible GUI, no teleport, metrics disabled, and
+`CUBATARIUM_RELIGHT_AUDIT=1`. The M624J route used the established M335 profile
+with 8/30/20-second idle/fly/stop phases. M624K and M624L used the same start,
+camera, yaw, pitch, and speed with a shorter 8/20/10-second route. The shorter
+duration changes only how long the route runs, not its capture conditions.
+
+Example command for the M624L repeat (Release executable must already be
+built; `CUBA_ALLOW_DIRTY_AF=1` is required because this is a diagnostic source
+diff, not clean-commit acceptance):
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_ALLOW_DIRTY_AF='1'
+$env:PYTHONIOENCODING='utf-8'
+python .\tools\flight_sim_run.py `
+  --world World_164 --require-existing-world `
+  --scenario product-174657-far `
+  --product-start-position 120 56 56 --yaw 180 --pitch -30 `
+  --idle-sec 8 --fly-phase-sec 20 --stop-phase-sec 10 `
+  --stop-after-blocked-sec 6 --visible --no-metrics `
+  --phase-id m624l_legal_dark_noop_suppression_20261017 `
+  --report bin/suite_reports/engine_refactor/m624l_legal_dark_noop_suppression_20261017.json `
+  --artifact-root artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017
+```
+
+The opt-in producer trace includes branch reason, `defer`, first-mesh/preview
+state, fully-dark and stale-dark predicates, open-sky state, field/published/
+meshed light revisions, and the legal-dark-current decision. Compare the
+following records with PowerShell (set `$log` to the INFO log under that run's
+artifact root):
+
+```powershell
+Select-String -Path $log -Pattern 'relight_admission event=queue_request.*column=\(2,7\)' |
+  Measure-Object
+Select-String -Path $log -Pattern 'job_submit.*column=\(2,7\).*band=32:47' |
+  Measure-Object
+Select-String -Path $log -Pattern 'slice job=.*coord=\(2,2,7\)' |
+  Measure-Object
+```
+
+M624K showed 176 submissions for `(2,7)` band `32:47` and 177 slice reports
+for `(2,2,7)`. M624L showed zero submissions for that band and one slice
+report after the current legal-dark guard. Both runs completed 1,167 frames,
+traveled five chunks, had no collision, and disabled performance gates. Keep
+both suite reports and INFO logs; the comparison demonstrates suppression of
+this specific repeated no-op loop, not visual or performance acceptance.
+
+Artifacts:
+
+- M624J: `artifacts/research/rendering/m624j_visible_relight_producer_20261017/`
+- M624K: `artifacts/research/rendering/m624k_visible_relight_trigger_20261017/`
+- M624L: `artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017/`

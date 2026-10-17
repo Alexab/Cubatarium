@@ -1079,7 +1079,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
     int max_horiz,
     const std::vector<glm::ivec2> &protected_visible_columns,
-    uint8_t *outcome, int *out_victim_horiz)
+    uint8_t *outcome, int *out_victim_horiz, const char *producer)
 {
   // Outcome: 1=normal admission, 2=no replaceable victim,
   // 3=victim replaced and target queued, 4=target failed after victim removal,
@@ -1198,7 +1198,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   if (PendingTerrainColumnRelightKeys.count(key) != 0)
   {
     EnqueueTerrainColumnRelight(world_x, world_z, /*priority=*/true, min_y,
-                                max_y, __FUNCTION__);
+                                max_y, producer ? producer : __FUNCTION__);
     prioritize_visible_repair();
     clear_deferred_far();
     if (outcome)
@@ -1215,7 +1215,8 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     // Bypass EnqueueTerrainColumnRelight's second pressure check, which uses
     // the FIFO trim focus and can reject the same visible target while moving.
     EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true, min_y,
-                                    max_y, /*visible_admission=*/true);
+                                    max_y, /*visible_admission=*/true,
+                                    producer);
     const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
     if (admitted)
     {
@@ -1276,7 +1277,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     {
       EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true,
                                       min_y, max_y,
-                                      /*visible_admission=*/true);
+                                      /*visible_admission=*/true, producer);
       const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
       if (admitted)
       {
@@ -1364,7 +1365,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   PendingTerrainColumnRelightYBands.erase(victim);
   ++RelightFifoOverflowDroppedN;
   EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true, min_y,
-                                  max_y, /*visible_admission=*/true);
+                                  max_y, /*visible_admission=*/true, producer);
   const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
   if (admitted)
   {
@@ -1382,11 +1383,11 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
     int max_horiz,
     const std::vector<glm::ivec2> &protected_visible_columns,
-    uint8_t *outcome, int *out_victim_horiz)
+    uint8_t *outcome, int *out_victim_horiz, const char *producer)
 {
   return EnqueueVisibleRelight(world_x, world_z, min_y, max_y, focus_ground,
                                max_horiz, protected_visible_columns, outcome,
-                               out_victim_horiz);
+                               out_victim_horiz, producer);
 }
 
 void UWorldPersistence::NoteVisibleFirstMeshRelight(

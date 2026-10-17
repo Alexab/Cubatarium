@@ -2002,7 +2002,7 @@ void UWorldStreaming::RefreshStreamingPressure(
                     world_key.x, world_key.y, min_world_y, max_world_y,
                     focus_horiz, kVisualStageFirstMeshRelightForwardHoriz,
                     protected_screen_ray_columns, &visible_relight_outcome,
-                    &visible_relight_victim_horiz);
+                    &visible_relight_victim_horiz, __FUNCTION__);
             if (visible_relight_admitted)
             {
               world.Persistence->NoteVisibleFirstMeshRelight(
