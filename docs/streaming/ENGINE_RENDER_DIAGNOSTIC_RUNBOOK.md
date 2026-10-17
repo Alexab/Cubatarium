@@ -3676,3 +3676,19 @@ zero before and after invalidation/unload, confirming the M624P guard. It did
 not reload this column. M624I separately covers denial→deferred→re-admit→exact
 capture→finalize. Artifacts:
 `artifacts/research/rendering/m624ag_boundary_owner_eviction_m335_short_20261017/`.
+
+### M624AH: short fresh-seed frame lane
+
+Create a unique radius-4 world with the Release CLI, verify the JSON report and
+saved chunk files, then use the existing M335 wrapper with `-EnableMetrics`
+for this run only. M624AH used seed `3650482222`, wrote 679 chunk files, and
+completed 4,047 frames / 58 in-game seconds across ten chunks, reaching
+`(-3,3)` without collision or heading drift. The start focus column was a
+procedural `disk_miss`; 268 procedural misses were recorded. Host CPU
+median/p95/max was `70.9/93.8/98.9%`, so this does not pass the performance
+gate. Analyzer readiness debt remained, while the near-focus mesh proxy rate
+was 0.037 and black proxy rate zero; no pixel or operator verdict exists.
+Treat the analyzer failure as proxy/source evidence, not visible-hole proof.
+Metrics return to off on wrapper exit. Reports are in
+`bin/suite_reports/engine_refactor/` and
+`artifacts/research/rendering/m624ah_cold_frame_m335_short_20261017/`.

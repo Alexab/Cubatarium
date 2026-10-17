@@ -14099,12 +14099,14 @@ source routes. The following are still needed before closing the refactor:
    and post-reload relight completion remain a low-frequency follow-up. Do not
    block the refactor on manufacturing a new route for this rare sequence;
    retain the false-complete guard and keep the follow-up reproducible.
-3. Run a short cold-frontier frame-attributed capture without heavy host CPU
-   contention, and pair it with one actual operator/pixel inspection before
-   making any visual acceptance claim. M624AC does not satisfy this: its
-   analyzer proxies failed under host CPU p95 94%, and no pixel trace was
-   collected. Use the existing repeatable M335 route; no long operator flight
-   is required.
+3. Cold-frontier capture is now reproduced on M624AH: the first M335 focus
+   column `(7,0,3)` was a procedural `disk_miss`; the 58-second visible route
+   covered ten chunks and reached `(-3,3)`. It is not performance acceptance:
+   host CPU p95/max was 93.8/98.9%, and analyzer readiness proxies failed. The
+   near-focus mesh proxy was low and black proxy was zero, but no framebuffer
+   pixel/operator verdict was collected. One clean short frame-attributed
+   capture under lower host load plus the visual verdict remain the last visual
+   acceptance step; no long operator flight is needed.
 4. Once those lifecycle and short visual checks pass, rerun the focused Release
    regression suite and verify metrics remain off by default and experiment
    artifacts/runbooks remain reproducible. Seven focused CTests passed after
@@ -14175,6 +14177,26 @@ collected. Flight report and INFO log are under
 `artifacts/research/rendering/m624ae_open_sky_dirty_queue_witness_m335_short_20261017/`
 and
 `artifacts/research/rendering/m624af_open_sky_repair_owner_m335_short_20261017/`.
+
+### M624AH — fresh cold-frontier frame sample (CPU-contaminated)
+
+Created the unique radius-4 seed `3650482222` in
+`World_M624AH_ColdFrame_20261017`; the Release CLI produced 679 saved chunk
+files. Its visible, no-teleport M335 run enabled metrics for this run only and
+completed 4,047 frames / 58 requested game seconds in 70.15 s. It traveled ten
+chunks from `(7,3)` to the west target `(-3,3)` without collision, heading drift,
+clock gap, or teleport. Source trace recorded 268 procedural disk misses; the
+focus column `(7,0,3)` was a miss. Host CPU median/p95/max was
+`70.9/93.8/98.9%`, so do not use the frame times as a performance gate.
+
+The analyzer returned `pass=false`: readiness debt was 1.0 and stop readiness
+did not drain; near-focus mesh-hole proxy rate was 0.037 and black proxy rate
+was 0. These are streaming/coverage proxies, not visible blank pixels. No pixel
+capture or operator verdict was collected. Metrics are disabled by default and
+were explicitly enabled only for M624AH. Artifacts:
+`bin/suite_reports/engine_refactor/m624ah_cold_frame_world_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m624ah_cold_frame_m335_short_20261017.json`,
+and `artifacts/research/rendering/m624ah_cold_frame_m335_short_20261017/`.
 
 ### M624AG — verify boundary dependency survives column eviction
 

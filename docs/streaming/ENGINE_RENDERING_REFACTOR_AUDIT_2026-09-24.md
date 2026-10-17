@@ -6696,3 +6696,13 @@ denial/deferred/re-admit/capture/finalize segment. The pinned route did not
 reload that same column, so same-column reload remains a low-frequency
 follow-up. This verifies that unload does not falsely persist complete light.
 No metrics or framebuffer verdict were collected.
+
+M624AH created a fresh radius-4 seed (679 chunk files) and ran the same short
+visible M335 flight with FramePerf enabled for that run only. The cold start
+column `(7,0,3)` was a procedural disk miss; the flight reached `(-3,3)` over
+ten chunks without collision. Host CPU p95/max was `93.8/98.9%`, so the run is
+not a performance baseline. Readiness proxy remained high, near-focus mesh
+proxy rate was 0.037, and black proxy rate was zero; no framebuffer/operator
+verdict was collected. This closes the cold-frontier source reproduction, not
+the clean-load performance or visual-acceptance gate. Metrics return to off by
+default.

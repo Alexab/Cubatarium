@@ -13455,3 +13455,38 @@ through unload. Metrics/pixel capture were off. Same-column reload did not
 occur on this route; M624I is the separate denial/defer/re-admit/finalize
 witness. Report and INFO trace:
 `artifacts/research/rendering/m624ag_boundary_owner_eviction_m335_short_20261017/`.
+
+### M624AH — cold-seed FramePerf lane (metrics enabled for one run)
+
+Create a new unique radius-4 seed with the Release CLI, verify its
+`--report-json` and chunk files, then run the established short M335 profile:
+
+```powershell
+$oldDirtyAf = $env:CUBA_ALLOW_DIRTY_AF
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EnableFogPullIn -EnableMetrics -RequireExistingWorld `
+    -World World_M624AH_ColdFrame_20261017 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+    -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 `
+    -PhaseId m624ah_cold_frame_m335_short_20261017 `
+    -Report bin/suite_reports/engine_refactor/m624ah_cold_frame_m335_short_20261017.json
+} finally {
+  if ($null -eq $oldDirtyAf) { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+  else { $env:CUBA_ALLOW_DIRTY_AF = $oldDirtyAf }
+}
+```
+
+M624AH seed `3650482222` created 679 chunk files. The flight completed 4,047
+frames / 58 seconds and ten chunks, reaching `(-3,3)` without collision or
+heading drift. The start focus column was a procedural miss; 268 misses were
+recorded. Host CPU median/p95/max was `70.9/93.8/98.9%`, so frame timings are
+load-contaminated. Analyzer readiness debt stayed high, but near-focus mesh
+proxy rate was 0.037 and black proxy rate zero; no pixel or operator verdict
+was collected. The wrapper restores metrics off by default after the run.
+Artifacts:
+`bin/suite_reports/engine_refactor/m624ah_cold_frame_world_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m624ah_cold_frame_m335_short_20261017.json`,
+`artifacts/research/rendering/m624ah_cold_frame_m335_short_20261017/`.
