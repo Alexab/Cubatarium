@@ -12694,18 +12694,33 @@ unchanged. Release build and short M335 route completed. The route logged
 rows, 80 contained unsettled dark slices; 22 inspected settled dark slices,
 with two stale-witness rows for the same `(3,3,6)` slice. Its light field,
 meshed, and published revisions converged to 2 with matching halo about 0.57 s
-after relight, though no same-view pixel/GPU-ready verdict was captured.
+after relight. A targeted query of the saved renderer-pixel probes joined 28
+opaque depth-surface samples to `(3,3,6)`; all were drawable/draw-ready, on the
+visible MDI pass, and showed settled matching light revisions `2/2/2`. One
+fixed-view pixel `(416,450)` at camera `(120,70,56)` was repeated 3.629 s later
+with RGB changing only from `(117,163,232)` to `(117,162,231)`. This confirms
+the chunk was sampled in a current drawable state after the first publication,
+but there was no same-view pre-publication sample to show a defect transition
+and no operator verdict. Nine samples also showed geometry revision 4 desired
+while revision 3 remained published, despite draw readiness.
+
+The target accumulated stale-light debt again and published `2/2/2` at
+10:36:23.553; its last matching depth-surface probe was earlier, around
+10:36:22.74. Later voxel-ray-only associations resolved framebuffer depth to
+adjacent chunk `(2,3,6)`, so the second repair has no matching target pixel.
 The separate sparse renderer-pixel analysis found 102 low-luma pixels, all on
 drawable opaque surfaces; eight had unsettled/preview state and none had a
 light-revision mismatch. No same-view preview handoff was sampled, and the
-stale target did not appear in the dark-pixel set, so its visible effect stays
-unverified.
+stale target did not appear in the dark-pixel set. The target-specific samples
+improve GPU/framebuffer evidence but still do not establish a visible defect or
+its repair transition.
 Compared with the earlier M622BG run, captures for column `(2,7)` fell from
 1,141 to 13 under the same route parameters; world state and host load differed,
 so this is suggestive evidence rather than a controlled result. M622BI still
-fails aggregate readiness/visual-proxy gates. Next trace the published slice to
-GPU-ready and same-view pixel state, and inspect the remaining repeated
-producers/FIFO pressure without treating readiness debt as a framebuffer hole.
+fails aggregate readiness/visual-proxy gates. Next capture a repeated stale-light
+episode with same-view probes both before and after publication, and inspect the
+remaining repeated producers/FIFO pressure without treating readiness debt as a
+framebuffer hole.
 
 See M622BC/BD in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for measurements and
 artifact names, and `FLIGHT_EXPERIMENT_SCRIPTS.md` for the reproducible route.

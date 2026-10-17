@@ -12162,3 +12162,27 @@ This produced 3,300 probes and 102 low-luma samples, all joined to drawable
 opaque surfaces; eight dark samples had unsettled/preview light and none had a
 light-revision mismatch. No same-view preview-to-nonpreview handoff was
 observed, and the stale target chunk `(3,3,6)` was not in the dark-pixel set.
+
+The dark-pixel filter omits bright observations of the stale target. To retain
+all framebuffer probes associated with one chunk, use the repeatable
+`--watch-chunk X,Y,Z` option without launching another flight:
+
+```powershell
+py -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261017-103559_47804.jsonl `
+  --watch-chunk 3,3,6 `
+  --json-out bin/suite_reports/engine_refactor/m622bi_renderer_pixel_trace_watch_3_3_6_20261017.json
+```
+
+The report found 38 unique associated probes: 28 opaque depth-surface joins
+and 28 separate voxel-ray hits, with 18 appearing in both sets. All 28 depth
+joins were drawable, draw-ready, on a visible MDI pass, settled, and matched
+light revisions `2/2/2`; nine still had desired geometry revision 4 versus
+published revision 3. It found one repeated same-view sample at pixel
+`(416,450)` and camera `(120,70,56)`, 3.629 s apart, RGB
+`(117,163,232)` then `(117,162,231)`. Both observations followed the first
+stale-light publication. There is no matching pre-publication pixel sample, and
+the later stale-light publication at 10:36:23.553 has no target depth-surface
+probe after it; later voxel-ray-only hits resolved the framebuffer depth to
+adjacent `(2,3,6)`. Treat this as direct post-publication framebuffer/GPU-state
+evidence, not proof of a bad-to-good transition or operator-visible defect.

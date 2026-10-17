@@ -20,6 +20,20 @@ def luminance(rgb: tuple[int, int, int]) -> float:
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue
 
 
+def parse_chunk_arg(value: str) -> tuple[int, int, int]:
+    try:
+        parts = tuple(int(part.strip()) for part in value.split(","))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "chunk must be three comma-separated integers: X,Y,Z"
+        ) from exc
+    if len(parts) != 3:
+        raise argparse.ArgumentTypeError(
+            "chunk must be three comma-separated integers: X,Y,Z"
+        )
+    return parts
+
+
 def fog_snapshot(row: dict[str, Any]) -> dict[str, Any] | None:
     if not row.get("renderer_pixel_fog_state_valid"):
         return None
@@ -141,6 +155,17 @@ def main() -> int:
     parser.add_argument("perf_jsonl", type=Path)
     parser.add_argument("--threshold", type=float, default=32.0)
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument(
+        "--watch-chunk",
+        action="append",
+        type=parse_chunk_arg,
+        default=[],
+        metavar="X,Y,Z",
+        help=(
+            "retain all framebuffer probe observations whose opaque or voxel "
+            "ray hit belongs to this chunk; repeat to watch multiple chunks"
+        ),
+    )
     args = parser.parse_args()
 
     probe_count = 0
@@ -148,6 +173,9 @@ def main() -> int:
     ray_states: Counter[str] = Counter()
     dark_light_states: Counter[str] = Counter()
     dark_pixels: list[dict[str, Any]] = []
+    watched_chunk_samples: dict[
+        tuple[int, int, int], list[dict[str, Any]]
+    ] = {coord: [] for coord in args.watch_chunk}
     provisional_preview_sample_n = 0
     surface_preview_sample_n = 0
     surface_preview_seen: set[tuple[int, int, int, int, int, int]] = set()
@@ -195,6 +223,167 @@ def main() -> int:
                 luma = luminance(rgb)
                 ray_state = int(row.get("renderer_pixel_voxel_ray_state", 0))
                 ray_states[str(ray_state)] += 1
+
+                opaque_chunk = (
+                    int(row.get("renderer_pixel_opaque_chunk_x", 0)),
+                    int(row.get("renderer_pixel_opaque_chunk_y", 0)),
+                    int(row.get("renderer_pixel_opaque_chunk_z", 0)),
+                )
+                voxel_chunk = (
+                    int(row.get("renderer_pixel_voxel_chunk_x", 0)),
+                    int(row.get("renderer_pixel_voxel_chunk_y", 0)),
+                    int(row.get("renderer_pixel_voxel_chunk_z", 0)),
+                )
+                watch_matches = {
+                    coord
+                    for coord in args.watch_chunk
+                    if (
+                        row.get("renderer_pixel_opaque_surface_valid")
+                        and opaque_chunk == coord
+                    )
+                    or (
+                        ray_state == 1
+                        and row.get("renderer_pixel_voxel_hit_x") is not None
+                        and voxel_chunk == coord
+                    )
+                }
+                for coord in watch_matches:
+                    sample_time = sample_monotonic_ms(row)
+                    field_rev = row.get("renderer_pixel_opaque_field_light_rev")
+                    meshed_rev = row.get("renderer_pixel_opaque_meshed_light_rev")
+                    published_rev = row.get(
+                        "renderer_pixel_opaque_published_light_rev"
+                    )
+                    desired_geom_rev = row.get(
+                        "renderer_pixel_opaque_demand_desired_geom_rev"
+                    )
+                    published_geom_rev = row.get(
+                        "renderer_pixel_opaque_published_geom_rev"
+                    )
+                    watched_chunk_samples[coord].append(
+                        {
+                            "probe_id": int(
+                                row.get("renderer_pixel_probe_id", 0)
+                            ),
+                            "frame_epoch": int(row.get("frame_epoch", 0)),
+                            "world_epoch": row.get(
+                                "renderer_pixel_opaque_world_epoch",
+                                row.get("world_epoch"),
+                            ),
+                            "incarnation": row.get(
+                                "renderer_pixel_opaque_incarnation",
+                                row.get("incarnation"),
+                            ),
+                            "sample_time_ms": sample_time,
+                            "sample_clock_aligned": row.get(
+                                "renderer_pixel_sample_steady_ms"
+                            )
+                            is not None,
+                            "pixel": [
+                                int(row.get("renderer_pixel_x", 0)),
+                                int(row.get("renderer_pixel_y", 0)),
+                            ],
+                            "camera_world_pos": [
+                                row.get("renderer_pixel_camera_pos_x"),
+                                row.get("renderer_pixel_camera_pos_y"),
+                                row.get("renderer_pixel_camera_pos_z"),
+                            ],
+                            "rgb": list(rgb),
+                            "luminance": round(luma, 3),
+                            "fog_blend_estimate": fog_blend_estimate(row),
+                            "depth_surface_chunk": (
+                                list(opaque_chunk)
+                                if row.get(
+                                    "renderer_pixel_opaque_surface_valid"
+                                )
+                                else None
+                            ),
+                            "depth_surface_valid": bool(
+                                row.get(
+                                    "renderer_pixel_opaque_surface_valid"
+                                )
+                            ),
+                            "opaque_surface_matches_watched_chunk": bool(
+                                row.get(
+                                    "renderer_pixel_opaque_surface_valid"
+                                )
+                                and opaque_chunk == coord
+                            ),
+                            "drawable": bool(
+                                row.get("renderer_pixel_opaque_drawable")
+                            ),
+                            "draw_ready": bool(
+                                row.get("renderer_pixel_opaque_draw_ready")
+                            ),
+                            "mdi_visible_pass_flags": row.get(
+                                "renderer_pixel_opaque_mdi_visible_pass_flags"
+                            ),
+                            "mdi_visible_index_count": row.get(
+                                "renderer_pixel_opaque_mdi_visible_index_count"
+                            ),
+                            "mesh_revision": row.get(
+                                "renderer_pixel_opaque_mesh_revision"
+                            ),
+                            "desired_geometry_revision": desired_geom_rev,
+                            "published_geometry_revision": published_geom_rev,
+                            "geometry_revision_match": (
+                                desired_geom_rev is not None
+                                and published_geom_rev is not None
+                                and int(desired_geom_rev) == int(published_geom_rev)
+                            ),
+                            "field_light_revision": field_rev,
+                            "meshed_light_revision": meshed_rev,
+                            "published_light_revision": published_rev,
+                            "light_revisions_match": (
+                                field_rev is not None
+                                and meshed_rev is not None
+                                and published_rev is not None
+                                and int(field_rev) == int(meshed_rev)
+                                and int(field_rev) == int(published_rev)
+                            ),
+                            "demand_settled": bool(
+                                row.get(
+                                    "renderer_pixel_opaque_demand_has_settled_light"
+                                )
+                            ),
+                            "light_preview": bool(
+                                row.get(
+                                    "renderer_pixel_opaque_vertex_light_preview"
+                                )
+                                or row.get(
+                                    "renderer_pixel_opaque_preview_shader_override"
+                                )
+                                or row.get(
+                                    "renderer_pixel_surface_preview_shader_override"
+                                )
+                            ),
+                            "stale_light_remesh_pending": bool(
+                                row.get(
+                                    "renderer_pixel_opaque_stale_light_remesh_pending"
+                                )
+                            ),
+                            "mesh_work_owner_flags": row.get(
+                                "renderer_pixel_opaque_mesh_work_owner_flags"
+                            ),
+                            "relight_owner_flags": row.get(
+                                "renderer_pixel_opaque_relight_owner_flags"
+                            ),
+                            "voxel_ray_state": ray_state,
+                            "voxel_ray_chunk": list(voxel_chunk)
+                            if ray_state == 1
+                            and row.get("renderer_pixel_voxel_hit_x")
+                            is not None
+                            else None,
+                            "voxel_hit_block": [
+                                row.get("renderer_pixel_voxel_hit_x"),
+                                row.get("renderer_pixel_voxel_hit_y"),
+                                row.get("renderer_pixel_voxel_hit_z"),
+                            ]
+                            if row.get("renderer_pixel_voxel_hit_x")
+                            is not None
+                            else None,
+                        }
+                    )
 
                 if (
                     row.get("renderer_pixel_opaque_surface_valid")
@@ -2090,6 +2279,140 @@ def main() -> int:
         }
         for block_id, group in sorted(dark_pixel_surface_groups.items())
     }
+    watched_chunk_observation_rows: list[dict[str, Any]] = []
+    for coord, raw_samples in sorted(watched_chunk_samples.items()):
+        samples = sorted(
+            raw_samples,
+            key=lambda sample: (
+                float(sample["sample_time_ms"])
+                if sample["sample_time_ms"] is not None
+                else float("inf")
+            ),
+        )
+        same_view_groups: list[list[dict[str, Any]]] = []
+        for sample in samples:
+            group = next(
+                (
+                    existing
+                    for existing in same_view_groups
+                    if existing[0]["pixel"] == sample["pixel"]
+                    and existing[0].get("world_epoch")
+                    == sample.get("world_epoch")
+                    and existing[0].get("incarnation")
+                    == sample.get("incarnation")
+                    and same_camera_position(existing[0], sample)
+                ),
+                None,
+            )
+            if group is None:
+                same_view_groups.append([sample])
+            else:
+                group.append(sample)
+        repeated_same_view = []
+        for group in same_view_groups:
+            if len(group) < 2:
+                continue
+            first = group[0]
+            last = group[-1]
+            first_ms = first.get("sample_time_ms")
+            last_ms = last.get("sample_time_ms")
+            repeated_same_view.append(
+                {
+                    "pixel": first["pixel"],
+                    "camera_world_pos": first["camera_world_pos"],
+                    "sample_count": len(group),
+                    "first_sample_ms": first_ms,
+                    "last_sample_ms": last_ms,
+                    "observed_interval_ms": (
+                        round(float(last_ms) - float(first_ms), 3)
+                        if first_ms is not None
+                        and last_ms is not None
+                        and float(last_ms) >= float(first_ms)
+                        else None
+                    ),
+                    "first_rgb": first["rgb"],
+                    "last_rgb": last["rgb"],
+                    "first_light_revisions": [
+                        first["field_light_revision"],
+                        first["meshed_light_revision"],
+                        first["published_light_revision"],
+                    ],
+                    "last_light_revisions": [
+                        last["field_light_revision"],
+                        last["meshed_light_revision"],
+                        last["published_light_revision"],
+                    ],
+                    "all_draw_ready": all(
+                        item["draw_ready"] for item in group
+                    ),
+                    "all_light_revisions_match": all(
+                        item["light_revisions_match"] for item in group
+                    ),
+                }
+            )
+        observed_times = [
+            float(sample["sample_time_ms"])
+            for sample in samples
+            if sample["sample_time_ms"] is not None
+        ]
+        matching_depth_samples = [
+            sample
+            for sample in samples
+            if sample["opaque_surface_matches_watched_chunk"]
+        ]
+        matching_voxel_ray_samples = [
+            sample
+            for sample in samples
+            if sample["voxel_ray_chunk"] == list(coord)
+        ]
+        watched_chunk_observation_rows.append(
+            {
+                "chunk": list(coord),
+                "sample_count": len(samples),
+                "unique_pixel_count": len(
+                    {tuple(sample["pixel"]) for sample in samples}
+                ),
+                "drawable_sample_count": sum(
+                    sample["drawable"] for sample in matching_depth_samples
+                ),
+                "draw_ready_sample_count": sum(
+                    sample["draw_ready"] for sample in matching_depth_samples
+                ),
+                "matching_light_revision_sample_count": sum(
+                    sample["light_revisions_match"]
+                    for sample in matching_depth_samples
+                ),
+                "matching_geometry_revision_sample_count": sum(
+                    sample["geometry_revision_match"]
+                    for sample in matching_depth_samples
+                ),
+                "geometry_revision_mismatch_sample_count": sum(
+                    not sample["geometry_revision_match"]
+                    for sample in matching_depth_samples
+                ),
+                "unsettled_demand_sample_count": sum(
+                    not sample["demand_settled"]
+                    for sample in matching_depth_samples
+                ),
+                "preview_sample_count": sum(
+                    sample["light_preview"] for sample in matching_depth_samples
+                ),
+                "stale_remesh_pending_sample_count": sum(
+                    sample["stale_light_remesh_pending"]
+                    for sample in matching_depth_samples
+                ),
+                "depth_surface_sample_count": len(matching_depth_samples),
+                "voxel_ray_hit_sample_count": len(matching_voxel_ray_samples),
+                "first_sample_ms": min(observed_times)
+                if observed_times
+                else None,
+                "last_sample_ms": max(observed_times)
+                if observed_times
+                else None,
+                "repeated_same_view_pixel_groups": repeated_same_view,
+                "samples": samples,
+            }
+        )
     report = {
         "perf_jsonl": str(args.perf_jsonl),
         "pixel_probe_count": probe_count,
@@ -2099,6 +2422,7 @@ def main() -> int:
         "dark_pixel_classification": dark_pixel_classification,
         "dark_pixel_fog_blend_counts": dict(dark_pixel_fog_blend_counts),
         "dark_pixel_surface_summary": dark_pixel_surface_summary,
+        "watched_chunk_observations": watched_chunk_observation_rows,
         "opaque_unsettled_demand_sample_count": len(opaque_unsettled_seen),
         "surface_preview_shader_override_sample_count": surface_preview_sample_n,
         "provisional_light_preview_sample_count": provisional_preview_sample_n,

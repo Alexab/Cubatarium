@@ -133,7 +133,7 @@ cd bin
 | `tools/flight_sim_run.py` | Запускает видимый flight, пишет perf/report и исполняет no-teleport маршрут. |
 | `tools/flight_sim_analyze.py` | Сводит perf-метрики и stop/readiness gates; `pass=false` не является само по себе доказательством чёрного пикселя. |
 | `tools/analyze_water_surface_pixel_join.py` | Сопоставляет экранные rays с сохранёнными блоками, CPU fluid triangles, GPU-state witnesses, stencil и RGB до/после transparency. |
-| `tools/analyze_renderer_pixel_trace.py` | Фильтрует подробные renderer pixel trace записи. |
+| `tools/analyze_renderer_pixel_trace.py` | Сводит подробные renderer pixel trace записи; `--watch-chunk X,Y,Z` сохраняет framebuffer-пробы для указанного чанка по depth surface или voxel-ray hit. |
 | `tools/flight_sim_timeline_analyze.py` | Сопоставляет переходы и короткие визуальные/streaming события по timeline. |
 | `tools/analyze_framebuffer_pixel_grid.py` | Сводит пространственную сетку framebuffer probes. |
 | `tools/analyze_geometry_lifecycle.py` | Join для geometry revision bump → queue schedule → точная публикация по координате и attempt id. |
@@ -2362,9 +2362,32 @@ For `(3,3,6)`, `slice job=175` installed changed light at field revision 2 and
 left the drawable mesh dirty at meshed/published revision 1. The stale-light
 debt was queued; at 10:36:05.720, `stale_light_debt event=published` observed
 field, meshed, and published light revision 2 with a matching halo. This
-verifies light/mesh publication convergence for that sample, but the trace did
-not join the chunk to an explicit same-view framebuffer pixel or operator
-verdict, so GPU-visible repair is not proven.
+verifies light/mesh publication convergence for that sample. A targeted pass of
+the saved pixel trace with `--watch-chunk 3,3,6` found 38 associated probes: 28
+whose opaque depth surface resolved to this chunk and 28 whose separate voxel
+ray hit it (18 probes joined both). Every depth-surface probe was drawable and
+draw-ready, had visible MDI pass flags, settled demand, no preview or pending
+stale-light remesh, and matching field/meshed/published light revision `2/2/2`.
+This is framebuffer-pixel/GPU-state evidence after the first publication, not
+just a lifecycle inference.
+
+The targeted trace also found one repeated same-view pixel group at `(416,450)`
+with camera position `(120,70,56)`: two samples 3.629 s apart, RGB
+`(117,163,232)` then `(117,162,231)`, both draw-ready and light-revision
+matched. The first sample was about 2.875 s after the 10:36:05.720 publication.
+No pre-publication sample exists at that same pixel and view, so this does not
+show a bad-to-good transition or establish what an operator saw. Nine of the 28
+depth-surface probes had desired geometry revision 4 while revision 3 remained
+published; they were still drawable, indicating concurrent geometry debt that
+the light-revision check alone does not describe.
+
+The chunk later acquired stale-light debt again at 10:36:23.402 and published
+revision `2/2/2` at 10:36:23.553. The last depth-surface probe for `(3,3,6)` was
+earlier, at about 10:36:22.74. Later probes that still had a voxel-ray hit in
+`(3,3,6)` resolved their opaque depth surface to adjacent chunk `(2,3,6)`;
+there is no post-second-publication pixel sample of the target surface. Thus the
+first repair has direct post-publication pixel evidence, while the repeated
+stale-light episode remains without a matching framebuffer sample.
 
 One earlier M622BG run had 1,141 capture submissions to column `(2,7)`;
 M622BI had 13 to that column on the same route parameters. This is consistent
@@ -2380,14 +2403,16 @@ samples below luma 32 joined a drawable opaque depth surface; none lacked that
 join. Eight dark samples had unsettled/preview state, none had a light-revision
 mismatch, and the samples were 101 outside fog and one partly fogged. The
 trace found zero same-view preview-to-nonpreview handoffs, and its dark-pixel
-set did not include `(3,3,6)`. Low-luma drawable pixels alone do not establish
-a lighting defect; this leaves the stale witness's operator-visible effect
-unproven.
+set did not include `(3,3,6)`. The targeted watch query above recovers bright
+observations omitted by the dark-pixel filter. Low-luma drawable pixels alone
+do not establish a lighting defect; the post-publication pixel joins do not
+prove a pre/post visual transition or an operator-visible defect.
 
-Next correlate the `(3,3,6)` publication with GPU-ready and same-view pixel
-evidence, and inspect why FIFO denials coexist with many redundant-looking
-producer requests. Keep aggregate readiness debt separate from framebuffer
-defects.
+Next capture a repeated stale-light episode with a same-view pixel sample before
+and after the second publication, while retaining the target chunk watch and
+geometry-revision fields. Continue inspecting why FIFO denials coexist with
+many redundant-looking producer requests. Keep aggregate readiness debt
+separate from framebuffer defects.
 
 Artifacts: report `m622bi_pre_admission_noop_guard_20261017.json`; perf
 `perf_20261017-103559_47804.jsonl`; INFO
