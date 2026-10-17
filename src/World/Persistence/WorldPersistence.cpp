@@ -703,8 +703,41 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
       horiz = std::max(std::abs(ground_xz.x - RelightFifoTrimFocusCx),
                        std::abs(ground_xz.y - RelightFifoTrimFocusCz));
     }
-    if (!visible_admission &&
-        !ShouldAdmitRelightFifoEnqueue(fifo_n, horiz))
+    const bool fifo_backpressured =
+        !ShouldAdmitRelightFifoEnqueue(fifo_n, horiz);
+    if (!visible_admission && fifo_backpressured)
+    {
+      // A prior denial already retained this exact work in DeferredFar. While
+      // the same pressure rule still blocks it, repeated producers must merge
+      // their coverage into that durable owner instead of re-running the
+      // denial path every frame. DeferredFar is serviced before producers on
+      // the next capture tick; visible admissions bypass this coalescing path.
+      const auto deferred_owner = DeferredFarRelightColumns.find(ground_xz);
+      if (deferred_owner != DeferredFarRelightColumns.end())
+      {
+        DeferFarRelightColumn(ground_xz, min_y, max_y, priority,
+                              "deferred_owner_backpressure");
+        if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+        {
+          const auto merged = DeferredFarRelightColumns.find(ground_xz);
+          const glm::ivec2 band =
+              merged != DeferredFarRelightColumns.end()
+                  ? merged->second.y_band
+                  : glm::ivec2(min_y, max_y);
+          CubatariumLogInfo(
+              "RelightAudit",
+              "relight_admission event=deferred_owner_skip source=" +
+                  std::string(producer ? producer : "unspecified") +
+                  " column=(" + std::to_string(ground_xz.x) + "," +
+                  std::to_string(ground_xz.y) + ") fifo_n=" +
+                  std::to_string(fifo_n) + " horiz=" +
+                  std::to_string(horiz) + " band=" +
+                  std::to_string(band.x) + ":" + std::to_string(band.y));
+        }
+        return;
+      }
+    }
+    if (!visible_admission && fifo_backpressured)
     {
       if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
       {

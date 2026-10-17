@@ -12174,7 +12174,7 @@ py -X utf8 tools/analyze_renderer_pixel_trace.py `
   --json-out bin/suite_reports/engine_refactor/m622bi_renderer_pixel_trace_watch_3_3_6_20261017.json
 ```
 
-The report found 38 unique associated probes: 28 opaque depth-surface joins
+The report found 38 associated sample records: 28 opaque depth-surface joins
 and 28 separate voxel-ray hits, with 18 appearing in both sets. All 28 depth
 joins were drawable, draw-ready, on a visible MDI pass, settled, and matched
 light revisions `2/2/2`; nine still had desired geometry revision 4 versus
@@ -12186,3 +12186,76 @@ the later stale-light publication at 10:36:23.553 has no target depth-surface
 probe after it; later voxel-ray-only hits resolved the framebuffer depth to
 adjacent `(2,3,6)`. Treat this as direct post-publication framebuffer/GPU-state
 evidence, not proof of a bad-to-good transition or operator-visible defect.
+
+### M622BJ: coalesce deferred-owner retries under FIFO pressure
+
+M622BJ rebuilt the Release target after changing `EnqueueTerrainColumnRelightImpl`
+to merge duplicate requests into an existing DeferredFar owner when the current
+FIFO rule still blocks admission. Visible admission and newly admissible
+requests keep their normal path. The build command was:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+```
+
+Use the same warm `World_164`, visible, no-teleport M335 route as M622BF/BG/BI;
+only change the phase id and report path. The exact run was:
+
+```powershell
+$previousAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$hadPreviousAudit = Test-Path Env:CUBATARIUM_RELIGHT_AUDIT
+$previousDirty = $env:CUBA_ALLOW_DIRTY_AF
+$hadPreviousDirty = Test-Path Env:CUBA_ALLOW_DIRTY_AF
+try {
+  $env:CUBATARIUM_RELIGHT_AUDIT = '1'
+  $env:CUBA_ALLOW_DIRTY_AF = '1'
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -EndMarginBlocks 0 -EnableFogPullIn -EnableScreenRayPixelProbes `
+    -StampWarmPeriods -RequireExistingWorld -World World_164 `
+    -ProbeMinCameraX -128 -ProbeMaxCameraX 128 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 `
+    -Yaw 180 -Pitch -30 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 -IdleSeconds 8 -PhaseId M622BJ `
+    -Report bin/suite_reports/engine_refactor/m622bj_deferred_owner_coalesce_20261017.json
+} finally {
+  if ($hadPreviousAudit) { $env:CUBATARIUM_RELIGHT_AUDIT = $previousAudit }
+  else { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  if ($hadPreviousDirty) { $env:CUBA_ALLOW_DIRTY_AF = $previousDirty }
+  else { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+}
+```
+
+Analyze global low-luma samples and the target stale-light chunk from the saved
+run, without another flight:
+
+```powershell
+$report = Get-Content bin/suite_reports/engine_refactor/m622bj_deferred_owner_coalesce_20261017.json -Raw | ConvertFrom-Json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --json-out bin/suite_reports/engine_refactor/m622bj_renderer_pixel_trace_20261017.json
+py -X utf8 tools/analyze_renderer_pixel_trace.py $report.perf_jsonl `
+  --watch-chunk 3,3,6 `
+  --json-out bin/suite_reports/engine_refactor/m622bj_renderer_pixel_trace_watch_3_3_6_20261017.json
+```
+
+The route completed 29 periods/27 steady with process exit zero and no timeout.
+It logged 46 `deferred_owner_skip` decisions, including 26 from
+`DrainIdleFocusPendingLight`; that source had no FIFO denials. Total FIFO
+denials were 38, with 30 from `EnqueueVoidDarkColumnRelightNote`; no FIFO
+overflow drop was recorded. The run had readiness debt 1.0 and post-stop debt
+34, so aggregate gates remained false. Host CPU median/p95 61.2/86.5% is
+context only.
+
+The global pixel trace had 2,160 probes and 74 low-luma samples, all joined to
+drawable opaque surfaces; seven had unsettled/preview light and none had a
+light-revision mismatch. The watched target had nine associated probes: eight
+depth-surface matches and three voxel-ray hits. All eight depth samples were
+draw-ready with matching geometry and light revisions and no preview/stale
+remesh flag. The slice had a stale-light publication at 10:53:13.055 and again
+at 10:53:45.279. Both target invalidations followed adjacent source
+`(4,3,6)` light installs, jobs 152 and 501 respectively, which scheduled
+`(3,3,6)` as a mesh dependency. The second source install reached field revision
+3 while revision 2 was still published. Target depth samples ended before the
+second episode; there was no fixed-view pre/post pair. Trace job 501's upstream
+request/capture to determine why the neighbor was recalculated. Treat the
+coalescing counters as direct path evidence, not as a causal total-denial
+comparison or proof of a visible lighting defect.

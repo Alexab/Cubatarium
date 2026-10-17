@@ -2369,6 +2369,9 @@ def main() -> int:
             {
                 "chunk": list(coord),
                 "sample_count": len(samples),
+                "unique_probe_id_count": len(
+                    {sample["probe_id"] for sample in samples}
+                ),
                 "unique_pixel_count": len(
                     {tuple(sample["pixel"]) for sample in samples}
                 ),
@@ -2403,6 +2406,16 @@ def main() -> int:
                 ),
                 "depth_surface_sample_count": len(matching_depth_samples),
                 "voxel_ray_hit_sample_count": len(matching_voxel_ray_samples),
+                "depth_and_voxel_ray_sample_count": sum(
+                    sample["opaque_surface_matches_watched_chunk"]
+                    and sample["voxel_ray_chunk"] == list(coord)
+                    for sample in samples
+                ),
+                "voxel_ray_only_sample_count": sum(
+                    not sample["opaque_surface_matches_watched_chunk"]
+                    and sample["voxel_ray_chunk"] == list(coord)
+                    for sample in samples
+                ),
                 "first_sample_ms": min(observed_times)
                 if observed_times
                 else None,

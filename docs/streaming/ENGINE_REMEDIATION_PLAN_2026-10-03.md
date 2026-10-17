@@ -12717,10 +12717,49 @@ its repair transition.
 Compared with the earlier M622BG run, captures for column `(2,7)` fell from
 1,141 to 13 under the same route parameters; world state and host load differed,
 so this is suggestive evidence rather than a controlled result. M622BI still
-fails aggregate readiness/visual-proxy gates. Next capture a repeated stale-light
-episode with same-view probes both before and after publication, and inspect the
-remaining repeated producers/FIFO pressure without treating readiness debt as a
-framebuffer hole.
+fails aggregate readiness/visual-proxy gates. M622BJ exercised a targeted
+DeferredFar coalescing change; see the entry below for its scope and limits.
+The remaining rendering question is whether a repeated halo-stale transition
+has a corresponding bad-to-good framebuffer change at a fixed view. Continue
+producer/FIFO analysis separately from framebuffer evidence.
 
 See M622BC/BD in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for measurements and
 artifact names, and `FLIGHT_EXPERIMENT_SCRIPTS.md` for the reproducible route.
+
+### M622BJ: coalesce pressure-blocked retries with an existing deferred owner
+
+Static inspection found that non-visible producers could repeatedly re-enter
+FIFO admission after a denial had already created an exact `DeferredFar`
+owner. Under active pressure, M622BJ now merges any expanded Y band/priority
+into that owner and skips a duplicate enqueue attempt. It preserves the normal
+admission path when pressure eases and does not change visible-priority
+admission. Release build and the established short M335 route completed.
+
+M622BJ recorded 46 `deferred_owner_skip` decisions, including 26 from
+`DrainIdleFocusPendingLight`; that source had no FIFO denials in the run. Total
+FIFO denials were 38, with 30 from `EnqueueVoidDarkColumnRelightNote`. This
+demonstrates the new ownership/coalescing path and fewer retries from one
+producer, but the total denial comparison to M622BI is not causal because
+world state and host load were not controlled. The host CPU median/p95 was
+61.2/86.5% and is recorded as context only. No FIFO overflow was recorded.
+
+The route remained diagnostically incomplete: 29 periods/27 steady, but
+readiness debt stayed at 1.0 and post-stop readiness debt was 34. Direct
+post-stop mesh-missing, visual-hole, black-sticky, and stalled-visible-black
+counts were zero. A pixel trace of 2,160 probes found 74 low-luma samples; all
+joined drawable surfaces, seven had unsettled/preview light, none had a light
+revision mismatch, and none belonged to target `(3,3,6)`.
+
+The target again produced stale-light debt (`published_halo_changed`) after
+convergence: it was queued at 10:53:12.215, published `2/2/2` at 10:53:13.055,
+queued again at 10:53:44.831, and published at 10:53:45.279. Eight framebuffer
+depth samples of the target were captured after the first publication; all
+were draw-ready with matching geometry/light revisions and no preview or
+pending stale remesh. Both invalidations followed source-chunk `(4,3,6)` light
+installs that queued its dependent `(3,3,6)`: job 152 moved field revision 2
+against published 1; job 501 later moved field revision 3 against published 2.
+The target had no depth sample after the second publication and no fixed-view
+pre/post pair. Next trace the upstream request and capture for job 501 to decide
+whether the late neighbor install is expected streaming work or a repeated
+calculation, then retain the target in the established pixel trace across that
+update. This does not require changing the M335 route start or speed.

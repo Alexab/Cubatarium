@@ -2418,3 +2418,64 @@ Artifacts: report `m622bi_pre_admission_noop_guard_20261017.json`; perf
 `perf_20261017-103559_47804.jsonl`; INFO
 `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-103555.47804`; pixel
 trace `m622bi_renderer_pixel_trace_20261017.json`.
+
+### M622BJ: coalesce retries owned by DeferredFar during FIFO pressure
+
+Static review showed that FIFO denial already retains the exact column and
+vertical band in `DeferredFarRelightColumns`, but repeated non-visible
+producers could retry the same key while the shared pressure predicate still
+blocked it. The new admission path merges an existing deferred band's coverage
+and priority, then returns. It does this only when the key has a deferred owner
+and the current FIFO rule would still deny admission; visible requests and
+requests that become admissible retain their previous behavior. The deferred
+service remains responsible for retrying ownership.
+
+The Release target was rebuilt with
+`cmake --build bin --config Release --target Cubatarium --parallel 8` and the
+short warm M335 no-teleport route completed 29 periods/27 steady with exit 0
+and no timeout. The audit logged 46 `deferred_owner_skip` rows (26 from
+`DrainIdleFocusPendingLight`); none of that producer's requests became FIFO
+denials. There were 38 FIFO denials total, mostly from
+`EnqueueVoidDarkColumnRelightNote` (30). Compared with the preceding M622BI
+count this is suggestive only: saved-world state and host load were different.
+Host CPU was elevated (median/p95 61.2/86.5%) and is context, not an admission
+gate. No FIFO overflow drop was recorded.
+
+The M622BJ route did not pass aggregate readiness gates (readiness debt 1.0,
+visual-hole proxy 0.074, post-stop readiness debt 34). At stop, direct
+mesh-missing, visual-hole, black-sticky, and stalled-visible-black counts were
+zero. Its pixel trace contained 2,160 probes and 74 low-luma samples; all
+joined drawable opaque depth, seven had unsettled/preview light, and none had a
+light-revision mismatch. The dark-pixel set did not include `(3,3,6)`.
+
+The target slice `(3,3,6)` again had a stale-dark witness at block
+`(62,48,100)`. Its stale debt was queued at 10:53:12.215, FIFO-denied at
+10:53:12.811, and published at 10:53:13.055 with matching light revisions
+`2/2/2` and halo. A second stale debt was queued at 10:53:44.831 and published
+at 10:53:45.279. Both target invalidations followed a light install in adjacent
+source chunk `(4,3,6)`, which queued a `mesh_dependency` for dependent
+`(3,3,6)`: job 152 changed the source from published revision 1 to field
+revision 2; job 501 later changed it from published revision 2 to field
+revision 3. The source chunk's own debt also converged after each install. The
+remaining question is why job 501 produced a later settled-light install, not
+whether the target was invalidated without a neighbor light change. The watched
+pixel trace found nine target associations, eight
+opaque depth-surface samples and three separate voxel-ray hits. All eight depth
+samples were drawable/draw-ready, matched geometry and light revisions, and
+had no preview or stale-remesh pending; none was dark. They all preceded the
+second stale episode, and no repeated same-view pixel group was captured. This
+is direct post-first-publication evidence, not a pre/post transition or proof
+of the second repair on screen.
+
+Artifacts: report `m622bj_deferred_owner_coalesce_20261017.json`; perf
+`perf_20261017-105305_30268.jsonl`; INFO
+`Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-105301.30268`; pixel
+reports `m622bj_renderer_pixel_trace_20261017.json` and
+`m622bj_renderer_pixel_trace_watch_3_3_6_20261017.json`.
+
+Next trace the upstream owner/capture request for late source install job 501
+on `(4,3,6)` and determine whether the revision-3 update is expected streaming
+work or a repeated calculation. Arrange the existing short pixel trace to
+remain on `(3,3,6)` across that neighbor update. Keep the M335 route and its
+known start/speed; do not use aggregate readiness as a substitute for a
+framebuffer transition.
