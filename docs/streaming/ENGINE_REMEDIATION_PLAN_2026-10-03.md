@@ -13211,3 +13211,37 @@ this startup question.
 The M623H route was diagnostic, not acceptance: 29 periods, about 144 blocks,
 no timeout, readiness/eye proxies failed, and no operator framebuffer verdict.
 It does not change the rendering status or close cold-world checks.
+
+### M623I update: saved-world startup regression fixed; create performance remains
+
+Closed the M623H persistence/runtime-policy question in `c098d740`. Runtime
+async generation, chunk I/O, and commit budget are now captured before metadata
+load and reapplied before spatial terrain loading. Headless CLI creation restores
+the runtime flags before metadata save, so its temporary synchronous execution
+policy no longer leaks into new worlds. The valid short M335 route on
+`World_M572_Cold_20261014` confirmed async I/O before spatial load and measured
+923 ms spatial load / 5.740 s total startup, compared with M623H's 43.353 / 48.219
+s. Keep this as a diagnostic single comparison, not a performance SLA; the
+harness still failed readiness/eye-proxy gates and there was no framebuffer
+verdict.
+
+The requested create-world performance check found a distinct remaining debt.
+The Release build was invoked with `--parallel 8`, but this affects compilation
+only. CLI creation still forces `AsyncChunkGeneration=false`, so the profile
+used one generation worker and took 68.343 s for 598 saved chunk files. Phase
+costs were 18.933 s generation, 4.303 s post-create, 11.549 s mesh warmup,
+26.165 s prepare-view, and approximately 3.637 s final save. Next steps, in
+order:
+
+1. Enable the already-existing cooperative parallel generation path only for
+   headless CLI creation, preserving synchronous chunk I/O and restoring the
+   configured runtime flags before save.
+2. Recreate a uniquely named world with a distinct seed; verify process/report
+   success, complete chunk count, metadata flags, and a loadable world. Compare
+   phase timings as diagnostics, not as a benchmark.
+3. If mesh warmup/prepare-view remain dominant, inspect exactly which lighting
+   and persisted-data invariants they establish. Only then consider a dedicated
+   headless creation mode that skips work proven unnecessary, leaving GUI
+   `UWorld::Create` unchanged.
+4. Treat interactive startup and visible rendering as separate acceptance
+   evidence; do not infer far-flight correctness from the CLI profile.

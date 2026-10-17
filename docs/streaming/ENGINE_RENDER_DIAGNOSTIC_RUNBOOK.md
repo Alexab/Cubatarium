@@ -2918,3 +2918,46 @@ Artifacts remain local at
 `bin/suite_reports/engine_refactor/m623g_flush_log_shutdown_world164_m335_20261017.json`,
 `bin/logs/perf_20261017-132034_22320.jsonl`, and
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-132030.22320`.
+
+### M623I: verify runtime load policy and profile CLI creation
+
+The startup path now snapshots runtime `AsyncChunkGeneration`, `AsyncChunkIo`,
+and `MaxChunkCommitsPerFrame` in `BeginLoad`, then reapplies them immediately
+after `LoadWorldData`, before `SpatialChunks`. `CreateWorldHeadless` restores
+those runtime settings before saving metadata. This ordering is part of the
+regression contract: do not move policy application back to late finalization.
+
+The short M335 check used the established `World_M572_Cold_20261014` route and
+fixed-day harness. Verify the manifest start-integrity marker, 121/121 spatial
+columns, zero generation, and the `WorldLoadPerf` async flags. The M623I
+diagnostic measured 923 ms `spatial_chunks` and 5.740 s total startup, versus
+M623H's 43.353 s and 48.219 s with metadata flags disabled. The map metadata
+was restored byte for byte after the run. These one-shot timings are diagnostic
+and are not an SLA. Harness readiness and eye-proxy gates still failed; there
+was no operator framebuffer verdict and the route does not certify far-flight
+rendering.
+
+The same Release binary was exercised through `--create-world` with a new
+world name and seed. For the M623I sample, the command created 598 chunk files
+and persisted async generation/I/O enabled; the operation took 68.343 s.
+Generation took 18.933 s and used one worker, post-create 4.303 s, mesh warmup
+11.549 s, prepare-view 26.165 s, and final save about 3.637 s. This established
+that the build itself was requested with `--parallel 8`, while runtime world
+generation was still serial because the CLI explicitly set
+`AsyncChunkGeneration=false`.
+
+Next controlled experiment: change only the CLI creation-time generation flag
+to use the existing async/parallel chunk generation path; keep async chunk I/O
+disabled for the in-memory initial creation and continue restoring the runtime
+policy before save. Use a new world name and seed and preserve prior experiment
+worlds. Confirm successful process/report, chunk count, metadata, and a reload
+of the generated world. Do not optimize away mesh/lighting phases until their
+save and load invariants are understood. C++ `--parallel N` is build parallelism
+only; runtime worker count must be read from `WorldLoadPerf`/creation logs.
+
+Artifacts: `bin/suite_reports/engine_refactor/m623i_async_runtime_policy_load_m335_20261017.json`,
+`bin/logs/perf_20261017-135244_29564.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-135239.29564`,
+and `bin/suite_reports/engine_refactor/m623i_async_runtime_policy_world_create_20261017.json`.
+The generated `bin/worlds/World_M623I_AsyncRuntimePolicy_20261017` is an
+intentional preserved test fixture.

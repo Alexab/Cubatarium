@@ -6478,3 +6478,32 @@ readiness/eye-proxy gates failed, it covered only about 144 blocks, and there
 was no operator framebuffer verdict. Its startup timing identifies a concrete
 load-path issue; it says nothing by itself about far-flight rendering. Keep
 startup timing and visible rendering acceptance as separate rows in the plan.
+
+### M623I follow-up: close the saved-world startup-policy trace
+
+The open M623H question is now traced end to end. `CreateWorldHeadless` runs
+creation with async chunk generation/I/O temporarily disabled, but previously
+serialized those temporary flags into the new world's `world_data.json`.
+Commit `c098d740` now reapplies the runtime policy from
+`core.ProceduralTemplate` before `Save`, and `UWorldCooperativeSession::BeginLoad`
+captures that policy before loading metadata and reapplies it immediately after
+`LoadWorldData`, before `SpatialChunks` starts. This avoids both persisting CLI
+execution choices and allowing old saved flags to force synchronous startup.
+
+The short M623I M335 route on `World_M572_Cold_20261014` read 121/121 columns,
+reported async chunk I/O/generation enabled, and measured 923 ms in
+`spatial_chunks` / 5.740 s total startup, down from M623H's 43.353 / 48.219 s.
+The fixed-day runner restored the map metadata byte for byte. This is a
+diagnostic before/after observation, not a controlled benchmark or rendering
+acceptance result: product readiness proxies failed and no operator framebuffer
+verdict was recorded.
+
+The accompanying CLI world-create profile produced 598 chunk files and correct
+persisted runtime flags, but took 68.343 s. Generation was serial (18.933 s),
+mesh warmup took 11.549 s, and prepare-view took 26.165 s. Build parallelism
+was explicitly requested with `--parallel 8`; runtime world generation still
+uses one worker because the headless CLI currently disables async generation.
+This is a separate performance debt. Evaluate enabling the existing parallel
+chunk-generation path for CLI creation, then profile the visual warmup phases
+before adding a headless fast path; do not skip lighting or change interactive
+world-creation behavior without a data-contract check.

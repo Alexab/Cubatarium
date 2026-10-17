@@ -12742,3 +12742,42 @@ result. Artifacts remain local at
 `bin/suite_reports/engine_refactor/m623h_seed_variant_boundary_world_m572_m335_20261017.json`,
 `bin/logs/perf_20261017-132340_38580.jsonl`, and
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-132335.38580`.
+
+### M623I: runtime async policy and CLI world-create profile
+
+After commit `c098d740`, repeated the short visible no-teleport M335 route on
+`World_M572_Cold_20261014`. The route started at the established `(7,3)` focus,
+ended at `(-2,3)`, completed 29 periods without timeout, and loaded all 121/121
+spatial columns without generation. `WorldLoadPerf` reported async generation
+and chunk I/O enabled before the spatial-column phase. Startup `spatial_chunks`
+took 923 ms and the complete load operation 5.740 s, compared with M623H's
+43.353 s / 48.219 s when the saved metadata disabled async I/O. This is a
+single diagnostic comparison, not a controlled performance benchmark.
+
+The harness remained diagnostic (`pass=false`) on readiness, eye-proxy and A24
+gates. It produced no operator framebuffer verdict; the short route does not
+certify far-flight rendering. Host CPU was 80.3% median / 94.4% p95 and is
+context only. The fixed-day harness restored `World_M572` metadata byte for
+byte after the run.
+
+The same change was checked with a separate CLI-created world
+`World_M623I_AsyncRuntimePolicy_20261017` (seed 3650482211, radius 4). Creation
+succeeded and wrote 598 chunk files. Its persisted runtime metadata correctly
+has async generation and chunk I/O enabled. The operation took 68.343 s:
+18.933 s generation (37,249/37,249 columns, one worker), 4.303 s post-create,
+11.549 s mesh warmup, 26.165 s prepare-view, plus the final save. The Release
+binary was built using `cmake --build bin --config Release --target Cubatarium
+--parallel 8`; this is build parallelism and does not imply parallel runtime
+world generation. The CLI's creation path still explicitly disables async
+generation, so generation itself remains serial. Most total wall time is in
+visual readiness phases that headless CLI generation does not need for a GUI.
+Any optimization must preserve the full lighting/data contract and remain
+isolated from normal interactive world creation.
+
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623i_async_runtime_policy_load_m335_20261017.json`,
+`bin/logs/perf_20261017-135244_29564.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-135239.29564`,
+and `bin/suite_reports/engine_refactor/m623i_async_runtime_policy_world_create_20261017.json`.
+The created world is intentionally preserved under
+`bin/worlds/World_M623I_AsyncRuntimePolicy_20261017`.
