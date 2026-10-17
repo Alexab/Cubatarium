@@ -13352,3 +13352,44 @@ those values cannot establish a visible hole or black chunk. Preserve the
 distinction among process/route outcome, source lifecycle, load validity, and
 visual acceptance in future reports. Avoid repeating long flights for this;
 use the established short route with only the required trace channels enabled.
+
+### M624AD — per-slice OpenSky repair publication check
+
+Run the established short visible route with metrics off. Set and restore the
+extra audit environment variable explicitly; the wrapper does not own it:
+
+```powershell
+$oldRelightAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+    -World World_M624AC_ColdFrame_20261017 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+    -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 `
+    -PhaseId m624ad_open_sky_slice_repair_m335_short_20261017
+} finally {
+  if ($null -eq $oldRelightAudit) {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  } else {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $oldRelightAudit
+  }
+}
+```
+
+The Release source tree subsequently recorded as `771ab0f3` gives each
+qualifying slice a capture-scoped OpenSky repair event and completes it only
+after a newer attempt publishes newer geometry at or beyond the target light
+revision. The report manifest says `git_sha=unknown`, so it is not a source
+revision attestation. M624AD completed 3,569 frames
+and 58 requested in-game seconds, from focus `(7,3)` to `(-2,3)` over nine
+chunks, with no collision, heading deviation, or clock gap. No metrics or
+framebuffer/pixel trace were collected. The INFO trace has 35
+`relight_terminal event=open_sky_dark` observations; all 35 stayed pending, and
+none reported a matching publication. Slice `(9,2,4)` was dirty but not
+in-flight or GPU-pending at its last observation. Thus the route verifies that
+the obligation survives gate reset, but does not prove a near-visible repair
+publishes or show an operator-visible defect. Report and INFO log are in
+`artifacts/research/rendering/m624ad_open_sky_slice_repair_m335_short_20261017/`.

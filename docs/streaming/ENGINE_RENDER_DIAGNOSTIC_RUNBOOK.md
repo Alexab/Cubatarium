@@ -3594,3 +3594,43 @@ Do not repeat this exact metrics run for operator monitoring. When host load
 is suitable, use a short cold-seed capture on the same pinned route, collect
 only the metric channels needed for frame attribution, and obtain a separate
 operator/pixel verdict. Keep metrics disabled by default.
+
+### M624AD: per-slice OpenSky repair lifecycle
+
+To reproduce the focused source/audit lane, preserve and restore the opt-in
+relight audit variable so it does not leak into later runs. This route keeps
+metrics and pixel capture disabled:
+
+```powershell
+$oldRelightAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+    -World World_M624AC_ColdFrame_20261017 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+    -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 `
+    -PhaseId m624ad_open_sky_slice_repair_m335_short_20261017
+} finally {
+  if ($null -eq $oldRelightAudit) {
+    Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
+  } else {
+    $env:CUBATARIUM_RELIGHT_AUDIT = $oldRelightAudit
+  }
+}
+```
+
+The Release source tree subsequently recorded as `771ab0f3` adds an OpenSky
+repair obligation per chunk slice and requires a newer attempt plus newer
+published geometry at the target light revision to close it. The flight
+manifest has `git_sha=unknown`; it does not attest the source commit. M624AD
+completed 3,569 frames / 58 in-game seconds and
+nine chunks with no collision or heading deviation. Metrics were disabled.
+The INFO log contains 35 OpenSky-dark terminal observations, all with
+`repair_pending=1` and `repair_published=0`. Slice `(9,2,4)` was still dirty
+without mesh/GPU work in flight when sampled; no later publication was
+observed. This confirms retention across gate reset, but leaves queue ownership
+and publication completion open. There is no pixel/operator verdict. Report
+and trace: `artifacts/research/rendering/m624ad_open_sky_slice_repair_m335_short_20261017/`.

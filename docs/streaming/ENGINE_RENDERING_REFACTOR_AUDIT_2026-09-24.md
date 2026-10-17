@@ -6652,3 +6652,24 @@ ineligible for LegalDark, but do not mark this gate closed until a short trace
 captures the exact decision. M624M's report and INFO log are preserved under
 `artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`; the
 command and count patterns are recorded in the flight script index.
+
+### 2026-10-17 addendum: M624AD per-slice OpenSky repair obligation
+
+The Release source tree subsequently committed as `771ab0f3` replaces the
+transient-only observation with a capture-scoped OpenSky event and per-slice
+publication proof. The flight manifest itself reports `git_sha=unknown`. A repair remains pending until
+a newer mesh attempt publishes geometry newer than its baseline at the required
+light revision; gate reset no longer makes an unresolved repair look settled.
+The seven focused Release tests passed after the change, and the Release app
+passed static dependency verification.
+
+The short visible M335 run M624AD completed 3,569 frames and 58 requested
+in-game seconds, reaching nine chunks without collision or heading deviation.
+It recorded 35 OpenSky-dark terminal observations: all remained pending and
+none recorded publication. Slice `(9,2,4)` ended its trace dirty with no mesh or
+GPU work in flight, after its source revision reached 6 while published
+geometry remained revision 5. This makes queue ownership/progress the next
+diagnostic target; it does not establish a visible hole, since no pixel trace
+or operator verdict was collected and the slice was not observed later in the
+route. Metrics were disabled. Exact command, caveats, and artifacts are in the
+remediation plan, diagnostic runbook, and experiment journal under M624AD.

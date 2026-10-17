@@ -14073,10 +14073,16 @@ flight succeeded; `pass=false` is an analyzer gate result. Artifacts:
 The bounded-progress implementation is built and exercised on warm and fresh
 source routes. The following are still needed before closing the refactor:
 
-1. Resolve and test the exact OpenSky equal-revision, fully-dark terminal
-   decision with per-slice attempt/publication identity; do not revive the
-   rejected sticky column-wide repair marker, which can repeatedly remint
-   legal dark cave work.
+1. The exact OpenSky equal-revision, fully-dark case now has a durable
+   per-slice repair obligation keyed to a capture event and closed only by a
+   newer mesh publication at the target light revision (commit `771ab0f3`).
+   M624AD exercised the state: all 35 OpenSky-dark terminal observations
+   remained `repair_pending=1`; none had `repair_published=1`. In the sampled
+   slice `(9,2,4)`, the replacement geometry was dirty but not in flight or
+   GPU-pending at the end of the trace. This proves the obligation is retained,
+   but not that a near-visible repair reaches publication. Add stage/queue
+   ownership to the next short trace and close this item only after observing
+   the matching publication (or a documented cancellation/rebind lifecycle).
 2. Produce one runtime trace for a boundary dependency through admission
    denial, deferred ownership, eviction, reload, and relight completion. The
    M624P unload guard protects `boundary_dependency`, but no run has yet shown
@@ -14087,7 +14093,43 @@ source routes. The following are still needed before closing the refactor:
    analyzer proxies failed under host CPU p95 94%, and no pixel trace was
    collected. Use the existing repeatable M335 route; no long operator flight
    is required.
-4. Once those lifecycle and short visual checks pass, run the focused Release
+4. Once those lifecycle and short visual checks pass, rerun the focused Release
    regression suite and verify metrics remain off by default and experiment
-   artifacts/runbooks remain reproducible. The six focused CTests in M624Z
-   passed, but they do not cover the two open runtime lifecycles.
+   artifacts/runbooks remain reproducible. Seven focused CTests passed after
+   `771ab0f3`; they cover policy/store state but do not prove the two open
+   runtime lifecycles or visual acceptance.
+
+### M624AD — exercise per-slice OpenSky repair publication tracking
+
+The source tree subsequently recorded as commit `771ab0f3` adds a
+capture-scoped OpenSky event id and a per-slice repair obligation. A qualifying
+publication must use an attempt newer than both the active and last-published
+baselines, advance geometry revision, and meet the required light revision.
+The obligation remains across enter-gate reset and cannot be settled by the
+transient column marker alone. The flight manifest reports `git_sha=unknown`,
+so it does not independently attest the source revision; the matching Release
+binary was built from that source tree before it was committed.
+
+The established visible, no-teleport M335 route was run for 8/30/20 seconds
+on `World_M624AC_ColdFrame_20261017`, with metrics disabled and only source
+trace plus opt-in `CUBATARIUM_RELIGHT_AUDIT=1`. The process completed 3,569
+frames / 58 requested in-game seconds in 62.92 s, with no clock gap, collision,
+heading drift, or teleport. It reached focus `(-2,3)` from `(7,3)` (nine chunks)
+and did not reach the west target `(-3,3)`. The log has 35
+`relight_terminal event=open_sky_dark` rows; every row reports pending repair
+and zero published repair. For `(9,2,4)`, the captured source revision rose
+from 1 to 6 while published geometry remained 5; the slice was dirty, with no
+mesh build, GPU apply, or extraction in flight. It was not observed again in
+the route log, so this is unresolved queue/service evidence, not proof of a
+player-visible defect or successful repair. No framebuffer/pixel verdict was
+collected.
+
+The seven focused Release CTests passed after this change:
+`chunk_render_demand_test`, `miss_first_mesh_class_test`,
+`job_admission_lifetime_test`, `normal_shutdown_test`,
+`streaming_render_ready_invariants_test`, `cruise_sot_phase_test`, and
+`relight_result_install_test`. Release executable static dependency check
+passed. The all-target build still reports unresolved symbols in unrelated
+legacy test targets (`ChunkLighting.obj` / `ChunkMeshSnapshot.obj`); the app
+and selected refactor/test targets build successfully. Route report and INFO trace are under
+`artifacts/research/rendering/m624ad_open_sky_slice_repair_m335_short_20261017/`.
