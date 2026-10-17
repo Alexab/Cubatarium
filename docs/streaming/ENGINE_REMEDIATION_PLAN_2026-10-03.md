@@ -13109,7 +13109,53 @@ convergence or a user-visible fix from these short warm runs. M623D's two-step
 target update is consistent with an expected boundary return wave; the
 deterministic fixture verifies one source/neighbor/return-check sequence, but
 does not cover deferred pressure across many columns or cold-world startup.
-Next, inspect the final `boundary_dependency` queues from M623D and confirm no
-dependency marker is stranded at shutdown; then perform a short cold-world
-lighting check before another operator-visible route. Keep long flights out of
-the plan.
+An offline lifecycle reconstruction of the complete M623D INFO log found 16
+boundary enqueue/coalesce/denial events and 14 `boundary_exact=1` captures;
+all dependency keys had a later capture by the end of the log. The normal
+shutdown/save summary was present, so this run did not leave a dependency
+marker outstanding. This is reconstructed from request/capture events because
+the runtime does not yet print a direct marker count.
+
+The next short cold-runtime attempt, M623E, used `World_188` with the same
+30/20/8-second no-teleport M335 timing. It was not a valid replay: the saved
+world loaded 121/121 spatial columns with zero generation, but the requested
+start `(120,56,56)` fell back to focus `(-3,1)` instead of `(7,3)`. The
+integrity gate correctly failed. Host CPU was 95.8% median / 100% p95, and the
+INFO log ended mid-record before an orderly shutdown summary. Its 449 raw
+boundary-source events, 241 exact captures, 198 paired boundary job applies
+(43 submitted jobs lacked a logged apply), and 14 marker keys still pending at
+the last complete relevant log line are pressure diagnostics only; the
+truncated trace cannot establish final queue ownership. Do not treat this as a
+cold-world result or a visual regression. Use `World_164` for the primary
+repeatable route. A future fresh-world check must first verify a solid start
+locus without changing the established camera/flight parameters; otherwise
+keep the run static and label it as startup-only. Keep long flights out of the
+plan.
+
+To make the queue check conclusive, the opt-in `capture phase=end` audit now
+reports total boundary markers, marker counts owned by the FIFO/deferred
+queue, and markers with no visible queue owner. The counters are behind
+`CUBATARIUM_RELIGHT_AUDIT`; normal direct launches do not pay the scan/logging
+cost.
+
+M623F rebuilt Release and repeated the established short M335 route on
+`World_164`. Route integrity passed: focus moved `(7,3) -> (-1,3)` over 29
+periods, without timeout. Of 1,799 complete capture-end audit rows, the
+boundary-marker high-water mark was 3, `boundary_without_owner` stayed zero,
+and the last complete row had all four counts at zero. Seven dependency jobs
+were paired with apply; across 591 jobs, 586 were paired and five applies were
+absent from the available INFO log. Paired-job latency was 33.703 ms median,
+125.106 ms p95, and 197.729 ms max. Twelve light-delta records were observed.
+Host CPU was 51.5% median / 75.0% p95; context only.
+
+The harness returned a diagnostic failure: readiness debt remained 1.0 and
+the eye-proxy stop-line reported stale-visual activity/blinking; the
+near-focus visual-hole rate was 0.074 and its post-stop maximum was zero. No
+operator framebuffer verdict was recorded, so this is not evidence of a
+visible defect. The INFO log again ends mid-record without the normal shutdown
+summary, but the final complete queue sample already shows no pending boundary
+markers. M623F validates bounded ownership on the repeatable warm route, not
+global convergence or a fresh-world start. M623E remains invalid as a cold
+route because its requested start did not match runtime focus. Keep the fresh
+world check secondary and require route integrity first; do not chase proxy
+failures without a visible or exact pixel witness.

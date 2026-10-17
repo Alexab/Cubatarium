@@ -2824,5 +2824,68 @@ the 14 boundary jobs had 44.714 ms median and 82.281 ms p95/max. Host CPU was
 `TestHorizontalBoundaryDependencyWaveSettles` fixture passed: a torch lights
 the adjacent chunk to level 13 and a source → neighbor → return-check wave
 settles in three jobs. It does not model deferred FIFO pressure or a full
-world's boundary graph. Inspect pending/deferred dependency ownership before
-the next short route; do not extend flight duration.
+world's boundary graph.
+
+An offline lifecycle reconstruction of the full M623D INFO log found 16 raw
+boundary-source enqueue/coalesce/denial events and 14 `boundary_exact=1`
+captures. All keys had a later capture; the log also contains the ordinary
+shutdown/save summary. There is no direct marker-count record yet, so this is
+event-based evidence rather than a dedicated queue invariant.
+
+### M623E: invalid cold-runtime route integrity check
+
+The short no-teleport M335 profile was repeated on `World_188` with
+`-RequireExistingWorld`, `-FlyPhaseSeconds 30`, `-StopPhaseSeconds 20`,
+`-StopAfterBlockedSeconds 8`, and `-IdleSeconds 8`, with relight/perf audit
+opt-ins. The loader reported `kind=load`, 121/121 spatial columns, and zero
+generation; startup was 3.944 s. The runner pinned the requested
+`(120,56,56)`, but the runtime began at focus `(-3,1)` instead of `(7,3)`, so
+the manifest integrity gate failed. This world does not provide a valid replay
+for that locus; do not compare its route/readiness metrics with M623C/D.
+
+The run completed 29 periods without timeout. Host CPU was 95.8% median / 100%
+p95 and app CPU was 21.2% median / 45.1% p95 of machine capacity; treat host
+load as context only. The available INFO file ends mid-record before orderly
+shutdown. It contains 449 raw boundary-source events, 241 exact dependency
+captures, 198 paired boundary applies, and 43 submitted dependency jobs with no
+logged apply. Fourteen keys were still outstanding at the last complete
+relevant audit line, but the truncated log cannot establish whether they later
+drained. These are queue-pressure diagnostics from an invalid start, not proof
+of a visual defect or a shutdown leak. The short probe exposed why route
+integrity and complete shutdown logs are required for cold-runtime analysis.
+
+Artifacts remain local at `bin/suite_reports/engine_refactor/m623e_boundary_dependency_cold_runtime_m335_20261017.json`,
+`bin/logs/perf_20261017-130919_43876.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-130914.43876`.
+For primary M335 comparisons continue to use `World_164`; only use a new world
+after verifying its start locus, without changing the camera or flight timing.
+
+### M623F: direct boundary queue ownership counters
+
+The Release app now appends these fields to audit-only `capture phase=end`
+events: `boundary_markers`, `boundary_in_fifo`, `boundary_in_deferred`, and
+`boundary_without_owner`. The count scan and log output are guarded by
+`CUBATARIUM_RELIGHT_AUDIT=1`; normal direct launches do not pay this cost.
+
+M623F repeated the established short visible M335 route on `World_164` with
+the same 30/20/8 timing and start `(120,56,56)`. Start integrity passed, focus
+moved `(7,3) -> (-1,3)`, and the process completed 29 periods without timeout.
+The audit had 1,799 complete capture-end rows: boundary markers peaked at 3,
+`boundary_without_owner` stayed zero, and the last complete row was
+`0/0/0/0`. There were 7 boundary jobs and 12 light-delta events. Across 591
+jobs, 586 had apply records; paired latency was 33.703 ms median, 125.106 ms
+p95, and 197.729 ms max. Host CPU was 51.5% median / 75.0% p95, context only.
+
+The harness still returned `pass=false` on readiness and eye-proxy stop-lines;
+readiness debt remained 1.0, visual-hole proxy rate was 0.074, and its
+post-stop maximum was zero. No operator framebuffer verdict was recorded.
+Treat this as a queue-ownership check, not a product acceptance or visual
+defect claim. The available INFO log is truncated before the ordinary shutdown
+summary, but its last complete queue sample already had zero boundary markers.
+
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623f_boundary_marker_counts_world164_m335_20261017.json`,
+`bin/logs/perf_20261017-131539_40028.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-131535.40028`.
+For future boundary work reuse the M623C command and parameters, changing only
+phase id/report path; preserve the start-integrity check and short duration.

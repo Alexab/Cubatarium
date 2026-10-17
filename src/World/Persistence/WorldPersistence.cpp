@@ -2294,12 +2294,33 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             : (!PendingTerrainColumnRelights.empty()
                    ? PendingTerrainColumnRelights.front()
                    : glm::ivec2(-1));
+    int boundary_markers_in_fifo = 0;
+    int boundary_markers_in_deferred = 0;
+    int boundary_markers_without_owner = 0;
+    for (const glm::ivec2 &key : PendingBoundaryDependencyRelightKeys)
+    {
+      const bool in_fifo = PendingTerrainColumnRelightKeys.count(key) != 0;
+      const glm::ivec2 ground_xz(FloorDiv(key.x, CHUNK_SIZE),
+                                 FloorDiv(key.y, CHUNK_SIZE));
+      const bool in_deferred = DeferredFarRelightColumns.count(ground_xz) != 0;
+      boundary_markers_in_fifo += in_fifo ? 1 : 0;
+      boundary_markers_in_deferred += in_deferred ? 1 : 0;
+      boundary_markers_without_owner += (in_fifo || in_deferred) ? 0 : 1;
+    }
     CubatariumLogInfo(
         "RelightAudit",
         std::string("capture phase=") + phase + " drained=" +
             std::to_string(drained) + " cap=" + std::to_string(cap) +
             " stop=" + std::to_string(capture_telem.RelightCaptureStopReason) +
             " fifo=" + std::to_string(GetPendingTerrainColumnRelightCount()) +
+            " boundary_markers=" +
+            std::to_string(PendingBoundaryDependencyRelightKeys.size()) +
+            " boundary_in_fifo=" +
+            std::to_string(boundary_markers_in_fifo) +
+            " boundary_in_deferred=" +
+            std::to_string(boundary_markers_in_deferred) +
+            " boundary_without_owner=" +
+            std::to_string(boundary_markers_without_owner) +
             " fifo_front=(" + std::to_string(front.x) + "," +
             std::to_string(front.y) + ") focus=(" +
             std::to_string(focus.x) + "," + std::to_string(focus.z) +

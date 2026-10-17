@@ -6389,5 +6389,45 @@ applies were missing; paired latency was 37.105 ms median, 127.051 ms p95, and
 228.939 ms max. The boundary jobs had 44.714 ms median and 82.281 ms p95/max.
 Host CPU median/p95 was 80.6/100% and is context only. The run confirms local
 handoff and deferral, not global lighting convergence or an operator-visible
-defect. Before another visible route, audit whether any boundary dependency
-marker remained queued/deferred at shutdown, then do a short cold-world check.
+defect. Offline reconstruction of the complete M623D INFO log counted 16
+boundary-source enqueue/coalesce/denial events and 14 exact dependency
+captures, with no key left outstanding at the final complete audit event. The
+normal shutdown/save summary was present; this is event reconstruction, since
+there is no direct runtime counter for pending boundary markers.
+
+The M623E cold-runtime attempt used saved `World_188`, the same short 30/20/8
+no-teleport profile, and a requested start of `(120,56,56)`. The loader read
+121/121 spatial columns and generated none, but `EnsurePlayerOnGround` fell
+back to focus `(-3,1)` rather than the required `(7,3)`. The run's manifest
+integrity gate failed, so its route and readiness metrics are not acceptance
+evidence. Host CPU was 95.8% median / 100% p95. The INFO file was truncated
+mid-record before a shutdown summary. It contains 449 raw dependency request
+events, 241 exact dependency captures, 198 paired applies (43 submitted jobs
+had no logged apply), and 14 marker keys at the last complete relevant log
+line. Because of the start mismatch, host load, and truncated trace, these
+counts only indicate queue pressure during an invalid route; they do not show
+that markers were stranded at shutdown or that a visual regression occurred.
+For repeatable checks keep `World_164`; any future fresh-world route needs an
+integrity-verified start locus before comparing it with M335.
+
+The subsequent queue-audit instrumentation adds opt-in counters to each
+`capture phase=end` line: total dependency markers, markers also owned by the
+FIFO, markers with a deferred-far owner, and markers without either owner.
+It runs only when `CUBATARIUM_RELIGHT_AUDIT=1`.
+
+M623F rebuilt Release and completed the established short no-teleport M335
+route on `World_164` without timeout; start focus was `(7,3)` and end focus
+`(-1,3)`. Of 1,799 complete capture-end records, the marker high-water mark
+was 3, `boundary_without_owner` stayed zero, and the last complete record had
+zero total/FIFO/deferred/unowned markers. The run logged 7 boundary jobs and
+12 light deltas; 586 of 591 total jobs paired with apply. The final INFO file
+was truncated before its normal shutdown summary, but the last complete queue
+sample already showed no pending boundary work.
+
+The harness remained diagnostic (`pass=false`): readiness debt was 1.0 and
+the eye-proxy stop-line reported stale-visual activity/blinking. The sampled
+visual-hole proxy rate was 0.074 and post-stop maximum zero. No operator
+framebuffer verdict was recorded; these counters are not proof of a visible
+defect. This validates bounded queue ownership on the repeatable warm route,
+not global convergence or a fresh-world start. Keep host CPU as context and
+do not use an invalid-start cold route to tune propagation.

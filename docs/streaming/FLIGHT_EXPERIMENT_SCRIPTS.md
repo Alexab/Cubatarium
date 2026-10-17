@@ -12649,3 +12649,44 @@ durable queue ownership, but do not establish global convergence or a visible
 defect. Artifacts remain local at `bin/logs/perf_20261017-130144_42972.jsonl`,
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-130140.42972`,
 and the report above.
+
+### M623E: cold-runtime route integrity probe
+
+Repeated the short visible no-teleport M335 timing on saved `World_188` with
+relight and perf audit enabled. The loader read 121/121 spatial columns and
+generated none, but the pinned `(120,56,56)` start fell back to focus `(-3,1)`
+instead of `(7,3)`. The manifest rejected the route; do not use it as a cold
+world or M335 acceptance result. It completed 29 periods without timeout
+under high host CPU load (95.8% median / 100% p95). The INFO trace ended
+mid-record before orderly shutdown; 449 raw boundary-source events and 241
+exact captures were logged, with 198 applies paired and 43 dependency submits
+missing an apply row. Fourteen marker keys were pending at the last complete
+relevant line, but the truncated trace cannot tell whether shutdown drained
+them. Treat these values as diagnostic queue-pressure data only.
+
+The exact command and interpretation are in the M623E runbook section.
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623e_boundary_dependency_cold_runtime_m335_20261017.json`,
+`bin/logs/perf_20261017-130919_43876.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-130914.43876`.
+
+### M623F: direct dependency-marker ownership probe
+
+After adding audit-only marker counters, built Release and repeated the short
+visible no-teleport M335 route on `World_164` with the established
+30/20/8-second timings. Start integrity passed; focus moved `(7,3) -> (-1,3)`
+over 29 periods without timeout. In 1,799 complete `capture phase=end` rows,
+the marker high-water mark was 3, `boundary_without_owner` stayed zero, and
+the last complete row reported all four marker counts as zero. Seven boundary
+jobs were logged; 586 of 591 total jobs had apply records. This validates
+queue ownership for the short warm route, not global convergence.
+
+The harness remained diagnostic (`pass=false`) on readiness/eye-proxy
+stop-lines. Readiness debt was 1.0, the visual-hole proxy rate was 0.074, and
+its post-stop maximum was zero. No operator framebuffer verdict was recorded.
+The INFO trace was truncated before the normal shutdown summary, although its
+last complete queue sample showed zero boundary markers. Host CPU was 51.5%
+median / 75.0% p95 and is context only. Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623f_boundary_marker_counts_world164_m335_20261017.json`,
+`bin/logs/perf_20261017-131539_40028.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-131535.40028`.
