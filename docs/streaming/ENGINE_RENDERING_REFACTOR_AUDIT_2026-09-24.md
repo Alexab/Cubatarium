@@ -6685,3 +6685,14 @@ with a matching publication. The trace omits the attempt id and explicit
 repair-state transition, so the next small follow-up is to log that transition
 directly. Metrics and framebuffer capture were disabled; this is not visual
 acceptance evidence.
+
+M624AG combined the short route with boundary relight and unload ownership
+traces. It recorded boundary FIFO denials and an eviction of `(7,0,11)` while
+`relight_deferred_far=1` and `relight_boundary_dependency=1`; `needs_relight`
+stayed true and `light_complete` stayed zero before and after invalidation and
+unload. For `(7,11)`, the trace includes a boundary-exact capture followed by
+deferred-far ownership before eviction. M624I separately supplies the
+denial/deferred/re-admit/capture/finalize segment. The pinned route did not
+reload that same column, so same-column reload remains a low-frequency
+follow-up. This verifies that unload does not falsely persist complete light.
+No metrics or framebuffer verdict were collected.

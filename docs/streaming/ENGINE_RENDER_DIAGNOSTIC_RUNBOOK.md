@@ -3662,3 +3662,17 @@ publishing. The trace omits the repair attempt id and explicit
 `repair_published=1` transition, so retain a small trace-completeness follow-up.
 M624AE/AF artifacts are under the same-named folders in
 `artifacts/research/rendering/`.
+
+### M624AG: boundary owner during unload
+
+Use the short M335 route with source trace plus both ownership channels:
+`CUBA_STREAMER_UNLOAD_TRACE=1` and `CUBATARIUM_RELIGHT_AUDIT=1`; keep metrics
+off. M624AG completed 58 in-game seconds and nine chunks with no collision.
+It recorded boundary FIFO denials. Column `(7,11)` had a boundary-exact
+capture, then a deferred-far owner; unloading `(7,0,11)` recorded
+`relight_deferred_far=1`, `relight_boundary_dependency=1`,
+`needs_relight=1`, and `relight_cancelled=2`. The light-complete flag stayed
+zero before and after invalidation/unload, confirming the M624P guard. It did
+not reload this column. M624I separately covers denial→deferred→re-admit→exact
+capture→finalize. Artifacts:
+`artifacts/research/rendering/m624ag_boundary_owner_eviction_m335_short_20261017/`.

@@ -14090,10 +14090,15 @@ source routes. The following are still needed before closing the refactor:
    attempt id and explicit `repair_published` transition, so add that small
    audit event before treating the lifecycle gate as fully evidenced across
    captures.
-2. Produce one runtime trace for a boundary dependency through admission
-   denial, deferred ownership, eviction, reload, and relight completion. The
-   M624P unload guard protects `boundary_dependency`, but no run has yet shown
-   that this marker was the sole outstanding owner at eviction.
+2. Boundary dependency lifecycle is now partly runtime-verified. M624I showed
+   denial → deferred → re-admission → exact-boundary capture → finalize.
+   M624AG showed boundary-denied requests and column `(7,0,11)` evicted while
+   both `relight_deferred_far=1` and `relight_boundary_dependency=1`; the
+   unload guard kept `needs_relight=1` and `light_complete=0` through removal.
+   The short pinned route did not revisit that column, so same-column reload
+   and post-reload relight completion remain a low-frequency follow-up. Do not
+   block the refactor on manufacturing a new route for this rare sequence;
+   retain the false-complete guard and keep the follow-up reproducible.
 3. Run a short cold-frontier frame-attributed capture without heavy host CPU
    contention, and pair it with one actual operator/pixel inspection before
    making any visual acceptance claim. M624AC does not satisfy this: its
@@ -14170,3 +14175,22 @@ collected. Flight report and INFO log are under
 `artifacts/research/rendering/m624ae_open_sky_dirty_queue_witness_m335_short_20261017/`
 and
 `artifacts/research/rendering/m624af_open_sky_repair_owner_m335_short_20261017/`.
+
+### M624AG — verify boundary dependency survives column eviction
+
+The same visible no-teleport 8/30/20 M335 route ran with source, relight, and
+streamer-unload traces on. It completed 3,552 frames / 58 requested in-game
+seconds in 63.62 s, from `(7,3)` to `(-2,3)` over nine chunks, without collision
+or teleport. Metrics and framebuffer capture were off. The trace recorded
+boundary-dependency FIFO denials. For column `(7,11)`, a boundary request was
+captured with `boundary_exact=1`; a later boundary request became
+`deferred_far` for `visible_exact_replacement`. On eviction of `(7,0,11)`, the
+snapshot had both `relight_deferred_far=1` and
+`relight_boundary_dependency=1`, `needs_relight=1`, and `relight_cancelled=2`.
+`light_complete_before`, `light_complete_after_invalidation`, and
+`light_complete_after_unload` were all zero. The boundary-debt unload guard is
+therefore verified against false completion. The route did not reload this
+same column; M624I provides the separate denial/deferred/re-admit/exact-capture
+completion segment. Full same-column reload is a rare follow-up, not a reason
+to extend operator monitoring. Artifacts are under
+`artifacts/research/rendering/m624ag_boundary_owner_eviction_m335_short_20261017/`.

@@ -13415,3 +13415,43 @@ emit the repair attempt id or explicit `repair_published=1` transition, so add
 that small diagnostic before treating all lifecycle states as fully evidenced.
 M624AE and M624AF reports and
 INFO logs are under their same-named folders in `artifacts/research/rendering/`.
+
+### M624AG — boundary dependency eviction owner check
+
+Run the same pinned route with both relight and unload ownership traces; save
+and restore all environment variables explicitly:
+
+```powershell
+$oldRelightAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$oldDirtyAf = $env:CUBA_ALLOW_DIRTY_AF
+$oldUnloadTrace = $env:CUBA_STREAMER_UNLOAD_TRACE
+$env:CUBATARIUM_RELIGHT_AUDIT = '1'
+$env:CUBA_ALLOW_DIRTY_AF = '1'
+$env:CUBA_STREAMER_UNLOAD_TRACE = '1'
+try {
+  .\tools\run_m335_water_visibility_ab.ps1 `
+    -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+    -World World_M624AC_ColdFrame_20261017 `
+    -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+    -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+    -StopAfterBlockedSeconds 8 `
+    -PhaseId m624ag_boundary_owner_eviction_m335_short_20261017
+} finally {
+  if ($null -eq $oldRelightAudit) { Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue }
+  else { $env:CUBATARIUM_RELIGHT_AUDIT = $oldRelightAudit }
+  if ($null -eq $oldDirtyAf) { Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue }
+  else { $env:CUBA_ALLOW_DIRTY_AF = $oldDirtyAf }
+  if ($null -eq $oldUnloadTrace) { Remove-Item Env:CUBA_STREAMER_UNLOAD_TRACE -ErrorAction SilentlyContinue }
+  else { $env:CUBA_STREAMER_UNLOAD_TRACE = $oldUnloadTrace }
+}
+```
+
+M624AG completed 3,552 frames / 58 seconds, nine chunks, no collision, and no
+teleport. Boundary FIFO denials were present. For `(7,11)`, the log shows a
+boundary-exact capture, then deferred-far ownership; eviction of `(7,0,11)`
+reported both deferred-far and boundary-dependency ownership, kept
+`needs_relight=1`, cancelled two relight requests, and left `light_complete=0`
+through unload. Metrics/pixel capture were off. Same-column reload did not
+occur on this route; M624I is the separate denial/defer/re-admit/finalize
+witness. Report and INFO trace:
+`artifacts/research/rendering/m624ag_boundary_owner_eviction_m335_short_20261017/`.
