@@ -3196,3 +3196,16 @@ clear revisions 98/101 were saved at revision 107; revision 108 was saved at
 110. The route report is `not_evaluated_metrics_disabled`; this is lifecycle
 evidence, not visual acceptance. It does not exercise eviction or a restart
 while the request remains deferred.
+
+### M624G: inspect relight state at column eviction
+
+Set `CUBA_STREAMER_UNLOAD_TRACE=1` together with
+`CUBATARIUM_RELIGHT_AUDIT=1` for the same short M335 route. Eviction records
+include `relight_keyed`, `relight_deferred_far`, `relight_deferred_visible`,
+`relight_inflight`, `relight_cancelled`, and light-complete state before and
+after invalidation/removal. In M624G the route produced 66 evictions and four
+with pending light debt; those four had no queue/deferred/in-flight owner and
+were already marked light-incomplete. None overlapped a deferred-far request,
+so this is not the deferred-owner eviction test. The last capture sample also
+had one generic relight in flight; avoid interpreting zero boundary markers as
+full work convergence.

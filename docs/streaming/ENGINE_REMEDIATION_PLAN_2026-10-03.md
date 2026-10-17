@@ -13472,13 +13472,35 @@ Artifacts: `bin/suite_reports/engine_refactor/m624e_deferred_light_flag_20261017
 `artifacts/research/rendering/m624e_deferred_light_flag_20261017/flight_sim_report.json`,
 and `artifacts/research/rendering/m624e_deferred_light_flag_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-151940.50968`.
 
-Remaining work after M624F:
+### M624G — trace relight ownership through column eviction
+
+Extended the existing opt-in `CUBA_STREAMER_UNLOAD_TRACE` event with the
+pre-unload relight queue owners, cancellation count, and `light_complete`
+before/after values. Release build and static EXE verification passed. On the
+same visible no-teleport M335 profile, `World_164` traveled from `(7,3)` to
+`(-1,3)` over eight chunks with no collision; metrics were disabled and the
+process exited successfully.
+
+The trace recorded 66 column evictions. Four had `needs_relight=1` and
+`active_work=1`; all four already had `light_complete=0` before eviction and
+after removal. None had a keyed FIFO owner, deferred-far owner, or relight job
+in flight, and none of the 66 evictions overlapped `relight_deferred_far=1`.
+Thus the trace confirms that observed pending-light evictions remain
+light-incomplete, but it does not exercise the exact deferred-owner eviction
+case. The final capture sample had no boundary markers or pending-light debt,
+but still one generic relight in flight; do not claim full convergence.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624g_deferred_unload_owner_20261017.json`,
+`artifacts/research/rendering/m624g_deferred_unload_owner_20261017/flight_sim_report.json`,
+and `artifacts/research/rendering/m624g_deferred_unload_owner_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-152518.39060`.
+
+Remaining work after M624G:
 
 1. Exercise the boundary-dependency relight owner through a multi-column chain
    with FIFO denial/deferred retention and column eviction/reload. M624F
-   confirms denial and flag-save ordering on the existing route, but does not
-   force eviction while deferred work is outstanding or restart from that
-   intermediate saved state. The existing
+   confirms denial/save ordering, while M624G confirms ordinary relight-debt
+   eviction; neither catches eviction while the exact boundary request remains
+   deferred or verifies restart from that intermediate saved state. The existing
    deterministic torch fixture settles one source-neighbor-return sequence;
    M623G's warm route ended with no pending/unowned boundary markers, but neither
    proves convergence under broader queue pressure.
