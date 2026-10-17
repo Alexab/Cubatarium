@@ -13360,6 +13360,7 @@ extra audit environment variable explicitly; the wrapper does not own it:
 
 ```powershell
 $oldRelightAudit = $env:CUBATARIUM_RELIGHT_AUDIT
+$oldDirtyAf = $env:CUBA_ALLOW_DIRTY_AF
 $env:CUBATARIUM_RELIGHT_AUDIT = '1'
 $env:CUBA_ALLOW_DIRTY_AF = '1'
 try {
@@ -13375,6 +13376,11 @@ try {
     Remove-Item Env:CUBATARIUM_RELIGHT_AUDIT -ErrorAction SilentlyContinue
   } else {
     $env:CUBATARIUM_RELIGHT_AUDIT = $oldRelightAudit
+  }
+  if ($null -eq $oldDirtyAf) {
+    Remove-Item Env:CUBA_ALLOW_DIRTY_AF -ErrorAction SilentlyContinue
+  } else {
+    $env:CUBA_ALLOW_DIRTY_AF = $oldDirtyAf
   }
 }
 ```

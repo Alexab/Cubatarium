@@ -9238,6 +9238,18 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           const bool capture_pending =
               MeshService && MeshService->GetCache().HasPendingCaptureWork(
                                  chunk_data.coord);
+          int32_t dirty_queue_index = -1;
+          int32_t dirty_queue_size = 0;
+          const uint8_t dirty_queue_kind =
+              MeshService ? MeshService->GetCache().GetDirtyQueueTrace(
+                                chunk_data.coord, dirty_queue_index,
+                                dirty_queue_size)
+                          : 0;
+          const uint64_t dirty_queue_age_frames =
+              MeshService
+                  ? MeshService->GetCache().GetDirtyQueueAgeFrames(
+                        chunk_data.coord)
+                  : 0;
           const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
           const bool first_mesh_ticket =
               flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh);
@@ -9299,6 +9311,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                   std::to_string(MeshService &&
                                  MeshService->GetCache().WasScheduledThisFrame(
                                      chunk_data.coord)) +
+                  " dirty_queue=" + std::to_string(dirty_queue_kind) + ":" +
+                  std::to_string(dirty_queue_index) + "/" +
+                  std::to_string(dirty_queue_size) + " dirty_age_frames=" +
+                  std::to_string(dirty_queue_age_frames) +
                   " first_mesh_ticket=" +
                   std::to_string(first_mesh_ticket) + " relight_ticket=" +
                   std::to_string(relight_ticket) + " field_light_rev=" +
