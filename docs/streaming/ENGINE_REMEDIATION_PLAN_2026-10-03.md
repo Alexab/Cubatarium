@@ -13998,6 +13998,9 @@ timeout; 82 procedural commit events had scheduler queue p95/max
 ApplyTo+MarkDirty p95/max `14.1/34.6 ms`. Shutdown again reported zero pending,
 active, or ready source work. This verifies the refactored helper and bounded
 fallback on the replayed warm route. It is not a cold-seed or framebuffer
-acceptance result. Artifact:
+acceptance result. Six focused Release CTests passed:
+`job_admission_lifetime_test`, `normal_shutdown_test`,
+`streaming_render_ready_invariants_test`, `miss_first_mesh_class_test`,
+`cruise_sot_phase_test`, and `relight_result_install_test`. Artifact:
 `bin/suite_reports/engine_refactor/m624z_final_budget_progress_m335_short_20261017.json`
 and `artifacts/research/rendering/m624z_final_budget_progress_m335_short_20261017/`.
