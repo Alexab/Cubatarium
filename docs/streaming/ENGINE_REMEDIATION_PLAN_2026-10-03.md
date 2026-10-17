@@ -13553,7 +13553,7 @@ Artifacts: `bin/suite_reports/engine_refactor/m624h_owner_source_unload_20261017
 `artifacts/research/rendering/m624h_owner_source_unload_20261017/flight_sim_report.json`,
 and `artifacts/research/rendering/m624h_owner_source_unload_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-153132.42512`.
 
-Remaining work after M624H:
+Items carried into M624I:
 
 1. Exercise the specific boundary-dependency request through FIFO denial,
    deferred ownership, eviction, reload, and relight admission. The M624F
@@ -13569,3 +13569,57 @@ Remaining work after M624H:
 4. At refactor close-out, make research-runner metrics opt-in by default while
    retaining lightweight in-memory counters where useful and a switch to
    disable disk logging.
+
+### M624I — preserve boundary dependency through deferred admission
+
+Added `relight_boundary_dependency` to the opt-in unload trace so a future
+eviction can distinguish an exact boundary marker from an ordinary deferred
+relight owner. Release build and static EXE verification passed.
+
+The visible no-teleport M335 route used the established start, speed, camera,
+and 15/30/20-second idle/fly/stop timing, plus a 15-second course reversal to
+revisit streamed terrain. It ran 2,243 frames, but ended at its original focus
+`(7,3)` with zero net chunks traveled; the report has process exit 1 and failed
+route integrity. Metrics were disabled. Do not treat this as a successful
+flight or visual/performance acceptance run.
+
+The diagnostic log contained 29 evictions, 24 FIFO denials, and one
+`boundary_dependency` denial at `(4,5)`. Its light flag was cleared at revision
+116, then the request was retained in `DeferredFar`. About 42 ms later it was
+admitted again, captured with `boundary_exact=1`, submitted as
+`source=boundary_dependency`, and finalized; the light-complete flag was set at
+revision 123. This verifies the live denial → defer → re-admit → exact capture
+path. No eviction carried a boundary marker or any deferred-far owner, so the
+eviction/reload portion remains open. The process log has no normal shutdown
+summary.
+
+The same trace exposed repeated no-op lighting on a settled slice. It recorded
+1,430 relight jobs; 924 slice reports for `(2,2,7)` all had
+`installed=0`, `satisfying=1`, current settlement `1:1`, published light
+revision 1, and meshed light revision 1. M624G's earlier standard one-way
+M335 also recorded 1,073 reports for this slice, all with the same settled,
+uninstalled state. These repeated jobs show relight churn, but not a
+framebuffer defect. Find the producer/visual-gate predicate that re-enqueues
+this settled slice, then prevent redundant lighting work while preserving
+necessary mesh repair and real stale-light recomputation. This is now the first
+remaining engine issue to resolve.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624i_boundary_owner_reload_20261017.json`,
+`artifacts/research/rendering/m624i_boundary_owner_reload_20261017/flight_sim_report.json`,
+and `artifacts/research/rendering/m624i_boundary_owner_reload_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-153624.17544`.
+
+Remaining work after M624I:
+
+1. Trace the producer and gate state behind repeated no-op relight jobs for an
+   already-settled visible slice; fix the confirmed redundant work and verify
+   the standard short M335 route.
+2. Exercise one exact boundary dependency through denial, deferred owner,
+   eviction, reload, and successful relight admission.
+3. Validate a short target lane at a distant, previously problematic
+   coordinate with disk-miss/unload-reload provenance and a near-view/framebuffer
+   verdict; avoid long operator-monitoring flights.
+4. Close visual gates with framebuffer/operator evidence distinct from off-view
+   backlog. Preserve the user's recent report that water and world appearance
+   look normal; do not alter water or fog without a matching witness.
+5. At close-out, make research-runner metrics opt-in by default while retaining
+   explicit control over disk logging.

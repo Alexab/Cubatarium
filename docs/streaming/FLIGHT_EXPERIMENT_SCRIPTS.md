@@ -12969,3 +12969,28 @@ predicates.
 Report: `bin/suite_reports/engine_refactor/m624h_owner_source_unload_20261017.json`.
 Preserved INFO log and report:
 `artifacts/research/rendering/m624h_owner_source_unload_20261017/`.
+
+### M624I — boundary denial, deferred owner, and reversal diagnostic
+
+Added `relight_boundary_dependency` to the unload trace. The Release run used
+the usual visible no-teleport M335 settings on `World_164`, with a course
+reversal after 15 seconds so the route returned toward already-streamed
+terrain. It ran 2,243 frames but ended at its original focus `(7,3)` with zero
+net chunks traveled; process exit was 1, so route integrity failed. Metrics
+were disabled and this is not acceptance evidence.
+
+There were 29 evictions and 24 FIFO denials. Boundary request `(4,5)` was denied
+at revision 116, retained in DeferredFar, readmitted about 42 ms later, captured
+with `boundary_exact=1`, submitted as `source=boundary_dependency`, and
+finalized at revision 123. No eviction carried a boundary marker or deferred
+owner; no reload was observed.
+
+The trace also recorded 1,430 relight jobs and 924 identical settled reports
+for slice `(2,2,7)` (`installed=0`, `satisfying=1`, settled `1:1`, published /
+meshed light revision 1). M624G's straight M335 route had 1,073 similarly
+settled reports for this same slice. Investigate redundant relight admission
+before treating relight queue volume as productive work.
+
+Report: `bin/suite_reports/engine_refactor/m624i_boundary_owner_reload_20261017.json`.
+Preserved INFO log and report:
+`artifacts/research/rendering/m624i_boundary_owner_reload_20261017/`.

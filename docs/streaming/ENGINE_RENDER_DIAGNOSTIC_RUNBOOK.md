@@ -3249,3 +3249,34 @@ Next, combine the boundary dependency denial, deferred owner, eviction,
 reload, and subsequent relight admission in one trace. M624F and M624H each
 cover only part of that chain. Keep the established M335 camera/speed/altitude;
 avoid long operator-monitoring runs.
+
+### M624I: trace boundary denial through exact capture
+
+The unload trace now includes `relight_boundary_dependency`, sampled before
+column work is cancelled. The M624I Release run used the same visible M335
+profile plus a 15-second course reversal. It completed 2,243 frames, but ended
+at focus `(7,3)` after returning to its start, with zero net chunks traveled
+and process exit 1. This fails route integrity; metrics and visual gates were
+disabled.
+
+The INFO trace recorded 29 evictions and 24 FIFO denials. One boundary request
+for `(4,5)` was denied, cleared light-complete revision 116, and acquired a
+deferred-far owner. About 42 ms later it was admitted, captured with
+`boundary_exact=1`, submitted as `source=boundary_dependency`, and finalized at
+light-complete revision 123. This verifies the live boundary defer/admission
+chain, but there was no eviction of a deferred owner and no reload witness.
+
+M624I also logged 1,430 relight jobs. Of 924 slice reports for `(2,2,7)`, every
+one said `installed=0`, `satisfying=1`, settled revision `1:1`, and published /
+meshed light revision 1. The M624G one-way M335 log contained 1,073 similarly
+settled reports for the same slice. Treat this as repeated no-op relight work
+and a scheduler/visual-gate investigation target, not as evidence of a visible
+rendering hole. Determine which producer re-admits it, then make the smallest
+fix that preserves actual stale-light and mesh repair.
+
+Artifacts: report
+`bin/suite_reports/engine_refactor/m624i_boundary_owner_reload_20261017.json`,
+isolated report
+`artifacts/research/rendering/m624i_boundary_owner_reload_20261017/flight_sim_report.json`,
+and INFO log
+`artifacts/research/rendering/m624i_boundary_owner_reload_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-153624.17544`.

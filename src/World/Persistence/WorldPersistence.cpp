@@ -3907,6 +3907,8 @@ UWorldPersistence::GetTerrainColumnRelightQueueInfo(
 {
   TerrainColumnRelightQueueInfo out{};
   out.keyed = PendingTerrainColumnRelightKeys.count(world_block_key) != 0;
+  out.boundary_dependency =
+      PendingBoundaryDependencyRelightKeys.count(world_block_key) != 0;
   out.deferred_visible =
       DeferredVisibleDrawGateRelightYBands.count(world_block_key) != 0;
   const glm::ivec2 ground_xz(FloorDiv(world_block_key.x, CHUNK_SIZE),

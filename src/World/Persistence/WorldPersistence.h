@@ -94,6 +94,7 @@ public:
     bool in_deque{false};
     bool deferred_visible{false};
     bool deferred_far{false};
+    bool boundary_dependency{false};
     bool y_band_defined{false};
     int queue_index{-1};
     int queue_size{0};

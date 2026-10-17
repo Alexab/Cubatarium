@@ -6576,3 +6576,28 @@ relight owner in its trace, but that older event did not expose the full
 unclassified; the aggregate event alone does not prove ownerless work.
 Artifacts and exact route settings are recorded in the remediation plan,
 diagnostic runbook, and `FLIGHT_EXPERIMENT_SCRIPTS.md` under M624H.
+
+### 2026-10-17 addendum: M624I boundary denial and repeated settled relight
+
+M624I adds `relight_boundary_dependency` to the opt-in column-unload trace.
+The visible reverse-course M335 route ended at its original focus `(7,3)`,
+traveled zero net chunks, and exited 1; its route-integrity gate failed. Do not
+use it as acceptance evidence. Its INFO trace did show one exact boundary
+denial at `(4,5)`: light-complete revision 116 was cleared, the request was
+retained in DeferredFar, then it was re-admitted about 42 ms later, captured
+with `boundary_exact=1`, submitted as a boundary job, and finalized at revision
+123. No deferred owner was evicted and no disk reload was seen.
+
+A separate high-volume pattern merits priority investigation. M624I submitted
+1,430 relight jobs; all 924 recorded slices for `(2,2,7)` were uninstalled but
+satisfying, settled at `1:1`, and had published/meshed light revision 1. M624G's
+standard one-way route recorded the same chunk slice 1,073 times in the same
+settled/uninstalled state. This confirms redundant relight computation on a
+settled slice across two runs. It does not identify the enqueuing producer or
+prove a framebuffer defect. Trace the visible-relight producer/gate predicate
+and stop needless recalculation without suppressing actual stale-light or
+mesh repair.
+
+M624I report and INFO log are preserved under
+`artifacts/research/rendering/m624i_boundary_owner_reload_20261017/`; the next
+step is to identify the producer behind these repeated no-op jobs.

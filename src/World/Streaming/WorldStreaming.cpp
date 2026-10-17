@@ -5906,6 +5906,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                   std::to_string(relight_queue.deferred_far) +
                   " relight_deferred_visible=" +
                   std::to_string(relight_queue.deferred_visible) +
+                  " relight_boundary_dependency=" +
+                  std::to_string(relight_queue.boundary_dependency) +
                   " relight_inflight=" + std::to_string(relight_inflight) +
                   " pending_light_before_mesh=" +
                   std::to_string(pending_light_before_mesh) +
