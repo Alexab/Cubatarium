@@ -13664,11 +13664,42 @@ Artifacts:
 - M624L: `bin/suite_reports/engine_refactor/m624l_legal_dark_noop_suppression_20261017.json`
   and `artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017/`.
 
-### Current remaining work after M624L
+### M624M — exercise startup open-sky and stale-dark repair after the guard
 
-1. Run a short targeted route that exercises open-sky equal-revision darkness
-   and a stale-dark witness, confirming these states still enter the repair
-   path after the legal-dark guard.
+M624M repeated the established visible M335 route on saved
+`World_M613A_Cold_FlagLifecycle_20261016`, using the same `(-32,56,56)` start,
+eye Y 70, yaw 180, pitch -30, speed scale 1, and fog-pull-in setting as the
+earlier open-sky investigation. The route was shortened to 8/30/20-second
+idle/fly/stop phases, remained no-teleport, completed 3,074 frames, traveled
+ten chunks from `(-2,3)` to `(-12,3)`, and had no collision. The world loaded
+from saved terrain (warm cache); perf/disk metrics were disabled. The manifest
+records clean source at commit `1da8592f` and Release configuration.
+
+The INFO trace recorded one `enter_open_sky` application that changed two
+chunk slices at world column `(-48,96)`, followed by published-halo stale-light
+debt. It also recorded eight `AdmitUnfinishedVisualDemand` admissions with
+`stale_dark=1`; those requests remained on the repair path with
+`legal_dark_current=0`. For example, slice `(3,3,1)` was admitted at field light
+revision 2 while mesh/published revisions were 1, then published at revision 2.
+This confirms stale-dark repair remains live after M624L and that the startup
+open-sky mutation still creates dependent work.
+
+No admission in this run had `open_sky=1`, and no `legal_dark_current=1`
+decision was directly traced. Thus it does not prove the equal-revision,
+open-sky fully-dark case at runtime. The shared policy statically excludes
+open-sky and stale faces from LegalDark, but retain one short targeted check of
+that specific predicate before closing the gate review.
+
+Report and INFO log:
+`bin/suite_reports/engine_refactor/m624m_open_sky_legal_dark_guard_20261017.json`
+and `artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`.
+Exact parameters and trace commands are in `FLIGHT_EXPERIMENT_SCRIPTS.md`.
+
+### Current remaining work after M624M
+
+1. Confirm the direct `open_sky=1`, equal-revision fully-dark decision at
+   runtime. M624M exercised a changed open-sky mutation and stale-dark repairs,
+   but did not log this exact gate state.
 2. Exercise one exact boundary dependency through FIFO denial, deferred
    ownership, eviction, reload, and successful relight admission.
 3. Validate one short distant lane with disk-miss/unload-reload provenance and

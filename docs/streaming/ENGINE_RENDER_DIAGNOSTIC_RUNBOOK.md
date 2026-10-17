@@ -3325,3 +3325,42 @@ The flight parameters and trace-count commands are recorded in
 check, the boundary-denial → deferred owner → eviction → reload chain, and one
 short distant disk-miss lane. Keep long operator-monitoring flights out of the
 close-out plan.
+
+### M624M: open-sky mutation and stale-dark repair after M624L
+
+M624M repeated the established visible M335 route on the saved
+`World_M613A_Cold_FlagLifecycle_20261016` world with the previously used
+`(-32,56,56)` start, eye Y 70, yaw 180, pitch -30, speed scale 1, and fog
+pull-in. It used 8/30/20-second idle/fly/stop phases, completed 3,074 frames,
+traveled ten chunks from `(-2,3)` to `(-12,3)`, and had no collision. Startup
+loaded saved terrain; this is a warm-cache run. Perf and disk metrics were
+disabled. The manifest records clean Release source at commit `1da8592f`.
+
+The INFO trace recorded one `enter_open_sky` application changing two chunk
+slices at world column `(-48,96)` and queuing the dependent stale-light halo.
+Eight `AdmitUnfinishedVisualDemand` queue requests had `stale_dark=1` and
+`legal_dark_current=0`; stale-light debt for `(3,3,1)` was admitted at field
+revision 2 with mesh/published revisions 1, then published at revision 2.
+This is runtime evidence that stale-dark repair remains active after the
+LegalDark no-op guard and that an open-sky mutation continues into dependent
+mesh repair.
+
+The run did not produce an admission with `open_sky=1` or a directly logged
+`legal_dark_current=1` decision. Therefore the exact equal-revision open-sky
+fully-dark guard case remains pending; do not infer it from the mutation event
+alone. The static policy rejects open-sky/stale cases from LegalDark, and the
+stale-dark runtime path was observed, but one short exact open-sky decision
+trace is still needed.
+
+Report: `bin/suite_reports/engine_refactor/m624m_open_sky_legal_dark_guard_20261017.json`.
+Preserved suite report, application report, and INFO log:
+`artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`.
+
+To count the state witnesses:
+
+```powershell
+$log = 'artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-155436.29048'
+Select-String -Path $log -Pattern 'enter_open_sky event=complete.*changed_chunks=[1-9]'
+Select-String -Path $log -Pattern 'relight_admission event=queue_request.*stale_dark=1'
+Select-String -Path $log -Pattern 'stale_light_debt event=(admitted|published) coord=\(3,3,1\)'
+```

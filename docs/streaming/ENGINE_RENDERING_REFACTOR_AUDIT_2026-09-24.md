@@ -6628,3 +6628,27 @@ matching `artifacts/research/rendering/` directories. The trace schema,
 reproducible runner command, and counting commands are in
 `FLIGHT_EXPERIMENT_SCRIPTS.md`; exact run results and remaining steps are in
 the remediation plan and diagnostic runbook.
+
+### 2026-10-17 addendum: M624M open-sky and stale-dark repair check
+
+M624M reran the established M335 start/camera on the saved
+`World_M613A_Cold_FlagLifecycle_20261016` map under the M624L Release code.
+This was a warm-cache load, visible no-teleport route, and 8/30/20-second
+idle/fly/stop profile. It completed 3,074 frames and ten chunks without
+collision; metrics and disk sampling were disabled. The clean manifest points
+to commit `1da8592f`.
+
+The INFO trace recorded an `enter_open_sky` application that changed two
+loaded slices and created dependent stale-light work. It also recorded eight
+admissions with `stale_dark=1` and `legal_dark_current=0`. Slice `(3,3,1)` was
+admitted while field light revision 2 was ahead of mesh/published revision 1,
+then reached revision 2 on publication. This confirms actual stale-dark repair
+still executes after the legal-dark guard. The open-sky mutation/dependency
+path also executed.
+
+No admission had `open_sky=1`; the equal-revision open-sky fully-dark case
+therefore remains unverified at runtime. Static policy makes that state
+ineligible for LegalDark, but do not mark this gate closed until a short trace
+captures the exact decision. M624M's report and INFO log are preserved under
+`artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`; the
+command and count patterns are recorded in the flight script index.

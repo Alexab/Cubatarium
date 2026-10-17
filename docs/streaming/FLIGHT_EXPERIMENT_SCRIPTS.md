@@ -13050,3 +13050,36 @@ Artifacts:
 - M624J: `artifacts/research/rendering/m624j_visible_relight_producer_20261017/`
 - M624K: `artifacts/research/rendering/m624k_visible_relight_trigger_20261017/`
 - M624L: `artifacts/research/rendering/m624l_legal_dark_noop_suppression_20261017/`
+
+### M624M — short open-sky/stale-dark check after the legal-dark guard
+
+This replay uses the existing M335 wrapper and the established M622G
+`World_M613A_Cold_FlagLifecycle_20261016` start and camera. The world is now a
+saved warm-cache load. Only the route duration is shorter (8/30/20 seconds).
+`-DisableMetrics` turns off perf/disk metrics and the higher-volume visual
+traces; `CUBATARIUM_RELIGHT_AUDIT` remains enabled to retain open-sky, queue,
+and stale-light lifecycle records.
+
+```powershell
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:PYTHONIOENCODING='utf-8'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn -RequireExistingWorld `
+  -DisableMetrics -World World_M613A_Cold_FlagLifecycle_20261016 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 8 `
+  -PhaseId m624m_open_sky_legal_dark_guard_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624m_open_sky_legal_dark_guard_20261017.json `
+  -ArtifactRoot artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017
+```
+
+M624M completed 3,074 frames and traveled ten chunks from focus `(-2,3)` to
+`(-12,3)`, with no collision. It logged one open-sky application changing two
+slices, eight stale-dark admissions (`stale_dark=1`), and stale-light debt for
+`(3,3,1)` that published at the current light revision. It had no admission
+with `open_sky=1`, so use it to verify stale-dark repair and open-sky dependent
+work, not the equal-revision open-sky gate itself. Report and trace are kept in
+`artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`.
