@@ -31,6 +31,7 @@ def summarize(path: Path) -> dict[str, Any]:
     capture_flags: dict[tuple[int, int], int] = {}
     trigger_counts: Counter[str] = Counter()
     ray_states: Counter[str] = Counter()
+    ray_state_color_counts: dict[str, Counter[str]] = defaultdict(Counter)
     pixel_counts: Counter[str] = Counter()
     focus_counts: dict[int, Counter[str]] = defaultdict(Counter)
     luminances: list[float] = []
@@ -89,7 +90,14 @@ def summarize(path: Path) -> dict[str, Any]:
                 pixel_counts["sea_plane_surface_ray_valid"] += 1
 
             state = int(row.get("renderer_pixel_voxel_ray_state", 0))
-            ray_states[str(state)] += 1
+            state_key = str(state)
+            ray_states[state_key] += 1
+            state_color = ray_state_color_counts[state_key]
+            state_color["samples"] += 1
+            state_color["luminance_sum"] += luminance
+            state_color["luminance_le_32"] += luminance <= 32
+            state_color["luminance_le_64"] += luminance <= 64
+            state_color["rgb_max_le_16"] += max(red, green, blue) <= 16
             fog_end = float(row.get("renderer_pixel_fog_end", -1.0))
             if state == 1:
                 pixel_counts["opaque_voxel_ray_hit"] += 1
@@ -137,6 +145,18 @@ def summarize(path: Path) -> dict[str, Any]:
         raise ValueError(f"no renderer_pixel_probe rows found in {path}")
 
     capture_size_counts = Counter(str(count) for count in captures.values())
+    ray_state_color = {
+        state: {
+            "samples": counts["samples"],
+            "rgb_max_le_16": counts["rgb_max_le_16"],
+            "luminance_le_32": counts["luminance_le_32"],
+            "luminance_le_64": counts["luminance_le_64"],
+            "mean_luminance": round(
+                counts["luminance_sum"] / counts["samples"], 3
+            ),
+        }
+        for state, counts in sorted(ray_state_color_counts.items())
+    }
     focus_summary = {
         str(cx): {
             "samples": counts["samples"],
@@ -173,6 +193,7 @@ def summarize(path: Path) -> dict[str, Any]:
             "luminance_median": round(statistics.median(luminances), 3),
         },
         "voxel_ray_states": dict(sorted(ray_states.items())),
+        "voxel_ray_state_color": ray_state_color,
         "ray_and_depth_counts": dict(sorted(pixel_counts.items())),
         "interpretation_limits": [
             "A raw near-black threshold is not by itself a missing-terrain diagnosis.",
@@ -206,6 +227,7 @@ def main() -> int:
         "capture_trigger_flag_counts": summary["capture_trigger_flag_counts"],
         "color": summary["color"],
         "voxel_ray_states": summary["voxel_ray_states"],
+        "voxel_ray_state_color": summary["voxel_ray_state_color"],
         "ray_and_depth_counts": summary["ray_and_depth_counts"],
         "json_out": str(args.json_out) if args.json_out else None,
     }, ensure_ascii=False))

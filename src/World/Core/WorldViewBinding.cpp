@@ -192,6 +192,19 @@ void UWorldViewBinding::EnsurePlayerOnGround(UWorld &world)
   std::optional<int> topY = world.FindHighestSolidY(x, z);
   if (!topY)
   {
+    const glm::ivec3 user_ground(FloorDiv(column.x, CHUNK_SIZE), 0,
+                                 FloorDiv(column.z, CHUNK_SIZE));
+    // A saved player can be restored into a column that is not resident yet
+    // (for example, a fresh world whose terrain around the saved position must
+    // be generated on demand). Treating that temporary absence as an empty
+    // column teleports the player to SpawnPoint before streaming can satisfy
+    // the request. Only use the spawn fallback after the user's terrain column
+    // is complete and demonstrably has no solid ground.
+    if (!world.IsTerrainColumnCompleteFast(user_ground))
+    {
+      return;
+    }
+
     const glm::ivec3 spawnColumn = WorldPosToBlock(world.SpawnPoint);
     x = spawnColumn.x;
     z = spawnColumn.z;

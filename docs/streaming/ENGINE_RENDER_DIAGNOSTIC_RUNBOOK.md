@@ -3032,3 +3032,44 @@ Artifacts: `bin/suite_reports/engine_refactor/m623k_headless_cli_create_20261017
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142330.32200`,
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142358.43332`,
 and `bin/worlds/World_M623K_HeadlessCreate_20261017`.
+
+### M624A: short cold-frontier check after start-position repair
+
+Build Release with `tools/build_release.ps1 -Jobs 8`, then run the established
+visible M335 settings for a short segment:
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF = "1" # diagnostic runs on an uncommitted fix only
+tools/run_m335_water_visibility_ab.ps1 `
+  -EnableFogPullIn -EnableScreenRayPixelProbes -StampWarmPeriods `
+  -RequireExistingWorld -World World_M623K_HeadlessCreate_20261017 `
+  -ProbeMinCameraX -200 -ProbeMaxCameraX 200 `
+  -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 8 `
+  -PhaseId m624a_cold_start_no_spawn_fallback_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624a_cold_start_no_spawn_fallback_20261017.json
+Remove-Item Env:CUBA_ALLOW_DIRTY_AF
+```
+
+The route integrity check passed: `(120,56,56)` / focus `(7,3)` stayed pinned;
+the route reached `(-2,3)` after 144 blocks. INFO source events show the start
+column `(7,0,3)` was missing on disk, then generated in 260 ms and committed in
+302 ms. This validates that a temporarily incomplete terrain column no longer
+teleports the saved player to `SpawnPoint`. The world is saved, so classify it
+as a cold streaming frontier, not a clean unsaved-world load. The run's product
+suite still failed readiness/visual-hole proxies and its manifest records a
+dirty diff; it is not acceptance evidence.
+
+App-side pixel probes: run
+`python -X utf8 tools/analyze_framebuffer_pixel_grid.py <perf-jsonl> --json-out <analysis.json>`.
+The analyzer now groups sampled colors by voxel-ray state. M624A had 66
+unloaded-voxel rays within fog end 32, all between 30.5 and 31.8 blocks in four
+captures; the pixels had mean luminance 129.554, with zero at luminance <=32 or
+RGB max <=16. This points to unresolved geometry at the fog boundary, not a
+sampled black pixel. Sparse app-side probes are not full-frame coverage; keep
+the distinction explicit in reports.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624a_cold_start_no_spawn_fallback_20261017.json`,
+`bin/suite_reports/engine_refactor/m624a_framebuffer_pixel_analysis_20261017.json`,
+`bin/logs/perf_20261017-143427_44800.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-143423.44800`.

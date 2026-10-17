@@ -138,6 +138,8 @@ content refactors; do not create a separate artifact convention per subsystem.
   runner, analyzer, capture helper, or experiment recipe is added or retired.
 - Remove run-specific environment instrumentation after each experiment; keep
   the documented switches and default them off.
-- Finish the rendering tasks in
-  `ENGINE_REMEDIATION_PLAN_2026-10-03.md`: dependency-driven boundary relight,
-  deterministic skylight air/water validation, and short cold/far-route closure.
+- Rendering follow-up is tracked in the current-status section at the end of
+  `ENGINE_REMEDIATION_PLAN_2026-10-03.md`: prove dependency-relight convergence
+  under queue pressure, repeat a clean fresh-seed cold-frontier check, and close
+  a short distant-coordinate lane with framebuffer evidence. The air/water
+  skylight boundary and read-closure checks are already recorded as complete.

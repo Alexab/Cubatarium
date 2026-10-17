@@ -13291,3 +13291,61 @@ Build instructions are also corrected: `--parallel 8` by itself left MSVC at
 `tools/build_release.ps1 -Jobs 8`, which passes `/p:CL_MPCount=8`; compiler
 response files and concurrent workers confirmed `/MP8`. Build worker count and
 runtime world-generation worker count must be recorded separately.
+
+### M624A — do not move a saved player when its requested terrain is pending
+
+The M623E start-integrity failure was a real lifecycle issue, not a bad route
+coordinate. The world loader requested terrain at `(7,3)` for the pinned player
+position `(120,56,56)`, but `UWorldViewBinding::EnsurePlayerOnGround` treated a
+missing solid hit as an empty column and immediately moved the user to the
+saved spawn point. That helper did not distinguish an incomplete streamed
+column from a complete all-air column.
+
+`EnsurePlayerOnGround` now returns without changing the user or camera while
+the user's terrain column is incomplete. It keeps the existing spawn fallback
+for a complete column with no solid surface. The subsequent streaming ticks
+can finish the disk-miss/procedural request at the saved location.
+
+The Release build passed with `tools/build_release.ps1 -Jobs 8`. A short visible,
+no-teleport M335 run used the newly generated `World_M623K_HeadlessCreate_20261017`
+with the established `(120,56,56)`, eye Y 70, yaw 180, pitch -30, and speed
+scale 1; timing was 8 seconds idle, 30 seconds flight, and 20 seconds stop. The
+runner pinned and retained focus `(7,3)`, traveled 144 blocks to focus `(-2,3)`,
+and completed without timeout. The requested `(7,3)` column was absent from the
+saved chunk files: the source trace recorded `disk_miss`, procedural worker
+generation in 260 ms, and commit in 302 ms. This verifies player-position
+retention while an on-demand frontier column is generated. The map as a whole
+was an existing saved world, so do not label this a fully unsaved-world load.
+
+The harness remained `pass=false`: readiness/near-focus visual-hole proxy
+gates failed, and the run was built from a dirty worktree. This is diagnostic
+evidence, not clean acceptance. The app-side pixel-grid analysis sampled 4,320
+pixels across 48 captures. It found 66 rays to unloaded voxels within the
+32-block fog end, all in four captures at 30.5–31.8 blocks. None of those 66
+pixels had luminance <=32 or RGB max <=16; one had luminance <=64. Their mean
+luminance was 129.554/255. The complete sample set had no RGB-max<=8 pixels.
+This identifies a generation frontier near the fog boundary, but does not
+establish a black framebuffer hole. Sparse probes still do not cover the full
+frame or operator-visible image.
+
+Current remaining work after M624A:
+
+1. Exercise the boundary-dependency relight owner through a multi-column chain
+   with FIFO denial/deferred retention and column eviction. The existing
+   deterministic torch fixture settles one source-neighbor-return sequence;
+   M623G's warm route ended with no pending/unowned boundary markers, but neither
+   proves convergence under broader queue pressure.
+2. Repeat the cold-frontier M335 check on a clean committed Release build and a
+   fresh seed, keeping the established route parameters. Preserve source
+   attribution and app-side pixel analysis; do not accept readiness proxies as
+   framebuffer proof.
+3. Validate a short target lane at a distant, already-problematic coordinate
+   after the clean start check. This must exercise unload/reload or disk-miss
+   provenance and end with a distinct near-view/framebuffer verdict. Do not use
+   long operator-monitoring flights.
+4. Close the final gate review: separate visible geometry/light evidence from
+   backlog outside the active view. Do not change water or fog rendering unless
+   a matching framebuffer/operator witness reproduces the defect.
+5. Tooling follow-up is non-blocking for engine correctness: add the documented
+   configurable artifact root/run manifest, then migrate script paths behind
+   compatibility shims one family at a time.

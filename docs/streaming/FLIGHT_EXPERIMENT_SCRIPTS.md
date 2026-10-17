@@ -12847,3 +12847,34 @@ Artifacts remain local at
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142330.32200`,
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142358.43332`,
 and the preserved save `bin/worlds/World_M623K_HeadlessCreate_20261017`.
+
+### M624A: preserve the saved start while the terrain frontier generates
+
+Release change: `EnsurePlayerOnGround` no longer treats an incomplete user
+column as an empty, complete column and falls back to the world spawn. The
+short visible M335 replay used `World_M623K_HeadlessCreate_20261017`, start
+`(120,56,56)`, cruise eye Y 70, yaw 180, pitch -30, speed scale 1, and
+8/30/20-second idle/fly/stop phases. Start integrity passed at focus `(7,3)`;
+the route completed 144 blocks to `(-2,3)` without timeout. The requested start
+column was absent from the saved chunks. INFO events show a procedural
+`disk_miss`, generation in 260 ms, and commit in 302 ms. This is a cold streaming
+frontier within a saved world, not a wholly unsaved-world load.
+
+The product harness still returned `pass=false` on readiness/visual-hole proxy
+gates, and its manifest correctly records a dirty worktree. Treat it as a
+diagnostic start-lifecycle verification, not clean acceptance. The app-side
+pixel-grid analyzer sampled 4,320 framebuffer pixels over 48 captures. It
+found 66 unloaded-voxel rays within the 32-block fog end in four captures, at
+30.5–31.8 blocks. Those 66 pixels had mean luminance 129.554/255, zero with
+luminance <=32, one <=64, and zero with RGB max <=16. Across all samples,
+RGB-max<=8 occurred zero times. These sparse samples show no black pixel
+witness, but they do show unresolved geometry just inside the modeled fog
+horizon and do not cover the full frame.
+
+Artifacts remain local:
+
+- report: `bin/suite_reports/engine_refactor/m624a_cold_start_no_spawn_fallback_20261017.json`;
+- framebuffer analysis: `bin/suite_reports/engine_refactor/m624a_framebuffer_pixel_analysis_20261017.json`;
+- perf log: `bin/logs/perf_20261017-143427_44800.jsonl`;
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-143423.44800`;
+- world: `bin/worlds/World_M623K_HeadlessCreate_20261017`.
