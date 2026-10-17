@@ -61,6 +61,23 @@ data or local Git-commit wrappers. Do not clean or bulk-stage `bin/`.
    job-id submission records are available, `--jobs` pairs submit/apply; that
    wall interval still combines worker execution and completed-result wait.
 
+## Release build
+
+Use the tracked app-only wrapper so Windows builds compile in multiple
+processes:
+
+```powershell
+tools/build_release.ps1 -Jobs 8
+```
+
+`cmake --build bin --config Release --target Cubatarium --parallel 8` alone can
+still leave MSVC at `/MP1`: CMake uses `CL_MPCount=1` while enabling MSBuild's
+project-level `/m`. `tools/build_release.ps1` forwards the chosen job count as
+`/p:CL_MPCount=N` too. Confirm compiler-level concurrency from the active `cl`
+response files (`/MPN`) or multiple `cl.exe` workers. Keep this separate from
+runtime worker counts, which must be read from the engine's generation/stream
+diagnostics.
+
 ## Metrics and disk writes
 
 `UFramePerfMonitor` is gated by the process environment variable

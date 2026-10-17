@@ -47,8 +47,13 @@ compositor overlay и не заменяет app-side framebuffer probes.
 Собирайте приложение только в Release:
 
 ```powershell
-cmake --build bin --config Release --target Cubatarium --parallel
+tools/build_release.ps1 -Jobs 8
 ```
+
+Use the repository wrapper for Visual Studio builds: CMake's `--parallel`
+alone can pass `/p:CL_MPCount=1`, which leaves compilation units serialized.
+The wrapper passes the selected count to both project and compiler scheduling
+(`CL_MPCount`, which controls `/MP`). Keep the build target app-only and Release.
 
 Для проблемной зоны `camera_x=-6800..-5500` используйте проверенный мир и
 небольшой no-teleport маршрут, который пересекает весь диапазон:
@@ -2996,3 +3001,34 @@ Artifacts: `bin/suite_reports/engine_refactor/m623j_parallel_cli_create_20261017
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140016.49208`,
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140138.24104`,
 and the preserved map `bin/worlds/World_M623J_ParallelCliCreate_20261017`.
+
+### M623K: headless world creation and reload check
+
+`--create-world` uses `UWorld::CreateHeadless`, which retains terrain
+generation, fluid sealing, full terrain-column relight, emissive block-light
+relight, and save, but skips transient render-mesh warmup and camera/view
+readiness. Interactive creation still calls `UWorld::Create` and retains its
+previous visual warmup.
+
+The M623K Release run wrote 707 chunk files with four generation workers in
+4.646 s; creation plus save took 15.217 s. Saved runtime async generation, I/O,
+and relight flags were all true. No greedy render cache was built during the
+headless completion phase. The separate `--load-world` command then passed:
+121/121 startup columns, no generation, 1,295,709 loaded non-air blocks, cache
+427, 419 batches, and 192,336 vertices. This is a startup-subset loadability
+and mesh-readiness check, not a full-map comparison.
+
+Use a unique map name/seed and preserve the output directory. The fixed
+`load_world_report.txt` is overwritten by `--load-world`; save and restore any
+preexisting report, copying this run to an id-specific path.
+
+For MSVC Release builds, use `tools/build_release.ps1 -Jobs 8` (or pass
+`--parallel 8 -- /p:CL_MPCount=8` to CMake). CMake's Visual Studio generator
+sets `CL_MPCount=1` for `--parallel` alone; verify `/MP8` or eight `cl.exe`
+workers rather than inferring compiler parallelism from `/m:8`.
+
+Artifacts: `bin/suite_reports/engine_refactor/m623k_headless_cli_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m623k_headless_cli_load_20261017.txt`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142330.32200`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142358.43332`,
+and `bin/worlds/World_M623K_HeadlessCreate_20261017`.

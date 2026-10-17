@@ -6527,3 +6527,28 @@ produce an empty or unloadable save. Mesh warmup and prepare-view still took
 about 11.8 s and 21.4 s; removing those headless-only visual steps remains a
 separate optimization candidate and requires review of the lighting and save
 contract. Interactive creation has not changed.
+
+### M623K follow-up: headless CLI creation skips transient visual work
+
+The 33 s visual warmup debt was isolated to nonpersistent mesh/view
+preparation. Added `UWorld::CreateHeadless` and selected it only in
+`CreateWorldHeadless`. The headless operation retains cooperative parallel
+terrain generation, fluid sealing, full terrain-column relight, emissive
+block-light relight, and the normal save; it finishes before create mesh
+warmup and camera readiness. Interactive `UWorld::Create` continues through
+the existing visual stages.
+
+The M623K Release CLI run completed in 15.217 s and wrote 707 chunk files.
+Generation took 4.646 s using four workers; the completion phase had no greedy
+mesh cache. Persisted runtime async flags were true. The generated world then
+passed `--load-world`: 121/121 startup columns loaded without generation, with
+1,295,709 non-air blocks and regenerated mesh cache/batches/vertices
+(427/419/192,336). This supports the separation of CLI data creation from
+transient render caches. It checks the startup subset and mesh-readiness smoke,
+not byte-for-byte equality of every stored chunk.
+
+The Release build used `tools/build_release.ps1`'s equivalent explicit
+`CL_MPCount=8` override; the observed compiler response files had `/MP8`, with
+eight compiler workers. The previous `--parallel 8`-only attempt yielded
+`/MP1`; use the wrapper going forward. Build parallelism and runtime generation
+workers are separate settings.

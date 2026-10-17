@@ -13267,3 +13267,27 @@ serialized-state work beyond rendering caches. Preserve interactive creation
 as-is and only proceed with a separately verified path if the contract is
 clear. This is an optimization follow-up, not a blocker to continue short
 streaming/rendering investigation.
+
+### M623K update: close CLI world-creation performance work
+
+The remaining visual-stage debt was specific to the headless CLI. Commit
+`f17b433d` adds `UWorld::CreateHeadless`, preserving the full terrain and
+lighting data path but omitting transient mesh-cache and camera-ready
+preparation; normal interactive creation is unchanged. M623K created a new
+radius-4 world with 707 chunk files in 15.217 s. Generation was 4.646 s at four
+workers, and saved runtime async flags were true. The M623J flow with the same
+generation parallelism plus visual preparation took 48.500 s; distinct seeds
+make this a directional comparison, not a controlled benchmark.
+
+The M623K save passed the existing `--load-world` check: 121/121 startup
+columns loaded without generation, 1,295,709 loaded non-air blocks, regenerated
+mesh cache 427, 419 batches, 192,336 vertices, exit code 0. This closes the
+CLI world-creation performance step at the data/loadability level. It does not
+claim whole-map bytewise validation; a full map integrity validator remains
+future work if a concrete need arises.
+
+Build instructions are also corrected: `--parallel 8` by itself left MSVC at
+`/MP1`. The supported Release entry point is
+`tools/build_release.ps1 -Jobs 8`, which passes `/p:CL_MPCount=8`; compiler
+response files and concurrent workers confirmed `/MP8`. Build worker count and
+runtime world-generation worker count must be recorded separately.

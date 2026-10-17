@@ -12815,3 +12815,35 @@ Artifacts remain local at
 and `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-140138.24104`.
 Preserve the generated world at
 `bin/worlds/World_M623J_ParallelCliCreate_20261017` for follow-up load checks.
+
+### M623K: headless CLI creation without render-cache warmup
+
+Commit `f17b433d` adds a separate `UWorld::CreateHeadless` path used only by
+`--create-world`. It shares the regular cooperative generation and lighting
+phases, but ends after full terrain-column and emissive relight instead of
+building nonpersistent render meshes and a camera-ready view. `UWorld::Create`
+and the interactive GUI path keep their previous mesh/view preparation.
+
+Release was rebuilt with `/p:CL_MPCount=8`; compiler response files contained
+`/MP8` and eight compiler workers ran at once. The static Windows executable
+verification passed. The new M623K save
+`World_M623K_HeadlessCreate_20261017` (seed 3650482213, radius 4) completed
+successfully with 707 chunk files and `async_chunk_generation=true`,
+`async_chunk_io=true`, `async_relight=true`. Generation used four workers and
+took 4.646 s; full creation and save took 15.217 s. No mesh cache was built
+during creation (`greedy_cache=0` at the headless completion phase). Compared
+with M623J's 48.500 s parallel create that included visual warmup, this is a
+directional diagnostic, not a controlled benchmark because the seeds differ.
+
+The generated map was then loaded through `--load-world`: exit 0, `PASS`, 121/121
+startup columns loaded with zero procedural generation, 1,295,709 loaded
+non-air blocks, mesh cache 427, 419 batches, and 192,336 vertices. The reload
+validates the startup subset and mesh readiness; it is not a full-map bytewise
+comparison. The prior `load_world_report.txt` was preserved and restored.
+
+Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623k_headless_cli_create_20261017.json`,
+`bin/suite_reports/engine_refactor/m623k_headless_cli_load_20261017.txt`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142330.32200`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-142358.43332`,
+and the preserved save `bin/worlds/World_M623K_HeadlessCreate_20261017`.
