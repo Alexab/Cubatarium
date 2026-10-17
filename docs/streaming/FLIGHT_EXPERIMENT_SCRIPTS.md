@@ -1,6 +1,6 @@
 # Experimental flight and analysis scripts
 
-Обновлено: 2026-10-15. Цель каталога — сохранить и объяснить поддерживаемые flight tools и одноразовые анализаторы, которые накопились в рабочем дереве во время streaming/rendering расследований. Повторяемые water/streaming сценарии, evidence ladder и короткий target-lane описаны в [ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md).
+Обновлено: 2026-10-17. Цель каталога — сохранить и объяснить поддерживаемые flight tools и одноразовые анализаторы, которые накопились в рабочем дереве во время streaming/rendering расследований. Повторяемые water/streaming сценарии, evidence ladder и короткий target-lane описаны в [ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md](ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md); полный список версионируемых исследовательских скриптов находится в [ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md](ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md).
 
 ## Поддерживаемый поток
 
@@ -12710,3 +12710,35 @@ median / 99.3% p95 and is context only. Artifacts remain local at
 `bin/suite_reports/engine_refactor/m623g_flush_log_shutdown_world164_m335_20261017.json`,
 `bin/logs/perf_20261017-132034_22320.jsonl`, and
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-132030.22320`.
+
+### M623H: saved-world startup cost with async chunk I/O disabled
+
+M623H used the established short visible no-teleport M335 profile on the
+alternate saved map `World_M572_Cold_20261014`, with requested start
+`(120,56,56)`, eye Y=70, yaw 180, pitch −30, 30 s fly, 20 s stop, and an 8 s
+blocked-stop threshold. Start integrity passed. Focus moved `(7,3) -> (-2,3)`
+over 29 periods without timeout. This is a saved-map runtime-load check, not a
+new-world generation test: startup read all 121/121 spatial terrain columns
+and generated zero.
+
+The startup `WorldLoadPerf` record reports `async_chunk_io=0`. Spatial column
+loading took 43.353 s; the complete startup operation took 48.219 s. The
+subsequent relight phase took about 237 ms and mesh warmup about 1.479 s. The
+recent `World_164` startup path, with async chunk I/O enabled, took roughly
+4.8–6.5 s. M623H therefore found a specific saved-world configuration and
+startup-performance problem: 121 terrain columns load synchronously when the
+persisted flag is false. The map's `world_data.json` also stores
+`async_chunk_generation=false`, `async_chunk_io=false`, `async_relight=true`,
+and four relight workers. The CLI world-creation path currently sets both
+async chunk flags false; verify whether that path persisted those settings
+before changing old-save migration or runtime defaults. This latency is not a
+renderer defect.
+
+The route remained diagnostic (`pass=false` on readiness/eye proxies), with no
+operator framebuffer verdict. Host CPU was 71.9% median / 95.7% p95 and is
+context only. The route covered about 144 blocks / nine chunks and did not
+reach the west checkpoint, so it is not a long-route streaming acceptance
+result. Artifacts remain local at
+`bin/suite_reports/engine_refactor/m623h_seed_variant_boundary_world_m572_m335_20261017.json`,
+`bin/logs/perf_20261017-132340_38580.jsonl`, and
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-132335.38580`.

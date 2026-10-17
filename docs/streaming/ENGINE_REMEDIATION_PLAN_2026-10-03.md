@@ -1,4 +1,4 @@
-# План исправления стриминга и отображения мира — обновлён 10 октября 2026
+# План исправления стриминга и отображения мира — обновлён 17 октября 2026
 
 Исходная база: `develop` / `codex_audit2`, commit `185e2f08` (merge
 `codex_audit`). На 5 октября текущий чистый Release manifest — M396,
@@ -13185,3 +13185,29 @@ instrumentation checks on the repeatable warm route; it does not prove
 world-scale convergence or complete cold-world coverage. Keep the remaining
 open item to a short, route-integrity-verified fresh-world lifecycle check;
 do not use the invalid M623E World_188 start or increase flight duration.
+
+### M623H — investigate saved-world startup with synchronous terrain I/O
+
+M623H is the next static performance finding after the short M623G queue/log
+check. The visible no-teleport profile retained M335 camera and speed settings
+on `World_M572_Cold_20261014`; start integrity passed, focus moved `(7,3) ->
+(-2,3)`, and all 121 startup terrain columns loaded from disk without
+generation. The saved map had `async_chunk_io=false`. `WorldLoadPerf` measured
+43.353 s in `spatial_chunks` and 48.219 s total startup, versus about 4.8–6.5 s
+for recent `World_164` entry with async I/O enabled. Relight and mesh warmup
+were only about 237 ms and 1.479 s, respectively, so they do not account for
+the long startup phase.
+
+Static source confirms the false flag selects the synchronous
+`LoadTerrainColumn` loop in `UWorldCooperativeSession::Phase::SpatialChunks`.
+The headless world-creation path explicitly sets `AsyncChunkIo=false`; whether
+that setting is persisted into the current saved map is not yet proven. Next:
+trace create-world settings through metadata serialization, then fix the
+producer or add a versioned compatibility default without overriding an
+explicit user setting. Verify load latency with a short startup-only/visible
+check before returning to far-flight work. Do not make the long route wait on
+this startup question.
+
+The M623H route was diagnostic, not acceptance: 29 periods, about 144 blocks,
+no timeout, readiness/eye proxies failed, and no operator framebuffer verdict.
+It does not change the rendering status or close cold-world checks.

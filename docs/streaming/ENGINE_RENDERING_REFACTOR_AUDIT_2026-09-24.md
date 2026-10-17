@@ -6448,3 +6448,33 @@ post-stop max were zero, and eye-proxy/A24 safety stop-lines passed. No human
 framebuffer verdict was captured. Host CPU was 82.1% median / 99.3% p95 and is
 context only. The shutdown flush improves evidence completeness; it does not
 change or certify normal game rendering.
+
+### 2026-10-17 addendum: M623H startup I/O policy
+
+The short integrity-valid M623H route on saved `World_M572_Cold_20261014`
+loaded 121/121 spatial columns from disk with no generation, but its
+`WorldLoadPerf` record had `async_chunk_io=0`. The `spatial_chunks` phase took
+43.353 s of a 48.219 s startup. The same startup path on `World_164` with async
+I/O enabled takes about 4.8–6.5 s in recent M623 observations. The saved
+`world_data.json` has async generation and async chunk I/O disabled, async
+relight enabled, and four relight workers.
+
+Static inspection found `UWorldCooperativeSession::Phase::SpatialChunks`
+calling `LoadTerrainColumn` synchronously for each startup column whenever the
+saved `AsyncChunkIo` flag is false; when true, it submits those columns to the
+asynchronous chunk-I/O service and drains them under a bounded budget.
+`UWorldLifecycleFacade::CreateWorldHeadless` also explicitly sets both async
+flags false before applying settings to its world instance. That is a likely
+source of the saved map's legacy setting, but the metadata write path has not
+yet been traced end to end. Do not silently change the setting on every world
+load until its persistence/configuration contract is confirmed. The next
+static step is to trace CLI world creation through metadata save, then choose
+between correcting the CLI's persisted runtime knobs and a versioned old-save
+default migration. Preserve explicit user-selected performance settings if
+they are supported.
+
+M623H's short flight was diagnostic only: route integrity passed, but product
+readiness/eye-proxy gates failed, it covered only about 144 blocks, and there
+was no operator framebuffer verdict. Its startup timing identifies a concrete
+load-path issue; it says nothing by itself about far-flight rendering. Keep
+startup timing and visible rendering acceptance as separate rows in the plan.

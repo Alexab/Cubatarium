@@ -14,21 +14,16 @@ refactor without rebuilding its experiment harness from memory.
 | Experiment method and history | `docs/streaming/FLIGHT_EXPERIMENT_SCRIPTS.md`, `docs/streaming/ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`, current audit and plan | Canonical route, procedures, evidence, caveats, and remaining work |
 | Runtime output | `bin/logs/`, `bin/suite_reports/`, `bin/flight_captures/`, `bin/iter_reports/` | Mixed build/runtime output, some tracked historical baselines and many local runs |
 
-There are 326 tracked files under `tools/`, 17 under `scripts/`, and 163 under
-`docs/streaming/`. The experiment tooling is already mostly in Git, but naming
-and placement have grown incrementally. The initial inventory found 7,145
-untracked files under `bin/` (mostly images, JSON reports, and saved chunk
-data), including 104 Python files, 4 PowerShell files, 34 batch files, and
-research notes. The selected research sources and notes listed below are now
-archived in Git; remaining generated and legacy files are user data. Do not
-clean or bulk-stage them. The `_commit*.bat` files in particular perform Git
-writes.
-The research archive now includes the 104 Python analyzers/helpers, 4
-PowerShell drivers, one C++ reproducer, and 16 research notes, plus the
-experiment/score wrappers `_own_af_suite.bat`, `_v4_af_suite.bat`,
-`_v5_af_suite.bat`, `_v6_af_suite.bat`, `_v4_score_all.bat`,
-`_v5_score_all.bat`, and `tmp_run_audit191112.bat`. Git-writing commit
-wrappers remain local and untracked.
+There are 326 tracked files under `tools/`, 17 under `scripts/`, and 164 under
+`docs/streaming/` including this catalog. Naming and placement grew
+incrementally, but the current script source inventory is versioned. It lists
+85 engine-research scripts under `tools/` and 171 historical/research scripts
+under `bin/` (157 Python,
+6 PowerShell, 7 batch, and one C++ source). See
+[`ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md`](ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md)
+for every tracked path. Earlier untracked source scripts were curated into
+Git by `6d5e40ee`; the remaining untracked files are generated output/world
+data or local Git-commit wrappers. Do not clean or bulk-stage `bin/`.
 
 ## Investigation protocol
 
@@ -68,55 +63,62 @@ wrappers remain local and untracked.
 
 ## Metrics and disk writes
 
-`UFramePerfMonitor` currently computes a large per-frame diagnostics record and
-creates `bin/logs/perf_*.jsonl` whenever the application runs, even when the
-performance overlay is hidden. This work adds the opt-in environment variable
-`CUBATARIUM_PERF_LOG=1`. With it unset or set to `0`, the periodic collector and
-its JSONL writes are disabled. The flight experiment harness opts in because
-its gate analysis consumes that file. Direct game launches default to no
-performance JSONL. Use the same switch to disable the collector in an ad-hoc
-run; the harness intentionally turns it back on for analyzed flights.
+`UFramePerfMonitor` is gated by the process environment variable
+`CUBATARIUM_PERF_LOG`. When unset, empty, or set to `0`, `false`, `off`, or
+`no`, `OnInGameFrame` exits before the expensive frame snapshot and JSONL
+write; no `perf_*.jsonl` session is opened. A normal game launch therefore
+has periodic FramePerf collection and disk output off. Set it to `1` before
+launch only for an experiment that needs that trace. `tools/flight_sim_run.py`
+sets it to `1` because its gate analysis requires the perf file; this is a
+measurement-harness behavior, not the normal runtime default.
 
-Engine telemetry used by streaming, scheduling, and rendering decisions remains
-in the runtime. The switch only controls the periodic `FramePerfMonitor`
-collection, INFO summaries, and its disk session. The memory-budget code
-samples process memory at a bounded 30 streaming-frame cadence when no periodic
-sample exists. Environment
-trace channels such as `CUBA_VISUAL_BLACK_TRACE`,
-`CUBA_WORLD_COLUMN_SOURCE_TRACE`, and `CUBATARIUM_RELIGHT_AUDIT` are separate
-opt-in diagnostic paths and should be set only for a named experiment. After
-the refactor is accepted, keep direct launches at the default (off) and retain
-the switch so future investigations can opt in again.
+Runtime telemetry that drives scheduling, memory budgets, and rendering stays
+available in memory; it is not the same thing as periodic perf logging. When
+FramePerf logging is off, the memory-budget fallback samples process memory at
+a bounded 30 streaming-frame cadence, which is required by runtime policy and
+does not emit perf JSONL. The normal INFO application log remains a separate
+log channel. Trace channels such as `CUBA_VISUAL_BLACK_TRACE`,
+`CUBA_WORLD_COLUMN_SOURCE_TRACE`, and `CUBATARIUM_RELIGHT_AUDIT` are separately
+opt-in and must be enabled only for a named experiment; the M335 wrapper
+restores the process environment after its run. On refactor completion, keep
+the game default off, leave only bounded/low-cost runtime telemetry that the
+engine needs, and require an explicit opt-in for disk traces.
 
 ## Layout recommendation
 
-Do not mass-move the current scripts yet: experiment notes contain literal
-paths, and wrappers are used by previous run records. Keep existing entry
-points working while moving toward these boundaries:
+The current split is serviceable but not a good long-term home for future
+subsystem refactors: `tools/` mixes reusable runners, one-off experiments, and
+analyzers; `bin/` mixes build products, saves, raw logs, reports, and selected
+historical script sources. Keep the present paths stable while moving toward
+these boundaries:
 
 ```text
-tools/engine-research/flight/       repeatable run entry points
-tools/engine-research/analyze/      offline analyzers
-tools/engine-research/capture/      image/window evidence helpers
-docs/engine-research/               shared protocol and cross-subsystem index
-artifacts/engine-research/<run-id>/ reports, perf JSONL, app logs, frames
+tools/research/<subsystem>/run/       repeatable experiment entry points
+tools/research/<subsystem>/analyze/   offline analyzers and report builders
+tools/research/<subsystem>/capture/   window/frame/evidence helpers
+docs/research/<subsystem>/            protocol, inventory, audit, and plan
+artifacts/research/<subsystem>/<id>/  manifests, reports, logs, and captures
 ```
 
-First add a configurable artifact root to the harness and make each run write a
-manifest that references logs rather than relying on "newest file" discovery.
-Then add compatibility shims at the old `tools/` paths, migrate and verify one
-script family at a time, and only then move source scripts. Keep raw screenshots
-and logs out of routine source commits; commit selected baselines with an
-explicit rationale. Apply this same layout to later subsystem refactors so
-engine implementation, reusable tooling, and evidence have clear owners.
+`tools/` remains the shared home for generic build/test utilities; the
+subsystem folders are for research tooling. `artifacts/` is local/ignored by
+default; raw screenshots, perf traces, and app logs are not source files.
+First add a configurable artifact root to the flight harness and write a run
+manifest with explicit paths for the report, perf JSONL, INFO logs, captures,
+and analysis outputs. Stop relying on "newest file" discovery where the app
+report already knows its own path. Then add compatibility shims at existing
+`tools/` paths, migrate and verify one script family at a time, and only then
+move source scripts. Keep selected baselines in Git only with an explicit
+rationale. Reuse this layout for future renderer, physics, worldgen, and
+content refactors; do not create a separate artifact convention per subsystem.
 
 ## Outstanding follow-up
 
-- Inventory the 104 untracked Python files in `bin/`, classify reusable flight
-  analyzers versus one-off scratch scripts, and promote only the reusable
-  pieces without destroying the originals.
-- Add a run manifest/artifact-root option and update the M335 wrapper and
-  analysis path discovery to use it.
+- Add a run-manifest/artifact-root option and update the M335 wrapper and
+  analysis path discovery to use it. This is the next tooling change; do not
+  relocate source scripts in the same change.
+- Keep the newly versioned script inventory synchronized when a reusable
+  runner, analyzer, capture helper, or experiment recipe is added or retired.
 - Remove run-specific environment instrumentation after each experiment; keep
   the documented switches and default them off.
 - Finish the rendering tasks in

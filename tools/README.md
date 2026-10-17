@@ -52,6 +52,9 @@ Not wired in CI; run locally when investigating. See
 The repeatable route, environment variables, output files, gate meanings, and
 limitations are documented in [the flight experiment index](../docs/streaming/FLIGHT_EXPERIMENT_SCRIPTS.md)
 and [the diagnostic runbook](../docs/streaming/ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md).
+The versioned paths for supported runners, analysis utilities, iteration
+wrappers, and archived research scripts are listed in the
+[engine experiment script inventory](../docs/streaming/ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md).
 Keep the established M335 camera, world, speed, and no-teleport settings fixed
 when comparing engine changes. Use short operator-visible runs for visual
 checks; do not use long operator-monitoring runs as a substitute for a short
@@ -70,9 +73,13 @@ tree.
 Use explicit report/capture paths for every new experiment and record them in
 the flight index. Keep source scripts and interpretation rules in Git; keep
 large raw captures local unless a run is selected as a durable baseline. A
-future path cleanup should first add configurable artifact roots and preserve
-the current command-line wrappers, because historical notes contain many
-references to today's paths.
+normal direct game launch has `CUBATARIUM_PERF_LOG` unset (periodic perf
+sampling and `perf_*.jsonl` are off); the flight runner turns it on because its
+analysis requires that file. Runtime streaming counters remain available to the
+engine, and memory-budget process sampling stays bounded to one sample per 30
+streaming frames. A future path cleanup should first add configurable artifact
+roots and preserve the current command-line wrappers, because historical notes
+contain many references to today's paths.
 
 ## Legacy research scripts
 
