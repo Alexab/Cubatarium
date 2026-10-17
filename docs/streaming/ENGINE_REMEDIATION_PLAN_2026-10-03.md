@@ -13915,3 +13915,89 @@ denial/deferred/eviction/reload chain, and rare OpenSky equal-revision terminal
 as remaining checks. Artifacts:
 `bin/suite_reports/engine_refactor/m624u_source_only_m335_short_20261017.json`
 and `artifacts/research/rendering/m624u_source_only_m335_short_20261017/`.
+
+### M624V — source-only M335 crossed a fresh-seed procedural frontier
+
+Repeated the short established M335 route on fresh-seed world
+`World_M624D_EnterBarrier_20261017`, with source tracing enabled and FramePerf,
+perf JSONL, host sampling, pixel tracing, and fluid tracing disabled. The
+visible no-teleport route completed with process exit 0, no timeout, and no
+collision, traveling from focus `(7,3)` to `(-3,3)` over 10 chunks / 58
+requested in-game seconds. The startup report is an early snapshot (121
+resident columns, zero reads and generation completions); later source events
+show that this route crossed both persisted and procedural source frontiers.
+
+The INFO trace recorded 180 disk completions and 108 procedural
+`disk_miss` decisions. Procedural generation had 82 requests, worker submits,
+and worker finishes; 78 were committed. At process exit, the scheduler had
+one generating and three ready items, with no scheduler queue, worker-pending
+queue, or active worker. Four outstanding items were cancelled as the app
+closed, so this is not a steady-state drain proof. For the 78 committed
+procedural columns, generation time was median/p95/max `118/233/259 ms`,
+scheduler/worker queue time `132/5,128/5,830 ms`, ready-to-commit wait
+`93/6,584/12,213 ms`, and end-to-end `1,046/7,637/14,158 ms`. The long tail
+therefore sits mainly before generation starts and after generation completes,
+not in generation CPU time. This is consistent with delayed visual readiness,
+but the route collected no framebuffer or frame-correlated evidence and cannot
+prove a visible defect or identify which main-thread budget caused each wait.
+
+This closes the source-only cold-seed/procedural lane for the current short
+route. It does not close streaming/rendering refactor acceptance: the short
+flight has no pixel/operator verdict; the exact OpenSky equal-revision repair
+terminal and boundary denial/deferred/eviction/reload chain remain open. Do not
+raise worker counts or commit budgets from this trace alone. Artifacts:
+`bin/suite_reports/engine_refactor/m624v_cold_seed_source_frontier_m335_short_20261017.json`
+and `artifacts/research/rendering/m624v_cold_seed_source_frontier_m335_short_20261017/`.
+
+### M624W–M624Y — keep bounded source work moving after the far-stream budget
+
+M624W added an opt-in sparse witness at the `TickAsyncChunkSystems` early
+return. On the M335 route it sampled 420 consecutive budget exits while 12
+procedural requests waited, with zero active generation workers. The effective
+stream budget was 3 ms and the measured pre-scheduler work was consistently
+above it. This directly explains the multi-second request-to-schedule tail:
+the full scheduler tick was bypassed repeatedly before workers were even
+submitted.
+
+M624X tried admitting at most one already-requested job into a free worker in
+that path. This removed the unstarted request backlog, but the sampled frames
+showed 12 completed results waiting and no commits. The route's ready-wait
+p95 was still 6.49 s. This isolated the second half of the same early-return
+starvation: completed terrain also had no progress path.
+
+M624Y now reuses the scheduler's ordinary admission helper and, only when a
+ready result exists, runs a bounded fallback tick with zero new starts and a
+one-result commit cap. Admission is limited to one existing request and only
+when a worker-pool slot is free; near-focus/underfeet protection is unchanged.
+The short M335 replay completed 58 in-game seconds from `(7,3)` to `(-3,3)`
+with no collision/timeout, and its source snapshot drained to zero queued,
+active, and ready work. Of 115 procedural commit events, scheduler queue
+p95/max was `24.9/31.2 ms`, worker-pool queue `0.1/93.3 ms`, ready wait
+`35.8/68.9 ms`, and ApplyTo+MarkDirty p95/max `20.3/28.5 ms`. A sampled
+budget-limited tick showed one ready result committed and the ready queue
+falling from one to zero. This is a focused lifecycle/latency confirmation,
+not a fresh-seed pixel verdict; the route reused the world modified by prior
+M624V–M624X runs.
+
+Release build and static Windows dependency verification passed after the
+fallback change. The source-only runs do not verify framebuffer appearance.
+Still open: exact OpenSky equal-revision repair terminal; boundary
+denial/deferred/eviction/reload runtime chain; operator or pixel acceptance on
+a fresh seed; and a frame-correlated run under a genuinely cold procedural
+frontier. Do not call the rendering/streaming refactor complete until these
+remaining acceptance checks are closed. M624W/X/Y reports and traces are
+preserved under `bin/suite_reports/engine_refactor/` and
+`artifacts/research/rendering/m624w_budget_skip_trace_m335_short_20261017/`,
+`artifacts/research/rendering/m624x_budget_admission_m335_short_20261017/`,
+and `artifacts/research/rendering/m624y_budget_progress_m335_short_20261017/`.
+
+M624Z rebuilt the final helper refactor in Release and repeated the short 58 s
+route on the same warm world. It completed 10 chunks with no collision or
+timeout; 82 procedural commit events had scheduler queue p95/max
+`21.5/65.1 ms`, worker queue `0.1/99.5 ms`, ready wait `33.2/54.4 ms`, and
+ApplyTo+MarkDirty p95/max `14.1/34.6 ms`. Shutdown again reported zero pending,
+active, or ready source work. This verifies the refactored helper and bounded
+fallback on the replayed warm route. It is not a cold-seed or framebuffer
+acceptance result. Artifact:
+`bin/suite_reports/engine_refactor/m624z_final_budget_progress_m335_short_20261017.json`
+and `artifacts/research/rendering/m624z_final_budget_progress_m335_short_20261017/`.

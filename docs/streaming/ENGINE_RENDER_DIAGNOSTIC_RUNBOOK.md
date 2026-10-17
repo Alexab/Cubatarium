@@ -3483,3 +3483,53 @@ high-water marks were 416 ready loads and 105 pending disk columns, then
 drained at exit. Treat this as a signal to inspect result admission/main-thread
 apply with frame-correlated evidence; do not tune pool size or per-frame caps
 from this single run. No pixel/framebuffer result was collected.
+
+### M624V: source-only fresh-seed procedural frontier
+
+Repeat the M335 short no-teleport route on
+`World_M624D_EnterBarrier_20261017` with `-EnableSourceTrace` and without
+`-EnableMetrics` to observe source lifecycle while keeping FramePerf, perf
+JSONL, host polling, pixel tracing, and fluid tracing off. The 58-second route
+completed from `(7,3)` to `(-3,3)` over 10 chunks with no collision or timeout.
+It recorded 180 disk completions, 108 procedural disk misses, 82 procedural
+worker finishes, and 78 commits. Median/p95/max generation time was
+`118/233/259 ms`, scheduler/worker queue time `132/5,128/5,830 ms`,
+ready-to-commit wait `93/6,584/12,213 ms`, and end-to-end `1,046/7,637/14,158
+ms`. The route exit snapshot retained one generating and three ready items;
+therefore this is a frontier witness, not proof of idle-drain convergence.
+
+Treat the queue and ready-to-commit tails as targets for a frame-correlated
+instrumented comparison. This source-only run cannot distinguish scheduler
+admission delay from per-frame application caps or establish a visual defect.
+Artifacts:
+`bin/suite_reports/engine_refactor/m624v_cold_seed_source_frontier_m335_short_20261017.json`
+and `artifacts/research/rendering/m624v_cold_seed_source_frontier_m335_short_20261017/`.
+
+### M624W–M624Y: budget-limited scheduler progress
+
+When source tracing is explicitly enabled, the far-stream frame-budget early
+return samples `scheduler_budget_limited_tick` at sparse intervals. The
+record includes the pending/ready counts, worker slots, how many jobs were
+admitted, and whether one ready result was committed. Use this event to tell
+whether the full scheduler is being skipped while useful work is queued.
+
+M624W found repeated 3 ms budget exits with pending procedural work and no
+active generation worker. M624X showed that worker admission alone is
+insufficient: a ready queue could remain uncommitted for seconds. M624Y added
+the one-result fallback commit; a short replay recorded ready-wait p95 35.8 ms
+and shutdown with no pending work. Its world was warm from earlier runs, so
+use a fresh seed before treating the improvement as cold-frontier acceptance.
+The fallback intentionally commits at most one result and never starts a
+worker when the pool has no free slot.
+
+Report and source log:
+`bin/suite_reports/engine_refactor/m624y_budget_progress_m335_short_20261017.json`
+and `artifacts/research/rendering/m624y_budget_progress_m335_short_20261017/`.
+
+After the shared-admission helper was factored back into ordinary `Tick`,
+M624Z rebuilt Release and repeated the 30-second fly route. It completed 10
+chunks without collision/timeout; procedural scheduler-queue p95 was 21.5 ms,
+ready-wait p95 33.2 ms, and source queues were empty at shutdown. This confirms
+the exact committed shape of the helper on the replayed warm world. Report and
+log: `bin/suite_reports/engine_refactor/m624z_final_budget_progress_m335_short_20261017.json`
+and `artifacts/research/rendering/m624z_final_budget_progress_m335_short_20261017/`.

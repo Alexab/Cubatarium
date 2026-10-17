@@ -60,6 +60,10 @@ public:
             int maxGenerationStartsPerFrame = 4,
             double maxApplyMsPerFrame = 0.0,
             bool allowBoundedReadyDrain = false);
+  /// Admit already-requested generation work without applying completed
+  /// results. Used by bounded fallback paths that cannot run a full Tick.
+  int StartQueuedGenerationWorkers(int maxStarts);
+  int GetAvailableGenerationWorkerSlots() const;
   bool IsCommitted(glm::ivec3 coord) const;
   bool IsPending(glm::ivec3 coord) const;
   ChunkLoadState GetState(glm::ivec3 coord) const;

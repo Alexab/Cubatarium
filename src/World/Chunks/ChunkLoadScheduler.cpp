@@ -459,29 +459,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
 {
   LastTickApplyMs = 0.0;
   LastCommitsThisFrame = 0;
-  int generationStarts = 0;
-  while (!Queue.empty() && generationStarts < maxGenerationStartsPerFrame)
-  {
-    const PendingRequest next = Queue.top();
-    Queue.pop();
-    const auto stateIt = States.find(next.coord);
-    const auto queuedIt = QueuedRequests.find(next.coord);
-    if (stateIt == States.end() ||
-        stateIt->second != ChunkLoadState::Requested ||
-        queuedIt == QueuedRequests.end() ||
-        queuedIt->second.queueRevision != next.queueRevision)
-    {
-      continue;
-    }
-    const auto prioIt = RequestPriorities.find(next.coord);
-    if (prioIt != RequestPriorities.end() && next.priority != prioIt->second)
-    {
-      continue;
-    }
-    ScheduleWorker(next, maxGenerationStartsPerFrame);
-    QueuedRequests.erase(queuedIt);
-    ++generationStarts;
-  }
+  StartQueuedGenerationWorkers(maxGenerationStartsPerFrame);
 
   std::vector<PendingResult> ready = Completed.DrainAll();
   // During intentional movement, use the actual drained batch rather than a
@@ -652,6 +630,44 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
     ++committed;
   }
   LastCommitsThisFrame = committed;
+}
+
+int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
+{
+  int generationStarts = 0;
+  while (!Queue.empty() && generationStarts < maxStarts)
+  {
+    const PendingRequest next = Queue.top();
+    Queue.pop();
+    const auto stateIt = States.find(next.coord);
+    const auto queuedIt = QueuedRequests.find(next.coord);
+    if (stateIt == States.end() ||
+        stateIt->second != ChunkLoadState::Requested ||
+        queuedIt == QueuedRequests.end() ||
+        queuedIt->second.queueRevision != next.queueRevision)
+    {
+      continue;
+    }
+    const auto priorityIt = RequestPriorities.find(next.coord);
+    if (priorityIt != RequestPriorities.end() &&
+        next.priority != priorityIt->second)
+    {
+      continue;
+    }
+    ScheduleWorker(next, maxStarts);
+    QueuedRequests.erase(queuedIt);
+    ++generationStarts;
+  }
+  return generationStarts;
+}
+
+int UChunkLoadScheduler::GetAvailableGenerationWorkerSlots() const
+{
+  const JobThreadPoolSnapshot snapshot = Pool.GetSnapshot();
+  const std::size_t occupied = snapshot.pending + snapshot.active;
+  return snapshot.workers > occupied
+             ? static_cast<int>(snapshot.workers - occupied)
+             : 0;
 }
 
 bool UChunkLoadScheduler::IsCommitted(glm::ivec3 coord) const

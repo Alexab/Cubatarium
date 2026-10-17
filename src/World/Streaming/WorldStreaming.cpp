@@ -3389,16 +3389,50 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
   }
   RefreshStreamingPressure(world, main_t0, stream_budget_ms);
-  // Phase 5.2.2: after Refresh, stop commit/far at stream_budget (0.6×phase)
-  // so emerge keeps remain. Protect near miss / underfeet / enter.
+  // Phase 5.2.2: after Refresh, stop bulk commit/far work at stream_budget
+  // (0.6×phase) so emerge keeps time. Protect near miss / underfeet / enter;
+  // the over-budget fallback below advances only bounded procedural work.
   {
     const auto &pt = world.PhysicsTelemetryData;
     const bool protect_near =
         pt.FocusMissingMesh != 0 || pt.UnderfeetHasMesh == 0;
-    if (elapsed_main_ms() >= stream_budget_ms &&
+    const double pre_scheduler_elapsed_ms = elapsed_main_ms();
+    if (pre_scheduler_elapsed_ms >= stream_budget_ms &&
         !world.IsEnterLitGateActive() && !world.IsEnterSessionActive() &&
         !protect_near)
     {
+      // M624V showed that this early frame-budget exit can starve both worker
+      // admission and ready-result commits for hundreds of frames. Keep the
+      // response bounded: admit at most one queued job into a free worker and
+      // commit at most one already-ready result.
+      int pending_before = 0;
+      int ready_before = 0;
+      int worker_slots_before = 0;
+      int admitted = 0;
+      uint64_t skip_frames = 0;
+      bool sample_skip = false;
+      if (ChunkScheduler)
+      {
+        pending_before = ChunkScheduler->GetPendingQueueCount();
+        ready_before = ChunkScheduler->GetCompletedReadyCount();
+        worker_slots_before =
+            ChunkScheduler->GetAvailableGenerationWorkerSlots();
+        // RefreshStreamingPressure has already admitted these requests. Keep
+        // them moving into genuinely idle workers even when its far-stream
+        // phase exhausted the frame budget. This is async admission only: it
+        // neither applies results nor exceeds the worker pool's capacity.
+        admitted =
+            pending_before > 0 && worker_slots_before > 0
+                ? ChunkScheduler->StartQueuedGenerationWorkers(1)
+                : 0;
+        if (IsWorldColumnSourceTraceEnabled() &&
+            (pending_before > 0 || ready_before > 0))
+        {
+          static uint64_t scheduler_budget_skip_frames = 0;
+          skip_frames = ++scheduler_budget_skip_frames;
+          sample_skip = skip_frames == 1 || skip_frames % 60 == 0;
+        }
+      }
       // RefreshStreamingPressure may have admitted a render demand before this
       // budget exit. Run the bounded orphan reconciliation on the short path
       // too; otherwise repeated early returns leave ownerless Created attempts
@@ -3415,6 +3449,49 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                                        /*max_bg_columns=*/1);
       }
       world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs = elapsed_main_ms();
+      int bounded_commits = 0;
+      if (ChunkScheduler && ready_before > 0)
+      {
+        const auto bounded_tick_t0 = std::chrono::high_resolution_clock::now();
+        // The normal Tick is skipped at this point, but leaving completed
+        // columns uncommitted creates visible holes. Apply one ready result;
+        // do not start additional work or use the multi-commit drain boost.
+        ChunkScheduler->Tick(world.BlockWorld, /*maxCommitsPerFrame=*/1,
+                             /*maxGenerationStartsPerFrame=*/0,
+                             /*maxApplyMsPerFrame=*/0.0,
+                             /*allowBoundedReadyDrain=*/false);
+        world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs +=
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() -
+                bounded_tick_t0)
+                .count();
+        world.PhysicsTelemetryData.CommitApplyMs +=
+            ChunkScheduler->GetLastTickApplyMs();
+        bounded_commits = ChunkScheduler->GetLastCommitsThisFrame();
+      }
+      // Opt-in, sparse trace keeps the default/metrics-off path silent.
+      if (sample_skip && ChunkScheduler)
+      {
+        const glm::ivec3 skip_focus = UChunkManager::WorldToChunk(
+            world.GetPreferredLoadFocusBlock());
+        LogWorldColumnSource(
+            "procedural", "scheduler_budget_limited_tick",
+            glm::ivec3(skip_focus.x, 0, skip_focus.z),
+            "skip_frames=" + std::to_string(skip_frames) +
+                " elapsed_ms=" +
+                std::to_string(pre_scheduler_elapsed_ms) +
+                " budget_ms=" + std::to_string(stream_budget_ms) +
+                " pending_before=" + std::to_string(pending_before) +
+                " ready_before=" + std::to_string(ready_before) +
+                " worker_slots_before=" +
+                std::to_string(worker_slots_before) +
+                " admitted=" + std::to_string(admitted) +
+                " committed=" + std::to_string(bounded_commits) +
+                " pending_after=" +
+                std::to_string(ChunkScheduler->GetPendingQueueCount()) +
+                " ready_after=" +
+                std::to_string(ChunkScheduler->GetCompletedReadyCount()));
+      }
       return;
     }
   }

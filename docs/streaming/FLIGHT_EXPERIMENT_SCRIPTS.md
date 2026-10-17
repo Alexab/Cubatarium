@@ -13228,3 +13228,69 @@ of 8.18 s; ready-load/pending-disk high water was 416/105 and drained at exit.
 No framebuffer verdict was captured. Artifacts:
 `bin/suite_reports/engine_refactor/m624u_source_only_m335_short_20261017.json`
 and `artifacts/research/rendering/m624u_source_only_m335_short_20261017/`.
+
+### M624V — cold-seed source-only frontier witness
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_M624D_EnterBarrier_20261017 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624v_cold_seed_source_frontier_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624v_cold_seed_source_frontier_m335_short_20261017.json
+```
+
+M624V used the fresh-seed `World_M624D_EnterBarrier_20261017` with the
+established start/camera/speed and metrics off. It traveled `(7,3)` to
+`(-3,3)` over 10 chunks with no collision or timeout. Trace counts were 180
+disk completions, 108 procedural disk misses, 82 procedural worker finishes,
+and 78 commits. Generation p95 was 233 ms, while scheduler/worker queue p95
+was 5.13 s and ready-to-commit p95 was 6.58 s. The shutdown snapshot retained
+one generating and three ready items, so it does not prove queue drain. There
+is no pixel/framebuffer verdict. Report and INFO log are under
+`bin/suite_reports/engine_refactor/m624v_cold_seed_source_frontier_m335_short_20261017.json`
+and `artifacts/research/rendering/m624v_cold_seed_source_frontier_m335_short_20261017/`.
+
+### M624W–M624Y — scheduler budget progress probes
+
+These use the same visible, no-teleport M335 start/camera/speed on
+`World_M624D_EnterBarrier_20261017`, with source tracing on and performance,
+host, pixel, and fluid metrics off. The only route difference is the fly
+duration: W and X used 60 seconds to cross the resident ring; Y used the
+short 30-second route. The source trace adds sparse
+`scheduler_budget_limited_tick` events; it does not sample frames.
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_M624D_EnterBarrier_20261017 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624y_budget_progress_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624y_budget_progress_m335_short_20261017.json
+```
+
+The corresponding IDs/reports are `m624w_budget_skip_trace_m335_short_20261017`
+and `m624x_budget_admission_m335_short_20261017` (both with
+`-FlyPhaseSeconds 60`), then `m624y_budget_progress_m335_short_20261017`.
+W sampled the unstarted scheduler queue; X isolated worker admission but left
+ready commits stalled; Y includes one bounded ready-result commit. Y completed
+58 in-game seconds / 10 chunks without collision, recorded 115 procedural
+commit events, reduced ready-wait p95 to 35.8 ms, and drained the source
+queues at exit. It reused a world modified by earlier runs, so it is a
+mechanism check rather than a fresh-seed visual acceptance run. Reports and
+logs live under `bin/suite_reports/engine_refactor/` and the matching
+`artifacts/research/rendering/m624w_*`, `m624x_*`, and `m624y_*` folders.
+M624Z repeated Y after the final Release rebuild with the same 30-second
+route, using phase/report ID `m624z_final_budget_progress_m335_short_20261017`.
+It completed 10 chunks without collision, recorded 82 procedural commit
+events, ready-wait p95 33.2 ms, and a zero-work shutdown snapshot. This final
+rerun checks the shared helper refactor; it remains a warm-route mechanism
+check without a framebuffer verdict. Its report and log are under
+`bin/suite_reports/engine_refactor/m624z_final_budget_progress_m335_short_20261017.json`
+and `artifacts/research/rendering/m624z_final_budget_progress_m335_short_20261017/`.
