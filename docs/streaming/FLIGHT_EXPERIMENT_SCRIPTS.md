@@ -5,8 +5,10 @@
 С M624Q `flight_sim_run.py` по умолчанию не собирает FramePerf и не пишет
 perf JSONL. Воспроизводя историческую команду, которая разбирала метрики,
 добавляйте `--metrics`; поддерживаемые orchestration runners и сохранённые
-`tools/tmp_run_m*.py` wrappers уже передают этот флаг явно. `--no-metrics`
-оставлен для явного визуального прогона без метрик.
+`tools/tmp_run_m*.py` wrappers уже передают этот флаг явно. M335 wrapper тоже
+по умолчанию отключает метрики и высокообъёмные трассы; для них используйте
+`-EnableMetrics`. `--no-metrics` и `-DisableMetrics` оставлены как явные
+переключатели визуального прогона без метрик.
 
 ## Поддерживаемый поток
 
@@ -12925,8 +12927,8 @@ check.
 
 The M335 wrapper defaults to
 `artifacts/research/rendering/<phase-id>/`; override it with `-ArtifactRoot`.
-For an operator-visible route without metrics, use `-DisableMetrics`. For a
-diagnostic run, keep metrics enabled and use a named phase ID so the manifest,
+The wrapper defaults to an operator-visible route without metrics. For a
+diagnostic run, pass `-EnableMetrics` and use a named phase ID so the manifest,
 INFO log, perf JSONL, and any explicitly requested captures remain associated.
 
 ### M624D: cold focus terrain committed before first paint
@@ -13136,7 +13138,7 @@ with `open_sky=1`, so use it to verify stale-dark repair and open-sky dependent
 work, not the equal-revision open-sky gate itself. Report and trace are kept in
 `artifacts/research/rendering/m624m_open_sky_legal_dark_guard_20261017/`.
 
-### M624Q: bounded refactor close-out and metric policy
+### M624Q: metrics policy checkpoint and active evidence gaps
 
 The flight runner now defaults to an uninstrumented route: FramePerf collection,
 `perf_*.jsonl` disk writes, and host-resource polling are off unless
@@ -13145,14 +13147,23 @@ and disk output remain coupled because `FramePerfMonitor` gates both through
 one environment switch and does not expose a lightweight memory-only mode.
 Metric-consuming entry points (`flight_sim_suite`, `flight_sim_eval`,
 `flight_sim_iterate`, `perf_capture`, and GPU/bakeoff phase runners) now pass
-`--metrics`. The M335 wrapper does so by default and maps `-DisableMetrics` to
-`--no-metrics`.
+`--metrics`. The M335 wrapper opts in only with `-EnableMetrics`; otherwise it
+also disables its source/pixel/fluid traces and passes `--no-metrics`.
 
 Use a short route without metrics for operator-visible checks. Use `--metrics`
 only for a named diagnostic run whose analysis needs the perf stream. The
 equal-revision OpenSky fully-dark decision, complete boundary-denial/deferred/
-eviction/reload chain, and a distant disk-miss lane remain targeted follow-ups.
-They are not claims of observed visual failure: recent operator reports show
-normal world and water appearance, and proxy signals lack a matching framebuffer
-witness. Reopen these cases when a matching short-route symptom or trace occurs;
-do not schedule long operator-monitoring flights.
+eviction/reload chain, a distant disk-miss lane, and a fresh-world lifecycle
+check remain open plan items. M624R's short warm route had no disk or procedural
+source requests and cannot close the distant lane. Recent operator reports show
+normal world and water appearance, but M624R captured no operator framebuffer
+verdict; its proxy signals are not themselves a visual failure. Do not schedule
+long operator-monitoring flights.
+
+M624S verified the default metrics-off wrapper on the same short 8/30/20-second
+M335 route: focus `(7,3) -> (-1,3)`, eight chunks, 58 in-game seconds, no
+collision or timeout, zero host samples, and no perf JSONL. Startup still had
+no chunk-file reads or procedural generation; this checks the runner contract
+and route integrity only, not distant streaming or the actual framebuffer
+image. Report and isolated INFO log are under
+`artifacts/research/rendering/m624s_closeout_metrics_off_m335_short_20261017/`.

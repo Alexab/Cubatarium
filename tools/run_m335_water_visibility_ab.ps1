@@ -5,6 +5,7 @@ param(
     [switch]$EnableFogPullIn,
     [switch]$EnableScreenRayPixelProbes,
     [switch]$StampWarmPeriods,
+    [switch]$EnableMetrics,
     [switch]$DisableMetrics,
     [switch]$RequireExistingWorld,
     [string]$World = "World_M572_Cold_20261014",
@@ -30,6 +31,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($EnableMetrics -and $DisableMetrics) {
+    throw "Use either -EnableMetrics or -DisableMetrics, not both"
+}
+$metricsEnabled = [bool]$EnableMetrics -and -not $DisableMetrics
+if (($EnableScreenRayPixelProbes -or $StampWarmPeriods) -and -not $metricsEnabled) {
+    throw "-EnableScreenRayPixelProbes and -StampWarmPeriods require -EnableMetrics"
+}
 if ($ProbeMinCameraX -ge $ProbeMaxCameraX) {
     throw "ProbeMinCameraX must be smaller than ProbeMaxCameraX"
 }
@@ -92,7 +100,7 @@ try {
         CUBA_DEBUG_FLUID_FRAGMENT_MARKER = "0"
         CUBA_DEBUG_TRANSPARENT_SINGLE_PASS = "0"
     }
-    if ($DisableMetrics) {
+    if (-not $metricsEnabled) {
         foreach ($name in @(
             "CUBA_WORLD_COLUMN_SOURCE_TRACE",
             "CUBA_VISUAL_BLACK_TRACE",
@@ -126,11 +134,11 @@ try {
     foreach ($name in $environmentToClear) {
         [Environment]::SetEnvironmentVariable($name, $null, "Process")
     }
-    if ($EnableScreenRayPixelProbes -and -not $DisableMetrics) {
+    if ($EnableScreenRayPixelProbes -and $metricsEnabled) {
         [Environment]::SetEnvironmentVariable(
             "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY", "1", "Process")
     }
-    if ($StampWarmPeriods -and -not $DisableMetrics) {
+    if ($StampWarmPeriods -and $metricsEnabled) {
         [Environment]::SetEnvironmentVariable(
             "CUBA_WARM_PROTOCOL", "warmup_sec_stamp", "Process")
         [Environment]::SetEnvironmentVariable(
@@ -181,10 +189,10 @@ try {
         "--phase-id", $PhaseId,
         "--artifact-root", $ArtifactRoot
     )
-    if ($DisableMetrics) {
-        $flightArgs += "--no-metrics"
-    } else {
+    if ($metricsEnabled) {
         $flightArgs += "--metrics"
+    } else {
+        $flightArgs += "--no-metrics"
     }
     & python -X utf8 tools\flight_sim_run.py @flightArgs
     $runExitCode = $LASTEXITCODE

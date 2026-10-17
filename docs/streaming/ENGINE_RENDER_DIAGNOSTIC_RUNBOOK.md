@@ -3413,27 +3413,31 @@ build and static EXE verification passed. Continue to use a short run that
 correlates the same boundary column across denial, deferred ownership, unload,
 reload, and relight admission before closing that lifecycle gate.
 
-### M624Q: bounded refactor close-out
+### M624Q: metrics policy checkpoint; refactor remains open
 
-The implementation close-out is bounded to confirmed defects and repeatable
-tooling. M624L suppresses redundant relight enqueue for a settled legal-dark
-slice; M624O directly confirms that stale OpenSky dark work is classified for
-repair before the enter gate resets; M624P preserves boundary relight debt
-when unload cancels queue ownership. These fixes have Release build
-verification and route-level evidence recorded in the remediation plan. The
-user's recent operator checks report normal world and water appearance;
-proxy debt alone is not a framebuffer failure.
+M624L suppresses redundant relight enqueue for a settled legal-dark slice;
+M624O directly confirms stale OpenSky dark work is assigned repair before the
+enter gate resets; M624P preserves boundary relight debt when unload cancels
+queue ownership. Their Release verification and route evidence are recorded in
+the remediation plan. These fixes do not complete the streaming/rendering
+objective.
 
 The exact equal-revision OpenSky witness, combined boundary eviction/reload
-chain, and a distant disk-miss lane remain unobserved. Treat them as narrow
-follow-ups, not as evidence that the rendered world is broken. Reopen with a
-short targeted run when the corresponding trace or visible symptom occurs.
-Do not extend operator monitoring flights to force a rare branch.
+chain, a distant disk-miss lane, and a fresh-world lifecycle check remain open.
+M624R's short M335 replay started with 121 resident columns and recorded no
+disk reads or procedural requests, so it did not exercise the streaming source
+path. Its single near-hole witness resolved before the fog horizon, and the
+pixel sample showed drawable, lit surfaces; neither result provides a full-frame
+or operator verdict. Do not treat its proxy failures as a reproduced visual
+defect, and do not treat the short route as far-streaming acceptance.
 
 Research instrumentation now defaults off in `flight_sim_run.py`. Pass
 `--metrics` to enable FramePerf, perf JSONL disk output, and host sampling;
 `--no-metrics` disables them. These are deliberately coupled because the
 current monitor does not have a cheap in-memory-only collection path. The
-M335 wrapper opts in by default and supports `-DisableMetrics` for visual-only
-routes. See the script inventory for supported callers and the flight index
-for exact commands.
+M335 wrapper also defaults to metrics and trace collection off; use
+`-EnableMetrics` for diagnostic runs and `-DisableMetrics` as an explicit
+compatibility alias. See the script inventory for supported callers and the
+flight index for exact commands. M624S verified the default wrapper path ran
+the fixed short M335 route with no perf JSONL and no host-resource samples; it
+did not exercise disk/procedural streaming because the start ring was resident.

@@ -13746,9 +13746,12 @@ Release compilation and static EXE verification passed. Keep the M624I
 denial→deferred→admission witness separate from the still-open eviction/reload
 verification. Details are in `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`.
 
-### M624Q — bounded close-out of the rendering/streaming refactor
+### M624Q — research instrumentation defaults
 
-The planned implementation work is closed against confirmed defects:
+The research-runner defaults are corrected, but this is not completion of the
+rendering/streaming refactor. The engine still requires distant-source and
+boundary-lifecycle evidence before its streaming objective can be considered
+verified. Confirmed local fixes remain:
 
 - M624L removed repeated no-op relight enqueue for a settled legal-dark slice;
   the short route reduced that column/band from 176 submissions to zero.
@@ -13761,29 +13764,87 @@ The planned implementation work is closed against confirmed defects:
   perf JSONL output, and host sampling; `--no-metrics` disables them. The
   `FramePerfMonitor` currently couples collection and disk output and has no
   separate cheap in-memory mode. Metric-consuming maintained callers opt in
-  explicitly; the M335 visual wrapper opts in unless `-DisableMetrics` is used.
+  explicitly; the M335 visual wrapper defaults off and requires `-EnableMetrics`
+  for FramePerf and its bounded source/pixel traces. `-DisableMetrics` remains
+  an explicit compatibility alias.
 - Repeatable routes, script inventory, evidence interpretation, and close-out
   conditions are documented in the flight index, diagnostic runbook, and
   script inventory.
 
-No current operator-reported visual defect remains: recent checks report
-normal terrain and water. Historical proxy/readiness debt is not a framebuffer
-failure by itself, and fog silhouettes remain an unresolved pre-existing
-behavior without a matching pixel/framebuffer witness. Do not change water or
-fog on proxy-only evidence.
+Recent operator reports found the world and water visually normal, but the
+current run has no operator framebuffer verdict. Historical readiness proxies
+are not pixel proof, and fog silhouettes remain a pre-existing unresolved
+behavior. Neither observation closes rendering acceptance.
 
-The following are evidence-gated follow-ups rather than active implementation
-blockers: (1) the rare OpenSky equal-revision fully-dark terminal decision;
-(2) one exact boundary request through denial, deferred ownership, eviction,
-reload, and relight admission; and (3) a short distant lane with disk-miss or
-unload/reload provenance and near-view evidence. M624O, M624I, and earlier
-source-trace routes provide partial evidence but do not prove these complete
-chains. Reopen only when a matching trace/visible symptom occurs or a targeted
-short run can exercise the branch; long operator-monitoring flights are not
-part of close-out.
+M624Q closed the runner default-policy item, not the plan. M624R below shows
+that a 30-second M335 route does not exercise disk or procedural streaming and
+does not reach the distant checkpoint. Keep the following active: (1) observe
+the rare OpenSky equal-revision fully-dark terminal decision; (2) exercise one
+boundary request through denial, deferred ownership, eviction, reload, and
+relight admission; (3) complete a source-traced distant M335 lane with near-view
+evidence; (4) repeat a short cold/new-world start check and the periodic fresh
+seed check; and (5) capture an operator/framebuffer verdict if a concrete
+dark/empty or unready-light symptom returns. Do not substitute long operator
+monitoring flights for those short visual checks.
 
-Release build verification of the engine changes is recorded with M624L–P.
-The final M624Q changes are runner/documentation-only and do not change the
-engine binary. Verification and invocation details are recorded in
-`FLIGHT_EXPERIMENT_SCRIPTS.md`, `ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md`, and
-`ENGINE_EXPERIMENT_SCRIPT_INVENTORY.md`.
+The current Release build covers M624L–P and the tooling-only M624Q changes.
+Plan completion remains open until the active lifecycle/source checks have
+evidence; see `FLIGHT_EXPERIMENT_SCRIPTS.md` and
+`ENGINE_RENDER_DIAGNOSTIC_RUNBOOK.md` for the fixed route and instrumentation
+rules.
+
+### M624R — short M335 route did not reach a streaming frontier
+
+Built current commit `9dffb8a5` with `tools/build_release.ps1 -Jobs 8`; the
+MSVC Release build and static Windows EXE check passed. A visible, no-teleport
+M335 replay on `World_164` used start `(120,56,56)`, eye Y 70, yaw 180, pitch
+-30, speed scale 1, and 8/30/20-second idle/fly/stop phases. Route integrity
+passed from focus `(7,3)` to `(-2,3)` over nine chunks / about 144 blocks; the
+far-west checkpoint at `x=-3` was not reached. The process completed without
+timeout, but overall acceptance returned false.
+
+This was an instrumented run made before the M624Q wrapper default was changed:
+29 periods / 27 steady periods, 149,260,582-byte perf JSONL, and 49.3/88.4/98.9%
+host CPU median/p95/max (20.1/38.5/43.9% for the app). Treat its frame-time
+results as trace-contaminated and do not use it as a performance baseline.
+
+Startup reported 121 spatial columns, zero chunk files read, and zero
+procedural generation completions; shutdown reported zero source requests.
+Therefore this short replay did not test disk reload or a new procedural
+frontier. It recorded one near-focus-hole period whose exact missing-mesh
+witness was outside the fog horizon and resolved before entry; the safety gate
+failed on this proxy, not on a framebuffer witness. The eye-proxy gate also
+failed on stale-visual activity without matching hole counters. Pixel tracing
+found 165 samples below luma 96 among 1,520 probes; all joined drawable opaque
+depth surfaces with visible MDI passes, 0 RGB changes across the transparent
+pass, no light preview, and only one unsettled demand sample. This neither
+proves an image defect nor replaces operator inspection.
+
+Artifacts are `bin/suite_reports/engine_refactor/m624r_closeout_world164_m335_short_20261017.json`,
+`bin/suite_reports/engine_refactor/m624r_closeout_world164_m335_short_20261017_renderer_pixel_trace.json`,
+and `artifacts/research/rendering/m624r_closeout_world164_m335_short_20261017/`.
+M624S below verifies the now-default metrics-off wrapper on the same short
+route. The next engine step is not to tune gates from these runs: keep a
+source-traced run separate until a target route can exercise disk or procedural
+streaming.
+
+### M624S — verify default metrics-off short M335 route
+
+After the M624Q wrapper change, repeated the exact M335 start, camera, speed,
+and 8/30/20-second no-teleport route on `World_164`, this time without passing
+`-EnableMetrics` or `-DisableMetrics`. The wrapper launched Release with
+`--no-metrics`; route integrity passed from focus `(7,3)` to `(-1,3)` across
+eight chunks / 58 requested in-game seconds, with no collision or timeout.
+`flight_sim_uninstrumented_run.v1` records collection, perf JSONL output, and
+host-resource sampling all disabled; sample count was zero, `perf_jsonl` is
+null, and the isolated log folder contains only a 15 KB INFO log.
+
+Startup again reported 121 resident columns, zero chunk files read, and zero
+procedural generation completions. This confirms the wrapper's opt-out default
+and route integrity, not far streaming or visual acceptance. It did not verify
+the `-EnableMetrics` branch after the interface change; that branch uses the
+existing runner `--metrics` path. The short route remains distinct from M624R's
+instrumented pixel run and should not be compared for performance.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624s_closeout_metrics_off_m335_short_20261017.json`
+and `artifacts/research/rendering/m624s_closeout_metrics_off_m335_short_20261017/`.

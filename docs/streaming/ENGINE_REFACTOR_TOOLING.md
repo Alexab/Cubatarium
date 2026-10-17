@@ -86,14 +86,13 @@ diagnostics.
 write; no `perf_*.jsonl` session is opened. A normal game launch therefore
 has periodic FramePerf collection and disk output off. Set it to `1` before
 launch only for an experiment that needs that trace. `tools/flight_sim_run.py`
-sets it to `1` for normal instrumented research runs because its gate analysis
-requires the perf file. Pass `--no-metrics` to `flight_sim_run.py` or
-`-DisableMetrics` to the M335 PowerShell wrapper to disable FramePerf
-collection/disk output and host CPU/memory sampling; that run writes an
-explicit `not_evaluated_metrics_disabled` report and must not be treated as a
-passing gate. The wrapper also turns off its opt-in visual/source trace flags
-in that mode. This is a measurement-harness behavior, not the normal runtime
-default.
+sets it to `1` only when `--metrics` is passed; otherwise it disables
+FramePerf, disk output, host CPU/memory sampling, and metric gates. The M335
+wrapper has the same default; use `-EnableMetrics` for perf JSONL plus its
+bounded visual/source trace flags. `--no-metrics` and `-DisableMetrics` remain
+explicit visual-only switches. Metric-free runs write an explicit
+`not_evaluated_metrics_disabled` report and must not be treated as a passing
+gate. This is a measurement-harness behavior, not the normal runtime default.
 
 Runtime telemetry that drives scheduling, memory budgets, and rendering stays
 available in memory; it is not the same thing as periodic perf logging. When
