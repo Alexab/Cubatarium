@@ -3756,3 +3756,66 @@ the overall analyzer `pass=false` is not itself a visible-hole finding. Host
 CPU was elevated (`48.1/80.9/86.1%` median/p95/max), so timing is advisory.
 Artifacts:
 `artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.
+
+### M624AK — fresh seed, cold frontier, sparse framebuffer and water/light join
+
+Use the established M335 start/camera and short 8/30/20 route. The unique
+radius-4 world was created with Release CLI seed `3650482223`; the saved start
+focus column `(7,0,3)` was absent, allowing the source trace to identify a
+procedural `disk_miss` while nearby columns exercised disk reads. Do not use
+the analyzer's aggregate `pass` as a pixel verdict.
+
+To reproduce the same world from a clean data directory, create it once with
+the Release CLI:
+
+```powershell
+.\Cubatarium.exe --console --create-world --seed 3650482223 `
+  --name World_M624AK_ColdPixel_20261017 --radius-chunks 4 `
+  --preset balanced `
+  --report-json suite_reports/engine_refactor/m624ak_cold_frontier_pixel_world_create_20261017.json
+```
+
+That CLI invocation did not leave the requested report JSON, but its INFO log
+records successful creation, all `generation_columns=43264/43264`, and four
+workers. The generated world has 695 chunk files.
+
+```powershell
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableMetrics `
+  -EnableScreenRayPixelProbes `
+  -World World_M624AK_ColdPixel_20261017 `
+  -ProbeMinCameraX -96 -ProbeMaxCameraX 160 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624ak_cold_frontier_pixel_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624ak_cold_frontier_pixel_m335_short_20261017.json
+```
+
+The completed trace is in
+`artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/logs/`.
+Run the existing offline analyzers against the `perf_*.jsonl` there:
+
+```powershell
+python tools/analyze_renderer_pixel_trace.py `
+  artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/logs/perf_20261017-202316_45828.jsonl `
+  --threshold 60 `
+  --json-out artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/renderer_pixel_analysis.json
+python tools/analyze_water_surface_pixel_join.py `
+  artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/logs/perf_20261017-202316_45828.jsonl `
+  bin/worlds/World_M624AK_ColdPixel_20261017 `
+  --min-camera-x -96 --max-camera-x 160 `
+  --json-out artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/water_surface_pixel_join.json
+```
+
+M624AK completed 3,669 frames / 58 requested seconds and nine chunks, reaching
+focus `(-2,3)` from `(7,3)` without collision, heading drift, or teleport. The
+route did not reach `(-3,3)`, so it is a bounded diagnostic, not a full west
+route. The cold focus was a disk miss; the log recorded 230 procedural misses,
+130 disk queue/completion pairs, and 148 procedural commits. In 3,200 sampled
+framebuffer pixels there were no all-channel RGB values below 12. The 66 stale
+light-revision pixel samples all matched ready water triangles above
+submerged opaque surfaces; they are not dry-terrain dark-pixel evidence. There
+were 39 missing-mesh focus-ring obligations at stop, while
+`visual_holes_rate=0` and visible-black proxies were zero. Keep readiness debt
+separate from pixel observations. Metrics return to off after the wrapper.

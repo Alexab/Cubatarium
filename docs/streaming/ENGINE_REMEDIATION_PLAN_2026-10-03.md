@@ -14089,18 +14089,21 @@ another long operator flight.
    `needs_relight=1` and `light_complete=0`. Revisiting the exact evicted
    column and observing its post-reload relight is still a rare, reproducible
    follow-up, but it is not a blocker to closing this refactor.
-3. Cold-frontier source behavior is reproduced on M624AH. The first focus
-   column `(7,0,3)` was a procedural `disk_miss`; the visible route completed
-   ten chunks. M624AI collected 3,540 direct RGBA framebuffer samples on the
-   warm repeat; none was near-black, and the visual-hole/black proxies were
-   zero. This is sparse sampling, not a full-frame or operator verdict. Both
-   runs had elevated host load, so their timing is advisory. A cold-frontier
-   RGBA sample would add coverage if a defect recurs, but is not an active
-   correctness gate. Do not make an arbitrary host CPU percentage a merge
-   gate: other host work (including development tools) can keep that gate from
-   passing without indicating an engine defect. A clean baseline is useful
-   later for performance tuning but
-   is not required for the current correctness refactor.
+3. Cold-frontier source behavior and sampled pixels are now covered by M624AH
+   and M624AK. In both worlds the start-focus column `(7,0,3)` was a procedural
+   `disk_miss`; M624AK's Release CLI creation used four generation workers.
+   M624AK collected 3,200 direct RGBA framebuffer samples; none was near-black.
+   All 66 samples with stale published light revisions hit ready water
+   triangles over submerged terrain. The 190 low-luma samples had drawable
+   depth surfaces; unchanged-RGB dark samples had matching opaque light
+   revisions. This is sparse sampling, not a full-frame verdict. Both analyzer
+   readiness-debt rates remained 1.0; M624AK's near-focus visual-hole and
+   visible-black proxies were zero, but these scoped signals do not establish
+   full-screen correctness. Timing is advisory. Do not make an arbitrary host
+   CPU percentage a merge gate:
+   other host work (including development tools) can keep that gate from
+   passing without indicating an engine defect. A clean performance baseline
+   remains useful for later tuning, not a correctness gate for this refactor.
 4. Release app and focused Release regression suite pass; the metrics flag
    remains opt-in and the experiment routes and artifact locations are
    documented. The seven focused CTests passed after the final source change.
@@ -14207,13 +14210,15 @@ The JSONL contains 3,540 direct RGBA framebuffer samples from 44 probe events
 at 100 screen positions (20 horizontal positions across four/five sampled
 rows). No sampled RGB triplet had all channels below 12. This is sparse
 framebuffer evidence, not a full screenshot or operator verdict. The 25
-`screen_ray_candidate_trace` rows all had `screen_ray_selected=0`, so the run
-did not pair a sampled color with a selected world-geometry ray. Analyzer
-`visual_holes_rate` and black proxy were zero, while readiness debt remained
-1.0 and analyzer `pass=false`; those readiness values are not visible-hole
-proof. No operator visual verdict was recorded. The run was on a warm world, so
-a cold-frontier pixel sample remains a useful coverage follow-up if a visual
-defect recurs. Metrics return to off by default. Artifacts:
+`screen_ray_candidate_trace` rows all had `screen_ray_selected=0`; this only
+means that selector did not choose a geometry candidate. The pixel records
+still contain their own opaque depth-surface attribution and CPU water-triangle
+matches: 2,166 samples matched ready water top-face triangles, and 1,756
+changed RGB after the transparent pass. Analyzer `visual_holes_rate` and black
+proxy were zero, while readiness debt remained 1.0 and analyzer `pass=false`;
+those readiness values are not visible-hole proof. No operator visual verdict
+was recorded. M624AK below adds cold-frontier framebuffer coverage. Metrics
+return to off by default. Artifacts:
 `artifacts/research/rendering/m624ai_framebuffer_pixel_witness_m335_short_20261017/`.
 
 ### M624AG — verify boundary dependency survives column eviction
@@ -14256,3 +14261,55 @@ but `visual_holes_rate` and black proxy were zero; `pass=false` is not a visible
 hole verdict. Metrics were enabled for this run only and return to off by
 default. Flight report and trace:
 `artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.
+
+### M624AK — fresh cold-frontier pixels and water/light correlation
+
+Created `World_M624AK_ColdPixel_20261017`, seed `3650482223`, radius 4, using
+the Release CLI. It wrote 695 chunk files and used four generation workers.
+Before flight, the established focus column `(7,0,3)` had no saved chunk file;
+the source trace confirms `procedural:disk_miss`. The flight source trace
+contains 230 procedural misses and 130 disk queue/completion pairs, followed
+by 148 procedural commits.
+
+The visible no-teleport M335 route used the established start and camera with
+8 s idle, 30 s fly, 20 s stop, and 8 s blocked-stop timeout. It completed 3,669
+frames / 58 requested in-game seconds, reaching focus `(-2,3)` from `(7,3)`;
+it did not reach the `(-3,3)` west gate. No collision, heading deviation, or
+teleport occurred. Host CPU median/p95/max was `47.7/79.4/84.2%`; use timing as
+advisory only. The report has `readiness_debt_rate=1.0`,
+`visual_holes_rate=0`, `post_stop_visible_black_max=0`, and 39 missing-mesh
+obligations at focus after stop. `pass=false` reflects readiness debt and route
+coverage; these are not direct pixel-hole measurements.
+
+The existing `analyze_renderer_pixel_trace.py` processed 3,200 framebuffer
+samples. No sample was RGB-black by the existing `<12` all-channel threshold.
+There were 190 samples with luma `<60`; every one mapped to a drawable opaque
+depth surface. Among the 176 whose RGB was unchanged by the transparent pass,
+none had an opaque published-vs-field light revision mismatch; two were
+provisional previews. The 66 samples that did have a stale opaque light
+revision all matched a ready fluid top-face triangle and carried stale-light
+repair debt. Of those 66, 28 changed RGB and 58 changed RGBA after transparent
+rendering; the pixel-to-fluid join places these on submerged terrain under the
+water surface. This is concrete cold-seed mesh-light debt, but this run does
+not show a stale-light pixel escaping the water pass or a visible dark terrain
+defect.
+
+`analyze_water_surface_pixel_join.py` processed 2,440 in-window samples and
+found 1,317 ready source-triangle matches; 891 of those changed RGB after the
+transparent pass. Selected GPU water-batch readbacks matched source vertex and
+index payloads. The evidence is still sparse and does not guarantee every
+water pixel, but independently confirms water reaches the sampled framebuffer
+in this cold-start route. The analysis outputs and run artifacts are in
+`artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/`;
+the created world is `bin/worlds/World_M624AK_ColdPixel_20261017`.
+
+**Closure decision:** M624AK completes the previously planned cold-frontier
+pixel/source check. Together with M624AJ publication evidence, the focused
+Release regression suite, documented repeatable tools, and the operator's
+positive visual assessment, there is no reproducible visible rendering defect
+remaining that justifies keeping the core refactor open. The remaining focus
+readiness debt and submerged stale-light queue state stay recorded as
+diagnostic/performance follow-ups; do not relabel them as visible holes without
+a same-pixel dry-surface or operator-visible witness. Same-column reload and a
+separate clean performance baseline remain optional follow-ups, not gates for
+this visual/streaming refactor.

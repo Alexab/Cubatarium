@@ -13538,3 +13538,74 @@ attempt, geometry, and light revision predicate. Host CPU median/p95/max was
 black proxies were zero. `pass=false` does not establish a visible defect.
 Artifacts are under
 `artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.
+
+### M624AK — cold-frontier framebuffer, water, and light-revision correlation
+
+Release CLI created the unique radius-4 world
+`World_M624AK_ColdPixel_20261017`, seed `3650482223`, with 695 chunk files and
+four generation workers. The established M335 focus column `(7,0,3)` was a
+procedural disk miss. Source trace totals: 230 procedural misses, 130 disk
+queue/completion pairs, 148 procedural commits.
+
+World-create command used (run once per unique world name):
+
+```powershell
+.\Cubatarium.exe --console --create-world --seed 3650482223 `
+  --name World_M624AK_ColdPixel_20261017 --radius-chunks 4 `
+  --preset balanced `
+  --report-json suite_reports/engine_refactor/m624ak_cold_frontier_pixel_world_create_20261017.json
+```
+
+The report JSON was not present after this invocation; the matching INFO log
+records successful creation, `generation_workers=4`, and all
+`generation_columns=43264/43264`. Treat that INFO log and the 695 chunk files as
+the creation evidence.
+
+Exact short visible no-teleport route (same established start and camera):
+
+```powershell
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableMetrics `
+  -EnableScreenRayPixelProbes `
+  -World World_M624AK_ColdPixel_20261017 `
+  -ProbeMinCameraX -96 -ProbeMaxCameraX 160 `
+  -StartX 120 -StartY 56 -StartZ 56 -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 30 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624ak_cold_frontier_pixel_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624ak_cold_frontier_pixel_m335_short_20261017.json
+```
+
+The route completed 3,669 frames / 58 requested seconds and reached focus
+`(-2,3)` from `(7,3)` without collision, heading drift, or teleport; it did not
+reach west focus `(-3,3)`. Analyzer `pass=false` because readiness debt remained
+and route coverage was short. It reported `visual_holes_rate=0` and zero
+post-stop visible-black proxy, while 39 focus-ring missing-mesh obligations
+remained. Keep these readiness signals separate from sampled pixels.
+
+Offline analysis commands and outputs:
+
+```powershell
+python tools/analyze_renderer_pixel_trace.py `
+  artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/logs/perf_20261017-202316_45828.jsonl `
+  --threshold 60 `
+  --json-out artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/renderer_pixel_analysis.json
+python tools/analyze_water_surface_pixel_join.py `
+  artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/logs/perf_20261017-202316_45828.jsonl `
+  bin/worlds/World_M624AK_ColdPixel_20261017 `
+  --min-camera-x -96 --max-camera-x 160 `
+  --json-out artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/water_surface_pixel_join.json
+```
+
+The pixel analyzer found 3,200 framebuffer samples, no all-channel RGB below
+12, and 190 samples below luma 60; all 190 had drawable opaque depth surfaces.
+All 66 samples with stale published-light revisions matched ready water
+triangles over submerged terrain. Of those, 28 changed RGB and 58 changed RGBA
+after the transparent pass. None of the 176 low-luma samples whose RGB stayed
+unchanged had an opaque light-revision mismatch. The water join independently
+found 1,317 ready source-triangle matches, 891 with post-transparent RGB
+change, and matching GPU source/index payloads in selected water-batch
+readbacks. This is positive cold-frontier sampled evidence, not a full-frame
+visual guarantee. The analyzer outputs, route report, and 222.9 MB perf trace
+are preserved under
+`artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/`.

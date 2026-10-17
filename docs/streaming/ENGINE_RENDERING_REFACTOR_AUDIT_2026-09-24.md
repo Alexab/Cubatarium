@@ -6716,20 +6716,24 @@ chunks, with no collision, clock gap, teleport, or heading deviation. Host CPU
 median/p95/max was `32.3/77.2/83.6%`; this remains a contaminated performance
 sample.
 
-The `renderer_pixel_probe` event records the framebuffer RGBA sampled through
+The `renderer_pixel_probe` event records framebuffer RGBA sampled through
 `glReadPixels`, rather than a synthetic renderer proxy. This run stored 3,540
 samples across 44 probes and 100 screen positions; none had RGB channels all
 below 12. That reduces concern about near-black at the sampled points, but is
-not a full-frame image or operator verdict. All 25 screen-ray candidate trace
-rows had `screen_ray_selected=0`, so no pixel was linked to a selected
-world-geometry candidate. The analyzer reported zero visual-hole and black
-proxy rates while readiness debt remained 1.0 and `pass=false`. These signals
-must stay separate: the proxy failure does not establish a visible hole, and
-the sparse sample does not establish complete visual correctness. A
-cold-frontier framebuffer sample is useful coverage if a visual defect recurs,
-but it is not a current refactor blocker. Host CPU percent is advisory and must
-not be an arbitrary merge gate. No long operator flight is justified. Full
-metrics and sample details are in
+not a full-frame image or operator verdict. All 25 separate
+`screen_ray_candidate_trace` rows had `screen_ray_selected=0`; this means that
+specific candidate selector did not choose a world-geometry candidate. It does
+not mean the pixel probes lack geometry attribution: their own records include
+opaque depth surfaces and CPU water-triangle matches. In M624AI, 2,166 samples
+matched a ready water top-face triangle and 1,756 changed RGB after the
+transparent pass. This independently ties those framebuffer samples to water
+geometry, while still not claiming a full-frame water verdict. The analyzer
+reported zero visual-hole and black proxy rates while readiness debt remained
+1.0 and `pass=false`. These signals must stay separate: the proxy failure does
+not establish a visible hole, and sparse sampling does not establish complete
+visual correctness. M624AK adds a fresh cold-frontier sample below. Host CPU
+percent remains advisory and must not be an arbitrary merge gate. No long
+operator flight is justified. Full metrics and sample details are in
 `artifacts/research/rendering/m624ai_framebuffer_pixel_witness_m335_short_20261017/`.
 
 ### 2026-10-17 addendum: M624AJ explicit repair publication
@@ -6751,3 +6755,44 @@ readiness debt was 1.0, while visual-hole and black proxies were zero; its
 overall `pass=false` does not identify a visible hole. Metrics were enabled
 for this short run only and return to off by default. Full report and trace:
 `artifacts/research/rendering/m624aj_open_sky_publication_transition_m335_short_20261017/`.
+
+### 2026-10-17 addendum: M624AK cold-frontier framebuffer and water/light join
+
+M624AK created a unique radius-4 seed (`3650482223`) in Release; creation
+produced 695 chunk files and used four generation workers. The established
+start-focus column `(7,0,3)` was absent from the saved map and traced as a
+procedural `disk_miss`. The flight source trace contained 230 procedural
+misses, 130 disk queue/completion pairs, and 148 procedural commits. This gives
+a short cold-frontier run that exercises both disk-backed and procedurally
+generated columns.
+
+The visible no-teleport M335 8/30/20 route completed 3,669 frames / 58
+requested in-game seconds from focus `(7,3)` to `(-2,3)`, without collision,
+heading drift, or teleport. It did not reach the west target `(-3,3)`. Host CPU
+median/p95/max was `47.7/79.4/84.2%`; the sample is not a performance gate.
+Analyzer `pass=false` with readiness debt 1.0 and 39 post-stop focus-ring
+missing-mesh obligations, but `visual_holes_rate=0` and post-stop visible-black
+proxy zero. These signals describe readiness/coverage, not pixel color.
+
+The trace contains 3,200 real `glReadPixels` samples; none had all RGB
+channels below 12. The existing pixel analyzer found 190 samples below luma
+60, all with drawable opaque depth surfaces. Among 176 low-luma samples whose
+RGB stayed unchanged after the transparent pass, zero had stale opaque light
+revisions; two were preview samples. In contrast, the 66 samples with stale
+published light revisions all matched ready water triangles over submerged
+opaque surfaces and carried stale-light repair debt. Twenty-eight of those
+changed RGB and 58 changed RGBA after transparency. The water-surface join
+found 1,317 ready source-triangle matches and 891 post-transparent RGB changes;
+selected GPU batch readbacks matched source vertex and index payloads. Thus the
+run captures underwater light-revision debt but does not show it escaping the
+water layer as dark terrain. The bounded sample supports the existing visible
+assessment; it is not a whole-frame proof.
+
+The two existing analyzers were run without modifying their thresholds or
+classification rules. Their outputs and the trace are preserved in
+`artifacts/research/rendering/m624ak_cold_frontier_pixel_m335_short_20261017/`.
+The earlier M624AI statement about no selected `screen_ray_candidate_trace`
+row should be read narrowly: that selector did not choose a candidate, while
+the pixel probe itself still carried opaque-depth and water-triangle geometry
+joins. Do not use either selector result as a claim that no geometry was
+associated with sampled framebuffer pixels.
