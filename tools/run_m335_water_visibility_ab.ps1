@@ -6,6 +6,7 @@ param(
     [switch]$EnableScreenRayPixelProbes,
     [switch]$StampWarmPeriods,
     [switch]$EnableMetrics,
+    [switch]$EnableSourceTrace,
     [switch]$DisableMetrics,
     [switch]$RequireExistingWorld,
     [string]$World = "World_M572_Cold_20261014",
@@ -33,6 +34,9 @@ param(
 $ErrorActionPreference = "Stop"
 if ($EnableMetrics -and $DisableMetrics) {
     throw "Use either -EnableMetrics or -DisableMetrics, not both"
+}
+if ($EnableMetrics -and $EnableSourceTrace) {
+    throw "-EnableMetrics already enables source tracing; use only one switch"
 }
 $metricsEnabled = [bool]$EnableMetrics -and -not $DisableMetrics
 if (($EnableScreenRayPixelProbes -or $StampWarmPeriods) -and -not $metricsEnabled) {
@@ -101,8 +105,8 @@ try {
         CUBA_DEBUG_TRANSPARENT_SINGLE_PASS = "0"
     }
     if (-not $metricsEnabled) {
+        $environmentValues["CUBA_WORLD_COLUMN_SOURCE_TRACE"] = if ($EnableSourceTrace) { "1" } else { "0" }
         foreach ($name in @(
-            "CUBA_WORLD_COLUMN_SOURCE_TRACE",
             "CUBA_VISUAL_BLACK_TRACE",
             "CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS",
             "CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS",

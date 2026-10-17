@@ -13880,3 +13880,38 @@ for accepting that source change.
 Artifact: `bin/suite_reports/engine_refactor/m624t_sticky_light_repair_short_20261017.json`
 and `artifacts/research/rendering/m624t_sticky_light_repair_short_20261017/`.
 The exact runtime OpenSky witness and distant source lane remain open.
+
+### M624U — source-only M335 crossed the resident ring
+
+Added `-EnableSourceTrace` to the M335 wrapper so a named route can log
+world-column source events while keeping FramePerf, perf JSONL, host sampling,
+pixel tracing, and fluid tracing off. The wrapper parser passed validation.
+With the same saved `World_164` start/camera/speed, a 60-second visible
+no-teleport route completed with process exit 0 and no collision, traveling
+from focus `(7,3)` to `(-11,3)` over 18 chunks. The report's early startup
+counter still says zero reads; the later INFO source trace proves 288 disk
+requests completed, all with `disk_light=1`. No procedural request completed,
+and the shutdown snapshot had zero pending source work. This is the first
+short route in this close-out batch that actually crossed the startup ring and
+exercised saved-terrain disk streaming.
+
+Disk worker activity is multithreaded (`chunkio_workers=5`, with four load
+workers and one background worker). Across 288 disk completions, file-read
+time was median/p95/max `0.95/3.42/23.51 ms` and worker queue wait was
+`1.83/24.08/38.37 ms`. Deserialization plus apply was `6.23/8.75/13.99 ms`.
+The request-to-result wait was much wider: median/p95 `670/1,624 ms`, with one
+8.18 s column (four slice waits sum to 32.69 s). At the high-water mark the
+trace reported 416 ready loads and 105 pending disk columns, while four load
+workers were active. All work had drained by process exit. This makes the
+main-thread/ready-result application lane the next performance investigation;
+it does not justify raising worker counts or changing budgets without a
+frame-correlated comparison. The route had no pixel/framebuffer verdict and
+did not exercise a procedural miss/cold frontier.
+
+The source-only experiment produced a 342 KB INFO log with no FramePerf or
+perf JSONL, so this is materially lighter than the coupled M335 metrics mode.
+Keep the cold procedural frontier, near-view image evidence, exact boundary
+denial/deferred/eviction/reload chain, and rare OpenSky equal-revision terminal
+as remaining checks. Artifacts:
+`bin/suite_reports/engine_refactor/m624u_source_only_m335_short_20261017.json`
+and `artifacts/research/rendering/m624u_source_only_m335_short_20261017/`.

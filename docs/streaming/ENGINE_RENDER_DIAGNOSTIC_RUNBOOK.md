@@ -3151,8 +3151,11 @@ integrity (focus `(7,3)` to `(-3,3)`, 10 chunks, no collision). FramePerf and
 host resource sampling were disabled; no metric acceptance was evaluated.
 
 For this lifecycle-only check, the direct runner used `--no-metrics` while
-explicitly enabling only `CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. The M335 wrapper's
-`-DisableMetrics` intentionally clears its source/pixel trace flags too.
+explicitly enabling only `CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. The M335 wrapper
+now has the equivalent `-EnableSourceTrace` switch: it keeps FramePerf, perf
+JSONL, host sampling, pixel trace, and fluid trace disabled while collecting
+only world-column disk/procedural events. `-DisableMetrics` without that switch
+clears all diagnostic trace flags.
 Artifacts: control report `bin/suite_reports/engine_refactor/m624d_clean_cold_focus_barrier_20261017.json`,
 world-create report `bin/suite_reports/engine_refactor/m624d_cold_world_create_20261017.json`,
 INFO trace `artifacts/research/rendering/m624d_cold_focus_barrier_20261017/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-150858.31160`,
@@ -3436,8 +3439,9 @@ Research instrumentation now defaults off in `flight_sim_run.py`. Pass
 `--no-metrics` disables them. These are deliberately coupled because the
 current monitor does not have a cheap in-memory-only collection path. The
 M335 wrapper also defaults to metrics and trace collection off; use
-`-EnableMetrics` for diagnostic runs and `-DisableMetrics` as an explicit
-compatibility alias. See the script inventory for supported callers and the
+`-EnableMetrics` for perf plus bounded traces, `-EnableSourceTrace` for only
+disk/procedural source events, and `-DisableMetrics` as an explicit metrics-off
+alias. See the script inventory for supported callers and the
 flight index for exact commands. M624S verified the default wrapper path ran
 the fixed short M335 route with no perf JSONL and no host-resource samples; it
 did not exercise disk/procedural streaming because the start ring was resident.
@@ -3459,3 +3463,23 @@ M624T's candidate Release route had 121 startup resident columns and made no
 disk/procedural requests; it is not streaming or runtime-policy evidence. Keep
 the OpenSky runtime witness and boundary denial/deferred/eviction/reload chain
 open.
+
+### M624U: source-only route reached the saved disk frontier
+
+For a route that needs disk/procedural source events but not FramePerf, use
+`-EnableSourceTrace`. This leaves perf JSONL, host polling, visual-black pixel
+trace, and fluid trace off. On the established warm `World_164` M335 route,
+60 seconds of flight traveled from `(7,3)` to `(-11,3)` over 18 chunks and
+completed without collision. The trace recorded 288 disk requests and 288
+completions; each completed record had `disk_light=1`. It recorded no
+procedural generation completion and the process-exit source snapshot had no
+queued, active, or ready work. This proves the route reached saved terrain
+outside the initial resident ring, not a cold procedural frontier.
+
+The worker pool reported five total workers (four load plus one background).
+Disk file-read p95 was 3.42 ms and worker-queue p95 24.08 ms, while
+request-to-result wait p95 was 1.624 s; one column took 8.18 s. The trace
+high-water marks were 416 ready loads and 105 pending disk columns, then
+drained at exit. Treat this as a signal to inspect result admission/main-thread
+apply with frame-correlated evidence; do not tune pool size or per-frame caps
+from this single run. No pixel/framebuffer result was collected.

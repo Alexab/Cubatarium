@@ -89,8 +89,10 @@ launch only for an experiment that needs that trace. `tools/flight_sim_run.py`
 sets it to `1` only when `--metrics` is passed; otherwise it disables
 FramePerf, disk output, host CPU/memory sampling, and metric gates. The M335
 wrapper has the same default; use `-EnableMetrics` for perf JSONL plus its
-bounded visual/source trace flags. `--no-metrics` and `-DisableMetrics` remain
-explicit visual-only switches. Metric-free runs write an explicit
+bounded visual/source trace flags. Use `-EnableSourceTrace` to record only
+world-column disk/procedural events with FramePerf, perf JSONL, host sampling,
+pixel tracing, and fluid tracing disabled. `--no-metrics` and `-DisableMetrics`
+remain explicit metrics-off switches. Metric-free runs write an explicit
 `not_evaluated_metrics_disabled` report and must not be treated as a passing
 gate. This is a measurement-harness behavior, not the normal runtime default.
 

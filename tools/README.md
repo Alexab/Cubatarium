@@ -62,8 +62,10 @@ repeatable reproduction. `flight_sim_run.py` disables FramePerf collection,
 perf JSONL output, and host-resource polling by default. Pass `--metrics` when
 the run consumes metric gates or perf JSONL; `--no-metrics` is an explicit
 alias for the default. The M335 wrapper also defaults off; pass
-`-EnableMetrics` for FramePerf and diagnostic traces. `-DisableMetrics` remains
-an explicit compatibility alias.
+`-EnableMetrics` for FramePerf and its bounded diagnostic traces. For a
+source-only streaming diagnosis without perf logging or host sampling, pass
+`-EnableSourceTrace`; pixel and fluid traces remain off. `-DisableMetrics`
+remains an explicit compatibility alias for metrics-off mode.
 
 ## Evidence and output locations
 

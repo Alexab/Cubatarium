@@ -7,8 +7,10 @@ perf JSONL. Воспроизводя историческую команду, к
 добавляйте `--metrics`; поддерживаемые orchestration runners и сохранённые
 `tools/tmp_run_m*.py` wrappers уже передают этот флаг явно. M335 wrapper тоже
 по умолчанию отключает метрики и высокообъёмные трассы; для них используйте
-`-EnableMetrics`. `--no-metrics` и `-DisableMetrics` оставлены как явные
-переключатели визуального прогона без метрик.
+`-EnableMetrics`. Для проверки только disk/procedural source lifecycle без
+FramePerf, perf JSONL, host sampling, pixel и fluid trace используйте
+`-EnableSourceTrace`. `--no-metrics` и `-DisableMetrics` оставлены как явные
+переключатели метрик off.
 
 ## Поддерживаемый поток
 
@@ -13196,3 +13198,33 @@ acceptance. The exact runtime OpenSky equal-revision and distant-source gates
 remain open. Report and INFO log are under
 `bin/suite_reports/engine_refactor/m624t_sticky_light_repair_short_20261017.json`
 and `artifacts/research/rendering/m624t_sticky_light_repair_short_20261017/`.
+
+### M624U — source-only short M335 lane outside the startup ring
+
+This route keeps the established world, start, camera, speed, and no-teleport
+settings. It extends only the fly phase to 60 seconds so the camera crosses the
+resident startup ring. `-EnableSourceTrace` records disk/procedural source
+events while FramePerf, perf JSONL, host sampling, pixel trace, and fluid trace
+stay disabled.
+
+```powershell
+$env:CUBA_ALLOW_DIRTY_AF='1'
+.\tools\run_m335_water_visibility_ab.ps1 `
+  -RequireExistingWorld -EnableFogPullIn -EnableSourceTrace `
+  -World World_164 -StartX 120 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -IdleSeconds 8 -FlyPhaseSeconds 60 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 `
+  -PhaseId m624u_source_only_m335_short_20261017 `
+  -Report bin/suite_reports/engine_refactor/m624u_source_only_m335_short_20261017.json
+```
+
+M624U completed from focus `(7,3)` to `(-11,3)` over 18 chunks, without
+collision or timeout. The trace recorded 288 disk requests/completions, all
+with persisted light valid, and no procedural generation completion. It
+reported five ChunkIO workers (four load, one background), disk-read p95
+3.42 ms, request-to-result p95 1.624 s, and a maximum one-column elapsed wait
+of 8.18 s; ready-load/pending-disk high water was 416/105 and drained at exit.
+No framebuffer verdict was captured. Artifacts:
+`bin/suite_reports/engine_refactor/m624u_source_only_m335_short_20261017.json`
+and `artifacts/research/rendering/m624u_source_only_m335_short_20261017/`.
