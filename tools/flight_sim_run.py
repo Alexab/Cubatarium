@@ -307,8 +307,8 @@ def read_world_startup_identity(
     }
 
 
-def newest_perf(after_ts: float) -> Path | None:
-    logs = BIN / "logs"
+def newest_perf(after_ts: float, logs_dir: Path | None = None) -> Path | None:
+    logs = logs_dir or BIN / "logs"
     if not logs.is_dir():
         return None
     cands = [
@@ -1693,13 +1693,14 @@ def kill_process_tree(pid: int) -> None:
 
 
 def run_with_timeout(
-    cmd: list[str], cwd: Path, timeout_sec: float
+    cmd: list[str], cwd: Path, timeout_sec: float, *, sample_resources: bool = True
 ) -> tuple[int, dict]:
     """Run flight-sim while sampling host and app CPU/memory when psutil exists."""
     proc = subprocess.Popen(cmd, cwd=str(cwd))
     monitor = {
         "schema": "flight-runtime-resources.v1",
         "available": False,
+        "disabled_by_user": not sample_resources,
         "sample_interval_sec": 1.0,
         "sample_count": 0,
         "logical_cpu_count": None,
@@ -1707,24 +1708,27 @@ def run_with_timeout(
     }
     psutil_module = None
     app_process = None
-    try:
-        import psutil
-    except ImportError as exc:
-        monitor["unavailable_reason"] = type(exc).__name__
+    if not sample_resources:
+        monitor["unavailable_reason"] = "disabled_by_user"
     else:
-        psutil_module = psutil
         try:
-            monitor["logical_cpu_count"] = psutil_module.cpu_count(logical=True) or 1
-            app_process = psutil_module.Process(proc.pid)
-            # Prime psutil's interval counters so the first recorded sample spans
-            # the first second of the actual flight process.
-            psutil_module.cpu_percent(interval=None)
-            app_process.cpu_percent(interval=None)
-            monitor["available"] = True
-        except (OSError, psutil_module.Error) as exc:
+            import psutil
+        except ImportError as exc:
             monitor["unavailable_reason"] = type(exc).__name__
-            psutil_module = None
-            app_process = None
+        else:
+            psutil_module = psutil
+            try:
+                monitor["logical_cpu_count"] = psutil_module.cpu_count(logical=True) or 1
+                app_process = psutil_module.Process(proc.pid)
+                # Prime psutil's interval counters so the first recorded sample spans
+                # the first second of the actual flight process.
+                psutil_module.cpu_percent(interval=None)
+                app_process.cpu_percent(interval=None)
+                monitor["available"] = True
+            except (OSError, psutil_module.Error) as exc:
+                monitor["unavailable_reason"] = type(exc).__name__
+                psutil_module = None
+                app_process = None
 
     started_at = time.monotonic()
     deadline = started_at + max(0.0, timeout_sec)
@@ -1975,6 +1979,17 @@ def main() -> int:
     )
     ap.add_argument("--report", type=Path, default=BIN / "flight_sim_gate_report.json")
     ap.add_argument(
+        "--artifact-root",
+        type=Path,
+        default=None,
+        help="optional per-run root for app report, INFO/perf logs, and run artifacts",
+    )
+    ap.add_argument(
+        "--no-metrics",
+        action="store_true",
+        help="disable FramePerf collection/disk output and host resource sampling; skip metric gates",
+    )
+    ap.add_argument(
         "--build-dir",
         type=Path,
         default=ROOT / "build" / ("desktop-msvc" if sys.platform == "win32" else "desktop-linux"),
@@ -2160,9 +2175,27 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    # This harness evaluates saved FramePerfMonitor data. Ordinary application
-    # launches keep the monitor disabled by default; experiment runs opt in.
-    os.environ["CUBATARIUM_PERF_LOG"] = "1"
+    # Ordinary app launches keep FramePerf disabled. Research runs opt in unless
+    # the caller explicitly asks for an uninstrumented visible flight.
+    metrics_enabled = not args.no_metrics
+    os.environ["CUBATARIUM_PERF_LOG"] = "1" if metrics_enabled else "0"
+    artifact_root = args.artifact_root
+    if artifact_root is not None:
+        if not artifact_root.is_absolute():
+            artifact_root = ROOT / artifact_root
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        logs_dir = artifact_root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["CUBATARIUM_LOG_DIR"] = str(logs_dir)
+        flight_report_path = artifact_root / "flight_sim_report.json"
+    else:
+        configured_logs = os.environ.get("CUBATARIUM_LOG_DIR", "").strip()
+        logs_dir = Path(configured_logs) if configured_logs else BIN / "logs"
+        if not logs_dir.is_absolute():
+            logs_dir = BIN / logs_dir
+        logs_dir = logs_dir.resolve()
+        os.environ["CUBATARIUM_LOG_DIR"] = str(logs_dir)
+        flight_report_path = BIN / "flight_sim_report.json"
     if os.environ.get("CUBA_FLIGHT_REQUIRE_EXISTING_WORLD", "").strip().lower() in (
         "1",
         "true",
@@ -3311,7 +3344,7 @@ def main() -> int:
             "--seconds",
             str(args.seconds),
             "--report",
-            str(BIN / "flight_sim_report.json"),
+            str(flight_report_path),
         ]
         break_scenarios = ("break-stand", "visual-dig", "idle-edit-smoke")
         if args.scenario in break_scenarios:
@@ -3394,7 +3427,9 @@ def main() -> int:
             process_timeout = max(process_timeout, args.seconds + 180.0)
 
         print("running:", " ".join(sim_cmd), flush=True)
-        rc, runtime_resources = run_with_timeout(sim_cmd, BIN, process_timeout)
+        rc, runtime_resources = run_with_timeout(
+            sim_cmd, BIN, process_timeout, sample_resources=metrics_enabled
+        )
         runtime_resources_summary = {
             "available": runtime_resources.get("available"),
             "sample_count": runtime_resources.get("sample_count"),
@@ -3421,9 +3456,9 @@ def main() -> int:
         hang_killed = rc == 124
         kill_cubatarium_orphans()
 
-        perf = newest_perf(t0)
-        if perf is None:
-            flight_report = BIN / "flight_sim_report.json"
+        perf = newest_perf(t0, logs_dir=logs_dir) if metrics_enabled else None
+        if perf is None and metrics_enabled:
+            flight_report = flight_report_path
             if flight_report.is_file():
                 data = json.loads(flight_report.read_text(encoding="utf-8"))
                 p = data.get("perf_jsonl") or ""
@@ -3432,6 +3467,107 @@ def main() -> int:
 
         ana = 1
         if perf is None:
+            if args.no_metrics:
+                flight_report = flight_report_path
+                app_report = load_best(flight_report) or {}
+                info_log = None
+                if DIAG.is_file():
+                    import importlib.util
+
+                    spec = importlib.util.spec_from_file_location(
+                        "flight_sim_diag", DIAG
+                    )
+                    if spec and spec.loader:
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        info_log = mod.newest_info_log(t0, logs_dir=logs_dir)
+                world_startup_identity = read_world_startup_identity(
+                    str(args.world), flight_report, info_log, t0
+                )
+                from a21_run_manifest import build_run_manifest
+
+                cold_warm = world_startup_identity.get("cache_mode", "unknown")
+                run_manifest = build_run_manifest(
+                    exe=resolve_exe(),
+                    world=(world_startup_identity.get("runtime_world") or args.world),
+                    scenario=args.scenario,
+                    cold_warm=cold_warm,
+                    route_hash=hashlib.sha256(
+                        json.dumps(
+                            build_flight_route_identity(args),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode("utf-8")
+                    ).hexdigest(),
+                    source_identity=run_source_identity,
+                    extra={
+                        "route": build_flight_route_identity(args),
+                        "requested_world": str(args.world),
+                        "world_startup": world_startup_identity,
+                        "frame_perf_enabled": False,
+                        "host_resource_sampling_enabled": False,
+                        "perf_jsonl": None,
+                        "info_log": str(info_log) if info_log else None,
+                        "application_report": str(flight_report),
+                        "artifact_root": str(artifact_root) if artifact_root else None,
+                        "analysis_status": "skipped_metrics_disabled",
+                    },
+                )
+                app_report_ok = app_report.get("exit_code") == 0
+                report_data = {
+                    "schema": "flight_sim_uninstrumented_run.v1",
+                    "phase_id": args.phase_id or "unspecified",
+                    "scenario": args.scenario,
+                    "world": args.world,
+                    "process_rc": rc,
+                    "hang_killed": hang_killed,
+                    "process_success": rc == 0 and not hang_killed and app_report_ok,
+                    "verdict": "not_evaluated_metrics_disabled",
+                    "pass": None,
+                    "route_observation": {
+                        key: app_report.get(key)
+                        for key in (
+                            "loading_seen",
+                            "ingame_frames",
+                            "ingame_seconds_requested",
+                            "start_focus",
+                            "end_focus",
+                            "chunks_traveled_cheb",
+                            "collision_stop_triggered",
+                        )
+                    },
+                    "world_startup": world_startup_identity,
+                    "metrics": {
+                        "frame_perf_collection": False,
+                        "frame_perf_disk_logging": False,
+                        "host_resource_sampling": False,
+                        "perf_jsonl": None,
+                    },
+                    "runtime_resources": runtime_resources,
+                    "run_manifest": run_manifest,
+                }
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(
+                    json.dumps(report_data, indent=2) + "\n", encoding="utf-8"
+                )
+                append_phase_history(
+                    {
+                        "phase": args.phase_id or "unspecified",
+                        "rc": rc,
+                        "hang_killed": hang_killed,
+                        "perf": None,
+                        "report": str(report_path),
+                        "repeat": rep,
+                        "metrics_disabled": True,
+                    }
+                )
+                run_reports.append(report_path)
+                last_rc = 0 if report_data["process_success"] else (3 if hang_killed else 1)
+                print(
+                    "metrics disabled: route was executed; diagnostic gates were not evaluated",
+                    flush=True,
+                )
+                continue
             print("FAIL: no perf jsonl produced", file=sys.stderr)
             append_phase_history(
                 {
@@ -3498,10 +3634,10 @@ def main() -> int:
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
-                info_log = mod.newest_info_log(t0)
+                info_log = mod.newest_info_log(t0, logs_dir=logs_dir)
         world_startup_identity = read_world_startup_identity(
             str(args.world),
-            BIN / "flight_sim_report.json",
+            flight_report_path,
             info_log,
             t0,
         )
@@ -3652,6 +3788,21 @@ def main() -> int:
                             == "1",
                             **_perf_runtime_identity,
                             "perf_jsonl": str(perf) if perf else None,
+                            "artifact_root": (
+                                str(artifact_root) if artifact_root else None
+                            ),
+                            "artifact_paths": {
+                                "control_report": str(report_path.resolve()),
+                                "application_report": str(flight_report_path),
+                                "logs_directory": str(logs_dir),
+                                "perf_jsonl": str(perf) if perf else None,
+                                "info_log": str(info_log) if info_log else None,
+                                "captures_directory": os.environ.get(
+                                    "CUBA_FLIGHT_CAPTURE_DIR"
+                                ),
+                            },
+                            "frame_perf_enabled": metrics_enabled,
+                            "host_resource_sampling_enabled": metrics_enabled,
                             "schema_perf": "perf_jsonl.v2",
                             "flight_move_speed_scale": os.environ.get(
                                 "CUBA_FLIGHT_MOVE_SPEED_SCALE", "1"
@@ -4218,7 +4369,7 @@ def main() -> int:
                 )
                 last_rc = 2
 
-    if repeats > 1 and run_reports:
+    if repeats > 1 and run_reports and not args.no_metrics:
         agg_path = base_report.with_name(f"{base_report.stem}_agg{base_report.suffix}")
         write_repeat_aggregate(run_reports, agg_path)
         print(f"wrote aggregate: {agg_path}", flush=True)

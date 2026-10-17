@@ -3092,10 +3092,43 @@ current/saved user's position (falling back to spawn only when no user exists).
 M624C on a new seed is the required clean verification. Do not interpret the
 suite's near-view hole or readiness proxy as a screenshot verdict. The 4,320
 M624B sampled pixels and their ray provenance did not yield a stable
-full-frame hole witness.
+full-frame hole witness. The required M624C follow-up was run; it moved the
+request before first paint but the commit still completed after first paint,
+as recorded below.
 
 M624B artifacts: `bin/suite_reports/engine_refactor/m624b_clean_cold_start_20261017.json`,
 `bin/suite_reports/engine_refactor/m624b_framebuffer_pixel_analysis_20261017.json`,
 `bin/logs/perf_20261017-144011_45236.jsonl`,
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-144007.45236`,
 and `bin/worlds/World_M624B_ColdStart_20261017`.
+
+### M624C: a pre-frame request is not a startup-readiness barrier
+
+M624C ran the same short visible no-teleport route on fresh seed
+`3650482215`. Route integrity passed from focus `(7,3)` to `(-2,3)`; the
+product harness returned `pass=false` on readiness/visual-hole proxy gates.
+The request for absent start column `(7,0,3)` was submitted before
+`phase=first_paint`, but worker completion and commit followed first paint by
+about 80 ms and 196 ms. Continue tracing the entry path until the saved camera
+column is loaded/generated and committed before presenting the first in-game
+frame. Enqueue ordering alone does not meet the gate.
+
+Pixel-grid analysis saw 58 unloaded-voxel witnesses within fog end among 5,460
+samples/59 captures. None were RGB-max<=16; two had luminance<=32. These
+sparse samples do not prove a full-frame defect. The 78-second run wrote a
+206 MB perf log and host CPU p95 was 98.8%; use it for lifecycle ordering only,
+not performance acceptance. The window appeared during loading; it was later
+verified visible and non-minimized.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624c_clean_cold_enter_focus_20261017.json`,
+`bin/suite_reports/engine_refactor/m624c_framebuffer_pixel_analysis_20261017.json`,
+`bin/suite_reports/engine_refactor/m624c_cold_world_create_20261017.json`,
+`bin/logs/perf_20261017-144711_8736.jsonl`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-144707.8736`,
+and `bin/worlds/World_M624C_ColdEnterFocus_20261017`.
+
+For new M335 runs, `tools/run_m335_water_visibility_ab.ps1` defaults raw logs
+to `artifacts/research/rendering/<phase-id>/logs` and records explicit artifact
+paths in the manifest. Use `-DisableMetrics` when operator-visible behavior
+matters but FramePerf/source/pixel metrics are not needed; the output then
+states that metric gates were not evaluated.

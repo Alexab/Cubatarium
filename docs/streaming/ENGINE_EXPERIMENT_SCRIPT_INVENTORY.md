@@ -10,6 +10,7 @@ Updated 2026-10-17. This file inventories the versioned source scripts used by t
 - At the inventory snapshot, no untracked `.py`, `.ps1`, or `.cpp` source scripts existed under `tools/` or `bin/`. The remaining untracked `.bat` files are local Git-commit wrappers and intentionally excluded. Do not bulk-stage `bin/`: it also contains worlds, builds, logs, frames, and reports.
 - Primary current entry points are `tools/flight_sim_run.py`, `tools/flight_sim_fixed_day.py`, and `tools/run_m335_water_visibility_ab.ps1`; canonical procedures and fixed route parameters are in the runbook.
 - Use Release builds only. Enable `CUBATARIUM_PERF_LOG=1` only for an experiment that consumes perf JSONL; normal app runs keep it unset/off. Flight harness runs enable it because their analysis requires that evidence.
+- `tools/run_m335_water_visibility_ab.ps1` stores per-run logs under the ignored `artifacts/research/rendering/<phase-id>/` root by default. Use `-ArtifactRoot` to select another folder or `-DisableMetrics` for a visual-only run; metric-free reports say `not_evaluated_metrics_disabled` and are not acceptance results.
 
 ## Versioned engine-research scripts under `tools/`
 

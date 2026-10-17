@@ -5,6 +5,7 @@ param(
     [switch]$EnableFogPullIn,
     [switch]$EnableScreenRayPixelProbes,
     [switch]$StampWarmPeriods,
+    [switch]$DisableMetrics,
     [switch]$RequireExistingWorld,
     [string]$World = "World_M572_Cold_20261014",
     [int]$ProbeMinCameraX = -4710,
@@ -24,6 +25,7 @@ param(
     [ValidateRange(8, 300)]
     [int]$IdleSeconds = 15,
     [string]$PhaseId,
+    [string]$ArtifactRoot,
     [string]$Report = "bin/suite_reports/engine_refactor/m584_m572_water_fog_margin0_20261015.json"
 )
 
@@ -90,6 +92,17 @@ try {
         CUBA_DEBUG_FLUID_FRAGMENT_MARKER = "0"
         CUBA_DEBUG_TRANSPARENT_SINGLE_PASS = "0"
     }
+    if ($DisableMetrics) {
+        foreach ($name in @(
+            "CUBA_WORLD_COLUMN_SOURCE_TRACE",
+            "CUBA_VISUAL_BLACK_TRACE",
+            "CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS",
+            "CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS",
+            "CUBA_FLUID_RENDER_TRACE"
+        )) {
+            $environmentValues[$name] = "0"
+        }
+    }
     foreach ($entry in $environmentValues.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, "Process")
     }
@@ -113,11 +126,11 @@ try {
     foreach ($name in $environmentToClear) {
         [Environment]::SetEnvironmentVariable($name, $null, "Process")
     }
-    if ($EnableScreenRayPixelProbes) {
+    if ($EnableScreenRayPixelProbes -and -not $DisableMetrics) {
         [Environment]::SetEnvironmentVariable(
             "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY", "1", "Process")
     }
-    if ($StampWarmPeriods) {
+    if ($StampWarmPeriods -and -not $DisableMetrics) {
         [Environment]::SetEnvironmentVariable(
             "CUBA_WARM_PROTOCOL", "warmup_sec_stamp", "Process")
         [Environment]::SetEnvironmentVariable(
@@ -138,24 +151,40 @@ try {
             $PhaseId = "water_target_x{0}_fly{1}_{2}" -f $StartX, $FlyPhaseSeconds, $pullInTag
         }
     }
+    if ([string]::IsNullOrWhiteSpace($ArtifactRoot)) {
+        $ArtifactRoot = "artifacts/research/rendering/$PhaseId"
+    }
+    $artifactRootFull = if ([System.IO.Path]::IsPathRooted($ArtifactRoot)) {
+        $ArtifactRoot
+    } else {
+        Join-Path $repoRoot $ArtifactRoot
+    }
+    New-Item -ItemType Directory -Path $artifactRootFull -Force | Out-Null
+
     $runSeconds = $IdleSeconds + $FlyPhaseSeconds + $StopPhaseSeconds + 5
-    & python -X utf8 tools\flight_sim_run.py `
-        --scenario product-174657-far `
-        --world $World `
-        --seconds $runSeconds `
-        --fly-stop `
-        --fly-phase-sec $FlyPhaseSeconds `
-        --stop-phase-sec $StopPhaseSeconds `
-        --stop-after-blocked-sec $StopAfterBlockedSeconds `
-        --idle-sec $IdleSeconds `
-        --visible `
-        --resume `
-        --product-start-position $StartX $StartY $StartZ `
-        --cruise-eye-y $CruiseEyeY `
-        --yaw $Yaw `
-        --pitch $Pitch `
-        --report $Report `
-        --phase-id $PhaseId
+    $flightArgs = @(
+        "--scenario", "product-174657-far",
+        "--world", $World,
+        "--seconds", [string]$runSeconds,
+        "--fly-stop",
+        "--fly-phase-sec", [string]$FlyPhaseSeconds,
+        "--stop-phase-sec", [string]$StopPhaseSeconds,
+        "--stop-after-blocked-sec", [string]$StopAfterBlockedSeconds,
+        "--idle-sec", [string]$IdleSeconds,
+        "--visible",
+        "--resume",
+        "--product-start-position", [string]$StartX, [string]$StartY, [string]$StartZ,
+        "--cruise-eye-y", [string]$CruiseEyeY,
+        "--yaw", [string]$Yaw,
+        "--pitch", [string]$Pitch,
+        "--report", $Report,
+        "--phase-id", $PhaseId,
+        "--artifact-root", $ArtifactRoot
+    )
+    if ($DisableMetrics) {
+        $flightArgs += "--no-metrics"
+    }
+    & python -X utf8 tools\flight_sim_run.py @flightArgs
     $runExitCode = $LASTEXITCODE
 }
 finally {

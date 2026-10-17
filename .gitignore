@@ -77,6 +77,9 @@
 /build/desktop-msvc/
 /build/desktop-linux/
 
+# Local experiment artifacts (run manifests, logs, reports, captures)
+/artifacts/
+
 CMakeFiles
 Debug
 .cmake

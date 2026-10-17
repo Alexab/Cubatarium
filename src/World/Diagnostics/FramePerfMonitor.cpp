@@ -228,13 +228,21 @@ Session &GetSession()
 
 bool IsPerfLogEnabled()
 {
-  const char *value = std::getenv("CUBATARIUM_PERF_LOG");
-  if (!value || value[0] == '\0')
+  // The process environment is fixed before the app starts. Cache the switch
+  // so a disabled monitor avoids both getenv and the session mutex per frame.
+  static const bool enabled = []()
   {
-    return false;
-  }
-  return std::strcmp(value, "0") != 0 && std::strcmp(value, "false") != 0 &&
-         std::strcmp(value, "off") != 0 && std::strcmp(value, "no") != 0;
+    const char *value = std::getenv("CUBATARIUM_PERF_LOG");
+    if (!value || value[0] == '\0')
+    {
+      return false;
+    }
+    return std::strcmp(value, "0") != 0 &&
+           std::strcmp(value, "false") != 0 &&
+           std::strcmp(value, "off") != 0 &&
+           std::strcmp(value, "no") != 0;
+  }();
+  return enabled;
 }
 
 void OpenSessionLocked(Session &s)
@@ -243,7 +251,12 @@ void OpenSessionLocked(Session &s)
   {
     return;
   }
-  const auto logs = GetExecutableDirectory() / "logs";
+  std::filesystem::path logs = GetExecutableDirectory() / "logs";
+  if (const char *override_dir = std::getenv("CUBATARIUM_LOG_DIR");
+      override_dir && override_dir[0] != '\0')
+  {
+    logs = std::filesystem::path(override_dir);
+  }
   std::error_code ec;
   std::filesystem::create_directories(logs, ec);
   const auto now = std::chrono::system_clock::now();
@@ -4581,12 +4594,12 @@ void UFramePerfMonitor::EnsureSession()
 void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
                                       double interval_sec, double frame_wall_ms)
 {
-  Session &s = GetSession();
-  std::lock_guard<std::mutex> lock(s.Mutex);
   if (!IsPerfLogEnabled())
   {
     return;
   }
+  Session &s = GetSession();
+  std::lock_guard<std::mutex> lock(s.Mutex);
   OpenSessionLocked(s);
   if (!s.Opened)
   {

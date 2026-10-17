@@ -8,6 +8,7 @@
 #include <atomic>
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -80,6 +81,11 @@ std::atomic<bool> &LoggingInitializedFlag()
 
 std::filesystem::path LogsDirectory()
 {
+  if (const char *override_dir = std::getenv("CUBATARIUM_LOG_DIR");
+      override_dir && override_dir[0] != '\0')
+  {
+    return std::filesystem::path(override_dir);
+  }
   return ExecutableDirectory() / "logs";
 }
 

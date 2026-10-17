@@ -86,8 +86,14 @@ diagnostics.
 write; no `perf_*.jsonl` session is opened. A normal game launch therefore
 has periodic FramePerf collection and disk output off. Set it to `1` before
 launch only for an experiment that needs that trace. `tools/flight_sim_run.py`
-sets it to `1` because its gate analysis requires the perf file; this is a
-measurement-harness behavior, not the normal runtime default.
+sets it to `1` for normal instrumented research runs because its gate analysis
+requires the perf file. Pass `--no-metrics` to `flight_sim_run.py` or
+`-DisableMetrics` to the M335 PowerShell wrapper to disable FramePerf
+collection/disk output and host CPU/memory sampling; that run writes an
+explicit `not_evaluated_metrics_disabled` report and must not be treated as a
+passing gate. The wrapper also turns off its opt-in visual/source trace flags
+in that mode. This is a measurement-harness behavior, not the normal runtime
+default.
 
 Runtime telemetry that drives scheduling, memory budgets, and rendering stays
 available in memory; it is not the same thing as periodic perf logging. When
@@ -100,6 +106,18 @@ opt-in and must be enabled only for a named experiment; the M335 wrapper
 restores the process environment after its run. On refactor completion, keep
 the game default off, leave only bounded/low-cost runtime telemetry that the
 engine needs, and require an explicit opt-in for disk traces.
+At the rendering-refactor close-out, change research-runner defaults to metrics
+off and require an explicit opt-in for FramePerf/source/pixel traces. Keep the
+current instrumented default while the engine plan still depends on those
+measurements; direct interactive launches are already off by default.
+
+The application log and FramePerf JSONL share `CUBATARIUM_LOG_DIR` when it is
+set; otherwise they remain under `bin/logs`. The M335 wrapper now defaults to
+`artifacts/research/rendering/<phase-id>/`, passes that root into the runner,
+and the run manifest names the app report, control report, logs, perf JSONL,
+and any explicitly configured capture directory. The root `artifacts/` folder
+is ignored by Git. This keeps logs from different experiments separate while
+preserving requested control-report paths under `bin/suite_reports/`.
 
 ## Layout recommendation
 
@@ -120,10 +138,11 @@ artifacts/research/<subsystem>/<id>/  manifests, reports, logs, and captures
 `tools/` remains the shared home for generic build/test utilities; the
 subsystem folders are for research tooling. `artifacts/` is local/ignored by
 default; raw screenshots, perf traces, and app logs are not source files.
-First add a configurable artifact root to the flight harness and write a run
-manifest with explicit paths for the report, perf JSONL, INFO logs, captures,
-and analysis outputs. Stop relying on "newest file" discovery where the app
-report already knows its own path. Then add compatibility shims at existing
+The flight harness now supports a configurable artifact root and records
+explicit app/control report, log, perf, and capture paths in its run manifest.
+It still selects a newly created perf or INFO file by timestamp inside that
+run's log directory; a future tightening can take both exact output paths from
+the app report. Then add compatibility shims at existing
 `tools/` paths, migrate and verify one script family at a time, and only then
 move source scripts. Keep selected baselines in Git only with an explicit
 rationale. Reuse this layout for future renderer, physics, worldgen, and
@@ -131,9 +150,14 @@ content refactors; do not create a separate artifact convention per subsystem.
 
 ## Outstanding follow-up
 
-- Add a run-manifest/artifact-root option and update the M335 wrapper and
-  analysis path discovery to use it. This is the next tooling change; do not
-  relocate source scripts in the same change.
+- A combined short M335 run verified `--artifact-root` and `--no-metrics`:
+  INFO/app reports were isolated under the per-run root, FramePerf and host
+  sampling stayed off, and the report explicitly skipped metric gates.
+- At refactor completion, switch the research-runner default to metrics off;
+  retain explicit opt-in flags for future diagnostics.
+- Keep the current script locations stable during the rendering refactor. A
+  future shared layout should migrate one family at a time with shims, because
+  historical wrappers embed paths and phase assumptions.
 - Keep the newly versioned script inventory synchronized when a reusable
   runner, analyzer, capture helper, or experiment recipe is added or retired.
 - Remove run-specific environment instrumentation after each experiment; keep

@@ -13342,8 +13342,9 @@ distinct entry-ordering defect from M624A's player relocation bug.
 `GetEnterWarmupFocusBlock()` now prefers the current/saved user's position and
 falls back to the spawn only when no user exists. This makes the enter visual
 warmup target the restored camera instead of the original spawn. The Release
-build passed, but the change is not accepted until M624C verifies that the
-start-column request/commit precedes `phase=first_paint` on a fresh clean save.
+build passed, but the change was not accepted until M624C verified that both
+the start-column request and commit precede `phase=first_paint` on a fresh
+clean save.
 
 M624B's app-side pixel analysis sampled 4,320 pixels across 48 captures. It
 found 122 unloaded-voxel rays within fog end; all four RGB-max<=16 witnesses
@@ -13360,17 +13361,59 @@ Artifacts: `bin/suite_reports/engine_refactor/m624b_clean_cold_start_20261017.js
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-144007.45236`,
 and `bin/worlds/World_M624B_ColdStart_20261017`.
 
-Current remaining work after M624B:
+### M624C — enqueue moved before first paint; terrain commit did not
+
+Built Release from clean commit `af825698`. Created the fresh radius-4 world
+`World_M624C_ColdEnterFocus_20261017` (seed `3650482215`, 709 saved chunk
+files); the start column `(7,0,3)` was absent. The established visible no-
+teleport M335 route used `(120,56,56)`, eye Y 70, yaw 180, pitch -30, speed
+scale 1, and 8/30/20-second idle/fly/stop phases. Route integrity passed:
+start focus `(7,3)`, end `(-2,3)`, 144 blocks, observed median speed 4.936
+blocks/s. The harness returned `pass=false` on visual/readiness proxy gates;
+this is diagnostic evidence, not visual acceptance.
+
+The focus fix changed ordering but did not complete the startup barrier. Source
+trace shows the missing-column demand at 14:47:23.125 and generation request
+`request_id=123` submitted at 14:47:23.129. `phase=first_paint` followed at
+14:47:23.176. The worker finished at 14:47:23.256 and the column committed at
+14:47:23.372. Thus the request now precedes first paint, but the terrain was
+not generated/committed until about 196 ms after it. The first-paint path must
+wait for the saved-view column's terminal load/generation result, not only
+enqueue it. The route later reached the column normally; that does not prove
+the first frame was presentable.
+
+Pixel-grid analysis sampled 5,460 pixels across 59 captures. It found 58
+unloaded-voxel witnesses within the modeled fog end; none of those had
+RGB-max<=16, and two had luminance<=32. Their mean luminance was 114.195.
+There was no stable near-black pixel witness, and the sparse probes do not
+cover the full frame. The run also had host CPU p95 98.8% and wrote a 206 MB
+perf JSONL in 78 seconds, so its CPU/frame timing is not a performance
+acceptance result.
+
+The visible window was reported missing at launch but appeared during world
+loading; Win32 inspection then showed a visible, non-minimized `flight-sim`
+window. The route was started with `--visible`; retain startup latency in the
+runbook, and do not interpret this as a hidden-window route.
+
+Artifacts: `bin/suite_reports/engine_refactor/m624c_clean_cold_enter_focus_20261017.json`,
+`bin/suite_reports/engine_refactor/m624c_framebuffer_pixel_analysis_20261017.json`,
+`bin/suite_reports/engine_refactor/m624c_cold_world_create_20261017.json`,
+`bin/logs/perf_20261017-144711_8736.jsonl` (206 MB),
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-144707.8736`,
+and `bin/worlds/World_M624C_ColdEnterFocus_20261017`.
+
+Current remaining work after M624C:
 
 1. Exercise the boundary-dependency relight owner through a multi-column chain
    with FIFO denial/deferred retention and column eviction. The existing
    deterministic torch fixture settles one source-neighbor-return sequence;
    M623G's warm route ended with no pending/unowned boundary markers, but neither
    proves convergence under broader queue pressure.
-2. Verify the M624B entry-focus change on a clean committed Release build and a
-   fresh seed. Require the saved camera column's request and commit to precede
-   `phase=first_paint`; preserve source attribution and app-side pixel analysis.
-   Do not accept readiness proxies as framebuffer proof.
+2. Add an entry barrier for the saved-view column's load/generation and commit.
+   M624C proved that enqueue-before-`phase=first_paint` still allowed the first
+   frame to precede the column commit. Re-run a short clean fresh-seed M335
+   route and require commit-before-first-paint; keep framebuffer evidence
+   separate from readiness proxies.
 3. Validate a short target lane at a distant, already-problematic coordinate
    after the clean start check. This must exercise unload/reload or disk-miss
    provenance and end with a distinct near-view/framebuffer verdict. Do not use
@@ -13378,6 +13421,7 @@ Current remaining work after M624B:
 4. Close the final gate review: separate visible geometry/light evidence from
    backlog outside the active view. Do not change water or fog rendering unless
    a matching framebuffer/operator witness reproduces the defect.
-5. Tooling follow-up is non-blocking for engine correctness: add the documented
-   configurable artifact root/run manifest, then migrate script paths behind
-   compatibility shims one family at a time.
+5. Tooling follow-up is non-blocking for engine correctness: keep script paths
+   stable during this refactor; future migrations should use compatibility
+   shims one family at a time. At refactor close-out, set research-runner
+   defaults to metrics off and retain explicit opt-ins for later investigations.

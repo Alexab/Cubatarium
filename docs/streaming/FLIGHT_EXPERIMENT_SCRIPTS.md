@@ -12579,7 +12579,9 @@ process did not time out. The harness returned exit code 2 because existing
 renderer and stop-line acceptance gates failed; this is a short harness/metric
 smoke, not a passing engine run or far-route check. The report is
 `m623a_perf_optin_m335_20261017.json`. Host CPU and app CPU are recorded there
-for context only.
+for context only. Current runners also support `-DisableMetrics` / `--no-metrics`
+for visual-only route checks. Those reports say `not_evaluated_metrics_disabled`
+and do not run acceptance analysis.
 
 ### M622BV: short M335 relight job correlation
 
@@ -12878,3 +12880,44 @@ Artifacts remain local:
 - perf log: `bin/logs/perf_20261017-143427_44800.jsonl`;
 - INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261017-143423.44800`;
 - world: `bin/worlds/World_M623K_HeadlessCreate_20261017`.
+
+### M624B: cold saved-view first-paint ordering
+
+On a fresh radius-4 saved map, the start column `(7,0,3)` was absent from disk.
+All `121/121` spatial startup columns were visited, but the camera column was
+not requested until after `phase=first_paint`. `GetEnterWarmupFocusBlock()` was
+then changed to follow the saved/current user position during entry warmup.
+This is separate from the M624A player-retention fix.
+
+### M624C: first-paint still preceded terrain commit
+
+The clean Release replay used new seed `3650482215`, the same M335 camera and
+8/30/20-second phases. Route integrity passed from focus `(7,3)` to `(-2,3)`
+over 144 blocks. The focus change moved the request before first paint, but not
+the terminal result: request submitted at 14:47:23.129, first paint at
+14:47:23.176, worker finished at 14:47:23.256, and commit at 14:47:23.372.
+The entry path still needs a generation/commit barrier. The product report
+failed readiness/visual-hole proxies, so this is diagnostic evidence only.
+
+The sparse pixel grid sampled 5,460 points over 59 captures and found 58
+unloaded-voxel rays within modeled fog end. None were RGB-max<=16; two had
+luminance<=32. This is not a full-frame defect witness. The 206 MB perf trace
+and high host CPU from this short run are not performance acceptance evidence.
+
+### M624C: verify metrics-off mode and isolated artifacts
+
+After M624C had generated/saved its start frontier, the same short visible route
+was repeated with `-DisableMetrics`. It traversed nine chunks from `(7,3)` to
+`(-2,3)`, process exit was 0, and the report explicitly states
+`not_evaluated_metrics_disabled`. It recorded 0 host samples and no FramePerf
+JSONL. The INFO log and app report were written under
+`artifacts/research/rendering/m624c_no_metrics_route_20261017/`; the control
+report remains at `bin/suite_reports/engine_refactor/`. This verifies the
+toggle and artifact-root behavior; it is not a product gate or cold-frontier
+check.
+
+The M335 wrapper defaults to
+`artifacts/research/rendering/<phase-id>/`; override it with `-ArtifactRoot`.
+For an operator-visible route without metrics, use `-DisableMetrics`. For a
+diagnostic run, keep metrics enabled and use a named phase ID so the manifest,
+INFO log, perf JSONL, and any explicitly requested captures remain associated.
