@@ -79,8 +79,9 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
   const float lowErosion = 1.0f - Smoothstep(0.35f, 0.78f, climate.erosion);
   const float peakValleys = std::clamp(PeaksAndValleys(climate.weirdness), 0.0f, 1.0f);
   const float mountainWeight =
-      land * inland * lowErosion * Smoothstep(0.28f, 0.72f, climate.ridge) *
-      Smoothstep(0.25f, 0.78f, peakValleys);
+      land * inland * (0.30f + 0.70f * lowErosion) *
+      Smoothstep(0.28f, 0.65f, climate.ridge) *
+      (0.80f + 0.20f * Smoothstep(0.12f, 0.65f, peakValleys));
 
   const float broadNoise =
       FBM2D(wx * 0.0024f, wz * 0.0024f, Seed + 5401, 3, 0.5f, 2.0f);
@@ -90,11 +91,17 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
   const float rollingNoise =
       FBM2D(wx * rolling.Scale, wz * rolling.Scale, Seed + 5403,
             std::max(1, rolling.Octaves), 0.5f, 2.0f);
-  const float ridgeNoise = NormalizedFBM2D(
-      wx * std::max(0.0035f, regional.Scale * 0.7f),
-      wz * std::max(0.0035f, regional.Scale * 0.7f), Seed + 5404, 3, 0.5f,
+  const float broadRidgeNoise = NormalizedFBM2D(
+      wx * std::max(0.0018f, regional.Scale * 0.32f),
+      wz * std::max(0.0018f, regional.Scale * 0.32f), Seed + 5404, 3, 0.5f,
       2.0f);
-  const float ridged = 1.0f - std::fabs(ridgeNoise);
+  const float fineRidgeNoise = NormalizedFBM2D(
+      wx * std::max(0.0035f, regional.Scale * 0.7f),
+      wz * std::max(0.0035f, regional.Scale * 0.7f), Seed + 5405, 3, 0.5f,
+      2.0f);
+  const float broadRidged = 1.0f - std::fabs(broadRidgeNoise);
+  const float fineRidged = 1.0f - std::fabs(fineRidgeNoise);
+  const float ridged = broadRidged * (0.78f + 0.22f * fineRidged);
   const float verticalRange = static_cast<float>(MaxHeight - SeaLevel);
   const float roughness = std::max(0.25f, TerrainRoughness);
 
@@ -102,14 +109,18 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
       verticalRange * (0.035f + 0.035f * roughness) * (0.35f + 0.65f * lowErosion);
   const float rollingAmplitude =
       verticalRange * (0.015f + 0.018f * roughness) * (0.55f + 0.45f * lowErosion);
-  const float mountainAmplitude = verticalRange * 0.48f;
+  const float mountainUplift = verticalRange * 0.42f;
+  const float mountainRidgeAmplitude = verticalRange * 0.52f;
+  const float mountainTrough = verticalRange * 0.05f;
   route.baseHeightBlocks +=
       land * (broadNoise * verticalRange * 0.055f +
               regionalNoise * regionalAmplitude + rollingNoise * rollingAmplitude);
-  route.baseHeightBlocks += mountainWeight *
-                            (std::pow(std::clamp(ridged, 0.0f, 1.0f), 2.0f) *
-                                 mountainAmplitude -
-                             verticalRange * 0.065f);
+  route.baseHeightBlocks +=
+      mountainWeight *
+      (mountainUplift +
+       std::pow(std::clamp(ridged, 0.0f, 1.0f), 2.0f) *
+           mountainRidgeAmplitude -
+       mountainTrough);
   if (Params.riversEnabled && route.baseHeightBlocks > SeaLevel + 2 &&
       climate.continentalness > 0.40f)
   {

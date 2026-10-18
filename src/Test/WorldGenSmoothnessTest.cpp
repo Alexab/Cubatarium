@@ -2,18 +2,22 @@
 
 #include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
+#include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <iostream>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -357,6 +361,100 @@ static void TestNegativeHeightSamplingAndCompactBounds()
                     "compact profile maps its bounds into the correct chunk band");
 }
 
+static void TestRegionalDensityTerrainDistribution()
+{
+  constexpr int sampleRadius = 1024;
+  constexpr int sampleStep = 64;
+  constexpr std::array<uint32_t, 3> seeds = {410056U, 410057U, 410058U};
+  std::vector<int> heights;
+  heights.reserve(seeds.size() * 33 * 33);
+
+  for (uint32_t seed : seeds)
+  {
+    cutum::ProceduralSettings settings = MakeBalancedSettings();
+    settings.Seed = seed;
+    settings.Tuning.terrainRoughness = 0.58f;
+    cutum::UDensityFieldSampler density_sampler(
+        settings.Seed, settings.SeaLevel, settings.MaxHeight,
+        settings.Tuning.terrainRoughness, cutum::DensityFieldParams{},
+        settings.Caves, settings.MinHeight);
+
+    std::vector<int> seed_heights;
+    seed_heights.reserve(33 * 33);
+    float min_continentalness = 1.0f;
+    float max_continentalness = 0.0f;
+    float min_ridge = 1.0f;
+    float max_ridge = 0.0f;
+    float min_erosion = 1.0f;
+    float max_erosion = 0.0f;
+    float max_mountain_weight = 0.0f;
+    for (int z = -sampleRadius; z <= sampleRadius; z += sampleStep)
+    {
+      for (int x = -sampleRadius; x <= sampleRadius; x += sampleStep)
+      {
+        const int y = density_sampler.SurfaceYAt(x, z);
+        const cutum::ClimateSample climate =
+            cutum::SampleClimate(x, z, settings.Seed);
+        const float land = cutum::Smoothstep(
+            0.38f, 0.58f, climate.continentalness);
+        const float inland = cutum::Smoothstep(
+            0.50f, 0.82f, climate.continentalness);
+        const float low_erosion =
+            1.0f - cutum::Smoothstep(0.35f, 0.78f, climate.erosion);
+        const float peak_valleys = std::clamp(
+            cutum::PeaksAndValleys(climate.weirdness), 0.0f, 1.0f);
+        const float mountain_weight =
+            land * inland * (0.30f + 0.70f * low_erosion) *
+            cutum::Smoothstep(0.28f, 0.65f, climate.ridge) *
+            (0.80f + 0.20f *
+                        cutum::Smoothstep(0.12f, 0.65f, peak_valleys));
+        min_continentalness =
+            std::min(min_continentalness, climate.continentalness);
+        max_continentalness =
+            std::max(max_continentalness, climate.continentalness);
+        min_ridge = std::min(min_ridge, climate.ridge);
+        max_ridge = std::max(max_ridge, climate.ridge);
+        min_erosion = std::min(min_erosion, climate.erosion);
+        max_erosion = std::max(max_erosion, climate.erosion);
+        max_mountain_weight = std::max(max_mountain_weight, mountain_weight);
+        seed_heights.push_back(y);
+        heights.push_back(y);
+      }
+    }
+    const auto [minimum, maximum] =
+        std::minmax_element(seed_heights.begin(), seed_heights.end());
+    const int minimum_y = *minimum;
+    const int maximum_y = *maximum;
+    std::sort(seed_heights.begin(), seed_heights.end());
+    const std::size_t p95_index = (seed_heights.size() - 1) * 95 / 100;
+    const int above_mountain_threshold = static_cast<int>(std::count_if(
+        seed_heights.begin(), seed_heights.end(), [&](int y)
+        { return y >= settings.SeaLevel + 57; }));
+    const int high_peak_samples = static_cast<int>(std::count_if(
+        seed_heights.begin(), seed_heights.end(),
+        [](int y) { return y >= 150; }));
+
+    std::cout << kTestName << ": density terrain seed=" << seed
+              << " min=" << minimum_y << " p95=" << seed_heights[p95_index]
+              << " max=" << maximum_y
+              << " mountain_samples=" << above_mountain_threshold << "/"
+              << seed_heights.size() << " high_peak_samples="
+              << high_peak_samples << " continentalness="
+              << min_continentalness << ".." << max_continentalness
+              << " ridge=" << min_ridge << ".." << max_ridge
+              << " erosion=" << min_erosion << ".." << max_erosion
+              << " max_mountain_weight=" << max_mountain_weight << std::endl;
+    FluidTest::Expect(minimum_y >= settings.MinHeight &&
+                          maximum_y <= settings.MaxHeight,
+                      kTestName,
+                      "regional density terrain stays within world bounds");
+  }
+
+  const auto maximum = std::max_element(heights.begin(), heights.end());
+  FluidTest::Expect(maximum != heights.end() && *maximum >= 150, kTestName,
+                    "regional density terrain includes high mountain peaks");
+}
+
 } // namespace
 
 int main()
@@ -375,6 +473,7 @@ int main()
   TestCoastRampMonotonic();
   TestCoastSandMatchesRamp();
   TestNegativeHeightSamplingAndCompactBounds();
+  TestRegionalDensityTerrainDistribution();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }
