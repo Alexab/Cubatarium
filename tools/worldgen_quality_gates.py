@@ -62,11 +62,15 @@ def main() -> int:
 
     print(
         f"world_y={metrics.get('world_min_height', 0)}..{metrics.get('world_max_height', 319)} "
-        f"flatness={metrics.get('spawn_flatness_pct', metrics.get('flatness_pct', 0)):.2f}% "
-        f"rolling={metrics.get('spawn_rolling_hill_pct', metrics.get('rolling_hill_pct', 0)):.2f}% "
+        f"land={metrics.get('spawn_land_coverage_pct', 0):.1f}% "
+        f"land_mean={metrics.get('spawn_land_height_mean', 0):.1f} "
+        f"terrain_flat={metrics.get('flatness_pct', 0):.2f}% "
+        f"terrain_rolling={metrics.get('rolling_hill_pct', 0):.2f}% "
+        f"spawn_flat={metrics.get('spawn_flatness_pct', 0):.2f}% "
         f"cave_cov={metrics.get('cave_chunk_coverage_pct', 0):.2f}% "
         f"veg_cv={metrics.get('nn_distance_cv', 0):.3f} "
         f"trees={metrics.get('spawn_tree_blocks', 0)} "
+        f"normalized={metrics.get('spawn_tree_blocks_land_normalized', 0):.0f} "
         f"(spawn land; placement blocks)"
     )
 

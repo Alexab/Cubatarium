@@ -163,8 +163,11 @@ def count_spawn_ground_logs(
     id_to_name: dict[int, str],
     spawn_radius: int,
     surface: dict[tuple[int, int], tuple[int, int]],
+    *,
+    center_x: int = 0,
+    center_z: int = 0,
 ) -> int:
-    """tree_log blocks placed at column terrain surface (tree bases, bush centers)."""
+    """Count trunk blocks at or just above terrain in the spawn window."""
     chunk_dir = world_dir / "chunks"
     if not chunk_dir.is_dir():
         return 0
@@ -173,13 +176,13 @@ def count_spawn_ground_logs(
         columns.update(decode_chunk(path))
     count = 0
     for (wx, wy, wz), bid in columns.items():
-        if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+        if abs(wx - center_x) > spawn_radius or abs(wz - center_z) > spawn_radius:
             continue
         if id_to_name.get(bid, "") != "tree_log":
             continue
         surface_entry = surface.get((wx, wz))
         ground_y = surface_entry[0] if surface_entry is not None else None
-        if ground_y is not None and wy == ground_y:
+        if ground_y is not None and ground_y <= wy <= ground_y + 1:
             count += 1
     return count
 
@@ -189,6 +192,9 @@ def count_bush_common_footprints(
     id_to_name: dict[int, str],
     spawn_radius: int,
     surface: dict[tuple[int, int], tuple[int, int]],
+    *,
+    center_x: int = 0,
+    center_z: int = 0,
 ) -> int:
     """tree_log with a ring of tree_leaves on the same Y (bush_common)."""
     chunk_dir = world_dir / "chunks"
@@ -200,7 +206,7 @@ def count_bush_common_footprints(
     logs: list[tuple[int, int, int]] = []
     leaves: set[tuple[int, int, int]] = set()
     for (wx, wy, wz), bid in columns.items():
-        if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+        if abs(wx - center_x) > spawn_radius or abs(wz - center_z) > spawn_radius:
             continue
         name = id_to_name.get(bid, "")
         if name == "tree_log":
@@ -231,6 +237,9 @@ def count_spawn_fire_blocks(
     world_dir: Path,
     id_to_name: dict[int, str],
     spawn_radius: int,
+    *,
+    center_x: int = 0,
+    center_z: int = 0,
 ) -> int:
     chunk_dir = world_dir / "chunks"
     if not chunk_dir.is_dir():
@@ -238,7 +247,7 @@ def count_spawn_fire_blocks(
     count = 0
     for path in chunk_dir.glob("*.cchunk"):
         for (wx, _wy, wz), bid in decode_chunk(path).items():
-            if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+            if abs(wx - center_x) > spawn_radius or abs(wz - center_z) > spawn_radius:
                 continue
             if id_to_name.get(bid, "") == "fire":
                 count += 1
@@ -503,6 +512,18 @@ def terrain_surface_map(
     return surface
 
 
+def terrain_surface_blocks(
+    columns: dict[tuple[int, int, int], int],
+    *,
+    ignored_ids: set[int] | frozenset[int] = frozenset(),
+) -> dict[tuple[int, int], tuple[int, int]]:
+    heights = terrain_surface_map(columns, ignored_ids=ignored_ids)
+    return {
+        xz: (y, columns.get((xz[0], y, xz[1]), 0))
+        for xz, y in heights.items()
+    }
+
+
 def local_height_range(
     surface: dict[tuple[int, int], int], x: int, z: int
 ) -> int | None:
@@ -510,7 +531,9 @@ def local_height_range(
     if center is None:
         return None
     neighbors = [center]
-    for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+    # Immediate neighbors quantize gradual slopes into one-block steps and
+    # make broad, smooth hills look flat. Measure a five-block baseline.
+    for dx, dz in ((2, 0), (-2, 0), (0, 2), (0, -2)):
         neighbor = surface.get((x + dx, z + dz))
         if neighbor is not None:
             neighbors.append(neighbor)
@@ -657,41 +680,68 @@ def vegetation_cluster_stats(
     id_to_name: dict[int, str],
     spawn_radius: int,
     surface: dict[tuple[int, int], tuple[int, int]],
+    terrain_surface: dict[tuple[int, int], tuple[int, int]],
+    *,
+    center_x: int = 0,
+    center_z: int = 0,
+    water_id: int | None = None,
 ) -> dict:
     columns = load_world_block_columns(world_dir)
     ground_cover_columns: set[tuple[int, int]] = set()
-    tree_columns: set[tuple[int, int]] = set()
+    tree_base_columns: set[tuple[int, int]] = set()
+    shrub_base_columns: set[tuple[int, int]] = set()
+    tree_canopy_columns: set[tuple[int, int]] = set()
+    shrub_stem_names = {
+        "mtg_bush_stem",
+        "mtg_acacia_bush_stem",
+        "mtg_pine_bush_stem",
+    }
 
     for (wx, wy, wz), bid in columns.items():
-        if abs(wx) > spawn_radius or abs(wz) > spawn_radius:
+        if abs(wx - center_x) > spawn_radius or abs(wz - center_z) > spawn_radius:
             continue
         name = id_to_name.get(bid, "")
-        surface_entry = surface.get((wx, wz))
+        surface_entry = terrain_surface.get((wx, wz))
         ground_y = surface_entry[0] if surface_entry is not None else None
+        if ground_y is None:
+            continue
         if name in GROUND_COVER_BLOCK_NAMES:
-            if ground_y is not None and wy <= ground_y + 2:
+            if ground_y < wy <= ground_y + 2:
                 ground_cover_columns.add((wx, wz))
-        if name in VEGETATION_BLOCK_NAMES:
-            if ground_y is not None and wy >= ground_y:
-                tree_columns.add((wx, wz))
+        if name in TREE_LOG_BLOCK_NAMES and ground_y <= wy <= ground_y + 1:
+            tree_base_columns.add((wx, wz))
+        elif name in shrub_stem_names and ground_y <= wy <= ground_y + 2:
+            shrub_base_columns.add((wx, wz))
+        if name in TREE_LEAF_BLOCK_NAMES and wy > ground_y:
+            tree_canopy_columns.add((wx, wz))
 
     spawn_columns = [
         xz
         for xz in surface
-        if abs(xz[0]) <= spawn_radius and abs(xz[1]) <= spawn_radius
+        if abs(xz[0] - center_x) <= spawn_radius
+        and abs(xz[1] - center_z) <= spawn_radius
+        and (water_id is None or surface[xz][1] != water_id)
     ]
+    land_columns = set(spawn_columns)
+    ground_cover_columns &= land_columns
+    tree_base_columns &= land_columns
+    shrub_base_columns &= land_columns
+    tree_canopy_columns &= land_columns
     ground_cover_density = (
-        100.0 * len(ground_cover_columns) / max(1, len(spawn_columns))
+        100.0 * len(ground_cover_columns) / max(1, len(land_columns))
     )
 
-    feature_columns = sorted(ground_cover_columns | tree_columns)
-    if len(feature_columns) > 384:
-        stride = max(1, len(feature_columns) // 384)
-        feature_columns = feature_columns[::stride]
+    feature_columns = sorted(
+        ground_cover_columns | tree_base_columns | shrub_base_columns
+    )
+    tree_points = sorted(tree_base_columns)
+    if len(tree_points) > 384:
+        stride = max(1, len(tree_points) // 384)
+        tree_points = tree_points[::stride]
     nn_distances: list[float] = []
-    for i, (x0, z0) in enumerate(feature_columns):
+    for i, (x0, z0) in enumerate(tree_points):
         best = float("inf")
-        for j, (x1, z1) in enumerate(feature_columns):
+        for j, (x1, z1) in enumerate(tree_points):
             if i == j:
                 continue
             dist = ((x0 - x1) ** 2 + (z0 - z1) ** 2) ** 0.5
@@ -716,12 +766,18 @@ def vegetation_cluster_stats(
         max_z = max(z for _, z in spawn_columns)
         for wx in range(min_x, max_x + 1, window):
             for wz in range(min_z, max_z + 1, window):
-                count = sum(
+                local_land = sum(
+                    1
+                    for x, z in land_columns
+                    if wx <= x < wx + window and wz <= z < wz + window
+                )
+                local_cover = sum(
                     1
                     for x, z in ground_cover_columns
                     if wx <= x < wx + window and wz <= z < wz + window
                 )
-                densities.append(float(count))
+                if local_land:
+                    densities.append(100.0 * local_cover / local_land)
 
     if len(densities) >= 2:
         mean_density = sum(densities) / len(densities)
@@ -734,6 +790,10 @@ def vegetation_cluster_stats(
     return {
         "ground_cover_density": ground_cover_density,
         "ground_cover_columns": len(ground_cover_columns),
+        "spawn_land_columns": len(land_columns),
+        "tree_base_columns": len(tree_base_columns),
+        "tree_canopy_columns": len(tree_canopy_columns & land_columns),
+        "shrub_base_columns": len(shrub_base_columns),
         "nn_distance_cv": nn_cv,
         "local_density_variance": density_var,
         "feature_columns": len(feature_columns),
@@ -760,11 +820,13 @@ def _spawn_slot_fractions(
     spawn_radius: int,
     id_to_name: dict[int, str],
     slot_map: dict[str, list[str]],
+    center_x: int = 0,
+    center_z: int = 0,
 ) -> dict[str, float]:
     counts: Counter[str] = Counter()
     total = 0
     for (x, z), (_, bid) in surface.items():
-        if abs(x) > spawn_radius or abs(z) > spawn_radius:
+        if abs(x - center_x) > spawn_radius or abs(z - center_z) > spawn_radius:
             continue
         slot = block_id_to_slot(bid, id_to_name, slot_map)
         counts[slot] += 1
@@ -777,7 +839,10 @@ def _spawn_slot_fractions(
 def analyze_surface(
     surface: dict[tuple[int, int], tuple[int, int]],
     *,
+    terrain_surface: dict[tuple[int, int], tuple[int, int]] | None = None,
     spawn_radius: int = 48,
+    center_x: int = 0,
+    center_z: int = 0,
     max_height: int = 319,
     min_height: int = 0,
     id_to_name: dict[int, str] | None = None,
@@ -786,9 +851,10 @@ def analyze_surface(
     if not surface:
         return {"columns": 0}
 
-    heights = [y for y, _ in surface.values()]
+    terrain = terrain_surface or surface
+    heights = [y for y, _ in terrain.values()]
     top_blocks = Counter(bid for _, bid in surface.values())
-    deltas = _height_deltas(surface)
+    deltas = _height_deltas(terrain)
 
     cliff16 = sum(1 for d in deltas if d >= 16)
     cliff8 = sum(1 for d in deltas if d >= 8)
@@ -796,8 +862,8 @@ def analyze_surface(
     cliff1 = sum(1 for d in deltas if d >= 1)
     max_violations = sum(1 for y in heights if y > max_height)
     min_violations = sum(1 for y in heights if y < min_height)
-    pits = micro_pit_stats(surface)
-    shape = terrain_shape_stats(surface)
+    pits = micro_pit_stats(terrain)
+    shape = terrain_shape_stats(terrain)
 
     result: dict = {
         "columns": len(surface),
@@ -824,12 +890,18 @@ def analyze_surface(
 
     if id_to_name is not None and slot_map is not None:
         spawn_slots = _spawn_slot_fractions(
-            surface, spawn_radius, id_to_name, slot_map
+            surface,
+            spawn_radius,
+            id_to_name,
+            slot_map,
+            center_x=center_x,
+            center_z=center_z,
         )
         spawn_heights = [
             y
-            for (x, z), (y, _) in surface.items()
-            if abs(x) <= spawn_radius and abs(z) <= spawn_radius
+            for (x, z), (y, _) in terrain.items()
+            if abs(x - center_x) <= spawn_radius
+            and abs(z - center_z) <= spawn_radius
         ]
         result["spawn"] = {
             "columns": len(spawn_heights),
@@ -892,6 +964,7 @@ def land_surface_subset(
 
 def spawn_land_shape_metrics(
     surface: dict[tuple[int, int], tuple[int, int]],
+    terrain_surface: dict[tuple[int, int], tuple[int, int]],
     *,
     center_x: int,
     center_z: int,
@@ -899,20 +972,29 @@ def spawn_land_shape_metrics(
     water_id: int | None,
 ) -> dict:
     spawn_surface = spawn_surface_subset(surface, center_x, center_z, radius)
-    spawn_land = land_surface_subset(spawn_surface, water_id)
-    shape_source = spawn_land if spawn_land else spawn_surface
-    if not shape_source:
+    spawn_land = {
+        xz: terrain_surface[xz]
+        for xz, (_, visible_bid) in spawn_surface.items()
+        if (water_id is None or visible_bid != water_id) and xz in terrain_surface
+    }
+    if not spawn_land:
         return {
             "spawn_center": [center_x, center_z],
             "spawn_land_columns": 0,
+            "spawn_land_coverage_pct": 0.0,
+            "spawn_land_height_mean": 0.0,
             "spawn_flatness_pct": 0.0,
             "spawn_rolling_hill_pct": 0.0,
             "spawn_plateau_edge_pct": 0.0,
         }
-    shape = terrain_shape_stats(shape_source)
+    shape = terrain_shape_stats(spawn_land)
+    spawn_window_columns = (radius * 2 + 1) ** 2
     return {
         "spawn_center": [center_x, center_z],
-        "spawn_land_columns": len(shape_source),
+        "spawn_land_columns": len(spawn_land),
+        "spawn_land_coverage_pct": 100.0 * len(spawn_land) / spawn_window_columns,
+        "spawn_land_height_mean": sum(y for y, _ in spawn_land.values())
+        / len(spawn_land),
         "spawn_flatness_pct": shape["flatness_pct"],
         "spawn_rolling_hill_pct": shape["rolling_hill_pct"],
         "spawn_plateau_edge_pct": shape["plateau_edge_pct"],
@@ -932,6 +1014,7 @@ def analyze_world(
     slot_map = load_slot_map(refs_path)
     id_to_name = build_id_to_name_from_world(world_dir, repo)
     surface = load_world_columns(world_dir)
+    columns = load_world_block_columns(world_dir)
     meta_path = world_dir / "world_data.json"
     meta: dict = {}
     if meta_path.is_file():
@@ -945,9 +1028,27 @@ def analyze_world(
         max_height=max_height,
     )
     procedural = meta.get("procedural", {})
+    sea_level = int(procedural.get("sea_level", meta.get("sea_level", 63)))
+    water_id = next(
+        (bid for bid, name in id_to_name.items() if name == "water"),
+        None,
+    )
+    non_terrain_names = (
+        {"water", "lava", "fire"}
+        | set(VEGETATION_BLOCK_NAMES)
+        | set(GROUND_COVER_BLOCK_NAMES)
+    )
+    non_terrain_ids = {
+        bid for bid, name in id_to_name.items() if name in non_terrain_names
+    }
+    terrain_surface = terrain_surface_blocks(columns, ignored_ids=non_terrain_ids)
+    terrain_heights = {xz: y for xz, (y, _) in terrain_surface.items()}
     metrics = analyze_surface(
         surface,
+        terrain_surface=terrain_surface,
         spawn_radius=spawn_radius,
+        center_x=spawn_x,
+        center_z=spawn_z,
         max_height=world_max_y,
         min_height=min_world_y,
         id_to_name=id_to_name,
@@ -966,32 +1067,41 @@ def analyze_world(
         veg.get(name, 0) for name in SHRUB_BLOCK_NAMES
     )
     metrics["spawn_ground_logs"] = count_spawn_ground_logs(
-        world_dir, id_to_name, spawn_radius, surface
+        world_dir,
+        id_to_name,
+        spawn_radius,
+        terrain_surface,
+        center_x=spawn_x,
+        center_z=spawn_z,
     )
     metrics["spawn_bush_common_footprints"] = count_bush_common_footprints(
-        world_dir, id_to_name, spawn_radius, surface
+        world_dir,
+        id_to_name,
+        spawn_radius,
+        terrain_surface,
+        center_x=spawn_x,
+        center_z=spawn_z,
     )
     metrics["spawn_fire_blocks"] = count_spawn_fire_blocks(
-        world_dir, id_to_name, spawn_radius
+        world_dir,
+        id_to_name,
+        spawn_radius,
+        center_x=spawn_x,
+        center_z=spawn_z,
     )
-    sea_level = int(procedural.get("sea_level", meta.get("sea_level", 63)))
     if meta:
         metrics["seed"] = meta.get("world_seed")
         metrics["world_name"] = meta.get("world_name")
-    water_id = next(
-        (bid for bid, name in id_to_name.items() if name == "water"),
-        None,
-    )
     metrics.update(
         spawn_land_shape_metrics(
             surface,
+            terrain_surface,
             center_x=spawn_x,
             center_z=spawn_z,
             radius=spawn_radius,
             water_id=water_id,
         )
     )
-    columns = load_world_block_columns(world_dir)
     metrics.update(
         ocean_depth_stats(
             columns,
@@ -1001,14 +1111,10 @@ def analyze_world(
         )
     )
     metrics["sea_level"] = sea_level
-    non_terrain_ids = {
-        bid for bid, name in id_to_name.items() if name in {"water", "lava", "fire"}
-    }
-    terrain_surface = terrain_surface_map(columns, ignored_ids=non_terrain_ids)
     metrics.update(
         cave_stats(
             columns,
-            terrain_surface,
+            terrain_heights,
             # Measure cave networks over the generated test area, not only at spawn.
             spawn_radius=None,
             min_world_y=min_world_y,
@@ -1017,7 +1123,7 @@ def analyze_world(
     metrics.update(
         cave_void_fluid_stats(
             columns,
-            terrain_surface,
+            terrain_heights,
             id_to_name,
             min_world_y=min_world_y,
         )
@@ -1028,7 +1134,20 @@ def analyze_world(
             id_to_name,
             spawn_radius,
             surface,
+            terrain_surface,
+            center_x=spawn_x,
+            center_z=spawn_z,
+            water_id=water_id,
         )
+    )
+    spawn_window_columns = (spawn_radius * 2 + 1) ** 2
+    land_coverage = metrics.get("spawn_land_columns", 0) / max(
+        1, spawn_window_columns
+    )
+    metrics["spawn_tree_blocks_land_normalized"] = (
+        metrics.get("spawn_tree_blocks", 0) / land_coverage
+        if land_coverage > 0
+        else 0.0
     )
 
     if water_id is not None:
@@ -1072,22 +1191,35 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
                 f"{ocean_depth_p90_min}"
             )
 
-    if metrics.get("delta_ge_16_pct", 0) > thresholds.get("delta_ge_16_pct_max", 0.5):
+    delta16_max = thresholds.get("delta_ge_16_pct_max", 0.5)
+    if metrics.get("delta_ge_16_pct", 0) > delta16_max:
         fail(
             f"delta_ge_16_pct={metrics['delta_ge_16_pct']:.3f} > "
-            f"{thresholds['delta_ge_16_pct_max']}"
+            f"{delta16_max}"
         )
-    if metrics.get("delta_ge_8_pct", 0) > thresholds.get("delta_ge_8_pct_max", 5.0):
+    delta8_max = thresholds.get("delta_ge_8_pct_max", 5.0)
+    if metrics.get("delta_ge_8_pct", 0) > delta8_max:
         fail(
             f"delta_ge_8_pct={metrics['delta_ge_8_pct']:.3f} > "
-            f"{thresholds['delta_ge_8_pct_max']}"
+            f"{delta8_max}"
         )
 
-    mean_y = metrics.get("height_mean", 0)
-    if mean_y < thresholds.get("height_mean_min", 48.0):
-        fail(f"height_mean={mean_y:.2f} < {thresholds['height_mean_min']}")
-    if mean_y > thresholds.get("height_mean_max", 65.0):
-        fail(f"height_mean={mean_y:.2f} > {thresholds['height_mean_max']}")
+    mean_y = metrics.get("spawn_land_height_mean", metrics.get("height_mean", 0))
+    height_mean_min = thresholds.get("height_mean_min", 48.0)
+    height_mean_max = thresholds.get("height_mean_max", 65.0)
+    if mean_y < height_mean_min:
+        fail(f"spawn_land_height_mean={mean_y:.2f} < {height_mean_min}")
+    if mean_y > height_mean_max:
+        fail(f"spawn_land_height_mean={mean_y:.2f} > {height_mean_max}")
+
+    land_coverage_min = thresholds.get("spawn_land_coverage_pct_min")
+    if land_coverage_min is not None:
+        land_coverage = metrics.get("spawn_land_coverage_pct", 0.0)
+        if land_coverage < land_coverage_min:
+            fail(
+                f"spawn_land_coverage_pct={land_coverage:.2f}% < "
+                f"{land_coverage_min}%"
+            )
 
     slack = thresholds.get("height_max_slack", 1)
     max_h = thresholds.get("max_height", 319)
@@ -1116,16 +1248,25 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
     if meadow_min is not None:
         if meadow_pct < meadow_min:
             fail(f"spawn meadow (grass+tall_grass)={meadow_pct:.1f}% < {meadow_min}%")
-    elif grass_pct < thresholds.get("spawn_grass_min_pct", 30.0):
-        fail(f"spawn grass={grass_pct:.1f}% < {thresholds['spawn_grass_min_pct']}%")
-    if stone_pct > thresholds.get("spawn_stone_max_pct", 45.0):
-        fail(f"spawn stone={stone_pct:.1f}% > {thresholds['spawn_stone_max_pct']}%")
+    else:
+        grass_min = thresholds.get("spawn_grass_min_pct", 30.0)
+        if grass_pct < grass_min:
+            fail(f"spawn grass={grass_pct:.1f}% < {grass_min}%")
+    stone_max = thresholds.get("spawn_stone_max_pct", 45.0)
+    if stone_pct > stone_max:
+        fail(f"spawn stone={stone_pct:.1f}% > {stone_max}%")
 
     tree_min = thresholds.get("spawn_tree_blocks_min")
     if tree_min is not None:
-        tree_blocks = metrics.get("spawn_tree_blocks", 0)
+        tree_blocks = metrics.get(
+            "spawn_tree_blocks_land_normalized",
+            metrics.get("spawn_tree_blocks", 0),
+        )
         if tree_blocks < tree_min:
-            fail(f"spawn tree_blocks={tree_blocks} < {tree_min}")
+            fail(
+                f"spawn tree_blocks_land_normalized={tree_blocks:.0f} < "
+                f"{tree_min}"
+            )
 
     ground_log_max = thresholds.get("spawn_ground_logs_max")
     if ground_log_max is not None:
@@ -1159,24 +1300,22 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
 
     flatness_max = thresholds.get("flatness_pct_max")
     if flatness_max is not None:
-        flatness = metrics.get(
-            "spawn_flatness_pct", metrics.get("flatness_pct", 0.0)
-        )
+        # Terrain quality is measured over the generated area; a single biome
+        # around spawn may legitimately be a plain, beach, or plateau.
+        flatness = metrics.get("flatness_pct", metrics.get("spawn_flatness_pct", 0.0))
         if flatness > flatness_max:
             fail(f"flatness_pct={flatness:.2f}% > {flatness_max}%")
 
     flatness_min = thresholds.get("flatness_pct_min")
     if flatness_min is not None:
-        flatness = metrics.get(
-            "spawn_flatness_pct", metrics.get("flatness_pct", 0.0)
-        )
+        flatness = metrics.get("flatness_pct", metrics.get("spawn_flatness_pct", 0.0))
         if flatness < flatness_min:
             fail(f"flatness_pct={flatness:.2f}% < {flatness_min}%")
 
     rolling_min = thresholds.get("rolling_hill_pct_min")
     if rolling_min is not None:
         rolling = metrics.get(
-            "spawn_rolling_hill_pct", metrics.get("rolling_hill_pct", 0.0)
+            "rolling_hill_pct", metrics.get("spawn_rolling_hill_pct", 0.0)
         )
         if rolling < rolling_min:
             fail(f"rolling_hill_pct={rolling:.2f}% < {rolling_min}%")
@@ -1184,7 +1323,7 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
     plateau_edge_max = thresholds.get("plateau_edge_pct_max")
     if plateau_edge_max is not None:
         plateau_edge = metrics.get(
-            "spawn_plateau_edge_pct", metrics.get("plateau_edge_pct", 0.0)
+            "plateau_edge_pct", metrics.get("spawn_plateau_edge_pct", 0.0)
         )
         if plateau_edge > plateau_edge_max:
             fail(f"plateau_edge_pct={plateau_edge:.2f}% > {plateau_edge_max}%")

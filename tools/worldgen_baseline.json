@@ -11,6 +11,7 @@
     "delta_ge_8_pct_max": 6.0,
     "height_mean_min": 63.0,
     "height_mean_max": 85.0,
+    "spawn_land_coverage_pct_min": 20.0,
     "height_max_slack": 1,
     "ocean_columns_min_for_depth_gate": 64,
     "ocean_depth_p50_min": 14,
