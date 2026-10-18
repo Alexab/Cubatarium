@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -12,13 +13,12 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 MANIFEST = REPO / "tools" / "object_manifest.yaml"
 OUT_JSON = REPO / "content" / "object_features.json"
-OBJECTS = REPO / "objects"
-
 VALID_SURFACE_CONSTRAINTS = {
     "any_land",
     "grass",
     "near_water",
     "water_surface",
+    "underwater_floor",
 }
 
 
@@ -76,6 +76,43 @@ def build_rule(name: str, meta: dict, wg: dict) -> dict | None:
     return entry
 
 
+def rule_identity(rule: dict) -> tuple[str, str, int] | None:
+    mode = rule.get("mode", "object")
+    name = rule.get("species") or rule.get("object") or rule.get("block")
+    if not isinstance(name, str) or not name:
+        return None
+    return mode, name, int(rule.get("seed_offset", 0))
+
+
+def merge_existing_pool_rules(
+    generated: list[dict], existing: list[dict]
+) -> list[dict]:
+    """Retain authored/calibrated fields and rules while refreshing manifest entries."""
+    by_identity: dict[tuple[str, str, int], list[int]] = {}
+    for index, rule in enumerate(generated):
+        identity = rule_identity(rule)
+        if identity is not None:
+            by_identity.setdefault(identity, []).append(index)
+
+    merged = [dict(rule) for rule in generated]
+    matched: set[int] = set()
+    authored: list[dict] = []
+    for rule in existing:
+        if not isinstance(rule, dict):
+            continue
+        identity = rule_identity(rule)
+        candidates = by_identity.get(identity, []) if identity else []
+        target = next((i for i in candidates if i not in matched), None)
+        if target is None:
+            authored.append(dict(rule))
+            continue
+        # In merge mode the checked-in JSON may include calibrated placement,
+        # ecology, or procedural shape data absent from the legacy manifest.
+        merged[target] = {**merged[target], **rule}
+        matched.add(target)
+    return merged + authored
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -106,32 +143,37 @@ def main() -> int:
             if rule:
                 pools[pool].append(rule)
 
-    calibrated_rules: dict[str, list] = {k: [] for k in pools}
-    object_names: set[str] = set()
-    if OBJECTS.is_dir():
-        for path in OBJECTS.rglob("*.json"):
-            try:
-                data = json.loads(path.read_text(encoding="utf-8-sig"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            object_names.add(data.get("name") or path.stem)
+    existing_doc: dict = {}
     if args.merge_calibrated and OUT_JSON.is_file():
-        existing = json.loads(OUT_JSON.read_text(encoding="utf-8-sig"))
+        existing_doc = json.loads(OUT_JSON.read_text(encoding="utf-8-sig"))
         for pool_name in pools:
-            for rule in existing.get(pool_name, []):
-                if not isinstance(rule, dict) or not rule.get("calibrated"):
-                    continue
-                obj = rule.get("object")
-                if obj and obj not in object_names:
-                    continue
-                calibrated_rules[pool_name].append(rule)
+            pools[pool_name] = merge_existing_pool_rules(
+                pools[pool_name], existing_doc.get(pool_name, [])
+            )
 
-    for pool_name in pools:
-        pools[pool_name].extend(calibrated_rules[pool_name])
-
-    doc = {"schema_version": 1, **pools}
+    doc = dict(existing_doc)
+    doc.setdefault("schema_version", 1)
+    for pool_name, rules in pools.items():
+        doc[pool_name] = rules
+    root_order = [
+        "schema_version",
+        "structure_placement",
+        *pools.keys(),
+        "cave_features",
+    ]
+    ordered_doc = {key: doc[key] for key in root_order if key in doc}
+    ordered_doc.update(
+        {key: value for key, value in doc.items() if key not in ordered_doc}
+    )
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
-    OUT_JSON.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    encoded = json.dumps(ordered_doc, indent=2)
+    encoded = re.sub(
+        r"\[\n\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?),\n"
+        r"\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?),?\n\s*\]",
+        r"[\1, \2]",
+        encoded,
+    )
+    OUT_JSON.write_text(encoded + "\n", encoding="utf-8")
     total = sum(len(v) for v in pools.values())
     print(f"Wrote {OUT_JSON} ({total} rules)")
     return 0

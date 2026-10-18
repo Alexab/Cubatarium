@@ -5,6 +5,7 @@
 #include "World/Objects/ObjectUtil.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Features/ObjectPlacementConstraints.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
 #include <iostream>
@@ -361,6 +362,49 @@ static void TestFindSurfaceUnderPlants()
       "grass remains placeable with plants above");
 }
 
+static void TestAquaticPlacementAnchors()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  cutum::ProceduralSettings settings;
+  settings.SeaLevel = kSea;
+  settings.MaxHeight = 128;
+  cutum::WorldGenContext ctx(world, registry, settings);
+  ctx.Blocks.Water = kWater;
+
+  for (int y = 0; y <= 42; ++y)
+  {
+    world.SetBlock(glm::ivec3(4, y, 7), kStone);
+  }
+  for (int y = 43; y <= kSea; ++y)
+  {
+    world.SetBlock(glm::ivec3(4, y, 7), kWater);
+  }
+  world.SetBlock(glm::ivec3(4, kSea + 1, 7), cutum::BLOCK_AIR);
+
+  glm::ivec3 anchor;
+  FluidTest::Expect(
+      cutum::FindWaterSurfaceAnchorForPlacement(ctx, 4, 7, anchor) &&
+          anchor == glm::ivec3(4, kSea + 1, 7),
+      kTestName, "aquatic surface anchor resolves above water");
+  FluidTest::Expect(
+      cutum::FindUnderwaterFloorAnchorForPlacement(ctx, 4, 7, anchor) &&
+          anchor == glm::ivec3(4, 43, 7),
+      kTestName, "underwater feature anchor resolves above ocean floor");
+
+  cutum::SurfaceConstraint surface;
+  surface.Kind = cutum::SurfaceConstraintKind::WaterSurface;
+  FluidTest::Expect(
+      cutum::SatisfiesSurfaceConstraint(ctx, surface, "lily_pad", 4, 7,
+                                        kSea),
+      kTestName, "water-surface rule recognizes a true surface");
+  surface.Kind = cutum::SurfaceConstraintKind::UnderwaterFloor;
+  FluidTest::Expect(
+      cutum::SatisfiesSurfaceConstraint(ctx, surface, "mtg_coral_cyan", 4, 7,
+                                        42),
+      kTestName, "underwater-floor rule recognizes submerged solid ground");
+}
+
 static void TestResolveSurfaceLayerAnchorY()
 {
   cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
@@ -504,6 +548,7 @@ int main()
   TestAcceptFallenLogOverTallGrass();
   TestObjectPlacementWriterCallback();
   TestFindSurfaceUnderPlants();
+  TestAquaticPlacementAnchors();
   TestResolveSurfaceLayerAnchorY();
   TestRejectMisTaggedVerticalPlantAsSurfaceLayer();
   TestPruneFloatingLeaves();

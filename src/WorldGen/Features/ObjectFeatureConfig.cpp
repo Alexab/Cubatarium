@@ -412,6 +412,10 @@ SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name)
   {
     return SurfaceConstraintKind::WaterSurface;
   }
+  if (name == "underwater_floor")
+  {
+    return SurfaceConstraintKind::UnderwaterFloor;
+  }
   return SurfaceConstraintKind::AnyLand;
 }
 
@@ -425,6 +429,8 @@ const char *SurfaceConstraintKindToString(SurfaceConstraintKind kind)
     return "near_water";
   case SurfaceConstraintKind::WaterSurface:
     return "water_surface";
+  case SurfaceConstraintKind::UnderwaterFloor:
+    return "underwater_floor";
   case SurfaceConstraintKind::AnyLand:
   default:
     return "any_land";

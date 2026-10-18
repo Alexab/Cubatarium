@@ -55,13 +55,20 @@ def main() -> int:
     args = parser.parse_args()
 
     canonical = load_canonical(args.canonical.resolve())
+    output_path = args.output.resolve()
+    slots = build_slots(canonical)
+    if output_path.is_file():
+        existing = json.loads(output_path.read_text(encoding="utf-8-sig"))
+        for slot, spec in existing.get("slots", {}).items():
+            if slot not in slots:
+                slots[slot] = spec
     doc = {
         "schema_version": 1,
-        "slots": build_slots(canonical),
+        "slots": slots,
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
-    print(f"Wrote {args.output} ({len(doc['slots'])} slots)")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    print(f"Wrote {output_path} ({len(doc['slots'])} slots)")
     return 0
 
 

@@ -518,24 +518,45 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
         static_cast<int>((h / 31U) % static_cast<uint32_t>(span)) - radius;
     const int wx = x + ox;
     const int wz = z + oz;
-    const int maxScanY =
-        ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel, ctx.Settings.MaxHeight);
-    const int localSurface =
-        FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
-    if (localSurface < ctx.Settings.SeaLevel +
-                            WorldGenPlacementTuning::MinLandAboveSea)
+    glm::ivec3 pos;
+    if (rule.Surface.Kind == SurfaceConstraintKind::UnderwaterFloor)
     {
-      continue;
+      glm::ivec3 waterAnchor;
+      if (!FindUnderwaterFloorAnchorForPlacement(ctx, wx, wz, waterAnchor))
+      {
+        continue;
+      }
+      pos = waterAnchor + glm::ivec3(0, rule.Scatter.DyOffset, 0);
+      const BlockId support =
+          ctx.World.GetBlock(pos - glm::ivec3(0, 1, 0));
+      if (ctx.World.GetBlock(pos) != ctx.Blocks.Water ||
+          support == BLOCK_AIR || !ctx.Registry.BlocksMovement(support) ||
+          ctx.Registry.IsLiquid(support))
+      {
+        continue;
+      }
     }
-    const int y = localSurface + 1 + rule.Scatter.DyOffset;
-    if (y <= ctx.Settings.SeaLevel)
+    else
     {
-      continue;
-    }
-    const glm::ivec3 pos(wx, y, wz);
-    if (!CanPlacePlantAt(ctx.World, ctx.Registry, pos))
-    {
-      continue;
+      const int maxScanY = ComputeMaxScanY(
+          surfaceY, ctx.Settings.SeaLevel, ctx.Settings.MaxHeight);
+      const int localSurface =
+          FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
+      if (localSurface < ctx.Settings.SeaLevel +
+                              WorldGenPlacementTuning::MinLandAboveSea)
+      {
+        continue;
+      }
+      const int y = localSurface + 1 + rule.Scatter.DyOffset;
+      if (y <= ctx.Settings.SeaLevel)
+      {
+        continue;
+      }
+      pos = glm::ivec3(wx, y, wz);
+      if (!CanPlacePlantAt(ctx.World, ctx.Registry, pos))
+      {
+        continue;
+      }
     }
     const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(pos);
     const uint64_t chunk_key = ChunkXZKey(chunk_coord.x, chunk_coord.z);
@@ -553,8 +574,8 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
       ++ScatterChunkCounts[chunk_key];
     }
     ++placed;
-    minY = std::min(minY, y);
-    maxY = std::max(maxY, y);
+    minY = std::min(minY, pos.y);
+    maxY = std::max(maxY, pos.y);
   }
 
   if (placed <= 0)
@@ -615,7 +636,8 @@ public:
     if (rule.Surface.Kind == SurfaceConstraintKind::WaterSurface)
     {
       glm::ivec3 waterAnchor;
-      return FindWaterSurfaceAnchorForPlacement(ctx, x, z, waterAnchor) &&
+      return FindWaterSurfaceAnchorForPlacement(
+                 ctx, x, z, waterAnchor, rule.Surface.NearWaterRadius) &&
              PlaceObjectAtWaterSurface(ctx, rule.ObjectName, waterAnchor);
     }
 
@@ -710,9 +732,18 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   const float subMul = biomeKey.empty()
                            ? SubBiomePoolWeightMultiplier(subBiome, biome, pool)
                            : 1.0f;
+  PlacementSurfaceInfo landSurface;
+  const bool hasLandSurface =
+      IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, landSurface);
 
   for (const ObjectFeatureRule &rule : rules)
   {
+    if (ctx.Settings.WorldGenProfileVersion < 2 &&
+        (rule.Surface.Kind == SurfaceConstraintKind::WaterSurface ||
+         rule.Surface.Kind == SurfaceConstraintKind::UnderwaterFloor))
+    {
+      continue;
+    }
     if (rule.Mode == ObjectFeatureRuleMode::ProceduralTree &&
         ctx.Settings.WorldGenProfileVersion < 2)
     {
@@ -723,6 +754,47 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       continue;
     }
     if (!SubBiomeMatches(subBiome, rule.SubBiomes))
+    {
+      continue;
+    }
+
+    int ecologySurfaceY = surfaceY;
+    if (rule.Surface.Kind == SurfaceConstraintKind::WaterSurface)
+    {
+      glm::ivec3 waterAnchor;
+      if (!FindWaterSurfaceAnchorForPlacement(
+              ctx, x, z, waterAnchor, rule.Surface.NearWaterRadius))
+      {
+        continue;
+      }
+      ecologySurfaceY = waterAnchor.y - 1;
+    }
+    else if (rule.Surface.Kind == SurfaceConstraintKind::UnderwaterFloor)
+    {
+      glm::ivec3 underwaterAnchor;
+      if (!FindUnderwaterFloorAnchorForPlacement(ctx, x, z,
+                                                 underwaterAnchor))
+      {
+        continue;
+      }
+      ecologySurfaceY = underwaterAnchor.y - 1;
+    }
+    else
+    {
+      if (!hasLandSurface)
+      {
+        continue;
+      }
+      ecologySurfaceY = landSurface.topSolidY;
+    }
+    if (rule.Surface.Kind != SurfaceConstraintKind::WaterSurface &&
+        rule.Surface.Kind != SurfaceConstraintKind::UnderwaterFloor &&
+        !SatisfiesSurfaceConstraint(
+            ctx, rule.Surface,
+            rule.Mode == ObjectFeatureRuleMode::ScatterBlocks
+                ? rule.Scatter.BlockName
+                : rule.ObjectName,
+            x, z, ecologySurfaceY))
     {
       continue;
     }
@@ -778,7 +850,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       }
     }
     const FeatureEcologyProfile &ecology = rule.Ecology;
-    if (surfaceY < ecology.MinElevation || surfaceY > ecology.MaxElevation)
+    if (ecologySurfaceY < ecology.MinElevation ||
+        ecologySurfaceY > ecology.MaxElevation)
     {
       continue;
     }
@@ -796,7 +869,7 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       }
     }
     if (ecology.MaxSlope > 0.0f &&
-        SampleStructureSurfaceGradient(ctx, x, z, surfaceY) >
+        SampleStructureSurfaceGradient(ctx, x, z, ecologySurfaceY) >
             ecology.MaxSlope)
     {
       continue;
@@ -840,16 +913,38 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
   }
 
-  PlacementSurfaceInfo placementSurface;
-  if (!IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, placementSurface))
+  int strategySurfaceY = surfaceY;
+  if (chosen->Surface.Kind == SurfaceConstraintKind::WaterSurface)
   {
-    return false;
+    glm::ivec3 anchor;
+    if (!FindWaterSurfaceAnchorForPlacement(
+            ctx, x, z, anchor, chosen->Surface.NearWaterRadius))
+    {
+      return false;
+    }
+    strategySurfaceY = anchor.y - 1;
   }
-  const int topSolid = placementSurface.topSolidY;
+  else if (chosen->Surface.Kind == SurfaceConstraintKind::UnderwaterFloor)
+  {
+    glm::ivec3 anchor;
+    if (!FindUnderwaterFloorAnchorForPlacement(ctx, x, z, anchor))
+    {
+      return false;
+    }
+    strategySurfaceY = anchor.y - 1;
+  }
+  else
+  {
+    if (!hasLandSurface)
+    {
+      return false;
+    }
+    strategySurfaceY = landSurface.topSolidY;
+  }
   EnsureBuiltinFeaturePlacementStrategies();
   const auto strategy =
       ObjectFeaturePlacementStrategyRegistry::Find(chosen->Mode);
-  return strategy && strategy->Place(ctx, x, z, topSolid, *chosen);
+  return strategy && strategy->Place(ctx, x, z, strategySurfaceY, *chosen);
 }
 
 bool HasObjectFeatureRules(const ObjectFeatureConfig &cfg)
@@ -989,12 +1084,7 @@ bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  PlacementSurfaceInfo placementSurface;
-  if (!IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, placementSurface))
-  {
-    return false;
-  }
-  return TryPlaceObjectPool(ctx, x, z, placementSurface.topSolidY, biome,
+  return TryPlaceObjectPool(ctx, x, z, surfaceY, biome,
                             GetObjectFeatures(ctx).GroundCover,
                             ObjectFeaturePool::GroundCover, 5500, false, true,
                             ctx.Settings.Tuning.vegetationDensity * 0.85f,
@@ -1010,12 +1100,7 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  PlacementSurfaceInfo placementSurface;
-  if (!IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, placementSurface))
-  {
-    return false;
-  }
-  return TryPlaceObjectPool(ctx, x, z, placementSurface.topSolidY, biome,
+  return TryPlaceObjectPool(ctx, x, z, surfaceY, biome,
                             GetObjectFeatures(ctx).Decoration,
                             ObjectFeaturePool::Decoration, 6000, false, false,
                             ctx.Settings.Tuning.decorationDensity, biomeKey);

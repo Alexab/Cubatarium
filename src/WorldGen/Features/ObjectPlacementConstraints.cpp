@@ -1,4 +1,5 @@
 #include "WorldGen/Features/ObjectPlacementConstraints.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectUtil.h"
@@ -77,9 +78,9 @@ bool TryWaterSurfaceAnchorAt(const WorldGenContext &ctx, int x, int z,
 }
 
 bool FindWaterSurfaceAnchor(const WorldGenContext &ctx, int x, int z,
-                            glm::ivec3 &anchor_out)
+                            glm::ivec3 &anchor_out, int max_radius)
 {
-  for (int radius = 0; radius <= 3; ++radius)
+  for (int radius = 0; radius <= std::max(0, max_radius); ++radius)
   {
     for (int dz = -radius; dz <= radius; ++dz)
     {
@@ -101,6 +102,33 @@ bool FindWaterSurfaceAnchor(const WorldGenContext &ctx, int x, int z,
   return false;
 }
 
+bool FindUnderwaterFloorAnchor(const WorldGenContext &ctx, int x, int z,
+                               glm::ivec3 &anchor_out)
+{
+  if (ctx.Blocks.Water == BLOCK_AIR)
+  {
+    return false;
+  }
+  const int max_y = std::min(ctx.Settings.SeaLevel, ctx.Settings.MaxHeight - 1);
+  for (int y = max_y; y >= 1; --y)
+  {
+    const glm::ivec3 water_pos(x, y, z);
+    if (ctx.World.GetBlock(water_pos) != ctx.Blocks.Water)
+    {
+      continue;
+    }
+    const glm::ivec3 floor_pos = water_pos - glm::ivec3(0, 1, 0);
+    const BlockId floor_block = ctx.World.GetBlock(floor_pos);
+    if (floor_block != BLOCK_AIR && ctx.Registry.BlocksMovement(floor_block) &&
+        !ctx.Registry.IsLiquid(floor_block))
+    {
+      anchor_out = water_pos;
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool SatisfiesSurfaceConstraint(const WorldGenContext &ctx,
@@ -115,7 +143,16 @@ bool SatisfiesSurfaceConstraint(const WorldGenContext &ctx,
   case SurfaceConstraintKind::NearWater:
     return IsNearSurfaceWater(ctx, x, z, surface_y, constraint.NearWaterRadius);
   case SurfaceConstraintKind::WaterSurface:
-    return IsNearSurfaceWater(ctx, x, z, surface_y, constraint.NearWaterRadius);
+  {
+    glm::ivec3 anchor;
+    return FindWaterSurfaceAnchor(ctx, x, z, anchor,
+                                  constraint.NearWaterRadius);
+  }
+  case SurfaceConstraintKind::UnderwaterFloor:
+  {
+    glm::ivec3 anchor;
+    return FindUnderwaterFloorAnchor(ctx, x, z, anchor);
+  }
   case SurfaceConstraintKind::AnyLand:
   default:
     return true;
@@ -123,9 +160,16 @@ bool SatisfiesSurfaceConstraint(const WorldGenContext &ctx,
 }
 
 bool FindWaterSurfaceAnchorForPlacement(const WorldGenContext &ctx, int x,
-                                        int z, glm::ivec3 &anchor_out)
+                                        int z, glm::ivec3 &anchor_out,
+                                        int radius)
 {
-  return FindWaterSurfaceAnchor(ctx, x, z, anchor_out);
+  return FindWaterSurfaceAnchor(ctx, x, z, anchor_out, radius);
+}
+
+bool FindUnderwaterFloorAnchorForPlacement(const WorldGenContext &ctx, int x,
+                                           int z, glm::ivec3 &anchor_out)
+{
+  return FindUnderwaterFloorAnchor(ctx, x, z, anchor_out);
 }
 
 float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,

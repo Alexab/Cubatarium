@@ -297,7 +297,10 @@
       }
     },
     {
-      "object": "flower_scatter_plains",
+      "mode": "scatter_blocks",
+      "block": "dandelion",
+      "attempts": 5,
+      "radius": 3,
       "biomes": [
         "plains"
       ],
@@ -355,6 +358,69 @@
         "elevation": [45, 90],
         "max_slope": 9.0
       }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "mtg_coral_cyan",
+      "attempts": 4,
+      "radius": 3,
+      "biomes": [
+        "ocean"
+      ],
+      "weight": 1,
+      "seed_offset": 4350,
+      "spacing": 44,
+      "surface_constraint": "underwater_floor",
+      "ecology": {
+        "temperature": [0.62, 1.0],
+        "elevation": [0, 44],
+        "max_slope": 12.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "mtg_coral_brown",
+      "attempts": 4,
+      "radius": 3,
+      "biomes": [
+        "ocean"
+      ],
+      "weight": 1,
+      "seed_offset": 4351,
+      "spacing": 44,
+      "surface_constraint": "underwater_floor",
+      "ecology": {
+        "temperature": [0.0, 0.65],
+        "elevation": [0, 44],
+        "max_slope": 12.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "mtg_coral_orange",
+      "attempts": 4,
+      "radius": 3,
+      "biomes": [
+        "ocean"
+      ],
+      "weight": 1,
+      "seed_offset": 4352,
+      "spacing": 48,
+      "surface_constraint": "underwater_floor",
+      "ecology": {
+        "temperature": [0.68, 1.0],
+        "elevation": [0, 44],
+        "max_slope": 10.0
+      }
+    },
+    {
+      "object": "flower_scatter_plains",
+      "biomes": [
+        "plains"
+      ],
+      "weight": 2,
+      "seed_offset": 4120,
+      "spacing": 12
     },
     {
       "biomes": [

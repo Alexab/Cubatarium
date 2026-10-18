@@ -2040,6 +2040,7 @@ add_executable(worldgen_vegetation_placement_test
     src/WorldGen/Core/WorldGenContentPin.cpp
     src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/WorldGen/Features/ObjectPlacementConstraints.cpp
     src/WorldGen/Core/Noise.cpp
     src/Test/WorldGenVegetationPlacementTest.cpp)
 target_include_directories(worldgen_vegetation_placement_test PRIVATE

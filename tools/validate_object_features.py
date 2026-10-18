@@ -22,6 +22,7 @@ VALID_SURFACE_CONSTRAINTS = {
     "grass",
     "near_water",
     "water_surface",
+    "underwater_floor",
 }
 
 
@@ -155,6 +156,10 @@ def main() -> int:
             if surface is not None and surface not in VALID_SURFACE_CONSTRAINTS:
                 errors.append(
                     f"{pool_name}[{idx}]: invalid surface_constraint {surface!r}"
+                )
+            if surface == "underwater_floor" and mode != "scatter_blocks":
+                errors.append(
+                    f"{pool_name}[{idx}]: underwater_floor currently requires scatter_blocks"
                 )
             validate_ecology(rule.get("ecology"), f"{pool_name}[{idx}]", errors)
 

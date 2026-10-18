@@ -12,7 +12,10 @@ bool SatisfiesSurfaceConstraint(const WorldGenContext &ctx,
                                 int surface_y);
 
 bool FindWaterSurfaceAnchorForPlacement(const WorldGenContext &ctx, int x,
-                                        int z, glm::ivec3 &anchor_out);
+                                        int z, glm::ivec3 &anchor_out,
+                                        int radius = 3);
+bool FindUnderwaterFloorAnchorForPlacement(const WorldGenContext &ctx, int x,
+                                          int z, glm::ivec3 &anchor_out);
 
 float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
                                      int surfaceY);
