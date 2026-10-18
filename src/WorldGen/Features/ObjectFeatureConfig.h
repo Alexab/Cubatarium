@@ -136,6 +136,27 @@ struct ObjectFeatureRule
   SurfaceConstraint Surface;
 };
 
+class IObjectFeaturePlacementStrategy
+{
+public:
+  virtual ~IObjectFeaturePlacementStrategy() = default;
+  virtual bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
+                     const ObjectFeatureRule &rule) const = 0;
+};
+
+/// Runtime registry separates feature type names from their placement
+/// algorithms. New modes can register an implementation without adding another
+/// branch to the candidate-selection pipeline.
+class ObjectFeaturePlacementStrategyRegistry
+{
+public:
+  static bool Register(ObjectFeatureRuleMode mode,
+                       std::shared_ptr<const IObjectFeaturePlacementStrategy>
+                           strategy);
+  static std::shared_ptr<const IObjectFeaturePlacementStrategy>
+  Find(ObjectFeatureRuleMode mode);
+};
+
 struct ObjectFeatureConfig
 {
   std::vector<ObjectFeatureRule> Vegetation;

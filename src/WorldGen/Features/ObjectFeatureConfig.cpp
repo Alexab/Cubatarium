@@ -34,6 +34,22 @@ std::mutex &FeatureTypeMutex()
   return mutex;
 }
 
+std::unordered_map<ObjectFeatureRuleMode,
+                   std::shared_ptr<const IObjectFeaturePlacementStrategy>> &
+PlacementStrategies()
+{
+  static std::unordered_map<
+      ObjectFeatureRuleMode,
+      std::shared_ptr<const IObjectFeaturePlacementStrategy>> strategies;
+  return strategies;
+}
+
+std::mutex &PlacementStrategyMutex()
+{
+  static std::mutex mutex;
+  return mutex;
+}
+
 BiomeId ParseBiome(const std::string &name)
 {
   return BiomeIdFromString(name);
@@ -324,6 +340,26 @@ ObjectFeatureTypeRegistry::Find(const std::string &name)
   return it == FeatureTypeMap().end()
              ? std::optional<ObjectFeatureRuleMode>{}
              : std::optional<ObjectFeatureRuleMode>{it->second};
+}
+
+bool ObjectFeaturePlacementStrategyRegistry::Register(
+    ObjectFeatureRuleMode mode,
+    std::shared_ptr<const IObjectFeaturePlacementStrategy> strategy)
+{
+  if (!strategy)
+  {
+    return false;
+  }
+  std::lock_guard<std::mutex> lock(PlacementStrategyMutex());
+  return PlacementStrategies().emplace(mode, std::move(strategy)).second;
+}
+
+std::shared_ptr<const IObjectFeaturePlacementStrategy>
+ObjectFeaturePlacementStrategyRegistry::Find(ObjectFeatureRuleMode mode)
+{
+  std::lock_guard<std::mutex> lock(PlacementStrategyMutex());
+  const auto it = PlacementStrategies().find(mode);
+  return it == PlacementStrategies().end() ? nullptr : it->second;
 }
 
 SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name)

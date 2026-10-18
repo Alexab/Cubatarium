@@ -9,6 +9,7 @@
 namespace cutum
 {
 
+class IWorldGenBiomeSource;
 class UOverworldHeightSampler;
 class UBiomeSampler;
 
@@ -34,7 +35,8 @@ class UColumnSampleBuilder
 public:
   UColumnSampleBuilder(const UOverworldHeightSampler *height_sampler,
                        const UBiomeSampler *biome_sampler,
-                       const ProceduralSettings &settings);
+                       const ProceduralSettings &settings,
+                       const IWorldGenBiomeSource *biome_source = nullptr);
 
   ColumnSampleContext Build(int world_x, int world_z) const;
 
@@ -42,6 +44,7 @@ private:
   const UOverworldHeightSampler *HeightSampler;
   const UBiomeSampler *BiomeSampler;
   ProceduralSettings Settings;
+  const IWorldGenBiomeSource *BiomeSource;
 };
 
 bool ShouldSpawnSurfaceOverride(int world_x, int world_z,

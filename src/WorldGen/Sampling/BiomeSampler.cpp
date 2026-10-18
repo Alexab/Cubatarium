@@ -1,4 +1,5 @@
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/BiomeSource.h"
 #include "WorldGen/Core/ColumnHash.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
@@ -1766,6 +1767,57 @@ BiomeSurfaceRule UBiomeSampler::BlendedSurfaceRule(
   sample.SpawnSurfaceOverride =
       ShouldSpawnSurfaceOverride(x, z, ctx.Settings);
   return EvaluateSurfaceRule(x, z, sample, ctx);
+}
+
+BiomeWeightSet ProceduralClimateBiomeSource::SampleSurfaceWeights(
+    int x, int z, int coarseY, int seaLevel, int maxHeight) const
+{
+  return Sampler.WeightsAt(x, z, coarseY, seaLevel, maxHeight);
+}
+
+BiomeId ProceduralClimateBiomeSource::Sample3D(int x, int y, int z,
+                                                int surfaceY, int seaLevel,
+                                                int maxHeight) const
+{
+  return Sampler.At3D(x, y, z, surfaceY, seaLevel, maxHeight);
+}
+
+BiomeKey ProceduralClimateBiomeSource::Sample3DKey(
+    int x, int y, int z, int surfaceY, int seaLevel, int maxHeight) const
+{
+  return Sampler.At3DKey(x, y, z, surfaceY, seaLevel, maxHeight);
+}
+
+BiomeWeightSet ImageMapBiomeSource::SampleSurfaceWeights(
+    int x, int z, int coarseY, int seaLevel, int maxHeight) const
+{
+  (void)coarseY;
+  (void)seaLevel;
+  (void)maxHeight;
+  BiomeWeightSet weights;
+  const BiomeId biome = UWorldGenPack::BiomeAtImage(x, z);
+  weights.weights[BiomeIndex(biome)] = 1.0f;
+  return weights;
+}
+
+BiomeId ImageMapBiomeSource::Sample3D(int x, int y, int z, int surfaceY,
+                                      int seaLevel, int maxHeight) const
+{
+  if (y >= surfaceY - 2)
+  {
+    return UWorldGenPack::BiomeAtImage(x, z);
+  }
+  return CaveSampler.At3D(x, y, z, surfaceY, seaLevel, maxHeight);
+}
+
+BiomeKey ImageMapBiomeSource::Sample3DKey(int x, int y, int z, int surfaceY,
+                                          int seaLevel, int maxHeight) const
+{
+  if (y >= surfaceY - 2)
+  {
+    return BiomeIdToString(UWorldGenPack::BiomeAtImage(x, z));
+  }
+  return CaveSampler.At3DKey(x, y, z, surfaceY, seaLevel, maxHeight);
 }
 
 } // namespace cutum

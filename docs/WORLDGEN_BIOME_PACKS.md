@@ -62,11 +62,18 @@ The registry is captured in the immutable worldgen-pack snapshot. Handles are
 temporary indices into that snapshot; only keys belong in JSON or save data.
 During chunk population, the content pin keeps the same pack/biome registry
 visible to the sampler and feature placer even if another pack is loaded.
+`IWorldGenBiomeSource` now selects either the procedural climate source or the
+image-map source from pack settings. Image maps still use the procedural 3D
+sampler for cave biomes.
 
 ## Vegetation feature strategies
 
 `content/object_features.json` can select a registered feature strategy using
-`mode`. The existing `object` and `scatter_blocks` strategies stay supported.
+`mode`. The callable `ObjectFeaturePlacementStrategyRegistry` dispatches the
+existing `object`, `scatter_blocks`, and `procedural_tree` modes after candidate
+selection. New placement algorithms can register an implementation without
+adding another placement branch to the selection pipeline. Cave features still
+use their dedicated placement path.
 `procedural_tree` takes a stable `species` key and a `tree_profile` with bounded
 height, crown radii/shape, branch count, leaf density, root chance, and block
 names. An optional `ecology` profile can constrain temperature, moisture,

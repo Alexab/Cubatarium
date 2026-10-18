@@ -51,6 +51,15 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
   {
     BiomeSampler.emplace(ctx.Settings.Seed, ctx.Settings.Tuning,
                          ctx.Settings.WorldGenProfileVersion);
+    if (UWorldGenPack::Get().BiomeMode == WorldGenBiomeMode::Image)
+    {
+      BiomeSource = std::make_unique<ImageMapBiomeSource>(*BiomeSampler);
+    }
+    else
+    {
+      BiomeSource = std::make_unique<ProceduralClimateBiomeSource>(
+          *BiomeSampler);
+    }
     if (HeightSampler)
     {
       DirectCoarseHeightFn = [this](int hx, int hz)
@@ -70,7 +79,7 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
   {
     SampleBuilder.emplace(HeightSampler.has_value() ? &*HeightSampler : nullptr,
                           BiomeSampler.has_value() ? &*BiomeSampler : nullptr,
-                          ctx.Settings);
+                          ctx.Settings, BiomeSource.get());
   }
 }
 
@@ -177,8 +186,13 @@ BiomeId UComposableWorldGenerator::BiomeAt3D(int world_x, int world_y,
   {
     return BiomeId::Plains;
   }
+  if (BiomeSource)
+  {
+    return BiomeSource->Sample3D(world_x, world_y, world_z, surface_y,
+                                 Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
+  }
   return BiomeSampler->At3D(world_x, world_y, world_z, surface_y,
-                             Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
+                            Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
 }
 
 BiomeKey UComposableWorldGenerator::BiomeKeyAt3D(int world_x, int world_y,
@@ -188,6 +202,12 @@ BiomeKey UComposableWorldGenerator::BiomeKeyAt3D(int world_x, int world_y,
   if (!BiomeSampler)
   {
     return BiomeIdToString(BiomeId::Plains);
+  }
+  if (BiomeSource)
+  {
+    return BiomeSource->Sample3DKey(world_x, world_y, world_z, surface_y,
+                                   Ctx.Settings.SeaLevel,
+                                   Ctx.Settings.MaxHeight);
   }
   return BiomeSampler->At3DKey(world_x, world_y, world_z, surface_y,
                                Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
@@ -243,12 +263,11 @@ int UComposableWorldGenerator::SampleCoarseSurfaceY(int world_x,
 BiomeWeightSet UComposableWorldGenerator::SampleBiomeWeights(
     int world_x, int world_z, int coarse_y) const
 {
-  if (UWorldGenPack::Get().BiomeMode == WorldGenBiomeMode::Image)
+  if (BiomeSource)
   {
-    BiomeWeightSet weights;
-    weights.weights[BiomeIndex(UWorldGenPack::BiomeAtImage(world_x, world_z))] =
-        1.0f;
-    return weights;
+    return BiomeSource->SampleSurfaceWeights(
+        world_x, world_z, coarse_y, Ctx.Settings.SeaLevel,
+        Ctx.Settings.MaxHeight);
   }
   if (!BiomeSampler)
   {

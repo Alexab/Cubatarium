@@ -12,6 +12,7 @@
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/BiomeSource.h"
 
 #include <chrono>
 #include <filesystem>
@@ -235,6 +236,28 @@ static void TestDataDefinedBiomeAffectsSampling()
   fs::remove_all(root, ec);
 }
 
+static void TestImageBiomeSourceStrategy()
+{
+  FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("image_demo"), kTestName,
+                    "image biome pack loads for source strategy test");
+  cutum::WorldGenTuning tuning;
+  cutum::UBiomeSampler caveSampler(kSeed, tuning, 2);
+  cutum::ImageMapBiomeSource source(caveSampler);
+  const int x = 36;
+  const int z = -20;
+  const cutum::BiomeId expected = cutum::UWorldGenPack::BiomeAtImage(x, z);
+  const cutum::BiomeWeightSet weights =
+      source.SampleSurfaceWeights(x, z, 64, 48, 128);
+  FluidTest::Expect(cutum::DominantBiome(weights) == expected, kTestName,
+                    "image source returns its map biome as the surface blend");
+  FluidTest::Expect(source.Sample3DKey(x, 80, z, 80, 48, 128) ==
+                        cutum::BiomeIdToString(expected),
+                    kTestName, "image source routes surface 3D keys to image map");
+  FluidTest::Expect(source.Sample3DKey(x, 24, z, 80, 48, 128) ==
+                        caveSampler.At3DKey(x, 24, z, 80, 48, 128),
+                    kTestName, "image source keeps the procedural cave source");
+}
+
 } // namespace
 
 int main()
@@ -269,7 +292,16 @@ int main()
 
   cutum::UPipelineChunkPopulator populator(registry, &objects, kOwnerPack);
   TestChunkPopulatorPlacesTrees(populator, registry, objects);
+  FluidTest::Expect(
+      cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+          cutum::ObjectFeatureRuleMode::Object) != nullptr &&
+          cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+              cutum::ObjectFeatureRuleMode::ScatterBlocks) != nullptr &&
+          cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+              cutum::ObjectFeatureRuleMode::ProceduralTree) != nullptr,
+      kTestName, "built-in feature placement strategies are registered");
   TestDataDefinedBiomeAffectsSampling();
+  TestImageBiomeSourceStrategy();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

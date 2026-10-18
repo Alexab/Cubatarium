@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <array>
 #include <iostream>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -560,6 +561,90 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
   return true;
 }
 
+class ScatterBlocksPlacementStrategy final
+    : public IObjectFeaturePlacementStrategy
+{
+public:
+  bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
+             const ObjectFeatureRule &rule) const override
+  {
+    return TryPlaceScatterBlocks(ctx, x, z, surfaceY, rule);
+  }
+};
+
+class ProceduralTreePlacementStrategy final
+    : public IObjectFeaturePlacementStrategy
+{
+public:
+  bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
+             const ObjectFeatureRule &rule) const override
+  {
+    if (!SatisfiesSurfaceConstraint(ctx, rule.Surface, rule.ObjectName, x, z,
+                                    surfaceY))
+    {
+      return false;
+    }
+    return TryPlaceProceduralTree(
+        ctx, glm::ivec3(x, surfaceY + 1, z), rule,
+        FeatureHash(x, z, ctx.Settings.Seed + rule.SeedOffset));
+  }
+};
+
+class ObjectPrefabPlacementStrategy final
+    : public IObjectFeaturePlacementStrategy
+{
+public:
+  bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
+             const ObjectFeatureRule &rule) const override
+  {
+    if (!SatisfiesSurfaceConstraint(ctx, rule.Surface, rule.ObjectName, x, z,
+                                    surfaceY))
+    {
+      return false;
+    }
+
+    if (rule.Surface.Kind == SurfaceConstraintKind::WaterSurface)
+    {
+      glm::ivec3 waterAnchor;
+      return FindWaterSurfaceAnchorForPlacement(ctx, x, z, waterAnchor) &&
+             PlaceObjectAtWaterSurface(ctx, rule.ObjectName, waterAnchor);
+    }
+
+    if (!ctx.Objects)
+    {
+      return false;
+    }
+    const auto prefabOwned = ctx.Objects->GetShared(rule.ObjectName);
+    const WorldObjectDefinition *prefab = prefabOwned.get();
+    if (!prefab)
+    {
+      return false;
+    }
+    const int yOffset = ResolvePlacementYOffset(ctx, rule);
+    const glm::ivec3 anchor(
+        x, ResolveWorldGenAnchorY(*prefab, ctx.Registry, surfaceY, yOffset), z);
+    return PlaceObjectAt(ctx, rule.ObjectName, anchor, surfaceY);
+  }
+};
+
+void EnsureBuiltinFeaturePlacementStrategies()
+{
+  static std::once_flag registered;
+  std::call_once(registered,
+                 []
+                 {
+                   ObjectFeaturePlacementStrategyRegistry::Register(
+                       ObjectFeatureRuleMode::Object,
+                       std::make_shared<ObjectPrefabPlacementStrategy>());
+                   ObjectFeaturePlacementStrategyRegistry::Register(
+                       ObjectFeatureRuleMode::ScatterBlocks,
+                       std::make_shared<ScatterBlocksPlacementStrategy>());
+                   ObjectFeaturePlacementStrategyRegistry::Register(
+                       ObjectFeatureRuleMode::ProceduralTree,
+                       std::make_shared<ProceduralTreePlacementStrategy>());
+                 });
+}
+
 bool SubBiomeMatches(SubBiomeId sub_biome,
                      const std::vector<SubBiomeId> &allowed)
 {
@@ -752,45 +837,10 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     return false;
   }
   const int topSolid = placementSurface.topSolidY;
-  if (chosen->Mode == ObjectFeatureRuleMode::ScatterBlocks)
-  {
-    return TryPlaceScatterBlocks(ctx, x, z, topSolid, *chosen);
-  }
-  if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->ObjectName, x,
-                                  z, topSolid))
-  {
-    return false;
-  }
-  if (chosen->Mode == ObjectFeatureRuleMode::ProceduralTree)
-  {
-    return TryPlaceProceduralTree(
-        ctx, glm::ivec3(x, topSolid + 1, z), *chosen,
-        FeatureHash(x, z, seed + chosen->SeedOffset));
-  }
-  const int yOffset = ResolvePlacementYOffset(ctx, *chosen);
-  if (chosen->Surface.Kind == SurfaceConstraintKind::WaterSurface)
-  {
-    if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->ObjectName, x,
-                                    z, topSolid))
-    {
-      return false;
-    }
-    glm::ivec3 water_anchor;
-    if (!FindWaterSurfaceAnchorForPlacement(ctx, x, z, water_anchor))
-    {
-      return false;
-    }
-    return PlaceObjectAtWaterSurface(ctx, chosen->ObjectName, water_anchor);
-  }
-  const auto prefabOwned = ctx.Objects->GetShared(chosen->ObjectName);
-  const WorldObjectDefinition *prefab = prefabOwned.get();
-  if (!prefab)
-  {
-    return false;
-  }
-  const glm::ivec3 anchor(
-      x, ResolveWorldGenAnchorY(*prefab, ctx.Registry, topSolid, yOffset), z);
-  return PlaceObjectAt(ctx, chosen->ObjectName, anchor, topSolid);
+  EnsureBuiltinFeaturePlacementStrategies();
+  const auto strategy =
+      ObjectFeaturePlacementStrategyRegistry::Find(chosen->Mode);
+  return strategy && strategy->Place(ctx, x, z, topSolid, *chosen);
 }
 
 bool HasObjectFeatureRules(const ObjectFeatureConfig &cfg)

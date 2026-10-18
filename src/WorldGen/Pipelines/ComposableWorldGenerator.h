@@ -4,12 +4,14 @@
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/BiomeSource.h"
 #include "WorldGen/Sampling/AquiferSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/CoarseHeightCache.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
+#include <memory>
 #include <optional>
 
 namespace cutum
@@ -96,6 +98,7 @@ private:
   std::optional<UDensityFieldSampler> DensitySampler;
   std::optional<UAquiferSampler> AquiferSampler;
   std::optional<UBiomeSampler> BiomeSampler;
+  std::unique_ptr<IWorldGenBiomeSource> BiomeSource;
   std::optional<UColumnSampleBuilder> SampleBuilder;
   std::optional<UCoarseHeightCache> ChunkCoarseCache;
   CoarseHeightCallback DirectCoarseHeightFn;
