@@ -140,10 +140,11 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
 {
   const glm::ivec3 ground(column.x, 0, column.y);
   const auto &proc = world.GetProceduralSettings();
-  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int min_cy = FloorDiv(proc.MinHeight, CHUNK_SIZE);
+  const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
   const bool has_chunk =
       world.GetBlockWorld().GetChunkManager().HasChunk(
-          glm::ivec3(column.x, 0, column.y));
+          glm::ivec3(column.x, min_cy, column.y));
   if (!has_chunk)
   {
     SetColumnJobStage(column, ColumnJobStage::Absent);
@@ -154,7 +155,7 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   bool gpu_pending = false;
   bool meshing = false;
   bool pending_light = false;
-  for (int cy = 0; cy <= max_cy; ++cy)
+  for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(column.x, cy, column.y);
     if (mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord))
@@ -196,7 +197,7 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   // mesh_rev feeds published.mesh_version only (SyncFromWorldTruth), not handle.
   if (render_ready)
   {
-    for (int cy = 0; cy <= max_cy; ++cy)
+    for (int cy = min_cy; cy <= max_cy; ++cy)
     {
       const uint64_t token = mesh.GetCache().QueryLiveGpuResidencyToken(
           glm::ivec3(column.x, cy, column.y));
@@ -341,7 +342,8 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
       item.kind == ColumnWorkKind::FirstMesh && !item.scan_full_focus &&
       decide_world_ != nullptr &&
       decide_world_->IsPendingLightBeforeMesh(item.column) &&
-      (item.cy < 0 || decide_world_->IsPendingLightBeforeMeshSlice(
+      (!IsConcreteColumnWorkCy(item.cy) ||
+       decide_world_->IsPendingLightBeforeMeshSlice(
                           glm::ivec3(item.column.x, item.cy, item.column.y)));
   if (targeted_first_mesh_waits_for_light)
   {
@@ -624,7 +626,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
       ColumnWorkItem retry = work;
       retry.kind = ColumnWorkKind::RelightThenMesh;
       retry.scan_full_focus = false;
-      retry.cy = -1;
+      retry.cy = kColumnWorkWholeRemeshBandCy;
       const CooldownKey retry_key =
           MakeCooldownKey(retry.column, ColumnWorkKind::RelightThenMesh);
       relight_retry_after_frame_[retry_key] =
@@ -869,7 +871,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     item.priority =
         ColumnFlowFirstMeshPriority(100 + admit_n, /*horiz=*/0, focus_radius);
     item.scan_full_focus = true;
-    item.cy = -1;
+    item.cy = kColumnWorkWholeRemeshBandCy;
     Enqueue(item);
     // Phase 3: ticket → ColumnRecord.desired dual-write.
     const ColumnTicketLevel ticket = TicketLevelForRing(0);

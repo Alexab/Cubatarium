@@ -2,19 +2,19 @@
 #include <algorithm>
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Math/GridMath.h"
 
 namespace cutum
 {
 
 bool TerrainColumnNeedsFill(const UBlockWorld &world, int worldX, int worldZ,
-                            int maxWorldY)
+                            int maxWorldY, int minWorldY)
 {
-  if (world.GetBlock(glm::ivec3(worldX, 0, worldZ)) == BLOCK_AIR)
+  if (maxWorldY < minWorldY)
   {
     return true;
   }
-  const int topY = std::max(1, maxWorldY);
-  for (int y = 1; y <= topY; ++y)
+  for (int y = minWorldY; y <= maxWorldY; ++y)
   {
     if (world.GetBlock(glm::ivec3(worldX, y, worldZ)) != BLOCK_AIR)
     {
@@ -25,15 +25,16 @@ bool TerrainColumnNeedsFill(const UBlockWorld &world, int worldX, int worldZ,
 }
 
 int GetHighestNonAirChunkSlice(const UBlockWorld &world, glm::ivec3 groundCoord,
-                               int maxWorldY)
+                               int maxWorldY, int minWorldY)
 {
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
   }
-  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
-  int highest = -1;
-  for (int cy = 0; cy <= maxCy; ++cy)
+  const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
+  const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
+  int highest = kNoTerrainChunkSlice;
+  for (int cy = minCy; cy <= maxCy; ++cy)
   {
     const UChunk *chunk = world.GetChunkManager().GetChunk(
         glm::ivec3(groundCoord.x, cy, groundCoord.z));
@@ -47,21 +48,25 @@ int GetHighestNonAirChunkSlice(const UBlockWorld &world, glm::ivec3 groundCoord,
 }
 
 int GetRequiredTerrainColumnTopCy(const UBlockWorld &world, glm::ivec3 groundCoord,
-                                  int maxWorldY, int highestCyOnDisk)
+                                  int maxWorldY, int highestCyOnDisk,
+                                  int minWorldY)
 {
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
   }
-  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
-  int topCy = GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY);
-  if (highestCyOnDisk > topCy)
+  const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
+  const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
+  int topCy = GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY,
+                                         minWorldY);
+  if (highestCyOnDisk != kNoTerrainChunkSlice &&
+      (topCy == kNoTerrainChunkSlice || highestCyOnDisk > topCy))
   {
     topCy = highestCyOnDisk;
   }
-  if (topCy < 0)
+  if (topCy == kNoTerrainChunkSlice)
   {
-    return -1;
+    return kNoTerrainChunkSlice;
   }
   return std::min(topCy, maxCy);
 }
@@ -86,34 +91,38 @@ void MaterializeTerrainColumnSliceRange(UBlockWorld &world, glm::ivec3 groundCoo
 
 void MaterializeRequiredTerrainColumnSlices(UBlockWorld &world,
                                             glm::ivec3 groundCoord,
-                                            int maxWorldY, int highestCyOnDisk)
+                                            int maxWorldY, int highestCyOnDisk,
+                                            int minWorldY)
 {
-  const int topCy =
-      GetRequiredTerrainColumnTopCy(world, groundCoord, maxWorldY, highestCyOnDisk);
-  if (topCy < 0)
+  const int topCy = GetRequiredTerrainColumnTopCy(
+      world, groundCoord, maxWorldY, highestCyOnDisk, minWorldY);
+  if (topCy == kNoTerrainChunkSlice)
   {
     return;
   }
-  MaterializeTerrainColumnSliceRange(world, groundCoord, 0, topCy);
+  MaterializeTerrainColumnSliceRange(world, groundCoord,
+                                    FloorDiv(minWorldY, CHUNK_SIZE), topCy);
 }
 
 void MaterializeTerrainColumnAirSlices(UBlockWorld &world, glm::ivec3 groundCoord,
-                                     int maxWorldY)
+                                     int maxWorldY, int minWorldY)
 {
-  MaterializeRequiredTerrainColumnSlices(world, groundCoord, maxWorldY, -1);
+  MaterializeRequiredTerrainColumnSlices(world, groundCoord, maxWorldY,
+                                         kNoTerrainChunkSlice, minWorldY);
 }
 
 bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
                                   glm::ivec3 groundCoord, int maxWorldY,
-                                  int minimumSliceCy)
+                                  int minimumSliceCy, int minWorldY)
 {
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
   }
-  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
-  int highestLoadedCy = -1;
-  for (int cy = 0; cy <= maxCy; ++cy)
+  const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
+  const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
+  int highestLoadedCy = kNoTerrainChunkSlice;
+  for (int cy = minCy; cy <= maxCy; ++cy)
   {
     if (world.GetChunkManager().HasChunk(
             glm::ivec3(groundCoord.x, cy, groundCoord.z)))
@@ -121,23 +130,24 @@ bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
       highestLoadedCy = cy;
     }
   }
-  if (highestLoadedCy < 0)
+  if (highestLoadedCy == kNoTerrainChunkSlice)
   {
     return false;
   }
   const int highestNonAirCy =
-      GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY);
+      GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY, minWorldY);
   int requiredCy = highestLoadedCy;
-  if (highestNonAirCy > requiredCy)
+  if (highestNonAirCy != kNoTerrainChunkSlice &&
+      highestNonAirCy > requiredCy)
   {
     requiredCy = highestNonAirCy;
   }
-  if (minimumSliceCy > requiredCy)
+  if (minimumSliceCy != kNoTerrainChunkSlice && minimumSliceCy > requiredCy)
   {
     requiredCy = minimumSliceCy;
   }
   requiredCy = std::min(requiredCy, maxCy);
-  for (int cy = 0; cy <= requiredCy; ++cy)
+  for (int cy = minCy; cy <= requiredCy; ++cy)
   {
     if (!world.GetChunkManager().HasChunk(
             glm::ivec3(groundCoord.x, cy, groundCoord.z)))
@@ -149,14 +159,15 @@ bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
 }
 
 bool IsTerrainChunkComplete(const UBlockWorld &world, glm::ivec3 groundCoord,
-                            int maxWorldY, int minimumSliceCy)
+                            int maxWorldY, int minimumSliceCy,
+                            int minWorldY)
 {
   if (groundCoord.y != 0)
   {
     return false;
   }
   if (!AreTerrainColumnSlicesLoaded(world, groundCoord, maxWorldY,
-                                    minimumSliceCy))
+                                    minimumSliceCy, minWorldY))
   {
     return false;
   }
@@ -166,7 +177,8 @@ bool IsTerrainChunkComplete(const UBlockWorld &world, glm::ivec3 groundCoord,
     {
       const int worldX = groundCoord.x * CHUNK_SIZE + lx;
       const int worldZ = groundCoord.z * CHUNK_SIZE + lz;
-      if (TerrainColumnNeedsFill(world, worldX, worldZ, maxWorldY))
+      if (TerrainColumnNeedsFill(world, worldX, worldZ, maxWorldY,
+                                 minWorldY))
       {
         return false;
       }
@@ -176,14 +188,15 @@ bool IsTerrainChunkComplete(const UBlockWorld &world, glm::ivec3 groundCoord,
 }
 
 void ClearTerrainColumnChunks(UBlockWorld &world, glm::ivec3 groundCoord,
-                              int maxWorldY)
+                              int maxWorldY, int minWorldY)
 {
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
   }
-  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
-  for (int cy = 0; cy <= maxCy; ++cy)
+  const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
+  const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
+  for (int cy = minCy; cy <= maxCy; ++cy)
   {
     world.GetChunkManager().RemoveChunk(
         glm::ivec3(groundCoord.x, cy, groundCoord.z));

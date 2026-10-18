@@ -41,7 +41,7 @@ class UAquiferSampler
 {
 public:
   UAquiferSampler(uint32_t seed, int seaLevel, int maxHeight,
-                  AquiferParams params = {});
+                  AquiferParams params = {}, int minHeight = 0);
 
   AquiferSample SampleAt(int x, int y, int z) const;
 
@@ -55,6 +55,7 @@ private:
   uint32_t Seed;
   int SeaLevel;
   int MaxHeight;
+  int MinHeight;
   AquiferParams Params;
 };
 

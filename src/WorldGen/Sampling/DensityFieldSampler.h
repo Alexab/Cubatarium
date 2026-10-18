@@ -32,7 +32,8 @@ public:
   UDensityFieldSampler(uint32_t seed, int seaLevel, int maxHeight,
                        float terrainRoughness,
                        const DensityFieldParams &params = DensityFieldParams{},
-                       const CaveParams &caves = CaveParams{});
+                       const CaveParams &caves = CaveParams{},
+                       int minHeight = 0);
 
   float SampleTerrainDensity(int x, int y, int z, int octaves = -1) const;
   float SampleDensity(int x, int y, int z, int surface_y) const;
@@ -54,6 +55,7 @@ private:
   uint32_t Seed;
   int SeaLevel;
   int MaxHeight;
+  int MinHeight;
   float TerrainRoughness;
   DensityFieldParams Params;
   CaveParams Caves;

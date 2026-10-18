@@ -627,7 +627,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           const glm::ivec3 ground(g.x, 0, g.y);
           const int sea = ProceduralTemplate.SeaLevel;
           const int max_y = ProceduralTemplate.MaxHeight;
-          const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+          const int dirty_min =
+              std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE);
           const int dirty_max = std::min(max_y, sea + CHUNK_SIZE * 2);
           MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, dirty_min, dirty_max,
@@ -1186,7 +1187,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
       continue;
     }
-    int dirty_min = std::max(0, band.min_y - 1);
+    int dirty_min =
+        std::max(ProceduralTemplate.MinHeight, band.min_y - 1);
     int dirty_max = std::min(column_max_y, band.max_y + 1);
     if (dirty_max < dirty_min)
     {
@@ -1238,7 +1240,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       PendingLightBeforeMesh.erase(g);
       const glm::ivec3 ground(g.x, 0, g.y);
       SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-      const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+      const int dirty_min =
+          std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE);
       const int dirty_max = std::min(column_max_y, sea + CHUNK_SIZE * 2);
       if (priority_mesh)
       {

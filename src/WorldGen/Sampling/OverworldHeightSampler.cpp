@@ -225,8 +225,10 @@ float OverworldMacroHeight01(int x, int z, uint32_t seed)
 UOverworldHeightSampler::UOverworldHeightSampler(uint32_t Seed, int SeaLevel,
                                                  int MaxHeight,
                                                  HeightPreset preset,
-                                                 float terrainRoughness)
+                                                 float terrainRoughness,
+                                                 int minHeight)
     : Seed(Seed), SeaLevel(SeaLevel), MaxHeight(MaxHeight),
+      MinHeight(minHeight),
       Params(ParamsForPreset(preset, MaxHeight)), Preset(preset)
 {
   const float roughness = std::max(0.25f, terrainRoughness);
@@ -277,12 +279,12 @@ OverworldHeightSample UOverworldHeightSampler::SampleAt(int x, int z) const
     heightDelta = std::clamp(heightDelta, -maxDown, maxUp);
     out.surfaceY =
         SeaLevel + static_cast<int>(std::floor(heightDelta + 0.5f));
-    out.surfaceY = std::clamp(out.surfaceY, 1, MaxHeight);
+    out.surfaceY = std::clamp(out.surfaceY, MinHeight + 1, MaxHeight);
     return out;
   }
   const float delta = (out.h01 - Params.seaBias) * Params.amplitudeBlocks;
   out.surfaceY = SeaLevel + static_cast<int>(std::floor(delta + 0.5f));
-  out.surfaceY = std::clamp(out.surfaceY, 1, MaxHeight);
+  out.surfaceY = std::clamp(out.surfaceY, MinHeight + 1, MaxHeight);
   return out;
 }
 

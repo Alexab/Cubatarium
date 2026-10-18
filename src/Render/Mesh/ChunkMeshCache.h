@@ -16,6 +16,7 @@
 #include "Render/Mesh/MeshPublishContract.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Math/GridMath.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/StreamIngressPolicy.h"
@@ -156,7 +157,7 @@ public:
                                        bool include_neighbors = true);
   void RemoveChunk(glm::ivec3 chunkCoord);
   /// Removes all Y slices for a terrain column with one greedy-list invalidation.
-  void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
+  void RemoveColumn(glm::ivec3 ground_coord, int min_cy, int max_cy);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
                           int max_drain_per_frame = 8,
                           int max_schedule_per_frame = 8);
@@ -1020,11 +1021,13 @@ public:
   /// RemeshAfterApply) — safe on cruise; idle F2 fd_end uses remesh_only=false
   /// to also clear first-mesh/air Dirty outside the eye shell.
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
-                                  int keep_cy = -1, bool remesh_only = false);
+                                  int keep_cy = kNoChunkSlice,
+                                  bool remesh_only = false);
   /// Drop FirstMesh Dirty beyond keep shell — frees schedule for nearest hole
   /// (163559: dirty_fm≈192 starved nh≤2 witness while rim FM flooded queue).
   int DropFarFirstMeshDirtyBeyondRadius(glm::ivec3 center_chunk,
-                                        int keep_radius, int keep_cy = -1);
+                                        int keep_radius,
+                                        int keep_cy = kNoChunkSlice);
   /// SRBR-P0: Remove Dirty / RemeshAfterApply coords without a resident chunk.
   int PruneGhostDirty(UBlockWorld &world, int cap);
   /// Chebyshev radius for SyncRebuildVisibleMissing hole-fill (1=underfeet).

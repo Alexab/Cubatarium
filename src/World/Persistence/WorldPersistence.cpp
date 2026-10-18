@@ -82,8 +82,9 @@ int ColumnTopBlockY(const UWorld &world, glm::ivec2 ground_xz, int max_y)
 {
   const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
   const int top_cy =
-      GetHighestNonAirChunkSlice(world.GetBlockWorld(), ground, max_y);
-  if (top_cy < 0)
+      GetHighestNonAirChunkSlice(world.GetBlockWorld(), ground, max_y,
+                                 world.GetProceduralSettings().MinHeight);
+  if (top_cy == kNoTerrainChunkSlice)
   {
     return -1;
   }
@@ -727,9 +728,9 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
       PendingBoundaryDependencyRelightKeys.count(key) == 0 &&
       PendingTerrainColumnRelightKeys.count(key) == 0)
   {
-    const int world_max_y =
-        std::max(0, world_context->ProceduralTemplate.MaxHeight);
-    int no_op_min_y = std::clamp(min_y, 0, world_max_y);
+    const int world_min_y = world_context->ProceduralTemplate.MinHeight;
+    const int world_max_y = world_context->ProceduralTemplate.MaxHeight;
+    int no_op_min_y = std::clamp(min_y, world_min_y, world_max_y);
     const int requested_max_y =
         max_y >= no_op_min_y ? max_y : world_max_y;
     int no_op_max_y =
@@ -738,7 +739,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     if (deferred != DeferredFarRelightColumns.end())
     {
       const int deferred_min_y =
-          std::clamp(deferred->second.y_band.x, 0, world_max_y);
+          std::clamp(deferred->second.y_band.x, world_min_y, world_max_y);
       const int deferred_max_y =
           deferred->second.y_band.y >= deferred_min_y
               ? std::clamp(deferred->second.y_band.y, deferred_min_y,
@@ -855,9 +856,9 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
           pending_column = world_context->IsPendingLightBeforeMesh(ground_xz);
           lit_ready = world_context->IsColumnLitReady(
               glm::ivec3(ground_xz.x, 0, ground_xz.y));
-          const int world_max_y =
-              std::max(0, world_context->ProceduralTemplate.MaxHeight);
-          audit_min_y = std::clamp(min_y, 0, world_max_y);
+          const int world_min_y = world_context->ProceduralTemplate.MinHeight;
+          const int world_max_y = world_context->ProceduralTemplate.MaxHeight;
+          audit_min_y = std::clamp(min_y, world_min_y, world_max_y);
           const int requested_max_y =
               max_y >= audit_min_y ? max_y : world_max_y;
           audit_max_y = std::clamp(requested_max_y, audit_min_y, world_max_y);
@@ -865,7 +866,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
           if (deferred != DeferredFarRelightColumns.end())
           {
             const int deferred_min_y =
-                std::clamp(deferred->second.y_band.x, 0, world_max_y);
+                std::clamp(deferred->second.y_band.x, world_min_y, world_max_y);
             const int deferred_max_y =
                 deferred->second.y_band.y >= deferred_min_y
                     ? std::clamp(deferred->second.y_band.y, deferred_min_y,
@@ -1398,10 +1399,10 @@ void UWorldPersistence::NoteVisibleFirstMeshRelight(
     return;
   }
   auto [it, inserted] = PendingVisibleFirstMeshRelightYBands.try_emplace(
-      world_block_key, glm::ivec2(std::max(0, min_y), max_y));
+      world_block_key, glm::ivec2(min_y, max_y));
   if (!inserted)
   {
-    it->second.x = std::min(it->second.x, std::max(0, min_y));
+    it->second.x = std::min(it->second.x, min_y);
     it->second.y = std::max(it->second.y, max_y);
   }
 }
@@ -1427,8 +1428,10 @@ bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_
                                FloorDiv(world_z, CHUNK_SIZE));
   const int max_y_eff =
       max_y >= 0 ? max_y : world.ProceduralTemplate.MaxHeight;
-  const int band_min = std::max(0, min_y);
-  const int band_max = std::max(band_min, max_y_eff);
+  const int band_min = std::clamp(min_y, world.ProceduralTemplate.MinHeight,
+                                  world.ProceduralTemplate.MaxHeight);
+  const int band_max = std::clamp(std::max(band_min, max_y_eff), band_min,
+                                  world.ProceduralTemplate.MaxHeight);
   const bool pending_light = world.IsPendingLightBeforeMesh(ground_xz);
   const bool column_lit_ready = world.IsColumnLitReady(
       glm::ivec3(ground_xz.x, 0, ground_xz.y));
@@ -1652,7 +1655,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     // after it was recorded. Do not re-admit stale work just because its
     // deferred owner has not yet been revisited; the capture path would later
     // discard the same band as a no-op after it had occupied queue capacity.
-    const int band_min = std::max(0, kv.second.y_band.x);
+    const int band_min =
+        std::max(world.ProceduralTemplate.MinHeight, kv.second.y_band.x);
     const int band_max = std::max(
         band_min, kv.second.y_band.y >= band_min
                       ? kv.second.y_band.y
@@ -2277,7 +2281,7 @@ void UWorldPersistence::EnqueuePlayerRelight(
   {
     min_y = std::min(min_y, pos.y);
   }
-  min_y = std::max(0, min_y - CHUNK_SIZE);
+  min_y -= CHUNK_SIZE;
   PendingPlayerRelights.push_back(
       PlayerRelightRequest{block_positions, min_y});
 }
@@ -2409,9 +2413,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const int max_y = world.ProceduralTemplate.MaxHeight;
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
   const int surface_band_min =
-      RelightSurfaceBandMinY(focus_block.y, CHUNK_SIZE, 0);
+      RelightSurfaceBandMinY(focus_block.y, CHUNK_SIZE,
+                             world.ProceduralTemplate.MinHeight);
   const int surface_band_max =
-      RelightSurfaceBandMaxY(focus_block.y, CHUNK_SIZE, max_y, max_y);
+      RelightSurfaceBandMaxY(focus_block.y, CHUNK_SIZE, max_y, max_y,
+                             world.ProceduralTemplate.MinHeight);
   const bool async_bg =
       world.ProceduralTemplate.AsyncRelight &&
       !world.IsLightingRelightDeferred() && world.AllowsAsyncLighting();
@@ -2554,8 +2560,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         bool undrawn = false;
         if (world.MeshService)
         {
-          const int max_cy_hole = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
-          for (int cy = 0; cy <= max_cy_hole; ++cy)
+          const int min_cy_hole =
+              FloorDiv(world.ProceduralTemplate.MinHeight, CHUNK_SIZE);
+          const int max_cy_hole = FloorDiv(max_y, CHUNK_SIZE);
+          for (int cy = min_cy_hole; cy <= max_cy_hole; ++cy)
           {
             const glm::ivec3 coord(soft_defer_hole.x, cy, soft_defer_hole.z);
             if (world.MeshService->HasGreedyMesh(coord) &&
@@ -2572,8 +2580,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                              /*already_in_fifo=*/false,
                                              phys_pin.RelightWitnessHoldN / 60))
         {
-          EnqueueTerrainColumnRelight(hole_key.x, hole_key.y, /*priority=*/true,
-                                      0, max_y, __FUNCTION__, &world);
+          EnqueueTerrainColumnRelight(
+              hole_key.x, hole_key.y, /*priority=*/true,
+              world.ProceduralTemplate.MinHeight, max_y, __FUNCTION__, &world);
           const auto again = std::find(prio.begin(), prio.end(), hole_key);
           if (again != prio.end() && again != prio.begin())
           {
@@ -2619,9 +2628,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         }
         else
         {
-          EnqueueTerrainColumnRelight(nearest_key.x, nearest_key.y,
-                                      /*priority=*/true, 0, max_y, __FUNCTION__,
-                                      &world);
+          EnqueueTerrainColumnRelight(
+              nearest_key.x, nearest_key.y, /*priority=*/true,
+              world.ProceduralTemplate.MinHeight, max_y, __FUNCTION__, &world);
           const auto again = std::find(prio.begin(), prio.end(), nearest_key);
           if (again != prio.end() && again != prio.begin())
           {
@@ -2658,9 +2667,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         prio.push_front(nearest_key);
         return;
       }
-      EnqueueTerrainColumnRelight(nearest_key.x, nearest_key.y,
-                                  /*priority=*/true, 0, max_y, __FUNCTION__,
-                                  &world);
+      EnqueueTerrainColumnRelight(
+          nearest_key.x, nearest_key.y, /*priority=*/true,
+          world.ProceduralTemplate.MinHeight, max_y, __FUNCTION__, &world);
       const auto again = std::find(prio.begin(), prio.end(), nearest_key);
       if (again != prio.end() && again != prio.begin())
       {
@@ -2669,8 +2678,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       }
     };
     const int pin_max_horiz = RelightMissPinMaxHoriz();
-    const int max_cy_pin =
-        std::max(0, FloorDiv(max_y, CHUNK_SIZE));
+    const int min_cy_pin =
+        FloorDiv(world.ProceduralTemplate.MinHeight, CHUNK_SIZE);
+    const int max_cy_pin = FloorDiv(max_y, CHUNK_SIZE);
     int pinned = 0;
     std::vector<std::pair<int, glm::ivec2>> near_empty;
     near_empty.reserve(static_cast<size_t>((pin_max_horiz * 2 + 1) *
@@ -2690,7 +2700,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           continue;
         }
         bool softdefer_empty = false;
-        for (int cy = 0; cy <= max_cy_pin; ++cy)
+        for (int cy = min_cy_pin; cy <= max_cy_pin; ++cy)
         {
           const glm::ivec3 coord(col.x, cy, col.y);
           if (world.MeshService->HasGreedyMesh(coord) &&
@@ -2733,7 +2743,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       const glm::ivec2 miss_col(phys.MissCx, phys.MissCz);
       bool undrawn = false;
-      for (int cy = 0; cy <= max_cy_pin; ++cy)
+      for (int cy = min_cy_pin; cy <= max_cy_pin; ++cy)
       {
         const glm::ivec3 coord(miss_col.x, cy, miss_col.y);
         if (world.MeshService->HasGreedyMesh(coord) &&
@@ -2803,8 +2813,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         const glm::ivec2 col_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
         if (!PendingTerrainColumnRelightKeys.count(col_key))
         {
-          EnqueueTerrainColumnRelight(col_key.x, col_key.y, /*priority=*/true, 0,
-                                      max_y, __FUNCTION__, &world);
+          EnqueueTerrainColumnRelight(
+              col_key.x, col_key.y, /*priority=*/true,
+              world.ProceduralTemplate.MinHeight, max_y, __FUNCTION__, &world);
         }
         else
         {
@@ -3215,8 +3226,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         bg_cap, ShouldKillProducerBoostOnSimHot(telem_final.SimMsPrev),
         completed_final, telem_final.RelightFifoN);
   }
-  band_cy = EffectiveRelightCaptureBandCy(band_cy, moving && !enter_fov_lit,
-                                          visual_holes);
+  band_cy = EffectiveRelightCaptureBandCy(
+      band_cy, moving && !enter_fov_lit, visual_holes,
+      FloorDiv(world.ProceduralTemplate.MinHeight, CHUNK_SIZE));
   // G1: sticky hitch + FullyDark repair — clamp Capture flood (193536 wall~113
   // @cap=8). 195525: wall>50@cap≤3 cut Apply too hard (miss_stuck↑); only clamp
   // past ~80ms when thrash is clear.
@@ -3367,20 +3379,21 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               (dequeued_priority ? "priority" : "fifo") +
               " remaining=" + std::to_string(queue_size_after_dequeue));
     }
-    int relight_min = 0;
+    int relight_min = world.ProceduralTemplate.MinHeight;
     int relight_max = max_y;
     const auto band_it = PendingTerrainColumnRelightYBands.find(col);
     bool queued_band_defined = band_it != PendingTerrainColumnRelightYBands.end();
-    glm::ivec2 queued_band(0, max_y);
+    glm::ivec2 queued_band(world.ProceduralTemplate.MinHeight, max_y);
     if (band_it != PendingTerrainColumnRelightYBands.end())
     {
       queued_band = band_it->second;
-      relight_min = std::max(0, band_it->second.x);
+      relight_min = std::max(world.ProceduralTemplate.MinHeight,
+                             band_it->second.x);
       relight_max = std::min(max_y, band_it->second.y);
       PendingTerrainColumnRelightYBands.erase(band_it);
       if (relight_max < relight_min)
       {
-        relight_min = 0;
+        relight_min = world.ProceduralTemplate.MinHeight;
         relight_max = max_y;
       }
     }
@@ -3399,25 +3412,28 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       if (visible_band_it != PendingVisibleDrawGateRelightYBands.end())
       {
         const glm::ivec2 visible_band = visible_band_it->second;
-        const int exact_min = std::max(0, visible_band.x);
+        const int exact_min =
+            std::max(world.ProceduralTemplate.MinHeight, visible_band.x);
         const int exact_max = std::min(max_y, visible_band.y);
         if (exact_max >= exact_min)
         {
           exact_draw_gate_band = true;
           if (queued_band_defined && queued_band != visible_band)
           {
-            retained_band_min = std::max(0, queued_band.x);
+            retained_band_min = std::max(world.ProceduralTemplate.MinHeight,
+                                         queued_band.x);
             retained_band_max = std::min(max_y, queued_band.y);
           }
           else if (queued_band_defined &&
                    world.IsPendingLightBeforeMesh(ground_xz))
           {
-            retained_band_min = std::max(0, queued_band.x);
+            retained_band_min = std::max(world.ProceduralTemplate.MinHeight,
+                                         queued_band.x);
             retained_band_max = std::min(max_y, queued_band.y);
           }
           else if (!queued_band_defined)
           {
-            retained_band_min = 0;
+            retained_band_min = world.ProceduralTemplate.MinHeight;
             retained_band_max = max_y;
           }
           relight_min = exact_min;
@@ -3436,7 +3452,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           PendingVisibleFirstMeshRelightYBands.find(col);
       if (first_mesh_band_it != PendingVisibleFirstMeshRelightYBands.end())
       {
-        const int exact_min = std::max(0, first_mesh_band_it->second.x);
+        const int exact_min = std::max(world.ProceduralTemplate.MinHeight,
+                                       first_mesh_band_it->second.x);
         const int exact_max = std::min(max_y, first_mesh_band_it->second.y);
         if (exact_max >= exact_min)
         {
@@ -3445,7 +3462,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           // Preserve the full owned interval; the surface clamp would otherwise
           // silently replace a missing FirstMesh slice with the surface slice.
           relight_min = queued_band_defined
-                            ? std::min(std::max(0, queued_band.x), exact_min)
+                            ? std::min(std::max(world.ProceduralTemplate.MinHeight,
+                                                queued_band.x),
+                                       exact_min)
                             : exact_min;
           relight_max = queued_band_defined
                             ? std::max(std::min(max_y, queued_band.y), exact_max)
@@ -3466,7 +3485,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         !exact_boundary_dependency_band)
     {
       const auto col_band = RelightSurfaceBandForColumn(
-          focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min, relight_max);
+          focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min,
+          relight_max, world.ProceduralTemplate.MinHeight);
       surface_band_adjusted = col_band.first != relight_min ||
                               col_band.second != relight_max;
       relight_min = col_band.first;
@@ -3514,8 +3534,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     // Top-down Y-band: Capture sky first; requeue remainder after enqueue.
     // SoftDefer keeps PendingLight until the final band — cold hole first-mesh
     // is unblocked via MeshLitGate hole-preview in TickMeshEmerge (not here).
-    int remainder_min = -1;
-    int remainder_max = -1;
+    int remainder_min = 0;
+    int remainder_max = 0;
+    bool has_remainder = false;
     bool finalize_gate = true;
     if (exact_draw_gate_band)
     {
@@ -3523,6 +3544,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       // column work and never clear its wider PendingLight obligation here.
       remainder_min = retained_band_min;
       remainder_max = retained_band_max;
+      has_remainder = true;
       finalize_gate = false;
     }
     // P2: miss nh≤2 prefers one surface finalize Capture (no partial Y-band).
@@ -3570,6 +3592,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         {
           remainder_min = relight_min;
           remainder_max = band_min - 1;
+          has_remainder = true;
           relight_min = band_min;
           finalize_gate = false;
         }
@@ -3630,12 +3653,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       if (world.IsAsyncRelightColumnInFlight(ground_xz) &&
           world.GetAsyncRelightInFlightCount() > 0)
       {
-        if (remainder_min >= 0)
+        if (has_remainder)
         {
           PendingTerrainColumnRelightYBands[col] =
               glm::ivec2(remainder_min, remainder_max);
         }
-        else if (relight_min > 0 || relight_max < max_y)
+        else if (relight_min > world.ProceduralTemplate.MinHeight ||
+                 relight_max < max_y)
         {
           PendingTerrainColumnRelightYBands[col] =
               glm::ivec2(relight_min, relight_max);
@@ -3737,19 +3761,20 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         PendingBoundaryDependencyRelightKeys.erase(col);
       }
     }
-    if (remainder_min >= 0)
+    if (has_remainder)
     {
       // Era36 B1: underground remainder is invisible — do not requeue.
       if (remainder_max < surface_band_min)
       {
         remainder_min = -1;
+        has_remainder = false;
       }
       else
       {
         remainder_min = std::max(remainder_min, surface_band_min);
       }
     }
-    if (remainder_min >= 0)
+    if (has_remainder)
     {
       // SoftDefer: remainder band must stay hot within focus, otherwise
       // finalize_pending_gate=true can be starved and PendingLight keeps
@@ -4225,12 +4250,19 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
            std::to_string(PendingAsyncColumnLoadSlices.size());
   };
   const int max_height = world.ProceduralTemplate.MaxHeight;
+  const int min_height = world.ProceduralTemplate.MinHeight;
   MaterializeRequiredTerrainColumnSlices(world.BlockWorld, ground_coord,
-                                         max_height, state.highest_cy_on_disk);
+                                         max_height, state.highest_cy_on_disk,
+                                         min_height);
 
-  const bool has_disk = state.highest_cy_on_disk >= 0;
+  const bool has_disk =
+      state.highest_cy_on_disk != kNoChunkSliceOnDisk;
   const bool complete = IsTerrainChunkComplete(
-      world.BlockWorld, ground_coord, max_height, state.highest_cy_on_disk);
+      world.BlockWorld, ground_coord, max_height,
+      state.highest_cy_on_disk == kNoChunkSliceOnDisk
+          ? kNoTerrainChunkSlice
+          : state.highest_cy_on_disk,
+      min_height);
   const bool should_retry =
       has_disk &&
       (state.had_disk_read_failure || state.had_invalid_token || !complete);
@@ -4254,10 +4286,12 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             " complete=" + (complete ? "1" : "0") +
             " elapsed_ms=" + std::to_string(load_ms) +
             async_io_trace_details());
-    ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height);
+    ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height,
+                             min_height);
     PendingAsyncColumnLoadState retry_state;
     const int load_to_cy = state.highest_cy_on_disk;
-    retry_state.remaining_results = load_to_cy + 1;
+    const int min_cy = FloorDiv(min_height, CHUNK_SIZE);
+    retry_state.remaining_results = load_to_cy - min_cy + 1;
     retry_state.demand_id = state.demand_id;
     retry_state.highest_cy_on_disk = state.highest_cy_on_disk;
     retry_state.cancellation = state.cancellation;
@@ -4287,10 +4321,10 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     const int sea_cy =
         FloorDiv(world.ProceduralTemplate.SeaLevel, CHUNK_SIZE);
     std::vector<int> cy_order;
-    cy_order.reserve(static_cast<size_t>(load_to_cy + 1));
+    cy_order.reserve(static_cast<size_t>(retry_state.remaining_results));
     auto push_cy = [&](int cy)
     {
-      if (cy < 0 || cy > load_to_cy)
+      if (cy < min_cy || cy > load_to_cy)
       {
         return;
       }
@@ -4304,12 +4338,14 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     {
       push_cy(sea_cy);
     }
-    for (int d = 1; d <= load_to_cy; ++d)
+    const int focus_radius = std::max(focus.y - min_cy,
+                                      load_to_cy - focus.y);
+    for (int d = 1; d <= focus_radius; ++d)
     {
       push_cy(focus.y - d);
       push_cy(focus.y + d);
     }
-    for (int cy = 0; cy <= load_to_cy; ++cy)
+    for (int cy = min_cy; cy <= load_to_cy; ++cy)
     {
       push_cy(cy);
     }
@@ -4338,8 +4374,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             async_io_trace_details());
     if (has_disk)
     {
-      ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height);
-      RemoveTerrainColumnFromDisk(ground_coord, max_height);
+      ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height,
+                               min_height);
+      RemoveTerrainColumnFromDisk(ground_coord, max_height, min_height);
     }
     return;
   }
@@ -4369,21 +4406,24 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     const ProceduralSettings &settings = world.GetProceduralSettings();
 
     // Default relight range (used when the mesh gate isn't blocking yet).
-    const int relight_min_full = std::max(0, settings.SeaLevel - CHUNK_SIZE * 2);
+    const int relight_min_full =
+        std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE * 2);
     const int relight_max_full = settings.MaxHeight;
 
     if (!world.IsLightingRelightDeferred() && !state.had_disk_light)
     {
       // Mesh gate band = sea±2 CHUNK ∪ player when near (same as commit).
       const int sea = settings.SeaLevel;
-      int dirty_min = std::max(0, sea - CHUNK_SIZE);
+      int dirty_min = std::max(settings.MinHeight, sea - CHUNK_SIZE);
       int dirty_max =
           std::min(settings.MaxHeight, sea + CHUNK_SIZE * 2);
       if (near_focus)
       {
         const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
         dirty_min =
-            std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
+            std::min(dirty_min,
+                     std::max(settings.MinHeight,
+                              focus_block.y - CHUNK_SIZE));
         dirty_max = std::max(
             dirty_max,
             std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
@@ -4462,13 +4502,16 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       // Seamed neighbors off: avoid 3x3 Dirty dual with neighbor FirstMesh/RAA.
       ++world.GetPhysicsTelemetryMutable().DiskLightTrustedN;
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-      int dirty_min = std::max(0, focus_block.y - CHUNK_SIZE);
+      int dirty_min = std::max(settings.MinHeight,
+                               focus_block.y - CHUNK_SIZE);
       int dirty_max =
           std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
       if (settings.FillWater)
       {
         dirty_min =
-            std::min(dirty_min, std::max(0, settings.SeaLevel - CHUNK_SIZE));
+            std::min(dirty_min,
+                     std::max(settings.MinHeight,
+                              settings.SeaLevel - CHUNK_SIZE));
         dirty_max = std::max(
             dirty_max,
             std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
@@ -4536,13 +4579,16 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       // Disk already lit: remesh visible band only (player ∪ sea), not full
       // 0..MaxHeight (that flooded Dirty on every column load).
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-      int dirty_min = std::max(0, focus_block.y - CHUNK_SIZE);
+      int dirty_min = std::max(settings.MinHeight,
+                               focus_block.y - CHUNK_SIZE);
       int dirty_max =
           std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
       if (settings.FillWater)
       {
         dirty_min =
-            std::min(dirty_min, std::max(0, settings.SeaLevel - CHUNK_SIZE));
+            std::min(dirty_min,
+                     std::max(settings.MinHeight,
+                              settings.SeaLevel - CHUNK_SIZE));
         dirty_max = std::max(
             dirty_max,
             std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
@@ -5189,7 +5235,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
                                   disk_discovery_started)
                                   .count();
   }
-  if (state.highest_cy_on_disk < 0)
+  if (state.highest_cy_on_disk == kNoChunkSliceOnDisk)
   {
     LogWorldColumnSource("procedural", "disk_miss", ground_coord,
                          "demand_id=" + std::to_string(demand_id) +
@@ -5198,7 +5244,12 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
     return;
   }
   state.requested_at = std::chrono::steady_clock::now();
-  state.remaining_results = state.highest_cy_on_disk + 1;
+  const int min_cy = FloorDiv(world.ProceduralTemplate.MinHeight, CHUNK_SIZE);
+  if (state.highest_cy_on_disk < min_cy)
+  {
+    return;
+  }
+  state.remaining_results = state.highest_cy_on_disk - min_cy + 1;
   state.cancellation = std::make_shared<std::atomic<bool>>(false);
   PendingAsyncColumnLoadSlices[ground_coord] = state;
   LogWorldColumnSource(
@@ -5216,10 +5267,10 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   const int sea_cy =
       FloorDiv(world.ProceduralTemplate.SeaLevel, CHUNK_SIZE);
   std::vector<int> cy_order;
-  cy_order.reserve(static_cast<size_t>(state.highest_cy_on_disk + 1));
+  cy_order.reserve(static_cast<size_t>(state.remaining_results));
   auto push_cy = [&](int cy)
   {
-    if (cy < 0 || cy > state.highest_cy_on_disk)
+    if (cy < min_cy || cy > state.highest_cy_on_disk)
     {
       return;
     }
@@ -5233,12 +5284,14 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   {
     push_cy(sea_cy);
   }
-  for (int d = 1; d <= state.highest_cy_on_disk; ++d)
+  const int focus_radius = std::max(focus.y - min_cy,
+                                    state.highest_cy_on_disk - focus.y);
+  for (int d = 1; d <= focus_radius; ++d)
   {
     push_cy(focus.y - d);
     push_cy(focus.y + d);
   }
-  for (int cy = 0; cy <= state.highest_cy_on_disk; ++cy)
+  for (int cy = min_cy; cy <= state.highest_cy_on_disk; ++cy)
   {
     push_cy(cy);
   }
@@ -5270,9 +5323,11 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     return;
   }
   const int max_height = world.ProceduralTemplate.MaxHeight;
+  const int min_height = world.ProceduralTemplate.MinHeight;
   const auto completeness_started = std::chrono::steady_clock::now();
   const bool complete =
-      IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height);
+      IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height,
+                             kNoTerrainChunkSlice, min_height);
   const double completeness_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - completeness_started)
@@ -5282,7 +5337,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     ChunkStorage->MarkColumnSavePending(ground_coord);
     PendingAsyncColumnSaveSlices[ground_coord] = 1;
     AsyncChunkIo->RequestRemoveTerrainColumn(
-        ground_coord, max_height, *ChunkStorage, WorldFolderPath);
+        ground_coord, max_height, min_height, *ChunkStorage, WorldFolderPath);
     if (IsWorldColumnSaveTraceEnabled())
     {
       LogWorldColumnSave("discard_incomplete_queued", ground_coord,
@@ -5300,7 +5355,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     }
     return;
   }
-  const int max_cy = std::max(0, max_height) / CHUNK_SIZE;
+  const int min_cy = FloorDiv(min_height, CHUNK_SIZE);
+  const int max_cy = FloorDiv(max_height, CHUNK_SIZE);
   const auto disk_index_started = std::chrono::steady_clock::now();
   const int highest_on_disk =
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
@@ -5310,23 +5366,30 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
           .count();
   const auto highest_non_air_started = std::chrono::steady_clock::now();
   const int highest_non_air =
-      GetHighestNonAirChunkSlice(world.BlockWorld, ground_coord, max_height);
+      GetHighestNonAirChunkSlice(world.BlockWorld, ground_coord, max_height,
+                                 min_height);
   const double highest_non_air_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - highest_non_air_started)
           .count();
-  int highest_to_save = std::max(highest_on_disk, highest_non_air);
-  if (highest_to_save < 0)
+  int highest_to_save = highest_non_air;
+  if (highest_on_disk != kNoChunkSliceOnDisk)
+  {
+    highest_to_save = highest_to_save == kNoTerrainChunkSlice
+                          ? highest_on_disk
+                          : std::max(highest_on_disk, highest_to_save);
+  }
+  if (highest_to_save == kNoTerrainChunkSlice)
   {
     LogWorldColumnSave("skip_empty", ground_coord,
                        "world_folder=" + WorldFolderPath);
     return;
   }
-  highest_to_save = std::min(highest_to_save, max_cy);
+  highest_to_save = std::clamp(highest_to_save, min_cy, max_cy);
 
   const auto materialize_started = std::chrono::steady_clock::now();
   int save_count = 0;
-  for (int cy = 0; cy <= highest_to_save; ++cy)
+  for (int cy = min_cy; cy <= highest_to_save; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
     if (!world.BlockWorld.GetChunkManager().HasChunk(slice))
@@ -5351,7 +5414,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
           std::chrono::steady_clock::now() - pending_started)
           .count();
   const auto enqueue_started = std::chrono::steady_clock::now();
-  for (int cy = 0; cy <= highest_to_save; ++cy)
+  for (int cy = min_cy; cy <= highest_to_save; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
     AsyncChunkIo->RequestSave(
@@ -5495,20 +5558,20 @@ bool UWorldPersistence::IsTerrainColumnDiskLoadPending(
 int UWorldPersistence::LoadTerrainColumn(glm::ivec3 coord,
                                          UBlockWorld &block_world,
                                          UBlockRegistry &registry,
-                                         int max_height)
+                                         int max_height, int min_height)
 {
   if (!ChunkStorage)
   {
     return 0;
   }
   return ChunkStorage->LoadTerrainColumn(coord, block_world, WorldFolderPath,
-                                         registry, max_height);
+                                         registry, max_height, min_height);
 }
 
 void UWorldPersistence::SaveTerrainColumn(glm::ivec3 ground_coord,
                                           UBlockWorld &block_world,
                                           UBlockRegistry &registry,
-                                          int max_height)
+                                          int max_height, int min_height)
 {
   if (!ChunkStorage)
   {
@@ -5518,19 +5581,21 @@ void UWorldPersistence::SaveTerrainColumn(glm::ivec3 ground_coord,
   {
     ground_coord.y = 0;
   }
-  if (!IsTerrainChunkComplete(block_world, ground_coord, max_height))
+  if (!IsTerrainChunkComplete(block_world, ground_coord, max_height,
+                              kNoTerrainChunkSlice, min_height))
   {
     // Incomplete in RAM must not preserve a stale complete column on disk
     // (e.g. ocean file left after quit mid-land-gen → straight coast cut).
-    RemoveTerrainColumnFromDisk(ground_coord, max_height);
+    RemoveTerrainColumnFromDisk(ground_coord, max_height, min_height);
     return;
   }
   ChunkStorage->SaveTerrainColumn(ground_coord, block_world, WorldFolderPath,
-                                  registry, max_height);
+                                  registry, max_height, min_height);
 }
 
 void UWorldPersistence::RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord,
-                                                    int max_height)
+                                                    int max_height,
+                                                    int min_height)
 {
   if (!ChunkStorage)
   {
@@ -5541,19 +5606,20 @@ void UWorldPersistence::RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord,
     ground_coord.y = 0;
   }
   ChunkStorage->RemoveTerrainColumnFromDisk(WorldFolderPath, ground_coord,
-                                            max_height);
+                                            max_height, nullptr, min_height);
 }
 
 void UWorldPersistence::PurgeIncompleteTerrainColumn(UBlockWorld &block_world,
                                                      glm::ivec3 ground_coord,
-                                                     int max_height)
+                                                     int max_height,
+                                                     int min_height)
 {
   if (ground_coord.y != 0)
   {
     ground_coord.y = 0;
   }
-  ClearTerrainColumnChunks(block_world, ground_coord, max_height);
-  RemoveTerrainColumnFromDisk(ground_coord, max_height);
+  ClearTerrainColumnChunks(block_world, ground_coord, max_height, min_height);
+  RemoveTerrainColumnFromDisk(ground_coord, max_height, min_height);
 }
 
 void UWorldPersistence::LoadInitialTerrainColumns(UWorld &world,
@@ -5573,12 +5639,16 @@ void UWorldPersistence::LoadInitialTerrainColumns(UWorld &world,
     {
       const glm::ivec3 ground(center_chunk.x + dx, 0, center_chunk.z + dz);
       LoadTerrainColumn(ground, world.BlockWorld, *world.BlockRegistry,
-                        world.ProceduralTemplate.MaxHeight);
+                        world.ProceduralTemplate.MaxHeight,
+                        world.ProceduralTemplate.MinHeight);
       if (!IsTerrainChunkComplete(world.BlockWorld, ground,
-                                  world.ProceduralTemplate.MaxHeight))
+                                  world.ProceduralTemplate.MaxHeight,
+                                  kNoTerrainChunkSlice,
+                                  world.ProceduralTemplate.MinHeight))
       {
         PurgeIncompleteTerrainColumn(world.BlockWorld, ground,
-                                     world.ProceduralTemplate.MaxHeight);
+                                     world.ProceduralTemplate.MaxHeight,
+                                     world.ProceduralTemplate.MinHeight);
       }
     }
   }

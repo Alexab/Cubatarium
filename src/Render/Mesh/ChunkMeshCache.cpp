@@ -1877,15 +1877,14 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
     }
     return MissingMemo.result;
   }
-  // Presentable cy band — align with FindNearestMissingGreedyMesh / enter SoT
-  // (manual 100846: y=0 bedrock kept focus_missing_mesh=1 forever).
-  constexpr int kMissingScanMaxCy = 48;
-  int cy_scan_lo = 0;
-  int cy_scan_hi = kMissingScanMaxCy;
-  if (center_ground_chunk.y > 0)
+  // Ground-focus queries inspect the configured vertical world range. A
+  // concrete vertical focus narrows the scan to its presentable slice band.
+  int cy_scan_lo = world.GetVerticalProfile().MinChunkY(CHUNK_SIZE);
+  int cy_scan_hi = world.GetVerticalProfile().MaxChunkY(CHUNK_SIZE);
+  if (center_ground_chunk.y != 0)
   {
-    cy_scan_lo = std::max(0, center_ground_chunk.y - 1);
-    cy_scan_hi = std::min(kMissingScanMaxCy, center_ground_chunk.y + 1);
+    cy_scan_lo = std::max(cy_scan_lo, center_ground_chunk.y - 1);
+    cy_scan_hi = std::min(cy_scan_hi, center_ground_chunk.y + 1);
   }
   bool missing = false;
   glm::ivec3 missing_coord{0};
@@ -2024,18 +2023,15 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
   // Ring-order + early exit. ForEachChunk over the whole resident set used to
   // cost 70–120ms mesh_emerge_prep on hole frames (CB spike_holes) while
   // searching for a nearest xz that is usually underfeet (r≤1).
-  // Callers pass focus_ground_horiz with y=0 — scan a tall cy band so altitude
-  // slices stay visible without walking every keep-shell chunk.
-  constexpr int kMissingScanMaxCy = 48;
+  // Ground-focus queries inspect the configured vertical world range. A
+  // concrete vertical focus narrows the scan to its presentable slice band.
   const UChunkManager &chunks = world.GetChunkManager();
-  int cy_scan_lo = 0;
-  int cy_scan_hi = kMissingScanMaxCy;
-  if (center_ground_chunk.y > 0)
+  int cy_scan_lo = world.GetVerticalProfile().MinChunkY(CHUNK_SIZE);
+  int cy_scan_hi = world.GetVerticalProfile().MaxChunkY(CHUNK_SIZE);
+  if (center_ground_chunk.y != 0)
   {
-    // Presentable band (player cy ±1) — align with HasMissingGreedyMeshesNearFocus
-    // so pin/heal targets the same slice SoT (not bedrock cy=0 alone).
-    cy_scan_lo = std::max(0, center_ground_chunk.y - 1);
-    cy_scan_hi = std::min(kMissingScanMaxCy, center_ground_chunk.y + 1);
+    cy_scan_lo = std::max(cy_scan_lo, center_ground_chunk.y - 1);
+    cy_scan_hi = std::min(cy_scan_hi, center_ground_chunk.y + 1);
   }
   auto chunk_is_solid_missing = [&](glm::ivec3 coord) -> bool
   {
@@ -2463,7 +2459,8 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
     {
       return true;
     }
-    if (keep_cy >= 0 && std::abs(coord.y - center_chunk.y) > keep_cy)
+    if (keep_cy != kNoChunkSlice &&
+        std::abs(coord.y - center_chunk.y) > keep_cy)
     {
       return true;
     }
@@ -2542,7 +2539,8 @@ int UChunkMeshCache::DropFarFirstMeshDirtyBeyondRadius(
     {
       return true;
     }
-    if (keep_cy >= 0 && std::abs(coord.y - center_chunk.y) > keep_cy)
+    if (keep_cy != kNoChunkSlice &&
+        std::abs(coord.y - center_chunk.y) > keep_cy)
     {
       return true;
     }
@@ -4140,14 +4138,14 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
   InvalidateVisibleList();
 }
 
-void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
+void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
+                                   int max_cy)
 {
   if (ground_coord.y != 0)
   {
     ground_coord.y = 0;
   }
-  max_cy = std::max(0, max_cy);
-  for (int cy = 0; cy <= max_cy; ++cy)
+  for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
     UChunkRenderDemandStore::Get().Remove(slice);

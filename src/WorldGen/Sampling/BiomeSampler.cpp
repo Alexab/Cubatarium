@@ -556,8 +556,8 @@ int ApplyCoastShelf(int x, int z, int surfaceY, const ProceduralSettings &settin
   const float blend = beach_strength * 0.65f;
   const float blended =
       static_cast<float>(surfaceY) * (1.0f - blend) + target_y * blend;
-  return std::clamp(static_cast<int>(std::floor(blended + 0.5f)), 1,
-                    settings.MaxHeight);
+  return std::clamp(static_cast<int>(std::floor(blended + 0.5f)),
+                    settings.MinHeight + 1, settings.MaxHeight);
 }
 
 float SampleCoarseHeightGradient(int x, int z,
@@ -717,13 +717,13 @@ BiomeHeightProfile BiomeHeightProfileFor(BiomeId biome)
 }
 
 int ApplyBiomeHeightProfile(int coarseY, int seaLevel, int maxHeight,
-                            const BiomeHeightProfile &profile)
+                            const BiomeHeightProfile &profile, int minHeight)
 {
   const float delta = static_cast<float>(coarseY - seaLevel);
   const float scaled =
       delta * profile.amplitudeMultiplier + profile.baseOffsetBlocks;
   int y = seaLevel + static_cast<int>(std::lround(scaled));
-  return std::clamp(y, 1, maxHeight);
+  return std::clamp(y, minHeight + 1, maxHeight);
 }
 
 void ComputeBiomeClimate(int x, int z, uint32_t seed, float &temperature,
@@ -1087,7 +1087,7 @@ SubBiomeId SubBiomeFor(int x, int z, BiomeId biome, uint32_t seed)
   return entries.back().Id;
 }
 
-int BiomeBlendedHeightY(int coarseY, int seaLevel, int maxHeight,
+int BiomeBlendedHeightY(int coarseY, int seaLevel, int minHeight, int maxHeight,
                         const BiomeWeightSet &weights)
 {
   float sum = 0.0f;
@@ -1096,15 +1096,17 @@ int BiomeBlendedHeightY(int coarseY, int seaLevel, int maxHeight,
   {
     const BiomeHeightProfile profile = BiomeHeightProfileForHandle(entry.biome);
     sum += entry.weight * static_cast<float>(ApplyBiomeHeightProfile(
-                               coarseY, seaLevel, maxHeight, profile));
+                               coarseY, seaLevel, maxHeight, profile,
+                               minHeight));
     weight_sum += entry.weight;
   }
   if (weight_sum <= 0.0f)
   {
-    return std::clamp(coarseY, 1, maxHeight);
+    return std::clamp(coarseY, minHeight + 1, maxHeight);
   }
   return std::clamp(
-      static_cast<int>(std::floor(sum / weight_sum + 0.5f)), 1, maxHeight);
+      static_cast<int>(std::floor(sum / weight_sum + 0.5f)), minHeight + 1,
+      maxHeight);
 }
 
 int BiomeBlendedBaseY(int x, int z, int coarseY, const BiomeWeightSet &weights,
@@ -1120,7 +1122,7 @@ int BiomeBlendedBaseY(int x, int z, int coarseY, const BiomeWeightSet &weights,
   }
   const int y =
       coarseY + static_cast<int>(std::floor(offset + 0.5f));
-  return std::clamp(y, 1, settings.MaxHeight);
+  return std::clamp(y, settings.MinHeight + 1, settings.MaxHeight);
 }
 
 int SmoothBlendedSurfaceY(int x, int z, int baseY,
@@ -1176,7 +1178,8 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
 
   int y = tuning.useUnifiedHeightField
               ? BiomeBlendedHeightY(coarseY, settings.SeaLevel,
-                                    settings.MaxHeight, weights)
+                                    settings.MinHeight, settings.MaxHeight,
+                                    weights)
               : BiomeBlendedBaseY(x, z, coarseY, weights, settings);
   const ClimateSample climate = SampleClimate(x, z, seed);
   y = SmoothBlendedSurfaceY(x, z, y, weights, settings, seed, tuning, getCoarseY,
@@ -1241,7 +1244,7 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
       std::clamp(OverworldMacroHeight01(x, z, seed), 0.0f, 1.0f);
   y = ApplyErosionLite(x, z, y, seed, settings, getCoarseY, weights,
                        macro_height01);
-  return std::clamp(y, 1, settings.MaxHeight);
+  return std::clamp(y, settings.MinHeight + 1, settings.MaxHeight);
 }
 
 BiomeId PickWeightedBiome(int x, int z, uint32_t seed, float temperature,

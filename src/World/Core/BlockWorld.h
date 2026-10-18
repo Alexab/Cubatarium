@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Math/WorldVerticalProfile.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <optional>
@@ -19,6 +20,16 @@ class UChunkBuffer;
 class UBlockWorld
 {
 public:
+  /// Runtime snapshot of the current world's vertical coordinate profile.
+  void SetVerticalProfile(WorldVerticalProfile profile)
+  {
+    VerticalProfile = profile;
+  }
+  const WorldVerticalProfile &GetVerticalProfile() const
+  {
+    return VerticalProfile;
+  }
+
   void SetFluidDefinitions(const UBlockDefinitionStorage *definitions)
   {
     FluidDefinitions = definitions;
@@ -56,6 +67,7 @@ public:
 
 private:
   UChunkManager Chunks;
+  WorldVerticalProfile VerticalProfile{};
   const UBlockDefinitionStorage *FluidDefinitions{nullptr};
   UChunkBuffer *CaptureBuffer{nullptr};
 };

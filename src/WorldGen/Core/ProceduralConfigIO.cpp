@@ -16,10 +16,17 @@ namespace
 
 void ApplyLegacyVerticalMode(ProceduralSettings &settings,
                              const std::string &verticalMode, bool hasSeaLevel,
-                             bool hasMaxHeight, bool compactGenerator)
+                             bool hasMaxHeight, bool hasMinHeight,
+                             bool compactGenerator)
 {
   const int defaultSeaLevel = compactGenerator ? 5 : 63;
+  const int defaultMinHeight = compactGenerator ? 0 : -64;
   const int defaultMaxHeight = compactGenerator ? 15 : 319;
+
+  if (!hasMinHeight)
+  {
+    settings.MinHeight = defaultMinHeight;
+  }
 
   if (hasSeaLevel || hasMaxHeight)
   {
@@ -35,12 +42,14 @@ void ApplyLegacyVerticalMode(ProceduralSettings &settings,
   }
   if (verticalMode == "compact")
   {
+    settings.MinHeight = 0;
     settings.SeaLevel = 5;
     settings.MaxHeight = 15;
     return;
   }
   if (verticalMode == "extended")
   {
+    settings.MinHeight = -64;
     settings.SeaLevel = 63;
     settings.MaxHeight = 319;
     return;
@@ -347,6 +356,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     std::string legacyVerticalMode;
     bool hasSeaLevel = false;
     bool hasMaxHeight = false;
+    bool hasMinHeight = false;
     bool hasCaves = false;
     bool hasTrees = false;
     bool hasDecoration = false;
@@ -391,9 +401,21 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       settings.MaxHeight = p["max_height"].get<int>();
       hasMaxHeight = true;
     }
+    if (p.contains("min_height"))
+    {
+      settings.MinHeight = p["min_height"].get<int>();
+      hasMinHeight = true;
+    }
     if (p.contains("bedrock_top_y"))
     {
       settings.BedrockTopY = p["bedrock_top_y"].get<int>();
+      // Legacy world configs used Y=0 as the bedrock floor. New worlds put
+      // the bedrock floor at the bottom of the expanded vertical range.
+      if (!hasMinHeight && settings.Generator != ProceduralGenerator::Flat &&
+          settings.Generator != ProceduralGenerator::Heightmap)
+      {
+        settings.BedrockTopY = -64;
+      }
     }
     if (p.contains("worldgen_pack_id") && p["worldgen_pack_id"].is_string())
     {
@@ -567,7 +589,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
         settings.Generator == ProceduralGenerator::Flat ||
         settings.Generator == ProceduralGenerator::Heightmap;
     ApplyLegacyVerticalMode(settings, legacyVerticalMode, hasSeaLevel,
-                            hasMaxHeight, compactGenerator);
+                            hasMaxHeight, hasMinHeight, compactGenerator);
     ApplyLegacyOverworldProfile(legacyGeneratorId, settings, hasCaves, hasTrees,
                                 hasOres, hasFillWater, hasFillLava,
                                 hasFillFire);
@@ -615,6 +637,7 @@ void WriteProceduralSettings(nlohmann::json &root,
   nlohmann::json procedural;
   procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
   procedural["sea_level"] = settings.SeaLevel;
+  procedural["min_height"] = settings.MinHeight;
   procedural["max_height"] = settings.MaxHeight;
   procedural["bedrock_top_y"] = settings.BedrockTopY;
   procedural["worldgen_pack_id"] = settings.WorldGenPackId;

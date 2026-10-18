@@ -5,6 +5,7 @@
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/IO/JsonChunkSerializer.h"
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -13,6 +14,8 @@
 
 namespace cutum
 {
+
+inline constexpr int kNoChunkSliceOnDisk = std::numeric_limits<int>::min();
 
 class UBlockRegistry;
 class UBlockWorld;
@@ -57,14 +60,17 @@ public:
   /// Delete all Y-slices for a ground column (stale/incomplete purge).
   bool RemoveTerrainColumnFromDisk(const std::string &worldFolder,
                                    glm::ivec3 groundCoord, int maxWorldY,
-                                   std::string *outError = nullptr) const;
+                                   std::string *outError = nullptr,
+                                   int minWorldY = 0) const;
 
   void SaveTerrainColumn(glm::ivec3 groundCoord, const UBlockWorld &world,
                          const std::string &worldFolder,
-                         UBlockRegistry &registry, int maxWorldY);
+                         UBlockRegistry &registry, int maxWorldY,
+                         int minWorldY = 0);
   int LoadTerrainColumn(glm::ivec3 groundCoord, UBlockWorld &world,
                         const std::string &worldFolder,
-                        UBlockRegistry &registry, int maxWorldY);
+                        UBlockRegistry &registry, int maxWorldY,
+                        int minWorldY = 0);
 
   SerializedChunk SerializeChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
                                  UBlockRegistry &registry) const;

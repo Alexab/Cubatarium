@@ -60,7 +60,7 @@ void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
       continue;
     }
     const int y = column_surface_y - dy;
-    if (y < 1)
+    if (y < ctx.Settings.MinHeight)
     {
       break;
     }
@@ -71,7 +71,8 @@ void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
       ctx.World.SetBlock(pos, BLOCK_AIR);
     }
   }
-  ctx.AccumulateDirtyColumn(std::max(1, carved_bottom), column_surface_y);
+  ctx.AccumulateDirtyColumn(std::max(ctx.Settings.MinHeight, carved_bottom),
+                            column_surface_y);
 }
 
 } // namespace

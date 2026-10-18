@@ -65,10 +65,18 @@ public:
   static bool HasSpreadTarget(const UBlockWorld &world,
                               const UBlockDefinitionStorage &definitions,
                               glm::ivec3 block_pos);
+  static bool HasSpreadTarget(const UBlockWorld &world,
+                              const UBlockDefinitionStorage &definitions,
+                              glm::ivec3 block_pos, int min_world_y);
   static bool HasSpreadTargetForTick(const UBlockWorld &world,
                                      const UBlockDefinitionStorage &definitions,
                                      glm::ivec3 block_pos,
                                      uint64_t physics_tick);
+  static bool HasSpreadTargetForTick(const UBlockWorld &world,
+                                     const UBlockDefinitionStorage &definitions,
+                                     glm::ivec3 block_pos,
+                                     uint64_t physics_tick,
+                                     int min_world_y);
 
   static bool CanReceiveFluid(const UBlockWorld &blockWorld,
                               const UBlockRegistry &registry,
@@ -89,8 +97,15 @@ public:
                              uint64_t physics_tick, glm::ivec3 block_pos);
   FluidSpreadStats TickBlock(UBlockWorld &blockWorld,
                              const UBlockDefinitionStorage &definitions,
+                             uint64_t physics_tick, glm::ivec3 block_pos);
+  FluidSpreadStats TickBlock(UBlockWorld &blockWorld,
+                             const UBlockDefinitionStorage &definitions,
                              uint64_t physics_tick, glm::ivec3 block_pos,
-                             int sea_level = -1);
+                             int sea_level);
+  FluidSpreadStats TickBlock(UBlockWorld &blockWorld,
+                             const UBlockDefinitionStorage &definitions,
+                             uint64_t physics_tick, glm::ivec3 block_pos,
+                             int sea_level, int min_world_y);
 
   static bool ShouldProcessFluidTick(uint64_t physics_tick,
                                      glm::ivec3 block_pos, int spread_period);

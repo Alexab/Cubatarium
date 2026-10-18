@@ -1,5 +1,7 @@
 #pragma once
 
+#include "World/Math/GridMath.h"
+
 #include "Core/FrameDeadline.h"
 #include "World/Streaming/ColumnTicketMap.h"
 #include "World/Streaming/RelightFifoPolicy.h"
@@ -33,9 +35,9 @@ struct MeshWorkAdmissionInput
   int ring_depth{8};
   /// Nearest focus miss Chebyshev horiz; <0 = unknown (skip K3 remesh band).
   int nearest_miss_horiz{-1};
-  /// Nearest focus miss chunk Y; <0 = unknown. Era17: cy≤1 ⇒ FirstMesh class.
+  /// Nearest focus miss signed chunk Y; kNoChunkSlice = unknown. Era17: cy≤1 ⇒ FirstMesh class.
   /// Era20: cy≤3 OR mh≤4 (manual 214034 miss_cy=3 mh=4).
-  int nearest_miss_cy{-1};
+  int nearest_miss_cy{kNoChunkSlice};
   /// Era47 P2: EnterLitGate — never Normal; force HoleDrain/WarmBacklog.
   bool enter_lit_gate{false};
   /// Closeout C: RemeshQ depth — keep remesh_schedule≥1 when nonempty.
@@ -96,7 +98,7 @@ inline bool IsMissFirstMeshClass(bool holes, int nearest_miss_cy,
   {
     return false;
   }
-  if (nearest_miss_cy >= 0 && nearest_miss_cy <= 3)
+  if (nearest_miss_cy != kNoChunkSlice && nearest_miss_cy <= 3)
   {
     return true;
   }

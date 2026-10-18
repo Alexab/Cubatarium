@@ -132,6 +132,25 @@ int main()
            "identical demand cannot grow tombstone heap");
   }
 
+  // Negative chunk coordinates are concrete targets, not range sentinels.
+  {
+    UColumnFlowScheduler signed_y;
+    ColumnWorkItem exact{};
+    exact.column = {5, 6};
+    exact.kind = ColumnWorkKind::FirstMesh;
+    exact.priority = 80;
+    exact.cy = -1;
+    signed_y.Enqueue(exact);
+    ColumnWorkItem broad = exact;
+    broad.cy = cutum::kColumnWorkWholeRemeshBandCy;
+    broad.priority = 90;
+    signed_y.Enqueue(broad);
+    ColumnWorkItem drained{};
+    Expect(signed_y.DrainOne(drained), "signed-Y work is drainable");
+    Expect(drained.cy == -1,
+           "broad refresh preserves exact negative chunk target");
+  }
+
   // N06: structural cooldown keys must not collide on negative Z / adjacent X.
   {
     using cutum::UColumnFlowExecutor;

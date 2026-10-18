@@ -61,7 +61,7 @@ bool TryWaterSurfaceAnchorAt(const WorldGenContext &ctx, int x, int z,
   }
   const int max_y =
       std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 1);
-  for (int y = max_y; y >= 1; --y)
+  for (int y = max_y; y >= ctx.Settings.MinHeight; --y)
   {
     if (ctx.World.GetBlock(glm::ivec3(x, y, z)) != ctx.Blocks.Water)
     {
@@ -110,7 +110,7 @@ bool FindUnderwaterFloorAnchor(const WorldGenContext &ctx, int x, int z,
     return false;
   }
   const int max_y = std::min(ctx.Settings.SeaLevel, ctx.Settings.MaxHeight - 1);
-  for (int y = max_y; y >= 1; --y)
+  for (int y = max_y; y >= ctx.Settings.MinHeight; --y)
   {
     const glm::ivec3 water_pos(x, y, z);
     if (ctx.World.GetBlock(water_pos) != ctx.Blocks.Water)
@@ -178,10 +178,11 @@ float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
   const int maxScanY = ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel,
                                        ctx.Settings.MaxHeight);
   auto surfaceAt = [&](int wx, int wz) -> int {
-    return FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
+    return FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY,
+                                ctx.Settings.MinHeight);
   };
   const int centerY = surfaceAt(x, z);
-  if (centerY < 0)
+  if (centerY < ctx.Settings.MinHeight)
   {
     return 999.0f;
   }
@@ -195,7 +196,7 @@ float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
         continue;
       }
       const int neighborY = surfaceAt(x + dx, z + dz);
-      if (neighborY < 0)
+      if (neighborY < ctx.Settings.MinHeight)
       {
         continue;
       }

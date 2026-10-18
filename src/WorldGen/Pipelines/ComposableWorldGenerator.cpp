@@ -28,7 +28,8 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
   {
     AquiferSampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
                            ctx.Settings.MaxHeight,
-                           UWorldGenPack::AquifersConfig());
+                           UWorldGenPack::AquifersConfig(),
+                           ctx.Settings.MinHeight);
   }
   if (Config.TerrainMode == ComposableTerrainMode::Density3D)
   {
@@ -39,13 +40,14 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
     DensitySampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
                            ctx.Settings.MaxHeight,
                            ctx.Settings.Tuning.terrainRoughness, density_params,
-                           ctx.Settings.Caves);
+                           ctx.Settings.Caves, ctx.Settings.MinHeight);
   }
   else if (Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap)
   {
     HeightSampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
                           ctx.Settings.MaxHeight, Config.HeightPreset,
-                          ctx.Settings.Tuning.terrainRoughness);
+                          ctx.Settings.Tuning.terrainRoughness,
+                          ctx.Settings.MinHeight);
   }
   if (Config.UseBiomeSurface)
   {

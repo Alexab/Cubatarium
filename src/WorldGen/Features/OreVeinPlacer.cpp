@@ -259,7 +259,7 @@ void FillOreVeins(WorldGenContext &ctx, int x, int z, int surfaceY,
     return;
   }
 
-  const int min_y = 1;
+  const int min_y = ctx.Settings.MinHeight;
   const int max_y = std::max(min_y, surfaceY - 3);
   const float density = std::clamp(oreDensity, 0.0f, 2.0f);
   const std::array<BlockId, 6> host_ids = ResolveOreHostIds(ctx);

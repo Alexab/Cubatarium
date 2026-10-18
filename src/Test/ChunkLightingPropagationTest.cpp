@@ -344,6 +344,21 @@ int main()
            "block light propagates inside the top supported chunk slice");
   }
 
+  {
+    constexpr int kMinWorldY = -64;
+    cutum::UBlockWorld deep_world;
+    deep_world.GetChunkManager().EnsureChunk(glm::ivec3(0, -4, 0));
+    deep_world.GetChunkManager().EnsureChunk(glm::ivec3(0, -3, 0));
+    const glm::ivec3 torch_pos(8, -49, 8);
+    deep_world.SetBlock(torch_pos, kTorch);
+    cutum::RelightColumn(deep_world, *registry, torch_pos.x, torch_pos.z,
+                         kMinWorldY, -33, true, false);
+    Expect(BlockAt(deep_world, torch_pos) >= 13,
+           "block light source is processed below world Y=0");
+    Expect(BlockAt(deep_world, glm::ivec3(8, -48, 8)) > 0,
+           "block light crosses the negative chunk seam at Y=-48");
+  }
+
   std::cout << "chunk_lighting_propagation_test: OK" << std::endl;
   return 0;
 }

@@ -78,6 +78,38 @@ int main()
              tall_world.GetChunkManager().HasChunk(glm::ivec3(0, 20, 0)),
          "terrain column bounds stop after the slice containing y=319");
 
+  cutum::UBlockWorld full_height_world;
+  constexpr int kMinWorldY = -64;
+  constexpr int kFullHeightMaxY = 319;
+  constexpr int kMinCy = -4;
+  constexpr int kMaxCy = 19;
+  for (int cy = kMinCy; cy <= kMaxCy; ++cy)
+  {
+    full_height_world.GetChunkManager().EnsureChunk(glm::ivec3(0, cy, 0));
+  }
+  full_height_world.SetBlock(glm::ivec3(0, kMinWorldY, 0), kStone);
+  full_height_world.SetBlock(glm::ivec3(0, kFullHeightMaxY, 0), kStone);
+  Expect(cutum::GetHighestNonAirChunkSlice(
+             full_height_world, glm::ivec3(0, 0, 0), kFullHeightMaxY,
+             kMinWorldY) == kMaxCy,
+         "full-height column scans signed slices through the top bound");
+  Expect(cutum::AreTerrainColumnSlicesLoaded(
+             full_height_world, glm::ivec3(0, 0, 0), kFullHeightMaxY,
+             kMaxCy, kMinWorldY),
+         "full-height readiness requires a contiguous range from cy=-4 to 19");
+  Expect(!cutum::TerrainColumnNeedsFill(full_height_world, 0, 0,
+                                        kFullHeightMaxY, kMinWorldY),
+         "a column containing terrain only at negative Y is not treated as empty");
+  full_height_world.GetChunkManager().EnsureChunk(glm::ivec3(0, -5, 0));
+  full_height_world.GetChunkManager().EnsureChunk(glm::ivec3(0, 20, 0));
+  cutum::ClearTerrainColumnChunks(full_height_world, glm::ivec3(0, 0, 0),
+                                  kFullHeightMaxY, kMinWorldY);
+  Expect(!full_height_world.GetChunkManager().HasChunk(glm::ivec3(0, -4, 0)) &&
+             !full_height_world.GetChunkManager().HasChunk(glm::ivec3(0, 19, 0)) &&
+             full_height_world.GetChunkManager().HasChunk(glm::ivec3(0, -5, 0)) &&
+             full_height_world.GetChunkManager().HasChunk(glm::ivec3(0, 20, 0)),
+         "full-height clear respects the exact signed vertical bounds");
+
   const size_t before_remove = chunks.GetResidentChunkCount();
   chunks.RemoveChunk(glm::ivec3(0, 0, -1));
   Expect(chunks.GetResidentChunkCount() == before_remove - 1,

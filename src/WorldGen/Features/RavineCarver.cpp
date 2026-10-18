@@ -89,7 +89,7 @@ void MaterializeRavineColumn(WorldGenContext &ctx, int wx, int wz,
   for (int dy = 0; dy < column_depth; ++dy)
   {
     const int y = column_surface_y - dy;
-    if (y < 1)
+    if (y < ctx.Settings.MinHeight)
     {
       break;
     }
@@ -113,7 +113,8 @@ void MaterializeRavineColumn(WorldGenContext &ctx, int wx, int wz,
       }
     }
   }
-  ctx.AccumulateDirtyColumn(std::max(1, carved_bottom), column_surface_y);
+  ctx.AccumulateDirtyColumn(std::max(ctx.Settings.MinHeight, carved_bottom),
+                            column_surface_y);
 }
 
 void AccumulateRavineCarveDepth(

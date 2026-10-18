@@ -2,10 +2,16 @@
 #define GRIDMATH_H
 
 #include <cmath>
+#include <limits>
 #include <glm/glm.hpp>
 
 namespace cutum
 {
+
+/// Sentinel for APIs that optionally target a vertical chunk slice. Valid
+/// chunk coordinates may be negative, so -1 cannot safely mean "unspecified".
+inline constexpr int kNoChunkSlice = std::numeric_limits<int>::min();
+inline constexpr int kWholeColumnChunkSlice = kNoChunkSlice + 1;
 
 int FloorDiv(int a, int b);
 int PositiveMod(int a, int b);

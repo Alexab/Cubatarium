@@ -7,6 +7,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
+#include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 
@@ -269,9 +270,64 @@ static void TestExpandedOceanDepthProfile()
   FluidTest::Expect(newCoastDepth >= 24.0f, kTestName,
                     "coastal ocean floors are deep enough for a broad shelf");
   FluidTest::Expect(defaultSettings.SeaLevel == newSeaLevel &&
+                        defaultSettings.MinHeight == -64 &&
                         defaultSettings.MaxHeight == newMaxHeight,
                     kTestName,
-                    "default world settings use the expanded vertical range");
+                    "default world settings use the full modern vertical range");
+  FluidTest::Expect(defaultSettings.BedrockTopY == -64, kTestName,
+                    "bedrock floor is anchored to the new world minimum");
+  const cutum::WorldVerticalProfile vertical =
+      defaultSettings.GetVerticalProfile();
+  FluidTest::Expect(vertical.IsValid() && vertical.MinY == -64 &&
+                        vertical.MaxY == 319 && vertical.SeaLevelY == 63 &&
+                        vertical.BedrockTopY == -64 &&
+                        vertical.DatumY == cutum::kWorldDatumY &&
+                        vertical.MinChunkY(16) == -4 &&
+                        vertical.MaxChunkY(16) == 19 &&
+                        vertical.ContainsY(-64) && vertical.ContainsY(319) &&
+                        !vertical.ContainsY(-65) && vertical.ClampY(-100) == -64,
+                    kTestName,
+                    "vertical profile centralizes bounds, datum, sea level, and chunk limits");
+}
+
+static void TestNegativeHeightSamplingAndCompactBounds()
+{
+  cutum::ProceduralSettings settings = MakeBalancedSettings();
+  FluidTest::Expect(settings.MinHeight == -64, kTestName,
+                    "overworld profile retains the -64 lower world bound");
+
+  const cutum::UOverworldHeightSampler height_sampler(
+      settings.Seed, settings.SeaLevel, settings.MaxHeight,
+      cutum::HeightPreset::Overworld, settings.Tuning.terrainRoughness,
+      settings.MinHeight);
+  const int surface_y = height_sampler.SurfaceYAt(-19, 37);
+  FluidTest::Expect(surface_y > settings.MinHeight &&
+                        surface_y <= settings.MaxHeight,
+                    kTestName,
+                    "height sampler returns a surface inside world bounds");
+
+  cutum::UDensityFieldSampler density_sampler(
+      settings.Seed, settings.SeaLevel, settings.MaxHeight,
+      settings.Tuning.terrainRoughness, cutum::DensityFieldParams{},
+      settings.Caves, settings.MinHeight);
+  FluidTest::Expect(density_sampler.SampleTerrainDensity(-19, -64, 37) > 0.0f,
+                    kTestName,
+                    "stone terrain density extends through the lower world");
+  FluidTest::Expect(density_sampler.SurfaceYAt(-19, 37) > settings.MinHeight,
+                    kTestName,
+                    "density surface scan includes negative Y samples");
+
+  cutum::ProceduralSettings compact;
+  compact.Generator = cutum::ProceduralGenerator::Flat;
+  compact.MinHeight = 0;
+  compact.MaxHeight = 15;
+  FluidTest::Expect(compact.MinHeight == 0 && compact.MaxHeight == 15,
+                    kTestName,
+                    "compact generator keeps its independent 0..15 bounds");
+  FluidTest::Expect(compact.GetVerticalProfile().MinChunkY(16) == 0 &&
+                        compact.GetVerticalProfile().MaxChunkY(16) == 0,
+                    kTestName,
+                    "compact profile maps its bounds into the correct chunk band");
 }
 
 } // namespace
@@ -288,6 +344,7 @@ int main()
   TestCoastRampMonotonic();
   TestCoastSandMatchesRamp();
   TestExpandedOceanDepthProfile();
+  TestNegativeHeightSamplingAndCompactBounds();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

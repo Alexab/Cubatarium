@@ -197,19 +197,20 @@ int MaxLevelFromNeighbor(const FluidCellState &neighbor_state,
 
 bool HorizontalSpreadAllowed(const UBlockWorld &blockWorld,
                              const UBlockDefinitionStorage &definitions,
-                             glm::ivec3 block_pos)
+                             glm::ivec3 block_pos, int min_world_y)
 {
   const glm::ivec3 below(block_pos.x, block_pos.y - 1, block_pos.z);
-  return below.y < 0 ||
+  return below.y < min_world_y ||
          !UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, below);
 }
 
 bool SpreadDownWouldChange(const UBlockWorld &blockWorld,
                            const UBlockDefinitionStorage &definitions,
-                           glm::ivec3 block_pos, BlockId fluid_id)
+                           glm::ivec3 block_pos, BlockId fluid_id,
+                           int min_world_y)
 {
   const glm::ivec3 below(block_pos.x, block_pos.y - 1, block_pos.z);
-  if (below.y < 0 ||
+  if (below.y < min_world_y ||
       !UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, below))
   {
     return false;
@@ -229,7 +230,11 @@ bool SpreadDownWouldChange(const UBlockWorld &blockWorld,
     return LevelFromState(current_below) <
            LevelFromState(stored_below);
   }
-  return (!replace_below || below_id == fluid_id) &&
+  if (replace_below)
+  {
+    return true;
+  }
+  return below_id == fluid_id &&
          (current_below.Level != stored_below.Level ||
           current_below.Falling != stored_below.Falling ||
           current_below.IsSource() != stored_below.IsSource() ||
@@ -238,7 +243,8 @@ bool SpreadDownWouldChange(const UBlockWorld &blockWorld,
 
 bool HasOutboundSpreadTarget(const UBlockWorld &blockWorld,
                              const UBlockDefinitionStorage &definitions,
-                             glm::ivec3 block_pos, BlockId fluid_id)
+                             glm::ivec3 block_pos, BlockId fluid_id,
+                             int min_world_y)
 {
   static constexpr std::array<glm::ivec3, 6> kDirs = {
       glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
@@ -246,6 +252,10 @@ bool HasOutboundSpreadTarget(const UBlockWorld &blockWorld,
   for (const glm::ivec3 &offset : kDirs)
   {
     const glm::ivec3 neighbor_pos = block_pos + offset;
+    if (neighbor_pos.y < min_world_y)
+    {
+      continue;
+    }
     if (!UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions,
                                              neighbor_pos))
     {
@@ -312,7 +322,8 @@ bool StoredFluidWouldMatchCurrent(
 
 bool TransformWouldChange(const UBlockWorld &blockWorld,
                             const UBlockDefinitionStorage &definitions,
-                            glm::ivec3 block_pos, int sea_level)
+                            glm::ivec3 block_pos, int sea_level,
+                            int min_world_y)
 {
   const BlockId block_id = blockWorld.GetBlock(block_pos);
   const bool is_liquid = IsLiquidId(definitions, block_id);
@@ -373,12 +384,13 @@ bool TransformWouldChange(const UBlockWorld &blockWorld,
 
   const glm::ivec3 below(block_pos.x, block_pos.y - 1, block_pos.z);
   const bool below_floodable =
-      below.y >= 0 &&
+      below.y >= min_world_y &&
       UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, below);
   const bool flowing_down = below_floodable;
 
   if (is_liquid && below_floodable &&
-      SpreadDownWouldChange(blockWorld, definitions, block_pos, fluid_id))
+      SpreadDownWouldChange(blockWorld, definitions, block_pos, fluid_id,
+                            min_world_y))
   {
     return true;
   }
@@ -414,14 +426,15 @@ bool TransformWouldChange(const UBlockWorld &blockWorld,
       continue;
     }
     if (is_liquid && kAxes[i] == NeighborAxis::Horizontal &&
-        !HorizontalSpreadAllowed(blockWorld, definitions, block_pos))
+        !HorizontalSpreadAllowed(blockWorld, definitions, block_pos,
+                                 min_world_y))
     {
       continue;
     }
     const glm::ivec3 side_below(neighbor_pos.x, neighbor_pos.y - 1,
                                 neighbor_pos.z);
     if (is_liquid && kAxes[i] == NeighborAxis::Horizontal &&
-        side_below.y >= 0 &&
+        side_below.y >= min_world_y &&
         UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, side_below))
     {
       continue;
@@ -483,7 +496,8 @@ bool TransformWouldChange(const UBlockWorld &blockWorld,
     {
       const int current_wet = LevelFromState(current_state);
       if (current_state.HasExplicitKind() && current_wet > 0 &&
-          HasOutboundSpreadTarget(blockWorld, definitions, block_pos, fluid_id))
+          HasOutboundSpreadTarget(blockWorld, definitions, block_pos, fluid_id,
+                                  min_world_y))
       {
         return false;
       }
@@ -529,7 +543,7 @@ bool TransformWouldChange(const UBlockWorld &blockWorld,
 FluidSpreadStats UFluidTransformSim::TickBlock(
     UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
     uint64_t physics_tick, glm::ivec3 block_pos, int sea_level,
-    bool shadow_mode)
+    bool shadow_mode, int min_world_y)
 {
   FluidSpreadStats stats;
   ++stats.Candidates;
@@ -598,7 +612,7 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
 
   const glm::ivec3 below(block_pos.x, block_pos.y - 1, block_pos.z);
   const bool below_floodable =
-      below.y >= 0 &&
+      below.y >= min_world_y &&
       UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, below);
   const bool flowing_down = below_floodable;
 
@@ -607,7 +621,8 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
                                                  spread_period))
   {
     const FluidCellState below_state = FluidCellState::Flowing(1, true);
-    if (SpreadDownWouldChange(blockWorld, definitions, block_pos, fluid_id))
+    if (SpreadDownWouldChange(blockWorld, definitions, block_pos, fluid_id,
+                              min_world_y))
     {
       UFluidFillPolicy::ApplyFluidFill(blockWorld, definitions, below, fluid_id,
                                        below_state);
@@ -658,14 +673,15 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
       continue;
     }
     if (is_liquid && kAxes[i] == NeighborAxis::Horizontal &&
-        !HorizontalSpreadAllowed(blockWorld, definitions, block_pos))
+        !HorizontalSpreadAllowed(blockWorld, definitions, block_pos,
+                                 min_world_y))
     {
       continue;
     }
     const glm::ivec3 side_below(neighbor_pos.x, neighbor_pos.y - 1,
                                 neighbor_pos.z);
     if (is_liquid && kAxes[i] == NeighborAxis::Horizontal &&
-        side_below.y >= 0 &&
+        side_below.y >= min_world_y &&
         UFluidFillPolicy::CanReceiveFluid(blockWorld, definitions, side_below))
     {
       continue;
@@ -737,7 +753,8 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
     {
       const int current_wet = LevelFromState(current_state);
       if (current_state.HasExplicitKind() && current_wet > 0 &&
-          HasOutboundSpreadTarget(blockWorld, definitions, block_pos, fluid_id))
+          HasOutboundSpreadTarget(blockWorld, definitions, block_pos, fluid_id,
+                                  min_world_y))
       {
         return stats;
       }
@@ -791,9 +808,10 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
 
 bool UFluidTransformSim::HasSpreadTarget(
     const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
-    glm::ivec3 block_pos)
+    glm::ivec3 block_pos, int min_world_y)
 {
-  return TransformWouldChange(blockWorld, definitions, block_pos, -1);
+  return TransformWouldChange(blockWorld, definitions, block_pos, -1,
+                               min_world_y);
 }
 
 } // namespace cutum

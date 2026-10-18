@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Render/Mesh/ChunkMeshFace.h"
+#include "World/Math/GridMath.h"
 // BUDGET_MS: 0.0
 // R06 field: when first drawable coverage publishes, remesh sea/subsea seams.
 // Drawable stays out of InputsStillValid stamp (ADR Strategy A).
@@ -69,9 +70,10 @@ inline bool ShouldRemeshSeaSeamOnFirstDrawable(int chunk_cy, int sea_cy,
 }
 
 /// Inland / air-near-fluid surface: sea_level - CHUNK .. sea+2*CHUNK.
-inline int SeaSeamRemeshMinYSurface(int sea_level, int chunk_size)
+inline int SeaSeamRemeshMinYSurface(int sea_level, int chunk_size,
+                                    int min_height = 0)
 {
-  return std::max(0, sea_level - chunk_size);
+  return std::max(min_height, sea_level - chunk_size);
 }
 
 inline int SeaSeamRemeshMaxYSurface(int sea_level, int chunk_size,
@@ -84,53 +86,58 @@ inline int SeaSeamRemeshMaxYSurface(int sea_level, int chunk_size,
 inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
                                            int max_height, int publisher_cy,
                                            SeaSeamEyeContext ctx,
-                                           int &out_min_y, int &out_max_y)
+                                           int &out_min_y, int &out_max_y,
+                                           int min_height = 0)
 {
   if (SeaSeamEyeUsesUnderwaterBand(ctx))
   {
-    out_min_y = std::max(0, publisher_cy * chunk_size);
+    out_min_y = std::max(min_height, publisher_cy * chunk_size);
     out_max_y =
         std::min(max_height, (publisher_cy + 1) * chunk_size - 1);
     return;
   }
-  out_min_y = SeaSeamRemeshMinYSurface(sea_level, chunk_size);
+  out_min_y = SeaSeamRemeshMinYSurface(sea_level, chunk_size, min_height);
   out_max_y = SeaSeamRemeshMaxYSurface(sea_level, chunk_size, max_height);
 }
 
 inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
                                            int max_height, int publisher_cy,
                                            bool underwater_wide,
-                                           int &out_min_y, int &out_max_y)
+                                           int &out_min_y, int &out_max_y,
+                                           int min_height = 0)
 {
   SeaSeamRemeshYRangeForPublisher(
       sea_level, chunk_size, max_height, publisher_cy,
       underwater_wide ? SeaSeamEyeContext::Underwater
                       : SeaSeamEyeContext::Inland,
-      out_min_y, out_max_y);
+      out_min_y, out_max_y, min_height);
 }
 
 /// Chunks dirtied per peer column when include_horizontal_neighbors=false.
 inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
                                            int max_height, int publisher_cy,
-                                           SeaSeamEyeContext ctx)
+                                           SeaSeamEyeContext ctx,
+                                           int min_height = 0)
 {
   int min_y = 0;
   int max_y = 0;
   SeaSeamRemeshYRangeForPublisher(sea_level, chunk_size, max_height,
-                                 publisher_cy, ctx, min_y, max_y);
-  const int cy0 = min_y / chunk_size;
-  const int cy1 = max_y / chunk_size;
+                                 publisher_cy, ctx, min_y, max_y, min_height);
+  const int cy0 = FloorDiv(min_y, chunk_size);
+  const int cy1 = FloorDiv(max_y, chunk_size);
   return std::max(0, cy1 - cy0 + 1);
 }
 
 inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
                                            int max_height, int publisher_cy,
-                                           bool underwater_wide)
+                                           bool underwater_wide,
+                                           int min_height = 0)
 {
   return SeaSeamRemeshChunksPerPeerColumn(
       sea_level, chunk_size, max_height, publisher_cy,
       underwater_wide ? SeaSeamEyeContext::Underwater
-                      : SeaSeamEyeContext::Inland);
+                      : SeaSeamEyeContext::Inland,
+      min_height);
 }
 
 /// Shell face index on peer looking back at publisher (ChunkMeshSnapshot faces).

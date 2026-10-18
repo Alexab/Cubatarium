@@ -69,7 +69,8 @@ using BiomeWeightSet = BiomeBlend;
 
 BiomeHeightProfile BiomeHeightProfileFor(BiomeId biome);
 int ApplyBiomeHeightProfile(int coarseY, int seaLevel, int maxHeight,
-                            const BiomeHeightProfile &profile);
+                            const BiomeHeightProfile &profile,
+                            int minHeight = 0);
 using CoarseHeightCallback = std::function<int(int, int)>;
 
 int RefineSurfaceYWithBiomes(int x, int z, int coarseY,

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "WorldGen/Features/CaveCarver.h"
+#include "World/Math/WorldVerticalProfile.h"
 
 namespace cutum
 {
@@ -90,9 +91,10 @@ struct ProceduralSettings
   std::string SeedText;
   WorldSeedKind SeedKind{WorldSeedKind::Numeric};
   WorldSeedHashAlgo SeedHashAlgo{WorldSeedHashAlgo::Fnv1a32};
-  int SeaLevel{63};
-  int MaxHeight{319};
-  int BedrockTopY{0};
+  int SeaLevel{kDefaultWorldSeaLevelY};
+  int MinHeight{kDefaultWorldMinY};
+  int MaxHeight{kDefaultWorldMaxY};
+  int BedrockTopY{kDefaultWorldMinY};
   std::string WorldGenPackId{"default"};
   std::string WorldGenPresetId{"balanced"};
   // Profile 1 preserves historical pack interpretation; profile 2 adds the
@@ -129,6 +131,12 @@ struct ProceduralSettings
   RavineParams Ravines;
   WorldGenTuning Tuning;
   TerrainBackend TerrainBackendMode{TerrainBackend::Heightmap};
+
+  WorldVerticalProfile GetVerticalProfile() const
+  {
+    return WorldVerticalProfile(MinHeight, MaxHeight, SeaLevel, BedrockTopY,
+                                kWorldDatumY);
+  }
 };
 
 float ClampTuningValue(float value);

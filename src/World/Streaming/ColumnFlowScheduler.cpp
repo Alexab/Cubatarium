@@ -14,7 +14,7 @@ void UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
   item.kind = kind;
   item.priority = priority;
   item.scan_full_focus = false;
-  item.cy = -1;
+  item.cy = kColumnWorkWholeRemeshBandCy;
   Enqueue(item);
 }
 
@@ -52,7 +52,10 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
     // Keep the higher priority; prefer a concrete cy (>=0) over whole-band.
     ColumnWorkItem refreshed = item;
     refreshed.priority = std::max(old.priority, item.priority);
-    if (old.cy >= 0 && item.cy < 0)
+    if ((IsConcreteColumnWorkCy(old.cy) &&
+         !IsConcreteColumnWorkCy(item.cy)) ||
+        (old.cy == kColumnWorkWholeColumnCy &&
+         item.cy == kColumnWorkWholeRemeshBandCy))
     {
       refreshed.cy = old.cy;
     }

@@ -179,9 +179,9 @@ bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
 }
 
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
-                         int x, int z, int maxY)
+                         int x, int z, int maxY, int minY)
 {
-  for (int y = std::max(1, maxY); y >= 1; --y)
+  for (int y = maxY; y >= minY; --y)
   {
     const glm::ivec3 ground(x, y, z);
     if (!IsSolidPlantGround(world, registry, ground))
@@ -298,12 +298,13 @@ bool HasTreeVegetationInFootprint(const UBlockWorld &world,
 PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               UBlockRegistry &registry, int x,
                                               int z, int heightmapSurfaceY,
-                                              int maxHeight, int seaLevel)
+                                              int maxHeight, int seaLevel,
+                                              int minHeight)
 {
   PlacementSurfaceInfo info;
   info.maxScanY = ComputeMaxScanY(heightmapSurfaceY, seaLevel, maxHeight);
   info.topSolidY =
-      FindTopSolidSurfaceY(world, registry, x, z, info.maxScanY);
+      FindTopSolidSurfaceY(world, registry, x, z, info.maxScanY, minHeight);
   if (info.topSolidY < seaLevel + WorldGenPlacementTuning::MinLandAboveSea)
   {
     info.topSolidY = -1;

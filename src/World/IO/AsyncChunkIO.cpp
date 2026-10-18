@@ -551,7 +551,7 @@ void UAsyncChunkIO::RequestRemoveChunkSlices(
 }
 
 void UAsyncChunkIO::RequestRemoveTerrainColumn(
-    glm::ivec3 groundCoord, const int maxWorldY,
+    glm::ivec3 groundCoord, const int maxWorldY, const int minWorldY,
     UChunkStorageService &storage, const std::string &worldFolder)
 {
   if (groundCoord.y != 0)
@@ -560,11 +560,11 @@ void UAsyncChunkIO::RequestRemoveTerrainColumn(
   }
   EnqueueStorageCleanup(
       groundCoord, groundCoord, storage, worldFolder, "full_column", -1,
-      [groundCoord, maxWorldY](UChunkStorageService &worker_storage,
+      [groundCoord, maxWorldY, minWorldY](UChunkStorageService &worker_storage,
                                const std::string &folder, std::string &error)
       {
         return worker_storage.RemoveTerrainColumnFromDisk(
-            folder, groundCoord, maxWorldY, &error);
+            folder, groundCoord, maxWorldY, &error, minWorldY);
       });
 }
 

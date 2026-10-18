@@ -166,6 +166,24 @@ int main()
   {
     return Fail("surface remesh min y");
   }
+  {
+    int min_y = 0;
+    int max_y = 0;
+    cutum::SeaSeamRemeshYRangeForPublisher(
+        63, 16, 319, /*publisher_cy=*/-4,
+        cutum::SeaSeamEyeContext::Underwater, min_y, max_y,
+        /*min_height=*/-64);
+    if (min_y != -64 || max_y != -49)
+    {
+      return Fail("negative-Y underwater remesh targets its signed chunk");
+    }
+    if (cutum::SeaSeamRemeshChunksPerPeerColumn(
+            63, 16, 319, -4,
+            cutum::SeaSeamEyeContext::Underwater, -64) != 1)
+    {
+      return Fail("negative-Y seam range counts one chunk slice");
+    }
+  }
   // E0/E2: underwater Y is publisher_cy only (not sea-4*CHUNK flood).
   {
     int min_y = 0;

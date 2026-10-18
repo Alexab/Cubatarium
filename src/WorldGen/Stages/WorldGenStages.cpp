@@ -34,7 +34,8 @@ MakeAquiferSealSampler(const WorldGenContext &ctx)
   }
   return UAquiferSampler(ctx.Settings.Seed, ctx.Settings.SeaLevel,
                          ctx.Settings.MaxHeight,
-                         UWorldGenPack::AquifersConfig());
+                         UWorldGenPack::AquifersConfig(),
+                         ctx.Settings.MinHeight);
 }
 
 bool AllowsAquiferWater(const UAquiferSampler *sampler, glm::ivec3 pos,
@@ -173,18 +174,20 @@ int AdjustSurfaceYForSpawnIsland(int worldX, int worldZ, int naturalSurfaceY,
   (void)worldZ;
   (void)centerX;
   (void)centerZ;
-  return std::clamp(naturalSurfaceY, 1, settings.MaxHeight);
+  return std::clamp(naturalSurfaceY, settings.MinHeight + 1,
+                    settings.MaxHeight);
 }
 
 void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const ColumnLayerRule &rule)
 {
-  if (surfaceY < 1)
+  if (surfaceY < ctx.Settings.MinHeight + 1)
   {
     return;
   }
-  const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY, 0, surfaceY);
-  for (int y = 0; y <= surfaceY; ++y)
+  const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY,
+                                    ctx.Settings.MinHeight, surfaceY);
+  for (int y = ctx.Settings.MinHeight; y <= surfaceY; ++y)
   {
     BlockId Id = rule.fillerBlock;
     if (y <= bedrockTop)
@@ -210,13 +213,14 @@ void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
     ctx.World.SetBlock(glm::ivec3(x, y, z), Id);
   }
   const int maxY = std::max(surfaceY, ctx.Settings.SeaLevel);
-  ctx.AccumulateDirtyColumn(0, maxY);
+  ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, maxY);
 }
 
 bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                         uint32_t seed)
 {
-  if (ctx.Blocks.Stone == BLOCK_AIR || surfaceY < 1)
+  if (ctx.Blocks.Stone == BLOCK_AIR ||
+      surfaceY < ctx.Settings.MinHeight + 1)
   {
     return false;
   }
@@ -237,7 +241,7 @@ bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
   int min_dirty = surfaceY;
   int max_dirty = 0;
 
-  for (int y = 1; y <= surfaceY; ++y)
+  for (int y = ctx.Settings.MinHeight; y <= surfaceY; ++y)
   {
     const glm::ivec3 pos(x, y, z);
     if (ctx.World.GetBlock(pos) != ctx.Blocks.Stone)
@@ -303,7 +307,7 @@ bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
 
   const int scan_top = std::min(surfaceY - 1, ctx.Settings.MaxHeight - 1);
   bool changed = false;
-  for (int y = 1; y <= scan_top; ++y)
+  for (int y = ctx.Settings.MinHeight; y <= scan_top; ++y)
   {
     const glm::ivec3 pos(x, y, z);
     if (ctx.World.GetBlock(pos) != BLOCK_AIR)
@@ -342,7 +346,7 @@ bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
   if (changed)
   {
-    ctx.AccumulateDirtyColumn(1, scan_top);
+    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, scan_top);
   }
   return changed;
 }
@@ -354,9 +358,11 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
     return;
   }
   const int sea = ctx.Settings.SeaLevel;
-  const int maxScanY = std::max(1, ctx.Settings.MaxHeight - 1);
+  const int maxScanY = std::max(ctx.Settings.MinHeight + 1,
+                                ctx.Settings.MaxHeight - 1);
   const int topSolid =
-      FindTopSolidSurfaceY(ctx.World, ctx.Registry, x, z, maxScanY);
+      FindTopSolidSurfaceY(ctx.World, ctx.Registry, x, z, maxScanY,
+                           ctx.Settings.MinHeight);
   const int fillBase = topSolid >= 0 ? topSolid : surfaceY;
   if (fillBase >= sea)
   {
@@ -401,12 +407,12 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
   }
   const int filled = UFluidSpreadSystem::FloodWetPocketsInBox(
       ctx.World, *definitions,
-      glm::ivec3(base_x, 1, base_z),
+      glm::ivec3(base_x, ctx.Settings.MinHeight, base_z),
       glm::ivec3(base_x + CHUNK_SIZE - 1, sea, base_z + CHUNK_SIZE - 1),
       options);
   if (filled > 0)
   {
-    ctx.AccumulateDirtyColumn(0, sea);
+    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, sea);
   }
   return filled > 0;
 }
@@ -446,7 +452,7 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
   for (int pass = 0; pass < 2; ++pass)
   {
     bool changed = false;
-    for (int y = 1; y <= sea; ++y)
+    for (int y = ctx.Settings.MinHeight; y <= sea; ++y)
     {
       for (int x = min_x; x <= max_x; ++x)
       {
@@ -481,7 +487,7 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
   }
   if (any)
   {
-    ctx.AccumulateDirtyColumn(0, sea);
+    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, sea);
   }
   return any;
 }
@@ -515,8 +521,8 @@ bool IsWaterColumnSlotBlock(const WorldGenContext &ctx, UBlockRegistry &registry
 
 int FindWaterColumnFloorY(const WorldGenContext &ctx, int x, int z, int sea)
 {
-  int floor_y = -1;
-  for (int y = 1; y < sea; ++y)
+  int floor_y = ctx.Settings.MinHeight - 1;
+  for (int y = ctx.Settings.MinHeight; y < sea; ++y)
   {
     const glm::ivec3 ground(x, y, z);
     if (!IsSolidPlantGround(ctx.World, ctx.Registry, ground))
@@ -590,7 +596,7 @@ bool RestoreWaterColumnCell(WorldGenContext &ctx, glm::ivec3 pos, int floor_y,
 bool WaterlogCoastalPermeableStack(WorldGenContext &ctx, int x, int z,
                                    int floor_y, int sea)
 {
-  if (floor_y < 0 || floor_y >= sea)
+  if (floor_y < ctx.Settings.MinHeight || floor_y >= sea)
   {
     return false;
   }
@@ -626,7 +632,7 @@ bool WaterlogCoastalPermeableStack(WorldGenContext &ctx, int x, int z,
 bool RestoreWaterColumnAt(WorldGenContext &ctx, int x, int z, int sea)
 {
   const int floor_y = FindWaterColumnFloorY(ctx, x, z, sea);
-  if (floor_y < 0 || floor_y >= sea)
+  if (floor_y < ctx.Settings.MinHeight || floor_y >= sea)
   {
     return false;
   }
@@ -667,7 +673,7 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
   }
   if (any_filled)
   {
-    ctx.AccumulateDirtyColumn(0, sea + 8);
+    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, sea + 8);
   }
   return any_filled;
 }
@@ -748,7 +754,7 @@ int LegacyHashSurfaceY(int x, int z, const ProceduralSettings &settings)
   const int range = std::max(1, settings.MaxHeight - settings.SeaLevel);
   const int surfaceY =
       LegacyHeightAt(x, z, settings.Seed, settings.SeaLevel, range);
-  return std::clamp(surfaceY, 1, settings.MaxHeight);
+  return std::clamp(surfaceY, settings.MinHeight + 1, settings.MaxHeight);
 }
 
 void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
@@ -766,10 +772,10 @@ void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
   const int naturalY = LegacyHashSurfaceY(x, z, ctx.Settings);
   const int surfaceY = naturalY;
 
-  for (int y = 0; y <= surfaceY; ++y)
+  for (int y = ctx.Settings.MinHeight; y <= surfaceY; ++y)
   {
     BlockId Id = stone;
-    if (y == 0)
+    if (y <= ctx.Settings.BedrockTopY)
     {
       Id = bedrock;
     }
@@ -788,7 +794,7 @@ void FillLegacyHashColumn(WorldGenContext &ctx, int x, int z)
     ctx.World.SetBlock(glm::ivec3(x, y, z), Id);
   }
   FillFluidColumn(ctx, x, z, surfaceY);
-  ctx.AccumulateDirtyColumn(0, surfaceY);
+  ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, surfaceY);
 }
 
 void FillFlatColumn(WorldGenContext &ctx, int x, int z)
@@ -803,7 +809,7 @@ void FillFlatColumn(WorldGenContext &ctx, int x, int z)
   ctx.World.SetBlock(glm::ivec3(x, 1, z), ctx.Blocks.Stone);
   ctx.World.SetBlock(glm::ivec3(x, 2, z), ctx.Blocks.Stone);
   ctx.World.SetBlock(glm::ivec3(x, surfaceY, z), ctx.Blocks.Grass);
-  ctx.AccumulateDirtyColumn(0, surfaceY);
+  ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, surfaceY);
 }
 
 } // namespace cutum

@@ -105,11 +105,30 @@ void TestAquiferRegionsAndDeterminism()
   Expect(changed_by_seed, "aquifer distribution depends on the world seed");
 }
 
+void TestNegativeWorldRange()
+{
+  cutum::AquiferParams params;
+  params.DryCellChance = 0.0f;
+  params.LavaCellChance = 0.0f;
+  params.BarrierBand = 0.0f;
+  const cutum::UAquiferSampler sampler(91427, 63, 319, params, -64);
+  const cutum::AquiferSample inside = sampler.SampleAt(12, -32, -7);
+  const cutum::AquiferSample bottom = sampler.SampleAt(12, -64, -7);
+  const cutum::AquiferSample below = sampler.SampleAt(12, -65, -7);
+  Expect(inside.Fluid == cutum::AquiferFluid::Water,
+         "aquifer fluid sampling works at negative world heights");
+  Expect(bottom.Fluid == cutum::AquiferFluid::Water,
+         "aquifer includes the lowest supported block");
+  Expect(below.Fluid == cutum::AquiferFluid::Dry,
+         "aquifer rejects samples below the world minimum");
+}
+
 } // namespace
 
 int main()
 {
   TestAquiferRegionsAndDeterminism();
+  TestNegativeWorldRange();
   std::cout << kTestName << ": OK\n";
   return 0;
 }

@@ -37,7 +37,7 @@ bool CanPlacePlantAt(const UBlockWorld &world, UBlockRegistry &registry,
 bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
                           int x, int z, int surfaceY);
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
-                         int x, int z, int maxY);
+                         int x, int z, int maxY, int minY = 0);
 
 struct PlacementSurfaceInfo
 {
@@ -48,7 +48,8 @@ struct PlacementSurfaceInfo
 PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               UBlockRegistry &registry, int x,
                                               int z, int heightmapSurfaceY,
-                                              int maxHeight, int seaLevel);
+                                              int maxHeight, int seaLevel,
+                                              int minHeight = 0);
 
 bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 pos);

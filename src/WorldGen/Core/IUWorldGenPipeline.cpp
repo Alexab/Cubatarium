@@ -106,7 +106,7 @@ glm::vec3 IUWorldGenPipeline::ResolvePlayerSpawnPosition(
     const int heightmap_y = SurfaceYAt(candidate.x, candidate.z);
     const PlacementSurfaceInfo surface = ResolvePlacementSurfaceY(
         world, registry, candidate.x, candidate.z, heightmap_y,
-        settings.MaxHeight, settings.SeaLevel);
+        settings.MaxHeight, settings.SeaLevel, settings.MinHeight);
     if (surface.topSolidY < 0)
     {
       continue;

@@ -156,15 +156,18 @@ void ApplyGeneratorHeightDefaults(ProceduralSettings &s)
       s.Generator == ProceduralGenerator::Heightmap;
   if (compactGenerator)
   {
+    s.MinHeight = 0;
     s.SeaLevel = 5;
     s.MaxHeight = 15;
   }
   else
   {
-    // Use the Minecraft 1.18+ sea datum and a taller supported vertical range.
+    // Use the Minecraft 1.18+ vertical range and sea datum for new worlds.
+    s.MinHeight = -64;
     s.SeaLevel = 63;
     s.MaxHeight = 319;
   }
+  s.BedrockTopY = s.MinHeight;
 }
 
 } // namespace
@@ -208,6 +211,7 @@ void ResolveProceduralDefaults(ProceduralSettings &s)
       s.Generator == ProceduralGenerator::Heightmap;
   if (compactGenerator)
   {
+    s.MinHeight = 0;
     if (s.MaxHeight <= 0 || s.MaxHeight > 15)
     {
       s.MaxHeight = (s.MaxHeight > 15) ? 15 : 15;
@@ -221,19 +225,21 @@ void ResolveProceduralDefaults(ProceduralSettings &s)
   }
   else
   {
+    s.MinHeight = std::clamp(s.MinHeight, -64, 0);
     if (s.MaxHeight <= 0)
     {
       s.MaxHeight = 319;
     }
-    s.MaxHeight = std::clamp(s.MaxHeight, 16, 319);
+    s.MaxHeight = std::clamp(s.MaxHeight, s.MinHeight + 16, 319);
     if (s.SeaLevel <= 0)
     {
       s.SeaLevel = 63;
     }
-    s.SeaLevel = std::clamp(s.SeaLevel, 4, s.MaxHeight - 4);
+    s.SeaLevel = std::clamp(s.SeaLevel, s.MinHeight + 4, s.MaxHeight - 4);
   }
-  s.FlatSurfaceY = std::clamp(s.FlatSurfaceY, 1, s.MaxHeight);
-  s.BedrockTopY = std::clamp(s.BedrockTopY, 0, s.MaxHeight);
+  s.FlatSurfaceY = std::clamp(s.FlatSurfaceY, s.MinHeight + 1, s.MaxHeight);
+  s.BedrockTopY = std::clamp(s.BedrockTopY, s.MinHeight, s.MaxHeight);
+  s.Caves.minY = std::clamp(s.Caves.minY, s.MinHeight, s.MaxHeight);
   ClampTuning(s.Tuning);
 }
 

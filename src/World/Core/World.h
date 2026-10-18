@@ -26,6 +26,7 @@
 #include "Game/WorldGameMode.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Math/CollisionVolume.h"
+#include "World/Math/GridMath.h"
 #include "World/Physics/PhysicsProfile.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/ColumnEmergeState.h"
@@ -1216,11 +1217,12 @@ public:
   int AdmitFocusMeshIngress(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
   /// If only_column is set, prefer that column first (V4 ColumnFlowExecutor).
-  /// only_cy >= 0 restricts MarkMissing to that slice (exact-slice FirstMesh).
+  /// A concrete signed cy restricts MarkMissing to that slice. kNoChunkSlice
+  /// scans the remesh band; kWholeColumnChunkSlice scans the full world height.
   int AdmitFocusVisibleMissing(int max_columns = 8,
                                glm::vec2 forward_xz = glm::vec2(0.0f),
                                const glm::ivec2 *only_column = nullptr,
-                               int only_cy = -1);
+                               int only_cy = kNoChunkSlice);
   /// R3 M4: ColumnFlow-owned MarkDirty — scan only; marks applied in ColumnFlow.
   void ClearAdmitFocusMarkBuffer();
   const std::vector<AdmitFocusMarkRange> &GetAdmitFocusMarkBuffer() const

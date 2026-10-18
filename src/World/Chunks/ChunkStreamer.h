@@ -109,7 +109,7 @@ public:
   using IsColumnPendingLightFn = std::function<bool(glm::ivec3)>;
 
   UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry, uint32_t Seed,
-                 int baseY, int MaxHeight);
+                 int baseY, int MaxHeight, int MinHeight);
 
   void SetWorldFolder(const std::string &path);
   void SetCallbacks(LoadChunkFn loadFn, SaveChunkFn saveFn,
@@ -157,6 +157,7 @@ public:
     return std::max(VisualRenderDistance, KeepRenderDistance + UnloadMargin);
   }
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
+  void SetMinTerrainHeight(int height) { MinHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
   void SetMaxKeepPrefetchOpsPerFrame(int value)
@@ -253,6 +254,7 @@ private:
   UBlockRegistry &Registry;
   uint32_t Seed;
   int BaseY;
+  int MinHeight;
   int MaxHeight;
   int VisualRenderDistance{4};
   int KeepRenderDistance{6};

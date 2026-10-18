@@ -56,9 +56,10 @@ float Smoothstep01(float value)
 } // namespace
 
 UAquiferSampler::UAquiferSampler(uint32_t seed, int seaLevel, int maxHeight,
-                                 AquiferParams params)
+                                 AquiferParams params, int minHeight)
     : Seed(seed), SeaLevel(std::max(4, seaLevel)),
-      MaxHeight(std::max(SeaLevel + 4, maxHeight)), Params(params)
+      MaxHeight(std::max(SeaLevel + 4, maxHeight)), MinHeight(minHeight),
+      Params(params)
 {
   Params.CellSizeX = std::clamp(Params.CellSizeX, 8, 64);
   Params.CellSizeY = std::clamp(Params.CellSizeY, 8, 48);
@@ -72,7 +73,8 @@ UAquiferSampler::UAquiferSampler(uint32_t seed, int seaLevel, int maxHeight,
       std::clamp(Params.BarrierNoiseThreshold, -1.0f, 1.0f);
   Params.PressureDifferenceThreshold =
       std::clamp(Params.PressureDifferenceThreshold, 0, 48);
-  Params.LavaMaxY = std::clamp(Params.LavaMaxY, 1, MaxHeight / 2);
+  Params.LavaMaxY =
+      std::clamp(Params.LavaMaxY, MinHeight + 1, MaxHeight / 2);
   Params.LavaCellChance = std::clamp(Params.LavaCellChance, 0.0f, 0.75f);
 }
 
@@ -132,11 +134,11 @@ int UAquiferSampler::FluidLevelForCell(const Cell &cell) const
   }
   if (cell.Fluid == AquiferFluid::Lava)
   {
-    const int lava_span = std::max(1, Params.LavaMaxY - 3);
+    const int lava_span = std::max(1, Params.LavaMaxY - MinHeight);
     return std::clamp(
-        3 + static_cast<int>(CellRandom(cell.CellX, cell.CellY, cell.CellZ, 6u) *
-                             lava_span),
-        1, Params.LavaMaxY);
+        MinHeight + static_cast<int>(CellRandom(cell.CellX, cell.CellY,
+                                                cell.CellZ, 6u) * lava_span),
+        MinHeight, Params.LavaMaxY);
   }
   const float level_noise = FBM3D(
       cell.CenterX * 0.012f, cell.CenterY * 0.022f, cell.CenterZ * 0.012f,
@@ -144,12 +146,12 @@ int UAquiferSampler::FluidLevelForCell(const Cell &cell) const
   return std::clamp(
       SeaLevel + Params.WaterLevelOffset +
           static_cast<int>(std::lround(level_noise * Params.WaterLevelAmplitude)),
-      3, std::max(3, std::min(SeaLevel - 2, MaxHeight - 1)));
+      MinHeight, std::max(MinHeight, std::min(SeaLevel - 2, MaxHeight - 1)));
 }
 
 AquiferSample UAquiferSampler::SampleAt(int x, int y, int z) const
 {
-  if (y < 1 || y >= MaxHeight)
+  if (y < MinHeight || y >= MaxHeight)
   {
     return {};
   }

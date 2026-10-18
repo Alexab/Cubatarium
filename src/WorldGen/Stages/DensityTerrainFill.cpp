@@ -13,15 +13,16 @@ void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
                                   const UDensityFieldSampler &sampler,
                                   const UAquiferSampler *aquiferSampler)
 {
-  if (surfaceY < 1)
+  if (surfaceY < ctx.Settings.MinHeight + 1)
   {
     return;
   }
-  const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY, 0, surfaceY);
+  const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY,
+                                    ctx.Settings.MinHeight, surfaceY);
   const UDensityFieldSampler::Column column =
       sampler.PrepareColumn(x, z, surfaceY);
   int maxY = surfaceY;
-  for (int y = 0; y <= ctx.Settings.MaxHeight; ++y)
+  for (int y = ctx.Settings.MinHeight; y <= ctx.Settings.MaxHeight; ++y)
   {
     if (sampler.SampleDensity(column, y) <= 0.0f)
     {
@@ -95,7 +96,7 @@ void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
     maxY = std::max(maxY, y);
   }
   const int dirtyMax = std::max(maxY, ctx.Settings.SeaLevel);
-  ctx.AccumulateDirtyColumn(0, dirtyMax);
+  ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, dirtyMax);
 }
 
 } // namespace cutum

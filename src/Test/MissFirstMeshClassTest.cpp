@@ -358,6 +358,16 @@ int main()
     cutum::FillWaterLateralRemeshBand(true, 3, 64, 256, bmin, bmax, 16);
     Expect(bmin <= 48 && bmax >= 80,
            "Era26 I-O5: FillWater lateral widens sea±CHUNK");
+    int signed_min = 0;
+    int signed_max = -32;
+    cutum::FillWaterLateralRemeshBand(true, 3, -40, 319, signed_min,
+                                      signed_max, 16, -64);
+    Expect(signed_min == -56 && signed_max == -24,
+           "FillWater lateral band respects the negative world floor");
+    const auto deep_surface = cutum::RelightSurfaceBandForColumn(
+        -60, -60, 16, 319, -64, 319, -64);
+    Expect(deep_surface.first == -64 && deep_surface.second == -1,
+           "relight surface band clamps a bottom-world surface to signed bounds");
     int keep_min = 40;
     int keep_max = 50;
     cutum::FillWaterLateralRemeshBand(true, 1, 64, 256, keep_min, keep_max, 16);

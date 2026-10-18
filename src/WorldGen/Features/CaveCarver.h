@@ -16,7 +16,7 @@ enum class CaveStyle
 struct CaveParams
 {
   float threshold{0.64f};
-  int minY{4};
+  int minY{-60};
   int maxDepthBelowSurface{8};
   int minDepthBelowSurface{2};
   int octaves{4};
@@ -39,7 +39,8 @@ struct CaveParams
 bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
                  const CaveParams &params);
 
-bool ShouldCarveWorm(int x, int y, int z, int surfaceY, uint32_t Seed);
+bool ShouldCarveWorm(int x, int y, int z, int surfaceY, uint32_t Seed,
+                     int minY = -60);
 
 void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
                       uint32_t Seed, const CaveParams &params);

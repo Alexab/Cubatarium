@@ -213,8 +213,9 @@ float QueryTerrainSurfaceWorldY(UWorld &world, const glm::vec3 &eye)
   const glm::ivec3 block = WorldPosToBlock(eye);
   const int surface_block_y = FindTopSolidSurfaceY(
       world.GetBlockWorld(), registry, block.x, block.z,
-      world.GetProceduralSettings().MaxHeight);
-  if (surface_block_y < 0)
+      world.GetProceduralSettings().MaxHeight,
+      world.GetProceduralSettings().MinHeight);
+  if (surface_block_y < world.GetProceduralSettings().MinHeight)
   {
     return 0.0f;
   }
@@ -236,8 +237,9 @@ void UWorldStreaming::EnsureStreamer(UBlockWorld &blockWorld,
 {
   if (!Streamer)
   {
-    Streamer = std::make_unique<UChunkStreamer>(blockWorld, registry, seed, 0,
-                                                settings.MaxHeight);
+    Streamer = std::make_unique<UChunkStreamer>(
+        blockWorld, registry, seed, settings.MinHeight, settings.MaxHeight,
+        settings.MinHeight);
     Streamer->SetRingGateEnabled(settings.RingGateEnabled);
   }
 }
@@ -390,12 +392,14 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
         // Mesh gate band = occupied ∪ sea (not 0..MaxHeight — that flooded Dirty
         // and remeshed unlit slices). MarkRelit remeshes lit ∪ pending ∪ sea.
-        int dirty_min = std::max(0, min_y);
+        int dirty_min = std::max(settings.MinHeight, min_y);
         int dirty_max = std::min(settings.MaxHeight, max_y);
         if (settings.FillWater)
         {
           dirty_min =
-              std::min(dirty_min, std::max(0, settings.SeaLevel - CHUNK_SIZE));
+              std::min(dirty_min,
+                       std::max(settings.MinHeight,
+                                settings.SeaLevel - CHUNK_SIZE));
           dirty_max = std::max(
               dirty_max,
               std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
@@ -404,14 +408,16 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         {
           const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
           dirty_min =
-              std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
+              std::min(dirty_min,
+                       std::max(settings.MinHeight,
+                                focus_block.y - CHUNK_SIZE));
           dirty_max = std::max(
               dirty_max,
               std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
         }
         if (dirty_max < dirty_min)
         {
-          dirty_min = 0;
+          dirty_min = settings.MinHeight;
           dirty_max = settings.MaxHeight;
         }
         // Spawn r=4 stays voxels-only until first relight; MeshWarmup hinterland
@@ -425,8 +431,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           // relight time and starved focus throughput.
           const int relight_min =
               settings.FillWater
-                  ? std::max(0, std::min(dirty_min,
-                                         settings.SeaLevel - CHUNK_SIZE * 2))
+                  ? std::max(settings.MinHeight,
+                             std::min(dirty_min,
+                                      settings.SeaLevel - CHUNK_SIZE * 2))
                   : dirty_min;
           // Near focus: mesh gate band + one slice pad for skylight ingress.
           const int relight_max =
@@ -496,7 +503,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               // If relight_min/max is wider than dirty_min/max, SoftDefer can
               // keep finalize_pending_gate=false for too long → pending stuck.
               const int enqueue_relight_min =
-                  std::max(0, dirty_min - 1 /* air-neighbor pad */);
+                  std::max(settings.MinHeight,
+                           dirty_min - 1 /* air-neighbor pad */);
               const int enqueue_relight_max =
                   std::min(settings.MaxHeight, dirty_max + 1 /* air-neighbor pad */);
               if (world.Persistence &&
@@ -571,7 +579,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 relight.kind = ColumnWorkKind::RelightThenMesh;
                 relight.priority = 95;
                 relight.scan_full_focus = false;
-                relight.cy = -1;
+                relight.cy = kColumnWorkWholeRemeshBandCy;
                 exec.Enqueue(relight);
                 if (world.PhysicsTelemetryData.DarkFaceVoidNearN > 200 ||
                     world.PhysicsTelemetryData.FocusMissingMesh != 0)
@@ -673,9 +681,10 @@ bool ColumnBandHasPresentableMesh(const UWorld &world, glm::ivec2 under_xz,
                                   int band_min_y, int band_max_y)
 {
   const UWorldMeshService &mesh = world.GetMeshService();
-  const int max_cy = std::max(
-      0, FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE));
-  const int cy0 = std::max(0, FloorDiv(band_min_y, CHUNK_SIZE));
+  const auto &settings = world.GetProceduralSettings();
+  const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+  const int max_cy = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+  const int cy0 = std::max(min_cy, FloorDiv(band_min_y, CHUNK_SIZE));
   const int cy1 = std::min(max_cy, FloorDiv(band_max_y, CHUNK_SIZE));
   for (int cy = cy0; cy <= cy1; ++cy)
   {
@@ -1299,12 +1308,15 @@ void UWorldStreaming::RefreshStreamingPressure(
           const float max_distance = std::min(
               static_cast<float>((miss_probe_radius + 1) * CHUNK_SIZE),
               192.0f);
-          int cy_scan_lo = 0;
-          int cy_scan_hi = 48;
+          const auto &settings = world.GetProceduralSettings();
+          const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+          const int max_cy = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+          int cy_scan_lo = min_cy;
+          int cy_scan_hi = max_cy;
           if (focus_ground.y > 0)
           {
-            cy_scan_lo = std::max(0, focus_ground.y - 1);
-            cy_scan_hi = std::min(48, focus_ground.y + 1);
+            cy_scan_lo = std::max(min_cy, focus_ground.y - 1);
+            cy_scan_hi = std::min(max_cy, focus_ground.y + 1);
           }
           const auto screen_ray_probe_t0 =
               std::chrono::high_resolution_clock::now();
@@ -1698,7 +1710,8 @@ void UWorldStreaming::RefreshStreamingPressure(
             {
               world.Persistence->EnqueueTerrainColumnRelight(
                   miss_coord.x * CHUNK_SIZE, miss_coord.z * CHUNK_SIZE,
-                  /*priority=*/true, 0, -1, "miss_witness", &world);
+                  /*priority=*/true, world.GetProceduralSettings().MinHeight,
+                  -1, "miss_witness", &world);
             }
             GetColumnFlowExecutor().RequestPromoteRelight(miss_xz, 55);
           }
@@ -1808,9 +1821,11 @@ void UWorldStreaming::RefreshStreamingPressure(
         int column_mesh_dirty_slices = 0;
         int column_mesh_build_slices = 0;
         int column_gpu_pending_slices = 0;
-        const int max_cy = std::max(
-            0, FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE));
-        for (int cy = 0; cy <= max_cy; ++cy)
+        const int max_cy =
+            FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE);
+        for (int cy = FloorDiv(world.GetProceduralSettings().MinHeight,
+                               CHUNK_SIZE);
+             cy <= max_cy; ++cy)
         {
           const glm::ivec3 slice(coord.x, cy, coord.z);
           column_mesh_dirty_slices +=
@@ -1993,7 +2008,9 @@ void UWorldStreaming::RefreshStreamingPressure(
           bool visible_relight_admitted = false;
           if (screen_ray_selected && world.Persistence && !async_before)
           {
-            const int min_world_y = std::max(0, coord.y * CHUNK_SIZE);
+            const int min_world_y = std::max(
+                world.GetProceduralSettings().MinHeight,
+                coord.y * CHUNK_SIZE);
             const int max_world_y = std::min(
                 world.GetProceduralSettings().MaxHeight,
                 min_world_y + CHUNK_SIZE - 1);
@@ -2200,12 +2217,15 @@ void UWorldStreaming::RefreshStreamingPressure(
   {
     incomplete_camera_column =
         !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
-                                world.GetProceduralSettings().MaxHeight);
+                                world.GetProceduralSettings().MaxHeight,
+                                kNoTerrainChunkSlice,
+                                world.GetProceduralSettings().MinHeight);
   }
   pt.PrepRefreshCameraCompleteMs = lap_ms(camera_complete_t0);
   const glm::ivec2 under_xz(focus_horiz.x, focus_horiz.z);
   const auto underfeet_probe_t0 = std::chrono::high_resolution_clock::now();
-  int band_min_y = std::max(0, focus_block.y - CHUNK_SIZE);
+  int band_min_y = std::max(world.GetProceduralSettings().MinHeight,
+                            focus_block.y - CHUNK_SIZE);
   int band_max_y = std::min(world.GetProceduralSettings().MaxHeight,
                             focus_block.y + CHUNK_SIZE * 2);
   const bool missing_underfeet_mesh =
@@ -3258,13 +3278,14 @@ void UWorldStreaming::RefreshStreamingPressure(
         world.GetColumnRenderableState(under_xz);
     bool has_mesh = false;
     bool pending_gpu = false;
-    const int max_cy = std::max(
-        0, FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE));
+    const auto &settings = world.GetProceduralSettings();
+    const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+    const int max_cy = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
     const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-    int band_min = std::max(0, focus_block.y - CHUNK_SIZE);
-    int band_max = std::min(world.GetProceduralSettings().MaxHeight,
+    int band_min = std::max(settings.MinHeight, focus_block.y - CHUNK_SIZE);
+    int band_max = std::min(settings.MaxHeight,
                             focus_block.y + CHUNK_SIZE * 2);
-    int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+    int cy0 = std::max(min_cy, FloorDiv(band_min, CHUNK_SIZE));
     int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
     const bool cruise_clear =
         !in.visual_holes && world.PhysicsTelemetryData.MissHoriz > 2;
@@ -3274,7 +3295,7 @@ void UWorldStreaming::RefreshStreamingPressure(
          world.PhysicsTelemetryData.MissHoriz <= 2);
     if (!cruise_clear || underfeet_safety_full)
     {
-      cy0 = 0;
+      cy0 = min_cy;
       cy1 = max_cy;
     }
     for (int cy = cy0; cy <= cy1; ++cy)
@@ -3611,7 +3632,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         incomplete_camera_column = !complete;
       }
       else if (!IsTerrainChunkComplete(world.BlockWorld, camera_ground,
-                                       procedural.MaxHeight))
+                                       procedural.MaxHeight,
+                                       kNoTerrainChunkSlice,
+                                       procedural.MinHeight))
       {
         incomplete_camera_column = true;
       }
@@ -4104,7 +4127,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       const glm::ivec3 ground(coord.x, 0, coord.z);
       // Shore seal mutates fluid after the first mesh — Dirty sea band.
       // Under Dirty backlog skip seamed fanout (ingress control).
-      const int mesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int mesh_min_y =
+          std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
       const int mesh_max_y =
           std::min(settings.MaxHeight - 1, settings.SeaLevel + CHUNK_SIZE * 2);
       const bool seam =
@@ -4590,7 +4614,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         {
           const glm::ivec3 pin_coord(
               SoftDeferCapturePinCx,
-              SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
+              SoftDeferCapturePinCy != kNoChunkSlice
+                  ? SoftDeferCapturePinCy
+                  : FloorDiv(world.GetPreferredLoadFocusBlock().y,
+                             CHUNK_SIZE),
               SoftDeferCapturePinCz);
           site_a_pin_drawable =
               world.GetMeshService().HasDrawableGreedyMesh(pin_coord);
@@ -4714,7 +4741,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       // on focus blocks floor while hole never gets FirstMesh (manual 191432).
       glm::ivec2 cand_xz = RepairColumnFromMissWitness(
           world.PhysicsTelemetryData, focus_xz);
-      int cand_cy = -1;
+      int cand_cy = kNoChunkSlice;
       int cand_horiz = world.PhysicsTelemetryData.MissHoriz;
       // Era24: SoftDefer empty stuck witness cy under miss Capture.
       if (missing_focus_mesh &&
@@ -4749,9 +4776,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         if (SoftDeferCapturePinValid)
         {
           const glm::ivec3 pin_coord(SoftDeferCapturePinCx,
-                                     SoftDeferCapturePinCy >= 0
+                                     SoftDeferCapturePinCy != kNoChunkSlice
                                          ? SoftDeferCapturePinCy
-                                         : 0,
+                                         : FloorDiv(
+                                               world.GetPreferredLoadFocusBlock().y,
+                                               CHUNK_SIZE),
                                      SoftDeferCapturePinCz);
           pin_drawable =
               world.GetMeshService().HasDrawableGreedyMesh(pin_coord);
@@ -4764,7 +4793,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
               world.GetMeshService().IsSoftDeferHeld(pin_coord);
           pinned_still =
               missing_focus_mesh && !pin_drawable && (pin_greedy || pin_held);
-          if (SoftDeferCapturePinCy < 0)
+          if (SoftDeferCapturePinCy == kNoChunkSlice)
           {
             pinned_still = missing_focus_mesh;
           }
@@ -4954,7 +4983,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                                           SoftDeferCapturePinCz);
             const glm::ivec3 prior_pin_coord(
                 prior_pin_xz.x,
-                SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
+                SoftDeferCapturePinCy != kNoChunkSlice
+                    ? SoftDeferCapturePinCy
+                    : FloorDiv(world.GetPreferredLoadFocusBlock().y,
+                               CHUNK_SIZE),
                 prior_pin_xz.y);
             if (world.GetMeshService().HasDrawableGreedyMesh(prior_pin_coord) ||
                 capture_backlog_witness)
@@ -4982,8 +5014,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             ms.MarkDirtyPriority(
                 miss_hole,
                 MeshRevisionBumpReason::PriorityWorldStreamingRepair);
-            const glm::ivec3 cand_hole(cand_xz.x, cand_cy >= 0 ? cand_cy : 0,
-                                       cand_xz.y);
+            const glm::ivec3 cand_hole(
+                cand_xz.x,
+                cand_cy != kNoChunkSlice
+                    ? cand_cy
+                    : FloorDiv(world.GetPreferredLoadFocusBlock().y,
+                               CHUNK_SIZE),
+                cand_xz.y);
             if (ms.IsPendingGpuQueued(cand_hole) ||
                 ms.IsPendingGpuApply(cand_hole) ||
                 ms.IsPendingGpuKickedOrDispatched(cand_hole))
@@ -5031,7 +5068,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           {
             const glm::ivec3 pin_hole(
                 SoftDeferCapturePinCx,
-                SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
+                SoftDeferCapturePinCy != kNoChunkSlice
+                    ? SoftDeferCapturePinCy
+                    : FloorDiv(world.GetPreferredLoadFocusBlock().y,
+                               CHUNK_SIZE),
                 SoftDeferCapturePinCz);
             auto &ms = world.GetMeshService();
             if (ms.IsPendingGpuQueued(pin_hole) ||
@@ -5696,6 +5736,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetMaxLoadOpsPerFrame(world.MaxLoadOpsPerFrame);
   Streamer->SetMaxUnloadOpsPerFrame(world.MaxUnloadOpsPerFrame);
   Streamer->SetMaxTerrainHeight(procedural.MaxHeight);
+  Streamer->SetMinTerrainHeight(procedural.MinHeight);
   Streamer->SetEnabled(StreamingEnabled);
   Streamer->SetWorldFolder(world.GetWorldFolderPath());
   Streamer->SetCallbacks(
@@ -5720,14 +5761,18 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const bool loaded =
             persistence.LoadTerrainColumn(coord, world.BlockWorld,
                                           *world.BlockRegistry,
-                                          settings.MaxHeight) > 0;
+                                          settings.MaxHeight,
+                                          settings.MinHeight) > 0;
         if (loaded)
         {
           if (!IsTerrainChunkComplete(world.BlockWorld, coord,
-                                      settings.MaxHeight))
+                                      settings.MaxHeight,
+                                      kNoTerrainChunkSlice,
+                                      settings.MinHeight))
           {
             persistence.PurgeIncompleteTerrainColumn(world.BlockWorld, coord,
-                                                     settings.MaxHeight);
+                                                     settings.MaxHeight,
+                                                     settings.MinHeight);
             FrameStreamingIoMs +=
                 std::chrono::duration<double, std::milli>(
                     std::chrono::high_resolution_clock::now() - t0)
@@ -5735,7 +5780,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             return false;
           }
           persistence.TryEnqueueTerrainColumnRelight(
-              world, coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
+              world, coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE,
+              /*priority=*/false, settings.MinHeight, /*max_y=*/-1);
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
@@ -5757,7 +5803,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           persistence.SaveTerrainColumn(ground, world.BlockWorld,
                                         *world.BlockRegistry,
-                                        settings.MaxHeight);
+                                        settings.MaxHeight,
+                                        settings.MinHeight);
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
@@ -5771,7 +5818,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         // empty/flicker while drain lagged Exhausted). Sea-band neighbor remesh
         // must run even under PendingLight.
         const ProceduralSettings &settings = world.GetProceduralSettings();
-        const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+        const int remesh_min_y =
+            std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
         const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
         world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
             ground, remesh_min_y, remesh_max_y, true,
@@ -5896,10 +5944,12 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - ownership_started)
                 .count();
-        const int highest_cy = std::max(0, max_cy);
+        const int min_cy = FloorDiv(
+            world.GetProceduralSettings().MinHeight, CHUNK_SIZE);
+        const int highest_cy = max_cy;
         const UWorldMeshService &mesh = world.GetMeshService();
         const auto mesh_scan_started = std::chrono::steady_clock::now();
-        for (int cy = 0; cy <= highest_cy; ++cy)
+        for (int cy = min_cy; cy <= highest_cy; ++cy)
         {
           const glm::ivec3 slice(ground.x, cy, ground.z);
           active_work = active_work || mesh.IsChunkMeshDirty(slice) ||
@@ -5944,13 +5994,13 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         world.ClearPendingLightBeforeMesh(col);
         world.ClearColumnEmergeState(col); // erase the obsolete column record
         const auto mesh_remove_started = std::chrono::steady_clock::now();
-        world.GetMeshService().RemoveColumn(ground, highest_cy);
+        world.GetMeshService().RemoveColumn(ground, min_cy, highest_cy);
         const double mesh_remove_ms =
             std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - mesh_remove_started)
                 .count();
         const auto collision_cleanup_started = std::chrono::steady_clock::now();
-        for (int cy = 0; cy <= highest_cy; ++cy)
+        for (int cy = min_cy; cy <= highest_cy; ++cy)
         {
           world.Collision.RemoveChunkMovementSolidCache(
               glm::ivec3(ground.x, cy, ground.z));
@@ -6097,7 +6147,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           return false;
         }
         return IsTerrainChunkComplete(world.BlockWorld, coord,
-                                      world.GetProceduralSettings().MaxHeight);
+                                      world.GetProceduralSettings().MaxHeight,
+                                      kNoTerrainChunkSlice,
+                                      world.GetProceduralSettings().MinHeight);
       });
   Streamer->SetColumnPendingCallback(
       [this, &world](glm::ivec3 coord)
@@ -6145,7 +6197,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                 : 0;
         const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
         const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
-        const int relight_min = std::max(0, settings.SeaLevel - CHUNK_SIZE * 2);
+        const int relight_min = std::max(settings.MinHeight,
+                                         settings.SeaLevel - CHUNK_SIZE * 2);
         const int relight_max = settings.MaxHeight;
         if (world.Persistence &&
             ShouldDeferFarRelightEnqueueOnFifoPressure(
@@ -6163,7 +6216,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           world.Persistence->EnqueueTerrainColumnRelight(
               ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
-              /*min_y=*/0, /*max_y=*/-1, "stream_dirty_callback", &world);
+              /*min_y=*/settings.MinHeight, /*max_y=*/-1,
+              "stream_dirty_callback", &world);
         }
       });
 }
@@ -6178,6 +6232,7 @@ void UWorldStreaming::RefreshStreamerSettings(const ProceduralSettings &settings
   }
   Streamer->SetAsyncGeneration(settings.AsyncChunkGeneration);
   Streamer->SetMaxTerrainHeight(settings.MaxHeight);
+  Streamer->SetMinTerrainHeight(settings.MinHeight);
   Streamer->SetMaxLoadOpsPerFrame(maxLoadOpsPerFrame);
   Streamer->SetMaxUnloadOpsPerFrame(maxUnloadOpsPerFrame);
   Streamer->SetRingGateEnabled(settings.RingGateEnabled);
@@ -6945,7 +7000,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       else
       {
         complete = IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
-                                          procedural.MaxHeight);
+                                          procedural.MaxHeight,
+                                          kNoTerrainChunkSlice,
+                                          procedural.MinHeight);
       }
       LastCameraTerrainCompleteGround = camera_ground;
       LastCameraTerrainComplete = complete;

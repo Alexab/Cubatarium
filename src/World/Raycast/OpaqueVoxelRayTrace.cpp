@@ -20,8 +20,10 @@ namespace
 bool IsKnownAirTerrainSlice(const UWorld &world, glm::ivec3 chunk_coord)
 {
   const int max_world_y = world.GetProceduralSettings().MaxHeight;
-  const int max_cy = std::max(0, max_world_y) / CHUNK_SIZE;
-  if (chunk_coord.y > max_cy)
+  const int min_world_y = world.GetProceduralSettings().MinHeight;
+  const int min_cy = FloorDiv(min_world_y, CHUNK_SIZE);
+  const int max_cy = FloorDiv(max_world_y, CHUNK_SIZE);
+  if (chunk_coord.y < min_cy || chunk_coord.y > max_cy)
   {
     return true;
   }
@@ -45,7 +47,7 @@ bool IsKnownAirTerrainSlice(const UWorld &world, glm::ivec3 chunk_coord)
     return false;
   }
   const int highest_resident_cy = GetHighestNonAirChunkSlice(
-      world.GetBlockWorld(), ground_coord, max_world_y);
+      world.GetBlockWorld(), ground_coord, max_world_y, min_world_y);
   const int highest_on_disk_cy =
       storage.GetHighestChunkSliceOnDisk(world_folder, ground_coord);
   return chunk_coord.y > std::max(highest_resident_cy, highest_on_disk_cy);

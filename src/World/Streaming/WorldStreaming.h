@@ -10,6 +10,7 @@
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Math/GridMath.h"
 #include <chrono>
 #include <climits>
 #include <cstdint>
@@ -160,7 +161,7 @@ private:
   bool SoftDeferCapturePinValid{false};
   int SoftDeferCapturePinCx{0};
   int SoftDeferCapturePinCz{0};
-  int SoftDeferCapturePinCy{-1};
+  int SoftDeferCapturePinCy{kNoChunkSlice};
   int SoftDeferCapturePinHoriz{0};
   int SoftDeferCapturePinAge{0};
   /// Pin length; Era29 enter sets EnterSpawnCapturePinFrames(), else Era27 T=8.

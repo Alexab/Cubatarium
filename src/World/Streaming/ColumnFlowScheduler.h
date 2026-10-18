@@ -1,5 +1,7 @@
 #pragma once
 
+#include "World/Math/GridMath.h"
+
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <queue>
@@ -8,6 +10,15 @@
 
 namespace cutum
 {
+
+inline constexpr int kColumnWorkWholeRemeshBandCy = kNoChunkSlice;
+inline constexpr int kColumnWorkWholeColumnCy = kWholeColumnChunkSlice;
+
+inline bool IsConcreteColumnWorkCy(int cy)
+{
+  return cy != kColumnWorkWholeRemeshBandCy &&
+         cy != kColumnWorkWholeColumnCy;
+}
 
 enum class ColumnWorkKind : uint8_t
 {
@@ -24,10 +35,9 @@ struct ColumnWorkItem
   int priority{0};
   /// True: Admit scans full focus ring (only=nullptr). False: filter to column.
   bool scan_full_focus{false};
-  /// >=0 prefer this slice when admitting.
-  /// -1 = whole remesh band missing slices (0..remesh_max).
-  /// -2 = whole column missing slices (0..procedural MaxHeight).
-  int cy{-1};
+  /// A concrete signed chunk Y prefers that slice. The sentinels request the
+  /// whole remesh band or the whole vertical column.
+  int cy{kColumnWorkWholeRemeshBandCy};
   /// Monotonic ticket generation for this column occupancy (M02 / A05).
   uint64_t generation{0};
 };
@@ -125,7 +135,7 @@ private:
     ColumnWorkKind kind{ColumnWorkKind::FirstMesh};
     int priority{0};
     bool scan_full_focus{false};
-    int cy{-1};
+    int cy{kColumnWorkWholeRemeshBandCy};
     uint64_t generation{0};
   };
 

@@ -367,7 +367,8 @@ std::optional<int> UWorldCollision::FindHighestSolidY(int x, int z) const
   {
     return std::nullopt;
   }
-  for (int y = 255; y >= 0; --y)
+  const WorldVerticalProfile &vertical = BlockWorld.GetVerticalProfile();
+  for (int y = vertical.MaxY; y >= vertical.MinY; --y)
   {
     if (BlockRegistry->IsSolid(BlockWorld.GetBlock(glm::ivec3(x, y, z))))
     {
@@ -396,8 +397,10 @@ UWorldCollision::QueryGroundFeetYUnder(int worldX, int worldZ,
     return std::nullopt;
   }
   const int startY =
-      std::clamp(static_cast<int>(std::floor(referenceFeetY + 0.25f)), 0, 255);
-  for (int y = startY; y >= 0; --y)
+      std::clamp(static_cast<int>(std::floor(referenceFeetY + 0.25f)),
+                 BlockWorld.GetVerticalProfile().MinY,
+                 BlockWorld.GetVerticalProfile().MaxY);
+  for (int y = startY; y >= BlockWorld.GetVerticalProfile().MinY; --y)
   {
     if (BlockRegistry->IsSolid(
             BlockWorld.GetBlock(glm::ivec3(worldX, y, worldZ))))

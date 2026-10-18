@@ -10,6 +10,6 @@
   "barrier_band": 2.5,
   "barrier_noise_threshold": 0.55,
   "pressure_difference_threshold": 8,
-  "lava_max_y": 10,
+  "lava_max_y": -54,
   "lava_cell_chance": 0.16
 }

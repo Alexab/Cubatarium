@@ -3,6 +3,7 @@
 #include "World/Core/BlockWorld.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenContext.h"
+#include <algorithm>
 #include <cmath>
 
 namespace cutum
@@ -53,9 +54,10 @@ bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
   return n01 > params.threshold;
 }
 
-bool ShouldCarveWorm(int x, int y, int z, int surfaceY, uint32_t Seed)
+bool ShouldCarveWorm(int x, int y, int z, int surfaceY, uint32_t Seed,
+                     int minY)
 {
-  if (y < 4 || y > surfaceY - 2)
+  if (y < minY || y > surfaceY - 2)
   {
     return false;
   }
@@ -84,7 +86,9 @@ bool ShouldCarveWorm(int x, int y, int z, int surfaceY, uint32_t Seed)
 void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
                       uint32_t Seed, const CaveParams &params)
 {
-  const CaveDepthBand band = ComputeCaveDepthBand(surfaceY, params);
+  CaveParams bounded = params;
+  bounded.minY = std::max(ctx.Settings.MinHeight, bounded.minY);
+  const CaveDepthBand band = ComputeCaveDepthBand(surfaceY, bounded);
   if (!band.valid)
   {
     return;
@@ -92,8 +96,9 @@ void CarveColumnCaves(WorldGenContext &ctx, int x, int z, int surfaceY,
   for (int y = band.y_bottom; y <= band.y_top; ++y)
   {
     const bool carve = params.style == CaveStyle::Worm
-                           ? ShouldCarveWorm(x, y, z, surfaceY, Seed)
-                           : ShouldCarve(x, y, z, surfaceY, Seed, params);
+                           ? ShouldCarveWorm(x, y, z, surfaceY, Seed,
+                                             ctx.Settings.MinHeight)
+                           : ShouldCarve(x, y, z, surfaceY, Seed, bounded);
     if (!carve)
     {
       continue;

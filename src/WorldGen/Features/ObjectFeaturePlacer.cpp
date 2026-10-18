@@ -239,7 +239,7 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
   {
     return false;
   }
-  if (base.y <= 0 || base.y >= ctx.Settings.MaxHeight ||
+  if (base.y < ctx.Settings.MinHeight || base.y >= ctx.Settings.MaxHeight ||
       !CanPlacePlantAt(ctx.World, ctx.Registry, base))
   {
     return false;
@@ -475,7 +475,8 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
   for (const auto &[relative, block] : voxels)
   {
     const glm::ivec3 worldPos = base + relative;
-    if (worldPos.y <= 0 || worldPos.y >= ctx.Settings.MaxHeight)
+    if (worldPos.y < ctx.Settings.MinHeight ||
+        worldPos.y >= ctx.Settings.MaxHeight)
     {
       return false;
     }
@@ -533,7 +534,7 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
     accent = BLOCK_AIR;
   }
   if (leaves == BLOCK_AIR || !ctx.Registry.HasRenderableTexture(leaves) ||
-      base.y <= 0 || base.y >= ctx.Settings.MaxHeight ||
+      base.y < ctx.Settings.MinHeight || base.y >= ctx.Settings.MaxHeight ||
       !CanPlacePlantAt(ctx.World, ctx.Registry, base))
   {
     return false;
@@ -680,7 +681,8 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
   {
     (void)block;
     const glm::ivec3 worldPos = base + relative;
-    if (worldPos.y <= 0 || worldPos.y >= ctx.Settings.MaxHeight)
+    if (worldPos.y < ctx.Settings.MinHeight ||
+        worldPos.y >= ctx.Settings.MaxHeight)
     {
       return false;
     }
@@ -709,7 +711,8 @@ PlacementSurfaceInfo ResolveColumnPlacementSurface(const WorldGenContext &ctx,
 {
   return ResolvePlacementSurfaceY(ctx.World, ctx.Registry, x, z,
                                   heightmapSurfaceY, ctx.Settings.MaxHeight,
-                                  ctx.Settings.SeaLevel);
+                                  ctx.Settings.SeaLevel,
+                                  ctx.Settings.MinHeight);
 }
 
 bool IsColumnReadyForPlantFeatures(const WorldGenContext &ctx, int x, int z,
@@ -812,7 +815,8 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
       const int maxScanY = ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel,
                                            ctx.Settings.MaxHeight);
       const int localSurface =
-          FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
+          FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY,
+                               ctx.Settings.MinHeight);
       if (localSurface <
           ctx.Settings.SeaLevel + WorldGenPlacementTuning::MinLandAboveSea)
       {
@@ -1581,7 +1585,8 @@ bool TryPlaceCaveFeatures(
     const std::function<BiomeId(int, int, int, int)> &biome_at_3d,
     const std::function<BiomeKey(int, int, int, int)> &biome_key_at_3d)
 {
-  if (!ctx.Settings.EnableCaves || !biome_at_3d || surfaceY < 12)
+  if (!ctx.Settings.EnableCaves || !biome_at_3d ||
+      surfaceY < ctx.Settings.MinHeight + 12)
   {
     return false;
   }
@@ -1612,7 +1617,8 @@ bool TryPlaceCaveFeatures(
   const glm::ivec3 current_chunk =
       UChunkManager::WorldToChunk(glm::ivec3(x, 0, z));
 
-  for (int floor_y = 5; floor_y < surfaceY - 4; ++floor_y)
+  for (int floor_y = ctx.Settings.MinHeight + 5; floor_y < surfaceY - 4;
+       ++floor_y)
   {
     const glm::ivec3 floor_pos(x, floor_y, z);
     if (!is_cave_rock(ctx.World.GetBlock(floor_pos)))

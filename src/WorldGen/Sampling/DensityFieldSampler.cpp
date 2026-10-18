@@ -53,8 +53,9 @@ float HorizontalSurfaceWobble(int x, int z, uint32_t seed, float scale,
 UDensityFieldSampler::UDensityFieldSampler(uint32_t seed, int seaLevel,
                                            int maxHeight, float terrainRoughness,
                                            const DensityFieldParams &params,
-                                           const CaveParams &caves)
-    : Seed(seed), SeaLevel(seaLevel), MaxHeight(maxHeight),
+                                           const CaveParams &caves,
+                                           int minHeight)
+    : Seed(seed), SeaLevel(seaLevel), MaxHeight(maxHeight), MinHeight(minHeight),
       TerrainRoughness(terrainRoughness), Params(params), Caves(caves)
 {
 }
@@ -109,7 +110,8 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
                                  mountainAmplitude -
                              verticalRange * 0.065f);
   route.baseHeightBlocks =
-      std::clamp(route.baseHeightBlocks, 1.0f, static_cast<float>(MaxHeight));
+      std::clamp(route.baseHeightBlocks, static_cast<float>(MinHeight),
+                 static_cast<float>(MaxHeight));
   route.noiseFactor =
       (2.2f + roughness * 2.8f + mountainWeight * 4.0f) *
       ErosionAmplitudeMultiplier(climate.erosion);
@@ -201,8 +203,8 @@ int UDensityFieldSampler::SurfaceYAt(int x, int z) const
 {
   const DensityRouteParams route = RouteAt(x, z);
   const float wobble = HorizontalWobbleAt(x, z, route);
-  int terrain_surface = 1;
-  for (int y = MaxHeight; y >= 1; --y)
+  int terrain_surface = MinHeight;
+  for (int y = MaxHeight; y >= MinHeight; --y)
   {
     if (SampleTerrainDensityAt(x, y, z, Params.octaves, route, wobble) > 0.0f)
     {
@@ -216,14 +218,14 @@ int UDensityFieldSampler::SurfaceYAt(int x, int z) const
   }
 
   const Column column = PrepareColumn(x, z, terrain_surface);
-  for (int y = terrain_surface; y >= 1; --y)
+  for (int y = terrain_surface; y >= MinHeight; --y)
   {
     if (SampleDensity(column, y) > 0.0f)
     {
       return y;
     }
   }
-  return std::clamp(static_cast<int>(std::lround(route.baseHeightBlocks)), 1,
+  return std::clamp(static_cast<int>(std::lround(route.baseHeightBlocks)), MinHeight,
                     MaxHeight);
 }
 
@@ -232,14 +234,14 @@ int UDensityFieldSampler::CoarseSurfaceYAt(int x, int z) const
   const DensityRouteParams route = RouteAt(x, z);
   const float wobble = HorizontalWobbleAt(x, z, route);
   const int coarse_octaves = std::max(1, Params.octaves - 2);
-  for (int y = MaxHeight; y >= 1; y -= 2)
+  for (int y = MaxHeight; y >= MinHeight; y -= 2)
   {
     if (SampleTerrainDensityAt(x, y, z, coarse_octaves, route, wobble) > 0.0f)
     {
       return y;
     }
   }
-  return std::clamp(static_cast<int>(std::lround(route.baseHeightBlocks)), 1,
+  return std::clamp(static_cast<int>(std::lround(route.baseHeightBlocks)), MinHeight,
                     MaxHeight);
 }
 
