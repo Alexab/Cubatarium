@@ -858,13 +858,18 @@ add_executable(terrain_column_util_test
     src/World/Chunks/TerrainColumnUtil.cpp
     src/World/Core/BlockWorld.cpp
     src/World/Core/IUBlockWriter.cpp
+    src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp
     src/Blocks/BlockDefinitionStorage.cpp
+    src/World/Physics/MaterialReactionRules.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp
     src/World/Math/FluidCellState.cpp
     src/World/Math/GridMath.cpp
     src/Test/TerrainColumnUtilTest.cpp)
 target_include_directories(terrain_column_util_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(terrain_column_util_test PRIVATE
+    CUTUM_PHYSICS_LIGHT_REGISTRY)
 target_link_libraries(terrain_column_util_test glm::glm)
 
 add_executable(world_mesh_service_test

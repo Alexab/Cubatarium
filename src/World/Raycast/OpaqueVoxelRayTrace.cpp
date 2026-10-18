@@ -20,7 +20,7 @@ namespace
 bool IsKnownAirTerrainSlice(const UWorld &world, glm::ivec3 chunk_coord)
 {
   const int max_world_y = world.GetProceduralSettings().MaxHeight;
-  const int max_cy = (max_world_y + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int max_cy = std::max(0, max_world_y) / CHUNK_SIZE;
   if (chunk_coord.y > max_cy)
   {
     return true;

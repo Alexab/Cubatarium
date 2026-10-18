@@ -13,9 +13,13 @@ from worldgen_metrics_lib import analyze_world, compare_to_thresholds
 
 REPO = Path(__file__).resolve().parents[1]
 
-def gate_thresholds(baseline: dict) -> dict:
+def gate_thresholds(baseline: dict, backend: str | None = None) -> dict:
     thresholds = dict(baseline.get("thresholds", {}))
-    thresholds["max_height"] = baseline.get("max_height", 128)
+    if backend:
+        thresholds.update(
+            baseline.get("backend_thresholds", {}).get(backend, {})
+        )
+    thresholds["max_height"] = baseline.get("max_height", 319)
     return thresholds
 
 
@@ -37,14 +41,21 @@ def main() -> int:
 
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
     spawn_radius = args.spawn_radius or baseline.get("spawn_radius", 48)
-    thresholds = gate_thresholds(baseline)
+    world_meta_path = args.world_dir / "world_data.json"
+    world_meta = (
+        json.loads(world_meta_path.read_text(encoding="utf-8"))
+        if world_meta_path.is_file()
+        else {}
+    )
+    backend = str(world_meta.get("procedural", {}).get("terrain_backend", ""))
+    thresholds = gate_thresholds(baseline, backend)
 
     metrics = analyze_world(
         args.world_dir,
         args.refs,
         repo_root=REPO,
         spawn_radius=spawn_radius,
-        max_height=baseline.get("max_height", 128),
+        max_height=baseline.get("max_height", 319),
     )
     failures = compare_to_thresholds(metrics, thresholds)
 

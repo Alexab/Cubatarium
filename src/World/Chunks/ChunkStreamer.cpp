@@ -673,7 +673,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
   }
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = KeepRenderDistance + UnloadMargin;
-  const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, MaxHeight) / CHUNK_SIZE;
   const int player_cy_min =
       UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(cap.feetY(eyePos)), 0))
           .y;
@@ -905,7 +905,7 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
   {
     return;
   }
-  const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, MaxHeight) / CHUNK_SIZE;
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = KeepRenderDistance + UnloadMargin;
   const int player_cy_min = UChunkManager::WorldToChunk(

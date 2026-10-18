@@ -5300,7 +5300,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     }
     return;
   }
-  const int max_cy = (max_height + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int max_cy = std::max(0, max_height) / CHUNK_SIZE;
   const auto disk_index_started = std::chrono::steady_clock::now();
   const int highest_on_disk =
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);

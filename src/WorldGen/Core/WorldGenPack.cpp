@@ -397,6 +397,38 @@ void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
       {
         pack.Height.CurveExponent = ow["curve_exponent"].get<float>();
       }
+      if (ow.contains("ocean_profile") && ow["ocean_profile"].is_object())
+      {
+        const auto &profile = ow["ocean_profile"];
+        auto readRatio = [&profile](const char *key, float fallback)
+        {
+          return profile.contains(key) ? profile[key].get<float>() : fallback;
+        };
+        pack.Height.Ocean.DeepOceanEnd =
+            std::clamp(readRatio("deep_ocean_end", 0.22f), 0.05f, 0.80f);
+        pack.Height.Ocean.ShelfEnd = std::clamp(
+            readRatio("shelf_end", 0.38f),
+            pack.Height.Ocean.DeepOceanEnd + 0.05f, 0.90f);
+        pack.Height.Ocean.CoastEnd = std::clamp(
+            readRatio("coast_end", 0.52f),
+            pack.Height.Ocean.ShelfEnd + 0.05f, 0.98f);
+        pack.Height.Ocean.DeepOceanDepthRatio = std::clamp(
+            readRatio("deep_ocean_depth_ratio", 0.23f), 0.05f, 0.45f);
+        pack.Height.Ocean.ShelfDepthRatio = std::clamp(
+            readRatio("shelf_depth_ratio", 0.18f), 0.02f,
+            pack.Height.Ocean.DeepOceanDepthRatio);
+        pack.Height.Ocean.CoastDepthRatio = std::clamp(
+            readRatio("coast_depth_ratio", 0.14f), 0.0f,
+            pack.Height.Ocean.ShelfDepthRatio);
+        pack.Height.Ocean.LowlandHeightRatio = std::clamp(
+            readRatio("lowland_height_ratio", 0.03f), 0.0f, 0.15f);
+        pack.Height.Ocean.HillHeightRatio = std::clamp(
+            readRatio("hill_height_ratio", 0.13f),
+            pack.Height.Ocean.LowlandHeightRatio, 0.30f);
+        pack.Height.Ocean.HighlandHeightRatio = std::clamp(
+            readRatio("highland_height_ratio", 0.22f),
+            pack.Height.Ocean.HillHeightRatio, 0.40f);
+      }
     }
     if (json.contains("jitter") && json["jitter"].is_object())
     {

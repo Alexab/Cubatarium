@@ -84,6 +84,18 @@ struct PackHeightConfig
   float JitterScale{0.03f};
   float JitterAmplitude{1.0f};
   float JitterErosionDamp{0.85f};
+  struct OceanProfile
+  {
+    float DeepOceanEnd{0.22f};
+    float ShelfEnd{0.38f};
+    float CoastEnd{0.52f};
+    float DeepOceanDepthRatio{0.23f};
+    float ShelfDepthRatio{0.18f};
+    float CoastDepthRatio{0.14f};
+    float LowlandHeightRatio{0.03f};
+    float HillHeightRatio{0.13f};
+    float HighlandHeightRatio{0.22f};
+  } Ocean;
   bool Loaded{false};
 };
 

@@ -480,7 +480,7 @@ bool UChunkStorageService::RemoveTerrainColumnFromDisk(
   {
     groundCoord.y = 0;
   }
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
   const int toCy = std::max(maxCy, highestOnDisk);
   bool success = true;
@@ -516,7 +516,7 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
   {
     groundCoord.y = 0;
   }
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
   const int highestNonAir =
       GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY);
@@ -565,7 +565,7 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
   }
 
   int total = 0;
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
   if (highestOnDisk < 0)
   {

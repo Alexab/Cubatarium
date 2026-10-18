@@ -1,7 +1,9 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
+#include "App/Platform/Log.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/LightUtil.h"
@@ -10,6 +12,12 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+
+namespace cutum
+{
+uint64_t UJobStageTrace::GetStreamingFrameEpoch() { return 0; }
+void CubatariumLogInfo(const char *, const std::string &) {}
+} // namespace cutum
 
 static void Expect(bool cond, const char *message)
 {
@@ -323,6 +331,17 @@ int main()
       center_edge_lit = block_light > 0;
     }
     Expect(center_edge_lit, "D: neighbor torch seeds center face");
+  }
+
+  {
+    constexpr int kTallWorldMaxY = 319;
+    cutum::UBlockWorld tall_world;
+    const glm::ivec3 torch_pos(8, kTallWorldMaxY - 1, 8);
+    tall_world.SetBlock(torch_pos, kTorch);
+    cutum::RelightBlocksAroundAll(tall_world, *registry, {torch_pos},
+                                  kTallWorldMaxY);
+    Expect(BlockAt(tall_world, torch_pos + glm::ivec3(0, 1, 0)) > 0,
+           "block light propagates inside the top supported chunk slice");
   }
 
   std::cout << "chunk_lighting_propagation_test: OK" << std::endl;

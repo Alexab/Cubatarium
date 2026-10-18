@@ -118,7 +118,7 @@ def main() -> int:
 
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
     thresholds = dict(baseline.get("thresholds", {}))
-    thresholds["max_height"] = baseline.get("max_height", 128)
+    thresholds["max_height"] = baseline.get("max_height", 319)
     seeds = parse_seeds(args.seeds, baseline.get("reference_seeds", [42, 12354, 20240625]))
     refs = REPO / "content" / "worldgen_refs.json"
     spawn_radius = baseline.get("spawn_radius", 48)
@@ -192,7 +192,7 @@ def main() -> int:
                 refs,
                 repo_root=REPO,
                 spawn_radius=spawn_radius,
-                max_height=baseline.get("max_height", 128),
+                max_height=baseline.get("max_height", 319),
             )
             active_thresholds = dict(thresholds)
             if backend != "heightmap":

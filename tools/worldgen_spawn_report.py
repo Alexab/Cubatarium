@@ -54,7 +54,7 @@ def main() -> int:
     spawn_radius = baseline.get("spawn_radius", 48)
     refs = REPO / "content" / "worldgen_refs.json"
     thresholds = dict(baseline.get("thresholds", {}))
-    thresholds["max_height"] = baseline.get("max_height", 128)
+    thresholds["max_height"] = baseline.get("max_height", 319)
 
     reports: list[dict] = []
     missing: list[int] = []
@@ -70,7 +70,7 @@ def main() -> int:
             refs,
             repo_root=REPO,
             spawn_radius=spawn_radius,
-            max_height=baseline.get("max_height", 128),
+            max_height=baseline.get("max_height", 319),
         )
         land = land_shape_metrics(world_dir, spawn_radius)
         gate_failures = compare_to_thresholds(metrics, thresholds)

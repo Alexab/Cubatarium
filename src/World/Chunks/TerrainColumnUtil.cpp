@@ -31,7 +31,7 @@ int GetHighestNonAirChunkSlice(const UBlockWorld &world, glm::ivec3 groundCoord,
   {
     groundCoord.y = 0;
   }
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
   int highest = -1;
   for (int cy = 0; cy <= maxCy; ++cy)
   {
@@ -53,7 +53,7 @@ int GetRequiredTerrainColumnTopCy(const UBlockWorld &world, glm::ivec3 groundCoo
   {
     groundCoord.y = 0;
   }
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
   int topCy = GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY);
   if (highestCyOnDisk > topCy)
   {
@@ -111,7 +111,7 @@ bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
   {
     groundCoord.y = 0;
   }
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
   int highestLoadedCy = -1;
   for (int cy = 0; cy <= maxCy; ++cy)
   {
@@ -182,7 +182,7 @@ void ClearTerrainColumnChunks(UBlockWorld &world, glm::ivec3 groundCoord,
   {
     groundCoord.y = 0;
   }
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int maxCy = std::max(0, maxWorldY) / CHUNK_SIZE;
   for (int cy = 0; cy <= maxCy; ++cy)
   {
     world.GetChunkManager().RemoveChunk(

@@ -23,7 +23,7 @@ struct RelightJobSpec
 {
   std::vector<glm::ivec3> block_positions;
   int min_world_y{0};
-  int max_world_y{128};
+  int max_world_y{319};
   bool include_block_light{true};
   bool include_skylight{true};
   int frontier_iterations{2};

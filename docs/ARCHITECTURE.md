@@ -104,7 +104,7 @@ Generators implement `IUWorldGenPipeline` and are registered in `UWorldGenerator
 
 `UComposableWorldGenerator` composes column stages via `UColumnGenerationService` and `WorldGenStageMask` (pack pipeline × generator × procedural settings). Stage order comes from `pipeline.json` `stages[]`. Builtin lava/fire features run through `IUBuiltinWorldGenFeature`. Block slots resolve through `WorldGenBlockResolver` on `WorldGenContext`. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
 
-Defaults: `sea_level` 48, `max_height` 128, `generator` `overworld`. Compact presets for `flat`/`heightmap` use low-height defaults (`sea_level` ~5, `max_height` ~15). Legacy `indev_retro` loads as `heightmap`.
+Defaults: `sea_level` 63, `max_height` 319, `generator` `overworld`. The supported vertical range is Y=0..319; negative Y is not supported by chunk streaming yet. Compact presets for `flat`/`heightmap` use low-height defaults (`sea_level` ~5, `max_height` ~15). Legacy `indev_retro` loads as `heightmap`.
 
 Settings persist in `config.json` (template: **generator + seed only**) and per-world `world_data.json` under full `procedural` + `procedural.tuning`. Sea level, height, and tuning are reset from generator defaults on each app start; per-world overrides live only in `world_data.json`.
 

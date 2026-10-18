@@ -1,5 +1,6 @@
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 #include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include <algorithm>
 #include <cmath>
 
@@ -14,30 +15,39 @@ float SplineHeightFromContinental(float c, int seaLevel, int maxHeight)
   const float range = static_cast<float>(std::max(8, maxHeight - seaLevel));
   const float u = std::clamp(c, 0.0f, 1.0f);
 
-  const float y_deep = seaLevel - range * 0.20f;
-  const float y_shallow = seaLevel - range * 0.06f;
-  const float y_coast = seaLevel + range * 0.01f;
-  const float y_low = seaLevel + range * 0.08f;
-  const float y_hills = seaLevel + range * 0.16f;
-  const float y_high = seaLevel + range * 0.24f;
+  const PackHeightConfig::OceanProfile &profile =
+      UWorldGenPack::HeightConfig().Ocean;
+  const float y_deep = seaLevel - range * profile.DeepOceanDepthRatio;
+  const float y_shelf = seaLevel - range * profile.ShelfDepthRatio;
+  const float y_coast = seaLevel - range * profile.CoastDepthRatio;
+  const float y_lowland = seaLevel + range * profile.LowlandHeightRatio;
+  const float y_hills = seaLevel + range * profile.HillHeightRatio;
+  const float y_highland = seaLevel + range * profile.HighlandHeightRatio;
 
-  if (u < 0.25f)
+  if (u < profile.DeepOceanEnd)
   {
-    const float t = u / 0.25f;
-    return y_deep + (y_shallow - y_deep) * Smoothstep(0.0f, 1.0f, t);
+    const float t = u / profile.DeepOceanEnd;
+    return y_deep + (y_shelf - y_deep) * Smoothstep(0.0f, 1.0f, t);
   }
-  if (u < 0.50f)
+  if (u < profile.ShelfEnd)
   {
-    const float t = (u - 0.25f) / 0.25f;
-    return y_shallow + (y_coast - y_shallow) * Smoothstep(0.0f, 1.0f, t);
+    const float t = (u - profile.DeepOceanEnd) /
+                    (profile.ShelfEnd - profile.DeepOceanEnd);
+    return y_shelf + (y_coast - y_shelf) * Smoothstep(0.0f, 1.0f, t);
   }
-  if (u < 0.72f)
+  if (u < profile.CoastEnd)
   {
-    const float t = (u - 0.50f) / 0.22f;
-    return y_coast + (y_hills - y_coast) * Smoothstep(0.0f, 1.0f, t);
+    const float t = (u - profile.ShelfEnd) /
+                    (profile.CoastEnd - profile.ShelfEnd);
+    return y_coast + (y_lowland - y_coast) * Smoothstep(0.0f, 1.0f, t);
   }
-  const float t = (u - 0.72f) / 0.28f;
-  return y_hills + (y_high - y_hills) * Smoothstep(0.0f, 1.0f, t);
+  if (u < 0.90f)
+  {
+    const float t = (u - profile.CoastEnd) / (0.90f - profile.CoastEnd);
+    return y_lowland + (y_hills - y_lowland) * Smoothstep(0.0f, 1.0f, t);
+  }
+  const float t = (u - 0.90f) / 0.10f;
+  return y_hills + (y_highland - y_hills) * Smoothstep(0.0f, 1.0f, t);
 }
 
 } // namespace

@@ -161,8 +161,9 @@ void ApplyGeneratorHeightDefaults(ProceduralSettings &s)
   }
   else
   {
-    s.SeaLevel = 48;
-    s.MaxHeight = 128;
+    // Use the Minecraft 1.18+ sea datum and a taller supported vertical range.
+    s.SeaLevel = 63;
+    s.MaxHeight = 319;
   }
 }
 
@@ -222,12 +223,12 @@ void ResolveProceduralDefaults(ProceduralSettings &s)
   {
     if (s.MaxHeight <= 0)
     {
-      s.MaxHeight = 128;
+      s.MaxHeight = 319;
     }
-    s.MaxHeight = std::clamp(s.MaxHeight, 16, 128);
+    s.MaxHeight = std::clamp(s.MaxHeight, 16, 319);
     if (s.SeaLevel <= 0)
     {
-      s.SeaLevel = 48;
+      s.SeaLevel = 63;
     }
     s.SeaLevel = std::clamp(s.SeaLevel, 4, s.MaxHeight - 4);
   }

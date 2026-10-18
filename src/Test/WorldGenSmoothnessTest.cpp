@@ -8,6 +8,7 @@
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
+#include "WorldGen/Sampling/TerrainClimateMapper.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -49,8 +50,8 @@ static cutum::ProceduralSettings MakeBalancedSettings()
 {
   cutum::ProceduralSettings settings;
   settings.Seed = kSeed;
-  settings.SeaLevel = 48;
-  settings.MaxHeight = 128;
+  settings.SeaLevel = 63;
+  settings.MaxHeight = 319;
   settings.FillWater = true;
   settings.Tuning.terrainRoughness = 0.62f;
   settings.Tuning.terrainErosion = 0.32f;
@@ -170,24 +171,35 @@ static void TestCoastSandMatchesRamp()
       MakeSurfaceRuleContext(world, registry, settings);
 
   bool checked = false;
+  int surfaceMin = settings.MaxHeight;
+  int surfaceMax = 0;
+  int coastBandCount = 0;
+  int strongBeachCount = 0;
+  float maximumBeachStrength = 0.0f;
   for (int z = -96; z < 96; ++z)
   {
     for (int x = -96; x < 96; ++x)
     {
       const int surface_y = cutum::RefineSurfaceYWithBiomes(
           x, z, coarse(x, z), settings, settings.Seed, settings.Tuning, coarse);
+      surfaceMin = std::min(surfaceMin, surface_y);
+      surfaceMax = std::max(surfaceMax, surface_y);
       const float beach_strength = cutum::ComputeCoastBeachStrength(
           x, z, surface_y, settings, coarse);
+      maximumBeachStrength = std::max(maximumBeachStrength, beach_strength);
+      if (surface_y >= settings.SeaLevel - 2 &&
+          surface_y <= settings.SeaLevel + 6)
+      {
+        ++coastBandCount;
+      }
+      if (beach_strength > 0.25f)
+      {
+        ++strongBeachCount;
+      }
       if (beach_strength <= 0.25f)
       {
         continue;
       }
-      if (surface_y < settings.SeaLevel - 1 ||
-          surface_y > settings.SeaLevel + 2)
-      {
-        continue;
-      }
-
       cutum::ColumnSampleContext sample;
       sample.SurfaceY = surface_y;
       sample.CoastFactor = beach_strength;
@@ -210,8 +222,56 @@ static void TestCoastSandMatchesRamp()
       break;
     }
   }
+  if (!checked)
+  {
+    std::cerr << kTestName << ": coast diagnostics surface=" << surfaceMin
+              << ".." << surfaceMax << " sea=" << settings.SeaLevel
+              << " band_columns=" << coastBandCount
+              << " strong_columns=" << strongBeachCount
+              << " max_strength=" << maximumBeachStrength << std::endl;
+  }
   FluidTest::Expect(checked, kTestName,
                     "coast sand test found a matching coastal column");
+}
+
+static void TestExpandedOceanDepthProfile()
+{
+  constexpr int oldSeaLevel = 48;
+  constexpr int oldMaxHeight = 128;
+  constexpr int newSeaLevel = 63;
+  constexpr int newMaxHeight = 319;
+  const int oldDeepOceanFloor = static_cast<int>(std::lround(
+      cutum::ContinentalHeightBlocks(0.0f, oldSeaLevel, oldMaxHeight)));
+  const int newDeepOceanFloor = static_cast<int>(std::lround(
+      cutum::ContinentalHeightBlocks(0.0f, newSeaLevel, newMaxHeight)));
+  const float oldShelfFloor = cutum::ContinentalHeightBlocks(
+      0.3f, oldSeaLevel, oldMaxHeight);
+  const float newShelfFloor = cutum::ContinentalHeightBlocks(
+      0.3f, newSeaLevel, newMaxHeight);
+  const float newCoastFloor = cutum::ContinentalHeightBlocks(
+      0.42f, newSeaLevel, newMaxHeight);
+  const int oldDepth = oldSeaLevel - oldDeepOceanFloor;
+  const int newDepth = newSeaLevel - newDeepOceanFloor;
+  const float newShelfDepth = static_cast<float>(newSeaLevel) - newShelfFloor;
+  const float newCoastDepth = static_cast<float>(newSeaLevel) - newCoastFloor;
+  const cutum::ProceduralSettings defaultSettings;
+
+  FluidTest::Expect(oldDepth > 16, kTestName,
+                    "expanded profile deepens oceans at the old vertical bounds");
+  FluidTest::Expect(oldShelfFloor < static_cast<float>(oldSeaLevel), kTestName,
+                    "expanded profile places ocean shelves below sea level");
+  FluidTest::Expect(newDeepOceanFloor >= 0, kTestName,
+                    "expanded profile keeps deep ocean above the current world floor");
+  FluidTest::Expect(newDepth >= 48 && newDepth > oldDepth * 3, kTestName,
+                    "expanded profile provides substantially deeper oceans");
+  FluidTest::Expect(newShelfDepth >= 18.0f, kTestName,
+                    "ocean profile keeps broad shelves below sea level");
+  FluidTest::Expect(newCoastDepth >= 24.0f, kTestName,
+                    "coastal ocean floors are deep enough for a broad shelf");
+  FluidTest::Expect(defaultSettings.SeaLevel == newSeaLevel &&
+                        defaultSettings.MaxHeight == newMaxHeight,
+                    kTestName,
+                    "default world settings use the expanded vertical range");
 }
 
 } // namespace
@@ -227,6 +287,7 @@ int main()
   TestCoastRampDoesNotSpike();
   TestCoastRampMonotonic();
   TestCoastSandMatchesRamp();
+  TestExpandedOceanDepthProfile();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

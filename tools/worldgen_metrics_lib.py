@@ -234,6 +234,51 @@ def count_shore_air_gaps(
     return gaps
 
 
+def ocean_depth_stats(
+    columns: dict[tuple[int, int, int], int],
+    *,
+    sea_level: int,
+    water_id: int | None,
+    min_world_y: int = 0,
+) -> dict:
+    """Measure contiguous surface-ocean water depth from sea level to floor."""
+    if water_id is None:
+        return {
+            "ocean_columns": 0,
+            "ocean_depth_p10": 0,
+            "ocean_depth_p50": 0,
+            "ocean_depth_p90": 0,
+            "ocean_depth_max": 0,
+        }
+
+    depths: list[int] = []
+    for (x, y, z), bid in columns.items():
+        if y != sea_level or bid != water_id:
+            continue
+        floor_y = sea_level - 1
+        while floor_y >= min_world_y and columns.get((x, floor_y, z), 0) == water_id:
+            floor_y -= 1
+        depths.append(sea_level - floor_y)
+
+    if not depths:
+        return {
+            "ocean_columns": 0,
+            "ocean_depth_p10": 0,
+            "ocean_depth_p50": 0,
+            "ocean_depth_p90": 0,
+            "ocean_depth_max": 0,
+        }
+
+    depths.sort()
+    return {
+        "ocean_columns": len(depths),
+        "ocean_depth_p10": depths[int((len(depths) - 1) * 0.10)],
+        "ocean_depth_p50": depths[int((len(depths) - 1) * 0.50)],
+        "ocean_depth_p90": depths[int((len(depths) - 1) * 0.90)],
+        "ocean_depth_max": depths[-1],
+    }
+
+
 def micro_pit_stats(surface: dict[tuple[int, int], tuple[int, int]]) -> dict:
     pits = 0
     flat_columns = 0
@@ -692,7 +737,7 @@ def analyze_surface(
     surface: dict[tuple[int, int], tuple[int, int]],
     *,
     spawn_radius: int = 48,
-    max_height: int = 128,
+    max_height: int = 319,
     id_to_name: dict[int, str] | None = None,
     slot_map: dict[str, list[str]] | None = None,
 ) -> dict:
@@ -817,7 +862,7 @@ def analyze_world(
     *,
     repo_root: Path | None = None,
     spawn_radius: int = 48,
-    max_height: int = 128,
+    max_height: int = 319,
 ) -> dict:
     repo = repo_root or refs_path.parent.parent
     slot_map = load_slot_map(refs_path)
@@ -855,9 +900,8 @@ def analyze_world(
     metrics["spawn_fire_blocks"] = count_spawn_fire_blocks(
         world_dir, id_to_name, spawn_radius
     )
-    sea_level = 48
-    if meta.get("sea_level") is not None:
-        sea_level = int(meta["sea_level"])
+    procedural = meta.get("procedural", {})
+    sea_level = int(procedural.get("sea_level", meta.get("sea_level", 63)))
     if meta:
         metrics["seed"] = meta.get("world_seed")
         metrics["world_name"] = meta.get("world_name")
@@ -875,6 +919,14 @@ def analyze_world(
         )
     )
     columns = load_world_block_columns(world_dir)
+    metrics.update(
+        ocean_depth_stats(
+            columns,
+            sea_level=sea_level,
+            water_id=water_id,
+        )
+    )
+    metrics["sea_level"] = sea_level
     non_terrain_ids = {
         bid for bid, name in id_to_name.items() if name in {"water", "lava", "fire"}
     }
@@ -916,6 +968,27 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
         fail("no terrain columns")
         return failures
 
+    ocean_min_columns = thresholds.get("ocean_columns_min_for_depth_gate", 64)
+    if metrics.get("ocean_columns", 0) >= ocean_min_columns:
+        ocean_depth_p50_min = thresholds.get("ocean_depth_p50_min")
+        if (
+            ocean_depth_p50_min is not None
+            and metrics.get("ocean_depth_p50", 0) < ocean_depth_p50_min
+        ):
+            fail(
+                f"ocean_depth_p50={metrics.get('ocean_depth_p50', 0)} < "
+                f"{ocean_depth_p50_min}"
+            )
+        ocean_depth_p90_min = thresholds.get("ocean_depth_p90_min")
+        if (
+            ocean_depth_p90_min is not None
+            and metrics.get("ocean_depth_p90", 0) < ocean_depth_p90_min
+        ):
+            fail(
+                f"ocean_depth_p90={metrics.get('ocean_depth_p90', 0)} < "
+                f"{ocean_depth_p90_min}"
+            )
+
     if metrics.get("delta_ge_16_pct", 0) > thresholds.get("delta_ge_16_pct_max", 0.5):
         fail(
             f"delta_ge_16_pct={metrics['delta_ge_16_pct']:.3f} > "
@@ -934,7 +1007,7 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
         fail(f"height_mean={mean_y:.2f} > {thresholds['height_mean_max']}")
 
     slack = thresholds.get("height_max_slack", 1)
-    max_h = thresholds.get("max_height", 128)
+    max_h = thresholds.get("max_height", 319)
     if metrics.get("height_max", 0) > max_h + slack:
         fail(f"height_max={metrics['height_max']} > {max_h + slack}")
 

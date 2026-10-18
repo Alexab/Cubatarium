@@ -57,6 +57,27 @@ int main()
   Expect(!chunks.HasChunk(glm::ivec3(ground.x, 8, ground.z)),
          "materialize should not pad empty sky slices up to maxCy");
 
+  cutum::UBlockWorld tall_world;
+  constexpr int kTallMaxWorldY = 319;
+  for (int cy = 0; cy <= kTallMaxWorldY / cutum::CHUNK_SIZE; ++cy)
+  {
+    tall_world.GetChunkManager().EnsureChunk(glm::ivec3(0, cy, 0));
+  }
+  tall_world.SetBlock(glm::ivec3(0, kTallMaxWorldY, 0), kStone);
+  tall_world.GetChunkManager().EnsureChunk(glm::ivec3(0, 20, 0));
+  tall_world.SetBlock(glm::ivec3(0, kTallMaxWorldY + 1, 0), kStone);
+  Expect(cutum::GetHighestNonAirChunkSlice(tall_world, glm::ivec3(0, 0, 0),
+                                           kTallMaxWorldY) == 19,
+         "319 is the top valid block in chunk slice cy=19");
+  Expect(cutum::AreTerrainColumnSlicesLoaded(tall_world, glm::ivec3(0, 0, 0),
+                                             kTallMaxWorldY, 19),
+         "tall terrain column readiness includes the top valid slice");
+  cutum::ClearTerrainColumnChunks(tall_world, glm::ivec3(0, 0, 0),
+                                  kTallMaxWorldY);
+  Expect(!tall_world.GetChunkManager().HasChunk(glm::ivec3(0, 19, 0)) &&
+             tall_world.GetChunkManager().HasChunk(glm::ivec3(0, 20, 0)),
+         "terrain column bounds stop after the slice containing y=319");
+
   const size_t before_remove = chunks.GetResidentChunkCount();
   chunks.RemoveChunk(glm::ivec3(0, 0, -1));
   Expect(chunks.GetResidentChunkCount() == before_remove - 1,

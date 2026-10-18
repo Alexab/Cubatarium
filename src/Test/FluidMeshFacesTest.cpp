@@ -1,5 +1,6 @@
 #include "Test/FluidTestHelpers.h"
 
+#include "App/Platform/Log.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
@@ -9,9 +10,16 @@
 #include "World/Math/FluidCellState.h"
 
 #include <cstdlib>
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+
+namespace cutum
+{
+void CubatariumLogInfo(const char *, const std::string &) {}
+} // namespace cutum
 
 static void Expect(bool cond, const char *message)
 {
@@ -505,6 +513,43 @@ int main()
     const std::vector<cutum::GreedyQuad> solid_quads =
         cutum::UGreedyMesher::BuildChunkMesh(solid_snap, registry);
     (void)solid_quads;
+  }
+
+  {
+    constexpr int kWorldTopY = 319;
+    cutum::UBlockWorld tall_world;
+    tall_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 top_chunk(0, 19, 0);
+    tall_world.GetChunkManager().EnsureChunk(top_chunk);
+    tall_world.SetBlock(glm::ivec3(8, kWorldTopY, 8), 8);
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    const cutum::ChunkMeshSnapshot top_snapshot =
+        cutum::ChunkMeshSnapshot::Capture(tall_world, top_chunk,
+                                          /*sourceRevision=*/1,
+                                          drawable_false, nullptr);
+    const std::vector<cutum::GreedyQuad> top_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(top_snapshot, registry);
+    bool top_face_at_world_limit = false;
+    for (const cutum::GreedyQuad &quad : top_quads)
+    {
+      if (quad.Id != 8 || quad.axis != 1 || quad.faceSign <= 0)
+      {
+        continue;
+      }
+      std::vector<cutum::GreedyMeshVertex> vertices;
+      std::vector<uint32_t> indices;
+      cutum::AppendGreedyQuad(quad, top_chunk, vertices, indices);
+      top_face_at_world_limit = std::any_of(
+          vertices.begin(), vertices.end(),
+          [](const cutum::GreedyMeshVertex &vertex)
+          { return vertex.py == 319.5f; });
+      if (top_face_at_world_limit)
+      {
+        break;
+      }
+    }
+    Expect(top_face_at_world_limit,
+           "mesher places the top block face at world y=319");
   }
 
   std::cout << "fluid_mesh_faces_test: OK" << std::endl;

@@ -90,13 +90,13 @@ struct ProceduralSettings
   std::string SeedText;
   WorldSeedKind SeedKind{WorldSeedKind::Numeric};
   WorldSeedHashAlgo SeedHashAlgo{WorldSeedHashAlgo::Fnv1a32};
-  int SeaLevel{48};
-  int MaxHeight{128};
+  int SeaLevel{63};
+  int MaxHeight{319};
   int BedrockTopY{0};
   std::string WorldGenPackId{"default"};
   std::string WorldGenPresetId{"balanced"};
-  // Profile 1 preserves historical pack interpretation. New worlds use the
-  // data-driven biome/feature profile (2); saves without the field stay at 1.
+  // Profile 1 preserves historical pack interpretation; profile 2 adds the
+  // data-driven biome/feature model.
   int WorldGenProfileVersion{2};
   bool EnableCaves{false};
   bool EnableTrees{true};

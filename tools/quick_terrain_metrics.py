@@ -101,7 +101,7 @@ def main() -> int:
             refs,
             repo_root=REPO,
             spawn_radius=radius,
-            max_height=128,
+            max_height=319,
         )
         print("  placement (blocks in world files, not render):")
         print(f"    spawn_tree_blocks: {metrics.get('spawn_tree_blocks', 0)}")

@@ -16,10 +16,21 @@ namespace
 
 void ApplyLegacyVerticalMode(ProceduralSettings &settings,
                              const std::string &verticalMode, bool hasSeaLevel,
-                             bool hasMaxHeight)
+                             bool hasMaxHeight, bool compactGenerator)
 {
+  const int defaultSeaLevel = compactGenerator ? 5 : 63;
+  const int defaultMaxHeight = compactGenerator ? 15 : 319;
+
   if (hasSeaLevel || hasMaxHeight)
   {
+    if (!hasSeaLevel)
+    {
+      settings.SeaLevel = defaultSeaLevel;
+    }
+    if (!hasMaxHeight)
+    {
+      settings.MaxHeight = defaultMaxHeight;
+    }
     return;
   }
   if (verticalMode == "compact")
@@ -30,8 +41,8 @@ void ApplyLegacyVerticalMode(ProceduralSettings &settings,
   }
   if (verticalMode == "extended")
   {
-    settings.SeaLevel = 48;
-    settings.MaxHeight = 128;
+    settings.SeaLevel = 63;
+    settings.MaxHeight = 319;
     return;
   }
   if (!verticalMode.empty())
@@ -39,6 +50,8 @@ void ApplyLegacyVerticalMode(ProceduralSettings &settings,
     std::cerr << "WARN: unknown procedural.vertical '" << verticalMode
               << "', ignoring legacy field" << std::endl;
   }
+  settings.SeaLevel = defaultSeaLevel;
+  settings.MaxHeight = defaultMaxHeight;
 }
 
 void ApplyLegacyOverworldProfile(const std::string &legacyGenerator,
@@ -550,8 +563,11 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       ParseTuning(p["tuning"], settings.Tuning);
     }
     ParseProceduralStreamingOptions(p, settings);
+    const bool compactGenerator =
+        settings.Generator == ProceduralGenerator::Flat ||
+        settings.Generator == ProceduralGenerator::Heightmap;
     ApplyLegacyVerticalMode(settings, legacyVerticalMode, hasSeaLevel,
-                            hasMaxHeight);
+                            hasMaxHeight, compactGenerator);
     ApplyLegacyOverworldProfile(legacyGeneratorId, settings, hasCaves, hasTrees,
                                 hasOres, hasFillWater, hasFillLava,
                                 hasFillFire);
