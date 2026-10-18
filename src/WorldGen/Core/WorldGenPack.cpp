@@ -366,6 +366,20 @@ void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
   {
     std::ifstream file(heightJson);
     const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Height.SchemaVersion = json.value("schema_version", 1);
+    if (pack.Height.SchemaVersion < 1 || pack.Height.SchemaVersion > 2)
+    {
+      throw std::runtime_error("unsupported height schema_version");
+    }
+    if (pack.Height.SchemaVersion == 1)
+    {
+      // Height schema 1 scaled ocean depths from sea level toward max_height.
+      // Keep that authored behavior for legacy/custom packs.
+      pack.Height.Ocean.CoastEnd = 0.52f;
+      pack.Height.Ocean.DeepOceanDepthRatio = 0.23f;
+      pack.Height.Ocean.ShelfDepthRatio = 0.18f;
+      pack.Height.Ocean.CoastDepthRatio = 0.14f;
+    }
     if (json.contains("layers") && json["layers"].is_object())
     {
       const auto &layers = json["layers"];
@@ -410,15 +424,21 @@ void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
             readRatio("shelf_end", 0.38f),
             pack.Height.Ocean.DeepOceanEnd + 0.05f, 0.90f);
         pack.Height.Ocean.CoastEnd = std::clamp(
-            readRatio("coast_end", 0.52f),
+            readRatio("coast_end", pack.Height.Ocean.CoastEnd),
             pack.Height.Ocean.ShelfEnd + 0.05f, 0.98f);
         pack.Height.Ocean.DeepOceanDepthRatio = std::clamp(
-            readRatio("deep_ocean_depth_ratio", 0.23f), 0.05f, 0.45f);
+            readRatio("deep_ocean_depth_ratio",
+                      pack.Height.Ocean.DeepOceanDepthRatio),
+            0.05f, 0.90f);
         pack.Height.Ocean.ShelfDepthRatio = std::clamp(
-            readRatio("shelf_depth_ratio", 0.18f), 0.02f,
+            readRatio("shelf_depth_ratio",
+                      pack.Height.Ocean.ShelfDepthRatio),
+            0.02f,
             pack.Height.Ocean.DeepOceanDepthRatio);
         pack.Height.Ocean.CoastDepthRatio = std::clamp(
-            readRatio("coast_depth_ratio", 0.14f), 0.0f,
+            readRatio("coast_depth_ratio",
+                      pack.Height.Ocean.CoastDepthRatio),
+            0.0f,
             pack.Height.Ocean.ShelfDepthRatio);
         pack.Height.Ocean.LowlandHeightRatio = std::clamp(
             readRatio("lowland_height_ratio", 0.03f), 0.0f, 0.15f);

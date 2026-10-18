@@ -14,6 +14,7 @@ struct DensityRouteParams
 };
 
 DensityRouteParams RouteDensity(const ClimateSample &climate, int seaLevel,
-                                int maxHeight, float terrainRoughness);
+                                int maxHeight, int minHeight,
+                                float terrainRoughness);
 
 } // namespace cutum

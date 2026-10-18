@@ -268,7 +268,8 @@ OverworldHeightSample UOverworldHeightSampler::SampleAt(int x, int z) const
   {
     out.climate = SampleClimate(x, z, Seed);
     const float offset = ClimateTerrainOffset(
-        out.climate, SeaLevel, MaxHeight, out.regional01, out.detail01,
+        out.climate, SeaLevel, MaxHeight, MinHeight, out.regional01,
+        out.detail01,
         Params.detailWeight, Params.amplitudeBlocks, TerrainRoughness, x, z,
         Seed, Params.rolling.weight, Params.rolling.scale,
         Params.rolling.octaves);

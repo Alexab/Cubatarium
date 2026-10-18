@@ -64,7 +64,7 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
 {
   const ClimateSample climate = SampleClimate(x, z, Seed);
   DensityRouteParams route =
-      RouteDensity(climate, SeaLevel, MaxHeight, TerrainRoughness);
+      RouteDensity(climate, SeaLevel, MaxHeight, MinHeight, TerrainRoughness);
 
   const PackHeightConfig &height = UWorldGenPack::HeightConfig();
   const HeightLayerPackConfig regional =

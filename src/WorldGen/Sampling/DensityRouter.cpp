@@ -7,7 +7,8 @@ namespace cutum
 {
 
 DensityRouteParams RouteDensity(const ClimateSample &climate, int seaLevel,
-                                int maxHeight, float terrainRoughness)
+                                int maxHeight, int minHeight,
+                                float terrainRoughness)
 {
   DensityRouteParams params;
   const float erosion = std::clamp(climate.erosion, 0.0f, 1.0f);
@@ -15,7 +16,8 @@ DensityRouteParams RouteDensity(const ClimateSample &climate, int seaLevel,
   const float roughness = std::max(0.25f, terrainRoughness);
 
   params.baseHeightBlocks =
-      ContinentalHeightBlocks(climate.continentalness, seaLevel, maxHeight);
+      ContinentalHeightBlocks(climate.continentalness, seaLevel, maxHeight,
+                              minHeight);
   params.noiseFactor =
       (6.0f + roughness * 10.0f) * ErosionAmplitudeMultiplier(erosion);
   params.jaggedness =

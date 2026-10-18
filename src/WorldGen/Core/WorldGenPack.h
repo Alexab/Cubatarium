@@ -75,6 +75,7 @@ struct HeightLayerPackConfig
 
 struct PackHeightConfig
 {
+  int SchemaVersion{2};
   HeightLayerPackConfig Continental;
   HeightLayerPackConfig Regional;
   HeightLayerPackConfig Detail;
@@ -88,10 +89,10 @@ struct PackHeightConfig
   {
     float DeepOceanEnd{0.22f};
     float ShelfEnd{0.38f};
-    float CoastEnd{0.52f};
-    float DeepOceanDepthRatio{0.23f};
-    float ShelfDepthRatio{0.18f};
-    float CoastDepthRatio{0.14f};
+    float CoastEnd{0.68f};
+    float DeepOceanDepthRatio{0.78f};
+    float ShelfDepthRatio{0.50f};
+    float CoastDepthRatio{0.40f};
     float LowlandHeightRatio{0.03f};
     float HillHeightRatio{0.13f};
     float HighlandHeightRatio{0.22f};

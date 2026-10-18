@@ -10,19 +10,24 @@ namespace cutum
 namespace
 {
 
-float SplineHeightFromContinental(float c, int seaLevel, int maxHeight)
+float SplineHeightFromContinental(float c, int seaLevel, int maxHeight,
+                                  int minHeight)
 {
-  const float range = static_cast<float>(std::max(8, maxHeight - seaLevel));
+  const float landRange =
+      static_cast<float>(std::max(8, maxHeight - seaLevel));
   const float u = std::clamp(c, 0.0f, 1.0f);
 
-  const PackHeightConfig::OceanProfile &profile =
-      UWorldGenPack::HeightConfig().Ocean;
-  const float y_deep = seaLevel - range * profile.DeepOceanDepthRatio;
-  const float y_shelf = seaLevel - range * profile.ShelfDepthRatio;
-  const float y_coast = seaLevel - range * profile.CoastDepthRatio;
-  const float y_lowland = seaLevel + range * profile.LowlandHeightRatio;
-  const float y_hills = seaLevel + range * profile.HillHeightRatio;
-  const float y_highland = seaLevel + range * profile.HighlandHeightRatio;
+  const PackHeightConfig &height_config = UWorldGenPack::HeightConfig();
+  const PackHeightConfig::OceanProfile &profile = height_config.Ocean;
+  const bool signed_ocean_profile = height_config.SchemaVersion >= 2;
+  const float oceanRange = static_cast<float>(std::max(
+      8, signed_ocean_profile ? seaLevel - minHeight : maxHeight - seaLevel));
+  const float y_deep = seaLevel - oceanRange * profile.DeepOceanDepthRatio;
+  const float y_shelf = seaLevel - oceanRange * profile.ShelfDepthRatio;
+  const float y_coast = seaLevel - oceanRange * profile.CoastDepthRatio;
+  const float y_lowland = seaLevel + landRange * profile.LowlandHeightRatio;
+  const float y_hills = seaLevel + landRange * profile.HillHeightRatio;
+  const float y_highland = seaLevel + landRange * profile.HighlandHeightRatio;
 
   if (u < profile.DeepOceanEnd)
   {
@@ -58,10 +63,11 @@ float PeaksAndValleys(float weirdness)
   return 1.0f - std::fabs(3.0f * std::fabs(w * 2.0f - 1.0f) - 2.0f);
 }
 
-float ContinentalHeightBlocks(float continentalness, int seaLevel, int maxHeight)
+float ContinentalHeightBlocks(float continentalness, int seaLevel,
+                              int maxHeight, int minHeight)
 {
   return SplineHeightFromContinental(std::clamp(continentalness, 0.0f, 1.0f),
-                                     seaLevel, maxHeight);
+                                     seaLevel, maxHeight, minHeight);
 }
 
 float ErosionAmplitudeMultiplier(float erosion)
@@ -71,7 +77,8 @@ float ErosionAmplitudeMultiplier(float erosion)
 }
 
 float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
-                           int maxHeight, float regionalNoise01,
+                           int maxHeight, int minHeight,
+                           float regionalNoise01,
                            float detailNoise01, float detailWeight,
                            float amplitudeBlocks, float terrainRoughness,
                            int worldX, int worldZ, uint32_t seed,
@@ -107,7 +114,8 @@ float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
   }
 
   const float climate_base =
-      ContinentalHeightBlocks(climate.continentalness, seaLevel, maxHeight);
+      ContinentalHeightBlocks(climate.continentalness, seaLevel, maxHeight,
+                              minHeight);
   const float mid_bias = static_cast<float>(seaLevel) + amplitudeBlocks * 0.12f;
   return (climate_base - mid_bias) + regional_delta + detail_delta + ridge_boost +
          rolling_delta;

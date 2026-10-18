@@ -239,36 +239,63 @@ static void TestExpandedOceanDepthProfile()
 {
   constexpr int oldSeaLevel = 48;
   constexpr int oldMaxHeight = 128;
+  constexpr int oldMinHeight = 0;
   constexpr int newSeaLevel = 63;
+  constexpr int newMinHeight = -64;
   constexpr int newMaxHeight = 319;
   const int oldDeepOceanFloor = static_cast<int>(std::lround(
-      cutum::ContinentalHeightBlocks(0.0f, oldSeaLevel, oldMaxHeight)));
+      cutum::ContinentalHeightBlocks(0.0f, oldSeaLevel, oldMaxHeight,
+                                     oldMinHeight)));
   const int newDeepOceanFloor = static_cast<int>(std::lround(
-      cutum::ContinentalHeightBlocks(0.0f, newSeaLevel, newMaxHeight)));
+      cutum::ContinentalHeightBlocks(0.0f, newSeaLevel, newMaxHeight,
+                                     newMinHeight)));
   const float oldShelfFloor = cutum::ContinentalHeightBlocks(
-      0.3f, oldSeaLevel, oldMaxHeight);
+      0.3f, oldSeaLevel, oldMaxHeight, oldMinHeight);
   const float newShelfFloor = cutum::ContinentalHeightBlocks(
-      0.3f, newSeaLevel, newMaxHeight);
+      0.3f, newSeaLevel, newMaxHeight, newMinHeight);
   const float newCoastFloor = cutum::ContinentalHeightBlocks(
-      0.42f, newSeaLevel, newMaxHeight);
+      0.42f, newSeaLevel, newMaxHeight, newMinHeight);
+  const float newLandFloor = cutum::ContinentalHeightBlocks(
+      0.95f, newSeaLevel, newMaxHeight, newMinHeight);
+  const float oldBoundsLandFloor = cutum::ContinentalHeightBlocks(
+      0.95f, newSeaLevel, newMaxHeight, oldMinHeight);
   const int oldDepth = oldSeaLevel - oldDeepOceanFloor;
   const int newDepth = newSeaLevel - newDeepOceanFloor;
   const float newShelfDepth = static_cast<float>(newSeaLevel) - newShelfFloor;
   const float newCoastDepth = static_cast<float>(newSeaLevel) - newCoastFloor;
   const cutum::ProceduralSettings defaultSettings;
+  if (newShelfDepth < 55.0f)
+  {
+    const auto &height = cutum::UWorldGenPack::HeightConfig();
+    std::cerr << kTestName << ": ocean profile diagnostic schema="
+              << height.SchemaVersion << " deep="
+              << height.Ocean.DeepOceanDepthRatio << " shelf="
+              << height.Ocean.ShelfDepthRatio << " coast="
+              << height.Ocean.CoastDepthRatio << " deep_end="
+              << height.Ocean.DeepOceanEnd << " shelf_end="
+              << height.Ocean.ShelfEnd << " coast_end="
+              << height.Ocean.CoastEnd << " deep_floor="
+              << newDeepOceanFloor << " shelf_floor=" << newShelfFloor
+              << " coast_floor=" << newCoastFloor << std::endl;
+  }
 
   FluidTest::Expect(oldDepth > 16, kTestName,
                     "expanded profile deepens oceans at the old vertical bounds");
   FluidTest::Expect(oldShelfFloor < static_cast<float>(oldSeaLevel), kTestName,
                     "expanded profile places ocean shelves below sea level");
-  FluidTest::Expect(newDeepOceanFloor >= 0, kTestName,
-                    "expanded profile keeps deep ocean above the current world floor");
-  FluidTest::Expect(newDepth >= 48 && newDepth > oldDepth * 3, kTestName,
+  FluidTest::Expect(newDeepOceanFloor < 0 &&
+                        newDeepOceanFloor > newMinHeight,
+                    kTestName,
+                    "deep ocean uses signed vertical space above the world floor");
+  FluidTest::Expect(newDepth >= 90 && newDepth > oldDepth * 2, kTestName,
                     "expanded profile provides substantially deeper oceans");
-  FluidTest::Expect(newShelfDepth >= 18.0f, kTestName,
-                    "ocean profile keeps broad shelves below sea level");
-  FluidTest::Expect(newCoastDepth >= 24.0f, kTestName,
+  FluidTest::Expect(newShelfDepth >= 55.0f, kTestName,
+                    "ocean profile keeps broad shelves substantially below sea level");
+  FluidTest::Expect(newCoastDepth >= 40.0f, kTestName,
                     "coastal ocean floors are deep enough for a broad shelf");
+  FluidTest::Expect(std::fabs(newLandFloor - oldBoundsLandFloor) < 0.01f,
+                    kTestName,
+                    "ocean depth scaling does not change land height scaling");
   FluidTest::Expect(defaultSettings.SeaLevel == newSeaLevel &&
                         defaultSettings.MinHeight == -64 &&
                         defaultSettings.MaxHeight == newMaxHeight,
@@ -338,12 +365,15 @@ int main()
   std::error_code ec;
   fs::current_path(repo_root, ec);
   cutum::UWorldGenPack::LoadPackId("default");
+  FluidTest::Expect(cutum::UWorldGenPack::HeightConfig().SchemaVersion == 2,
+                    kTestName,
+                    "default height pack uses signed ocean-depth semantics");
 
+  TestExpandedOceanDepthProfile();
   TestRefineSurfaceYNeighborDelta();
   TestCoastRampDoesNotSpike();
   TestCoastRampMonotonic();
   TestCoastSandMatchesRamp();
-  TestExpandedOceanDepthProfile();
   TestNegativeHeightSamplingAndCompactBounds();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
