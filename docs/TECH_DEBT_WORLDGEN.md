@@ -257,10 +257,15 @@ generation должна быть детерминирована мировым s
 - [x] Проверить текущий источник ассетов и добавить явный generic fallback для
   trunk/leaves новых видов. Лицензия и upstream существующего pack задокументированы;
   новые лицензируемые ассеты не добавлялись.
-- [ ] Полностью заменить фиксированный enum-массив на handle-only blend и
-  перевести все генерационные потребители на определения. Surface consumers и
-  cave feature rules уже получают dynamic keys, но часть terrain consumers пока
-  использует compatibility array.
+- [x] Полностью заменить фиксированный enum-массив на единый handle-only blend:
+  встроенные и JSON-биомы хранятся в одном векторе с весами, а рельеф, высотные
+  профили, river/erosion carve и палитра читают значения через snapshot handles.
+  Неизвестный ключ в legacy `BiomeId` отображается в `Invalid`, а не в `plains`;
+  все 17 встроенных ключей входят в каждый реестр контента. Интеграционная
+  проверка подтверждает разрешение ключей, смесь с JSON-биомом и отсутствие
+  тихой подмены custom dominant biome на plains. Основная цель и обе worldgen-
+  тестовые цели собрались; `worldgen_vegetation_placement_integration_test` и
+  `worldgen_biome_features_test` проходят.
 - [x] Разделить источник выбора поверхности: `IWorldGenBiomeSource` выбирает
   procedural climate или image-map стратегию по pack mode; image-map сохраняет
   procedural 3D cave source. Integration test проверяет image surface и cave.

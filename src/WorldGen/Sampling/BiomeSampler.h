@@ -48,9 +48,9 @@ enum class SubBiomeId
   ScrubWet,
 };
 
-// Surface-biome blend array. Cave biomes are resolved by UBiomeSampler::At3D
-// and intentionally do not participate in the surface climate weight vector.
-constexpr int kBiomeCount = 14;
+// Legacy classifier candidates. Surface weights themselves are always stored
+// in the pack-scoped, handle-only BiomeBlend below.
+constexpr int kBuiltinSurfaceBiomeCount = 14;
 
 struct BiomeSurfaceRule
 {
@@ -65,13 +65,7 @@ struct BiomeHeightProfile
   float volatilityMultiplier{1.f};
 };
 
-struct BiomeWeightSet
-{
-  std::array<float, kBiomeCount> weights{};
-  // Dynamic pack-defined biomes coexist with the legacy enum weights while
-  // worldgen consumers are migrated to handles.
-  BiomeBlend extensions;
-};
+using BiomeWeightSet = BiomeBlend;
 
 BiomeHeightProfile BiomeHeightProfileFor(BiomeId biome);
 int ApplyBiomeHeightProfile(int coarseY, int seaLevel, int maxHeight,
@@ -145,6 +139,8 @@ BiomeId PickWeightedBiome(int x, int z, uint32_t seed, float temperature,
 
 float BiomeTuningWeight(BiomeId biome, const WorldGenTuning &tuning);
 int BiomeIndex(BiomeId biome);
+BiomeHandle BiomeHandleForId(BiomeId biome);
+float BiomeWeightFor(const BiomeWeightSet &weights, BiomeId biome);
 
 float SampleCoarseHeightGradient(int x, int z,
                                  const CoarseHeightCallback &get_coarse_y);

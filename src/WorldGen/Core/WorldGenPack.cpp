@@ -18,7 +18,31 @@
 namespace cutum
 {
 
-std::shared_ptr<const WorldGenPack> UWorldGenPack::Active = std::make_shared<WorldGenPack>();
+namespace
+{
+
+std::vector<BiomeKey> BuiltinBiomeKeys()
+{
+  return {"plains",          "forest",        "desert",
+          "hills",           "tundra",        "savanna",
+          "foothills",       "scrubland",     "cold_steppe",
+          "ocean",            "beach",         "mountains",
+          "snowy_slopes",     "jagged_peaks",  "lush_caves",
+          "dripstone_caves",  "deep_dark"};
+}
+
+std::shared_ptr<const WorldGenPack> MakeInitialWorldGenPack()
+{
+  auto pack = std::make_shared<WorldGenPack>();
+  pack->BiomeRegistry = std::make_shared<const BiomeDefinitionRegistry>(
+      BuiltinBiomeKeys());
+  return pack;
+}
+
+} // namespace
+
+std::shared_ptr<const WorldGenPack> UWorldGenPack::Active =
+    MakeInitialWorldGenPack();
 std::string UWorldGenPack::ActivePackDir;
 
 namespace
@@ -943,8 +967,8 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
     }
   }
 
-  std::vector<BiomeKey> biomeKeys;
-  biomeKeys.reserve(pack.Biomes.size());
+  std::vector<BiomeKey> biomeKeys = BuiltinBiomeKeys();
+  biomeKeys.reserve(biomeKeys.size() + pack.Biomes.size());
   for (const auto &[key, definition] : pack.Biomes)
   {
     (void)definition;

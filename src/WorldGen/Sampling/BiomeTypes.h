@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -43,6 +45,77 @@ struct BiomeBlend
       }
     }
     return 0.0f;
+  }
+
+  void AddWeight(BiomeHandle handle, float weight)
+  {
+    if (!handle.IsValid() || !std::isfinite(weight) || !(weight > 0.0f))
+    {
+      return;
+    }
+    for (BiomeBlendEntry &entry : entries)
+    {
+      if (entry.biome == handle)
+      {
+        entry.weight += weight;
+        return;
+      }
+    }
+    entries.push_back({handle, weight});
+  }
+
+  void SetWeight(BiomeHandle handle, float weight)
+  {
+    for (auto it = entries.begin(); it != entries.end(); ++it)
+    {
+      if (it->biome == handle)
+      {
+        if (std::isfinite(weight) && weight > 0.0f)
+        {
+          it->weight = weight;
+        }
+        else
+        {
+          entries.erase(it);
+        }
+        return;
+      }
+    }
+    if (std::isfinite(weight) && weight > 0.0f)
+    {
+      AddWeight(handle, weight);
+    }
+  }
+
+  float TotalWeight() const
+  {
+    float total = 0.0f;
+    for (const BiomeBlendEntry &entry : entries)
+    {
+      total += entry.weight;
+    }
+    return total;
+  }
+
+  void Normalize()
+  {
+    entries.erase(std::remove_if(entries.begin(), entries.end(),
+                                 [](const BiomeBlendEntry &entry)
+                                 { return !entry.biome.IsValid() ||
+                                          !std::isfinite(entry.weight) ||
+                                          !(entry.weight > 0.0f); }),
+                  entries.end());
+    const float total = TotalWeight();
+    if (std::isfinite(total) && total > 0.0f)
+    {
+      for (BiomeBlendEntry &entry : entries)
+      {
+        entry.weight /= total;
+      }
+    }
+    std::sort(entries.begin(), entries.end(),
+              [](const BiomeBlendEntry &a, const BiomeBlendEntry &b)
+              { return a.biome.index < b.biome.index; });
   }
 };
 

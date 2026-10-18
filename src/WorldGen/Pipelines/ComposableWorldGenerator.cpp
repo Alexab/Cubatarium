@@ -272,7 +272,7 @@ BiomeWeightSet UComposableWorldGenerator::SampleBiomeWeights(
   if (!BiomeSampler)
   {
     BiomeWeightSet weights;
-    weights.weights[BiomeIndex(BiomeId::Plains)] = 1.0f;
+    weights.SetWeight(BiomeHandleForId(BiomeId::Plains), 1.0f);
     return weights;
   }
   return BiomeSampler->WeightsAt(world_x, world_z, coarse_y,

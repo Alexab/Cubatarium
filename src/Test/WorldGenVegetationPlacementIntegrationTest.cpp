@@ -275,7 +275,7 @@ static void TestDataDefinedBiomeAffectsSampling()
       weights = cutum::ComputeBiomeWeights(x, z, 64, settings.SeaLevel,
                                            settings.MaxHeight, kSeed,
                                            settings.Tuning);
-      if (weights.extensions.Weight(handle) > 0.8f)
+      if (weights.Weight(handle) > 0.8f)
       {
         sampled = true;
         break;
@@ -284,23 +284,41 @@ static void TestDataDefinedBiomeAffectsSampling()
   }
   FluidTest::Expect(sampled, kTestName,
                     "climate profile participates in dynamic biome blending");
+  const cutum::BiomeHandle plainsHandle =
+      cutum::BiomeHandleForId(cutum::BiomeId::Plains);
+  FluidTest::Expect(plainsHandle.IsValid(), kTestName,
+                    "built-in biomes resolve to pack-scoped handles");
+  for (const cutum::BiomeId builtin : {
+           cutum::BiomeId::Plains, cutum::BiomeId::Forest,
+           cutum::BiomeId::Desert, cutum::BiomeId::Hills,
+           cutum::BiomeId::Tundra, cutum::BiomeId::Savanna,
+           cutum::BiomeId::Foothills, cutum::BiomeId::Scrubland,
+           cutum::BiomeId::ColdSteppe, cutum::BiomeId::Ocean,
+           cutum::BiomeId::Beach, cutum::BiomeId::Mountains,
+           cutum::BiomeId::SnowySlopes, cutum::BiomeId::JaggedPeaks,
+           cutum::BiomeId::LushCaves, cutum::BiomeId::DripstoneCaves,
+           cutum::BiomeId::DeepDark})
+  {
+    FluidTest::Expect(cutum::BiomeHandleForId(builtin).IsValid(), kTestName,
+                      "all built-in biome keys exist in the active snapshot");
+  }
+  FluidTest::Expect(std::all_of(
+                        weights.entries.begin(), weights.entries.end(),
+                        [](const cutum::BiomeBlendEntry &entry)
+                        { return entry.biome.IsValid(); }),
+                    kTestName, "biome blends contain handles only");
   FluidTest::Expect(cutum::BiomeKeyForHandle(
                         cutum::DominantBiomeHandle(weights)) == "azure_meadow",
                     kTestName, "dynamic biome can dominate the sampled blend");
+  FluidTest::Expect(cutum::DominantBiome(weights) == cutum::BiomeId::Invalid,
+                    kTestName,
+                    "custom dominant biomes do not silently become plains");
 
   const int with_custom = cutum::RefineSurfaceYWithBiomes(
       0, 0, 64, settings, kSeed, settings.Tuning, {}, &weights);
   cutum::BiomeWeightSet legacy_only = weights;
-  legacy_only.extensions.entries.clear();
-  float legacy_total = 0.0f;
-  for (float weight : legacy_only.weights)
-  {
-    legacy_total += weight;
-  }
-  for (float &weight : legacy_only.weights)
-  {
-    weight /= legacy_total;
-  }
+  legacy_only.SetWeight(handle, 0.0f);
+  legacy_only.Normalize();
   const int without_custom = cutum::RefineSurfaceYWithBiomes(
       0, 0, 64, settings, kSeed, settings.Tuning, {}, &legacy_only);
   FluidTest::Expect(with_custom >= without_custom + 4, kTestName,

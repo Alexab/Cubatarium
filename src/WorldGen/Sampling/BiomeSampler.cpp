@@ -3,6 +3,7 @@
 #include "WorldGen/Core/ColumnHash.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 #include "WorldGen/Core/Noise.h"
@@ -169,6 +170,11 @@ BiomeHeightProfile BiomeHeightProfileForHandle(BiomeHandle handle)
   {
     return definition->Height;
   }
+  const BiomeId builtin = BiomeIdFromString(BiomeKeyForHandle(handle));
+  if (builtin != BiomeId::Invalid)
+  {
+    return BiomeHeightProfileFor(builtin);
+  }
   return {};
 }
 
@@ -253,6 +259,23 @@ BiomeId BiomeFromIndex(int index)
   default:
     return BiomeId::Plains;
   }
+}
+
+BiomeHandle BiomeHandleForId(BiomeId biome)
+{
+  if (biome == BiomeId::Invalid)
+  {
+    return {};
+  }
+  const WorldGenPack &pack = UWorldGenPack::Get();
+  return pack.BiomeRegistry
+             ? pack.BiomeRegistry->Find(BiomeIdToString(biome))
+             : BiomeHandle{};
+}
+
+float BiomeWeightFor(const BiomeWeightSet &weights, BiomeId biome)
+{
+  return weights.Weight(BiomeHandleForId(biome));
 }
 
 float AxisFitness(float value, float minV, float maxV)
@@ -432,8 +455,8 @@ int ClampToFlatPlateau(int x, int z, int y, int localCoarseRange,
 int ApplyRiverCarve(int x, int z, int surfaceY, const BiomeWeightSet &weights,
                     const ProceduralSettings &settings, int localCoarseRange)
 {
-  const float forest = weights.weights[BiomeIndex(BiomeId::Forest)];
-  const float plains = weights.weights[BiomeIndex(BiomeId::Plains)];
+  const float forest = BiomeWeightFor(weights, BiomeId::Forest);
+  const float plains = BiomeWeightFor(weights, BiomeId::Plains);
   const float humid = forest + plains;
   const ClimateSample climate = SampleClimate(x, z, settings.Seed);
   const float pv = PeaksAndValleys(climate.weirdness);
@@ -556,7 +579,7 @@ int ApplyErosionLite(int x, int z, int surfaceY, uint32_t seed,
                      const BiomeWeightSet &weights, float macro_height01)
 {
   (void)seed;
-  if (weights.weights[BiomeIndex(BiomeId::Hills)] > 0.6f &&
+  if (BiomeWeightFor(weights, BiomeId::Hills) > 0.6f &&
       macro_height01 > 0.75f)
   {
     return surfaceY;
@@ -846,13 +869,12 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
 
   BiomeWeightSet result;
   float total = 0.0f;
-  for (int i = 0; i < kBiomeCount; ++i)
+  for (int i = 0; i < kBuiltinSurfaceBiomeCount; ++i)
   {
     const BiomeId biome = BiomeFromIndex(i);
     const float tuningWeight = BiomeTuningWeight(biome, tuning);
     if (tuningWeight <= 0.0f)
     {
-      result.weights[i] = 0.0f;
       continue;
     }
     float w = BiomeClimateFitness(
@@ -866,7 +888,7 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
                         localHeightNorm) *
           tuningWeight * 0.25f;
     }
-    result.weights[i] = w;
+    result.AddWeight(BiomeHandleForId(biome), w);
     total += w;
   }
   const WorldGenPack &pack = UWorldGenPack::Get();
@@ -888,31 +910,26 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
           CustomBiomeClimateFitness(definition->second.Climate, climate);
       if (handle.IsValid() && weight > 0.0f)
       {
-        result.extensions.entries.push_back({handle, weight});
+        result.AddWeight(handle, weight);
         total += weight;
       }
     }
   }
-  std::sort(result.extensions.entries.begin(), result.extensions.entries.end(),
-            [](const BiomeBlendEntry &a, const BiomeBlendEntry &b)
-            { return a.biome.index < b.biome.index; });
-
   if (total > 0.0f)
   {
-    for (float &weight : result.weights)
-    {
-      weight /= total;
-    }
-    for (BiomeBlendEntry &entry : result.extensions.entries)
+    for (BiomeBlendEntry &entry : result.entries)
     {
       entry.weight /= total;
     }
   }
   else
   {
-    result.weights[BiomeIndex(ClassifyBiome(climate.temperature, climate.moisture,
-                                            localHeightNorm))] = 1.0f;
+    result.SetWeight(
+        BiomeHandleForId(ClassifyBiome(climate.temperature, climate.moisture,
+                                       localHeightNorm)),
+        1.0f);
   }
+  result.Normalize();
   return result;
 }
 
@@ -948,94 +965,61 @@ BiomeWeightSet BlendedBiomeWeights(int x, int z, int coarseY, int seaLevel,
       const BiomeWeightSet local = ComputeBiomeWeights(
           x + dx, z + dz, sampleY, seaLevel, maxHeight, seed, tuning,
           worldgenProfileVersion);
-      for (int i = 0; i < kBiomeCount; ++i)
+      for (const BiomeBlendEntry &entry : local.entries)
       {
-        blended.weights[i] += local.weights[i] * kernel;
-      }
-      for (const BiomeBlendEntry &entry : local.extensions.entries)
-      {
-        auto it = std::find_if(
-            blended.extensions.entries.begin(), blended.extensions.entries.end(),
-            [&entry](const BiomeBlendEntry &candidate)
-            { return candidate.biome == entry.biome; });
-        if (it == blended.extensions.entries.end())
-        {
-          blended.extensions.entries.push_back({entry.biome, entry.weight * kernel});
-        }
-        else
-        {
-          it->weight += entry.weight * kernel;
-        }
+        blended.AddWeight(entry.biome, entry.weight * kernel);
       }
       totalKernel += kernel;
     }
   }
   if (totalKernel > 0.0f)
   {
-    for (float &w : blended.weights)
-    {
-      w /= totalKernel;
-    }
-    for (BiomeBlendEntry &entry : blended.extensions.entries)
+    for (BiomeBlendEntry &entry : blended.entries)
     {
       entry.weight /= totalKernel;
     }
   }
+  blended.Normalize();
   return blended;
 }
 
 BiomeId DominantBiome(const BiomeWeightSet &weights)
 {
-  int best = 0;
-  float bestW = -1.0f;
-  for (int i = 0; i < kBiomeCount; ++i)
-  {
-    if (weights.weights[i] > bestW)
-    {
-      bestW = weights.weights[i];
-      best = i;
-    }
-  }
-  return BiomeFromIndex(best);
+  const BiomeHandle handle = DominantBiomeHandle(weights);
+  return handle.IsValid()
+             ? BiomeIdFromString(BiomeKeyForHandle(handle))
+             : BiomeId::Invalid;
 }
 
 BiomeHandle DominantBiomeHandle(const BiomeWeightSet &weights)
 {
   BiomeHandle best;
   float bestWeight = 0.0f;
-  for (const BiomeBlendEntry &entry : weights.extensions.entries)
+  for (const BiomeBlendEntry &entry : weights.entries)
   {
-    if (entry.weight > bestWeight)
+    if (entry.weight > bestWeight ||
+        (entry.weight == bestWeight && entry.biome.index < best.index))
     {
       best = entry.biome;
       bestWeight = entry.weight;
     }
   }
-  const float legacyWeight =
-      weights.weights[BiomeIndex(DominantBiome(weights))];
-  return bestWeight > legacyWeight ? best : BiomeHandle{};
+  return best;
 }
 
 BiomeHandle PickSurfaceBiomeHandle(int x, int z,
                                    const BiomeWeightSet &weights)
 {
-  float dynamicWeight = 0.0f;
-  for (const BiomeBlendEntry &entry : weights.extensions.entries)
-  {
-    dynamicWeight += entry.weight;
-  }
-  if (dynamicWeight <= 0.0f)
+  const float totalWeight = weights.TotalWeight();
+  if (totalWeight <= 0.0f)
   {
     return {};
   }
 
-  float pick = static_cast<float>(BiomePickHash(x, z, 11821) % 100000U) /
-               100000.0f;
-  if (pick >= dynamicWeight)
-  {
-    return {};
-  }
-  for (const BiomeBlendEntry &entry : weights.extensions.entries)
+  float pick = (static_cast<float>(BiomePickHash(x, z, 11821) % 100000U) /
+                100000.0f) *
+               totalWeight;
+  for (const BiomeBlendEntry &entry : weights.entries)
   {
     pick -= entry.weight;
     if (pick < 0.0f)
@@ -1043,7 +1027,7 @@ BiomeHandle PickSurfaceBiomeHandle(int x, int z,
       return entry.biome;
     }
   }
-  return weights.extensions.entries.back().biome;
+  return weights.entries.empty() ? BiomeHandle{} : weights.entries.back().biome;
 }
 
 BiomeKey BiomeKeyForHandle(BiomeHandle handle)
@@ -1059,43 +1043,8 @@ BiomeKey BiomeKeyForHandle(BiomeHandle handle)
 
 BiomeId PickSurfaceBiome(int x, int z, const BiomeWeightSet &weights)
 {
-  const BiomeId dominant = DominantBiome(weights);
-  const float dominantWeight = weights.weights[BiomeIndex(dominant)];
-  if (dominantWeight >= 0.62f)
-  {
-    return dominant;
-  }
-
-  int first = -1;
-  int second = -1;
-  float firstW = -1.0f;
-  float secondW = -1.0f;
-  for (int i = 0; i < kBiomeCount; ++i)
-  {
-    if (weights.weights[i] > firstW)
-    {
-      second = first;
-      secondW = firstW;
-      first = i;
-      firstW = weights.weights[i];
-    }
-    else if (weights.weights[i] > secondW)
-    {
-      second = i;
-      secondW = weights.weights[i];
-    }
-  }
-  if (second < 0 || secondW < 0.15f || std::fabs(firstW - secondW) < 0.12f)
-  {
-    return dominant;
-  }
-
-  const uint32_t pick = BiomePickHash(x, z, 7711) % 1000;
-  const float threshold =
-      firstW / std::max(0.001f, firstW + secondW);
-  return pick < static_cast<uint32_t>(threshold * 1000.0f)
-             ? BiomeFromIndex(first)
-             : BiomeFromIndex(second);
+  return BiomeIdFromString(
+      BiomeKeyForHandle(PickSurfaceBiomeHandle(x, z, weights)));
 }
 
 SubBiomeId SubBiomeFor(int x, int z, BiomeId biome, uint32_t seed)
@@ -1163,19 +1112,7 @@ int BiomeBlendedHeightY(int coarseY, int seaLevel, int maxHeight,
 {
   float sum = 0.0f;
   float weight_sum = 0.0f;
-  for (int i = 0; i < kBiomeCount; ++i)
-  {
-    if (weights.weights[i] <= 0.0f)
-    {
-      continue;
-    }
-    const BiomeId biome = BiomeFromIndex(i);
-    const int height = ApplyBiomeHeightProfile(
-        coarseY, seaLevel, maxHeight, BiomeHeightProfileFor(biome));
-    sum += weights.weights[i] * static_cast<float>(height);
-    weight_sum += weights.weights[i];
-  }
-  for (const BiomeBlendEntry &entry : weights.extensions.entries)
+  for (const BiomeBlendEntry &entry : weights.entries)
   {
     const BiomeHeightProfile profile = BiomeHeightProfileForHandle(entry.biome);
     sum += entry.weight * static_cast<float>(ApplyBiomeHeightProfile(
@@ -1196,12 +1133,7 @@ int BiomeBlendedBaseY(int x, int z, int coarseY, const BiomeWeightSet &weights,
   (void)x;
   (void)z;
   float offset = 0.0f;
-  for (int i = 0; i < kBiomeCount; ++i)
-  {
-    const BiomeHeightProfile profile = BiomeHeightProfileFor(BiomeFromIndex(i));
-    offset += weights.weights[i] * profile.baseOffsetBlocks;
-  }
-  for (const BiomeBlendEntry &entry : weights.extensions.entries)
+  for (const BiomeBlendEntry &entry : weights.entries)
   {
     offset += entry.weight *
               BiomeHeightProfileForHandle(entry.biome).baseOffsetBlocks;
@@ -1255,12 +1187,7 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
                                 settings.MaxHeight, seed, tuning, getCoarseY,
                                 worldgenProfileVersion);
   float volatilityJitter = 0.0f;
-  for (int i = 0; i < kBiomeCount; ++i)
-  {
-    const BiomeHeightProfile profile = BiomeHeightProfileFor(BiomeFromIndex(i));
-    volatilityJitter += weights.weights[i] * profile.volatilityMultiplier;
-  }
-  for (const BiomeBlendEntry &entry : weights.extensions.entries)
+  for (const BiomeBlendEntry &entry : weights.entries)
   {
     volatilityJitter += entry.weight *
                         BiomeHeightProfileForHandle(entry.biome)
@@ -1342,7 +1269,7 @@ BiomeId PickWeightedBiome(int x, int z, uint32_t seed, float temperature,
                           const WorldGenTuning &tuning)
 {
   const BiomeId primary = ClassifyBiome(temperature, moisture, localHeightNorm);
-  constexpr std::array<BiomeId, kBiomeCount> kBiomes = {
+  constexpr std::array<BiomeId, kBuiltinSurfaceBiomeCount> kBiomes = {
       BiomeId::Plains,    BiomeId::Forest,   BiomeId::Desert, BiomeId::Hills,
       BiomeId::Tundra,    BiomeId::Savanna,  BiomeId::Foothills,
       BiomeId::Scrubland, BiomeId::ColdSteppe, BiomeId::Ocean,
@@ -1350,7 +1277,7 @@ BiomeId PickWeightedBiome(int x, int z, uint32_t seed, float temperature,
       BiomeId::JaggedPeaks};
 
   float total = 0.0f;
-  std::array<float, kBiomeCount> weights{};
+  std::array<float, kBuiltinSurfaceBiomeCount> weights{};
   for (size_t i = 0; i < kBiomes.size(); ++i)
   {
     const float tuningWeight = BiomeTuningWeight(kBiomes[i], tuning);
@@ -1618,22 +1545,28 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
   const int surface_y = sample.SurfaceY;
 
   UBiomeSampler biome_lookup(ctx.Settings.Seed, ctx.Settings.Tuning);
-  BiomeSurfaceRule rule = biome_lookup.SurfaceRule(pick, ctx);
-
-  if (sample.SurfaceBiomeHandle.IsValid())
+  const bool customBiome = sample.SurfaceBiomeHandle.IsValid() &&
+                           BiomeIdFromString(sample.SurfaceBiomeKey) ==
+                               BiomeId::Invalid;
+  BiomeSurfaceRule rule;
+  if (pick == BiomeId::Invalid)
   {
-    if (const BiomeDefinitionRegistry *registry = UWorldGenPack::Get().BiomeRegistry.get())
-    {
-      if (const BiomeKey *key = registry->Key(sample.SurfaceBiomeHandle))
-      {
-        rule.surface = ctx.Blocks.Grass;
-        rule.subsurface = ctx.Blocks.Dirt;
-        rule = ApplyPackPalette(*key, rule, ctx);
-      }
-    }
+    rule.surface = ctx.Blocks.Grass;
+    rule.subsurface = ctx.Blocks.Dirt;
+  }
+  else
+  {
+    rule = biome_lookup.SurfaceRule(pick, ctx);
   }
 
-  if (!sample.SurfaceBiomeHandle.IsValid() &&
+  if (customBiome)
+  {
+    rule.surface = ctx.Blocks.Grass;
+    rule.subsurface = ctx.Blocks.Dirt;
+    rule = ApplyPackPalette(sample.SurfaceBiomeKey, rule, ctx);
+  }
+
+  if (!customBiome &&
       (pick == BiomeId::Hills || dominant == BiomeId::Hills))
   {
     if (sample.MacroHeight01 < 0.88f)
@@ -1645,18 +1578,19 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
 
   const float second_weight = [&]() {
     float best = 0.0f;
-    for (int i = 0; i < kBiomeCount; ++i)
+    const BiomeHandle dominantHandle = DominantBiomeHandle(weights);
+    for (const BiomeBlendEntry &entry : weights.entries)
     {
-      if (BiomeFromIndex(i) == dominant)
+      if (entry.biome == dominantHandle)
       {
         continue;
       }
-      best = std::max(best, weights.weights[i]);
+      best = std::max(best, entry.weight);
     }
     return best;
   }();
-  if (!sample.SurfaceBiomeHandle.IsValid() && second_weight > 0.15f &&
-      weights.weights[BiomeIndex(dominant)] < 0.85f)
+  const float dominant_weight = weights.Weight(DominantBiomeHandle(weights));
+  if (!customBiome && second_weight > 0.15f && dominant_weight < 0.85f)
   {
     const uint32_t mix = BiomePickHash(x, z, 8803) % 100;
     if (mix < 35)
@@ -1667,10 +1601,8 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
     if ((dominant == BiomeId::Desert && pick == BiomeId::Forest) ||
         (dominant == BiomeId::Forest && pick == BiomeId::Desert))
     {
-      const float desert_weight =
-          weights.weights[BiomeIndex(BiomeId::Desert)];
-      const float forest_weight =
-          weights.weights[BiomeIndex(BiomeId::Forest)];
+      const float desert_weight = BiomeWeightFor(weights, BiomeId::Desert);
+      const float forest_weight = BiomeWeightFor(weights, BiomeId::Forest);
       const float sand_prob =
           desert_weight /
           std::max(0.001f, desert_weight + forest_weight);
@@ -1796,7 +1728,7 @@ BiomeWeightSet ImageMapBiomeSource::SampleSurfaceWeights(
   (void)maxHeight;
   BiomeWeightSet weights;
   const BiomeId biome = UWorldGenPack::BiomeAtImage(x, z);
-  weights.weights[BiomeIndex(biome)] = 1.0f;
+  weights.SetWeight(BiomeHandleForId(biome), 1.0f);
   return weights;
 }
 
