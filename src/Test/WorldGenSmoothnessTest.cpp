@@ -368,6 +368,9 @@ static void TestRegionalDensityTerrainDistribution()
   constexpr std::array<uint32_t, 3> seeds = {410056U, 410057U, 410058U};
   std::vector<int> heights;
   heights.reserve(seeds.size() * 33 * 33);
+  int high_peaks_with_mountain_biome_weight = 0;
+  int high_peak_samples = 0;
+  float max_high_peak_mountain_biome_weight = 0.0f;
 
   for (uint32_t seed : seeds)
   {
@@ -395,19 +398,29 @@ static void TestRegionalDensityTerrainDistribution()
         const int y = density_sampler.SurfaceYAt(x, z);
         const cutum::ClimateSample climate =
             cutum::SampleClimate(x, z, settings.Seed);
-        const float land = cutum::Smoothstep(
-            0.38f, 0.58f, climate.continentalness);
-        const float inland = cutum::Smoothstep(
-            0.50f, 0.82f, climate.continentalness);
-        const float low_erosion =
-            1.0f - cutum::Smoothstep(0.35f, 0.78f, climate.erosion);
-        const float peak_valleys = std::clamp(
-            cutum::PeaksAndValleys(climate.weirdness), 0.0f, 1.0f);
+        if (y >= 150)
+        {
+          ++high_peak_samples;
+          const cutum::BiomeWeightSet biome_weights =
+              cutum::ComputeBiomeWeights(x, z, y, settings.SeaLevel,
+                                         settings.MaxHeight, settings.Seed,
+                                         settings.Tuning);
+          const float mountain_biome_weight =
+              cutum::BiomeWeightFor(biome_weights,
+                                    cutum::BiomeId::Mountains) +
+              cutum::BiomeWeightFor(biome_weights,
+                                    cutum::BiomeId::SnowySlopes) +
+              cutum::BiomeWeightFor(biome_weights,
+                                    cutum::BiomeId::JaggedPeaks);
+          max_high_peak_mountain_biome_weight = std::max(
+              max_high_peak_mountain_biome_weight, mountain_biome_weight);
+          if (mountain_biome_weight >= 0.20f)
+          {
+            ++high_peaks_with_mountain_biome_weight;
+          }
+        }
         const float mountain_weight =
-            land * inland * (0.30f + 0.70f * low_erosion) *
-            cutum::Smoothstep(0.28f, 0.65f, climate.ridge) *
-            (0.80f + 0.20f *
-                        cutum::Smoothstep(0.12f, 0.65f, peak_valleys));
+            cutum::MountainClimateWeight(climate);
         min_continentalness =
             std::min(min_continentalness, climate.continentalness);
         max_continentalness =
@@ -453,6 +466,16 @@ static void TestRegionalDensityTerrainDistribution()
   const auto maximum = std::max_element(heights.begin(), heights.end());
   FluidTest::Expect(maximum != heights.end() && *maximum >= 150, kTestName,
                     "regional density terrain includes high mountain peaks");
+  std::cout << kTestName << ": high peaks with mountain biome blend >=0.20="
+            << high_peaks_with_mountain_biome_weight
+            << "/" << high_peak_samples << " max blend="
+            << max_high_peak_mountain_biome_weight
+            << std::endl;
+  FluidTest::Expect(high_peak_samples > 0 &&
+                        high_peaks_with_mountain_biome_weight * 2 >=
+                            high_peak_samples,
+                    kTestName,
+                    "most high terrain peaks overlap mountain surface biomes");
 }
 
 } // namespace

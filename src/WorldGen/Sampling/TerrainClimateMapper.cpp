@@ -63,6 +63,19 @@ float PeaksAndValleys(float weirdness)
   return 1.0f - std::fabs(3.0f * std::fabs(w * 2.0f - 1.0f) - 2.0f);
 }
 
+float MountainClimateWeight(const ClimateSample &climate)
+{
+  const float land = Smoothstep(0.38f, 0.58f, climate.continentalness);
+  const float inland = Smoothstep(0.50f, 0.82f, climate.continentalness);
+  const float lowErosion =
+      1.0f - Smoothstep(0.35f, 0.78f, climate.erosion);
+  const float peakValleys =
+      std::clamp(PeaksAndValleys(climate.weirdness), 0.0f, 1.0f);
+  return land * inland * (0.30f + 0.70f * lowErosion) *
+         Smoothstep(0.28f, 0.65f, climate.ridge) *
+         (0.80f + 0.20f * Smoothstep(0.12f, 0.65f, peakValleys));
+}
+
 float ContinentalHeightBlocks(float continentalness, int seaLevel,
                               int maxHeight, int minHeight)
 {

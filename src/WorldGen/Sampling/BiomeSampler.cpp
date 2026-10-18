@@ -878,15 +878,13 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
       coastalBand * Smoothstep(0.36f, 0.49f, climate.continentalness) *
       (1.0f - Smoothstep(0.58f, 0.70f, climate.continentalness));
   const float mountainFactor =
-      Smoothstep(0.48f, 0.78f, localHeightNorm) *
-      (1.0f - Smoothstep(0.58f, 0.86f, climate.erosion)) *
-      Smoothstep(0.48f, 0.76f, climate.ridge);
+      MountainClimateWeight(climate) * Smoothstep(0.20f, 0.45f, height_norm);
   const float snowySlopeFactor =
       mountainFactor * (1.0f - Smoothstep(0.22f, 0.52f, climate.temperature));
   const float jaggedPeakFactor =
       mountainFactor * Smoothstep(0.55f, 0.84f,
                                   PeaksAndValleys(climate.weirdness)) *
-      Smoothstep(0.67f, 0.93f, localHeightNorm);
+      Smoothstep(0.42f, 0.68f, height_norm);
 
   BiomeWeightSet result;
   float total = 0.0f;

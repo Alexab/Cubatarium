@@ -7,6 +7,8 @@ namespace cutum
 {
 
 float PeaksAndValleys(float weirdness);
+/// Shared climate mask for mountain terrain uplift and mountain biomes.
+float MountainClimateWeight(const ClimateSample &climate);
 float ContinentalHeightBlocks(float continentalness, int seaLevel, int maxHeight,
                               int minHeight);
 float ErosionAmplitudeMultiplier(float erosion);
