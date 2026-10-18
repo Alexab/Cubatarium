@@ -159,12 +159,20 @@ bool PassesSpatialFloraCandidateGate(int x, int z, uint32_t seed, int spacing,
   const int cellZ = FloorDiv(z, cellSize);
   const uint32_t cellHash =
       FeatureHash(cellX, cellZ, seed + pool_seed_offset + rule_seed_offset);
-  const int inset = std::max(1, cellSize / 4);
-  const int jitterSpan = std::max(1, cellSize - inset * 2);
-  const int candidateX =
-      cellX * cellSize + inset + static_cast<int>(cellHash % jitterSpan);
-  const int candidateZ = cellZ * cellSize + inset +
-                         static_cast<int>((cellHash / 31U) % jitterSpan);
+  // The acceptance probability below is normalized against the full cell
+  // area. Restricting jitter to an inset silently multiplied the configured
+  // density by (jitterSpan / cellSize)^2, making flora substantially rarer
+  // than its authored spacing. Sample the whole cell instead, with independent
+  // deterministic hashes for the two axes.
+  const int candidateX = cellX * cellSize +
+                         static_cast<int>(cellHash %
+                                          static_cast<uint32_t>(cellSize));
+  const uint32_t zHash = FeatureHash(
+      cellX, cellZ,
+      seed + pool_seed_offset + rule_seed_offset + 0x68bc21ebU);
+  const int candidateZ = cellZ * cellSize +
+                         static_cast<int>(zHash %
+                                          static_cast<uint32_t>(cellSize));
   if (x != candidateX || z != candidateZ)
   {
     return false;

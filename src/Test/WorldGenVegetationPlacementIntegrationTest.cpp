@@ -322,6 +322,61 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
                     "chunk populator placed blocks from a tree species");
 }
 
+static void TestSpatialFloraCandidateDensity(cutum::UBlockRegistry &registry)
+{
+  cutum::ProceduralSettings settings = MakeVegetationSettings();
+  settings.SeaLevel = 8;
+  settings.MinHeight = 0;
+  settings.MaxHeight = 64;
+  settings.WorldGenProfileVersion = 2;
+
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext ctx(world, registry, settings);
+  ctx.WorldgenOwnerPackId = "minetest_default_16";
+  ctx.ResolveBlockIds();
+  FluidTest::Expect(ctx.Blocks.Grass != cutum::BLOCK_AIR, kTestName,
+                    "spatial flora density test resolves its ground block");
+
+  constexpr int kRegionSize = 64;
+  constexpr int kSurfaceY = 15;
+  for (int z = 0; z < kRegionSize; ++z)
+  {
+    for (int x = 0; x < kRegionSize; ++x)
+    {
+      world.SetBlock(glm::ivec3(x, kSurfaceY, z), ctx.Blocks.Grass);
+    }
+  }
+
+  cutum::ObjectFeatureConfig features;
+  cutum::ObjectFeatureRule grass;
+  grass.Mode = cutum::ObjectFeatureRuleMode::ScatterBlocks;
+  grass.Biomes = {cutum::BiomeId::Plains};
+  grass.Spacing = 34;
+  grass.Weight = 1;
+  grass.SeedOffset = 0x41f09a37U;
+  grass.Scatter.BlockName = "mtg_grass_1";
+  grass.Scatter.Attempts = 1;
+  grass.Scatter.Radius = 0;
+  features.GroundCover.push_back(grass);
+  ctx.ObjectFeatures = &features;
+  cutum::RegisterBuiltinObjectFeaturePlacementStrategies();
+
+  for (int z = 0; z < kRegionSize; ++z)
+  {
+    for (int x = 0; x < kRegionSize; ++x)
+    {
+      cutum::TryPlaceGroundCoverFeatures(ctx, x, z, kSurfaceY,
+                                         cutum::BiomeId::Plains, false);
+    }
+  }
+
+  const int placedGrass = CountBlocksNamed(world, registry, "mtg_grass_1");
+  std::cout << "spatial flora test placements=" << placedGrass << std::endl;
+  FluidTest::Expect(placedGrass >= 55, kTestName,
+                    "full-cell jitter preserves authored flora candidate density");
+}
+
 static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
 {
   cutum::ProceduralSettings settings = MakeVegetationSettings();
@@ -802,6 +857,12 @@ int main(int argc, char **argv)
   const auto definitions = LoadPackDefinitions(pack_root);
   cutum::UBlockRegistry registry(nullptr, definitions);
   constexpr const char *kOwnerPack = "minetest_default_16";
+  if (argc > 1 && std::string(argv[1]) == "--spatial-flora-density-only")
+  {
+    TestSpatialFloraCandidateDensity(registry);
+    std::cout << kTestName << ": spatial flora density check OK" << std::endl;
+    return 0;
+  }
 
   cutum::UObjectLibrary objects;
   cutum::ResourcePackManifest manifest =
@@ -818,6 +879,7 @@ int main(int argc, char **argv)
                     "tree_pine available after LoadMerged");
 
   cutum::UPipelineChunkPopulator populator(registry, &objects, kOwnerPack);
+  TestSpatialFloraCandidateDensity(registry);
   TestChunkPopulatorPlacesTrees(populator, registry, objects);
   TestProceduralVegetationStrategies(registry);
   FluidTest::Expect(
