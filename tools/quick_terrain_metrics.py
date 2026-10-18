@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from collections import Counter
 from pathlib import Path
@@ -19,6 +20,30 @@ from worldgen_metrics_lib import (
 REPO = Path(__file__).resolve().parents[1]
 
 
+def water_ids_for_world(
+    world_dir: Path,
+    columns: dict[tuple[int, int, int], int] | None = None,
+    repo_root: Path = REPO,
+) -> set[int]:
+    id_to_name = build_id_to_name_from_world(world_dir, repo_root)
+    water_ids = {bid for bid, name in id_to_name.items() if name == "water"}
+    if water_ids or columns is None:
+        return water_ids
+
+    meta_path = world_dir / "world_data.json"
+    meta = (
+        json.loads(meta_path.read_text(encoding="utf-8"))
+        if meta_path.is_file()
+        else {}
+    )
+    procedural = meta.get("procedural", {})
+    sea_level = int(procedural.get("sea_level", meta.get("sea_level", 63)))
+    sea_counts = Counter(
+        bid for (_, wy, _), bid in columns.items() if wy == sea_level
+    )
+    return {sea_counts.most_common(1)[0][0]} if sea_counts else set()
+
+
 def load_columns(world_dir: Path, center_x: int, center_z: int, radius: int):
     chunk_dir = world_dir / "chunks"
     columns: dict[tuple[int, int, int], int] = {}
@@ -30,30 +55,22 @@ def load_columns(world_dir: Path, center_x: int, center_z: int, radius: int):
 
 
 def build_surface(
-    columns: dict[tuple[int, int, int], int], *, land_only: bool
+    columns: dict[tuple[int, int, int], int],
+    *,
+    land_only: bool,
+    water_ids: set[int] | None = None,
 ) -> dict[tuple[int, int], tuple[int, int]]:
     by_xz: dict[tuple[int, int], list[tuple[int, int]]] = {}
     for (wx, wy, wz), bid in columns.items():
         by_xz.setdefault((wx, wz), []).append((wy, bid))
 
-    water_ids: set[int] = set()
-    if land_only:
-        sea_counts: Counter[int] = Counter()
-        for (wx, wy, wz), bid in columns.items():
-            if wy == 48:
-                sea_counts[bid] += 1
-        if sea_counts:
-            water_ids.add(sea_counts.most_common(1)[0][0])
+    water_ids = water_ids or set()
 
     surface: dict[tuple[int, int], tuple[int, int]] = {}
     for xz, entries in by_xz.items():
-        if land_only:
-            land_entries = [(wy, bid) for wy, bid in entries if bid not in water_ids]
-            if not land_entries:
-                continue
-            wy, bid = max(land_entries, key=lambda t: t[0])
-        else:
-            wy, bid = max(entries, key=lambda t: t[0])
+        wy, bid = max(entries, key=lambda t: t[0])
+        if land_only and bid in water_ids:
+            continue
         surface[xz] = (wy, bid)
     return surface
 
@@ -74,7 +91,9 @@ def main() -> int:
     center_z = int(args[3]) if len(args) > 3 else 0
 
     columns = load_columns(world, center_x, center_z, radius)
-    surface = build_surface(columns, land_only=land_only)
+    id_to_name = build_id_to_name_from_world(world, REPO)
+    water_ids = water_ids_for_world(world, columns, REPO)
+    surface = build_surface(columns, land_only=land_only, water_ids=water_ids)
     if not surface:
         print(f"no surface data for {world} center=({center_x},{center_z})")
         return 1
@@ -94,7 +113,6 @@ def main() -> int:
 
     if count_objects:
         refs = REPO / "content" / "worldgen_refs.json"
-        id_to_name = build_id_to_name_from_world(world, REPO)
         veg = count_spawn_vegetation_blocks(world, id_to_name, radius)
         metrics = analyze_world(
             world,

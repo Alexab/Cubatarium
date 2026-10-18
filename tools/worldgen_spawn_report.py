@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from quick_terrain_metrics import build_surface, load_columns
+from quick_terrain_metrics import build_surface, load_columns, water_ids_for_world
 from worldgen_metrics_lib import analyze_world, compare_to_thresholds, terrain_shape_stats
 
 REPO = Path(__file__).resolve().parents[1]
@@ -17,7 +17,8 @@ REPO = Path(__file__).resolve().parents[1]
 
 def land_shape_metrics(world_dir: Path, spawn_radius: int) -> dict:
     columns = load_columns(world_dir, 0, 0, spawn_radius)
-    surface = build_surface(columns, land_only=True)
+    water_ids = water_ids_for_world(world_dir, columns, REPO)
+    surface = build_surface(columns, land_only=True, water_ids=water_ids)
     if not surface:
         return {}
     ys = [y for y, _ in surface.values()]
