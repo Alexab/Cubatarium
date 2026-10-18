@@ -8,8 +8,11 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <utility>
 
 namespace cutum
 {
@@ -60,34 +63,76 @@ LakeSite SampleLakeSite(int cellX, int cellZ, int seaLevel, uint32_t seed,
   }
 
   const uint32_t placementHash = ColumnHash(cellX, cellZ, seed + 9602U);
-  site.centerX = cellOriginX + margin +
-                 static_cast<int>(placementHash % static_cast<uint32_t>(span));
-  site.centerZ = cellOriginZ + margin +
-                 static_cast<int>((placementHash / 31U) %
-                                  static_cast<uint32_t>(span));
-  const ClimateSample climate = SampleClimate(site.centerX, site.centerZ, seed);
-  if (climate.moisture < params.minMoisture ||
-      climate.continentalness < 0.40f || climate.continentalness > 0.82f ||
-      climate.erosion > 0.92f)
-  {
-    return site;
-  }
-
   if (!get_surface_y)
   {
     return site;
   }
-  const int centerSurfaceY = get_surface_y(site.centerX, site.centerZ);
+  const int anchorX = cellOriginX + margin +
+                      static_cast<int>(placementHash % static_cast<uint32_t>(span));
+  const int anchorZ = cellOriginZ + margin +
+                      static_cast<int>((placementHash / 31U) %
+                                       static_cast<uint32_t>(span));
+  const int minCenterX = cellOriginX + margin;
+  const int minCenterZ = cellOriginZ + margin;
+  const int maxCenterX = cellOriginX + cellSize - margin - 1;
+  const int maxCenterZ = cellOriginZ + cellSize - margin - 1;
+  const int candidateStep = std::max(radiusMax + 4, cellSize / 4);
+  static constexpr std::array<std::pair<int, int>, 8> kCandidateOffsets = {{
+      {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}}};
   const int minElevation = std::max(1, params.minElevationAboveSea);
   const int maxElevation = std::max(minElevation, params.maxElevationAboveSea);
-  if (centerSurfaceY < seaLevel + minElevation + 1)
+  bool foundLandSite = false;
+  std::array<std::pair<int, int>, 9> testedCandidates{};
+  std::size_t testedCandidateCount = 0;
+  for (int attempt = 0; attempt < 9; ++attempt)
+  {
+    int candidateX = anchorX;
+    int candidateZ = anchorZ;
+    if (attempt > 0)
+    {
+      const std::size_t offsetIndex = static_cast<std::size_t>(
+          (placementHash + static_cast<uint32_t>(attempt - 1)) %
+          static_cast<uint32_t>(kCandidateOffsets.size()));
+      candidateX += kCandidateOffsets[offsetIndex].first * candidateStep;
+      candidateZ += kCandidateOffsets[offsetIndex].second * candidateStep;
+      candidateX = std::clamp(candidateX, minCenterX, maxCenterX);
+      candidateZ = std::clamp(candidateZ, minCenterZ, maxCenterZ);
+    }
+    const std::pair<int, int> candidate{candidateX, candidateZ};
+    if (std::find(testedCandidates.begin(),
+                  testedCandidates.begin() + testedCandidateCount,
+                  candidate) != testedCandidates.begin() + testedCandidateCount)
+    {
+      continue;
+    }
+    testedCandidates[testedCandidateCount++] = candidate;
+
+    const ClimateSample climate = SampleClimate(candidateX, candidateZ, seed);
+    if (climate.moisture < params.minMoisture ||
+        climate.continentalness < 0.40f ||
+        climate.continentalness > 0.82f || climate.erosion > 0.92f)
+    {
+      continue;
+    }
+    const int centerSurfaceY = get_surface_y(candidateX, candidateZ);
+    if (centerSurfaceY < seaLevel + minElevation + 1)
+    {
+      continue;
+    }
+
+    site.centerX = candidateX;
+    site.centerZ = candidateZ;
+    const int waterDrop = 2 + static_cast<int>((hash >> 5U) % 3U);
+    site.waterY = std::clamp(centerSurfaceY - waterDrop,
+                             seaLevel + minElevation,
+                             seaLevel + maxElevation);
+    foundLandSite = true;
+    break;
+  }
+  if (!foundLandSite)
   {
     return site;
   }
-  const int waterDrop = 2 + static_cast<int>((hash >> 5U) % 3U);
-  site.waterY = std::clamp(centerSurfaceY - waterDrop,
-                            seaLevel + minElevation,
-                            seaLevel + maxElevation);
 
   site.radiusX = radiusMin + static_cast<int>((hash >> 8U) % static_cast<uint32_t>(
                                                   radiusMax - radiusMin + 1));

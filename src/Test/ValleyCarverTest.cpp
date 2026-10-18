@@ -11,10 +11,14 @@
 #include "WorldGen/Core/ColumnHash.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
 #include <filesystem>
 #include <iostream>
 #include <map>
 #include <tuple>
+#include <utility>
 
 namespace fs = std::filesystem;
 
@@ -286,11 +290,16 @@ static void TestLakeCarveAndChunkOrder()
   params.basinDepthMax = 4;
   params.minMoisture = 0.0f;
 
+  int anchorX = 0;
+  int anchorZ = 0;
   int centerX = 0;
   int centerZ = 0;
   bool suitableCell = false;
   const int margin = params.radiusMax + 2;
   const int span = params.cellSize - margin * 2;
+  const int candidateStep = std::max(params.radiusMax + 4, params.cellSize / 4);
+  static constexpr std::array<std::pair<int, int>, 8> kCandidateOffsets = {{
+      {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}}};
   for (int cellZ = -8; cellZ <= 8 && !suitableCell; ++cellZ)
   {
     for (int cellX = -8; cellX <= 8 && !suitableCell; ++cellX)
@@ -303,19 +312,36 @@ static void TestLakeCarveAndChunkOrder()
       const int z = cellZ * params.cellSize + margin +
                     static_cast<int>((placementHash / 31U) %
                                      static_cast<uint32_t>(span));
-      const auto climate = cutum::SampleClimate(x, z, kSeed);
-      if (climate.moisture >= params.minMoisture &&
-          climate.continentalness >= 0.40f &&
-          climate.continentalness <= 0.82f && climate.erosion <= 0.92f)
+      for (int attempt = 1; attempt <= 8 && !suitableCell; ++attempt)
       {
-        suitableCell = true;
-        centerX = x;
-        centerZ = z;
+        const std::size_t offsetIndex = static_cast<std::size_t>(
+            (placementHash + static_cast<uint32_t>(attempt - 1)) %
+            static_cast<uint32_t>(kCandidateOffsets.size()));
+        const int candidateX = std::clamp(
+            x + kCandidateOffsets[offsetIndex].first * candidateStep,
+            cellX * params.cellSize + margin,
+            cellX * params.cellSize + params.cellSize - margin - 1);
+        const int candidateZ = std::clamp(
+            z + kCandidateOffsets[offsetIndex].second * candidateStep,
+            cellZ * params.cellSize + margin,
+            cellZ * params.cellSize + params.cellSize - margin - 1);
+        const auto climate = cutum::SampleClimate(candidateX, candidateZ, kSeed);
+        if (climate.moisture >= params.minMoisture &&
+            climate.continentalness >= 0.40f &&
+            climate.continentalness <= 0.82f && climate.erosion <= 0.92f &&
+            (candidateX != x || candidateZ != z))
+        {
+          suitableCell = true;
+          anchorX = x;
+          anchorZ = z;
+          centerX = candidateX;
+          centerZ = candidateZ;
+        }
       }
     }
   }
   FluidTest::Expect(suitableCell, kTestName,
-                    "test seed has a climate-compatible lake cell");
+                    "test seed has a climate-compatible fallback lake site");
 
   cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
   cutum::UBlockWorld forwardWorld;
@@ -330,7 +356,12 @@ static void TestLakeCarveAndChunkOrder()
     {
       const int surfaceY = (x == centerX && z == centerZ) ? 51 : 64;
       cutum::CarveLakeColumn(forwardCtx, x, z, surfaceY, kSeed, params, 48,
-                             [](int, int) { return 64; });
+                             [=](int sampleX, int sampleZ)
+                             {
+                               return sampleX == anchorX && sampleZ == anchorZ
+                                          ? 48
+                                          : 64;
+                             });
       cutum::CarveLakeColumn(submergedCtx, x, z, 48, kSeed, params, 48,
                              [](int, int) { return 48; });
     }
@@ -341,7 +372,12 @@ static void TestLakeCarveAndChunkOrder()
     {
       const int surfaceY = (x == centerX && z == centerZ) ? 51 : 64;
       cutum::CarveLakeColumn(reverseCtx, x, z, surfaceY, kSeed, params, 48,
-                             [](int, int) { return 64; });
+                             [=](int sampleX, int sampleZ)
+                             {
+                               return sampleX == anchorX && sampleZ == anchorZ
+                                          ? 48
+                                          : 64;
+                             });
     }
   }
 
