@@ -129,6 +129,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   config.Ores = ctx.Settings.EnableOres;
   config.Ravines = ctx.Settings.Ravines.enabled;
   config.Valleys = true;
+  config.Lakes = true;
   config.Vegetation = ctx.Settings.EnableTrees;
   config.GroundCover = ctx.Settings.EnableGroundCover;
   config.Decoration = ctx.Settings.EnableDecoration;

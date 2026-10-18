@@ -11,8 +11,10 @@
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 
 namespace cutum
 {
@@ -33,6 +35,7 @@ struct ComposableWorldGenConfig
   bool Fluids{true};
   bool Ravines{false};
   bool Valleys{false};
+  bool Lakes{false};
   bool Caves{false};
   bool Ores{false};
   bool Vegetation{false};
@@ -55,6 +58,7 @@ public:
   int SurfaceYAt(int worldX, int worldZ) const override;
 
   ColumnSampleContext BuildColumnSample(int world_x, int world_z) const;
+  int LakeCenterSurfaceYAt(int world_x, int world_z) const;
   BiomeId BiomeAt3D(int world_x, int world_y, int world_z,
                     int surface_y) const;
   BiomeKey BiomeKeyAt3D(int world_x, int world_y, int world_z,
@@ -101,6 +105,7 @@ private:
   std::unique_ptr<IWorldGenBiomeSource> BiomeSource;
   std::optional<UColumnSampleBuilder> SampleBuilder;
   std::optional<UCoarseHeightCache> ChunkCoarseCache;
+  mutable std::unordered_map<uint64_t, int> LakeCenterSurfaceYCache;
   CoarseHeightCallback DirectCoarseHeightFn;
 };
 

@@ -4,6 +4,7 @@
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Features/BuiltinWorldGenFeatures.h"
 #include "WorldGen/Features/CaveCarver.h"
+#include "WorldGen/Features/LakeCarver.h"
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
@@ -90,6 +91,33 @@ void RunValleysStage(UComposableWorldGenerator &generator,
   CarveColumnValleys(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
                      params, ctx.Settings.SeaLevel,
                      ctx.Settings.Tuning.riverWidth, get_surface_y);
+}
+
+void RunLakesStage(UComposableWorldGenerator &generator,
+                   const ColumnSampleContext &sample, int world_x, int world_z,
+                   PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  LakeParams params;
+  const PackLakesConfig &pack = UWorldGenPack::LakesConfig();
+  if (pack.Loaded)
+  {
+    params.enabled = pack.Enabled;
+    params.cellSize = pack.CellSize;
+    params.chancePerCell = pack.ChancePerCell;
+    params.radiusMin = pack.RadiusMin;
+    params.radiusMax = pack.RadiusMax;
+    params.minElevationAboveSea = pack.MinElevationAboveSea;
+    params.maxElevationAboveSea = pack.MaxElevationAboveSea;
+    params.maxExcavationDepth = pack.MaxExcavationDepth;
+    params.basinDepthMin = pack.BasinDepthMin;
+    params.basinDepthMax = pack.BasinDepthMax;
+    params.minMoisture = pack.MinMoisture;
+  }
+  const LakeSurfaceYCallback get_surface_y = [&generator](int hx, int hz)
+  { return generator.LakeCenterSurfaceYAt(hx, hz); };
+  CarveLakeColumn(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
+                  params, ctx.Settings.SeaLevel, get_surface_y);
 }
 
 void RunCavesStage(UComposableWorldGenerator &generator,
@@ -194,6 +222,7 @@ const std::unordered_map<WorldGenStageId, PostTerrainStageFn> &StageFnMap()
       {WorldGenStageId::Geology, RunGeologyStage},
       {WorldGenStageId::Ravines, RunRavinesStage},
       {WorldGenStageId::Valleys, RunValleysStage},
+      {WorldGenStageId::Lakes, RunLakesStage},
       {WorldGenStageId::Caves, RunCavesStage},
       {WorldGenStageId::Aquifers, RunAquifersStage},
       {WorldGenStageId::CaveFeatures, RunCaveFeaturesStage},

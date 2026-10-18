@@ -411,6 +411,7 @@ set(SOURCES
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/ValleyCarver.cpp
+    src/WorldGen/Features/LakeCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Features/ObjectPlacementConstraints.cpp
@@ -1957,6 +1958,7 @@ add_executable(valley_carver_test
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/BiomeRegistry.cpp
     src/WorldGen/Features/ValleyCarver.cpp
+    src/WorldGen/Features/LakeCarver.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/ThirdParty/stb_image.cpp
     src/Test/ValleyCarverTest.cpp)
@@ -2386,6 +2388,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/ValleyCarver.cpp
+    src/WorldGen/Features/LakeCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Features/ObjectPlacementConstraints.cpp

@@ -179,12 +179,29 @@ struct PackValleysConfig
   bool Loaded{false};
 };
 
+struct PackLakesConfig
+{
+  bool Enabled{true};
+  int CellSize{128};
+  int ChancePerCell{5};
+  int RadiusMin{7};
+  int RadiusMax{15};
+  int MinElevationAboveSea{2};
+  int MaxElevationAboveSea{8};
+  int MaxExcavationDepth{14};
+  int BasinDepthMin{3};
+  int BasinDepthMax{7};
+  float MinMoisture{0.32f};
+  bool Loaded{false};
+};
+
 struct WorldGenPackPipeline
 {
   bool Loaded{false};
   bool Fluids{false};
   bool Ravines{false};
   bool Valleys{false};
+  bool Lakes{false};
   bool Ores{false};
   bool Caves{false};
   bool Vegetation{false};
@@ -220,6 +237,7 @@ struct WorldGenPack
   PackAquifersConfig Aquifers;
   PackRavinesConfig Ravines;
   PackValleysConfig Valleys;
+  PackLakesConfig Lakes;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
   std::shared_ptr<const BiomeDefinitionRegistry> BiomeRegistry;
   std::vector<BiomeHandle> SurfaceClimateBiomes;
@@ -244,6 +262,7 @@ public:
   static const PackAquifersConfig &AquifersConfig();
   static const PackRavinesConfig &RavinesConfig();
   static const PackValleysConfig &ValleysConfig();
+  static const PackLakesConfig &LakesConfig();
   static void ApplyPackCaveDefaults(ProceduralSettings &settings);
   static void ApplyPackRavineDefaults(ProceduralSettings &settings);
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);

@@ -1,0 +1,188 @@
+#include "WorldGen/Features/LakeCarver.h"
+
+#include "Blocks/BlockRegistry.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Math/FluidCellState.h"
+#include "WorldGen/Core/ColumnHash.h"
+#include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Sampling/ClimateSampler.h"
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+
+namespace cutum
+{
+
+namespace
+{
+
+int LakeCellFloorDiv(int value, int divisor)
+{
+  int quotient = value / divisor;
+  if (value % divisor < 0)
+  {
+    --quotient;
+  }
+  return quotient;
+}
+
+struct LakeSite
+{
+  bool valid{false};
+  int centerX{0};
+  int centerZ{0};
+  int waterY{0};
+  int radiusX{0};
+  int radiusZ{0};
+  int maxDepth{0};
+  uint32_t shapeSeed{0};
+};
+
+LakeSite SampleLakeSite(int cellX, int cellZ, int seaLevel, uint32_t seed,
+                        const LakeParams &params,
+                        const LakeSurfaceYCallback &get_surface_y)
+{
+  LakeSite site;
+  const int radiusMin = std::clamp(params.radiusMin, 4, 24);
+  const int radiusMax = std::clamp(params.radiusMax, radiusMin, 24);
+  const int cellSize = std::max(
+      params.cellSize, radiusMax * 2 + 8);
+  const int margin = radiusMax + 2;
+  const int span = std::max(1, cellSize - margin * 2);
+  const int cellOriginX = cellX * cellSize;
+  const int cellOriginZ = cellZ * cellSize;
+  const uint32_t hash = ColumnHash(cellX, cellZ, seed + 9601U);
+  const int chance = std::max(1, params.chancePerCell);
+  if (hash % static_cast<uint32_t>(chance) != 0U)
+  {
+    return site;
+  }
+
+  const uint32_t placementHash = ColumnHash(cellX, cellZ, seed + 9602U);
+  site.centerX = cellOriginX + margin +
+                 static_cast<int>(placementHash % static_cast<uint32_t>(span));
+  site.centerZ = cellOriginZ + margin +
+                 static_cast<int>((placementHash / 31U) %
+                                  static_cast<uint32_t>(span));
+  const ClimateSample climate = SampleClimate(site.centerX, site.centerZ, seed);
+  if (climate.moisture < params.minMoisture ||
+      climate.continentalness < 0.40f || climate.continentalness > 0.82f ||
+      climate.erosion > 0.92f)
+  {
+    return site;
+  }
+
+  if (!get_surface_y)
+  {
+    return site;
+  }
+  const int centerSurfaceY = get_surface_y(site.centerX, site.centerZ);
+  const int minElevation = std::max(1, params.minElevationAboveSea);
+  const int maxElevation = std::max(minElevation, params.maxElevationAboveSea);
+  if (centerSurfaceY < seaLevel + minElevation + 1)
+  {
+    return site;
+  }
+  const int waterDrop = 2 + static_cast<int>((hash >> 5U) % 3U);
+  site.waterY = std::clamp(centerSurfaceY - waterDrop,
+                            seaLevel + minElevation,
+                            seaLevel + maxElevation);
+
+  site.radiusX = radiusMin + static_cast<int>((hash >> 8U) % static_cast<uint32_t>(
+                                                  radiusMax - radiusMin + 1));
+  site.radiusZ = radiusMin + static_cast<int>((hash >> 13U) % static_cast<uint32_t>(
+                                                  radiusMax - radiusMin + 1));
+  site.maxDepth = std::clamp(params.basinDepthMin, 1, 12) +
+                  static_cast<int>((hash >> 24U) % static_cast<uint32_t>(
+                      std::max(1, std::clamp(params.basinDepthMax, 1, 12) -
+                                      std::clamp(params.basinDepthMin, 1, 12) +
+                                  1)));
+  site.shapeSeed = seed + hash + 9603U;
+  site.valid = true;
+  return site;
+}
+
+} // namespace
+
+void CarveLakeColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
+                     uint32_t seed, const LakeParams &params, int seaLevel,
+                     const LakeSurfaceYCallback &get_surface_y)
+{
+  if (!params.enabled || ctx.Blocks.Water == BLOCK_AIR)
+  {
+    return;
+  }
+  const int radiusMax = std::clamp(params.radiusMax, 4, 24);
+  const int cellSize = std::max(params.cellSize, radiusMax * 2 + 8);
+  const int cellX = LakeCellFloorDiv(x, cellSize);
+  const int cellZ = LakeCellFloorDiv(z, cellSize);
+  const LakeSite site =
+      SampleLakeSite(cellX, cellZ, seaLevel, seed, params, get_surface_y);
+  if (!site.valid)
+  {
+    return;
+  }
+
+  const int dx = x - site.centerX;
+  const int dz = z - site.centerZ;
+  if (std::abs(dx) > site.radiusX + 1 || std::abs(dz) > site.radiusZ + 1)
+  {
+    return;
+  }
+  const float distance =
+      std::sqrt(static_cast<float>(dx * dx) /
+                    static_cast<float>(site.radiusX * site.radiusX) +
+                static_cast<float>(dz * dz) /
+                    static_cast<float>(site.radiusZ * site.radiusZ));
+  const float shorelineNoise = NormalizedFBM2D(
+      static_cast<float>(x) * 0.075f, static_cast<float>(z) * 0.075f,
+      site.shapeSeed, 2, 0.5f, 2.0f);
+  const float irregularDistance = distance + shorelineNoise * 0.075f;
+  if (irregularDistance >= 1.0f)
+  {
+    return;
+  }
+
+  const int maxExcavation = std::max(2, params.maxExcavationDepth);
+  if (surfaceY - site.waterY > maxExcavation)
+  {
+    return;
+  }
+  const float basin =
+      1.0f - Smoothstep(0.0f, 1.0f, std::clamp(irregularDistance, 0.0f, 1.0f));
+  const int depth = std::max(
+      1, static_cast<int>(std::floor(1.0f +
+                                     static_cast<float>(site.maxDepth - 1) * basin +
+                                     0.5f)));
+  const int floorY = site.waterY - depth;
+  if (floorY < ctx.Settings.MinHeight || surfaceY < floorY)
+  {
+    return;
+  }
+
+  const BlockId floorBlock =
+      ctx.Blocks.Dirt != BLOCK_AIR ? ctx.Blocks.Dirt : ctx.Blocks.Stone;
+  if (floorBlock == BLOCK_AIR)
+  {
+    return;
+  }
+  for (int y = std::max(surfaceY, site.waterY); y > floorY; --y)
+  {
+    const glm::ivec3 position(x, y, z);
+    if (y <= site.waterY)
+    {
+      ctx.World.SetBlock(position, ctx.Blocks.Water);
+      ctx.World.SetFluidState(
+          position, FluidCellState::Source().WithKind(FluidKind::Water));
+    }
+    else
+    {
+      ctx.World.SetBlock(position, BLOCK_AIR);
+    }
+  }
+  ctx.World.SetBlock(glm::ivec3(x, floorY, z), floorBlock);
+  ctx.AccumulateDirtyColumn(floorY, std::max(surfaceY, site.waterY));
+}
+
+} // namespace cutum

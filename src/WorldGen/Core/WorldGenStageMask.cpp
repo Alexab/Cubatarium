@@ -57,6 +57,7 @@ ComposableWorldGenConfig ApplyPackPipelineMask(ComposableWorldGenConfig config)
   config.Fluids = StageEnabled(pipeline, config.Fluids, pipeline.Fluids);
   config.Ravines = StageEnabled(pipeline, config.Ravines, pipeline.Ravines);
   config.Valleys = StageEnabled(pipeline, config.Valleys, pipeline.Valleys);
+  config.Lakes = StageEnabled(pipeline, config.Lakes, pipeline.Lakes);
   config.Ores = StageEnabled(pipeline, config.Ores, pipeline.Ores);
   config.Caves = StageEnabled(pipeline, config.Caves, pipeline.Caves);
   config.Vegetation =
@@ -99,6 +100,11 @@ WorldGenStageMask BuildWorldGenStageMask(
       StageEnabled(pack_pipeline, generator_config.Valleys,
                    pack_pipeline.Valleys);
   mask.Set(WorldGenStageId::Valleys, valleys);
+
+  const bool lakes =
+      settings.WorldGenProfileVersion >= 2 &&
+      StageEnabled(pack_pipeline, generator_config.Lakes, pack_pipeline.Lakes);
+  mask.Set(WorldGenStageId::Lakes, lakes);
 
   const bool caves = StageEnabled(pack_pipeline, generator_config.Caves,
                                   pack_pipeline.Caves) &&
@@ -180,6 +186,10 @@ std::optional<WorldGenStageId> WorldGenStageIdFromPipelineString(
   {
     return WorldGenStageId::Valleys;
   }
+  if (stage == "lakes")
+  {
+    return WorldGenStageId::Lakes;
+  }
   if (stage == "caves")
   {
     return WorldGenStageId::Caves;
@@ -235,7 +245,8 @@ std::optional<WorldGenStageId> WorldGenStageIdFromPipelineString(
 std::vector<WorldGenStageId> DefaultPostTerrainStageOrder()
 {
   return {WorldGenStageId::Geology,     WorldGenStageId::Ravines,
-          WorldGenStageId::Valleys,     WorldGenStageId::Caves,
+          WorldGenStageId::Valleys,     WorldGenStageId::Lakes,
+          WorldGenStageId::Caves,
           WorldGenStageId::Aquifers,    WorldGenStageId::CaveFeatures,
           WorldGenStageId::Fluids,
           WorldGenStageId::Ores,        WorldGenStageId::Vegetation,

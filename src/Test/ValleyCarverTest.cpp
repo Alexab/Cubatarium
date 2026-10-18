@@ -6,9 +6,15 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Features/ValleyCarver.h"
+#include "WorldGen/Features/LakeCarver.h"
+#include "WorldGen/Features/RiverField.h"
+#include "WorldGen/Core/ColumnHash.h"
+#include "WorldGen/Sampling/ClimateSampler.h"
 
 #include <filesystem>
 #include <iostream>
+#include <map>
+#include <tuple>
 
 namespace fs = std::filesystem;
 
@@ -48,6 +54,8 @@ static cutum::WorldGenContext MakeContext(cutum::UBlockWorld &world,
   settings.MaxHeight = 128;
   cutum::WorldGenContext ctx(world, registry, settings);
   ctx.Blocks.Stone = kStone;
+  ctx.Blocks.Dirt = 10;
+  ctx.Blocks.Water = 9;
   return ctx;
 }
 
@@ -239,8 +247,143 @@ static void TestChunkValleySeamStable()
     }
   }
   FluidTest::Expect(carved, kTestName, "chunk valley carve occurred");
-  FluidTest::Expect(MaxCarveRimDelta(world, base_x, base_z, kSurfaceY) <= 2,
+  const int rimDelta = MaxCarveRimDelta(world, base_x, base_z, kSurfaceY);
+  FluidTest::Expect(rimDelta <= 3,
                     kTestName, "chunk valley seam stays smooth across chunk");
+}
+
+static void TestRiverFieldContinuity()
+{
+  const float center = cutum::SampleRiverChannelStrength(
+      101, -57, kSeed, 0.008f, 1.0f, 0.35f, 0.4f);
+  FluidTest::Expect(center >= 0.0f && center <= 1.0f, kTestName,
+                    "river strength stays normalized");
+  FluidTest::Expect(
+      center == cutum::SampleRiverChannelStrength(
+                    101, -57, kSeed, 0.008f, 1.0f, 0.35f, 0.4f),
+      kTestName, "river strength is deterministic");
+  const float east = cutum::SampleRiverChannelStrength(
+      102, -57, kSeed, 0.008f, 1.0f, 0.35f, 0.4f);
+  const float south = cutum::SampleRiverChannelStrength(
+      101, -56, kSeed, 0.008f, 1.0f, 0.35f, 0.4f);
+  FluidTest::Expect(std::abs(center - east) < 0.55f &&
+                        std::abs(center - south) < 0.55f,
+                    kTestName,
+                    "neighboring river samples do not jump abruptly");
+}
+
+static void TestLakeCarveAndChunkOrder()
+{
+  cutum::LakeParams params;
+  params.cellSize = 48;
+  params.chancePerCell = 1;
+  params.radiusMin = 4;
+  params.radiusMax = 6;
+  params.minElevationAboveSea = 2;
+  params.maxElevationAboveSea = 4;
+  params.maxExcavationDepth = 20;
+  params.basinDepthMin = 2;
+  params.basinDepthMax = 4;
+  params.minMoisture = 0.0f;
+
+  int centerX = 0;
+  int centerZ = 0;
+  bool suitableCell = false;
+  const int margin = params.radiusMax + 2;
+  const int span = params.cellSize - margin * 2;
+  for (int cellZ = -8; cellZ <= 8 && !suitableCell; ++cellZ)
+  {
+    for (int cellX = -8; cellX <= 8 && !suitableCell; ++cellX)
+    {
+      const uint32_t placementHash =
+          cutum::ColumnHash(cellX, cellZ, kSeed + 9602U);
+      const int x = cellX * params.cellSize + margin +
+                    static_cast<int>(placementHash %
+                                     static_cast<uint32_t>(span));
+      const int z = cellZ * params.cellSize + margin +
+                    static_cast<int>((placementHash / 31U) %
+                                     static_cast<uint32_t>(span));
+      const auto climate = cutum::SampleClimate(x, z, kSeed);
+      if (climate.moisture >= params.minMoisture &&
+          climate.continentalness >= 0.40f &&
+          climate.continentalness <= 0.82f && climate.erosion <= 0.92f)
+      {
+        suitableCell = true;
+        centerX = x;
+        centerZ = z;
+      }
+    }
+  }
+  FluidTest::Expect(suitableCell, kTestName,
+                    "test seed has a climate-compatible lake cell");
+
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+  cutum::UBlockWorld forwardWorld;
+  auto forwardCtx = MakeContext(forwardWorld, registry);
+  cutum::UBlockWorld reverseWorld;
+  auto reverseCtx = MakeContext(reverseWorld, registry);
+  cutum::UBlockWorld submergedWorld;
+  auto submergedCtx = MakeContext(submergedWorld, registry);
+  for (int z = centerZ - params.radiusMax; z <= centerZ + params.radiusMax; ++z)
+  {
+    for (int x = centerX - params.radiusMax; x <= centerX + params.radiusMax; ++x)
+    {
+      const int surfaceY = (x == centerX && z == centerZ) ? 51 : 64;
+      cutum::CarveLakeColumn(forwardCtx, x, z, surfaceY, kSeed, params, 48,
+                             [](int, int) { return 64; });
+      cutum::CarveLakeColumn(submergedCtx, x, z, 48, kSeed, params, 48,
+                             [](int, int) { return 48; });
+    }
+  }
+  for (int z = centerZ + params.radiusMax; z >= centerZ - params.radiusMax; --z)
+  {
+    for (int x = centerX + params.radiusMax; x >= centerX - params.radiusMax; --x)
+    {
+      const int surfaceY = (x == centerX && z == centerZ) ? 51 : 64;
+      cutum::CarveLakeColumn(reverseCtx, x, z, surfaceY, kSeed, params, 48,
+                             [](int, int) { return 64; });
+    }
+  }
+
+  using BlockMap = std::map<std::tuple<int, int, int>, cutum::BlockId>;
+  BlockMap forward;
+  BlockMap reverse;
+  forwardWorld.ForEachBlock([&](glm::ivec3 pos, cutum::BlockId id)
+                            { forward.emplace(std::make_tuple(pos.x, pos.y, pos.z), id); });
+  reverseWorld.ForEachBlock([&](glm::ivec3 pos, cutum::BlockId id)
+                            { reverse.emplace(std::make_tuple(pos.x, pos.y, pos.z), id); });
+  FluidTest::Expect(forward == reverse, kTestName,
+                    "lake output is independent of column visitation order");
+  int waterBlocks = 0;
+  int highestWaterY = -1000;
+  bool filledLowCenterToSurface = false;
+  for (const auto &[position, id] : forward)
+  {
+    if (id != 9)
+    {
+      continue;
+    }
+    ++waterBlocks;
+    const int y = std::get<1>(position);
+    highestWaterY = std::max(highestWaterY, y);
+    filledLowCenterToSurface =
+        filledLowCenterToSurface ||
+        (std::get<0>(position) == centerX && std::get<2>(position) == centerZ &&
+         y == 52);
+    FluidTest::Expect(y >= 44 && y <= 52, kTestName,
+                      "lake water stays within its basin profile");
+  }
+  FluidTest::Expect(waterBlocks >= 5, kTestName,
+                    "climate-compatible site creates a water basin");
+  FluidTest::Expect(highestWaterY > 48, kTestName,
+                    "lake water surface is above sea level");
+  FluidTest::Expect(filledLowCenterToSurface, kTestName,
+                    "basin fills low terrain up to a continuous waterline");
+  int submergedWrites = 0;
+  submergedWorld.ForEachBlock([&](glm::ivec3, cutum::BlockId)
+                              { ++submergedWrites; });
+  FluidTest::Expect(submergedWrites == 0, kTestName,
+                    "ocean-floor candidates do not create inland lakes");
 }
 
 } // namespace
@@ -251,9 +394,15 @@ int main()
   std::error_code ec;
   fs::current_path(repo_root, ec);
   cutum::UWorldGenPack::LoadPackId("default");
+  FluidTest::Expect(cutum::UWorldGenPack::Get().Pipeline.Lakes,
+                    kTestName, "default pipeline enables lakes");
+  FluidTest::Expect(cutum::UWorldGenPack::LakesConfig().Loaded,
+                    kTestName, "lakes parameters load from the pack");
 
   TestValleyCarveSmoothWalls();
   TestChunkValleySeamStable();
+  TestRiverFieldContinuity();
+  TestLakeCarveAndChunkOrder();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "cell_size": 128,
+  "chance_per_cell": 5,
+  "radius_min": 7,
+  "radius_max": 15,
+  "min_elevation_above_sea": 2,
+  "max_elevation_above_sea": 8,
+  "max_excavation_depth": 14,
+  "basin_depth_min": 3,
+  "basin_depth_max": 7,
+  "min_moisture": 0.32
+}

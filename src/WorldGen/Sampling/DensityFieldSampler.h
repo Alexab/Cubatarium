@@ -15,6 +15,9 @@ struct DensityFieldParams
   float lacunarity{2.0f};
   bool cavesInDensity{false};
   float caveAmplitude{18.0f};
+  bool riversEnabled{false};
+  float riverWidth{1.0f};
+  float riverNoiseScale{0.008f};
 };
 
 class UDensityFieldSampler

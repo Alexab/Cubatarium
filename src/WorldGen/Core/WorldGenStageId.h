@@ -8,6 +8,7 @@ enum class WorldGenStageId
   Terrain,
   Ravines,
   Valleys,
+  Lakes,
   Caves,
   Fluids,
   Ores,
@@ -22,6 +23,6 @@ enum class WorldGenStageId
   CaveFeatures,
 };
 
-constexpr int WorldGenStageIdCount = 15;
+constexpr int WorldGenStageIdCount = 16;
 
 } // namespace cutum

@@ -37,6 +37,17 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
     density_params.cavesInDensity = Config.Caves && ctx.Settings.EnableCaves;
     density_params.caveAmplitude =
         std::max(0.0f, ctx.Settings.Caves.densityCaveAmplitude * 320.0f);
+    const PackValleysConfig &valley_config = UWorldGenPack::ValleysConfig();
+    density_params.riversEnabled =
+        Config.Valleys && ctx.Settings.WorldGenProfileVersion >= 2 &&
+        !ctx.Settings.Tuning.useDensityRefineParity;
+    density_params.riverWidth = ctx.Settings.Tuning.riverWidth;
+    if (valley_config.Loaded)
+    {
+      density_params.riversEnabled = density_params.riversEnabled &&
+                                     valley_config.Enabled;
+      density_params.riverNoiseScale = valley_config.RiverNoiseScale;
+    }
     DensitySampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
                            ctx.Settings.MaxHeight,
                            ctx.Settings.Tuning.terrainRoughness, density_params,
@@ -88,6 +99,7 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
 void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
                                                       int pad)
 {
+  LakeCenterSurfaceYCache.clear();
   if (!BiomeSampler || !DirectCoarseHeightFn)
   {
     return;
@@ -355,6 +367,27 @@ void UComposableWorldGenerator::GenerateColumn(int world_x, int world_z)
 int UComposableWorldGenerator::SurfaceYAt(int world_x, int world_z) const
 {
   return SampleSurfaceY(world_x, world_z);
+}
+
+int UComposableWorldGenerator::LakeCenterSurfaceYAt(int world_x,
+                                                    int world_z) const
+{
+  const uint64_t key = (static_cast<uint64_t>(
+                            static_cast<uint32_t>(world_x))
+                        << 32U) |
+                       static_cast<uint32_t>(world_z);
+  const auto cached = LakeCenterSurfaceYCache.find(key);
+  if (cached != LakeCenterSurfaceYCache.end())
+  {
+    return cached->second;
+  }
+  const int surfaceY = SurfaceYAt(world_x, world_z);
+  if (LakeCenterSurfaceYCache.size() >= 256)
+  {
+    LakeCenterSurfaceYCache.clear();
+  }
+  LakeCenterSurfaceYCache.emplace(key, surfaceY);
+  return surfaceY;
 }
 
 } // namespace cutum

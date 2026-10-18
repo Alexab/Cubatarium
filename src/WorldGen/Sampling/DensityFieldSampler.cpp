@@ -2,6 +2,7 @@
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Features/CaveDepthBand.h"
 #include "WorldGen/Features/CaveCarver.h"
+#include "WorldGen/Features/RiverField.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 #include "WorldGen/Core/WorldGenPack.h"
@@ -109,6 +110,20 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
                             (std::pow(std::clamp(ridged, 0.0f, 1.0f), 2.0f) *
                                  mountainAmplitude -
                              verticalRange * 0.065f);
+  if (Params.riversEnabled && route.baseHeightBlocks > SeaLevel + 2 &&
+      climate.continentalness > 0.40f)
+  {
+    const float channel = SampleRiverChannelStrength(
+        x, z, Seed, Params.riverNoiseScale, Params.riverWidth,
+        climate.erosion, climate.weirdness);
+    const float wetness = Smoothstep(0.24f, 0.68f, climate.moisture);
+    const float incision = channel * (0.2f + wetness * 0.8f);
+    const float river_floor =
+        std::max(static_cast<float>(MinHeight + 2),
+                 static_cast<float>(SeaLevel - 2));
+    route.baseHeightBlocks -=
+        std::max(0.0f, route.baseHeightBlocks - river_floor) * incision;
+  }
   route.baseHeightBlocks =
       std::clamp(route.baseHeightBlocks, static_cast<float>(MinHeight),
                  static_cast<float>(MaxHeight));

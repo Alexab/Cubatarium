@@ -219,6 +219,11 @@ bool ParsePipelineStage(const std::string &stage, WorldGenPackPipeline &pipeline
     pipeline.Valleys = true;
     return true;
   }
+  if (stage == "lakes")
+  {
+    pipeline.Lakes = true;
+    return true;
+  }
   if (stage == "ores")
   {
     pipeline.Ores = true;
@@ -583,6 +588,52 @@ void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
   catch (const std::exception &e)
   {
     std::cerr << "WorldGenPack: valleys.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadLakesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path lakes_json = root / "lakes.json";
+  if (!std::filesystem::exists(lakes_json))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(lakes_json);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Lakes.Enabled = json.value("enabled", pack.Lakes.Enabled);
+    pack.Lakes.CellSize = std::clamp(
+        json.value("cell_size", pack.Lakes.CellSize), 48, 512);
+    pack.Lakes.ChancePerCell = std::clamp(
+        json.value("chance_per_cell", pack.Lakes.ChancePerCell), 1, 1000);
+    pack.Lakes.RadiusMin = std::clamp(
+        json.value("radius_min", pack.Lakes.RadiusMin), 4, 24);
+    pack.Lakes.RadiusMax = std::clamp(
+        json.value("radius_max", pack.Lakes.RadiusMax), pack.Lakes.RadiusMin,
+        24);
+    pack.Lakes.MinElevationAboveSea = std::clamp(
+        json.value("min_elevation_above_sea", pack.Lakes.MinElevationAboveSea),
+        1, 64);
+    pack.Lakes.MaxElevationAboveSea = std::clamp(
+        json.value("max_elevation_above_sea", pack.Lakes.MaxElevationAboveSea),
+        pack.Lakes.MinElevationAboveSea, 96);
+    pack.Lakes.MaxExcavationDepth = std::clamp(
+        json.value("max_excavation_depth", pack.Lakes.MaxExcavationDepth), 2,
+        64);
+    pack.Lakes.BasinDepthMin = std::clamp(
+        json.value("basin_depth_min", pack.Lakes.BasinDepthMin), 1, 12);
+    pack.Lakes.BasinDepthMax = std::clamp(
+        json.value("basin_depth_max", pack.Lakes.BasinDepthMax),
+        pack.Lakes.BasinDepthMin, 12);
+    pack.Lakes.MinMoisture = std::clamp(
+        json.value("min_moisture", pack.Lakes.MinMoisture), 0.0f, 1.0f);
+    pack.Lakes.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: lakes.json parse error: " << e.what()
               << std::endl;
   }
 }
@@ -984,6 +1035,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   LoadAquifersJson(root, pack);
   LoadRavinesJson(root, pack);
   LoadValleysJson(root, pack);
+  LoadLakesJson(root, pack);
 
   const std::filesystem::path biomesDir = root / "biomes";
   if (std::filesystem::exists(biomesDir))
@@ -1199,6 +1251,11 @@ const PackRavinesConfig &UWorldGenPack::RavinesConfig()
 const PackValleysConfig &UWorldGenPack::ValleysConfig()
 {
   return Get().Valleys;
+}
+
+const PackLakesConfig &UWorldGenPack::LakesConfig()
+{
+  return Get().Lakes;
 }
 
 void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)

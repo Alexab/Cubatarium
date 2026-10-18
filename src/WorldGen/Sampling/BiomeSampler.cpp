@@ -10,6 +10,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
+#include "WorldGen/Features/RiverField.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
 #include <array>
@@ -453,8 +454,33 @@ int ClampToFlatPlateau(int x, int z, int y, int localCoarseRange,
 }
 
 int ApplyRiverCarve(int x, int z, int surfaceY, const BiomeWeightSet &weights,
-                    const ProceduralSettings &settings, int localCoarseRange)
+                    const ProceduralSettings &settings, int localCoarseRange,
+                    int worldgenProfileVersion)
 {
+  if (worldgenProfileVersion >= 2)
+  {
+    if (surfaceY <= settings.SeaLevel + 2 || localCoarseRange <= 2)
+    {
+      return surfaceY;
+    }
+    const ClimateSample climate = SampleClimate(x, z, settings.Seed);
+    const PackValleysConfig &valleys = UWorldGenPack::ValleysConfig();
+    if (valleys.Loaded && !valleys.Enabled)
+    {
+      return surfaceY;
+    }
+    const float noiseScale = valleys.Loaded ? valleys.RiverNoiseScale : 0.008f;
+    const float river = SampleRiverChannelStrength(
+        x, z, settings.Seed, noiseScale, settings.Tuning.riverWidth,
+        climate.erosion, climate.weirdness);
+    const float wetness = Smoothstep(0.24f, 0.68f, climate.moisture);
+    const float strength = river * (0.2f + wetness * 0.8f);
+    const int targetY = std::max(settings.MinHeight + 2, settings.SeaLevel - 2);
+    const int depth = static_cast<int>(
+        std::floor(strength * static_cast<float>(surfaceY - targetY)));
+    return std::max(targetY, surfaceY - depth);
+  }
+
   const float forest = BiomeWeightFor(weights, BiomeId::Forest);
   const float plains = BiomeWeightFor(weights, BiomeId::Plains);
   const float humid = forest + plains;
@@ -1236,7 +1262,11 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
     y = std::clamp(y, neighbor_avg - 2, neighbor_avg + 2);
   }
 
-  y = ApplyRiverCarve(x, z, y, weights, settings, localCoarseRange);
+  if (worldgenProfileVersion < 2)
+  {
+    y = ApplyRiverCarve(x, z, y, weights, settings, localCoarseRange,
+                        worldgenProfileVersion);
+  }
   y = ApplyCoastShelf(x, z, y, settings, getCoarseY);
   y = FillMicroDepressions(x, z, y, localCoarseRange, getCoarseY, climate.erosion);
   y = ClampToFlatPlateau(x, z, y, localCoarseRange, getCoarseY, climate.erosion);
@@ -1244,6 +1274,11 @@ int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
       std::clamp(OverworldMacroHeight01(x, z, seed), 0.0f, 1.0f);
   y = ApplyErosionLite(x, z, y, seed, settings, getCoarseY, weights,
                        macro_height01);
+  if (worldgenProfileVersion >= 2)
+  {
+    y = ApplyRiverCarve(x, z, y, weights, settings, localCoarseRange,
+                        worldgenProfileVersion);
+  }
   return std::clamp(y, settings.MinHeight + 1, settings.MaxHeight);
 }
 
