@@ -477,6 +477,18 @@ static void TestLakeCarveAndChunkOrder()
   params.basinDepthMax = 4;
   params.minMoisture = 0.0f;
 
+  cutum::ClimateSample temperateWetClimate;
+  temperateWetClimate.temperature = 0.5f;
+  temperateWetClimate.moisture = 0.5f;
+  temperateWetClimate.continentalness = 0.6f;
+  temperateWetClimate.erosion = 0.5f;
+  FluidTest::Expect(cutum::IsLakeClimateSuitable(temperateWetClimate, params),
+                    kTestName, "temperate moist climate allows an inland lake");
+  auto hotClimate = temperateWetClimate;
+  hotClimate.temperature = params.maxTemperature + 0.01f;
+  FluidTest::Expect(!cutum::IsLakeClimateSuitable(hotClimate, params),
+                    kTestName, "hot climate rejects an inland lake");
+
   int anchorX = 0;
   int anchorZ = 0;
   int centerX = 0;
@@ -513,9 +525,7 @@ static void TestLakeCarveAndChunkOrder()
             cellZ * params.cellSize + margin,
             cellZ * params.cellSize + params.cellSize - margin - 1);
         const auto climate = cutum::SampleClimate(candidateX, candidateZ, kSeed);
-        if (climate.moisture >= params.minMoisture &&
-            climate.continentalness >= 0.40f &&
-            climate.continentalness <= 0.82f && climate.erosion <= 0.92f &&
+        if (cutum::IsLakeClimateSuitable(climate, params) &&
             (candidateX != x || candidateZ != z))
         {
           suitableCell = true;
@@ -621,6 +631,10 @@ int main()
                     kTestName, "default pipeline enables lakes");
   FluidTest::Expect(cutum::UWorldGenPack::LakesConfig().Loaded,
                     kTestName, "lakes parameters load from the pack");
+  FluidTest::Expect(
+      std::abs(cutum::UWorldGenPack::LakesConfig().MaxTemperature - 0.75f) <
+          0.0001f,
+      kTestName, "lake maximum temperature loads from the default pack");
 
   TestValleyCarveSmoothWalls();
   TestChunkValleySeamStable();

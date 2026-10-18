@@ -108,9 +108,7 @@ LakeSite SampleLakeSite(int cellX, int cellZ, int seaLevel, uint32_t seed,
     testedCandidates[testedCandidateCount++] = candidate;
 
     const ClimateSample climate = SampleClimate(candidateX, candidateZ, seed);
-    if (climate.moisture < params.minMoisture ||
-        climate.continentalness < 0.40f ||
-        climate.continentalness > 0.82f || climate.erosion > 0.92f)
+    if (!IsLakeClimateSuitable(climate, params))
     {
       continue;
     }
@@ -149,6 +147,15 @@ LakeSite SampleLakeSite(int cellX, int cellZ, int seaLevel, uint32_t seed,
 }
 
 } // namespace
+
+bool IsLakeClimateSuitable(const ClimateSample &climate,
+                           const LakeParams &params)
+{
+  return climate.moisture >= params.minMoisture &&
+         climate.temperature <= params.maxTemperature &&
+         climate.continentalness >= 0.40f &&
+         climate.continentalness <= 0.82f && climate.erosion <= 0.92f;
+}
 
 void CarveLakeColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                      uint32_t seed, const LakeParams &params, int seaLevel,

@@ -636,6 +636,8 @@ void LoadLakesJson(const std::filesystem::path &root, WorldGenPack &pack)
         pack.Lakes.BasinDepthMin, 12);
     pack.Lakes.MinMoisture = std::clamp(
         json.value("min_moisture", pack.Lakes.MinMoisture), 0.0f, 1.0f);
+    pack.Lakes.MaxTemperature = std::clamp(
+        json.value("max_temperature", pack.Lakes.MaxTemperature), 0.0f, 1.0f);
     pack.Lakes.Loaded = true;
   }
   catch (const std::exception &e)

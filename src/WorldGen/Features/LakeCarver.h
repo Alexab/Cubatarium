@@ -1,6 +1,7 @@
 #pragma once
 
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Sampling/ClimateSampler.h"
 #include <cstdint>
 #include <functional>
 
@@ -22,7 +23,11 @@ struct LakeParams
   int basinDepthMin{3};
   int basinDepthMax{7};
   float minMoisture{0.32f};
+  float maxTemperature{0.75f};
 };
+
+bool IsLakeClimateSuitable(const ClimateSample &climate,
+                           const LakeParams &params);
 
 using LakeSurfaceYCallback = std::function<int(int, int)>;
 

@@ -117,6 +117,7 @@ void RunLakesStage(UComposableWorldGenerator &generator,
     params.basinDepthMin = pack.BasinDepthMin;
     params.basinDepthMax = pack.BasinDepthMax;
     params.minMoisture = pack.MinMoisture;
+    params.maxTemperature = pack.MaxTemperature;
   }
   const LakeSurfaceYCallback get_surface_y = [&generator](int hx, int hz)
   { return generator.LakeCenterSurfaceYAt(hx, hz); };

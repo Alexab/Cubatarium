@@ -196,6 +196,7 @@ struct PackLakesConfig
   int BasinDepthMin{3};
   int BasinDepthMax{7};
   float MinMoisture{0.32f};
+  float MaxTemperature{0.75f};
   bool Loaded{false};
 };
 
