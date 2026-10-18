@@ -11,6 +11,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
+#include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/BiomeSource.h"
 
@@ -258,6 +259,67 @@ static void TestImageBiomeSourceStrategy()
                     kTestName, "image source keeps the procedural cave source");
 }
 
+static void TestCaveFeaturePlacementStrategies(cutum::UBlockRegistry &registry)
+{
+  cutum::ProceduralSettings settings = MakeVegetationSettings();
+  settings.EnableCaves = true;
+  settings.MaxHeight = 128;
+  settings.SeaLevel = 48;
+
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext ctx(world, registry, settings);
+  ctx.WorldgenOwnerPackId = "minetest_default_16";
+  ctx.ResolveBlockIds();
+
+  const cutum::BlockId stone = registry.GetIdByTypeName("stone");
+  const cutum::BlockId mossVisual = cutum::ResolvePackScatterBlockId(
+      registry, ctx.WorldgenOwnerPackId, "mtg_grass_1");
+  FluidTest::Expect(stone != cutum::BLOCK_AIR &&
+                        mossVisual != cutum::BLOCK_AIR,
+                    kTestName, "cave strategy test blocks resolve from the pack");
+  world.SetBlock(glm::ivec3(0, 8, 0), stone);
+
+  cutum::ObjectFeatureConfig features;
+  cutum::CaveFeatureRule moss;
+  moss.Biome = cutum::BiomeId::LushCaves;
+  moss.BiomeKeyName = "lush_caves";
+  moss.Kind = cutum::CaveFeatureKind::MossPatch;
+  moss.BlockName = "mtg_grass_1";
+  moss.Chance = 1;
+  moss.Radius = 0;
+  features.CaveFeatures.push_back(moss);
+  ctx.ObjectFeatures = &features;
+
+  const auto biomeAt = [](int, int, int, int) {
+    return cutum::BiomeId::LushCaves;
+  };
+  const auto biomeKeyAt = [](int, int, int, int) {
+    return cutum::BiomeKey("lush_caves");
+  };
+  FluidTest::Expect(cutum::TryPlaceCaveFeatures(ctx, 0, 0, 20, biomeAt,
+                                                biomeKeyAt),
+                    kTestName, "registered cave strategy places a moss floor");
+  const cutum::BlockId placedBlock = world.GetBlock(glm::ivec3(0, 8, 0));
+  const std::string placedMessage =
+      "cave feature writes its resolved block through sink (expected=" +
+      std::to_string(static_cast<int>(mossVisual)) + ", actual=" +
+      std::to_string(static_cast<int>(placedBlock)) + ")";
+  FluidTest::Expect(
+      placedBlock == mossVisual, kTestName, placedMessage.c_str());
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 5, 0)) == cutum::BLOCK_AIR,
+                    kTestName,
+                    "unresolved cave rock aliases do not treat air as a floor");
+  FluidTest::Expect(
+      cutum::CaveFeaturePlacementStrategyRegistry::Find(
+          cutum::CaveFeatureKind::MossPatch) != nullptr &&
+          cutum::CaveFeaturePlacementStrategyRegistry::Find(
+              cutum::CaveFeatureKind::Stalagmite) != nullptr &&
+          cutum::CaveFeaturePlacementStrategyRegistry::Find(
+              cutum::CaveFeatureKind::AmethystCluster) != nullptr,
+      kTestName, "built-in cave feature strategies are registered");
+}
+
 } // namespace
 
 int main()
@@ -300,6 +362,7 @@ int main()
           cutum::ObjectFeaturePlacementStrategyRegistry::Find(
               cutum::ObjectFeatureRuleMode::ProceduralTree) != nullptr,
       kTestName, "built-in feature placement strategies are registered");
+  TestCaveFeaturePlacementStrategies(registry);
   TestDataDefinedBiomeAffectsSampling();
   TestImageBiomeSourceStrategy();
 

@@ -1057,6 +1057,136 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
                             ctx.Settings.Tuning.structureDensity, biomeKey);
 }
 
+namespace
+{
+
+class MossPatchCavePlacementStrategy final
+    : public ICaveFeaturePlacementStrategy
+{
+public:
+  bool Place(WorldGenContext &ctx, const CaveFeatureRule &rule,
+             glm::ivec3 floorPosition, BlockId featureBlock, uint32_t,
+             glm::ivec3 chunkCoordinate,
+             const std::function<bool(BlockId)> &isCaveRock) const override
+  {
+    const int radius = std::max(0, rule.Radius);
+    bool placed = false;
+    VoxelFeatureSink sink(ctx.World);
+    for (int dz = -radius; dz <= radius; ++dz)
+    {
+      for (int dx = -radius; dx <= radius; ++dx)
+      {
+        if (dx * dx + dz * dz > radius * radius)
+        {
+          continue;
+        }
+        const glm::ivec3 targetFloor(floorPosition.x + dx, floorPosition.y,
+                                     floorPosition.z + dz);
+        if (UChunkManager::WorldToChunk(targetFloor) != chunkCoordinate ||
+            !isCaveRock(ctx.World.GetBlock(targetFloor)) ||
+            !ctx.World.IsAir(targetFloor + glm::ivec3(0, 1, 0)))
+        {
+          continue;
+        }
+        sink.WriteVoxel(targetFloor, featureBlock);
+        placed = true;
+      }
+    }
+    if (placed)
+    {
+      ctx.AccumulateDirtyColumn(floorPosition.y, floorPosition.y + 1);
+    }
+    return placed;
+  }
+};
+
+class StalagmiteCavePlacementStrategy final
+    : public ICaveFeaturePlacementStrategy
+{
+public:
+  bool Place(WorldGenContext &ctx, const CaveFeatureRule &rule,
+             glm::ivec3 floorPosition, BlockId featureBlock, uint32_t hash,
+             glm::ivec3, const std::function<bool(BlockId)> &) const override
+  {
+    const int maxHeight = std::clamp(rule.MaxHeight, 1, 64);
+    const int requestedHeight =
+        1 + static_cast<int>((hash >> 8U) % static_cast<uint32_t>(maxHeight));
+    int height = 0;
+    for (int dy = 1; dy <= requestedHeight; ++dy)
+    {
+      if (!ctx.World.IsAir(floorPosition + glm::ivec3(0, dy, 0)))
+      {
+        break;
+      }
+      height = dy;
+    }
+    if (height <= 0)
+    {
+      return false;
+    }
+
+    VoxelFeatureSink sink(ctx.World);
+    for (int dy = 1; dy <= height; ++dy)
+    {
+      sink.WriteVoxel(floorPosition + glm::ivec3(0, dy, 0), featureBlock);
+    }
+    ctx.AccumulateDirtyColumn(floorPosition.y, floorPosition.y + height);
+    return true;
+  }
+};
+
+class AmethystClusterCavePlacementStrategy final
+    : public ICaveFeaturePlacementStrategy
+{
+public:
+  bool Place(WorldGenContext &ctx, const CaveFeatureRule &rule,
+             glm::ivec3 floorPosition, BlockId featureBlock, uint32_t hash,
+             glm::ivec3 chunkCoordinate,
+             const std::function<bool(BlockId)> &) const override
+  {
+    const glm::ivec3 center = floorPosition + glm::ivec3(0, 1, 0);
+    if (!ctx.World.IsAir(center) ||
+        !ctx.World.IsAir(center + glm::ivec3(0, 1, 0)))
+    {
+      return false;
+    }
+
+    VoxelFeatureSink sink(ctx.World);
+    sink.WriteVoxel(center, featureBlock);
+    if (rule.Radius > 0 && (hash & 1U) != 0U)
+    {
+      const glm::ivec3 side = center + glm::ivec3(1, 0, 0);
+      if (ctx.World.IsAir(side) &&
+          UChunkManager::WorldToChunk(side) == chunkCoordinate)
+      {
+        sink.WriteVoxel(side, featureBlock);
+      }
+    }
+    ctx.AccumulateDirtyColumn(floorPosition.y, floorPosition.y + 1);
+    return true;
+  }
+};
+
+void EnsureBuiltinCaveFeatureStrategies()
+{
+  static std::once_flag registered;
+  std::call_once(registered,
+                 []
+                 {
+                   CaveFeaturePlacementStrategyRegistry::Register(
+                       CaveFeatureKind::MossPatch,
+                       std::make_shared<MossPatchCavePlacementStrategy>());
+                   CaveFeaturePlacementStrategyRegistry::Register(
+                       CaveFeatureKind::Stalagmite,
+                       std::make_shared<StalagmiteCavePlacementStrategy>());
+                   CaveFeaturePlacementStrategyRegistry::Register(
+                       CaveFeatureKind::AmethystCluster,
+                       std::make_shared<AmethystClusterCavePlacementStrategy>());
+                 });
+}
+
+} // namespace
+
 bool TryPlaceCaveFeatures(
     WorldGenContext &ctx, int x, int z, int surfaceY,
     const std::function<BiomeId(int, int, int, int)> &biome_at_3d,
@@ -1071,6 +1201,7 @@ bool TryPlaceCaveFeatures(
   {
     return false;
   }
+  EnsureBuiltinCaveFeatureStrategies();
   const std::array<BlockId, 7> cave_rock = {
       ctx.Blocks.Stone,
       ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "granite"),
@@ -1080,7 +1211,10 @@ bool TryPlaceCaveFeatures(
       ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "tuff"),
       ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, "rooted_dirt")};
   const auto is_cave_rock = [&cave_rock](BlockId id)
-  { return std::find(cave_rock.begin(), cave_rock.end(), id) != cave_rock.end(); };
+  {
+    return id != BLOCK_AIR &&
+           std::find(cave_rock.begin(), cave_rock.end(), id) != cave_rock.end();
+  };
   const glm::ivec3 current_chunk = UChunkManager::WorldToChunk(glm::ivec3(x, 0, z));
 
   for (int floor_y = 5; floor_y < surfaceY - 4; ++floor_y)
@@ -1154,77 +1288,12 @@ bool TryPlaceCaveFeatures(
       {
         continue;
       }
-      int min_dirty_y = floor_y;
-      int max_dirty_y = floor_y + 1;
-      bool placed = false;
-
-      if (rule.Kind == CaveFeatureKind::MossPatch)
+      const auto strategy =
+          CaveFeaturePlacementStrategyRegistry::Find(rule.Kind);
+      if (strategy &&
+          strategy->Place(ctx, rule, floor_pos, feature_block, hash,
+                          current_chunk, is_cave_rock))
       {
-        const int radius = std::max(0, rule.Radius);
-        for (int dz = -radius; dz <= radius; ++dz)
-        {
-          for (int dx = -radius; dx <= radius; ++dx)
-          {
-            if (dx * dx + dz * dz > radius * radius)
-            {
-              continue;
-            }
-            const glm::ivec3 target_floor(x + dx, floor_y, z + dz);
-            if (UChunkManager::WorldToChunk(target_floor) != current_chunk ||
-                !is_cave_rock(ctx.World.GetBlock(target_floor)) ||
-                !ctx.World.IsAir(target_floor + glm::ivec3(0, 1, 0)))
-            {
-              continue;
-            }
-            ctx.World.SetBlock(target_floor, feature_block);
-            placed = true;
-          }
-        }
-      }
-      else if (rule.Kind == CaveFeatureKind::Stalagmite)
-      {
-        const int requested_height =
-            1 + static_cast<int>((hash >> 8U) % static_cast<uint32_t>(rule.MaxHeight));
-        int height = 0;
-        for (int dy = 1; dy <= requested_height; ++dy)
-        {
-          if (!ctx.World.IsAir(glm::ivec3(x, floor_y + dy, z)))
-          {
-            break;
-          }
-          height = dy;
-        }
-        if (height > 0)
-        {
-          for (int dy = 1; dy <= height; ++dy)
-          {
-            ctx.World.SetBlock(glm::ivec3(x, floor_y + dy, z), feature_block);
-          }
-          max_dirty_y = floor_y + height;
-          placed = true;
-        }
-      }
-      else if (rule.Kind == CaveFeatureKind::AmethystCluster)
-      {
-        const glm::ivec3 center(x, floor_y + 1, z);
-        if (ctx.World.IsAir(center) &&
-            ctx.World.IsAir(center + glm::ivec3(0, 1, 0)))
-        {
-          ctx.World.SetBlock(center, feature_block);
-          if (rule.Radius > 0 && (hash & 1U) != 0U &&
-              ctx.World.IsAir(center + glm::ivec3(1, 0, 0)) &&
-              UChunkManager::WorldToChunk(center + glm::ivec3(1, 0, 0)) ==
-                  current_chunk)
-          {
-            ctx.World.SetBlock(center + glm::ivec3(1, 0, 0), feature_block);
-          }
-          placed = true;
-        }
-      }
-
-      if (placed)
-      {
-        ctx.AccumulateDirtyColumn(min_dirty_y, max_dirty_y);
         return true;
       }
     }

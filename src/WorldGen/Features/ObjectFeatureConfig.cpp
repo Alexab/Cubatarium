@@ -50,6 +50,22 @@ std::mutex &PlacementStrategyMutex()
   return mutex;
 }
 
+std::unordered_map<CaveFeatureKind,
+                   std::shared_ptr<const ICaveFeaturePlacementStrategy>> &
+CavePlacementStrategies()
+{
+  static std::unordered_map<
+      CaveFeatureKind,
+      std::shared_ptr<const ICaveFeaturePlacementStrategy>> strategies;
+  return strategies;
+}
+
+std::mutex &CavePlacementStrategyMutex()
+{
+  static std::mutex mutex;
+  return mutex;
+}
+
 BiomeId ParseBiome(const std::string &name)
 {
   return BiomeIdFromString(name);
@@ -360,6 +376,26 @@ ObjectFeaturePlacementStrategyRegistry::Find(ObjectFeatureRuleMode mode)
   std::lock_guard<std::mutex> lock(PlacementStrategyMutex());
   const auto it = PlacementStrategies().find(mode);
   return it == PlacementStrategies().end() ? nullptr : it->second;
+}
+
+bool CaveFeaturePlacementStrategyRegistry::Register(
+    CaveFeatureKind kind,
+    std::shared_ptr<const ICaveFeaturePlacementStrategy> strategy)
+{
+  if (!strategy)
+  {
+    return false;
+  }
+  std::lock_guard<std::mutex> lock(CavePlacementStrategyMutex());
+  return CavePlacementStrategies().emplace(kind, std::move(strategy)).second;
+}
+
+std::shared_ptr<const ICaveFeaturePlacementStrategy>
+CaveFeaturePlacementStrategyRegistry::Find(CaveFeatureKind kind)
+{
+  std::lock_guard<std::mutex> lock(CavePlacementStrategyMutex());
+  const auto it = CavePlacementStrategies().find(kind);
+  return it == CavePlacementStrategies().end() ? nullptr : it->second;
 }
 
 SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name)

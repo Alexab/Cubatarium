@@ -73,7 +73,12 @@ sampler for cave biomes.
 existing `object`, `scatter_blocks`, and `procedural_tree` modes after candidate
 selection. New placement algorithms can register an implementation without
 adding another placement branch to the selection pipeline. Cave features still
-use their dedicated placement path.
+use their own `CaveFeaturePlacementStrategyRegistry` because their placement
+domain is 3D. Moss patches, stalagmites, and amethyst clusters are independently
+registered strategies; they and procedural trees emit voxels through the
+current `VoxelFeatureSink`.
+The cave rock predicate excludes unresolved optional block IDs (`BLOCK_AIR`),
+so a missing rock in a pack cannot make empty cave air count as a valid floor.
 `procedural_tree` takes a stable `species` key and a `tree_profile` with bounded
 height, crown radii/shape, branch count, leaf density, root chance, and block
 names. An optional `ecology` profile can constrain temperature, moisture,

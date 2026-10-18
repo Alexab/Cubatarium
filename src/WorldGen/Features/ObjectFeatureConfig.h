@@ -3,6 +3,7 @@
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include <cstdint>
+#include <functional>
 #include <filesystem>
 #include <limits>
 #include <memory>
@@ -99,6 +100,26 @@ struct CaveFeatureRule
   int Radius{1};
   int MaxHeight{3};
   uint32_t SeedOffset{0};
+};
+
+class ICaveFeaturePlacementStrategy
+{
+public:
+  virtual ~ICaveFeaturePlacementStrategy() = default;
+  virtual bool Place(WorldGenContext &ctx, const CaveFeatureRule &rule,
+                     glm::ivec3 floorPosition, BlockId featureBlock,
+                     uint32_t featureHash, glm::ivec3 chunkCoordinate,
+                     const std::function<bool(BlockId)> &isCaveRock) const = 0;
+};
+
+class CaveFeaturePlacementStrategyRegistry
+{
+public:
+  static bool Register(
+      CaveFeatureKind kind,
+      std::shared_ptr<const ICaveFeaturePlacementStrategy> strategy);
+  static std::shared_ptr<const ICaveFeaturePlacementStrategy>
+  Find(CaveFeatureKind kind);
 };
 
 struct SurfaceConstraint
