@@ -156,6 +156,8 @@ int main()
                     kTestName, "object_features load failed");
   FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"), kTestName,
                     "worldgen pack load failed");
+  FluidTest::Expect(cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
+                    "aquifer configuration loads from the active worldgen pack");
 
   const fs::path pack_root = repo_root / "resource_packs" / "minetest_default_16";
   const auto definitions = LoadPackDefinitions(pack_root);

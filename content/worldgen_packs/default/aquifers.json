@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "cell_size_x": 24,
+  "cell_size_y": 16,
+  "cell_size_z": 24,
+  "cell_jitter": 0.28,
+  "dry_cell_chance": 0.38,
+  "water_level_offset": -12,
+  "water_level_amplitude": 17,
+  "barrier_band": 2.5,
+  "barrier_noise_threshold": 0.55,
+  "pressure_difference_threshold": 8,
+  "lava_max_y": 10,
+  "lava_cell_chance": 0.16
+}

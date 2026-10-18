@@ -592,6 +592,47 @@ void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
   }
 }
 
+void LoadAquifersJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path aquifersJson = root / "aquifers.json";
+  if (!std::filesystem::exists(aquifersJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(aquifersJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Aquifers.CellSizeX = json.value("cell_size_x", pack.Aquifers.CellSizeX);
+    pack.Aquifers.CellSizeY = json.value("cell_size_y", pack.Aquifers.CellSizeY);
+    pack.Aquifers.CellSizeZ = json.value("cell_size_z", pack.Aquifers.CellSizeZ);
+    pack.Aquifers.CellJitter = json.value("cell_jitter", pack.Aquifers.CellJitter);
+    pack.Aquifers.DryCellChance =
+        json.value("dry_cell_chance", pack.Aquifers.DryCellChance);
+    pack.Aquifers.WaterLevelOffset =
+        json.value("water_level_offset", pack.Aquifers.WaterLevelOffset);
+    pack.Aquifers.WaterLevelAmplitude =
+        json.value("water_level_amplitude", pack.Aquifers.WaterLevelAmplitude);
+    pack.Aquifers.BarrierBand =
+        json.value("barrier_band", pack.Aquifers.BarrierBand);
+    pack.Aquifers.BarrierNoiseThreshold =
+        json.value("barrier_noise_threshold",
+                   pack.Aquifers.BarrierNoiseThreshold);
+    pack.Aquifers.PressureDifferenceThreshold =
+        json.value("pressure_difference_threshold",
+                   pack.Aquifers.PressureDifferenceThreshold);
+    pack.Aquifers.LavaMaxY = json.value("lava_max_y", pack.Aquifers.LavaMaxY);
+    pack.Aquifers.LavaCellChance =
+        json.value("lava_cell_chance", pack.Aquifers.LavaCellChance);
+    pack.Aquifers.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: aquifers.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
 BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
                                      const std::string &biomeId)
 {
@@ -679,6 +720,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   LoadClimateJson(root, pack);
   LoadOresJson(root, pack);
   LoadCavesJson(root, pack);
+  LoadAquifersJson(root, pack);
   LoadRavinesJson(root, pack);
   LoadValleysJson(root, pack);
 
@@ -841,6 +883,11 @@ const PackClimateConfig &UWorldGenPack::ClimateConfig() { return Get().Climate; 
 const PackOresConfig &UWorldGenPack::OresConfig() { return Get().Ores; }
 
 const PackCavesConfig &UWorldGenPack::CavesConfig() { return Get().Caves; }
+
+const PackAquifersConfig &UWorldGenPack::AquifersConfig()
+{
+  return Get().Aquifers;
+}
 
 const PackRavinesConfig &UWorldGenPack::RavinesConfig()
 {

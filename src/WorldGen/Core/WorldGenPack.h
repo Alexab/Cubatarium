@@ -2,6 +2,7 @@
 
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Core/WorldGenStageId.h"
+#include "WorldGen/Sampling/AquiferSampler.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <memory>
 #include <string>
@@ -109,6 +110,11 @@ struct PackCavesConfig
   bool Loaded{false};
 };
 
+struct PackAquifersConfig : AquiferParams
+{
+  bool Loaded{false};
+};
+
 struct PackRavinesConfig
 {
   bool Enabled{true};
@@ -169,6 +175,7 @@ struct WorldGenPack
   PackClimateConfig Climate;
   PackOresConfig Ores;
   PackCavesConfig Caves;
+  PackAquifersConfig Aquifers;
   PackRavinesConfig Ravines;
   PackValleysConfig Valleys;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
@@ -189,6 +196,7 @@ public:
   static const PackClimateConfig &ClimateConfig();
   static const PackOresConfig &OresConfig();
   static const PackCavesConfig &CavesConfig();
+  static const PackAquifersConfig &AquifersConfig();
   static const PackRavinesConfig &RavinesConfig();
   static const PackValleysConfig &ValleysConfig();
   static void ApplyPackCaveDefaults(ProceduralSettings &settings);

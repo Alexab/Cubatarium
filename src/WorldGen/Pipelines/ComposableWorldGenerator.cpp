@@ -23,6 +23,13 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
       StageMask(BuildWorldGenStageMask(Config, ctx.Settings,
                                        UWorldGenPack::Get().Pipeline))
 {
+  if (Config.Aquifers && ctx.Settings.EnableCaves &&
+      (ctx.Settings.FillWater || ctx.Settings.FillLava))
+  {
+    AquiferSampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
+                           ctx.Settings.MaxHeight,
+                           UWorldGenPack::AquifersConfig());
+  }
   if (Config.TerrainMode == ComposableTerrainMode::Density3D)
   {
     DensityFieldParams density_params;

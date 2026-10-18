@@ -530,6 +530,40 @@ def cave_stats(
     }
 
 
+def cave_void_fluid_stats(
+    columns: dict[tuple[int, int, int], int],
+    surface: dict[tuple[int, int], int],
+    id_to_name: dict[int, str],
+    *,
+    air_id: int = 0,
+) -> dict:
+    """Estimate dry and liquid cave voxels below each column's terrain surface."""
+    water_ids = {bid for bid, name in id_to_name.items() if name == "water"}
+    lava_ids = {bid for bid, name in id_to_name.items() if name == "lava"}
+    dry_air = water = lava = 0
+    for (wx, wz), ground_y in surface.items():
+        for wy in range(1, ground_y):
+            block_id = columns.get((wx, wy, wz), air_id)
+            if block_id == air_id:
+                dry_air += 1
+            elif block_id in water_ids:
+                water += 1
+            elif block_id in lava_ids:
+                lava += 1
+
+    total = dry_air + water + lava
+    denominator = max(1, total)
+    return {
+        "cave_dry_air_voxels": dry_air,
+        "cave_water_voxels": water,
+        "cave_lava_voxels": lava,
+        "cave_void_voxels": total,
+        "cave_dry_pct": 100.0 * dry_air / denominator,
+        "cave_water_pct": 100.0 * water / denominator,
+        "cave_lava_pct": 100.0 * lava / denominator,
+    }
+
+
 def vegetation_cluster_stats(
     world_dir: Path,
     id_to_name: dict[int, str],
@@ -849,6 +883,7 @@ def analyze_world(
             spawn_radius=None,
         )
     )
+    metrics.update(cave_void_fluid_stats(columns, terrain_surface, id_to_name))
     metrics.update(
         vegetation_cluster_stats(
             world_dir,

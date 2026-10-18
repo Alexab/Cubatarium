@@ -8,16 +8,46 @@
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/ColumnHash.h"
 #include "WorldGen/Core/WorldGenBlockResolver.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Sampling/AquiferSampler.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <optional>
 
 namespace cutum
 {
 
 namespace
 {
+
+std::optional<UAquiferSampler>
+MakeAquiferSealSampler(const WorldGenContext &ctx)
+{
+  if (ctx.Settings.TerrainBackendMode != TerrainBackend::Density3D ||
+      !ctx.Settings.EnableCaves ||
+      (UWorldGenPack::Get().Pipeline.Loaded &&
+       !UWorldGenPack::Get().Pipeline.Aquifers))
+  {
+    return std::nullopt;
+  }
+  return UAquiferSampler(ctx.Settings.Seed, ctx.Settings.SeaLevel,
+                         ctx.Settings.MaxHeight,
+                         UWorldGenPack::AquifersConfig());
+}
+
+bool AllowsAquiferWater(const UAquiferSampler *sampler, glm::ivec3 pos,
+                        int sea_level)
+{
+  // Preserve the surface ocean/shore band. Below it, connected-pocket sealing
+  // may only fill cells that the generation sampler classified as water.
+  if (sampler == nullptr || pos.y >= sea_level - 1)
+  {
+    return true;
+  }
+  return sampler->SampleAt(pos.x, pos.y, pos.z).Fluid == AquiferFluid::Water;
+}
 
 BlockId ResolveGeologyBlock(WorldGenContext &ctx, const char *name)
 {
@@ -260,21 +290,18 @@ bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
 }
 
 bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
-                       uint32_t seed)
+                       const UAquiferSampler &sampler)
 {
-  if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR || surfaceY < 4)
+  const bool water_available =
+      ctx.Settings.FillWater && ctx.Blocks.Water != BLOCK_AIR;
+  const bool lava_available =
+      ctx.Settings.FillLava && ctx.Blocks.Lava != BLOCK_AIR;
+  if ((!water_available && !lava_available) || surfaceY < 4)
   {
     return false;
   }
 
-  const float table_noise = FBM2D(static_cast<float>(x) * 0.021f,
-                                  static_cast<float>(z) * 0.021f, seed + 8201,
-                                  2, 0.5f, 2.0f);
-  const int local_water_table = std::clamp(
-      ctx.Settings.SeaLevel - 12 + static_cast<int>(std::lround(table_noise * 9.0f)),
-      3, std::max(3, ctx.Settings.SeaLevel - 2));
-  const int scan_top = std::min(surfaceY - 1, local_water_table + 5);
-  const bool can_fill_lava = ctx.Settings.FillLava && ctx.Blocks.Lava != BLOCK_AIR;
+  const int scan_top = std::min(surfaceY - 1, ctx.Settings.MaxHeight - 1);
   bool changed = false;
   for (int y = 1; y <= scan_top; ++y)
   {
@@ -284,29 +311,30 @@ bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
       continue;
     }
 
-    const float pressure_noise =
-        FBM3D(static_cast<float>(x) * 0.037f, static_cast<float>(y) * 0.052f,
-              static_cast<float>(z) * 0.037f, seed + 8202, 2, 0.5f, 2.0f);
-    const int local_level = local_water_table +
-                            static_cast<int>(std::lround(pressure_noise * 5.0f));
-    if (y > local_level)
+    const AquiferSample sample = sampler.SampleAt(x, y, z);
+    if (sample.Fluid == AquiferFluid::Barrier && ctx.Blocks.Stone != BLOCK_AIR)
     {
+      ctx.World.SetBlock(pos, ctx.Blocks.Stone);
+      ctx.World.SetFluidState(pos, FluidCellState{});
+      changed = true;
       continue;
     }
 
-    BlockId fluid_block = ctx.Blocks.Water;
-    FluidKind fluid_kind = FluidKind::Water;
-    if (can_fill_lava && y <= 10)
+    BlockId fluid_block = BLOCK_AIR;
+    FluidKind fluid_kind = FluidKind::None;
+    if (sample.Fluid == AquiferFluid::Water && water_available)
     {
-      const float lava_noise =
-          FBM3D(static_cast<float>(x) * 0.061f,
-                static_cast<float>(y) * 0.073f,
-                static_cast<float>(z) * 0.061f, seed + 8203, 2, 0.5f, 2.0f);
-      if (lava_noise > 0.28f)
-      {
-        fluid_block = ctx.Blocks.Lava;
-        fluid_kind = FluidKind::Lava;
-      }
+      fluid_block = ctx.Blocks.Water;
+      fluid_kind = FluidKind::Water;
+    }
+    else if (sample.Fluid == AquiferFluid::Lava && lava_available)
+    {
+      fluid_block = ctx.Blocks.Lava;
+      fluid_kind = FluidKind::Lava;
+    }
+    if (fluid_block == BLOCK_AIR)
+    {
+      continue;
     }
     ctx.World.SetBlock(pos, fluid_block);
     ctx.World.SetFluidState(pos, FluidCellState::Source().WithKind(fluid_kind));
@@ -314,7 +342,7 @@ bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
   if (changed)
   {
-    ctx.AccumulateDirtyColumn(1, local_water_table);
+    ctx.AccumulateDirtyColumn(1, scan_top);
   }
   return changed;
 }
@@ -364,6 +392,13 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
   options.fluid_id = ctx.Blocks.Water;
   options.source_for_air = true;
   options.max_passes = 8;
+  const std::optional<UAquiferSampler> aquifer_sampler =
+      MakeAquiferSealSampler(ctx);
+  if (aquifer_sampler)
+  {
+    options.allow_air_fill = [&aquifer_sampler, sea](glm::ivec3 pos)
+    { return AllowsAquiferWater(&*aquifer_sampler, pos, sea); };
+  }
   const int filled = UFluidSpreadSystem::FloodWetPocketsInBox(
       ctx.World, *definitions,
       glm::ivec3(base_x, 1, base_z),
@@ -403,6 +438,8 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
   const int min_z = base_z - 1;
   const int max_z = base_z + CHUNK_SIZE;
   const BlockId water = ctx.Blocks.Water;
+  const std::optional<UAquiferSampler> aquifer_sampler =
+      MakeAquiferSealSampler(ctx);
   bool any = false;
   // 8 full-volume passes were 200–470ms on main (CB hole spikes). Two passes
   // close the common shore strip; remaining edges catch up on later frames.
@@ -417,6 +454,11 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
         {
           const glm::ivec3 pos(x, y, z);
           if (ctx.World.GetBlock(pos) != BLOCK_AIR)
+          {
+            continue;
+          }
+          if (!AllowsAquiferWater(aquifer_sampler ? &*aquifer_sampler : nullptr,
+                                  pos, sea))
           {
             continue;
           }

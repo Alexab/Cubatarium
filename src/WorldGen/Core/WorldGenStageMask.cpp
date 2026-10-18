@@ -153,7 +153,8 @@ WorldGenStageMask BuildWorldGenStageMask(
 
   const bool aquifers =
       StageEnabled(pack_pipeline, generator_config.Aquifers,
-                   pack_pipeline.Aquifers) && settings.EnableCaves;
+                   pack_pipeline.Aquifers) && settings.EnableCaves &&
+      generator_config.TerrainMode != ComposableTerrainMode::Density3D;
   mask.Set(WorldGenStageId::Aquifers, aquifers);
 
   const bool cave_features =

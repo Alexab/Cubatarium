@@ -318,6 +318,10 @@ int FloodWetPocketsInBoxImpl(UBlockWorld &blockWorld,
 
     if (block_id == BLOCK_AIR)
     {
+      if (options.allow_air_fill && !options.allow_air_fill(pos))
+      {
+        return;
+      }
       to_fill_air.push_back(index);
       return;
     }

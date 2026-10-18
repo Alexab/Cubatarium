@@ -4,6 +4,7 @@
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/AquiferSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/CoarseHeightCache.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
@@ -63,6 +64,10 @@ public:
   {
     return DensitySampler.has_value() ? &*DensitySampler : nullptr;
   }
+  const UAquiferSampler *GetAquiferSampler() const
+  {
+    return AquiferSampler.has_value() ? &*AquiferSampler : nullptr;
+  }
   WorldGenContext &GetContext() { return Ctx; }
 
   /// Install chunk-local CoarseSurfaceY memo for blend/coast lookups.
@@ -87,6 +92,7 @@ private:
   WorldGenStageMask StageMask;
   std::optional<UOverworldHeightSampler> HeightSampler;
   std::optional<UDensityFieldSampler> DensitySampler;
+  std::optional<UAquiferSampler> AquiferSampler;
   std::optional<UBiomeSampler> BiomeSampler;
   std::optional<UColumnSampleBuilder> SampleBuilder;
   std::optional<UCoarseHeightCache> ChunkCoarseCache;

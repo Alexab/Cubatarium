@@ -28,7 +28,8 @@ void RunTerrainStage(UComposableWorldGenerator &generator,
             generator.GetDensitySampler())
     {
       FillTerrainColumnFromDensity(generator.GetContext(), world_x, world_z,
-                                 sample.SurfaceY, rule, *density_sampler);
+                                 sample.SurfaceY, rule, *density_sampler,
+                                 generator.GetAquiferSampler());
       return;
     }
   }
@@ -111,9 +112,12 @@ void RunAquifersStage(UComposableWorldGenerator &generator,
                       const ColumnSampleContext &sample, int world_x,
                       int world_z, PostTerrainState &)
 {
-  WorldGenContext &ctx = generator.GetContext();
-  FillAquiferColumn(ctx, world_x, world_z, sample.SurfaceY,
-                    ctx.Settings.Seed);
+  const UAquiferSampler *sampler = generator.GetAquiferSampler();
+  if (sampler != nullptr)
+  {
+    WorldGenContext &ctx = generator.GetContext();
+    FillAquiferColumn(ctx, world_x, world_z, sample.SurfaceY, *sampler);
+  }
 }
 
 void RunCaveFeaturesStage(UComposableWorldGenerator &generator,

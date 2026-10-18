@@ -399,6 +399,7 @@ set(SOURCES
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/DensityRouter.cpp
     src/WorldGen/Sampling/DensityFieldSampler.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Pipelines/WorldGenStageRunner.cpp
     src/WorldGen/Pipelines/ColumnGenerationService.cpp
@@ -1864,6 +1865,7 @@ add_executable(fluid_worldgen_seal_test
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -1965,6 +1967,7 @@ add_executable(density_refine_parity_test
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/DensityRouter.cpp
     src/WorldGen/Sampling/DensityFieldSampler.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
     src/WorldGen/Sampling/CoarseHeightCache.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
@@ -2026,6 +2029,7 @@ add_executable(worldgen_vegetation_placement_test
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -2051,6 +2055,14 @@ target_include_directories(worldgen_cave_depth_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(worldgen_cave_depth_test glm::glm)
 
+add_executable(worldgen_aquifer_test
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
+    src/Test/WorldGenAquiferTest.cpp)
+target_include_directories(worldgen_aquifer_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(worldgen_aquifer_test glm::glm)
+
 set(WORLDGEN_PIPELINE_TEST_SOURCES
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp
@@ -2062,6 +2074,7 @@ set(WORLDGEN_PIPELINE_TEST_SOURCES
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -2321,6 +2334,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/DensityRouter.cpp
     src/WorldGen/Sampling/DensityFieldSampler.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Pipelines/WorldGenStageRunner.cpp
     src/WorldGen/Pipelines/ColumnGenerationService.cpp
@@ -2740,6 +2754,8 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     TIMEOUT 60)
 endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
+  fluid_worldgen_seal_test
+  worldgen_aquifer_test
   job_admission_lifetime_test
   chunk_input_stamp_test
   inputs_still_valid_visual_test
