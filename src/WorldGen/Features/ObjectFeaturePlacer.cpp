@@ -310,8 +310,16 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     }
   }
 
-  const int crownBase = std::max(1, height - crownHeight / 2);
-  const int crownTop = height + std::max(1, crownHeight / 2);
+  const bool conicalCrown = profile.CrownShape == TreeCrownShape::Conical;
+  // Conifers carry foliage along the lower trunk. Broadleaf crowns remain
+  // centered near the top, while conical profiles taper from the lower crown
+  // base to the top of the trunk.
+  const int crownBase = conicalCrown
+                            ? std::max(1, height - crownHeight)
+                            : std::max(1, height - crownHeight / 2);
+  const int crownTop = conicalCrown
+                           ? std::max(crownBase, height - 1)
+                           : height + std::max(1, crownHeight / 2);
   for (int y = crownBase; y <= crownTop; ++y)
   {
     const float t = static_cast<float>(y - crownBase) /
@@ -431,42 +439,98 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     }
   }
 
-  for (int branch = 0; branch < profile.BranchCount; ++branch)
+  if (conicalCrown)
   {
-    const uint32_t branchHash =
-        FeatureHash(base.x + branch * 13, base.z - branch * 7,
-                    seed + 0x4252414eU + static_cast<uint32_t>(branch * 31));
-    const int direction = static_cast<int>(branchHash % 8U);
     static constexpr int kDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
     static constexpr int kDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
-    const int branchY =
-        height / 2 +
-        static_cast<int>((branchHash >> 8U) %
-                         static_cast<uint32_t>(std::max(1, height / 3)));
-    const int branchLengthMax = std::max({2, radiusX, radiusZ});
-    const int branchLengthMin = std::max(1, branchLengthMax / 2);
-    const int branchLengthRange = branchLengthMax - branchLengthMin + 1;
-    const int length =
-        branchLengthMin + static_cast<int>((branchHash >> 16U) %
-                                           static_cast<uint32_t>(branchLengthRange));
-    int tipX = 0;
-    int tipZ = 0;
-    for (int step = 1; step <= length; ++step)
+    const int tiers = profile.BranchCount;
+    for (int tier = 0; tier < tiers; ++tier)
     {
-      tipX = kDirX[direction] * step;
-      tipZ = kDirZ[direction] * step;
-      addVoxel(tipX, branchY + (step + 1) / 2, tipZ, trunk);
-    }
-    const int leafY = branchY + (length + 1) / 2;
-    for (int dy = -1; dy <= 1; ++dy)
-    {
-      for (int dz = -1; dz <= 1; ++dz)
+      const uint32_t tierHash = FeatureHash(
+          base.x + tier * 13, base.z - tier * 7,
+          seed + 0x4252414eU + static_cast<uint32_t>(tier * 31));
+      const float tierT = static_cast<float>(tier + 1) /
+                          static_cast<float>(tiers + 1);
+      const int branchY = crownBase + static_cast<int>(std::lround(
+                                           tierT * (crownTop - crownBase)));
+      const float taper = 1.0f - tierT * 0.82f;
+      const int branchLength = std::max(
+          1, static_cast<int>(std::lround(
+                 static_cast<float>(std::max(radiusX, radiusZ)) * taper *
+                 (0.55f + static_cast<float>((tierHash >> 16U) % 31U) /
+                               100.0f))));
+      // Choose cardinal or diagonal directions per tier; the per-tree rotation
+      // varies the silhouette without breaking the ring-like growth pattern.
+      const int rotation = static_cast<int>((tierHash >> 8U) & 1U);
+      for (int arm = 0; arm < 4; ++arm)
       {
-        for (int dx = -1; dx <= 1; ++dx)
+        const int direction = (arm * 2 + rotation) % 8;
+        int tipX = 0;
+        int tipZ = 0;
+        for (int step = 1; step <= branchLength; ++step)
         {
-          if (std::abs(dx) + std::abs(dz) + std::abs(dy) <= 2)
+          tipX = kDirX[direction] * step;
+          tipZ = kDirZ[direction] * step;
+          const int branchStepY =
+              std::min(height - 1, branchY + (step + 2) / 3);
+          addVoxel(tipX, branchStepY, tipZ, trunk);
+        }
+        const int leafY = std::min(height, branchY + branchLength / 3);
+        for (int dy = -1; dy <= 1; ++dy)
+        {
+          for (int dz = -1; dz <= 1; ++dz)
           {
-            addVoxel(tipX + dx, leafY + dy, tipZ + dz, leaves);
+            for (int dx = -1; dx <= 1; ++dx)
+            {
+              if (std::abs(dx) + std::abs(dz) + std::abs(dy) <= 2)
+              {
+                addVoxel(tipX + dx, leafY + dy, tipZ + dz, leaves);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  else
+  {
+    for (int branch = 0; branch < profile.BranchCount; ++branch)
+    {
+      const uint32_t branchHash =
+          FeatureHash(base.x + branch * 13, base.z - branch * 7,
+                      seed + 0x4252414eU + static_cast<uint32_t>(branch * 31));
+      const int direction = static_cast<int>(branchHash % 8U);
+      static constexpr int kDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
+      static constexpr int kDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+      const int branchY =
+          height / 2 +
+          static_cast<int>((branchHash >> 8U) %
+                           static_cast<uint32_t>(std::max(1, height / 3)));
+      const int branchLengthMax = std::max({2, radiusX, radiusZ});
+      const int branchLengthMin = std::max(1, branchLengthMax / 2);
+      const int branchLengthRange = branchLengthMax - branchLengthMin + 1;
+      const int length =
+          branchLengthMin + static_cast<int>((branchHash >> 16U) %
+                                             static_cast<uint32_t>(branchLengthRange));
+      int tipX = 0;
+      int tipZ = 0;
+      for (int step = 1; step <= length; ++step)
+      {
+        tipX = kDirX[direction] * step;
+        tipZ = kDirZ[direction] * step;
+        addVoxel(tipX, branchY + (step + 1) / 2, tipZ, trunk);
+      }
+      const int leafY = branchY + (length + 1) / 2;
+      for (int dy = -1; dy <= 1; ++dy)
+      {
+        for (int dz = -1; dz <= 1; ++dz)
+        {
+          for (int dx = -1; dx <= 1; ++dx)
+          {
+            if (std::abs(dx) + std::abs(dz) + std::abs(dy) <= 2)
+            {
+              addVoxel(tipX + dx, leafY + dy, tipZ + dz, leaves);
+            }
           }
         }
       }
@@ -1274,6 +1338,11 @@ const ObjectFeatureConfig &GetObjectFeatures(const WorldGenContext &ctx)
 } // namespace
 
 void ResetScatterChunkCounts() { ScatterChunkCounts.clear(); }
+
+void RegisterBuiltinObjectFeaturePlacementStrategies()
+{
+  EnsureBuiltinFeaturePlacementStrategies();
+}
 
 bool CanPlaceObjectAt(const WorldGenContext &ctx, const std::string &prefabName,
                       glm::ivec3 anchorWorldPos)

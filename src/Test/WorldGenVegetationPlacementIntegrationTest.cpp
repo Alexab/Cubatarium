@@ -23,6 +23,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -331,6 +332,7 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
   cutum::WorldGenContext ctx(world, registry, settings);
   ctx.WorldgenOwnerPackId = "minetest_default_16";
   ctx.ResolveBlockIds();
+  cutum::RegisterBuiltinObjectFeaturePlacementStrategies();
 
   const cutum::BlockId grass = ctx.Blocks.Grass;
   FluidTest::Expect(grass != cutum::BLOCK_AIR, kTestName,
@@ -381,6 +383,51 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
       });
   FluidTest::Expect(tree_extent >= 5, kTestName,
                     "wide profile produces outward branch and leaf silhouettes");
+
+  cutum::ObjectFeatureRule pine;
+  pine.Mode = cutum::ObjectFeatureRuleMode::ProceduralTree;
+  pine.Tree.HeightMin = 10;
+  pine.Tree.HeightMax = 10;
+  pine.Tree.CrownRadiusX = 3;
+  pine.Tree.CrownRadiusZ = 3;
+  pine.Tree.CrownHeight = 8;
+  pine.Tree.BranchCount = 4;
+  pine.Tree.CrownLobes = 0;
+  pine.Tree.LeafDensity = 1.0f;
+  pine.Tree.RootChance = 0.0f;
+  pine.Tree.CrownShape = cutum::TreeCrownShape::Conical;
+  pine.Tree.TrunkBlock = "mtg_pine_tree";
+  pine.Tree.LeavesBlock = "mtg_pine_needles";
+  FluidTest::Expect(treeStrategy->Place(ctx, 14, 14, 51, pine), kTestName,
+                    "conical tree strategy places a pine profile");
+  const cutum::BlockId pine_trunk =
+      registry.GetIdByTypeName("mtg_pine_tree");
+  const cutum::BlockId pine_needles =
+      registry.GetIdByTypeName("mtg_pine_needles");
+  int lowest_pine_foliage_y = std::numeric_limits<int>::max();
+  bool pine_has_lateral_bough = false;
+  world.ForEachBlock(
+      [&](glm::ivec3 position, cutum::BlockId block)
+      {
+        if (position.x < 8 || position.x > 20 || position.z < 8 ||
+            position.z > 20)
+        {
+          return;
+        }
+        if (block == pine_needles)
+        {
+          lowest_pine_foliage_y = std::min(lowest_pine_foliage_y, position.y);
+        }
+        if (block == pine_trunk && position.y > 51 &&
+            (position.x != 14 || position.z != 14))
+        {
+          pine_has_lateral_bough = true;
+        }
+      });
+  FluidTest::Expect(lowest_pine_foliage_y <= 55, kTestName,
+                    "conical pine foliage extends to the lower crown");
+  FluidTest::Expect(pine_has_lateral_bough, kTestName,
+                    "conical pine has lateral branches in multiple tiers");
 
   cutum::ObjectFeatureRule shrub;
   shrub.Mode = cutum::ObjectFeatureRuleMode::ProceduralShrub;
@@ -761,6 +808,12 @@ int main(int argc, char **argv)
       *cutum::UResourcePack::LoadManifest(pack_root);
   objects.LoadMerged(repo_root / "objects", {manifest}, registry);
   objects.RebindBlockIds(registry);
+  if (argc > 1 && std::string(argv[1]) == "--procedural-vegetation-only")
+  {
+    TestProceduralVegetationStrategies(registry);
+    std::cout << kTestName << ": procedural vegetation check OK" << std::endl;
+    return 0;
+  }
   FluidTest::Expect(objects.Get("tree_pine") != nullptr, kTestName,
                     "tree_pine available after LoadMerged");
 

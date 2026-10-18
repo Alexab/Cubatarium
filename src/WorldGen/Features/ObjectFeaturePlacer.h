@@ -38,5 +38,7 @@ bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
                        BiomeId biome, BlockId grassId);
 
 void ResetScatterChunkCounts();
+/// Ensure built-in placement strategies are available for direct registry use.
+void RegisterBuiltinObjectFeaturePlacementStrategies();
 
 } // namespace cutum
