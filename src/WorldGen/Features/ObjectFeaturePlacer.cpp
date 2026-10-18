@@ -443,7 +443,12 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
         height / 2 +
         static_cast<int>((branchHash >> 8U) %
                          static_cast<uint32_t>(std::max(1, height / 3)));
-    const int length = 1 + static_cast<int>((branchHash >> 16U) % 3U);
+    const int branchLengthMax = std::max({2, radiusX, radiusZ});
+    const int branchLengthMin = std::max(1, branchLengthMax / 2);
+    const int branchLengthRange = branchLengthMax - branchLengthMin + 1;
+    const int length =
+        branchLengthMin + static_cast<int>((branchHash >> 16U) %
+                                           static_cast<uint32_t>(branchLengthRange));
     int tipX = 0;
     int tipZ = 0;
     for (int step = 1; step <= length; ++step)

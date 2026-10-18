@@ -16,13 +16,16 @@
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/BiomeSource.h"
 
-#include <chrono>
 #include <algorithm>
+#include <array>
+#include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -81,6 +84,7 @@ static cutum::ProceduralSettings MakeVegetationSettings()
 {
   cutum::ProceduralSettings settings;
   settings.Generator = cutum::ProceduralGenerator::Overworld;
+  settings.TerrainBackendMode = cutum::TerrainBackend::Density3D;
   settings.Seed = kSeed;
   settings.FillWater = true;
   settings.EnableCaves = false;
@@ -165,11 +169,21 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
 
   const cutum::ProceduralSettings settings = MakeVegetationSettings();
   std::vector<glm::ivec3> chunkOrder;
+  // Seed 410021's generated spawn is in chunk (2, 1); sample around that
+  // location because its origin window at (0, 0) is water and has no trees.
+  constexpr int kSpawnChunkX = 2;
+  constexpr int kSpawnChunkZ = 1;
   for (int cx = -2; cx <= 2; ++cx)
   {
-    for (int cz = -2; cz <= 2; ++cz)
+    for (int chunk_y = 2; chunk_y <= 9; ++chunk_y)
     {
-      chunkOrder.emplace_back(cx, 0, cz);
+      for (int cz = -2; cz <= 2; ++cz)
+      {
+        // Vegetation grows around Y=40..140. Populate those vertical sections
+        // so worldgen-owned tree voxels are applied to their owning chunks.
+        chunkOrder.emplace_back(kSpawnChunkX + cx, chunk_y,
+                                kSpawnChunkZ + cz);
+      }
     }
   }
   cutum::ChunkGenerationToken token;
@@ -184,7 +198,9 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
       request.token = token;
       request.settings = settings;
       request.objects = &objects;
-      request.columnOrigin = glm::ivec2(8, -8);
+      request.columnOrigin = glm::ivec2(
+          kSpawnChunkX * cutum::CHUNK_SIZE + 8,
+          kSpawnChunkZ * cutum::CHUNK_SIZE + 8);
       request.hasColumnOrigin = true;
       const cutum::ChunkPopulateResult result = populator.Populate(request);
       result.buffer.ApplyTo(world);
@@ -213,13 +229,20 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
   FluidTest::Expect(forwardBlocks == reverseBlocks, kTestName,
                     "generated chunk area is independent of chunk apply order");
 
-  const int tree_logs = CountBlocksNamed(forwardWorld, registry, "tree_log");
-  const int tree_leaves = CountBlocksNamed(forwardWorld, registry, "tree_leaves");
-  const int species_logs = CountBlocksNamed(forwardWorld, registry, "mtg_tree");
-  const int species_leaves = CountBlocksNamed(forwardWorld, registry, "mtg_leaves");
-  FluidTest::Expect(tree_logs > 0 || tree_leaves > 0 || species_logs > 0 ||
-                        species_leaves > 0,
-                    kTestName, "chunk populator placed tree blocks");
+  static constexpr std::array<const char *, 16> treeBlockNames = {
+      "tree_log",          "mtg_tree",       "mtg_pine_tree",
+      "mtg_aspen_tree",    "mtg_acacia_tree", "mtg_jungletree",
+      "tree_leaves",       "mtg_leaves",     "leaves_spruce",
+      "leaves_spruce_light", "leaves_jungle",  "leaves_jungle_light",
+      "mtg_aspen_leaves",  "mtg_acacia_leaves", "mtg_jungleleaves",
+      "mtg_pine_needles"};
+  int tree_blocks = 0;
+  for (const char *name : treeBlockNames)
+  {
+    tree_blocks += CountBlocksNamed(forwardWorld, registry, name);
+  }
+  FluidTest::Expect(tree_blocks > 0, kTestName,
+                    "chunk populator placed blocks from a tree species");
 }
 
 static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
@@ -248,10 +271,12 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
   tree.Mode = cutum::ObjectFeatureRuleMode::ProceduralTree;
   tree.Tree.HeightMin = 7;
   tree.Tree.HeightMax = 9;
-  tree.Tree.CrownRadiusX = 3;
+  tree.Tree.CrownRadiusX = 4;
   tree.Tree.CrownRadiusZ = 4;
   tree.Tree.CrownHeight = 5;
-  tree.Tree.CrownLobes = 3;
+  tree.Tree.BranchCount = 8;
+  tree.Tree.CrownLobes = 0;
+  tree.Tree.RootChance = 0.0f;
   tree.Tree.CrownIrregularity = 0.28f;
   tree.Tree.TrunkBlock = "mtg_tree";
   tree.Tree.LeavesBlock = "mtg_leaves";
@@ -265,6 +290,21 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
                         CountBlocksNamed(world, registry, "mtg_leaves") > 0,
                     kTestName,
                     "procedural tree writes species trunk and canopy blocks");
+  int tree_extent = 0;
+  const cutum::BlockId tree_trunk = registry.GetIdByTypeName("mtg_tree");
+  const cutum::BlockId tree_leaves = registry.GetIdByTypeName("mtg_leaves");
+  world.ForEachBlock(
+      [&](glm::ivec3 position, cutum::BlockId block)
+      {
+        if (block == tree_trunk || block == tree_leaves)
+        {
+          tree_extent = std::max(
+              tree_extent,
+              std::max(std::abs(position.x), std::abs(position.z)));
+        }
+      });
+  FluidTest::Expect(tree_extent >= 5, kTestName,
+                    "wide profile produces outward branch and leaf silhouettes");
 
   cutum::ObjectFeatureRule shrub;
   shrub.Mode = cutum::ObjectFeatureRuleMode::ProceduralShrub;
@@ -317,7 +357,7 @@ static void TestWorldGenSetsSchemaV2Migration()
   FluidTest::Expect(tree != resolved.Vegetation.end() &&
                         tree->Mode ==
                             cutum::ObjectFeatureRuleMode::ProceduralTree &&
-                        tree->Tree.CrownLobes == 3 && tree->Weight == 5 &&
+                        tree->Tree.CrownLobes == 4 && tree->Weight == 5 &&
                         tree->Spacing == 39,
                     kTestName,
                     "migration restores authored mode and profile, preserving saved frequency");
@@ -352,7 +392,7 @@ static void TestDataDefinedBiomeAffectsSampling()
       "id": "azure_meadow",
       "domain": "surface",
       "climate": {"temperature": [0.0, 1.0], "weight": 100.0},
-      "height": {"base_offset": 8.0, "amplitude_mul": 1.0},
+      "height": {"base_offset": 24.0, "amplitude_mul": 1.0},
       "palette": {"surface": "sand", "subsurface": "sandstone"}
     })";
     std::ofstream caveBiome(root / "biomes" / "crystal_caves.json");
@@ -434,6 +474,21 @@ static void TestDataDefinedBiomeAffectsSampling()
   legacy_only.Normalize();
   const int without_custom = cutum::RefineSurfaceYWithBiomes(
       0, 0, 64, settings, kSeed, settings.Tuning, {}, &legacy_only);
+  if (with_custom < without_custom + 4)
+  {
+    const auto *definition =
+        cutum::UWorldGenPack::BiomeDefinitionFor("azure_meadow");
+    std::cerr << "custom biome height diagnostic: weight="
+              << weights.Weight(handle)
+              << " base_offset="
+              << (definition ? definition->Height.baseOffsetBlocks : -999.0f)
+              << " unified=" << settings.Tuning.useUnifiedHeightField
+              << " sea=" << settings.SeaLevel
+              << " min=" << settings.MinHeight
+              << " max=" << settings.MaxHeight
+              << " with=" << with_custom
+              << " without=" << without_custom << std::endl;
+  }
   FluidTest::Expect(with_custom >= without_custom + 4, kTestName,
                     "dynamic biome height profile affects terrain shaping");
   std::error_code ec;
@@ -595,7 +650,7 @@ static void TestCrossChunkTreeConflictStable(cutum::UBlockRegistry &registry)
 
 } // namespace
 
-int main()
+int main(int argc, char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
   std::error_code ec;
@@ -612,6 +667,12 @@ int main()
                     "worldgen pack load failed");
   FluidTest::Expect(cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
                     "aquifer configuration loads from the active worldgen pack");
+  if (argc > 1 && std::string(argv[1]) == "--biome-profile-only")
+  {
+    TestDataDefinedBiomeAffectsSampling();
+    std::cout << kTestName << ": biome profile check OK" << std::endl;
+    return 0;
+  }
   TestConfiguredGroundCoverEcology();
 
   const fs::path pack_root = repo_root / "resource_packs" / "minetest_default_16";
