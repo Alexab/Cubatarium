@@ -105,6 +105,7 @@ def main() -> int:
         )
         print("  placement (blocks in world files, not render):")
         print(f"    spawn_tree_blocks: {metrics.get('spawn_tree_blocks', 0)}")
+        print(f"    spawn_shrub_blocks: {metrics.get('spawn_shrub_blocks', 0)}")
         print(f"    spawn_bush_common_footprints: {metrics.get('spawn_bush_common_footprints', 0)}")
         print(f"    spawn_ground_logs: {metrics.get('spawn_ground_logs', 0)}")
         print(f"    spawn_fire_blocks: {metrics.get('spawn_fire_blocks', 0)}")

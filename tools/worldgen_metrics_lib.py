@@ -75,9 +75,47 @@ def decode_chunk(path: Path) -> dict[tuple[int, int, int], int]:
     return blocks
 
 
-TREE_LOG_BLOCK_NAMES = ("tree_log", "mtg_tree", "mtg_pine_tree")
-TREE_LEAF_BLOCK_NAMES = ("tree_leaves", "mtg_leaves", "leaves_spruce")
-VEGETATION_BLOCK_NAMES = TREE_LOG_BLOCK_NAMES + TREE_LEAF_BLOCK_NAMES
+TREE_LOG_BLOCK_NAMES = (
+    "tree_log",
+    "mtg_tree",
+    "mtg_pine_tree",
+    "mtg_aspen_tree",
+    "mtg_acacia_tree",
+    "mtg_jungletree",
+)
+TREE_LEAF_BLOCK_NAMES = (
+    "tree_leaves",
+    "mtg_leaves",
+    "leaves_spruce",
+    "leaves_spruce_light",
+    "leaves_jungle",
+    "leaves_jungle_light",
+    "mtg_aspen_leaves",
+    "mtg_acacia_leaves",
+    "mtg_jungleleaves",
+    "mtg_pine_needles",
+)
+SHRUB_BLOCK_NAMES = (
+    "mtg_bush_stem",
+    "mtg_bush_leaves",
+    "mtg_blueberry_bush_leaves",
+    "mtg_blueberry_bush_leaves_with_berries",
+    "mtg_acacia_bush_stem",
+    "mtg_acacia_bush_leaves",
+    "mtg_pine_bush_stem",
+    "mtg_pine_bush_needles",
+)
+TREE_BLOCK_NAMES = TREE_LOG_BLOCK_NAMES + TREE_LEAF_BLOCK_NAMES
+VEGETATION_BLOCK_NAMES = TREE_BLOCK_NAMES + SHRUB_BLOCK_NAMES
+
+
+def vegetation_block_category(block_name: str) -> str | None:
+    """Classify blocks used by authored tree and procedural shrub features."""
+    if block_name in TREE_BLOCK_NAMES:
+        return "tree"
+    if block_name in SHRUB_BLOCK_NAMES:
+        return "shrub"
+    return None
 
 
 def count_spawn_vegetation_blocks(
@@ -923,8 +961,9 @@ def analyze_world(
         center_z=spawn_z,
     )
     metrics["spawn_vegetation"] = veg
-    metrics["spawn_tree_blocks"] = sum(
-        veg.get(name, 0) for name in TREE_LOG_BLOCK_NAMES + TREE_LEAF_BLOCK_NAMES
+    metrics["spawn_tree_blocks"] = sum(veg.get(name, 0) for name in TREE_BLOCK_NAMES)
+    metrics["spawn_shrub_blocks"] = sum(
+        veg.get(name, 0) for name in SHRUB_BLOCK_NAMES
     )
     metrics["spawn_ground_logs"] = count_spawn_ground_logs(
         world_dir, id_to_name, spawn_radius, surface

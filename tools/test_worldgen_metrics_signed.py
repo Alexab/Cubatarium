@@ -10,6 +10,7 @@ from worldgen_metrics_lib import (
     cave_void_fluid_stats,
     count_shore_air_gaps,
     ocean_depth_stats,
+    vegetation_block_category,
     world_vertical_bounds,
 )
 
@@ -104,6 +105,17 @@ class SignedWorldMetricTests(unittest.TestCase):
         self.assertEqual(result["world_max_height"], 319)
         self.assertEqual(result["min_height_violations"], 1)
         self.assertEqual(result["max_height_violations"], 0)
+
+    def test_vegetation_taxonomy_includes_profile_two_species(self) -> None:
+        self.assertEqual(vegetation_block_category("mtg_aspen_tree"), "tree")
+        self.assertEqual(vegetation_block_category("mtg_acacia_leaves"), "tree")
+        self.assertEqual(vegetation_block_category("mtg_jungletree"), "tree")
+        self.assertEqual(vegetation_block_category("mtg_bush_stem"), "shrub")
+        self.assertEqual(
+            vegetation_block_category("mtg_blueberry_bush_leaves_with_berries"),
+            "shrub",
+        )
+        self.assertIsNone(vegetation_block_category("mtg_aspen_sapling"))
 
 
 if __name__ == "__main__":
