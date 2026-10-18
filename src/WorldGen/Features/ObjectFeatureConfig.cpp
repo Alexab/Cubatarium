@@ -133,16 +133,28 @@ void ParseEcologyProfile(const nlohmann::json &item, ObjectFeatureRule &rule)
              rule.Ecology.TemperatureMax, rule.Ecology.HasTemperatureRange);
   parse_axis("moisture", rule.Ecology.MoistureMin, rule.Ecology.MoistureMax,
              rule.Ecology.HasMoistureRange);
-  if (ecology.contains("elevation") && ecology["elevation"].is_array() &&
-      ecology["elevation"].size() == 2 && ecology["elevation"][0].is_number() &&
-      ecology["elevation"][1].is_number())
+  if (ecology.contains("elevation"))
   {
-    rule.Ecology.MinElevation = ecology["elevation"][0].get<int>();
-    rule.Ecology.MaxElevation = ecology["elevation"][1].get<int>();
-    if (rule.Ecology.MinElevation > rule.Ecology.MaxElevation)
+    const nlohmann::json &elevation = ecology["elevation"];
+    const nlohmann::json *range = &elevation;
+    FeatureEcologyProfile::ElevationReference reference =
+        FeatureEcologyProfile::ElevationReference::AbsoluteY;
+    if (elevation.is_object() && elevation.contains("above_sea_level"))
     {
-      rule.Ecology.MinElevation = std::numeric_limits<int>::min();
-      rule.Ecology.MaxElevation = std::numeric_limits<int>::max();
+      range = &elevation["above_sea_level"];
+      reference = FeatureEcologyProfile::ElevationReference::SeaLevel;
+    }
+    if (range->is_array() && range->size() == 2 && (*range)[0].is_number() &&
+        (*range)[1].is_number())
+    {
+      const int minimum = (*range)[0].get<int>();
+      const int maximum = (*range)[1].get<int>();
+      if (minimum <= maximum)
+      {
+        rule.Ecology.ElevationRef = reference;
+        rule.Ecology.MinElevation = minimum;
+        rule.Ecology.MaxElevation = maximum;
+      }
     }
   }
   if (ecology.contains("max_slope") && ecology["max_slope"].is_number())

@@ -73,15 +73,30 @@ struct ShrubSpeciesProfile
 
 struct FeatureEcologyProfile
 {
+  enum class ElevationReference
+  {
+    AbsoluteY,
+    SeaLevel,
+  };
+
   bool HasTemperatureRange{false};
   bool HasMoistureRange{false};
   float TemperatureMin{0.0f};
   float TemperatureMax{1.0f};
   float MoistureMin{0.0f};
   float MoistureMax{1.0f};
+  ElevationReference ElevationRef{ElevationReference::AbsoluteY};
   int MinElevation{std::numeric_limits<int>::min()};
   int MaxElevation{std::numeric_limits<int>::max()};
   float MaxSlope{0.0f};
+
+  bool AllowsElevation(int worldY, int seaLevel) const
+  {
+    const int64_t origin =
+        ElevationRef == ElevationReference::SeaLevel ? seaLevel : 0;
+    return static_cast<int64_t>(worldY) >= origin + MinElevation &&
+           static_cast<int64_t>(worldY) <= origin + MaxElevation;
+  }
 };
 
 /// Runtime registry of authored feature behavior names. New algorithms add a

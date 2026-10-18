@@ -147,7 +147,7 @@
       "ecology": {
         "temperature": [0.3, 0.9],
         "moisture": [0.4, 1.0],
-        "elevation": [45, 100],
+        "elevation": {"above_sea_level": [-3, 52]},
         "max_slope": 10.0
       }
     },
@@ -181,7 +181,7 @@
       "ecology": {
         "temperature": [0.0, 0.55],
         "moisture": [0.15, 1.0],
-        "elevation": [42, 128],
+        "elevation": {"above_sea_level": [-6, 80]},
         "max_slope": 14.0
       }
     },
@@ -214,7 +214,7 @@
       "ecology": {
         "temperature": [0.15, 0.9],
         "moisture": [0.3, 1.0],
-        "elevation": [45, 110],
+        "elevation": {"above_sea_level": [-3, 62]},
         "max_slope": 12.0
       }
     },
@@ -247,7 +247,7 @@
       "ecology": {
         "temperature": [0.5, 1.0],
         "moisture": [0.05, 0.78],
-        "elevation": [40, 100],
+        "elevation": {"above_sea_level": [-8, 52]},
         "max_slope": 10.0
       }
     }
@@ -266,7 +266,7 @@
       "ecology": {
         "temperature": [0.48, 1.0],
         "moisture": [0.08, 0.72],
-        "elevation": [45, 92],
+        "elevation": {"above_sea_level": [-3, 44]},
         "max_slope": 12.0
       }
     },
@@ -287,7 +287,7 @@
       "ecology": {
         "temperature": [0.28, 0.86],
         "moisture": [0.5, 1.0],
-        "elevation": [44, 96],
+        "elevation": {"above_sea_level": [-4, 48]},
         "max_slope": 9.0
       }
     },
@@ -307,7 +307,7 @@
       "ecology": {
         "temperature": [0.18, 1.0],
         "moisture": [0.16, 1.0],
-        "elevation": [43, 106],
+        "elevation": {"above_sea_level": [-5, 58]},
         "max_slope": 16.0
       }
     },
@@ -324,7 +324,7 @@
       "ecology": {
         "temperature": [0.0, 0.68],
         "moisture": [0.22, 1.0],
-        "elevation": [45, 128],
+        "elevation": {"above_sea_level": [-3, 80]},
         "max_slope": 12.0
       }
     },
@@ -356,7 +356,7 @@
       "ecology": {
         "temperature": [0.18, 1.0],
         "moisture": [0.16, 1.0],
-        "elevation": [43, 106],
+        "elevation": {"above_sea_level": [-5, 58]},
         "max_slope": 14.0
       }
     },
@@ -391,7 +391,7 @@
       "ecology": {
         "temperature": [0.28, 0.86],
         "moisture": [0.5, 1.0],
-        "elevation": [44, 96],
+        "elevation": {"above_sea_level": [-4, 48]},
         "max_slope": 9.0
       }
     },
@@ -421,7 +421,7 @@
       "ecology": {
         "temperature": [0.48, 1.0],
         "moisture": [0.05, 0.72],
-        "elevation": [42, 98],
+        "elevation": {"above_sea_level": [-6, 50]},
         "max_slope": 12.0
       }
     },
@@ -452,7 +452,7 @@
       "ecology": {
         "temperature": [0.0, 0.68],
         "moisture": [0.22, 1.0],
-        "elevation": [45, 128],
+        "elevation": {"above_sea_level": [-3, 80]},
         "max_slope": 12.0
       }
     },
@@ -473,7 +473,7 @@
       "ecology": {
         "temperature": [0.25, 1.0],
         "moisture": [0.0, 0.58],
-        "elevation": [45, 100],
+        "elevation": {"above_sea_level": [-3, 52]},
         "max_slope": 10.0
       }
     },
@@ -491,7 +491,7 @@
       "ecology": {
         "temperature": [0.22, 0.92],
         "moisture": [0.3, 1.0],
-        "elevation": [45, 94],
+        "elevation": {"above_sea_level": [-3, 46]},
         "max_slope": 8.0
       }
     },
@@ -522,7 +522,7 @@
       "ecology": {
         "temperature": [0.22, 0.82],
         "moisture": [0.64, 1.0],
-        "elevation": [44, 96],
+        "elevation": {"above_sea_level": [-4, 48]},
         "max_slope": 8.0
       }
     },
@@ -538,7 +538,7 @@
       "ecology": {
         "temperature": [0.25, 0.86],
         "moisture": [0.66, 1.0],
-        "elevation": [44, 94],
+        "elevation": {"above_sea_level": [-4, 46]},
         "max_slope": 8.0
       }
     },
@@ -554,7 +554,7 @@
       "ecology": {
         "temperature": [0.28, 0.92],
         "moisture": [0.35, 1.0],
-        "elevation": [45, 90],
+        "elevation": {"above_sea_level": [-3, 42]},
         "max_slope": 9.0
       }
     },
@@ -572,7 +572,7 @@
       "surface_constraint": "underwater_floor",
       "ecology": {
         "temperature": [0.62, 1.0],
-        "elevation": [0, 44],
+        "elevation": {"above_sea_level": [-48, -4]},
         "max_slope": 12.0
       }
     },
@@ -590,7 +590,7 @@
       "surface_constraint": "underwater_floor",
       "ecology": {
         "temperature": [0.0, 0.65],
-        "elevation": [0, 44],
+        "elevation": {"above_sea_level": [-48, -4]},
         "max_slope": 12.0
       }
     },
@@ -608,7 +608,7 @@
       "surface_constraint": "underwater_floor",
       "ecology": {
         "temperature": [0.68, 1.0],
-        "elevation": [0, 44],
+        "elevation": {"above_sea_level": [-48, -4]},
         "max_slope": 10.0
       }
     },
@@ -653,7 +653,7 @@
       "ecology": {
         "temperature": [0.28, 0.92],
         "moisture": [0.38, 1.0],
-        "elevation": [45, 96],
+        "elevation": {"above_sea_level": [-3, 48]},
         "max_slope": 8.0
       }
     },
@@ -672,7 +672,7 @@
       "ecology": {
         "temperature": [0.32, 0.9],
         "moisture": [0.62, 1.0],
-        "elevation": [45, 104],
+        "elevation": {"above_sea_level": [-3, 56]},
         "max_slope": 9.0
       }
     },
@@ -690,7 +690,7 @@
       "ecology": {
         "temperature": [0.58, 1.0],
         "moisture": [0.72, 1.0],
-        "elevation": [45, 90],
+        "elevation": {"above_sea_level": [-3, 42]},
         "max_slope": 11.0
       }
     },
@@ -713,7 +713,7 @@
       "ecology": {
         "temperature": [0.45, 1.0],
         "moisture": [0.52, 1.0],
-        "elevation": [45, 58],
+        "elevation": {"above_sea_level": [-3, 10]},
         "max_slope": 4.0
       }
     },
@@ -734,7 +734,7 @@
       "ecology": {
         "temperature": [0.48, 1.0],
         "moisture": [0.18, 0.72],
-        "elevation": [45, 54],
+        "elevation": {"above_sea_level": [-3, 6]},
         "max_slope": 5.0
       }
     },
@@ -754,7 +754,7 @@
       "ecology": {
         "temperature": [0.12, 1.0],
         "moisture": [0.0, 0.32],
-        "elevation": [45, 110],
+        "elevation": {"above_sea_level": [-3, 62]},
         "max_slope": 12.0
       }
     }

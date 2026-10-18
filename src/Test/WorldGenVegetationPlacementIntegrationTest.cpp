@@ -118,11 +118,14 @@ static int CountBlocksNamed(cutum::UBlockWorld &world,
   return count;
 }
 
-static void TestConfiguredGroundCoverEcology()
+static void TestConfiguredGroundCoverEcology(const fs::path &repo_root)
 {
   bool hasMeadowGrass = false;
   bool hasFern = false;
   bool hasWaterEdgePapyrus = false;
+  bool hasSeaRelativePapyrusRange = false;
+  bool hasSeaRelativeMarramRange = false;
+  bool hasSeaRelativeCoralRange = false;
   for (const cutum::ObjectFeatureRule &rule :
        cutum::UObjectFeatureConfigStorage::Get().GroundCover)
   {
@@ -147,6 +150,24 @@ static void TestConfiguredGroundCoverEcology()
           rule.Surface.Kind == cutum::SurfaceConstraintKind::NearWater &&
           rule.Surface.NearWaterRadius == 7 &&
           rule.Ecology.HasMoistureRange;
+      hasSeaRelativePapyrusRange =
+          rule.Ecology.ElevationRef ==
+              cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
+          rule.Ecology.MinElevation == -3 && rule.Ecology.MaxElevation == 10;
+    }
+    else if (rule.Scatter.BlockName == "mtg_marram_grass_1")
+    {
+      hasSeaRelativeMarramRange =
+          rule.Ecology.ElevationRef ==
+              cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
+          rule.Ecology.MinElevation == -3 && rule.Ecology.MaxElevation == 6;
+    }
+    else if (rule.Scatter.BlockName == "mtg_coral_cyan")
+    {
+      hasSeaRelativeCoralRange =
+          rule.Ecology.ElevationRef ==
+              cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
+          rule.Ecology.MinElevation == -48 && rule.Ecology.MaxElevation == -4;
     }
   }
   FluidTest::Expect(hasMeadowGrass, kTestName,
@@ -155,6 +176,61 @@ static void TestConfiguredGroundCoverEcology()
                     "fern placement is limited to damp conditions");
   FluidTest::Expect(hasWaterEdgePapyrus, kTestName,
                     "papyrus profile uses near-water and moisture constraints");
+  FluidTest::Expect(hasSeaRelativePapyrusRange && hasSeaRelativeMarramRange &&
+                        hasSeaRelativeCoralRange,
+                    kTestName,
+                    "shore and underwater ecology heights are sea-relative");
+
+  cutum::FeatureEcologyProfile seaRelative;
+  seaRelative.ElevationRef =
+      cutum::FeatureEcologyProfile::ElevationReference::SeaLevel;
+  seaRelative.MinElevation = -3;
+  seaRelative.MaxElevation = 6;
+  FluidTest::Expect(seaRelative.AllowsElevation(60, 63) &&
+                        seaRelative.AllowsElevation(69, 63) &&
+                        !seaRelative.AllowsElevation(59, 63) &&
+                        !seaRelative.AllowsElevation(70, 63),
+                    kTestName,
+                    "sea-relative ecology follows the active sea level");
+
+  cutum::FeatureEcologyProfile absolute;
+  absolute.MinElevation = 45;
+  absolute.MaxElevation = 54;
+  FluidTest::Expect(absolute.AllowsElevation(51, 63) &&
+                        !absolute.AllowsElevation(60, 63),
+                    kTestName,
+                    "legacy absolute ecology ranges keep their original meaning");
+
+  const fs::path legacyConfigPath =
+      fs::temp_directory_path() / "cubatarium_legacy_feature_elevation.json";
+  {
+    std::ofstream legacyConfig(legacyConfigPath, std::ios::trunc);
+    legacyConfig << R"({"ground_cover":[{"mode":"scatter_blocks","block":"legacy_test_plant","biomes":["plains"],"ecology":{"elevation":[45,54]}}]})";
+  }
+  bool legacyArrayLoaded = false;
+  if (cutum::UObjectFeatureConfigStorage::LoadFromFile(legacyConfigPath))
+  {
+    for (const cutum::ObjectFeatureRule &rule :
+         cutum::UObjectFeatureConfigStorage::Get().GroundCover)
+    {
+      if (rule.Scatter.BlockName == "legacy_test_plant")
+      {
+        legacyArrayLoaded =
+            rule.Ecology.ElevationRef == cutum::FeatureEcologyProfile::
+                                            ElevationReference::AbsoluteY &&
+            rule.Ecology.MinElevation == 45 &&
+            rule.Ecology.MaxElevation == 54 &&
+            rule.Ecology.AllowsElevation(51, 63) &&
+            !rule.Ecology.AllowsElevation(60, 63);
+      }
+    }
+  }
+  cutum::UObjectFeatureConfigStorage::LoadFromFile(
+      repo_root / "content" / "object_features.json");
+  std::error_code removeError;
+  fs::remove(legacyConfigPath, removeError);
+  FluidTest::Expect(legacyArrayLoaded, kTestName,
+                    "legacy ecology elevation arrays remain absolute Y ranges");
 }
 
 static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &populator,
@@ -673,7 +749,7 @@ int main(int argc, char **argv)
     std::cout << kTestName << ": biome profile check OK" << std::endl;
     return 0;
   }
-  TestConfiguredGroundCoverEcology();
+  TestConfiguredGroundCoverEcology(repo_root);
 
   const fs::path pack_root = repo_root / "resource_packs" / "minetest_default_16";
   const auto definitions = LoadPackDefinitions(pack_root);

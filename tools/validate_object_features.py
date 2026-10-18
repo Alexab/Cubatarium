@@ -74,7 +74,12 @@ def validate_ecology(ecology: object, label: str, errors: list[str]) -> None:
 
     if "elevation" in ecology:
         value = ecology["elevation"]
-        if (
+        if isinstance(value, dict) and set(value) == {"above_sea_level"}:
+            value = value["above_sea_level"]
+        elif not isinstance(value, list):
+            errors.append(f"{label}: invalid ecology elevation range")
+            value = None
+        if value is not None and (
             not isinstance(value, list)
             or len(value) != 2
             or any(isinstance(v, bool) or not isinstance(v, int) for v in value)

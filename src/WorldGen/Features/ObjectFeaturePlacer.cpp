@@ -1154,8 +1154,7 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       }
     }
     const FeatureEcologyProfile &ecology = rule.Ecology;
-    if (ecologySurfaceY < ecology.MinElevation ||
-        ecologySurfaceY > ecology.MaxElevation)
+    if (!ecology.AllowsElevation(ecologySurfaceY, ctx.Settings.SeaLevel))
     {
       continue;
     }
