@@ -583,6 +583,13 @@ void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
         json.value("aquatic_depth_scale", pack.Valleys.AquaticDepthScale);
     pack.Valleys.RiverNoiseScale =
         json.value("river_noise_scale", pack.Valleys.RiverNoiseScale);
+    pack.Valleys.FillWater = json.value("fill_water", pack.Valleys.FillWater);
+    pack.Valleys.WaterMinStrength =
+        json.value("water_min_strength", pack.Valleys.WaterMinStrength);
+    pack.Valleys.WaterMinMoisture =
+        json.value("water_min_moisture", pack.Valleys.WaterMinMoisture);
+    pack.Valleys.WaterSurfaceDepth =
+        json.value("water_surface_depth", pack.Valleys.WaterSurfaceDepth);
     pack.Valleys.Loaded = true;
   }
   catch (const std::exception &e)

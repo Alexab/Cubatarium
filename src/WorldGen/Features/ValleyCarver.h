@@ -16,6 +16,10 @@ struct ValleyParams
   float widthSigma{2.5f};
   float aquaticDepthScale{0.4f};
   float riverNoiseScale{0.008f};
+  bool fillWater{false};
+  float waterMinStrength{0.65f};
+  float waterMinMoisture{0.42f};
+  int waterSurfaceDepth{0};
 };
 
 using ValleySurfaceYCallback = std::function<int(int x, int z)>;

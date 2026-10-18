@@ -56,7 +56,9 @@ float SmoothedValleyRiverStrengthAt(int x, int z, uint32_t seed,
 }
 
 void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
-                             int column_surface_y, int column_depth, int sea_level)
+                             int column_surface_y, int column_depth,
+                             const ValleyParams &params, float river_strength,
+                             float moisture)
 {
   if (column_depth <= 0)
   {
@@ -88,6 +90,41 @@ void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
   }
   ctx.AccumulateDirtyColumn(std::max(ctx.Settings.MinHeight, carved_bottom),
                             column_surface_y);
+
+  if (!params.fillWater || !ctx.Settings.FillWater ||
+      ctx.Blocks.Water == BLOCK_AIR ||
+      river_strength < params.waterMinStrength ||
+      moisture < params.waterMinMoisture)
+  {
+    return;
+  }
+
+  const int water_surface_y =
+      column_surface_y - std::max(0, params.waterSurfaceDepth);
+  const int lower_bound = std::max(ctx.Settings.MinHeight,
+                                   column_surface_y - column_depth + 1);
+  if (water_surface_y < lower_bound)
+  {
+    return;
+  }
+
+  int water_bottom_y = water_surface_y;
+  for (int y = water_surface_y; y >= lower_bound; --y)
+  {
+    const glm::ivec3 pos(wx, y, wz);
+    if (!ctx.World.IsAir(pos))
+    {
+      break;
+    }
+    ctx.World.SetBlock(pos, ctx.Blocks.Water);
+    ctx.World.SetFluidState(pos,
+                            FluidCellState::Source().WithKind(FluidKind::Water));
+    water_bottom_y = y;
+  }
+  if (water_bottom_y < water_surface_y)
+  {
+    ctx.AccumulateDirtyColumn(water_bottom_y, water_surface_y);
+  }
 }
 
 } // namespace
@@ -111,6 +148,7 @@ void CarveColumnValleys(WorldGenContext &ctx, int x, int z, int surface_y,
       std::max(1, static_cast<int>(static_cast<float>(params.maxDepth) *
                                    river_strength));
   const int column_surface_y = LocalSurfaceY(x, z, surface_y, get_surface_y);
+  const float moisture = SampleClimate(x, z, seed).moisture;
   int column_depth = max_depth;
   if (column_surface_y <= sea_level + 2)
   {
@@ -118,7 +156,8 @@ void CarveColumnValleys(WorldGenContext &ctx, int x, int z, int surface_y,
         static_cast<float>(column_depth) * params.aquaticDepthScale);
     column_depth = std::max(1, column_depth);
   }
-  MaterializeValleyColumn(ctx, x, z, column_surface_y, column_depth, sea_level);
+  MaterializeValleyColumn(ctx, x, z, column_surface_y, column_depth, params,
+                          river_strength, moisture);
 }
 
 void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
@@ -145,6 +184,7 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
       }
       const int column_surface_y =
           LocalSurfaceY(wx, wz, sea_level, get_surface_y);
+      const float moisture = SampleClimate(wx, wz, seed).moisture;
       int column_depth =
           std::max(1, static_cast<int>(static_cast<float>(params.maxDepth) *
                                        river_strength));
@@ -155,7 +195,7 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
         column_depth = std::max(1, column_depth);
       }
       MaterializeValleyColumn(ctx, wx, wz, column_surface_y, column_depth,
-                              sea_level);
+                              params, river_strength, moisture);
     }
   }
 }

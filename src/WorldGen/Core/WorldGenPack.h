@@ -176,6 +176,10 @@ struct PackValleysConfig
   float WidthSigma{2.5f};
   float AquaticDepthScale{0.4f};
   float RiverNoiseScale{0.008f};
+  bool FillWater{false};
+  float WaterMinStrength{0.65f};
+  float WaterMinMoisture{0.42f};
+  int WaterSurfaceDepth{0};
   bool Loaded{false};
 };
 

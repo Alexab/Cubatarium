@@ -405,6 +405,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             valley_params.widthSigma = pack.WidthSigma;
             valley_params.aquaticDepthScale = pack.AquaticDepthScale;
             valley_params.riverNoiseScale = pack.RiverNoiseScale;
+            valley_params.fillWater = pack.FillWater;
+            valley_params.waterMinStrength = pack.WaterMinStrength;
+            valley_params.waterMinMoisture = pack.WaterMinMoisture;
+            valley_params.waterSurfaceDepth = pack.WaterSurfaceDepth;
           }
           CarveChunkValleys(ctx, base_x, base_z, settings.Seed, valley_params,
                             settings.SeaLevel, settings.Tuning.riverWidth,

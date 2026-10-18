@@ -276,6 +276,188 @@ static void TestRiverFieldContinuity()
                     "neighboring river samples do not jump abruptly");
 }
 
+static float SmoothedRiverStrength(int x, int z, uint32_t seed,
+                                   const cutum::ValleyParams &params)
+{
+  float sum = 0.0f;
+  float weight_sum = 0.0f;
+  const float width = params.widthSigma / 2.5f;
+  for (int dz = -2; dz <= 2; ++dz)
+  {
+    for (int dx = -2; dx <= 2; ++dx)
+    {
+      const float weight = static_cast<float>((3 - std::abs(dx)) *
+                                              (3 - std::abs(dz)));
+      const auto climate = cutum::SampleClimate(x + dx, z + dz, seed);
+      sum += cutum::SampleRiverChannelStrength(
+                 x + dx, z + dz, seed, params.riverNoiseScale, width,
+                 climate.erosion, climate.weirdness) *
+             weight;
+      weight_sum += weight;
+    }
+  }
+  return sum / weight_sum;
+}
+
+static void TestWetRiverChannelsReceiveWater()
+{
+  cutum::ValleyParams params;
+  params.enabled = true;
+  params.maxDepth = 12;
+  params.widthSigma = 2.5f;
+  params.riverNoiseScale = 0.008f;
+  params.fillWater = true;
+  params.waterMinStrength = 0.65f;
+  params.waterMinMoisture = 0.42f;
+  params.waterSurfaceDepth = 0;
+
+  int river_x = -1;
+  int river_z = -1;
+  for (int z = 0; z < 256 && river_x < 0; ++z)
+  {
+    for (int x = 0; x < 256; ++x)
+    {
+      if (SmoothedRiverStrength(x, z, kSeed, params) >=
+              params.waterMinStrength &&
+          cutum::SampleClimate(x, z, kSeed).moisture >=
+              params.waterMinMoisture)
+      {
+        river_x = x;
+        river_z = z;
+        break;
+      }
+    }
+  }
+  FluidTest::Expect(river_x >= 0, kTestName,
+                    "test seed contains a wet river channel core");
+  if (river_x < 0)
+  {
+    return;
+  }
+
+  const auto generate_channel =
+      [&](cutum::UBlockWorld &world, cutum::UBlockRegistry &registry)
+  {
+    auto ctx = MakeContext(world, registry);
+    ctx.Settings.FillWater = true;
+    FillStoneColumn(world, river_x, river_z, kSurfaceY);
+    cutum::CarveColumnValleys(ctx, river_x, river_z, kSurfaceY, kSeed, params,
+                              48, 1.0f, nullptr);
+  };
+
+  cutum::UBlockRegistry registry(nullptr,
+                                 FluidTest::MakeTestFluidDefinitions());
+  cutum::UBlockWorld first;
+  cutum::UBlockWorld second;
+  generate_channel(first, registry);
+  generate_channel(second, registry);
+
+  int water_blocks = 0;
+  int highest_water_y = -1000;
+  first.ForEachBlock([&](glm::ivec3 pos, cutum::BlockId id)
+                     {
+                       if (id == 9)
+                       {
+                         ++water_blocks;
+                         highest_water_y = std::max(highest_water_y, pos.y);
+                       }
+                     });
+  FluidTest::Expect(water_blocks >= 3, kTestName,
+                    "wet valley core receives a connected water column");
+  FluidTest::Expect(highest_water_y == kSurfaceY, kTestName,
+                    "river water reaches the channel surface");
+
+  using BlockMap = std::map<std::tuple<int, int, int>, cutum::BlockId>;
+  BlockMap first_blocks;
+  BlockMap second_blocks;
+  first.ForEachBlock([&](glm::ivec3 pos, cutum::BlockId id)
+                      { first_blocks.emplace(std::make_tuple(pos.x, pos.y, pos.z), id); });
+  second.ForEachBlock([&](glm::ivec3 pos, cutum::BlockId id)
+                       { second_blocks.emplace(std::make_tuple(pos.x, pos.y, pos.z), id); });
+  FluidTest::Expect(first_blocks == second_blocks, kTestName,
+                    "river water placement is deterministic");
+}
+
+static void TestRiverWaterAcrossChunkBoundary()
+{
+  cutum::ValleyParams params;
+  params.fillWater = true;
+  params.waterMinStrength = 0.65f;
+  params.waterMinMoisture = 0.42f;
+
+  int river_z = -1;
+  for (int z = 0; z < 2048; ++z)
+  {
+    const float west_strength = SmoothedRiverStrength(-1, z, kSeed, params);
+    const float east_strength = SmoothedRiverStrength(0, z, kSeed, params);
+    const bool wet_west = cutum::SampleClimate(-1, z, kSeed).moisture >=
+                          params.waterMinMoisture;
+    const bool wet_east = cutum::SampleClimate(0, z, kSeed).moisture >=
+                          params.waterMinMoisture;
+    if (west_strength >= params.waterMinStrength &&
+        east_strength >= params.waterMinStrength && wet_west && wet_east)
+    {
+      river_z = z;
+      break;
+    }
+  }
+  FluidTest::Expect(river_z >= 0, kTestName,
+                    "test seed has a wet channel crossing the chunk seam");
+  if (river_z < 0)
+  {
+    return;
+  }
+
+  const int base_z = (river_z / cutum::CHUNK_SIZE) * cutum::CHUNK_SIZE;
+  cutum::UBlockRegistry registry(nullptr,
+                                 FluidTest::MakeTestFluidDefinitions());
+  cutum::UBlockWorld forward_world;
+  cutum::UBlockWorld reverse_world;
+  FillStoneChunk(forward_world, -cutum::CHUNK_SIZE, base_z, kSurfaceY);
+  FillStoneChunk(forward_world, 0, base_z, kSurfaceY);
+  FillStoneChunk(reverse_world, -cutum::CHUNK_SIZE, base_z, kSurfaceY);
+  FillStoneChunk(reverse_world, 0, base_z, kSurfaceY);
+  auto forward_ctx = MakeContext(forward_world, registry);
+  auto reverse_ctx = MakeContext(reverse_world, registry);
+  forward_ctx.Settings.FillWater = true;
+  reverse_ctx.Settings.FillWater = true;
+  const auto surface_at = [](int, int) { return kSurfaceY; };
+
+  cutum::CarveChunkValleys(forward_ctx, -cutum::CHUNK_SIZE, base_z, kSeed,
+                           params, 48, 1.0f, surface_at);
+  cutum::CarveChunkValleys(forward_ctx, 0, base_z, kSeed, params, 48, 1.0f,
+                           surface_at);
+  cutum::CarveChunkValleys(reverse_ctx, 0, base_z, kSeed, params, 48, 1.0f,
+                           surface_at);
+  cutum::CarveChunkValleys(reverse_ctx, -cutum::CHUNK_SIZE, base_z, kSeed,
+                           params, 48, 1.0f, surface_at);
+
+  FluidTest::Expect(
+      forward_world.GetBlock(glm::ivec3(-1, kSurfaceY, river_z)) == 9 &&
+          forward_world.GetBlock(glm::ivec3(0, kSurfaceY, river_z)) == 9,
+      kTestName, "river water is continuous across a chunk seam");
+
+  using WaterMap = std::map<std::tuple<int, int, int>, cutum::BlockId>;
+  WaterMap forward_water;
+  WaterMap reverse_water;
+  forward_world.ForEachBlock([&](glm::ivec3 pos, cutum::BlockId id)
+                             {
+                               if (id == 9)
+                               {
+                                 forward_water.emplace(std::make_tuple(pos.x, pos.y, pos.z), id);
+                               }
+                             });
+  reverse_world.ForEachBlock([&](glm::ivec3 pos, cutum::BlockId id)
+                             {
+                               if (id == 9)
+                               {
+                                 reverse_water.emplace(std::make_tuple(pos.x, pos.y, pos.z), id);
+                               }
+                             });
+  FluidTest::Expect(forward_water == reverse_water, kTestName,
+                    "river water across chunks is independent of chunk order");
+}
+
 static void TestLakeCarveAndChunkOrder()
 {
   cutum::LakeParams params;
@@ -438,6 +620,8 @@ int main()
   TestValleyCarveSmoothWalls();
   TestChunkValleySeamStable();
   TestRiverFieldContinuity();
+  TestWetRiverChannelsReceiveWater();
+  TestRiverWaterAcrossChunkBoundary();
   TestLakeCarveAndChunkOrder();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
