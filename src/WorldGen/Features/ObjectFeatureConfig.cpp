@@ -24,7 +24,8 @@ std::unordered_map<std::string, ObjectFeatureRuleMode> &FeatureTypeMap()
   static std::unordered_map<std::string, ObjectFeatureRuleMode> types = {
       {"object", ObjectFeatureRuleMode::Object},
       {"scatter_blocks", ObjectFeatureRuleMode::ScatterBlocks},
-      {"procedural_tree", ObjectFeatureRuleMode::ProceduralTree}};
+      {"procedural_tree", ObjectFeatureRuleMode::ProceduralTree},
+      {"procedural_shrub", ObjectFeatureRuleMode::ProceduralShrub}};
   return types;
 }
 
@@ -40,7 +41,8 @@ PlacementStrategies()
 {
   static std::unordered_map<
       ObjectFeatureRuleMode,
-      std::shared_ptr<const IObjectFeaturePlacementStrategy>> strategies;
+      std::shared_ptr<const IObjectFeaturePlacementStrategy>>
+      strategies;
   return strategies;
 }
 
@@ -55,8 +57,8 @@ std::unordered_map<CaveFeatureKind,
 CavePlacementStrategies()
 {
   static std::unordered_map<
-      CaveFeatureKind,
-      std::shared_ptr<const ICaveFeaturePlacementStrategy>> strategies;
+      CaveFeatureKind, std::shared_ptr<const ICaveFeaturePlacementStrategy>>
+      strategies;
   return strategies;
 }
 
@@ -66,10 +68,7 @@ std::mutex &CavePlacementStrategyMutex()
   return mutex;
 }
 
-BiomeId ParseBiome(const std::string &name)
-{
-  return BiomeIdFromString(name);
-}
+BiomeId ParseBiome(const std::string &name) { return BiomeIdFromString(name); }
 
 void ParseBiomeArray(const nlohmann::json &item, ObjectFeatureRule &rule)
 {
@@ -112,8 +111,8 @@ void ParseEcologyProfile(const nlohmann::json &item, ObjectFeatureRule &rule)
     return;
   }
   const nlohmann::json &ecology = item["ecology"];
-  const auto parse_axis = [&](const char *name, float &min_value,
-                              float &max_value, bool &enabled)
+  const auto parse_axis =
+      [&](const char *name, float &min_value, float &max_value, bool &enabled)
   {
     if (!ecology.contains(name))
     {
@@ -128,8 +127,7 @@ void ParseEcologyProfile(const nlohmann::json &item, ObjectFeatureRule &rule)
     min_value = range[0].get<float>();
     max_value = range[1].get<float>();
     enabled = std::isfinite(min_value) && std::isfinite(max_value) &&
-              min_value >= 0.0f && max_value <= 1.0f &&
-              min_value < max_value;
+              min_value >= 0.0f && max_value <= 1.0f && min_value < max_value;
   };
   parse_axis("temperature", rule.Ecology.TemperatureMin,
              rule.Ecology.TemperatureMax, rule.Ecology.HasTemperatureRange);
@@ -149,8 +147,8 @@ void ParseEcologyProfile(const nlohmann::json &item, ObjectFeatureRule &rule)
   }
   if (ecology.contains("max_slope") && ecology["max_slope"].is_number())
   {
-    rule.Ecology.MaxSlope = std::clamp(
-        ecology["max_slope"].get<float>(), 0.0f, 64.0f);
+    rule.Ecology.MaxSlope =
+        std::clamp(ecology["max_slope"].get<float>(), 0.0f, 64.0f);
   }
 }
 
@@ -205,8 +203,8 @@ bool ParseRuleArray(const nlohmann::json &arr,
           continue;
         }
         rule.Tree.HeightMin = std::clamp(profile.value("height_min", 5), 2, 32);
-        rule.Tree.HeightMax = std::clamp(profile.value("height_max", 8),
-                                         rule.Tree.HeightMin, 40);
+        rule.Tree.HeightMax =
+            std::clamp(profile.value("height_max", 8), rule.Tree.HeightMin, 40);
         rule.Tree.CrownRadiusX =
             std::clamp(profile.value("crown_radius_x", 3), 1, 8);
         rule.Tree.CrownRadiusZ =
@@ -215,10 +213,14 @@ bool ParseRuleArray(const nlohmann::json &arr,
             std::clamp(profile.value("crown_height", 4), 2, 16);
         rule.Tree.BranchCount =
             std::clamp(profile.value("branch_count", 2), 0, 8);
+        rule.Tree.CrownLobes =
+            std::clamp(profile.value("crown_lobes", 2), 0, 8);
         rule.Tree.LeafDensity =
             std::clamp(profile.value("leaf_density", 0.84f), 0.2f, 1.0f);
         rule.Tree.RootChance =
             std::clamp(profile.value("root_chance", 0.45f), 0.0f, 1.0f);
+        rule.Tree.CrownIrregularity =
+            std::clamp(profile.value("crown_irregularity", 0.18f), 0.0f, 0.45f);
         rule.Tree.TrunkBlock =
             profile.value("trunk_block", std::string("tree_log"));
         rule.Tree.LeavesBlock =
@@ -242,6 +244,40 @@ bool ParseRuleArray(const nlohmann::json &arr,
         }
       }
     }
+    else if (rule.Mode == ObjectFeatureRuleMode::ProceduralShrub)
+    {
+      rule.ObjectName = item.value("species", item.value("object", ""));
+      if (rule.ObjectName.empty())
+      {
+        continue;
+      }
+      if (item.contains("shrub_profile"))
+      {
+        const nlohmann::json &profile = item["shrub_profile"];
+        if (!profile.is_object())
+        {
+          continue;
+        }
+        rule.Shrub.HeightMin = std::clamp(profile.value("height_min", 2), 1, 8);
+        rule.Shrub.HeightMax = std::clamp(profile.value("height_max", 3),
+                                          rule.Shrub.HeightMin, 10);
+        rule.Shrub.RadiusX = std::clamp(profile.value("radius_x", 2), 1, 6);
+        rule.Shrub.RadiusZ = std::clamp(profile.value("radius_z", 2), 1, 6);
+        rule.Shrub.LobeCount =
+            std::clamp(profile.value("lobe_count", 4), 1, 10);
+        rule.Shrub.LeafDensity =
+            std::clamp(profile.value("leaf_density", 0.86f), 0.2f, 1.0f);
+        rule.Shrub.CrownIrregularity =
+            std::clamp(profile.value("crown_irregularity", 0.22f), 0.0f, 0.5f);
+        rule.Shrub.AccentChance =
+            std::clamp(profile.value("accent_chance", 0.0f), 0.0f, 1.0f);
+        rule.Shrub.StemBlock =
+            profile.value("stem_block", std::string("mtg_bush_stem"));
+        rule.Shrub.LeavesBlock =
+            profile.value("leaves_block", std::string("mtg_bush_leaves"));
+        rule.Shrub.AccentBlock = profile.value("accent_block", std::string{});
+      }
+    }
     else
     {
       rule.ObjectName = item.value("object", "");
@@ -255,7 +291,8 @@ bool ParseRuleArray(const nlohmann::json &arr,
     rule.ChancePerColumn = item.value("chance_per_column", 0);
     rule.SeedOffset = item.value("seed_offset", 0);
     rule.PlacementYOffset = item.value("placement_y_offset", 0);
-    if (item.contains("surface_constraint") && item["surface_constraint"].is_string())
+    if (item.contains("surface_constraint") &&
+        item["surface_constraint"].is_string())
     {
       rule.Surface.Kind = SurfaceConstraintKindFromString(
           item["surface_constraint"].get<std::string>());
@@ -529,11 +566,13 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
                    next->Structures);
     ParseCaveFeatureArray(root.value("cave_features", nlohmann::json::array()),
                           next->CaveFeatures);
-    if (root.contains("structure_placement") && root["structure_placement"].is_object())
+    if (root.contains("structure_placement") &&
+        root["structure_placement"].is_object())
     {
       const auto &sp = root["structure_placement"];
       next->structureCellSize = std::max(16, sp.value("cell_size", 64));
-      next->structureChancePerCell = std::max(1, sp.value("chance_per_cell", 12));
+      next->structureChancePerCell =
+          std::max(1, sp.value("chance_per_cell", 12));
       next->structureMinSpacing = std::max(32, sp.value("min_spacing", 128));
     }
   }

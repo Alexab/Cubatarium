@@ -13,20 +13,10 @@ from worldgen_metrics_lib import analyze_world, compare_to_thresholds
 
 REPO = Path(__file__).resolve().parents[1]
 
-GATE_KEYS = (
-    "flatness_pct_max",
-    "flatness_pct_min",
-    "rolling_hill_pct_min",
-    "cave_chunk_coverage_pct_min",
-    "nn_distance_cv_min",
-)
-
-
 def gate_thresholds(baseline: dict) -> dict:
-    all_thresholds = dict(baseline.get("thresholds", {}))
-    gates = {key: all_thresholds[key] for key in GATE_KEYS if key in all_thresholds}
-    gates["max_height"] = baseline.get("max_height", 128)
-    return gates
+    thresholds = dict(baseline.get("thresholds", {}))
+    thresholds["max_height"] = baseline.get("max_height", 128)
+    return thresholds
 
 
 def main() -> int:

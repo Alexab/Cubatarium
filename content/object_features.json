@@ -99,6 +99,7 @@
       "object": "tree_pine_small",
       "biomes": [
         "tundra",
+        "forest",
         "mountains",
         "snowy_slopes"
       ],
@@ -135,7 +136,9 @@
         "crown_radius_z": 4,
         "crown_height": 5,
         "branch_count": 3,
+        "crown_lobes": 3,
         "leaf_density": 0.86,
+        "crown_irregularity": 0.27,
         "root_chance": 0.35,
         "crown_shape": "round",
         "trunk_block": "mtg_tree",
@@ -167,7 +170,9 @@
         "crown_radius_z": 3,
         "crown_height": 8,
         "branch_count": 2,
+        "crown_lobes": 1,
         "leaf_density": 0.92,
+        "crown_irregularity": 0.12,
         "root_chance": 0.2,
         "crown_shape": "conical",
         "trunk_block": "mtg_pine_tree",
@@ -178,6 +183,72 @@
         "moisture": [0.15, 1.0],
         "elevation": [42, 128],
         "max_slope": 14.0
+      }
+    },
+    {
+      "mode": "procedural_tree",
+      "species": "tree_procedural_aspen",
+      "biomes": [
+        "forest",
+        "plains",
+        "hills"
+      ],
+      "weight": 2,
+      "seed_offset": 4014,
+      "spacing": 36,
+      "tree_profile": {
+        "height_min": 7,
+        "height_max": 12,
+        "crown_radius_x": 2,
+        "crown_radius_z": 3,
+        "crown_height": 7,
+        "branch_count": 3,
+        "crown_lobes": 2,
+        "leaf_density": 0.9,
+        "crown_irregularity": 0.2,
+        "root_chance": 0.15,
+        "crown_shape": "columnar",
+        "trunk_block": "mtg_aspen_tree",
+        "leaves_block": "mtg_aspen_leaves"
+      },
+      "ecology": {
+        "temperature": [0.15, 0.9],
+        "moisture": [0.3, 1.0],
+        "elevation": [45, 110],
+        "max_slope": 12.0
+      }
+    },
+    {
+      "mode": "procedural_tree",
+      "species": "tree_procedural_acacia",
+      "biomes": [
+        "savanna",
+        "scrubland",
+        "desert"
+      ],
+      "weight": 2,
+      "seed_offset": 4015,
+      "spacing": 38,
+      "tree_profile": {
+        "height_min": 5,
+        "height_max": 9,
+        "crown_radius_x": 4,
+        "crown_radius_z": 3,
+        "crown_height": 4,
+        "branch_count": 4,
+        "crown_lobes": 3,
+        "leaf_density": 0.88,
+        "crown_irregularity": 0.3,
+        "root_chance": 0.05,
+        "crown_shape": "umbrella",
+        "trunk_block": "mtg_acacia_tree",
+        "leaves_block": "mtg_acacia_leaves"
+      },
+      "ecology": {
+        "temperature": [0.5, 1.0],
+        "moisture": [0.05, 0.78],
+        "elevation": [40, 100],
+        "max_slope": 10.0
       }
     }
   ],
@@ -258,6 +329,134 @@
       }
     },
     {
+      "mode": "procedural_shrub",
+      "species": "shrub_procedural_common",
+      "biomes": [
+        "plains",
+        "forest",
+        "foothills",
+        "scrubland",
+        "savanna",
+        "hills"
+      ],
+      "weight": 2,
+      "seed_offset": 4115,
+      "spacing": 30,
+      "shrub_profile": {
+        "height_min": 2,
+        "height_max": 4,
+        "radius_x": 2,
+        "radius_z": 3,
+        "lobe_count": 4,
+        "leaf_density": 0.88,
+        "crown_irregularity": 0.28,
+        "stem_block": "mtg_bush_stem",
+        "leaves_block": "mtg_bush_leaves"
+      },
+      "ecology": {
+        "temperature": [0.18, 1.0],
+        "moisture": [0.16, 1.0],
+        "elevation": [43, 106],
+        "max_slope": 14.0
+      }
+    },
+    {
+      "mode": "procedural_shrub",
+      "species": "shrub_procedural_blueberry",
+      "biomes": [
+        "forest",
+        "plains"
+      ],
+      "weight": 2,
+      "seed_offset": 4116,
+      "spacing": 28,
+      "sub_biomes": [
+        "sparse_forest",
+        "woodland",
+        "dense_forest"
+      ],
+      "shrub_profile": {
+        "height_min": 2,
+        "height_max": 3,
+        "radius_x": 2,
+        "radius_z": 2,
+        "lobe_count": 5,
+        "leaf_density": 0.9,
+        "crown_irregularity": 0.24,
+        "accent_chance": 0.08,
+        "stem_block": "mtg_bush_stem",
+        "leaves_block": "mtg_blueberry_bush_leaves",
+        "accent_block": "mtg_blueberry_bush_leaves_with_berries"
+      },
+      "ecology": {
+        "temperature": [0.28, 0.86],
+        "moisture": [0.5, 1.0],
+        "elevation": [44, 96],
+        "max_slope": 9.0
+      }
+    },
+    {
+      "mode": "procedural_shrub",
+      "species": "shrub_procedural_acacia",
+      "biomes": [
+        "desert",
+        "savanna",
+        "scrubland",
+        "plains"
+      ],
+      "weight": 2,
+      "seed_offset": 4117,
+      "spacing": 24,
+      "shrub_profile": {
+        "height_min": 1,
+        "height_max": 3,
+        "radius_x": 3,
+        "radius_z": 2,
+        "lobe_count": 4,
+        "leaf_density": 0.8,
+        "crown_irregularity": 0.32,
+        "stem_block": "mtg_acacia_bush_stem",
+        "leaves_block": "mtg_acacia_bush_leaves"
+      },
+      "ecology": {
+        "temperature": [0.48, 1.0],
+        "moisture": [0.05, 0.72],
+        "elevation": [42, 98],
+        "max_slope": 12.0
+      }
+    },
+    {
+      "mode": "procedural_shrub",
+      "species": "shrub_procedural_pine",
+      "biomes": [
+        "tundra",
+        "cold_steppe",
+        "forest",
+        "mountains",
+        "snowy_slopes"
+      ],
+      "weight": 2,
+      "seed_offset": 4118,
+      "spacing": 24,
+      "shrub_profile": {
+        "height_min": 2,
+        "height_max": 4,
+        "radius_x": 2,
+        "radius_z": 2,
+        "lobe_count": 3,
+        "leaf_density": 0.92,
+        "crown_irregularity": 0.16,
+        "stem_block": "mtg_pine_bush_stem",
+        "leaves_block": "mtg_pine_bush_needles"
+      },
+      "ecology": {
+        "temperature": [0.0, 0.68],
+        "moisture": [0.22, 1.0],
+        "elevation": [45, 128],
+        "max_slope": 12.0
+      }
+    },
+    {
       "mode": "scatter_blocks",
       "block": "mtg_dry_grass_1",
       "attempts": 4,
@@ -298,7 +497,7 @@
     },
     {
       "mode": "scatter_blocks",
-      "block": "dandelion",
+      "block": "flower",
       "attempts": 5,
       "radius": 3,
       "biomes": [

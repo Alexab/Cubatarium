@@ -834,12 +834,7 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
                                    const WorldGenTuning &tuning,
                                    int worldgenProfileVersion)
 {
-  const int dither_x =
-      static_cast<int>(BiomePickHash(x, z, 9011) % 9) - 4;
-  const int dither_z =
-      static_cast<int>(BiomePickHash(x, z, 9012) % 9) - 4;
-  const ClimateSample climate =
-      SampleClimate(x + dither_x, z + dither_z, seed);
+  const ClimateSample climate = SampleClimate(x, z, seed);
   const float macro_h01 =
       std::clamp(OverworldMacroHeight01(x, z, seed), 0.0f, 1.0f);
   const float height_norm = std::clamp(
@@ -1010,24 +1005,9 @@ BiomeHandle DominantBiomeHandle(const BiomeWeightSet &weights)
 BiomeHandle PickSurfaceBiomeHandle(int x, int z,
                                    const BiomeWeightSet &weights)
 {
-  const float totalWeight = weights.TotalWeight();
-  if (totalWeight <= 0.0f)
-  {
-    return {};
-  }
-
-  float pick = (static_cast<float>(BiomePickHash(x, z, 11821) % 100000U) /
-                100000.0f) *
-               totalWeight;
-  for (const BiomeBlendEntry &entry : weights.entries)
-  {
-    pick -= entry.weight;
-    if (pick < 0.0f)
-    {
-      return entry.biome;
-    }
-  }
-  return weights.entries.empty() ? BiomeHandle{} : weights.entries.back().biome;
+  (void)x;
+  (void)z;
+  return DominantBiomeHandle(weights);
 }
 
 BiomeKey BiomeKeyForHandle(BiomeHandle handle)
@@ -1573,45 +1553,6 @@ BiomeSurfaceRule EvaluateSurfaceRule(int x, int z,
     {
       rule.surface = ctx.Blocks.Grass;
       rule.subsurface = ctx.Blocks.Dirt;
-    }
-  }
-
-  const float second_weight = [&]() {
-    float best = 0.0f;
-    const BiomeHandle dominantHandle = DominantBiomeHandle(weights);
-    for (const BiomeBlendEntry &entry : weights.entries)
-    {
-      if (entry.biome == dominantHandle)
-      {
-        continue;
-      }
-      best = std::max(best, entry.weight);
-    }
-    return best;
-  }();
-  const float dominant_weight = weights.Weight(DominantBiomeHandle(weights));
-  if (!customBiome && second_weight > 0.15f && dominant_weight < 0.85f)
-  {
-    const uint32_t mix = BiomePickHash(x, z, 8803) % 100;
-    if (mix < 35)
-    {
-      rule.subsurface =
-          ctx.Blocks.Gravel != BLOCK_AIR ? ctx.Blocks.Gravel : rule.subsurface;
-    }
-    if ((dominant == BiomeId::Desert && pick == BiomeId::Forest) ||
-        (dominant == BiomeId::Forest && pick == BiomeId::Desert))
-    {
-      const float desert_weight = BiomeWeightFor(weights, BiomeId::Desert);
-      const float forest_weight = BiomeWeightFor(weights, BiomeId::Forest);
-      const float sand_prob =
-          desert_weight /
-          std::max(0.001f, desert_weight + forest_weight);
-      const uint32_t sand_pick = BiomePickHash(x, z, 8804) % 100;
-      if (sand_pick < static_cast<uint32_t>(sand_prob * 100.0f))
-      {
-        rule.surface =
-            ctx.Blocks.Sand != BLOCK_AIR ? ctx.Blocks.Sand : rule.surface;
-      }
     }
   }
 

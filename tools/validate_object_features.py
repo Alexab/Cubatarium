@@ -130,11 +130,12 @@ def main() -> int:
 
     json_objects_by_pool: dict[str, set[str]] = {
         "vegetation": set(),
+        "ground_cover": set(),
         "decoration": set(),
         "structures": set(),
     }
 
-    for pool_name in ("vegetation", "decoration", "structures"):
+    for pool_name in ("vegetation", "ground_cover", "decoration", "structures"):
         rules = data.get(pool_name, [])
         if not isinstance(rules, list):
             errors.append(f"{pool_name}: expected array")
@@ -196,33 +197,43 @@ def main() -> int:
                 seen_keys.add(key)
                 continue
 
-            if mode == "procedural_tree":
+            if mode in ("procedural_tree", "procedural_shrub"):
                 species = rule.get("species")
-                profile = rule.get("tree_profile")
+                profile_key = "tree_profile" if mode == "procedural_tree" else "shrub_profile"
+                profile = rule.get(profile_key)
                 if not isinstance(species, str) or not species:
                     errors.append(f"{pool_name}[{idx}]: missing procedural species")
                     continue
                 if not isinstance(profile, dict):
-                    errors.append(f"{pool_name}[{idx}]: missing tree_profile")
+                    errors.append(f"{pool_name}[{idx}]: missing {profile_key}")
                     continue
-                for block_field, fallback in (
-                    ("trunk_block", "tree_log"),
-                    ("leaves_block", "tree_leaves"),
-                ):
+                block_fields = (
+                    (("trunk_block", "tree_log"), ("leaves_block", "tree_leaves"))
+                    if mode == "procedural_tree"
+                    else (("stem_block", "mtg_bush_stem"), ("leaves_block", "tree_leaves"),
+                          ("accent_block", ""))
+                )
+                for block_field, fallback in block_fields:
                     block_name = profile.get(block_field, fallback)
+                    if not block_name:
+                        continue
                     if block_name not in block_names and fallback not in block_names:
                         errors.append(
                             f"{pool_name}[{idx}]: {block_field} {block_name!r} "
                             "has no default-pack fallback"
                         )
-                height_min = profile.get("height_min", 5)
-                height_max = profile.get("height_max", 8)
+                height_min = profile.get("height_min", 5 if mode == "procedural_tree" else 2)
+                height_max = profile.get("height_max", 8 if mode == "procedural_tree" else 3)
+                min_height = 2 if mode == "procedural_tree" else 1
+                max_height = 40 if mode == "procedural_tree" else 10
                 if (
                     not isinstance(height_min, int)
                     or not isinstance(height_max, int)
-                    or not (2 <= height_min <= height_max <= 40)
+                    or not (min_height <= height_min <= height_max <= max_height)
                 ):
-                    errors.append(f"{pool_name}[{idx}]: invalid tree height range")
+                    errors.append(
+                        f"{pool_name}[{idx}]: invalid {mode.removeprefix('procedural_')} height range"
+                    )
                 spacing = rule.get("spacing")
                 if spacing is None:
                     errors.append(f"{pool_name}[{idx}]: missing spacing")
@@ -247,7 +258,7 @@ def main() -> int:
             if object_name not in object_names:
                 errors.append(f"{pool_name}[{idx}]: unknown object {object_name!r}")
 
-            if pool_name in ("vegetation", "decoration"):
+            if pool_name in ("vegetation", "ground_cover", "decoration"):
                 spacing = rule.get("spacing")
                 if spacing is None:
                     errors.append(f"{pool_name}[{idx}]: missing spacing")

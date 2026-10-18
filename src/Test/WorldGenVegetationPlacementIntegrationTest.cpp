@@ -10,6 +10,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenRefs.h"
+#include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
@@ -21,6 +22,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -218,8 +220,119 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
   FluidTest::Expect(tree_logs > 0 || tree_leaves > 0 || species_logs > 0 ||
                         species_leaves > 0,
                     kTestName, "chunk populator placed tree blocks");
-  FluidTest::Expect(species_logs > 0 || species_leaves > 0, kTestName,
-                    "procedural tree strategy emits species blocks");
+}
+
+static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
+{
+  cutum::ProceduralSettings settings = MakeVegetationSettings();
+  settings.SeaLevel = 48;
+  settings.MaxHeight = 128;
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext ctx(world, registry, settings);
+  ctx.WorldgenOwnerPackId = "minetest_default_16";
+  ctx.ResolveBlockIds();
+
+  const cutum::BlockId grass = ctx.Blocks.Grass;
+  FluidTest::Expect(grass != cutum::BLOCK_AIR, kTestName,
+                    "procedural flora test ground resolves");
+  for (int z = -8; z <= 16; ++z)
+  {
+    for (int x = -8; x <= 16; ++x)
+    {
+      world.SetBlock(glm::ivec3(x, 51, z), grass);
+    }
+  }
+
+  cutum::ObjectFeatureRule tree;
+  tree.Mode = cutum::ObjectFeatureRuleMode::ProceduralTree;
+  tree.Tree.HeightMin = 7;
+  tree.Tree.HeightMax = 9;
+  tree.Tree.CrownRadiusX = 3;
+  tree.Tree.CrownRadiusZ = 4;
+  tree.Tree.CrownHeight = 5;
+  tree.Tree.CrownLobes = 3;
+  tree.Tree.CrownIrregularity = 0.28f;
+  tree.Tree.TrunkBlock = "mtg_tree";
+  tree.Tree.LeavesBlock = "mtg_leaves";
+  const auto treeStrategy = cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+      cutum::ObjectFeatureRuleMode::ProceduralTree);
+  FluidTest::Expect(treeStrategy != nullptr, kTestName,
+                    "procedural tree strategy is registered");
+  FluidTest::Expect(treeStrategy->Place(ctx, 0, 0, 51, tree), kTestName,
+                    "procedural tree strategy places its profile");
+  FluidTest::Expect(CountBlocksNamed(world, registry, "mtg_tree") > 0 &&
+                        CountBlocksNamed(world, registry, "mtg_leaves") > 0,
+                    kTestName,
+                    "procedural tree writes species trunk and canopy blocks");
+
+  cutum::ObjectFeatureRule shrub;
+  shrub.Mode = cutum::ObjectFeatureRuleMode::ProceduralShrub;
+  shrub.Shrub.HeightMin = 2;
+  shrub.Shrub.HeightMax = 3;
+  shrub.Shrub.RadiusX = 2;
+  shrub.Shrub.RadiusZ = 3;
+  shrub.Shrub.LobeCount = 4;
+  shrub.Shrub.StemBlock = "mtg_bush_stem";
+  shrub.Shrub.LeavesBlock = "mtg_bush_leaves";
+  const auto shrubStrategy = cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+      cutum::ObjectFeatureRuleMode::ProceduralShrub);
+  FluidTest::Expect(shrubStrategy != nullptr, kTestName,
+                    "procedural shrub strategy is registered");
+  FluidTest::Expect(shrubStrategy->Place(ctx, 12, 0, 51, shrub), kTestName,
+                    "procedural shrub strategy places its profile");
+  FluidTest::Expect(CountBlocksNamed(world, registry, "mtg_bush_leaves") > 0,
+                    kTestName, "procedural shrub writes a leafy silhouette");
+}
+
+static void TestWorldGenSetsSchemaV2Migration()
+{
+  using json = nlohmann::json;
+  json legacy;
+  legacy["schema_version"] = 1;
+  legacy["objects"]["vegetation"]["default"]["entries"] = json::array(
+      {{{"object", "tree_procedural_oak"},
+        {"weight", 5},
+        {"spacing", 39},
+        {"seed_offset", 4012},
+        {"biomes", {"forest", "plains"}}}});
+  cutum::WorldGenSets sets;
+  std::string error;
+  FluidTest::Expect(cutum::ParseWorldGenSets(legacy, sets, error), kTestName,
+                    "legacy worldgen_sets schema loads");
+  FluidTest::Expect(sets.SchemaVersion == 1, kTestName,
+                    "legacy schema version is preserved before migration");
+
+  const cutum::ObjectFeatureConfig &authored =
+      cutum::UObjectFeatureConfigStorage::Get();
+  cutum::UpgradeLegacyWorldGenSetMetadata(sets, authored, 2);
+  FluidTest::Expect(sets.SchemaVersion == 2, kTestName,
+                    "profile-2 world upgrades worldgen_sets schema");
+  const cutum::ObjectFeatureConfig resolved =
+      cutum::ResolveObjectFeatures(sets, authored, 2);
+  const auto tree = std::find_if(
+      resolved.Vegetation.begin(), resolved.Vegetation.end(),
+      [](const cutum::ObjectFeatureRule &rule)
+      { return rule.ObjectName == "tree_procedural_oak"; });
+  FluidTest::Expect(tree != resolved.Vegetation.end() &&
+                        tree->Mode ==
+                            cutum::ObjectFeatureRuleMode::ProceduralTree &&
+                        tree->Tree.CrownLobes == 3 && tree->Weight == 5 &&
+                        tree->Spacing == 39,
+                    kTestName,
+                    "migration restores authored mode and profile, preserving saved frequency");
+
+  json saved;
+  cutum::WriteWorldGenSets(saved, sets);
+  FluidTest::Expect(saved["worldgen_sets"]["schema_version"] == 2 &&
+                        saved["worldgen_sets"]["objects"]["vegetation"]
+                                ["default"]["entries"][0]["mode"] ==
+                            "procedural_tree" &&
+                        saved["worldgen_sets"]["objects"]["vegetation"]
+                                ["default"]["entries"][0].contains(
+                                    "tree_profile"),
+                    kTestName,
+                    "schema-v2 save retains procedural mode and tree profile");
 }
 
 static void TestDataDefinedBiomeAffectsSampling()
@@ -494,6 +607,7 @@ int main()
   FluidTest::Expect(cutum::UObjectFeatureConfigStorage::LoadFromFile(
                         repo_root / "content" / "object_features.json"),
                     kTestName, "object_features load failed");
+  TestWorldGenSetsSchemaV2Migration();
   FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"), kTestName,
                     "worldgen pack load failed");
   FluidTest::Expect(cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
@@ -515,6 +629,7 @@ int main()
 
   cutum::UPipelineChunkPopulator populator(registry, &objects, kOwnerPack);
   TestChunkPopulatorPlacesTrees(populator, registry, objects);
+  TestProceduralVegetationStrategies(registry);
   FluidTest::Expect(
       cutum::ObjectFeaturePlacementStrategyRegistry::Find(
           cutum::ObjectFeatureRuleMode::Object) != nullptr &&

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
+#include "WorldGen/Sampling/BiomeSampler.h"
 #include <cstdint>
-#include <functional>
 #include <filesystem>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -28,6 +28,7 @@ enum class ObjectFeatureRuleMode
   Object,
   ScatterBlocks,
   ProceduralTree,
+  ProceduralShrub,
 };
 
 enum class TreeCrownShape
@@ -46,11 +47,28 @@ struct TreeSpeciesProfile
   int CrownRadiusZ{3};
   int CrownHeight{4};
   int BranchCount{2};
+  int CrownLobes{2};
   float LeafDensity{0.84f};
   float RootChance{0.45f};
+  float CrownIrregularity{0.18f};
   TreeCrownShape CrownShape{TreeCrownShape::Round};
   std::string TrunkBlock{"tree_log"};
   std::string LeavesBlock{"tree_leaves"};
+};
+
+struct ShrubSpeciesProfile
+{
+  int HeightMin{2};
+  int HeightMax{3};
+  int RadiusX{2};
+  int RadiusZ{2};
+  int LobeCount{4};
+  float LeafDensity{0.86f};
+  float CrownIrregularity{0.22f};
+  float AccentChance{0.0f};
+  std::string StemBlock{"mtg_bush_stem"};
+  std::string LeavesBlock{"mtg_bush_leaves"};
+  std::string AccentBlock;
 };
 
 struct FeatureEcologyProfile
@@ -116,9 +134,9 @@ public:
 class CaveFeaturePlacementStrategyRegistry
 {
 public:
-  static bool Register(
-      CaveFeatureKind kind,
-      std::shared_ptr<const ICaveFeaturePlacementStrategy> strategy);
+  static bool
+  Register(CaveFeatureKind kind,
+           std::shared_ptr<const ICaveFeaturePlacementStrategy> strategy);
   static std::shared_ptr<const ICaveFeaturePlacementStrategy>
   Find(CaveFeatureKind kind);
 };
@@ -154,6 +172,7 @@ struct ObjectFeatureRule
   ObjectFeatureRuleMode Mode{ObjectFeatureRuleMode::Object};
   ScatterBlockSpec Scatter;
   TreeSpeciesProfile Tree;
+  ShrubSpeciesProfile Shrub;
   FeatureEcologyProfile Ecology;
   SurfaceConstraint Surface;
 };
@@ -172,9 +191,9 @@ public:
 class ObjectFeaturePlacementStrategyRegistry
 {
 public:
-  static bool Register(ObjectFeatureRuleMode mode,
-                       std::shared_ptr<const IObjectFeaturePlacementStrategy>
-                           strategy);
+  static bool
+  Register(ObjectFeatureRuleMode mode,
+           std::shared_ptr<const IObjectFeaturePlacementStrategy> strategy);
   static std::shared_ptr<const IObjectFeaturePlacementStrategy>
   Find(ObjectFeatureRuleMode mode);
 };

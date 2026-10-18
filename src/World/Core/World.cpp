@@ -10070,8 +10070,12 @@ void UWorld::RebuildResolvedObjectFeatures()
 {
   if (UObjectFeatureConfigStorage::IsLoaded())
   {
+    const ObjectFeatureConfig &global = UObjectFeatureConfigStorage::Get();
+    UpgradeLegacyWorldGenSetMetadata(
+        WorldGenSetsData, global, ProceduralTemplate.WorldGenProfileVersion);
     ResolvedObjectFeatures = ResolveObjectFeatures(
-        WorldGenSetsData, UObjectFeatureConfigStorage::Get());
+        WorldGenSetsData, global,
+        ProceduralTemplate.WorldGenProfileVersion);
   }
 }
 
