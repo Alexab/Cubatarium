@@ -212,6 +212,7 @@ def count_shore_air_gaps(
     *,
     water_id: int,
     sea_level: int,
+    min_world_y: int = 0,
     air_id: int = 0,
 ) -> int:
     """AIR at y<=sea with a 6-neighbor water block (shore seal gap)."""
@@ -225,7 +226,7 @@ def count_shore_air_gaps(
     )
     gaps = 0
     for (wx, wy, wz), bid in columns.items():
-        if bid != air_id or wy < 1 or wy > sea_level:
+        if bid != air_id or wy < min_world_y or wy > sea_level:
             continue
         for dx, dy, dz in dirs:
             if columns.get((wx + dx, wy + dy, wz + dz), air_id) == water_id:
@@ -534,6 +535,7 @@ def cave_stats(
     *,
     air_id: int = 0,
     spawn_radius: int | None = None,
+    min_world_y: int = 0,
 ) -> dict:
     if not columns or not surface:
         return {
@@ -555,7 +557,7 @@ def cave_stats(
         chunk_x = wx // CHUNK_SIZE if wx >= 0 else (wx - CHUNK_SIZE + 1) // CHUNK_SIZE
         chunk_z = wz // CHUNK_SIZE if wz >= 0 else (wz - CHUNK_SIZE + 1) // CHUNK_SIZE
         total_chunks.add((chunk_x, chunk_z))
-        for wy in range(1, ground_y):
+        for wy in range(min_world_y, ground_y):
             if columns.get((wx, wy, wz), air_id) != air_id:
                 continue
             depth = ground_y - wy
@@ -583,13 +585,14 @@ def cave_void_fluid_stats(
     id_to_name: dict[int, str],
     *,
     air_id: int = 0,
+    min_world_y: int = 0,
 ) -> dict:
     """Estimate dry and liquid cave voxels below each column's terrain surface."""
     water_ids = {bid for bid, name in id_to_name.items() if name == "water"}
     lava_ids = {bid for bid, name in id_to_name.items() if name == "lava"}
     dry_air = water = lava = 0
     for (wx, wz), ground_y in surface.items():
-        for wy in range(1, ground_y):
+        for wy in range(min_world_y, ground_y):
             block_id = columns.get((wx, wy, wz), air_id)
             if block_id == air_id:
                 dry_air += 1
@@ -738,6 +741,7 @@ def analyze_surface(
     *,
     spawn_radius: int = 48,
     max_height: int = 319,
+    min_height: int = 0,
     id_to_name: dict[int, str] | None = None,
     slot_map: dict[str, list[str]] | None = None,
 ) -> dict:
@@ -753,6 +757,7 @@ def analyze_surface(
     cliff4 = sum(1 for d in deltas if d >= 4)
     cliff1 = sum(1 for d in deltas if d >= 1)
     max_violations = sum(1 for y in heights if y > max_height)
+    min_violations = sum(1 for y in heights if y < min_height)
     pits = micro_pit_stats(surface)
     shape = terrain_shape_stats(surface)
 
@@ -760,6 +765,8 @@ def analyze_surface(
         "columns": len(surface),
         "height_min": min(heights),
         "height_max": max(heights),
+        "world_min_height": min_height,
+        "world_max_height": max_height,
         "height_mean": sum(heights) / len(heights),
         "delta_mean": sum(deltas) / max(1, len(deltas)),
         "delta_p95": deltas[int(len(deltas) * 0.95)] if deltas else 0,
@@ -768,6 +775,7 @@ def analyze_surface(
         "delta_ge_8_pct": 100.0 * cliff8 / max(1, len(deltas)),
         "delta_ge_16_pct": 100.0 * cliff16 / max(1, len(deltas)),
         "max_height_violations": max_violations,
+        "min_height_violations": min_violations,
         "top_block_ids": top_blocks.most_common(8),
         "micro_pit_pct": pits["micro_pit_pct"],
         "micro_pits": pits["micro_pits"],
@@ -798,6 +806,23 @@ def spawn_center_from_meta(meta: dict) -> tuple[int, int]:
     if isinstance(spawn, list) and len(spawn) >= 3:
         return int(round(float(spawn[0]))), int(round(float(spawn[2])))
     return 0, 0
+
+
+def world_vertical_bounds(
+    meta: dict,
+    *,
+    min_height: int | None = None,
+    max_height: int | None = None,
+) -> tuple[int, int]:
+    """Return the saved world bounds, keeping legacy saves at their old range."""
+    procedural = meta.get("procedural", {})
+    min_world_y = (
+        min_height if min_height is not None else procedural.get("min_height", 0)
+    )
+    max_world_y = (
+        max_height if max_height is not None else procedural.get("max_height", 319)
+    )
+    return int(min_world_y), int(max_world_y)
 
 
 def spawn_surface_subset(
@@ -862,7 +887,8 @@ def analyze_world(
     *,
     repo_root: Path | None = None,
     spawn_radius: int = 48,
-    max_height: int = 319,
+    max_height: int | None = None,
+    min_height: int | None = None,
 ) -> dict:
     repo = repo_root or refs_path.parent.parent
     slot_map = load_slot_map(refs_path)
@@ -873,10 +899,19 @@ def analyze_world(
     if meta_path.is_file():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     spawn_x, spawn_z = spawn_center_from_meta(meta)
+    # Legacy saves without vertical profile metadata predate signed-height
+    # overworlds and must keep their historical metric range.
+    min_world_y, world_max_y = world_vertical_bounds(
+        meta,
+        min_height=min_height,
+        max_height=max_height,
+    )
+    procedural = meta.get("procedural", {})
     metrics = analyze_surface(
         surface,
         spawn_radius=spawn_radius,
-        max_height=max_height,
+        max_height=world_max_y,
+        min_height=min_world_y,
         id_to_name=id_to_name,
         slot_map=slot_map,
     )
@@ -900,7 +935,6 @@ def analyze_world(
     metrics["spawn_fire_blocks"] = count_spawn_fire_blocks(
         world_dir, id_to_name, spawn_radius
     )
-    procedural = meta.get("procedural", {})
     sea_level = int(procedural.get("sea_level", meta.get("sea_level", 63)))
     if meta:
         metrics["seed"] = meta.get("world_seed")
@@ -924,6 +958,7 @@ def analyze_world(
             columns,
             sea_level=sea_level,
             water_id=water_id,
+            min_world_y=min_world_y,
         )
     )
     metrics["sea_level"] = sea_level
@@ -937,9 +972,17 @@ def analyze_world(
             terrain_surface,
             # Measure cave networks over the generated test area, not only at spawn.
             spawn_radius=None,
+            min_world_y=min_world_y,
         )
     )
-    metrics.update(cave_void_fluid_stats(columns, terrain_surface, id_to_name))
+    metrics.update(
+        cave_void_fluid_stats(
+            columns,
+            terrain_surface,
+            id_to_name,
+            min_world_y=min_world_y,
+        )
+    )
     metrics.update(
         vegetation_cluster_stats(
             world_dir,
@@ -954,6 +997,7 @@ def analyze_world(
             columns,
             water_id=water_id,
             sea_level=sea_level,
+            min_world_y=min_world_y,
         )
     return metrics
 
@@ -1010,6 +1054,14 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
     max_h = thresholds.get("max_height", 319)
     if metrics.get("height_max", 0) > max_h + slack:
         fail(f"height_max={metrics['height_max']} > {max_h + slack}")
+
+    min_h = thresholds.get("min_height", metrics.get("world_min_height", 0))
+    if metrics.get("height_min", 0) < min_h:
+        fail(f"height_min={metrics['height_min']} < {min_h}")
+    if metrics.get("min_height_violations", 0) > thresholds.get(
+        "min_height_violations_max", 0
+    ):
+        fail(f"min_height_violations={metrics['min_height_violations']}")
 
     if metrics.get("max_height_violations", 0) > thresholds.get(
         "max_height_violations_max", 0

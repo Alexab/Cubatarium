@@ -20,6 +20,7 @@ def gate_thresholds(baseline: dict, backend: str | None = None) -> dict:
             baseline.get("backend_thresholds", {}).get(backend, {})
         )
     thresholds["max_height"] = baseline.get("max_height", 319)
+    thresholds["min_height"] = baseline.get("min_height", -64)
     return thresholds
 
 
@@ -60,6 +61,7 @@ def main() -> int:
     failures = compare_to_thresholds(metrics, thresholds)
 
     print(
+        f"world_y={metrics.get('world_min_height', 0)}..{metrics.get('world_max_height', 319)} "
         f"flatness={metrics.get('spawn_flatness_pct', metrics.get('flatness_pct', 0)):.2f}% "
         f"rolling={metrics.get('spawn_rolling_hill_pct', metrics.get('rolling_hill_pct', 0)):.2f}% "
         f"cave_cov={metrics.get('cave_chunk_coverage_pct', 0):.2f}% "
