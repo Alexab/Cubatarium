@@ -637,7 +637,8 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
                                    UBlockRegistry &registry,
                                    const WorldObjectDefinition &object,
                                    glm::ivec3 anchorWorldPos, bool skipOccupied,
-                                   const ObjectWorldGenPlacementOptions &options)
+                                   const ObjectWorldGenPlacementOptions &options,
+                                   ObjectVoxelWriter writeVoxel)
 {
   ObjectPlacementStats stats;
   if (object.voxels.empty())
@@ -661,7 +662,14 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
     {
       continue;
     }
-    world.SetBlock(worldPos, blockId);
+    if (writeVoxel)
+    {
+      writeVoxel(worldPos, blockId);
+    }
+    else
+    {
+      world.SetBlock(worldPos, blockId);
+    }
     stats.minY = std::min(stats.minY, worldPos.y);
     stats.maxY = std::max(stats.maxY, worldPos.y);
     ++stats.placedCount;

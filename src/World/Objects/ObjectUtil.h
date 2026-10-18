@@ -2,6 +2,7 @@
 
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include <functional>
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -73,13 +74,16 @@ struct ObjectWorldGenPlacementOptions
   int seaLevel{-1};
 };
 
+using ObjectVoxelWriter = std::function<void(glm::ivec3, BlockId)>;
+
 ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
                                    UBlockRegistry &registry,
                                    const WorldObjectDefinition &object,
                                    glm::ivec3 anchorWorldPos,
                                    bool skipOccupied,
                                    const ObjectWorldGenPlacementOptions &options =
-                                       ObjectWorldGenPlacementOptions{});
+                                       ObjectWorldGenPlacementOptions{},
+                                   ObjectVoxelWriter writeVoxel = {});
 
 std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
                                                       UBlockRegistry &registry,

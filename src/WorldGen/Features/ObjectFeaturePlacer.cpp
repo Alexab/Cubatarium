@@ -471,8 +471,11 @@ bool PlaceObjectAtWaterSurface(WorldGenContext &ctx, const std::string &prefabNa
   {
     return false;
   }
-  const ObjectPlacementStats stats =
-      PlaceObjectAt(ctx.World, ctx.Registry, *prefab, anchorWorldPos, false);
+  VoxelFeatureSink sink(ctx.World);
+  const ObjectPlacementStats stats = PlaceObjectAt(
+      ctx.World, ctx.Registry, *prefab, anchorWorldPos, false, {},
+      [&sink](glm::ivec3 position, BlockId block)
+      { sink.WriteVoxel(position, block); });
   if (stats.placedCount == 0)
   {
     return false;
@@ -504,6 +507,7 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
   int placed = 0;
   int minY = surfaceY;
   int maxY = surfaceY + 1;
+  VoxelFeatureSink sink(ctx.World);
 
   for (int attempt = 0; attempt < rule.Scatter.Attempts; ++attempt)
   {
@@ -543,7 +547,7 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
         continue;
       }
     }
-    ctx.World.SetBlock(pos, blockId);
+    sink.WriteVoxel(pos, blockId);
     if (rule.Scatter.MaxPerChunk > 0)
     {
       ++ScatterChunkCounts[chunk_key];
@@ -917,9 +921,12 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
   {
     return false;
   }
+  VoxelFeatureSink sink(ctx.World);
   const ObjectPlacementStats stats = PlaceObjectAt(
       ctx.World, ctx.Registry, *prefab, anchorWorldPos, false,
-      ObjectWorldGenPlacementOptions{maxScanY, ctx.Settings.SeaLevel});
+      ObjectWorldGenPlacementOptions{maxScanY, ctx.Settings.SeaLevel},
+      [&sink](glm::ivec3 position, BlockId block)
+      { sink.WriteVoxel(position, block); });
   if (stats.placedCount == 0)
   {
     return false;

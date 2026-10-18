@@ -324,6 +324,27 @@ static void TestAcceptFallenLogOverTallGrass()
                     "grass preserved under fallen log");
 }
 
+static void TestObjectPlacementWriterCallback()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  const cutum::WorldObjectDefinition log = MakeFallenLog();
+  int writes = 0;
+  const cutum::ObjectPlacementStats stats = cutum::PlaceObjectAt(
+      world, registry, log, glm::ivec3(4, 60, 0), false, {},
+      [&writes](glm::ivec3, cutum::BlockId block)
+      {
+        if (block == kLog)
+        {
+          ++writes;
+        }
+      });
+  FluidTest::Expect(stats.placedCount == writes && writes == 3, kTestName,
+                    "prefab voxels can be routed through a feature sink");
+  FluidTest::Expect(world.IsAir(glm::ivec3(4, 60, 0)), kTestName,
+                    "custom writer owns the prefab voxel output");
+}
+
 static void TestFindSurfaceUnderPlants()
 {
   cutum::UBlockWorld world;
@@ -481,6 +502,7 @@ int main()
   TestRejectFallenLogOnSlope();
   TestRejectFallenLogBesideTreeTrunk();
   TestAcceptFallenLogOverTallGrass();
+  TestObjectPlacementWriterCallback();
   TestFindSurfaceUnderPlants();
   TestResolveSurfaceLayerAnchorY();
   TestRejectMisTaggedVerticalPlantAsSurfaceLayer();
