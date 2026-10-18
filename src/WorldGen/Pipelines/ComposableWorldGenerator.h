@@ -55,6 +55,8 @@ public:
   ColumnSampleContext BuildColumnSample(int world_x, int world_z) const;
   BiomeId BiomeAt3D(int world_x, int world_y, int world_z,
                     int surface_y) const;
+  BiomeKey BiomeKeyAt3D(int world_x, int world_y, int world_z,
+                        int surface_y) const;
   ColumnLayerRule BuildTerrainRuleFromSample(
       int world_x, int world_z, const ColumnSampleContext &sample) const;
 

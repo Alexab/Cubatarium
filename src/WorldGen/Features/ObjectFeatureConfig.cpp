@@ -4,8 +4,10 @@
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -16,6 +18,21 @@ std::shared_ptr<const ObjectFeatureConfig> UObjectFeatureConfigStorage::Active =
 
 namespace
 {
+
+std::unordered_map<std::string, ObjectFeatureRuleMode> &FeatureTypeMap()
+{
+  static std::unordered_map<std::string, ObjectFeatureRuleMode> types = {
+      {"object", ObjectFeatureRuleMode::Object},
+      {"scatter_blocks", ObjectFeatureRuleMode::ScatterBlocks},
+      {"procedural_tree", ObjectFeatureRuleMode::ProceduralTree}};
+  return types;
+}
+
+std::mutex &FeatureTypeMutex()
+{
+  static std::mutex mutex;
+  return mutex;
+}
 
 BiomeId ParseBiome(const std::string &name)
 {
@@ -30,7 +47,13 @@ void ParseBiomeArray(const nlohmann::json &item, ObjectFeatureRule &rule)
     {
       if (b.is_string())
       {
-        rule.Biomes.push_back(ParseBiome(b.get<std::string>()));
+        const std::string key = b.get<std::string>();
+        rule.BiomeKeys.push_back(key);
+        const BiomeId legacy = ParseBiome(key);
+        if (legacy != BiomeId::Invalid)
+        {
+          rule.Biomes.push_back(legacy);
+        }
       }
     }
   }
@@ -50,6 +73,55 @@ void ParseSubBiomeArray(const nlohmann::json &item, ObjectFeatureRule &rule)
   }
 }
 
+void ParseEcologyProfile(const nlohmann::json &item, ObjectFeatureRule &rule)
+{
+  if (!item.contains("ecology") || !item["ecology"].is_object())
+  {
+    return;
+  }
+  const nlohmann::json &ecology = item["ecology"];
+  const auto parse_axis = [&](const char *name, float &min_value,
+                              float &max_value, bool &enabled)
+  {
+    if (!ecology.contains(name))
+    {
+      return;
+    }
+    const nlohmann::json &range = ecology[name];
+    if (!range.is_array() || range.size() != 2 || !range[0].is_number() ||
+        !range[1].is_number())
+    {
+      return;
+    }
+    min_value = range[0].get<float>();
+    max_value = range[1].get<float>();
+    enabled = std::isfinite(min_value) && std::isfinite(max_value) &&
+              min_value >= 0.0f && max_value <= 1.0f &&
+              min_value < max_value;
+  };
+  parse_axis("temperature", rule.Ecology.TemperatureMin,
+             rule.Ecology.TemperatureMax, rule.Ecology.HasTemperatureRange);
+  parse_axis("moisture", rule.Ecology.MoistureMin, rule.Ecology.MoistureMax,
+             rule.Ecology.HasMoistureRange);
+  if (ecology.contains("elevation") && ecology["elevation"].is_array() &&
+      ecology["elevation"].size() == 2 && ecology["elevation"][0].is_number() &&
+      ecology["elevation"][1].is_number())
+  {
+    rule.Ecology.MinElevation = ecology["elevation"][0].get<int>();
+    rule.Ecology.MaxElevation = ecology["elevation"][1].get<int>();
+    if (rule.Ecology.MinElevation > rule.Ecology.MaxElevation)
+    {
+      rule.Ecology.MinElevation = std::numeric_limits<int>::min();
+      rule.Ecology.MaxElevation = std::numeric_limits<int>::max();
+    }
+  }
+  if (ecology.contains("max_slope") && ecology["max_slope"].is_number())
+  {
+    rule.Ecology.MaxSlope = std::clamp(
+        ecology["max_slope"].get<float>(), 0.0f, 64.0f);
+  }
+}
+
 bool ParseRuleArray(const nlohmann::json &arr,
                     std::vector<ObjectFeatureRule> &out)
 {
@@ -64,10 +136,18 @@ bool ParseRuleArray(const nlohmann::json &arr,
       continue;
     }
     ObjectFeatureRule rule;
-    const std::string mode = item.value("mode", "object");
-    if (mode == "scatter_blocks")
+    const std::string modeName = item.value("mode", "object");
+    const std::optional<ObjectFeatureRuleMode> mode =
+        ObjectFeatureTypeRegistry::Find(modeName);
+    if (!mode)
     {
-      rule.Mode = ObjectFeatureRuleMode::ScatterBlocks;
+      std::cerr << "ObjectFeatureConfig: unknown feature type '" << modeName
+                << "'\n";
+      continue;
+    }
+    rule.Mode = *mode;
+    if (rule.Mode == ObjectFeatureRuleMode::ScatterBlocks)
+    {
       rule.Scatter.BlockName = item.value("block", "");
       rule.Scatter.Attempts = std::max(1, item.value("attempts", 4));
       rule.Scatter.Radius = std::max(0, item.value("radius", 2));
@@ -76,6 +156,58 @@ bool ParseRuleArray(const nlohmann::json &arr,
       if (rule.Scatter.BlockName.empty())
       {
         continue;
+      }
+    }
+    else if (rule.Mode == ObjectFeatureRuleMode::ProceduralTree)
+    {
+      rule.ObjectName = item.value("species", item.value("object", ""));
+      if (rule.ObjectName.empty())
+      {
+        continue;
+      }
+      if (item.contains("tree_profile"))
+      {
+        const nlohmann::json &profile = item["tree_profile"];
+        if (!profile.is_object())
+        {
+          continue;
+        }
+        rule.Tree.HeightMin = std::clamp(profile.value("height_min", 5), 2, 32);
+        rule.Tree.HeightMax = std::clamp(profile.value("height_max", 8),
+                                         rule.Tree.HeightMin, 40);
+        rule.Tree.CrownRadiusX =
+            std::clamp(profile.value("crown_radius_x", 3), 1, 8);
+        rule.Tree.CrownRadiusZ =
+            std::clamp(profile.value("crown_radius_z", 3), 1, 8);
+        rule.Tree.CrownHeight =
+            std::clamp(profile.value("crown_height", 4), 2, 16);
+        rule.Tree.BranchCount =
+            std::clamp(profile.value("branch_count", 2), 0, 8);
+        rule.Tree.LeafDensity =
+            std::clamp(profile.value("leaf_density", 0.84f), 0.2f, 1.0f);
+        rule.Tree.RootChance =
+            std::clamp(profile.value("root_chance", 0.45f), 0.0f, 1.0f);
+        rule.Tree.TrunkBlock =
+            profile.value("trunk_block", std::string("tree_log"));
+        rule.Tree.LeavesBlock =
+            profile.value("leaves_block", std::string("tree_leaves"));
+        const std::string crown = profile.value("crown_shape", "round");
+        if (crown == "conical")
+        {
+          rule.Tree.CrownShape = TreeCrownShape::Conical;
+        }
+        else if (crown == "umbrella")
+        {
+          rule.Tree.CrownShape = TreeCrownShape::Umbrella;
+        }
+        else if (crown == "columnar")
+        {
+          rule.Tree.CrownShape = TreeCrownShape::Columnar;
+        }
+        else
+        {
+          rule.Tree.CrownShape = TreeCrownShape::Round;
+        }
       }
     }
     else
@@ -103,7 +235,8 @@ bool ParseRuleArray(const nlohmann::json &arr,
     }
     ParseBiomeArray(item, rule);
     ParseSubBiomeArray(item, rule);
-    if (rule.Biomes.empty())
+    ParseEcologyProfile(item, rule);
+    if (rule.BiomeKeys.empty())
     {
       continue;
     }
@@ -127,21 +260,15 @@ void ParseCaveFeatureArray(const nlohmann::json &arr,
     }
     CaveFeatureRule rule;
     const std::string biome = item.value("biome", "");
-    if (biome == "lush_caves")
-    {
-      rule.Biome = BiomeId::LushCaves;
-    }
-    else if (biome == "dripstone_caves")
-    {
-      rule.Biome = BiomeId::DripstoneCaves;
-    }
-    else if (biome == "deep_dark")
-    {
-      rule.Biome = BiomeId::DeepDark;
-    }
-    else
+    if (biome.empty())
     {
       continue;
+    }
+    rule.BiomeKeyName = biome;
+    const BiomeId legacyBiome = BiomeIdFromString(biome);
+    if (legacyBiome != BiomeId::Invalid)
+    {
+      rule.Biome = legacyBiome;
     }
 
     const std::string kind = item.value("kind", "");
@@ -177,6 +304,27 @@ void ParseCaveFeatureArray(const nlohmann::json &arr,
 }
 
 } // namespace
+
+bool ObjectFeatureTypeRegistry::Register(const std::string &name,
+                                         ObjectFeatureRuleMode mode)
+{
+  if (name.empty())
+  {
+    return false;
+  }
+  std::lock_guard<std::mutex> lock(FeatureTypeMutex());
+  return FeatureTypeMap().emplace(name, mode).second;
+}
+
+std::optional<ObjectFeatureRuleMode>
+ObjectFeatureTypeRegistry::Find(const std::string &name)
+{
+  std::lock_guard<std::mutex> lock(FeatureTypeMutex());
+  const auto it = FeatureTypeMap().find(name);
+  return it == FeatureTypeMap().end()
+             ? std::optional<ObjectFeatureRuleMode>{}
+             : std::optional<ObjectFeatureRuleMode>{it->second};
+}
 
 SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name)
 {

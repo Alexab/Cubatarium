@@ -11,8 +11,11 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
+#include "WorldGen/Sampling/BiomeSampler.h"
 
+#include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
@@ -23,7 +26,7 @@ namespace
 {
 
 constexpr const char *kTestName = "worldgen_vegetation_placement_integration_test";
-constexpr uint32_t kSeed = 42u;
+constexpr uint32_t kSeed = 410021u;
 
 static fs::path FindRepoRoot()
 {
@@ -136,8 +139,100 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
 
   const int tree_logs = CountBlocksNamed(world, registry, "tree_log");
   const int tree_leaves = CountBlocksNamed(world, registry, "tree_leaves");
-  FluidTest::Expect(tree_logs > 0 || tree_leaves > 0, kTestName,
-                    "chunk populator placed tree blocks");
+  const int species_logs = CountBlocksNamed(world, registry, "mtg_tree");
+  const int species_leaves = CountBlocksNamed(world, registry, "mtg_leaves");
+  FluidTest::Expect(tree_logs > 0 || tree_leaves > 0 || species_logs > 0 ||
+                        species_leaves > 0,
+                    kTestName, "chunk populator placed tree blocks");
+  FluidTest::Expect(species_logs > 0 || species_leaves > 0, kTestName,
+                    "procedural tree strategy emits species blocks");
+}
+
+static void TestDataDefinedBiomeAffectsSampling()
+{
+  const fs::path root = fs::temp_directory_path() /
+                        ("cubatarium_worldgen_biome_" +
+                         std::to_string(std::chrono::steady_clock::now()
+                                            .time_since_epoch()
+                                            .count()));
+  fs::create_directories(root / "biomes");
+  {
+    std::ofstream pack(root / "pack.json");
+    pack << R"({"id":"data_defined_biome_test"})";
+    std::ofstream biome(root / "biomes" / "azure_meadow.json");
+    biome << R"({
+      "schema_version": 2,
+      "id": "azure_meadow",
+      "domain": "surface",
+      "climate": {"temperature": [0.0, 1.0], "weight": 100.0},
+      "height": {"base_offset": 8.0, "amplitude_mul": 1.0},
+      "palette": {"surface": "sand", "subsurface": "sandstone"}
+    })";
+    std::ofstream caveBiome(root / "biomes" / "crystal_caves.json");
+    caveBiome << R"({
+      "schema_version": 2,
+      "id": "crystal_caves",
+      "domain": "cave",
+      "climate": {"temperature": [0.0, 1.0], "moisture": [0.0, 1.0], "weight": 100.0},
+      "features": {"cave_features": {"moss_patch": 0.5}}
+    })";
+  }
+  FluidTest::Expect(cutum::UWorldGenPack::LoadFromDirectory(root.string()),
+                    kTestName, "data-defined biome pack loads");
+  const auto pack = cutum::UWorldGenPack::GetSnapshot();
+  const cutum::BiomeHandle handle = pack->BiomeRegistry->Find("azure_meadow");
+  FluidTest::Expect(handle.IsValid(), kTestName,
+                    "data-defined biome is registered without a C++ classifier");
+  cutum::WorldGenTuning tuning;
+  cutum::UBiomeSampler sampler(kSeed, tuning, 2);
+  FluidTest::Expect(sampler.At3DKey(17, 24, -31, 80, 48, 128) ==
+                        "crystal_caves",
+                    kTestName,
+                    "custom cave biome is selected by the 3D biome sampler");
+
+  cutum::ProceduralSettings settings;
+  cutum::ApplyWorldGenPreset(settings, "balanced");
+  cutum::BiomeWeightSet weights;
+  bool sampled = false;
+  for (int x = -8; x <= 8 && !sampled; ++x)
+  {
+    for (int z = -8; z <= 8; ++z)
+    {
+      weights = cutum::ComputeBiomeWeights(x, z, 64, settings.SeaLevel,
+                                           settings.MaxHeight, kSeed,
+                                           settings.Tuning);
+      if (weights.extensions.Weight(handle) > 0.8f)
+      {
+        sampled = true;
+        break;
+      }
+    }
+  }
+  FluidTest::Expect(sampled, kTestName,
+                    "climate profile participates in dynamic biome blending");
+  FluidTest::Expect(cutum::BiomeKeyForHandle(
+                        cutum::DominantBiomeHandle(weights)) == "azure_meadow",
+                    kTestName, "dynamic biome can dominate the sampled blend");
+
+  const int with_custom = cutum::RefineSurfaceYWithBiomes(
+      0, 0, 64, settings, kSeed, settings.Tuning, {}, &weights);
+  cutum::BiomeWeightSet legacy_only = weights;
+  legacy_only.extensions.entries.clear();
+  float legacy_total = 0.0f;
+  for (float weight : legacy_only.weights)
+  {
+    legacy_total += weight;
+  }
+  for (float &weight : legacy_only.weights)
+  {
+    weight /= legacy_total;
+  }
+  const int without_custom = cutum::RefineSurfaceYWithBiomes(
+      0, 0, 64, settings, kSeed, settings.Tuning, {}, &legacy_only);
+  FluidTest::Expect(with_custom >= without_custom + 4, kTestName,
+                    "dynamic biome height profile affects terrain shaping");
+  std::error_code ec;
+  fs::remove_all(root, ec);
 }
 
 } // namespace
@@ -174,6 +269,7 @@ int main()
 
   cutum::UPipelineChunkPopulator populator(registry, &objects, kOwnerPack);
   TestChunkPopulatorPlacesTrees(populator, registry, objects);
+  TestDataDefinedBiomeAffectsSampling();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

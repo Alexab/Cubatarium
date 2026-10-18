@@ -95,6 +95,9 @@ struct ProceduralSettings
   int BedrockTopY{0};
   std::string WorldGenPackId{"default"};
   std::string WorldGenPresetId{"balanced"};
+  // Profile 1 preserves historical pack interpretation. New worlds use the
+  // data-driven biome/feature profile (2); saves without the field stay at 1.
+  int WorldGenProfileVersion{2};
   bool EnableCaves{false};
   bool EnableTrees{true};
   bool EnableGroundCover{true};

@@ -49,7 +49,8 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
   }
   if (Config.UseBiomeSurface)
   {
-    BiomeSampler.emplace(ctx.Settings.Seed, ctx.Settings.Tuning);
+    BiomeSampler.emplace(ctx.Settings.Seed, ctx.Settings.Tuning,
+                         ctx.Settings.WorldGenProfileVersion);
     if (HeightSampler)
     {
       DirectCoarseHeightFn = [this](int hx, int hz)
@@ -132,6 +133,9 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
         BiomeSampler->WeightsAt(world_x, world_z, sample.PreliminarySurfaceY,
                                 Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
     sample.DominantBiome = DominantBiome(sample.Biomes);
+    sample.SurfaceBiomeHandle =
+        PickSurfaceBiomeHandle(world_x, world_z, sample.Biomes);
+    sample.SurfaceBiomeKey = BiomeKeyForHandle(sample.SurfaceBiomeHandle);
     const int raw_y = DensitySampler->SurfaceYAt(world_x, world_z);
     sample.SurfaceY = raw_y;
     if (Ctx.Settings.Tuning.useDensityRefineParity)
@@ -175,6 +179,18 @@ BiomeId UComposableWorldGenerator::BiomeAt3D(int world_x, int world_y,
   }
   return BiomeSampler->At3D(world_x, world_y, world_z, surface_y,
                              Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
+}
+
+BiomeKey UComposableWorldGenerator::BiomeKeyAt3D(int world_x, int world_y,
+                                                  int world_z,
+                                                  int surface_y) const
+{
+  if (!BiomeSampler)
+  {
+    return BiomeIdToString(BiomeId::Plains);
+  }
+  return BiomeSampler->At3DKey(world_x, world_y, world_z, surface_y,
+                               Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
 }
 
 int UComposableWorldGenerator::SampleSurfaceY(int world_x, int world_z) const
@@ -298,6 +314,8 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRule(
   ColumnSampleContext sample;
   sample.SurfaceY = surface_y;
   sample.Biomes = weights;
+  sample.SurfaceBiomeHandle = PickSurfaceBiomeHandle(world_x, world_z, weights);
+  sample.SurfaceBiomeKey = BiomeKeyForHandle(sample.SurfaceBiomeHandle);
   sample.DominantBiome = biome;
   sample.SurfaceBiome = PickSurfaceBiome(world_x, world_z, weights);
   sample.MacroHeight01 =

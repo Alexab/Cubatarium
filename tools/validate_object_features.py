@@ -14,6 +14,7 @@ REPO = Path(__file__).resolve().parents[1]
 FEATURES = REPO / "content" / "object_features.json"
 MANIFEST = REPO / "tools" / "object_manifest.yaml"
 OBJECTS = REPO / "objects"
+DEFAULT_BLOCKS = REPO / "resource_packs" / "minetest_default_16" / "blocks"
 
 VALID_SURFACE_CONSTRAINTS = {
     "any_land",
@@ -28,6 +29,18 @@ def load_object_names() -> set[str]:
     for path in OBJECTS.rglob("*.json"):
         if not path.is_file():
             continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        name = data.get("name") or path.stem
+        names.add(name)
+    return names
+
+
+def load_block_names() -> set[str]:
+    names: set[str] = set()
+    for path in DEFAULT_BLOCKS.glob("*.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
@@ -68,6 +81,7 @@ def main() -> int:
         return 1
 
     object_names = load_object_names()
+    block_names = load_block_names()
     manifest_wg = manifest_worldgen()
     data = json.loads(FEATURES.read_text(encoding="utf-8-sig"))
 
@@ -126,6 +140,79 @@ def main() -> int:
                 if key in seen_keys:
                     warnings.append(
                         f"{pool_name}[{idx}]: duplicate scatter rule {key}"
+                    )
+                seen_keys.add(key)
+                continue
+
+            if mode == "procedural_tree":
+                species = rule.get("species")
+                profile = rule.get("tree_profile")
+                if not isinstance(species, str) or not species:
+                    errors.append(f"{pool_name}[{idx}]: missing procedural species")
+                    continue
+                if not isinstance(profile, dict):
+                    errors.append(f"{pool_name}[{idx}]: missing tree_profile")
+                    continue
+                for block_field, fallback in (
+                    ("trunk_block", "tree_log"),
+                    ("leaves_block", "tree_leaves"),
+                ):
+                    block_name = profile.get(block_field, fallback)
+                    if block_name not in block_names and fallback not in block_names:
+                        errors.append(
+                            f"{pool_name}[{idx}]: {block_field} {block_name!r} "
+                            "has no default-pack fallback"
+                        )
+                height_min = profile.get("height_min", 5)
+                height_max = profile.get("height_max", 8)
+                if (
+                    not isinstance(height_min, int)
+                    or not isinstance(height_max, int)
+                    or not (2 <= height_min <= height_max <= 40)
+                ):
+                    errors.append(f"{pool_name}[{idx}]: invalid tree height range")
+                ecology = rule.get("ecology", {})
+                if not isinstance(ecology, dict):
+                    errors.append(f"{pool_name}[{idx}]: ecology must be an object")
+                    ecology = {}
+                for axis in ("temperature", "moisture"):
+                    if axis not in ecology:
+                        continue
+                    value = ecology[axis]
+                    if (
+                        not isinstance(value, list)
+                        or len(value) != 2
+                        or not all(isinstance(v, (int, float)) for v in value)
+                        or not (0 <= value[0] < value[1] <= 1)
+                    ):
+                        errors.append(
+                            f"{pool_name}[{idx}]: invalid ecology {axis} range"
+                        )
+                if "elevation" in ecology:
+                    value = ecology["elevation"]
+                    if (
+                        not isinstance(value, list)
+                        or len(value) != 2
+                        or not all(isinstance(v, int) for v in value)
+                        or value[0] > value[1]
+                    ):
+                        errors.append(
+                            f"{pool_name}[{idx}]: invalid ecology elevation range"
+                        )
+                max_slope = ecology.get("max_slope", 0)
+                if not isinstance(max_slope, (int, float)) or max_slope < 0:
+                    errors.append(f"{pool_name}[{idx}]: max_slope must be non-negative")
+                spacing = rule.get("spacing")
+                if spacing is None:
+                    errors.append(f"{pool_name}[{idx}]: missing spacing")
+                elif not isinstance(spacing, int) or spacing < 8 or spacing > 256:
+                    errors.append(
+                        f"{pool_name}[{idx}]: spacing {spacing} not in [8, 256]"
+                    )
+                key = (f"procedural:{species}", tuple(sorted(biomes)))
+                if key in seen_keys:
+                    warnings.append(
+                        f"{pool_name}[{idx}]: duplicate procedural rule {key}"
                     )
                 seen_keys.add(key)
                 continue

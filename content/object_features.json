@@ -117,6 +117,68 @@
       "seed_offset": 4004,
       "spacing": 26,
       "placement_y_offset": -1
+    },
+    {
+      "mode": "procedural_tree",
+      "species": "tree_procedural_oak",
+      "biomes": [
+        "forest",
+        "plains"
+      ],
+      "weight": 2,
+      "seed_offset": 4012,
+      "spacing": 34,
+      "tree_profile": {
+        "height_min": 6,
+        "height_max": 10,
+        "crown_radius_x": 3,
+        "crown_radius_z": 4,
+        "crown_height": 5,
+        "branch_count": 3,
+        "leaf_density": 0.86,
+        "root_chance": 0.35,
+        "crown_shape": "round",
+        "trunk_block": "mtg_tree",
+        "leaves_block": "mtg_leaves"
+      },
+      "ecology": {
+        "temperature": [0.3, 0.9],
+        "moisture": [0.4, 1.0],
+        "elevation": [45, 100],
+        "max_slope": 10.0
+      }
+    },
+    {
+      "mode": "procedural_tree",
+      "species": "tree_procedural_pine",
+      "biomes": [
+        "tundra",
+        "mountains",
+        "snowy_slopes",
+        "cold_steppe"
+      ],
+      "weight": 2,
+      "seed_offset": 4013,
+      "spacing": 38,
+      "tree_profile": {
+        "height_min": 8,
+        "height_max": 14,
+        "crown_radius_x": 3,
+        "crown_radius_z": 3,
+        "crown_height": 8,
+        "branch_count": 2,
+        "leaf_density": 0.92,
+        "root_chance": 0.2,
+        "crown_shape": "conical",
+        "trunk_block": "mtg_pine_tree",
+        "leaves_block": "leaves_spruce"
+      },
+      "ecology": {
+        "temperature": [0.0, 0.55],
+        "moisture": [0.15, 1.0],
+        "elevation": [42, 128],
+        "max_slope": 14.0
+      }
     }
   ],
   "ground_cover": [

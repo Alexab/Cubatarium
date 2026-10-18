@@ -126,8 +126,10 @@ void RunCaveFeaturesStage(UComposableWorldGenerator &generator,
 {
   const auto biome_at_3d = [&generator](int x, int y, int z, int surface_y)
   { return generator.BiomeAt3D(x, y, z, surface_y); };
+  const auto biome_key_at_3d = [&generator](int x, int y, int z, int surface_y)
+  { return generator.BiomeKeyAt3D(x, y, z, surface_y); };
   TryPlaceCaveFeatures(generator.GetContext(), world_x, world_z,
-                       sample.SurfaceY, biome_at_3d);
+                       sample.SurfaceY, biome_at_3d, biome_key_at_3d);
 }
 
 void RunOresStage(UComposableWorldGenerator &generator,
@@ -145,7 +147,7 @@ void RunVegetationStage(UComposableWorldGenerator &generator,
 {
   state.placed_tree = TryPlaceVegetationFeatures(
       generator.GetContext(), world_x, world_z, sample.SurfaceY,
-      sample.SurfaceBiome);
+      sample.SurfaceBiome, sample.SurfaceBiomeKey);
 }
 
 void RunGroundCoverStage(UComposableWorldGenerator &generator,
@@ -154,7 +156,7 @@ void RunGroundCoverStage(UComposableWorldGenerator &generator,
 {
   TryPlaceGroundCoverFeatures(generator.GetContext(), world_x, world_z,
                               sample.SurfaceY, sample.SurfaceBiome,
-                              state.placed_tree);
+                              state.placed_tree, sample.SurfaceBiomeKey);
 }
 
 void RunDecorationStage(UComposableWorldGenerator &generator,
@@ -162,7 +164,8 @@ void RunDecorationStage(UComposableWorldGenerator &generator,
                         int world_z, PostTerrainState &)
 {
   TryPlaceDecorationFeatures(generator.GetContext(), world_x, world_z,
-                             sample.SurfaceY, sample.SurfaceBiome);
+                             sample.SurfaceY, sample.SurfaceBiome,
+                             sample.SurfaceBiomeKey);
 }
 
 void RunStructuresStage(UComposableWorldGenerator &generator,
@@ -170,7 +173,8 @@ void RunStructuresStage(UComposableWorldGenerator &generator,
                         int world_z, PostTerrainState &)
 {
   TryPlaceStructureFeatures(generator.GetContext(), world_x, world_z,
-                            sample.SurfaceY, sample.SurfaceBiome);
+                            sample.SurfaceY, sample.SurfaceBiome,
+                            sample.SurfaceBiomeKey);
 }
 
 void RunBuiltinStage(UComposableWorldGenerator &generator,

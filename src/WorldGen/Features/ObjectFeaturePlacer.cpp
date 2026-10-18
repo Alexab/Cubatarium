@@ -1,5 +1,6 @@
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/ObjectPlacementConstraints.h"
+#include "WorldGen/Features/WorldGenFeatureSink.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Chunks/ChunkManager.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
@@ -14,6 +15,7 @@
 #include "ResourcePacks/BlockNameUtil.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenBlockResolver.h"
+#include "WorldGen/Sampling/ClimateSampler.h"
 #include <climits>
 #include <cmath>
 #include <cstdint>
@@ -41,9 +43,22 @@ uint32_t FeatureHash(int x, int z, uint32_t Seed)
   return ColumnHash(x, z, Seed);
 }
 
-bool BiomeMatches(BiomeId biome, const std::vector<BiomeId> &allowed)
+bool BiomeMatches(BiomeId biome, const ObjectFeatureRule &rule,
+                  const BiomeKey &biomeKey)
 {
-  for (BiomeId allowedBiome : allowed)
+  const std::string key = biomeKey.empty() ? BiomeIdToString(biome) : biomeKey;
+  for (const BiomeKey &allowedKey : rule.BiomeKeys)
+  {
+    if (allowedKey == key)
+    {
+      return true;
+    }
+  }
+  if (!biomeKey.empty())
+  {
+    return false;
+  }
+  for (BiomeId allowedBiome : rule.Biomes)
   {
     if (allowedBiome == biome)
     {
@@ -116,6 +131,62 @@ bool PassesNoiseDensityGate(int x, int z, uint32_t seed, int spacing,
   return noise01 > 0.28f;
 }
 
+int FloorDiv(int value, int divisor)
+{
+  int quotient = value / divisor;
+  if (value % divisor < 0)
+  {
+    --quotient;
+  }
+  return quotient;
+}
+
+bool PassesSpatialFloraCandidateGate(int x, int z, uint32_t seed, int spacing,
+                                     float densityMultiplier,
+                                     uint32_t rule_seed_offset,
+                                     uint32_t pool_seed_offset)
+{
+  const int effectiveSpacing = EffectiveSpacing(spacing, densityMultiplier);
+  if (effectiveSpacing <= 0 || effectiveSpacing == INT_MAX)
+  {
+    return false;
+  }
+  const int cellSize = std::clamp(
+      static_cast<int>(std::floor(std::sqrt(static_cast<float>(effectiveSpacing)))),
+      3, 16);
+  const int cellX = FloorDiv(x, cellSize);
+  const int cellZ = FloorDiv(z, cellSize);
+  const uint32_t cellHash = FeatureHash(
+      cellX, cellZ, seed + pool_seed_offset + rule_seed_offset);
+  const int inset = std::max(1, cellSize / 4);
+  const int jitterSpan = std::max(1, cellSize - inset * 2);
+  const int candidateX =
+      cellX * cellSize + inset + static_cast<int>(cellHash % jitterSpan);
+  const int candidateZ = cellZ * cellSize + inset +
+                         static_cast<int>((cellHash / 31U) % jitterSpan);
+  if (x != candidateX || z != candidateZ)
+  {
+    return false;
+  }
+
+  const int cellArea = cellSize * cellSize;
+  const uint32_t acceptance = static_cast<uint32_t>(std::clamp(
+      static_cast<int>((static_cast<int64_t>(cellArea) * 10000) /
+                       effectiveSpacing),
+      0, 10000));
+  const uint32_t acceptanceHash = FeatureHash(
+      cellX, cellZ, seed + pool_seed_offset + rule_seed_offset + 0x5bd1e995U);
+  if (acceptanceHash % 10000U >= acceptance)
+  {
+    return false;
+  }
+
+  const float noise = NormalizedFBM2D(
+      static_cast<float>(x) * 0.02f, static_cast<float>(z) * 0.02f,
+      seed + pool_seed_offset + rule_seed_offset, 2, 0.5f, 2.0f);
+  return (noise + 1.0f) * 0.5f > 0.28f;
+}
+
 int ResolvePlacementYOffset(const WorldGenContext &ctx,
                             const ObjectFeatureRule &rule)
 {
@@ -134,6 +205,230 @@ int ResolvePlacementYOffset(const WorldGenContext &ctx,
     return 0;
   }
   return prefab->PlacementYOffset;
+}
+
+uint64_t TreeVoxelKey(int x, int y, int z)
+{
+  return (static_cast<uint64_t>(static_cast<uint16_t>(x + 128)) << 32U) |
+         (static_cast<uint64_t>(static_cast<uint16_t>(y + 128)) << 16U) |
+         static_cast<uint16_t>(z + 128);
+}
+
+bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
+                            const ObjectFeatureRule &rule, uint32_t seed)
+{
+  const TreeSpeciesProfile &profile = rule.Tree;
+  BlockId trunk = ResolvePackScatterBlockId(
+      ctx.Registry, ctx.WorldgenOwnerPackId, profile.TrunkBlock);
+  BlockId leaves = ResolvePackScatterBlockId(
+      ctx.Registry, ctx.WorldgenOwnerPackId, profile.LeavesBlock);
+  if (trunk == BLOCK_AIR)
+  {
+    trunk = ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId,
+                                      "tree_log");
+  }
+  if (leaves == BLOCK_AIR)
+  {
+    leaves = ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId,
+                                       "tree_leaves");
+  }
+  if (trunk == BLOCK_AIR || leaves == BLOCK_AIR ||
+      !ctx.Registry.HasRenderableTexture(trunk) ||
+      !ctx.Registry.HasRenderableTexture(leaves))
+  {
+    return false;
+  }
+  if (base.y <= 0 || base.y >= ctx.Settings.MaxHeight ||
+      !CanPlacePlantAt(ctx.World, ctx.Registry, base))
+  {
+    return false;
+  }
+
+  const uint32_t heightHash = FeatureHash(base.x, base.z, seed + 0x31415927U);
+  const int heightRange = profile.HeightMax - profile.HeightMin + 1;
+  const int height = profile.HeightMin +
+                     static_cast<int>(heightHash % static_cast<uint32_t>(heightRange));
+  const int radiusX = std::clamp(
+      profile.CrownRadiusX + static_cast<int>((heightHash >> 8U) % 3U) - 1, 1, 9);
+  const int radiusZ = std::clamp(
+      profile.CrownRadiusZ + static_cast<int>((heightHash >> 11U) % 3U) - 1, 1, 9);
+  const int crownHeight = std::clamp(
+      profile.CrownHeight + static_cast<int>((heightHash >> 14U) % 3U) - 1, 2, 18);
+  const float leafDensity = std::clamp(
+      profile.LeafDensity + static_cast<float>((heightHash >> 17U) % 13U) / 100.0f -
+          0.06f,
+      0.2f, 1.0f);
+
+  std::vector<std::pair<glm::ivec3, BlockId>> voxels;
+  std::unordered_map<uint64_t, size_t> voxelIndex;
+  const auto addVoxel = [&](int x, int y, int z, BlockId block)
+  {
+    const uint64_t key = TreeVoxelKey(x, y, z);
+    const auto it = voxelIndex.find(key);
+    if (it == voxelIndex.end())
+    {
+      voxelIndex.emplace(key, voxels.size());
+      voxels.emplace_back(glm::ivec3(x, y, z), block);
+    }
+    else if (block == trunk)
+    {
+      voxels[it->second].second = trunk;
+    }
+  };
+
+  for (int y = 0; y < height; ++y)
+  {
+    addVoxel(0, y, 0, trunk);
+  }
+
+  if (profile.RootChance > 0.0f)
+  {
+    const uint32_t rootHash = FeatureHash(base.x, base.z, seed + 0x524f4f54U);
+    if (static_cast<float>(rootHash % 10000U) / 10000.0f < profile.RootChance)
+    {
+      static constexpr int kRootX[4] = {1, 0, -1, 0};
+      static constexpr int kRootZ[4] = {0, 1, 0, -1};
+      const int rotation = static_cast<int>((rootHash >> 8U) % 4U);
+      const int rootLength = 1 + static_cast<int>((rootHash >> 12U) % 2U);
+      for (int arm = 0; arm < 4; ++arm)
+      {
+        if (((rootHash >> (arm + 16U)) & 1U) == 0U)
+        {
+          continue;
+        }
+        const int dir = (arm + rotation) % 4;
+        for (int distance = 1; distance <= rootLength; ++distance)
+        {
+          addVoxel(kRootX[dir] * distance, 0, kRootZ[dir] * distance, trunk);
+        }
+      }
+    }
+  }
+
+  const int crownBase = std::max(1, height - crownHeight / 2);
+  const int crownTop = height + std::max(1, crownHeight / 2);
+  for (int y = crownBase; y <= crownTop; ++y)
+  {
+    const float t = static_cast<float>(y - crownBase) /
+                    static_cast<float>(std::max(1, crownTop - crownBase));
+    float shape = 1.0f;
+    switch (profile.CrownShape)
+    {
+    case TreeCrownShape::Conical:
+      shape = 1.0f - t * 0.82f;
+      break;
+    case TreeCrownShape::Umbrella:
+      shape = t < 0.62f ? 0.5f + t * 0.55f : 0.84f - (t - 0.62f) * 0.28f;
+      break;
+    case TreeCrownShape::Columnar:
+      shape = 0.76f + 0.12f * std::sin(t * 3.14159265f);
+      break;
+    case TreeCrownShape::Round:
+    default:
+    {
+      const float normalized = 2.0f * t - 1.0f;
+      shape = std::sqrt(std::max(0.08f, 1.0f - normalized * normalized));
+      break;
+    }
+    }
+    const int rx = std::max(1, static_cast<int>(std::lround(radiusX * shape)));
+    const int rz = std::max(1, static_cast<int>(std::lround(radiusZ * shape)));
+    for (int dz = -rz; dz <= rz; ++dz)
+    {
+      for (int dx = -rx; dx <= rx; ++dx)
+      {
+        const float ellipse = static_cast<float>(dx * dx) /
+                                  static_cast<float>(rx * rx) +
+                              static_cast<float>(dz * dz) /
+                                  static_cast<float>(rz * rz);
+        if (ellipse > 1.0f)
+        {
+          continue;
+        }
+        uint32_t leafHash = FeatureHash(base.x + dx, base.z + dz,
+                                        seed + static_cast<uint32_t>(y * 7919));
+        leafHash ^= static_cast<uint32_t>(y) * 0x9e3779b9U;
+        const float leafRoll = static_cast<float>(leafHash % 10000U) / 10000.0f;
+        const bool crownTip = y == crownTop && dx == 0 && dz == 0;
+        if (!crownTip && leafRoll > leafDensity)
+        {
+          continue;
+        }
+        addVoxel(dx, y, dz, leaves);
+      }
+    }
+  }
+
+  for (int branch = 0; branch < profile.BranchCount; ++branch)
+  {
+    const uint32_t branchHash = FeatureHash(
+        base.x + branch * 13, base.z - branch * 7,
+        seed + 0x4252414eU + static_cast<uint32_t>(branch * 31));
+    const int direction = static_cast<int>(branchHash % 8U);
+    static constexpr int kDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
+    static constexpr int kDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+    const int branchY = height / 2 +
+                        static_cast<int>((branchHash >> 8U) %
+                                         static_cast<uint32_t>(
+                                             std::max(1, height / 3)));
+    const int length = 1 + static_cast<int>((branchHash >> 16U) % 3U);
+    int tipX = 0;
+    int tipZ = 0;
+    for (int step = 1; step <= length; ++step)
+    {
+      tipX = kDirX[direction] * step;
+      tipZ = kDirZ[direction] * step;
+      addVoxel(tipX, branchY + (step + 1) / 2, tipZ, trunk);
+    }
+    const int leafY = branchY + (length + 1) / 2;
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+      for (int dz = -1; dz <= 1; ++dz)
+      {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+          if (std::abs(dx) + std::abs(dz) + std::abs(dy) <= 2)
+          {
+            addVoxel(tipX + dx, leafY + dy, tipZ + dz, leaves);
+          }
+        }
+      }
+    }
+  }
+
+  int minY = base.y;
+  int maxY = base.y;
+  std::vector<std::pair<glm::ivec3, BlockId>> accepted;
+  accepted.reserve(voxels.size());
+  for (const auto &[relative, block] : voxels)
+  {
+    const glm::ivec3 worldPos = base + relative;
+    if (worldPos.y <= 0 || worldPos.y >= ctx.Settings.MaxHeight)
+    {
+      return false;
+    }
+    const BlockId current = ctx.World.GetBlock(worldPos);
+    if (!ctx.World.IsAir(worldPos) && current != leaves)
+    {
+      const bool optionalRoot = relative.y == 0 &&
+                                (relative.x != 0 || relative.z != 0);
+      if (optionalRoot)
+      {
+        continue;
+      }
+      return false;
+    }
+    accepted.emplace_back(relative, block);
+    minY = std::min(minY, worldPos.y);
+    maxY = std::max(maxY, worldPos.y);
+  }
+  VoxelFeatureSink sink(ctx.World);
+  for (const auto &[relative, block] : accepted)
+  {
+    sink.WriteVoxel(base + relative, block);
+  }
+  ctx.AccumulateDirtyColumn(minY, maxY + 1);
+  return !accepted.empty();
 }
 
 PlacementSurfaceInfo ResolveColumnPlacementSurface(const WorldGenContext &ctx,
@@ -301,10 +596,9 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                         const std::vector<ObjectFeatureRule> &rules,
                         ObjectFeaturePool pool, uint32_t pickSeedOffset,
                         bool useChanceOnly, bool requireTreesEnabled,
-                        float densityMultiplier)
+                        float densityMultiplier, const BiomeKey &biomeKey)
 {
-  if ((requireTreesEnabled && !ctx.Settings.EnableTrees) || !ctx.Objects ||
-      rules.empty())
+  if ((requireTreesEnabled && !ctx.Settings.EnableTrees) || rules.empty())
   {
     return false;
   }
@@ -319,11 +613,18 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   candidates.reserve(rules.size());
   const uint32_t seed = ctx.Settings.Seed;
   const SubBiomeId subBiome = SubBiomeFor(x, z, biome, seed);
-  const float subMul = SubBiomePoolWeightMultiplier(subBiome, biome, pool);
+  const float subMul = biomeKey.empty()
+                           ? SubBiomePoolWeightMultiplier(subBiome, biome, pool)
+                           : 1.0f;
 
   for (const ObjectFeatureRule &rule : rules)
   {
-    if (!BiomeMatches(biome, rule.Biomes))
+    if (rule.Mode == ObjectFeatureRuleMode::ProceduralTree &&
+        ctx.Settings.WorldGenProfileVersion < 2)
+    {
+      continue;
+    }
+    if (!BiomeMatches(biome, rule, biomeKey))
     {
       continue;
     }
@@ -340,7 +641,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
         continue;
       }
     }
-    else if (!ctx.Objects->GetShared(rule.ObjectName))
+    else if (rule.Mode == ObjectFeatureRuleMode::Object &&
+             (!ctx.Objects || !ctx.Objects->GetShared(rule.ObjectName)))
     {
       if (pool == ObjectFeaturePool::Decoration)
       {
@@ -364,17 +666,57 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
     else
     {
-      if (!PassesNoiseDensityGate(x, z, seed, rule.Spacing, densityMultiplier,
-                                  rule.SeedOffset, pickSeedOffset))
+      const bool floraPool =
+          ctx.Settings.WorldGenProfileVersion >= 2 &&
+          (pool == ObjectFeaturePool::Vegetation ||
+           pool == ObjectFeaturePool::GroundCover);
+      const bool passes =
+          floraPool
+              ? PassesSpatialFloraCandidateGate(
+                    x, z, seed, rule.Spacing, densityMultiplier,
+                    rule.SeedOffset, pickSeedOffset)
+              : PassesNoiseDensityGate(x, z, seed, rule.Spacing,
+                                       densityMultiplier, rule.SeedOffset,
+                                       pickSeedOffset);
+      if (!passes)
       {
         continue;
       }
+    }
+    const FeatureEcologyProfile &ecology = rule.Ecology;
+    if (surfaceY < ecology.MinElevation || surfaceY > ecology.MaxElevation)
+    {
+      continue;
+    }
+    if (ecology.HasTemperatureRange || ecology.HasMoistureRange)
+    {
+      const ClimateSample climate = SampleClimate(x, z, seed);
+      if ((ecology.HasTemperatureRange &&
+           (climate.temperature < ecology.TemperatureMin ||
+            climate.temperature > ecology.TemperatureMax)) ||
+          (ecology.HasMoistureRange &&
+           (climate.moisture < ecology.MoistureMin ||
+            climate.moisture > ecology.MoistureMax)))
+      {
+        continue;
+      }
+    }
+    if (ecology.MaxSlope > 0.0f &&
+        SampleStructureSurfaceGradient(ctx, x, z, surfaceY) >
+            ecology.MaxSlope)
+    {
+      continue;
     }
     const std::string &featureKey =
         rule.Mode == ObjectFeatureRuleMode::ScatterBlocks ? rule.Scatter.BlockName
                                                         : rule.ObjectName;
     const float packMul =
-        UWorldGenPack::FeatureWeightMultiplier(BiomeIdToString(biome), featureKey);
+        UWorldGenPack::FeatureWeightMultiplier(
+            biomeKey.empty() ? BiomeIdToString(biome) : biomeKey, featureKey);
+    if (packMul <= 0.0f)
+    {
+      continue;
+    }
     const int weight = std::max(
         1, static_cast<int>(static_cast<float>(std::max(1, rule.Weight)) *
                             subMul * packMul));
@@ -404,7 +746,6 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
   }
 
-  const int yOffset = ResolvePlacementYOffset(ctx, *chosen);
   PlacementSurfaceInfo placementSurface;
   if (!IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, placementSurface))
   {
@@ -415,6 +756,18 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   {
     return TryPlaceScatterBlocks(ctx, x, z, topSolid, *chosen);
   }
+  if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->ObjectName, x,
+                                  z, topSolid))
+  {
+    return false;
+  }
+  if (chosen->Mode == ObjectFeatureRuleMode::ProceduralTree)
+  {
+    return TryPlaceProceduralTree(
+        ctx, glm::ivec3(x, topSolid + 1, z), *chosen,
+        FeatureHash(x, z, seed + chosen->SeedOffset));
+  }
+  const int yOffset = ResolvePlacementYOffset(ctx, *chosen);
   if (chosen->Surface.Kind == SurfaceConstraintKind::WaterSurface)
   {
     if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->ObjectName, x,
@@ -437,11 +790,6 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
   const glm::ivec3 anchor(
       x, ResolveWorldGenAnchorY(*prefab, ctx.Registry, topSolid, yOffset), z);
-  if (!SatisfiesSurfaceConstraint(ctx, chosen->Surface, chosen->ObjectName, x, z,
-                                  topSolid))
-  {
-    return false;
-  }
   return PlaceObjectAt(ctx, chosen->ObjectName, anchor, topSolid);
 }
 
@@ -526,7 +874,8 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
 }
 
 bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
-                                int surfaceY, BiomeId biome)
+                                int surfaceY, BiomeId biome,
+                                const BiomeKey &biomeKey)
 {
   if (!UObjectFeatureConfigStorage::IsLoaded())
   {
@@ -558,17 +907,22 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   return TryPlaceObjectPool(ctx, x, z, surfaceY, biome,
                             GetObjectFeatures(ctx).Vegetation,
                             ObjectFeaturePool::Vegetation, 5000, false, true,
-                            ctx.Settings.Tuning.vegetationDensity);
+                            ctx.Settings.Tuning.vegetationDensity, biomeKey);
 }
 
 bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
                                  int surfaceY, BiomeId biome,
-                                 bool skipIfTreeNearby)
+                                 bool skipIfTreeNearby,
+                                 const BiomeKey &biomeKey)
 {
-  if (skipIfTreeNearby)
+  // A tree placed in this exact column is not a blanket reason to suppress
+  // undergrowth. The plant/object placement checks below reject actual voxel
+  // collisions while allowing cover in open space under the crown.
+  if (skipIfTreeNearby && ctx.Settings.WorldGenProfileVersion < 2)
   {
     return false;
   }
+  (void)skipIfTreeNearby;
   if (!UObjectFeatureConfigStorage::IsLoaded() || !ctx.Settings.EnableGroundCover)
   {
     return false;
@@ -581,11 +935,13 @@ bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
   return TryPlaceObjectPool(ctx, x, z, placementSurface.topSolidY, biome,
                             GetObjectFeatures(ctx).GroundCover,
                             ObjectFeaturePool::GroundCover, 5500, false, true,
-                            ctx.Settings.Tuning.vegetationDensity * 0.85f);
+                            ctx.Settings.Tuning.vegetationDensity * 0.85f,
+                            biomeKey);
 }
 
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
-                                int surfaceY, BiomeId biome)
+                                int surfaceY, BiomeId biome,
+                                const BiomeKey &biomeKey)
 {
   if (!UObjectFeatureConfigStorage::IsLoaded() ||
       !ctx.Settings.EnableDecoration)
@@ -600,11 +956,12 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
   return TryPlaceObjectPool(ctx, x, z, placementSurface.topSolidY, biome,
                             GetObjectFeatures(ctx).Decoration,
                             ObjectFeaturePool::Decoration, 6000, false, false,
-                            ctx.Settings.Tuning.decorationDensity);
+                            ctx.Settings.Tuning.decorationDensity, biomeKey);
 }
 
 bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
-                               int surfaceY, BiomeId biome)
+                               int surfaceY, BiomeId biome,
+                               const BiomeKey &biomeKey)
 {
   if (!UObjectFeatureConfigStorage::IsLoaded() ||
       !ctx.Settings.EnableStructures)
@@ -647,12 +1004,13 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
 
   return TryPlaceObjectPool(ctx, x, z, surfaceY, biome, cfg.Structures,
                             ObjectFeaturePool::Structures, 7001, true, false,
-                            ctx.Settings.Tuning.structureDensity);
+                            ctx.Settings.Tuning.structureDensity, biomeKey);
 }
 
 bool TryPlaceCaveFeatures(
     WorldGenContext &ctx, int x, int z, int surfaceY,
-    const std::function<BiomeId(int, int, int, int)> &biome_at_3d)
+    const std::function<BiomeId(int, int, int, int)> &biome_at_3d,
+    const std::function<BiomeKey(int, int, int, int)> &biome_key_at_3d)
 {
   if (!ctx.Settings.EnableCaves || !biome_at_3d || surfaceY < 12)
   {
@@ -690,22 +1048,52 @@ bool TryPlaceCaveFeatures(
     }
 
     const BiomeId cave_biome = biome_at_3d(x, floor_y + 1, z, surfaceY);
-    if (cave_biome != BiomeId::LushCaves &&
-        cave_biome != BiomeId::DripstoneCaves &&
-        cave_biome != BiomeId::DeepDark)
+    const BiomeKey cave_key =
+        biome_key_at_3d ? biome_key_at_3d(x, floor_y + 1, z, surfaceY)
+                        : BiomeIdToString(cave_biome);
+    const bool is_builtin_cave = cave_biome == BiomeId::LushCaves ||
+                                 cave_biome == BiomeId::DripstoneCaves ||
+                                 cave_biome == BiomeId::DeepDark;
+    const BiomePackDefinition *cave_definition =
+        cave_key.empty() ? nullptr : UWorldGenPack::BiomeDefinitionFor(cave_key);
+    if (!is_builtin_cave &&
+        (!cave_definition || cave_definition->Domain != BiomeDomain::Cave))
     {
       continue;
     }
     for (const CaveFeatureRule &rule : config.CaveFeatures)
     {
-      if (rule.Biome != cave_biome)
+      if ((!rule.BiomeKeyName.empty() && rule.BiomeKeyName != cave_key) ||
+          (rule.BiomeKeyName.empty() && rule.Biome != cave_biome))
       {
         continue;
       }
+      const char *featureName = "moss_patch";
+      switch (rule.Kind)
+      {
+      case CaveFeatureKind::MossPatch:
+        featureName = "moss_patch";
+        break;
+      case CaveFeatureKind::Stalagmite:
+        featureName = "stalagmite";
+        break;
+      case CaveFeatureKind::AmethystCluster:
+        featureName = "amethyst_cluster";
+        break;
+      }
+      const float profileWeight =
+          UWorldGenPack::FeatureWeightMultiplier(cave_key, featureName);
+      if (profileWeight <= 0.0f)
+      {
+        continue;
+      }
+      const int effectiveChance = std::max(
+          1, static_cast<int>(std::lround(static_cast<float>(rule.Chance) /
+                                           profileWeight)));
       uint32_t hash = ColumnHash(x, z, ctx.Settings.Seed + rule.SeedOffset);
       hash ^= static_cast<uint32_t>(floor_y) * 0x9e3779b9U;
       hash ^= hash >> 16U;
-      if (hash % static_cast<uint32_t>(std::max(1, rule.Chance)) != 0U)
+      if (hash % static_cast<uint32_t>(effectiveChance) != 0U)
       {
         continue;
       }

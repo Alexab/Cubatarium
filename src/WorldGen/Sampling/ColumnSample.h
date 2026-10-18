@@ -21,6 +21,8 @@ struct ColumnSampleContext
   int SurfaceY{0};
   float SurfaceGradient{0.f};
   BiomeWeightSet Biomes{};
+  BiomeHandle SurfaceBiomeHandle{};
+  BiomeKey SurfaceBiomeKey;
   BiomeId DominantBiome{BiomeId::Plains};
   BiomeId SurfaceBiome{BiomeId::Plains};
   bool SpawnSurfaceOverride{false};

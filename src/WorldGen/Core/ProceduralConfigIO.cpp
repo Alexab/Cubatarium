@@ -362,6 +362,8 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     {
       settings.TerrainBackendMode = TerrainBackend::Heightmap;
     }
+    settings.WorldGenProfileVersion = std::clamp(
+        p.value("worldgen_profile_version", 1), 1, 2);
     if (p.contains("vertical") && p["vertical"].is_string())
     {
       legacyVerticalMode = p["vertical"].get<std::string>();
@@ -584,6 +586,10 @@ ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
     // the current new-world default. Per-world saves remain on heightmap above.
     settings.TerrainBackendMode = TerrainBackend::Density3D;
   }
+  if (!procedural || !procedural->contains("worldgen_profile_version"))
+  {
+    settings.WorldGenProfileVersion = 2;
+  }
   return settings;
 }
 
@@ -596,6 +602,7 @@ void WriteProceduralSettings(nlohmann::json &root,
   procedural["max_height"] = settings.MaxHeight;
   procedural["bedrock_top_y"] = settings.BedrockTopY;
   procedural["worldgen_pack_id"] = settings.WorldGenPackId;
+  procedural["worldgen_profile_version"] = settings.WorldGenProfileVersion;
   procedural["preset"] = settings.WorldGenPresetId;
   procedural["terrain_backend"] =
       TerrainBackendToString(settings.TerrainBackendMode);

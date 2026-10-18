@@ -75,7 +75,9 @@ def decode_chunk(path: Path) -> dict[tuple[int, int, int], int]:
     return blocks
 
 
-VEGETATION_BLOCK_NAMES = ("tree_log", "tree_leaves")
+TREE_LOG_BLOCK_NAMES = ("tree_log", "mtg_tree", "mtg_pine_tree")
+TREE_LEAF_BLOCK_NAMES = ("tree_leaves", "mtg_leaves", "leaves_spruce")
+VEGETATION_BLOCK_NAMES = TREE_LOG_BLOCK_NAMES + TREE_LEAF_BLOCK_NAMES
 
 
 def count_spawn_vegetation_blocks(
@@ -841,7 +843,9 @@ def analyze_world(
         center_z=spawn_z,
     )
     metrics["spawn_vegetation"] = veg
-    metrics["spawn_tree_blocks"] = veg.get("tree_log", 0) + veg.get("tree_leaves", 0)
+    metrics["spawn_tree_blocks"] = sum(
+        veg.get(name, 0) for name in TREE_LOG_BLOCK_NAMES + TREE_LEAF_BLOCK_NAMES
+    )
     metrics["spawn_ground_logs"] = count_spawn_ground_logs(
         world_dir, id_to_name, spawn_radius, surface
     )

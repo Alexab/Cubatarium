@@ -3,6 +3,7 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Sampling/AquiferSampler.h"
+#include "WorldGen/Sampling/BiomeDefinitionRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <memory>
 #include <string>
@@ -28,8 +29,36 @@ struct BiomeSubBiomePackRule
   float NoiseThreshold{-1.0f};
 };
 
+enum class BiomeDomain
+{
+  Surface,
+  Cave,
+};
+
+struct BiomeClimateRange
+{
+  bool Enabled{false};
+  float Min{0.0f};
+  float Max{1.0f};
+};
+
+struct BiomeClimateProfile
+{
+  BiomeClimateRange Temperature;
+  BiomeClimateRange Moisture;
+  BiomeClimateRange Continentalness;
+  BiomeClimateRange Erosion;
+  BiomeClimateRange Weirdness;
+  BiomeClimateRange Ridge;
+  float Weight{1.0f};
+  bool Enabled{false};
+};
+
 struct BiomePackDefinition
 {
+  int SchemaVersion{1};
+  BiomeDomain Domain{BiomeDomain::Surface};
+  BiomeClimateProfile Climate;
   BiomeHeightProfile Height;
   std::string SurfaceSlot;
   std::string SubsurfaceSlot;
@@ -179,6 +208,9 @@ struct WorldGenPack
   PackRavinesConfig Ravines;
   PackValleysConfig Valleys;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
+  std::shared_ptr<const BiomeDefinitionRegistry> BiomeRegistry;
+  std::vector<BiomeHandle> SurfaceClimateBiomes;
+  std::vector<BiomeHandle> CaveClimateBiomes;
 };
 
 class UWorldGenPack

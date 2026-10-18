@@ -4,8 +4,11 @@
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace cutum
@@ -23,6 +26,52 @@ enum class ObjectFeatureRuleMode
 {
   Object,
   ScatterBlocks,
+  ProceduralTree,
+};
+
+enum class TreeCrownShape
+{
+  Round,
+  Conical,
+  Umbrella,
+  Columnar,
+};
+
+struct TreeSpeciesProfile
+{
+  int HeightMin{5};
+  int HeightMax{8};
+  int CrownRadiusX{3};
+  int CrownRadiusZ{3};
+  int CrownHeight{4};
+  int BranchCount{2};
+  float LeafDensity{0.84f};
+  float RootChance{0.45f};
+  TreeCrownShape CrownShape{TreeCrownShape::Round};
+  std::string TrunkBlock{"tree_log"};
+  std::string LeavesBlock{"tree_leaves"};
+};
+
+struct FeatureEcologyProfile
+{
+  bool HasTemperatureRange{false};
+  bool HasMoistureRange{false};
+  float TemperatureMin{0.0f};
+  float TemperatureMax{1.0f};
+  float MoistureMin{0.0f};
+  float MoistureMax{1.0f};
+  int MinElevation{std::numeric_limits<int>::min()};
+  int MaxElevation{std::numeric_limits<int>::max()};
+  float MaxSlope{0.0f};
+};
+
+/// Runtime registry of authored feature behavior names. New algorithms add a
+/// strategy type here and a matching placement strategy in the worldgen layer.
+class ObjectFeatureTypeRegistry
+{
+public:
+  static bool Register(const std::string &name, ObjectFeatureRuleMode mode);
+  static std::optional<ObjectFeatureRuleMode> Find(const std::string &name);
 };
 
 enum class SurfaceConstraintKind
@@ -43,6 +92,7 @@ enum class CaveFeatureKind
 struct CaveFeatureRule
 {
   BiomeId Biome{BiomeId::LushCaves};
+  BiomeKey BiomeKeyName;
   CaveFeatureKind Kind{CaveFeatureKind::MossPatch};
   std::string BlockName;
   int Chance{96};
@@ -70,6 +120,9 @@ struct ObjectFeatureRule
 {
   std::string ObjectName;
   std::vector<BiomeId> Biomes;
+  // Keep the authored keys so pack-defined biomes survive parsing even before
+  // every placement consumer has migrated from the legacy enum API.
+  std::vector<BiomeKey> BiomeKeys;
   int Spacing{0};
   int Weight{1};
   int ChancePerColumn{0};
@@ -78,6 +131,8 @@ struct ObjectFeatureRule
   std::vector<SubBiomeId> SubBiomes;
   ObjectFeatureRuleMode Mode{ObjectFeatureRuleMode::Object};
   ScatterBlockSpec Scatter;
+  TreeSpeciesProfile Tree;
+  FeatureEcologyProfile Ecology;
   SurfaceConstraint Surface;
 };
 

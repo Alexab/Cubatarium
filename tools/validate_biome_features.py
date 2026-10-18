@@ -44,6 +44,8 @@ def object_names(features: dict) -> set[str]:
         for rule in features.get(pool, []):
             if isinstance(rule, dict) and rule.get("object"):
                 names.add(rule["object"])
+            if isinstance(rule, dict) and rule.get("species"):
+                names.add(rule["species"])
             if isinstance(rule, dict) and rule.get("block"):
                 names.add(rule["block"])
     return names

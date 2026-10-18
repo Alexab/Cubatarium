@@ -8,9 +8,11 @@
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include "ThirdParty/stb_image.h"
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -637,6 +639,89 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
                                      const std::string &biomeId)
 {
   BiomePackDefinition biomeDef;
+  biomeDef.SchemaVersion = biomeJson.value("schema_version", 1);
+  if (biomeDef.SchemaVersion < 1 || biomeDef.SchemaVersion > 2)
+  {
+    throw std::runtime_error("unsupported biome schema_version");
+  }
+  const bool is_builtin = BiomeIdFromString(biomeId) != BiomeId::Invalid;
+  const bool is_cave_builtin = biomeId == "lush_caves" ||
+                               biomeId == "dripstone_caves" ||
+                               biomeId == "deep_dark";
+  if (biomeDef.SchemaVersion == 1 && !is_builtin)
+  {
+    throw std::runtime_error(
+        "custom biome IDs require schema_version 2 with a climate profile");
+  }
+  if (biomeDef.SchemaVersion == 2)
+  {
+    if (!biomeJson.contains("domain") || !biomeJson["domain"].is_string())
+    {
+      throw std::runtime_error("schema v2 requires domain surface|cave");
+    }
+    const std::string domain = biomeJson["domain"].get<std::string>();
+    if (domain == "surface")
+    {
+      biomeDef.Domain = BiomeDomain::Surface;
+    }
+    else if (domain == "cave")
+    {
+      biomeDef.Domain = BiomeDomain::Cave;
+    }
+    else
+    {
+      throw std::runtime_error("domain must be surface or cave");
+    }
+    if (!biomeJson.contains("climate") || !biomeJson["climate"].is_object())
+    {
+      throw std::runtime_error("schema v2 requires a climate object");
+    }
+
+    const nlohmann::json &climate = biomeJson["climate"];
+    const auto parse_range = [&](const char *key, BiomeClimateRange &out)
+    {
+      if (!climate.contains(key))
+      {
+        return;
+      }
+      const nlohmann::json &range = climate[key];
+      if (!range.is_array() || range.size() != 2 || !range[0].is_number() ||
+          !range[1].is_number())
+      {
+        throw std::runtime_error(std::string("climate.") + key +
+                                 " must be [min,max]");
+      }
+      out.Min = range[0].get<float>();
+      out.Max = range[1].get<float>();
+      if (!std::isfinite(out.Min) || !std::isfinite(out.Max) || out.Min < 0.0f ||
+          out.Max > 1.0f || out.Min >= out.Max)
+      {
+        throw std::runtime_error(std::string("climate.") + key +
+                                 " must satisfy 0 <= min < max <= 1");
+      }
+      out.Enabled = true;
+      biomeDef.Climate.Enabled = true;
+    };
+    parse_range("temperature", biomeDef.Climate.Temperature);
+    parse_range("moisture", biomeDef.Climate.Moisture);
+    parse_range("continentalness", biomeDef.Climate.Continentalness);
+    parse_range("erosion", biomeDef.Climate.Erosion);
+    parse_range("weirdness", biomeDef.Climate.Weirdness);
+    parse_range("ridge", biomeDef.Climate.Ridge);
+    biomeDef.Climate.Weight = climate.value("weight", 1.0f);
+    if (!biomeDef.Climate.Enabled || !std::isfinite(biomeDef.Climate.Weight) ||
+        biomeDef.Climate.Weight <= 0.0f || biomeDef.Climate.Weight > 100.0f)
+    {
+      throw std::runtime_error(
+          "climate needs at least one axis and weight in (0,100]");
+    }
+  }
+  else
+  {
+    biomeDef.Domain = is_cave_builtin ? BiomeDomain::Cave
+                                      : BiomeDomain::Surface;
+  }
+
   if (biomeJson.contains("height"))
   {
     ParseBiomeHeight(biomeJson["height"], biomeDef.Height);
@@ -653,8 +738,109 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
   {
     ParseSubBiomes(biomeJson["sub_biomes"], biomeDef);
   }
-  (void)biomeId;
+  if (biomeDef.SchemaVersion == 2)
+  {
+    const auto validate_multiplier = [](const nlohmann::json &height,
+                                        const char *field, float minValue,
+                                        float maxValue)
+    {
+      if (!height.contains(field))
+      {
+        return;
+      }
+      if (!height[field].is_number())
+      {
+        throw std::runtime_error(std::string("height.") + field +
+                                 " must be numeric");
+      }
+      const float value = height[field].get<float>();
+      if (!std::isfinite(value) || value < minValue || value > maxValue)
+      {
+        throw std::runtime_error(std::string("height.") + field +
+                                 " is outside the supported range");
+      }
+    };
+    if (biomeJson.contains("height"))
+    {
+      if (!biomeJson["height"].is_object())
+      {
+        throw std::runtime_error("height must be an object");
+      }
+      const nlohmann::json &height = biomeJson["height"];
+      validate_multiplier(height, "base_offset", -64.0f, 64.0f);
+      validate_multiplier(height, "amplitude_mul", 0.0f, 4.0f);
+      validate_multiplier(height, "volatility_mul", 0.0f, 4.0f);
+    }
+    if (biomeJson.contains("palette"))
+    {
+      const nlohmann::json &palette = biomeJson["palette"];
+      if (!palette.is_object())
+      {
+        throw std::runtime_error("palette must be an object");
+      }
+      for (const char *slot : {"surface", "subsurface"})
+      {
+        if (palette.contains(slot) &&
+            (!palette[slot].is_string() || palette[slot].get<std::string>().empty()))
+        {
+          throw std::runtime_error(std::string("palette.") + slot +
+                                   " must be a non-empty slot name");
+        }
+      }
+    }
+    if (biomeJson.contains("features"))
+    {
+      const nlohmann::json &features = biomeJson["features"];
+      if (!features.is_object())
+      {
+        throw std::runtime_error("features must be an object");
+      }
+      for (const auto &[pool, entries] : features.items())
+      {
+        if (pool != "vegetation" && pool != "ground_cover" &&
+            pool != "decoration" && pool != "structures" &&
+            pool != "cave_features")
+        {
+          throw std::runtime_error("unknown feature pool '" + pool + "'");
+        }
+        if (!entries.is_object())
+        {
+          throw std::runtime_error("feature pool '" + pool +
+                                   "' must be an object");
+        }
+        for (const auto &[feature, value] : entries.items())
+        {
+          if (feature.empty() || !value.is_number())
+          {
+            throw std::runtime_error("invalid feature weight in pool '" + pool +
+                                     "'");
+          }
+          const float weight = value.get<float>();
+          if (!std::isfinite(weight) || weight < 0.0f || weight > 100.0f)
+          {
+            throw std::runtime_error("feature weight is outside [0,100]");
+          }
+        }
+      }
+    }
+  }
   return biomeDef;
+}
+
+bool IsValidBiomeKey(const std::string &key)
+{
+  if (key.empty() || key.size() > 64 || key.front() < 'a' || key.front() > 'z')
+  {
+    return false;
+  }
+  for (const unsigned char ch : key)
+  {
+    if (!((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_'))
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 } // namespace
@@ -662,7 +848,6 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
 bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
 {
   WorldGenPack pack{};
-  ActivePackDir = packDir;
   const std::filesystem::path root(packDir);
   const std::filesystem::path packJson = root / "pack.json";
   if (!std::filesystem::exists(packJson))
@@ -739,13 +924,54 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
         const nlohmann::json biomeJson = nlohmann::json::parse(biomeFile);
         const std::string biomeId =
             biomeJson.value("id", entry.path().stem().string());
-        pack.Biomes[biomeId] = ParseBiomeJson(biomeJson, biomeId);
+        if (!IsValidBiomeKey(biomeId))
+        {
+          throw std::runtime_error("invalid biome ID '" + biomeId + "'");
+        }
+        if (pack.Biomes.count(biomeId) != 0)
+        {
+          throw std::runtime_error("duplicate biome ID '" + biomeId + "'");
+        }
+        pack.Biomes.emplace(biomeId, ParseBiomeJson(biomeJson, biomeId));
       }
       catch (const std::exception &e)
       {
         std::cerr << "WorldGenPack: biome parse error in "
                   << entry.path().string() << ": " << e.what() << std::endl;
+        return false;
       }
+    }
+  }
+
+  std::vector<BiomeKey> biomeKeys;
+  biomeKeys.reserve(pack.Biomes.size());
+  for (const auto &[key, definition] : pack.Biomes)
+  {
+    (void)definition;
+    biomeKeys.push_back(key);
+  }
+  pack.BiomeRegistry =
+      std::make_shared<const BiomeDefinitionRegistry>(std::move(biomeKeys));
+  for (uint32_t i = 0; i < pack.BiomeRegistry->Size(); ++i)
+  {
+    const BiomeHandle handle{i};
+    const BiomeKey *key = pack.BiomeRegistry->Key(handle);
+    if (!key || BiomeIdFromString(*key) != BiomeId::Invalid)
+    {
+      continue;
+    }
+    const auto definition = pack.Biomes.find(*key);
+    if (definition == pack.Biomes.end() || !definition->second.Climate.Enabled)
+    {
+      continue;
+    }
+    if (definition->second.Domain == BiomeDomain::Surface)
+    {
+      pack.SurfaceClimateBiomes.push_back(handle);
+    }
+    else
+    {
+      pack.CaveClimateBiomes.push_back(handle);
     }
   }
 
@@ -764,8 +990,8 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   std::cout << "WorldGenPack: loaded '" << pack.Id << "' with "
             << pack.Biomes.size() << " biome profile(s)"
             << (pack.Pipeline.Loaded ? " + pipeline" : "") << std::endl;
-  GetActiveBiomeRegistry().LoadFromPack(pack);
   Publish(std::make_shared<const WorldGenPack>(std::move(pack)));
+  ActivePackDir = packDir;
   return true;
 }
 
@@ -969,13 +1195,13 @@ float UWorldGenPack::FeatureWeightMultiplier(const std::string &biomeId,
   const auto prefabIt = def->FeatureWeights.find(prefabName);
   if (prefabIt != def->FeatureWeights.end())
   {
-    return std::max(0.1f, prefabIt->second);
+    return std::max(0.0f, prefabIt->second);
   }
   const std::string mapgenKey = prefabName + "_mapgen";
   const auto mapgenIt = def->FeatureWeights.find(mapgenKey);
   if (mapgenIt != def->FeatureWeights.end())
   {
-    return std::max(0.1f, mapgenIt->second);
+    return std::max(0.0f, mapgenIt->second);
   }
   return 1.0f;
 }

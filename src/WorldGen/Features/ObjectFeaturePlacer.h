@@ -16,16 +16,21 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
                    glm::ivec3 anchorWorldPos, int surfaceY = -1);
 
 bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
-                                int surfaceY, BiomeId biome);
+                                int surfaceY, BiomeId biome,
+                                const BiomeKey &biomeKey = {});
 bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z, int surfaceY,
-                                 BiomeId biome, bool skipIfTreeNearby);
+                                 BiomeId biome, bool skipIfTreeNearby,
+                                 const BiomeKey &biomeKey = {});
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
-                                int surfaceY, BiomeId biome);
+                                int surfaceY, BiomeId biome,
+                                const BiomeKey &biomeKey = {});
 bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z,
-                               int surfaceY, BiomeId biome);
+                               int surfaceY, BiomeId biome,
+                               const BiomeKey &biomeKey = {});
 bool TryPlaceCaveFeatures(
     WorldGenContext &ctx, int x, int z, int surfaceY,
-    const std::function<BiomeId(int, int, int, int)> &biome_at_3d);
+    const std::function<BiomeId(int, int, int, int)> &biome_at_3d,
+    const std::function<BiomeKey(int, int, int, int)> &biome_key_at_3d = {});
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                       BiomeId biome);
