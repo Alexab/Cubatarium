@@ -309,7 +309,7 @@ static void TestWetRiverChannelsReceiveWater()
   params.fillWater = true;
   params.waterMinStrength = 0.65f;
   params.waterMinMoisture = 0.42f;
-  params.waterSurfaceDepth = 0;
+  params.waterSurfaceDepth = 2;
 
   int river_x = -1;
   int river_z = -1;
@@ -364,8 +364,12 @@ static void TestWetRiverChannelsReceiveWater()
                      });
   FluidTest::Expect(water_blocks >= 3, kTestName,
                     "wet valley core receives a connected water column");
-  FluidTest::Expect(highest_water_y == kSurfaceY, kTestName,
-                    "river water reaches the channel surface");
+  FluidTest::Expect(highest_water_y == kSurfaceY - params.waterSurfaceDepth,
+                    kTestName,
+                    "river water stays below the original terrain surface");
+  FluidTest::Expect(first.GetBlock(glm::ivec3(river_x, kSurfaceY, river_z)) ==
+                        cutum::BLOCK_AIR,
+                    kTestName, "river channel remains carved above water");
 
   using BlockMap = std::map<std::tuple<int, int, int>, cutum::BlockId>;
   BlockMap first_blocks;
@@ -382,6 +386,7 @@ static void TestRiverWaterAcrossChunkBoundary()
 {
   cutum::ValleyParams params;
   params.fillWater = true;
+  params.waterSurfaceDepth = 2;
   params.waterMinStrength = 0.65f;
   params.waterMinMoisture = 0.42f;
 
@@ -433,8 +438,8 @@ static void TestRiverWaterAcrossChunkBoundary()
                            params, 48, 1.0f, surface_at);
 
   FluidTest::Expect(
-      forward_world.GetBlock(glm::ivec3(-1, kSurfaceY, river_z)) == 9 &&
-          forward_world.GetBlock(glm::ivec3(0, kSurfaceY, river_z)) == 9,
+      forward_world.GetBlock(glm::ivec3(-1, kSurfaceY - 2, river_z)) == 9 &&
+          forward_world.GetBlock(glm::ivec3(0, kSurfaceY - 2, river_z)) == 9,
       kTestName, "river water is continuous across a chunk seam");
 
   using WaterMap = std::map<std::tuple<int, int, int>, cutum::BlockId>;

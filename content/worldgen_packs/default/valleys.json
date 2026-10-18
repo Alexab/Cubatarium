@@ -8,5 +8,5 @@
   "fill_water": true,
   "water_min_strength": 0.65,
   "water_min_moisture": 0.42,
-  "water_surface_depth": 0
+  "water_surface_depth": 2
 }
