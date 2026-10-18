@@ -191,7 +191,13 @@
       "weight": 2,
       "seed_offset": 4102,
       "spacing": 20,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "temperature": [0.48, 1.0],
+        "moisture": [0.08, 0.72],
+        "elevation": [45, 92],
+        "max_slope": 12.0
+      }
     },
     {
       "object": "bush_blueberry",
@@ -206,7 +212,13 @@
       "sub_biomes": [
         "sparse_forest",
         "woodland"
-      ]
+      ],
+      "ecology": {
+        "temperature": [0.28, 0.86],
+        "moisture": [0.5, 1.0],
+        "elevation": [44, 96],
+        "max_slope": 9.0
+      }
     },
     {
       "object": "bush_common",
@@ -220,7 +232,13 @@
       "weight": 2,
       "seed_offset": 4101,
       "spacing": 28,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "temperature": [0.18, 1.0],
+        "moisture": [0.16, 1.0],
+        "elevation": [43, 106],
+        "max_slope": 16.0
+      }
     },
     {
       "object": "bush_pine",
@@ -231,7 +249,13 @@
       "weight": 2,
       "seed_offset": 4103,
       "spacing": 18,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "temperature": [0.0, 0.68],
+        "moisture": [0.22, 1.0],
+        "elevation": [45, 128],
+        "max_slope": 12.0
+      }
     },
     {
       "mode": "scatter_blocks",
@@ -246,7 +270,13 @@
       ],
       "weight": 2,
       "seed_offset": 4114,
-      "spacing": 8
+      "spacing": 8,
+      "ecology": {
+        "temperature": [0.25, 1.0],
+        "moisture": [0.0, 0.58],
+        "elevation": [45, 100],
+        "max_slope": 10.0
+      }
     },
     {
       "object": "flower_patch_common",
@@ -258,7 +288,13 @@
       "weight": 2,
       "seed_offset": 4110,
       "spacing": 24,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "temperature": [0.22, 0.92],
+        "moisture": [0.3, 1.0],
+        "elevation": [45, 94],
+        "max_slope": 8.0
+      }
     },
     {
       "object": "flower_scatter_plains",
@@ -280,7 +316,13 @@
       "placement_y_offset": -1,
       "sub_biomes": [
         "woodland"
-      ]
+      ],
+      "ecology": {
+        "temperature": [0.22, 0.82],
+        "moisture": [0.64, 1.0],
+        "elevation": [44, 96],
+        "max_slope": 8.0
+      }
     },
     {
       "object": "mushroom_red_pair",
@@ -290,7 +332,13 @@
       "weight": 1,
       "seed_offset": 4113,
       "spacing": 28,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "temperature": [0.25, 0.86],
+        "moisture": [0.66, 1.0],
+        "elevation": [44, 94],
+        "max_slope": 8.0
+      }
     },
     {
       "object": "tall_grass_patch",
@@ -300,7 +348,13 @@
       "weight": 3,
       "seed_offset": 4111,
       "spacing": 18,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "temperature": [0.28, 0.92],
+        "moisture": [0.35, 1.0],
+        "elevation": [45, 90],
+        "max_slope": 9.0
+      }
     },
     {
       "biomes": [
@@ -316,6 +370,128 @@
       ],
       "calibrated": true,
       "object": "bush_pine"
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "mtg_grass_1",
+      "attempts": 7,
+      "radius": 3,
+      "biomes": [
+        "plains",
+        "forest",
+        "foothills",
+        "hills"
+      ],
+      "weight": 3,
+      "seed_offset": 4140,
+      "spacing": 10,
+      "ecology": {
+        "temperature": [0.28, 0.92],
+        "moisture": [0.38, 1.0],
+        "elevation": [45, 96],
+        "max_slope": 8.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "mtg_fern_1",
+      "attempts": 6,
+      "radius": 3,
+      "biomes": [
+        "forest",
+        "hills"
+      ],
+      "weight": 2,
+      "seed_offset": 4141,
+      "spacing": 18,
+      "ecology": {
+        "temperature": [0.32, 0.9],
+        "moisture": [0.62, 1.0],
+        "elevation": [45, 104],
+        "max_slope": 9.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "mtg_junglegrass",
+      "attempts": 8,
+      "radius": 4,
+      "biomes": [
+        "forest"
+      ],
+      "weight": 2,
+      "seed_offset": 4142,
+      "spacing": 28,
+      "ecology": {
+        "temperature": [0.58, 1.0],
+        "moisture": [0.72, 1.0],
+        "elevation": [45, 90],
+        "max_slope": 11.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "mtg_papyrus",
+      "attempts": 5,
+      "radius": 2,
+      "biomes": [
+        "plains",
+        "forest",
+        "desert",
+        "savanna"
+      ],
+      "weight": 2,
+      "seed_offset": 4144,
+      "spacing": 32,
+      "surface_constraint": "near_water",
+      "near_water_radius": 7,
+      "ecology": {
+        "temperature": [0.45, 1.0],
+        "moisture": [0.52, 1.0],
+        "elevation": [45, 58],
+        "max_slope": 4.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "mtg_marram_grass_1",
+      "attempts": 6,
+      "radius": 3,
+      "biomes": [
+        "desert",
+        "scrubland"
+      ],
+      "weight": 2,
+      "seed_offset": 4145,
+      "spacing": 24,
+      "surface_constraint": "near_water",
+      "near_water_radius": 9,
+      "ecology": {
+        "temperature": [0.48, 1.0],
+        "moisture": [0.18, 0.72],
+        "elevation": [45, 54],
+        "max_slope": 5.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "deadbush",
+      "attempts": 4,
+      "radius": 3,
+      "biomes": [
+        "desert",
+        "scrubland",
+        "cold_steppe"
+      ],
+      "weight": 2,
+      "seed_offset": 4146,
+      "spacing": 28,
+      "ecology": {
+        "temperature": [0.12, 1.0],
+        "moisture": [0.0, 0.32],
+        "elevation": [45, 110],
+        "max_slope": 12.0
+      }
     }
   ],
   "decoration": [

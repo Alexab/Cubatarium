@@ -109,6 +109,45 @@ static int CountBlocksNamed(cutum::UBlockWorld &world,
   return count;
 }
 
+static void TestConfiguredGroundCoverEcology()
+{
+  bool hasMeadowGrass = false;
+  bool hasFern = false;
+  bool hasWaterEdgePapyrus = false;
+  for (const cutum::ObjectFeatureRule &rule :
+       cutum::UObjectFeatureConfigStorage::Get().GroundCover)
+  {
+    if (rule.Mode != cutum::ObjectFeatureRuleMode::ScatterBlocks)
+    {
+      continue;
+    }
+    if (rule.Scatter.BlockName == "mtg_grass_1")
+    {
+      hasMeadowGrass = rule.Ecology.HasMoistureRange &&
+                       rule.Ecology.HasTemperatureRange &&
+                       rule.Ecology.MaxSlope > 0.0f;
+    }
+    else if (rule.Scatter.BlockName == "mtg_fern_1")
+    {
+      hasFern = rule.Ecology.HasMoistureRange &&
+                rule.Ecology.MoistureMin >= 0.6f;
+    }
+    else if (rule.Scatter.BlockName == "mtg_papyrus")
+    {
+      hasWaterEdgePapyrus =
+          rule.Surface.Kind == cutum::SurfaceConstraintKind::NearWater &&
+          rule.Surface.NearWaterRadius == 7 &&
+          rule.Ecology.HasMoistureRange;
+    }
+  }
+  FluidTest::Expect(hasMeadowGrass, kTestName,
+                    "meadow grass uses an ecological placement profile");
+  FluidTest::Expect(hasFern, kTestName,
+                    "fern placement is limited to damp conditions");
+  FluidTest::Expect(hasWaterEdgePapyrus, kTestName,
+                    "papyrus profile uses near-water and moisture constraints");
+}
+
 static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &populator,
                                           cutum::UBlockRegistry &registry,
                                           cutum::UObjectLibrary &objects)
@@ -320,6 +359,47 @@ static void TestCaveFeaturePlacementStrategies(cutum::UBlockRegistry &registry)
       kTestName, "built-in cave feature strategies are registered");
 }
 
+static void TestScatterSurfaceConstraint(cutum::UBlockRegistry &registry)
+{
+  cutum::ProceduralSettings settings = MakeVegetationSettings();
+  settings.SeaLevel = 48;
+  settings.MaxHeight = 128;
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext ctx(world, registry, settings);
+  ctx.WorldgenOwnerPackId = "minetest_default_16";
+  ctx.ResolveBlockIds();
+
+  const cutum::BlockId dirt = registry.GetIdByTypeName("dirt");
+  const cutum::BlockId water = ctx.Blocks.Water;
+  const cutum::BlockId papyrus = cutum::ResolvePackScatterBlockId(
+      registry, ctx.WorldgenOwnerPackId, "mtg_papyrus");
+  FluidTest::Expect(dirt != cutum::BLOCK_AIR && water != cutum::BLOCK_AIR &&
+                        papyrus != cutum::BLOCK_AIR,
+                    kTestName, "near-water scatter test blocks resolve");
+  world.SetBlock(glm::ivec3(0, 51, 0), dirt);
+  world.SetBlock(glm::ivec3(1, 51, 0), water);
+  world.SetBlock(glm::ivec3(10, 51, 0), dirt);
+
+  cutum::ObjectFeatureRule rule;
+  rule.Mode = cutum::ObjectFeatureRuleMode::ScatterBlocks;
+  rule.Scatter.BlockName = "mtg_papyrus";
+  rule.Scatter.Attempts = 1;
+  rule.Scatter.Radius = 0;
+  rule.Surface.Kind = cutum::SurfaceConstraintKind::NearWater;
+  rule.Surface.NearWaterRadius = 3;
+  const auto strategy = cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+      cutum::ObjectFeatureRuleMode::ScatterBlocks);
+  FluidTest::Expect(strategy != nullptr, kTestName,
+                    "scatter placement strategy is registered");
+  FluidTest::Expect(strategy->Place(ctx, 0, 0, 51, rule), kTestName,
+                    "near-water scatter placement is accepted");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 52, 0)) == papyrus,
+                    kTestName, "near-water scatter writes the plant block");
+  FluidTest::Expect(!strategy->Place(ctx, 10, 0, 51, rule), kTestName,
+                    "near-water scatter placement rejects dry locations");
+}
+
 } // namespace
 
 int main()
@@ -338,6 +418,7 @@ int main()
                     "worldgen pack load failed");
   FluidTest::Expect(cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
                     "aquifer configuration loads from the active worldgen pack");
+  TestConfiguredGroundCoverEcology();
 
   const fs::path pack_root = repo_root / "resource_packs" / "minetest_default_16";
   const auto definitions = LoadPackDefinitions(pack_root);
@@ -362,6 +443,7 @@ int main()
           cutum::ObjectFeaturePlacementStrategyRegistry::Find(
               cutum::ObjectFeatureRuleMode::ProceduralTree) != nullptr,
       kTestName, "built-in feature placement strategies are registered");
+  TestScatterSurfaceConstraint(registry);
   TestCaveFeaturePlacementStrategies(registry);
   TestDataDefinedBiomeAffectsSampling();
   TestImageBiomeSourceStrategy();

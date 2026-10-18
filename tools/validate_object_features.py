@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -48,6 +49,47 @@ def load_block_names() -> set[str]:
         name = data.get("name") or path.stem
         names.add(name)
     return names
+
+
+def validate_ecology(ecology: object, label: str, errors: list[str]) -> None:
+    if ecology is None:
+        return
+    if not isinstance(ecology, dict):
+        errors.append(f"{label}: ecology must be an object")
+        return
+
+    for axis in ("temperature", "moisture"):
+        if axis not in ecology:
+            continue
+        value = ecology[axis]
+        if (
+            not isinstance(value, list)
+            or len(value) != 2
+            or any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in value)
+            or not all(math.isfinite(v) for v in value)
+            or not (0 <= value[0] < value[1] <= 1)
+        ):
+            errors.append(f"{label}: invalid ecology {axis} range")
+
+    if "elevation" in ecology:
+        value = ecology["elevation"]
+        if (
+            not isinstance(value, list)
+            or len(value) != 2
+            or any(isinstance(v, bool) or not isinstance(v, int) for v in value)
+            or value[0] > value[1]
+        ):
+            errors.append(f"{label}: invalid ecology elevation range")
+
+    if "max_slope" in ecology:
+        slope = ecology["max_slope"]
+        if (
+            isinstance(slope, bool)
+            or not isinstance(slope, (int, float))
+            or not math.isfinite(slope)
+            or slope < 0
+        ):
+            errors.append(f"{label}: ecology max_slope must be non-negative")
 
 
 def manifest_worldgen() -> dict[str, list[dict]]:
@@ -114,6 +156,7 @@ def main() -> int:
                 errors.append(
                     f"{pool_name}[{idx}]: invalid surface_constraint {surface!r}"
                 )
+            validate_ecology(rule.get("ecology"), f"{pool_name}[{idx}]", errors)
 
             if not biomes:
                 errors.append(f"{pool_name}[{idx}]: empty biomes")
@@ -126,6 +169,10 @@ def main() -> int:
             if mode == "scatter_blocks":
                 if not block:
                     errors.append(f"{pool_name}[{idx}]: scatter_blocks missing block")
+                elif block not in block_names:
+                    errors.append(
+                        f"{pool_name}[{idx}]: unknown scatter block {block!r}"
+                    )
                 scatter_key = f"scatter:{block}"
                 json_objects_by_pool[pool_name].add(scatter_key)
                 if pool_name in ("vegetation", "decoration"):
@@ -171,37 +218,6 @@ def main() -> int:
                     or not (2 <= height_min <= height_max <= 40)
                 ):
                     errors.append(f"{pool_name}[{idx}]: invalid tree height range")
-                ecology = rule.get("ecology", {})
-                if not isinstance(ecology, dict):
-                    errors.append(f"{pool_name}[{idx}]: ecology must be an object")
-                    ecology = {}
-                for axis in ("temperature", "moisture"):
-                    if axis not in ecology:
-                        continue
-                    value = ecology[axis]
-                    if (
-                        not isinstance(value, list)
-                        or len(value) != 2
-                        or not all(isinstance(v, (int, float)) for v in value)
-                        or not (0 <= value[0] < value[1] <= 1)
-                    ):
-                        errors.append(
-                            f"{pool_name}[{idx}]: invalid ecology {axis} range"
-                        )
-                if "elevation" in ecology:
-                    value = ecology["elevation"]
-                    if (
-                        not isinstance(value, list)
-                        or len(value) != 2
-                        or not all(isinstance(v, int) for v in value)
-                        or value[0] > value[1]
-                    ):
-                        errors.append(
-                            f"{pool_name}[{idx}]: invalid ecology elevation range"
-                        )
-                max_slope = ecology.get("max_slope", 0)
-                if not isinstance(max_slope, (int, float)) or max_slope < 0:
-                    errors.append(f"{pool_name}[{idx}]: max_slope must be non-negative")
                 spacing = rule.get("spacing")
                 if spacing is None:
                     errors.append(f"{pool_name}[{idx}]: missing spacing")

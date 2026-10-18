@@ -94,6 +94,14 @@ Perttu Ahola et al., and the upstream source at
 `https://github.com/minetest-game/default`. Keep source pack, author, and
 license records with the pack if new assets are introduced later.
 
+Ground-cover rules can use the same ecology fields to constrain temperature,
+moisture, elevation, and slope. The existing default pack supplies the added
+meadow/dry grass, fern, jungle grass, papyrus, marram grass, and dead-bush
+blocks. Papyrus and marram rules also use the near-water surface constraint;
+scatter placement now applies that constraint before writing blocks. The
+worldgen validator checks scatter block names and ecology ranges against the
+available default-pack blocks.
+
 Biome IDs must be unique lowercase snake-case keys (up to 64 characters).
 Unsupported schema versions, invalid domains/ranges, duplicate IDs, or custom
 IDs that use the legacy schema reject the whole pack. The active immutable

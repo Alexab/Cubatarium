@@ -568,6 +568,11 @@ public:
   bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
              const ObjectFeatureRule &rule) const override
   {
+    if (!SatisfiesSurfaceConstraint(ctx, rule.Surface, rule.Scatter.BlockName,
+                                    x, z, surfaceY))
+    {
+      return false;
+    }
     return TryPlaceScatterBlocks(ctx, x, z, surfaceY, rule);
   }
 };
