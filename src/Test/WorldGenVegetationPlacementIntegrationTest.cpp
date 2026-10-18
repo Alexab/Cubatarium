@@ -16,11 +16,14 @@
 #include "WorldGen/Sampling/BiomeSource.h"
 
 #include <chrono>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <tuple>
 #include <unordered_map>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -159,15 +162,23 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
       "vegetation rules loaded");
 
   const cutum::ProceduralSettings settings = MakeVegetationSettings();
-  cutum::UBlockWorld world;
-  world.SetFluidDefinitions(registry.GetDefinitions());
-  cutum::ChunkGenerationToken token;
+  std::vector<glm::ivec3> chunkOrder;
   for (int cx = -2; cx <= 2; ++cx)
   {
     for (int cz = -2; cz <= 2; ++cz)
     {
+      chunkOrder.emplace_back(cx, 0, cz);
+    }
+  }
+  cutum::ChunkGenerationToken token;
+  const auto populate = [&](cutum::UBlockWorld &world,
+                            const std::vector<glm::ivec3> &order)
+  {
+    world.SetFluidDefinitions(registry.GetDefinitions());
+    for (const glm::ivec3 &chunkCoord : order)
+    {
       cutum::ChunkPopulateRequest request;
-      request.chunkCoord = glm::ivec3(cx, 0, cz);
+      request.chunkCoord = chunkCoord;
       request.token = token;
       request.settings = settings;
       request.objects = &objects;
@@ -176,12 +187,34 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
       const cutum::ChunkPopulateResult result = populator.Populate(request);
       result.buffer.ApplyTo(world);
     }
-  }
+  };
 
-  const int tree_logs = CountBlocksNamed(world, registry, "tree_log");
-  const int tree_leaves = CountBlocksNamed(world, registry, "tree_leaves");
-  const int species_logs = CountBlocksNamed(world, registry, "mtg_tree");
-  const int species_leaves = CountBlocksNamed(world, registry, "mtg_leaves");
+  const auto snapshot = [](cutum::UBlockWorld &world)
+  {
+    std::vector<std::tuple<int, int, int, cutum::BlockId>> blocks;
+    world.ForEachBlock(
+        [&blocks](glm::ivec3 pos, cutum::BlockId id)
+        { blocks.emplace_back(pos.x, pos.y, pos.z, id); });
+    std::sort(blocks.begin(), blocks.end());
+    return blocks;
+  };
+
+  cutum::UBlockWorld forwardWorld;
+  populate(forwardWorld, chunkOrder);
+  std::reverse(chunkOrder.begin(), chunkOrder.end());
+  cutum::UBlockWorld reverseWorld;
+  populate(reverseWorld, chunkOrder);
+  const std::vector<std::tuple<int, int, int, cutum::BlockId>> forwardBlocks =
+      snapshot(forwardWorld);
+  const std::vector<std::tuple<int, int, int, cutum::BlockId>> reverseBlocks =
+      snapshot(reverseWorld);
+  FluidTest::Expect(forwardBlocks == reverseBlocks, kTestName,
+                    "generated chunk area is independent of chunk apply order");
+
+  const int tree_logs = CountBlocksNamed(forwardWorld, registry, "tree_log");
+  const int tree_leaves = CountBlocksNamed(forwardWorld, registry, "tree_leaves");
+  const int species_logs = CountBlocksNamed(forwardWorld, registry, "mtg_tree");
+  const int species_leaves = CountBlocksNamed(forwardWorld, registry, "mtg_leaves");
   FluidTest::Expect(tree_logs > 0 || tree_leaves > 0 || species_logs > 0 ||
                         species_leaves > 0,
                     kTestName, "chunk populator placed tree blocks");
@@ -400,6 +433,35 @@ static void TestScatterSurfaceConstraint(cutum::UBlockRegistry &registry)
                     "near-water scatter placement rejects dry locations");
 }
 
+static void TestCrossChunkTreeConflictStable(cutum::UBlockRegistry &registry)
+{
+  const cutum::BlockId trunk = registry.GetIdByTypeName("mtg_tree");
+  const cutum::BlockId leaves = registry.GetIdByTypeName("mtg_leaves");
+  FluidTest::Expect(trunk != cutum::BLOCK_AIR && leaves != cutum::BLOCK_AIR,
+                    kTestName, "custom tree conflict blocks resolve");
+
+  const glm::ivec3 overlap(16, 8, 8);
+  const std::vector<std::pair<cutum::BlockId, int>> ranks = {
+      {trunk, 3}, {leaves, 1}};
+  cutum::UChunkBuffer leftBuffer;
+  leftBuffer.SetWorldGenOwnerChunk(glm::ivec3(0, 0, 0), registry, ranks);
+  leftBuffer.SetBlock(overlap, trunk);
+  cutum::UChunkBuffer rightBuffer;
+  rightBuffer.SetWorldGenOwnerChunk(glm::ivec3(1, 0, 0), registry, ranks);
+  rightBuffer.SetBlock(overlap, leaves);
+
+  cutum::UBlockWorld leftThenRight;
+  leftBuffer.ApplyTo(leftThenRight);
+  rightBuffer.ApplyTo(leftThenRight);
+  cutum::UBlockWorld rightThenLeft;
+  rightBuffer.ApplyTo(rightThenLeft);
+  leftBuffer.ApplyTo(rightThenLeft);
+  FluidTest::Expect(leftThenRight.GetBlock(overlap) == trunk &&
+                        rightThenLeft.GetBlock(overlap) == trunk,
+                    kTestName,
+                    "cross-chunk procedural tree overlap resolves identically");
+}
+
 } // namespace
 
 int main()
@@ -444,6 +506,7 @@ int main()
               cutum::ObjectFeatureRuleMode::ProceduralTree) != nullptr,
       kTestName, "built-in feature placement strategies are registered");
   TestScatterSurfaceConstraint(registry);
+  TestCrossChunkTreeConflictStable(registry);
   TestCaveFeaturePlacementStrategies(registry);
   TestDataDefinedBiomeAffectsSampling();
   TestImageBiomeSourceStrategy();

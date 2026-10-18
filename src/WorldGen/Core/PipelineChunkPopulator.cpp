@@ -6,6 +6,7 @@
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenBlockResolver.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
@@ -25,6 +26,7 @@
 #include <cstdlib>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace cutum
 {
@@ -131,16 +133,57 @@ double ElapsedMs(std::chrono::steady_clock::time_point start)
       .count();
 }
 
+/// Carry species block priorities into the buffer's cross-chunk conflict rule.
+std::vector<std::pair<BlockId, int>> CollectTreeFeatureBlockRanks(
+    UBlockRegistry &registry, const std::string &ownerPackId,
+    const ObjectFeatureConfig *features)
+{
+  std::vector<std::pair<BlockId, int>> ranks;
+  if (!features)
+  {
+    return ranks;
+  }
+  const auto collectPool = [&](const std::vector<ObjectFeatureRule> &rules)
+  {
+    for (const ObjectFeatureRule &rule : rules)
+    {
+      if (rule.Mode != ObjectFeatureRuleMode::ProceduralTree)
+      {
+        continue;
+      }
+      const BlockId trunk = ResolvePackScatterBlockId(
+          registry, ownerPackId, rule.Tree.TrunkBlock);
+      const BlockId leaves = ResolvePackScatterBlockId(
+          registry, ownerPackId, rule.Tree.LeavesBlock);
+      if (trunk != BLOCK_AIR)
+      {
+        ranks.emplace_back(trunk, 3);
+      }
+      if (leaves != BLOCK_AIR)
+      {
+        ranks.emplace_back(leaves, 1);
+      }
+    }
+  };
+  collectPool(features->Vegetation);
+  collectPool(features->GroundCover);
+  collectPool(features->Decoration);
+  collectPool(features->Structures);
+  return ranks;
+}
+
 /// RAII: mirror gen-scratch SetBlock/SetFluid into the transfer ChunkBuffer.
 struct CaptureBufferScope
 {
   UBlockWorld &World;
   explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer,
                               glm::ivec3 ownerChunk,
-                              const UBlockRegistry &registry)
+                              const UBlockRegistry &registry,
+                              const std::vector<std::pair<BlockId, int>>
+                                  &treeBlockRanks)
       : World(world)
   {
-    buffer.SetWorldGenOwnerChunk(ownerChunk, registry);
+    buffer.SetWorldGenOwnerChunk(ownerChunk, registry, treeBlockRanks);
     World.SetCaptureBuffer(&buffer);
   }
   ~CaptureBufferScope() { World.SetCaptureBuffer(nullptr); }
@@ -217,7 +260,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   // D1: write gen scratch + transfer buffer together (no final world→buffer scan).
   result.buffer.Clear();
   CaptureBufferScope capture_scope(genWorld, result.buffer, request.chunkCoord,
-                                   Registry);
+                                   Registry,
+                                   CollectTreeFeatureBlockRanks(
+                                       Registry, WorldgenOwnerPackId,
+                                       content.Features.get()));
 
   const int base_x = request.chunkCoord.x * CHUNK_SIZE;
   const int base_z = request.chunkCoord.z * CHUNK_SIZE;

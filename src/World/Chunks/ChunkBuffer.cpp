@@ -13,26 +13,20 @@ namespace cutum
 namespace
 {
 
-int TreeFeatureBlockRank(BlockId id,
-                         const std::array<BlockId, 4> &treeBlockIds)
+int TreeFeatureBlockRank(
+    BlockId id, const std::unordered_map<BlockId, int> &treeBlockRanks)
 {
   if (id == BLOCK_AIR)
   {
     return 0;
   }
-  if (id == treeBlockIds[0] || id == treeBlockIds[1])
-  {
-    return 3;
-  }
-  if (id == treeBlockIds[2])
-  {
-    return 2;
-  }
-  return id == treeBlockIds[3] ? 1 : 0;
+  const auto it = treeBlockRanks.find(id);
+  return it == treeBlockRanks.end() ? 0 : it->second;
 }
 
 bool ShouldApplyCrossChunkBlock(const UBlockWorld &world,
-                                const std::array<BlockId, 4> &treeBlockIds,
+                                const std::unordered_map<BlockId, int>
+                                    &treeBlockRanks,
                                 glm::ivec3 pos, BlockId incoming)
 {
   const BlockId current = world.GetBlock(pos);
@@ -45,8 +39,8 @@ bool ShouldApplyCrossChunkBlock(const UBlockWorld &world,
     return false;
   }
 
-  const int currentRank = TreeFeatureBlockRank(current, treeBlockIds);
-  const int incomingRank = TreeFeatureBlockRank(incoming, treeBlockIds);
+  const int currentRank = TreeFeatureBlockRank(current, treeBlockRanks);
+  const int incomingRank = TreeFeatureBlockRank(incoming, treeBlockRanks);
   if (currentRank == 0 || incomingRank == 0)
   {
     // The target chunk owns its terrain and any features already committed
@@ -125,14 +119,31 @@ void UChunkBuffer::SetChunkLightData(
 }
 
 void UChunkBuffer::SetWorldGenOwnerChunk(glm::ivec3 chunkCoord,
-                                         const UBlockRegistry &registry)
+                                         const UBlockRegistry &registry,
+                                         const std::vector<std::pair<BlockId, int>>
+                                             &treeBlockRanks)
 {
   WorldGenOwnerChunk = chunkCoord;
   HasWorldGenOwnerChunk = true;
-  WorldGenTreeBlockIds = {registry.GetIdByTypeName("tree_log"),
-                          registry.GetIdByTypeName("tree_bark"),
-                          registry.GetIdByTypeName("tree_branch"),
-                          registry.GetIdByTypeName("tree_leaves")};
+  WorldGenTreeBlockRanks.clear();
+  const std::array<std::pair<const char *, int>, 4> builtins = {{
+      {"tree_log", 3}, {"tree_bark", 3}, {"tree_branch", 2},
+      {"tree_leaves", 1}}};
+  for (const auto &[name, rank] : builtins)
+  {
+    const BlockId id = registry.GetIdByTypeName(name);
+    if (id != BLOCK_AIR)
+    {
+      WorldGenTreeBlockRanks[id] = rank;
+    }
+  }
+  for (const auto &[id, rank] : treeBlockRanks)
+  {
+    if (id != BLOCK_AIR && rank > 0)
+    {
+      WorldGenTreeBlockRanks[id] = std::max(WorldGenTreeBlockRanks[id], rank);
+    }
+  }
 }
 
 BlockId UChunkBuffer::GetBlock(glm::ivec3 worldPos) const
@@ -180,10 +191,19 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
 {
   for (const auto &entry : Blocks)
   {
-    if (HasWorldGenOwnerChunk &&
-        UChunkManager::WorldToChunk(entry.first) != WorldGenOwnerChunk &&
-        !ShouldApplyCrossChunkBlock(world, WorldGenTreeBlockIds, entry.first,
-                                    entry.second))
+    const bool ownerChunk =
+        !HasWorldGenOwnerChunk ||
+        UChunkManager::WorldToChunk(entry.first) == WorldGenOwnerChunk;
+    const int incomingTreeRank =
+        TreeFeatureBlockRank(entry.second, WorldGenTreeBlockRanks);
+    const int currentTreeRank =
+        TreeFeatureBlockRank(world.GetBlock(entry.first), WorldGenTreeBlockRanks);
+    if ((HasWorldGenOwnerChunk && !ownerChunk &&
+         !ShouldApplyCrossChunkBlock(world, WorldGenTreeBlockRanks, entry.first,
+                                     entry.second)) ||
+        (ownerChunk && incomingTreeRank > 0 && currentTreeRank > 0 &&
+         !ShouldApplyCrossChunkBlock(world, WorldGenTreeBlockRanks, entry.first,
+                                     entry.second)))
     {
       continue;
     }
@@ -291,7 +311,7 @@ void UChunkBuffer::Clear()
   MaxY = -1;
   WorldGenOwnerChunk = glm::ivec3(0);
   HasWorldGenOwnerChunk = false;
-  WorldGenTreeBlockIds.fill(BLOCK_AIR);
+  WorldGenTreeBlockRanks.clear();
 }
 
 } // namespace cutum

@@ -102,6 +102,12 @@ scatter placement now applies that constraint before writing blocks. The
 worldgen validator checks scatter block names and ecology ranges against the
 available default-pack blocks.
 
+Cross-chunk procedural-tree voxels carry material ranks into the generated
+chunk buffer: trunks/bark outrank branches, which outrank leaves. When two
+species overlap, ties use block IDs. Owner-chunk tree voxels use the same
+resolution when they collide with an already-applied neighboring tree, while
+ordinary terrain remains owned by its chunk.
+
 Biome IDs must be unique lowercase snake-case keys (up to 64 characters).
 Unsupported schema versions, invalid domains/ranges, duplicate IDs, or custom
 IDs that use the legacy schema reject the whole pack. The active immutable

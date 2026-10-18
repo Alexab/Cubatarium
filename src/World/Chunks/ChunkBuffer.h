@@ -4,6 +4,8 @@
 #include "World/Core/IUBlockWriter.h"
 #include <array>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace cutum
 {
@@ -34,7 +36,9 @@ public:
   /// Mark a worker-generated buffer so object voxels crossing a chunk edge
   /// cannot race with the owning chunk's terrain when results are committed.
   void SetWorldGenOwnerChunk(glm::ivec3 chunkCoord,
-                             const UBlockRegistry &registry);
+                             const UBlockRegistry &registry,
+                             const std::vector<std::pair<BlockId, int>>
+                                 &treeBlockRanks = {});
   BlockId GetBlock(glm::ivec3 worldPos) const override;
   uint8_t GetFluidPacked(glm::ivec3 worldPos) const;
   uint8_t GetLightPacked(glm::ivec3 worldPos) const;
@@ -60,7 +64,7 @@ private:
   int MaxY{-1};
   glm::ivec3 WorldGenOwnerChunk{0};
   bool HasWorldGenOwnerChunk{false};
-  std::array<BlockId, 4> WorldGenTreeBlockIds{};
+  std::unordered_map<BlockId, int> WorldGenTreeBlockRanks;
 };
 
 } // namespace cutum
