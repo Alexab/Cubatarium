@@ -19,5 +19,12 @@
     "mtg_bush_stem_default_bush_stem",
     "mtg_bush_stem_default_bush_stem"
   ],
-  "render": {}
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }

@@ -3,6 +3,7 @@
 #include "Core/Jobs/PipelineAdmission.h"
 #include "Render/Camera/Frustum.h"
 #include "Render/Mesh/ChunkMeshCache.h"
+#include "Render/Pipeline/GreedyDrawCategory.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 
@@ -19,6 +20,7 @@ constexpr const char *kTestName = "decor_mesh_integration_test";
 constexpr cutum::BlockId kStone = 8;
 constexpr cutum::BlockId kFire = 631;
 constexpr cutum::BlockId kTallGrass = 568;
+constexpr cutum::BlockId kCutoutLeaves = 633;
 
 static void Expect(bool cond, const char *message)
 {
@@ -50,15 +52,23 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   tall_grass.Render.Style = cutum::BlockRenderStyle::Cross;
   tall_grass.Render.Transparent = true;
 
+  cutum::BlockDefinition cutout_leaves;
+  cutout_leaves.Name = "cutout_leaves";
+  cutout_leaves.Physics = cutum::BlockPhysicsProfile::Solid();
+  cutout_leaves.Physics.Movement.Occupancy = 0.0f;
+  cutout_leaves.Render.Style = cutum::BlockRenderStyle::Cutout;
+
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kFire] = fire;
   by_id[kTallGrass] = tall_grass;
+  by_id[kCutoutLeaves] = cutout_leaves;
 
   std::unordered_map<std::string, cutum::BlockId> name_to_id;
   name_to_id["stone"] = kStone;
   name_to_id["fire"] = kFire;
   name_to_id["tall_grass"] = kTallGrass;
+  name_to_id["cutout_leaves"] = kCutoutLeaves;
 
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return definitions;
@@ -94,6 +104,22 @@ CountGreedyVerticesForBlock(const cutum::UChunkMeshCache &cache,
     }
   }
   return count;
+}
+
+static const cutum::GreedyMeshBatch *FindGreedyBatchForBlock(
+    const cutum::UChunkMeshCache &cache,
+    const std::vector<cutum::GreedyBatchRef> &refs,
+    cutum::BlockId block_id)
+{
+  for (const cutum::GreedyBatchRef &ref : refs)
+  {
+    const cutum::GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
+    if (batch && batch->blockId == block_id)
+    {
+      return batch;
+    }
+  }
+  return nullptr;
 }
 
 static void RebuildAndCull(cutum::UChunkMeshCache &cache,
@@ -191,6 +217,41 @@ static void TestCampfireStoneMesh(cutum::UBlockWorld &world,
          "campfire stone ring should produce opaque greedy vertices");
 }
 
+static void TestGreedyAlphaCutoutIsMaterialScoped(
+    cutum::UBlockWorld &world, cutum::UBlockRegistry &registry)
+{
+  using cutum::ShouldUseGreedyAlphaCutout;
+  Expect(!ShouldUseGreedyAlphaCutout(false, true, false),
+         "opaque alpha discard must stay disabled for ordinary materials");
+  Expect(ShouldUseGreedyAlphaCutout(false, false, true),
+         "opaque alpha discard must follow the cutout material flag");
+  Expect(ShouldUseGreedyAlphaCutout(true, true, false),
+         "transparent passes must retain their pass-wide alpha policy");
+  Expect(!ShouldUseGreedyAlphaCutout(true, false, true),
+         "transparent passes must not inherit opaque material cutout state");
+
+  const glm::ivec3 stone_pos(32, 10, 32);
+  const glm::ivec3 leaves_pos(32, 11, 32);
+  world.SetBlock(stone_pos, kStone);
+  world.SetBlock(leaves_pos, kCutoutLeaves);
+
+  cutum::UChunkMeshCache cache;
+  cache.SetRenderSettings(MakeFrustumMeshSettings());
+  cache.SetRenderDistanceChunks(4);
+  RebuildAndCull(cache, world, registry,
+                 glm::vec3(32.5f, 13.5f, 36.0f));
+
+  const auto &opaque_refs = cache.GetGreedyOpaqueCutoutRefs();
+  const auto *stone_batch =
+      FindGreedyBatchForBlock(cache, opaque_refs, kStone);
+  const auto *leaves_batch =
+      FindGreedyBatchForBlock(cache, opaque_refs, kCutoutLeaves);
+  Expect(stone_batch != nullptr && !stone_batch->AlphaCutout,
+         "ordinary stone batches must not request alpha discard");
+  Expect(leaves_batch != nullptr && leaves_batch->AlphaCutout,
+         "cutout leaves batches must preserve their alpha discard flag");
+}
+
 static void
 TestOverflowRetryWithNoDirtyAdmission(cutum::UBlockRegistry &registry)
 {
@@ -256,6 +317,7 @@ int main()
 
   TestCrossGrassVisibleWithFrustum(world, registry);
   TestCampfireStoneMesh(world, registry);
+  TestGreedyAlphaCutoutIsMaterialScoped(world, registry);
   TestOverflowRetryWithNoDirtyAdmission(registry);
 
   std::cout << kTestName << ": OK" << std::endl;

@@ -145,6 +145,7 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
   const bool new_drawable = !batch.vertices.empty() && !batch.indices.empty();
 
   gpu.blockId = batch.blockId;
+  gpu.AlphaCutout = batch.AlphaCutout;
   gpu.pooled = false;
   gpu.vboByteOffset = 0;
   gpu.eboByteOffset = 0;

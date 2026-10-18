@@ -20,5 +20,13 @@
     "mtg_grass_1_default_grass_1",
     "mtg_grass_1_default_grass_1"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }

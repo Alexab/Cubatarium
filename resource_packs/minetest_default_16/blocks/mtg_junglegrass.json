@@ -20,5 +20,13 @@
     "mtg_junglegrass_default_junglegrass",
     "mtg_junglegrass_default_junglegrass"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }
