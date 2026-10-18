@@ -369,6 +369,7 @@ static void TestRegionalDensityTerrainDistribution()
   std::vector<int> heights;
   heights.reserve(seeds.size() * 33 * 33);
   int high_peaks_with_mountain_biome_weight = 0;
+  int high_peaks_with_mountain_surface_biome = 0;
   int high_peak_samples = 0;
   float max_high_peak_mountain_biome_weight = 0.0f;
 
@@ -417,6 +418,14 @@ static void TestRegionalDensityTerrainDistribution()
           if (mountain_biome_weight >= 0.20f)
           {
             ++high_peaks_with_mountain_biome_weight;
+          }
+          const cutum::BiomeId surface_biome =
+              cutum::DominantBiome(biome_weights);
+          if (surface_biome == cutum::BiomeId::Mountains ||
+              surface_biome == cutum::BiomeId::SnowySlopes ||
+              surface_biome == cutum::BiomeId::JaggedPeaks)
+          {
+            ++high_peaks_with_mountain_surface_biome;
           }
         }
         const float mountain_weight =
@@ -468,14 +477,18 @@ static void TestRegionalDensityTerrainDistribution()
                     "regional density terrain includes high mountain peaks");
   std::cout << kTestName << ": high peaks with mountain biome blend >=0.20="
             << high_peaks_with_mountain_biome_weight
-            << "/" << high_peak_samples << " max blend="
+            << "/" << high_peak_samples << " dominant mountain biome="
+            << high_peaks_with_mountain_surface_biome << "/"
+            << high_peak_samples << " max blend="
             << max_high_peak_mountain_biome_weight
             << std::endl;
   FluidTest::Expect(high_peak_samples > 0 &&
-                        high_peaks_with_mountain_biome_weight * 2 >=
-                            high_peak_samples,
+                        high_peaks_with_mountain_biome_weight * 10 >=
+                            high_peak_samples * 9 &&
+                        high_peaks_with_mountain_surface_biome * 4 >=
+                            high_peak_samples * 3,
                     kTestName,
-                    "most high terrain peaks overlap mountain surface biomes");
+                    "high peaks carry mountain weight and mostly select a mountain biome");
 }
 
 } // namespace

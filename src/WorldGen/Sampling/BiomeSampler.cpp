@@ -907,6 +907,13 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
                         localHeightNorm) *
           tuningWeight * 0.25f;
     }
+    // Mountain profiles take over progressively with altitude so exposed
+    // peaks do not keep the lowland biome's grass or sand palette.
+    if (biome != BiomeId::Mountains && biome != BiomeId::SnowySlopes &&
+        biome != BiomeId::JaggedPeaks)
+    {
+      w *= 1.0f - mountainFactor;
+    }
     result.AddWeight(BiomeHandleForId(biome), w);
     total += w;
   }
