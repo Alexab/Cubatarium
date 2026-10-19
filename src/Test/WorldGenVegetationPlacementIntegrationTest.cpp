@@ -870,11 +870,107 @@ static void TestStaticPlantPrefabsPlaceOnFlatGround(
                     "full ground-cover pool can place configured tall grass");
 }
 
+static void TestVanillaStyleTreesProfile3(cutum::UBlockRegistry &registry)
+{
+  cutum::ProceduralSettings settings = MakeVegetationSettings();
+  settings.SeaLevel = 48;
+  settings.MaxHeight = 128;
+  settings.WorldGenProfileVersion = 3;
+  cutum::RegisterBuiltinObjectFeaturePlacementStrategies();
+  const auto strategy = cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+      cutum::ObjectFeatureRuleMode::ProceduralTree);
+  FluidTest::Expect(strategy != nullptr, kTestName,
+                    "profile 3 tree test finds the strategy");
+  const cutum::TreeCrownShape shapes[] = {
+      cutum::TreeCrownShape::Round, cutum::TreeCrownShape::Conical,
+      cutum::TreeCrownShape::Umbrella, cutum::TreeCrownShape::Columnar};
+  for (const cutum::TreeCrownShape shape : shapes)
+  {
+    cutum::UBlockWorld world;
+    world.SetFluidDefinitions(registry.GetDefinitions());
+    cutum::WorldGenContext ctx(world, registry, settings);
+    ctx.WorldgenOwnerPackId = "minetest_default_16";
+    ctx.ResolveBlockIds();
+    for (int z = -10; z <= 10; ++z)
+    {
+      for (int x = -10; x <= 10; ++x)
+      {
+        world.SetBlock(glm::ivec3(x, 51, z), ctx.Blocks.Grass);
+      }
+    }
+    cutum::ObjectFeatureRule tree;
+    tree.Mode = cutum::ObjectFeatureRuleMode::ProceduralTree;
+    tree.Tree.HeightMin = 7;
+    tree.Tree.HeightMax = 9;
+    tree.Tree.CrownRadiusX = 4;
+    tree.Tree.CrownRadiusZ = 4;
+    tree.Tree.CrownHeight = 5;
+    tree.Tree.CrownShape = shape;
+    tree.Tree.TrunkBlock = "mtg_tree";
+    tree.Tree.LeavesBlock = "mtg_leaves";
+    FluidTest::Expect(strategy->Place(ctx, 0, 0, 51, tree), kTestName,
+                      "profile 3 tree places");
+    const cutum::BlockId trunk = registry.GetIdByTypeName("mtg_tree");
+    const cutum::BlockId leaves = registry.GetIdByTypeName("mtg_leaves");
+    std::vector<glm::ivec3> logs;
+    int leafCount = 0;
+    int extent = 0;
+    world.ForEachBlock(
+        [&](glm::ivec3 position, cutum::BlockId block)
+        {
+          if (block == trunk)
+          {
+            logs.push_back(position);
+          }
+          else if (block == leaves)
+          {
+            ++leafCount;
+            extent = std::max(extent, std::max(std::abs(position.x),
+                                               std::abs(position.z)));
+          }
+        });
+    FluidTest::Expect(!logs.empty() && leafCount >= 8, kTestName,
+                      "profile 3 tree has trunk and compact foliage");
+    FluidTest::Expect(extent <= 5, kTestName,
+                      "profile 3 foliage stays within its radius");
+    std::vector<bool> seen(logs.size(), false);
+    std::vector<size_t> pending;
+    for (size_t i = 0; i < logs.size(); ++i)
+    {
+      if (logs[i].x == 0 && logs[i].y == 52 && logs[i].z == 0)
+      {
+        seen[i] = true;
+        pending.push_back(i);
+      }
+    }
+    size_t reached = 0;
+    while (!pending.empty())
+    {
+      const size_t cur = pending.back();
+      pending.pop_back();
+      ++reached;
+      for (size_t i = 0; i < logs.size(); ++i)
+      {
+        const glm::ivec3 d = logs[i] - logs[cur];
+        if (!seen[i] && std::abs(d.x) + std::abs(d.y) + std::abs(d.z) == 1)
+        {
+          seen[i] = true;
+          pending.push_back(i);
+        }
+      }
+    }
+    FluidTest::Expect(reached == logs.size(), kTestName,
+                      "profile 3 trunk is face-connected");
+  }
+}
+
 static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
 {
   cutum::ProceduralSettings settings = MakeVegetationSettings();
   settings.SeaLevel = 48;
   settings.MaxHeight = 128;
+  // Legacy crown/branch shape contract.
+  settings.WorldGenProfileVersion = 2;
   cutum::UBlockWorld world;
   world.SetFluidDefinitions(registry.GetDefinitions());
   cutum::WorldGenContext ctx(world, registry, settings);
@@ -1568,6 +1664,7 @@ int main(int argc, char **argv)
   if (argc > 1 && std::string(argv[1]) == "--procedural-vegetation-only")
   {
     TestProceduralVegetationStrategies(registry);
+    TestVanillaStyleTreesProfile3(registry);
     std::cout << kTestName << ": procedural vegetation check OK" << std::endl;
     return 0;
   }

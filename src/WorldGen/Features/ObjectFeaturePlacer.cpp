@@ -311,6 +311,141 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     }
   };
 
+  const bool vanillaStyle = ctx.Settings.WorldGenProfileVersion >= 3;
+  if (vanillaStyle)
+  {
+    // Minecraft-style trunk + foliage placers: a straight (or forking) trunk
+    // and integer-radius foliage layers with trimmed corners. No random leaf
+    // holes and no free-floating branch blobs, so silhouettes stay compact
+    // and species-specific.
+    const int foliageR = std::clamp(std::max(radiusX, radiusZ) - 1, 2, 4);
+    const auto discOk = [](int dx, int dz, int rad, bool trimCorner,
+                           uint32_t cornerHash)
+    {
+      if (rad <= 0)
+      {
+        return dx == 0 && dz == 0;
+      }
+      if (std::abs(dx) == rad && std::abs(dz) == rad)
+      {
+        return !trimCorner && (cornerHash & 1U) != 0U && rad > 1;
+      }
+      return dx * dx + dz * dz <= rad * rad + rad / 2 + 1;
+    };
+    const auto addLayer = [&](int cx, int cy, int cz, int rad, bool trim,
+                              uint32_t salt)
+    {
+      for (int dz = -rad; dz <= rad; ++dz)
+      {
+        for (int dx = -rad; dx <= rad; ++dx)
+        {
+          const uint32_t ch =
+              FeatureHash(base.x + cx + dx, base.z + cz + dz,
+                          seed + salt + static_cast<uint32_t>(cy * 131));
+          if (discOk(dx, dz, rad, trim, ch))
+          {
+            addVoxel(cx + dx, cy, cz + dz, leaves);
+          }
+        }
+      }
+    };
+    switch (profile.CrownShape)
+    {
+    case TreeCrownShape::Conical:
+    {
+      for (int y = 0; y < height; ++y)
+      {
+        addVoxel(0, y, 0, trunk);
+      }
+      const int bare = 1 + static_cast<int>((heightHash >> 20U) % 2U);
+      addVoxel(0, height, 0, leaves);
+      for (int k = 1; height - k >= bare + 1; ++k)
+      {
+        const int rad = std::min(foliageR, (k + 1) / 2);
+        addLayer(0, height - k, 0, rad, k % 2 == 0, 0x53505255U);
+      }
+      break;
+    }
+    case TreeCrownShape::Umbrella:
+    {
+      const int bend = std::max(2, (height * 3) / 5);
+      const int dirIdx = static_cast<int>((heightHash >> 20U) % 4U);
+      static constexpr int kDX[4] = {1, 0, -1, 0};
+      static constexpr int kDZ[4] = {0, 1, 0, -1};
+      int tx = 0;
+      int tz = 0;
+      for (int y = 0; y < bend; ++y)
+      {
+        addVoxel(0, y, 0, trunk);
+      }
+      int y = bend;
+      for (int step = 0; y < height; ++y, ++step)
+      {
+        if (step % 2 == 0)
+        {
+          tx += kDX[dirIdx];
+          tz += kDZ[dirIdx];
+        }
+        addVoxel(tx, y, tz, trunk);
+      }
+      addLayer(tx, height, tz, foliageR, false, 0x41434143U);
+      addLayer(tx, height + 1, tz, std::max(1, foliageR - 1), true,
+               0x41434144U);
+      const int opp = (dirIdx + 2) % 4;
+      int sx = 0;
+      int sz = 0;
+      const int sTop = std::max(bend + 1, height - 2);
+      for (int sy = bend; sy < sTop; ++sy)
+      {
+        if ((sy - bend) % 2 == 0)
+        {
+          sx += kDX[opp];
+          sz += kDZ[opp];
+        }
+        addVoxel(sx, sy, sz, trunk);
+      }
+      addLayer(sx, sTop, sz, std::max(1, foliageR - 1), true, 0x41434145U);
+      break;
+    }
+    case TreeCrownShape::Columnar:
+    {
+      for (int y = 0; y < height; ++y)
+      {
+        addVoxel(0, y, 0, trunk);
+      }
+      const int layers = std::clamp(crownHeight, 4, 7);
+      for (int i = 0; i < layers; ++i)
+      {
+        const int ly = height + 1 - i;
+        int rad = i == 0 ? 1 : std::min(2, 1 + i / 2);
+        if (i == layers - 1)
+        {
+          rad = std::max(1, rad - 1);
+        }
+        addLayer(0, ly, 0, rad, i == 0 || i == layers - 1, 0x434f4c55U);
+      }
+      break;
+    }
+    case TreeCrownShape::Round:
+    default:
+    {
+      for (int y = 0; y < height; ++y)
+      {
+        addVoxel(0, y, 0, trunk);
+      }
+      const int layers = std::clamp(crownHeight, 3, 5);
+      for (int i = 0; i < layers; ++i)
+      {
+        const int ly = height + 1 - i;
+        const int rad = i == 0 ? std::max(1, foliageR - 1) : foliageR;
+        addLayer(0, ly, 0, rad, i == 0 || i == layers - 1, 0x424c4f42U);
+      }
+      break;
+    }
+    }
+  }
+  else
+  {
   for (int y = 0; y < height; ++y)
   {
     addVoxel(0, y, 0, trunk);
@@ -577,6 +712,8 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
                                              static_cast<uint32_t>(branchLengthRange));
       addConnectedBranch(direction, branchY, length, branchHash);
     }
+  }
+
   }
 
   int minY = base.y;
@@ -1166,8 +1303,41 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   const bool hasLandSurface =
       IsColumnReadyForPlantFeatures(ctx, x, z, surfaceY, landSurface);
 
+  // Profile 3: procedural species replace fixed template trees wherever the
+  // biome has one, and forest density comes from strongly contrasted regional
+  // noise (groves and clearings) instead of an even per-rule scatter.
+  const bool v3Flora = ctx.Settings.WorldGenProfileVersion >= 3 &&
+                       pool == ObjectFeaturePool::Vegetation;
+  bool biomeHasProceduralTree = false;
+  FeatureDistributionProfile v3Distribution;
+  if (v3Flora)
+  {
+    for (const ObjectFeatureRule &r : rules)
+    {
+      if (r.Mode == ObjectFeatureRuleMode::ProceduralTree &&
+          BiomeMatches(biome, r, biomeKey))
+      {
+        biomeHasProceduralTree = true;
+        break;
+      }
+    }
+    if (distribution)
+    {
+      v3Distribution = *distribution;
+    }
+    v3Distribution.RegionalNoiseScale = 0.0045f;
+    v3Distribution.MinDensityMultiplier = 0.10f;
+    v3Distribution.MaxDensityMultiplier = 2.4f;
+  }
+
   for (const ObjectFeatureRule &rule : rules)
   {
+    if (v3Flora && biomeHasProceduralTree &&
+        rule.Mode == ObjectFeatureRuleMode::Object &&
+        rule.ObjectName.rfind("tree_", 0) == 0)
+    {
+      continue;
+    }
     if (ctx.Settings.WorldGenProfileVersion < 2 &&
         (rule.Surface.Kind == SurfaceConstraintKind::WaterSurface ||
          rule.Surface.Kind == SurfaceConstraintKind::UnderwaterFloor))
@@ -1275,7 +1445,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
               ? PassesSpatialFloraCandidateGate(x, z, seed, rule.Spacing,
                                                 densityMultiplier,
                                                 rule.SeedOffset, pickSeedOffset,
-                                                distribution
+                                                v3Flora ? v3Distribution
+                                                : distribution
                                                     ? *distribution
                                                     : FeatureDistributionProfile{})
               : PassesNoiseDensityGate(x, z, seed, rule.Spacing,
