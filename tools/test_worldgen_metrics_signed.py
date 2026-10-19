@@ -15,6 +15,7 @@ from worldgen_metrics_lib import (
     compare_to_thresholds,
     count_shore_air_gaps,
     ground_cover_block_names_for_world,
+    land_terrain_surface_subset,
     ocean_depth_stats,
     spawn_land_shape_metrics,
     terrain_surface_blocks,
@@ -205,6 +206,30 @@ class SignedWorldMetricTests(unittest.TestCase):
         self.assertEqual(result["height_min"], 4)
         self.assertEqual(result["height_max"], 4)
         self.assertEqual(result["flatness_pct"], 100.0)
+
+    def test_land_cliff_metric_excludes_underwater_shore_transition(self) -> None:
+        visible = {
+            (0, 0): (64, 1),
+            (1, 0): (63, 9),
+            (2, 0): (64, 1),
+        }
+        terrain = {
+            (0, 0): (64, 1),
+            (1, 0): (-16, 2),
+            (2, 0): (64, 1),
+        }
+
+        all_columns = analyze_surface(visible, terrain_surface=terrain)
+        land_columns = land_terrain_surface_subset(visible, terrain, water_id=9)
+        land_metrics = analyze_surface(
+            visible,
+            terrain_surface=terrain,
+            cliff_surface=land_columns,
+        )
+
+        self.assertEqual(all_columns["delta_ge_16_pct"], 100.0)
+        self.assertEqual(land_metrics["cliff_sample_pairs"], 0)
+        self.assertEqual(land_metrics["delta_ge_16_pct"], 0.0)
 
     def test_spawn_shape_uses_spawn_center_and_dry_terrain_only(self) -> None:
         visible_surface = {

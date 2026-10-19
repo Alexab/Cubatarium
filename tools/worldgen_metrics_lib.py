@@ -991,6 +991,7 @@ def analyze_surface(
     surface: dict[tuple[int, int], tuple[int, int]],
     *,
     terrain_surface: dict[tuple[int, int], tuple[int, int]] | None = None,
+    cliff_surface: dict[tuple[int, int], tuple[int, int]] | None = None,
     spawn_radius: int = 48,
     center_x: int = 0,
     center_z: int = 0,
@@ -1005,7 +1006,7 @@ def analyze_surface(
     terrain = terrain_surface or surface
     heights = [y for y, _ in terrain.values()]
     top_blocks = Counter(bid for _, bid in surface.values())
-    deltas = _height_deltas(terrain)
+    deltas = _height_deltas(cliff_surface if cliff_surface is not None else terrain)
 
     cliff16 = sum(1 for d in deltas if d >= 16)
     cliff8 = sum(1 for d in deltas if d >= 8)
@@ -1023,6 +1024,7 @@ def analyze_surface(
         "world_min_height": min_height,
         "world_max_height": max_height,
         "height_mean": sum(heights) / len(heights),
+        "cliff_sample_pairs": len(deltas),
         "delta_mean": sum(deltas) / max(1, len(deltas)),
         "delta_p95": deltas[int(len(deltas) * 0.95)] if deltas else 0,
         "delta_ge_1_pct": 100.0 * cliff1 / max(1, len(deltas)),
@@ -1113,6 +1115,21 @@ def land_surface_subset(
     return land
 
 
+def land_terrain_surface_subset(
+    surface: dict[tuple[int, int], tuple[int, int]],
+    terrain_surface: dict[tuple[int, int], tuple[int, int]],
+    water_id: int | None,
+) -> dict[tuple[int, int], tuple[int, int]]:
+    """Keep dry terrain columns for cliff metrics, excluding underwater shores."""
+    if water_id is None:
+        return dict(terrain_surface)
+    return {
+        xz: terrain
+        for xz, terrain in terrain_surface.items()
+        if surface.get(xz, (0, 0))[1] != water_id
+    }
+
+
 def spawn_land_shape_metrics(
     surface: dict[tuple[int, int], tuple[int, int]],
     terrain_surface: dict[tuple[int, int], tuple[int, int]],
@@ -1194,9 +1211,11 @@ def analyze_world(
     }
     terrain_surface = terrain_surface_blocks(columns, ignored_ids=non_terrain_ids)
     terrain_heights = {xz: y for xz, (y, _) in terrain_surface.items()}
+    cliff_surface = land_terrain_surface_subset(surface, terrain_surface, water_id)
     metrics = analyze_surface(
         surface,
         terrain_surface=terrain_surface,
+        cliff_surface=cliff_surface,
         spawn_radius=spawn_radius,
         center_x=spawn_x,
         center_z=spawn_z,
