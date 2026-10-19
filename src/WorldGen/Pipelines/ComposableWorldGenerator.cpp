@@ -36,7 +36,8 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
     DensityFieldParams density_params;
     density_params.cavesInDensity = Config.Caves && ctx.Settings.EnableCaves;
     density_params.caveAmplitude =
-        std::max(0.0f, ctx.Settings.Caves.densityCaveAmplitude * 320.0f);
+        std::max(0.0f, DensityFieldCaveAmplitudeBlocks(
+                           ctx.Settings.Caves.densityCaveAmplitude));
     const PackValleysConfig &valley_config = UWorldGenPack::ValleysConfig();
     density_params.riversEnabled =
         Config.Valleys && ctx.Settings.WorldGenProfileVersion >= 2 &&

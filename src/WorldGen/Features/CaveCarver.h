@@ -36,6 +36,20 @@ struct CaveParams
   float noodleWeight{0.30f};
 };
 
+// Cave density amplitude is authored as a normalized tuning value in packs.
+// The explicit surface-distance carver and the density-field modifier have
+// different units and therefore keep separate, documented conversions.
+inline constexpr float kExplicitCaveAmplitudeBlocksPerUnit = 24.0f;
+inline constexpr float ExplicitCaveAmplitudeBlocks(float normalizedAmplitude)
+{
+  return normalizedAmplitude * kExplicitCaveAmplitudeBlocksPerUnit;
+}
+inline constexpr float kDensityFieldCaveAmplitudeBlocksPerUnit = 96.0f;
+inline constexpr float DensityFieldCaveAmplitudeBlocks(float normalizedAmplitude)
+{
+  return normalizedAmplitude * kDensityFieldCaveAmplitudeBlocksPerUnit;
+}
+
 bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
                  const CaveParams &params);
 

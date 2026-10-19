@@ -13,57 +13,17 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 from worldgen_metrics_lib import (  # noqa: E402
     CHUNK_SIZE,
-    SHRUB_BLOCK_NAMES,
-    TREE_BLOCK_NAMES,
     build_id_to_name_from_world,
     decode_chunk,
-    ground_cover_block_names_for_world,
+    non_terrain_block_names_for_world,
     spawn_center_from_meta,
 )
 
 
-def block_definitions(world_data: dict) -> dict[str, dict]:
-    definitions: dict[str, dict] = {}
-    packs = world_data.get("resource_packs", {})
-    for tier in ("primary", "secondary"):
-        pack_ids = packs.get(tier, [])
-        if not isinstance(pack_ids, list):
-            continue
-        for pack_id in pack_ids:
-            blocks_dir = REPO / "resource_packs" / str(pack_id) / "blocks"
-            if not blocks_dir.is_dir():
-                continue
-            for path in blocks_dir.glob("*.json"):
-                try:
-                    definition = json.loads(path.read_text(encoding="utf-8-sig"))
-                except (OSError, json.JSONDecodeError):
-                    continue
-                name = definition.get("name")
-                if isinstance(name, str) and name:
-                    definitions[name] = definition
-    return definitions
-
-
-def ignored_block_names(world_dir: Path, world_data: dict) -> set[str]:
-    ignored = {"water", "lava", "fire"}
-    ignored.update(TREE_BLOCK_NAMES)
-    ignored.update(SHRUB_BLOCK_NAMES)
-    ignored.update(ground_cover_block_names_for_world(world_dir, REPO))
-
-    for name, definition in block_definitions(world_data).items():
-        types_value = definition.get("types", [])
-        types = set(types_value) if isinstance(types_value, list) else set()
-        render = definition.get("render", {})
-        render_style = render.get("style") if isinstance(render, dict) else None
-        physics = definition.get("physics", {})
-        physics_preset = physics.get("preset") if isinstance(physics, dict) else None
-        if (
-            "fluid" in types
-            or render_style == "fluid"
-            or physics_preset in {"water", "lava"}
-        ):
-            ignored.add(name)
-    return ignored
+def ignored_block_names(world_dir: Path) -> set[str]:
+    # Surface CSVs describe terrain, not the topmost decoration. In particular,
+    # lily pads sit one block above water and otherwise look like terrain spikes.
+    return non_terrain_block_names_for_world(world_dir, REPO)
 
 
 def extract_surface(
@@ -72,9 +32,8 @@ def extract_surface(
     meta_path = world_dir / "world_data.json"
     if not meta_path.is_file():
         raise ValueError(f"world metadata not found: {meta_path}")
-    world_data = json.loads(meta_path.read_text(encoding="utf-8"))
     id_to_name = build_id_to_name_from_world(world_dir, REPO)
-    ignored_names = ignored_block_names(world_dir, world_data)
+    ignored_names = ignored_block_names(world_dir)
     ignored_ids = {
         block_id for block_id, name in id_to_name.items() if name in ignored_names
     }

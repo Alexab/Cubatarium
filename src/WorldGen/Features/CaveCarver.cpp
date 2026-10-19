@@ -46,7 +46,8 @@ bool ShouldCarve(int x, int y, int z, int surfaceY, uint32_t Seed,
   {
     float density = static_cast<float>(surfaceY - y);
     const float cave_noise = CombinedCaveNoise(x, y, z, Seed + 3000, params);
-    density += cave_noise * params.densityCaveAmplitude * 24.0f;
+    density += cave_noise *
+               ExplicitCaveAmplitudeBlocks(params.densityCaveAmplitude);
     return density < 0.0f;
   }
   const float n = CombinedCaveNoise(x, y, z, Seed + 3000, params);

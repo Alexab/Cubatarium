@@ -559,6 +559,57 @@ def ground_cover_block_names_for_world(
     return frozenset(names)
 
 
+def non_terrain_block_names_for_world(
+    world_dir: Path, repo_root: Path | None = None
+) -> set[str]:
+    """Return fluids and plant-like blocks to omit from terrain heights."""
+    repo = repo_root or Path(__file__).resolve().parents[1]
+    names = {"water", "lava", "fire"}
+    names.update(VEGETATION_BLOCK_NAMES)
+    names.update(ground_cover_block_names_for_world(world_dir, repo))
+    meta_path = world_dir / "world_data.json"
+    if not meta_path.is_file():
+        return names
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return names
+
+    packs = meta.get("resource_packs", {})
+    pack_ids: list[str] = []
+    for tier in ("primary", "secondary"):
+        ids = packs.get(tier, []) if isinstance(packs, dict) else []
+        if isinstance(ids, list):
+            pack_ids.extend(str(pack_id) for pack_id in ids)
+    for pack_id in pack_ids:
+        blocks_dir = repo / "resource_packs" / pack_id / "blocks"
+        if not blocks_dir.is_dir():
+            continue
+        for path in blocks_dir.glob("*.json"):
+            try:
+                definition = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            name = definition.get("name")
+            if not isinstance(name, str) or not name:
+                continue
+            types_value = definition.get("types", [])
+            types = set(types_value) if isinstance(types_value, list) else set()
+            render = definition.get("render", {})
+            render_style = render.get("style") if isinstance(render, dict) else None
+            physics = definition.get("physics", {})
+            movement = physics.get("movement", {}) if isinstance(physics, dict) else {}
+            occupancy = movement.get("occupancy") if isinstance(movement, dict) else None
+            if (
+                "plants" in types
+                or "fluid" in types
+                or render_style in {"cross", "plant", "plant_cross", "fluid"}
+                or occupancy == 0
+            ):
+                names.add(name)
+    return names
+
+
 def bush_common_footprint_data(
     columns: dict[tuple[int, int, int], int],
     id_to_name: dict[int, str],
@@ -1235,16 +1286,25 @@ def analyze_world(
         (bid for bid, name in id_to_name.items() if name == "water"),
         None,
     )
-    non_terrain_names = (
-        {"water", "lava", "fire"}
-        | set(VEGETATION_BLOCK_NAMES)
-        | set(ground_cover_block_names_for_world(world_dir, repo))
-    )
+    non_terrain_names = non_terrain_block_names_for_world(world_dir, repo)
     non_terrain_ids = {
         bid for bid, name in id_to_name.items() if name in non_terrain_names
     }
     terrain_surface = terrain_surface_blocks(columns, ignored_ids=non_terrain_ids)
     terrain_heights = {xz: y for xz, (y, _) in terrain_surface.items()}
+    wet_columns: set[tuple[int, int]] = set()
+    water_surface_y: dict[tuple[int, int], int] = {}
+    if water_id is not None:
+        for (x, y, z), block_id in columns.items():
+            xz = (x, z)
+            ground_y = terrain_heights.get(xz)
+            if block_id == water_id and ground_y is not None and y > ground_y:
+                wet_columns.add(xz)
+                water_surface_y[xz] = max(y, water_surface_y.get(xz, y))
+        # A lily pad can be the highest saved block of a water column. Normalize
+        # it to the actual water surface before land and cliff metrics run.
+        for xz in wet_columns:
+            surface[xz] = (water_surface_y[xz], water_id)
     cliff_surface = land_terrain_surface_subset(surface, terrain_surface, water_id)
     metrics = analyze_surface(
         surface,

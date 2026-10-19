@@ -3,12 +3,23 @@
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/CaveDepthBand.h"
 
+#include <cmath>
 #include <iostream>
 
 namespace
 {
 
 constexpr const char *kTestName = "worldgen_cave_depth_test";
+
+static void TestCaveAmplitudeScalesAreIntentional()
+{
+  const float explicit_amplitude = cutum::ExplicitCaveAmplitudeBlocks(0.15f);
+  FluidTest::Expect(std::fabs(explicit_amplitude - 3.6f) < 0.001f, kTestName,
+                    "explicit cave amplitude uses surface-distance scale");
+  const float density_amplitude = cutum::DensityFieldCaveAmplitudeBlocks(0.15f);
+  FluidTest::Expect(std::fabs(density_amplitude - 14.4f) < 0.001f, kTestName,
+                    "density cave amplitude uses bounded density scale");
+}
 
 static void TestDeepBandValidAtSeaLevel()
 {
@@ -43,6 +54,7 @@ static void TestShallowBandStillValid()
 
 int main()
 {
+  TestCaveAmplitudeScalesAreIntentional();
   TestDeepBandValidAtSeaLevel();
   TestShallowBandStillValid();
 

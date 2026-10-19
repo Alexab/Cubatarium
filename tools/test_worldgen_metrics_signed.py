@@ -16,6 +16,7 @@ from worldgen_metrics_lib import (
     count_shore_air_gaps,
     ground_cover_block_names_for_world,
     land_terrain_surface_subset,
+    non_terrain_block_names_for_world,
     ocean_depth_stats,
     spawn_land_shape_metrics,
     terrain_surface_blocks,
@@ -26,6 +27,38 @@ from worldgen_metrics_lib import (
 
 
 class SignedWorldMetricTests(unittest.TestCase):
+    def test_surface_terrain_filter_follows_block_render_definitions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            world = root / "world"
+            repo = root / "repo"
+            blocks = repo / "resource_packs" / "test_pack" / "blocks"
+            blocks.mkdir(parents=True)
+            world.mkdir()
+            (world / "world_data.json").write_text(
+                json.dumps({"resource_packs": {"primary": ["test_pack"]}}),
+                encoding="utf-8",
+            )
+            (blocks / "lily_pad.json").write_text(
+                json.dumps(
+                    {
+                        "name": "lily_pad",
+                        "types": ["natural", "plants"],
+                        "render": {"style": "cross"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (blocks / "stone.json").write_text(
+                json.dumps({"name": "stone", "types": ["natural"]}),
+                encoding="utf-8",
+            )
+
+            names = non_terrain_block_names_for_world(world, repo)
+
+        self.assertIn("lily_pad", names)
+        self.assertNotIn("stone", names)
+
     def test_ground_cover_names_follow_saved_worldgen_rules(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
