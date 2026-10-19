@@ -257,7 +257,9 @@ def analyze_world(world_dir: Path, repo_root: Path) -> dict:
     return {
         "world": world_dir.name,
         "seed": meta.get("world_seed"),
-        "worldgen_profile_version": meta.get("worldgen_profile_version"),
+        "worldgen_profile_version": meta.get(
+            "worldgen_profile_version", procedural.get("worldgen_profile_version")
+        ),
         "terrain_backend": procedural.get("terrain_backend", meta.get("terrain_backend")),
         "sea_level": sea_level,
         "chunk_files": len(chunk_files),
