@@ -484,6 +484,29 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
   FluidTest::Expect(pine_has_lateral_bough, kTestName,
                     "conical pine has lateral branches in multiple tiers");
 
+  const int trees_before_clipped_tree =
+      CountBlocksNamed(world, registry, "mtg_tree");
+  for (int y = 55; y <= 63; ++y)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        if (dx == 0 && dz == 0)
+        {
+          continue;
+        }
+        world.SetBlock(glm::ivec3(-6 + dx, y, 8 + dz), grass);
+      }
+    }
+  }
+  FluidTest::Expect(treeStrategy->Place(ctx, -6, 8, 51, tree), kTestName,
+                    "tree keeps a viable silhouette when hillside voxels block its canopy");
+  FluidTest::Expect(CountBlocksNamed(world, registry, "mtg_tree") >
+                        trees_before_clipped_tree,
+                    kTestName,
+                    "clipped tree retains its central trunk instead of failing placement");
+
   cutum::ObjectFeatureRule shrub;
   shrub.Mode = cutum::ObjectFeatureRuleMode::ProceduralShrub;
   shrub.Shrub.HeightMin = 2;
@@ -501,6 +524,27 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
                     "procedural shrub strategy places its profile");
   FluidTest::Expect(CountBlocksNamed(world, registry, "mtg_bush_leaves") > 0,
                     kTestName, "procedural shrub writes a leafy silhouette");
+
+  const int stems_before_clipped_shrub =
+      CountBlocksNamed(world, registry, "mtg_bush_stem");
+  for (int dz = -1; dz <= 1; ++dz)
+  {
+    for (int dx = -1; dx <= 1; ++dx)
+    {
+      if (dx == 0 && dz == 0)
+      {
+        continue;
+      }
+      world.SetBlock(glm::ivec3(-6 + dx, 52, -5 + dz), grass);
+      world.SetBlock(glm::ivec3(-6 + dx, 53, -5 + dz), grass);
+    }
+  }
+  FluidTest::Expect(shrubStrategy->Place(ctx, -6, -5, 51, shrub), kTestName,
+                    "shrub keeps viable foliage when hillside voxels block leaves");
+  FluidTest::Expect(
+      CountBlocksNamed(world, registry, "mtg_bush_stem") >
+          stems_before_clipped_shrub,
+      kTestName, "clipped shrub retains its stem instead of failing placement");
 }
 
 static void TestWorldGenSetsSchemaV2Migration()

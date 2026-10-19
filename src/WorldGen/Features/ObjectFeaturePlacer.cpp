@@ -560,10 +560,12 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     const BlockId current = ctx.World.GetBlock(worldPos);
     if (!ctx.World.IsAir(worldPos) && current != leaves)
     {
-      const bool optionalRoot =
-          relative.y == 0 && (relative.x != 0 || relative.z != 0);
-      if (optionalRoot)
+      const bool lateralVoxel = relative.x != 0 || relative.z != 0;
+      if (block != trunk || lateralVoxel)
       {
+        // Canopies, roots, and lateral branches may overlap terrain on slopes
+        // or meet another feature. Trim those voxels; the central trunk stays
+        // required.
         continue;
       }
       return false;
@@ -660,6 +662,10 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
   {
     for (int dy = -clumpRadiusY; dy <= clumpRadiusY; ++dy)
     {
+      if (centerY + dy < 0)
+      {
+        continue;
+      }
       for (int dz = -clumpRadiusZ; dz <= clumpRadiusZ; ++dz)
       {
         for (int dx = -clumpRadiusX; dx <= clumpRadiusX; ++dx)
@@ -754,32 +760,49 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
 
   int minY = base.y;
   int maxY = base.y;
+  std::vector<std::pair<glm::ivec3, BlockId>> accepted;
+  accepted.reserve(voxels.size());
   for (const auto &[relative, block] : voxels)
   {
-    (void)block;
     const glm::ivec3 worldPos = base + relative;
     if (worldPos.y < ctx.Settings.MinHeight ||
         worldPos.y >= ctx.Settings.MaxHeight)
     {
+      if (block != stem)
+      {
+        continue;
+      }
       return false;
     }
     const BlockId current = ctx.World.GetBlock(worldPos);
     if (!ctx.World.IsAir(worldPos) && current != leaves && current != accent &&
         current != stem)
     {
+      if (block == leaves || block == accent)
+      {
+        // Leaf voxels intersecting a hillside or another feature are clipped.
+        // A single collision should not discard the whole shrub.
+        continue;
+      }
       return false;
     }
+    accepted.emplace_back(relative, block);
     minY = std::min(minY, worldPos.y);
     maxY = std::max(maxY, worldPos.y);
   }
 
+  if (accepted.empty())
+  {
+    return false;
+  }
+
   VoxelFeatureSink sink(ctx.World);
-  for (const auto &[relative, block] : voxels)
+  for (const auto &[relative, block] : accepted)
   {
     sink.WriteVoxel(base + relative, block);
   }
   ctx.AccumulateDirtyColumn(minY, maxY + 1);
-  return !voxels.empty();
+  return true;
 }
 
 PlacementSurfaceInfo ResolveColumnPlacementSurface(const WorldGenContext &ctx,
