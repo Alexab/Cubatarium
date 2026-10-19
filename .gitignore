@@ -132,6 +132,18 @@ tools/debug_uv_overlays/
 /audit_report.json
 /build*/
 
+# Local runtime and generated QA output. Existing tracked baselines remain tracked;
+# intentionally promoted new artifacts can be added with `git add -f`.
+/bin/
+
+# Local editor plans and dated investigation notes, not project source docs.
+/.cursor/plans/
+/docs/streaming/A40_*.md
+
+# Stray files created by local tools in the repository root.
+/%s
+/1
+
 # Generated code audit artifacts (orchestrator writes here)
 /audit/*
 !/audit/.gitignore
