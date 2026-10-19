@@ -216,6 +216,32 @@ bool ObjectVoxelIsSolid(const ObjectVoxel &voxel,
   return id != BLOCK_AIR && registry.BlocksMovement(id);
 }
 
+bool IsSurfaceFollowingPlantPrefab(const WorldObjectDefinition &object,
+                                   const UBlockRegistry &registry)
+{
+  if (object.PlacementMode != ObjectPlacementMode::VerticalPlant ||
+      object.voxels.empty())
+  {
+    return false;
+  }
+
+  bool hasPlantVoxel = false;
+  for (const ObjectVoxel &voxel : object.voxels)
+  {
+    if (ResolveObjectVoxelPlacementId(voxel, registry) == BLOCK_AIR)
+    {
+      continue;
+    }
+    if (ObjectVoxelIsSolid(voxel, registry) ||
+        voxel.offset.y != object.anchor.y)
+    {
+      return false;
+    }
+    hasPlantVoxel = true;
+  }
+  return hasPlantVoxel;
+}
+
 std::optional<int> UniformSurfaceLayerSolidDy(const WorldObjectDefinition &object,
                                               const UBlockRegistry &registry)
 {
@@ -251,6 +277,22 @@ glm::ivec3 ResolveObjectVoxelWorldPos(const UBlockWorld & /*world*/,
                                       int /*maxScanY*/)
 {
   return anchorWorldPos + voxel.offset - object.anchor;
+}
+
+glm::ivec3 ResolveSurfaceFollowingPlantVoxelWorldPos(
+    const UBlockWorld &world, glm::ivec3 anchorWorldPos,
+    const WorldObjectDefinition &object, const ObjectVoxel &voxel,
+    UBlockRegistry &registry, int maxScanY)
+{
+  glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
+      world, anchorWorldPos, object, voxel, registry, maxScanY);
+  const int localSurface = FindTopSolidSurfaceY(
+      world, registry, worldPos.x, worldPos.z, maxScanY);
+  if (localSurface >= 0)
+  {
+    worldPos.y = localSurface + 1;
+  }
+  return worldPos;
 }
 
 bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id)
@@ -512,11 +554,17 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
   std::vector<glm::ivec3> nonSolidWorldPositions;
   solidWorldPositions.reserve(object.voxels.size());
   nonSolidWorldPositions.reserve(object.voxels.size());
+  const bool followsLocalSurface =
+      IsSurfaceFollowingPlantPrefab(object, registry);
 
   for (const auto &voxel : object.voxels)
   {
-    const glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
-        world, anchorWorldPos, object, voxel, registry, maxScanY);
+    const glm::ivec3 worldPos =
+        followsLocalSurface
+            ? ResolveSurfaceFollowingPlantVoxelWorldPos(
+                  world, anchorWorldPos, object, voxel, registry, maxScanY)
+            : ResolveObjectVoxelWorldPos(world, anchorWorldPos, object, voxel,
+                                         registry, maxScanY);
     const bool voxelSolid = ObjectVoxelIsSolid(voxel, registry);
     if (voxelSolid)
     {
@@ -689,14 +737,22 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
   {
     return stats;
   }
+  const bool followsLocalSurface =
+      options.maxScanY >= 0 && options.seaLevel >= 0 &&
+      IsSurfaceFollowingPlantPrefab(object, registry);
 
   stats.minY = anchorWorldPos.y;
   stats.maxY = anchorWorldPos.y;
 
   for (const auto &voxel : object.voxels)
   {
-    const glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
-        world, anchorWorldPos, object, voxel, registry, options.maxScanY);
+    const glm::ivec3 worldPos =
+        followsLocalSurface
+            ? ResolveSurfaceFollowingPlantVoxelWorldPos(
+                  world, anchorWorldPos, object, voxel, registry,
+                  options.maxScanY)
+            : ResolveObjectVoxelWorldPos(world, anchorWorldPos, object, voxel,
+                                         registry, options.maxScanY);
     const BlockId blockId = ResolveObjectVoxelPlacementId(voxel, registry);
     if (blockId == BLOCK_AIR)
     {

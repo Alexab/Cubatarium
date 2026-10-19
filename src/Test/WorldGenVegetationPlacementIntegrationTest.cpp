@@ -794,6 +794,49 @@ static void TestStaticPlantPrefabsPlaceOnFlatGround(
                     kTestName,
                     "tall-grass prefab writes all configured grass voxels");
 
+  cutum::UBlockWorld unevenWorld;
+  unevenWorld.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext unevenCtx(unevenWorld, registry, settings, &objects);
+  unevenCtx.WorldgenOwnerPackId = "minetest_default_16";
+  unevenCtx.ResolveBlockIds();
+  for (int z = 0; z <= 6; ++z)
+  {
+    for (int x = 0; x <= 6; ++x)
+    {
+      if (x == 3 && z == 2)
+      {
+        unevenWorld.SetBlock(glm::ivec3(x, kSurfaceY - 1, z),
+                             unevenCtx.Blocks.Grass);
+      }
+      else
+      {
+        unevenWorld.SetBlock(glm::ivec3(x, kSurfaceY, z),
+                             unevenCtx.Blocks.Grass);
+      }
+    }
+  }
+  unevenWorld.SetBlock(glm::ivec3(2, kSurfaceY + 1, 3),
+                       unevenCtx.Blocks.Grass);
+
+  const bool unevenFlowerPatchPlaced = cutum::PlaceObjectAt(
+      unevenCtx, "flower_patch_common", glm::ivec3(3, kSurfaceY + 1, 3),
+      kSurfaceY);
+  FluidTest::Expect(unevenFlowerPatchPlaced, kTestName,
+                    "flower patch adapts to one-block steps in terrain");
+  const cutum::BlockId rose = registry.GetIdByTypeName("rose");
+  const std::array<glm::ivec3, 5> expectedRosePositions = {
+      glm::ivec3(2, kSurfaceY + 2, 3),
+      glm::ivec3(3, kSurfaceY, 2),
+      glm::ivec3(3, kSurfaceY + 1, 3),
+      glm::ivec3(3, kSurfaceY + 1, 4),
+      glm::ivec3(4, kSurfaceY + 1, 3)};
+  const bool allUnevenFlowersFollowGround =
+      std::all_of(expectedRosePositions.begin(), expectedRosePositions.end(),
+                  [&](glm::ivec3 position)
+                  { return unevenWorld.GetBlock(position) == rose; });
+  FluidTest::Expect(allUnevenFlowersFollowGround, kTestName,
+                    "each plant voxel follows its local supporting column");
+
   constexpr int kRuleFixtureRadius = 64;
   cutum::UBlockWorld defaultWorld;
   defaultWorld.SetFluidDefinitions(registry.GetDefinitions());
