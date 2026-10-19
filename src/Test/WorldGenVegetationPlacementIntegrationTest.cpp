@@ -403,6 +403,75 @@ static void TestSpatialFloraCandidateDensity(cutum::UBlockRegistry &registry)
                     "full-cell jitter preserves authored flora candidate density");
 }
 
+static void TestBuiltinTreeTemplateLogsConnectToTrunk(
+    const cutum::UObjectLibrary &objects)
+{
+  static const std::array<const char *, 11> kTreeTemplates = {
+      "tree_acacia", "tree_apple", "tree_aspen", "tree_jungle",
+      "tree_jungle_emergent", "tree_large", "tree_pine",
+      "tree_pine_small", "tree_pine_snowy", "tree_pine_snowy_small",
+      "tree_small"};
+
+  for (const char *name : kTreeTemplates)
+  {
+    const cutum::WorldObjectDefinition *object = objects.Get(name);
+    const std::string loadedMessage =
+        std::string("static tree template loads: ") + name;
+    FluidTest::Expect(object != nullptr, kTestName, loadedMessage.c_str());
+    if (!object)
+    {
+      continue;
+    }
+
+    std::vector<glm::ivec3> logs;
+    for (const cutum::ObjectVoxel &voxel : object->voxels)
+    {
+      if (voxel.Type == "tree_log")
+      {
+        logs.push_back(voxel.offset);
+      }
+    }
+    const auto root = std::find(logs.begin(), logs.end(), object->anchor);
+    const std::string anchorMessage =
+        std::string("static tree has a trunk at its anchor: ") + name;
+    FluidTest::Expect(root != logs.end(), kTestName, anchorMessage.c_str());
+    if (root == logs.end())
+    {
+      continue;
+    }
+
+    std::vector<bool> reached(logs.size(), false);
+    const size_t rootIndex = static_cast<size_t>(root - logs.begin());
+    std::vector<size_t> pending{rootIndex};
+    reached[rootIndex] = true;
+    size_t reachedCount = 0;
+    while (!pending.empty())
+    {
+      const size_t current = pending.back();
+      pending.pop_back();
+      ++reachedCount;
+      for (size_t candidate = 0; candidate < logs.size(); ++candidate)
+      {
+        if (reached[candidate])
+        {
+          continue;
+        }
+        const glm::ivec3 delta = logs[candidate] - logs[current];
+        if (std::abs(delta.x) + std::abs(delta.y) + std::abs(delta.z) == 1)
+        {
+          reached[candidate] = true;
+          pending.push_back(candidate);
+        }
+      }
+    }
+
+    const std::string connectivityMessage =
+        std::string("static tree logs connect to trunk: ") + name;
+    FluidTest::Expect(reachedCount == logs.size(), kTestName,
+                      connectivityMessage.c_str());
+  }
+}
+
 static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
 {
   cutum::ProceduralSettings settings = MakeVegetationSettings();
@@ -977,6 +1046,7 @@ int main(int argc, char **argv)
       *cutum::UResourcePack::LoadManifest(pack_root);
   objects.LoadMerged(repo_root / "objects", {manifest}, registry);
   objects.RebindBlockIds(registry);
+  TestBuiltinTreeTemplateLogsConnectToTrunk(objects);
   if (argc > 1 && std::string(argv[1]) == "--procedural-vegetation-only")
   {
     TestProceduralVegetationStrategies(registry);
