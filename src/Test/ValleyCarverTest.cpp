@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <tuple>
 #include <utility>
 
@@ -338,10 +339,11 @@ static void TestWetRiverChannelsReceiveWater()
   const auto generate_channel =
       [&](cutum::UBlockWorld &world, cutum::UBlockRegistry &registry)
   {
+    constexpr int river_surface_y = 70; // Water surface remains below sea+24.
     auto ctx = MakeContext(world, registry);
     ctx.Settings.FillWater = true;
-    FillStoneColumn(world, river_x, river_z, kSurfaceY);
-    cutum::CarveColumnValleys(ctx, river_x, river_z, kSurfaceY, kSeed, params,
+    FillStoneColumn(world, river_x, river_z, river_surface_y);
+    cutum::CarveColumnValleys(ctx, river_x, river_z, river_surface_y, kSeed, params,
                               48, 1.0f, nullptr);
   };
 
@@ -364,10 +366,11 @@ static void TestWetRiverChannelsReceiveWater()
                      });
   FluidTest::Expect(water_blocks >= 3, kTestName,
                     "wet valley core receives a connected water column");
-  FluidTest::Expect(highest_water_y == kSurfaceY - params.waterSurfaceDepth,
+  constexpr int river_surface_y = 70;
+  FluidTest::Expect(highest_water_y == river_surface_y - params.waterSurfaceDepth,
                     kTestName,
                     "river water stays below the original terrain surface");
-  FluidTest::Expect(first.GetBlock(glm::ivec3(river_x, kSurfaceY, river_z)) ==
+  FluidTest::Expect(first.GetBlock(glm::ivec3(river_x, river_surface_y, river_z)) ==
                         cutum::BLOCK_AIR,
                     kTestName, "river channel remains carved above water");
 
@@ -418,15 +421,16 @@ static void TestRiverWaterAcrossChunkBoundary()
                                  FluidTest::MakeTestFluidDefinitions());
   cutum::UBlockWorld forward_world;
   cutum::UBlockWorld reverse_world;
-  FillStoneChunk(forward_world, -cutum::CHUNK_SIZE, base_z, kSurfaceY);
-  FillStoneChunk(forward_world, 0, base_z, kSurfaceY);
-  FillStoneChunk(reverse_world, -cutum::CHUNK_SIZE, base_z, kSurfaceY);
-  FillStoneChunk(reverse_world, 0, base_z, kSurfaceY);
+  constexpr int river_surface_y = 74; // Exactly at the default sea+24 limit.
+  FillStoneChunk(forward_world, -cutum::CHUNK_SIZE, base_z, river_surface_y);
+  FillStoneChunk(forward_world, 0, base_z, river_surface_y);
+  FillStoneChunk(reverse_world, -cutum::CHUNK_SIZE, base_z, river_surface_y);
+  FillStoneChunk(reverse_world, 0, base_z, river_surface_y);
   auto forward_ctx = MakeContext(forward_world, registry);
   auto reverse_ctx = MakeContext(reverse_world, registry);
   forward_ctx.Settings.FillWater = true;
   reverse_ctx.Settings.FillWater = true;
-  const auto surface_at = [](int, int) { return kSurfaceY; };
+  const auto surface_at = [river_surface_y](int, int) { return river_surface_y; };
 
   cutum::CarveChunkValleys(forward_ctx, -cutum::CHUNK_SIZE, base_z, kSeed,
                            params, 48, 1.0f, surface_at);
@@ -438,8 +442,8 @@ static void TestRiverWaterAcrossChunkBoundary()
                            params, 48, 1.0f, surface_at);
 
   FluidTest::Expect(
-      forward_world.GetBlock(glm::ivec3(-1, kSurfaceY - 2, river_z)) == 9 &&
-          forward_world.GetBlock(glm::ivec3(0, kSurfaceY - 2, river_z)) == 9,
+      forward_world.GetBlock(glm::ivec3(-1, river_surface_y - 2, river_z)) == 9 &&
+          forward_world.GetBlock(glm::ivec3(0, river_surface_y - 2, river_z)) == 9,
       kTestName, "river water is continuous across a chunk seam");
 
   using WaterMap = std::map<std::tuple<int, int, int>, cutum::BlockId>;
@@ -461,6 +465,78 @@ static void TestRiverWaterAcrossChunkBoundary()
                              });
   FluidTest::Expect(forward_water == reverse_water, kTestName,
                     "river water across chunks is independent of chunk order");
+}
+
+static void TestRiverWaterElevationCap()
+{
+  cutum::ValleyParams params;
+  params.fillWater = true;
+  params.maxDepth = 12;
+  params.riverNoiseScale = 0.008f;
+  params.waterMinStrength = 0.65f;
+  params.waterMinMoisture = 0.42f;
+  params.waterSurfaceDepth = 2;
+  params.maxWaterElevationAboveSea = 24;
+
+  int river_x = -1;
+  int river_z = -1;
+  for (int z = 0; z < 256 && river_x < 0; ++z)
+  {
+    for (int x = 0; x < 256; ++x)
+    {
+      if (SmoothedRiverStrength(x, z, kSeed, params) >=
+              params.waterMinStrength &&
+          cutum::SampleClimate(x, z, kSeed).moisture >=
+              params.waterMinMoisture)
+      {
+        river_x = x;
+        river_z = z;
+        break;
+      }
+    }
+  }
+  FluidTest::Expect(river_x >= 0, kTestName,
+                    "test seed contains a wet channel for elevation gating");
+  if (river_x < 0)
+  {
+    return;
+  }
+
+  cutum::UBlockRegistry registry(nullptr,
+                                 FluidTest::MakeTestFluidDefinitions());
+  const auto carve_at_surface = [&](int surface_y)
+  {
+    auto world = std::make_unique<cutum::UBlockWorld>();
+    FillStoneColumn(*world, river_x, river_z, surface_y);
+    auto ctx = MakeContext(*world, registry);
+    ctx.Settings.FillWater = true;
+    const auto surface_at = [surface_y](int, int) { return surface_y; };
+    cutum::CarveColumnValleys(ctx, river_x, river_z, surface_y, kSeed, params,
+                              48, 1.0f, surface_at);
+    return world;
+  };
+
+  auto capped_channel = carve_at_surface(76); // water surface would be Y=74.
+  int capped_water_blocks = 0;
+  capped_channel->ForEachBlock(
+      [&](glm::ivec3, cutum::BlockId id)
+      {
+        if (id == 9)
+        {
+          ++capped_water_blocks;
+        }
+      });
+  FluidTest::Expect(capped_water_blocks == 0, kTestName,
+                    "river channels above sea+24 remain carved but dry");
+  FluidTest::Expect(
+      capped_channel->GetBlock(glm::ivec3(river_x, 76, river_z)) ==
+          cutum::BLOCK_AIR,
+      kTestName, "elevation gating does not disable valley carving");
+
+  auto boundary_channel = carve_at_surface(74); // water surface is sea+24.
+  FluidTest::Expect(
+      boundary_channel->GetBlock(glm::ivec3(river_x, 72, river_z)) == 9,
+      kTestName, "water is allowed at the configured sea+24 boundary");
 }
 
 static void TestLakeCarveAndChunkOrder()
@@ -667,12 +743,17 @@ int main()
   FluidTest::Expect(cutum::UWorldGenPack::LakesConfig().ChancePerCell == 3,
                     kTestName,
                     "default lake frequency loads from the content pack");
+  FluidTest::Expect(
+      cutum::UWorldGenPack::ValleysConfig().Loaded &&
+          cutum::UWorldGenPack::ValleysConfig().WaterMaxElevationAboveSea == 24,
+      kTestName, "default river water elevation limit loads from the pack");
 
   TestValleyCarveSmoothWalls();
   TestChunkValleySeamStable();
   TestRiverFieldContinuity();
   TestWetRiverChannelsReceiveWater();
   TestRiverWaterAcrossChunkBoundary();
+  TestRiverWaterElevationCap();
   TestLakeCarveAndChunkOrder();
   std::cout << kTestName << ": all tests passed\n";
   return 0;

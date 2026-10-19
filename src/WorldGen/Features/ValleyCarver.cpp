@@ -58,7 +58,7 @@ float SmoothedValleyRiverStrengthAt(int x, int z, uint32_t seed,
 void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
                              int column_surface_y, int column_depth,
                              const ValleyParams &params, float river_strength,
-                             float moisture)
+                             float moisture, int sea_level)
 {
   if (column_depth <= 0)
   {
@@ -101,6 +101,12 @@ void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
 
   const int water_surface_y =
       column_surface_y - std::max(0, params.waterSurfaceDepth);
+  const int maximum_water_y =
+      sea_level + std::max(0, params.maxWaterElevationAboveSea);
+  if (water_surface_y > maximum_water_y)
+  {
+    return;
+  }
   const int lower_bound = std::max(ctx.Settings.MinHeight,
                                    column_surface_y - column_depth + 1);
   if (water_surface_y < lower_bound)
@@ -157,7 +163,7 @@ void CarveColumnValleys(WorldGenContext &ctx, int x, int z, int surface_y,
     column_depth = std::max(1, column_depth);
   }
   MaterializeValleyColumn(ctx, x, z, column_surface_y, column_depth, params,
-                          river_strength, moisture);
+                          river_strength, moisture, sea_level);
 }
 
 void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
@@ -195,7 +201,7 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
         column_depth = std::max(1, column_depth);
       }
       MaterializeValleyColumn(ctx, wx, wz, column_surface_y, column_depth,
-                              params, river_strength, moisture);
+                              params, river_strength, moisture, sea_level);
     }
   }
 }

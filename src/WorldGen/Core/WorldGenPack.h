@@ -183,6 +183,7 @@ struct PackValleysConfig
   float WaterMinStrength{0.65f};
   float WaterMinMoisture{0.42f};
   int WaterSurfaceDepth{0};
+  int WaterMaxElevationAboveSea{24};
   bool Loaded{false};
 };
 

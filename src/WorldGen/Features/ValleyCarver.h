@@ -20,6 +20,7 @@ struct ValleyParams
   float waterMinStrength{0.65f};
   float waterMinMoisture{0.42f};
   int waterSurfaceDepth{0};
+  int maxWaterElevationAboveSea{24};
 };
 
 using ValleySurfaceYCallback = std::function<int(int x, int z)>;

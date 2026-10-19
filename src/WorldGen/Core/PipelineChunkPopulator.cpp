@@ -484,6 +484,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             valley_params.waterMinStrength = pack.WaterMinStrength;
             valley_params.waterMinMoisture = pack.WaterMinMoisture;
             valley_params.waterSurfaceDepth = pack.WaterSurfaceDepth;
+            valley_params.maxWaterElevationAboveSea =
+                pack.WaterMaxElevationAboveSea;
           }
           CarveChunkValleys(ctx, base_x, base_z, settings.Seed, valley_params,
                             settings.SeaLevel, settings.Tuning.riverWidth,

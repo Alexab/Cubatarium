@@ -89,6 +89,7 @@ void RunValleysStage(UComposableWorldGenerator &generator,
     params.waterMinStrength = pack.WaterMinStrength;
     params.waterMinMoisture = pack.WaterMinMoisture;
     params.waterSurfaceDepth = pack.WaterSurfaceDepth;
+    params.maxWaterElevationAboveSea = pack.WaterMaxElevationAboveSea;
   }
   const ValleySurfaceYCallback get_surface_y =
       [&generator](int hx, int hz) { return generator.SurfaceYAt(hx, hz); };
