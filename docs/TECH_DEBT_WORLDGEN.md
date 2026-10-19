@@ -1003,6 +1003,10 @@ generation должна быть детерминирована мировым s
 - [x] Собрать приложение и `worldgen_smoothness_test` только в Release;
   `worldgen_smoothness_test` завершился `all tests passed`. Runtime-копия
   `climate.json` совпадает с исходником по SHA-256.
+- [x] После изменения биомных весов собрать и выполнить
+  `worldgen_vegetation_placement_integration_test` только в Release; результат
+  `OK`, включая генерацию деревьев и одинаковые блоки при прямом/обратном
+  порядке чанков.
 - [x] Создать новый полный Release-мир `CI_410058_mountain_snowline_R16_20261019`
   (profile 2, `density_3d`, 12611 chunk-файлов). В сохранённой колонке `(200,136)`
   записан `snow` на Y=191; соседнее baseline-сохранение того же seed и радиуса
