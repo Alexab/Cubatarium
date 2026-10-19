@@ -121,7 +121,16 @@ glm::vec3 IUWorldGenPipeline::ResolvePlayerSpawnPosition(
                      static_cast<float>(candidate.z));
   }
 
-  return DefaultSpawnPosition(centerX, centerZ, eyeHeight);
+  const glm::vec3 fallback =
+      DefaultSpawnPosition(centerX, centerZ, eyeHeight);
+  if (settings.FillWater)
+  {
+    const float aboveSeaSpawnY =
+        static_cast<float>(settings.SeaLevel) + eyeHeight + 0.5f;
+    return glm::vec3(fallback.x, std::max(fallback.y, aboveSeaSpawnY),
+                     fallback.z);
+  }
+  return fallback;
 }
 
 void IUWorldGenPipeline::GenerateSpawnPatch(int centerX, int centerZ,

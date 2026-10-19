@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
@@ -38,6 +39,31 @@ namespace
 
 constexpr const char *kTestName = "worldgen_vegetation_placement_integration_test";
 constexpr uint32_t kSeed = 410021u;
+
+class FixedSurfacePipeline final : public cutum::IUWorldGenPipeline
+{
+public:
+  FixedSurfacePipeline(cutum::WorldGenContext context, int surfaceY)
+      : IUWorldGenPipeline(context), SurfaceY(surfaceY)
+  {
+  }
+
+  void GenerateColumn(int worldX, int worldZ) override
+  {
+    (void)worldX;
+    (void)worldZ;
+  }
+
+  int SurfaceYAt(int worldX, int worldZ) const override
+  {
+    (void)worldX;
+    (void)worldZ;
+    return SurfaceY;
+  }
+
+private:
+  int SurfaceY;
+};
 
 static fs::path FindRepoRoot()
 {
@@ -870,6 +896,34 @@ static void TestCrossChunkTreeConflictStable(cutum::UBlockRegistry &registry)
                     "cross-chunk procedural tree overlap resolves identically");
 }
 
+static void TestOceanFallbackSpawnStaysAboveSea(
+    cutum::UBlockRegistry &registry)
+{
+  cutum::ProceduralSettings settings;
+  settings.SeaLevel = 63;
+  settings.MinHeight = -64;
+  settings.MaxHeight = 320;
+  settings.FillWater = true;
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext context(world, registry, settings);
+  const cutum::BlockId stone = registry.GetIdByTypeName("stone");
+  const cutum::BlockId water = registry.GetIdByTypeName("water");
+  FluidTest::Expect(stone != cutum::BLOCK_AIR && water != cutum::BLOCK_AIR,
+                    kTestName, "ocean fallback test blocks resolve");
+  world.SetBlock(glm::ivec3(0, 34, 0), stone);
+  for (int y = 35; y <= settings.SeaLevel; ++y)
+  {
+    world.SetBlock(glm::ivec3(0, y, 0), water);
+  }
+  FixedSurfacePipeline pipeline(context, 34);
+
+  const glm::vec3 spawn =
+      pipeline.ResolvePlayerSpawnPosition(world, registry);
+  FluidTest::Expect(spawn.y >= 63.0f + 1.62f + 0.5f, kTestName,
+                    "ocean-only fallback does not spawn below the sea surface");
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -901,6 +955,7 @@ int main(int argc, char **argv)
   const auto definitions = LoadPackDefinitions(pack_root);
   cutum::UBlockRegistry registry(nullptr, definitions);
   constexpr const char *kOwnerPack = "minetest_default_16";
+  TestOceanFallbackSpawnStaysAboveSea(registry);
   if (argc > 1 && std::string(argv[1]) == "--spatial-flora-density-only")
   {
     TestSpatialFloraCandidateDensity(registry);
