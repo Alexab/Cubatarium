@@ -4,8 +4,10 @@
 #include "World/Core/BlockWorld.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
@@ -565,6 +567,35 @@ static void TestAltitudeAdjustedMountainSnowLine()
       "altitude cooling allows snowy slopes to win over the mountain palette");
 }
 
+static void TestRiverValleysAndRavinesAreIndependent()
+{
+  cutum::WorldGenPackPipeline packPipeline;
+  packPipeline.Loaded = true;
+  packPipeline.Valleys = true;
+  packPipeline.Ravines = true;
+
+  cutum::ProceduralSettings settings;
+  settings.Tuning.useAnalyticValleys = true;
+  settings.Ravines.enabled = true;
+  cutum::ComposableWorldGenConfig generatorConfig;
+  generatorConfig.Valleys = true;
+  generatorConfig.Ravines = true;
+  const cutum::WorldGenStageMask mask = cutum::BuildWorldGenStageMask(
+      generatorConfig, settings, packPipeline);
+  FluidTest::Expect(mask.IsEnabled(cutum::WorldGenStageId::Valleys), kTestName,
+                    "analytic river valleys are enabled by their setting");
+  FluidTest::Expect(mask.IsEnabled(cutum::WorldGenStageId::Ravines), kTestName,
+                    "ravines remain enabled alongside analytic valleys");
+
+  settings.Ravines.enabled = false;
+  const cutum::WorldGenStageMask noRavines = cutum::BuildWorldGenStageMask(
+      generatorConfig, settings, packPipeline);
+  FluidTest::Expect(noRavines.IsEnabled(cutum::WorldGenStageId::Valleys) &&
+                        !noRavines.IsEnabled(cutum::WorldGenStageId::Ravines),
+                    kTestName,
+                    "ravines keep their independent enable switch");
+}
+
 } // namespace
 
 int main()
@@ -585,6 +616,7 @@ int main()
   TestNegativeHeightSamplingAndCompactBounds();
   TestRegionalDensityTerrainDistribution();
   TestAltitudeAdjustedMountainSnowLine();
+  TestRiverValleysAndRavinesAreIndependent();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

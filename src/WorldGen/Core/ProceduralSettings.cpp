@@ -297,6 +297,7 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.decorationDensity = 0.8f;
     s.Tuning.biomeBlendRadius = 16.0f;
     s.Tuning.erosionStrength = 0.25f;
+    s.Tuning.useAnalyticValleys = true;
     s.FillFire = false;
   }
   else if (presetId == "sparse_structures")
@@ -304,6 +305,7 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.structureDensity = 0.2f;
     s.Tuning.vegetationDensity = 0.75f;
     s.Tuning.decorationDensity = 0.75f;
+    s.Tuning.useAnalyticValleys = true;
   }
   else if (presetId == "smooth")
   {
@@ -334,6 +336,7 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.decorationDensity = 0.55f;
     s.Tuning.biomeBlendRadius = 14.0f;
     s.Tuning.erosionStrength = 0.25f;
+    s.Tuning.useAnalyticValleys = true;
     s.Tuning.heightSmoothing = true;
     s.Tuning.heightSmoothingRadius = 2;
     s.FillFire = false;

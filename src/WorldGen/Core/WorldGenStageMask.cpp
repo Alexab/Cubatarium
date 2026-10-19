@@ -89,7 +89,6 @@ WorldGenStageMask BuildWorldGenStageMask(
 
   const bool use_valleys = settings.Tuning.useAnalyticValleys;
   const bool ravines =
-      !use_valleys &&
       StageEnabled(pack_pipeline, generator_config.Ravines,
                    pack_pipeline.Ravines) &&
       settings.Ravines.enabled;
