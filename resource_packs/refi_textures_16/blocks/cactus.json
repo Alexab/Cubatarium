@@ -22,5 +22,7 @@
     "cactus_bottom"
   ],
   "displayName": "Cactus",
-  "render": {}
+  "render": {
+    "style": "cutout"
+  }
 }

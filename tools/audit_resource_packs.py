@@ -113,10 +113,18 @@ def check_cube_blend_mismatch(block_by_name: dict[str, dict]) -> list[str]:
     return issues
 
 
-def check_cutout_occupancy(block_by_name: dict[str, dict]) -> list[str]:
+def check_cutout_occupancy(
+    block_by_name: dict[str, dict], cutout_patterns: list[str]
+) -> list[str]:
     warnings: list[str] = []
     for name, block in block_by_name.items():
-        if render_style(block) != "cutout":
+        # Cutout describes texture alpha handling, not collision. Only the
+        # canonical foliage/web group is expected to be non-solid; blocks such
+        # as cactus may use cutout pixels and still occupy their cell.
+        if (
+            render_style(block) != "cutout"
+            or not name_matches_patterns(name, cutout_patterns)
+        ):
             continue
         occ = block_occupancy(block)
         if occ is None or occ >= 1.0:
@@ -544,7 +552,8 @@ def audit_pack(
     if isinstance(cutout_patterns, list):
         warnings.extend(check_cutout_block_marking(block_by_name, cutout_patterns))
 
-    warnings.extend(check_cutout_occupancy(block_by_name))
+    if isinstance(cutout_patterns, list):
+        warnings.extend(check_cutout_occupancy(block_by_name, cutout_patterns))
     if isinstance(cutout_patterns, list):
         warnings.extend(
             check_alpha_cutout_candidates(pack_dir, block_by_name, cutout_patterns)
