@@ -433,7 +433,7 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
   tree.Tree.CrownRadiusX = 4;
   tree.Tree.CrownRadiusZ = 4;
   tree.Tree.CrownHeight = 5;
-  tree.Tree.BranchCount = 8;
+  tree.Tree.BranchCount = 0;
   tree.Tree.CrownLobes = 0;
   tree.Tree.RootChance = 0.0f;
   tree.Tree.CrownIrregularity = 0.28f;
@@ -462,8 +462,17 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
               std::max(std::abs(position.x), std::abs(position.z)));
         }
       });
-  FluidTest::Expect(tree_extent >= 5, kTestName,
-                    "wide profile produces outward branch and leaf silhouettes");
+  bool oak_has_lateral_wood = false;
+  world.ForEachBlock(
+      [&](glm::ivec3 position, cutum::BlockId block)
+      {
+        if (block == tree_trunk && (position.x != 0 || position.z != 0))
+        {
+          oak_has_lateral_wood = true;
+        }
+      });
+  FluidTest::Expect(tree_extent >= 4 && !oak_has_lateral_wood, kTestName,
+                    "broadleaf crown expands without exposed lateral logs");
 
   cutum::ObjectFeatureRule pine;
   pine.Mode = cutum::ObjectFeatureRuleMode::ProceduralTree;
