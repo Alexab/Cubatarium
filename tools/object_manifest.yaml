@@ -113,6 +113,7 @@ objects:
       biomes:
       - plains
       - forest
+      - hills
       spacing: 32
       weight: 3
       seed_offset: 4001
@@ -135,6 +136,9 @@ objects:
       - tundra
       - foothills
       - cold_steppe
+      - hills
+      - mountains
+      - snowy_slopes
       spacing: 48
       weight: 2
       seed_offset: 4002
@@ -154,6 +158,9 @@ objects:
       pool: vegetation
       biomes:
       - tundra
+      - forest
+      - mountains
+      - snowy_slopes
       spacing: 22
       weight: 3
       seed_offset: 4003
@@ -235,6 +242,7 @@ objects:
       biomes:
       - plains
       - forest
+      - hills
       spacing: 36
       weight: 2
       seed_offset: 4008
@@ -254,6 +262,7 @@ objects:
       pool: vegetation
       biomes:
       - tundra
+      - snowy_slopes
       spacing: 26
       weight: 2
       seed_offset: 4004
@@ -307,6 +316,7 @@ objects:
       - foothills
       - scrubland
       - savanna
+      - hills
       spacing: 28
       weight: 2
       seed_offset: 4101
@@ -412,6 +422,7 @@ objects:
       biomes:
       - plains
       - forest
+      - hills
       spacing: 72
       weight: 1
       seed_offset: 4202
@@ -450,6 +461,7 @@ objects:
       biomes:
       - plains
       - forest
+      - hills
       spacing: 24
       weight: 2
       seed_offset: 4110
@@ -540,6 +552,7 @@ objects:
       biomes:
       - plains
       - forest
+      - hills
       spacing: 48
       weight: 1
       seed_offset: 4210
@@ -592,6 +605,7 @@ objects:
       biomes:
       - forest
       - tundra
+      - hills
       spacing: 85
       weight: 1
       seed_offset: 4302
@@ -648,6 +662,7 @@ objects:
       biomes:
       - plains
       - forest
+      - hills
       spacing: 88
       weight: 1
       seed_offset: 4305
@@ -795,6 +810,7 @@ objects:
       biomes:
       - plains
       - forest
+      - hills
       chance_per_column: 6000
       seed_offset: 9101
   house_stone_cottage:
@@ -942,6 +958,7 @@ objects:
       biomes:
       - plains
       - forest
+      - hills
       spacing: 150
       weight: 1
       seed_offset: 9204
