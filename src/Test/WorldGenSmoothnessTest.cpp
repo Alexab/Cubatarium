@@ -455,6 +455,32 @@ static void TestRegionalDensityTerrainDistribution()
         heights.push_back(y);
       }
     }
+    if (seed == 410058U)
+    {
+      constexpr int sampleX = 200;
+      constexpr int sampleZ = 136;
+      const int sampleY = density_sampler.SurfaceYAt(sampleX, sampleZ);
+      const cutum::ClimateSample climate =
+          cutum::SampleClimate(sampleX, sampleZ, settings.Seed);
+      const cutum::BiomeWeightSet weights = cutum::ComputeBiomeWeights(
+          sampleX, sampleZ, sampleY, settings.SeaLevel, settings.MaxHeight,
+          settings.Seed, settings.Tuning, settings.WorldGenProfileVersion);
+      std::cout << kTestName << ": mountain_palette_sample seed=" << seed
+                << " pos=(" << sampleX << "," << sampleZ << ") y=" << sampleY
+                << " temperature=" << climate.temperature
+                << " climate_mountain=" << cutum::MountainClimateWeight(climate)
+                << " forest_weight="
+                << cutum::BiomeWeightFor(weights, cutum::BiomeId::Forest)
+                << " mountain_weight="
+                << cutum::BiomeWeightFor(weights, cutum::BiomeId::Mountains)
+                << " snowy_weight="
+                << cutum::BiomeWeightFor(weights, cutum::BiomeId::SnowySlopes)
+                << " peak_weight="
+                << cutum::BiomeWeightFor(weights, cutum::BiomeId::JaggedPeaks)
+                << " dominant="
+                << cutum::BiomeIdToString(cutum::DominantBiome(weights))
+                << std::endl;
+    }
     const auto [minimum, maximum] =
         std::minmax_element(seed_heights.begin(), seed_heights.end());
     const int minimum_y = *minimum;
