@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from worldgen_metrics_lib import (
     analyze_surface,
+    bush_common_footprint_data,
     cave_stats,
     cave_void_fluid_stats,
     compare_to_thresholds,
     count_shore_air_gaps,
+    ground_cover_block_names_for_world,
     ocean_depth_stats,
     spawn_land_shape_metrics,
     terrain_surface_blocks,
@@ -20,6 +25,74 @@ from worldgen_metrics_lib import (
 
 
 class SignedWorldMetricTests(unittest.TestCase):
+    def test_ground_cover_names_follow_saved_worldgen_rules(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            world = root / "world"
+            repo = root / "repo"
+            world.mkdir()
+            (repo / "objects").mkdir(parents=True)
+            (world / "world_data.json").write_text(
+                json.dumps(
+                    {
+                        "worldgen_sets": {
+                            "objects": {
+                                "ground_cover": {
+                                    "default": {
+                                        "entries": [
+                                            {
+                                                "mode": "scatter_blocks",
+                                                "block": "pack:custom_moss",
+                                            },
+                                            {"object": "flower_patch"},
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (repo / "objects" / "flower_patch.json").write_text(
+                json.dumps(
+                    {
+                        "blocks": [
+                            {"type": "custom_bloom"},
+                            {"type": "tree_leaves"},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            names = ground_cover_block_names_for_world(world, repo)
+
+        self.assertIn("custom_moss", names)
+        self.assertIn("custom_bloom", names)
+        self.assertIn("mtg_grass_1", names)
+        self.assertNotIn("tree_leaves", names)
+
+    def test_bush_common_is_separated_from_tree_canopy(self) -> None:
+        columns = {(0, 1, 0): 1, (10, 1, 0): 1}
+        leaves = set()
+        for y in (1, 2):
+            for x in (-1, 0, 1):
+                for z in (-1, 0, 1):
+                    if (x, y, z) != (0, 1, 0):
+                        leaves.add((x, y, z))
+        columns.update({pos: 2 for pos in leaves})
+
+        bases, bush_leaves = bush_common_footprint_data(
+            columns,
+            {1: "tree_log", 2: "tree_leaves"},
+            {(0, 0): (0, 3), (10, 0): (0, 3)},
+            spawn_radius=16,
+        )
+
+        self.assertEqual(bases, {(0, 1, 0)})
+        self.assertEqual(bush_leaves, leaves)
+
     def test_profile_bounds_are_read_and_legacy_saves_stay_unsigned(self) -> None:
         self.assertEqual(
             world_vertical_bounds(

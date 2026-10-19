@@ -203,34 +203,15 @@ def count_bush_common_footprints(
     columns: dict[tuple[int, int, int], int] = {}
     for path in chunk_dir.glob("*.cchunk"):
         columns.update(decode_chunk(path))
-    logs: list[tuple[int, int, int]] = []
-    leaves: set[tuple[int, int, int]] = set()
-    for (wx, wy, wz), bid in columns.items():
-        if abs(wx - center_x) > spawn_radius or abs(wz - center_z) > spawn_radius:
-            continue
-        name = id_to_name.get(bid, "")
-        if name == "tree_log":
-            logs.append((wx, wy, wz))
-        elif name == "tree_leaves":
-            leaves.add((wx, wy, wz))
-    count = 0
-    for wx, wy, wz in logs:
-        ring = 0
-        for dx, dz in (
-            (-1, -1),
-            (0, -1),
-            (1, -1),
-            (-1, 0),
-            (1, 0),
-            (-1, 1),
-            (0, 1),
-            (1, 1),
-        ):
-            if (wx + dx, wy, wz + dz) in leaves:
-                ring += 1
-        if ring >= 6:
-            count += 1
-    return count
+    bases, _ = bush_common_footprint_data(
+        columns,
+        id_to_name,
+        surface,
+        spawn_radius=spawn_radius,
+        center_x=center_x,
+        center_z=center_z,
+    )
+    return len(bases)
 
 
 def count_spawn_fire_blocks(
@@ -483,8 +464,154 @@ GROUND_COVER_BLOCK_NAMES = frozenset(
         "flower_yellow",
         "flower_blue",
         "flower_white",
+        # Blocks used by the bundled Minetest-derived content pack.
+        "flower",
+        "mtg_grass_1",
+        "mtg_dry_grass_1",
+        "mtg_fern_1",
+        "mtg_junglegrass",
+        "mtg_marram_grass_1",
+        "mtg_papyrus",
+        "deadbush",
+        "mtg_coral_brown",
+        "mtg_coral_cyan",
+        "mtg_coral_orange",
     }
 )
+
+
+def _canonical_block_name(value: object) -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+    return value.rsplit(":", 1)[-1]
+
+
+def _feature_rule_entries(value: object) -> list[dict]:
+    """Find feature rules in current and nested worldgen-set save formats."""
+    entries: list[dict] = []
+    if isinstance(value, dict):
+        if any(key in value for key in ("object", "block", "mode", "species")):
+            entries.append(value)
+        else:
+            for child in value.values():
+                entries.extend(_feature_rule_entries(child))
+    elif isinstance(value, list):
+        for child in value:
+            entries.extend(_feature_rule_entries(child))
+    return entries
+
+
+def _object_template_block_names(object_name: str, repo_root: Path) -> set[str]:
+    template_path = repo_root / "objects" / f"{object_name}.json"
+    if not template_path.is_file():
+        return set()
+    try:
+        template = json.loads(template_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+    names = set()
+    for block in template.get("blocks", []):
+        name = _canonical_block_name(block.get("type")) if isinstance(block, dict) else None
+        if name:
+            names.add(name)
+    return names
+
+
+def ground_cover_block_names_for_world(
+    world_dir: Path,
+    repo_root: Path | None = None,
+) -> frozenset[str]:
+    """Resolve ground-cover blocks from the immutable feature rules saved in a world."""
+    names = set(GROUND_COVER_BLOCK_NAMES)
+    repo = repo_root or Path(__file__).resolve().parents[1]
+    meta_path = world_dir / "world_data.json"
+    meta: dict = {}
+    if meta_path.is_file():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            meta = {}
+
+    saved_entries = _feature_rule_entries(
+        meta.get("worldgen_sets", {}).get("objects", {}).get("ground_cover", {})
+    )
+    entries = saved_entries
+    if not entries:
+        features_path = repo / "content" / "object_features.json"
+        try:
+            features = json.loads(features_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            features = {}
+        entries = _feature_rule_entries(features.get("vegetation", []))
+
+    for entry in entries:
+        block_name = _canonical_block_name(entry.get("block"))
+        if block_name:
+            names.add(block_name)
+        object_name = entry.get("object")
+        if isinstance(object_name, str):
+            names.update(_object_template_block_names(object_name, repo))
+
+    # Shrubs and trees have their own coverage metrics; do not let their leaves
+    # inflate the ground-cover metric just because a static template uses them.
+    names.difference_update(TREE_BLOCK_NAMES)
+    names.difference_update(SHRUB_BLOCK_NAMES)
+    return frozenset(names)
+
+
+def bush_common_footprint_data(
+    columns: dict[tuple[int, int, int], int],
+    id_to_name: dict[int, str],
+    terrain_surface: dict[tuple[int, int], tuple[int, int]],
+    *,
+    spawn_radius: int | None = None,
+    center_x: int = 0,
+    center_z: int = 0,
+) -> tuple[set[tuple[int, int, int]], set[tuple[int, int, int]]]:
+    """Return detected low bush_common bases and their leaf voxels."""
+    leaves = {
+        pos
+        for pos, bid in columns.items()
+        if id_to_name.get(bid, "") == "tree_leaves"
+    }
+    shrub_bases: set[tuple[int, int, int]] = set()
+    shrub_leaves: set[tuple[int, int, int]] = set()
+    ring_offsets = (
+        (-1, -1),
+        (0, -1),
+        (1, -1),
+        (-1, 0),
+        (1, 0),
+        (-1, 1),
+        (0, 1),
+        (1, 1),
+    )
+
+    for (wx, wy, wz), bid in columns.items():
+        if id_to_name.get(bid, "") != "tree_log":
+            continue
+        if spawn_radius is not None and (
+            abs(wx - center_x) > spawn_radius or abs(wz - center_z) > spawn_radius
+        ):
+            continue
+        ground = terrain_surface.get((wx, wz))
+        if ground is None or not ground[0] <= wy <= ground[0] + 1:
+            continue
+        ring = {
+            (wx + dx, wy, wz + dz)
+            for dx, dz in ring_offsets
+            if (wx + dx, wy, wz + dz) in leaves
+        }
+        if len(ring) < 6:
+            continue
+        shrub_bases.add((wx, wy, wz))
+        for leaf_y in (wy, wy + 1):
+            for dx in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    pos = (wx + dx, leaf_y, wz + dz)
+                    if pos in leaves:
+                        shrub_leaves.add(pos)
+    return shrub_bases, shrub_leaves
 
 
 def load_world_block_columns(world_dir: Path) -> dict[tuple[int, int, int], int]:
@@ -687,10 +814,20 @@ def vegetation_cluster_stats(
     water_id: int | None = None,
 ) -> dict:
     columns = load_world_block_columns(world_dir)
+    ground_cover_names = ground_cover_block_names_for_world(world_dir)
+    bush_bases, bush_leaf_voxels = bush_common_footprint_data(
+        columns,
+        id_to_name,
+        terrain_surface,
+        spawn_radius=spawn_radius,
+        center_x=center_x,
+        center_z=center_z,
+    )
     ground_cover_columns: set[tuple[int, int]] = set()
     tree_base_columns: set[tuple[int, int]] = set()
     shrub_base_columns: set[tuple[int, int]] = set()
     tree_canopy_columns: set[tuple[int, int]] = set()
+    shrub_canopy_columns: set[tuple[int, int]] = set()
     shrub_stem_names = {
         "mtg_bush_stem",
         "mtg_acacia_bush_stem",
@@ -700,20 +837,32 @@ def vegetation_cluster_stats(
     for (wx, wy, wz), bid in columns.items():
         if abs(wx - center_x) > spawn_radius or abs(wz - center_z) > spawn_radius:
             continue
-        name = id_to_name.get(bid, "")
+        name = _canonical_block_name(id_to_name.get(bid, "")) or ""
         surface_entry = terrain_surface.get((wx, wz))
         ground_y = surface_entry[0] if surface_entry is not None else None
         if ground_y is None:
             continue
-        if name in GROUND_COVER_BLOCK_NAMES:
+        if name in ground_cover_names:
             if ground_y < wy <= ground_y + 2:
                 ground_cover_columns.add((wx, wz))
         if name in TREE_LOG_BLOCK_NAMES and ground_y <= wy <= ground_y + 1:
-            tree_base_columns.add((wx, wz))
+            if (wx, wy, wz) in bush_bases:
+                shrub_base_columns.add((wx, wz))
+            else:
+                tree_base_columns.add((wx, wz))
         elif name in shrub_stem_names and ground_y <= wy <= ground_y + 2:
             shrub_base_columns.add((wx, wz))
         if name in TREE_LEAF_BLOCK_NAMES and wy > ground_y:
-            tree_canopy_columns.add((wx, wz))
+            if (wx, wy, wz) not in bush_leaf_voxels:
+                tree_canopy_columns.add((wx, wz))
+            else:
+                shrub_canopy_columns.add((wx, wz))
+        if name in SHRUB_BLOCK_NAMES and wy > ground_y:
+            shrub_canopy_columns.add((wx, wz))
+
+    # The object-library bush_common template uses generic tree leaves, so
+    # include its detected crown in shrub coverage after excluding it above.
+    shrub_canopy_columns.update((x, z) for x, _y, z in bush_leaf_voxels)
 
     spawn_columns = [
         xz
@@ -727,6 +876,7 @@ def vegetation_cluster_stats(
     tree_base_columns &= land_columns
     shrub_base_columns &= land_columns
     tree_canopy_columns &= land_columns
+    shrub_canopy_columns &= land_columns
     ground_cover_density = (
         100.0 * len(ground_cover_columns) / max(1, len(land_columns))
     )
@@ -794,6 +944,7 @@ def vegetation_cluster_stats(
         "tree_base_columns": len(tree_base_columns),
         "tree_canopy_columns": len(tree_canopy_columns & land_columns),
         "shrub_base_columns": len(shrub_base_columns),
+        "shrub_canopy_columns": len(shrub_canopy_columns),
         "nn_distance_cv": nn_cv,
         "local_density_variance": density_var,
         "feature_columns": len(feature_columns),
@@ -1036,7 +1187,7 @@ def analyze_world(
     non_terrain_names = (
         {"water", "lava", "fire"}
         | set(VEGETATION_BLOCK_NAMES)
-        | set(GROUND_COVER_BLOCK_NAMES)
+        | set(ground_cover_block_names_for_world(world_dir, repo))
     )
     non_terrain_ids = {
         bid for bid, name in id_to_name.items() if name in non_terrain_names

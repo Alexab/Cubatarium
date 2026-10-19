@@ -14,7 +14,7 @@ from worldgen_metrics_lib import (
     build_id_to_name_from_world,
     count_spawn_vegetation_blocks,
     decode_chunk,
-    GROUND_COVER_BLOCK_NAMES,
+    ground_cover_block_names_for_world,
     SHRUB_BLOCK_NAMES,
     spawn_center_from_meta,
     TREE_BLOCK_NAMES,
@@ -54,7 +54,7 @@ def non_terrain_ids_for_world(world_dir: Path, repo_root: Path = REPO) -> set[in
         {"water", "lava", "fire"}
         | set(TREE_BLOCK_NAMES)
         | set(SHRUB_BLOCK_NAMES)
-        | set(GROUND_COVER_BLOCK_NAMES)
+        | set(ground_cover_block_names_for_world(world_dir, repo_root))
     )
     return {bid for bid, name in id_to_name.items() if name in ignored_names}
 
@@ -171,6 +171,21 @@ def main() -> int:
         print(f"    spawn_bush_common_footprints: {metrics.get('spawn_bush_common_footprints', 0)}")
         print(f"    spawn_ground_logs: {metrics.get('spawn_ground_logs', 0)}")
         print(f"    spawn_fire_blocks: {metrics.get('spawn_fire_blocks', 0)}")
+        print(
+            "    ground_cover_columns/density: "
+            f"{metrics.get('ground_cover_columns', 0)}/"
+            f"{metrics.get('ground_cover_density', 0.0):.1f}%"
+        )
+        print(
+            "    tree bases/canopy columns: "
+            f"{metrics.get('tree_base_columns', 0)}/"
+            f"{metrics.get('tree_canopy_columns', 0)}"
+        )
+        print(
+            "    shrub bases/canopy columns: "
+            f"{metrics.get('shrub_base_columns', 0)}/"
+            f"{metrics.get('shrub_canopy_columns', 0)}"
+        )
         if veg:
             print(f"    vegetation_breakdown: {veg}")
     return 0
