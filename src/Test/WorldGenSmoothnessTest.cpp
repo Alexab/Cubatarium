@@ -20,8 +20,10 @@
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -657,6 +659,145 @@ static int DumpBiomeGrid(uint32_t seed, int radius, int step)
   return 0;
 }
 
+static bool LoadSurfaceHeights(
+    const fs::path &path, std::map<std::pair<int, int>, int> &surface_heights,
+    std::string &error)
+{
+  std::ifstream input(path);
+  if (!input)
+  {
+    error = "could not open saved-surface CSV: " + path.string();
+    return false;
+  }
+
+  std::string line;
+  if (!std::getline(input, line) || line != "x,z,surface_y")
+  {
+    error = "saved-surface CSV header must be x,z,surface_y";
+    return false;
+  }
+
+  int line_number = 1;
+  while (std::getline(input, line))
+  {
+    ++line_number;
+    if (line.empty())
+    {
+      continue;
+    }
+
+    std::stringstream row(line);
+    int x = 0;
+    int z = 0;
+    int surface_y = 0;
+    char first_separator = '\0';
+    char second_separator = '\0';
+    if (!(row >> x >> first_separator >> z >> second_separator >> surface_y) ||
+        first_separator != ',' || second_separator != ',')
+    {
+      error = "invalid saved-surface CSV row " + std::to_string(line_number);
+      return false;
+    }
+    row >> std::ws;
+    if (!row.eof())
+    {
+      error = "unexpected data in saved-surface CSV row " +
+              std::to_string(line_number);
+      return false;
+    }
+    if (!surface_heights.emplace(std::make_pair(x, z), surface_y).second)
+    {
+      error = "duplicate coordinate in saved-surface CSV row " +
+              std::to_string(line_number);
+      return false;
+    }
+  }
+
+  if (surface_heights.empty())
+  {
+    error = "saved-surface CSV contains no heights";
+    return false;
+  }
+  return true;
+}
+
+static int DumpBiomeGridFromSurface(
+    uint32_t seed, int radius, int center_x, int center_z,
+    const std::map<std::pair<int, int>, int> &saved_surface)
+{
+  if (radius < 0 || radius > 4096)
+  {
+    std::cerr << "radius must be in [0,4096]\n";
+    return 2;
+  }
+
+  cutum::ProceduralSettings settings = MakeBalancedSettings();
+  settings.Seed = seed;
+  const int blend_radius = std::clamp(
+      static_cast<int>(std::lround(settings.Tuning.biomeBlendRadius)), 0, 16);
+  for (int z = center_z - radius - blend_radius;
+       z <= center_z + radius + blend_radius; ++z)
+  {
+    for (int x = center_x - radius - blend_radius;
+         x <= center_x + radius + blend_radius; ++x)
+    {
+      if (saved_surface.find(std::make_pair(x, z)) == saved_surface.end())
+      {
+        std::cerr << "saved-surface CSV is missing blend input coordinate ("
+                  << x << ',' << z << ")\n";
+        return 2;
+      }
+    }
+  }
+  const cutum::CoarseHeightCallback coarse_height =
+      [&saved_surface](int x, int z)
+  { return saved_surface.at(std::make_pair(x, z)); };
+
+  std::cout << "seed,x,z,surface_y,temperature,moisture,continentalness,"
+               "erosion,weirdness,ridge,dominant_biome,biome_weights\n";
+  std::cout << std::setprecision(6);
+  for (int z = center_z - radius; z <= center_z + radius; ++z)
+  {
+    for (int x = center_x - radius; x <= center_x + radius; ++x)
+    {
+      const auto found = saved_surface.find(std::make_pair(x, z));
+      if (found == saved_surface.end())
+      {
+        std::cerr << "saved-surface CSV is missing output coordinate (" << x
+                  << ',' << z << ")\n";
+        return 2;
+      }
+      const int surface_y = found->second;
+      const cutum::ClimateSample climate =
+          cutum::SampleClimate(x, z, settings.Seed);
+      const cutum::BiomeWeightSet weights = cutum::BlendedBiomeWeights(
+          x, z, surface_y, settings.SeaLevel, settings.MaxHeight,
+          settings.Seed, settings.Tuning, coarse_height,
+          settings.WorldGenProfileVersion);
+      const cutum::BiomeKey dominant = cutum::BiomeKeyForHandle(
+          cutum::DominantBiomeHandle(weights));
+      std::cout << seed << ',' << x << ',' << z << ',' << surface_y << ','
+                << climate.temperature << ',' << climate.moisture << ','
+                << climate.continentalness << ',' << climate.erosion << ','
+                << climate.weirdness << ',' << climate.ridge << ',' << dominant
+                << ",\"";
+      bool first = true;
+      for (const cutum::BiomeBlendEntry &entry : weights.entries)
+      {
+        if (!first)
+        {
+          std::cout << '|';
+        }
+        first = false;
+        std::cout << cutum::BiomeKeyForHandle(entry.biome) << ':'
+                  << entry.weight;
+      }
+      std::cout << '\"' << '\n';
+    }
+  }
+  return 0;
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -687,6 +828,43 @@ int main(int argc, char **argv)
     catch (const std::exception &error)
     {
       std::cerr << "invalid biome-grid arguments: " << error.what() << '\n';
+      return 2;
+    }
+  }
+
+  if (argc == 7 &&
+      std::string(argv[1]) == "--dump-biome-grid-from-surface")
+  {
+    // Keep pack-loader status text out of the machine-readable CSV stream.
+    std::ostringstream pack_status;
+    std::streambuf *original_buffer = std::cout.rdbuf(pack_status.rdbuf());
+    const bool pack_loaded = cutum::UWorldGenPack::LoadPackId("default");
+    std::cout.rdbuf(original_buffer);
+    if (!pack_loaded)
+    {
+      std::cerr << "could not load default worldgen pack\n";
+      return 2;
+    }
+    try
+    {
+      const uint32_t seed = static_cast<uint32_t>(std::stoul(argv[2]));
+      const int radius = std::stoi(argv[3]);
+      const int center_x = std::stoi(argv[4]);
+      const int center_z = std::stoi(argv[5]);
+      std::map<std::pair<int, int>, int> saved_surface;
+      std::string error;
+      if (!LoadSurfaceHeights(argv[6], saved_surface, error))
+      {
+        std::cerr << error << '\n';
+        return 2;
+      }
+      return DumpBiomeGridFromSurface(seed, radius, center_x, center_z,
+                                      saved_surface);
+    }
+    catch (const std::exception &error)
+    {
+      std::cerr << "invalid saved-surface biome-grid arguments: "
+                << error.what() << '\n';
       return 2;
     }
   }

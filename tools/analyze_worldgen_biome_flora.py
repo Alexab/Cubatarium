@@ -18,6 +18,7 @@ from worldgen_metrics_lib import (  # noqa: E402
     SHRUB_BLOCK_NAMES,
     TREE_BLOCK_NAMES,
     build_id_to_name_from_world,
+    spawn_center_from_meta,
 )
 
 CCHUNK_MAGIC = b"CCHK"
@@ -201,13 +202,22 @@ def iter_feature_cells(path: Path, wanted_ids: set[int]):
         raise ValueError(f"incomplete chunk voxel data in {path}: {filled}")
 
 
-def analyze(world_dir: Path, grid_path: Path, radius: int | None) -> dict:
+def analyze(
+    world_dir: Path,
+    grid_path: Path,
+    radius: int | None,
+    center_x_override: int | None = None,
+    center_z_override: int | None = None,
+) -> dict:
     world_data_path = world_dir / "world_data.json"
     if not world_data_path.is_file():
         raise ValueError(f"world metadata not found: {world_data_path}")
     world_data = json.loads(world_data_path.read_text(encoding="utf-8"))
     world_seed = int(world_data["world_seed"])
     sea_level = int(world_data.get("procedural", {}).get("sea_level", 63))
+    spawn_x, spawn_z = spawn_center_from_meta(world_data)
+    center_x = spawn_x if center_x_override is None else center_x_override
+    center_z = spawn_z if center_z_override is None else center_z_override
     grid, step, grid_origin = read_biome_grid(grid_path, world_seed)
     x_values = sorted({x for x, _ in grid})
     z_values = sorted({z for _, z in grid})
@@ -256,7 +266,9 @@ def analyze(world_dir: Path, grid_path: Path, radius: int | None) -> dict:
         for lz in range(CHUNK_SIZE):
             for lx in range(CHUNK_SIZE):
                 x, z = cx * CHUNK_SIZE + lx, cz * CHUNK_SIZE + lz
-                if radius is not None and (abs(x) > radius or abs(z) > radius):
+                if radius is not None and (
+                    abs(x - center_x) > radius or abs(z - center_z) > radius
+                ):
                     continue
                 sample = sample_at(x, z)
                 if sample is None:
@@ -271,7 +283,9 @@ def analyze(world_dir: Path, grid_path: Path, radius: int | None) -> dict:
 
     for path in chunk_paths:
         for x, _y, z, block_id in iter_feature_cells(path, wanted_ids):
-            if radius is not None and (abs(x) > radius or abs(z) > radius):
+            if radius is not None and (
+                abs(x - center_x) > radius or abs(z - center_z) > radius
+            ):
                 continue
             sample = sample_at(x, z)
             if sample is None or sample["surface_y"] <= sea_level:
@@ -331,6 +345,7 @@ def analyze(world_dir: Path, grid_path: Path, radius: int | None) -> dict:
         "schema_version": 1,
         "world_name": world_data.get("world_name", world_dir.name),
         "world_seed": world_seed,
+        "analysis_center": {"x": center_x, "z": center_z},
         "worldgen_profile_version": world_data.get("procedural", {}).get(
             "worldgen_profile_version"
         ),
@@ -343,8 +358,16 @@ def analyze(world_dir: Path, grid_path: Path, radius: int | None) -> dict:
         "biome_grid": str(grid_path),
         "biome_grid_step": step,
         "biome_grid_origin": grid_origin,
-        "biome_assignment": "nearest sampled dominant biome (approximate)",
-        "land_area_estimate": "nearest sampled terrain surface above sea level",
+        "biome_assignment": (
+            "exact coordinate sample of dominant biome"
+            if step == 1
+            else "nearest sampled dominant biome (approximate)"
+        ),
+        "land_area_estimate": (
+            "saved terrain surface above sea level"
+            if step == 1
+            else "nearest sampled terrain surface above sea level"
+        ),
         "chunk_files": len(chunk_paths),
         "mapped_plant_block_types": len(wanted),
         "unresolved_plant_block_names": missing_names,
@@ -358,11 +381,19 @@ def main() -> int:
     parser.add_argument("world_dir", type=Path)
     parser.add_argument("--biome-grid", type=Path, required=True)
     parser.add_argument("--radius", type=int, default=None)
+    parser.add_argument("--center-x", type=int, default=None)
+    parser.add_argument("--center-z", type=int, default=None)
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
 
     try:
-        report = analyze(args.world_dir, args.biome_grid, args.radius)
+        report = analyze(
+            args.world_dir,
+            args.biome_grid,
+            args.radius,
+            args.center_x,
+            args.center_z,
+        )
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"analyze_worldgen_biome_flora: {exc}", file=sys.stderr)
         return 2
