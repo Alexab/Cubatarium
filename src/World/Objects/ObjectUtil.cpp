@@ -181,6 +181,16 @@ bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
                          int x, int z, int maxY, int minY)
 {
+  const std::optional<int> surface = FindTopSolidSurfaceYOptional(
+      world, registry, x, z, maxY, minY);
+  return surface.value_or(-1);
+}
+
+std::optional<int> FindTopSolidSurfaceYOptional(const UBlockWorld &world,
+                                                UBlockRegistry &registry,
+                                                int x, int z, int maxY,
+                                                int minY)
+{
   for (int y = maxY; y >= minY; --y)
   {
     const glm::ivec3 ground(x, y, z);
@@ -193,7 +203,7 @@ int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
       return y;
     }
   }
-  return -1;
+  return std::nullopt;
 }
 
 namespace

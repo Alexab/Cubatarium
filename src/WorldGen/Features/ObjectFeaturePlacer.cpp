@@ -1293,7 +1293,7 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       }
     }
     if (ecology.MaxSlope > 0.0f &&
-        SampleStructureSurfaceGradient(ctx, x, z, ecologySurfaceY) >
+        SampleLandSurfaceGradient(ctx, x, z, ecologySurfaceY) >
             ecology.MaxSlope)
     {
       continue;

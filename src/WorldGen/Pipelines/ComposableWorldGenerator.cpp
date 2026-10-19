@@ -94,6 +94,8 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
                           BiomeSampler.has_value() ? &*BiomeSampler : nullptr,
                           ctx.Settings, BiomeSource.get());
   }
+  Ctx.CoarseSurfaceYAt = [this](int world_x, int world_z)
+  { return SampleCoarseSurfaceY(world_x, world_z); };
 }
 
 void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,

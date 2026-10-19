@@ -19,5 +19,7 @@ bool FindUnderwaterFloorAnchorForPlacement(const WorldGenContext &ctx, int x,
 
 float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
                                      int surfaceY);
+float SampleLandSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                                int surfaceY);
 
 } // namespace cutum

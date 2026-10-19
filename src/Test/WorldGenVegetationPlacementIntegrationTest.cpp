@@ -24,6 +24,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -448,6 +449,34 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
       snapshot(forwardWorld);
   const std::vector<std::tuple<int, int, int, cutum::BlockId>> reverseBlocks =
       snapshot(reverseWorld);
+  if (forwardBlocks != reverseBlocks)
+  {
+    std::vector<std::tuple<int, int, int, cutum::BlockId>> forwardOnly;
+    std::vector<std::tuple<int, int, int, cutum::BlockId>> reverseOnly;
+    std::set_difference(forwardBlocks.begin(), forwardBlocks.end(),
+                        reverseBlocks.begin(), reverseBlocks.end(),
+                        std::back_inserter(forwardOnly));
+    std::set_difference(reverseBlocks.begin(), reverseBlocks.end(),
+                        forwardBlocks.begin(), forwardBlocks.end(),
+                        std::back_inserter(reverseOnly));
+    std::cerr << kTestName << ": order diff forward=" << forwardBlocks.size()
+              << " reverse=" << reverseBlocks.size()
+              << " forward_only=" << forwardOnly.size()
+              << " reverse_only=" << reverseOnly.size() << std::endl;
+    const auto printFirst = [](const char *label,
+                               const std::vector<std::tuple<int, int, int,
+                                                            cutum::BlockId>> &items)
+    {
+      for (size_t i = 0; i < std::min<size_t>(items.size(), 12); ++i)
+      {
+        const auto &[x, y, z, id] = items[i];
+        std::cerr << "  " << label << " (" << x << ',' << y << ',' << z
+                  << ") id=" << id << std::endl;
+      }
+    };
+    printFirst("forward", forwardOnly);
+    printFirst("reverse", reverseOnly);
+  }
   FluidTest::Expect(forwardBlocks == reverseBlocks, kTestName,
                     "generated chunk area is independent of chunk apply order");
 
@@ -1354,6 +1383,12 @@ int main(int argc, char **argv)
                     "tree_pine available after LoadMerged");
 
   cutum::UPipelineChunkPopulator populator(registry, &objects, kOwnerPack);
+  if (argc > 1 && std::string(argv[1]) == "--chunk-order-only")
+  {
+    TestChunkPopulatorPlacesTrees(populator, registry, objects);
+    std::cout << kTestName << ": chunk order check complete" << std::endl;
+    return 0;
+  }
   TestSpatialFloraCandidateDensity(registry);
   TestRegionalFloraDensityClustering(registry);
   TestChunkPopulatorPlacesTrees(populator, registry, objects);

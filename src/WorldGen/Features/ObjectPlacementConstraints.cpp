@@ -6,6 +6,7 @@
 #include "WorldGen/Core/WorldGenPlacementTuning.h"
 
 #include <cmath>
+#include <optional>
 
 namespace cutum
 {
@@ -172,17 +173,44 @@ bool FindUnderwaterFloorAnchorForPlacement(const WorldGenContext &ctx, int x,
   return FindUnderwaterFloorAnchor(ctx, x, z, anchor_out);
 }
 
-float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
-                                     int surfaceY)
+namespace
+{
+float SampleSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                            int surfaceY, bool landOnly)
 {
   const int maxScanY = ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel,
                                        ctx.Settings.MaxHeight);
-  auto surfaceAt = [&](int wx, int wz) -> int {
-    return FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY,
-                                ctx.Settings.MinHeight);
+  auto surfaceAt = [&](int wx, int wz) -> std::optional<int> {
+    if (landOnly && ctx.CoarseSurfaceYAt)
+    {
+      const int deterministicSurfaceY = ctx.CoarseSurfaceYAt(wx, wz);
+      return deterministicSurfaceY < ctx.Settings.SeaLevel
+                 ? std::nullopt
+                 : std::optional<int>(deterministicSurfaceY);
+    }
+    const std::optional<int> surface = FindTopSolidSurfaceYOptional(
+        ctx.World, ctx.Registry, wx, wz, maxScanY, ctx.Settings.MinHeight);
+    if (!surface)
+    {
+      return std::nullopt;
+    }
+    if (landOnly)
+    {
+      if (*surface < ctx.Settings.SeaLevel)
+      {
+        return std::nullopt;
+      }
+      const BlockId above =
+          ctx.World.GetBlock(glm::ivec3(wx, *surface + 1, wz));
+      if (ctx.Registry.IsLiquid(above))
+      {
+        return std::nullopt;
+      }
+    }
+    return surface;
   };
-  const int centerY = surfaceAt(x, z);
-  if (centerY < ctx.Settings.MinHeight)
+  const std::optional<int> centerY = surfaceAt(x, z);
+  if (!centerY)
   {
     return 999.0f;
   }
@@ -195,16 +223,29 @@ float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
       {
         continue;
       }
-      const int neighborY = surfaceAt(x + dx, z + dz);
-      if (neighborY < ctx.Settings.MinHeight)
+      const std::optional<int> neighborY = surfaceAt(x + dx, z + dz);
+      if (!neighborY)
       {
         continue;
       }
       maxDelta =
-          std::max(maxDelta, static_cast<float>(std::abs(neighborY - centerY)));
+          std::max(maxDelta, static_cast<float>(std::abs(*neighborY - *centerY)));
     }
   }
   return maxDelta;
+}
+} // namespace
+
+float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                                     int surfaceY)
+{
+  return SampleSurfaceGradient(ctx, x, z, surfaceY, false);
+}
+
+float SampleLandSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                                int surfaceY)
+{
+  return SampleSurfaceGradient(ctx, x, z, surfaceY, true);
 }
 
 } // namespace cutum

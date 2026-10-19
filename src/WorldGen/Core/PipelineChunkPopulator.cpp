@@ -1,6 +1,8 @@
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Objects/ObjectUtil.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
@@ -133,42 +135,115 @@ double ElapsedMs(std::chrono::steady_clock::time_point start)
       .count();
 }
 
-/// Carry species block priorities into the buffer's cross-chunk conflict rule.
-std::vector<std::pair<BlockId, int>> CollectTreeFeatureBlockRanks(
-    UBlockRegistry &registry, const std::string &ownerPackId,
-    const ObjectFeatureConfig *features)
+int FloraFeatureBlockRank(const std::string &blockName)
+{
+  if (blockName.find("leaves") != std::string::npos ||
+      blockName.find("needles") != std::string::npos ||
+      blockName.find("flower") != std::string::npos ||
+      blockName.find("grass") != std::string::npos ||
+      blockName.find("mushroom") != std::string::npos)
+  {
+    return 1;
+  }
+  if (blockName.find("stem") != std::string::npos ||
+      blockName.find("branch") != std::string::npos)
+  {
+    return 2;
+  }
+  if (blockName.find("tree") != std::string::npos ||
+      blockName.find("log") != std::string::npos ||
+      blockName.find("trunk") != std::string::npos ||
+      blockName.find("bark") != std::string::npos)
+  {
+    return 3;
+  }
+  return 1;
+}
+
+/// Carry deterministic priorities for all flora voxels across chunk borders.
+std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
+    UBlockRegistry &registry, UObjectLibrary *objects,
+    const std::string &ownerPackId, const ObjectFeatureConfig *features)
 {
   std::vector<std::pair<BlockId, int>> ranks;
   if (!features)
   {
     return ranks;
   }
+  const auto addBlock = [&](BlockId id, int rank)
+  {
+    if (id == BLOCK_AIR || rank <= 0)
+    {
+      return;
+    }
+    auto found = std::find_if(
+        ranks.begin(), ranks.end(),
+        [id](const std::pair<BlockId, int> &entry) { return entry.first == id; });
+    if (found == ranks.end())
+    {
+      ranks.emplace_back(id, rank);
+    }
+    else
+    {
+      found->second = std::max(found->second, rank);
+    }
+  };
   const auto collectPool = [&](const std::vector<ObjectFeatureRule> &rules)
   {
     for (const ObjectFeatureRule &rule : rules)
     {
-      if (rule.Mode != ObjectFeatureRuleMode::ProceduralTree)
+      if (rule.Mode == ObjectFeatureRuleMode::ProceduralTree)
+      {
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Tree.TrunkBlock),
+                 3);
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Tree.LeavesBlock),
+                 1);
+        continue;
+      }
+      if (rule.Mode == ObjectFeatureRuleMode::ProceduralShrub)
+      {
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Shrub.StemBlock),
+                 2);
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Shrub.LeavesBlock),
+                 1);
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Shrub.AccentBlock),
+                 1);
+        continue;
+      }
+      if (rule.Mode == ObjectFeatureRuleMode::ScatterBlocks)
+      {
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Scatter.BlockName),
+                 1);
+        continue;
+      }
+      if (rule.Mode != ObjectFeatureRuleMode::Object || !objects)
       {
         continue;
       }
-      const BlockId trunk = ResolvePackScatterBlockId(
-          registry, ownerPackId, rule.Tree.TrunkBlock);
-      const BlockId leaves = ResolvePackScatterBlockId(
-          registry, ownerPackId, rule.Tree.LeavesBlock);
-      if (trunk != BLOCK_AIR)
+      const auto object = objects->GetShared(rule.ObjectName);
+      if (!object)
       {
-        ranks.emplace_back(trunk, 3);
+        continue;
       }
-      if (leaves != BLOCK_AIR)
+      for (const ObjectVoxel &voxel : object->voxels)
       {
-        ranks.emplace_back(leaves, 1);
+        const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
+        if (id == BLOCK_AIR)
+        {
+          continue;
+        }
+        addBlock(id, FloraFeatureBlockRank(registry.GetTypeNameById(id)));
       }
     }
   };
   collectPool(features->Vegetation);
   collectPool(features->GroundCover);
-  collectPool(features->Decoration);
-  collectPool(features->Structures);
   return ranks;
 }
 
@@ -261,9 +336,9 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   result.buffer.Clear();
   CaptureBufferScope capture_scope(genWorld, result.buffer, request.chunkCoord,
                                    Registry,
-                                   CollectTreeFeatureBlockRanks(
-                                       Registry, WorldgenOwnerPackId,
-                                       content.Features.get()));
+                                   CollectFloraFeatureBlockRanks(
+                                       Registry, objects, WorldgenOwnerPackId,
+                                       pin.Get().Features.get()));
 
   const int base_x = request.chunkCoord.x * CHUNK_SIZE;
   const int base_z = request.chunkCoord.z * CHUNK_SIZE;

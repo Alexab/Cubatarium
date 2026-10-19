@@ -24,6 +24,10 @@ struct WorldGenContext
   UObjectLibrary *Objects{nullptr};
   const ObjectFeatureConfig *ObjectFeatures{nullptr};
   std::string WorldgenOwnerPackId;
+  /// Deterministic terrain height lookup for feature rules that need
+  /// neighborhood context. Unlike reading World, this is independent of the
+  /// order in which terrain columns or chunks have been materialized.
+  std::function<int(int worldX, int worldZ)> CoarseSurfaceYAt;
 
   WorldGenBlockResolver Blocks;
 

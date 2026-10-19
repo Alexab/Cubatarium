@@ -4,6 +4,7 @@
 #include "World/Objects/ObjectLibrary.h"
 #include <functional>
 #include <glm/glm.hpp>
+#include <optional>
 
 namespace cutum
 {
@@ -38,6 +39,10 @@ bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
                           int x, int z, int surfaceY);
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
                          int x, int z, int maxY, int minY = 0);
+std::optional<int> FindTopSolidSurfaceYOptional(const UBlockWorld &world,
+                                                UBlockRegistry &registry,
+                                                int x, int z, int maxY,
+                                                int minY = 0);
 
 struct PlacementSurfaceInfo
 {
