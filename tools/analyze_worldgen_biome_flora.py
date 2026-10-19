@@ -258,6 +258,10 @@ def analyze(
     outside_grid_columns = 0
 
     for x, z in grid:
+        if radius is not None and (
+            abs(x - center_x) > radius or abs(z - center_z) > radius
+        ):
+            continue
         sample = grid[(x, z)]
         if sample["surface_y"] > sea_level:
             land_sample_points[sample["dominant_biome"]] += 1
