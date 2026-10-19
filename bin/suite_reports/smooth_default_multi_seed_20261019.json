@@ -1,0 +1,588 @@
+{
+  "seeds": [
+    42,
+    12345,
+    12354,
+    20240625
+  ],
+  "preset": "smooth",
+  "terrain_backend": "density_3d",
+  "worldgen_profile_version": 2,
+  "failures": [],
+  "per_seed": {
+    "42": {
+      "columns": 43264,
+      "height_min": -6,
+      "height_max": 117,
+      "world_min_height": -64,
+      "world_max_height": 319,
+      "height_mean": 33.933871116863905,
+      "cliff_sample_pairs": 16531,
+      "delta_mean": 0.606375899824572,
+      "delta_p95": 2,
+      "delta_ge_1_pct": 46.60940052023471,
+      "delta_ge_4_pct": 0.9618292904240517,
+      "delta_ge_8_pct": 0.2843143185530216,
+      "delta_ge_16_pct": 0.0060492408202770555,
+      "max_height_violations": 0,
+      "min_height_violations": 0,
+      "top_block_ids": [
+        [
+          575,
+          34732
+        ],
+        [
+          549,
+          2119
+        ],
+        [
+          469,
+          1375
+        ],
+        [
+          572,
+          1161
+        ],
+        [
+          409,
+          940
+        ],
+        [
+          377,
+          496
+        ],
+        [
+          417,
+          471
+        ],
+        [
+          457,
+          366
+        ]
+      ],
+      "micro_pit_pct": 0.9084292530393293,
+      "micro_pits": 337,
+      "flatness_pct": 33.080621301775146,
+      "rolling_hill_pct": 54.338480029585796,
+      "plateau_edge_pct": 0.0,
+      "grass_sand_neighbor_pairs": 17695,
+      "grass_sand_neighbor_transitions": 0,
+      "grass_sand_neighbor_transition_pct": 0.0,
+      "spawn": {
+        "columns": 4225,
+        "height_mean": 57.58958579881657,
+        "surface_slots": {
+          "water": 68.75739644970415,
+          "sand": 24.42603550295858,
+          "gravel": 2.437869822485207,
+          "stone": 1.467455621301775,
+          "mtg_aspen_leaves": 0.7337278106508875,
+          "tree_leaves": 0.6153846153846154,
+          "mtg_leaves": 0.5207100591715976,
+          "grass": 0.28402366863905326,
+          "mtg_grass_1": 0.21301775147928995,
+          "rose": 0.1893491124260355,
+          "mtg_bush_leaves": 0.1893491124260355,
+          "tall_grass": 0.09467455621301775,
+          "tree_bark": 0.023668639053254437,
+          "reeds": 0.023668639053254437,
+          "mtg_aspen_tree": 0.023668639053254437
+        }
+      },
+      "spawn_vegetation": {
+        "tree_log": 49,
+        "tree_leaves": 124,
+        "mtg_aspen_leaves": 117,
+        "mtg_bush_leaves": 16,
+        "mtg_bush_stem": 1,
+        "mtg_leaves": 129,
+        "mtg_tree": 33,
+        "mtg_aspen_tree": 23
+      },
+      "spawn_tree_blocks": 475,
+      "spawn_shrub_blocks": 17,
+      "spawn_ground_logs": 3,
+      "spawn_bush_common_footprints": 0,
+      "spawn_fire_blocks": 0,
+      "seed": 42,
+      "world_name": "WorldgenSmoothGateQA_42_20261019",
+      "spawn_center": [
+        28,
+        -32
+      ],
+      "spawn_land_columns": 1320,
+      "spawn_land_coverage_pct": 31.242603550295858,
+      "spawn_land_height_mean": 67.48939393939393,
+      "spawn_flatness_pct": 56.36363636363637,
+      "spawn_rolling_hill_pct": 41.96969696969697,
+      "spawn_plateau_edge_pct": 0.0,
+      "ocean_columns": 35211,
+      "ocean_depth_p10": 7,
+      "ocean_depth_p50": 47,
+      "ocean_depth_p90": 60,
+      "ocean_depth_max": 69,
+      "sea_level": 63,
+      "cave_air_volume": 25523,
+      "max_cave_depth_below_surface": 26,
+      "cave_chunk_coverage_pct": 58.16326530612245,
+      "cave_chunks_with_air": 114,
+      "cave_chunks_total": 196,
+      "cave_dry_air_voxels": 25523,
+      "cave_water_voxels": 24123,
+      "cave_lava_voxels": 0,
+      "cave_void_voxels": 49646,
+      "cave_dry_pct": 51.40998267735568,
+      "cave_water_pct": 48.59001732264432,
+      "cave_lava_pct": 0.0,
+      "ground_cover_density": 2.803030303030303,
+      "ground_cover_columns": 37,
+      "tree_base_columns": 5,
+      "tree_canopy_columns": 79,
+      "shrub_base_columns": 0,
+      "shrub_canopy_columns": 8,
+      "nn_distance_cv": 0.6865415624213008,
+      "local_density_variance": 98.77098618547163,
+      "feature_columns": 42,
+      "spawn_tree_blocks_land_normalized": 1520.3598484848485,
+      "shore_air_gaps": 0
+    },
+    "12345": {
+      "columns": 43264,
+      "height_min": -4,
+      "height_max": 101,
+      "world_min_height": -64,
+      "world_max_height": 319,
+      "height_mean": 38.12315088757396,
+      "cliff_sample_pairs": 15659,
+      "delta_mean": 0.5618494156714988,
+      "delta_p95": 2,
+      "delta_ge_1_pct": 47.99157034293378,
+      "delta_ge_4_pct": 0.11494986908487131,
+      "delta_ge_8_pct": 0.0063861038380484065,
+      "delta_ge_16_pct": 0.0,
+      "max_height_violations": 0,
+      "min_height_violations": 0,
+      "top_block_ids": [
+        [
+          575,
+          35225
+        ],
+        [
+          572,
+          1549
+        ],
+        [
+          404,
+          1407
+        ],
+        [
+          401,
+          878
+        ],
+        [
+          469,
+          824
+        ],
+        [
+          417,
+          788
+        ],
+        [
+          549,
+          541
+        ],
+        [
+          560,
+          337
+        ]
+      ],
+      "micro_pit_pct": 1.453569348426144,
+      "micro_pits": 574,
+      "flatness_pct": 32.724667159763314,
+      "rolling_hill_pct": 61.88285872781065,
+      "plateau_edge_pct": 0.0,
+      "grass_sand_neighbor_pairs": 33288,
+      "grass_sand_neighbor_transitions": 0,
+      "grass_sand_neighbor_transition_pct": 0.0,
+      "spawn": {
+        "columns": 4225,
+        "height_mean": 58.89112426035503,
+        "surface_slots": {
+          "water": 59.02958579881657,
+          "mtg_aspen_leaves": 1.9644970414201184,
+          "grass": 2.93491124260355,
+          "tree_leaves": 11.384615384615385,
+          "mtg_leaves": 7.57396449704142,
+          "rose": 2.769230769230769,
+          "mtg_grass_1": 2.4142011834319526,
+          "tree_bark": 0.23668639053254437,
+          "mtg_acacia_bush_stem": 0.16568047337278108,
+          "mtg_acacia_bush_leaves": 3.171597633136095,
+          "lily_pad": 0.07100591715976332,
+          "tall_grass": 2.3431952662721893,
+          "sand": 1.2071005917159763,
+          "mtg_bush_leaves": 2.2485207100591715,
+          "mtg_dry_grass_1": 0.09467455621301775,
+          "mtg_bush_stem": 0.11834319526627218,
+          "dirt": 0.1893491124260355,
+          "mtg_acacia_leaves": 0.378698224852071,
+          "mtg_acacia_tree": 0.023668639053254437,
+          "mtg_tree": 0.35502958579881655,
+          "flower": 1.0414201183431953,
+          "tree_log": 0.023668639053254437,
+          "stone": 0.23668639053254437,
+          "mtg_aspen_tree": 0.023668639053254437
+        }
+      },
+      "spawn_vegetation": {
+        "mtg_leaves": 1059,
+        "mtg_aspen_leaves": 507,
+        "mtg_bush_leaves": 333,
+        "mtg_acacia_bush_leaves": 567,
+        "mtg_aspen_tree": 89,
+        "mtg_acacia_bush_stem": 31,
+        "tree_leaves": 1315,
+        "tree_log": 530,
+        "mtg_tree": 292,
+        "mtg_acacia_leaves": 31,
+        "mtg_bush_stem": 16,
+        "mtg_acacia_tree": 4
+      },
+      "spawn_tree_blocks": 3827,
+      "spawn_shrub_blocks": 947,
+      "spawn_ground_logs": 25,
+      "spawn_bush_common_footprints": 0,
+      "spawn_fire_blocks": 0,
+      "seed": 12345,
+      "world_name": "WorldgenSmoothGateQA_12345_20261019",
+      "spawn_center": [
+        32,
+        28
+      ],
+      "spawn_land_columns": 1731,
+      "spawn_land_coverage_pct": 40.97041420118343,
+      "spawn_land_height_mean": 71.37839399191219,
+      "spawn_flatness_pct": 15.084449621432732,
+      "spawn_rolling_hill_pct": 82.00349446709377,
+      "spawn_plateau_edge_pct": 0.0,
+      "ocean_columns": 34679,
+      "ocean_depth_p10": 9,
+      "ocean_depth_p50": 39,
+      "ocean_depth_p90": 57,
+      "ocean_depth_max": 67,
+      "sea_level": 63,
+      "cave_air_volume": 19560,
+      "max_cave_depth_below_surface": 35,
+      "cave_chunk_coverage_pct": 41.83673469387755,
+      "cave_chunks_with_air": 82,
+      "cave_chunks_total": 196,
+      "cave_dry_air_voxels": 19560,
+      "cave_water_voxels": 49089,
+      "cave_lava_voxels": 0,
+      "cave_void_voxels": 68649,
+      "cave_dry_pct": 28.49276755670148,
+      "cave_water_pct": 71.50723244329852,
+      "cave_lava_pct": 0.0,
+      "ground_cover_density": 42.114384748700175,
+      "ground_cover_columns": 729,
+      "tree_base_columns": 26,
+      "tree_canopy_columns": 914,
+      "shrub_base_columns": 33,
+      "shrub_canopy_columns": 612,
+      "nn_distance_cv": 0.40315510492975415,
+      "local_density_variance": 292.4627378415525,
+      "feature_columns": 788,
+      "spawn_tree_blocks_land_normalized": 9340.886770652802,
+      "shore_air_gaps": 0
+    },
+    "12354": {
+      "columns": 43264,
+      "height_min": 4,
+      "height_max": 138,
+      "world_min_height": -64,
+      "world_max_height": 319,
+      "height_mean": 49.85396634615385,
+      "cliff_sample_pairs": 27280,
+      "delta_mean": 0.6780058651026393,
+      "delta_p95": 2,
+      "delta_ge_1_pct": 55.645161290322584,
+      "delta_ge_4_pct": 0.6304985337243402,
+      "delta_ge_8_pct": 0.08064516129032258,
+      "delta_ge_16_pct": 0.0,
+      "max_height_violations": 0,
+      "min_height_violations": 0,
+      "top_block_ids": [
+        [
+          575,
+          29327
+        ],
+        [
+          572,
+          1949
+        ],
+        [
+          377,
+          1480
+        ],
+        [
+          469,
+          1300
+        ],
+        [
+          560,
+          1295
+        ],
+        [
+          391,
+          1287
+        ],
+        [
+          417,
+          1246
+        ],
+        [
+          362,
+          997
+        ]
+      ],
+      "micro_pit_pct": 0.7074293228139382,
+      "micro_pits": 269,
+      "flatness_pct": 27.235114644970412,
+      "rolling_hill_pct": 63.37601701183432,
+      "plateau_edge_pct": 0.0,
+      "grass_sand_neighbor_pairs": 27545,
+      "grass_sand_neighbor_transitions": 0,
+      "grass_sand_neighbor_transition_pct": 0.0,
+      "spawn": {
+        "columns": 4225,
+        "height_mean": 62.39289940828402,
+        "surface_slots": {
+          "water": 52.875739644970416,
+          "grass": 4.875739644970414,
+          "mtg_bush_leaves": 4.615384615384615,
+          "sand": 0.2603550295857988,
+          "tree_leaves": 10.035502958579881,
+          "mtg_grass_1": 2.366863905325444,
+          "mtg_acacia_bush_leaves": 1.1597633136094674,
+          "tall_grass": 2.2485207100591715,
+          "mtg_aspen_leaves": 7.502958579881657,
+          "rose": 2.5088757396449703,
+          "tree_bark": 0.07100591715976332,
+          "flower": 1.017751479289941,
+          "mtg_bush_stem": 0.1893491124260355,
+          "mtg_leaves": 8.781065088757396,
+          "lily_pad": 0.07100591715976332,
+          "mtg_acacia_bush_stem": 0.07100591715976332,
+          "dirt": 0.47337278106508873,
+          "mtg_tree": 0.23668639053254437,
+          "mtg_aspen_tree": 0.11834319526627218,
+          "stone": 0.40236686390532544,
+          "gravel": 0.07100591715976332,
+          "tree_log": 0.047337278106508875
+        }
+      },
+      "spawn_vegetation": {
+        "mtg_bush_leaves": 741,
+        "tree_leaves": 1094,
+        "mtg_bush_stem": 39,
+        "tree_log": 418,
+        "mtg_acacia_bush_leaves": 192,
+        "mtg_acacia_bush_stem": 9,
+        "mtg_aspen_leaves": 1229,
+        "mtg_aspen_tree": 213,
+        "mtg_leaves": 1128,
+        "mtg_tree": 232
+      },
+      "spawn_tree_blocks": 4314,
+      "spawn_shrub_blocks": 981,
+      "spawn_ground_logs": 23,
+      "spawn_bush_common_footprints": 0,
+      "spawn_fire_blocks": 1,
+      "seed": 12354,
+      "world_name": "WorldgenSmoothGateQA_12354_20261019",
+      "spawn_center": [
+        32,
+        28
+      ],
+      "spawn_land_columns": 1991,
+      "spawn_land_coverage_pct": 47.124260355029584,
+      "spawn_land_height_mean": 76.6911099949774,
+      "spawn_flatness_pct": 4.773996952767902,
+      "spawn_rolling_hill_pct": 78.51701371254444,
+      "spawn_plateau_edge_pct": 0.0,
+      "ocean_columns": 29135,
+      "ocean_depth_p10": 8,
+      "ocean_depth_p50": 35,
+      "ocean_depth_p90": 56,
+      "ocean_depth_max": 59,
+      "sea_level": 63,
+      "cave_air_volume": 25135,
+      "max_cave_depth_below_surface": 24,
+      "cave_chunk_coverage_pct": 54.08163265306123,
+      "cave_chunks_with_air": 106,
+      "cave_chunks_total": 196,
+      "cave_dry_air_voxels": 25135,
+      "cave_water_voxels": 29885,
+      "cave_lava_voxels": 0,
+      "cave_void_voxels": 55020,
+      "cave_dry_pct": 45.68338785896038,
+      "cave_water_pct": 54.31661214103962,
+      "cave_lava_pct": 0.0,
+      "ground_cover_density": 41.03465595178302,
+      "ground_cover_columns": 817,
+      "tree_base_columns": 23,
+      "tree_canopy_columns": 1145,
+      "shrub_base_columns": 30,
+      "shrub_canopy_columns": 623,
+      "nn_distance_cv": 0.5818380358716034,
+      "local_density_variance": 274.54924240255946,
+      "feature_columns": 870,
+      "spawn_tree_blocks_land_normalized": 9154.520341536916,
+      "shore_air_gaps": 0
+    },
+    "20240625": {
+      "columns": 43264,
+      "height_min": -2,
+      "height_max": 88,
+      "world_min_height": -64,
+      "world_max_height": 319,
+      "height_mean": 34.42067307692308,
+      "cliff_sample_pairs": 13057,
+      "delta_mean": 0.48877996476985525,
+      "delta_p95": 2,
+      "delta_ge_1_pct": 40.13173010645631,
+      "delta_ge_4_pct": 0.40591253733629473,
+      "delta_ge_8_pct": 0.199126905108371,
+      "delta_ge_16_pct": 0.0,
+      "max_height_violations": 0,
+      "min_height_violations": 0,
+      "top_block_ids": [
+        [
+          575,
+          36498
+        ],
+        [
+          469,
+          1512
+        ],
+        [
+          572,
+          1383
+        ],
+        [
+          409,
+          757
+        ],
+        [
+          549,
+          560
+        ],
+        [
+          377,
+          451
+        ],
+        [
+          417,
+          355
+        ],
+        [
+          401,
+          328
+        ]
+      ],
+      "micro_pit_pct": 0.8671399594320487,
+      "micro_pits": 342,
+      "flatness_pct": 39.915403106508876,
+      "rolling_hill_pct": 54.32461168639053,
+      "plateau_edge_pct": 0.0,
+      "grass_sand_neighbor_pairs": 25327,
+      "grass_sand_neighbor_transitions": 0,
+      "grass_sand_neighbor_transition_pct": 0.0,
+      "spawn": {
+        "columns": 4225,
+        "height_mean": 59.38177514792899,
+        "surface_slots": {
+          "water": 56.023668639053255,
+          "sand": 4.3076923076923075,
+          "grass": 3.5976331360946747,
+          "mtg_aspen_leaves": 4.118343195266272,
+          "gravel": 0.7100591715976331,
+          "mtg_leaves": 10.982248520710058,
+          "tree_leaves": 9.372781065088757,
+          "flower": 0.378698224852071,
+          "mtg_bush_leaves": 1.6094674556213018,
+          "stone": 0.023668639053254437,
+          "mtg_grass_1": 1.9408284023668638,
+          "rose": 1.5384615384615385,
+          "tall_grass": 1.727810650887574,
+          "mtg_acacia_bush_leaves": 3.1479289940828403,
+          "tree_bark": 0.023668639053254437,
+          "lily_pad": 0.023668639053254437,
+          "dirt": 0.14201183431952663,
+          "mtg_acacia_bush_stem": 0.09467455621301775,
+          "mtg_tree": 0.1893491124260355,
+          "tree_log": 0.023668639053254437,
+          "mtg_bush_stem": 0.023668639053254437
+        }
+      },
+      "spawn_vegetation": {
+        "mtg_aspen_leaves": 971,
+        "mtg_acacia_bush_leaves": 466,
+        "mtg_bush_leaves": 541,
+        "mtg_leaves": 1584,
+        "mtg_aspen_tree": 173,
+        "mtg_tree": 400,
+        "mtg_bush_stem": 16,
+        "tree_leaves": 867,
+        "tree_log": 347,
+        "mtg_acacia_bush_stem": 22
+      },
+      "spawn_tree_blocks": 4342,
+      "spawn_shrub_blocks": 1045,
+      "spawn_ground_logs": 16,
+      "spawn_bush_common_footprints": 0,
+      "spawn_fire_blocks": 0,
+      "seed": 20240625,
+      "world_name": "WorldgenSmoothGateQA_20240625_20261019",
+      "spawn_center": [
+        20,
+        -28
+      ],
+      "spawn_land_columns": 1858,
+      "spawn_land_coverage_pct": 43.976331360946745,
+      "spawn_land_height_mean": 73.26749192680302,
+      "spawn_flatness_pct": 21.897018970189702,
+      "spawn_rolling_hill_pct": 77.88617886178862,
+      "spawn_plateau_edge_pct": 0.0,
+      "ocean_columns": 35143,
+      "ocean_depth_p10": 11,
+      "ocean_depth_p50": 40,
+      "ocean_depth_p90": 57,
+      "ocean_depth_max": 65,
+      "sea_level": 63,
+      "cave_air_volume": 35788,
+      "max_cave_depth_below_surface": 24,
+      "cave_chunk_coverage_pct": 62.755102040816325,
+      "cave_chunks_with_air": 123,
+      "cave_chunks_total": 196,
+      "cave_dry_air_voxels": 35788,
+      "cave_water_voxels": 23737,
+      "cave_lava_voxels": 0,
+      "cave_void_voxels": 59525,
+      "cave_dry_pct": 60.122637547249056,
+      "cave_water_pct": 39.877362452750944,
+      "cave_lava_pct": 0.0,
+      "ground_cover_density": 31.001076426264802,
+      "ground_cover_columns": 576,
+      "tree_base_columns": 16,
+      "tree_canopy_columns": 1062,
+      "shrub_base_columns": 25,
+      "shrub_canopy_columns": 642,
+      "nn_distance_cv": 0.49726472284872447,
+      "local_density_variance": 281.77471873546517,
+      "feature_columns": 617,
+      "spawn_tree_blocks_land_normalized": 9873.493003229278,
+      "shore_air_gaps": 0
+    }
+  }
+}
