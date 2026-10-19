@@ -145,7 +145,8 @@ int FloorDiv(int value, int divisor)
 bool PassesSpatialFloraCandidateGate(int x, int z, uint32_t seed, int spacing,
                                      float densityMultiplier,
                                      uint32_t rule_seed_offset,
-                                     uint32_t pool_seed_offset)
+                                     uint32_t pool_seed_offset,
+                                     const FeatureDistributionProfile &distribution)
 {
   const int effectiveSpacing = EffectiveSpacing(spacing, densityMultiplier);
   if (effectiveSpacing <= 0 || effectiveSpacing == INT_MAX)
@@ -179,10 +180,31 @@ bool PassesSpatialFloraCandidateGate(int x, int z, uint32_t seed, int spacing,
   }
 
   const int cellArea = cellSize * cellSize;
-  const uint32_t acceptance = static_cast<uint32_t>(
+  uint32_t acceptance = static_cast<uint32_t>(
       std::clamp(static_cast<int>((static_cast<int64_t>(cellArea) * 10000) /
                                   effectiveSpacing),
                  0, 10000));
+  if (distribution.RegionalNoiseScale > 0.0f &&
+      (distribution.MinDensityMultiplier != 1.0f ||
+       distribution.MaxDensityMultiplier != 1.0f))
+  {
+    // Share the broad field across all rules in the same feature pool so
+    // species form coherent groves instead of competing patch patterns.
+    const float regionalNoise = NormalizedFBM2D(
+        static_cast<float>(x) * distribution.RegionalNoiseScale,
+        static_cast<float>(z) * distribution.RegionalNoiseScale,
+        seed + pool_seed_offset + 0x4f1bbcdcU, 2, 0.5f, 2.0f);
+    const float regional01 = Smoothstep(0.18f, 0.82f,
+                                        (regionalNoise + 1.0f) * 0.5f);
+    const float regionalMultiplier =
+        distribution.MinDensityMultiplier +
+        (distribution.MaxDensityMultiplier -
+         distribution.MinDensityMultiplier) *
+            regional01;
+    acceptance = static_cast<uint32_t>(std::clamp(
+        std::lround(static_cast<double>(acceptance) * regionalMultiplier),
+        0L, 10000L));
+  }
   const uint32_t acceptanceHash = FeatureHash(
       cellX, cellZ, seed + pool_seed_offset + rule_seed_offset + 0x5bd1e995U);
   if (acceptanceHash % 10000U >= acceptance)
@@ -1107,7 +1129,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                         const std::vector<ObjectFeatureRule> &rules,
                         ObjectFeaturePool pool, uint32_t pickSeedOffset,
                         bool useChanceOnly, bool requireTreesEnabled,
-                        float densityMultiplier, const BiomeKey &biomeKey)
+                        float densityMultiplier, const BiomeKey &biomeKey,
+                        const FeatureDistributionProfile *distribution = nullptr)
 {
   if ((requireTreesEnabled && !ctx.Settings.EnableTrees) || rules.empty())
   {
@@ -1239,7 +1262,10 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
           floraPool
               ? PassesSpatialFloraCandidateGate(x, z, seed, rule.Spacing,
                                                 densityMultiplier,
-                                                rule.SeedOffset, pickSeedOffset)
+                                                rule.SeedOffset, pickSeedOffset,
+                                                distribution
+                                                    ? *distribution
+                                                    : FeatureDistributionProfile{})
               : PassesNoiseDensityGate(x, z, seed, rule.Spacing,
                                        densityMultiplier, rule.SeedOffset,
                                        pickSeedOffset);
@@ -1464,7 +1490,8 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
   return TryPlaceObjectPool(ctx, x, z, surfaceY, biome,
                             GetObjectFeatures(ctx).Vegetation,
                             ObjectFeaturePool::Vegetation, 5000, false, true,
-                            ctx.Settings.Tuning.vegetationDensity, biomeKey);
+                            ctx.Settings.Tuning.vegetationDensity, biomeKey,
+                            &GetObjectFeatures(ctx).VegetationDistribution);
 }
 
 bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
@@ -1488,7 +1515,8 @@ bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
   return TryPlaceObjectPool(
       ctx, x, z, surfaceY, biome, GetObjectFeatures(ctx).GroundCover,
       ObjectFeaturePool::GroundCover, 5500, false, true,
-      ctx.Settings.Tuning.vegetationDensity * 0.85f, biomeKey);
+      ctx.Settings.Tuning.vegetationDensity * 0.85f, biomeKey,
+      &GetObjectFeatures(ctx).GroundCoverDistribution);
 }
 
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,

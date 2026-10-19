@@ -164,6 +164,32 @@ void ParseEcologyProfile(const nlohmann::json &item, ObjectFeatureRule &rule)
   }
 }
 
+void ParseDistributionProfile(const nlohmann::json &root,
+                              const char *profileName,
+                              FeatureDistributionProfile &profile)
+{
+  if (!root.contains(profileName) || !root[profileName].is_object())
+  {
+    return;
+  }
+  const nlohmann::json &source = root[profileName];
+  const float scale = source.value("regional_noise_scale", 0.0f);
+  const float minDensity = source.value("min_density_multiplier", 1.0f);
+  const float maxDensity = source.value("max_density_multiplier", 1.0f);
+  if (!std::isfinite(scale) || !std::isfinite(minDensity) ||
+      !std::isfinite(maxDensity))
+  {
+    return;
+  }
+  profile.RegionalNoiseScale = std::clamp(scale, 0.0f, 0.05f);
+  profile.MinDensityMultiplier = std::clamp(minDensity, 0.0f, 2.0f);
+  profile.MaxDensityMultiplier = std::clamp(maxDensity, 0.0f, 2.0f);
+  if (profile.MinDensityMultiplier > profile.MaxDensityMultiplier)
+  {
+    std::swap(profile.MinDensityMultiplier, profile.MaxDensityMultiplier);
+  }
+}
+
 bool ParseRuleArray(const nlohmann::json &arr,
                     std::vector<ObjectFeatureRule> &out)
 {
@@ -578,6 +604,15 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
                    next->Structures);
     ParseCaveFeatureArray(root.value("cave_features", nlohmann::json::array()),
                           next->CaveFeatures);
+    if (root.contains("spatial_distribution") &&
+        root["spatial_distribution"].is_object())
+    {
+      const nlohmann::json &distribution = root["spatial_distribution"];
+      ParseDistributionProfile(distribution, "vegetation",
+                               next->VegetationDistribution);
+      ParseDistributionProfile(distribution, "ground_cover",
+                               next->GroundCoverDistribution);
+    }
     if (root.contains("structure_placement") &&
         root["structure_placement"].is_object())
     {

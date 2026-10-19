@@ -187,16 +187,28 @@ void ParseEcology(const nlohmann::json &item, FeatureEcologyProfile &ecology)
              ecology.HasTemperatureRange);
   parseRange("moisture", ecology.MoistureMin, ecology.MoistureMax,
              ecology.HasMoistureRange);
-  if (value.contains("elevation") && value["elevation"].is_array() &&
-      value["elevation"].size() == 2 && value["elevation"][0].is_number() &&
-      value["elevation"][1].is_number())
+  if (value.contains("elevation"))
   {
-    ecology.MinElevation = value["elevation"][0].get<int>();
-    ecology.MaxElevation = value["elevation"][1].get<int>();
-    if (ecology.MinElevation > ecology.MaxElevation)
+    const nlohmann::json &elevation = value["elevation"];
+    const nlohmann::json *range = &elevation;
+    FeatureEcologyProfile::ElevationReference reference =
+        FeatureEcologyProfile::ElevationReference::AbsoluteY;
+    if (elevation.is_object() && elevation.contains("above_sea_level"))
     {
-      ecology.MinElevation = std::numeric_limits<int>::min();
-      ecology.MaxElevation = std::numeric_limits<int>::max();
+      range = &elevation["above_sea_level"];
+      reference = FeatureEcologyProfile::ElevationReference::SeaLevel;
+    }
+    if (range->is_array() && range->size() == 2 && (*range)[0].is_number() &&
+        (*range)[1].is_number())
+    {
+      const int minimum = (*range)[0].get<int>();
+      const int maximum = (*range)[1].get<int>();
+      if (minimum <= maximum)
+      {
+        ecology.ElevationRef = reference;
+        ecology.MinElevation = minimum;
+        ecology.MaxElevation = maximum;
+      }
     }
   }
   if (value.contains("max_slope") && value["max_slope"].is_number())
@@ -269,7 +281,17 @@ void WriteEcology(const FeatureEcologyProfile &ecology, nlohmann::json &item)
   if (ecology.MinElevation != std::numeric_limits<int>::min() ||
       ecology.MaxElevation != std::numeric_limits<int>::max())
   {
-    value["elevation"] = {ecology.MinElevation, ecology.MaxElevation};
+    const nlohmann::json elevationRange = {ecology.MinElevation,
+                                           ecology.MaxElevation};
+    if (ecology.ElevationRef ==
+        FeatureEcologyProfile::ElevationReference::SeaLevel)
+    {
+      value["elevation"] = {{"above_sea_level", elevationRange}};
+    }
+    else
+    {
+      value["elevation"] = elevationRange;
+    }
   }
   if (ecology.MaxSlope > 0.0f)
   {
@@ -482,7 +504,7 @@ bool ParseWorldGenSets(const nlohmann::json &root, WorldGenSets &out,
     return false;
   }
   out.SchemaVersion = root.value("schema_version", 0);
-  if (out.SchemaVersion < 1 || out.SchemaVersion > 2)
+  if (out.SchemaVersion < 1 || out.SchemaVersion > 3)
   {
     error = "unsupported worldgen_sets schema_version";
     return false;
@@ -616,7 +638,7 @@ void WriteWorldGenSets(nlohmann::json &root, const WorldGenSets &sets)
 WorldGenSets BuildDefaultWorldGenSets()
 {
   WorldGenSets sets;
-  sets.SchemaVersion = 2;
+  sets.SchemaVersion = 3;
   if (!UObjectFeatureConfigStorage::IsLoaded())
   {
     return sets;
@@ -677,22 +699,27 @@ void UpgradeLegacyWorldGenSetMetadata(WorldGenSets &sets,
                                       const ObjectFeatureConfig &global,
                                       int worldgenProfileVersion)
 {
-  if (sets.SchemaVersion != 1 || worldgenProfileVersion < 2)
+  if (worldgenProfileVersion < 2 || sets.SchemaVersion >= 3)
   {
     return;
   }
-  UpgradeLegacyFeatureMetadata(sets.VegetationSections, global.Vegetation);
-  UpgradeLegacyFeatureMetadata(sets.GroundCoverSections, global.GroundCover);
-  UpgradeLegacyFeatureMetadata(sets.DecorationSections, global.Decoration);
-  UpgradeLegacyFeatureMetadata(sets.StructureSections, global.Structures);
-  sets.SchemaVersion = 2;
+  if (sets.SchemaVersion == 1)
+  {
+    UpgradeLegacyFeatureMetadata(sets.VegetationSections, global.Vegetation);
+    UpgradeLegacyFeatureMetadata(sets.GroundCoverSections, global.GroundCover);
+    UpgradeLegacyFeatureMetadata(sets.DecorationSections, global.Decoration);
+    UpgradeLegacyFeatureMetadata(sets.StructureSections, global.Structures);
+  }
+  // Schema 3 stores sea-relative elevation ranges explicitly. Earlier arrays
+  // remain absolute Y values when their original reference cannot be known.
+  sets.SchemaVersion = 3;
 }
 
 bool ValidateWorldGenSets(const WorldGenSets &sets, std::string &error)
 {
-  if (sets.SchemaVersion < 1 || sets.SchemaVersion > 2)
+  if (sets.SchemaVersion < 1 || sets.SchemaVersion > 3)
   {
-    error = "worldgen_sets schema_version must be 1 or 2";
+    error = "worldgen_sets schema_version must be 1, 2, or 3";
     return false;
   }
   (void)sets;

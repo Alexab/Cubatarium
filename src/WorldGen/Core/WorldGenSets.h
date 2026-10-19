@@ -45,7 +45,7 @@ struct WorldGenOreSlot
 
 struct WorldGenSets
 {
-  int SchemaVersion{2};
+  int SchemaVersion{3};
   std::unordered_map<std::string, WorldGenObjectSection> VegetationSections;
   std::unordered_map<std::string, WorldGenObjectSection> GroundCoverSections;
   std::unordered_map<std::string, WorldGenObjectSection> DecorationSections;

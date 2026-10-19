@@ -5,6 +5,18 @@
     "chance_per_cell": 10,
     "min_spacing": 128
   },
+  "spatial_distribution": {
+    "vegetation": {
+      "regional_noise_scale": 0.0035,
+      "min_density_multiplier": 0.45,
+      "max_density_multiplier": 1.65
+    },
+    "ground_cover": {
+      "regional_noise_scale": 0.006,
+      "min_density_multiplier": 0.6,
+      "max_density_multiplier": 1.4
+    }
+  },
   "vegetation": [
     {
       "object": "cactus_large",

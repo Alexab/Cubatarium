@@ -522,6 +522,123 @@ static void TestSpatialFloraCandidateDensity(cutum::UBlockRegistry &registry)
                     "full-cell jitter preserves authored flora candidate density");
 }
 
+struct RegionalFloraRun
+{
+  std::array<int, 9> TileCounts{};
+  std::vector<std::tuple<int, int, int>> Placements;
+};
+
+static RegionalFloraRun RunRegionalFloraFixture(
+    cutum::UBlockRegistry &registry,
+    const cutum::FeatureDistributionProfile &distribution)
+{
+  cutum::ProceduralSettings settings = MakeVegetationSettings();
+  settings.Seed = kSeed;
+  settings.SeaLevel = 8;
+  settings.MinHeight = 0;
+  settings.MaxHeight = 64;
+  settings.WorldGenProfileVersion = 2;
+
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext ctx(world, registry, settings);
+  ctx.WorldgenOwnerPackId = "minetest_default_16";
+  ctx.ResolveBlockIds();
+
+  constexpr int kRegionSize = 192;
+  constexpr int kSurfaceY = 15;
+  for (int z = 0; z < kRegionSize; ++z)
+  {
+    for (int x = 0; x < kRegionSize; ++x)
+    {
+      world.SetBlock(glm::ivec3(x, kSurfaceY, z), ctx.Blocks.Grass);
+    }
+  }
+
+  cutum::ObjectFeatureConfig features;
+  features.GroundCoverDistribution = distribution;
+  cutum::ObjectFeatureRule grass;
+  grass.Mode = cutum::ObjectFeatureRuleMode::ScatterBlocks;
+  grass.Biomes = {cutum::BiomeId::Plains};
+  grass.Spacing = 34;
+  grass.Weight = 1;
+  grass.SeedOffset = 0x41f09a37U;
+  grass.Scatter.BlockName = "mtg_grass_1";
+  grass.Scatter.Attempts = 1;
+  grass.Scatter.Radius = 0;
+  features.GroundCover.push_back(grass);
+  ctx.ObjectFeatures = &features;
+  cutum::RegisterBuiltinObjectFeaturePlacementStrategies();
+
+  for (int z = 0; z < kRegionSize; ++z)
+  {
+    for (int x = 0; x < kRegionSize; ++x)
+    {
+      cutum::TryPlaceGroundCoverFeatures(ctx, x, z, kSurfaceY,
+                                         cutum::BiomeId::Plains, false);
+    }
+  }
+
+  const cutum::BlockId grassId =
+      registry.GetIdByTypeName("mtg_grass_1");
+  RegionalFloraRun result;
+  world.ForEachBlock([&](glm::ivec3 position, cutum::BlockId id)
+                     {
+                       if (id != grassId || position.y != kSurfaceY + 1 ||
+                           position.x < 0 || position.z < 0 ||
+                           position.x >= kRegionSize ||
+                           position.z >= kRegionSize)
+                       {
+                         return;
+                       }
+                       const int tileX = position.x / 64;
+                       const int tileZ = position.z / 64;
+                       ++result.TileCounts[static_cast<size_t>(tileZ * 3 + tileX)];
+                       result.Placements.emplace_back(position.x, position.y,
+                                                      position.z);
+                     });
+  std::sort(result.Placements.begin(), result.Placements.end());
+  return result;
+}
+
+static double TileCountVariance(const std::array<int, 9> &counts)
+{
+  double mean = 0.0;
+  for (const int count : counts)
+  {
+    mean += static_cast<double>(count);
+  }
+  mean /= static_cast<double>(counts.size());
+  double variance = 0.0;
+  for (const int count : counts)
+  {
+    const double delta = static_cast<double>(count) - mean;
+    variance += delta * delta;
+  }
+  return variance / static_cast<double>(counts.size());
+}
+
+static void TestRegionalFloraDensityClustering(
+    cutum::UBlockRegistry &registry)
+{
+  const cutum::FeatureDistributionProfile neutral{};
+  cutum::FeatureDistributionProfile clustered;
+  clustered.RegionalNoiseScale = 0.008f;
+  clustered.MinDensityMultiplier = 0.15f;
+  clustered.MaxDensityMultiplier = 1.85f;
+
+  const RegionalFloraRun baseline = RunRegionalFloraFixture(registry, neutral);
+  const RegionalFloraRun first = RunRegionalFloraFixture(registry, clustered);
+  const RegionalFloraRun repeat = RunRegionalFloraFixture(registry, clustered);
+  FluidTest::Expect(first.Placements == repeat.Placements, kTestName,
+                    "regional flora clusters repeat for the same seed");
+  FluidTest::Expect(
+      TileCountVariance(first.TileCounts) >
+          TileCountVariance(baseline.TileCounts) * 1.2,
+      kTestName,
+      "regional density creates broader ground-cover patches than the local field alone");
+}
+
 static void TestBuiltinTreeTemplateLogsConnectToTrunk(
     const cutum::UObjectLibrary &objects)
 {
@@ -780,7 +897,13 @@ static void TestWorldGenSetsSchemaV2Migration()
         {"weight", 5},
         {"spacing", 39},
         {"seed_offset", 4012},
-        {"biomes", {"forest", "plains"}}}});
+        {"biomes", {"forest", "plains"}}},
+       {{"object", "legacy_absolute_height"},
+        {"weight", 1},
+        {"spacing", 48},
+        {"seed_offset", 9001},
+        {"biomes", {"plains"}},
+        {"ecology", {{"elevation", {10, 20}}}}}});
   cutum::WorldGenSets sets;
   std::string error;
   FluidTest::Expect(cutum::ParseWorldGenSets(legacy, sets, error), kTestName,
@@ -791,8 +914,8 @@ static void TestWorldGenSetsSchemaV2Migration()
   const cutum::ObjectFeatureConfig &authored =
       cutum::UObjectFeatureConfigStorage::Get();
   cutum::UpgradeLegacyWorldGenSetMetadata(sets, authored, 2);
-  FluidTest::Expect(sets.SchemaVersion == 2, kTestName,
-                    "profile-2 world upgrades worldgen_sets schema");
+  FluidTest::Expect(sets.SchemaVersion == 3, kTestName,
+                    "profile-2 world upgrades worldgen_sets to reference-aware schema");
   const cutum::ObjectFeatureConfig resolved =
       cutum::ResolveObjectFeatures(sets, authored, 2);
   const auto tree = std::find_if(
@@ -803,21 +926,65 @@ static void TestWorldGenSetsSchemaV2Migration()
                         tree->Mode ==
                             cutum::ObjectFeatureRuleMode::ProceduralTree &&
                         tree->Tree.CrownLobes == 4 && tree->Weight == 5 &&
-                        tree->Spacing == 39,
+                        tree->Spacing == 39 &&
+                        tree->Ecology.ElevationRef ==
+                            cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
+                        tree->Ecology.MinElevation == -3 &&
+                        tree->Ecology.MaxElevation == 52,
                     kTestName,
-                    "migration restores authored mode and profile, preserving saved frequency");
+                    "migration restores authored profile reference and mode, preserving saved frequency");
+
+  const auto absoluteHeight = std::find_if(
+      resolved.Vegetation.begin(), resolved.Vegetation.end(),
+      [](const cutum::ObjectFeatureRule &rule)
+      { return rule.ObjectName == "legacy_absolute_height"; });
+  FluidTest::Expect(
+      absoluteHeight != resolved.Vegetation.end() &&
+          absoluteHeight->Ecology.ElevationRef ==
+              cutum::FeatureEcologyProfile::ElevationReference::AbsoluteY &&
+          absoluteHeight->Ecology.AllowsElevation(15, 63) &&
+          !absoluteHeight->Ecology.AllowsElevation(73, 63),
+      kTestName,
+      "legacy elevation arrays continue to mean absolute world Y");
 
   json saved;
   cutum::WriteWorldGenSets(saved, sets);
-  FluidTest::Expect(saved["worldgen_sets"]["schema_version"] == 2 &&
+  FluidTest::Expect(saved["worldgen_sets"]["schema_version"] == 3 &&
                         saved["worldgen_sets"]["objects"]["vegetation"]
                                 ["default"]["entries"][0]["mode"] ==
                             "procedural_tree" &&
                         saved["worldgen_sets"]["objects"]["vegetation"]
                                 ["default"]["entries"][0].contains(
-                                    "tree_profile"),
+                                    "tree_profile") &&
+                        saved["worldgen_sets"]["objects"]["vegetation"]
+                                ["default"]["entries"][0]["ecology"]
+                                ["elevation"]["above_sea_level"] ==
+                            json::array({-3, 52}) &&
+                        saved["worldgen_sets"]["objects"]["vegetation"]
+                                ["default"]["entries"][1]["ecology"]
+                                ["elevation"] == json::array({10, 20}),
                     kTestName,
-                    "schema-v2 save retains procedural mode and tree profile");
+                    "schema-v3 save retains strategy, tree profile, and elevation reference");
+
+  cutum::WorldGenSets roundTripped;
+  FluidTest::Expect(
+      cutum::ParseWorldGenSets(saved["worldgen_sets"], roundTripped, error),
+      kTestName, "schema-v3 worldgen_sets parses after save");
+  const cutum::ObjectFeatureConfig roundTrippedFeatures =
+      cutum::ResolveObjectFeatures(roundTripped, authored, 2);
+  const auto roundTrippedTree = std::find_if(
+      roundTrippedFeatures.Vegetation.begin(),
+      roundTrippedFeatures.Vegetation.end(),
+      [](const cutum::ObjectFeatureRule &rule)
+      { return rule.ObjectName == "tree_procedural_oak"; });
+  FluidTest::Expect(
+      roundTrippedTree != roundTrippedFeatures.Vegetation.end() &&
+          roundTrippedTree->Ecology.ElevationRef ==
+              cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
+          roundTrippedTree->Ecology.AllowsElevation(63 + 52, 63) &&
+          !roundTrippedTree->Ecology.AllowsElevation(63 + 53, 63),
+      kTestName,
+      "schema-v3 round trip keeps the sea-relative tree height range");
 }
 
 static void TestDataDefinedBiomeAffectsSampling()
@@ -1135,6 +1302,15 @@ int main(int argc, char **argv)
   FluidTest::Expect(cutum::UObjectFeatureConfigStorage::LoadFromFile(
                         repo_root / "content" / "object_features.json"),
                     kTestName, "object_features load failed");
+  const auto featureConfig = cutum::UObjectFeatureConfigStorage::GetSnapshot();
+  FluidTest::Expect(
+      featureConfig &&
+          std::fabs(featureConfig->VegetationDistribution.RegionalNoiseScale -
+                    0.0035f) < 0.00001f &&
+          std::fabs(featureConfig->GroundCoverDistribution.RegionalNoiseScale -
+                    0.006f) < 0.00001f,
+      kTestName,
+      "regional density profiles load from object_features.json");
   TestWorldGenSetsSchemaV2Migration();
   FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"), kTestName,
                     "worldgen pack load failed");
@@ -1179,6 +1355,7 @@ int main(int argc, char **argv)
 
   cutum::UPipelineChunkPopulator populator(registry, &objects, kOwnerPack);
   TestSpatialFloraCandidateDensity(registry);
+  TestRegionalFloraDensityClustering(registry);
   TestChunkPopulatorPlacesTrees(populator, registry, objects);
   TestProceduralVegetationStrategies(registry);
   FluidTest::Expect(

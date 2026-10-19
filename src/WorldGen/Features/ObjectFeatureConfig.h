@@ -99,6 +99,15 @@ struct FeatureEcologyProfile
   }
 };
 
+/// Large-scale density modulation used to form groves and clearings while
+/// keeping individual placements deterministic in world coordinates.
+struct FeatureDistributionProfile
+{
+  float RegionalNoiseScale{0.0f};
+  float MinDensityMultiplier{1.0f};
+  float MaxDensityMultiplier{1.0f};
+};
+
 /// Runtime registry of authored feature behavior names. New algorithms add a
 /// strategy type here and a matching placement strategy in the worldgen layer.
 class ObjectFeatureTypeRegistry
@@ -220,6 +229,8 @@ struct ObjectFeatureConfig
   std::vector<ObjectFeatureRule> Decoration;
   std::vector<ObjectFeatureRule> Structures;
   std::vector<CaveFeatureRule> CaveFeatures;
+  FeatureDistributionProfile VegetationDistribution;
+  FeatureDistributionProfile GroundCoverDistribution;
   int structureCellSize{64};
   int structureChancePerCell{12};
   int structureMinSpacing{128};
