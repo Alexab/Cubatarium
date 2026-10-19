@@ -549,13 +549,9 @@ objects:
     displayName: Plains Flower Scatter
     import_status: ready
     source:
-      mod: cubatarium/procedural
-      license: CC0
+      mod: minetest-game/default
+      license: CC-BY-SA-3.0
     worldgen:
-      mode: scatter_blocks
-      block: dandelion
-      attempts: 5
-      radius: 3
       pool: ground_cover
       biomes:
       - plains

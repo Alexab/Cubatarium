@@ -18,7 +18,13 @@
       "placement_y_offset": -1,
       "sub_biomes": [
         "scrub_desert"
-      ]
+      ],
+      "ecology": {
+        "temperature": [0.45, 1.0],
+        "moisture": [0.0, 0.42],
+        "elevation": {"above_sea_level": [-5, 40]},
+        "max_slope": 8.0
+      }
     },
     {
       "object": "tree_acacia",
@@ -537,7 +543,13 @@
       ],
       "weight": 2,
       "seed_offset": 4120,
-      "spacing": 12
+      "spacing": 12,
+      "ecology": {
+        "temperature": [0.22, 0.92],
+        "moisture": [0.2, 0.65],
+        "elevation": {"above_sea_level": [-3, 42]},
+        "max_slope": 9.0
+      }
     },
     {
       "object": "mushroom_brown_pair",
@@ -651,7 +663,13 @@
       ],
       "weight": 2,
       "seed_offset": 4120,
-      "spacing": 12
+      "spacing": 12,
+      "ecology": {
+        "temperature": [0.22, 0.92],
+        "moisture": [0.2, 0.65],
+        "elevation": {"above_sea_level": [-3, 42]},
+        "max_slope": 9.0
+      }
     },
     {
       "biomes": [
@@ -666,7 +684,13 @@
         "woodland"
       ],
       "calibrated": true,
-      "object": "bush_pine"
+      "object": "bush_pine",
+      "ecology": {
+        "temperature": [0.0, 0.68],
+        "moisture": [0.22, 1.0],
+        "elevation": {"above_sea_level": [-3, 80]},
+        "max_slope": 12.0
+      }
     },
     {
       "mode": "scatter_blocks",

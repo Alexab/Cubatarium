@@ -309,6 +309,76 @@ static void TestConfiguredTreeElevationBands()
       "all authored tree templates use sea-relative elevation and slope limits");
 }
 
+static void TestConfiguredNaturalFeatureElevationBands()
+{
+  const auto hasSeaRelativeProfile = [](const cutum::ObjectFeatureRule &rule,
+                                        int expectedMinimum,
+                                        int expectedMaximum)
+  {
+    const cutum::FeatureEcologyProfile &ecology = rule.Ecology;
+    return ecology.ElevationRef ==
+               cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
+           ecology.MinElevation == expectedMinimum &&
+           ecology.MaxElevation == expectedMaximum &&
+           ecology.HasTemperatureRange && ecology.HasMoistureRange &&
+           ecology.MaxSlope > 0.0f &&
+           ecology.AllowsElevation(63 + expectedMinimum, 63) &&
+           ecology.AllowsElevation(63 + expectedMaximum, 63) &&
+           !ecology.AllowsElevation(62 + expectedMinimum, 63) &&
+           !ecology.AllowsElevation(64 + expectedMaximum, 63);
+  };
+
+  bool cactusLimited = false;
+  for (const cutum::ObjectFeatureRule &rule :
+       cutum::UObjectFeatureConfigStorage::Get().Vegetation)
+  {
+    if (rule.Mode == cutum::ObjectFeatureRuleMode::Object &&
+        rule.ObjectName == "cactus_large")
+    {
+      cactusLimited = hasSeaRelativeProfile(rule, -5, 40) &&
+                      rule.Ecology.TemperatureMin == 0.45f &&
+                      rule.Ecology.MoistureMax == 0.42f &&
+                      rule.Ecology.MaxSlope == 8.0f;
+      break;
+    }
+  }
+
+  bool flowerScatterLimited = false;
+  bool flowerPatchLimited = false;
+  bool sparsePineBushLimited = false;
+  for (const cutum::ObjectFeatureRule &rule :
+       cutum::UObjectFeatureConfigStorage::Get().GroundCover)
+  {
+    if (rule.Mode == cutum::ObjectFeatureRuleMode::ScatterBlocks &&
+        rule.Scatter.BlockName == "flower")
+    {
+      flowerScatterLimited = hasSeaRelativeProfile(rule, -3, 42) &&
+                             rule.Ecology.MaxSlope == 9.0f;
+    }
+    else if (rule.Mode == cutum::ObjectFeatureRuleMode::Object &&
+             rule.ObjectName == "flower_scatter_plains")
+    {
+      flowerPatchLimited = hasSeaRelativeProfile(rule, -3, 42) &&
+                           rule.Ecology.MaxSlope == 9.0f;
+    }
+    else if (rule.Mode == cutum::ObjectFeatureRuleMode::Object &&
+             rule.ObjectName == "bush_pine" && rule.SeedOffset == 4109)
+    {
+      sparsePineBushLimited = hasSeaRelativeProfile(rule, -3, 80) &&
+                              rule.Ecology.TemperatureMax == 0.68f &&
+                              rule.Ecology.MoistureMin == 0.22f &&
+                              rule.Ecology.MaxSlope == 12.0f;
+    }
+  }
+
+  FluidTest::Expect(cactusLimited, kTestName,
+                    "cactus is restricted to warm, dry, low-slope ground");
+  FluidTest::Expect(flowerScatterLimited && flowerPatchLimited, kTestName,
+                    "both plains flower feature types use matching ecological bands");
+  FluidTest::Expect(sparsePineBushLimited, kTestName,
+                    "sparse-forest pine bushes use the conifer ecology band");
+}
+
 static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &populator,
                                           cutum::UBlockRegistry &registry,
                                           cutum::UObjectLibrary &objects)
@@ -1078,6 +1148,7 @@ int main(int argc, char **argv)
   }
   TestConfiguredGroundCoverEcology(repo_root);
   TestConfiguredTreeElevationBands();
+  TestConfiguredNaturalFeatureElevationBands();
 
   const fs::path pack_root = repo_root / "resource_packs" / "minetest_default_16";
   const auto definitions = LoadPackDefinitions(pack_root);
