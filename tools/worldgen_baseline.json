@@ -46,6 +46,17 @@
     }
   },
   "reference_seeds": [42, 12345, 12354, 20240625],
+  "global": {
+    "note": "Whole-area gates for tools/terrain_full_metrics.py (radius >= 8 chunks, >= 3 seeds). Targets are Minecraft-like; they intentionally fail on the pre-profile-3 generator.",
+    "thresholds": {
+      "relief16_p50_max": 6.0,
+      "relief16_p90_max": 16.0,
+      "relief16_p99_max": 40.0,
+      "delta_ge_16_pct_max": 0.05,
+      "delta_ge_8_pct_max": 0.30,
+      "range5_ge_16_pct_max": 0.30
+    }
+  },
   "smoothness_thresholds": {
     "mean_abs_delta_y_max": 1.1,
     "pct_delta_gt_2_max": 2.5,

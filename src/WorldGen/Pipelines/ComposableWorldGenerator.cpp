@@ -34,6 +34,7 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
   if (Config.TerrainMode == ComposableTerrainMode::Density3D)
   {
     DensityFieldParams density_params;
+    density_params.routerV3 = ctx.Settings.WorldGenProfileVersion >= 3;
     density_params.cavesInDensity = Config.Caves && ctx.Settings.EnableCaves;
     density_params.caveAmplitude =
         std::max(0.0f, DensityFieldCaveAmplitudeBlocks(
@@ -41,7 +42,8 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
     const PackValleysConfig &valley_config = UWorldGenPack::ValleysConfig();
     density_params.riversEnabled =
         Config.Valleys && ctx.Settings.WorldGenProfileVersion >= 2 &&
-        !ctx.Settings.Tuning.useDensityRefineParity;
+        (ctx.Settings.WorldGenProfileVersion >= 3 ||
+         !ctx.Settings.Tuning.useDensityRefineParity);
     density_params.riverWidth = ctx.Settings.Tuning.riverWidth;
     if (valley_config.Loaded)
     {
@@ -165,7 +167,10 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
     const int raw_y = DensitySampler->SurfaceYAt(world_x, world_z);
     sample.RawSurfaceY = raw_y;
     sample.SurfaceY = raw_y;
-    if (Ctx.Settings.Tuning.useDensityRefineParity)
+    // Profile 3 keeps the voxel surface identical to the density field; the
+    // integer refinement chain only stays for legacy profiles.
+    if (Ctx.Settings.Tuning.useDensityRefineParity &&
+        Ctx.Settings.WorldGenProfileVersion < 3)
     {
       sample.SurfaceY = BiomeSampler->RefineSurfaceY(world_x, world_z, raw_y,
                                                      Ctx.Settings);

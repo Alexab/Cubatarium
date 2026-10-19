@@ -386,7 +386,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       settings.TerrainBackendMode = TerrainBackend::Heightmap;
     }
     settings.WorldGenProfileVersion = std::clamp(
-        p.value("worldgen_profile_version", 1), 1, 2);
+        p.value("worldgen_profile_version", 1), 1, 3);
     if (p.contains("vertical") && p["vertical"].is_string())
     {
       legacyVerticalMode = p["vertical"].get<std::string>();
@@ -626,7 +626,7 @@ ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
   }
   if (!procedural || !procedural->contains("worldgen_profile_version"))
   {
-    settings.WorldGenProfileVersion = 2;
+    settings.WorldGenProfileVersion = 3;
   }
   return settings;
 }

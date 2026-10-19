@@ -18,6 +18,9 @@ struct DensityFieldParams
   bool riversEnabled{false};
   float riverWidth{1.0f};
   float riverNoiseScale{0.008f};
+  // Profile 3: bounded spline-like router (no raw block uplifts, 3D noise
+  // scaled by a mountain/erosion factor).
+  bool routerV3{false};
 };
 
 class UDensityFieldSampler

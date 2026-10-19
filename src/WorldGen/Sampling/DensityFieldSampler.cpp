@@ -101,18 +101,35 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
   const float verticalRange = static_cast<float>(MaxHeight - SeaLevel);
   const float roughness = std::max(0.25f, TerrainRoughness);
 
-  const float regionalAmplitude =
+  float regionalAmplitude =
       verticalRange * (0.035f + 0.035f * roughness) * (0.35f + 0.65f * lowErosion);
-  const float rollingAmplitude =
+  float rollingAmplitude =
       verticalRange * (0.015f + 0.018f * roughness) * (0.55f + 0.45f * lowErosion);
-  const float mountainUplift = verticalRange * 0.42f;
-  const float mountainRidgeAmplitude = verticalRange * 0.52f;
-  const float mountainTrough = verticalRange * 0.05f;
+  float broadAmplitude = verticalRange * 0.055f;
+  float mountainUplift = verticalRange * 0.42f;
+  float mountainRidgeAmplitude = verticalRange * 0.52f;
+  float mountainTrough = verticalRange * 0.05f;
+  float mountainShape = mountainWeight;
+  if (Params.routerV3)
+  {
+    // Bounded relief: plains/rolling terms shrink with erosion, the mountain
+    // block uplift is capped (~0.54 of the vertical range at most instead of
+    // ~0.94) and eased in with a smoothstep so foot slopes stay walkable.
+    regionalAmplitude = verticalRange * 0.020f * (0.30f + 0.70f * lowErosion) *
+                        (0.6f + 0.4f * roughness);
+    rollingAmplitude = verticalRange * 0.008f * (0.40f + 0.60f * lowErosion) *
+                       (0.6f + 0.4f * roughness);
+    broadAmplitude = verticalRange * 0.040f;
+    mountainUplift = verticalRange * 0.24f;
+    mountainRidgeAmplitude = verticalRange * 0.30f;
+    mountainTrough = verticalRange * 0.03f;
+    mountainShape = mountainWeight * mountainWeight * (3.0f - 2.0f * mountainWeight);
+  }
   route.baseHeightBlocks +=
-      land * (broadNoise * verticalRange * 0.055f +
+      land * (broadNoise * broadAmplitude +
               regionalNoise * regionalAmplitude + rollingNoise * rollingAmplitude);
   route.baseHeightBlocks +=
-      mountainWeight *
+      mountainShape *
       (mountainUplift +
        std::pow(std::clamp(ridged, 0.0f, 1.0f), 2.0f) *
            mountainRidgeAmplitude -
@@ -128,8 +145,16 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
     const float river_floor =
         std::max(static_cast<float>(MinHeight + 2),
                  static_cast<float>(SeaLevel - 2));
-    route.baseHeightBlocks -=
-        std::max(0.0f, route.baseHeightBlocks - river_floor) * incision;
+    float cut = std::max(0.0f, route.baseHeightBlocks - river_floor) * incision;
+    if (Params.routerV3)
+    {
+      // Rivers are lowland features: fade the cut out with elevation and cap
+      // its depth so a channel never becomes a canyon wall in highlands.
+      const float above_sea = route.baseHeightBlocks - SeaLevel;
+      const float lowland = 1.0f - Smoothstep(6.0f, 36.0f, above_sea);
+      cut = std::min(cut * lowland, 6.0f);
+    }
+    route.baseHeightBlocks -= cut;
   }
   route.baseHeightBlocks =
       std::clamp(route.baseHeightBlocks, static_cast<float>(MinHeight),
@@ -137,6 +162,14 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
   route.noiseFactor =
       (2.2f + roughness * 2.8f + mountainWeight * 4.0f) *
       ErosionAmplitudeMultiplier(climate.erosion);
+  if (Params.routerV3)
+  {
+    // 3D noise is the "factor" of the router: tiny on lowlands, strong only
+    // where the mountain weight is high.
+    route.noiseFactor =
+        (0.9f + roughness * 1.4f + mountainShape * 6.5f) *
+        ErosionAmplitudeMultiplier(climate.erosion);
+  }
   route.jaggedness = std::clamp(
       0.3f + (1.0f - climate.erosion) * 0.35f + mountainWeight * 0.65f +
           peakValleys * 0.15f,

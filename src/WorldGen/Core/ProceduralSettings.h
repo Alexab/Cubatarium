@@ -99,7 +99,7 @@ struct ProceduralSettings
   std::string WorldGenPresetId{"balanced"};
   // Profile 1 preserves historical pack interpretation; profile 2 adds the
   // data-driven biome/feature model.
-  int WorldGenProfileVersion{2};
+  int WorldGenProfileVersion{3};
   bool EnableCaves{false};
   bool EnableTrees{true};
   bool EnableGroundCover{true};
