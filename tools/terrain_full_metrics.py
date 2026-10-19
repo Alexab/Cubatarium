@@ -18,7 +18,11 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from worldgen_metrics_lib import decode_chunk  # noqa: E402
+from worldgen_metrics_lib import (  # noqa: E402
+    build_id_to_name_from_world,
+    decode_chunk,
+    non_terrain_block_names_for_world,
+)
 import quick_terrain_metrics as q  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
@@ -29,7 +33,9 @@ def load_height_grid(world: Path):
     cols: dict[tuple[int, int, int], int] = {}
     for path in (world / "chunks").glob("*.cchunk"):
         cols.update(decode_chunk(path))
-    ignored = q.non_terrain_ids_for_world(world, REPO)
+    id_to_name = build_id_to_name_from_world(world, REPO)
+    ignored_names = non_terrain_block_names_for_world(world, REPO) | {"lily_pad"}
+    ignored = {b for b, n in id_to_name.items() if n in ignored_names}
     surf: dict[tuple[int, int], int] = {}
     for (x, y, z), bid in cols.items():
         if bid == 0 or bid in ignored:
