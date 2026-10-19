@@ -29,7 +29,8 @@ void RunTerrainStage(UComposableWorldGenerator &generator,
             generator.GetDensitySampler())
     {
       FillTerrainColumnFromDensity(generator.GetContext(), world_x, world_z,
-                                 sample.SurfaceY, rule, *density_sampler,
+                                 sample.SurfaceY, sample.RawSurfaceY, rule,
+                                 *density_sampler,
                                  generator.GetAquiferSampler());
       return;
     }

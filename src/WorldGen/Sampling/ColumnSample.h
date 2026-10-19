@@ -19,6 +19,7 @@ struct ColumnSampleContext
   float MacroHeight01{0.f};
   float HeightNorm{0.f};
   int PreliminarySurfaceY{0};
+  int RawSurfaceY{0};
   int SurfaceY{0};
   float SurfaceGradient{0.f};
   BiomeWeightSet Biomes{};

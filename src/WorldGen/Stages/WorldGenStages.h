@@ -22,7 +22,8 @@ struct ColumnLayerRule
 void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const ColumnLayerRule &rule);
 void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
-                                  int surfaceY, const ColumnLayerRule &rule,
+                                  int surfaceY, int rawSurfaceY,
+                                  const ColumnLayerRule &rule,
                                   const UDensityFieldSampler &sampler,
                                   const UAquiferSampler *aquiferSampler = nullptr);
 bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,

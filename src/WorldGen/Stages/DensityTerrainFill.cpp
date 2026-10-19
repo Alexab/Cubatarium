@@ -9,7 +9,8 @@ namespace cutum
 {
 
 void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
-                                  int surfaceY, const ColumnLayerRule &rule,
+                                  int surfaceY, int rawSurfaceY,
+                                  const ColumnLayerRule &rule,
                                   const UDensityFieldSampler &sampler,
                                   const UAquiferSampler *aquiferSampler)
 {
@@ -20,7 +21,7 @@ void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
   const int bedrockTop = std::clamp(ctx.Settings.BedrockTopY,
                                     ctx.Settings.MinHeight, surfaceY);
   const UDensityFieldSampler::Column column =
-      sampler.PrepareColumn(x, z, surfaceY);
+      sampler.PrepareColumn(x, z, surfaceY, rawSurfaceY);
   int maxY = surfaceY;
   for (int y = ctx.Settings.MinHeight; y <= ctx.Settings.MaxHeight; ++y)
   {

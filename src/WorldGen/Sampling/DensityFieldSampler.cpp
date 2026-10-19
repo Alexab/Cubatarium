@@ -198,16 +198,21 @@ float UDensityFieldSampler::SampleTerrainDensity(int x, int y, int z,
 float UDensityFieldSampler::SampleDensity(int x, int y, int z,
                                           int surface_y) const
 {
-  return SampleDensity(PrepareColumn(x, z, surface_y), y);
+  return SampleDensity(PrepareColumn(x, z, surface_y, surface_y), y);
 }
 
 UDensityFieldSampler::Column UDensityFieldSampler::PrepareColumn(
-    int x, int z, int surface_y) const
+    int x, int z, int target_surface_y, int raw_surface_y) const
 {
   Column column;
   column.x = x;
   column.z = z;
-  column.surfaceY = surface_y;
+  column.surfaceY = target_surface_y;
+  // Translate the complete density column so its raw zero crossing lands on
+  // the biome-refined surface. This keeps the 3D caves and terrain noise while
+  // making the voxel surface match the same smoothed height used by features.
+  column.surfaceDensityOffset =
+      static_cast<float>(target_surface_y - raw_surface_y);
   column.route = RouteAt(x, z);
   column.horizontalWobble = HorizontalWobbleAt(x, z, column.route);
   return column;
@@ -215,9 +220,10 @@ UDensityFieldSampler::Column UDensityFieldSampler::PrepareColumn(
 
 float UDensityFieldSampler::SampleDensity(const Column &column, int y) const
 {
-  float density = SampleTerrainDensityAt(
-      column.x, y, column.z, Params.octaves, column.route,
-      column.horizontalWobble);
+  float density = SampleTerrainDensityAt(column.x, y, column.z, Params.octaves,
+                                         column.route,
+                                         column.horizontalWobble) +
+                  column.surfaceDensityOffset;
   return ApplyCaveDensityOffset(column.x, y, column.z, column.surfaceY, density);
 }
 
@@ -239,7 +245,8 @@ int UDensityFieldSampler::SurfaceYAt(int x, int z) const
     return terrain_surface;
   }
 
-  const Column column = PrepareColumn(x, z, terrain_surface);
+  const Column column =
+      PrepareColumn(x, z, terrain_surface, terrain_surface);
   for (int y = terrain_surface; y >= MinHeight; --y)
   {
     if (SampleDensity(column, y) > 0.0f)

@@ -123,7 +123,11 @@ void UWorldGenSettingsForm::SetForNewWorldDefaults()
   ForNewWorldScreen = true;
   FormSettings.Generator = ProceduralGenerator::Overworld;
   ResetToGeneratorDefaults(FormSettings);
-  ApplyWorldGenPreset(FormSettings, "balanced");
+  // New worlds should start with the terrain-quality options that smooth the
+  // unified biome height field and keep the 3D density surface in sync with it.
+  FormSettings.TerrainBackendMode = TerrainBackend::Density3D;
+  FormSettings.WorldGenProfileVersion = 2;
+  ApplyWorldGenPreset(FormSettings, "smooth");
   SetHintText("Choose generator and tuning for this new world.");
 }
 

@@ -30,6 +30,7 @@ public:
     int surfaceY{0};
     DensityRouteParams route{};
     float horizontalWobble{0.0f};
+    float surfaceDensityOffset{0.0f};
   };
 
   UDensityFieldSampler(uint32_t seed, int seaLevel, int maxHeight,
@@ -40,7 +41,8 @@ public:
 
   float SampleTerrainDensity(int x, int y, int z, int octaves = -1) const;
   float SampleDensity(int x, int y, int z, int surface_y) const;
-  Column PrepareColumn(int x, int z, int surface_y) const;
+  Column PrepareColumn(int x, int z, int target_surface_y,
+                       int raw_surface_y) const;
   float SampleDensity(const Column &column, int y) const;
   int SurfaceYAt(int x, int z) const;
   int CoarseSurfaceYAt(int x, int z) const;

@@ -51,7 +51,7 @@ struct WorldGenTuning
   bool useUnifiedHeightField{false};
   bool useAnalyticValleys{false};
   bool useMudflowErosion{false};
-  bool useDensityRefineParity{false};
+  bool useDensityRefineParity{true};
 };
 
 enum class RavineFeatherMode

@@ -162,6 +162,7 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
         PickSurfaceBiomeHandle(world_x, world_z, sample.Biomes);
     sample.SurfaceBiomeKey = BiomeKeyForHandle(sample.SurfaceBiomeHandle);
     const int raw_y = DensitySampler->SurfaceYAt(world_x, world_z);
+    sample.RawSurfaceY = raw_y;
     sample.SurfaceY = raw_y;
     if (Ctx.Settings.Tuning.useDensityRefineParity)
     {
