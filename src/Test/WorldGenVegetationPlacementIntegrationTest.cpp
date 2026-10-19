@@ -767,7 +767,7 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
   tree.Tree.CrownRadiusX = 4;
   tree.Tree.CrownRadiusZ = 4;
   tree.Tree.CrownHeight = 5;
-  tree.Tree.BranchCount = 0;
+  tree.Tree.BranchCount = 3;
   tree.Tree.CrownLobes = 0;
   tree.Tree.RootChance = 0.0f;
   tree.Tree.CrownIrregularity = 0.28f;
@@ -797,16 +797,57 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
         }
       });
   bool oak_has_lateral_wood = false;
+  std::vector<glm::ivec3> oak_logs;
   world.ForEachBlock(
       [&](glm::ivec3 position, cutum::BlockId block)
       {
-        if (block == tree_trunk && (position.x != 0 || position.z != 0))
+        if (block != tree_trunk)
+        {
+          return;
+        }
+        oak_logs.push_back(position);
+        if (position.x != 0 || position.z != 0)
         {
           oak_has_lateral_wood = true;
         }
       });
-  FluidTest::Expect(tree_extent >= 4 && !oak_has_lateral_wood, kTestName,
-                    "broadleaf crown expands without exposed lateral logs");
+  FluidTest::Expect(tree_extent >= 4 && oak_has_lateral_wood, kTestName,
+                    "broadleaf profile grows lateral branches");
+  const auto oakRoot = std::find_if(
+      oak_logs.begin(), oak_logs.end(), [](const glm::ivec3 &position)
+      { return position.x == 0 && position.y == 52 && position.z == 0; });
+  std::vector<bool> reachedOakLog(oak_logs.size(), false);
+  std::vector<size_t> pendingOakLogs;
+  if (oakRoot != oak_logs.end())
+  {
+    const size_t rootIndex =
+        static_cast<size_t>(std::distance(oak_logs.begin(), oakRoot));
+    reachedOakLog[rootIndex] = true;
+    pendingOakLogs.push_back(rootIndex);
+  }
+  size_t connectedOakLogCount = 0;
+  while (!pendingOakLogs.empty())
+  {
+    const size_t currentIndex = pendingOakLogs.back();
+    pendingOakLogs.pop_back();
+    ++connectedOakLogCount;
+    for (size_t candidateIndex = 0; candidateIndex < oak_logs.size();
+         ++candidateIndex)
+    {
+      if (reachedOakLog[candidateIndex])
+      {
+        continue;
+      }
+      const glm::ivec3 delta = oak_logs[candidateIndex] - oak_logs[currentIndex];
+      if (std::abs(delta.x) + std::abs(delta.y) + std::abs(delta.z) == 1)
+      {
+        reachedOakLog[candidateIndex] = true;
+        pendingOakLogs.push_back(candidateIndex);
+      }
+    }
+  }
+  FluidTest::Expect(connectedOakLogCount == oak_logs.size(), kTestName,
+                    "procedural broadleaf trunk and branches are face-connected");
 
   cutum::ObjectFeatureRule pine;
   pine.Mode = cutum::ObjectFeatureRuleMode::ProceduralTree;
@@ -1340,6 +1381,18 @@ int main(int argc, char **argv)
                     0.006f) < 0.00001f,
       kTestName,
       "regional density profiles load from object_features.json");
+  const bool allProceduralTreeProfilesHaveBranches =
+      featureConfig &&
+      std::all_of(featureConfig->Vegetation.begin(),
+                  featureConfig->Vegetation.end(),
+                  [](const cutum::ObjectFeatureRule &rule)
+                  {
+                    return rule.Mode !=
+                               cutum::ObjectFeatureRuleMode::ProceduralTree ||
+                           rule.Tree.BranchCount > 0;
+                  });
+  FluidTest::Expect(allProceduralTreeProfilesHaveBranches, kTestName,
+                    "configured procedural tree species enable branch growth");
   TestWorldGenSetsSchemaV2Migration();
   FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"), kTestName,
                     "worldgen pack load failed");

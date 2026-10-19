@@ -411,6 +411,66 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     }
   }
 
+  // Rasterize branches as face-connected voxel paths. Diagonal branches use
+  // a short stair-step so adjacent wood blocks share a face instead of only
+  // touching at a corner, and occasional vertical steps keep the silhouette
+  // from becoming a flat horizontal spoke.
+  static constexpr int kBranchDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
+  static constexpr int kBranchDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+  const auto addConnectedBranch = [&](int direction, int startY, int length,
+                                      uint32_t branchSeed)
+  {
+    int x = 0;
+    int y = startY;
+    int z = 0;
+    const int dx = kBranchDirX[direction % 8];
+    const int dz = kBranchDirZ[direction % 8];
+    const bool diagonal = dx != 0 && dz != 0;
+    const bool xFirst = (branchSeed & 1U) == 0U;
+    for (int step = 1; step <= length; ++step)
+    {
+      if (!diagonal)
+      {
+        x += dx;
+        addVoxel(x, y, z, trunk);
+      }
+      else if (xFirst)
+      {
+        x += dx;
+        addVoxel(x, y, z, trunk);
+        z += dz;
+        addVoxel(x, y, z, trunk);
+      }
+      else
+      {
+        z += dz;
+        addVoxel(x, y, z, trunk);
+        x += dx;
+        addVoxel(x, y, z, trunk);
+      }
+      if (step % 2 == 0 && y + 1 < height)
+      {
+        ++y;
+        addVoxel(x, y, z, trunk);
+      }
+    }
+
+    const int leafY = y;
+    for (int leafDy = -1; leafDy <= 1; ++leafDy)
+    {
+      for (int leafDz = -1; leafDz <= 1; ++leafDz)
+      {
+        for (int leafDx = -1; leafDx <= 1; ++leafDx)
+        {
+          if (std::abs(leafDx) + std::abs(leafDz) + std::abs(leafDy) <= 2)
+          {
+            addVoxel(x + leafDx, leafY + leafDy, z + leafDz, leaves);
+          }
+        }
+      }
+    }
+  };
+
   // Add offset foliage clumps around the main crown so broadleaf silhouettes
   // do not all read as one perfectly centered ellipsoid.
   for (int lobe = 0; lobe < profile.CrownLobes; ++lobe)
@@ -471,8 +531,6 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
 
   if (conicalCrown)
   {
-    static constexpr int kDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
-    static constexpr int kDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
     const int tiers = profile.BranchCount;
     for (int tier = 0; tier < tiers; ++tier)
     {
@@ -495,30 +553,7 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
       for (int arm = 0; arm < 4; ++arm)
       {
         const int direction = (arm * 2 + rotation) % 8;
-        int tipX = 0;
-        int tipZ = 0;
-        for (int step = 1; step <= branchLength; ++step)
-        {
-          tipX = kDirX[direction] * step;
-          tipZ = kDirZ[direction] * step;
-          const int branchStepY =
-              std::min(height - 1, branchY + (step + 2) / 3);
-          addVoxel(tipX, branchStepY, tipZ, trunk);
-        }
-        const int leafY = std::min(height, branchY + branchLength / 3);
-        for (int dy = -1; dy <= 1; ++dy)
-        {
-          for (int dz = -1; dz <= 1; ++dz)
-          {
-            for (int dx = -1; dx <= 1; ++dx)
-            {
-              if (std::abs(dx) + std::abs(dz) + std::abs(dy) <= 2)
-              {
-                addVoxel(tipX + dx, leafY + dy, tipZ + dz, leaves);
-              }
-            }
-          }
-        }
+        addConnectedBranch(direction, branchY, branchLength, tierHash + arm);
       }
     }
   }
@@ -530,8 +565,6 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
           FeatureHash(base.x + branch * 13, base.z - branch * 7,
                       seed + 0x4252414eU + static_cast<uint32_t>(branch * 31));
       const int direction = static_cast<int>(branchHash % 8U);
-      static constexpr int kDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
-      static constexpr int kDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
       const int branchY =
           height / 2 +
           static_cast<int>((branchHash >> 8U) %
@@ -542,28 +575,7 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
       const int length =
           branchLengthMin + static_cast<int>((branchHash >> 16U) %
                                              static_cast<uint32_t>(branchLengthRange));
-      int tipX = 0;
-      int tipZ = 0;
-      for (int step = 1; step <= length; ++step)
-      {
-        tipX = kDirX[direction] * step;
-        tipZ = kDirZ[direction] * step;
-        addVoxel(tipX, branchY + (step + 1) / 2, tipZ, trunk);
-      }
-      const int leafY = branchY + (length + 1) / 2;
-      for (int dy = -1; dy <= 1; ++dy)
-      {
-        for (int dz = -1; dz <= 1; ++dz)
-        {
-          for (int dx = -1; dx <= 1; ++dx)
-          {
-            if (std::abs(dx) + std::abs(dz) + std::abs(dy) <= 2)
-            {
-              addVoxel(tipX + dx, leafY + dy, tipZ + dz, leaves);
-            }
-          }
-        }
-      }
+      addConnectedBranch(direction, branchY, length, branchHash);
     }
   }
 
