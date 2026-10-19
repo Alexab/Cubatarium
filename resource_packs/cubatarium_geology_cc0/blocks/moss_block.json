@@ -5,12 +5,12 @@
     "building"
   ],
   "textures": [
-    "rock_moss",
-    "rock_moss",
-    "rock_moss",
-    "rock_moss",
-    "rock_moss",
-    "rock_moss"
+    "greystone",
+    "greystone",
+    "greystone",
+    "greystone",
+    "grass_top",
+    "greystone"
   ],
   "hardness": 0.6,
   "dig": {

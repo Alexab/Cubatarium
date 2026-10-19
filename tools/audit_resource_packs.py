@@ -135,18 +135,19 @@ def check_cutout_occupancy(
 
 
 def scan_png_alpha_profile(png_path: Path) -> tuple[bool, bool] | None:
-    """Return (has_alpha_holes, has_semitransparent) for RGBA/GA PNGs."""
+    """Return (has_alpha_holes, has_semitransparent) for non-interlaced RGBA/GA PNGs."""
     try:
         raw = png_path.read_bytes()
         if raw[:8] != b"\x89PNG\r\n\x1a\n":
             return None
-        if len(raw) < 26:
+        if len(raw) < 29:
             return None
         width = struct.unpack(">I", raw[16:20])[0]
         height = struct.unpack(">I", raw[20:24])[0]
         bit_depth = raw[24]
         color_type = raw[25]
-        if bit_depth != 8 or color_type not in (4, 6):
+        interlace_method = raw[28]
+        if bit_depth != 8 or color_type not in (4, 6) or interlace_method != 0:
             return None
         bytes_per_pixel = 2 if color_type == 4 else 4
         alpha_index = 1 if color_type == 4 else 3
@@ -168,17 +169,59 @@ def scan_png_alpha_profile(png_path: Path) -> tuple[bool, bool] | None:
         has_holes = False
         has_semi = False
         offset = 0
+        previous = bytearray(width * bytes_per_pixel)
         for _ in range(height):
             if offset + row_bytes > len(inflated):
                 return None
-            row_start = offset + 1
+            filter_type = inflated[offset]
+            filtered = inflated[offset + 1 : offset + row_bytes]
             offset += row_bytes
+            if filter_type > 4:
+                return None
+
+            # PNG scanlines contain filtered bytes, not pixel channel values.
+            # Undo the per-row filter before inspecting alpha or RGB data.
+            reconstructed = bytearray(width * bytes_per_pixel)
+            for byte_index, filtered_byte in enumerate(filtered):
+                left = (
+                    reconstructed[byte_index - bytes_per_pixel]
+                    if byte_index >= bytes_per_pixel
+                    else 0
+                )
+                above = previous[byte_index]
+                upper_left = (
+                    previous[byte_index - bytes_per_pixel]
+                    if byte_index >= bytes_per_pixel
+                    else 0
+                )
+                if filter_type == 0:
+                    predictor = 0
+                elif filter_type == 1:
+                    predictor = left
+                elif filter_type == 2:
+                    predictor = above
+                elif filter_type == 3:
+                    predictor = (left + above) // 2
+                else:
+                    estimate = left + above - upper_left
+                    distance_left = abs(estimate - left)
+                    distance_above = abs(estimate - above)
+                    distance_upper_left = abs(estimate - upper_left)
+                    if distance_left <= distance_above and distance_left <= distance_upper_left:
+                        predictor = left
+                    elif distance_above <= distance_upper_left:
+                        predictor = above
+                    else:
+                        predictor = upper_left
+                reconstructed[byte_index] = (filtered_byte + predictor) & 0xFF
+
             for px in range(width):
-                alpha = inflated[row_start + px * bytes_per_pixel + alpha_index]
+                alpha = reconstructed[px * bytes_per_pixel + alpha_index]
                 if alpha == 0:
                     has_holes = True
                 elif alpha < 255:
                     has_semi = True
+            previous = reconstructed
         return has_holes, has_semi
     except (OSError, struct.error, zlib.error):
         return None

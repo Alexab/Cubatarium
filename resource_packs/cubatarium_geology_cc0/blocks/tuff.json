@@ -5,12 +5,12 @@
     "building"
   ],
   "textures": [
-    "rock",
-    "rock",
-    "rock",
-    "rock",
-    "rock",
-    "rock"
+    "greystone_sand",
+    "greystone_sand",
+    "greystone_sand",
+    "greystone_sand",
+    "greystone_sand",
+    "greystone_sand"
   ],
   "hardness": 1.5,
   "dig": {

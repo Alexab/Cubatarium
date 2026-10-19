@@ -2,6 +2,7 @@ license: CC0-1.0
 license_text: |
   Cubatarium CC0 Base — textures from Kenney Voxel Pack (CC0).
   https://kenney.nl/assets/voxel-pack
+  Hellrock uses Kenney's opaque redstone tile in place of the transparent rock sprite.
 blocks:
   dirt: dirt
   stone: stone

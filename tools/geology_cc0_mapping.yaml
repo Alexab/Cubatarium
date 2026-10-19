@@ -4,9 +4,9 @@ license_text: |
   Source: https://kenney.nl/assets/voxel-pack
   The Voxel Pack is released under Creative Commons CC0.
   Tile mapping: granite=stone_browniron, diorite=greystone_sand,
-  andesite=stone_dirt, deepslate=greystone, tuff=rock,
+  andesite=stone_dirt, deepslate=greystone, tuff=greystone_sand,
   calcite=greystone_ruby_alt, smooth_basalt=stone,
-  amethyst_block=greystone_ruby, moss_block=rock_moss,
+  amethyst_block=greystone_ruby, moss_block sides/bottom=greystone and top=grass_top,
   rooted_dirt=dirt_grass.
 blocks:
   granite:
@@ -34,7 +34,7 @@ blocks:
     dig: {level: 1, groups: {cracky: 2}}
     displayName: Deepslate
   tuff:
-    faces: [rock, rock, rock, rock, rock, rock]
+    faces: [greystone_sand, greystone_sand, greystone_sand, greystone_sand, greystone_sand, greystone_sand]
     types: [natural, building]
     hardness: 1.5
     dig: {level: 0, groups: {cracky: 2}}
@@ -58,7 +58,7 @@ blocks:
     dig: {level: 0, groups: {cracky: 2}}
     displayName: Amethyst Block
   moss_block:
-    faces: [rock_moss, rock_moss, rock_moss, rock_moss, rock_moss, rock_moss]
+    faces: [greystone, greystone, greystone, greystone, grass_top, greystone]
     types: [natural, building]
     hardness: 0.6
     dig: {level: 0, groups: {crumbly: 1}}
