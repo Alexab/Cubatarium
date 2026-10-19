@@ -530,6 +530,41 @@ static void TestRegionalDensityTerrainDistribution()
                     "high peaks carry mountain weight and mostly select a mountain biome");
 }
 
+static void TestAltitudeAdjustedMountainSnowLine()
+{
+  cutum::ProceduralSettings settings = MakeBalancedSettings();
+  settings.Seed = 410058U;
+  cutum::UDensityFieldSampler density_sampler(
+      settings.Seed, settings.SeaLevel, settings.MaxHeight,
+      settings.Tuning.terrainRoughness, cutum::DensityFieldParams{},
+      settings.Caves, settings.MinHeight);
+
+  constexpr int sampleX = 200;
+  constexpr int sampleZ = 136;
+  const int surfaceY = density_sampler.SurfaceYAt(sampleX, sampleZ);
+  const cutum::ClimateSample climate =
+      cutum::SampleClimate(sampleX, sampleZ, settings.Seed);
+  const cutum::BiomeWeightSet weights = cutum::ComputeBiomeWeights(
+      sampleX, sampleZ, surfaceY, settings.SeaLevel, settings.MaxHeight,
+      settings.Seed, settings.Tuning, settings.WorldGenProfileVersion);
+
+  FluidTest::Expect(cutum::UWorldGenPack::ClimateConfig().Loaded &&
+                        cutum::UWorldGenPack::ClimateConfig()
+                                .TemperatureLapsePerBlock > 0.0f,
+                    kTestName,
+                    "climate pack configures an altitude temperature lapse");
+  FluidTest::Expect(surfaceY >= settings.SeaLevel + 96 &&
+                        climate.temperature >= 0.30f,
+                    kTestName,
+                    "snowline regression uses a high, temperate mountain sample");
+  FluidTest::Expect(
+      cutum::DominantBiome(weights) == cutum::BiomeId::SnowySlopes &&
+          cutum::BiomeWeightFor(weights, cutum::BiomeId::SnowySlopes) >
+              cutum::BiomeWeightFor(weights, cutum::BiomeId::Mountains),
+      kTestName,
+      "altitude cooling allows snowy slopes to win over the mountain palette");
+}
+
 } // namespace
 
 int main()
@@ -549,6 +584,7 @@ int main()
   TestCoastSandMatchesRamp();
   TestNegativeHeightSamplingAndCompactBounds();
   TestRegionalDensityTerrainDistribution();
+  TestAltitudeAdjustedMountainSnowLine();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

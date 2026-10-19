@@ -879,12 +879,30 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
       (1.0f - Smoothstep(0.58f, 0.70f, climate.continentalness));
   const float mountainFactor =
       MountainClimateWeight(climate) * Smoothstep(0.20f, 0.45f, height_norm);
-  const float snowySlopeFactor =
-      mountainFactor * (1.0f - Smoothstep(0.22f, 0.52f, climate.temperature));
-  const float jaggedPeakFactor =
-      mountainFactor * Smoothstep(0.55f, 0.84f,
-                                  PeaksAndValleys(climate.weirdness)) *
+  const PackClimateConfig &climateConfig = UWorldGenPack::ClimateConfig();
+  const float temperatureLapse =
+      climateConfig.Loaded ? climateConfig.TemperatureLapsePerBlock : 0.00135f;
+  const float temperatureAtAltitude = std::clamp(
+      climate.temperature - std::max(0.0f, seaDelta) * temperatureLapse,
+      0.0f, 1.0f);
+  const float snowShare =
+      1.0f - Smoothstep(0.22f, 0.52f, temperatureAtAltitude);
+  const float jaggedShare =
+      Smoothstep(0.55f, 0.84f, PeaksAndValleys(climate.weirdness)) *
       Smoothstep(0.42f, 0.68f, height_norm);
+  // Select one mountain surface identity while preserving the family's prior
+  // total emphasis: the old overlapping mountain/snow/peak weights added these
+  // factors independently. Jagged peaks take priority; otherwise cold high
+  // terrain becomes snowy slopes and the remainder stays rocky mountains.
+  const float mountainIdentityBoost = 1.0f + snowShare + jaggedShare;
+  const float jaggedPeakFactor =
+      mountainFactor * mountainIdentityBoost * jaggedShare;
+  const float snowySlopeFactor =
+      mountainFactor * mountainIdentityBoost * (1.0f - jaggedShare) *
+      snowShare;
+  const float mountainSurfaceFactor =
+      mountainFactor * mountainIdentityBoost * (1.0f - jaggedShare) *
+      (1.0f - snowShare);
 
   BiomeWeightSet result;
   float total = 0.0f;
@@ -898,7 +916,9 @@ BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
     }
     float w = BiomeClimateFitness(
                   biome, climate, localHeightNorm, oceanFactor, beachFactor,
-                  mountainFactor, snowySlopeFactor, jaggedPeakFactor) *
+                  biome == BiomeId::Mountains ? mountainSurfaceFactor
+                                               : mountainFactor,
+                  snowySlopeFactor, jaggedPeakFactor) *
               tuningWeight;
     w *= SpawnBiomeWeightMul(biome, x, z);
     if (w < 0.01f)

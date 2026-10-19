@@ -515,6 +515,10 @@ void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
     {
       ParseClimateAxis(json["ridge"], pack.Climate.Ridge);
     }
+    pack.Climate.TemperatureLapsePerBlock = std::clamp(
+        json.value("temperature_lapse_per_block",
+                   pack.Climate.TemperatureLapsePerBlock),
+        0.0f, 0.004f);
     pack.Climate.Loaded = true;
   }
   catch (const std::exception &e)

@@ -115,6 +115,9 @@ struct PackClimateConfig
   ClimateAxisPackConfig Erosion;
   ClimateAxisPackConfig Weirdness;
   ClimateAxisPackConfig Ridge;
+  // Normalized temperature reduction per block above sea level, used for
+  // mountain snowline selection. Older climate packs inherit this default.
+  float TemperatureLapsePerBlock{0.00135f};
   bool Loaded{false};
 };
 
