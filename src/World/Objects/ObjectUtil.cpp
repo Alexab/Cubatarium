@@ -528,7 +528,8 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
     }
   }
 
-  if (solidWorldPositions.empty() && !nonSolidWorldPositions.empty())
+  if (solidWorldPositions.empty() && !nonSolidWorldPositions.empty() &&
+      object.PlacementMode != ObjectPlacementMode::VerticalPlant)
   {
     return false;
   }
@@ -540,6 +541,38 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
   }
 
   const ColumnXZ anchorKey = ColumnKey(anchorX, anchorZ);
+  if (solidWorldPositions.empty())
+  {
+    if (object.PlacementMode != ObjectPlacementMode::VerticalPlant ||
+        nonSolidWorldPositions.empty())
+    {
+      return false;
+    }
+
+    // Plant prefabs (flowers, grasses, and similar vegetation) are made only
+    // from non-colliding blocks. They have no solid voxel in the anchor column,
+    // so validate each plant against its own ground column instead of
+    // requiring a solid prefab voxel below.
+    for (const glm::ivec3 &plantPos : nonSolidWorldPositions)
+    {
+      const int localSurface = FindTopSolidSurfaceY(
+          world, registry, plantPos.x, plantPos.z, maxScanY);
+      if (localSurface < 0 || (seaLevel >= 0 && localSurface < seaLevel) ||
+          plantPos.y != localSurface + 1 ||
+          !CanOccupySurfacePlantLayerAt(world, registry, plantPos))
+      {
+        return false;
+      }
+
+      const BlockId existing = world.GetBlock(plantPos);
+      if (existing != BLOCK_AIR && registry.IsLiquid(existing))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
   const auto anchorIt = solidYByColumn.find(anchorKey);
   if (solidYByColumn.empty() || anchorIt == solidYByColumn.end())
   {

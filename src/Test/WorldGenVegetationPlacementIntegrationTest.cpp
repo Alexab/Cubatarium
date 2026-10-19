@@ -737,6 +737,96 @@ static void TestBuiltinTreeTemplateLogsConnectToTrunk(
   }
 }
 
+static void TestStaticPlantPrefabsPlaceOnFlatGround(
+    cutum::UBlockRegistry &registry, cutum::UObjectLibrary &objects)
+{
+  cutum::ProceduralSettings settings = MakeVegetationSettings();
+  settings.SeaLevel = 63;
+  settings.MinHeight = -64;
+  settings.MaxHeight = 319;
+  settings.WorldGenProfileVersion = 2;
+
+  cutum::UBlockWorld world;
+  world.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext ctx(world, registry, settings, &objects);
+  ctx.WorldgenOwnerPackId = "minetest_default_16";
+  ctx.ResolveBlockIds();
+
+  constexpr int kSurfaceY = 64;
+  for (int z = 0; z <= 8; ++z)
+  {
+    for (int x = 0; x <= 18; ++x)
+    {
+      world.SetBlock(glm::ivec3(x, kSurfaceY, z), ctx.Blocks.Grass);
+    }
+  }
+
+  const bool loaded = objects.Get("flower_patch_common") != nullptr &&
+                      objects.Get("flower_scatter_plains") != nullptr &&
+                      objects.Get("tall_grass_patch") != nullptr;
+  FluidTest::Expect(loaded, kTestName,
+                    "static flower and grass prefabs load from object content");
+  if (!loaded)
+  {
+    return;
+  }
+
+  const bool flowerPatchPlaced = cutum::PlaceObjectAt(
+      ctx, "flower_patch_common", glm::ivec3(3, kSurfaceY + 1, 3),
+      kSurfaceY);
+  const bool flowerScatterPlaced = cutum::PlaceObjectAt(
+      ctx, "flower_scatter_plains", glm::ivec3(9, kSurfaceY + 1, 3),
+      kSurfaceY);
+  const bool tallGrassPlaced = cutum::PlaceObjectAt(
+      ctx, "tall_grass_patch", glm::ivec3(15, kSurfaceY + 1, 3),
+      kSurfaceY);
+
+  FluidTest::Expect(flowerPatchPlaced, kTestName,
+                    "common rose patch places above supported grass");
+  FluidTest::Expect(flowerScatterPlaced, kTestName,
+                    "plains rose scatter places above supported grass");
+  FluidTest::Expect(tallGrassPlaced, kTestName,
+                    "non-solid tall-grass prefab places above supported grass");
+  FluidTest::Expect(CountBlocksNamed(world, registry, "rose") == 8,
+                    kTestName,
+                    "both rose prefabs write all configured rose voxels");
+  FluidTest::Expect(CountBlocksNamed(world, registry, "tall_grass") == 5,
+                    kTestName,
+                    "tall-grass prefab writes all configured grass voxels");
+
+  constexpr int kRuleFixtureRadius = 64;
+  cutum::UBlockWorld defaultWorld;
+  defaultWorld.SetFluidDefinitions(registry.GetDefinitions());
+  cutum::WorldGenContext defaultCtx(defaultWorld, registry, settings, &objects);
+  defaultCtx.WorldgenOwnerPackId = "minetest_default_16";
+  defaultCtx.ResolveBlockIds();
+  for (int z = -kRuleFixtureRadius - 3; z <= kRuleFixtureRadius + 3; ++z)
+  {
+    for (int x = -kRuleFixtureRadius - 3; x <= kRuleFixtureRadius + 3; ++x)
+    {
+      defaultWorld.SetBlock(glm::ivec3(x, kSurfaceY, z), defaultCtx.Blocks.Grass);
+    }
+  }
+  for (int z = -kRuleFixtureRadius; z <= kRuleFixtureRadius; ++z)
+  {
+    for (int x = -kRuleFixtureRadius; x <= kRuleFixtureRadius; ++x)
+    {
+      cutum::TryPlaceGroundCoverFeatures(defaultCtx, x, z, kSurfaceY,
+                                         cutum::BiomeId::Plains, false);
+    }
+  }
+
+  const int defaultRoseCount = CountBlocksNamed(defaultWorld, registry, "rose");
+  const int defaultTallGrassCount =
+      CountBlocksNamed(defaultWorld, registry, "tall_grass");
+  std::cout << "default ground-cover pool fixture roses=" << defaultRoseCount
+            << " tall_grass=" << defaultTallGrassCount << std::endl;
+  FluidTest::Expect(defaultRoseCount > 0, kTestName,
+                    "full ground-cover pool can place configured rose prefabs");
+  FluidTest::Expect(defaultTallGrassCount > 0, kTestName,
+                    "full ground-cover pool can place configured tall grass");
+}
+
 static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
 {
   cutum::ProceduralSettings settings = MakeVegetationSettings();
@@ -1426,6 +1516,12 @@ int main(int argc, char **argv)
   objects.LoadMerged(repo_root / "objects", {manifest}, registry);
   objects.RebindBlockIds(registry);
   TestBuiltinTreeTemplateLogsConnectToTrunk(objects);
+  TestStaticPlantPrefabsPlaceOnFlatGround(registry, objects);
+  if (argc > 1 && std::string(argv[1]) == "--static-plant-prefabs-only")
+  {
+    std::cout << kTestName << ": static plant prefab check OK" << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--procedural-vegetation-only")
   {
     TestProceduralVegetationStrategies(registry);

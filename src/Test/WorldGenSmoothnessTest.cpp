@@ -17,8 +17,13 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdlib>
+#include <exception>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -596,13 +601,96 @@ static void TestRiverValleysAndRavinesAreIndependent()
                     "ravines keep their independent enable switch");
 }
 
+static int DumpBiomeGrid(uint32_t seed, int radius, int step)
+{
+  if (radius < 0 || radius > 4096 || step <= 0)
+  {
+    std::cerr << "radius must be in [0,4096] and step must be positive\n";
+    return 2;
+  }
+
+  cutum::ProceduralSettings settings = MakeBalancedSettings();
+  settings.Seed = seed;
+  const cutum::UDensityFieldSampler height_sampler(
+      settings.Seed, settings.SeaLevel, settings.MaxHeight,
+      settings.Tuning.terrainRoughness, cutum::DensityFieldParams{},
+      settings.Caves, settings.MinHeight);
+  const cutum::CoarseHeightCallback coarse_height =
+      [&height_sampler](int x, int z)
+  { return height_sampler.SurfaceYAt(x, z); };
+
+  std::cout << "seed,x,z,surface_y,temperature,moisture,continentalness,"
+               "erosion,weirdness,ridge,dominant_biome,biome_weights\n";
+  std::cout << std::setprecision(6);
+  for (int z = -radius; z <= radius; z += step)
+  {
+    for (int x = -radius; x <= radius; x += step)
+    {
+      const int surface_y = height_sampler.SurfaceYAt(x, z);
+      const cutum::ClimateSample climate =
+          cutum::SampleClimate(x, z, settings.Seed);
+      const cutum::BiomeWeightSet weights = cutum::BlendedBiomeWeights(
+          x, z, surface_y, settings.SeaLevel, settings.MaxHeight,
+          settings.Seed, settings.Tuning, coarse_height,
+          settings.WorldGenProfileVersion);
+      const cutum::BiomeKey dominant = cutum::BiomeKeyForHandle(
+          cutum::DominantBiomeHandle(weights));
+      std::cout << seed << ',' << x << ',' << z << ',' << surface_y << ','
+                << climate.temperature << ',' << climate.moisture << ','
+                << climate.continentalness << ',' << climate.erosion << ','
+                << climate.weirdness << ',' << climate.ridge << ',' << dominant
+                << ",\"";
+      bool first = true;
+      for (const cutum::BiomeBlendEntry &entry : weights.entries)
+      {
+        if (!first)
+        {
+          std::cout << '|';
+        }
+        first = false;
+        std::cout << cutum::BiomeKeyForHandle(entry.biome) << ':'
+                  << entry.weight;
+      }
+      std::cout << '"' << '\n';
+    }
+  }
+  return 0;
+}
+
 } // namespace
 
-int main()
+int main(int argc, char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
   std::error_code ec;
   fs::current_path(repo_root, ec);
+
+  if (argc == 5 && std::string(argv[1]) == "--dump-biome-grid")
+  {
+    // Keep pack-loader status text out of the machine-readable CSV stream.
+    std::ostringstream pack_status;
+    std::streambuf *original_buffer = std::cout.rdbuf(pack_status.rdbuf());
+    const bool pack_loaded = cutum::UWorldGenPack::LoadPackId("default");
+    std::cout.rdbuf(original_buffer);
+    if (!pack_loaded)
+    {
+      std::cerr << "could not load default worldgen pack\n";
+      return 2;
+    }
+    try
+    {
+      const uint32_t seed = static_cast<uint32_t>(std::stoul(argv[2]));
+      const int radius = std::stoi(argv[3]);
+      const int step = std::stoi(argv[4]);
+      return DumpBiomeGrid(seed, radius, step);
+    }
+    catch (const std::exception &error)
+    {
+      std::cerr << "invalid biome-grid arguments: " << error.what() << '\n';
+      return 2;
+    }
+  }
+
   cutum::UWorldGenPack::LoadPackId("default");
   FluidTest::Expect(cutum::UWorldGenPack::HeightConfig().SchemaVersion == 2,
                     kTestName,
