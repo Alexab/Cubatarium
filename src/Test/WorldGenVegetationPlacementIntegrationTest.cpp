@@ -260,6 +260,55 @@ static void TestConfiguredGroundCoverEcology(const fs::path &repo_root)
                     "legacy ecology elevation arrays remain absolute Y ranges");
 }
 
+static void TestConfiguredTreeElevationBands()
+{
+  const std::unordered_map<std::string, int> expectedMaxAboveSea = {
+      {"tree_acacia", 52},
+      {"tree_apple", 56},
+      {"tree_aspen", 68},
+      {"tree_jungle", 50},
+      {"tree_jungle_emergent", 55},
+      {"tree_pine", 96},
+      {"tree_pine_small", 90},
+      {"tree_pine_snowy", 105},
+  };
+  std::unordered_map<std::string, bool> checked;
+  for (const auto &expected : expectedMaxAboveSea)
+  {
+    checked.emplace(expected.first, false);
+  }
+
+  for (const cutum::ObjectFeatureRule &rule :
+       cutum::UObjectFeatureConfigStorage::Get().Vegetation)
+  {
+    if (rule.Mode != cutum::ObjectFeatureRuleMode::Object)
+    {
+      continue;
+    }
+    const auto expected = expectedMaxAboveSea.find(rule.ObjectName);
+    if (expected == expectedMaxAboveSea.end())
+    {
+      continue;
+    }
+    const auto reference =
+        cutum::FeatureEcologyProfile::ElevationReference::SeaLevel;
+    checked[rule.ObjectName] =
+        rule.Ecology.ElevationRef == reference &&
+        rule.Ecology.MinElevation < 0 &&
+        rule.Ecology.MaxElevation == expected->second &&
+        rule.Ecology.MaxSlope > 0.0f &&
+        rule.Ecology.AllowsElevation(63 + expected->second, 63) &&
+        !rule.Ecology.AllowsElevation(64 + expected->second, 63);
+  }
+
+  const bool allStaticTreeProfilesPresent =
+      std::all_of(checked.begin(), checked.end(),
+                  [](const auto &entry) { return entry.second; });
+  FluidTest::Expect(
+      allStaticTreeProfilesPresent, kTestName,
+      "all authored tree templates use sea-relative elevation and slope limits");
+}
+
 static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &populator,
                                           cutum::UBlockRegistry &registry,
                                           cutum::UObjectLibrary &objects)
@@ -1028,6 +1077,7 @@ int main(int argc, char **argv)
     return 0;
   }
   TestConfiguredGroundCoverEcology(repo_root);
+  TestConfiguredTreeElevationBands();
 
   const fs::path pack_root = repo_root / "resource_packs" / "minetest_default_16";
   const auto definitions = LoadPackDefinitions(pack_root);

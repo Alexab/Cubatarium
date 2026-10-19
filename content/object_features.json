@@ -30,7 +30,11 @@
       "weight": 2,
       "seed_offset": 4007,
       "spacing": 30,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "elevation": {"above_sea_level": [-6, 52]},
+        "max_slope": 14.0
+      }
     },
     {
       "object": "tree_apple",
@@ -42,7 +46,11 @@
       "weight": 3,
       "seed_offset": 4001,
       "spacing": 32,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "elevation": {"above_sea_level": [-3, 56]},
+        "max_slope": 12.0
+      }
     },
     {
       "object": "tree_aspen",
@@ -54,7 +62,11 @@
       "weight": 2,
       "seed_offset": 4008,
       "spacing": 36,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "elevation": {"above_sea_level": [-3, 68]},
+        "max_slope": 12.0
+      }
     },
     {
       "object": "tree_jungle",
@@ -64,7 +76,11 @@
       "weight": 2,
       "seed_offset": 4005,
       "spacing": 52,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "elevation": {"above_sea_level": [-3, 50]},
+        "max_slope": 15.0
+      }
     },
     {
       "object": "tree_jungle_emergent",
@@ -77,7 +93,11 @@
       "placement_y_offset": -1,
       "sub_biomes": [
         "dense_forest"
-      ]
+      ],
+      "ecology": {
+        "elevation": {"above_sea_level": [-3, 55]},
+        "max_slope": 12.0
+      }
     },
     {
       "object": "tree_pine",
@@ -93,7 +113,11 @@
       "weight": 2,
       "seed_offset": 4002,
       "spacing": 48,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "elevation": {"above_sea_level": [-6, 96]},
+        "max_slope": 20.0
+      }
     },
     {
       "object": "tree_pine_small",
@@ -106,7 +130,11 @@
       "weight": 3,
       "seed_offset": 4003,
       "spacing": 22,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "elevation": {"above_sea_level": [-6, 90]},
+        "max_slope": 18.0
+      }
     },
     {
       "object": "tree_pine_snowy",
@@ -117,7 +145,11 @@
       "weight": 2,
       "seed_offset": 4004,
       "spacing": 26,
-      "placement_y_offset": -1
+      "placement_y_offset": -1,
+      "ecology": {
+        "elevation": {"above_sea_level": [-6, 105]},
+        "max_slope": 18.0
+      }
     },
     {
       "mode": "procedural_tree",

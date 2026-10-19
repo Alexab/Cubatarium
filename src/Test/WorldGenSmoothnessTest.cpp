@@ -385,6 +385,9 @@ static void TestRegionalDensityTerrainDistribution()
 
     std::vector<int> seed_heights;
     seed_heights.reserve(33 * 33);
+    int peak_x = 0;
+    int peak_z = 0;
+    int peak_y = settings.MinHeight;
     float min_continentalness = 1.0f;
     float max_continentalness = 0.0f;
     float min_ridge = 1.0f;
@@ -397,10 +400,19 @@ static void TestRegionalDensityTerrainDistribution()
       for (int x = -sampleRadius; x <= sampleRadius; x += sampleStep)
       {
         const int y = density_sampler.SurfaceYAt(x, z);
+        if (y > peak_y)
+        {
+          peak_x = x;
+          peak_z = z;
+          peak_y = y;
+        }
         const cutum::ClimateSample climate =
             cutum::SampleClimate(x, z, settings.Seed);
         if (y >= 150)
         {
+          std::cout << kTestName << ": high_peak_sample seed=" << seed
+                    << " x=" << x << " z=" << z << " y=" << y
+                    << std::endl;
           ++high_peak_samples;
           const cutum::BiomeWeightSet biome_weights =
               cutum::ComputeBiomeWeights(x, z, y, settings.SeaLevel,
@@ -458,7 +470,8 @@ static void TestRegionalDensityTerrainDistribution()
 
     std::cout << kTestName << ": density terrain seed=" << seed
               << " min=" << minimum_y << " p95=" << seed_heights[p95_index]
-              << " max=" << maximum_y
+              << " max=" << maximum_y << " peak_at=(" << peak_x << ","
+              << peak_z << ")"
               << " mountain_samples=" << above_mountain_threshold << "/"
               << seed_heights.size() << " high_peak_samples="
               << high_peak_samples << " continentalness="
