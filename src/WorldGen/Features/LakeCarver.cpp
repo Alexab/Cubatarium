@@ -118,12 +118,18 @@ LakeSite SampleLakeSite(int cellX, int cellZ, int seaLevel, uint32_t seed,
       continue;
     }
 
+    const int waterDrop = 2 + static_cast<int>((hash >> 5U) % 3U);
+    const int waterY = std::clamp(centerSurfaceY - waterDrop,
+                                  seaLevel + minElevation,
+                                  seaLevel + maxElevation);
+    if (centerSurfaceY - waterY > std::max(2, params.maxExcavationDepth))
+    {
+      continue;
+    }
+
     site.centerX = candidateX;
     site.centerZ = candidateZ;
-    const int waterDrop = 2 + static_cast<int>((hash >> 5U) % 3U);
-    site.waterY = std::clamp(centerSurfaceY - waterDrop,
-                             seaLevel + minElevation,
-                             seaLevel + maxElevation);
+    site.waterY = waterY;
     foundLandSite = true;
     break;
   }
@@ -153,8 +159,9 @@ bool IsLakeClimateSuitable(const ClimateSample &climate,
 {
   return climate.moisture >= params.minMoisture &&
          climate.temperature <= params.maxTemperature &&
-         climate.continentalness >= 0.40f &&
-         climate.continentalness <= 0.82f && climate.erosion <= 0.92f;
+         climate.continentalness >= params.minContinentalness &&
+         climate.continentalness <= params.maxContinentalness &&
+         climate.erosion <= 0.92f;
 }
 
 void CarveLakeColumn(WorldGenContext &ctx, int x, int z, int surfaceY,

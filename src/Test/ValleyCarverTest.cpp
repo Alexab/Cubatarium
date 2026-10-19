@@ -488,6 +488,17 @@ static void TestLakeCarveAndChunkOrder()
   hotClimate.temperature = params.maxTemperature + 0.01f;
   FluidTest::Expect(!cutum::IsLakeClimateSuitable(hotClimate, params),
                     kTestName, "hot climate rejects an inland lake");
+  auto inlandClimate = temperateWetClimate;
+  inlandClimate.continentalness = 0.90f;
+  FluidTest::Expect(cutum::IsLakeClimateSuitable(inlandClimate, params),
+                    kTestName,
+                    "moist inland climates can contain lakes away from coasts");
+  auto excessiveContinentalness = temperateWetClimate;
+  excessiveContinentalness.continentalness =
+      params.maxContinentalness + 0.01f;
+  FluidTest::Expect(
+      !cutum::IsLakeClimateSuitable(excessiveContinentalness, params),
+      kTestName, "continentalness above the configured range rejects lakes");
 
   int anchorX = 0;
   int anchorZ = 0;
@@ -547,6 +558,8 @@ static void TestLakeCarveAndChunkOrder()
   auto reverseCtx = MakeContext(reverseWorld, registry);
   cutum::UBlockWorld submergedWorld;
   auto submergedCtx = MakeContext(submergedWorld, registry);
+  cutum::UBlockWorld tooHighWorld;
+  auto tooHighCtx = MakeContext(tooHighWorld, registry);
   for (int z = centerZ - params.radiusMax; z <= centerZ + params.radiusMax; ++z)
   {
     for (int x = centerX - params.radiusMax; x <= centerX + params.radiusMax; ++x)
@@ -617,6 +630,13 @@ static void TestLakeCarveAndChunkOrder()
                               { ++submergedWrites; });
   FluidTest::Expect(submergedWrites == 0, kTestName,
                     "ocean-floor candidates do not create inland lakes");
+  cutum::CarveLakeColumn(tooHighCtx, centerX, centerZ, 160, kSeed, params, 48,
+                         [](int, int) { return 160; });
+  int tooHighWrites = 0;
+  tooHighWorld.ForEachBlock([&](glm::ivec3, cutum::BlockId)
+                            { ++tooHighWrites; });
+  FluidTest::Expect(tooHighWrites == 0, kTestName,
+                    "basins beyond the configured excavation depth are skipped");
 }
 
 } // namespace
@@ -635,6 +655,18 @@ int main()
       std::abs(cutum::UWorldGenPack::LakesConfig().MaxTemperature - 0.75f) <
           0.0001f,
       kTestName, "lake maximum temperature loads from the default pack");
+  FluidTest::Expect(
+      std::abs(cutum::UWorldGenPack::LakesConfig().MaxContinentalness - 0.96f) <
+          0.0001f,
+      kTestName, "lake continentalness range loads from the default pack");
+  FluidTest::Expect(
+      cutum::UWorldGenPack::LakesConfig().MaxElevationAboveSea == 24 &&
+          cutum::UWorldGenPack::LakesConfig().MaxExcavationDepth == 18,
+      kTestName,
+      "default lakes support basins in inland lowlands above the coast range");
+  FluidTest::Expect(cutum::UWorldGenPack::LakesConfig().ChancePerCell == 3,
+                    kTestName,
+                    "default lake frequency loads from the content pack");
 
   TestValleyCarveSmoothWalls();
   TestChunkValleySeamStable();

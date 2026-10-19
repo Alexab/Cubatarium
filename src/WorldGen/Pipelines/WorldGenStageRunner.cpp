@@ -116,6 +116,8 @@ void RunLakesStage(UComposableWorldGenerator &generator,
     params.maxExcavationDepth = pack.MaxExcavationDepth;
     params.basinDepthMin = pack.BasinDepthMin;
     params.basinDepthMax = pack.BasinDepthMax;
+    params.minContinentalness = pack.MinContinentalness;
+    params.maxContinentalness = pack.MaxContinentalness;
     params.minMoisture = pack.MinMoisture;
     params.maxTemperature = pack.MaxTemperature;
   }

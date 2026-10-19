@@ -18,10 +18,12 @@ struct LakeParams
   int radiusMin{7};
   int radiusMax{15};
   int minElevationAboveSea{2};
-  int maxElevationAboveSea{8};
-  int maxExcavationDepth{14};
+  int maxElevationAboveSea{24};
+  int maxExcavationDepth{18};
   int basinDepthMin{3};
   int basinDepthMax{7};
+  float minContinentalness{0.40f};
+  float maxContinentalness{0.96f};
   float minMoisture{0.32f};
   float maxTemperature{0.75f};
 };

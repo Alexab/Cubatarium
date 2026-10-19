@@ -191,10 +191,12 @@ struct PackLakesConfig
   int RadiusMin{7};
   int RadiusMax{15};
   int MinElevationAboveSea{2};
-  int MaxElevationAboveSea{8};
-  int MaxExcavationDepth{14};
+  int MaxElevationAboveSea{24};
+  int MaxExcavationDepth{18};
   int BasinDepthMin{3};
   int BasinDepthMax{7};
+  float MinContinentalness{0.40f};
+  float MaxContinentalness{0.96f};
   float MinMoisture{0.32f};
   float MaxTemperature{0.75f};
   bool Loaded{false};
