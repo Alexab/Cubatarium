@@ -19,12 +19,19 @@
     },
     "grass": {
       "block_names": [
-        "grass"
+        "grass",
+        "mtg_dirt_with_grass",
+        "mtg_dirt_with_grass_footsteps",
+        "mtg_dirt_with_dry_grass",
+        "mtg_dry_dirt_with_dry_grass"
       ]
     },
     "sand": {
       "block_names": [
-        "sand"
+        "sand",
+        "mtg_sand",
+        "mtg_desert_sand",
+        "mtg_silver_sand"
       ],
       "fallback_slot": "sandstone"
     },

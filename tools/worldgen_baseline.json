@@ -16,6 +16,7 @@
     "ocean_columns_min_for_depth_gate": 64,
     "ocean_depth_p50_min": 14,
     "ocean_depth_p90_min": 30,
+    "grass_sand_neighbor_transition_pct_max": 8.0,
     "spawn_meadow_min_pct": 0.0,
     "spawn_stone_max_pct": 45.0,
     "spawn_tree_blocks_min": 1700,

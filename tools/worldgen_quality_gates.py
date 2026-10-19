@@ -71,7 +71,9 @@ def main() -> int:
         f"veg_cv={metrics.get('nn_distance_cv', 0):.3f} "
         f"trees={metrics.get('spawn_tree_blocks', 0)} "
         f"normalized={metrics.get('spawn_tree_blocks_land_normalized', 0):.0f} "
-        f"(spawn land; placement blocks)"
+        f"grass_sand_edges="
+        f"{metrics.get('grass_sand_neighbor_transition_pct', 0.0):.2f}% "
+        f"(spawn land; placement blocks; grass/sand edges over generated area)"
     )
 
     if failures:

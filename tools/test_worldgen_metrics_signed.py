@@ -332,6 +332,31 @@ class SignedWorldMetricTests(unittest.TestCase):
 
         self.assertEqual(failures, [])
 
+    def test_surface_quality_gate_rejects_grass_sand_checkerboard(self) -> None:
+        failures = compare_to_thresholds(
+            {
+                "columns": 100,
+                "grass_sand_neighbor_transition_pct": 46.13,
+            },
+            {"grass_sand_neighbor_transition_pct_max": 8.0},
+        )
+
+        self.assertTrue(
+            any(
+                "grass_sand_neighbor_transition_pct=46.13%" in failure
+                for failure in failures
+            ),
+            failures,
+        )
+
+    def test_surface_quality_gate_rejects_missing_grass_sand_metric(self) -> None:
+        failures = compare_to_thresholds(
+            {"columns": 100},
+            {"grass_sand_neighbor_transition_pct_max": 8.0},
+        )
+
+        self.assertIn("grass_sand_neighbor_transition_pct unavailable", failures)
+
     def test_surface_spawn_slots_use_saved_spawn_center(self) -> None:
         result = analyze_surface(
             {(100, 200): (65, 1), (0, 0): (70, 2)},
@@ -344,6 +369,24 @@ class SignedWorldMetricTests(unittest.TestCase):
 
         self.assertEqual(result["spawn"]["columns"], 1)
         self.assertEqual(result["spawn"]["surface_slots"], {"grass": 100.0})
+
+    def test_surface_metrics_detect_grass_sand_checkerboard(self) -> None:
+        surface = {
+            (x, z): (64, 1 if (x + z) % 2 == 0 else 2)
+            for x in range(3)
+            for z in range(3)
+        }
+
+        result = analyze_surface(
+            surface,
+            terrain_surface=surface,
+            id_to_name={1: "grass", 2: "sand"},
+            slot_map={"grass": ["grass"], "sand": ["sand"]},
+        )
+
+        self.assertEqual(result["grass_sand_neighbor_pairs"], 12)
+        self.assertEqual(result["grass_sand_neighbor_transitions"], 12)
+        self.assertEqual(result["grass_sand_neighbor_transition_pct"], 100.0)
 
     def test_vegetation_taxonomy_includes_profile_two_species(self) -> None:
         self.assertEqual(vegetation_block_category("mtg_aspen_tree"), "tree")

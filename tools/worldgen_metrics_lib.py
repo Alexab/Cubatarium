@@ -987,6 +987,37 @@ def _spawn_slot_fractions(
     return {slot: 100.0 * count / total for slot, count in counts.items()}
 
 
+def surface_grass_sand_transition_stats(
+    surface: dict[tuple[int, int], tuple[int, int]],
+    id_to_name: dict[int, str],
+    slot_map: dict[str, list[str]],
+) -> dict[str, int | float]:
+    """Measure adjacent grass/sand surface switches, counting each edge once."""
+    materials: dict[tuple[int, int], str] = {}
+    for xz, (_y, block_id) in surface.items():
+        slot = block_id_to_slot(block_id, id_to_name, slot_map)
+        if slot in {"grass", "sand"}:
+            materials[xz] = slot
+
+    pairs = 0
+    transitions = 0
+    for (x, z), material in materials.items():
+        for neighbor in ((x + 1, z), (x, z + 1)):
+            other = materials.get(neighbor)
+            if other is None:
+                continue
+            pairs += 1
+            transitions += material != other
+
+    return {
+        "grass_sand_neighbor_pairs": pairs,
+        "grass_sand_neighbor_transitions": transitions,
+        "grass_sand_neighbor_transition_pct": (
+            round(100.0 * transitions / pairs, 3) if pairs else 0.0
+        ),
+    }
+
+
 def analyze_surface(
     surface: dict[tuple[int, int], tuple[int, int]],
     *,
@@ -1042,6 +1073,9 @@ def analyze_surface(
     }
 
     if id_to_name is not None and slot_map is not None:
+        result.update(
+            surface_grass_sand_transition_stats(terrain, id_to_name, slot_map)
+        )
         spawn_slots = _spawn_slot_fractions(
             surface,
             spawn_radius,
@@ -1467,6 +1501,20 @@ def compare_to_thresholds(metrics: dict, thresholds: dict) -> list[str]:
         shore_gaps = metrics.get("shore_air_gaps", 0)
         if shore_gaps > shore_gaps_max:
             fail(f"shore_air_gaps={shore_gaps} > {shore_gaps_max}")
+
+    grass_sand_transition_max = thresholds.get(
+        "grass_sand_neighbor_transition_pct_max"
+    )
+    if grass_sand_transition_max is not None:
+        grass_sand_transitions = metrics.get("grass_sand_neighbor_transition_pct")
+        if grass_sand_transitions is None:
+            fail("grass_sand_neighbor_transition_pct unavailable")
+        elif grass_sand_transitions > grass_sand_transition_max:
+            fail(
+                "grass_sand_neighbor_transition_pct="
+                f"{grass_sand_transitions:.2f}% > "
+                f"{grass_sand_transition_max}%"
+            )
 
     flatness_max = thresholds.get("flatness_pct_max")
     if flatness_max is not None:
