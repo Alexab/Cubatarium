@@ -308,6 +308,7 @@ set(SOURCES
     src/World/Streaming/ChunkRenderDemand.cpp
     src/World/Diagnostics/EnterLitDiagnostics.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
+    src/World/Diagnostics/MeshAuditDiagnostics.cpp
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
@@ -1707,6 +1708,24 @@ target_compile_definitions(gpu_greedy_face_extract_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(gpu_greedy_face_extract_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(gpu_extract_mesher_parity_test
+    src/Test/GpuExtractMesherParityTest.cpp
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/LiquidDebugTrace.cpp)
+target_include_directories(gpu_extract_mesher_parity_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(gpu_extract_mesher_parity_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF}
+    CUBATARIUM_GPU_EMIT_SOURCE_PATH="${CMAKE_SOURCE_DIR}/src/Render/Mesh/GpuGreedyOpaqueEmit.cpp")
+target_link_libraries(gpu_extract_mesher_parity_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(greedy_transparent_sort_test
     src/Test/GreedyTransparentSortTest.cpp
     src/Render/Pipeline/GreedyTransparentSort.cpp
@@ -2899,6 +2918,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   chunk_render_demand_test
   packed_quad_parity_test
   seam_absent_neighbor_test
+  gpu_extract_mesher_parity_test
 )
 foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
   if(TARGET ${_t})

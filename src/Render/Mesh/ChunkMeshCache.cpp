@@ -45,6 +45,7 @@
 #include <cstring>
 #include <fstream>
 #include <limits>
+#include <cstdio>
 #include <sstream>
 #include <tuple>
 #include <glm/gtc/matrix_transform.hpp>
@@ -2937,6 +2938,92 @@ bool UChunkMeshCache::ShouldBumpChunkMeshRevisionOnDirty(
          GetMeshPublishRevs(chunk_coord).geom_rev;
 }
 
+void UChunkMeshCache::RecordPublishedGeomStamps(
+    ChunkGreedyMesh &mesh,
+    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps)
+{
+  if (!stamps)
+  {
+    mesh.PublishedGeomStampsValid = false;
+    return;
+  }
+  // Index 0 = center, 1..6 = face neighbors (see ChunkMeshSnapshot::Capture).
+  for (size_t i = 0; i < mesh.PublishedGeomStamps.size(); ++i)
+  {
+    mesh.PublishedGeomStamps[i] = (*stamps)[i];
+    mesh.PublishedGeomStamps[i].readsLight = false;
+    mesh.PublishedGeomStamps[i].readsContent = true;
+  }
+  mesh.PublishedGeomStampsValid = true;
+}
+
+void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
+                                                   int max_checks)
+{
+  ++ReconcileFrame;
+  if (max_checks <= 0 || GreedyCache.empty())
+  {
+    return;
+  }
+  if (ReconcileKeys.size() != GreedyCache.size() || ReconcileCursor >= ReconcileKeys.size())
+  {
+    if (ReconcileKeys.size() != GreedyCache.size())
+    {
+      ReconcileKeys.clear();
+      ReconcileKeys.reserve(GreedyCache.size());
+      for (const auto &entry : GreedyCache)
+      {
+        ReconcileKeys.push_back(entry.first);
+      }
+    }
+    ReconcileCursor = 0;
+  }
+  constexpr uint64_t kCooldownFrames = 240;
+  const UChunkManager &chunks = world.GetChunkManager();
+  for (int n = 0; n < max_checks && ReconcileCursor < ReconcileKeys.size();
+       ++n, ++ReconcileCursor)
+  {
+    const glm::ivec3 coord = ReconcileKeys[ReconcileCursor];
+    const auto it = GreedyCache.find(coord);
+    if (it == GreedyCache.end() || !it->second.PublishedGeomStampsValid)
+    {
+      continue;
+    }
+    if (!chunks.GetChunk(coord))
+    {
+      continue;
+    }
+    if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
+        HasInflightMeshBuild(coord) || IsPendingGpuApply(coord) ||
+        IsPendingGpuQueued(coord) || IsGpuExtractInFlight(coord))
+    {
+      continue;
+    }
+    bool current = true;
+    for (const ChunkInputStamp &stamp : it->second.PublishedGeomStamps)
+    {
+      if (!stamp.Matches(chunks.GetChunk(stamp.coord)))
+      {
+        current = false;
+        break;
+      }
+    }
+    if (current)
+    {
+      continue;
+    }
+    const auto last = ReconcileLastMarkFrame.find(coord);
+    if (last != ReconcileLastMarkFrame.end() &&
+        ReconcileFrame - last->second < kCooldownFrames)
+    {
+      continue;
+    }
+    ReconcileLastMarkFrame[coord] = ReconcileFrame;
+    ++ReconcileRedirtyN;
+    MarkDirty(coord);
+  }
+}
+
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
   MarkDirty(chunkCoord, MeshRevisionBumpReason::MarkDirtyEnqueued);
@@ -5328,7 +5415,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
     bool accepted_input_stale, uint64_t source_light_revision,
     bool has_source_light_revision, BoundaryOverlayState boundary_overlay,
-    bool accepted_geom_stale, JobStageSpan job_trace)
+    bool accepted_geom_stale, JobStageSpan job_trace,
+    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *source_stamps)
 {
   (void)registry;
   (void)source_revision;
@@ -5687,6 +5775,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     chunkMesh.PublishRevs.geom_rev = source_revision;
     chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
+    RecordPublishedGeomStamps(chunkMesh, source_stamps);
   }
   if (kChunkDemandShadow())
   {
@@ -6451,7 +6540,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
               ? pending.snapshot.inputStamps[0].light
               : 0ull,
           pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
-          pending.accepted_geom_stale, pending.stageTrace);
+          pending.accepted_geom_stale, pending.stageTrace,
+          pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
+                                            : nullptr);
       if (gpu_process_profile_sample)
       {
         gpu_profile_commit_ms +=
@@ -6594,7 +6685,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
             ? pending.snapshot.inputStamps[0].light
             : 0ull,
         pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
-        pending.accepted_geom_stale, pending.stageTrace);
+        pending.accepted_geom_stale, pending.stageTrace,
+          pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
+                                            : nullptr);
     if (gpu_process_profile_sample)
     {
       gpu_profile_commit_ms +=
@@ -7092,7 +7185,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
               ? pending.snapshot.inputStamps[0].light
               : 0ull,
           pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
-          pending.accepted_geom_stale, pending.stageTrace);
+          pending.accepted_geom_stale, pending.stageTrace,
+          pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
+                                            : nullptr);
       if (gpu_process_profile_sample)
       {
         gpu_profile_commit_ms +=
@@ -8011,6 +8106,28 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     chunkMesh.PublishRevs.geom_rev = result.sourceRevision;
     chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
+    if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+    {
+      int tx = 0, ty = 0, tz = 0;
+      if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
+          result.coord == glm::ivec3(tx, ty, tz))
+      {
+        const UChunk *tc = world.GetChunkManager().GetChunk(result.coord);
+        std::ostringstream message;
+        message << "cpu_commit coord=(" << tx << "," << ty << "," << tz
+                << ") sourceRev=" << result.sourceRevision
+                << " stampsValid=" << result.InputStampsValid
+                << " stampContent=" << result.InputStamps[0].content
+                << " stampIncarnation=" << result.InputStamps[0].incarnation
+                << " nowContent=" << (tc ? tc->GetContentRevision() : 0)
+                << " nowIncarnation=" << (tc ? tc->GetIncarnation() : 0)
+                << " batches=" << result.batches.size();
+        CubatariumLogInfo("ChunkTrace", message.str());
+      }
+    }
+    RecordPublishedGeomStamps(chunkMesh,
+                              result.InputStampsValid ? &result.InputStamps
+                                                      : nullptr);
     chunkMesh.PublishRevs.material_stamp =
         MeshPublishMaterialStamp(ids.data(), ids.size());
   }
@@ -8281,6 +8398,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     double max_sync_ms, bool skip_gpu_consume)
 {
   Dirty.AdvanceScheduleFrame();
+  ReconcilePublishedMeshInputs(world, 16);
   const auto dirty_tick_t0 = std::chrono::high_resolution_clock::now();
   auto seg_t0 = dirty_tick_t0;
   auto take_seg_ms = [&seg_t0]() -> double
@@ -11581,6 +11699,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       }
       chunkMesh.PublishRevs.geom_rev = sync_rev;
       chunkMesh.PublishRevs.light_rev = chunk->GetLightFieldRevision();
+      RecordPublishedGeomStamps(chunkMesh, sync_snap.inputStampsValid
+                                               ? &sync_snap.inputStamps
+                                               : nullptr);
       chunkMesh.PublishRevs.material_stamp =
           MeshPublishMaterialStamp(ids.data(), ids.size());
       chunkMesh.BoundaryOverlay = sync_snap.boundaryOverlay;

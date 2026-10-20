@@ -474,6 +474,19 @@ public:
   int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                             int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
+  /// Budgeted round-robin sweep: any published mesh whose recorded geometry
+  /// input stamps no longer match the resident chunks (and that has no pending
+  /// rebuild) is re-dirtied. Guarantees eventual consistency even if an
+  /// invalidation event was dropped (stale meshes = see-through holes).
+  void ReconcilePublishedMeshInputs(const UBlockWorld &world, int max_checks);
+  uint64_t GetReconcileRedirtyCount() const { return ReconcileRedirtyN; }
+  /// Diagnostics only: published CPU batches of a chunk (nullptr if none).
+  const std::vector<GreedyMeshBatch> *DebugGetChunkBatches(
+      glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    return it != GreedyCache.end() ? &it->second.batches : nullptr;
+  }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   size_t GetGreedyVertexCount(glm::ivec3 chunk_coord) const
   {
@@ -1177,7 +1190,15 @@ private:
     /// S4 versioned neighbor-missing overlay (independent of stamp).
     BoundaryOverlayState BoundaryOverlay{};
     std::vector<GpuBlockDrawRange> GpuBlockRanges;
+    /// Geometry inputs (center + 6 face neighbors, content/incarnation only)
+    /// this mesh was built from; used by ReconcilePublishedMeshInputs to heal
+    /// any lost invalidation (level-triggered check, not event-triggered).
+    std::array<ChunkInputStamp, 7> PublishedGeomStamps{};
+    bool PublishedGeomStampsValid{false};
   };
+  static void RecordPublishedGeomStamps(
+      ChunkGreedyMesh &mesh,
+      const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps);
   struct PendingGpuApply
   {
     enum class Phase : uint8_t
@@ -1213,7 +1234,9 @@ private:
       bool has_source_light_revision = false,
       BoundaryOverlayState boundary_overlay = {},
       bool accepted_geom_stale = false,
-      JobStageSpan stage_trace = {});
+      JobStageSpan stage_trace = {},
+      const std::array<ChunkInputStamp, kChunkMeshInputStampCount>
+          *source_stamps = nullptr);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);
@@ -1413,6 +1436,13 @@ private:
   uint64_t MeshApplyStaleGeomAcceptedCount{0};
   /// N04 H4: Dirty refresh queued after accepting light/geom stale drawable.
   uint64_t MeshApplyStaleAcceptedRefreshCount{0};
+  /// Reconciliation: published meshes found built from outdated geometry
+  /// inputs with no pending work, re-dirtied by the periodic sweep.
+  uint64_t ReconcileRedirtyN{0};
+  uint64_t ReconcileFrame{0};
+  size_t ReconcileCursor{0};
+  std::vector<glm::ivec3> ReconcileKeys;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ReconcileLastMarkFrame;
   /// SoT 100303: accepted-stale would have held empty spoof — publish instead.
   uint64_t I3tHoldEmptySpoofN{0};
   /// I3t: last ApplyMeshResult held prior draw (not a Completed publish).

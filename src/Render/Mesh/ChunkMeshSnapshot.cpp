@@ -7,6 +7,7 @@
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <sstream>
 
@@ -273,6 +274,23 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.fluid_packed = chunk->GetFluidData();
   snapshot.light_packed = chunk->GetLightData();
   note_slow_stage("center_chunk_copy");
+  if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+  {
+    int tx = 0, ty = 0, tz = 0;
+    if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
+        chunkCoord == glm::ivec3(tx, ty, tz))
+    {
+      std::ostringstream message;
+      message << "capture coord=(" << tx << "," << ty << "," << tz
+              << ") content=" << chunk->GetContentRevision()
+              << " incarnation=" << chunk->GetIncarnation()
+              << " nonair=" << chunk->GetNonAirCount()
+              << " b(8,3,8)=" << chunk->GetBlockLocal({8, 3, 8})
+              << " b(8,4,8)=" << chunk->GetBlockLocal({8, 4, 8})
+              << " sourceRev=" << sourceRevision;
+      CubatariumLogInfo("ChunkTrace", message.str());
+    }
+  }
 
   const glm::ivec3 origin = snapshot.ChunkOrigin();
   // Capture exactly the radius-2 light neighborhood read by FaceLightPacked.
