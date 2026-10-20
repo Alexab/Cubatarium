@@ -5,6 +5,7 @@
 #include "World/Math/FluidCellState.h"
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -45,6 +46,9 @@ public:
   int GetBlockLightLocal(glm::ivec3 local) const;
   void SetLightLocal(glm::ivec3 local, int sky_level, int block_level);
   void ClearLightLocal(glm::ivec3 local);
+  float GetSurfaceWetness() const { return SurfaceWetness; }
+  double GetWeatherLastUpdateSec() const { return WeatherLastUpdateSec; }
+  void SetWeatherState(float wetness, double last_update_sec);
 
   const std::array<uint8_t, CHUNK_VOLUME> &GetLightData() const
   {
@@ -71,6 +75,8 @@ private:
   std::array<BlockId, CHUNK_VOLUME> Data{};
   std::array<uint8_t, CHUNK_VOLUME> FluidData{};
   std::array<uint8_t, CHUNK_VOLUME> LightData{};
+  float SurfaceWetness{0.0f};
+  double WeatherLastUpdateSec{0.0};
   uint64_t LightFieldRevision{0};
   inline static std::atomic<uint64_t> NextIncarnation{1};
   uint64_t Incarnation{NextIncarnation.fetch_add(1, std::memory_order_relaxed)};

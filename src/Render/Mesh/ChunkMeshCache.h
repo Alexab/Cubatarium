@@ -1087,10 +1087,6 @@ public:
   {
     return AltitudeFogThresholdBlocks;
   }
-  void SetSurfaceWetness(float value)
-  {
-    SurfaceWetness = std::clamp(value, 0.0f, 1.0f);
-  }
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   const FluidSurfaceColumnSlice *
   GetFluidSurfaceSlice(const UBlockWorld &world, UBlockRegistry &registry,
@@ -1310,7 +1306,6 @@ private:
   int RenderDistanceChunks{4};
   float AltitudeAboveTerrain{0.0f};
   int AltitudeFogThresholdBlocks{32};
-  float SurfaceWetness{0.0f};
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;

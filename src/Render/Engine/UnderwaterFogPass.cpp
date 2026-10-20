@@ -1,6 +1,6 @@
-#include <cstdlib>
 #include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/Pipeline/RenderTextureUnits.h"
+#include <cstdlib>
 
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/DistanceFog.h"
@@ -8,10 +8,11 @@
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
-#include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Core/World.h"
+#include "World/Environment/WeatherField.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -21,7 +22,8 @@ namespace cutum
 void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
                                 UFluidSurfaceMap &surface_map,
                                 const glm::vec3 &base_sky_color,
-                                const glm::mat3 &inv_view_rot)
+                                const glm::mat3 &inv_view_rot,
+                                const WeatherSample *weather)
 {
   auto camera = world.GetCurrentUserCamera();
   if (!camera)
@@ -52,9 +54,8 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   bool map_ready = surface_map.IsValid();
   if (nearby_fluid)
   {
-    const bool moving =
-        world.GetLastMovementSpeed() >
-        world.GetProceduralSettings().MovementPrefetchThreshold;
+    const bool moving = world.GetLastMovementSpeed() >
+                        world.GetProceduralSettings().MovementPrefetchThreshold;
     const bool enter_throttle = FluidMapShouldThrottleEnter(
         world.IsEnterFovLitPassActive(), world.IsEnterLitGateActive(),
         world.GetPhysicsTelemetry().PostLoadRingNotReady > 0,
@@ -74,10 +75,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
 
   const bool partial_submerge =
       column.valid && cutum::IsPartialSubmerge(eye.y, column.surfaceY);
-  const bool column_underwater_fog =
-      cutum::ShouldApplyUnderwaterFogToColumn(
-          camera_submerged, partial_submerge, column.surfaceBlockY,
-          column.bottomBlockY);
+  const bool column_underwater_fog = cutum::ShouldApplyUnderwaterFogToColumn(
+      camera_submerged, partial_submerge, column.surfaceBlockY,
+      column.bottomBlockY);
   const bool per_column_active =
       cutum::ShouldUsePerColumnUnderwaterFog(map_ready, nearby_fluid) &&
       column_underwater_fog;
@@ -120,10 +120,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
 
   CameraColumnSurfaceY = column.valid ? column.surfaceY : 1e9f;
   CameraColumnFluidIndex =
-      column.valid
-          ? static_cast<float>(FluidSurfaceIndexForBlock(column.fluidId,
-                                                         registry))
-          : 0.0f;
+      column.valid ? static_cast<float>(
+                         FluidSurfaceIndexForBlock(column.fluidId, registry))
+                   : 0.0f;
   CameraColumnBottomBlockY =
       column.valid ? static_cast<float>(column.bottomBlockY) : 1e9f;
   UnderwaterFogSubmerged = camera_submerged ? 1.0f : 0.0f;
@@ -136,11 +135,14 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   color_in.base_sky = base_sky_color;
   color_in.day = day;
   color_in.moon = moon;
-  color_in.weather_atten = env.WeatherSkyAttenuation;
-  color_in.cloudiness = env.Cloudiness;
-  color_in.precip = env.PrecipitationIntensity;
+  color_in.weather_atten =
+      weather ? weather->SkyLightAttenuation : env.WeatherSkyAttenuation;
+  color_in.cloudiness = weather ? weather->CloudCoverage : env.Cloudiness;
+  color_in.precip =
+      weather ? weather->PrecipitationIntensity : env.PrecipitationIntensity;
   color_in.celestial_bodies = &env.CelestialBodies;
-  const AtmosphericSkyColors atmospheric = ComputeAtmosphericSkyColors(color_in);
+  const AtmosphericSkyColors atmospheric =
+      ComputeAtmosphericSkyColors(color_in);
   glm::vec3 target_sky = atmospheric.sky_tint;
   TargetFogColor = atmospheric.fog_color;
   FogEnabled = 0.0f;
@@ -225,8 +227,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
         world.GetEffectiveFogRenderDistance(), atmospheric.fog_color,
         render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
         render.DistanceFogDensity,
-        world.GetEffectiveFogEndMarginBlocks(
-            render.DistanceFogEndMarginBlocks),
+        world.GetEffectiveFogEndMarginBlocks(render.DistanceFogEndMarginBlocks),
         world.GetPresentedFogHorizonBlocks(),
         world.GetPresentedFogStartBlocks());
     AirFogEnabled = 1.0f;
@@ -275,8 +276,8 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   else if (partial_submerge && column.valid)
   {
     UnderwaterSkyAmount = 0.0f;
-    ScreenWaterlineNdc = cutum::ComputeScreenWaterlineNdc(
-        eye, column.surfaceY, inv_view_rot);
+    ScreenWaterlineNdc =
+        cutum::ComputeScreenWaterlineNdc(eye, column.surfaceY, inv_view_rot);
   }
   else
   {
@@ -313,8 +314,9 @@ void UUnderwaterFogPass::ApplyUniforms(
   static const bool debugDisableUnderwaterFog =
       std::getenv("CUBA_DEBUG_NO_UNDERWATER_FOG") != nullptr;
   const float underwater_fog_enabled =
-      (apply_underwater_fog && !debugDisableUnderwaterFog) ? UnderwaterFogEnabled
-                                                           : 0.0f;
+      (apply_underwater_fog && !debugDisableUnderwaterFog)
+          ? UnderwaterFogEnabled
+          : 0.0f;
   shader->SetFloat("uUnderwaterFogEnabled", underwater_fog_enabled);
   shader->SetFloat("uUnderwaterFogStart", UnderwaterFogStart);
   shader->SetFloat("uUnderwaterFogEnd", UnderwaterFogEnd);
@@ -346,9 +348,8 @@ void UUnderwaterFogPass::ApplyUniforms(
                    RenderTextureUnitIndex(RenderTextureUnit::FluidSurfaceY));
     shader->SetInt("uFluidIndexMap",
                    RenderTextureUnitIndex(RenderTextureUnit::FluidIndex));
-    shader->SetInt(
-        "uFluidBottomBlockMap",
-        RenderTextureUnitIndex(RenderTextureUnit::FluidBottomBlock));
+    shader->SetInt("uFluidBottomBlockMap",
+                   RenderTextureUnitIndex(RenderTextureUnit::FluidBottomBlock));
   }
   const GLint color_loc = shader->GetUniformLocation("uUnderwaterFogColors");
   if (color_loc != -1)

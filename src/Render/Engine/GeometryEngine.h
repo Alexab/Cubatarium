@@ -199,6 +199,9 @@ private:
                         bool applyBelowSurfaceFog = true);
   void ApplyGreedyEnvironmentUniforms(
       const std::shared_ptr<UShaderProgram> &shader);
+  void ApplyGreedyChunkWeatherUniforms(
+      const std::shared_ptr<UShaderProgram> &shader,
+      glm::ivec3 chunk_coord);
   void RenderFluidOverlay(int width, int height);
   void RenderWeatherOverlay(int width, int height);
   bool InitOverlayBuffers();
@@ -386,6 +389,10 @@ private:
   IUMeshGpuStore &MeshStore();
   void EnsureRenderBackendsBound();
   bool PackedRepresentationSwitchBound_{false};
+  std::unordered_map<glm::ivec3, WeatherSample, IVec3Hash>
+      ChunkWeatherSamplesForFrame;
+  uint64_t CachedChunkWeatherFrame{0};
+  bool ChunkWeatherFrameValid{false};
   void DrawGreedyOpaqueBatches(
       const UChunkMeshCache &cache,
       const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,

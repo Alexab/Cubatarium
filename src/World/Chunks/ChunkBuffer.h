@@ -33,17 +33,21 @@ public:
   void SetLightPacked(glm::ivec3 worldPos, uint8_t packed);
   void SetChunkLightData(glm::ivec3 chunkCoord,
                          const std::array<uint8_t, CHUNK_VOLUME> &light);
+  void SetChunkWeatherState(glm::ivec3 chunkCoord, float wetness,
+                            double last_update_sec);
   /// Mark a worker-generated buffer so object voxels crossing a chunk edge
   /// cannot race with the owning chunk's terrain when results are committed.
-  void SetWorldGenOwnerChunk(glm::ivec3 chunkCoord,
-                             const UBlockRegistry &registry,
-                             const std::vector<std::pair<BlockId, int>>
-                                 &treeBlockRanks = {});
+  void SetWorldGenOwnerChunk(
+      glm::ivec3 chunkCoord, const UBlockRegistry &registry,
+      const std::vector<std::pair<BlockId, int>> &treeBlockRanks = {});
   BlockId GetBlock(glm::ivec3 worldPos) const override;
   uint8_t GetFluidPacked(glm::ivec3 worldPos) const;
   uint8_t GetLightPacked(glm::ivec3 worldPos) const;
   bool HasChunkLightData() const { return HasChunkLight; }
-  bool IsEmpty() const { return Blocks.empty() && !HasChunkLight; }
+  bool IsEmpty() const
+  {
+    return Blocks.empty() && !HasChunkLight && !HasChunkWeather;
+  }
   bool HasYBounds() const { return HasBounds; }
   int GetMinY() const { return MinY; }
   int GetMaxY() const { return MaxY; }
@@ -59,6 +63,10 @@ private:
   bool HasChunkLight{false};
   glm::ivec3 ChunkLightCoord{0};
   std::array<uint8_t, CHUNK_VOLUME> ChunkLight{};
+  bool HasChunkWeather{false};
+  glm::ivec3 ChunkWeatherCoord{0};
+  float ChunkWetness{0.0f};
+  double ChunkWeatherLastUpdateSec{0.0};
   bool HasBounds{false};
   int MinY{0};
   int MaxY{-1};

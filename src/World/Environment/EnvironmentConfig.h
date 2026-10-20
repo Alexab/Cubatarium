@@ -1,6 +1,7 @@
 #ifndef ENVIRONMENTCONFIG_H
 #define ENVIRONMENTCONFIG_H
 
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <string>
@@ -51,6 +52,9 @@ struct WeatherAutoRuntime
   bool ManualOverride{false};
   float EpisodeRemainingSec{0.0f};
   WeatherAutoEpisodeMode EpisodeMode{WeatherAutoEpisodeMode::None};
+  uint32_t FieldAlgorithmVersion{1};
+  double FieldSimulationTimeSec{0.0};
+  double WeatherSimulationTimeSec{0.0};
 };
 
 struct EnvironmentConfig
@@ -72,8 +76,9 @@ struct EnvironmentConfig
 
 EnvironmentCelestialBodySpec
 ParseCelestialBodySpec(const nlohmann::json &entry);
-bool TryParseCelestialBodiesArray(const nlohmann::json &array,
-                                  std::vector<EnvironmentCelestialBodySpec> &out);
+bool TryParseCelestialBodiesArray(
+    const nlohmann::json &array,
+    std::vector<EnvironmentCelestialBodySpec> &out);
 
 } // namespace cutum
 

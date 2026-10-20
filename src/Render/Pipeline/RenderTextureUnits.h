@@ -16,6 +16,7 @@ enum class RenderTextureUnit : GLint
   FluidBottomBlock = 3,
   WeatherDepth = 4,
   OpaqueDepth = 5,
+  WeatherField = 6,
 };
 
 constexpr GLint RenderTextureUnitIndex(RenderTextureUnit unit)
@@ -37,7 +38,9 @@ static_assert(RenderTextureUnitIndex(RenderTextureUnit::BlockAtlas) <
               RenderTextureUnitIndex(RenderTextureUnit::FluidBottomBlock) <
                   RenderTextureUnitIndex(RenderTextureUnit::WeatherDepth) &&
               RenderTextureUnitIndex(RenderTextureUnit::WeatherDepth) <
-                  RenderTextureUnitIndex(RenderTextureUnit::OpaqueDepth),
+                  RenderTextureUnitIndex(RenderTextureUnit::OpaqueDepth) &&
+              RenderTextureUnitIndex(RenderTextureUnit::OpaqueDepth) <
+                  RenderTextureUnitIndex(RenderTextureUnit::WeatherField),
               "render sampler units must remain distinct");
 
 } // namespace cutum

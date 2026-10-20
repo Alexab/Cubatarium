@@ -798,7 +798,7 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
 {
   BiomePackDefinition biomeDef;
   biomeDef.SchemaVersion = biomeJson.value("schema_version", 1);
-  if (biomeDef.SchemaVersion < 1 || biomeDef.SchemaVersion > 2)
+  if (biomeDef.SchemaVersion < 1 || biomeDef.SchemaVersion > 3)
   {
     throw std::runtime_error("unsupported biome schema_version");
   }
@@ -811,7 +811,7 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
     throw std::runtime_error(
         "custom biome IDs require schema_version 2 with a climate profile");
   }
-  if (biomeDef.SchemaVersion == 2)
+  if (biomeDef.SchemaVersion >= 2)
   {
     if (!biomeJson.contains("domain") || !biomeJson["domain"].is_string())
     {
@@ -896,7 +896,38 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
   {
     ParseSubBiomes(biomeJson["sub_biomes"], biomeDef);
   }
-  if (biomeDef.SchemaVersion == 2)
+  if (biomeJson.contains("weather"))
+  {
+    if (biomeDef.SchemaVersion < 3)
+    {
+      throw std::runtime_error(
+          "weather requires biome schema_version 3 or newer");
+    }
+    const nlohmann::json &weather = biomeJson["weather"];
+    if (!weather.is_object())
+    {
+      throw std::runtime_error("weather must be an object");
+    }
+    biomeDef.Weather.TemperatureOffset =
+        weather.value("temperature_offset", 0.0f);
+    biomeDef.Weather.PrecipitationMultiplier =
+        weather.value("precipitation_multiplier", 1.0f);
+    biomeDef.Weather.WindExposure = weather.value("wind_exposure", 1.0f);
+    if (!std::isfinite(biomeDef.Weather.TemperatureOffset) ||
+        biomeDef.Weather.TemperatureOffset < -0.5f ||
+        biomeDef.Weather.TemperatureOffset > 0.5f ||
+        !std::isfinite(biomeDef.Weather.PrecipitationMultiplier) ||
+        biomeDef.Weather.PrecipitationMultiplier < 0.0f ||
+        biomeDef.Weather.PrecipitationMultiplier > 4.0f ||
+        !std::isfinite(biomeDef.Weather.WindExposure) ||
+        biomeDef.Weather.WindExposure < 0.0f ||
+        biomeDef.Weather.WindExposure > 2.0f)
+    {
+      throw std::runtime_error("weather values are outside supported ranges");
+    }
+    biomeDef.Weather.Defined = true;
+  }
+  if (biomeDef.SchemaVersion >= 2)
   {
     const auto validate_multiplier = [](const nlohmann::json &height,
                                         const char *field, float minValue,

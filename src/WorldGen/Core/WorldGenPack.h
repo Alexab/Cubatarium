@@ -54,11 +54,20 @@ struct BiomeClimateProfile
   bool Enabled{false};
 };
 
+struct BiomeWeatherProfile
+{
+  float TemperatureOffset{0.0f};
+  float PrecipitationMultiplier{1.0f};
+  float WindExposure{1.0f};
+  bool Defined{false};
+};
+
 struct BiomePackDefinition
 {
   int SchemaVersion{1};
   BiomeDomain Domain{BiomeDomain::Surface};
   BiomeClimateProfile Climate;
+  BiomeWeatherProfile Weather;
   BiomeHeightProfile Height;
   std::string SurfaceSlot;
   std::string SubsurfaceSlot;

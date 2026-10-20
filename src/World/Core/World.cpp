@@ -43,6 +43,9 @@
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Environment/WeatherAutoController.h"
 #include "World/Environment/WeatherBiomeUtil.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Sampling/ClimateSampler.h"
+#include "WorldGen/Sampling/BiomeSampler.h"
 #include "World/IO/ChunkStorageService.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
@@ -254,16 +257,6 @@ std::string NormalizeToken(std::string value)
   return value;
 }
 
-UWorld::CelestialBodyType CelestialTypeFromId(const std::string &id)
-{
-  const std::string lower = NormalizeToken(id);
-  if (lower.find("moon") != std::string::npos)
-  {
-    return UWorld::CelestialBodyType::Moon;
-  }
-  return UWorld::CelestialBodyType::Sun;
-}
-
 glm::mat3 BuildCelestialFrameRotation(float period_days, float phase,
                                       float inclination_deg, float longitude_deg,
                                       float time_norm)
@@ -403,7 +396,6 @@ void UWorld::UpdateCelestialLightingFactors()
     {
       body.Id = body.Type == CelestialBodyType::Moon ? "moon_auto" : "sun_auto";
     }
-    body.Type = CelestialTypeFromId(body.Id);
     body.DirectionWorld = ComputeCelestialDirection(
         body, EnvironmentStateData.TimeOfDayNormalized);
     const float elev = body.DirectionWorld.y;
@@ -422,8 +414,9 @@ void UWorld::UpdateCelestialLightingFactors()
   EnvironmentStateData.DayNightFactor = Clamp01(sun_day);
   EnvironmentStateData.MoonNightFactor = Clamp01(moon_night);
   const float night = 1.0f - EnvironmentStateData.DayNightFactor;
-  const float auto_star_visibility =
-      Clamp01(night * (1.0f - EnvironmentStateData.CloudCoverage * 0.85f));
+  // Cloud occlusion belongs to the cloud compositing pass. Keep the stellar
+  // sphere's illumination independent from the weather at the camera.
+  const float auto_star_visibility = Clamp01(night);
   EnvironmentStateData.StarVisibility =
       EnvironmentStateData.StarVisibilityOverride >= 0.0f
           ? Clamp01(EnvironmentStateData.StarVisibilityOverride)
@@ -598,6 +591,12 @@ bool UWorld::IsWeatherAutoEnabled() const
          EnvironmentSettingsData.WeatherRuntime.Enabled;
 }
 
+bool UWorld::HasRegionalWeather() const
+{
+  return IsWeatherAutoEnabled() &&
+         !EnvironmentSettingsData.WeatherRuntime.ManualOverride;
+}
+
 void UWorld::ClearWeatherManualOverride()
 {
   EnvironmentSettingsData.WeatherRuntime.ManualOverride = false;
@@ -720,6 +719,8 @@ void UWorld::TickEnvironment(float dtSeconds)
   {
     return;
   }
+  EnvironmentSettingsData.WeatherRuntime.WeatherSimulationTimeSec +=
+      static_cast<double>(dtSeconds);
 
   if (!EnvironmentStateData.TimeFrozen)
   {
@@ -873,7 +874,370 @@ void UWorld::TickEnvironment(float dtSeconds)
           : auto_cloud_coverage;
   EnsureDefaultCelestialBodies();
   UpdateCelestialLightingFactors();
-  TickWeatherAuto(dtSeconds);
+  WeatherAutoRuntime &weather_runtime =
+      EnvironmentSettingsData.WeatherRuntime;
+  const bool weather_auto_enabled = IsWeatherAutoEnabled();
+  if (weather_auto_enabled)
+  {
+    weather_runtime.FieldAlgorithmVersion = WeatherFrontField::kAlgorithmVersion;
+    WeatherFrontFieldData.SetSeed(WorldSeed);
+    WeatherFrontFieldData.SetSimulationTimeSec(
+        weather_runtime.FieldSimulationTimeSec);
+    WeatherFrontFieldData.Tick(dtSeconds);
+    weather_runtime.FieldSimulationTimeSec =
+        WeatherFrontFieldData.GetSimulationTimeSec();
+  }
+  if (weather_auto_enabled && !weather_runtime.ManualOverride)
+  {
+    weather_runtime.EpisodeMode = WeatherAutoEpisodeMode::None;
+    weather_runtime.EpisodeRemainingSec = 0.0f;
+
+    glm::vec3 sample_position = SpawnPoint;
+    if (const UCreature *controlled = GetControlledCreature())
+    {
+      sample_position = controlled->GetBodyOrigin();
+    }
+    const WeatherSample local_weather = SampleWeatherAt(sample_position);
+    EnvironmentStateData.Cloudiness = local_weather.CloudCoverage;
+    EnvironmentStateData.CloudCoverage = local_weather.CloudCoverage;
+    EnvironmentStateData.PrecipitationIntensity =
+        local_weather.PrecipitationIntensity;
+    EnvironmentStateData.WindStrength = local_weather.WindStrength;
+    EnvironmentStateData.WindDirection = local_weather.WindDirection;
+    EnvironmentStateData.WeatherFogMultiplier = local_weather.FogFactor;
+    EnvironmentStateData.WeatherSkyAttenuation =
+        local_weather.SkyLightAttenuation;
+    const float wetness_lerp = std::clamp(dtSeconds * 0.25f, 0.0f, 1.0f);
+    EnvironmentStateData.SurfaceWetness +=
+        (local_weather.SurfaceWetness - EnvironmentStateData.SurfaceWetness) *
+        wetness_lerp;
+    if (local_weather.PrecipitationIntensity <= 0.05f)
+    {
+      EnvironmentStateData.Weather = WeatherType::Clear;
+    }
+    else if (local_weather.SnowFraction >= 0.5f)
+    {
+      EnvironmentStateData.Weather = WeatherType::Snow;
+    }
+    else
+    {
+      EnvironmentStateData.Weather = local_weather.WindStrength > 0.82f
+                                         ? WeatherType::Storm
+                                         : WeatherType::Rain;
+    }
+    EnvironmentStateData.TargetWeather = EnvironmentStateData.Weather;
+  }
+  else
+  {
+    TickWeatherAuto(dtSeconds);
+  }
+
+  const double weather_time =
+      EnvironmentSettingsData.WeatherRuntime.WeatherSimulationTimeSec;
+  if (weather_time - LastChunkWeatherUpdateSec >= 1.0)
+  {
+    glm::vec3 sample_position = SpawnPoint;
+    if (const UCreature *controlled = GetControlledCreature())
+    {
+      sample_position = controlled->GetBodyOrigin();
+    }
+    const WeatherSample weather = SampleWeatherAt(sample_position);
+    const glm::ivec3 column = UChunkManager::WorldToChunk(glm::ivec3(
+        static_cast<int>(std::floor(sample_position.x)), 0,
+        static_cast<int>(std::floor(sample_position.z))));
+    const WorldVerticalProfile &vertical = BlockWorld.GetVerticalProfile();
+    const int min_chunk_y = UChunkManager::WorldToChunk(
+                                glm::ivec3(0, vertical.MinY, 0))
+                                .y;
+    const int max_chunk_y = UChunkManager::WorldToChunk(
+                                glm::ivec3(0, vertical.MaxY, 0))
+                                .y;
+    UChunkManager &chunks = BlockWorld.GetChunkManager();
+    for (int cy = min_chunk_y; cy <= max_chunk_y; ++cy)
+    {
+      UChunk *chunk = chunks.GetChunk(glm::ivec3(column.x, cy, column.z));
+      if (!chunk)
+      {
+        continue;
+      }
+      const double elapsed = std::max(
+          0.0, weather_time - chunk->GetWeatherLastUpdateSec());
+      const float time_constant =
+          weather.SurfaceWetness > chunk->GetSurfaceWetness() ? 3.0f : 8.0f;
+      const float blend = static_cast<float>(
+          1.0 - std::exp(-elapsed / static_cast<double>(time_constant)));
+      const float wetness = chunk->GetSurfaceWetness() +
+                            (weather.SurfaceWetness -
+                             chunk->GetSurfaceWetness()) *
+                                std::clamp(blend, 0.0f, 1.0f);
+      chunk->SetWeatherState(wetness, weather_time);
+    }
+    LastChunkWeatherUpdateSec = weather_time;
+  }
+}
+
+BiomeEnvironmentSample UWorld::SampleBiomeEnvironmentAt(
+    const glm::vec3 &position) const
+{
+  const int world_x = static_cast<int>(std::floor(position.x));
+  const int world_z = static_cast<int>(std::floor(position.z));
+  const std::shared_ptr<const WorldGenPack> pack = UWorldGenPack::GetSnapshot();
+  if (WeatherBiomeCachePackSnapshot != pack.get())
+  {
+    WeatherBiomeSampleCache.clear();
+    WeatherBiomeCachePackSnapshot = pack.get();
+    CachedWeatherBiomeSampleValid = false;
+  }
+  const uint64_t cache_key =
+      (static_cast<uint64_t>(static_cast<uint32_t>(world_x)) << 32) |
+      static_cast<uint32_t>(world_z);
+  const auto cached = WeatherBiomeSampleCache.find(cache_key);
+  if (cached != WeatherBiomeSampleCache.end())
+  {
+    CachedWeatherBiomeColumn = glm::ivec2(world_x, world_z);
+    CachedWeatherBiomeSample = cached->second;
+    CachedWeatherBiomeSampleAge = 0;
+    CachedWeatherBiomeSampleValid = true;
+    return cached->second;
+  }
+  if (CachedWeatherBiomeSampleValid &&
+      CachedWeatherBiomeColumn == glm::ivec2(world_x, world_z) &&
+      ++CachedWeatherBiomeSampleAge < 60)
+  {
+    return CachedWeatherBiomeSample;
+  }
+  CachedWeatherBiomeSampleAge = 0;
+  BiomeEnvironmentSample result;
+  result.SurfaceHeight = static_cast<int>(std::floor(position.y));
+  if (const std::optional<int> surface = FindHighestSolidY(world_x, world_z))
+  {
+    result.SurfaceHeight = *surface;
+  }
+
+  const ClimateSample climate =
+      SampleClimate(world_x, world_z, ProceduralTemplate.Seed);
+  result.Temperature = climate.temperature;
+  result.Moisture = climate.moisture;
+
+  if (pack && pack->BiomeMode == WorldGenBiomeMode::Image)
+  {
+    const BiomeId biome = UWorldGenPack::BiomeAtImage(world_x, world_z);
+    result.BiomeWeights.SetWeight(BiomeHandleForId(biome), 1.0f);
+  }
+  else
+  {
+    UBiomeSampler sampler(ProceduralTemplate.Seed, ProceduralTemplate.Tuning,
+                          ProceduralTemplate.WorldGenProfileVersion);
+    result.BiomeWeights = sampler.WeightsAt(
+        world_x, world_z, result.SurfaceHeight, ProceduralTemplate.SeaLevel,
+        ProceduralTemplate.MaxHeight);
+  }
+  result.BiomeWeights.Normalize();
+
+  float total_weight = 0.0f;
+  float temperature_offset = 0.0f;
+  float precipitation_multiplier = 0.0f;
+  float wind_exposure = 0.0f;
+  for (const BiomeBlendEntry &entry : result.BiomeWeights.entries)
+  {
+    if (entry.weight <= 0.0f)
+    {
+      continue;
+    }
+    const BiomeKey *key = pack && pack->BiomeRegistry
+                              ? pack->BiomeRegistry->Key(entry.biome)
+                              : nullptr;
+    const std::string biome_key =
+        key ? *key : BiomeKeyForHandle(entry.biome);
+    BiomeWeatherProfile profile;
+    if (pack)
+    {
+      const auto definition = pack->Biomes.find(biome_key);
+      if (definition != pack->Biomes.end() && definition->second.Weather.Defined)
+      {
+        profile = definition->second.Weather;
+      }
+    }
+    if (!profile.Defined)
+    {
+      if (biome_key == "desert")
+      {
+        profile = {0.14f, 0.12f, 1.25f, true};
+      }
+      else if (biome_key == "savanna")
+      {
+        profile = {0.08f, 0.38f, 1.15f, true};
+      }
+      else if (biome_key == "tundra" || biome_key == "cold_steppe" ||
+               biome_key == "snowy_slopes" || biome_key == "jagged_peaks")
+      {
+        profile = {-0.16f, 0.9f, 1.1f, true};
+      }
+      else if (biome_key == "forest" || biome_key == "lush_caves")
+      {
+        profile = {0.0f, 1.15f, 0.8f, true};
+      }
+      else if (biome_key == "ocean")
+      {
+        profile = {0.0f, 1.1f, 1.2f, true};
+      }
+    }
+    temperature_offset += profile.TemperatureOffset * entry.weight;
+    precipitation_multiplier +=
+        profile.PrecipitationMultiplier * entry.weight;
+    wind_exposure += profile.WindExposure * entry.weight;
+    total_weight += entry.weight;
+  }
+  if (total_weight > 0.0f)
+  {
+    result.Temperature = std::clamp(result.Temperature + temperature_offset,
+                                    0.0f, 1.0f);
+    result.PrecipitationMultiplier = precipitation_multiplier / total_weight;
+    result.WindExposure = wind_exposure / total_weight;
+  }
+  CachedWeatherBiomeColumn = glm::ivec2(world_x, world_z);
+  CachedWeatherBiomeSample = result;
+  CachedWeatherBiomeSampleValid = true;
+  if (WeatherBiomeSampleCache.size() >= 8192)
+  {
+    WeatherBiomeSampleCache.erase(WeatherBiomeSampleCache.begin());
+  }
+  WeatherBiomeSampleCache.emplace(cache_key, result);
+  return result;
+}
+
+WeatherSample UWorld::SampleWeatherAt(const glm::vec3 &position) const
+{
+  const WeatherAutoRuntime &runtime = EnvironmentSettingsData.WeatherRuntime;
+  if (IsWeatherAutoEnabled() && !runtime.ManualOverride)
+  {
+    WeatherFrontField field(WorldSeed);
+    field.SetSimulationTimeSec(runtime.FieldSimulationTimeSec);
+    const BiomeEnvironmentSample biome = SampleBiomeEnvironmentAt(position);
+    const PackClimateConfig *climate = nullptr;
+    const std::shared_ptr<const WorldGenPack> pack = UWorldGenPack::GetSnapshot();
+    if (pack)
+    {
+      climate = &pack->Climate;
+    }
+    const float lapse = climate ? climate->TemperatureLapsePerBlock : 0.00135f;
+    const WeatherAutoSettings &auto_settings =
+        EnvironmentSettingsData.WeatherAuto;
+    WeatherSample result = field.SampleAt(
+        position, biome, static_cast<float>(ProceduralTemplate.SeaLevel), lapse,
+        auto_settings.PrecipFraction, auto_settings.PrecipHeavyFraction,
+        auto_settings.MinPrecipMinutes, auto_settings.MinDryMinutes,
+        auto_settings.EpisodeMinMinutes, auto_settings.EpisodeMaxMinutes,
+        auto_settings.TransitionSeconds);
+    if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
+    {
+      result.CloudCoverage =
+          Clamp01(EnvironmentStateData.CloudCoverageOverride);
+      result.SkyLightAttenuation = std::clamp(
+          1.0f - result.CloudCoverage * 0.28f -
+              result.PrecipitationIntensity * 0.12f,
+          0.55f, 1.0f);
+    }
+    return result;
+  }
+
+  WeatherSample result;
+  result.CloudCoverage = EnvironmentStateData.CloudCoverage;
+  result.PrecipitationIntensity =
+      EnvironmentStateData.PrecipitationIntensity;
+  result.SnowFraction = EnvironmentStateData.Weather == WeatherType::Snow ||
+                                EnvironmentStateData.TargetWeather == WeatherType::Snow
+                            ? 1.0f
+                            : 0.0f;
+  result.WindDirection = EnvironmentStateData.WindDirection;
+  result.WindStrength = EnvironmentStateData.WindStrength;
+  result.FogFactor = EnvironmentStateData.WeatherFogMultiplier;
+  result.SkyLightAttenuation = EnvironmentStateData.WeatherSkyAttenuation;
+  result.SurfaceWetness = EnvironmentStateData.SurfaceWetness;
+  return result;
+}
+
+double UWorld::GetWeatherSimulationTimeSec() const
+{
+  return EnvironmentSettingsData.WeatherRuntime.WeatherSimulationTimeSec;
+}
+
+void UWorld::UpdateChunkWeatherState(glm::ivec3 chunk_coord,
+                                     const WeatherSample &weather)
+{
+  const double weather_time = GetWeatherSimulationTimeSec();
+  if (!std::isfinite(weather_time) || weather_time < 1.0)
+  {
+    return;
+  }
+  UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return;
+  }
+  const double elapsed =
+      std::max(0.0, weather_time - chunk->GetWeatherLastUpdateSec());
+  if (elapsed < 1.0)
+  {
+    return;
+  }
+  const float target_wetness =
+      std::clamp(weather.SurfaceWetness, 0.0f, 1.0f);
+  const float time_constant =
+      target_wetness > chunk->GetSurfaceWetness() ? 3.0f : 8.0f;
+  const float blend = static_cast<float>(
+      1.0 - std::exp(-elapsed / static_cast<double>(time_constant)));
+  const float wetness = chunk->GetSurfaceWetness() +
+                        (target_wetness - chunk->GetSurfaceWetness()) *
+                            std::clamp(blend, 0.0f, 1.0f);
+  chunk->SetWeatherState(wetness, weather_time);
+}
+
+void UWorld::BuildWeatherCoverageField(
+    const glm::vec2 &center, float world_size, int resolution,
+    std::vector<uint8_t> &out_pixels) const
+{
+  if (resolution <= 0 || !std::isfinite(world_size) || world_size <= 0.0f)
+  {
+    out_pixels.clear();
+    return;
+  }
+  out_pixels.resize(static_cast<size_t>(resolution) * resolution);
+  if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
+  {
+    const uint8_t coverage = static_cast<uint8_t>(std::clamp(
+        std::lround(Clamp01(EnvironmentStateData.CloudCoverageOverride) * 255.0f),
+        0l, 255l));
+    std::fill(out_pixels.begin(), out_pixels.end(), coverage);
+    return;
+  }
+  if (!IsWeatherAutoEnabled() ||
+      EnvironmentSettingsData.WeatherRuntime.ManualOverride)
+  {
+    const uint8_t coverage = static_cast<uint8_t>(std::clamp(
+        std::lround(EnvironmentStateData.CloudCoverage * 255.0f), 0l, 255l));
+    std::fill(out_pixels.begin(), out_pixels.end(), coverage);
+    return;
+  }
+
+  WeatherFrontField field(WorldSeed);
+  field.SetSimulationTimeSec(
+      EnvironmentSettingsData.WeatherRuntime.FieldSimulationTimeSec);
+  const float step = world_size / static_cast<float>(resolution);
+  const float half = world_size * 0.5f;
+  for (int y = 0; y < resolution; ++y)
+  {
+    for (int x = 0; x < resolution; ++x)
+    {
+      const glm::vec2 world_xz =
+          center + glm::vec2((static_cast<float>(x) + 0.5f) * step - half,
+                             (static_cast<float>(y) + 0.5f) * step - half);
+      const float coverage = field.SampleCloudCoverageAt(world_xz);
+      out_pixels[static_cast<size_t>(y) * resolution + x] =
+          static_cast<uint8_t>(std::clamp(std::lround(coverage * 255.0f),
+                                          0l, 255l));
+    }
+  }
 }
 
 void UWorld::RebuildAllLightingDirtyMeshes()
@@ -10053,6 +10417,8 @@ void UWorld::SetTerrainParams(uint32_t Seed, const std::string &terrainType)
 void UWorld::SetProceduralSettings(const ProceduralSettings &settings,
                                    bool rebuildPipeline)
 {
+  CachedWeatherBiomeSampleValid = false;
+  WeatherBiomeSampleCache.clear();
   ProceduralTemplate = settings;
   BlockWorld.SetVerticalProfile(settings.GetVerticalProfile());
   WorldSeed = settings.Seed;

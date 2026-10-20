@@ -261,6 +261,11 @@ void main()
         float gray = dot(FragColor.rgb, vec3(0.299, 0.587, 0.114));
         FragColor.rgb = mix(FragColor.rgb, vec3(gray, gray, gray * 1.05), precip * 0.12);
     }
+    float wet = clamp(vWetness * uEnvWetness, 0.0, 1.0);
+    if (wet > 0.001) {
+        vec3 cooler = FragColor.rgb * vec3(0.78, 0.82, 0.9);
+        FragColor.rgb = mix(FragColor.rgb, cooler, wet * 0.08);
+    }
     // Keep the opt-in desktop/GLES fluid discard probe behavior aligned.
     if (uDebugFluidFragmentMarker > 0.5 &&
         uGreedyShaderMode == kGreedyModeColor) {

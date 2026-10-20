@@ -251,6 +251,7 @@ set(SOURCES
     src/World/View/ViewRayMath.cpp
     src/World/Environment/WeatherBiomeUtil.cpp
     src/World/Environment/WeatherAutoController.cpp
+    src/World/Environment/WeatherField.cpp
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
     src/World/Lighting/ChunkRelightSnapshot.cpp
@@ -1254,6 +1255,20 @@ target_include_directories(view_ray_math_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(view_ray_math_test glm::glm)
 
+add_executable(environment_config_celestial_test
+    src/Test/EnvironmentConfigCelestialTest.cpp
+    src/World/Environment/EnvironmentConfig.cpp)
+target_include_directories(environment_config_celestial_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(environment_config_celestial_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(weather_front_field_test
+    src/Test/WeatherFrontFieldTest.cpp
+    src/World/Environment/WeatherField.cpp)
+target_include_directories(weather_front_field_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(weather_front_field_test glm::glm)
+
 add_executable(chunk_light_pack_test
     src/Test/ChunkLightPackTest.cpp)
 target_include_directories(chunk_light_pack_test PRIVATE
@@ -1364,6 +1379,7 @@ target_link_libraries(chunk_bulk_blocklight_test glm::glm nlohmann_json::nlohman
 add_executable(fluid_chunk_io_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/IO/BinaryChunkSerializer.cpp
+    src/World/IO/JsonChunkSerializer.cpp
     src/Test/FluidChunkIoTest.cpp)
 target_include_directories(fluid_chunk_io_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -2818,6 +2834,11 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     TIMEOUT 60)
 endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
+  view_ray_math_test
+  environment_config_celestial_test
+  weather_front_field_test
+  fluid_chunk_io_test
+  worldgen_biome_features_test
   fluid_worldgen_seal_test
   worldgen_aquifer_test
   job_admission_lifetime_test

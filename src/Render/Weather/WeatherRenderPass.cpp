@@ -87,36 +87,9 @@ void UWeatherRenderPass::DestroyGpuResources()
   ParticleIndexCount = 0;
 }
 
-bool UWeatherRenderPass::PrecipActive(const UWorld &world) const
+bool UWeatherRenderPass::PrecipActive(const WeatherSample &weather) const
 {
-  const UWorld::EnvironmentState &env = world.GetEnvironmentState();
-  if (env.PrecipitationIntensity <= 0.05f)
-  {
-    return false;
-  }
-  const bool raining = env.Weather == UWorld::WeatherType::Rain ||
-                       env.TargetWeather == UWorld::WeatherType::Rain ||
-                       env.Weather == UWorld::WeatherType::Storm ||
-                       env.TargetWeather == UWorld::WeatherType::Storm;
-  const bool snowing = env.Weather == UWorld::WeatherType::Snow ||
-                       env.TargetWeather == UWorld::WeatherType::Snow;
-  return raining || snowing;
-}
-
-int UWeatherRenderPass::WeatherKind(const UWorld &world) const
-{
-  const UWorld::EnvironmentState &env = world.GetEnvironmentState();
-  const bool snowing = env.Weather == UWorld::WeatherType::Snow ||
-                       env.TargetWeather == UWorld::WeatherType::Snow;
-  const bool raining = env.Weather == UWorld::WeatherType::Rain ||
-                       env.TargetWeather == UWorld::WeatherType::Rain ||
-                       env.Weather == UWorld::WeatherType::Storm ||
-                       env.TargetWeather == UWorld::WeatherType::Storm;
-  if (snowing && !raining)
-  {
-    return 2;
-  }
-  return 1;
+  return weather.PrecipitationIntensity > 0.05f;
 }
 
 float UWeatherRenderPass::QualityForPreset(PerformancePreset preset) const
@@ -158,32 +131,40 @@ void UWeatherRenderPass::Render(const WeatherRenderContext &ctx,
     return;
   }
 
-  // Temporarily disabled: sky background streaks look unnatural in current art
-  // direction. Keep particles-only weather until a better sky solution lands.
-  if (!world.GetLightingSettings().WeatherParticlesEnabled)
-  {
-    return;
-  }
-
   if (!CanReceiveOutdoorPrecipitation(world, ctx.CameraPos))
   {
     ParticleSystem.Reset();
     return;
   }
+  const WeatherSample weather = world.SampleWeatherAt(ctx.CameraPos);
+  if (!PrecipActive(weather))
+  {
+    ParticleSystem.Reset();
+    return;
+  }
 
-  RenderParticlesPass(ctx, world);
+  const UWorld::LightingSettings &lighting = world.GetLightingSettings();
+  if (lighting.WeatherOverlayEnabled && weather.SnowFraction < 0.999f)
+  {
+    RenderStreaksPass(ctx, world, weather);
+  }
+  if (lighting.WeatherParticlesEnabled)
+  {
+    RenderParticlesPass(ctx, world, weather);
+  }
 }
 
 void UWeatherRenderPass::RenderStreaksPass(const WeatherRenderContext &ctx,
-                                           const UWorld &world)
+                                           const UWorld &world,
+                                           const WeatherSample &weather)
 {
-  if (!StreaksShader || !StreaksShader->IsValid() || !PrecipActive(world))
+  if (!StreaksShader || !StreaksShader->IsValid() || !PrecipActive(weather) ||
+      weather.SnowFraction >= 0.999f)
   {
     return;
   }
 
   const auto t_begin = std::chrono::high_resolution_clock::now();
-  const UWorld::EnvironmentState &env = world.GetEnvironmentState();
   const uint8_t debug_mode = world.GetLightingSettings().WeatherDebugMode;
 
   UGlStateScope gl_guard(kGlMaskWeatherOverlay);
@@ -194,17 +175,30 @@ void UWeatherRenderPass::RenderStreaksPass(const WeatherRenderContext &ctx,
   StreaksShader->Use();
   StreaksShader->SetVec2("uResolution", glm::vec2(ctx.Width, ctx.Height));
   StreaksShader->SetFloat("uTimeSec", ctx.ElapsedSec);
-  StreaksShader->SetFloat("uIntensity",
-                          std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
-  StreaksShader->SetInt("uWeatherKind", WeatherKind(world));
+  StreaksShader->SetFloat(
+      "uIntensity",
+      std::clamp(weather.PrecipitationIntensity * (1.0f - weather.SnowFraction),
+                 0.0f, 1.0f));
+  StreaksShader->SetInt("uWeatherKind", 1);
   StreaksShader->SetFloat("uQuality", QualityForPreset(ctx.Preset));
-  const float weather_light = std::clamp(
-      std::max(env.DayNightFactor, env.MoonNightFactor * 0.75f), 0.0f, 1.0f);
+  const float weather_light =
+      std::clamp(std::max(world.GetEnvironmentState().DayNightFactor,
+                          world.GetEnvironmentState().MoonNightFactor * 0.75f),
+                 0.0f, 1.0f);
   StreaksShader->SetFloat("uDayFactor", weather_light);
-  StreaksShader->SetFloat("uWind", std::clamp(env.WindStrength, 0.0f, 1.0f));
+  StreaksShader->SetVec2("uWindDirection", weather.WindDirection);
+  StreaksShader->SetVec3("uCameraRight", ctx.CameraRight);
+  StreaksShader->SetVec3("uCameraUp", ctx.CameraUp);
+  StreaksShader->SetFloat("uWind",
+                          std::clamp(weather.WindStrength, 0.0f, 1.0f));
   StreaksShader->SetFloat("uDebugMode", debug_mode == 1 ? 1.0f : 0.0f);
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  DepthCapture.ApplyShaderUniforms(StreaksShader, false);
+#else
+  DepthCapture.CaptureFromDefaultFramebuffer();
   DepthCapture.Bind();
   DepthCapture.ApplyShaderUniforms(StreaksShader, debug_mode != 2);
+#endif
   if (debug_mode == 2)
   {
     StreaksShader->SetFloat("uDepthGuard", 0.0f);
@@ -273,22 +267,26 @@ bool UWeatherRenderPass::EnsureParticleBuffers()
 }
 
 void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
-                                             const UWorld &world)
+                                             const UWorld &world,
+                                             const WeatherSample &weather)
 {
-  if (!ParticleShader || !ParticleShader->IsValid() || !PrecipActive(world))
+  if (!ParticleShader || !ParticleShader->IsValid() || !PrecipActive(weather))
   {
     return;
   }
 
-  const int weather_kind = WeatherKind(world);
-  const int budget = ParticleBudget(ctx.Preset, weather_kind);
+  const float snow_fraction = std::clamp(weather.SnowFraction, 0.0f, 1.0f);
+  const int rain_budget = ParticleBudget(ctx.Preset, 1);
+  const int snow_budget = ParticleBudget(ctx.Preset, 2);
+  const int budget = static_cast<int>(std::round(
+      rain_budget * (1.0f - snow_fraction) + snow_budget * snow_fraction));
   if (budget <= 0)
   {
     return;
   }
 
   const auto t_begin = std::chrono::high_resolution_clock::now();
-  ParticleSystem.Update(world, ctx.CameraPos, ctx.DeltaSec, budget);
+  ParticleSystem.Update(world, ctx.CameraPos, weather, ctx.DeltaSec, budget);
   if (ParticleSystem.GetActiveCount() <= 0)
   {
     LastParticleMs = 0.0;
@@ -325,7 +323,6 @@ void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
   glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(byte_size),
                   gpu_instances.data());
 
-  const UWorld::EnvironmentState &env = world.GetEnvironmentState();
   const uint8_t debug_mode = world.GetLightingSettings().WeatherDebugMode;
 
   UGlStateScope gl_guard(kGlMaskWeatherOverlay);
@@ -338,11 +335,13 @@ void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
   ParticleShader->SetMat4("uViewProj", ctx.ViewProj);
   ParticleShader->SetVec3("uCameraRight", ctx.CameraRight);
   ParticleShader->SetVec3("uCameraUp", ctx.CameraUp);
-  const float weather_light = std::clamp(
-      std::max(env.DayNightFactor, env.MoonNightFactor * 0.75f), 0.0f, 1.0f);
+  const float weather_light =
+      std::clamp(std::max(world.GetEnvironmentState().DayNightFactor,
+                          world.GetEnvironmentState().MoonNightFactor * 0.75f),
+                 0.0f, 1.0f);
   ParticleShader->SetFloat("uDayFactor", weather_light);
-  ParticleShader->SetFloat("uIntensity",
-                           std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f));
+  ParticleShader->SetFloat(
+      "uIntensity", std::clamp(weather.PrecipitationIntensity, 0.0f, 1.0f));
 
   glBindVertexArray(ParticleVao);
   glDrawElementsInstanced(GL_TRIANGLES, ParticleIndexCount, GL_UNSIGNED_INT,

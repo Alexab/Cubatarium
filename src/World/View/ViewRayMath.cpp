@@ -125,6 +125,41 @@ bool ScreenNdcToCameraSpaceRay(const ScreenRayTransform &transform, float ndc_x,
   return true;
 }
 
+bool ReconstructSkyViewRay(const glm::mat4 &inverse_projection, float ndc_x,
+                           float ndc_y, glm::vec3 &out_direction)
+{
+  out_direction = glm::vec3(0.0f, 0.0f, -1.0f);
+  if (!IsFinite(inverse_projection) || !std::isfinite(ndc_x) ||
+      !std::isfinite(ndc_y))
+  {
+    return false;
+  }
+  glm::vec3 near_point{};
+  if (!HomogeneousPoint(inverse_projection,
+                        glm::vec4(ndc_x, ndc_y, -1.0f, 1.0f), near_point))
+  {
+    return false;
+  }
+  glm::vec3 direction = near_point;
+  if (std::abs(inverse_projection[3][3]) > 1.0e-6f)
+  {
+    glm::vec3 far_point{};
+    if (!HomogeneousPoint(inverse_projection,
+                          glm::vec4(ndc_x, ndc_y, 1.0f, 1.0f), far_point))
+    {
+      return false;
+    }
+    direction = far_point - near_point;
+  }
+  const float length = glm::length(direction);
+  if (!std::isfinite(length) || length < 1.0e-8f)
+  {
+    return false;
+  }
+  out_direction = direction / length;
+  return IsFinite(out_direction);
+}
+
 bool ScreenNdcDepthToCameraSpacePoint(const ScreenRayTransform &transform,
                                       float ndc_x, float ndc_y, float depth01,
                                       glm::vec3 &out_view_point,
@@ -136,10 +171,9 @@ bool ScreenNdcDepthToCameraSpacePoint(const ScreenRayTransform &transform,
     return false;
   }
 
-  return HomogeneousPoint(
-             transform.inverse_projection,
-             glm::vec4(ndc_x, ndc_y, depth01 * 2.0f - 1.0f, 1.0f),
-             out_view_point) &&
+  return HomogeneousPoint(transform.inverse_projection,
+                          glm::vec4(ndc_x, ndc_y, depth01 * 2.0f - 1.0f, 1.0f),
+                          out_view_point) &&
          HomogeneousPoint(transform.inverse_view,
                           glm::vec4(out_view_point, 1.0f), out_world_point);
 }

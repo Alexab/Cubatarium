@@ -39,12 +39,17 @@ bool BuildScreenRayTransform(const glm::mat4 &view, const glm::mat4 &proj,
 bool ScreenNdcToCameraSpaceRay(const ScreenRayTransform &transform, float ndc_x,
                                float ndc_y, CameraSpaceRay &out_ray);
 
+/// Reconstructs the view-space sky direction using the inverse projection.
+/// Unlike a linear NDC-to-view approximation, this preserves the camera FOV
+/// and aspect ratio for perspective and orthographic cameras.
+bool ReconstructSkyViewRay(const glm::mat4 &inverse_projection, float ndc_x,
+                           float ndc_y, glm::vec3 &out_direction);
+
 /// Reconstructs a GL depth-buffer sample without a combined inverse matrix.
 bool ScreenNdcDepthToCameraSpacePoint(const ScreenRayTransform &transform,
-                                     float ndc_x, float ndc_y,
-                                     float depth01,
-                                     glm::vec3 &out_view_point,
-                                     glm::vec3 &out_world_point);
+                                      float ndc_x, float ndc_y, float depth01,
+                                      glm::vec3 &out_view_point,
+                                      glm::vec3 &out_world_point);
 
 /// Constructs a camera-space ray from OpenGL window coordinates.
 bool ScreenPointToCameraSpaceRay(const ScreenRayTransform &transform,
