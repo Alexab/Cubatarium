@@ -11344,7 +11344,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         GreedyMeshVertex &vertex = batch.vertices[i];
         ApplyVertexLight(vertex, q.LightPacked);
         const bool top_face = q.axis == 1 && q.faceSign > 0;
-        vertex.wetness = SurfaceWetness * (top_face ? 0.15f : 0.05f);
+        // Material response mask only. Regional, time-varying wetness is
+        // applied at draw time so weather changes do not rebuild chunk meshes.
+        vertex.wetness = top_face ? 0.15f : 0.05f;
       }
     }
     std::vector<GreedyMeshBatch> new_batches;

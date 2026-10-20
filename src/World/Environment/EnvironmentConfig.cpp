@@ -1,6 +1,7 @@
 #include "World/Environment/EnvironmentConfig.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -20,8 +21,7 @@ float Clamp01(float value) { return std::clamp(value, 0.0f, 1.0f); }
 
 } // namespace
 
-EnvironmentCelestialBodySpec
-ParseCelestialBodySpec(const nlohmann::json &entry)
+EnvironmentCelestialBodySpec ParseCelestialBodySpec(const nlohmann::json &entry)
 {
   EnvironmentCelestialBodySpec body;
   if (!entry.is_object())
@@ -29,7 +29,19 @@ ParseCelestialBodySpec(const nlohmann::json &entry)
     return body;
   }
   body.Id = entry.value("id", body.Id);
-  body.Type = entry.value("type", body.Type);
+  // Legacy saves did not store a type. Infer it once while reading them;
+  // explicit types remain authoritative even when IDs are arbitrary.
+  if (entry.contains("type") && entry["type"].is_string())
+  {
+    body.Type = entry["type"].get<std::string>();
+  }
+  else
+  {
+    std::string id = body.Id;
+    std::transform(id.begin(), id.end(), id.begin(), [](unsigned char c)
+                   { return static_cast<char>(std::tolower(c)); });
+    body.Type = id.find("moon") != std::string::npos ? "moon" : "sun";
+  }
   if (entry.contains("color") && entry["color"].is_array() &&
       entry["color"].size() == 3)
   {
@@ -52,8 +64,7 @@ ParseCelestialBodySpec(const nlohmann::json &entry)
 }
 
 bool TryParseCelestialBodiesArray(
-    const nlohmann::json &array,
-    std::vector<EnvironmentCelestialBodySpec> &out)
+    const nlohmann::json &array, std::vector<EnvironmentCelestialBodySpec> &out)
 {
   if (!array.is_array())
   {
@@ -91,6 +102,20 @@ bool TryParseCelestialBodiesArray(
 
 void EnvironmentConfig::Validate()
 {
+  if (!std::isfinite(WeatherRuntime.FieldSimulationTimeSec) ||
+      WeatherRuntime.FieldSimulationTimeSec < 0.0)
+  {
+    WeatherRuntime.FieldSimulationTimeSec = 0.0;
+  }
+  if (!std::isfinite(WeatherRuntime.WeatherSimulationTimeSec) ||
+      WeatherRuntime.WeatherSimulationTimeSec < 0.0)
+  {
+    WeatherRuntime.WeatherSimulationTimeSec = 0.0;
+  }
+  if (WeatherRuntime.FieldAlgorithmVersion == 0)
+  {
+    WeatherRuntime.FieldAlgorithmVersion = 1;
+  }
   if (std::abs((WeatherAuto.DryFraction + WeatherAuto.PrecipFraction) - 1.0f) >
       kFractionEpsilon)
   {
@@ -105,8 +130,8 @@ void EnvironmentConfig::Validate()
   MinAmbient = std::clamp(MinAmbient, 0.02f, 0.5f);
   CelestialHorizonFade = std::clamp(CelestialHorizonFade, 0.01f, 0.5f);
 
-  WeatherAuto.MinPrecipMinutes = std::max(kMinPrecipMinutes,
-                                          WeatherAuto.MinPrecipMinutes);
+  WeatherAuto.MinPrecipMinutes =
+      std::max(kMinPrecipMinutes, WeatherAuto.MinPrecipMinutes);
   const float transition_minutes = WeatherAuto.TransitionSeconds / 60.0f;
   if (WeatherAuto.MinPrecipMinutes < transition_minutes)
   {
@@ -114,8 +139,7 @@ void EnvironmentConfig::Validate()
   }
   WeatherAuto.MinDryMinutes = std::max(0.0f, WeatherAuto.MinDryMinutes);
   WeatherAuto.TransitionSeconds = std::max(0.0f, WeatherAuto.TransitionSeconds);
-  WeatherAuto.EpisodeMinMinutes =
-      std::max(0.1f, WeatherAuto.EpisodeMinMinutes);
+  WeatherAuto.EpisodeMinMinutes = std::max(0.1f, WeatherAuto.EpisodeMinMinutes);
   WeatherAuto.EpisodeMaxMinutes =
       std::max(WeatherAuto.EpisodeMinMinutes, WeatherAuto.EpisodeMaxMinutes);
   WeatherAuto.PrecipHeavyFraction = Clamp01(WeatherAuto.PrecipHeavyFraction);
@@ -135,7 +159,8 @@ void EnvironmentConfig::ReadWeatherAutoFromJson(
   {
     return;
   }
-  WeatherAuto.AutoChange = weather_json.value("auto_change", WeatherAuto.AutoChange);
+  WeatherAuto.AutoChange =
+      weather_json.value("auto_change", WeatherAuto.AutoChange);
   WeatherAuto.DryFraction =
       weather_json.value("dry_fraction", WeatherAuto.DryFraction);
   WeatherAuto.PrecipFraction =
@@ -157,8 +182,8 @@ void EnvironmentConfig::ReadWeatherAutoFromJson(
 
   WeatherRuntime.Enabled =
       weather_json.value("auto_enabled", WeatherRuntime.Enabled);
-  WeatherRuntime.ManualOverride = weather_json.value(
-      "auto_manual_override", WeatherRuntime.ManualOverride);
+  WeatherRuntime.ManualOverride =
+      weather_json.value("auto_manual_override", WeatherRuntime.ManualOverride);
   WeatherRuntime.EpisodeRemainingSec = weather_json.value(
       "auto_remaining_sec", WeatherRuntime.EpisodeRemainingSec);
   const std::string mode =
@@ -174,6 +199,22 @@ void EnvironmentConfig::ReadWeatherAutoFromJson(
   else
   {
     WeatherRuntime.EpisodeMode = WeatherAutoEpisodeMode::None;
+  }
+  WeatherRuntime.FieldAlgorithmVersion = weather_json.value(
+      "field_algorithm_version", WeatherRuntime.FieldAlgorithmVersion);
+  WeatherRuntime.FieldSimulationTimeSec = weather_json.value(
+      "field_simulation_time_sec", WeatherRuntime.FieldSimulationTimeSec);
+  if (!std::isfinite(WeatherRuntime.FieldSimulationTimeSec) ||
+      WeatherRuntime.FieldSimulationTimeSec < 0.0)
+  {
+    WeatherRuntime.FieldSimulationTimeSec = 0.0;
+  }
+  WeatherRuntime.WeatherSimulationTimeSec = weather_json.value(
+      "weather_simulation_time_sec", WeatherRuntime.WeatherSimulationTimeSec);
+  if (!std::isfinite(WeatherRuntime.WeatherSimulationTimeSec) ||
+      WeatherRuntime.WeatherSimulationTimeSec < 0.0)
+  {
+    WeatherRuntime.WeatherSimulationTimeSec = 0.0;
   }
 }
 
@@ -206,6 +247,12 @@ void EnvironmentConfig::WriteWeatherAutoToJson(
     weather_json["auto_episode_mode"] = "none";
     break;
   }
+  weather_json["field_algorithm_version"] =
+      WeatherRuntime.FieldAlgorithmVersion;
+  weather_json["field_simulation_time_sec"] =
+      WeatherRuntime.FieldSimulationTimeSec;
+  weather_json["weather_simulation_time_sec"] =
+      WeatherRuntime.WeatherSimulationTimeSec;
 }
 
 EnvironmentConfig EnvironmentConfig::FromJson(const nlohmann::json &root)

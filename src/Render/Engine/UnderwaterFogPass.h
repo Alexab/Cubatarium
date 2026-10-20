@@ -14,13 +14,15 @@ namespace cutum
 
 class UCamera;
 class UWorld;
+struct WeatherSample;
 
 class UUnderwaterFogPass
 {
 public:
   void Update(UWorld &world, const RenderSettings &render,
               UFluidSurfaceMap &surface_map, const glm::vec3 &base_sky_color,
-              const glm::mat3 &inv_view_rot = glm::mat3(1.0f));
+              const glm::mat3 &inv_view_rot = glm::mat3(1.0f),
+              const WeatherSample *weather = nullptr);
   void ApplyUniforms(const std::shared_ptr<UShaderProgram> &shader,
                      const glm::vec3 &camera_pos,
                      const UFluidSurfaceMap &surface_map,

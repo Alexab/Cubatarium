@@ -1,6 +1,6 @@
 #version 300 es
-precision mediump int;
-precision mediump float;
+precision highp float;
+precision highp int;
 
 in vec2 TexCoord;
 out vec4 FragColor;
@@ -15,8 +15,12 @@ uniform float uTimeOfDay;
 uniform float uStarVisibility;
 uniform float uCloudCoverage;
 uniform float uElapsedSec;
-uniform int uCloudSteps;
-uniform float uCloudJitter;
+uniform vec2 uWindDirection;
+uniform float uWindStrength;
+uniform sampler2D uWeatherField;
+uniform float uWeatherFieldValid;
+uniform vec2 uWeatherFieldCenter;
+uniform float uWeatherFieldWorldSize;
 uniform int uCelestialCount;
 uniform vec3 uCelestialDir[4];
 uniform vec3 uCelestialColor[4];
@@ -24,6 +28,8 @@ uniform float uCelestialIntensity[4];
 uniform float uCelestialAngularSizeDeg[4];
 uniform int uCelestialType[4];
 uniform mat3 uInvViewRot;
+uniform mat4 uInvProjection;
+uniform float uPerspective;
 uniform mat3 uStarCelestialInv;
 uniform vec3 uCameraPos;
 uniform float uUnderwaterSkyAmount;
@@ -49,32 +55,31 @@ float valueNoise(vec2 p)
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-vec2 octahedralEncode(vec3 n)
+float hash31(vec3 p)
 {
-    n /= (abs(n.x) + abs(n.y) + abs(n.z));
-    if (n.y >= 0.0)
-    {
-        return n.xz;
-    }
-    // Avoid GLSL sign(0)==0 collapsing the octahedral unwrap.
-    vec2 s = vec2(n.x < 0.0 ? -1.0 : 1.0, n.z < 0.0 ? -1.0 : 1.0);
-    return (vec2(1.0) - abs(n.zx)) * s;
+    p = fract(p * 0.1031);
+    p += dot(p, p.yxz + 33.33);
+    return fract((p.x + p.y) * p.z);
 }
 
-vec3 starLayer(vec2 uv, float cell_scale, float threshold, float size,
+vec3 starLayer(vec3 direction, float cell_scale, float threshold, float size,
                float mag_boost)
 {
-    vec2 st = uv * cell_scale + vec2(19.17, 78.3);
-    vec2 cell = floor(st);
-    vec2 f = fract(st) - 0.5;
-    float rnd = hash12(cell);
-    float rnd2 = hash12(cell + vec2(31.7, 7.1));
-    float rnd3 = hash12(cell + vec2(4.2, 53.9));
+    vec3 st = (direction * 0.5 + 0.5) * cell_scale + vec3(19.17, 78.3, 41.6);
+    vec3 cell = floor(st);
+    vec3 jitter = vec3(hash31(cell + vec3(31.7, 7.1, 4.2)),
+                       hash31(cell + vec3(4.2, 53.9, 31.7)),
+                       hash31(cell + vec3(7.1, 4.2, 53.9))) * 0.6 + 0.2;
+    vec3 star_direction = normalize((cell + jitter - vec3(19.17, 78.3, 41.6)) /
+                                    cell_scale * 2.0 - 1.0);
+    float rnd = hash31(cell);
+    float rnd2 = hash31(cell + vec3(31.7, 7.1, 4.2));
+    float rnd3 = hash31(cell + vec3(4.2, 53.9, 31.7));
     float mask = step(threshold, rnd);
     // Soft core + wider glow reduces temporal aliasing of sub-pixel dots.
-    float d = length(f);
-    float core = smoothstep(size, size * 0.25, d);
-    float glow = smoothstep(size * 2.4, size * 0.85, d) * 0.40;
+    float d = length(direction - star_direction);
+    float core = 1.0 - smoothstep(size * 0.25, size, d);
+    float glow = (1.0 - smoothstep(size * 0.85, size * 2.4, d)) * 0.40;
     float star = core + glow;
     float mag = pow(rnd2, 7.0) * mag_boost;
     vec3 cool = vec3(0.75, 0.82, 1.0);
@@ -85,54 +90,76 @@ vec3 starLayer(vec2 uv, float cell_scale, float threshold, float size,
 
 vec3 starFieldColor(vec3 dir_star)
 {
-    vec2 uv = octahedralEncode(dir_star);
-    // Fewer, larger stars stay stable under camera / sidereal motion.
-    vec3 dense = starLayer(uv, 160.0, 0.991, 0.085, 1.05);
-    vec3 bright = starLayer(uv, 72.0, 0.9975, 0.12, 2.2);
+    // A jittered 3D direction lattice avoids projection seams and polar
+    // crowding while remaining deterministic under sidereal rotation.
+    vec3 dense = starLayer(dir_star, 160.0, 0.991, 0.0018, 1.05);
+    vec3 bright = starLayer(dir_star, 72.0, 0.9975, 0.0034, 2.2);
     return dense + bright;
 }
 
-float cloudDensity(vec2 uv, float time_shift)
+float cloudDensity(vec2 world_xz, float time_shift, float scale)
 {
-    vec2 p = uv + vec2(time_shift * 0.25, -time_shift * 0.08);
-    float n0 = valueNoise(p * 4.0);
-    float n1 = valueNoise(p * 9.0 + vec2(13.2, -7.1));
-    return clamp(n0 * 0.72 + n1 * 0.28, 0.0, 1.0);
+    vec2 wind = normalize(uWindDirection + vec2(1.0e-4)) *
+                (0.25 + clamp(uWindStrength, 0.0, 1.0));
+    vec2 p = (world_xz + wind * time_shift) * scale;
+    float broad = valueNoise(p);
+    float medium = valueNoise(p * 2.7 + vec2(13.2, -7.1));
+    float detail = valueNoise(p * 8.0 + vec2(-4.1, 22.7));
+    return clamp(broad * 0.55 + medium * 0.32 + detail * 0.13, 0.0, 1.0);
 }
 
-vec2 cloudHorizonUv(vec3 dir, vec2 camera_xz, vec2 wind, float ring_scale,
-                    float elev_scale)
+float sampleWeatherCoverage(vec2 world_xz)
 {
-    vec2 horiz = normalize(dir.xz + vec2(1e-4));
-    float elev = clamp(dir.y, 0.0, 1.0);
-    return horiz * ring_scale + vec2(0.0, elev * elev_scale) +
-           camera_xz * 0.0008 + wind * 0.55;
+    if (uWeatherFieldValid < 0.5)
+    {
+        return clamp(uCloudCoverage, 0.0, 1.0);
+    }
+    vec2 uv = (world_xz - uWeatherFieldCenter) /
+              max(uWeatherFieldWorldSize, 1.0) + vec2(0.5);
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))))
+    {
+        return clamp(uCloudCoverage, 0.0, 1.0);
+    }
+    float edge_distance = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+    float edge_fade = smoothstep(0.0, 0.12, edge_distance);
+    float regional = texture(uWeatherField, uv).r;
+    return mix(clamp(uCloudCoverage, 0.0, 1.0), regional, edge_fade);
 }
 
-vec2 cloudWorldUv(vec3 dir, vec2 camera_xz, float world_scale, float parallax,
-                  vec2 wind, float elev_w)
+float cloudLayerOpticalDepth(vec3 ray, float layer_base, float thickness,
+                             float coverage, float time_sec, out vec3 cloud_pos)
 {
-    float y_safe = mix(0.50, max(dir.y, 0.24), elev_w);
-    vec2 proj = dir.xz / y_safe;
-    float r2 = dot(proj, proj);
-    proj *= inversesqrt(1.0 + r2 * 0.28);
-    return camera_xz * world_scale + proj * parallax * elev_w + wind;
-}
-
-vec2 blendCloudUv(vec2 horizon_uv, vec2 world_uv, float elev_w)
-{
-    return mix(horizon_uv, world_uv, elev_w);
-}
-
-float cloudDensityWorld(vec3 world_pos, float time_shift)
-{
-    return cloudDensity(world_pos.xz * 0.0012, time_shift);
-}
-
-float layerProfile(float y, float center, float half_thickness)
-{
-    float dy = abs(y - center) / max(half_thickness, 1.0);
-    return clamp(1.0 - dy, 0.0, 1.0);
+    cloud_pos = vec3(0.0);
+  if (abs(ray.y) <= 0.001)
+    {
+        return 0.0;
+    }
+  float distance_a = (layer_base - uCameraPos.y) / ray.y;
+  float distance_b = (layer_base + thickness - uCameraPos.y) / ray.y;
+  float segment_start = max(0.0, min(distance_a, distance_b));
+  float segment_end = max(distance_a, distance_b);
+  if (segment_end <= segment_start)
+    {
+        return 0.0;
+    }
+  float distance_to_layer = 0.5 * (segment_start + segment_end);
+  if (distance_to_layer > 18000.0)
+  {
+    return 0.0;
+  }
+    cloud_pos = uCameraPos + ray * distance_to_layer;
+    coverage = sampleWeatherCoverage(cloud_pos.xz);
+    if (coverage <= 0.001)
+    {
+        return 0.0;
+    }
+    float shape = cloudDensity(cloud_pos.xz, time_sec * 0.012, 0.0014);
+    float threshold = mix(0.78, 0.36, clamp(coverage, 0.0, 1.0));
+    float density = smoothstep(threshold, threshold + 0.22, shape);
+  float optical_path = min((segment_end - segment_start) /
+                               max(thickness, 1.0),
+                           3.5);
+  return density * coverage * 1.8 * optical_path;
 }
 
 vec3 horizonFogColor(vec3 view_dir)
@@ -171,7 +198,12 @@ void main()
     }
 
     vec2 sky_uv = TexCoord * 2.0 - 1.0;
-    vec3 dir_view = normalize(vec3(sky_uv.x, sky_uv.y, -1.0));
+    vec4 view_near_h = uInvProjection * vec4(sky_uv, -1.0, 1.0);
+    vec4 view_far_h = uInvProjection * vec4(sky_uv, 1.0, 1.0);
+    vec3 view_near = view_near_h.xyz / max(abs(view_near_h.w), 1e-7);
+    vec3 view_far = view_far_h.xyz / max(abs(view_far_h.w), 1e-7);
+    vec3 dir_view = normalize(uPerspective > 0.5 ? view_near
+                                                : view_far - view_near);
     vec3 view_dir = normalize(uInvViewRot * dir_view);
 
     vec3 skyTop = skyColor.rgb;
@@ -189,7 +221,7 @@ void main()
     float elev_fade = smoothstep(0.00, 0.22, view_dir.y);
     float star_vis = pow(clamp(uStarVisibility, 0.0, 1.0), 1.2);
     vec3 stars = starFieldColor(dir_star);
-    finalColor += stars * star_vis * horizon_mask * elev_fade * (1.0 - below_waterline);
+    vec3 celestial_color = vec3(0.0);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -209,48 +241,53 @@ void main()
         {
             body_col *= vec3(0.75, 0.8, 0.95);
         }
-        finalColor += body_col * (disc + halo) * (1.0 - below_waterline);
+        celestial_color += body_col * (disc + halo);
     }
 
     float cloud_cov = clamp(uCloudCoverage, 0.0, 1.0);
-    if (cloud_cov > 0.001)
+    float cloud_transmittance = 1.0;
+    vec3 cloud_radiance = vec3(0.0);
+    if (uWeatherFieldValid > 0.5 || cloud_cov > 0.001)
     {
-        float elev = clamp(view_dir.y, 0.0, 1.0);
-        float elev_w = smoothstep(0.22, 0.52, elev);
-        float horizon_fade = smoothstep(0.06, 0.42, elev);
-
-        vec2 wind_low = vec2(0.010, 0.004) * uElapsedSec;
-        vec2 wind_high = vec2(0.016, -0.003) * uElapsedSec;
-        vec2 horizon_low_uv =
-            cloudHorizonUv(view_dir, uCameraPos.xz, wind_low, 5.5, 3.2);
-        vec2 horizon_high_uv =
-            cloudHorizonUv(view_dir, uCameraPos.xz, wind_high, 3.6, 2.6);
-        vec2 world_low_uv =
-            cloudWorldUv(view_dir, uCameraPos.xz, 0.0016, 0.42, wind_low, elev_w);
-        vec2 world_high_uv =
-            cloudWorldUv(view_dir, uCameraPos.xz, 0.0009, 0.65, wind_high, elev_w);
-        vec2 low_uv = blendCloudUv(horizon_low_uv, world_low_uv, elev_w);
-        vec2 high_uv = blendCloudUv(horizon_high_uv, world_high_uv, elev_w);
-
-        float low_shape = cloudDensity(low_uv, uElapsedSec * 0.022);
-        float low_detail =
-            cloudDensity(low_uv * 2.1 + vec2(0.37, -0.22), uElapsedSec * 0.055) *
-            elev_w;
-        float low_cov =
-            max(0.0, low_shape * 0.78 + low_detail * 0.30 - 0.40);
-
-        float high_shape = cloudDensity(high_uv, uElapsedSec * 0.015);
-        float high_cov = max(0.0, high_shape - 0.52);
-        float cloud_low = smoothstep(0.10, 0.35, low_cov) * cloud_cov * horizon_fade;
-        float cloud_high = smoothstep(0.04, 0.20, high_cov) * cloud_cov * horizon_fade;
-        cloud_low *= mix(0.45, 1.0, elev_w);
-        cloud_high *= mix(0.65, 1.0, elev_w);
-        vec3 low_col = mix(vec3(0.66, 0.69, 0.74), vec3(0.94, 0.95, 0.98), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
-        vec3 high_col = mix(vec3(0.78, 0.81, 0.87), vec3(0.97, 0.98, 1.0), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
-        float cloud_mask = (1.0 - below_waterline);
-        finalColor = mix(finalColor, high_col, cloud_high * 0.40 * cloud_mask);
-        finalColor = mix(finalColor, low_col, cloud_low * 0.45 * cloud_mask);
+        vec3 low_pos;
+        vec3 high_pos;
+        float low_tau = cloudLayerOpticalDepth(view_dir, 112.0, 46.0,
+                                               cloud_cov, uElapsedSec, low_pos);
+        float high_tau = cloudLayerOpticalDepth(view_dir, 205.0, 58.0,
+                                                cloud_cov * 0.65,
+                                                uElapsedSec * 0.83, high_pos);
+        float low_alpha = 1.0 - exp(-low_tau);
+        float high_alpha = 1.0 - exp(-high_tau);
+        float sun_lighting = 0.0;
+        vec3 sun_color = vec3(1.0, 0.95, 0.84);
+        for (int i = 0; i < 4; ++i)
+        {
+            if (i >= uCelestialCount) break;
+            if (uCelestialType[i] == 0)
+            {
+                sun_lighting = max(0.0, uCelestialDir[i].y) *
+                               clamp(uCelestialIntensity[i], 0.0, 1.0);
+                sun_color = uCelestialColor[i];
+                break;
+            }
+        }
+        vec3 cloud_day = mix(vec3(0.34, 0.38, 0.46),
+                             vec3(0.78, 0.81, 0.84), sun_lighting);
+        vec3 cloud_night = vec3(0.045, 0.055, 0.085);
+        vec3 low_color = mix(cloud_night, cloud_day * sun_color, sun_lighting);
+        vec3 high_color = mix(cloud_night * 1.2,
+                              mix(vec3(0.62, 0.67, 0.75), cloud_day, sun_lighting),
+                              sun_lighting);
+        float cloud_mask = 1.0 - below_waterline;
+        cloud_radiance += low_color * low_alpha * cloud_mask;
+        cloud_transmittance *= 1.0 - low_alpha * cloud_mask;
+        cloud_radiance += cloud_transmittance * high_color * high_alpha * cloud_mask;
+        cloud_transmittance *= 1.0 - high_alpha * cloud_mask;
     }
+
+    finalColor += (stars * star_vis * horizon_mask * elev_fade +
+                   celestial_color) * (1.0 - below_waterline);
+    finalColor = cloud_radiance + finalColor * cloud_transmittance;
 
     if (below_waterline > 0.5) {
         finalColor = uUnderwaterFogColor;

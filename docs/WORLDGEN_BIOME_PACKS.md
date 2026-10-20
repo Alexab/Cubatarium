@@ -66,6 +66,26 @@ visible to the sampler and feature placer even if another pack is loaded.
 image-map source from pack settings. Image maps still use the procedural 3D
 sampler for cave biomes.
 
+## Schema version 3 weather modifiers
+
+Version 3 keeps the schema 2 domain and climate fields and adds an optional
+`weather` object. It can be used to shift the normalized temperature, reduce
+or increase the chance of precipitation, and adjust wind exposure:
+
+```json
+"weather": {
+  "temperature_offset": 0.08,
+  "precipitation_multiplier": 0.65,
+  "wind_exposure": 1.15
+}
+```
+
+Valid ranges are `temperature_offset` `[-0.5, 0.5]`,
+`precipitation_multiplier` `[0, 4]`, and `wind_exposure` `[0, 2]`. Omitted
+weather objects keep the built-in compatibility profile; omitted properties
+inside `weather` use neutral values. Terrain generated from older schema 1 or 2
+biomes remains valid.
+
 ## Vegetation feature strategies
 
 `content/object_features.json` can select a registered feature strategy using

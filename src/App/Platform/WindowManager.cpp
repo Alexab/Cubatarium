@@ -1575,7 +1575,7 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
         break;
       }
       World->SetWeather(next, 1.2f);
-      World->SetWeatherOverlayEnabled(false);
+      World->SetWeatherOverlayEnabled(true);
       World->SetWeatherParticlesEnabled(true);
       if (Geometries)
       {

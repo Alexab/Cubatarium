@@ -3866,12 +3866,70 @@ void UGeometryEngine::ApplyGreedyEnvironmentUniforms(
 {
   if (WorldInstance)
   {
+    UWorld::EnvironmentState local_env = WorldInstance->GetEnvironmentState();
+    if (const auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      const WeatherSample local_weather =
+          WorldInstance->SampleWeatherAt(camera->GetPosition());
+      local_env.Cloudiness = local_weather.CloudCoverage;
+      local_env.CloudCoverage = local_weather.CloudCoverage;
+      local_env.PrecipitationIntensity = local_weather.PrecipitationIntensity;
+      local_env.WindStrength = local_weather.WindStrength;
+      local_env.WindDirection = local_weather.WindDirection;
+      local_env.WeatherFogMultiplier = local_weather.FogFactor;
+      local_env.WeatherSkyAttenuation = local_weather.SkyLightAttenuation;
+      local_env.SurfaceWetness = local_weather.SurfaceWetness;
+    }
     ApplyGreedyEnvironmentUniformsToShader(
-        shader, &WorldInstance->GetEnvironmentState(),
-        &WorldInstance->GetLightingSettings());
+        shader, &local_env, &WorldInstance->GetLightingSettings());
     return;
   }
   ApplyGreedyEnvironmentUniformsToShader(shader, nullptr, nullptr);
+}
+
+void UGeometryEngine::ApplyGreedyChunkWeatherUniforms(
+    const std::shared_ptr<UShaderProgram> &shader, glm::ivec3 chunk_coord)
+{
+  if (!shader || !WorldInstance)
+  {
+    return;
+  }
+  const uint64_t frame = WorldInstance->GetStreamingFrameEpoch();
+  if (!ChunkWeatherFrameValid || CachedChunkWeatherFrame != frame)
+  {
+    ChunkWeatherSamplesForFrame.clear();
+    CachedChunkWeatherFrame = frame;
+    ChunkWeatherFrameValid = true;
+  }
+  auto weather_it = ChunkWeatherSamplesForFrame.find(chunk_coord);
+  if (weather_it == ChunkWeatherSamplesForFrame.end())
+  {
+    const glm::vec3 sample_position =
+        glm::vec3(chunk_coord * CHUNK_SIZE + glm::ivec3(CHUNK_SIZE / 2));
+    const WeatherSample weather =
+        WorldInstance->SampleWeatherAt(sample_position);
+    WorldInstance->UpdateChunkWeatherState(chunk_coord, weather);
+    weather_it = ChunkWeatherSamplesForFrame.emplace(chunk_coord, weather).first;
+  }
+  const WeatherSample &weather = weather_it->second;
+
+  UWorld::EnvironmentState local_env = WorldInstance->GetEnvironmentState();
+  local_env.Cloudiness = weather.CloudCoverage;
+  local_env.CloudCoverage = weather.CloudCoverage;
+  local_env.PrecipitationIntensity = weather.PrecipitationIntensity;
+  local_env.WindStrength = weather.WindStrength;
+  local_env.WindDirection = weather.WindDirection;
+  local_env.WeatherFogMultiplier = weather.FogFactor;
+  local_env.WeatherSkyAttenuation = weather.SkyLightAttenuation;
+  local_env.SurfaceWetness = weather.SurfaceWetness;
+  if (const UChunk *chunk = WorldInstance->GetBlockWorld()
+                                .GetChunkManager()
+                                .GetChunk(chunk_coord))
+  {
+    local_env.SurfaceWetness = chunk->GetSurfaceWetness();
+  }
+  ApplyGreedyEnvironmentUniformsToShader(
+      shader, &local_env, &WorldInstance->GetLightingSettings());
 }
 
 UGeometryEngine::UGeometryEngine(
@@ -4399,8 +4457,6 @@ void UGeometryEngine::DrawCubeGeometry()
     logged_first_paint_diag = true;
     LogWorldLoadDiag("first_paint", *WorldInstance, camera->GetPosition());
   }
-  mesh_service->GetCache().SetSurfaceWetness(std::clamp(
-      WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));
   const uint64_t meshRevision = mesh_service->GetMeshRevision();
   const bool useGreedyMesh = Render.UseFaceQuadDraw();
   const size_t renderCount =
@@ -5043,8 +5099,15 @@ void UGeometryEngine::PrepareFrameRendering()
     inv_view_rot = glm::transpose(glm::mat3(camera->GetViewMatrix()));
   }
   FluidMap().ClearLastFrameStats();
+  WeatherSample camera_weather;
+  const auto weather_camera = WorldInstance->GetCurrentUserCamera();
+  if (weather_camera)
+  {
+    camera_weather =
+        WorldInstance->SampleWeatherAt(weather_camera->GetPosition());
+  }
   UnderwaterFogPass_.Update(*WorldInstance, Render, FluidMap(), BaseSkyColor,
-                            inv_view_rot);
+                            inv_view_rot, &camera_weather);
   skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
@@ -5403,6 +5466,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   const bool use_mdi = store.SupportsMultiDrawIndirect() &&
                        cache.usesVertexPool && cache.poolVbo != 0 &&
                        cache.poolEbo != 0;
+  const bool regional_weather =
+      WorldInstance && WorldInstance->HasRegionalWeather();
   const auto is_fluid_block = [&](BlockId block_id)
   {
     return fluid_trace && WorldInstance->GetBlockRegistry().GetRenderStyle(
@@ -5579,6 +5644,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
              cache.batches[j].indexCountGl > 0 &&
              cache.batches[j].blockId == head.blockId &&
              cache.batches[j].AlphaCutout == head.AlphaCutout &&
+             (!regional_weather ||
+              cache.batches[j].chunkCoord == head.chunkCoord) &&
              (!WorldInstance ||
               WorldInstance->ShouldDrawProvisionalLightPreview(
                   cache.batches[j].chunkCoord) == light_preview))
@@ -5586,6 +5653,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         ++j;
       }
 
+      if (regional_weather)
+      {
+        ApplyGreedyChunkWeatherUniforms(greedyShader, head.chunkCoord);
+      }
       SetBlockAnimUniforms(greedyShader, head.blockId, textures);
       set_alpha_cutout_for_batch(head.AlphaCutout);
       greedyShader->SetFloat(
@@ -5748,6 +5819,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         continue;
       }
+      if (regional_weather)
+      {
+        ApplyGreedyChunkWeatherUniforms(greedyShader, gpu.chunkCoord);
+      }
       greedyShader->SetFloat(
           "uLightPreviewOverride",
           WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
@@ -5812,6 +5887,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     for (size_t gpu_index = 0; gpu_index < cache.batches.size(); ++gpu_index)
     {
       const GreedyGpuBatch &gpu = cache.batches[gpu_index];
+      if (regional_weather)
+      {
+        ApplyGreedyChunkWeatherUniforms(greedyShader, gpu.chunkCoord);
+      }
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
       set_alpha_cutout_for_batch(gpu.AlphaCutout);
       greedyShader->SetFloat(
@@ -6040,8 +6119,6 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   {
     return;
   }
-  mesh_service->GetCache().SetSurfaceWetness(std::clamp(
-      WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));
   const UWorldMeshService::GreedyDrawSnapshot draw =
       mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                       WorldInstance->GetBlockRegistry(),
@@ -6923,6 +7000,10 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     {
       trace->slice_ready = 1;
     }
+    if (WorldInstance && WorldInstance->HasRegionalWeather())
+    {
+      ApplyGreedyChunkWeatherUniforms(packedGreedyShader, chunk.chunkCoord);
+    }
     if (WorldInstance)
     {
       NoteRendererGateCandidate(
@@ -7485,7 +7566,24 @@ void UGeometryEngine::DrawSkyGradient()
   WorldInstance->RefreshSkyVisualStateForRender();
 
   float horizon_boost = 0.0f;
-  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+  UWorld::EnvironmentState env = WorldInstance->GetEnvironmentState();
+
+  glm::mat3 inv_view_rot(1.0f);
+  glm::mat4 inv_projection(1.0f);
+  glm::vec3 camera_pos(0.0f);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
+  {
+    const glm::mat3 view_rot = glm::mat3(camera->GetViewMatrix());
+    inv_view_rot = glm::transpose(view_rot);
+    camera_pos = camera->GetPosition();
+    inv_projection = glm::inverse(camera->GetProjection());
+  }
+  const WeatherSample sky_weather = WorldInstance->SampleWeatherAt(camera_pos);
+  env.CloudCoverage = sky_weather.CloudCoverage;
+  env.Cloudiness = sky_weather.CloudCoverage;
+  env.PrecipitationIntensity = sky_weather.PrecipitationIntensity;
+  env.WindStrength = sky_weather.WindStrength;
+  env.WindDirection = sky_weather.WindDirection;
   horizon_boost = std::clamp(
       env.Cloudiness * 0.14f + env.PrecipitationIntensity * 0.1f, 0.0f, 0.35f);
   if (Render.AltitudeAdaptiveFog)
@@ -7496,18 +7594,10 @@ void UGeometryEngine::DrawSkyGradient()
     horizon_boost += std::clamp(altitude / (threshold * 2.0f), 0.0f, 0.25f);
   }
 
-  glm::mat3 inv_view_rot(1.0f);
-  glm::vec3 camera_pos(0.0f);
-  if (auto camera = WorldInstance->GetCurrentUserCamera())
-  {
-    const glm::mat3 view_rot = glm::mat3(camera->GetViewMatrix());
-    inv_view_rot = glm::transpose(view_rot);
-    camera_pos = camera->GetPosition();
-  }
-
-  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, env, Render,
+  SkyGradientPass_.Draw(skyShader, skyColor, *WorldInstance,
+                        UnderwaterFogPass_, env, Render,
                         EffectiveWeatherPreset(), AnimationClock.ElapsedSeconds(),
-                        inv_view_rot, camera_pos, horizon_boost);
+                        inv_view_rot, camera_pos, inv_projection, horizon_boost);
   DurationSkyGradientMks = SkyGradientPass_.GetLastDrawMs();
 }
 

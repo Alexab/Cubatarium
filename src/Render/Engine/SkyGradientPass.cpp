@@ -3,9 +3,11 @@
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/GlIncludes.h"
+#include "Render/Pipeline/RenderTextureUnits.h"
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 #include <string>
 
@@ -55,6 +57,13 @@ bool USkyGradientPass::EnsureBuffers()
 
 void USkyGradientPass::DestroyBuffers()
 {
+  if (WeatherFieldTexture != 0)
+  {
+    glDeleteTextures(1, &WeatherFieldTexture);
+    WeatherFieldTexture = 0;
+  }
+  WeatherFieldResolution = 0;
+  WeatherFieldPixels.clear();
   if (SkyVbo != 0)
   {
     glDeleteBuffers(1, &SkyVbo);
@@ -67,14 +76,71 @@ void USkyGradientPass::DestroyBuffers()
   }
 }
 
-void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
-                            const glm::vec4 &sky_color,
-                            const UUnderwaterFogPass &fog_pass,
-                            const UWorld::EnvironmentState &env,
-                            const RenderSettings &render,
-                            PerformancePreset preset, float elapsed_sec,
-                            const glm::mat3 &inv_view_rot,
-                            const glm::vec3 &camera_pos, float horizon_boost)
+bool USkyGradientPass::UpdateWeatherFieldTexture(const UWorld &world,
+                                                 PerformancePreset preset,
+                                                 float elapsed_sec,
+                                                 const glm::vec3 &camera_pos)
+{
+  const int resolution = preset == PerformancePreset::Fast ||
+                                 preset == PerformancePreset::Performance
+                             ? 128
+                             : 256;
+  constexpr float kWorldSize = 8192.0f;
+  constexpr float kCenterQuantum = 512.0f;
+  const glm::vec2 center(
+      std::floor(camera_pos.x / kCenterQuantum) * kCenterQuantum +
+          kCenterQuantum * 0.5f,
+      std::floor(camera_pos.z / kCenterQuantum) * kCenterQuantum +
+          kCenterQuantum * 0.5f);
+  const bool resized = resolution != WeatherFieldResolution;
+  const bool moved = center != WeatherFieldCenter;
+  const bool stale = WeatherFieldLastUpdateSec < 0.0f ||
+                     elapsed_sec - WeatherFieldLastUpdateSec >= 1.0f;
+  const bool changed = resized || moved || stale;
+  if (changed)
+  {
+    WeatherFieldWorldSize = kWorldSize;
+    WeatherFieldResolution = resolution;
+    WeatherFieldCenter = center;
+    WeatherFieldLastUpdateSec = elapsed_sec;
+    world.BuildWeatherCoverageField(center, kWorldSize, resolution,
+                                    WeatherFieldPixels);
+  }
+  if (WeatherFieldPixels.empty())
+  {
+    return false;
+  }
+  if (WeatherFieldTexture == 0)
+  {
+    glGenTextures(1, &WeatherFieldTexture);
+  }
+  if (WeatherFieldTexture == 0)
+  {
+    return false;
+  }
+  if (changed)
+  {
+    glActiveTexture(RenderTextureUnitEnum(RenderTextureUnit::WeatherField));
+    glBindTexture(GL_TEXTURE_2D, WeatherFieldTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, resolution, resolution, 0, GL_RED,
+                 GL_UNSIGNED_BYTE, WeatherFieldPixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+  }
+  return true;
+}
+
+void USkyGradientPass::Draw(
+    const std::shared_ptr<UShaderProgram> &sky_shader,
+    const glm::vec4 &sky_color, const UWorld &world,
+    const UUnderwaterFogPass &fog_pass, const UWorld::EnvironmentState &env,
+    const RenderSettings &render, PerformancePreset preset, float elapsed_sec,
+    const glm::mat3 &inv_view_rot, const glm::vec3 &camera_pos,
+    const glm::mat4 &inv_projection, float horizon_boost)
 {
   if (!sky_shader || !sky_shader->IsValid())
   {
@@ -88,6 +154,8 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   }
 
   const auto t_begin = std::chrono::high_resolution_clock::now();
+  const bool weather_field_valid =
+      UpdateWeatherFieldTexture(world, preset, elapsed_sec, camera_pos);
 
   glDisable(GL_DEPTH_TEST);
 
@@ -97,7 +165,8 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetMat4("mvp_matrix", sky_matrix);
   sky_shader->SetVec4("skyColor", sky_color);
   sky_shader->SetVec3("uFogColor", fog_pass.GetFogColor());
-  sky_shader->SetFloat("uUnderwaterSkyAmount", fog_pass.GetUnderwaterSkyAmount());
+  sky_shader->SetFloat("uUnderwaterSkyAmount",
+                       fog_pass.GetUnderwaterSkyAmount());
   sky_shader->SetFloat("uScreenWaterlineNdc", fog_pass.GetScreenWaterlineNdc());
   sky_shader->SetVec3("uUnderwaterFogColor", fog_pass.GetUnderwaterFogColor());
   sky_shader->SetFloat("uTimeOfDay", env.TimeOfDayNormalized);
@@ -106,26 +175,21 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetFloat("uCloudCoverage",
                        std::clamp(env.CloudCoverage, 0.0f, 1.0f));
   sky_shader->SetFloat("uElapsedSec", std::max(0.0f, elapsed_sec));
+  sky_shader->SetVec2("uWindDirection", env.WindDirection);
+  sky_shader->SetFloat("uWindStrength",
+                       std::clamp(env.WindStrength, 0.0f, 1.0f));
   sky_shader->SetMat3("uInvViewRot", inv_view_rot);
+  sky_shader->SetMat4("uInvProjection", inv_projection);
+  sky_shader->SetFloat("uPerspective",
+                       std::abs(inv_projection[3][3]) < 1.0e-6f ? 1.0f : 0.0f);
+  sky_shader->SetInt(
+      "uWeatherField",
+      RenderTextureUnitIndex(RenderTextureUnit::WeatherField));
+  sky_shader->SetFloat("uWeatherFieldValid", weather_field_valid ? 1.0f : 0.0f);
+  sky_shader->SetVec2("uWeatherFieldCenter", WeatherFieldCenter);
+  sky_shader->SetFloat("uWeatherFieldWorldSize", WeatherFieldWorldSize);
   sky_shader->SetMat3("uStarCelestialInv", env.StarCelestialInv);
   sky_shader->SetVec3("uCameraPos", camera_pos);
-  int cloud_steps = 12;
-  if (preset == PerformancePreset::Fast ||
-      preset == PerformancePreset::Performance)
-  {
-    cloud_steps = 6;
-  }
-  else if (preset == PerformancePreset::Quality)
-  {
-    cloud_steps = 18;
-  }
-  sky_shader->SetInt("uCloudSteps", cloud_steps);
-  sky_shader->SetFloat(
-      "uCloudJitter",
-      (preset == PerformancePreset::Fast ||
-       preset == PerformancePreset::Performance)
-          ? 0.35f
-          : (preset == PerformancePreset::Quality ? 0.8f : 0.6f));
   constexpr int kMaxBodies = 4;
   sky_shader->SetInt("uCelestialCount",
                      static_cast<int>(std::min<size_t>(
@@ -157,13 +221,25 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetFloat(
       "uFogHorizonBlend",
       std::clamp(fog_pass.GetFogHorizonBlend() + horizon_boost, 0.0f, 1.0f));
-  sky_shader->SetFloat("uHorizonFogRadial", render.HorizonFogRadial ? 1.0f : 0.0f);
+  sky_shader->SetFloat("uHorizonFogRadial",
+                       render.HorizonFogRadial ? 1.0f : 0.0f);
   sky_shader->SetFloat("uHorizonFogCelestialTint",
                        render.HorizonFogCelestialTint ? 1.0f : 0.0f);
-  sky_shader->SetFloat("uFogHorizonElevation", fog_pass.GetFogHorizonElevation());
+  sky_shader->SetFloat("uFogHorizonElevation",
+                       fog_pass.GetFogHorizonElevation());
 
   glBindVertexArray(SkyVao);
+  if (weather_field_valid)
+  {
+    glActiveTexture(RenderTextureUnitEnum(RenderTextureUnit::WeatherField));
+    glBindTexture(GL_TEXTURE_2D, WeatherFieldTexture);
+  }
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  if (weather_field_valid)
+  {
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+  }
   glBindVertexArray(0);
   sky_shader->Unuse();
 

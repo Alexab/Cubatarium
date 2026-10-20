@@ -1,11 +1,12 @@
 #include "World/Chunks/ChunkBuffer.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
-#include "Blocks/BlockRegistry.h"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 namespace cutum
 {
@@ -13,8 +14,8 @@ namespace cutum
 namespace
 {
 
-int TreeFeatureBlockRank(
-    BlockId id, const std::unordered_map<BlockId, int> &treeBlockRanks)
+int TreeFeatureBlockRank(BlockId id,
+                         const std::unordered_map<BlockId, int> &treeBlockRanks)
 {
   if (id == BLOCK_AIR)
   {
@@ -24,10 +25,10 @@ int TreeFeatureBlockRank(
   return it == treeBlockRanks.end() ? 0 : it->second;
 }
 
-bool ShouldApplyCrossChunkBlock(const UBlockWorld &world,
-                                const std::unordered_map<BlockId, int>
-                                    &treeBlockRanks,
-                                glm::ivec3 pos, BlockId incoming)
+bool ShouldApplyCrossChunkBlock(
+    const UBlockWorld &world,
+    const std::unordered_map<BlockId, int> &treeBlockRanks, glm::ivec3 pos,
+    BlockId incoming)
 {
   const BlockId current = world.GetBlock(pos);
   if (current == BLOCK_AIR)
@@ -118,17 +119,29 @@ void UChunkBuffer::SetChunkLightData(
   ChunkLight = light;
 }
 
-void UChunkBuffer::SetWorldGenOwnerChunk(glm::ivec3 chunkCoord,
-                                         const UBlockRegistry &registry,
-                                         const std::vector<std::pair<BlockId, int>>
-                                             &treeBlockRanks)
+void UChunkBuffer::SetChunkWeatherState(glm::ivec3 chunkCoord, float wetness,
+                                        double last_update_sec)
+{
+  HasChunkWeather = true;
+  ChunkWeatherCoord = chunkCoord;
+  ChunkWetness =
+      std::clamp(std::isfinite(wetness) ? wetness : 0.0f, 0.0f, 1.0f);
+  ChunkWeatherLastUpdateSec =
+      std::isfinite(last_update_sec) ? std::max(0.0, last_update_sec) : 0.0;
+}
+
+void UChunkBuffer::SetWorldGenOwnerChunk(
+    glm::ivec3 chunkCoord, const UBlockRegistry &registry,
+    const std::vector<std::pair<BlockId, int>> &treeBlockRanks)
 {
   WorldGenOwnerChunk = chunkCoord;
   HasWorldGenOwnerChunk = true;
   WorldGenTreeBlockRanks.clear();
-  const std::array<std::pair<const char *, int>, 4> builtins = {{
-      {"tree_log", 3}, {"tree_bark", 3}, {"tree_branch", 2},
-      {"tree_leaves", 1}}};
+  const std::array<std::pair<const char *, int>, 4> builtins = {
+      {{"tree_log", 3},
+       {"tree_bark", 3},
+       {"tree_branch", 2},
+       {"tree_leaves", 1}}};
   for (const auto &[name, rank] : builtins)
   {
     const BlockId id = registry.GetIdByTypeName(name);
@@ -174,8 +187,7 @@ uint8_t UChunkBuffer::GetLightPacked(glm::ivec3 worldPos) const
     if (local.x >= 0 && local.x < CHUNK_SIZE && local.y >= 0 &&
         local.y < CHUNK_SIZE && local.z >= 0 && local.z < CHUNK_SIZE)
     {
-      const int index =
-          local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z);
+      const int index = local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z);
       return ChunkLight[static_cast<size_t>(index)];
     }
   }
@@ -196,8 +208,8 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
         UChunkManager::WorldToChunk(entry.first) == WorldGenOwnerChunk;
     const int incomingTreeRank =
         TreeFeatureBlockRank(entry.second, WorldGenTreeBlockRanks);
-    const int currentTreeRank =
-        TreeFeatureBlockRank(world.GetBlock(entry.first), WorldGenTreeBlockRanks);
+    const int currentTreeRank = TreeFeatureBlockRank(
+        world.GetBlock(entry.first), WorldGenTreeBlockRanks);
     if ((HasWorldGenOwnerChunk && !ownerChunk &&
          !ShouldApplyCrossChunkBlock(world, WorldGenTreeBlockRanks, entry.first,
                                      entry.second)) ||
@@ -211,8 +223,7 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
     const auto fluid_it = FluidPacked.find(entry.first);
     if (fluid_it != FluidPacked.end() && fluid_it->second != 0)
     {
-      world.SetFluidState(entry.first,
-                         UnpackFluidCellState(fluid_it->second));
+      world.SetFluidState(entry.first, UnpackFluidCellState(fluid_it->second));
     }
   }
   if (HasChunkLight)
@@ -221,6 +232,14 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
     if (UChunk *chunk = world.GetChunkManager().GetChunk(ChunkLightCoord))
     {
       chunk->GetLightDataMutable() = ChunkLight;
+    }
+  }
+  if (HasChunkWeather)
+  {
+    world.GetChunkManager().EnsureChunk(ChunkWeatherCoord);
+    if (UChunk *chunk = world.GetChunkManager().GetChunk(ChunkWeatherCoord))
+    {
+      chunk->SetWeatherState(ChunkWetness, ChunkWeatherLastUpdateSec);
     }
   }
   for (const auto &entry : LightPacked)
@@ -233,13 +252,12 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
       continue;
     }
     const glm::ivec3 local = UChunkManager::WorldToLocal(entry.first);
-    chunk->GetLightDataMutable()[static_cast<size_t>(UChunk::LocalIndex(local))] =
-        entry.second;
+    chunk->GetLightDataMutable()[static_cast<size_t>(
+        UChunk::LocalIndex(local))] = entry.second;
   }
 }
 
-void UChunkBuffer::ApplyToChunk(UBlockWorld &world,
-                                glm::ivec3 chunkCoord) const
+void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
 {
   if (IsEmpty())
   {
@@ -261,8 +279,8 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world,
     const auto fluid_it = FluidPacked.find(entry.first);
     if (fluid_it != FluidPacked.end() && fluid_it->second != 0)
     {
-      world.SetFluidStateInChunk(
-          *chunk, entry.first, UnpackFluidCellState(fluid_it->second));
+      world.SetFluidStateInChunk(*chunk, entry.first,
+                                 UnpackFluidCellState(fluid_it->second));
     }
   }
 
@@ -270,6 +288,11 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world,
   {
     assert(ChunkLightCoord == chunkCoord);
     chunk->GetLightDataMutable() = ChunkLight;
+  }
+  if (HasChunkWeather)
+  {
+    assert(ChunkWeatherCoord == chunkCoord);
+    chunk->SetWeatherState(ChunkWetness, ChunkWeatherLastUpdateSec);
   }
 
   std::array<uint8_t, CHUNK_VOLUME> *light_data = nullptr;
@@ -306,6 +329,10 @@ void UChunkBuffer::Clear()
   LightPacked.clear();
   HasChunkLight = false;
   ChunkLight.fill(0);
+  HasChunkWeather = false;
+  ChunkWeatherCoord = glm::ivec3(0);
+  ChunkWetness = 0.0f;
+  ChunkWeatherLastUpdateSec = 0.0;
   HasBounds = false;
   MinY = 0;
   MaxY = -1;

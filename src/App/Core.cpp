@@ -612,7 +612,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     {
       WorldInstance->ClearWeatherManualOverride();
     }
-    WorldInstance->SetWeatherOverlayEnabled(false);
+    WorldInstance->SetWeatherOverlayEnabled(true);
     WorldInstance->SetWeatherParticlesEnabled(true);
     WorldInstance->SetLightingDebugEnabled(false);
     if (GeometryEngineInstance)

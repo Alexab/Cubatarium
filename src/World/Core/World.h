@@ -20,6 +20,7 @@
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Environment/EnvironmentConfig.h"
+#include "World/Environment/WeatherField.h"
 #include "World/Environment/WorldEnvironment.h"
 #include "World/View/WorldViewSettings.h"
 #include "Game/WorldDifficulty.h"
@@ -255,6 +256,7 @@ public:
     float Cloudiness{0.0f};
     float PrecipitationIntensity{0.0f};
     float WindStrength{0.2f};
+    glm::vec2 WindDirection{1.0f, 0.0f};
     float WeatherFogMultiplier{1.0f};
     float WeatherSkyAttenuation{1.0f};
     float DayNightFactor{1.0f};
@@ -1042,6 +1044,15 @@ public:
   bool AllowsAsyncLighting() const;
   void RefreshStreamerSettings();
   void TickEnvironment(float dtSeconds);
+  BiomeEnvironmentSample SampleBiomeEnvironmentAt(
+      const glm::vec3 &position) const;
+  WeatherSample SampleWeatherAt(const glm::vec3 &position) const;
+  double GetWeatherSimulationTimeSec() const;
+  void UpdateChunkWeatherState(glm::ivec3 chunk_coord,
+                               const WeatherSample &weather);
+  void BuildWeatherCoverageField(const glm::vec2 &center, float world_size,
+                                 int resolution,
+                                 std::vector<uint8_t> &out_pixels) const;
   const EnvironmentState &GetEnvironmentState() const
   {
     return EnvironmentStateData;
@@ -1078,6 +1089,7 @@ public:
   float GetCelestialHorizonFade() const;
   void SetWeatherAutoEnabled(bool enabled);
   bool IsWeatherAutoEnabled() const;
+  bool HasRegionalWeather() const;
   void ClearWeatherManualOverride();
   std::string GetWeatherAutoStatusText() const;
   std::string GetWeatherName() const;
@@ -1641,6 +1653,15 @@ private:
   bool FoliageClimbEnabled{true};
   RenderSettings Render;
   EnvironmentState EnvironmentStateData;
+  WeatherFrontField WeatherFrontFieldData;
+  double LastChunkWeatherUpdateSec{-1.0};
+  mutable bool CachedWeatherBiomeSampleValid{false};
+  mutable glm::ivec2 CachedWeatherBiomeColumn{0};
+  mutable uint32_t CachedWeatherBiomeSampleAge{0};
+  mutable BiomeEnvironmentSample CachedWeatherBiomeSample;
+  mutable std::unordered_map<uint64_t, BiomeEnvironmentSample>
+      WeatherBiomeSampleCache;
+  mutable const void *WeatherBiomeCachePackSnapshot{nullptr};
   EnvironmentConfig EnvironmentSettingsData;
   WorldViewSettings ViewSettings;
   LightingSettings LightingSettingsData;
