@@ -158,6 +158,16 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
   route.baseHeightBlocks +=
       land * (broadNoise * broadAmplitude +
               regionalNoise * regionalAmplitude + rollingNoise * rollingAmplitude);
+  if (Params.routerV3)
+  {
+    // Mountains rise from inland high ground, not straight out of the sea:
+    // fade the uplift by the lowland height reached so far. Without this the
+    // continental shoreline spline is overridden by a 16-20 block coastal cliff
+    // wherever the mountain mask touches the coast.
+    mountainShape *= Smoothstep(static_cast<float>(SeaLevel),
+                                static_cast<float>(SeaLevel) + 30.0f,
+                                route.baseHeightBlocks);
+  }
   route.baseHeightBlocks +=
       mountainShape *
       (mountainUplift +
