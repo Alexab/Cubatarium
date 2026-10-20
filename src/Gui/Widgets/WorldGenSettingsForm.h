@@ -34,6 +34,10 @@ public:
   void SetHintText(const std::string &text);
   void SetForNewWorldDefaults();
   void SetOnLayoutChanged(std::function<void()> handler);
+  /// The host window owns the Basic/Advanced tab bar: the form creates none
+  /// (call before BuildInto) and follows SetActiveTab().
+  void UseExternalTabs() { ExternalTabs = true; }
+  void SetActiveTab(int tab);
   ProceduralSettings ReadSettings() const;
 
   void BuildInto(UGuiPanel &panel);
@@ -64,6 +68,7 @@ private:
   bool Built{false};
   bool ForNewWorldScreen{false};
   bool SeedBlank{false};
+  bool ExternalTabs{false};
   int ActiveTab{0};
   std::function<void()> OnLayoutChanged;
 

@@ -477,6 +477,17 @@ void UWorldGenSettingsForm::OnTerrainBackendSelected(int index)
   }
 }
 
+void UWorldGenSettingsForm::SetActiveTab(int tab)
+{
+  tab = tab == 0 ? 0 : 1;
+  if (TabBar)
+  {
+    TabBar->SetActiveTab(tab);
+  }
+  ActiveTab = tab;
+  UpdateFieldVisibility();
+}
+
 void UWorldGenSettingsForm::OnTabChanged(int tab)
 {
   ActiveTab = tab;
@@ -562,12 +573,8 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
       FormSettings.TerrainBackendMode == TerrainBackend::Heightmap ||
       FormSettings.WorldGenProfileVersion < 3;
 
-  // Basic tab.
-  vis(GeneratorCaption, true, basic);
-  vis(GeneratorList, true, basic);
-  vis(GeneratorDescLabel, true, basic);
-  vis(PresetLabel, true, basic);
-  vis(PresetList, true, basic);
+  // Basic tab: seed, the three main sliders and the five main checkboxes.
+  SetWidgetVisible(HintLabel, !ExternalTabs || advanced);
   vis(SeedLabel, true, basic);
   vis(SeedInput, true, basic);
   vis(FlatYLabel, showFlat, basic);
@@ -585,6 +592,11 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   vis(WaterBox, showFluids, basic);
 
   // Advanced tab.
+  vis(GeneratorCaption, true, advanced);
+  vis(GeneratorList, true, advanced);
+  vis(GeneratorDescLabel, true, advanced);
+  vis(PresetLabel, true, advanced);
+  vis(PresetList, true, advanced);
   vis(SeaLevelLabel, true, advanced);
   vis(SeaLevelField, true, advanced);
   vis(MaxHeightLabel, true, advanced);
@@ -705,12 +717,15 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
 {
   HintLabel = AddLabel(panel, "Defaults for the next new worlds.");
 
-  auto tabs = std::make_unique<UGuiTabBar>(Theme);
-  TabBar = tabs.get();
-  tabs->SetTabs({"Basic", "Advanced"});
-  tabs->SetActiveTab(ActiveTab);
-  tabs->SetOnTabChanged([this](int tab) { OnTabChanged(tab); });
-  panel.AddChild(std::move(tabs));
+  if (!ExternalTabs)
+  {
+    auto tabs = std::make_unique<UGuiTabBar>(Theme);
+    TabBar = tabs.get();
+    tabs->SetTabs({"Basic", "Advanced"});
+    tabs->SetActiveTab(ActiveTab);
+    tabs->SetOnTabChanged([this](int tab) { OnTabChanged(tab); });
+    panel.AddChild(std::move(tabs));
+  }
 
   // ---- Basic tab -------------------------------------------------------
   GeneratorCaption = AddLabel(panel, "Generator:");
@@ -948,9 +963,6 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   span(TabBar, 30);
 
   // Basic tab.
-  pair(GeneratorCaption, GeneratorList, 150);
-  span(GeneratorDescLabel, 36);
-  pair(PresetLabel, PresetList, 108);
   pair(SeedLabel, SeedInput, 32);
   pair(FlatYLabel, FlatYField, 32);
   pair(TerrainRoughnessLabel, TerrainRoughnessField, 32);
@@ -961,6 +973,9 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   twin(WaterBox, nullptr);
 
   // Advanced tab.
+  pair(GeneratorCaption, GeneratorList, 150);
+  span(GeneratorDescLabel, 36);
+  pair(PresetLabel, PresetList, 108);
   pair(SeaLevelLabel, SeaLevelField, 32);
   pair(MaxHeightLabel, MaxHeightField, 32);
   pair(BedrockTopYLabel, BedrockTopYField, 32);
