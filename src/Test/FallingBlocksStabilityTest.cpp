@@ -63,6 +63,25 @@ int main()
   Expect(first == second, "falling column simulation must be deterministic");
   Expect(first != 0ULL, "falling column must change world state");
 
+  constexpr cutum::BlockId kSand = 42;
+  const cutum::UBlockDefinitionStorage definitions = MakeDefinitions(kSand);
+  cutum::UBlockWorld negative_world;
+  negative_world.SetVerticalProfile(
+      cutum::WorldVerticalProfile(0, 319, 63, 0));
+  negative_world.SetBlock(glm::ivec3(0, 0, 0), kSand);
+  Expect(!cutum::UFallingBlockRules::CanFall(
+             definitions, negative_world, glm::ivec3(0, 0, 0)),
+         "default Y=0 floor remains closed");
+  Expect(cutum::UFallingBlockRules::TryApplyFall(
+             definitions, negative_world, glm::ivec3(0, 0, 0), -64),
+         "falling block can cross Y=0 in the extended world");
+  Expect(negative_world.GetBlock(glm::ivec3(0, -1, 0)) == kSand,
+         "falling block is installed in the negative slice");
+  negative_world.SetBlock(glm::ivec3(1, -64, 0), kSand);
+  Expect(!cutum::UFallingBlockRules::CanFall(
+             definitions, negative_world, glm::ivec3(1, -64, 0), -64),
+         "falling block stops at the configured world floor");
+
   std::cout << "falling_blocks_stability_test: OK" << std::endl;
   return 0;
 }

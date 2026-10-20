@@ -20,5 +20,13 @@
     "deadbush",
     "deadbush"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }

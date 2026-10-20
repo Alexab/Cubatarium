@@ -1,5 +1,6 @@
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 #include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include <algorithm>
 #include <cmath>
 
@@ -9,35 +10,81 @@ namespace cutum
 namespace
 {
 
-float SplineHeightFromContinental(float c, int seaLevel, int maxHeight)
+float SplineHeightFromContinental(float c, int seaLevel, int maxHeight,
+                                  int minHeight, bool gentleShoreline)
 {
-  const float range = static_cast<float>(std::max(8, maxHeight - seaLevel));
+  const float landRange =
+      static_cast<float>(std::max(8, maxHeight - seaLevel));
   const float u = std::clamp(c, 0.0f, 1.0f);
 
-  const float y_deep = seaLevel - range * 0.20f;
-  const float y_shallow = seaLevel - range * 0.06f;
-  const float y_coast = seaLevel + range * 0.01f;
-  const float y_low = seaLevel + range * 0.08f;
-  const float y_hills = seaLevel + range * 0.16f;
-  const float y_high = seaLevel + range * 0.24f;
+  const PackHeightConfig &height_config = UWorldGenPack::HeightConfig();
+  const PackHeightConfig::OceanProfile &profile = height_config.Ocean;
+  const bool signed_ocean_profile = height_config.SchemaVersion >= 2;
+  const float oceanRange = static_cast<float>(std::max(
+      8, signed_ocean_profile ? seaLevel - minHeight : maxHeight - seaLevel));
+  const float y_deep = seaLevel - oceanRange * profile.DeepOceanDepthRatio;
+  const float y_shelf = seaLevel - oceanRange * profile.ShelfDepthRatio;
+  const float y_coast = seaLevel - oceanRange * profile.CoastDepthRatio;
+  const float y_lowland = seaLevel + landRange * profile.LowlandHeightRatio;
+  const float y_hills = seaLevel + landRange * profile.HillHeightRatio;
+  const float y_highland = seaLevel + landRange * profile.HighlandHeightRatio;
 
-  if (u < 0.25f)
+  if (gentleShoreline)
   {
-    const float t = u / 0.25f;
-    return y_deep + (y_shallow - y_deep) * Smoothstep(0.0f, 1.0f, t);
+    // Profile 3: a broad, shallow shelf so the waterline is crossed on a
+    // gentle slope (Minecraft beaches), with the steep part kept offshore.
+    const float y_near = seaLevel - oceanRange * 0.12f;
+    const float y_wade = seaLevel - 4.0f;
+    const float y_beach = seaLevel + 1.5f;
+    struct Node
+    {
+      float u;
+      float y;
+    };
+    const Node nodes[] = {{0.0f, y_deep},
+                          {profile.DeepOceanEnd, y_shelf},
+                          {profile.ShelfEnd, y_near},
+                          {0.52f, y_wade},
+                          {0.57f, y_beach},
+                          {profile.CoastEnd, y_lowland},
+                          {0.90f, y_hills},
+                          {1.0f, y_highland}};
+    for (size_t i = 1; i < sizeof(nodes) / sizeof(nodes[0]); ++i)
+    {
+      if (u <= nodes[i].u || i + 1 == sizeof(nodes) / sizeof(nodes[0]))
+      {
+        const float span = std::max(0.0001f, nodes[i].u - nodes[i - 1].u);
+        const float t = std::clamp((u - nodes[i - 1].u) / span, 0.0f, 1.0f);
+        return nodes[i - 1].y +
+               (nodes[i].y - nodes[i - 1].y) * Smoothstep(0.0f, 1.0f, t);
+      }
+    }
+    return y_highland;
   }
-  if (u < 0.50f)
+  if (u < profile.DeepOceanEnd)
   {
-    const float t = (u - 0.25f) / 0.25f;
-    return y_shallow + (y_coast - y_shallow) * Smoothstep(0.0f, 1.0f, t);
+    const float t = u / profile.DeepOceanEnd;
+    return y_deep + (y_shelf - y_deep) * Smoothstep(0.0f, 1.0f, t);
   }
-  if (u < 0.72f)
+  if (u < profile.ShelfEnd)
   {
-    const float t = (u - 0.50f) / 0.22f;
-    return y_coast + (y_hills - y_coast) * Smoothstep(0.0f, 1.0f, t);
+    const float t = (u - profile.DeepOceanEnd) /
+                    (profile.ShelfEnd - profile.DeepOceanEnd);
+    return y_shelf + (y_coast - y_shelf) * Smoothstep(0.0f, 1.0f, t);
   }
-  const float t = (u - 0.72f) / 0.28f;
-  return y_hills + (y_high - y_hills) * Smoothstep(0.0f, 1.0f, t);
+  if (u < profile.CoastEnd)
+  {
+    const float t = (u - profile.ShelfEnd) /
+                    (profile.CoastEnd - profile.ShelfEnd);
+    return y_coast + (y_lowland - y_coast) * Smoothstep(0.0f, 1.0f, t);
+  }
+  if (u < 0.90f)
+  {
+    const float t = (u - profile.CoastEnd) / (0.90f - profile.CoastEnd);
+    return y_lowland + (y_hills - y_lowland) * Smoothstep(0.0f, 1.0f, t);
+  }
+  const float t = (u - 0.90f) / 0.10f;
+  return y_hills + (y_highland - y_hills) * Smoothstep(0.0f, 1.0f, t);
 }
 
 } // namespace
@@ -48,10 +95,26 @@ float PeaksAndValleys(float weirdness)
   return 1.0f - std::fabs(3.0f * std::fabs(w * 2.0f - 1.0f) - 2.0f);
 }
 
-float ContinentalHeightBlocks(float continentalness, int seaLevel, int maxHeight)
+float MountainClimateWeight(const ClimateSample &climate)
+{
+  const float land = Smoothstep(0.38f, 0.58f, climate.continentalness);
+  const float inland = Smoothstep(0.50f, 0.82f, climate.continentalness);
+  const float lowErosion =
+      1.0f - Smoothstep(0.35f, 0.78f, climate.erosion);
+  const float peakValleys =
+      std::clamp(PeaksAndValleys(climate.weirdness), 0.0f, 1.0f);
+  return land * inland * (0.30f + 0.70f * lowErosion) *
+         Smoothstep(0.28f, 0.65f, climate.ridge) *
+         (0.80f + 0.20f * Smoothstep(0.12f, 0.65f, peakValleys));
+}
+
+float ContinentalHeightBlocks(float continentalness, int seaLevel,
+                              int maxHeight, int minHeight,
+                              bool gentleShoreline)
 {
   return SplineHeightFromContinental(std::clamp(continentalness, 0.0f, 1.0f),
-                                     seaLevel, maxHeight);
+                                     seaLevel, maxHeight, minHeight,
+                                     gentleShoreline);
 }
 
 float ErosionAmplitudeMultiplier(float erosion)
@@ -61,7 +124,8 @@ float ErosionAmplitudeMultiplier(float erosion)
 }
 
 float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
-                           int maxHeight, float regionalNoise01,
+                           int maxHeight, int minHeight,
+                           float regionalNoise01,
                            float detailNoise01, float detailWeight,
                            float amplitudeBlocks, float terrainRoughness,
                            int worldX, int worldZ, uint32_t seed,
@@ -97,7 +161,8 @@ float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
   }
 
   const float climate_base =
-      ContinentalHeightBlocks(climate.continentalness, seaLevel, maxHeight);
+      ContinentalHeightBlocks(climate.continentalness, seaLevel, maxHeight,
+                              minHeight);
   const float mid_bias = static_cast<float>(seaLevel) + amplitudeBlocks * 0.12f;
   return (climate_base - mid_bias) + regional_delta + detail_delta + ridge_boost +
          rolling_delta;

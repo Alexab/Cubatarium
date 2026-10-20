@@ -4,12 +4,17 @@
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/BiomeSource.h"
+#include "WorldGen/Sampling/AquiferSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Sampling/CoarseHeightCache.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
+#include <cstdint>
+#include <memory>
 #include <optional>
+#include <unordered_map>
 
 namespace cutum
 {
@@ -30,6 +35,7 @@ struct ComposableWorldGenConfig
   bool Fluids{true};
   bool Ravines{false};
   bool Valleys{false};
+  bool Lakes{false};
   bool Caves{false};
   bool Ores{false};
   bool Vegetation{false};
@@ -38,6 +44,9 @@ struct ComposableWorldGenConfig
   bool Structures{false};
   bool LavaPools{false};
   bool FirePatch{false};
+  bool Geology{false};
+  bool Aquifers{false};
+  bool CaveFeatures{false};
 };
 
 class UComposableWorldGenerator : public IUWorldGenPipeline
@@ -49,6 +58,11 @@ public:
   int SurfaceYAt(int worldX, int worldZ) const override;
 
   ColumnSampleContext BuildColumnSample(int world_x, int world_z) const;
+  int LakeCenterSurfaceYAt(int world_x, int world_z) const;
+  BiomeId BiomeAt3D(int world_x, int world_y, int world_z,
+                    int surface_y) const;
+  BiomeKey BiomeKeyAt3D(int world_x, int world_y, int world_z,
+                        int surface_y) const;
   ColumnLayerRule BuildTerrainRuleFromSample(
       int world_x, int world_z, const ColumnSampleContext &sample) const;
 
@@ -57,6 +71,10 @@ public:
   const UDensityFieldSampler *GetDensitySampler() const
   {
     return DensitySampler.has_value() ? &*DensitySampler : nullptr;
+  }
+  const UAquiferSampler *GetAquiferSampler() const
+  {
+    return AquiferSampler.has_value() ? &*AquiferSampler : nullptr;
   }
   WorldGenContext &GetContext() { return Ctx; }
 
@@ -82,9 +100,12 @@ private:
   WorldGenStageMask StageMask;
   std::optional<UOverworldHeightSampler> HeightSampler;
   std::optional<UDensityFieldSampler> DensitySampler;
+  std::optional<UAquiferSampler> AquiferSampler;
   std::optional<UBiomeSampler> BiomeSampler;
+  std::unique_ptr<IWorldGenBiomeSource> BiomeSource;
   std::optional<UColumnSampleBuilder> SampleBuilder;
   std::optional<UCoarseHeightCache> ChunkCoarseCache;
+  mutable std::unordered_map<uint64_t, int> LakeCenterSurfaceYCache;
   CoarseHeightCallback DirectCoarseHeightFn;
 };
 

@@ -3,11 +3,59 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include "Blocks/BlockRegistry.h"
 #include <algorithm>
 #include <cassert>
 
 namespace cutum
 {
+
+namespace
+{
+
+int TreeFeatureBlockRank(
+    BlockId id, const std::unordered_map<BlockId, int> &treeBlockRanks)
+{
+  if (id == BLOCK_AIR)
+  {
+    return 0;
+  }
+  const auto it = treeBlockRanks.find(id);
+  return it == treeBlockRanks.end() ? 0 : it->second;
+}
+
+bool ShouldApplyCrossChunkBlock(const UBlockWorld &world,
+                                const std::unordered_map<BlockId, int>
+                                    &treeBlockRanks,
+                                glm::ivec3 pos, BlockId incoming)
+{
+  const BlockId current = world.GetBlock(pos);
+  if (current == BLOCK_AIR)
+  {
+    return true;
+  }
+  if (current == incoming)
+  {
+    return false;
+  }
+
+  const int currentRank = TreeFeatureBlockRank(current, treeBlockRanks);
+  const int incomingRank = TreeFeatureBlockRank(incoming, treeBlockRanks);
+  if (currentRank == 0 || incomingRank == 0)
+  {
+    // The target chunk owns its terrain and any features already committed
+    // there. Cross-boundary object voxels only fill empty cells.
+    return false;
+  }
+
+  if (incomingRank != currentRank)
+  {
+    return incomingRank > currentRank;
+  }
+  return incoming < current;
+}
+
+} // namespace
 
 UBlockWorldWriter::UBlockWorldWriter(UBlockWorld &world) : World(world) {}
 
@@ -70,6 +118,34 @@ void UChunkBuffer::SetChunkLightData(
   ChunkLight = light;
 }
 
+void UChunkBuffer::SetWorldGenOwnerChunk(glm::ivec3 chunkCoord,
+                                         const UBlockRegistry &registry,
+                                         const std::vector<std::pair<BlockId, int>>
+                                             &treeBlockRanks)
+{
+  WorldGenOwnerChunk = chunkCoord;
+  HasWorldGenOwnerChunk = true;
+  WorldGenTreeBlockRanks.clear();
+  const std::array<std::pair<const char *, int>, 4> builtins = {{
+      {"tree_log", 3}, {"tree_bark", 3}, {"tree_branch", 2},
+      {"tree_leaves", 1}}};
+  for (const auto &[name, rank] : builtins)
+  {
+    const BlockId id = registry.GetIdByTypeName(name);
+    if (id != BLOCK_AIR)
+    {
+      WorldGenTreeBlockRanks[id] = rank;
+    }
+  }
+  for (const auto &[id, rank] : treeBlockRanks)
+  {
+    if (id != BLOCK_AIR && rank > 0)
+    {
+      WorldGenTreeBlockRanks[id] = std::max(WorldGenTreeBlockRanks[id], rank);
+    }
+  }
+}
+
 BlockId UChunkBuffer::GetBlock(glm::ivec3 worldPos) const
 {
   const auto it = Blocks.find(worldPos);
@@ -115,6 +191,22 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
 {
   for (const auto &entry : Blocks)
   {
+    const bool ownerChunk =
+        !HasWorldGenOwnerChunk ||
+        UChunkManager::WorldToChunk(entry.first) == WorldGenOwnerChunk;
+    const int incomingTreeRank =
+        TreeFeatureBlockRank(entry.second, WorldGenTreeBlockRanks);
+    const int currentTreeRank =
+        TreeFeatureBlockRank(world.GetBlock(entry.first), WorldGenTreeBlockRanks);
+    if ((HasWorldGenOwnerChunk && !ownerChunk &&
+         !ShouldApplyCrossChunkBlock(world, WorldGenTreeBlockRanks, entry.first,
+                                     entry.second)) ||
+        (ownerChunk && incomingTreeRank > 0 && currentTreeRank > 0 &&
+         !ShouldApplyCrossChunkBlock(world, WorldGenTreeBlockRanks, entry.first,
+                                     entry.second)))
+    {
+      continue;
+    }
     world.SetBlock(entry.first, entry.second);
     const auto fluid_it = FluidPacked.find(entry.first);
     if (fluid_it != FluidPacked.end() && fluid_it->second != 0)
@@ -217,6 +309,9 @@ void UChunkBuffer::Clear()
   HasBounds = false;
   MinY = 0;
   MaxY = -1;
+  WorldGenOwnerChunk = glm::ivec3(0);
+  HasWorldGenOwnerChunk = false;
+  WorldGenTreeBlockRanks.clear();
 }
 
 } // namespace cutum

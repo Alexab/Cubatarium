@@ -524,15 +524,15 @@ void UWorldMeshService::RemoveChunk(glm::ivec3 chunk_coord)
   NotifyChunkUnloaded(chunk_coord);
 }
 
-void UWorldMeshService::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
+void UWorldMeshService::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
+                                     int max_cy)
 {
-  Cache.RemoveColumn(ground_coord, max_cy);
+  Cache.RemoveColumn(ground_coord, min_cy, max_cy);
   if (ground_coord.y != 0)
   {
     ground_coord.y = 0;
   }
-  max_cy = std::max(0, max_cy);
-  for (int cy = 0; cy <= max_cy; ++cy)
+  for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     NotifyChunkUnloaded(glm::ivec3(ground_coord.x, cy, ground_coord.z));
   }
@@ -707,7 +707,8 @@ int UWorldMeshService::MarkMissingSlicesDirtyPriority(
 }
 
 int UWorldMeshService::EnqueueColumnMissingDigSeamBelow(
-    const UBlockWorld &world, glm::ivec3 block_pos, int max_enqueue)
+    const UBlockWorld &world, glm::ivec3 block_pos, int max_enqueue,
+    int min_world_y)
 {
   if (max_enqueue <= 0)
   {
@@ -717,7 +718,8 @@ int UWorldMeshService::EnqueueColumnMissingDigSeamBelow(
   const int gz = FloorDiv(block_pos.z, CHUNK_SIZE);
   const int placed_cy = FloorDiv(block_pos.y, CHUNK_SIZE);
   int enqueued = 0;
-  for (int cy = 0; cy < placed_cy && enqueued < max_enqueue; ++cy)
+  for (int cy = FloorDiv(min_world_y, CHUNK_SIZE);
+       cy < placed_cy && enqueued < max_enqueue; ++cy)
   {
     const glm::ivec3 coord(gx, cy, gz);
     const UChunk *chunk = world.GetChunkManager().GetChunk(coord);

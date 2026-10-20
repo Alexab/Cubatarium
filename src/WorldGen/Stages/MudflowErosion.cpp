@@ -22,7 +22,8 @@ bool IsMudflowMovable(BlockId id, const WorldGenContext &ctx)
 
 int TopSolidY(WorldGenContext &ctx, int x, int z, int max_scan_y)
 {
-  return FindTopSolidSurfaceY(ctx.World, ctx.Registry, x, z, max_scan_y);
+  return FindTopSolidSurfaceY(ctx.World, ctx.Registry, x, z, max_scan_y,
+                              ctx.Settings.MinHeight);
 }
 
 } // namespace

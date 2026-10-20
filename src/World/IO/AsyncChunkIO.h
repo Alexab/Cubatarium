@@ -129,6 +129,7 @@ public:
                                 int lastCy, UChunkStorageService &storage,
                                 const std::string &worldFolder);
   void RequestRemoveTerrainColumn(glm::ivec3 groundCoord, int maxWorldY,
+                                  int minWorldY,
                                   UChunkStorageService &storage,
                                   const std::string &worldFolder);
   void RequestSaveColumnLightFlags(

@@ -1,4 +1,5 @@
 #include "WorldGen/Features/ValleyCarver.h"
+#include "WorldGen/Features/RiverField.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
@@ -6,7 +7,6 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include <algorithm>
-#include <array>
 #include <cmath>
 
 namespace cutum
@@ -29,19 +29,57 @@ float ValleyRiverStrengthAt(int x, int z, uint32_t seed,
                             const ValleyParams &params, float river_width)
 {
   const ClimateSample climate = SampleClimate(x, z, seed);
-  const float pv = PeaksAndValleys(climate.weirdness);
-  const float valley_boost = pv < 0.35f ? 1.25f : 1.0f;
-  const float river_noise =
-      NormalizedFBM2D(static_cast<float>(x) * params.riverNoiseScale,
-                      static_cast<float>(z) * params.riverNoiseScale,
-                      seed + 8801, 2, 0.5f, 2.0f);
-  const float width =
-      river_width * (1.0f - climate.erosion * 0.5f) * valley_boost;
-  return Smoothstep(0.50f, 0.72f, (river_noise + 1.0f) * 0.5f) * width;
+  const float profile_width = river_width * params.widthSigma / 2.5f;
+  return SampleRiverChannelStrength(x, z, seed, params.riverNoiseScale,
+                                    profile_width, climate.erosion,
+                                    climate.weirdness, params.warpBlocks);
+}
+
+// 1 on flat lowland, 0 on hillsides and highlands (profile 3).
+float ValleyLowlandFade(int wx, int wz, int surface_y, int sea_level,
+                        const ValleySurfaceYCallback &get_surface_y)
+{
+  const float above_sea = static_cast<float>(surface_y - sea_level);
+  float fade = 1.0f - Smoothstep(6.0f, 30.0f, above_sea);
+  if (fade > 0.0f && get_surface_y)
+  {
+    int max_delta = 0;
+    constexpr int kOffsets[4][2] = {{3, 0}, {-3, 0}, {0, 3}, {0, -3}};
+    for (const auto &offset : kOffsets)
+    {
+      max_delta = std::max(
+          max_delta,
+          std::abs(get_surface_y(wx + offset[0], wz + offset[1]) - surface_y));
+    }
+    fade *= 1.0f - Smoothstep(2.0f, 7.0f, static_cast<float>(max_delta));
+  }
+  return fade;
+}
+
+float SmoothedValleyRiverStrengthAt(int x, int z, uint32_t seed,
+                                    const ValleyParams &params,
+                                    float river_width)
+{
+  float sum = 0.0f;
+  float weight_sum = 0.0f;
+  for (int dz = -2; dz <= 2; ++dz)
+  {
+    for (int dx = -2; dx <= 2; ++dx)
+    {
+      const float weight = static_cast<float>((3 - std::abs(dx)) *
+                                              (3 - std::abs(dz)));
+      sum += ValleyRiverStrengthAt(x + dx, z + dz, seed, params, river_width) *
+             weight;
+      weight_sum += weight;
+    }
+  }
+  return sum / weight_sum;
 }
 
 void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
-                             int column_surface_y, int column_depth, int sea_level)
+                             int column_surface_y, int column_depth,
+                             const ValleyParams &params, float river_strength,
+                             float moisture, int sea_level)
 {
   if (column_depth <= 0)
   {
@@ -60,7 +98,7 @@ void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
       continue;
     }
     const int y = column_surface_y - dy;
-    if (y < 1)
+    if (y < ctx.Settings.MinHeight)
     {
       break;
     }
@@ -71,7 +109,49 @@ void MaterializeValleyColumn(WorldGenContext &ctx, int wx, int wz,
       ctx.World.SetBlock(pos, BLOCK_AIR);
     }
   }
-  ctx.AccumulateDirtyColumn(std::max(1, carved_bottom), column_surface_y);
+  ctx.AccumulateDirtyColumn(std::max(ctx.Settings.MinHeight, carved_bottom),
+                            column_surface_y);
+
+  if (!params.fillWater || !ctx.Settings.FillWater ||
+      ctx.Blocks.Water == BLOCK_AIR ||
+      river_strength < params.waterMinStrength ||
+      moisture < params.waterMinMoisture)
+  {
+    return;
+  }
+
+  const int water_surface_y =
+      column_surface_y - std::max(0, params.waterSurfaceDepth);
+  const int maximum_water_y =
+      sea_level + std::max(0, params.maxWaterElevationAboveSea);
+  if (water_surface_y > maximum_water_y)
+  {
+    return;
+  }
+  const int lower_bound = std::max(ctx.Settings.MinHeight,
+                                   column_surface_y - column_depth + 1);
+  if (water_surface_y < lower_bound)
+  {
+    return;
+  }
+
+  int water_bottom_y = water_surface_y;
+  for (int y = water_surface_y; y >= lower_bound; --y)
+  {
+    const glm::ivec3 pos(wx, y, wz);
+    if (!ctx.World.IsAir(pos))
+    {
+      break;
+    }
+    ctx.World.SetBlock(pos, ctx.Blocks.Water);
+    ctx.World.SetFluidState(pos,
+                            FluidCellState::Source().WithKind(FluidKind::Water));
+    water_bottom_y = y;
+  }
+  if (water_bottom_y < water_surface_y)
+  {
+    ctx.AccumulateDirtyColumn(water_bottom_y, water_surface_y);
+  }
 }
 
 } // namespace
@@ -85,46 +165,36 @@ void CarveColumnValleys(WorldGenContext &ctx, int x, int z, int surface_y,
     return;
   }
 
-  const float river_strength = ValleyRiverStrengthAt(x, z, seed, params, river_width);
+  const float river_strength =
+      SmoothedValleyRiverStrengthAt(x, z, seed, params, river_width);
   if (river_strength <= 0.05f)
   {
     return;
   }
-
-  const float sigma = std::max(0.75f, params.widthSigma);
-  const float sigma_sq = sigma * sigma * 2.0f;
   const int max_depth =
       std::max(1, static_cast<int>(static_cast<float>(params.maxDepth) *
                                    river_strength));
-
-  for (int dx = -3; dx <= 3; ++dx)
+  const int column_surface_y = LocalSurfaceY(x, z, surface_y, get_surface_y);
+  const float moisture = SampleClimate(x, z, seed).moisture;
+  int column_depth = max_depth;
+  if (params.lowlandOnly)
   {
-    for (int dz = -3; dz <= 3; ++dz)
+    column_depth = static_cast<int>(
+        static_cast<float>(column_depth) *
+        ValleyLowlandFade(x, z, column_surface_y, sea_level, get_surface_y));
+    if (column_depth <= 0)
     {
-      const int wx = x + dx;
-      const int wz = z + dz;
-      const float dist_sq = static_cast<float>(dx * dx + dz * dz);
-      const float radial = std::exp(-dist_sq / sigma_sq);
-      int column_depth =
-          static_cast<int>(static_cast<float>(max_depth) * radial);
-      if (column_depth <= 0)
-      {
-        continue;
-      }
-
-      const int column_surface_y =
-          LocalSurfaceY(wx, wz, surface_y, get_surface_y);
-      if (column_surface_y <= sea_level + 2)
-      {
-        column_depth = static_cast<int>(
-            static_cast<float>(column_depth) * params.aquaticDepthScale);
-        column_depth = std::max(1, column_depth);
-      }
-
-      MaterializeValleyColumn(ctx, wx, wz, column_surface_y, column_depth,
-                              sea_level);
+      return;
     }
   }
+  if (column_surface_y <= sea_level + 2)
+  {
+    column_depth = static_cast<int>(
+        static_cast<float>(column_depth) * params.aquaticDepthScale);
+    column_depth = std::max(1, column_depth);
+  }
+  MaterializeValleyColumn(ctx, x, z, column_surface_y, column_depth, params,
+                          river_strength, moisture, sea_level);
 }
 
 void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
@@ -137,80 +207,35 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
     return;
   }
 
-  std::array<std::array<int, CHUNK_SIZE>, CHUNK_SIZE> surface_y{};
-  std::array<std::array<int, CHUNK_SIZE>, CHUNK_SIZE> carve_depth{};
-
   for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {
     for (int lx = 0; lx < CHUNK_SIZE; ++lx)
     {
       const int wx = base_x + lx;
       const int wz = base_z + lz;
-      surface_y[static_cast<size_t>(lz)][static_cast<size_t>(lx)] =
-          LocalSurfaceY(wx, wz, sea_level, get_surface_y);
-    }
-  }
-
-  const float sigma = std::max(0.75f, params.widthSigma);
-  const float sigma_sq = sigma * sigma * 2.0f;
-
-  for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-  {
-    for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-    {
-      const int x = base_x + lx;
-      const int z = base_z + lz;
       const float river_strength =
-          ValleyRiverStrengthAt(x, z, seed, params, river_width);
+          SmoothedValleyRiverStrengthAt(wx, wz, seed, params, river_width);
       if (river_strength <= 0.05f)
       {
         continue;
       }
-
-      int max_depth =
+      const int column_surface_y =
+          LocalSurfaceY(wx, wz, sea_level, get_surface_y);
+      const float moisture = SampleClimate(wx, wz, seed).moisture;
+      int column_depth =
           std::max(1, static_cast<int>(static_cast<float>(params.maxDepth) *
                                        river_strength));
-
-      for (int dz = -3; dz <= 3; ++dz)
+      if (params.lowlandOnly)
       {
-        for (int dx = -3; dx <= 3; ++dx)
+        column_depth = static_cast<int>(
+            static_cast<float>(column_depth) *
+            ValleyLowlandFade(wx, wz, column_surface_y, sea_level,
+                              get_surface_y));
+        if (column_depth <= 0)
         {
-          const int tlx = lx + dx;
-          const int tlz = lz + dz;
-          if (tlx < 0 || tlx >= CHUNK_SIZE || tlz < 0 || tlz >= CHUNK_SIZE)
-          {
-            continue;
-          }
-          const float dist_sq = static_cast<float>(dx * dx + dz * dz);
-          const float radial = std::exp(-dist_sq / sigma_sq);
-          const int column_depth =
-              static_cast<int>(static_cast<float>(max_depth) * radial);
-          if (column_depth <= 0)
-          {
-            continue;
-          }
-          int &slot =
-              carve_depth[static_cast<size_t>(tlz)][static_cast<size_t>(tlx)];
-          slot = std::max(slot, column_depth);
+          continue;
         }
       }
-    }
-  }
-
-  for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-  {
-    for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-    {
-      int column_depth =
-          carve_depth[static_cast<size_t>(lz)][static_cast<size_t>(lx)];
-      if (column_depth <= 0)
-      {
-        continue;
-      }
-      const int wx = base_x + lx;
-      const int wz = base_z + lz;
-      const int column_surface_y =
-          surface_y[static_cast<size_t>(lz)][static_cast<size_t>(lx)];
       if (column_surface_y <= sea_level + 2)
       {
         column_depth = static_cast<int>(
@@ -218,7 +243,7 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
         column_depth = std::max(1, column_depth);
       }
       MaterializeValleyColumn(ctx, wx, wz, column_surface_y, column_depth,
-                              sea_level);
+                              params, river_strength, moisture, sea_level);
     }
   }
 }

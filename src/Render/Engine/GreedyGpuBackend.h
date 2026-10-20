@@ -34,6 +34,8 @@ struct GreedyGpuBatch
   size_t vboCapacityBytes{0};
   size_t eboCapacityBytes{0};
   bool pooled{false};
+  /// Alpha-discard mode copied from the published CPU mesh batch.
+  bool AlphaCutout{false};
   size_t vboByteOffset{0};
   size_t eboByteOffset{0};
   uint64_t poolAllocationId{0};

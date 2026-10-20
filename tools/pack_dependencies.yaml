@@ -11,6 +11,11 @@ packs:
     conflicts: []
     worldgen_role: secondary
 
+  cubatarium_geology_cc0:
+    depends: []
+    conflicts: []
+    worldgen_role: secondary
+
   kenney_voxel_16:
     depends: []
     conflicts: []

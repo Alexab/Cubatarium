@@ -132,6 +132,38 @@ tools/debug_uv_overlays/
 /audit_report.json
 /build*/
 
+# Generated runtime / QA output in bin. Keep masks scoped so useful files can
+# still be added elsewhere under bin. Existing tracked baselines remain tracked;
+# intentionally promoted reports/captures can be added with `git add -f`.
+/bin/flight_captures/
+/bin/suite_reports/
+/bin/research_*/
+/bin/worldgen_surface_diag_*/
+/bin/Release/
+/bin/Testing/
+/bin/tmp/
+/bin/tmp_*
+/bin/audit_biome_grid_*.csv
+/bin/world200_*.csv
+/bin/world200_*.json
+/bin/world200_*_artifacts/
+/bin/worldgen_*.csv
+/bin/worldgen_*.json
+/bin/diag_*.out
+/bin/CTestTestfile.cmake
+/bin/Cubatarium.exe.locked*
+/bin/_own_*_commit.bat
+/bin/_v*_commit*.bat
+/bin/tmp_commit_*.bat
+
+# Local editor plans and dated investigation notes, not project source docs.
+/.cursor/plans/
+/docs/streaming/A40_*.md
+
+# Stray files created by local tools in the repository root.
+/%s
+/1
+
 # Generated code audit artifacts (orchestrator writes here)
 /audit/*
 !/audit/.gitignore

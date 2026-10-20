@@ -91,7 +91,7 @@ def main() -> int:
     parser.add_argument(
         "--terrain-backend",
         type=str,
-        default="heightmap",
+        default="density_3d",
         help="Terrain backend passed to --create-world (heightmap or density_3d)",
     )
     parser.add_argument(
@@ -105,6 +105,8 @@ def main() -> int:
         help="Fast smoke: create-world + chunk file only (skip metrics/determinism)",
     )
     args = parser.parse_args()
+    exe = args.exe if args.exe.is_absolute() else (REPO / args.exe).resolve()
+    cwd = args.cwd if args.cwd.is_absolute() else (REPO / args.cwd).resolve()
 
     if validate_biome_features is not None:
         biome_failures = validate_biome_features()
@@ -116,7 +118,7 @@ def main() -> int:
 
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
     thresholds = dict(baseline.get("thresholds", {}))
-    thresholds["max_height"] = baseline.get("max_height", 128)
+    thresholds["max_height"] = baseline.get("max_height", 319)
     seeds = parse_seeds(args.seeds, baseline.get("reference_seeds", [42, 12354, 20240625]))
     refs = REPO / "content" / "worldgen_refs.json"
     spawn_radius = baseline.get("spawn_radius", 48)
@@ -130,15 +132,15 @@ def main() -> int:
         for seed in seeds:
             suffix = "" if backend == "heightmap" else f"_{backend}"
             world_name = f"CI_{seed}{suffix}"
-            world_dir = args.cwd / "worlds" / world_name
-            report_path = args.cwd / f"create_world_{seed}{suffix}.json"
+            world_dir = exe.parent / "worlds" / world_name
+            report_path = (cwd / f"create_world_{seed}{suffix}.json").resolve()
             if world_dir.is_dir() and not args.keep_worlds:
                 shutil.rmtree(world_dir, ignore_errors=True)
 
             try:
                 run_create(
-                    args.exe,
-                    args.cwd,
+                    exe,
+                    cwd,
                     seed,
                     world_name,
                     radius_chunks,
@@ -153,6 +155,9 @@ def main() -> int:
                 continue
 
             report = json.loads(report_path.read_text(encoding="utf-8"))
+            reported_world = report.get("world_path")
+            if reported_world:
+                world_dir = Path(reported_world).resolve()
             if not report.get("success"):
                 failures.append(
                     f"backend={backend} seed {seed}: report success=false: "
@@ -187,7 +192,7 @@ def main() -> int:
                 refs,
                 repo_root=REPO,
                 spawn_radius=spawn_radius,
-                max_height=baseline.get("max_height", 128),
+                max_height=baseline.get("max_height", 319),
             )
             active_thresholds = dict(thresholds)
             if backend != "heightmap":
@@ -198,16 +203,16 @@ def main() -> int:
 
             if not args.skip_determinism:
                 world_b = f"CI_{seed}{suffix}_det"
-                world_b_dir = args.cwd / "worlds" / world_b
+                world_b_dir = exe.parent / "worlds" / world_b
                 if world_b_dir.is_dir():
                     shutil.rmtree(world_b_dir, ignore_errors=True)
                 run_create(
-                    args.exe,
-                    args.cwd,
+                    exe,
+                    cwd,
                     seed,
                     world_b,
                     radius_chunks,
-                    args.cwd / f"create_world_{seed}{suffix}_det.json",
+                    (cwd / f"create_world_{seed}{suffix}_det.json").resolve(),
                     args.timeout,
                     terrain_backend=backend,
                 )
@@ -229,11 +234,16 @@ def main() -> int:
                 f"logs={metrics.get('spawn_ground_logs', 0)} "
                 f"fire={metrics.get('spawn_fire_blocks', 0)} "
                 f"gaps={metrics.get('shore_air_gaps', 0)} "
+                f"cave_dry={metrics.get('cave_dry_pct', 0):.1f}% "
+                f"cave_water={metrics.get('cave_water_pct', 0):.1f}% "
+                f"cave_lava={metrics.get('cave_lava_pct', 0):.1f}% "
                 f"pits={metrics.get('micro_pit_pct', 0):.2f}% "
                 f"cliff16={metrics.get('delta_ge_16_pct', 0):.3f}% "
                 f"flat={metrics.get('spawn_flatness_pct', metrics.get('flatness_pct', 0)):.2f}% "
                 f"rolling={metrics.get('spawn_rolling_hill_pct', metrics.get('rolling_hill_pct', 0)):.2f}%"
             )
+            if not args.keep_worlds:
+                shutil.rmtree(world_dir, ignore_errors=True)
 
     if failures:
         print("integration_test_worldgen: FAILED", file=sys.stderr)

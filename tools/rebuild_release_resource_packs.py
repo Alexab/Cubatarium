@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -31,7 +32,7 @@ BASE_STEM_TO_KENNEY: dict[str, str] = {
     "snow": "snow",
     "clay": "stone_dirt",
     "ice": "ice",
-    "hellrock": "rock",
+    "hellrock": "redstone",
     "bedrock": "greystone",
 }
 
@@ -294,17 +295,75 @@ def build_pack(spec: dict, staging: Path) -> None:
     from build_resource_pack import build_pack as build_pack_impl
     import yaml
 
+    out = spec["out"]
+    old_blocks: dict[str, dict] = {}
+    old_assets: dict[str, bytes] = {}
+    old_blocks_dir = out / "blocks"
+    if old_blocks_dir.is_dir():
+        for block_path in old_blocks_dir.glob("*.json"):
+            try:
+                block = json.loads(block_path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            old_blocks[block.get("name", block_path.stem)] = block
+    if out.is_dir():
+        old_assets = {
+            path.relative_to(out).as_posix(): path.read_bytes()
+            for path in out.rglob("*")
+            if path.is_file()
+        }
+
     mapping = yaml.safe_load(spec["mapping"].read_text(encoding="utf-8"))
     build_pack_impl(
         mapping,
         staging / "textures" / "blocks",
-        spec["out"],
+        out,
         spec["pack_id"],
         spec["priority"],
         spec["resolution"],
     )
-    pack_json = spec["out"] / "pack.json"
-    import json
+
+    # Source maps own block names, textures and types. Preserve authored runtime
+    # metadata for mapped blocks, plus block/assets omitted by a minimal map.
+    blocks_dir = out / "blocks"
+    for name, old_block in old_blocks.items():
+        block_path = blocks_dir / f"{name}.json"
+        if not block_path.is_file():
+            block_path.write_text(
+                json.dumps(old_block, indent=2) + "\n", encoding="utf-8"
+            )
+            continue
+
+        new_block = json.loads(block_path.read_text(encoding="utf-8-sig"))
+        merged = {}
+        for key, old_value in old_block.items():
+            if key in ("name", "textures", "types"):
+                merged[key] = new_block.get(key, old_value)
+            elif key == "render" and isinstance(old_value, dict):
+                new_render = new_block.get(key)
+                merged[key] = (
+                    new_render if isinstance(new_render, dict) and new_render else old_value
+                )
+            elif key == "animation" and isinstance(old_value, dict):
+                new_animation = new_block.get(key)
+                merged[key] = (
+                    new_animation
+                    if isinstance(new_animation, dict) and new_animation
+                    else old_value
+                )
+            else:
+                merged[key] = new_block.get(key, old_value)
+        for key, value in new_block.items():
+            merged.setdefault(key, value)
+        block_path.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+
+    for relative_path, contents in old_assets.items():
+        asset_path = out / relative_path
+        if not asset_path.exists():
+            asset_path.parent.mkdir(parents=True, exist_ok=True)
+            asset_path.write_bytes(contents)
+
+    pack_json = out / "pack.json"
 
     data = json.loads(pack_json.read_text(encoding="utf-8"))
     data["name"] = spec["name"]
@@ -312,6 +371,10 @@ def build_pack(spec: dict, staging: Path) -> None:
     from update_pack_metadata import load_dependencies, update_pack_json
 
     update_pack_json(pack_json, spec["pack_id"], load_dependencies(), False)
+    hardness_tool = REPO / "tools" / "apply_block_hardness.py"
+    subprocess.check_call(
+        [sys.executable, str(hardness_tool), "--pack", spec["pack_id"], "--keep-existing"]
+    )
 
 
 def validate_pack(path: Path) -> None:

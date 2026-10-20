@@ -514,7 +514,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   };
   bool want_drop_remesh = false;
   int drop_remesh_keep_h = INT_MAX;
-  int drop_remesh_keep_cy = -1;
+  int drop_remesh_keep_cy = kNoChunkSlice;
   bool drop_remesh_only = true;
   bool drop_remesh_use_preferred_cy = false;
   int prep_drop_remesh_n = 0;
@@ -523,11 +523,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     want_drop_remesh = true;
     drop_remesh_keep_h = std::min(drop_remesh_keep_h, keep_h);
-    if (keep_cy >= 0)
+    if (keep_cy != kNoChunkSlice)
     {
       drop_remesh_keep_cy =
-          (drop_remesh_keep_cy < 0) ? keep_cy
-                                   : std::min(drop_remesh_keep_cy, keep_cy);
+          (drop_remesh_keep_cy == kNoChunkSlice)
+              ? keep_cy
+              : std::min(drop_remesh_keep_cy, keep_cy);
     }
     drop_remesh_only = drop_remesh_only && remesh_only;
     drop_remesh_use_preferred_cy =
@@ -856,9 +857,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                        VisualObligation::LegalDark ||
                    settled_rec->visual_obligation ==
                        VisualObligation::LitDrawable);
-              const int max_y = world_ref.GetProceduralSettings().MaxHeight;
-              const int cy1 = max_y > 0 ? (max_y - 1) / CHUNK_SIZE : 0;
-              for (int cy = 0; cy <= cy1; ++cy)
+              const auto &settings = world_ref.GetProceduralSettings();
+              const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+              const int cy1 = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+              for (int cy = min_cy; cy <= cy1; ++cy)
               {
                 const glm::ivec3 sib(col.x, cy, col.y);
                 if (mesh.HasGreedyMesh(sib) &&
@@ -1426,7 +1428,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           int remesh_max_y = 0;
           SeaSeamRemeshYRangeForPublisher(
               settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight, chunk_coord.y,
-              seam_eye, remesh_min_y, remesh_max_y);
+              seam_eye, remesh_min_y, remesh_max_y, settings.MinHeight);
           for (const glm::ivec3 &d : kFaceNb)
           {
             const glm::ivec3 n = chunk_coord + d;
@@ -1865,20 +1867,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       --StuckSmokeCd;
     }
-    const int max_cy = std::max(
-        0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
+    const int max_cy = FloorDiv(procedural.MaxHeight, CHUNK_SIZE);
     // Rim-only miss: scan ground band, not cy=0..top (152933: scan spikes 41ms).
     int cy0 = (missing_visible_mesh && near_miss_urgent)
-                  ? 0
-                  : std::max(0, preferred_cy - 1);
+                  ? FloorDiv(procedural.MinHeight, CHUNK_SIZE)
+                  : std::max(FloorDiv(procedural.MinHeight, CHUNK_SIZE),
+                             preferred_cy - 1);
     const int cy1_base = std::min(max_cy, preferred_cy + 2);
     int cy1 = cy1_base;
     if (procedural.FillWater &&
         (enter_warmup_active || !moving || missing_underfeet))
     {
       const int sea = procedural.SeaLevel;
-      const int sea_cy0 =
-          FloorDiv(std::max(0, sea - CHUNK_SIZE), CHUNK_SIZE);
+      const int sea_cy0 = FloorDiv(
+          std::max(procedural.MinHeight, sea - CHUNK_SIZE), CHUNK_SIZE);
       const int sea_cy1 = FloorDiv(
           std::min(procedural.MaxHeight, sea + CHUNK_SIZE), CHUNK_SIZE);
       cy0 = std::min(cy0, sea_cy0);
@@ -2436,10 +2438,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               mesh_service.GetCache().ChunkHasFullyDarkFace(coord);
           if (!fully_dark_or_void && cand.empty_placeholder)
           {
-            const int max_cy_v = std::max(
-                0, FloorDiv(world.GetProceduralSettings().MaxHeight,
-                            CHUNK_SIZE));
-            for (int cy_v = 0; cy_v <= max_cy_v; ++cy_v)
+            const auto &settings = world.GetProceduralSettings();
+            const int min_cy_v = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+            const int max_cy_v = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+            for (int cy_v = min_cy_v; cy_v <= max_cy_v; ++cy_v)
             {
               const glm::ivec3 c(col.x, cy_v, col.y);
               if (mesh_service.HasDrawableGreedyMesh(c) &&
@@ -2827,13 +2829,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     UFrameStageWatchdog::MarkCurrentStage(
         "mesh_emerge.stuck_escape_water_range");
-    int pin_cy0 = 0;
+    int pin_cy0 = FloorDiv(procedural.MinHeight, CHUNK_SIZE);
     int pin_cy1 = 0;
-    const int max_cy_pin =
-        std::max(0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
+    const int min_cy_pin = FloorDiv(procedural.MinHeight, CHUNK_SIZE);
+    const int max_cy_pin = FloorDiv(procedural.MaxHeight, CHUNK_SIZE);
     EnterSpawnPresentableCyRange(preferred_cy,
                                  FloorDiv(procedural.SeaLevel, CHUNK_SIZE),
-                                 true, max_cy_pin, pin_cy0, pin_cy1);
+                                 true, max_cy_pin, pin_cy0, pin_cy1,
+                                 min_cy_pin);
     // try_stuck_escape_fm can erase and reinsert this same set entry. Snapshot
     // before invoking it so unordered_set erase/rehash cannot invalidate the
     // active range-for iterator and turn this bounded recovery pass into UB.
@@ -2908,8 +2911,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     const glm::ivec2 uf(focus_ground_horiz.x, focus_ground_horiz.z);
     const int player_cy = FloorDiv(focus_block.y, CHUNK_SIZE);
-    const int cy0 = std::max(0, player_cy - 2);
-    const int cy1 = player_cy + 1;
+    const int cy0 = std::max(
+        FloorDiv(world.GetProceduralSettings().MinHeight, CHUNK_SIZE),
+        player_cy - 2);
+    const int cy1 = std::min(
+        FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE),
+        player_cy + 1);
     bool forced = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
@@ -3182,7 +3189,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (visual_holes || missing_underfeet)
             ? std::min(focus_radius, stale_n > 200 ? 3 : 2)
             : focus_radius;
-    request_drop_remesh(drop_keep_h, /*keep_cy=*/-1, /*remesh_only=*/true,
+    request_drop_remesh(drop_keep_h, /*keep_cy=*/kNoChunkSlice,
+                        /*remesh_only=*/true,
                         /*use_preferred_cy=*/false);
   }
   const auto schedule_policy_t0 = std::chrono::high_resolution_clock::now();
@@ -4571,12 +4579,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   else if (underfeet_need || idle_focus_sync)
   {
     const int max_y = procedural.MaxHeight;
-    int band_min_y = std::max(0, focus_block.y - CHUNK_SIZE);
+    int band_min_y = std::max(procedural.MinHeight,
+                              focus_block.y - CHUNK_SIZE);
     int band_max_y = std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
     if (procedural.FillWater)
     {
       band_min_y =
-          std::min(band_min_y, std::max(0, procedural.SeaLevel - CHUNK_SIZE));
+          std::min(band_min_y,
+                   std::max(procedural.MinHeight,
+                            procedural.SeaLevel - CHUNK_SIZE));
       band_max_y = std::max(
           band_max_y,
           std::min(max_y, procedural.SeaLevel + CHUNK_SIZE * 2));
@@ -5222,14 +5233,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (carved < holes_to_carve)
     {
       // Second nearest: one ring scan excluding first (NearestMemo returns same).
-      constexpr int kMissingScanMaxCy = 48;
       const int scan_r = std::max(4, focus_radius);
-      int cy_lo = 0;
-      int cy_hi = kMissingScanMaxCy;
+      const int min_cy =
+          FloorDiv(world.GetProceduralSettings().MinHeight, CHUNK_SIZE);
+      const int max_cy =
+          FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE);
+      int cy_lo = min_cy;
+      int cy_hi = max_cy;
       if (focus_ground_horiz.y > 0)
       {
-        cy_lo = std::max(0, focus_ground_horiz.y - 1);
-        cy_hi = std::min(kMissingScanMaxCy, focus_ground_horiz.y + 1);
+        cy_lo = std::max(min_cy, focus_ground_horiz.y - 1);
+        cy_hi = std::min(max_cy, focus_ground_horiz.y + 1);
       }
       bool found_second = false;
       glm::ivec3 second_hole{};
@@ -5471,7 +5485,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (pending_dirty > 200)
     {
       mesh_service.DropRemeshDirtyBeyondRadius(
-          focus_ground_horiz, /*keep_h=*/2, /*keep_cy=*/-1,
+          focus_ground_horiz, /*keep_h=*/2,
+          /*keep_cy=*/kNoChunkSlice,
           /*remesh_only=*/true);
     }
     // Near miss: drop hinterland FirstMesh Dirty only — never inside the
@@ -5484,7 +5499,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.GetPhysicsTelemetryMutable().DirtyDropped +=
           static_cast<uint64_t>(std::max(
               0, mesh_service.DropFarFirstMeshDirtyBeyondRadius(
-                     focus_ground_horiz, fm_keep_h, /*keep_cy=*/-1)));
+                     focus_ground_horiz, fm_keep_h,
+                     /*keep_cy=*/kNoChunkSlice)));
     }
     // Admit floor before remesh — Finalize MeshWorkAdmission caps schedule.
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
@@ -5618,7 +5634,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       tail_scan.kind = ColumnWorkKind::FirstMesh;
       tail_scan.priority = 104;
       tail_scan.scan_full_focus = true;
-      tail_scan.cy = -2;
+      tail_scan.cy = kColumnWorkWholeColumnCy;
       exec.Enqueue(tail_scan);
       note_column_flow_drain(5, 4);
     }
@@ -5630,7 +5646,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       focus_scan.kind = ColumnWorkKind::FirstMesh;
       focus_scan.priority = 95;
       focus_scan.scan_full_focus = true;
-      focus_scan.cy = -1;
+      focus_scan.cy = kColumnWorkWholeRemeshBandCy;
       exec.Enqueue(focus_scan);
       FocusScanCd = (far_rim_force_scan ||
                        adm.mode == MeshWorkAdmission::Mode::Normal)
@@ -6265,7 +6281,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // Era22 F2b: use full-height missing slice dirtying, not only
           // remesh-band. This targets stuck unfinished_visual that can span
           // above remesh_max.
-          heal_scan.cy = -2;
+          heal_scan.cy = kColumnWorkWholeColumnCy;
           exec.Enqueue(heal_scan);
           note_column_flow_drain(3, 3);
         }
@@ -6283,7 +6299,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           pin.scan_full_focus = !stop_tail_ownership_mode;
           // Full column pin: prevent "single-slice" rebuild that doesn't
           // eliminate focus_missing_mesh for stuck holes.
-          pin.cy = -2; // Era22 F2c: whole-column missing slices (full height).
+          pin.cy = kColumnWorkWholeColumnCy;
           exec.Enqueue(pin);
           if (stop_tail_ownership_mode)
           {
@@ -6365,7 +6381,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     focus_scan.kind = ColumnWorkKind::FirstMesh;
     focus_scan.priority = 90;
     focus_scan.scan_full_focus = true;
-    focus_scan.cy = -1;
+    focus_scan.cy = kColumnWorkWholeRemeshBandCy;
     exec.Enqueue(focus_scan);
     note_column_flow_drain(moving ? 2 : 3, moving ? 2 : 3);
   }
@@ -6792,7 +6808,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int keep_h =
             mesh_service.GetLastDirtyRemeshN() > 40 ? 2 : 1;
         mesh_service.DropRemeshDirtyBeyondRadius(
-            focus_ground_horiz, keep_h, /*keep_cy=*/-1,
+            focus_ground_horiz, keep_h, /*keep_cy=*/kNoChunkSlice,
             /*remesh_only=*/true);
       }
       // J2/K1 / Era14.1 A2: under miss never clamp SoftDeferHeld requeue below 1
@@ -7300,9 +7316,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             continue;
           }
           bool has_mesh = false;
-          const int max_cy = std::max(
-              0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
-          for (int cy = 0; cy <= max_cy && !has_mesh; ++cy)
+          const int min_cy = FloorDiv(procedural.MinHeight, CHUNK_SIZE);
+          const int max_cy = FloorDiv(procedural.MaxHeight, CHUNK_SIZE);
+          for (int cy = min_cy; cy <= max_cy && !has_mesh; ++cy)
           {
             const glm::ivec3 coord(cx, cy, cz);
             if (mesh_service.HasDrawableGreedyMesh(coord) ||

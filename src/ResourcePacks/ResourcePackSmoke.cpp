@@ -171,6 +171,17 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
   {
     return false;
   }
+  for (const char *name : {"granite", "diorite", "andesite", "deepslate",
+                           "tuff", "calcite", "smooth_basalt",
+                           "amethyst_block", "moss_block", "rooted_dirt"})
+  {
+    if (!registry->HasBlock(name))
+    {
+      std::cerr << "ResourcePackSmoke: default selection is missing geology block '"
+                << name << "'" << std::endl;
+      return false;
+    }
+  }
 
   UResourcePackResolver resolver;
   const auto packs = resolver.Resolve(defaults, assetRoot, writableRoot);
@@ -313,6 +324,54 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
   return true;
 }
 
+bool SmokePlaceholderVisualMarker(
+    const std::shared_ptr<UPlaceholderTextureCache> &placeholders)
+{
+  if (!placeholders)
+  {
+    std::cerr << "ResourcePackSmoke: placeholder cache is unavailable"
+              << std::endl;
+    return false;
+  }
+
+  const std::string stem =
+      placeholders->GetOrCreateStem("missing_marker_smoke", 0, 16);
+  UTextureBaseStorage textures;
+  placeholders->RegisterAll(textures);
+  const auto it = textures.GetBaseTextures().find(stem);
+  const TexturePixelData *pixels =
+      it == textures.GetBaseTextures().end() ? nullptr : it->second.GetPixelData();
+  if (!pixels || pixels->Width != 16 || pixels->Height != 16)
+  {
+    std::cerr << "ResourcePackSmoke: missing placeholder marker pixels"
+              << std::endl;
+    return false;
+  }
+
+  bool has_warning_magenta = false;
+  bool has_dark_stripe = false;
+  bool has_question_mark = false;
+  bool has_yellow_frame = false;
+  for (size_t i = 0; i + 3 < pixels->Rgba.size(); i += 4)
+  {
+    const uint8_t r = pixels->Rgba[i];
+    const uint8_t g = pixels->Rgba[i + 1];
+    const uint8_t b = pixels->Rgba[i + 2];
+    has_warning_magenta |= r > 200 && b > 200 && g < 50;
+    has_dark_stripe |= r < 30 && g < 30 && b < 30;
+    has_question_mark |= r > 240 && g > 240 && b > 240;
+    has_yellow_frame |= r > 240 && g > 180 && g < 240 && b < 80;
+  }
+  if (!has_warning_magenta || !has_dark_stripe || !has_question_mark ||
+      !has_yellow_frame)
+  {
+    std::cerr << "ResourcePackSmoke: placeholder texture is not visibly marked"
+              << std::endl;
+    return false;
+  }
+  return true;
+}
+
 } // namespace
 
 int RunResourcePackSmoke(IUPlatformPaths &paths)
@@ -339,6 +398,7 @@ int RunResourcePackSmoke(IUPlatformPaths &paths)
 
   ResourcePackSelection minetest;
   minetest.Primary = {"minetest_default_16"};
+  minetest.Secondary = {"cubatarium_geology_cc0"};
   minetest.WorldgenOwner = "minetest_default_16";
   if (!SmokeSelection(minetest, assetRoot, writableRoot, registry, placeholders))
   {
@@ -363,6 +423,10 @@ int RunResourcePackSmoke(IUPlatformPaths &paths)
   }
 
   if (!SmokeStartupInit(assetRoot, writableRoot, placeholders))
+  {
+    return 1;
+  }
+  if (!SmokePlaceholderVisualMarker(placeholders))
   {
     return 1;
   }

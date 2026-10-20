@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Math/GridMath.h"
 #include <chrono>
 #include <cstdlib>
 #include <sstream>
@@ -317,12 +318,13 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       const UChunk *neighbor_chunk =
           world.GetChunkManager().GetChunk(neighbor_coord);
       const bool neighbor_loaded = neighbor_chunk != nullptr;
-      // Terrain chunks only exist at world Y >= 0. The absent chunk below
-      // cy=0 is a known world boundary, not an unloaded neighbor: expose the
-      // bottom shell to the mesher and do not create permanent FaceDebt for
-      // space that can never stream in. Other missing neighbors stay Unknown.
+      // A missing chunk below the configured world floor is known exterior,
+      // while missing slices inside the world remain Unknown until streamed.
       const bool known_world_exterior =
-          axis == 1 && sign < 0 && neighbor_coord.y < 0 && !neighbor_loaded;
+          axis == 1 && sign < 0 &&
+          neighbor_coord.y <
+              world.GetVerticalProfile().MinChunkY(CHUNK_SIZE) &&
+          !neighbor_loaded;
       // Stamp = geom/light only. Drawable fn affects shell occlusion preview.
       snapshot.inputStamps[static_cast<size_t>(face + 1)] =
           ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk,

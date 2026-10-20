@@ -2,6 +2,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Math/GridMath.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -147,7 +148,7 @@ int UChunkStorageService::ScanHighestChunkSliceOnDisk(
   if (!std::filesystem::exists(chunks_dir) ||
       !std::filesystem::is_directory(chunks_dir))
   {
-    return -1;
+    return kNoChunkSliceOnDisk;
   }
   if (groundCoord.y != 0)
   {
@@ -155,7 +156,7 @@ int UChunkStorageService::ScanHighestChunkSliceOnDisk(
   }
   const std::string prefix = std::to_string(groundCoord.x) + "_";
   const std::string suffix = "_" + std::to_string(groundCoord.z);
-  int highest = -1;
+  int highest = kNoChunkSliceOnDisk;
   for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
   {
     const std::string extension = entry.path().extension().string();
@@ -176,7 +177,7 @@ int UChunkStorageService::ScanHighestChunkSliceOnDisk(
         prefix.size(), stem.size() - prefix.size() - suffix.size());
     if (TryParseInt(cy_text, cy))
     {
-      highest = std::max(highest, cy);
+      highest = highest == kNoChunkSliceOnDisk ? cy : std::max(highest, cy);
     }
   }
   return highest;
@@ -394,7 +395,7 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
   if (index.dirty_columns.erase(column) > 0)
   {
     const int highest = ScanHighestChunkSliceOnDisk(worldFolder, groundCoord);
-    if (highest >= 0)
+    if (highest != kNoChunkSliceOnDisk)
     {
       index.highest_cy[column] = highest;
     }
@@ -404,7 +405,8 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
     }
   }
   const auto cached = index.highest_cy.find(column);
-  return cached != index.highest_cy.end() ? cached->second : -1;
+  return cached != index.highest_cy.end() ? cached->second
+                                          : kNoChunkSliceOnDisk;
 }
 
 void UChunkStorageService::PrepareHighestChunkSliceIndex(
@@ -474,18 +476,21 @@ bool UChunkStorageService::RemoveChunkSliceFromDisk(
 
 bool UChunkStorageService::RemoveTerrainColumnFromDisk(
     const std::string &worldFolder, glm::ivec3 groundCoord,
-    int maxWorldY, std::string *outError) const
+    int maxWorldY, std::string *outError, int minWorldY) const
 {
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
   }
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
+  const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
-  const int toCy = std::max(maxCy, highestOnDisk);
+  const int toCy = highestOnDisk == kNoChunkSliceOnDisk
+                       ? maxCy
+                       : std::max(maxCy, highestOnDisk);
   bool success = true;
   std::string first_error;
-  for (int cy = 0; cy <= toCy; ++cy)
+  for (int cy = minCy; cy <= toCy; ++cy)
   {
     std::string remove_error;
     if (!RemoveChunkSliceFromDisk(
@@ -510,24 +515,31 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
                                              const UBlockWorld &world,
                                              const std::string &worldFolder,
                                              UBlockRegistry &registry,
-                                             int maxWorldY)
+                                             int maxWorldY, int minWorldY)
 {
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
   }
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
+  const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
   const int highestNonAir =
-      GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY);
-  int highestToSave = std::max(highestOnDisk, highestNonAir);
-  if (highestToSave < 0)
+      GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY, minWorldY);
+  int highestToSave = highestNonAir;
+  if (highestOnDisk != kNoChunkSliceOnDisk)
+  {
+    highestToSave = highestToSave == kNoTerrainChunkSlice
+                        ? highestOnDisk
+                        : std::max(highestOnDisk, highestToSave);
+  }
+  if (highestToSave == kNoTerrainChunkSlice)
   {
     return;
   }
-  highestToSave = std::min(highestToSave, maxCy);
+  highestToSave = std::clamp(highestToSave, minCy, maxCy);
 
-  for (int cy = 0; cy <= highestToSave; ++cy)
+  for (int cy = minCy; cy <= highestToSave; ++cy)
   {
     const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
     const UChunk *chunk = world.GetChunkManager().GetChunk(slice);
@@ -553,7 +565,7 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
                                             UBlockWorld &world,
                                             const std::string &worldFolder,
                                             UBlockRegistry &registry,
-                                            int maxWorldY)
+                                            int maxWorldY, int minWorldY)
 {
   if (groundCoord.y != 0)
   {
@@ -565,13 +577,14 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
   }
 
   int total = 0;
-  const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
-  if (highestOnDisk < 0)
+  if (highestOnDisk == kNoChunkSliceOnDisk || highestOnDisk < minCy)
   {
     return 0;
   }
-  for (int cy = 0; cy <= highestOnDisk; ++cy)
+  const int highestToLoad = std::min(highestOnDisk, FloorDiv(maxWorldY, CHUNK_SIZE));
+  for (int cy = minCy; cy <= highestToLoad; ++cy)
   {
     const int placed = LoadChunk(glm::ivec3(groundCoord.x, cy, groundCoord.z),
                                  world, worldFolder, registry);
@@ -581,8 +594,7 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
     }
   }
   MaterializeRequiredTerrainColumnSlices(world, groundCoord, maxWorldY,
-                                         highestOnDisk);
-  (void)maxCy;
+                                         highestToLoad, minWorldY);
   return total > 0 ? total : 1;
 }
 

@@ -215,15 +215,19 @@ public:
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;
 
   int LoadTerrainColumn(glm::ivec3 coord, UBlockWorld &block_world,
-                        UBlockRegistry &registry, int max_height);
+                        UBlockRegistry &registry, int max_height,
+                        int min_height = 0);
   void SaveTerrainColumn(glm::ivec3 ground_coord, UBlockWorld &block_world,
-                         UBlockRegistry &registry, int max_height);
+                         UBlockRegistry &registry, int max_height,
+                         int min_height = 0);
   /// Remove all disk slices for a ground column (used when incomplete in RAM
   /// must not leave a stale complete ocean/land file behind).
-  void RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord, int max_height);
+  void RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord, int max_height,
+                                  int min_height = 0);
   /// Clear in-memory column and delete its disk slices (load repair).
   void PurgeIncompleteTerrainColumn(UBlockWorld &block_world,
-                                    glm::ivec3 ground_coord, int max_height);
+                                    glm::ivec3 ground_coord, int max_height,
+                                    int min_height = 0);
   void LoadInitialTerrainColumns(UWorld &world, glm::vec3 spawn_point,
                                  int render_distance_chunks);
 
@@ -244,7 +248,7 @@ private:
   {
     uint64_t demand_id{0};
     int remaining_results{0};
-    int highest_cy_on_disk{-1};
+    int highest_cy_on_disk{kNoChunkSliceOnDisk};
     std::shared_ptr<std::atomic<bool>> cancellation;
     std::chrono::steady_clock::time_point requested_at{};
     double disk_discovery_ms{0.0};

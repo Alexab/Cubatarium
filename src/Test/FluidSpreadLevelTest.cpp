@@ -51,14 +51,16 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
 
 static void RunTicks(cutum::UBlockWorld &world,
                      const cutum::UBlockDefinitionStorage &definitions,
-                     cutum::UFluidSpreadSystem &fluid, uint64_t ticks)
+                     cutum::UFluidSpreadSystem &fluid, uint64_t ticks,
+                     int min_world_y = 0)
 {
   for (uint64_t tick = 0; tick < ticks; ++tick)
   {
     world.ForEachBlock([&](glm::ivec3 pos, cutum::BlockId id)
                        {
                          (void)id;
-                         fluid.TickBlock(world, definitions, tick, pos);
+                         fluid.TickBlock(world, definitions, tick, pos, -1,
+                                         min_world_y);
                        });
   }
 }
@@ -87,6 +89,29 @@ int main()
   const cutum::FluidCellState source =
       world.GetFluidState(glm::ivec3(1, 10, 1));
   Expect(source.IsSource(), "water source stable after spread ticks");
+
+  cutum::UBlockWorld negative_world;
+  negative_world.GetChunkManager().EnsureChunk(glm::ivec3(0, -1, 0));
+  negative_world.SetBlock(glm::ivec3(0, 0, 0), kWater);
+  negative_world.SetFluidState(glm::ivec3(0, 0, 0),
+                               cutum::FluidCellState::Source());
+  Expect(fluid.HasSpreadTarget(negative_world, *definitions,
+                               glm::ivec3(0, 0, 0)),
+         "default fluid target lookup uses the world profile floor");
+  bool has_spread_tick = false;
+  for (uint64_t tick = 0; tick < 100; ++tick)
+  {
+    has_spread_tick = has_spread_tick ||
+                      fluid.HasSpreadTargetForTick(
+                          negative_world, *definitions, glm::ivec3(0, 0, 0),
+                          tick);
+    fluid.TickBlock(negative_world, *definitions, tick,
+                    glm::ivec3(0, 0, 0));
+  }
+  Expect(has_spread_tick,
+         "default fluid tick lookup uses the world profile floor");
+  Expect(negative_world.GetBlock(glm::ivec3(0, -1, 0)) == kWater,
+         "water flows across Y=0 into the negative world range");
 
   std::cout << "fluid_spread_level_test: OK" << std::endl;
   return 0;

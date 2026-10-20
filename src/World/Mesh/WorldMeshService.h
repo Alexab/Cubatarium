@@ -97,9 +97,11 @@ public:
   /// Consume one Dirty-admit slot for FirstMesh/Held/neighbor (false = deny).
   bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
-                                  int keep_cy = -1, bool remesh_only = false);
+                                  int keep_cy = kNoChunkSlice,
+                                  bool remesh_only = false);
   int DropFarFirstMeshDirtyBeyondRadius(glm::ivec3 center_chunk,
-                                        int keep_radius, int keep_cy = -1);
+                                        int keep_radius,
+                                        int keep_cy = kNoChunkSlice);
   int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk, int radius_chunks);
   void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);
@@ -157,7 +159,7 @@ public:
                                        bool include_neighbors = true);
   void MarkAllDirtyFromWorld(const UBlockWorld &world);
   void RemoveChunk(glm::ivec3 chunk_coord);
-  void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
+  void RemoveColumn(glm::ivec3 ground_coord, int min_cy, int max_cy);
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord, int min_y,
                                  int max_y);
@@ -182,7 +184,8 @@ public:
   /// Enqueue missing solid slices below placed block for post-place DigSeam.
   int EnqueueColumnMissingDigSeamBelow(const UBlockWorld &world,
                                        glm::ivec3 block_pos,
-                                       int max_enqueue = 4);
+                                       int max_enqueue = 4,
+                                       int min_world_y = 0);
 
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,

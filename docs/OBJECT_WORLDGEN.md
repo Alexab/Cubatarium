@@ -59,9 +59,14 @@ Rule selection among candidates: weighted random using `weight`, pack feature mu
 
 1. Create `Objects/<name>.json` (version 2, canonical block names).
 2. Add entry to `tools/object_manifest.yaml` with `worldgen` pool, biomes, spacing/weight.
-3. Run `python tools/generate_object_features.py`.
+3. Run `python tools/generate_object_features.py --merge-calibrated`.
 4. Run `python tools/validate_Objects.py` and `python tools/validate_object_features.py`.
 5. Regenerate catalog: `python tools/generate_Object_catalog.py`.
+
+The merge flag retains ecology and placement calibration authored in
+`content/object_features.json`, along with feature rules that do not have a
+manifest counterpart. A plain generation rebuilds from the manifest and can
+discard those fields.
 
 For scatter-only ground cover, use manifest `mode: scatter_blocks` with `block`, `attempts`, `radius` вЂ” no Object JSON required.
 

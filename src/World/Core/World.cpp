@@ -974,7 +974,7 @@ void UWorld::NoteOpenSkyRepairTargets(glm::ivec2 column, int min_y, int max_y,
   {
     return;
   }
-  const int min_cy = std::max(0, FloorDiv(min_y, CHUNK_SIZE));
+  const int min_cy = std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), FloorDiv(min_y, CHUNK_SIZE));
   const int max_cy = std::max(min_cy, FloorDiv(max_y, CHUNK_SIZE));
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
   const uint64_t world_epoch =
@@ -1048,7 +1048,8 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
   {
     for (const glm::ivec3 &pos : block_positions)
     {
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false, 0, -1,
+      Persistence->EnqueueTerrainColumnRelight(
+          pos.x, pos.z, false, ProceduralTemplate.MinHeight, -1,
                                                __FUNCTION__, this);
     }
   }
@@ -1072,7 +1073,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
   const int visible_band_min =
-      std::max(0, focus_block.y - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus_block.y - CHUNK_SIZE);
   const int visible_band_max =
       std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
   const bool audit_relight =
@@ -1099,11 +1100,11 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
     }
   }
   // Playerв€Єsea band, plus deeper ocean floor (sea-4 chunks).
-  int band_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_min = std::max(ProceduralTemplate.MinHeight, focus.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
   if (ProceduralTemplate.FillWater)
   {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
@@ -1689,9 +1690,9 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
   const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
-  int remesh_min = std::max(0, sea - CHUNK_SIZE);
+  int remesh_min = std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE);
   int remesh_max = std::min(max_y, sea + CHUNK_SIZE * 2);
-  const int player_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+  const int player_min = std::max(ProceduralTemplate.MinHeight, focus.y * CHUNK_SIZE - CHUNK_SIZE);
   const int player_max =
       std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
   remesh_min = std::min(remesh_min, player_min);
@@ -1780,19 +1781,18 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
   const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
-  int remesh_min = std::max(0, sea - CHUNK_SIZE);
+  int remesh_min = std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE);
   int remesh_max = std::min(max_y, sea + CHUNK_SIZE * 2);
-  const int player_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+  const int player_min = std::max(ProceduralTemplate.MinHeight, focus.y * CHUNK_SIZE - CHUNK_SIZE);
   const int player_max =
       std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
   remesh_min = std::min(remesh_min, player_min);
   remesh_max = std::max(remesh_max, player_max);
   const int cy0 = FloorDiv(remesh_min, CHUNK_SIZE);
   const int cy1 = FloorDiv(remesh_max, CHUNK_SIZE);
-  // Era22 F2c/F2: special whole-column mode.
-  // - only_cy == -1: whole remesh band (0..remesh_max).
-  // - only_cy == -2: whole column up to procedural MaxHeight.
-  const bool full_column_only = only_cy == -2;
+  // Signed chunk Y values, including -1, are valid targets; reserved
+  // sentinels request a whole range.
+  const bool full_column_only = only_cy == kWholeColumnChunkSlice;
   const int scan_cy1 = full_column_only ? FloorDiv(max_y, CHUNK_SIZE) : cy1;
   const glm::vec2 fwd_norm =
       glm::length(forward_xz) > 0.01f ? glm::normalize(forward_xz) : glm::vec2(0.0f);
@@ -1826,7 +1826,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
         bool missing = false;
         // Scan full column for missing solid slices — player-altitude band alone
         // missed cy=0..2 at exit (manual 110751: miss_cy=0–3, underfeet OK).
-        for (int cy = 0; cy <= scan_cy1 && !missing; ++cy)
+        for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= scan_cy1 && !missing; ++cy)
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
@@ -1923,16 +1923,16 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
           enqueue_min, enqueue_max, __FUNCTION__, this);
     }
     int marked = 0;
-    int mark_min = 0;
+    int mark_min = ProceduralTemplate.MinHeight;
     int mark_max = remesh_max;
-    if (only_cy >= 0)
+    if (only_cy != kNoChunkSlice && !full_column_only)
     {
       mark_min = only_cy * CHUNK_SIZE;
       mark_max = mark_min + CHUNK_SIZE - 1;
     }
     else if (full_column_only)
     {
-      mark_min = 0;
+      mark_min = ProceduralTemplate.MinHeight;
       mark_max = max_y;
     }
     marked = CountMissingSlicesInRange(BlockWorld, MeshService.get(), ground,
@@ -2001,9 +2001,8 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
   bool has_mesh = false;
   if (MeshService)
   {
-    const int max_cy =
-        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE);
-    for (int cy = 0; cy <= max_cy; ++cy)
+    const int max_cy = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+    for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
     {
       if (MeshService->HasGreedyMesh(glm::ivec3(ground.x, cy, ground.z)))
       {
@@ -2018,7 +2017,7 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
     ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
     return;
   }
-  const int note_min_y = std::max(0, min_y);
+  const int note_min_y = std::max(ProceduralTemplate.MinHeight, min_y);
   auto log_pending_light_note = [&](const char *action, int covered_min_y,
                                     int covered_max_y)
   {
@@ -2046,9 +2045,9 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
     const uint64_t world_epoch =
         MeshService->GetCache().GetCaptureStore().WorldEpoch();
     const int min_cy =
-        std::max(0, FloorDiv(std::max(0, band_min_y), CHUNK_SIZE));
+        std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), FloorDiv(std::max(ProceduralTemplate.MinHeight, band_min_y), CHUNK_SIZE));
     const int max_cy = std::min(
-        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE),
+        FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE),
         FloorDiv(std::min(band_max_y, ProceduralTemplate.MaxHeight),
                  CHUNK_SIZE));
     for (int cy = min_cy; cy <= max_cy; ++cy)
@@ -2162,7 +2161,9 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
     invalidate_slice_band(std::max(note_min_y, covered_max_y + 1), max_y,
                           "extend_high");
   }
-  it->second.min_y = std::min(it->second.min_y, std::max(0, min_y));
+  it->second.min_y = std::min(
+      it->second.min_y,
+      std::max(ProceduralTemplate.MinHeight, min_y));
   it->second.max_y = std::max(it->second.max_y, max_y);
   if (it->second.min_y != covered_min_y ||
       it->second.max_y != covered_max_y)
@@ -2222,18 +2223,20 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   // Era37 P5: per-column surface band (hills/trees), not focus Y only.
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const int col_top_cy =
-      GetHighestNonAirChunkSlice(BlockWorld, ground, max_y);
+      GetHighestNonAirChunkSlice(BlockWorld, ground, max_y,
+                                 ProceduralTemplate.MinHeight);
   const int col_top_y =
-      col_top_cy >= 0
+      col_top_cy != kNoTerrainChunkSlice
           ? std::min(max_y, (col_top_cy + 1) * CHUNK_SIZE - 1)
-          : -1;
+          : ProceduralTemplate.MinHeight - 1;
   const auto surface_band = RelightSurfaceBandForColumn(
-      focus_block.y, col_top_y, CHUNK_SIZE, max_y, 0, max_y);
+      focus_block.y, col_top_y, CHUNK_SIZE, max_y,
+      ProceduralTemplate.MinHeight, max_y, ProceduralTemplate.MinHeight);
   if (surface_band.second < surface_band.first)
   {
     return;
   }
-  int nearest_unsettled_dark_cy = -1;
+  int nearest_unsettled_dark_cy = kNoChunkSlice;
   int nearest_unsettled_dark_dist = INT_MAX;
   if (MeshService)
   {
@@ -2278,7 +2281,7 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   // If a drawable dark slice is missing a current calculation proof, repair
   // the nearest such slice first. A column-wide surface interval invalidates
   // settlements in unrelated slices before we know whether they need work.
-  if (nearest_unsettled_dark_cy >= 0)
+  if (nearest_unsettled_dark_cy != kNoChunkSlice)
   {
     relight_min_y = nearest_unsettled_dark_cy * CHUNK_SIZE;
     relight_max_y = std::min(
@@ -2399,9 +2402,8 @@ int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
       continue;
     }
     bool has_mesh = false;
-    const int max_cy =
-        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE);
-    for (int cy = 0; cy <= max_cy; ++cy)
+    const int max_cy = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+    for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
     {
       if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
       {
@@ -3139,26 +3141,26 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       IsColumnStickyRemesh(ground_xz) || ColumnHasRepairProgress(ground_xz);
 
   const int max_cy =
-      std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
   const int horiz_from_focus =
       std::max(std::abs(ground.x - focus_chunk.x),
                std::abs(ground.z - focus_chunk.z));
-  int band_min = std::max(0, focus_block.y - CHUNK_SIZE);
+  int band_min = std::max(ProceduralTemplate.MinHeight, focus_block.y - CHUNK_SIZE);
   int band_max =
       std::min(ProceduralTemplate.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
   if (ProceduralTemplate.FillWater)
   {
     const int sea = ProceduralTemplate.SeaLevel;
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max =
         std::max(band_max, std::min(ProceduralTemplate.MaxHeight,
                                     sea + CHUNK_SIZE * 2));
   }
   // Underfeet: full column — camera±1 band alone falsely reports NotLoaded(6)
   // when surface mesh sits below the player band (manual 201626).
-  int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+  int cy0 = std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), FloorDiv(band_min, CHUNK_SIZE));
   int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
   if (horiz_from_focus <= 1)
   {
@@ -3172,7 +3174,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     // I10-F2: cruise clear uses camera band only; safety paths keep full column.
     if (!moving || safety_full)
     {
-      cy0 = 0;
+      cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
       cy1 = max_cy;
     }
   }
@@ -3548,7 +3550,9 @@ bool UWorld::IsTerrainColumnCompleteFast(glm::ivec3 ground) const
     }
   }
   return IsTerrainChunkComplete(BlockWorld, ground,
-                                ProceduralTemplate.MaxHeight);
+                                ProceduralTemplate.MaxHeight,
+                                kNoTerrainChunkSlice,
+                                ProceduralTemplate.MinHeight);
 }
 
 int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
@@ -3579,8 +3583,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       return;
     }
     const int ring_width = 2 * radius_chunks + 1;
-    const int max_cy = std::max(
-        0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+    const int max_cy = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
     const std::string message =
         std::string("detail=unfinished_visual path=") + path +
         " focus=(" + std::to_string(focus_ground_chunk.x) + "," +
@@ -3668,11 +3671,12 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     census.data_mesh_sample_age_frames = 0;
     clear_data_mesh_counts();
 
-    const int max_height = std::max(0, ProceduralTemplate.MaxHeight);
+    const int max_height = ProceduralTemplate.MaxHeight;
     const int max_cy =
-        std::max(0, FloorDiv(max_height, CHUNK_SIZE));
+        FloorDiv(max_height, CHUNK_SIZE);
     const int focus_y = camera_block.y;
-    const int camera_band_min = std::max(0, focus_y - CHUNK_SIZE);
+    const int camera_band_min =
+        std::max(ProceduralTemplate.MinHeight, focus_y - CHUNK_SIZE);
     const int camera_band_max =
         std::min(max_height, focus_y + CHUNK_SIZE * 2);
     int band_min = camera_band_min;
@@ -3681,16 +3685,17 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     {
       band_min = std::min(
           band_min,
-          std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE * 4));
+          std::max(ProceduralTemplate.MinHeight,
+                   ProceduralTemplate.SeaLevel - CHUNK_SIZE * 4));
       band_max = std::max(
           band_max,
           std::min(max_height,
                    ProceduralTemplate.SeaLevel + CHUNK_SIZE * 2));
     }
-    const int band_cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+    const int band_cy0 = std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), FloorDiv(band_min, CHUNK_SIZE));
     const int band_cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
     const int camera_band_cy0 =
-        std::max(0, FloorDiv(camera_band_min, CHUNK_SIZE));
+        std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), FloorDiv(camera_band_min, CHUNK_SIZE));
     const int camera_band_cy1 =
         std::min(max_cy, FloorDiv(camera_band_max, CHUNK_SIZE));
     const auto &mesh_cache = MeshService->GetCache();
@@ -3711,7 +3716,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       {
         const int cx = focus_ground_chunk.x + dx;
         const int cz = focus_ground_chunk.z + dz;
-        for (int cy = 0; cy <= max_cy; ++cy)
+        for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
         {
           const glm::ivec3 coord(cx, cy, cz);
           const UChunk *chunk = chunk_manager.GetChunk(coord);
@@ -4746,11 +4751,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           kVisualStageFirstMeshRelightApproachHoriz;
       const int geometry_debt_ring_min =
           kVisualStageFirstMeshRelightApproachHoriz;
-      const int camera_band_min = std::max(0, focus_block.y - CHUNK_SIZE);
+      const int camera_band_min = std::max(ProceduralTemplate.MinHeight, focus_block.y - CHUNK_SIZE);
       const int camera_band_max =
           std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
       const int camera_cy_min =
-          std::max(0, FloorDiv(camera_band_min, CHUNK_SIZE));
+          std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), FloorDiv(camera_band_min, CHUNK_SIZE));
       const int camera_cy_max =
           std::min(cy1, FloorDiv(camera_band_max, CHUNK_SIZE));
       struct OuterCandidate
@@ -4801,7 +4806,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             continue;
           }
 
-          int target_cy = -1;
+          int target_cy = kNoChunkSlice;
           int best_vertical_distance = max_y + CHUNK_SIZE;
           for (int cy = camera_cy_min; cy <= camera_cy_max; ++cy)
           {
@@ -4838,7 +4843,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
               best_vertical_distance = vertical_distance;
             }
           }
-          if (target_cy >= 0)
+          if (target_cy != kNoChunkSlice)
           {
             const uint64_t key = PackUnfinishedColKey(cx, cz);
             if (candidate_columns.insert(key).second)
@@ -4886,7 +4891,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             continue;
           }
 
-          int target_cy = -1;
+          int target_cy = kNoChunkSlice;
           int best_vertical_distance = max_y + CHUNK_SIZE;
           for (int cy = camera_cy_min; cy <= camera_cy_max; ++cy)
           {
@@ -4926,7 +4931,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
               best_vertical_distance = vertical_distance;
             }
           }
-          if (target_cy >= 0)
+          if (target_cy != kNoChunkSlice)
           {
             candidate_columns.insert(key);
             const float forward_distance = glm::dot(to_column, forward);
@@ -5064,7 +5069,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     // Rank Y by |cy-focus| then prefer unlit / missing mesh.
     std::vector<int> ys;
     ys.reserve(static_cast<size_t>(cy1 + 1));
-    for (int cy = 0; cy <= cy1; ++cy)
+    for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(cx, cy, cz);
       if (!BlockWorld.GetChunkManager().GetChunk(coord))
@@ -6139,7 +6144,10 @@ bool UWorld::CanSeedSkylightAtCommit(glm::ivec3 ground) const
   {
     ground.y = 0;
   }
-  if (!IsTerrainChunkComplete(BlockWorld, ground, ProceduralTemplate.MaxHeight))
+  if (!IsTerrainChunkComplete(BlockWorld, ground,
+                              ProceduralTemplate.MaxHeight,
+                              kNoTerrainChunkSlice,
+                              ProceduralTemplate.MinHeight))
   {
     return false;
   }
@@ -6151,7 +6159,9 @@ bool UWorld::CanSeedSkylightAtCommit(glm::ivec3 ground) const
     {
       const glm::ivec3 neighbor(ground.x + dx, 0, ground.z + dz);
       if (!IsTerrainChunkComplete(BlockWorld, neighbor,
-                                  ProceduralTemplate.MaxHeight))
+                                  ProceduralTemplate.MaxHeight,
+                                  kNoTerrainChunkSlice,
+                                  ProceduralTemplate.MinHeight))
       {
         continue;
       }
@@ -6202,12 +6212,12 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
   int band_min =
-      std::max(0, focus_ground_horiz.y * CHUNK_SIZE - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus_ground_horiz.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus_ground_horiz.y * CHUNK_SIZE +
                                       CHUNK_SIZE * 3 - 1);
   if (ProceduralTemplate.FillWater)
   {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
@@ -6382,12 +6392,12 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
   int band_min =
-      std::max(0, focus_ground_horiz.y * CHUNK_SIZE - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus_ground_horiz.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus_ground_horiz.y * CHUNK_SIZE +
                                       CHUNK_SIZE * 3 - 1);
   if (ProceduralTemplate.FillWater)
   {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
@@ -6569,7 +6579,7 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
     return 0;
   }
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
   struct Entry
   {
     int dist;
@@ -6596,7 +6606,7 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
         continue;
       }
       bool stale = false;
-      for (int cy = 0; cy <= max_cy; ++cy)
+      for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
         if (MeshService->HasDrawableGreedyMesh(coord) &&
@@ -6668,7 +6678,8 @@ int UWorld::CollectDrawGateRelightTargets(
     ++recent_age_n;
     const int horiz = std::max(std::abs(coord.x - focus_ground_chunk.x),
                                std::abs(coord.z - focus_ground_chunk.z));
-    if (horiz > radius_chunks || coord.y < 0 ||
+    if (horiz > radius_chunks ||
+        coord.y < FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE) ||
         coord.y * CHUNK_SIZE > max_y)
     {
       continue;
@@ -6768,9 +6779,11 @@ int UWorld::CollectDrawGateRelightTargets(
         !settled_mesh_repair && stale_light
             ? std::max(coord.y, witness.source_chunk.y)
             : coord.y;
-    const int min_world_y = std::clamp(min_cy * CHUNK_SIZE, 0, max_y);
+    const int min_world_y = std::clamp(min_cy * CHUNK_SIZE,
+                                       ProceduralTemplate.MinHeight, max_y);
     const int max_world_y =
-        std::clamp((max_cy + 1) * CHUNK_SIZE - 1, 0, max_y);
+        std::clamp((max_cy + 1) * CHUNK_SIZE - 1,
+                   ProceduralTemplate.MinHeight, max_y);
     const int vertical_distance = std::abs(coord.y - focus_ground_chunk.y);
     auto &candidate_set =
         settled_mesh_repair ? settled_mesh_candidates : candidates;
@@ -7048,7 +7061,7 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
     return 0;
   }
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
   struct Entry
   {
     int dist;
@@ -7091,7 +7104,7 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
         continue;
       }
       bool fully_dark = false;
-      for (int cy = 0; cy <= max_cy; ++cy)
+      for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
         if (MeshService->HasDrawableGreedyMesh(coord) &&
@@ -7147,8 +7160,8 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
   bool stale_dark = false;
   bool remesh_owned = false;
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  for (int cy = 0; cy <= max_cy; ++cy)
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
     if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
@@ -7347,12 +7360,12 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
   int band_min =
-      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
                                       CHUNK_SIZE * 3 - 1);
   if (ProceduralTemplate.FillWater)
   {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
@@ -7413,23 +7426,23 @@ int UWorld::CountProvisionalLightPreviewFocusMeshes(
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
   int band_min =
-      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
                                      CHUNK_SIZE * 2 - 1);
   if (LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
   {
     const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
-    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_min = std::max(ProceduralTemplate.MinHeight, eye_y - CHUNK_SIZE);
     band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
     if (ProceduralTemplate.FillWater)
     {
-      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE));
       band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
     }
   }
   else if (ProceduralTemplate.FillWater)
   {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   return MeshService->GetCache().CountProvisionalLightPreviewsNear(
@@ -7480,35 +7493,35 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
   const bool moving =
       LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
   int band_min =
-      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
                                       CHUNK_SIZE * 3 - 1);
   if (moving)
   {
     // ColdWall S2b: cruise — eye ±1 cy ∪ sea±CHUNK (not sea±4*CHUNK).
     const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
-    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_min = std::max(ProceduralTemplate.MinHeight, eye_y - CHUNK_SIZE);
     band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
     if (ProceduralTemplate.FillWater)
     {
-      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE));
       band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
     }
   }
   else if (ProceduralTemplate.FillWater)
   {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   // FZ2.5-Perf3: standing VB stable 3+ frames — narrow cy band (eye±1).
   if (!moving && vb_stable_frames >= 3)
   {
     const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
-    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_min = std::max(ProceduralTemplate.MinHeight, eye_y - CHUNK_SIZE);
     band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
     if (ProceduralTemplate.FillWater)
     {
-      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE));
       band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
     }
   }
@@ -7889,8 +7902,8 @@ bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const
   if (MeshService->HasSoftDeferHeldInColumn(ground_xz))
   {
     bool fully_dark = false;
-    const int max_cy = std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-    for (int cy = 0; cy <= max_cy; ++cy)
+    const int max_cy = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+    for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
     {
       const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
       if (MeshService->HasDrawableGreedyMesh(coord) &&
@@ -7906,12 +7919,13 @@ bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const
     }
   }
   const int max_y = ProceduralTemplate.MaxHeight;
-  if (MeshService->HasDirtyInColumnBand(ground_xz, 0, max_y))
+  if (MeshService->HasDirtyInColumnBand(ground_xz,
+                                        ProceduralTemplate.MinHeight, max_y))
   {
     return true;
   }
-  const int max_cy = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
-  for (int cy = 0; cy <= max_cy; ++cy)
+  const int max_cy = FloorDiv(max_y, CHUNK_SIZE);
+  for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
     if (MeshService->IsRemeshAfterApplyPending(coord) ||
@@ -7934,8 +7948,8 @@ bool UWorld::ShouldDeferRepairReticketUntilGpuApplied(
     return false;
   }
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  for (int cy = 0; cy <= max_cy; ++cy)
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
     if (MeshService->IsPendingGpuApply(coord) ||
@@ -7969,12 +7983,12 @@ int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
   int band_min =
-      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
                                       CHUNK_SIZE * 3 - 1);
   if (ProceduralTemplate.FillWater)
   {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
@@ -8049,7 +8063,7 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
   // Narrow player band only — full sea±4*CHUNK caused mesh_emerge 500–740ms
   // spikes on manual stop (perf_20260720-194911).
   const int band_min =
-      std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus.y * CHUNK_SIZE - CHUNK_SIZE);
   const int band_max =
       std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 2 - 1);
   const int preferred_cy = focus.y;
@@ -8200,12 +8214,12 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
   int band_min =
-      std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+      std::max(ProceduralTemplate.MinHeight, focus.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max =
       std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
   if (ProceduralTemplate.FillWater)
   {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_min = std::min(band_min, std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
@@ -8233,7 +8247,8 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
     }
     // PendingLight owns a recorded Y range. Do not satisfy it with a mesh
     // from the camera's current vertical band, which may be unrelated.
-    const int ticket_min_y = std::max(0, it->second.min_y);
+    const int ticket_min_y =
+        std::max(ProceduralTemplate.MinHeight, it->second.min_y);
     const int ticket_max_y = std::min(max_y, it->second.max_y);
     if (ticket_max_y < ticket_min_y)
     {
@@ -8763,7 +8778,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   {
     for (const glm::ivec3 &pos : AsyncRelight->TakeOverflowSourcePositions())
     {
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false, 0, -1,
+      Persistence->EnqueueTerrainColumnRelight(
+          pos.x, pos.z, false, ProceduralTemplate.MinHeight, -1,
                                                __FUNCTION__, this);
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
       AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
@@ -9710,7 +9726,9 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       for (const glm::ivec3 &pos : result.source_block_positions)
       {
-        Persistence->TryEnqueueTerrainColumnRelight(*this, pos.x, pos.z);
+        Persistence->TryEnqueueTerrainColumnRelight(
+            *this, pos.x, pos.z, /*priority=*/false,
+            ProceduralTemplate.MinHeight, /*max_y=*/-1);
       }
     }
     const double elapsed_ms =
@@ -9779,7 +9797,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
       AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false, 0, -1,
+      Persistence->EnqueueTerrainColumnRelight(
+          pos.x, pos.z, false, ProceduralTemplate.MinHeight, -1,
                                                __FUNCTION__, this);
     }
   }
@@ -10035,6 +10054,7 @@ void UWorld::SetProceduralSettings(const ProceduralSettings &settings,
                                    bool rebuildPipeline)
 {
   ProceduralTemplate = settings;
+  BlockWorld.SetVerticalProfile(settings.GetVerticalProfile());
   WorldSeed = settings.Seed;
   TerrainType = ProceduralGeneratorToString(settings.Generator);
   MaxLoadOpsPerFrame = settings.MaxLoadOpsPerFrame;
@@ -10070,8 +10090,12 @@ void UWorld::RebuildResolvedObjectFeatures()
 {
   if (UObjectFeatureConfigStorage::IsLoaded())
   {
+    const ObjectFeatureConfig &global = UObjectFeatureConfigStorage::Get();
+    UpgradeLegacyWorldGenSetMetadata(
+        WorldGenSetsData, global, ProceduralTemplate.WorldGenProfileVersion);
     ResolvedObjectFeatures = ResolveObjectFeatures(
-        WorldGenSetsData, UObjectFeatureConfigStorage::Get());
+        WorldGenSetsData, global,
+        ProceduralTemplate.WorldGenProfileVersion);
   }
 }
 
@@ -10493,7 +10517,8 @@ void UWorld::CancelAsyncRelightWork()
   {
     for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
     {
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false, 0, -1,
+      Persistence->EnqueueTerrainColumnRelight(
+          pos.x, pos.z, false, ProceduralTemplate.MinHeight, -1,
                                                __FUNCTION__, this);
     }
   }
@@ -10836,11 +10861,12 @@ void EnterSpawnMeshPresentableBand(const UWorld &world, int &out_cy0,
 {
   const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();
   const auto &proc = world.GetProceduralSettings();
-  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
-  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
-  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
+  const int player_cy = FloorDiv(std::max(proc.MinHeight, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(proc.SeaLevel, CHUNK_SIZE);
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy,
-                               out_cy0, out_cy1);
+                               out_cy0, out_cy1,
+                               FloorDiv(proc.MinHeight, CHUNK_SIZE));
 }
 
 bool HasBlockingSpawnMeshDirty(const UWorld &world,
@@ -10851,7 +10877,7 @@ bool HasBlockingSpawnMeshDirty(const UWorld &world,
   {
     return mesh.HasDirtyWithinHorizontalRadius(center, radius);
   }
-  int cy0 = 0;
+  int cy0 = FloorDiv(world.GetProceduralSettings().MinHeight, CHUNK_SIZE);
   int cy1 = 0;
   EnterSpawnMeshPresentableBand(world, cy0, cy1);
   return mesh.HasUnsatisfiedDirtyInHorizontalRadiusBand(center, radius, cy0,
@@ -10867,7 +10893,7 @@ bool EnterMeshAsyncBlocksRing(const UWorld &world,
   if (world.IsEnterLitGateActive() || world.IsEnterSessionActive())
   {
     const int near_r = EnterMeshAsyncBlockRadiusChunks(radius_chunks);
-    int cy0 = 0;
+    int cy0 = FloorDiv(world.GetProceduralSettings().MinHeight, CHUNK_SIZE);
     int cy1 = 0;
     EnterSpawnMeshPresentableBand(world, cy0, cy1);
     glm::ivec3 blocker{};
@@ -10898,13 +10924,13 @@ bool FindFirstSpawnRingMissingGreedyImpl(const UWorld &world, glm::ivec3 &out_co
   const int radius = EnterGameMeshRadiusChunks(world);
   const UWorldMeshService &mesh = world.GetMeshService();
   const auto &proc = world.GetProceduralSettings();
-  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
-  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
-  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+  const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
+  const int player_cy = FloorDiv(std::max(proc.MinHeight, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(proc.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(proc.MinHeight, CHUNK_SIZE);
   int cy1 = 0;
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
-                               cy1);
+                               cy1, FloorDiv(proc.MinHeight, CHUNK_SIZE));
   auto sample_solid = [](const UChunk *chunk) -> bool
   {
     if (!chunk)
@@ -11002,14 +11028,14 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   if (spawn_meshes_pending && HasMissingGreedyMeshesNearFocus(*this))
   {
     const auto &proc = GetProceduralSettings();
-    const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+    const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
     const int player_cy =
-        FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
-    const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
-    int cy0 = 0;
+        FloorDiv(std::max(proc.MinHeight, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+    const int sea_cy = FloorDiv(proc.SeaLevel, CHUNK_SIZE);
+    int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
     int cy1 = 0;
     EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
-                                 cy1);
+                                 cy1, FloorDiv(proc.MinHeight, CHUNK_SIZE));
     for (int dx = -radius; dx <= radius; ++dx)
     {
       for (int dz = -radius; dz <= radius; ++dz)
@@ -11092,14 +11118,14 @@ int UWorld::MarkEnterMissingMeshesDirty()
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = EnterGameMeshRadiusChunks(*this);
   const auto &proc = GetProceduralSettings();
-  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
   const int player_cy =
-      FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
-  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+      FloorDiv(std::max(proc.MinHeight, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(proc.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = 0;
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
-                               cy1);
+                               cy1, FloorDiv(proc.MinHeight, CHUNK_SIZE));
   int marked = 0;
   const bool underfeet_exit_blocked =
       IsEnterLitGateActive() && !IsEnterUnderfeetPresentReady();
@@ -11285,13 +11311,13 @@ bool UWorld::IsSpawnMeshRingReady() const
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
   const int radius = EnterGameMeshRadiusChunks(*this);
   const auto &proc = GetProceduralSettings();
-  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
-  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
-  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+  const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
+  const int player_cy = FloorDiv(std::max(proc.MinHeight, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(proc.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = 0;
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
-                               cy1);
+                               cy1, FloorDiv(proc.MinHeight, CHUNK_SIZE));
   const bool underfeet_present = IsEnterUnderfeetPresentReady();
   // Near presentable: underfeet + no near async/gpu (debt may remain hinterland).
   const bool enter_gate_active =
@@ -11381,14 +11407,14 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
   const int vis_r = EnterVisualWorkRadiusChunks();
   const int ring_r = max_horiz < 0 ? vis_r : std::min(vis_r, max_horiz);
   const auto &proc = GetProceduralSettings();
-  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
   const int player_cy =
-      FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
-  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+      FloorDiv(std::max(proc.MinHeight, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(proc.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = 0;
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
-                               cy1);
+                               cy1, FloorDiv(proc.MinHeight, CHUNK_SIZE));
   int marked = 0;
   auto try_mark_slice = [&](glm::ivec3 coord) -> bool
   {
@@ -11539,13 +11565,13 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
   const int radius = EnterGameMeshRadiusChunks(*this);
   const auto &proc = GetProceduralSettings();
-  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
-  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
-  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+  const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
+  const int player_cy = FloorDiv(std::max(proc.MinHeight, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(proc.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = 0;
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
-                               cy1);
+                               cy1, FloorDiv(proc.MinHeight, CHUNK_SIZE));
   out.missing_greedy = HasMissingGreedyMeshesNearFocus(*this);
   out.visual_warmup = NeedsEnterGameVisualWarmup();
   const bool enter_warmup_gate =
@@ -11672,17 +11698,17 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
     return true;
   }
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
-  const int sea_cy = FloorDiv(std::max(0, ProceduralTemplate.SeaLevel),
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  const int focus_cy = FloorDiv(std::max(ProceduralTemplate.MinHeight, focus_block.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(ProceduralTemplate.SeaLevel,
                                CHUNK_SIZE);
-  int cy0 = 0;
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
   if (ProceduralTemplate.FillWater)
   {
-    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+    cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), sea_cy - 1));
   }
-  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), focus_cy - 1));
   for (int dx = -visual_r; dx <= visual_r; ++dx)
   {
     for (int dz = -visual_r; dz <= visual_r; ++dz)
@@ -11783,8 +11809,8 @@ bool UWorld::ColumnFullyDarkSolidDrawable(glm::ivec2 col_chunk_xz) const
     return false;
   }
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  for (int cy = 0; cy <= max_cy; ++cy)
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
     const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
@@ -11827,8 +11853,8 @@ bool UWorld::ColumnHasLitDrawableFace(glm::ivec2 col_chunk_xz) const
     return false;
   }
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  for (int cy = 0; cy <= max_cy; ++cy)
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
     if (MeshService->HasDrawableGreedyMesh(coord) &&
@@ -11932,7 +11958,7 @@ void UWorld::EnqueueEnterLitSnapshotRelight()
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const int fov_r = EnterVisualWarmupRadiusChunks();
   const int max_y = ProceduralTemplate.MaxHeight;
-  const int band_min = 0;
+  const int band_min = ProceduralTemplate.MinHeight;
   const int band_max = max_y;
   const glm::ivec3 focus_ground(center.x, 0, center.z);
   std::vector<glm::ivec2> protected_visible_columns;
@@ -12012,7 +12038,7 @@ void UWorld::RepairEnterLitSnapshotFifoGhosts()
     return;
   }
   const int max_y = ProceduralTemplate.MaxHeight;
-  const int band_min = 0;
+  const int band_min = ProceduralTemplate.MinHeight;
   const int band_max = max_y;
   for (const glm::ivec2 &col : EnterLitDebtSnapshot)
   {
@@ -12063,8 +12089,8 @@ bool UWorld::ColumnFullyDarkLooksStaleWithLitField(glm::ivec2 col_chunk_xz) cons
     return false;
   }
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  for (int cy = 0; cy <= max_cy; ++cy)
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
     if (!MeshService->HasDrawableGreedyMesh(coord) ||
@@ -12093,7 +12119,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
   }
   int scheduled = 0;
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const int vis_r = EnterVisualWorkRadiusChunks();
@@ -12148,7 +12174,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
       {
         const int sea = ProceduralTemplate.SeaLevel;
         const int max_h = ProceduralTemplate.MaxHeight;
-        const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+        const int dirty_min = std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE);
         const int dirty_max = std::min(max_h, sea + CHUNK_SIZE * 2);
         std::vector<glm::ivec3> changed_light_chunks;
         ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry,
@@ -12187,7 +12213,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
       return;
     }
     bool touched = false;
-    for (int cy = 0; cy <= max_cy; ++cy)
+    for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy; ++cy)
     {
       const glm::ivec3 coord(col.x, cy, col.y);
       if (!MeshService->HasDrawableGreedyMesh(coord) ||
@@ -12334,8 +12360,8 @@ void UWorld::RefreshEnterVisualWorklistStates()
     if (!terminal && MeshService)
     {
       const int max_cy =
-          std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-      for (int cy = 0; cy <= max_cy && !gpu_busy; ++cy)
+          FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+      for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE); cy <= max_cy && !gpu_busy; ++cy)
       {
         const glm::ivec3 coord(col.x, cy, col.y);
         if (MeshService->IsPendingGpuApply(coord) ||
@@ -12390,7 +12416,7 @@ void UWorld::BeginEnterLitGate()
   {
     const int sea = ProceduralTemplate.SeaLevel;
     const int max_h = ProceduralTemplate.MaxHeight;
-    const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+    const int dirty_min = std::max(ProceduralTemplate.MinHeight, sea - CHUNK_SIZE);
     const int dirty_max = std::min(max_h, sea + CHUNK_SIZE * 2);
     for (const glm::ivec2 &col : EnterLitDebtSnapshot)
     {
@@ -12487,7 +12513,7 @@ int UWorld::CountEnterFovLitDebt() const
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const int lit_r = EnterLitGateLitRadiusChunks();
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
 
   int debt = static_cast<int>(PendingLightBeforeMesh.size());
 
@@ -12537,17 +12563,17 @@ bool UWorld::ColumnHasTerrainInEnterVisualBand(glm::ivec2 col_chunk_xz) const
   }
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  const int focus_cy = FloorDiv(std::max(ProceduralTemplate.MinHeight, focus_block.y), CHUNK_SIZE);
   const int sea_cy =
-      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+      FloorDiv(ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
   if (ProceduralTemplate.FillWater)
   {
-    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+    cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), sea_cy - 1));
   }
-  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), focus_cy - 1));
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     if (BlockWorld.GetChunkManager().HasChunk(
@@ -12622,17 +12648,17 @@ bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
 
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  const int focus_cy = FloorDiv(std::max(ProceduralTemplate.MinHeight, focus_block.y), CHUNK_SIZE);
   const int sea_cy =
-      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+      FloorDiv(ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
   if (ProceduralTemplate.FillWater)
   {
-    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+    cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), sea_cy - 1));
   }
-  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), focus_cy - 1));
 
   bool any_chunk = false;
   bool fully_dark_solid = false;
@@ -12787,17 +12813,17 @@ bool UWorld::IsEnterUnderfeetPresentReady() const
     const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
     const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
     const int max_cy =
-        std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-    const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+        FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+    const int focus_cy = FloorDiv(std::max(ProceduralTemplate.MinHeight, focus_block.y), CHUNK_SIZE);
     const int sea_cy =
-        FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
-    int cy0 = 0;
+        FloorDiv(ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+    int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
     int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
     if (ProceduralTemplate.FillWater)
     {
-      cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+      cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), sea_cy - 1));
     }
-    cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+    cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), focus_cy - 1));
     bool saw_solid = false;
     bool opaque = false;
     for (int cy = cy0; cy <= cy1; ++cy)
@@ -12850,17 +12876,17 @@ bool UWorld::IsEnterUnderfeetPresentReady() const
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  const int focus_cy = FloorDiv(std::max(ProceduralTemplate.MinHeight, focus_block.y), CHUNK_SIZE);
   const int sea_cy =
-      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+      FloorDiv(ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
   if (ProceduralTemplate.FillWater)
   {
-    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+    cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), sea_cy - 1));
   }
-  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), focus_cy - 1));
   bool saw_solid_focus = false;
   bool opaque_present = false;
   for (int cy = cy0; cy <= cy1; ++cy)
@@ -12967,8 +12993,8 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
   const int fov_r = EnterVisualWarmupRadiusChunks();
   const int lit_r = std::max(fov_r, GetRenderDistanceChunks() + 1);
   const int max_y = ProceduralTemplate.MaxHeight;
-  const int max_cy = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
-  const int band_min = 0;
+  const int max_cy = FloorDiv(max_y, CHUNK_SIZE);
+  const int band_min = ProceduralTemplate.MinHeight;
   const int band_max = max_y;
 
   auto column_needs_light = [&](glm::ivec2 col) -> bool {
@@ -13149,17 +13175,17 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
     ++debt;
   }
   const int max_cy =
-      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  const int focus_cy = FloorDiv(std::max(ProceduralTemplate.MinHeight, focus_block.y), CHUNK_SIZE);
   const int sea_cy =
-      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
+      FloorDiv(ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+  int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
   if (ProceduralTemplate.FillWater)
   {
-    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+    cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), sea_cy - 1));
   }
-  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  cy0 = std::min(cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE), focus_cy - 1));
   for (int dx = -near_r; dx <= near_r; ++dx)
   {
     for (int dz = -near_r; dz <= near_r; ++dz)
@@ -13336,7 +13362,9 @@ bool UWorld::IsEnterStreamingWarmupSettled() const
     for (int dz = -radius; dz <= radius; ++dz)
     {
       const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
-      if (!IsTerrainChunkComplete(BlockWorld, coord, max_y))
+      if (!IsTerrainChunkComplete(BlockWorld, coord, max_y,
+                                  kNoTerrainChunkSlice,
+                                  GetProceduralSettings().MinHeight))
       {
         return false;
       }
@@ -13637,16 +13665,20 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
     }
     for (const glm::ivec3 &ground : grounds)
     {
-      if (IsTerrainChunkComplete(BlockWorld, ground, ProceduralTemplate.MaxHeight))
+      if (IsTerrainChunkComplete(BlockWorld, ground,
+                                 ProceduralTemplate.MaxHeight,
+                                 kNoTerrainChunkSlice,
+                                 ProceduralTemplate.MinHeight))
       {
         GetChunkStorage().SaveTerrainColumn(
             ground, BlockWorld, world_folder_path, *BlockRegistry,
-            ProceduralTemplate.MaxHeight);
+            ProceduralTemplate.MaxHeight, ProceduralTemplate.MinHeight);
       }
       else
       {
         GetChunkStorage().RemoveTerrainColumnFromDisk(
-            world_folder_path, ground, ProceduralTemplate.MaxHeight);
+            world_folder_path, ground, ProceduralTemplate.MaxHeight, nullptr,
+            ProceduralTemplate.MinHeight);
       }
     }
   }
@@ -13987,9 +14019,11 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   {
     const glm::ivec3 ground_col(FloorDiv(blockPos.x, CHUNK_SIZE), 0,
                                 FloorDiv(blockPos.z, CHUNK_SIZE));
-    MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground_col, 0,
-                                                blockPos.y + CHUNK_SIZE);
-    MeshService->EnqueueColumnMissingDigSeamBelow(BlockWorld, blockPos);
+    MeshService->MarkMissingSlicesDirtyPriority(
+        BlockWorld, ground_col, ProceduralTemplate.MinHeight,
+        blockPos.y + CHUNK_SIZE);
+    MeshService->EnqueueColumnMissingDigSeamBelow(
+        BlockWorld, blockPos, 4, ProceduralTemplate.MinHeight);
     // Era23 I-P1: SoftDefer empty / !Drawable under place → FirstMesh + Dirty
     // same tick (collision already via MarkBlockChunkDirty). No Imm flood.
     const glm::ivec3 place_chunk = UChunkManager::WorldToChunk(blockPos);
@@ -14739,7 +14773,8 @@ void UWorld::TryEnqueueFluidAt(glm::ivec3 blockPos)
     return;
   }
   if (!UFluidSpreadSystem::HasSpreadTargetForTick(BlockWorld, *definitions,
-                                                  blockPos, PhysicsTickCounter))
+                                                  blockPos, PhysicsTickCounter,
+                                                  ProceduralTemplate.MinHeight))
   {
     return;
   }

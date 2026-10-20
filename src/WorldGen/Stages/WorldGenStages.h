@@ -1,12 +1,14 @@
 #pragma once
 
 #include "WorldGen/Core/WorldGenContext.h"
+#include <cstdint>
 #include <glm/glm.hpp>
 
 namespace cutum
 {
 
 class UDensityFieldSampler;
+class UAquiferSampler;
 
 struct ColumnLayerRule
 {
@@ -20,8 +22,14 @@ struct ColumnLayerRule
 void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const ColumnLayerRule &rule);
 void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
-                                  int surfaceY, const ColumnLayerRule &rule,
-                                  const UDensityFieldSampler &sampler);
+                                  int surfaceY, int rawSurfaceY,
+                                  const ColumnLayerRule &rule,
+                                  const UDensityFieldSampler &sampler,
+                                  const UAquiferSampler *aquiferSampler = nullptr);
+bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
+                        uint32_t seed);
+bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
+                       const UAquiferSampler &sampler);
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY);
 bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z);
 bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z);

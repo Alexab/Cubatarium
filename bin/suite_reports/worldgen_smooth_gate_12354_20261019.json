@@ -1,0 +1,12 @@
+{
+  "chunk_files": 1580,
+  "error": "",
+  "generator": "overworld",
+  "preset": "smooth",
+  "radius_chunks": 4,
+  "seed": 12354,
+  "spawn_y": 72.12000274658203,
+  "success": true,
+  "world_name": "WorldgenSmoothGateQA_12354_20261019",
+  "world_path": "E:\\Work\\Home\\Cubatarium\\bin\\worlds\\WorldgenSmoothGateQA_12354_20261019"
+}

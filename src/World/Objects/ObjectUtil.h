@@ -2,7 +2,9 @@
 
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include <functional>
 #include <glm/glm.hpp>
+#include <optional>
 
 namespace cutum
 {
@@ -36,7 +38,11 @@ bool CanPlacePlantAt(const UBlockWorld &world, UBlockRegistry &registry,
 bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
                           int x, int z, int surfaceY);
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
-                         int x, int z, int maxY);
+                         int x, int z, int maxY, int minY = 0);
+std::optional<int> FindTopSolidSurfaceYOptional(const UBlockWorld &world,
+                                                UBlockRegistry &registry,
+                                                int x, int z, int maxY,
+                                                int minY = 0);
 
 struct PlacementSurfaceInfo
 {
@@ -47,7 +53,8 @@ struct PlacementSurfaceInfo
 PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               UBlockRegistry &registry, int x,
                                               int z, int heightmapSurfaceY,
-                                              int maxHeight, int seaLevel);
+                                              int maxHeight, int seaLevel,
+                                              int minHeight = 0);
 
 bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 pos);
@@ -73,13 +80,16 @@ struct ObjectWorldGenPlacementOptions
   int seaLevel{-1};
 };
 
+using ObjectVoxelWriter = std::function<void(glm::ivec3, BlockId)>;
+
 ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
                                    UBlockRegistry &registry,
                                    const WorldObjectDefinition &object,
                                    glm::ivec3 anchorWorldPos,
                                    bool skipOccupied,
                                    const ObjectWorldGenPlacementOptions &options =
-                                       ObjectWorldGenPlacementOptions{});
+                                       ObjectWorldGenPlacementOptions{},
+                                   ObjectVoxelWriter writeVoxel = {});
 
 std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
                                                       UBlockRegistry &registry,

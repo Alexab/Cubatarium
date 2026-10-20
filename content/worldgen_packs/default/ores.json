@@ -15,8 +15,7 @@
       "y_spread": 28,
       "vein_size": 4,
       "rarity": 0.08,
-      "below_sea_level": true,
-      "seed_modulo": 3
+      "below_sea_level": true
     }
   ]
 }

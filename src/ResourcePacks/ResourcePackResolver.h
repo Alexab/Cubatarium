@@ -52,6 +52,7 @@ inline ResourcePackSelection DefaultResourcePackSelection()
 {
   ResourcePackSelection selection;
   selection.Primary = {"minetest_default_16"};
+  selection.Secondary = {"cubatarium_geology_cc0"};
   selection.WorldgenOwner = "minetest_default_16";
   return selection;
 }

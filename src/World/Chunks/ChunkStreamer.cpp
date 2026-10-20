@@ -64,9 +64,9 @@ bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
 }
 
 bool TerrainColumnNeedsGeneration(const UBlockWorld &world, int worldX,
-                                  int worldZ, int maxWorldY)
+                                  int worldZ, int maxWorldY, int minWorldY)
 {
-  return TerrainColumnNeedsFill(world, worldX, worldZ, maxWorldY);
+  return TerrainColumnNeedsFill(world, worldX, worldZ, maxWorldY, minWorldY);
 }
 
 void MarkTerrainColumnMeshDirty(const UChunkStreamer::MarkDirtyFn &markDirtyFn,
@@ -91,9 +91,10 @@ void MarkTerrainColumnMeshDirty(const UChunkStreamer::MarkDirtyFn &markDirtyFn,
 } // namespace
 
 UChunkStreamer::UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry,
-                               uint32_t Seed, int baseY, int MaxHeight)
+                               uint32_t Seed, int baseY, int MaxHeight,
+                               int MinHeight)
     : World(world), Registry(registry), Seed(Seed), BaseY(baseY),
-      MaxHeight(MaxHeight)
+      MinHeight(MinHeight), MaxHeight(MaxHeight)
 {
 }
 
@@ -166,13 +167,15 @@ bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord) const
   }
   // R4.5.1: procedurally sealed columns skip O(256×H) NeedsFill scan.
   if (ProcedurallyGenerated.count(groundCoord) &&
-      AreTerrainColumnSlicesLoaded(World, groundCoord, MaxHeight))
+      AreTerrainColumnSlicesLoaded(World, groundCoord, MaxHeight,
+                                   kNoTerrainChunkSlice, MinHeight))
   {
     TerrainCompleteCache.emplace(groundCoord, true);
     return true;
   }
   const bool complete =
-      IsTerrainChunkComplete(World, groundCoord, MaxHeight);
+      IsTerrainChunkComplete(World, groundCoord, MaxHeight,
+                             kNoTerrainChunkSlice, MinHeight);
   TerrainCompleteCache.emplace(groundCoord, complete);
   return complete;
 }
@@ -336,7 +339,8 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
     const int worldX = chunkCoord.x * CHUNK_SIZE + lx;
     const int worldZ = chunkCoord.z * CHUNK_SIZE + lz;
     if (state.onlyEmptyColumns &&
-        !TerrainColumnNeedsGeneration(World, worldX, worldZ, MaxHeight))
+        !TerrainColumnNeedsGeneration(World, worldX, worldZ, MaxHeight,
+                                      MinHeight))
     {
       continue;
     }
@@ -480,7 +484,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
                                  TerrainSeamRemeshNotified);
       return true;
     }
-    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight, MinHeight);
     InvalidateTerrainCompleteCache(chunkCoord);
     if (OnRequestAsyncChunk)
     {
@@ -507,7 +511,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
         ++LastFrameStats.diskCompleteThisFrame;
         return true;
       }
-      ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+      ClearTerrainColumnChunks(World, chunkCoord, MaxHeight, MinHeight);
       InvalidateTerrainCompleteCache(chunkCoord);
       clearedPartialDiskLoad = true;
     }
@@ -541,7 +545,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       AsyncGeneration && OnRequestAsyncChunk &&
       !IsTerrainChunkCompleteCached(chunkCoord))
   {
-    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight, MinHeight);
     InvalidateTerrainCompleteCache(chunkCoord);
     ColumnGenStates.erase(chunkCoord);
     OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
@@ -673,13 +677,14 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
   }
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = KeepRenderDistance + UnloadMargin;
-  const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int minCy = FloorDiv(MinHeight, CHUNK_SIZE);
+  const int maxCy = FloorDiv(MaxHeight, CHUNK_SIZE);
   const int player_cy_min =
       UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(cap.feetY(eyePos)), 0))
           .y;
   const int player_cy_max =
       UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(eyePos.y), 0)).y;
-  const int keep_cy_min = std::max(0, player_cy_min - 1);
+  const int keep_cy_min = std::max(minCy, player_cy_min - 1);
   const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
 
   const bool use_cursor = UnloadModeUsesScanCursor(mode);
@@ -820,7 +825,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
 
     const auto remove_chunks_started = std::chrono::steady_clock::now();
     int removed_slices = 0;
-    for (int cy = 0; cy <= maxCy; ++cy)
+    for (int cy = minCy; cy <= maxCy; ++cy)
     {
       const glm::ivec3 slice(ground.x, cy, ground.z);
       if (!World.GetChunkManager().HasChunk(slice))
@@ -905,7 +910,8 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
   {
     return;
   }
-  const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int minCy = FloorDiv(MinHeight, CHUNK_SIZE);
+  const int maxCy = FloorDiv(MaxHeight, CHUNK_SIZE);
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = KeepRenderDistance + UnloadMargin;
   const int player_cy_min = UChunkManager::WorldToChunk(
@@ -914,7 +920,7 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
   const int player_cy_max =
       UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(eyePos.y), 0))
           .y;
-  const int keep_cy_min = std::max(0, player_cy_min - 1);
+  const int keep_cy_min = std::max(minCy, player_cy_min - 1);
   const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
   int ops = 0;
   while (ops < max_ops && !DeferredUnloadSaves.empty())
@@ -965,7 +971,7 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
       OnSaveChunk(ground);
       ++LastFrameStats.savesThisFrame;
     }
-    for (int cy = 0; cy <= maxCy; ++cy)
+    for (int cy = minCy; cy <= maxCy; ++cy)
     {
       const glm::ivec3 slice(ground.x, cy, ground.z);
       if (!World.GetChunkManager().HasChunk(slice))

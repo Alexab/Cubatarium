@@ -179,9 +179,19 @@ bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
 }
 
 int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
-                         int x, int z, int maxY)
+                         int x, int z, int maxY, int minY)
 {
-  for (int y = std::max(1, maxY); y >= 1; --y)
+  const std::optional<int> surface = FindTopSolidSurfaceYOptional(
+      world, registry, x, z, maxY, minY);
+  return surface.value_or(-1);
+}
+
+std::optional<int> FindTopSolidSurfaceYOptional(const UBlockWorld &world,
+                                                UBlockRegistry &registry,
+                                                int x, int z, int maxY,
+                                                int minY)
+{
+  for (int y = maxY; y >= minY; --y)
   {
     const glm::ivec3 ground(x, y, z);
     if (!IsSolidPlantGround(world, registry, ground))
@@ -193,7 +203,7 @@ int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
       return y;
     }
   }
-  return -1;
+  return std::nullopt;
 }
 
 namespace
@@ -204,6 +214,32 @@ bool ObjectVoxelIsSolid(const ObjectVoxel &voxel,
 {
   const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
   return id != BLOCK_AIR && registry.BlocksMovement(id);
+}
+
+bool IsSurfaceFollowingPlantPrefab(const WorldObjectDefinition &object,
+                                   const UBlockRegistry &registry)
+{
+  if (object.PlacementMode != ObjectPlacementMode::VerticalPlant ||
+      object.voxels.empty())
+  {
+    return false;
+  }
+
+  bool hasPlantVoxel = false;
+  for (const ObjectVoxel &voxel : object.voxels)
+  {
+    if (ResolveObjectVoxelPlacementId(voxel, registry) == BLOCK_AIR)
+    {
+      continue;
+    }
+    if (ObjectVoxelIsSolid(voxel, registry) ||
+        voxel.offset.y != object.anchor.y)
+    {
+      return false;
+    }
+    hasPlantVoxel = true;
+  }
+  return hasPlantVoxel;
 }
 
 std::optional<int> UniformSurfaceLayerSolidDy(const WorldObjectDefinition &object,
@@ -241,6 +277,22 @@ glm::ivec3 ResolveObjectVoxelWorldPos(const UBlockWorld & /*world*/,
                                       int /*maxScanY*/)
 {
   return anchorWorldPos + voxel.offset - object.anchor;
+}
+
+glm::ivec3 ResolveSurfaceFollowingPlantVoxelWorldPos(
+    const UBlockWorld &world, glm::ivec3 anchorWorldPos,
+    const WorldObjectDefinition &object, const ObjectVoxel &voxel,
+    UBlockRegistry &registry, int maxScanY)
+{
+  glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
+      world, anchorWorldPos, object, voxel, registry, maxScanY);
+  const int localSurface = FindTopSolidSurfaceY(
+      world, registry, worldPos.x, worldPos.z, maxScanY);
+  if (localSurface >= 0)
+  {
+    worldPos.y = localSurface + 1;
+  }
+  return worldPos;
 }
 
 bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id)
@@ -298,12 +350,13 @@ bool HasTreeVegetationInFootprint(const UBlockWorld &world,
 PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               UBlockRegistry &registry, int x,
                                               int z, int heightmapSurfaceY,
-                                              int maxHeight, int seaLevel)
+                                              int maxHeight, int seaLevel,
+                                              int minHeight)
 {
   PlacementSurfaceInfo info;
   info.maxScanY = ComputeMaxScanY(heightmapSurfaceY, seaLevel, maxHeight);
   info.topSolidY =
-      FindTopSolidSurfaceY(world, registry, x, z, info.maxScanY);
+      FindTopSolidSurfaceY(world, registry, x, z, info.maxScanY, minHeight);
   if (info.topSolidY < seaLevel + WorldGenPlacementTuning::MinLandAboveSea)
   {
     info.topSolidY = -1;
@@ -501,11 +554,17 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
   std::vector<glm::ivec3> nonSolidWorldPositions;
   solidWorldPositions.reserve(object.voxels.size());
   nonSolidWorldPositions.reserve(object.voxels.size());
+  const bool followsLocalSurface =
+      IsSurfaceFollowingPlantPrefab(object, registry);
 
   for (const auto &voxel : object.voxels)
   {
-    const glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
-        world, anchorWorldPos, object, voxel, registry, maxScanY);
+    const glm::ivec3 worldPos =
+        followsLocalSurface
+            ? ResolveSurfaceFollowingPlantVoxelWorldPos(
+                  world, anchorWorldPos, object, voxel, registry, maxScanY)
+            : ResolveObjectVoxelWorldPos(world, anchorWorldPos, object, voxel,
+                                         registry, maxScanY);
     const bool voxelSolid = ObjectVoxelIsSolid(voxel, registry);
     if (voxelSolid)
     {
@@ -517,7 +576,8 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
     }
   }
 
-  if (solidWorldPositions.empty() && !nonSolidWorldPositions.empty())
+  if (solidWorldPositions.empty() && !nonSolidWorldPositions.empty() &&
+      object.PlacementMode != ObjectPlacementMode::VerticalPlant)
   {
     return false;
   }
@@ -529,6 +589,38 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
   }
 
   const ColumnXZ anchorKey = ColumnKey(anchorX, anchorZ);
+  if (solidWorldPositions.empty())
+  {
+    if (object.PlacementMode != ObjectPlacementMode::VerticalPlant ||
+        nonSolidWorldPositions.empty())
+    {
+      return false;
+    }
+
+    // Plant prefabs (flowers, grasses, and similar vegetation) are made only
+    // from non-colliding blocks. They have no solid voxel in the anchor column,
+    // so validate each plant against its own ground column instead of
+    // requiring a solid prefab voxel below.
+    for (const glm::ivec3 &plantPos : nonSolidWorldPositions)
+    {
+      const int localSurface = FindTopSolidSurfaceY(
+          world, registry, plantPos.x, plantPos.z, maxScanY);
+      if (localSurface < 0 || (seaLevel >= 0 && localSurface < seaLevel) ||
+          plantPos.y != localSurface + 1 ||
+          !CanOccupySurfacePlantLayerAt(world, registry, plantPos))
+      {
+        return false;
+      }
+
+      const BlockId existing = world.GetBlock(plantPos);
+      if (existing != BLOCK_AIR && registry.IsLiquid(existing))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
   const auto anchorIt = solidYByColumn.find(anchorKey);
   if (solidYByColumn.empty() || anchorIt == solidYByColumn.end())
   {
@@ -637,21 +729,30 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
                                    UBlockRegistry &registry,
                                    const WorldObjectDefinition &object,
                                    glm::ivec3 anchorWorldPos, bool skipOccupied,
-                                   const ObjectWorldGenPlacementOptions &options)
+                                   const ObjectWorldGenPlacementOptions &options,
+                                   ObjectVoxelWriter writeVoxel)
 {
   ObjectPlacementStats stats;
   if (object.voxels.empty())
   {
     return stats;
   }
+  const bool followsLocalSurface =
+      options.maxScanY >= 0 && options.seaLevel >= 0 &&
+      IsSurfaceFollowingPlantPrefab(object, registry);
 
   stats.minY = anchorWorldPos.y;
   stats.maxY = anchorWorldPos.y;
 
   for (const auto &voxel : object.voxels)
   {
-    const glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
-        world, anchorWorldPos, object, voxel, registry, options.maxScanY);
+    const glm::ivec3 worldPos =
+        followsLocalSurface
+            ? ResolveSurfaceFollowingPlantVoxelWorldPos(
+                  world, anchorWorldPos, object, voxel, registry,
+                  options.maxScanY)
+            : ResolveObjectVoxelWorldPos(world, anchorWorldPos, object, voxel,
+                                         registry, options.maxScanY);
     const BlockId blockId = ResolveObjectVoxelPlacementId(voxel, registry);
     if (blockId == BLOCK_AIR)
     {
@@ -661,7 +762,14 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
     {
       continue;
     }
-    world.SetBlock(worldPos, blockId);
+    if (writeVoxel)
+    {
+      writeVoxel(worldPos, blockId);
+    }
+    else
+    {
+      world.SetBlock(worldPos, blockId);
+    }
     stats.minY = std::min(stats.minY, worldPos.y);
     stats.maxY = std::max(stats.maxY, worldPos.y);
     ++stats.placedCount;

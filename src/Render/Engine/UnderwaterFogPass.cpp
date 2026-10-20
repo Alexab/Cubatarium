@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/Pipeline/RenderTextureUnits.h"
 
@@ -308,8 +309,12 @@ void UUnderwaterFogPass::ApplyUniforms(
   shader->SetFloat("uFogHorizontal", FogHorizontal);
   shader->SetFloat("uFogDensity", FogDensity);
   shader->SetFloat("uAirFogEnabled", AirFogEnabled);
+  // Bisect hook for transparency/water artefact analysis (docs/WORLDGEN_AUDIT).
+  static const bool debugDisableUnderwaterFog =
+      std::getenv("CUBA_DEBUG_NO_UNDERWATER_FOG") != nullptr;
   const float underwater_fog_enabled =
-      apply_underwater_fog ? UnderwaterFogEnabled : 0.0f;
+      (apply_underwater_fog && !debugDisableUnderwaterFog) ? UnderwaterFogEnabled
+                                                           : 0.0f;
   shader->SetFloat("uUnderwaterFogEnabled", underwater_fog_enabled);
   shader->SetFloat("uUnderwaterFogStart", UnderwaterFogStart);
   shader->SetFloat("uUnderwaterFogEnd", UnderwaterFogEnd);

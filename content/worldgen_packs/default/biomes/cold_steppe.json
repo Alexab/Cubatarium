@@ -7,7 +7,9 @@
   },
   "palette": {
     "surface": "dirt",
-    "subsurface": "gravel"
+    "subsurface": "gravel",
+    "surface_v3": "grass",
+    "subsurface_v3": "dirt"
   },
   "features": {
     "vegetation": {

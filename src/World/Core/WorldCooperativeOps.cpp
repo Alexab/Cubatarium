@@ -165,8 +165,11 @@ bool CooperativeTerrainMeshesIncompleteInPatch(const UWorld &world,
 {
   const ProceduralSettings &settings = world.GetProceduralSettings();
   const int sea = settings.SeaLevel;
-  const int cy0 = std::max(0, FloorDiv(sea - CHUNK_SIZE, CHUNK_SIZE));
-  const int cy1 = FloorDiv(sea + CHUNK_SIZE * 2, CHUNK_SIZE);
+  const int cy0 = std::max(
+      FloorDiv(settings.MinHeight, CHUNK_SIZE),
+      FloorDiv(sea - CHUNK_SIZE, CHUNK_SIZE));
+  const int cy1 = std::min(FloorDiv(settings.MaxHeight, CHUNK_SIZE),
+                           FloorDiv(sea + CHUNK_SIZE * 2, CHUNK_SIZE));
   const int min_cx = FloorDiv(patch_min_x, CHUNK_SIZE);
   const int max_cx = FloorDiv(patch_max_x, CHUNK_SIZE);
   const int min_cz = FloorDiv(patch_min_z, CHUNK_SIZE);
@@ -316,8 +319,13 @@ void NoteColumnLightCalculationSettled(UWorld &world,
   }
   const glm::ivec3 ground = UChunkManager::WorldToChunk(
       glm::ivec3(column_block_xz.x, 0, column_block_xz.y));
-  const int cy0 = std::max(0, FloorDiv(std::max(0, min_world_y), CHUNK_SIZE));
-  const int cy1 = FloorDiv(std::max(0, max_world_y), CHUNK_SIZE);
+  const ProceduralSettings &settings = world.GetProceduralSettings();
+  const int cy0 = std::max(FloorDiv(settings.MinHeight, CHUNK_SIZE),
+                           FloorDiv(std::max(settings.MinHeight, min_world_y),
+                                    CHUNK_SIZE));
+  const int cy1 = std::min(FloorDiv(settings.MaxHeight, CHUNK_SIZE),
+                           FloorDiv(std::min(settings.MaxHeight, max_world_y),
+                                    CHUNK_SIZE));
   UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
   for (int cy = cy0; cy <= cy1; ++cy)
   {
@@ -557,7 +565,8 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
     if (Kind == WorldCoopKind::Create)
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
-      const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int remesh_min_y =
+          std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
       const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
       const int min_cx = FloorDiv(GenPatchMinX, CHUNK_SIZE);
       const int max_cx = FloorDiv(GenPatchMaxX, CHUNK_SIZE);
@@ -1486,20 +1495,25 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const auto column_load_started = std::chrono::steady_clock::now();
         const int loaded_slices = world.GetChunkStorage().LoadTerrainColumn(
             ground, world.BlockWorld, FolderPath, *world.BlockRegistry,
-            world.ProceduralTemplate.MaxHeight);
+            world.ProceduralTemplate.MaxHeight,
+            world.ProceduralTemplate.MinHeight);
         bool purged_incomplete_column = false;
         // LoadTerrainColumn returns -1 when a save still owns this column.
         // That is a deferred read, not an absent or torn disk column. Keep the
         // in-memory/save owner intact instead of clearing its chunks and files.
         if (loaded_slices >= 0 &&
             !IsTerrainChunkComplete(world.BlockWorld, ground,
-                                    world.ProceduralTemplate.MaxHeight))
+                                    world.ProceduralTemplate.MaxHeight,
+                                    kNoTerrainChunkSlice,
+                                    world.ProceduralTemplate.MinHeight))
         {
           // Stale/torn column: drop disk + RAM so streaming regenerates.
           ClearTerrainColumnChunks(world.BlockWorld, ground,
-                                   world.ProceduralTemplate.MaxHeight);
+                                   world.ProceduralTemplate.MaxHeight,
+                                   world.ProceduralTemplate.MinHeight);
           world.GetChunkStorage().RemoveTerrainColumnFromDisk(
-              FolderPath, ground, world.ProceduralTemplate.MaxHeight);
+              FolderPath, ground, world.ProceduralTemplate.MaxHeight, nullptr,
+              world.ProceduralTemplate.MinHeight);
           purged_incomplete_column = loaded_slices > 0;
         }
         if (IsWorldColumnSourceTraceEnabled())
@@ -1666,6 +1680,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::RelightColumns:
   {
+    const int min_y = world.ProceduralTemplate.MinHeight;
     const int max_y = world.ProceduralTemplate.MaxHeight;
     const auto tick_t0 = std::chrono::steady_clock::now();
     const bool use_async = world.ProceduralTemplate.AsyncRelight &&
@@ -1690,7 +1705,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const glm::ivec2 &col =
             ColumnRelightQueue[ColumnRelightScheduledIndex++];
         world.EnqueueAsyncTerrainColumnRelight(
-            col.x * CHUNK_SIZE, col.y * CHUNK_SIZE, 0, max_y,
+            col.x * CHUNK_SIZE, col.y * CHUNK_SIZE, min_y, max_y,
             /*include_skylight=*/true, /*include_block_light=*/false,
             /*finalize_pending_gate=*/false,
             /*visible_draw_gate_repair=*/false, "world_load");
@@ -1707,9 +1722,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       {
         const glm::ivec2 &col = ColumnRelightQueue[ColumnRelightIndex++];
         world.GetLightingPipeline().RelightColumn(
-            world.BlockWorld, *world.BlockRegistry, col.x, col.y, 0, max_y,
+            world.BlockWorld, *world.BlockRegistry, col.x, col.y, min_y, max_y,
             false, true);
-        NoteColumnLightCalculationSettled(world, col, 0, max_y);
+        NoteColumnLightCalculationSettled(world, col, min_y, max_y);
         ++relit;
       }
       ColumnRelightScheduledIndex = ColumnRelightIndex;
@@ -1886,7 +1901,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                            GenPatchMinZ, GenPatchMaxZ))
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
-      const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int remesh_min_y =
+          std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
       const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
       const int min_cx = FloorDiv(GenPatchMinX, CHUNK_SIZE);
       const int max_cx = FloorDiv(GenPatchMaxX, CHUNK_SIZE);
@@ -2720,16 +2736,20 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       if (save_by_ground_column)
       {
         if (IsTerrainChunkComplete(world.BlockWorld, coord,
-                                   world.ProceduralTemplate.MaxHeight))
+                                   world.ProceduralTemplate.MaxHeight,
+                                   kNoTerrainChunkSlice,
+                                   world.ProceduralTemplate.MinHeight))
         {
           world.GetChunkStorage().SaveTerrainColumn(
               coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
-              world.ProceduralTemplate.MaxHeight);
+              world.ProceduralTemplate.MaxHeight,
+              world.ProceduralTemplate.MinHeight);
         }
         else
         {
           world.GetChunkStorage().RemoveTerrainColumnFromDisk(
-              FolderPath, coord, world.ProceduralTemplate.MaxHeight);
+              FolderPath, coord, world.ProceduralTemplate.MaxHeight, nullptr,
+              world.ProceduralTemplate.MinHeight);
         }
       }
       else

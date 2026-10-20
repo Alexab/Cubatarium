@@ -22,5 +22,7 @@
     "dirt"
   ],
   "displayName": "Grass Block",
-  "render": {}
+  "render": {
+    "style": "cutout"
+  }
 }

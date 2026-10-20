@@ -2,6 +2,7 @@
 // BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
 
 #include "World/Diagnostics/EnterLitDiagnostics.h"
+#include "World/Math/GridMath.h"
 #include "World/Streaming/VisualStagePolicy.h"
 
 #include <algorithm>
@@ -204,14 +205,15 @@ inline bool EnterLitQuiesceMayLiftSpawnSoftDefer(bool enter_lit_quiesce,
 /// SoftDefer empty while underfeet_present_ready=1 at y≈96.
 inline void EnterSpawnPresentableCyRange(int player_cy, int sea_cy,
                                          bool fill_water, int max_cy,
-                                         int &out_cy0, int &out_cy1)
+                                         int &out_cy0, int &out_cy1,
+                                         int min_cy = 0)
 {
-  out_cy0 = std::max(0, player_cy - 1);
+  out_cy0 = std::max(min_cy, player_cy - 1);
   out_cy1 = std::min(max_cy, std::max(player_cy + 1,
                                       fill_water ? sea_cy + 1 : player_cy + 1));
   if (fill_water)
   {
-    out_cy0 = std::min(out_cy0, std::max(0, sea_cy - 1));
+    out_cy0 = std::min(out_cy0, std::max(min_cy, sea_cy - 1));
   }
 }
 
@@ -504,10 +506,12 @@ inline bool ShouldRemeshAfterApplyOnlyOnIdleDrawable(bool idle_or_suppress,
 
 /// Era36 B1: visible surface cy-band (surface_cy-1 .. surface_cy+3).
 inline std::pair<int, int> RelightSurfaceBandCy(int surface_block_y,
-                                                int chunk_size, int max_cy)
+                                                int chunk_size, int max_cy,
+                                                int min_cy = 0)
 {
-  const int surface_cy = std::max(0, surface_block_y / chunk_size);
-  return {std::max(0, surface_cy - 1), std::min(max_cy, surface_cy + 3)};
+  const int surface_cy = FloorDiv(surface_block_y, chunk_size);
+  return {std::max(min_cy, surface_cy - 1),
+          std::min(max_cy, surface_cy + 3)};
 }
 
 /// Era36 B1: relight Y-band surface clamp — skip underground chunks that
@@ -515,16 +519,19 @@ inline std::pair<int, int> RelightSurfaceBandCy(int surface_block_y,
 inline int RelightSurfaceBandMinY(int surface_block_y, int chunk_size,
                                   int original_min_y)
 {
-  const int surface_min = std::max(0, surface_block_y - chunk_size);
+  const int surface_min = surface_block_y - chunk_size;
   return std::max(original_min_y, surface_min);
 }
 
 /// Era36 B1: clamp max_y to surface band top (surface_cy+3).
 inline int RelightSurfaceBandMaxY(int surface_block_y, int chunk_size,
-                                  int max_height, int original_max_y)
+                                  int max_height, int original_max_y,
+                                  int min_height = 0)
 {
-  const int max_cy = std::max(0, max_height / chunk_size);
-  const int cy1 = RelightSurfaceBandCy(surface_block_y, chunk_size, max_cy).second;
+  const int max_cy = FloorDiv(max_height, chunk_size);
+  const int min_cy = FloorDiv(min_height, chunk_size);
+  const int cy1 = RelightSurfaceBandCy(surface_block_y, chunk_size, max_cy,
+                                       min_cy).second;
   const int surface_max = std::min(max_height, (cy1 + 1) * chunk_size - 1);
   return std::min(original_max_y, surface_max);
 }
@@ -611,12 +618,12 @@ inline int ClampCaptureMovingBgCapWithHoles(int bg_cap, bool moving,
 
 /// Cruise SOTA: moving + holes — narrow Capture Y-band (hot surface only).
 inline int EffectiveRelightCaptureBandCy(int band_cy, bool moving,
-                                         bool visual_holes)
+                                         bool visual_holes, int min_cy = 0)
 {
-  const int base = std::max(0, band_cy);
+  const int base = std::max(min_cy, band_cy);
   if (moving && visual_holes && base > 1)
   {
-    return std::max(1, base - 1);
+    return std::max(min_cy, base - 1);
   }
   return base;
 }
@@ -651,13 +658,15 @@ inline std::pair<int, int> RelightSurfaceBandForColumn(int focus_block_y,
                                                       int chunk_size,
                                                       int max_height,
                                                       int orig_min_y,
-                                                      int orig_max_y)
+                                                      int orig_max_y,
+                                                      int min_world_y = 0)
 {
   const int surface_y =
       RelightColumnSurfaceBlockY(focus_block_y, column_top_block_y);
   const int band_min = RelightSurfaceBandMinY(surface_y, chunk_size, orig_min_y);
   const int band_max =
-      RelightSurfaceBandMaxY(surface_y, chunk_size, max_height, orig_max_y);
+      RelightSurfaceBandMaxY(surface_y, chunk_size, max_height, orig_max_y,
+                             min_world_y);
   return {band_min, band_max};
 }
 

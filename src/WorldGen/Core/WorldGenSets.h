@@ -22,6 +22,9 @@ struct WorldGenObjectEntry
   ObjectFeatureRuleMode Mode{ObjectFeatureRuleMode::Object};
   ScatterBlockSpec Scatter;
   SurfaceConstraint Surface;
+  TreeSpeciesProfile Tree;
+  ShrubSpeciesProfile Shrub;
+  FeatureEcologyProfile Ecology;
 };
 
 struct WorldGenObjectSection
@@ -42,7 +45,7 @@ struct WorldGenOreSlot
 
 struct WorldGenSets
 {
-  int SchemaVersion{1};
+  int SchemaVersion{3};
   std::unordered_map<std::string, WorldGenObjectSection> VegetationSections;
   std::unordered_map<std::string, WorldGenObjectSection> GroundCoverSections;
   std::unordered_map<std::string, WorldGenObjectSection> DecorationSections;
@@ -56,7 +59,11 @@ bool ParseWorldGenSets(const nlohmann::json &root, WorldGenSets &out,
 void WriteWorldGenSets(nlohmann::json &root, const WorldGenSets &sets);
 WorldGenSets BuildDefaultWorldGenSets();
 ObjectFeatureConfig ResolveObjectFeatures(const WorldGenSets &sets,
-                                          const ObjectFeatureConfig &global);
+                                          const ObjectFeatureConfig &global,
+                                          int worldgenProfileVersion = 2);
+void UpgradeLegacyWorldGenSetMetadata(WorldGenSets &sets,
+                                     const ObjectFeatureConfig &global,
+                                     int worldgenProfileVersion);
 bool ValidateWorldGenSets(const WorldGenSets &sets, std::string &error);
 
 } // namespace cutum

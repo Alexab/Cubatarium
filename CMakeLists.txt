@@ -399,6 +399,7 @@ set(SOURCES
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/DensityRouter.cpp
     src/WorldGen/Sampling/DensityFieldSampler.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Pipelines/WorldGenStageRunner.cpp
     src/WorldGen/Pipelines/ColumnGenerationService.cpp
@@ -410,6 +411,7 @@ set(SOURCES
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/ValleyCarver.cpp
+    src/WorldGen/Features/LakeCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Features/ObjectPlacementConstraints.cpp
@@ -497,6 +499,7 @@ set(SOURCES
     src/Gui/Widgets/GuiLabel.cpp
     src/Gui/Widgets/GuiProgressBar.cpp
     src/Gui/Widgets/GuiSlider.cpp
+    src/Gui/Widgets/GuiSliderField.cpp
     src/Gui/Widgets/GuiTextInput.cpp
     src/Gui/Widgets/GuiPopupMenu.cpp
     src/Gui/Widgets/GuiListView.cpp
@@ -679,6 +682,7 @@ set(HEADERS
     src/Gui/Widgets/GuiLabel.h
     src/Gui/Widgets/GuiProgressBar.h
     src/Gui/Widgets/GuiSlider.h
+    src/Gui/Widgets/GuiSliderField.h
     src/Gui/Widgets/GuiTextInput.h
     src/Gui/Widgets/GuiPopupMenu.h
     src/Gui/Widgets/GuiListView.h
@@ -857,14 +861,44 @@ add_executable(terrain_column_util_test
     src/World/Chunks/TerrainColumnUtil.cpp
     src/World/Core/BlockWorld.cpp
     src/World/Core/IUBlockWriter.cpp
+    src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp
     src/Blocks/BlockDefinitionStorage.cpp
+    src/World/Physics/MaterialReactionRules.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp
     src/World/Math/FluidCellState.cpp
     src/World/Math/GridMath.cpp
     src/Test/TerrainColumnUtilTest.cpp)
 target_include_directories(terrain_column_util_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(terrain_column_util_test PRIVATE
+    CUTUM_PHYSICS_LIGHT_REGISTRY)
 target_link_libraries(terrain_column_util_test glm::glm)
+
+add_executable(negative_height_storage_test
+    src/World/Chunks/Chunk.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/ChunkBuffer.cpp
+    src/World/Chunks/TerrainColumnUtil.cpp
+    src/World/Core/BlockWorld.cpp
+    src/World/Core/IUBlockWriter.cpp
+    src/World/IO/BinaryChunkSerializer.cpp
+    src/World/IO/JsonChunkSerializer.cpp
+    src/World/IO/ChunkStorageService.cpp
+    src/World/IO/ChunkStorageTypes.cpp
+    src/Blocks/BlockRegistry.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/World/Physics/MaterialReactionRules.cpp
+    src/World/Physics/MaterialReactionRulesRegistry.cpp
+    src/World/Math/FluidCellState.cpp
+    src/World/Math/GridMath.cpp
+    src/Test/NegativeHeightStorageTest.cpp)
+target_include_directories(negative_height_storage_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(negative_height_storage_test PRIVATE
+    CUTUM_PHYSICS_LIGHT_REGISTRY)
+target_link_libraries(negative_height_storage_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(world_mesh_service_test
     src/Render/Mesh/ChunkDirtySet.cpp
@@ -1184,12 +1218,14 @@ target_include_directories(movement_chunk_boundary_test PRIVATE
 target_link_libraries(movement_chunk_boundary_test glm::glm)
 
 add_executable(falling_blocks_stability_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Physics/FallingBlockRules.cpp
     src/World/Physics/Replay/WorldStateHasher.cpp
     src/Test/FallingBlocksStabilityTest.cpp)
 target_include_directories(falling_blocks_stability_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(falling_blocks_stability_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(falling_blocks_stability_test glm::glm nlohmann_json::nlohmann_json)
 
 set(PHYSICS_REGISTRY_TEST_SOURCES
@@ -1336,11 +1372,13 @@ target_compile_definitions(fluid_chunk_io_test PRIVATE
 target_link_libraries(fluid_chunk_io_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(fluid_spread_level_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
     ${PHYSICS_FLUID_SIM_SOURCES}
     src/Test/FluidSpreadLevelTest.cpp)
 target_include_directories(fluid_spread_level_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_spread_level_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_spread_level_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(fluid_mesh_faces_test
@@ -1359,6 +1397,23 @@ target_include_directories(fluid_mesh_faces_test PRIVATE
 target_compile_definitions(fluid_mesh_faces_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_mesh_faces_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(greedy_cross_plant_ground_face_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/GreedyCrossPlantGroundFaceTest.cpp)
+target_include_directories(greedy_cross_plant_ground_face_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(greedy_cross_plant_ground_face_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(greedy_cross_plant_ground_face_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(underwater_fog_column_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -1382,7 +1437,8 @@ target_include_directories(streaming_render_ready_invariants_test PRIVATE
 target_link_libraries(streaming_render_ready_invariants_test glm::glm)
 
 add_executable(mesh_neighbor_policy_test
-    src/Test/MeshNeighborPolicyTest.cpp)
+    src/Test/MeshNeighborPolicyTest.cpp
+    src/World/Math/GridMath.cpp)
 target_include_directories(mesh_neighbor_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(mesh_neighbor_policy_test PRIVATE glm::glm)
@@ -1396,7 +1452,8 @@ target_link_libraries(mesh_publish_contract_test glm::glm)
 add_executable(miss_first_mesh_class_test
     src/Test/MissFirstMeshClassTest.cpp
     src/World/Streaming/EnterVisualGate.cpp
-    src/World/Streaming/MemoryBudgetController.cpp)
+    src/World/Streaming/MemoryBudgetController.cpp
+    src/World/Math/GridMath.cpp)
 target_include_directories(miss_first_mesh_class_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(miss_first_mesh_class_test glm::glm)
@@ -1864,6 +1921,7 @@ add_executable(fluid_worldgen_seal_test
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -1919,6 +1977,7 @@ add_executable(valley_carver_test
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/BiomeRegistry.cpp
     src/WorldGen/Features/ValleyCarver.cpp
+    src/WorldGen/Features/LakeCarver.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/ThirdParty/stb_image.cpp
     src/Test/ValleyCarverTest.cpp)
@@ -1965,6 +2024,7 @@ add_executable(density_refine_parity_test
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/DensityRouter.cpp
     src/WorldGen/Sampling/DensityFieldSampler.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
     src/WorldGen/Sampling/CoarseHeightCache.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
@@ -1999,6 +2059,8 @@ add_executable(worldgen_smoothness_test
     src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp
     src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/DensityRouter.cpp
+    src/WorldGen/Sampling/DensityFieldSampler.cpp
     src/WorldGen/Sampling/BiomeSampler.cpp
     src/WorldGen/Sampling/BiomeRegistry.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
@@ -2006,6 +2068,7 @@ add_executable(worldgen_smoothness_test
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
     src/WorldGen/Sampling/CoarseHeightCache.cpp
+    src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/ThirdParty/stb_image.cpp
     src/Test/WorldGenSmoothnessTest.cpp)
@@ -2026,6 +2089,7 @@ add_executable(worldgen_vegetation_placement_test
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -2036,6 +2100,7 @@ add_executable(worldgen_vegetation_placement_test
     src/WorldGen/Core/WorldGenContentPin.cpp
     src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/WorldGen/Features/ObjectPlacementConstraints.cpp
     src/WorldGen/Core/Noise.cpp
     src/Test/WorldGenVegetationPlacementTest.cpp)
 target_include_directories(worldgen_vegetation_placement_test PRIVATE
@@ -2051,6 +2116,14 @@ target_include_directories(worldgen_cave_depth_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(worldgen_cave_depth_test glm::glm)
 
+add_executable(worldgen_aquifer_test
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
+    src/Test/WorldGenAquiferTest.cpp)
+target_include_directories(worldgen_aquifer_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(worldgen_aquifer_test glm::glm)
+
 set(WORLDGEN_PIPELINE_TEST_SOURCES
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp
@@ -2062,6 +2135,7 @@ set(WORLDGEN_PIPELINE_TEST_SOURCES
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
@@ -2321,6 +2395,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/DensityRouter.cpp
     src/WorldGen/Sampling/DensityFieldSampler.cpp
+    src/WorldGen/Sampling/AquiferSampler.cpp
     src/WorldGen/Pipelines/ComposableWorldGenerator.cpp
     src/WorldGen/Pipelines/WorldGenStageRunner.cpp
     src/WorldGen/Pipelines/ColumnGenerationService.cpp
@@ -2332,6 +2407,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
     src/WorldGen/Features/ValleyCarver.cpp
+    src/WorldGen/Features/LakeCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Features/ObjectPlacementConstraints.cpp
@@ -2430,6 +2506,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
 
 add_executable(collision_broadphase_subchunk_test
     ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/WorldCollisionCreatureStubs.cpp
     src/Test/CollisionBroadphaseSubchunkTest.cpp)
 target_include_directories(collision_broadphase_subchunk_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -2448,6 +2525,7 @@ target_link_libraries(fluid_placement_test glm::glm nlohmann_json::nlohmann_json
 
 add_executable(block_placement_raycast_test
     ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/WorldCollisionCreatureStubs.cpp
     src/Test/BlockPlacementRaycastTest.cpp)
 target_include_directories(block_placement_raycast_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -2740,6 +2818,8 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     TIMEOUT 60)
 endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
+  fluid_worldgen_seal_test
+  worldgen_aquifer_test
   job_admission_lifetime_test
   chunk_input_stamp_test
   inputs_still_valid_visual_test

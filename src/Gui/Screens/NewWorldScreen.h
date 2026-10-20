@@ -19,6 +19,7 @@ class UGuiPanel;
 class UGuiLabel;
 class UGuiListView;
 class UGuiScrollView;
+class UGuiTabBar;
 
 class UNewWorldScreen : public UGuiScreenBase
 {
@@ -39,8 +40,14 @@ private:
   void LayoutWorldPage(const GuiRect &area) const;
   WorldGameMode ReadSelectedGameMode() const;
   WorldDifficulty ReadSelectedDifficulty() const;
+  void SetActiveTab(int tab);
+  void ApplyTabVisibility();
 
   IUGuiMenuHost *Host{nullptr};
+  UGuiTabBar *MainTabs{nullptr};
+  UGuiPanel *ViewPanel{nullptr};
+  UGuiPanel *PackPanel{nullptr};
+  int ActiveTab{0}; // 0 = Basic, 1 = Advanced
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiScrollView *BodyScroll{nullptr};

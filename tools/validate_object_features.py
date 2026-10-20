@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -14,12 +15,14 @@ REPO = Path(__file__).resolve().parents[1]
 FEATURES = REPO / "content" / "object_features.json"
 MANIFEST = REPO / "tools" / "object_manifest.yaml"
 OBJECTS = REPO / "objects"
+DEFAULT_BLOCKS = REPO / "resource_packs" / "minetest_default_16" / "blocks"
 
 VALID_SURFACE_CONSTRAINTS = {
     "any_land",
     "grass",
     "near_water",
     "water_surface",
+    "underwater_floor",
 }
 
 
@@ -35,6 +38,64 @@ def load_object_names() -> set[str]:
         name = data.get("name") or path.stem
         names.add(name)
     return names
+
+
+def load_block_names() -> set[str]:
+    names: set[str] = set()
+    for path in DEFAULT_BLOCKS.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        name = data.get("name") or path.stem
+        names.add(name)
+    return names
+
+
+def validate_ecology(ecology: object, label: str, errors: list[str]) -> None:
+    if ecology is None:
+        return
+    if not isinstance(ecology, dict):
+        errors.append(f"{label}: ecology must be an object")
+        return
+
+    for axis in ("temperature", "moisture"):
+        if axis not in ecology:
+            continue
+        value = ecology[axis]
+        if (
+            not isinstance(value, list)
+            or len(value) != 2
+            or any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in value)
+            or not all(math.isfinite(v) for v in value)
+            or not (0 <= value[0] < value[1] <= 1)
+        ):
+            errors.append(f"{label}: invalid ecology {axis} range")
+
+    if "elevation" in ecology:
+        value = ecology["elevation"]
+        if isinstance(value, dict) and set(value) == {"above_sea_level"}:
+            value = value["above_sea_level"]
+        elif not isinstance(value, list):
+            errors.append(f"{label}: invalid ecology elevation range")
+            value = None
+        if value is not None and (
+            not isinstance(value, list)
+            or len(value) != 2
+            or any(isinstance(v, bool) or not isinstance(v, int) for v in value)
+            or value[0] > value[1]
+        ):
+            errors.append(f"{label}: invalid ecology elevation range")
+
+    if "max_slope" in ecology:
+        slope = ecology["max_slope"]
+        if (
+            isinstance(slope, bool)
+            or not isinstance(slope, (int, float))
+            or not math.isfinite(slope)
+            or slope < 0
+        ):
+            errors.append(f"{label}: ecology max_slope must be non-negative")
 
 
 def manifest_worldgen() -> dict[str, list[dict]]:
@@ -68,26 +129,57 @@ def main() -> int:
         return 1
 
     object_names = load_object_names()
+    block_names = load_block_names()
     manifest_wg = manifest_worldgen()
     data = json.loads(FEATURES.read_text(encoding="utf-8-sig"))
 
     json_objects_by_pool: dict[str, set[str]] = {
         "vegetation": set(),
+        "ground_cover": set(),
         "decoration": set(),
         "structures": set(),
     }
 
-    for pool_name in ("vegetation", "decoration", "structures"):
+    for pool_name in ("vegetation", "ground_cover", "decoration", "structures"):
         rules = data.get(pool_name, [])
         if not isinstance(rules, list):
             errors.append(f"{pool_name}: expected array")
             continue
 
         seen_keys: set[tuple[str, tuple[str, ...]]] = set()
+        seed_owner: dict[int, int] = {}
+        biome_owner: dict[tuple[str, str], int] = {}
         for idx, rule in enumerate(rules):
             if not isinstance(rule, dict):
                 errors.append(f"{pool_name}[{idx}]: not an object")
                 continue
+
+            # Rules must not share a seed_offset (they would place on the same
+            # hashed cells) nor stack the same feature in the same biome.
+            seed_offset = rule.get("seed_offset")
+            if isinstance(seed_offset, int):
+                if seed_offset in seed_owner:
+                    errors.append(
+                        f"{pool_name}[{idx}]: seed_offset {seed_offset} already used "
+                        f"by {pool_name}[{seed_owner[seed_offset]}]"
+                    )
+                else:
+                    seed_owner[seed_offset] = idx
+            feature_id = (
+                rule.get("species")
+                or rule.get("object")
+                or rule.get("block")
+                or ""
+            )
+            for biome_name in rule.get("biomes") or []:
+                owner = biome_owner.get((feature_id, biome_name))
+                if owner is not None and not rule.get("calibrated"):
+                    errors.append(
+                        f"{pool_name}[{idx}]: {feature_id!r} already placed in biome "
+                        f"{biome_name!r} by {pool_name}[{owner}]"
+                    )
+                else:
+                    biome_owner[(feature_id, biome_name)] = idx
 
             mode = rule.get("mode", "object")
             object_name = rule.get("object")
@@ -100,6 +192,11 @@ def main() -> int:
                 errors.append(
                     f"{pool_name}[{idx}]: invalid surface_constraint {surface!r}"
                 )
+            if surface == "underwater_floor" and mode != "scatter_blocks":
+                errors.append(
+                    f"{pool_name}[{idx}]: underwater_floor currently requires scatter_blocks"
+                )
+            validate_ecology(rule.get("ecology"), f"{pool_name}[{idx}]", errors)
 
             if not biomes:
                 errors.append(f"{pool_name}[{idx}]: empty biomes")
@@ -112,6 +209,10 @@ def main() -> int:
             if mode == "scatter_blocks":
                 if not block:
                     errors.append(f"{pool_name}[{idx}]: scatter_blocks missing block")
+                elif block not in block_names:
+                    errors.append(
+                        f"{pool_name}[{idx}]: unknown scatter block {block!r}"
+                    )
                 scatter_key = f"scatter:{block}"
                 json_objects_by_pool[pool_name].add(scatter_key)
                 if pool_name in ("vegetation", "decoration"):
@@ -130,6 +231,58 @@ def main() -> int:
                 seen_keys.add(key)
                 continue
 
+            if mode in ("procedural_tree", "procedural_shrub"):
+                species = rule.get("species")
+                profile_key = "tree_profile" if mode == "procedural_tree" else "shrub_profile"
+                profile = rule.get(profile_key)
+                if not isinstance(species, str) or not species:
+                    errors.append(f"{pool_name}[{idx}]: missing procedural species")
+                    continue
+                if not isinstance(profile, dict):
+                    errors.append(f"{pool_name}[{idx}]: missing {profile_key}")
+                    continue
+                block_fields = (
+                    (("trunk_block", "tree_log"), ("leaves_block", "tree_leaves"))
+                    if mode == "procedural_tree"
+                    else (("stem_block", "mtg_bush_stem"), ("leaves_block", "tree_leaves"),
+                          ("accent_block", ""))
+                )
+                for block_field, fallback in block_fields:
+                    block_name = profile.get(block_field, fallback)
+                    if not block_name:
+                        continue
+                    if block_name not in block_names and fallback not in block_names:
+                        errors.append(
+                            f"{pool_name}[{idx}]: {block_field} {block_name!r} "
+                            "has no default-pack fallback"
+                        )
+                height_min = profile.get("height_min", 5 if mode == "procedural_tree" else 2)
+                height_max = profile.get("height_max", 8 if mode == "procedural_tree" else 3)
+                min_height = 2 if mode == "procedural_tree" else 1
+                max_height = 40 if mode == "procedural_tree" else 10
+                if (
+                    not isinstance(height_min, int)
+                    or not isinstance(height_max, int)
+                    or not (min_height <= height_min <= height_max <= max_height)
+                ):
+                    errors.append(
+                        f"{pool_name}[{idx}]: invalid {mode.removeprefix('procedural_')} height range"
+                    )
+                spacing = rule.get("spacing")
+                if spacing is None:
+                    errors.append(f"{pool_name}[{idx}]: missing spacing")
+                elif not isinstance(spacing, int) or spacing < 8 or spacing > 256:
+                    errors.append(
+                        f"{pool_name}[{idx}]: spacing {spacing} not in [8, 256]"
+                    )
+                key = (f"procedural:{species}", tuple(sorted(biomes)))
+                if key in seen_keys:
+                    warnings.append(
+                        f"{pool_name}[{idx}]: duplicate procedural rule {key}"
+                    )
+                seen_keys.add(key)
+                continue
+
             if not object_name:
                 errors.append(f"{pool_name}[{idx}]: missing object")
                 continue
@@ -139,7 +292,7 @@ def main() -> int:
             if object_name not in object_names:
                 errors.append(f"{pool_name}[{idx}]: unknown object {object_name!r}")
 
-            if pool_name in ("vegetation", "decoration"):
+            if pool_name in ("vegetation", "ground_cover", "decoration"):
                 spacing = rule.get("spacing")
                 if spacing is None:
                     errors.append(f"{pool_name}[{idx}]: missing spacing")

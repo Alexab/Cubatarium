@@ -333,9 +333,17 @@ void main()
             frag_underwater = true;
             underwater_fog_color = uUnderwaterFogColors[int(fi)];
             float dist = length(vWorldPos - uCameraPos);
+            float min_blend = uUnderwaterFogMinBlend;
+            if (uUnderwaterFogSubmerged < 0.5) {
+                // Camera above the surface: the tint comes from the water
+                // thickness along the view ray, not from camera distance.
+                vec3 view_dir = (vWorldPos - uCameraPos) / max(dist, 0.001);
+                dist = (sy - vWorldPos.y) / max(abs(view_dir.y), 0.25);
+                min_blend = 0.0;
+            }
             float fog_factor = computeDistanceFogFactor(
                 dist, uUnderwaterFogStart, uUnderwaterFogEnd,
-                uUnderwaterFogMinBlend, 1.0);
+                min_blend, 1.0);
             FragColor.rgb = mix(FragColor.rgb, underwater_fog_color, fog_factor);
         }
     }

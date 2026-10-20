@@ -1,0 +1,24 @@
+{
+  "name": "deepslate",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "greystone",
+    "greystone",
+    "greystone",
+    "greystone",
+    "greystone",
+    "greystone"
+  ],
+  "hardness": 2.5,
+  "dig": {
+    "level": 1,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "displayName": "Deepslate",
+  "render": {}
+}

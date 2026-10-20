@@ -1919,6 +1919,11 @@ def main() -> int:
     ap.add_argument("--build", action="store_true")
     ap.add_argument("--no-fly", action="store_true")
     ap.add_argument(
+        "--no-hold-forward",
+        action="store_true",
+        help="arm the camera/teleport without pressing W; useful for static captures",
+    )
+    ap.add_argument(
         "--fly-stop",
         action="store_true",
         help="fly phase then release W for stop-recovery (AppRunner --fly-stop)",
@@ -3370,6 +3375,8 @@ def main() -> int:
         elif args.no_fly:
             sim_cmd.append("--no-fly")
             sim_cmd.append("--no-hold-forward")
+        elif args.no_hold_forward:
+            sim_cmd.extend(["--fly", "--no-hold-forward"])
         else:
             sim_cmd.extend(["--fly", "--hold-forward"])
         if args.fly_stop and args.scenario not in (

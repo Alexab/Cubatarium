@@ -1,0 +1,12 @@
+{
+  "id": "ocean",
+  "height": {
+    "base_offset": -12,
+    "amplitude_mul": 0.9,
+    "volatility_mul": 0.4
+  },
+  "palette": {
+    "surface": "gravel",
+    "subsurface": "stone"
+  }
+}

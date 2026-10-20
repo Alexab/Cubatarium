@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from collections import Counter
 from pathlib import Path
@@ -13,10 +14,49 @@ from worldgen_metrics_lib import (
     build_id_to_name_from_world,
     count_spawn_vegetation_blocks,
     decode_chunk,
+    ground_cover_block_names_for_world,
+    SHRUB_BLOCK_NAMES,
+    spawn_center_from_meta,
+    TREE_BLOCK_NAMES,
     terrain_shape_stats,
 )
 
 REPO = Path(__file__).resolve().parents[1]
+
+
+def water_ids_for_world(
+    world_dir: Path,
+    columns: dict[tuple[int, int, int], int] | None = None,
+    repo_root: Path = REPO,
+) -> set[int]:
+    id_to_name = build_id_to_name_from_world(world_dir, repo_root)
+    water_ids = {bid for bid, name in id_to_name.items() if name == "water"}
+    if water_ids or columns is None:
+        return water_ids
+
+    meta_path = world_dir / "world_data.json"
+    meta = (
+        json.loads(meta_path.read_text(encoding="utf-8"))
+        if meta_path.is_file()
+        else {}
+    )
+    procedural = meta.get("procedural", {})
+    sea_level = int(procedural.get("sea_level", meta.get("sea_level", 63)))
+    sea_counts = Counter(
+        bid for (_, wy, _), bid in columns.items() if wy == sea_level
+    )
+    return {sea_counts.most_common(1)[0][0]} if sea_counts else set()
+
+
+def non_terrain_ids_for_world(world_dir: Path, repo_root: Path = REPO) -> set[int]:
+    id_to_name = build_id_to_name_from_world(world_dir, repo_root)
+    ignored_names = (
+        {"water", "lava", "fire"}
+        | set(TREE_BLOCK_NAMES)
+        | set(SHRUB_BLOCK_NAMES)
+        | set(ground_cover_block_names_for_world(world_dir, repo_root))
+    )
+    return {bid for bid, name in id_to_name.items() if name in ignored_names}
 
 
 def load_columns(world_dir: Path, center_x: int, center_z: int, radius: int):
@@ -30,30 +70,32 @@ def load_columns(world_dir: Path, center_x: int, center_z: int, radius: int):
 
 
 def build_surface(
-    columns: dict[tuple[int, int, int], int], *, land_only: bool
+    columns: dict[tuple[int, int, int], int],
+    *,
+    land_only: bool,
+    water_ids: set[int] | None = None,
+    ignored_ids: set[int] | None = None,
 ) -> dict[tuple[int, int], tuple[int, int]]:
     by_xz: dict[tuple[int, int], list[tuple[int, int]]] = {}
     for (wx, wy, wz), bid in columns.items():
         by_xz.setdefault((wx, wz), []).append((wy, bid))
 
-    water_ids: set[int] = set()
-    if land_only:
-        sea_counts: Counter[int] = Counter()
-        for (wx, wy, wz), bid in columns.items():
-            if wy == 48:
-                sea_counts[bid] += 1
-        if sea_counts:
-            water_ids.add(sea_counts.most_common(1)[0][0])
+    water_ids = water_ids or set()
+    ignored_ids = ignored_ids or set()
 
     surface: dict[tuple[int, int], tuple[int, int]] = {}
     for xz, entries in by_xz.items():
-        if land_only:
-            land_entries = [(wy, bid) for wy, bid in entries if bid not in water_ids]
-            if not land_entries:
-                continue
-            wy, bid = max(land_entries, key=lambda t: t[0])
-        else:
-            wy, bid = max(entries, key=lambda t: t[0])
+        visible_y, visible_bid = max(entries, key=lambda t: t[0])
+        if land_only and visible_bid in water_ids:
+            continue
+        candidates = [
+            (wy, bid)
+            for wy, bid in entries
+            if bid not in ignored_ids and (not land_only or bid not in water_ids)
+        ]
+        if not candidates:
+            continue
+        wy, bid = max(candidates, key=lambda t: t[0])
         surface[xz] = (wy, bid)
     return surface
 
@@ -62,7 +104,7 @@ def main() -> int:
     if len(sys.argv) < 2:
         print(
             "usage: quick_terrain_metrics.py WORLD_NAME [radius=32] "
-            "[center_x=0] [center_z=0] [--land] [--count-objects]"
+            "[center_x=spawn] [center_z=spawn] [--land] [--count-objects]"
         )
         return 1
     land_only = "--land" in sys.argv
@@ -70,11 +112,26 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if a not in ("--land", "--count-objects")]
     world = REPO / "bin" / "worlds" / args[0]
     radius = int(args[1]) if len(args) > 1 else 32
-    center_x = int(args[2]) if len(args) > 2 else 0
-    center_z = int(args[3]) if len(args) > 3 else 0
+    meta_path = world / "world_data.json"
+    meta = (
+        json.loads(meta_path.read_text(encoding="utf-8"))
+        if meta_path.is_file()
+        else {}
+    )
+    spawn_x, spawn_z = spawn_center_from_meta(meta)
+    center_x = int(args[2]) if len(args) > 2 else spawn_x
+    center_z = int(args[3]) if len(args) > 3 else spawn_z
 
     columns = load_columns(world, center_x, center_z, radius)
-    surface = build_surface(columns, land_only=land_only)
+    id_to_name = build_id_to_name_from_world(world, REPO)
+    water_ids = water_ids_for_world(world, columns, REPO)
+    ignored_ids = non_terrain_ids_for_world(world, REPO)
+    surface = build_surface(
+        columns,
+        land_only=land_only,
+        water_ids=water_ids,
+        ignored_ids=ignored_ids,
+    )
     if not surface:
         print(f"no surface data for {world} center=({center_x},{center_z})")
         return 1
@@ -94,20 +151,41 @@ def main() -> int:
 
     if count_objects:
         refs = REPO / "content" / "worldgen_refs.json"
-        id_to_name = build_id_to_name_from_world(world, REPO)
-        veg = count_spawn_vegetation_blocks(world, id_to_name, radius)
+        veg = count_spawn_vegetation_blocks(
+            world,
+            id_to_name,
+            radius,
+            center_x=center_x,
+            center_z=center_z,
+        )
         metrics = analyze_world(
             world,
             refs,
             repo_root=REPO,
             spawn_radius=radius,
-            max_height=128,
+            max_height=319,
         )
         print("  placement (blocks in world files, not render):")
         print(f"    spawn_tree_blocks: {metrics.get('spawn_tree_blocks', 0)}")
+        print(f"    spawn_shrub_blocks: {metrics.get('spawn_shrub_blocks', 0)}")
         print(f"    spawn_bush_common_footprints: {metrics.get('spawn_bush_common_footprints', 0)}")
         print(f"    spawn_ground_logs: {metrics.get('spawn_ground_logs', 0)}")
         print(f"    spawn_fire_blocks: {metrics.get('spawn_fire_blocks', 0)}")
+        print(
+            "    ground_cover_columns/density: "
+            f"{metrics.get('ground_cover_columns', 0)}/"
+            f"{metrics.get('ground_cover_density', 0.0):.1f}%"
+        )
+        print(
+            "    tree bases/canopy columns: "
+            f"{metrics.get('tree_base_columns', 0)}/"
+            f"{metrics.get('tree_canopy_columns', 0)}"
+        )
+        print(
+            "    shrub bases/canopy columns: "
+            f"{metrics.get('shrub_base_columns', 0)}/"
+            f"{metrics.get('shrub_canopy_columns', 0)}"
+        )
         if veg:
             print(f"    vegetation_breakdown: {veg}")
     return 0

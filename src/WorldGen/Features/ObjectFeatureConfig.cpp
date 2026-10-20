@@ -4,8 +4,10 @@
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -17,10 +19,56 @@ std::shared_ptr<const ObjectFeatureConfig> UObjectFeatureConfigStorage::Active =
 namespace
 {
 
-BiomeId ParseBiome(const std::string &name)
+std::unordered_map<std::string, ObjectFeatureRuleMode> &FeatureTypeMap()
 {
-  return BiomeIdFromString(name);
+  static std::unordered_map<std::string, ObjectFeatureRuleMode> types = {
+      {"object", ObjectFeatureRuleMode::Object},
+      {"scatter_blocks", ObjectFeatureRuleMode::ScatterBlocks},
+      {"procedural_tree", ObjectFeatureRuleMode::ProceduralTree},
+      {"procedural_shrub", ObjectFeatureRuleMode::ProceduralShrub}};
+  return types;
 }
+
+std::mutex &FeatureTypeMutex()
+{
+  static std::mutex mutex;
+  return mutex;
+}
+
+std::unordered_map<ObjectFeatureRuleMode,
+                   std::shared_ptr<const IObjectFeaturePlacementStrategy>> &
+PlacementStrategies()
+{
+  static std::unordered_map<
+      ObjectFeatureRuleMode,
+      std::shared_ptr<const IObjectFeaturePlacementStrategy>>
+      strategies;
+  return strategies;
+}
+
+std::mutex &PlacementStrategyMutex()
+{
+  static std::mutex mutex;
+  return mutex;
+}
+
+std::unordered_map<CaveFeatureKind,
+                   std::shared_ptr<const ICaveFeaturePlacementStrategy>> &
+CavePlacementStrategies()
+{
+  static std::unordered_map<
+      CaveFeatureKind, std::shared_ptr<const ICaveFeaturePlacementStrategy>>
+      strategies;
+  return strategies;
+}
+
+std::mutex &CavePlacementStrategyMutex()
+{
+  static std::mutex mutex;
+  return mutex;
+}
+
+BiomeId ParseBiome(const std::string &name) { return BiomeIdFromString(name); }
 
 void ParseBiomeArray(const nlohmann::json &item, ObjectFeatureRule &rule)
 {
@@ -30,7 +78,13 @@ void ParseBiomeArray(const nlohmann::json &item, ObjectFeatureRule &rule)
     {
       if (b.is_string())
       {
-        rule.Biomes.push_back(ParseBiome(b.get<std::string>()));
+        const std::string key = b.get<std::string>();
+        rule.BiomeKeys.push_back(key);
+        const BiomeId legacy = ParseBiome(key);
+        if (legacy != BiomeId::Invalid)
+        {
+          rule.Biomes.push_back(legacy);
+        }
       }
     }
   }
@@ -50,6 +104,92 @@ void ParseSubBiomeArray(const nlohmann::json &item, ObjectFeatureRule &rule)
   }
 }
 
+void ParseEcologyProfile(const nlohmann::json &item, ObjectFeatureRule &rule)
+{
+  if (!item.contains("ecology") || !item["ecology"].is_object())
+  {
+    return;
+  }
+  const nlohmann::json &ecology = item["ecology"];
+  const auto parse_axis =
+      [&](const char *name, float &min_value, float &max_value, bool &enabled)
+  {
+    if (!ecology.contains(name))
+    {
+      return;
+    }
+    const nlohmann::json &range = ecology[name];
+    if (!range.is_array() || range.size() != 2 || !range[0].is_number() ||
+        !range[1].is_number())
+    {
+      return;
+    }
+    min_value = range[0].get<float>();
+    max_value = range[1].get<float>();
+    enabled = std::isfinite(min_value) && std::isfinite(max_value) &&
+              min_value >= 0.0f && max_value <= 1.0f && min_value < max_value;
+  };
+  parse_axis("temperature", rule.Ecology.TemperatureMin,
+             rule.Ecology.TemperatureMax, rule.Ecology.HasTemperatureRange);
+  parse_axis("moisture", rule.Ecology.MoistureMin, rule.Ecology.MoistureMax,
+             rule.Ecology.HasMoistureRange);
+  if (ecology.contains("elevation"))
+  {
+    const nlohmann::json &elevation = ecology["elevation"];
+    const nlohmann::json *range = &elevation;
+    FeatureEcologyProfile::ElevationReference reference =
+        FeatureEcologyProfile::ElevationReference::AbsoluteY;
+    if (elevation.is_object() && elevation.contains("above_sea_level"))
+    {
+      range = &elevation["above_sea_level"];
+      reference = FeatureEcologyProfile::ElevationReference::SeaLevel;
+    }
+    if (range->is_array() && range->size() == 2 && (*range)[0].is_number() &&
+        (*range)[1].is_number())
+    {
+      const int minimum = (*range)[0].get<int>();
+      const int maximum = (*range)[1].get<int>();
+      if (minimum <= maximum)
+      {
+        rule.Ecology.ElevationRef = reference;
+        rule.Ecology.MinElevation = minimum;
+        rule.Ecology.MaxElevation = maximum;
+      }
+    }
+  }
+  if (ecology.contains("max_slope") && ecology["max_slope"].is_number())
+  {
+    rule.Ecology.MaxSlope =
+        std::clamp(ecology["max_slope"].get<float>(), 0.0f, 64.0f);
+  }
+}
+
+void ParseDistributionProfile(const nlohmann::json &root,
+                              const char *profileName,
+                              FeatureDistributionProfile &profile)
+{
+  if (!root.contains(profileName) || !root[profileName].is_object())
+  {
+    return;
+  }
+  const nlohmann::json &source = root[profileName];
+  const float scale = source.value("regional_noise_scale", 0.0f);
+  const float minDensity = source.value("min_density_multiplier", 1.0f);
+  const float maxDensity = source.value("max_density_multiplier", 1.0f);
+  if (!std::isfinite(scale) || !std::isfinite(minDensity) ||
+      !std::isfinite(maxDensity))
+  {
+    return;
+  }
+  profile.RegionalNoiseScale = std::clamp(scale, 0.0f, 0.05f);
+  profile.MinDensityMultiplier = std::clamp(minDensity, 0.0f, 2.0f);
+  profile.MaxDensityMultiplier = std::clamp(maxDensity, 0.0f, 2.0f);
+  if (profile.MinDensityMultiplier > profile.MaxDensityMultiplier)
+  {
+    std::swap(profile.MinDensityMultiplier, profile.MaxDensityMultiplier);
+  }
+}
+
 bool ParseRuleArray(const nlohmann::json &arr,
                     std::vector<ObjectFeatureRule> &out)
 {
@@ -64,10 +204,18 @@ bool ParseRuleArray(const nlohmann::json &arr,
       continue;
     }
     ObjectFeatureRule rule;
-    const std::string mode = item.value("mode", "object");
-    if (mode == "scatter_blocks")
+    const std::string modeName = item.value("mode", "object");
+    const std::optional<ObjectFeatureRuleMode> mode =
+        ObjectFeatureTypeRegistry::Find(modeName);
+    if (!mode)
     {
-      rule.Mode = ObjectFeatureRuleMode::ScatterBlocks;
+      std::cerr << "ObjectFeatureConfig: unknown feature type '" << modeName
+                << "'\n";
+      continue;
+    }
+    rule.Mode = *mode;
+    if (rule.Mode == ObjectFeatureRuleMode::ScatterBlocks)
+    {
       rule.Scatter.BlockName = item.value("block", "");
       rule.Scatter.Attempts = std::max(1, item.value("attempts", 4));
       rule.Scatter.Radius = std::max(0, item.value("radius", 2));
@@ -76,6 +224,96 @@ bool ParseRuleArray(const nlohmann::json &arr,
       if (rule.Scatter.BlockName.empty())
       {
         continue;
+      }
+    }
+    else if (rule.Mode == ObjectFeatureRuleMode::ProceduralTree)
+    {
+      rule.ObjectName = item.value("species", item.value("object", ""));
+      if (rule.ObjectName.empty())
+      {
+        continue;
+      }
+      if (item.contains("tree_profile"))
+      {
+        const nlohmann::json &profile = item["tree_profile"];
+        if (!profile.is_object())
+        {
+          continue;
+        }
+        rule.Tree.HeightMin = std::clamp(profile.value("height_min", 5), 2, 32);
+        rule.Tree.HeightMax =
+            std::clamp(profile.value("height_max", 8), rule.Tree.HeightMin, 40);
+        rule.Tree.CrownRadiusX =
+            std::clamp(profile.value("crown_radius_x", 3), 1, 8);
+        rule.Tree.CrownRadiusZ =
+            std::clamp(profile.value("crown_radius_z", 3), 1, 8);
+        rule.Tree.CrownHeight =
+            std::clamp(profile.value("crown_height", 4), 2, 16);
+        rule.Tree.BranchCount =
+            std::clamp(profile.value("branch_count", 2), 0, 8);
+        rule.Tree.CrownLobes =
+            std::clamp(profile.value("crown_lobes", 2), 0, 8);
+        rule.Tree.LeafDensity =
+            std::clamp(profile.value("leaf_density", 0.84f), 0.2f, 1.0f);
+        rule.Tree.RootChance =
+            std::clamp(profile.value("root_chance", 0.45f), 0.0f, 1.0f);
+        rule.Tree.CrownIrregularity =
+            std::clamp(profile.value("crown_irregularity", 0.18f), 0.0f, 0.45f);
+        rule.Tree.TrunkBlock =
+            profile.value("trunk_block", std::string("tree_log"));
+        rule.Tree.LeavesBlock =
+            profile.value("leaves_block", std::string("tree_leaves"));
+        const std::string crown = profile.value("crown_shape", "round");
+        if (crown == "conical")
+        {
+          rule.Tree.CrownShape = TreeCrownShape::Conical;
+        }
+        else if (crown == "umbrella")
+        {
+          rule.Tree.CrownShape = TreeCrownShape::Umbrella;
+        }
+        else if (crown == "columnar")
+        {
+          rule.Tree.CrownShape = TreeCrownShape::Columnar;
+        }
+        else
+        {
+          rule.Tree.CrownShape = TreeCrownShape::Round;
+        }
+      }
+    }
+    else if (rule.Mode == ObjectFeatureRuleMode::ProceduralShrub)
+    {
+      rule.ObjectName = item.value("species", item.value("object", ""));
+      if (rule.ObjectName.empty())
+      {
+        continue;
+      }
+      if (item.contains("shrub_profile"))
+      {
+        const nlohmann::json &profile = item["shrub_profile"];
+        if (!profile.is_object())
+        {
+          continue;
+        }
+        rule.Shrub.HeightMin = std::clamp(profile.value("height_min", 2), 1, 8);
+        rule.Shrub.HeightMax = std::clamp(profile.value("height_max", 3),
+                                          rule.Shrub.HeightMin, 10);
+        rule.Shrub.RadiusX = std::clamp(profile.value("radius_x", 2), 1, 6);
+        rule.Shrub.RadiusZ = std::clamp(profile.value("radius_z", 2), 1, 6);
+        rule.Shrub.LobeCount =
+            std::clamp(profile.value("lobe_count", 4), 1, 10);
+        rule.Shrub.LeafDensity =
+            std::clamp(profile.value("leaf_density", 0.86f), 0.2f, 1.0f);
+        rule.Shrub.CrownIrregularity =
+            std::clamp(profile.value("crown_irregularity", 0.22f), 0.0f, 0.5f);
+        rule.Shrub.AccentChance =
+            std::clamp(profile.value("accent_chance", 0.0f), 0.0f, 1.0f);
+        rule.Shrub.StemBlock =
+            profile.value("stem_block", std::string("mtg_bush_stem"));
+        rule.Shrub.LeavesBlock =
+            profile.value("leaves_block", std::string("mtg_bush_leaves"));
+        rule.Shrub.AccentBlock = profile.value("accent_block", std::string{});
       }
     }
     else
@@ -91,7 +329,8 @@ bool ParseRuleArray(const nlohmann::json &arr,
     rule.ChancePerColumn = item.value("chance_per_column", 0);
     rule.SeedOffset = item.value("seed_offset", 0);
     rule.PlacementYOffset = item.value("placement_y_offset", 0);
-    if (item.contains("surface_constraint") && item["surface_constraint"].is_string())
+    if (item.contains("surface_constraint") &&
+        item["surface_constraint"].is_string())
     {
       rule.Surface.Kind = SurfaceConstraintKindFromString(
           item["surface_constraint"].get<std::string>());
@@ -103,7 +342,8 @@ bool ParseRuleArray(const nlohmann::json &arr,
     }
     ParseBiomeArray(item, rule);
     ParseSubBiomeArray(item, rule);
-    if (rule.Biomes.empty())
+    ParseEcologyProfile(item, rule);
+    if (rule.BiomeKeys.empty())
     {
       continue;
     }
@@ -112,7 +352,126 @@ bool ParseRuleArray(const nlohmann::json &arr,
   return true;
 }
 
+void ParseCaveFeatureArray(const nlohmann::json &arr,
+                           std::vector<CaveFeatureRule> &out)
+{
+  if (!arr.is_array())
+  {
+    return;
+  }
+  for (const auto &item : arr)
+  {
+    if (!item.is_object())
+    {
+      continue;
+    }
+    CaveFeatureRule rule;
+    const std::string biome = item.value("biome", "");
+    if (biome.empty())
+    {
+      continue;
+    }
+    rule.BiomeKeyName = biome;
+    const BiomeId legacyBiome = BiomeIdFromString(biome);
+    if (legacyBiome != BiomeId::Invalid)
+    {
+      rule.Biome = legacyBiome;
+    }
+
+    const std::string kind = item.value("kind", "");
+    if (kind == "moss_patch")
+    {
+      rule.Kind = CaveFeatureKind::MossPatch;
+      rule.BlockName = item.value("block", "moss_block");
+    }
+    else if (kind == "stalagmite")
+    {
+      rule.Kind = CaveFeatureKind::Stalagmite;
+      rule.BlockName = item.value("block", "tuff");
+    }
+    else if (kind == "amethyst_cluster")
+    {
+      rule.Kind = CaveFeatureKind::AmethystCluster;
+      rule.BlockName = item.value("block", "amethyst_block");
+    }
+    else
+    {
+      continue;
+    }
+
+    rule.Chance = std::max(1, item.value("chance", rule.Chance));
+    rule.Radius = std::clamp(item.value("radius", rule.Radius), 0, 4);
+    rule.MaxHeight = std::clamp(item.value("max_height", rule.MaxHeight), 1, 6);
+    rule.SeedOffset = item.value("seed_offset", 0U);
+    if (!rule.BlockName.empty())
+    {
+      out.push_back(std::move(rule));
+    }
+  }
+}
+
 } // namespace
+
+bool ObjectFeatureTypeRegistry::Register(const std::string &name,
+                                         ObjectFeatureRuleMode mode)
+{
+  if (name.empty())
+  {
+    return false;
+  }
+  std::lock_guard<std::mutex> lock(FeatureTypeMutex());
+  return FeatureTypeMap().emplace(name, mode).second;
+}
+
+std::optional<ObjectFeatureRuleMode>
+ObjectFeatureTypeRegistry::Find(const std::string &name)
+{
+  std::lock_guard<std::mutex> lock(FeatureTypeMutex());
+  const auto it = FeatureTypeMap().find(name);
+  return it == FeatureTypeMap().end()
+             ? std::optional<ObjectFeatureRuleMode>{}
+             : std::optional<ObjectFeatureRuleMode>{it->second};
+}
+
+bool ObjectFeaturePlacementStrategyRegistry::Register(
+    ObjectFeatureRuleMode mode,
+    std::shared_ptr<const IObjectFeaturePlacementStrategy> strategy)
+{
+  if (!strategy)
+  {
+    return false;
+  }
+  std::lock_guard<std::mutex> lock(PlacementStrategyMutex());
+  return PlacementStrategies().emplace(mode, std::move(strategy)).second;
+}
+
+std::shared_ptr<const IObjectFeaturePlacementStrategy>
+ObjectFeaturePlacementStrategyRegistry::Find(ObjectFeatureRuleMode mode)
+{
+  std::lock_guard<std::mutex> lock(PlacementStrategyMutex());
+  const auto it = PlacementStrategies().find(mode);
+  return it == PlacementStrategies().end() ? nullptr : it->second;
+}
+
+bool CaveFeaturePlacementStrategyRegistry::Register(
+    CaveFeatureKind kind,
+    std::shared_ptr<const ICaveFeaturePlacementStrategy> strategy)
+{
+  if (!strategy)
+  {
+    return false;
+  }
+  std::lock_guard<std::mutex> lock(CavePlacementStrategyMutex());
+  return CavePlacementStrategies().emplace(kind, std::move(strategy)).second;
+}
+
+std::shared_ptr<const ICaveFeaturePlacementStrategy>
+CaveFeaturePlacementStrategyRegistry::Find(CaveFeatureKind kind)
+{
+  std::lock_guard<std::mutex> lock(CavePlacementStrategyMutex());
+  const auto it = CavePlacementStrategies().find(kind);
+  return it == CavePlacementStrategies().end() ? nullptr : it->second;
+}
 
 SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name)
 {
@@ -128,6 +487,10 @@ SurfaceConstraintKind SurfaceConstraintKindFromString(const std::string &name)
   {
     return SurfaceConstraintKind::WaterSurface;
   }
+  if (name == "underwater_floor")
+  {
+    return SurfaceConstraintKind::UnderwaterFloor;
+  }
   return SurfaceConstraintKind::AnyLand;
 }
 
@@ -141,6 +504,8 @@ const char *SurfaceConstraintKindToString(SurfaceConstraintKind kind)
     return "near_water";
   case SurfaceConstraintKind::WaterSurface:
     return "water_surface";
+  case SurfaceConstraintKind::UnderwaterFloor:
+    return "underwater_floor";
   case SurfaceConstraintKind::AnyLand:
   default:
     return "any_land";
@@ -237,11 +602,24 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
                    next->Decoration);
     ParseRuleArray(root.value("structures", nlohmann::json::array()),
                    next->Structures);
-    if (root.contains("structure_placement") && root["structure_placement"].is_object())
+    ParseCaveFeatureArray(root.value("cave_features", nlohmann::json::array()),
+                          next->CaveFeatures);
+    if (root.contains("spatial_distribution") &&
+        root["spatial_distribution"].is_object())
+    {
+      const nlohmann::json &distribution = root["spatial_distribution"];
+      ParseDistributionProfile(distribution, "vegetation",
+                               next->VegetationDistribution);
+      ParseDistributionProfile(distribution, "ground_cover",
+                               next->GroundCoverDistribution);
+    }
+    if (root.contains("structure_placement") &&
+        root["structure_placement"].is_object())
     {
       const auto &sp = root["structure_placement"];
       next->structureCellSize = std::max(16, sp.value("cell_size", 64));
-      next->structureChancePerCell = std::max(1, sp.value("chance_per_cell", 12));
+      next->structureChancePerCell =
+          std::max(1, sp.value("chance_per_cell", 12));
       next->structureMinSpacing = std::max(32, sp.value("min_spacing", 128));
     }
   }
@@ -252,7 +630,8 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
     return false;
   }
   const size_t rule_count = next->Vegetation.size() + next->GroundCover.size() +
-                            next->Decoration.size() + next->Structures.size();
+                            next->Decoration.size() + next->Structures.size() +
+                            next->CaveFeatures.size();
   std::atomic_store_explicit(
       &Active, std::shared_ptr<const ObjectFeatureConfig>(std::move(next)),
       std::memory_order_release);
@@ -289,7 +668,8 @@ bool UObjectFeatureConfigStorage::IsLoaded()
     return false;
   }
   return !(snap->Vegetation.empty() && snap->GroundCover.empty() &&
-           snap->Decoration.empty() && snap->Structures.empty());
+           snap->Decoration.empty() && snap->Structures.empty() &&
+           snap->CaveFeatures.empty());
 }
 
 } // namespace cutum

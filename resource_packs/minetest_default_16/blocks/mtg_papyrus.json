@@ -20,5 +20,13 @@
     "mtg_papyrus_default_papyrus",
     "mtg_papyrus_default_papyrus"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }

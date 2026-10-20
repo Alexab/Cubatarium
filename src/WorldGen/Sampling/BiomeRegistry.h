@@ -4,7 +4,6 @@
 #include <glm/glm.hpp>
 #include <optional>
 #include <string>
-#include <unordered_map>
 
 namespace cutum
 {
@@ -18,11 +17,6 @@ public:
   BiomeId IdFromString(const std::string &name) const;
   const char *StringFromId(BiomeId id) const;
   std::optional<glm::ivec3> MapColorFor(BiomeId id) const;
-
-private:
-  std::unordered_map<std::string, BiomeId> StringToId;
-  std::unordered_map<BiomeId, std::string> IdToString;
-  std::unordered_map<BiomeId, glm::ivec3> MapColors;
 };
 
 UBiomeRegistry &GetActiveBiomeRegistry();

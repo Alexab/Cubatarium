@@ -2,6 +2,8 @@
 
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Core/WorldGenStageId.h"
+#include "WorldGen/Sampling/AquiferSampler.h"
+#include "WorldGen/Sampling/BiomeDefinitionRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <memory>
 #include <string>
@@ -27,11 +29,42 @@ struct BiomeSubBiomePackRule
   float NoiseThreshold{-1.0f};
 };
 
+enum class BiomeDomain
+{
+  Surface,
+  Cave,
+};
+
+struct BiomeClimateRange
+{
+  bool Enabled{false};
+  float Min{0.0f};
+  float Max{1.0f};
+};
+
+struct BiomeClimateProfile
+{
+  BiomeClimateRange Temperature;
+  BiomeClimateRange Moisture;
+  BiomeClimateRange Continentalness;
+  BiomeClimateRange Erosion;
+  BiomeClimateRange Weirdness;
+  BiomeClimateRange Ridge;
+  float Weight{1.0f};
+  bool Enabled{false};
+};
+
 struct BiomePackDefinition
 {
+  int SchemaVersion{1};
+  BiomeDomain Domain{BiomeDomain::Surface};
+  BiomeClimateProfile Climate;
   BiomeHeightProfile Height;
   std::string SurfaceSlot;
   std::string SubsurfaceSlot;
+  // Optional palette used instead of the above for worldgen profile >= 3.
+  std::string SurfaceSlotV3;
+  std::string SubsurfaceSlotV3;
   std::unordered_map<std::string, float> FeatureWeights;
   std::unordered_map<std::string, BiomeSubBiomePackRule> SubBiomes;
 };
@@ -45,6 +78,7 @@ struct HeightLayerPackConfig
 
 struct PackHeightConfig
 {
+  int SchemaVersion{2};
   HeightLayerPackConfig Continental;
   HeightLayerPackConfig Regional;
   HeightLayerPackConfig Detail;
@@ -54,6 +88,18 @@ struct PackHeightConfig
   float JitterScale{0.03f};
   float JitterAmplitude{1.0f};
   float JitterErosionDamp{0.85f};
+  struct OceanProfile
+  {
+    float DeepOceanEnd{0.22f};
+    float ShelfEnd{0.38f};
+    float CoastEnd{0.68f};
+    float DeepOceanDepthRatio{0.78f};
+    float ShelfDepthRatio{0.50f};
+    float CoastDepthRatio{0.40f};
+    float LowlandHeightRatio{0.03f};
+    float HillHeightRatio{0.13f};
+    float HighlandHeightRatio{0.22f};
+  } Ocean;
   bool Loaded{false};
 };
 
@@ -72,6 +118,9 @@ struct PackClimateConfig
   ClimateAxisPackConfig Erosion;
   ClimateAxisPackConfig Weirdness;
   ClimateAxisPackConfig Ridge;
+  // Normalized temperature reduction per block above sea level, used for
+  // mountain snowline selection. Older climate packs inherit this default.
+  float TemperatureLapsePerBlock{0.00135f};
   bool Loaded{false};
 };
 
@@ -109,6 +158,11 @@ struct PackCavesConfig
   bool Loaded{false};
 };
 
+struct PackAquifersConfig : AquiferParams
+{
+  bool Loaded{false};
+};
+
 struct PackRavinesConfig
 {
   bool Enabled{true};
@@ -128,6 +182,30 @@ struct PackValleysConfig
   float WidthSigma{2.5f};
   float AquaticDepthScale{0.4f};
   float RiverNoiseScale{0.008f};
+  bool FillWater{false};
+  float WaterMinStrength{0.65f};
+  float WaterMinMoisture{0.42f};
+  int WaterSurfaceDepth{0};
+  int WaterMaxElevationAboveSea{24};
+  bool Loaded{false};
+};
+
+struct PackLakesConfig
+{
+  bool Enabled{true};
+  int CellSize{128};
+  int ChancePerCell{5};
+  int RadiusMin{7};
+  int RadiusMax{15};
+  int MinElevationAboveSea{2};
+  int MaxElevationAboveSea{24};
+  int MaxExcavationDepth{18};
+  int BasinDepthMin{3};
+  int BasinDepthMax{7};
+  float MinContinentalness{0.40f};
+  float MaxContinentalness{0.96f};
+  float MinMoisture{0.32f};
+  float MaxTemperature{0.75f};
   bool Loaded{false};
 };
 
@@ -137,6 +215,7 @@ struct WorldGenPackPipeline
   bool Fluids{false};
   bool Ravines{false};
   bool Valleys{false};
+  bool Lakes{false};
   bool Ores{false};
   bool Caves{false};
   bool Vegetation{false};
@@ -145,6 +224,9 @@ struct WorldGenPackPipeline
   bool Structures{false};
   bool LavaPools{false};
   bool FirePatch{false};
+  bool Geology{false};
+  bool Aquifers{false};
+  bool CaveFeatures{false};
   std::vector<WorldGenStageId> StageOrder;
 };
 
@@ -166,9 +248,14 @@ struct WorldGenPack
   PackClimateConfig Climate;
   PackOresConfig Ores;
   PackCavesConfig Caves;
+  PackAquifersConfig Aquifers;
   PackRavinesConfig Ravines;
   PackValleysConfig Valleys;
+  PackLakesConfig Lakes;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
+  std::shared_ptr<const BiomeDefinitionRegistry> BiomeRegistry;
+  std::vector<BiomeHandle> SurfaceClimateBiomes;
+  std::vector<BiomeHandle> CaveClimateBiomes;
 };
 
 class UWorldGenPack
@@ -186,10 +273,18 @@ public:
   static const PackClimateConfig &ClimateConfig();
   static const PackOresConfig &OresConfig();
   static const PackCavesConfig &CavesConfig();
+  static const PackAquifersConfig &AquifersConfig();
   static const PackRavinesConfig &RavinesConfig();
   static const PackValleysConfig &ValleysConfig();
-  static void ApplyPackCaveDefaults(ProceduralSettings &settings);
-  static void ApplyPackRavineDefaults(ProceduralSettings &settings);
+  static const PackLakesConfig &LakesConfig();
+  /// Copies pack cave/ravine values into `settings`. With
+  /// `preserveUserFields` (worldgen profile >= 3) the values the new-world form
+  /// exposes (cave max depth; ravine enabled/rarity/aquatic depth/fill water)
+  /// are left as the user set them and only the pack-only fields are applied.
+  static void ApplyPackCaveDefaults(ProceduralSettings &settings,
+                                    bool preserveUserFields = false);
+  static void ApplyPackRavineDefaults(ProceduralSettings &settings,
+                                      bool preserveUserFields = false);
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
   static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,

@@ -24,7 +24,16 @@ bool IsFallingBlock(const UBlockDefinitionStorage &definitions, BlockId id)
 } // namespace
 
 bool UFallingBlockRules::CanFall(const UBlockDefinitionStorage &definitions,
-                                 const UBlockWorld &world, glm::ivec3 blockPos)
+                                 const UBlockWorld &world,
+                                 glm::ivec3 blockPos)
+{
+  return CanFall(definitions, world, blockPos,
+                 world.GetVerticalProfile().MinY);
+}
+
+bool UFallingBlockRules::CanFall(const UBlockDefinitionStorage &definitions,
+                                 const UBlockWorld &world, glm::ivec3 blockPos,
+                                 int min_world_y)
 {
   const BlockId id = world.GetBlock(blockPos);
   if (!IsFallingBlock(definitions, id))
@@ -32,13 +41,22 @@ bool UFallingBlockRules::CanFall(const UBlockDefinitionStorage &definitions,
     return false;
   }
   const glm::ivec3 below(blockPos.x, blockPos.y - 1, blockPos.z);
-  return below.y >= 0 && world.IsAir(below);
+  return below.y >= min_world_y && world.IsAir(below);
 }
 
 bool UFallingBlockRules::TryApplyFall(const UBlockDefinitionStorage &definitions,
-                                      UBlockWorld &world, glm::ivec3 blockPos)
+                                      UBlockWorld &world,
+                                      glm::ivec3 blockPos)
 {
-  if (!CanFall(definitions, world, blockPos))
+  return TryApplyFall(definitions, world, blockPos,
+                      world.GetVerticalProfile().MinY);
+}
+
+bool UFallingBlockRules::TryApplyFall(const UBlockDefinitionStorage &definitions,
+                                      UBlockWorld &world, glm::ivec3 blockPos,
+                                      int min_world_y)
+{
+  if (!CanFall(definitions, world, blockPos, min_world_y))
   {
     return false;
   }

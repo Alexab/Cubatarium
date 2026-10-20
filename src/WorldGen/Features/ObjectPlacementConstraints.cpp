@@ -1,10 +1,12 @@
 #include "WorldGen/Features/ObjectPlacementConstraints.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectUtil.h"
 #include "WorldGen/Core/WorldGenPlacementTuning.h"
 
 #include <cmath>
+#include <optional>
 
 namespace cutum
 {
@@ -60,7 +62,7 @@ bool TryWaterSurfaceAnchorAt(const WorldGenContext &ctx, int x, int z,
   }
   const int max_y =
       std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 1);
-  for (int y = max_y; y >= 1; --y)
+  for (int y = max_y; y >= ctx.Settings.MinHeight; --y)
   {
     if (ctx.World.GetBlock(glm::ivec3(x, y, z)) != ctx.Blocks.Water)
     {
@@ -77,9 +79,9 @@ bool TryWaterSurfaceAnchorAt(const WorldGenContext &ctx, int x, int z,
 }
 
 bool FindWaterSurfaceAnchor(const WorldGenContext &ctx, int x, int z,
-                            glm::ivec3 &anchor_out)
+                            glm::ivec3 &anchor_out, int max_radius)
 {
-  for (int radius = 0; radius <= 3; ++radius)
+  for (int radius = 0; radius <= std::max(0, max_radius); ++radius)
   {
     for (int dz = -radius; dz <= radius; ++dz)
     {
@@ -101,6 +103,33 @@ bool FindWaterSurfaceAnchor(const WorldGenContext &ctx, int x, int z,
   return false;
 }
 
+bool FindUnderwaterFloorAnchor(const WorldGenContext &ctx, int x, int z,
+                               glm::ivec3 &anchor_out)
+{
+  if (ctx.Blocks.Water == BLOCK_AIR)
+  {
+    return false;
+  }
+  const int max_y = std::min(ctx.Settings.SeaLevel, ctx.Settings.MaxHeight - 1);
+  for (int y = max_y; y >= ctx.Settings.MinHeight; --y)
+  {
+    const glm::ivec3 water_pos(x, y, z);
+    if (ctx.World.GetBlock(water_pos) != ctx.Blocks.Water)
+    {
+      continue;
+    }
+    const glm::ivec3 floor_pos = water_pos - glm::ivec3(0, 1, 0);
+    const BlockId floor_block = ctx.World.GetBlock(floor_pos);
+    if (floor_block != BLOCK_AIR && ctx.Registry.BlocksMovement(floor_block) &&
+        !ctx.Registry.IsLiquid(floor_block))
+    {
+      anchor_out = water_pos;
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool SatisfiesSurfaceConstraint(const WorldGenContext &ctx,
@@ -115,7 +144,16 @@ bool SatisfiesSurfaceConstraint(const WorldGenContext &ctx,
   case SurfaceConstraintKind::NearWater:
     return IsNearSurfaceWater(ctx, x, z, surface_y, constraint.NearWaterRadius);
   case SurfaceConstraintKind::WaterSurface:
-    return IsNearSurfaceWater(ctx, x, z, surface_y, constraint.NearWaterRadius);
+  {
+    glm::ivec3 anchor;
+    return FindWaterSurfaceAnchor(ctx, x, z, anchor,
+                                  constraint.NearWaterRadius);
+  }
+  case SurfaceConstraintKind::UnderwaterFloor:
+  {
+    glm::ivec3 anchor;
+    return FindUnderwaterFloorAnchor(ctx, x, z, anchor);
+  }
   case SurfaceConstraintKind::AnyLand:
   default:
     return true;
@@ -123,21 +161,56 @@ bool SatisfiesSurfaceConstraint(const WorldGenContext &ctx,
 }
 
 bool FindWaterSurfaceAnchorForPlacement(const WorldGenContext &ctx, int x,
-                                        int z, glm::ivec3 &anchor_out)
+                                        int z, glm::ivec3 &anchor_out,
+                                        int radius)
 {
-  return FindWaterSurfaceAnchor(ctx, x, z, anchor_out);
+  return FindWaterSurfaceAnchor(ctx, x, z, anchor_out, radius);
 }
 
-float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
-                                     int surfaceY)
+bool FindUnderwaterFloorAnchorForPlacement(const WorldGenContext &ctx, int x,
+                                           int z, glm::ivec3 &anchor_out)
+{
+  return FindUnderwaterFloorAnchor(ctx, x, z, anchor_out);
+}
+
+namespace
+{
+float SampleSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                            int surfaceY, bool landOnly)
 {
   const int maxScanY = ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel,
                                        ctx.Settings.MaxHeight);
-  auto surfaceAt = [&](int wx, int wz) -> int {
-    return FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY);
+  auto surfaceAt = [&](int wx, int wz) -> std::optional<int> {
+    if (landOnly && ctx.CoarseSurfaceYAt)
+    {
+      const int deterministicSurfaceY = ctx.CoarseSurfaceYAt(wx, wz);
+      return deterministicSurfaceY < ctx.Settings.SeaLevel
+                 ? std::nullopt
+                 : std::optional<int>(deterministicSurfaceY);
+    }
+    const std::optional<int> surface = FindTopSolidSurfaceYOptional(
+        ctx.World, ctx.Registry, wx, wz, maxScanY, ctx.Settings.MinHeight);
+    if (!surface)
+    {
+      return std::nullopt;
+    }
+    if (landOnly)
+    {
+      if (*surface < ctx.Settings.SeaLevel)
+      {
+        return std::nullopt;
+      }
+      const BlockId above =
+          ctx.World.GetBlock(glm::ivec3(wx, *surface + 1, wz));
+      if (ctx.Registry.IsLiquid(above))
+      {
+        return std::nullopt;
+      }
+    }
+    return surface;
   };
-  const int centerY = surfaceAt(x, z);
-  if (centerY < 0)
+  const std::optional<int> centerY = surfaceAt(x, z);
+  if (!centerY)
   {
     return 999.0f;
   }
@@ -150,16 +223,29 @@ float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
       {
         continue;
       }
-      const int neighborY = surfaceAt(x + dx, z + dz);
-      if (neighborY < 0)
+      const std::optional<int> neighborY = surfaceAt(x + dx, z + dz);
+      if (!neighborY)
       {
         continue;
       }
       maxDelta =
-          std::max(maxDelta, static_cast<float>(std::abs(neighborY - centerY)));
+          std::max(maxDelta, static_cast<float>(std::abs(*neighborY - *centerY)));
     }
   }
   return maxDelta;
+}
+} // namespace
+
+float SampleStructureSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                                     int surfaceY)
+{
+  return SampleSurfaceGradient(ctx, x, z, surfaceY, false);
+}
+
+float SampleLandSurfaceGradient(const WorldGenContext &ctx, int x, int z,
+                                int surfaceY)
+{
+  return SampleSurfaceGradient(ctx, x, z, surfaceY, true);
 }
 
 } // namespace cutum

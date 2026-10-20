@@ -1,5 +1,6 @@
 #include "Test/FluidTestHelpers.h"
 
+#include "App/Platform/Log.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
@@ -9,9 +10,16 @@
 #include "World/Math/FluidCellState.h"
 
 #include <cstdlib>
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+
+namespace cutum
+{
+void CubatariumLogInfo(const char *, const std::string &) {}
+} // namespace cutum
 
 static void Expect(bool cond, const char *message)
 {
@@ -505,6 +513,93 @@ int main()
     const std::vector<cutum::GreedyQuad> solid_quads =
         cutum::UGreedyMesher::BuildChunkMesh(solid_snap, registry);
     (void)solid_quads;
+  }
+
+  {
+    constexpr int kWorldTopY = 319;
+    cutum::UBlockWorld tall_world;
+    tall_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 top_chunk(0, 19, 0);
+    tall_world.GetChunkManager().EnsureChunk(top_chunk);
+    tall_world.SetBlock(glm::ivec3(8, kWorldTopY, 8), 8);
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    const cutum::ChunkMeshSnapshot top_snapshot =
+        cutum::ChunkMeshSnapshot::Capture(tall_world, top_chunk,
+                                          /*sourceRevision=*/1,
+                                          drawable_false, nullptr);
+    const std::vector<cutum::GreedyQuad> top_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(top_snapshot, registry);
+    bool top_face_at_world_limit = false;
+    for (const cutum::GreedyQuad &quad : top_quads)
+    {
+      if (quad.Id != 8 || quad.axis != 1 || quad.faceSign <= 0)
+      {
+        continue;
+      }
+      std::vector<cutum::GreedyMeshVertex> vertices;
+      std::vector<uint32_t> indices;
+      cutum::AppendGreedyQuad(quad, top_chunk, vertices, indices);
+      top_face_at_world_limit = std::any_of(
+          vertices.begin(), vertices.end(),
+          [](const cutum::GreedyMeshVertex &vertex)
+          { return vertex.py == 319.5f; });
+      if (top_face_at_world_limit)
+      {
+        break;
+      }
+    }
+    Expect(top_face_at_world_limit,
+           "mesher places the top block face at world y=319");
+  }
+
+  {
+    constexpr int kWorldBottomY = -64;
+    cutum::UBlockWorld deep_world;
+    deep_world.SetVerticalProfile(
+        cutum::WorldVerticalProfile(kWorldBottomY, 319, 63, kWorldBottomY));
+    deep_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 bottom_chunk(0, -4, 0);
+    deep_world.GetChunkManager().EnsureChunk(bottom_chunk);
+    deep_world.SetBlock(glm::ivec3(8, kWorldBottomY, 8), 8);
+    const cutum::ChunkMeshSnapshot bottom_snapshot =
+        cutum::ChunkMeshSnapshot::Capture(deep_world, bottom_chunk,
+                                          /*sourceRevision=*/1);
+    const std::vector<cutum::GreedyQuad> bottom_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(bottom_snapshot, registry);
+    bool bottom_face_at_world_limit = false;
+    for (const cutum::GreedyQuad &quad : bottom_quads)
+    {
+      if (quad.Id != 8 || quad.axis != 1 || quad.faceSign >= 0)
+      {
+        continue;
+      }
+      std::vector<cutum::GreedyMeshVertex> vertices;
+      std::vector<uint32_t> indices;
+      cutum::AppendGreedyQuad(quad, bottom_chunk, vertices, indices);
+      bottom_face_at_world_limit = std::any_of(
+          vertices.begin(), vertices.end(),
+          [](const cutum::GreedyMeshVertex &vertex)
+          { return vertex.py == -64.5f; });
+      if (bottom_face_at_world_limit)
+      {
+        break;
+      }
+    }
+    Expect(bottom_face_at_world_limit,
+           "mesher places the bottom block face at world y=-64");
+
+    cutum::UBlockWorld interior_negative_world;
+    interior_negative_world.SetVerticalProfile(
+        cutum::WorldVerticalProfile(kWorldBottomY, 319, 63, kWorldBottomY));
+    const glm::ivec3 interior_negative_chunk(0, -3, 0);
+    interior_negative_world.GetChunkManager().EnsureChunk(interior_negative_chunk);
+    const cutum::ChunkMeshSnapshot interior_snapshot =
+        cutum::ChunkMeshSnapshot::Capture(interior_negative_world,
+                                          interior_negative_chunk, 2);
+    Expect(interior_snapshot.GetNeighborLoadState(
+               interior_snapshot.ChunkOrigin() + glm::ivec3(0, -1, 0)) ==
+               cutum::NeighborLoadState::Unknown,
+           "unloaded negative slice above world floor remains unknown");
   }
 
   std::cout << "fluid_mesh_faces_test: OK" << std::endl;

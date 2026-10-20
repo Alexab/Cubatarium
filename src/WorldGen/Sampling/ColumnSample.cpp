@@ -1,5 +1,6 @@
 #include "WorldGen/Sampling/ColumnSample.h"
 
+#include "WorldGen/Sampling/BiomeSource.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include <algorithm>
 #include <cmath>
@@ -33,9 +34,10 @@ bool ShouldSpawnSurfaceOverride(int world_x, int world_z,
 
 UColumnSampleBuilder::UColumnSampleBuilder(
     const UOverworldHeightSampler *height_sampler,
-    const UBiomeSampler *biome_sampler, const ProceduralSettings &settings)
+    const UBiomeSampler *biome_sampler, const ProceduralSettings &settings,
+    const IWorldGenBiomeSource *biome_source)
     : HeightSampler(height_sampler), BiomeSampler(biome_sampler),
-      Settings(settings)
+      Settings(settings), BiomeSource(biome_source)
 {
 }
 
@@ -69,9 +71,16 @@ ColumnSampleContext UColumnSampleBuilder::Build(int world_x, int world_z) const
   ctx.Climate = height.climate;
   ctx.PreliminarySurfaceY = height.surfaceY;
 
-  ctx.Biomes = BiomeSampler->WeightsAt(world_x, world_z, ctx.PreliminarySurfaceY,
-                                       Settings.SeaLevel, Settings.MaxHeight);
+  ctx.Biomes = BiomeSource
+                   ? BiomeSource->SampleSurfaceWeights(
+                         world_x, world_z, ctx.PreliminarySurfaceY,
+                         Settings.SeaLevel, Settings.MaxHeight)
+                   : BiomeSampler->WeightsAt(
+                         world_x, world_z, ctx.PreliminarySurfaceY,
+                         Settings.SeaLevel, Settings.MaxHeight);
   ctx.DominantBiome = DominantBiome(ctx.Biomes);
+  ctx.SurfaceBiomeHandle = PickSurfaceBiomeHandle(world_x, world_z, ctx.Biomes);
+  ctx.SurfaceBiomeKey = BiomeKeyForHandle(ctx.SurfaceBiomeHandle);
   ctx.SurfaceY = BiomeSampler->RefineSurfaceY(
       world_x, world_z, ctx.PreliminarySurfaceY, Settings, ctx.Biomes);
   ctx.HeightNorm =

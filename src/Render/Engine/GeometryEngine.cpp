@@ -51,6 +51,7 @@
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Render/Pipeline/GreedyDrawCategory.h"
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
 #include "World/Adapters/WorldRenderReadAdapter.h"
@@ -5349,8 +5350,14 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   greedyShader->Use();
   greedyShader->SetMat4("mvp_matrix", vp);
   greedyShader->SetInt("texture0", 0);
-  SetGreedyShaderMode(greedyShader, alphaCutout, transparentPass, mode,
-                      shellAlphaThreshold);
+  SetGreedyShaderMode(greedyShader, transparentPass ? alphaCutout : false,
+                      transparentPass, mode, shellAlphaThreshold);
+  const auto set_alpha_cutout_for_batch = [&](bool material_alpha_cutout)
+  {
+    const bool enabled = ShouldUseGreedyAlphaCutout(
+        transparentPass, alphaCutout, material_alpha_cutout);
+    greedyShader->SetInt("uAlphaCutout", enabled ? 1 : 0);
+  };
   greedyShader->SetFloat(
       "uDebugTransparentFragmentMarker",
       transparentPass && mode == GreedyShaderMode::TransparentColor &&
@@ -5571,6 +5578,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       while (j < cache.batches.size() && cache.batches[j].pooled &&
              cache.batches[j].indexCountGl > 0 &&
              cache.batches[j].blockId == head.blockId &&
+             cache.batches[j].AlphaCutout == head.AlphaCutout &&
              (!WorldInstance ||
               WorldInstance->ShouldDrawProvisionalLightPreview(
                   cache.batches[j].chunkCoord) == light_preview))
@@ -5579,6 +5587,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       }
 
       SetBlockAnimUniforms(greedyShader, head.blockId, textures);
+      set_alpha_cutout_for_batch(head.AlphaCutout);
       greedyShader->SetFloat(
           "uDebugFluidFragmentMarker",
           fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
@@ -5677,6 +5686,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
             {
               continue;
             }
+            set_alpha_cutout_for_batch(gpu.AlphaCutout);
             const GLint base_vertex = static_cast<GLint>(
                 gpu.vboByteOffset / sizeof(GreedyMeshVertex));
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
@@ -5745,6 +5755,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
               ? 1.0f
               : 0.0f);
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      set_alpha_cutout_for_batch(gpu.AlphaCutout);
       greedyShader->SetFloat(
           "uDebugFluidFragmentMarker",
           fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
@@ -5802,6 +5813,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     {
       const GreedyGpuBatch &gpu = cache.batches[gpu_index];
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      set_alpha_cutout_for_batch(gpu.AlphaCutout);
       greedyShader->SetFloat(
           "uDebugFluidFragmentMarker",
           fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
@@ -6990,6 +7002,12 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       {
         continue;
       }
+      packedGreedyShader->SetInt(
+          "uAlphaCutout",
+          ShouldUseGreedyAlphaCutout(transparent_pass, false,
+                                     range.AlphaCutout)
+              ? 1
+              : 0);
       glDrawArrays(GL_TRIANGLES, first, count);
       if (fluid_trace && fluid_range)
       {

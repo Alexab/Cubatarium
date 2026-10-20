@@ -29,6 +29,7 @@ MAX_PCT_DELTA_GT_3 = 0.5
 MAX_UNDERWATER_CLIFF_COUNT = 120
 RAVINE_RARITY = 600
 RAVINE_AQUATIC_MAX_DEPTH = 5
+CAVE_BIOMES = {"lush_caves", "dripstone_caves", "deep_dark"}
 
 
 def load_thresholds() -> dict:
@@ -51,13 +52,32 @@ def biome_ids() -> list[str]:
 
 
 def object_biome_coverage() -> tuple[set[str], set[str]]:
-    data = json.loads(OBJECT_FEATURES.read_text(encoding="utf-8"))
+    feature_data = json.loads(OBJECT_FEATURES.read_text(encoding="utf-8"))
+    biome_data: dict[str, dict] = {}
+    for path in PACK_BIOMES.glob("*.json"):
+        biome = json.loads(path.read_text(encoding="utf-8"))
+        biome_data[biome.get("id", path.stem)] = biome
+
+    # Surface biomes with declared ecological content and cave biomes require
+    # corresponding feature rules. Palette-only ocean, beach, and peak profiles
+    # are intentionally sparse and should not fail this coverage check.
+    required = set(CAVE_BIOMES)
+    for biome_id, biome in biome_data.items():
+        features = biome.get("features", {})
+        if isinstance(features, dict) and any(
+            isinstance(pool, dict) and pool for pool in features.values()
+        ):
+            required.add(biome_id)
+
     covered: set[str] = set()
     for pool in ("vegetation", "ground_cover", "decoration", "structures"):
-        for rule in data.get(pool, []):
+        for rule in feature_data.get(pool, []):
             for biome in rule.get("biomes", []):
                 covered.add(biome)
-    return set(biome_ids()), covered
+    for rule in feature_data.get("cave_features", []):
+        if isinstance(rule, dict) and isinstance(rule.get("biome"), str):
+            covered.add(rule["biome"])
+    return required, covered
 
 
 def check_schema_files() -> dict:
@@ -300,7 +320,7 @@ def main() -> int:
             print(f"NOTE: seed={seed}: {msg}", file=sys.stderr)
 
     print(
-        f"validate_worldgen_smoothness: biomes={len(all_biomes)} "
+        f"validate_worldgen_smoothness: feature_biomes={len(all_biomes)} "
         f"covered={len(covered)} reference_seeds={REFERENCE_SEEDS} "
         f"backend_proxy=heightmap"
     )

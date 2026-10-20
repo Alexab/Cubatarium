@@ -16,12 +16,22 @@ class UFallingBlockRules
 public:
   static bool CanFall(const UBlockRegistry &registry, const UBlockWorld &world,
                       glm::ivec3 blockPos);
+  static bool CanFall(const UBlockRegistry &registry, const UBlockWorld &world,
+                      glm::ivec3 blockPos, int min_world_y);
   static bool TryApplyFall(const UBlockRegistry &registry, UBlockWorld &world,
                            glm::ivec3 blockPos);
+  static bool TryApplyFall(const UBlockRegistry &registry, UBlockWorld &world,
+                           glm::ivec3 blockPos, int min_world_y);
   static bool CanFall(const UBlockDefinitionStorage &definitions,
                       const UBlockWorld &world, glm::ivec3 blockPos);
+  static bool CanFall(const UBlockDefinitionStorage &definitions,
+                      const UBlockWorld &world, glm::ivec3 blockPos,
+                      int min_world_y);
   static bool TryApplyFall(const UBlockDefinitionStorage &definitions,
                            UBlockWorld &world, glm::ivec3 blockPos);
+  static bool TryApplyFall(const UBlockDefinitionStorage &definitions,
+                           UBlockWorld &world, glm::ivec3 blockPos,
+                           int min_world_y);
 };
 
 } // namespace cutum

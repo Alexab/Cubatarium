@@ -4,6 +4,7 @@
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Features/BuiltinWorldGenFeatures.h"
 #include "WorldGen/Features/CaveCarver.h"
+#include "WorldGen/Features/LakeCarver.h"
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
@@ -28,7 +29,9 @@ void RunTerrainStage(UComposableWorldGenerator &generator,
             generator.GetDensitySampler())
     {
       FillTerrainColumnFromDensity(generator.GetContext(), world_x, world_z,
-                                 sample.SurfaceY, rule, *density_sampler);
+                                 sample.SurfaceY, sample.RawSurfaceY, rule,
+                                 *density_sampler,
+                                 generator.GetAquiferSampler());
       return;
     }
   }
@@ -47,6 +50,15 @@ struct PostTerrainState
 using PostTerrainStageFn = void (*)(UComposableWorldGenerator &,
                                     const ColumnSampleContext &, int, int,
                                     PostTerrainState &);
+
+void RunGeologyStage(UComposableWorldGenerator &generator,
+                     const ColumnSampleContext &sample, int world_x,
+                     int world_z, PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  ApplyGeologyColumn(ctx, world_x, world_z, sample.SurfaceY,
+                     ctx.Settings.Seed);
+}
 
 void RunRavinesStage(UComposableWorldGenerator &generator,
                      const ColumnSampleContext &sample, int world_x,
@@ -74,12 +86,52 @@ void RunValleysStage(UComposableWorldGenerator &generator,
     params.widthSigma = pack.WidthSigma;
     params.aquaticDepthScale = pack.AquaticDepthScale;
     params.riverNoiseScale = pack.RiverNoiseScale;
+    params.fillWater = pack.FillWater;
+    params.waterMinStrength = pack.WaterMinStrength;
+    params.waterMinMoisture = pack.WaterMinMoisture;
+    params.waterSurfaceDepth = pack.WaterSurfaceDepth;
+    params.maxWaterElevationAboveSea = pack.WaterMaxElevationAboveSea;
+  }
+  if (ctx.Settings.WorldGenProfileVersion >= 3)
+  {
+    params.lowlandOnly = true;
+    params.warpBlocks = 36.0f;
   }
   const ValleySurfaceYCallback get_surface_y =
       [&generator](int hx, int hz) { return generator.SurfaceYAt(hx, hz); };
   CarveColumnValleys(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
                      params, ctx.Settings.SeaLevel,
                      ctx.Settings.Tuning.riverWidth, get_surface_y);
+}
+
+void RunLakesStage(UComposableWorldGenerator &generator,
+                   const ColumnSampleContext &sample, int world_x, int world_z,
+                   PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  LakeParams params;
+  const PackLakesConfig &pack = UWorldGenPack::LakesConfig();
+  if (pack.Loaded)
+  {
+    params.enabled = pack.Enabled;
+    params.cellSize = pack.CellSize;
+    params.chancePerCell = pack.ChancePerCell;
+    params.radiusMin = pack.RadiusMin;
+    params.radiusMax = pack.RadiusMax;
+    params.minElevationAboveSea = pack.MinElevationAboveSea;
+    params.maxElevationAboveSea = pack.MaxElevationAboveSea;
+    params.maxExcavationDepth = pack.MaxExcavationDepth;
+    params.basinDepthMin = pack.BasinDepthMin;
+    params.basinDepthMax = pack.BasinDepthMax;
+    params.minContinentalness = pack.MinContinentalness;
+    params.maxContinentalness = pack.MaxContinentalness;
+    params.minMoisture = pack.MinMoisture;
+    params.maxTemperature = pack.MaxTemperature;
+  }
+  const LakeSurfaceYCallback get_surface_y = [&generator](int hx, int hz)
+  { return generator.LakeCenterSurfaceYAt(hx, hz); };
+  CarveLakeColumn(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
+                  params, ctx.Settings.SeaLevel, get_surface_y);
 }
 
 void RunCavesStage(UComposableWorldGenerator &generator,
@@ -98,6 +150,30 @@ void RunFluidsStage(UComposableWorldGenerator &generator,
   FillFluidColumn(generator.GetContext(), world_x, world_z, sample.SurfaceY);
 }
 
+void RunAquifersStage(UComposableWorldGenerator &generator,
+                      const ColumnSampleContext &sample, int world_x,
+                      int world_z, PostTerrainState &)
+{
+  const UAquiferSampler *sampler = generator.GetAquiferSampler();
+  if (sampler != nullptr)
+  {
+    WorldGenContext &ctx = generator.GetContext();
+    FillAquiferColumn(ctx, world_x, world_z, sample.SurfaceY, *sampler);
+  }
+}
+
+void RunCaveFeaturesStage(UComposableWorldGenerator &generator,
+                          const ColumnSampleContext &sample, int world_x,
+                          int world_z, PostTerrainState &)
+{
+  const auto biome_at_3d = [&generator](int x, int y, int z, int surface_y)
+  { return generator.BiomeAt3D(x, y, z, surface_y); };
+  const auto biome_key_at_3d = [&generator](int x, int y, int z, int surface_y)
+  { return generator.BiomeKeyAt3D(x, y, z, surface_y); };
+  TryPlaceCaveFeatures(generator.GetContext(), world_x, world_z,
+                       sample.SurfaceY, biome_at_3d, biome_key_at_3d);
+}
+
 void RunOresStage(UComposableWorldGenerator &generator,
                   const ColumnSampleContext &sample, int world_x, int world_z,
                   PostTerrainState &)
@@ -113,7 +189,7 @@ void RunVegetationStage(UComposableWorldGenerator &generator,
 {
   state.placed_tree = TryPlaceVegetationFeatures(
       generator.GetContext(), world_x, world_z, sample.SurfaceY,
-      sample.SurfaceBiome);
+      sample.SurfaceBiome, sample.SurfaceBiomeKey);
 }
 
 void RunGroundCoverStage(UComposableWorldGenerator &generator,
@@ -122,7 +198,7 @@ void RunGroundCoverStage(UComposableWorldGenerator &generator,
 {
   TryPlaceGroundCoverFeatures(generator.GetContext(), world_x, world_z,
                               sample.SurfaceY, sample.SurfaceBiome,
-                              state.placed_tree);
+                              state.placed_tree, sample.SurfaceBiomeKey);
 }
 
 void RunDecorationStage(UComposableWorldGenerator &generator,
@@ -130,7 +206,8 @@ void RunDecorationStage(UComposableWorldGenerator &generator,
                         int world_z, PostTerrainState &)
 {
   TryPlaceDecorationFeatures(generator.GetContext(), world_x, world_z,
-                             sample.SurfaceY, sample.SurfaceBiome);
+                             sample.SurfaceY, sample.SurfaceBiome,
+                             sample.SurfaceBiomeKey);
 }
 
 void RunStructuresStage(UComposableWorldGenerator &generator,
@@ -138,7 +215,8 @@ void RunStructuresStage(UComposableWorldGenerator &generator,
                         int world_z, PostTerrainState &)
 {
   TryPlaceStructureFeatures(generator.GetContext(), world_x, world_z,
-                            sample.SurfaceY, sample.SurfaceBiome);
+                            sample.SurfaceY, sample.SurfaceBiome,
+                            sample.SurfaceBiomeKey);
 }
 
 void RunBuiltinStage(UComposableWorldGenerator &generator,
@@ -155,9 +233,13 @@ void RunBuiltinStage(UComposableWorldGenerator &generator,
 const std::unordered_map<WorldGenStageId, PostTerrainStageFn> &StageFnMap()
 {
   static const std::unordered_map<WorldGenStageId, PostTerrainStageFn> map = {
+      {WorldGenStageId::Geology, RunGeologyStage},
       {WorldGenStageId::Ravines, RunRavinesStage},
       {WorldGenStageId::Valleys, RunValleysStage},
+      {WorldGenStageId::Lakes, RunLakesStage},
       {WorldGenStageId::Caves, RunCavesStage},
+      {WorldGenStageId::Aquifers, RunAquifersStage},
+      {WorldGenStageId::CaveFeatures, RunCaveFeaturesStage},
       {WorldGenStageId::Fluids, RunFluidsStage},
       {WorldGenStageId::Ores, RunOresStage},
       {WorldGenStageId::Vegetation, RunVegetationStage},
