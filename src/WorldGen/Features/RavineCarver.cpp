@@ -29,9 +29,16 @@ int ResolveColumnSurfaceY(int wx, int wz, int trigger_surface_y,
   return trigger_surface_y;
 }
 
+int RavineReach(const RavineParams &params)
+{
+  return params.gentleRadius > 0 ? params.gentleRadius : 3;
+}
+
 float RavineWidthProfile(const RavineParams &params, float dist)
 {
-  const float t = std::clamp(dist / 3.5f, 0.0f, 1.0f);
+  const float radius =
+      params.gentleRadius > 0 ? static_cast<float>(params.gentleRadius) : 3.5f;
+  const float t = std::clamp(dist / radius, 0.0f, 1.0f);
   if (params.featherMode == RavineFeatherMode::Linear)
   {
     return 1.0f - t;
@@ -40,7 +47,8 @@ float RavineWidthProfile(const RavineParams &params, float dist)
 }
 
 std::optional<RavineParams> RavineTriggerParams(int x, int z, uint32_t seed,
-                                                const RavineParams &params)
+                                                const RavineParams &params,
+                                                bool gentle)
 {
   if (!params.enabled || params.rarity <= 0)
   {
@@ -73,6 +81,18 @@ std::optional<RavineParams> RavineTriggerParams(int x, int z, uint32_t seed,
       static_cast<int>(depth_factor *
                        static_cast<float>(params.maxDepth - params.minDepth));
   effective.minDepth = effective.maxDepth;
+  if (gentle)
+  {
+    // Profile 3: shallow dells with ~1:1 walls instead of 8-40 block wells.
+    constexpr int kGentleMinDepth = 3;
+    constexpr int kGentleMaxDepth = 9;
+    effective.maxDepth =
+        kGentleMinDepth +
+        static_cast<int>(depth_factor *
+                         static_cast<float>(kGentleMaxDepth - kGentleMinDepth));
+    effective.minDepth = effective.maxDepth;
+    effective.gentleRadius = std::min(14, effective.maxDepth * 3 / 2 + 4);
+  }
   return effective;
 }
 
@@ -122,9 +142,10 @@ void AccumulateRavineCarveDepth(
     const RavineParams &effective,
     std::array<std::array<int, CHUNK_SIZE>, CHUNK_SIZE> &carve_depth)
 {
-  for (int dz = -3; dz <= 3; ++dz)
+  const int reach = RavineReach(effective);
+  for (int dz = -reach; dz <= reach; ++dz)
   {
-    for (int dx = -3; dx <= 3; ++dx)
+    for (int dx = -reach; dx <= reach; ++dx)
     {
       const int wx = trigger_x + dx;
       const int wz = trigger_z + dz;
@@ -196,9 +217,10 @@ void CarveColumnRavinesDeterministic(WorldGenContext &ctx, int x, int z,
   }
 
   const int carve_depth = params.maxDepth;
-  for (int dx = -3; dx <= 3; ++dx)
+  const int reach = RavineReach(params);
+  for (int dx = -reach; dx <= reach; ++dx)
   {
-    for (int dz = -3; dz <= 3; ++dz)
+    for (int dz = -reach; dz <= reach; ++dz)
     {
       const int wx = x + dx;
       const int wz = z + dz;
@@ -229,8 +251,8 @@ void CarveColumnRavines(WorldGenContext &ctx, int x, int z, int surface_y,
                         uint32_t seed, const RavineParams &params, int sea_level,
                         const RavineSurfaceYCallback &get_surface_y)
 {
-  const std::optional<RavineParams> effective =
-      RavineTriggerParams(x, z, seed, params);
+  const std::optional<RavineParams> effective = RavineTriggerParams(
+      x, z, seed, params, ctx.Settings.WorldGenProfileVersion >= 3);
   if (!effective)
   {
     return;
@@ -262,13 +284,14 @@ void CarveChunkRavines(WorldGenContext &ctx, int base_x, int base_z,
     }
   }
 
-  constexpr int kHalo = 3;
+  const bool gentle = ctx.Settings.WorldGenProfileVersion >= 3;
+  const int kHalo = gentle ? 14 : 3;
   for (int tz = base_z - kHalo; tz < base_z + CHUNK_SIZE + kHalo; ++tz)
   {
     for (int tx = base_x - kHalo; tx < base_x + CHUNK_SIZE + kHalo; ++tx)
     {
       const std::optional<RavineParams> effective =
-          RavineTriggerParams(tx, tz, seed, params);
+          RavineTriggerParams(tx, tz, seed, params, gentle);
       if (!effective)
       {
         continue;

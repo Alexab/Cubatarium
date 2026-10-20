@@ -69,6 +69,9 @@ struct RavineParams
   int aquaticMaxDepth{5};
   bool fillWater{false};
   RavineFeatherMode featherMode{RavineFeatherMode::Smoothstep};
+  // Profile 3: >0 turns the vertical well into a shallow dell whose walls
+  // slope out over this many blocks (set per trigger, not configured).
+  int gentleRadius{0};
 };
 
 enum class WorldSeedKind
