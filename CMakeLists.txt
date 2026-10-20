@@ -922,6 +922,14 @@ target_include_directories(terrain_mesh_dirty_seam_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(terrain_mesh_dirty_seam_test glm::glm)
 
+add_executable(packed_quad_parity_test
+    src/Test/PackedQuadParityTest.cpp)
+target_include_directories(packed_quad_parity_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(packed_quad_parity_test PRIVATE
+    CUBATARIUM_PACKED_SHADER_PATH="${CMAKE_SOURCE_DIR}/shaders/vshader_packed_greedy.glsl")
+target_link_libraries(packed_quad_parity_test glm::glm)
+
 add_executable(navigation_pathfinder_test
     src/Navigation/UNavigationPathfinder.cpp
     src/Navigation/UWaypointFollower.cpp
@@ -2872,6 +2880,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   frame_streaming_budget_test
   idle_recovery_policy_test
   chunk_render_demand_test
+  packed_quad_parity_test
 )
 foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
   if(TARGET ${_t})

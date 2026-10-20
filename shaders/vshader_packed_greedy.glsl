@@ -45,11 +45,16 @@ void main()
     else if (face == 4) { pos.y += 1.0; du = vec3(0,0,1);  dv = vec3(1,0,0); }
     else                { du = vec3(0,0,-1); dv = vec3(1,0,0); pos.z += qw; }
 
+    // Quad corners: 0=origin, 1=+u, 2=+u+v, 3=+v. Triangles must be
+    // (0,1,2),(0,2,3) exactly like GreedyMeshEmitter::AppendGreedyQuad;
+    // packed_quad_parity_test parses this table.
+    const int kCornerIdx[6] = int[6](0, 1, 2, 0, 2, 3);
+    const int ci = kCornerIdx[corner];
     vec3 offset;
-    if      (corner == 0) offset = vec3(0);
-    else if (corner == 1 || corner == 3) offset = du * qw;
-    else if (corner == 2 || corner == 4) offset = du * qw + dv * qh;
-    else                  offset = dv * qh;
+    if      (ci == 0) offset = vec3(0);
+    else if (ci == 1) offset = du * qw;
+    else if (ci == 2) offset = du * qw + dv * qh;
+    else              offset = dv * qh;
 
     vec3 worldPos = vec3(chunkOrigin) + pos + offset;
     gl_Position = mvp_matrix * vec4(worldPos, 1.0);
