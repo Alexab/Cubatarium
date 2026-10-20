@@ -196,6 +196,14 @@ void ParsePalette(const nlohmann::json &palette, BiomePackDefinition &biomeDef)
   {
     biomeDef.SubsurfaceSlot = palette["subsurface"].get<std::string>();
   }
+  if (palette.contains("surface_v3") && palette["surface_v3"].is_string())
+  {
+    biomeDef.SurfaceSlotV3 = palette["surface_v3"].get<std::string>();
+  }
+  if (palette.contains("subsurface_v3") && palette["subsurface_v3"].is_string())
+  {
+    biomeDef.SubsurfaceSlotV3 = palette["subsurface_v3"].get<std::string>();
+  }
 }
 
 bool ParsePipelineStage(const std::string &stage, WorldGenPackPipeline &pipeline)
@@ -928,7 +936,8 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
       {
         throw std::runtime_error("palette must be an object");
       }
-      for (const char *slot : {"surface", "subsurface"})
+      for (const char *slot :
+           {"surface", "subsurface", "surface_v3", "subsurface_v3"})
       {
         if (palette.contains(slot) &&
             (!palette[slot].is_string() || palette[slot].get<std::string>().empty()))

@@ -84,14 +84,20 @@ BiomeSurfaceRule ApplyPackPalette(BiomeId biome, BiomeSurfaceRule rule,
   {
     return rule;
   }
-  if (!packDef->SurfaceSlot.empty())
+  const bool v3 = ctx.Settings.WorldGenProfileVersion >= 3;
+  const std::string &surfaceSlot =
+      v3 && !packDef->SurfaceSlotV3.empty() ? packDef->SurfaceSlotV3
+                                            : packDef->SurfaceSlot;
+  const std::string &subsurfaceSlot =
+      v3 && !packDef->SubsurfaceSlotV3.empty() ? packDef->SubsurfaceSlotV3
+                                               : packDef->SubsurfaceSlot;
+  if (!surfaceSlot.empty())
   {
-    rule.surface = ResolveSlotBlock(ctx, packDef->SurfaceSlot, rule.surface);
+    rule.surface = ResolveSlotBlock(ctx, surfaceSlot, rule.surface);
   }
-  if (!packDef->SubsurfaceSlot.empty())
+  if (!subsurfaceSlot.empty())
   {
-    rule.subsurface =
-        ResolveSlotBlock(ctx, packDef->SubsurfaceSlot, rule.subsurface);
+    rule.subsurface = ResolveSlotBlock(ctx, subsurfaceSlot, rule.subsurface);
   }
   return rule;
 }
@@ -106,14 +112,20 @@ BiomeSurfaceRule ApplyPackPalette(const BiomeKey &biomeKey,
   {
     return rule;
   }
-  if (!packDef->SurfaceSlot.empty())
+  const bool v3 = ctx.Settings.WorldGenProfileVersion >= 3;
+  const std::string &surfaceSlot =
+      v3 && !packDef->SurfaceSlotV3.empty() ? packDef->SurfaceSlotV3
+                                            : packDef->SurfaceSlot;
+  const std::string &subsurfaceSlot =
+      v3 && !packDef->SubsurfaceSlotV3.empty() ? packDef->SubsurfaceSlotV3
+                                               : packDef->SubsurfaceSlot;
+  if (!surfaceSlot.empty())
   {
-    rule.surface = ResolveSlotBlock(ctx, packDef->SurfaceSlot, rule.surface);
+    rule.surface = ResolveSlotBlock(ctx, surfaceSlot, rule.surface);
   }
-  if (!packDef->SubsurfaceSlot.empty())
+  if (!subsurfaceSlot.empty())
   {
-    rule.subsurface =
-        ResolveSlotBlock(ctx, packDef->SubsurfaceSlot, rule.subsurface);
+    rule.subsurface = ResolveSlotBlock(ctx, subsurfaceSlot, rule.subsurface);
   }
   return rule;
 }

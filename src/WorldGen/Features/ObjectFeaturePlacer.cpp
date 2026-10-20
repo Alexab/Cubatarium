@@ -333,7 +333,7 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
       return dx * dx + dz * dz <= rad * rad + rad / 2 + 1;
     };
     const auto addLayer = [&](int cx, int cy, int cz, int rad, bool trim,
-                              uint32_t salt)
+                              uint32_t salt, uint32_t outerDropPct = 0U)
     {
       for (int dz = -rad; dz <= rad; ++dz)
       {
@@ -342,6 +342,14 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
           const uint32_t ch =
               FeatureHash(base.x + cx + dx, base.z + cz + dz,
                           seed + salt + static_cast<uint32_t>(cy * 131));
+          // Outer ring of a layer may thin out so tiers read as branches
+          // with gaps instead of a solid cone.
+          if (outerDropPct > 0U && rad >= 2 &&
+              std::max(std::abs(dx), std::abs(dz)) == rad &&
+              ((ch >> 8U) % 100U) < outerDropPct)
+          {
+            continue;
+          }
           if (discOk(dx, dz, rad, trim, ch))
           {
             addVoxel(cx + dx, cy, cz + dz, leaves);
@@ -357,12 +365,21 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
       {
         addVoxel(0, y, 0, trunk);
       }
-      const int bare = 1 + static_cast<int>((heightHash >> 20U) % 2U);
+      const int bare = 2 + static_cast<int>((heightHash >> 20U) % 2U);
       addVoxel(0, height, 0, leaves);
       for (int k = 1; height - k >= bare + 1; ++k)
       {
-        const int rad = std::min(foliageR, (k + 1) / 2);
-        addLayer(0, height - k, 0, rad, k % 2 == 0, 0x53505255U);
+        // Tiered spruce: wide skirt layers alternate with narrow ones that
+        // show the trunk, and the outer ring of skirts is thinned.
+        const bool skirt = k % 2 == 1;
+        if (!skirt && k % 4 != 0)
+        {
+          continue; // open layer: bare trunk shows between tiers
+        }
+        const int fullRad = std::min(foliageR, (k + 2) / 2);
+        const int rad = skirt ? fullRad : 1;
+        addLayer(0, height - k, 0, rad, !skirt, 0x53505255U,
+                 skirt ? 40U : 0U);
       }
       break;
     }

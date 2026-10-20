@@ -62,6 +62,9 @@ struct BiomePackDefinition
   BiomeHeightProfile Height;
   std::string SurfaceSlot;
   std::string SubsurfaceSlot;
+  // Optional palette used instead of the above for worldgen profile >= 3.
+  std::string SurfaceSlotV3;
+  std::string SubsurfaceSlotV3;
   std::unordered_map<std::string, float> FeatureWeights;
   std::unordered_map<std::string, BiomeSubBiomePackRule> SubBiomes;
 };
