@@ -3768,16 +3768,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       saw_gpu_inflight = true;
       continue;
     }
-    bool any_solid = false;
-    for (const BlockId block : chunk->GetData())
-    {
-      if (block != BLOCK_AIR)
-      {
-        any_solid = true;
-        break;
-      }
-    }
-    if (!any_solid)
+    // O(1) maintained counter instead of scanning 4096 voxels per call.
+    if (chunk->IsAirOnly())
     {
       continue;
     }
