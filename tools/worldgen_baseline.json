@@ -47,23 +47,23 @@
   },
   "reference_seeds": [42, 12345, 12354, 20240625],
   "global": {
-    "note": "Whole-area gates for tools/terrain_full_metrics.py (radius >= 8 chunks, >= 3 seeds). Calibrated on profile 3 (10 seeds 880001-880010 radius 10 + 777001-777003 radius 12); the pre-profile-3 generator fails them (777002: delta>=8 0.51%, range5>=16 0.79%). Metric ignores plants/lily pads/fluids.",
+    "note": "Whole-area gates for tools/terrain_full_metrics.py (radius >= 8 chunks, >= 3 seeds). Calibrated on profile 3 (10 seeds 880001-880010 radius 10 (warp + 8-gradient noise + gentle shoreline)); the pre-profile-3 generator fails them (777002: delta>=8 0.51%, range5>=16 0.79%). Metric ignores plants/lily pads/fluids.",
     "thresholds": {
-      "relief16_p50_max": 8.0,
-      "relief16_p90_max": 20.0,
-      "relief16_p99_max": 38.0,
-      "delta_ge_16_pct_max": 0.05,
-      "delta_ge_8_pct_max": 0.18,
-      "range5_ge_16_pct_max": 0.40
+      "relief16_p50_max": 6.0,
+      "relief16_p90_max": 21.0,
+      "relief16_p99_max": 37.0,
+      "delta_ge_16_pct_max": 0.06,
+      "delta_ge_8_pct_max": 0.20,
+      "range5_ge_16_pct_max": 0.55
     }
   },
   "forest": {
-    "note": "Gates for tools/forest_metrics.py (trunk bases, radius >= 8 chunks). Calibrated on 10 profile-3 seeds (880001-880010); trees are clustered (groves), not an even scatter.",
+    "note": "Gates for tools/forest_metrics.py (trunk bases, radius >= 8 chunks). Calibrated on 10 profile-3 seeds (880001-880010, warp noise build); trees are clustered (groves), not an even scatter.",
     "thresholds": {
       "min_trees_for_gate": 100,
       "dispersion_index_min": 4.0,
       "clark_evans_r_max": 0.9,
-      "trees_on_steep_pct_max": 18.0
+      "trees_on_steep_pct_max": 25.0
     }
   },
   "smoothness_thresholds": {

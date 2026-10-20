@@ -63,38 +63,68 @@ UDensityFieldSampler::UDensityFieldSampler(uint32_t seed, int seaLevel,
 
 DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
 {
-  const ClimateSample climate = SampleClimate(x, z, Seed);
-  DensityRouteParams route =
-      RouteDensity(climate, SeaLevel, MaxHeight, MinHeight, TerrainRoughness);
+  const bool v3 = Params.routerV3;
+  float wx = static_cast<float>(x);
+  float wz = static_cast<float>(z);
+  if (v3)
+  {
+    // Domain warp: displaces the large-scale fields by up to ~22 blocks so
+    // coastlines and ridges stop following the noise lattice.
+    constexpr float kWarpScale = 0.0042f;
+    constexpr float kWarpAmplitude = 22.0f;
+    wx += kWarpAmplitude *
+          SmoothFBM2D(static_cast<float>(x) * kWarpScale,
+                      static_cast<float>(z) * kWarpScale, Seed + 5410, 2, 0.5f,
+                      2.0f);
+    wz += kWarpAmplitude *
+          SmoothFBM2D(static_cast<float>(x) * kWarpScale + 71.0f,
+                      static_cast<float>(z) * kWarpScale - 43.0f, Seed + 5411,
+                      2, 0.5f, 2.0f);
+  }
+  const ClimateSample climate =
+      SampleClimate(static_cast<int>(std::lround(wx)),
+                    static_cast<int>(std::lround(wz)), Seed);
+  DensityRouteParams route = RouteDensity(climate, SeaLevel, MaxHeight,
+                                          MinHeight, TerrainRoughness, v3);
 
   const PackHeightConfig &height = UWorldGenPack::HeightConfig();
   const HeightLayerPackConfig regional =
       height.Loaded ? height.Regional : HeightLayerPackConfig{0.008f, 3, 0.32f};
   const HeightLayerPackConfig rolling =
       height.Loaded ? height.Rolling : HeightLayerPackConfig{0.012f, 3, 0.26f};
-  const float wx = static_cast<float>(x);
-  const float wz = static_cast<float>(z);
   const float land = Smoothstep(0.38f, 0.58f, climate.continentalness);
   const float lowErosion = 1.0f - Smoothstep(0.35f, 0.78f, climate.erosion);
   const float peakValleys = std::clamp(PeaksAndValleys(climate.weirdness), 0.0f, 1.0f);
   const float mountainWeight = MountainClimateWeight(climate);
 
   const float broadNoise =
-      FBM2D(wx * 0.0024f, wz * 0.0024f, Seed + 5401, 3, 0.5f, 2.0f);
+      v3 ? 1.4f * SmoothFBM2D(wx * 0.0024f, wz * 0.0024f, Seed + 5401, 3, 0.5f,
+                              2.0f)
+         : FBM2D(wx * 0.0024f, wz * 0.0024f, Seed + 5401, 3, 0.5f, 2.0f);
   const float regionalNoise =
-      FBM2D(wx * regional.Scale, wz * regional.Scale, Seed + 5402,
-            std::max(1, regional.Octaves), 0.5f, 2.0f);
+      v3 ? 1.4f * SmoothFBM2D(wx * regional.Scale, wz * regional.Scale,
+                              Seed + 5402, std::max(1, regional.Octaves), 0.5f,
+                              2.0f)
+         : FBM2D(wx * regional.Scale, wz * regional.Scale, Seed + 5402,
+                 std::max(1, regional.Octaves), 0.5f, 2.0f);
   const float rollingNoise =
-      FBM2D(wx * rolling.Scale, wz * rolling.Scale, Seed + 5403,
-            std::max(1, rolling.Octaves), 0.5f, 2.0f);
-  const float broadRidgeNoise = NormalizedFBM2D(
-      wx * std::max(0.0018f, regional.Scale * 0.32f),
-      wz * std::max(0.0018f, regional.Scale * 0.32f), Seed + 5404, 3, 0.5f,
-      2.0f);
-  const float fineRidgeNoise = NormalizedFBM2D(
-      wx * std::max(0.0035f, regional.Scale * 0.7f),
-      wz * std::max(0.0035f, regional.Scale * 0.7f), Seed + 5405, 3, 0.5f,
-      2.0f);
+      v3 ? 1.4f * SmoothFBM2D(wx * rolling.Scale, wz * rolling.Scale,
+                              Seed + 5403, std::max(1, rolling.Octaves), 0.5f,
+                              2.0f)
+         : FBM2D(wx * rolling.Scale, wz * rolling.Scale, Seed + 5403,
+                 std::max(1, rolling.Octaves), 0.5f, 2.0f);
+  const float ridgeScaleBroad = std::max(0.0018f, regional.Scale * 0.32f);
+  const float ridgeScaleFine = std::max(0.0035f, regional.Scale * 0.7f);
+  const float broadRidgeNoise =
+      v3 ? SmoothFBM2D(wx * ridgeScaleBroad, wz * ridgeScaleBroad, Seed + 5404,
+                       3, 0.5f, 2.0f)
+         : NormalizedFBM2D(wx * ridgeScaleBroad, wz * ridgeScaleBroad,
+                           Seed + 5404, 3, 0.5f, 2.0f);
+  const float fineRidgeNoise =
+      v3 ? SmoothFBM2D(wx * ridgeScaleFine, wz * ridgeScaleFine, Seed + 5405, 3,
+                       0.5f, 2.0f)
+         : NormalizedFBM2D(wx * ridgeScaleFine, wz * ridgeScaleFine,
+                           Seed + 5405, 3, 0.5f, 2.0f);
   const float broadRidged = 1.0f - std::fabs(broadRidgeNoise);
   const float fineRidged = 1.0f - std::fabs(fineRidgeNoise);
   const float ridged = broadRidged * (0.78f + 0.22f * fineRidged);

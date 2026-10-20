@@ -11,7 +11,7 @@ namespace
 {
 
 float SplineHeightFromContinental(float c, int seaLevel, int maxHeight,
-                                  int minHeight)
+                                  int minHeight, bool gentleShoreline)
 {
   const float landRange =
       static_cast<float>(std::max(8, maxHeight - seaLevel));
@@ -29,6 +29,38 @@ float SplineHeightFromContinental(float c, int seaLevel, int maxHeight,
   const float y_hills = seaLevel + landRange * profile.HillHeightRatio;
   const float y_highland = seaLevel + landRange * profile.HighlandHeightRatio;
 
+  if (gentleShoreline)
+  {
+    // Profile 3: a broad, shallow shelf so the waterline is crossed on a
+    // gentle slope (Minecraft beaches), with the steep part kept offshore.
+    const float y_near = seaLevel - oceanRange * 0.12f;
+    const float y_wade = seaLevel - 4.0f;
+    const float y_beach = seaLevel + 1.5f;
+    struct Node
+    {
+      float u;
+      float y;
+    };
+    const Node nodes[] = {{0.0f, y_deep},
+                          {profile.DeepOceanEnd, y_shelf},
+                          {profile.ShelfEnd, y_near},
+                          {0.56f, y_wade},
+                          {0.61f, y_beach},
+                          {profile.CoastEnd, y_lowland},
+                          {0.90f, y_hills},
+                          {1.0f, y_highland}};
+    for (size_t i = 1; i < sizeof(nodes) / sizeof(nodes[0]); ++i)
+    {
+      if (u <= nodes[i].u || i + 1 == sizeof(nodes) / sizeof(nodes[0]))
+      {
+        const float span = std::max(0.0001f, nodes[i].u - nodes[i - 1].u);
+        const float t = std::clamp((u - nodes[i - 1].u) / span, 0.0f, 1.0f);
+        return nodes[i - 1].y +
+               (nodes[i].y - nodes[i - 1].y) * Smoothstep(0.0f, 1.0f, t);
+      }
+    }
+    return y_highland;
+  }
   if (u < profile.DeepOceanEnd)
   {
     const float t = u / profile.DeepOceanEnd;
@@ -77,10 +109,12 @@ float MountainClimateWeight(const ClimateSample &climate)
 }
 
 float ContinentalHeightBlocks(float continentalness, int seaLevel,
-                              int maxHeight, int minHeight)
+                              int maxHeight, int minHeight,
+                              bool gentleShoreline)
 {
   return SplineHeightFromContinental(std::clamp(continentalness, 0.0f, 1.0f),
-                                     seaLevel, maxHeight, minHeight);
+                                     seaLevel, maxHeight, minHeight,
+                                     gentleShoreline);
 }
 
 float ErosionAmplitudeMultiplier(float erosion)

@@ -15,6 +15,7 @@ struct DensityRouteParams
 
 DensityRouteParams RouteDensity(const ClimateSample &climate, int seaLevel,
                                 int maxHeight, int minHeight,
-                                float terrainRoughness);
+                                float terrainRoughness,
+                                bool gentleShoreline = false);
 
 } // namespace cutum

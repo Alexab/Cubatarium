@@ -10,7 +10,7 @@ float PeaksAndValleys(float weirdness);
 /// Shared climate mask for mountain terrain uplift and mountain biomes.
 float MountainClimateWeight(const ClimateSample &climate);
 float ContinentalHeightBlocks(float continentalness, int seaLevel, int maxHeight,
-                              int minHeight);
+                              int minHeight, bool gentleShoreline = false);
 float ErosionAmplitudeMultiplier(float erosion);
 float ClimateTerrainOffset(const ClimateSample &climate, int seaLevel,
                            int maxHeight, int minHeight,

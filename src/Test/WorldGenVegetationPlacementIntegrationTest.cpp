@@ -394,12 +394,14 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
       cutum::UObjectFeatureConfigStorage::Get().Vegetation.size() > 0, kTestName,
       "vegetation rules loaded");
 
-  const cutum::ProceduralSettings settings = MakeVegetationSettings();
+  cutum::ProceduralSettings settings = MakeVegetationSettings();
+  // Profile 3 terrain (smooth noise, gentle shoreline) moved the old seed
+  // 410021 forest. Seed 880002 has a dense mixed forest around chunk (5, 9)
+  // (254 tree bases in a 5x5 chunk window, verified with tools/forest_metrics).
+  settings.Seed = 880002u;
   std::vector<glm::ivec3> chunkOrder;
-  // Seed 410021's generated spawn is in chunk (2, 1); sample around that
-  // location because its origin window at (0, 0) is water and has no trees.
-  constexpr int kSpawnChunkX = 2;
-  constexpr int kSpawnChunkZ = 1;
+  constexpr int kSpawnChunkX = 5;
+  constexpr int kSpawnChunkZ = 9;
   for (int cx = -2; cx <= 2; ++cx)
   {
     for (int chunk_y = 2; chunk_y <= 9; ++chunk_y)

@@ -63,6 +63,50 @@ float Grad3D(int hash, float x, float y, float z)
   return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
 }
 
+float Grad2D8(int hash, float x, float z)
+{
+  constexpr float kD = 0.70710678f;
+  switch (hash & 7)
+  {
+  case 0:
+    return x;
+  case 1:
+    return kD * (x + z);
+  case 2:
+    return z;
+  case 3:
+    return kD * (z - x);
+  case 4:
+    return -x;
+  case 5:
+    return -kD * (x + z);
+  case 6:
+    return -z;
+  default:
+    return kD * (x - z);
+  }
+}
+
+float SamplePerlin2D8(float x, float z, const std::array<int, 512> &perm)
+{
+  const int xi = static_cast<int>(std::floor(x)) & 255;
+  const int zi = static_cast<int>(std::floor(z)) & 255;
+  const float xf = x - std::floor(x);
+  const float zf = z - std::floor(z);
+  const float u = Fade(xf);
+  const float v = Fade(zf);
+  const int aa = perm[xi] + zi;
+  const int ab = perm[xi] + zi + 1;
+  const int ba = perm[xi + 1] + zi;
+  const int bb = perm[xi + 1] + zi + 1;
+  const float x1 =
+      Lerp(Grad2D8(perm[aa], xf, zf), Grad2D8(perm[ba], xf - 1.0f, zf), u);
+  const float x2 = Lerp(Grad2D8(perm[ab], xf, zf - 1.0f),
+                        Grad2D8(perm[bb], xf - 1.0f, zf - 1.0f), u);
+  // Unit gradients peak near 0.7 at cell centre; rescale toward [-1, 1].
+  return Lerp(x1, x2, v) * 1.45f;
+}
+
 float SamplePerlin2D(float x, float z, const std::array<int, 512> &perm)
 {
   const int xi = static_cast<int>(std::floor(x)) & 255;
@@ -255,6 +299,30 @@ float NormalizedFBM2D(float x, float z, uint32_t Seed, int octaves,
     return 0.0f;
   }
   return value / maxAmplitude;
+}
+
+float SmoothFBM2D(float x, float z, uint32_t Seed, int octaves,
+                  float persistence, float lacunarity)
+{
+  const auto &perm = PermutationForSeed(Seed);
+  float value = 0.0f;
+  float amplitude = 1.0f;
+  float frequency = 1.0f;
+  float maxAmplitude = 0.0f;
+  for (int i = 0; i < octaves; ++i)
+  {
+    // Rotate each octave so lattice axes never line up between octaves.
+    const float angle = 0.5f * static_cast<float>(i);
+    const float c = std::cos(angle);
+    const float s = std::sin(angle);
+    const float rx = (x * c - z * s) * frequency + 31.7f * static_cast<float>(i);
+    const float rz = (x * s + z * c) * frequency - 17.3f * static_cast<float>(i);
+    value += std::clamp(SamplePerlin2D8(rx, rz, perm), -1.0f, 1.0f) * amplitude;
+    maxAmplitude += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
+  return maxAmplitude > 0.0f ? value / maxAmplitude : 0.0f;
 }
 
 float Smoothstep(float edge0, float edge1, float x)
