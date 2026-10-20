@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
@@ -43,11 +44,18 @@ std::atomic<bool> gStop{false};
 std::thread gThread;
 HANDLE gMainThread = nullptr;
 
-void SamplerLoop(int interval_ms)
+void SamplerLoop(int interval_ms, int delay_ms)
 {
+  const auto t0 = std::chrono::steady_clock::now();
   while (!gStop.load(std::memory_order_relaxed))
   {
     Sleep(static_cast<DWORD>(interval_ms));
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t0)
+            .count() < delay_ms)
+    {
+      continue;
+    }
     const size_t index = gSampleCount.load(std::memory_order_relaxed);
     if (index >= kMaxSamples)
     {
@@ -201,6 +209,33 @@ void DumpProfileImpl()
       out << "   " << entry.second << "  " << entry.first << "\n";
     }
   }
+  if (const char *needle = std::getenv("CUBA_SAMPLE_CALLERS_OF"))
+  {
+    out << "\n== callers of functions matching '" << needle << "' ==\n";
+    std::unordered_map<std::string, size_t> chains;
+    for (size_t i = 0; i < count; ++i)
+    {
+      const Sample &sample = gSamples[i];
+      for (int f = 0; f < sample.depth; ++f)
+      {
+        if (resolve(sample.frames[f]).find(needle) == std::string::npos)
+        {
+          continue;
+        }
+        std::string chain;
+        for (int g = f + 1; g < std::min<int>(sample.depth, f + 6); ++g)
+        {
+          chain += resolve(sample.frames[g]) + " <- ";
+        }
+        ++chains[chain];
+        break;
+      }
+    }
+    for (const auto &entry : top(chains, 12))
+    {
+      out << "   " << entry.second << "  " << entry.first << "\n";
+    }
+  }
   SymCleanup(process);
 }
 
@@ -239,7 +274,12 @@ void StartSampleProfilerIfRequested()
   {
     return;
   }
-  gThread = std::thread(SamplerLoop, interval_ms);
+  int delay_ms = 0;
+  if (const char *value = std::getenv("CUBA_SAMPLE_PROFILE_DELAY_SEC"))
+  {
+    delay_ms = std::max(0, std::atoi(value)) * 1000;
+  }
+  gThread = std::thread(SamplerLoop, interval_ms, delay_ms);
   std::atexit(FinishSampleProfiler);
 }
 

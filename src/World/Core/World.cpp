@@ -14855,8 +14855,34 @@ bool UWorld::HasNearbyFluidSurface(glm::ivec3 cameraBlock,
   {
     return false;
   }
-  return HasFluidSurfaceNear(BlockWorld, *BlockRegistry, cameraBlock.x,
-                             cameraBlock.z, cameraBlock.y, radiusBlocks);
+  // Called 4+ times per frame with the same arguments (fog pass, streaming
+  // pressure, mesh emerge, ...); every call scans a column grid through the
+  // block registry (~7% of the main thread). Memoize per streaming epoch.
+  struct Memo
+  {
+    bool valid{false};
+    const UWorld *owner{nullptr};
+    uint64_t epoch{0};
+    glm::ivec3 block{0};
+    int radius{0};
+    bool value{false};
+  };
+  thread_local Memo memo[4];
+  thread_local size_t next_slot = 0;
+  for (const Memo &entry : memo)
+  {
+    if (entry.valid && entry.owner == this && entry.epoch == StreamingFrameEpoch &&
+        entry.block == cameraBlock && entry.radius == radiusBlocks)
+    {
+      return entry.value;
+    }
+  }
+  const bool value =
+      HasFluidSurfaceNear(BlockWorld, *BlockRegistry, cameraBlock.x,
+                          cameraBlock.z, cameraBlock.y, radiusBlocks);
+  memo[next_slot++ % 4] = {true, this, StreamingFrameEpoch, cameraBlock,
+                           radiusBlocks, value};
+  return value;
 }
 
 bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const

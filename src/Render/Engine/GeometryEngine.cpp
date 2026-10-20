@@ -3933,7 +3933,11 @@ void UGeometryEngine::ApplyGreedyChunkWeatherUniforms(
   {
     return;
   }
-  const uint64_t frame = WorldInstance->GetStreamingFrameEpoch();
+  const uint64_t epoch = WorldInstance->GetStreamingFrameEpoch();
+  // Weather varies smoothly: resample each chunk every 8 streaming epochs
+  // instead of every frame (SampleWeatherAt + state update were ~6% of the
+  // main thread with ~1000 chunks drawn).
+  const uint64_t frame = epoch >> 3;
   if (!ChunkWeatherFrameValid || CachedChunkWeatherFrame != frame)
   {
     ChunkWeatherSamplesForFrame.clear();
@@ -3952,7 +3956,18 @@ void UGeometryEngine::ApplyGreedyChunkWeatherUniforms(
   }
   const WeatherSample &weather = weather_it->second;
 
-  UWorld::EnvironmentState local_env = WorldInstance->GetEnvironmentState();
+  // The base environment is copied once per streaming epoch into a scratch
+  // object; only the weather fields below differ per chunk. Copying the whole
+  // (string/vector holding) state for every drawn chunk allocated each time.
+  thread_local UWorld::EnvironmentState local_env;
+  thread_local uint64_t scratch_epoch = UINT64_MAX;
+  thread_local const UWorld *scratch_owner = nullptr;
+  if (scratch_epoch != epoch || scratch_owner != WorldInstance.get())
+  {
+    local_env = WorldInstance->GetEnvironmentState();
+    scratch_epoch = epoch;
+    scratch_owner = WorldInstance.get();
+  }
   local_env.Cloudiness = weather.CloudCoverage;
   local_env.CloudCoverage = weather.CloudCoverage;
   local_env.PrecipitationIntensity = weather.PrecipitationIntensity;
