@@ -1595,6 +1595,39 @@ static void TestOceanFallbackSpawnStaysAboveSea(
 
 } // namespace
 
+static void TestPackDefaultsRespectUserFieldsInProfile3()
+{
+  cutum::ProceduralSettings user;
+  user.WorldGenProfileVersion = 3;
+  user.Caves.maxDepthBelowSurface = 20;
+  user.Ravines.enabled = false;
+  user.Ravines.rarity = 999;
+  user.Ravines.aquaticMaxDepth = 2;
+  user.Ravines.fillWater = true;
+  cutum::ProceduralSettings preserved = user;
+  cutum::UWorldGenPack::ApplyPackCaveDefaults(preserved, true);
+  cutum::UWorldGenPack::ApplyPackRavineDefaults(preserved, true);
+  FluidTest::Expect(preserved.Caves.maxDepthBelowSurface == 20 &&
+                        !preserved.Ravines.enabled &&
+                        preserved.Ravines.rarity == 999 &&
+                        preserved.Ravines.aquaticMaxDepth == 2 &&
+                        preserved.Ravines.fillWater,
+                    kTestName,
+                    "profile 3 keeps cave depth and ravine settings from the form");
+  FluidTest::Expect(preserved.Caves.densityCaveAmplitude !=
+                        user.Caves.densityCaveAmplitude,
+                    kTestName,
+                    "pack-only cave fields are still applied for profile 3");
+  cutum::ProceduralSettings legacy = user;
+  legacy.WorldGenProfileVersion = 2;
+  cutum::UWorldGenPack::ApplyPackCaveDefaults(legacy, false);
+  cutum::UWorldGenPack::ApplyPackRavineDefaults(legacy, false);
+  FluidTest::Expect(legacy.Caves.maxDepthBelowSurface != 20 &&
+                        legacy.Ravines.enabled && legacy.Ravines.rarity != 999,
+                    kTestName,
+                    "older profiles still take cave and ravine values from the pack");
+}
+
 int main(int argc, char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
@@ -1633,6 +1666,7 @@ int main(int argc, char **argv)
                     "worldgen pack load failed");
   FluidTest::Expect(cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
                     "aquifer configuration loads from the active worldgen pack");
+  TestPackDefaultsRespectUserFieldsInProfile3();
   if (argc > 1 && std::string(argv[1]) == "--biome-profile-only")
   {
     TestDataDefinedBiomeAffectsSampling();

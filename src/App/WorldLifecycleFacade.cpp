@@ -411,8 +411,9 @@ void UWorldLifecycleFacade::ApplyNewWorldCreationRequest(
     WorldGameMode gameMode, WorldDifficulty difficulty)
 {
   core.PendingNewWorldSettings = settings;
-  core.PendingNewWorldSettings->Seed = settings.Seed;
-  core.WorldSeed = settings.Seed + 1;
+  // The seed from the form is used verbatim (it used to be bumped by one, so
+  // typing seed N created world N+1 while the saved seed text still said N).
+  core.WorldSeed = settings.Seed;
   core.PendingNewWorldSettings->Seed = core.WorldSeed;
 
   core.ProceduralTemplate.Generator = settings.Generator;
@@ -504,10 +505,12 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
             << core.ActiveWorldFolder.string() << std::endl;
 
   ProceduralSettings worldSettings = core.ProceduralTemplate;
+  bool settingsFromNewWorldForm = false;
   if (core.PendingNewWorldSettings.has_value())
   {
     worldSettings = *core.PendingNewWorldSettings;
     core.PendingNewWorldSettings.reset();
+    settingsFromNewWorldForm = true;
   }
   else
   {
@@ -515,7 +518,13 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
     ResetToGeneratorDefaults(worldSettings);
   }
   ResolveProceduralDefaults(worldSettings);
-  ApplyGeneratorTierDefaults(worldSettings);
+  if (!settingsFromNewWorldForm)
+  {
+    // The New World form already starts from the tier defaults. Re-applying
+    // them here forced trees, caves, ores, water, lava, fire and ravines back
+    // on and made those checkboxes ineffective.
+    ApplyGeneratorTierDefaults(worldSettings);
+  }
   worldSettings.AsyncChunkGeneration =
       core.ProceduralTemplate.AsyncChunkGeneration;
   worldSettings.AsyncChunkIo = core.ProceduralTemplate.AsyncChunkIo;

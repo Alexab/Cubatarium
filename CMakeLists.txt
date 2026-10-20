@@ -499,6 +499,7 @@ set(SOURCES
     src/Gui/Widgets/GuiLabel.cpp
     src/Gui/Widgets/GuiProgressBar.cpp
     src/Gui/Widgets/GuiSlider.cpp
+    src/Gui/Widgets/GuiSliderField.cpp
     src/Gui/Widgets/GuiTextInput.cpp
     src/Gui/Widgets/GuiPopupMenu.cpp
     src/Gui/Widgets/GuiListView.cpp
@@ -681,6 +682,7 @@ set(HEADERS
     src/Gui/Widgets/GuiLabel.h
     src/Gui/Widgets/GuiProgressBar.h
     src/Gui/Widgets/GuiSlider.h
+    src/Gui/Widgets/GuiSliderField.h
     src/Gui/Widgets/GuiTextInput.h
     src/Gui/Widgets/GuiPopupMenu.h
     src/Gui/Widgets/GuiListView.h

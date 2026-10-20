@@ -277,8 +277,14 @@ public:
   static const PackRavinesConfig &RavinesConfig();
   static const PackValleysConfig &ValleysConfig();
   static const PackLakesConfig &LakesConfig();
-  static void ApplyPackCaveDefaults(ProceduralSettings &settings);
-  static void ApplyPackRavineDefaults(ProceduralSettings &settings);
+  /// Copies pack cave/ravine values into `settings`. With
+  /// `preserveUserFields` (worldgen profile >= 3) the values the new-world form
+  /// exposes (cave max depth; ravine enabled/rarity/aquatic depth/fill water)
+  /// are left as the user set them and only the pack-only fields are applied.
+  static void ApplyPackCaveDefaults(ProceduralSettings &settings,
+                                    bool preserveUserFields = false);
+  static void ApplyPackRavineDefaults(ProceduralSettings &settings,
+                                      bool preserveUserFields = false);
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
   static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,

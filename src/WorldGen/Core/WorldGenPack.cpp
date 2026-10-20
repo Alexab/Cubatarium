@@ -1290,14 +1290,18 @@ const PackLakesConfig &UWorldGenPack::LakesConfig()
   return Get().Lakes;
 }
 
-void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
+void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings,
+                                          bool preserveUserFields)
 {
   const PackCavesConfig &caves = Get().Caves;
   if (!caves.Loaded)
   {
     return;
   }
-  settings.Caves.maxDepthBelowSurface = caves.MaxDepthBelowSurface;
+  if (!preserveUserFields)
+  {
+    settings.Caves.maxDepthBelowSurface = caves.MaxDepthBelowSurface;
+  }
   settings.Caves.minDepthBelowSurface = caves.MinDepthBelowSurface;
   settings.Caves.chunkGateThreshold = caves.ChunkGateThreshold;
   settings.Caves.useDensityField = caves.UseDensityField;
@@ -1310,19 +1314,23 @@ void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
   settings.Caves.noodleWeight = caves.NoodleWeight;
 }
 
-void UWorldGenPack::ApplyPackRavineDefaults(ProceduralSettings &settings)
+void UWorldGenPack::ApplyPackRavineDefaults(ProceduralSettings &settings,
+                                            bool preserveUserFields)
 {
   const PackRavinesConfig &ravines = Get().Ravines;
   if (!ravines.Loaded)
   {
     return;
   }
-  settings.Ravines.enabled = ravines.Enabled;
-  settings.Ravines.rarity = ravines.Rarity;
+  if (!preserveUserFields)
+  {
+    settings.Ravines.enabled = ravines.Enabled;
+    settings.Ravines.rarity = ravines.Rarity;
+    settings.Ravines.aquaticMaxDepth = ravines.AquaticMaxDepth;
+    settings.Ravines.fillWater = ravines.FillWater;
+  }
   settings.Ravines.minDepth = ravines.MinDepth;
   settings.Ravines.maxDepth = ravines.MaxDepth;
-  settings.Ravines.aquaticMaxDepth = ravines.AquaticMaxDepth;
-  settings.Ravines.fillWater = ravines.FillWater;
   settings.Ravines.featherMode = ParseRavineFeatherMode(ravines.FeatherMode);
 }
 
