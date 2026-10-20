@@ -32,7 +32,28 @@ float ValleyRiverStrengthAt(int x, int z, uint32_t seed,
   const float profile_width = river_width * params.widthSigma / 2.5f;
   return SampleRiverChannelStrength(x, z, seed, params.riverNoiseScale,
                                     profile_width, climate.erosion,
-                                    climate.weirdness);
+                                    climate.weirdness, params.warpBlocks);
+}
+
+// 1 on flat lowland, 0 on hillsides and highlands (profile 3).
+float ValleyLowlandFade(int wx, int wz, int surface_y, int sea_level,
+                        const ValleySurfaceYCallback &get_surface_y)
+{
+  const float above_sea = static_cast<float>(surface_y - sea_level);
+  float fade = 1.0f - Smoothstep(6.0f, 30.0f, above_sea);
+  if (fade > 0.0f && get_surface_y)
+  {
+    int max_delta = 0;
+    constexpr int kOffsets[4][2] = {{3, 0}, {-3, 0}, {0, 3}, {0, -3}};
+    for (const auto &offset : kOffsets)
+    {
+      max_delta = std::max(
+          max_delta,
+          std::abs(get_surface_y(wx + offset[0], wz + offset[1]) - surface_y));
+    }
+    fade *= 1.0f - Smoothstep(2.0f, 7.0f, static_cast<float>(max_delta));
+  }
+  return fade;
 }
 
 float SmoothedValleyRiverStrengthAt(int x, int z, uint32_t seed,
@@ -156,6 +177,16 @@ void CarveColumnValleys(WorldGenContext &ctx, int x, int z, int surface_y,
   const int column_surface_y = LocalSurfaceY(x, z, surface_y, get_surface_y);
   const float moisture = SampleClimate(x, z, seed).moisture;
   int column_depth = max_depth;
+  if (params.lowlandOnly)
+  {
+    column_depth = static_cast<int>(
+        static_cast<float>(column_depth) *
+        ValleyLowlandFade(x, z, column_surface_y, sea_level, get_surface_y));
+    if (column_depth <= 0)
+    {
+      return;
+    }
+  }
   if (column_surface_y <= sea_level + 2)
   {
     column_depth = static_cast<int>(
@@ -194,6 +225,17 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
       int column_depth =
           std::max(1, static_cast<int>(static_cast<float>(params.maxDepth) *
                                        river_strength));
+      if (params.lowlandOnly)
+      {
+        column_depth = static_cast<int>(
+            static_cast<float>(column_depth) *
+            ValleyLowlandFade(wx, wz, column_surface_y, sea_level,
+                              get_surface_y));
+        if (column_depth <= 0)
+        {
+          continue;
+        }
+      }
       if (column_surface_y <= sea_level + 2)
       {
         column_depth = static_cast<int>(

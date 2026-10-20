@@ -14,7 +14,8 @@ namespace cutum
 /// the contour gradually so it does not read as a straight grid or round pits.
 inline float SampleRiverChannelStrength(int x, int z, uint32_t seed,
                                         float noise_scale, float river_width,
-                                        float erosion, float weirdness)
+                                        float erosion, float weirdness,
+                                        float warp_blocks = 10.0f)
 {
   const float scale = std::clamp(noise_scale, 0.001f, 0.05f);
   const float wx = static_cast<float>(x);
@@ -22,7 +23,7 @@ inline float SampleRiverChannelStrength(int x, int z, uint32_t seed,
   const float warp = NormalizedFBM2D(
       wx * scale * 0.38f + 17.0f, wz * scale * 0.38f - 29.0f,
       seed + 8813U, 2, 0.5f, 2.0f);
-  const float warp_offset = warp * 10.0f;
+  const float warp_offset = warp * warp_blocks;
   const float field = NormalizedFBM2D(
       (wx + warp_offset) * scale, (wz - warp_offset * 0.71f) * scale,
       seed + 8801U, 3, 0.5f, 2.0f);

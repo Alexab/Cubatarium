@@ -487,6 +487,11 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             valley_params.maxWaterElevationAboveSea =
                 pack.WaterMaxElevationAboveSea;
           }
+          if (settings.WorldGenProfileVersion >= 3)
+          {
+            valley_params.lowlandOnly = true;
+            valley_params.warpBlocks = 36.0f;
+          }
           CarveChunkValleys(ctx, base_x, base_z, settings.Seed, valley_params,
                             settings.SeaLevel, settings.Tuning.riverWidth,
                             get_surface_y);

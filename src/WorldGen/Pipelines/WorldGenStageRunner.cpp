@@ -92,6 +92,11 @@ void RunValleysStage(UComposableWorldGenerator &generator,
     params.waterSurfaceDepth = pack.WaterSurfaceDepth;
     params.maxWaterElevationAboveSea = pack.WaterMaxElevationAboveSea;
   }
+  if (ctx.Settings.WorldGenProfileVersion >= 3)
+  {
+    params.lowlandOnly = true;
+    params.warpBlocks = 36.0f;
+  }
   const ValleySurfaceYCallback get_surface_y =
       [&generator](int hx, int hz) { return generator.SurfaceYAt(hx, hz); };
   CarveColumnValleys(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,

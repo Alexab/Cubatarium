@@ -169,7 +169,7 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
   {
     const float channel = SampleRiverChannelStrength(
         x, z, Seed, Params.riverNoiseScale, Params.riverWidth,
-        climate.erosion, climate.weirdness);
+        climate.erosion, climate.weirdness, v3 ? 36.0f : 10.0f);
     const float wetness = Smoothstep(0.24f, 0.68f, climate.moisture);
     const float incision = channel * (0.2f + wetness * 0.8f);
     const float river_floor =
