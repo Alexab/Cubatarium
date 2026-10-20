@@ -3252,9 +3252,19 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   const bool light_repair_pending = IsPendingLightBeforeMesh(column) ||
                                     demand_owns_light_repair ||
                                     unsettled_repair_owned;
-  if (!light_repair_pending || settled_mesh_light_current)
+  if (settled_mesh_light_current)
   {
     return false;
+  }
+  if (!light_repair_pending)
+  {
+    // A drawable with zero-light faces and no settled matching light image
+    // used to fall through to the hide gate in IsChunkSliceRenderReady, which
+    // turned retained meshes (and every dig/place remesh of them) into
+    // see-through holes whenever no repair owner was visible. An ambient
+    // preview is strictly better than a hole, and the preview flag also makes
+    // the slice request its own relight (provisional_preview_needs_lighting).
+    return true;
   }
 
   // PendingLight and its FIFO key are column-scoped, while Capture advances
