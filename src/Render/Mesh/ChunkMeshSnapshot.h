@@ -64,6 +64,21 @@ struct ChunkMeshSnapshot
   /// Affects Capture shell only — never InputsStillValid / stamp equality.
   using NeighborVisualDrawableFn = bool (*)(void *ctx, glm::ivec3 neighbor_chunk);
 
+  /// True when an ABSENT face neighbor chunk is known open air, so its shared
+  /// boundary faces must be emitted instead of being hidden as Unknown:
+  ///  - below the configured world floor;
+  ///  - a horizontal (X/Z) neighbor slice above everything materialized in its
+  ///    column. Terrain columns only materialize slices up to their highest
+  ///    non-air slice (see TerrainColumnUtil), so at any height step across a
+  ///    chunk border the shorter column has no slice at the taller column's
+  ///    cy. Hiding those walls left see-through slits along chunk borders.
+  /// A column with no resident slice at all stays Unknown (not streamed yet).
+  /// If the neighbor slice later materializes, its ChunkInputStamp changes and
+  /// the mesh is rebuilt.
+  static bool IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
+                                           glm::ivec3 neighbor_coord,
+                                           int axis, int sign);
+
   /// Geom/light stamp check. Optional drawable args are ignored (API symmetry
   /// with Capture call sites); SoftDefer visual flips do not invalidate.
   bool InputsStillValid(

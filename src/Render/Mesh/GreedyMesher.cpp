@@ -20,6 +20,7 @@
 #include "World/Lighting/LightUtil.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 #include <cstring>
 
@@ -94,6 +95,16 @@ public:
     const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
     if (!World.GetChunkManager().GetChunk(chunk_coord))
     {
+      const glm::ivec3 delta = chunk_coord - ChunkCoordValue;
+      const int axis = delta.x != 0 ? 0 : (delta.y != 0 ? 1 : 2);
+      const int sign = delta[axis] < 0 ? -1 : 1;
+      const int manhattan = std::abs(delta.x) + std::abs(delta.y) +
+                            std::abs(delta.z);
+      if (manhattan == 1 && ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(
+                                World, chunk_coord, axis, sign))
+      {
+        return NeighborLoadState::Air;
+      }
       return NeighborLoadState::Unknown;
     }
     return NeighborLoadState::Loaded;

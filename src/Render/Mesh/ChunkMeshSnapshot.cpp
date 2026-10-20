@@ -143,6 +143,30 @@ bool LightHaloSignaturesMatch(
 
 } // namespace
 
+bool ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
+                                                     glm::ivec3 neighbor_coord,
+                                                     int axis, int sign)
+{
+  const UChunkManager &chunks = world.GetChunkManager();
+  if (chunks.GetChunk(neighbor_coord))
+  {
+    return false;
+  }
+  const int min_cy = world.GetVerticalProfile().MinChunkY(CHUNK_SIZE);
+  if (axis == 1)
+  {
+    return sign < 0 && neighbor_coord.y < min_cy;
+  }
+  for (int cy = neighbor_coord.y - 1; cy >= min_cy; --cy)
+  {
+    if (chunks.GetChunk(glm::ivec3(neighbor_coord.x, cy, neighbor_coord.z)))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool ChunkMeshSnapshot::InputsStillValid(
     const UBlockWorld &world, NeighborVisualDrawableFn /*neighbor_drawable*/,
     void * /*neighbor_drawable_ctx*/) const
@@ -321,10 +345,8 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       // A missing chunk below the configured world floor is known exterior,
       // while missing slices inside the world remain Unknown until streamed.
       const bool known_world_exterior =
-          axis == 1 && sign < 0 &&
-          neighbor_coord.y <
-              world.GetVerticalProfile().MinChunkY(CHUNK_SIZE) &&
-          !neighbor_loaded;
+          !neighbor_loaded &&
+          IsKnownAirAbsentFaceNeighbor(world, neighbor_coord, axis, sign);
       // Stamp = geom/light only. Drawable fn affects shell occlusion preview.
       snapshot.inputStamps[static_cast<size_t>(face + 1)] =
           ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk,
