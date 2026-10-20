@@ -356,7 +356,6 @@ objects:
       pool: ground_cover
       biomes:
       - tundra
-      - forest
       spacing: 18
       weight: 2
       seed_offset: 4103
@@ -564,13 +563,6 @@ objects:
     source:
       mod: minetest-game/default
       license: CC-BY-SA-3.0
-    worldgen:
-      pool: ground_cover
-      biomes:
-      - plains
-      spacing: 12
-      weight: 2
-      seed_offset: 4120
   deco_log_apple:
     source_mts: mtg/apple_log.mts
     category: decorative

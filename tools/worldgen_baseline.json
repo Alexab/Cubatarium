@@ -57,6 +57,14 @@
       "range5_ge_16_pct_max": 0.40
     }
   },
+  "forest": {
+    "note": "Gates for tools/forest_metrics.py (trunk bases, radius >= 8 chunks). Calibrated on profile 3 seeds 777002/777003; trees are clustered (groves), not an even scatter.",
+    "thresholds": {
+      "dispersion_index_min": 3.0,
+      "clark_evans_r_max": 1.0,
+      "trees_on_steep_pct_max": 12.0
+    }
+  },
   "smoothness_thresholds": {
     "mean_abs_delta_y_max": 1.1,
     "pct_delta_gt_2_max": 2.5,

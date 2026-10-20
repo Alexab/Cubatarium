@@ -1306,16 +1306,21 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   // Profile 3: procedural species replace fixed template trees wherever the
   // biome has one, and forest density comes from strongly contrasted regional
   // noise (groves and clearings) instead of an even per-rule scatter.
-  const bool v3Flora = ctx.Settings.WorldGenProfileVersion >= 3 &&
+  const bool v3Trees = ctx.Settings.WorldGenProfileVersion >= 3 &&
                        pool == ObjectFeaturePool::Vegetation;
+  const bool v3Shrubs = ctx.Settings.WorldGenProfileVersion >= 3 &&
+                        pool == ObjectFeaturePool::GroundCover;
+  const bool v3Flora = v3Trees || v3Shrubs;
   bool biomeHasProceduralTree = false;
   FeatureDistributionProfile v3Distribution;
   if (v3Flora)
   {
+    const ObjectFeatureRuleMode procedural =
+        v3Trees ? ObjectFeatureRuleMode::ProceduralTree
+                : ObjectFeatureRuleMode::ProceduralShrub;
     for (const ObjectFeatureRule &r : rules)
     {
-      if (r.Mode == ObjectFeatureRuleMode::ProceduralTree &&
-          BiomeMatches(biome, r, biomeKey))
+      if (r.Mode == procedural && BiomeMatches(biome, r, biomeKey))
       {
         biomeHasProceduralTree = true;
         break;
@@ -1325,16 +1330,27 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     {
       v3Distribution = *distribution;
     }
-    v3Distribution.RegionalNoiseScale = 0.0045f;
-    v3Distribution.MinDensityMultiplier = 0.10f;
-    v3Distribution.MaxDensityMultiplier = 2.4f;
+    if (v3Trees)
+    {
+      v3Distribution.RegionalNoiseScale = 0.0045f;
+      v3Distribution.MinDensityMultiplier = 0.10f;
+      v3Distribution.MaxDensityMultiplier = 2.4f;
+    }
+    else
+    {
+      // Shrubs, grass and flowers grow in noise patches (~60-100 blocks)
+      // separated by bare ground rather than an even scatter.
+      v3Distribution.RegionalNoiseScale = 0.011f;
+      v3Distribution.MinDensityMultiplier = 0.04f;
+      v3Distribution.MaxDensityMultiplier = 3.0f;
+    }
   }
 
   for (const ObjectFeatureRule &rule : rules)
   {
     if (v3Flora && biomeHasProceduralTree &&
         rule.Mode == ObjectFeatureRuleMode::Object &&
-        rule.ObjectName.rfind("tree_", 0) == 0)
+        rule.ObjectName.rfind(v3Trees ? "tree_" : "bush_", 0) == 0)
     {
       continue;
     }

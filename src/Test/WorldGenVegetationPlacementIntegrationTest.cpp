@@ -346,6 +346,7 @@ static void TestConfiguredNaturalFeatureElevationBands()
 
   bool flowerScatterLimited = false;
   bool flowerPatchLimited = false;
+  bool duplicateFlowerRulePresent = false;
   bool sparsePineBushLimited = false;
   for (const cutum::ObjectFeatureRule &rule :
        cutum::UObjectFeatureConfigStorage::Get().GroundCover)
@@ -359,8 +360,9 @@ static void TestConfiguredNaturalFeatureElevationBands()
     else if (rule.Mode == cutum::ObjectFeatureRuleMode::Object &&
              rule.ObjectName == "flower_scatter_plains")
     {
-      flowerPatchLimited = hasSeaRelativeProfile(rule, -3, 42) &&
-                           rule.Ecology.MaxSlope == 9.0f;
+      // Removed as a duplicate of the scatter rule (shared seed_offset 4120).
+      flowerPatchLimited = false;
+      duplicateFlowerRulePresent = true;
     }
     else if (rule.Mode == cutum::ObjectFeatureRuleMode::Object &&
              rule.ObjectName == "bush_pine" && rule.SeedOffset == 4109)
@@ -374,8 +376,10 @@ static void TestConfiguredNaturalFeatureElevationBands()
 
   FluidTest::Expect(cactusLimited, kTestName,
                     "cactus is restricted to warm, dry, low-slope ground");
-  FluidTest::Expect(flowerScatterLimited && flowerPatchLimited, kTestName,
-                    "both plains flower feature types use matching ecological bands");
+  (void)flowerPatchLimited;
+  FluidTest::Expect(flowerScatterLimited && !duplicateFlowerRulePresent,
+                    kTestName,
+                    "plains flowers use one scatter rule with its ecological band");
   FluidTest::Expect(sparsePineBushLimited, kTestName,
                     "sparse-forest pine bushes use the conifer ecology band");
 }

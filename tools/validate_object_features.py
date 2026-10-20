@@ -147,10 +147,39 @@ def main() -> int:
             continue
 
         seen_keys: set[tuple[str, tuple[str, ...]]] = set()
+        seed_owner: dict[int, int] = {}
+        biome_owner: dict[tuple[str, str], int] = {}
         for idx, rule in enumerate(rules):
             if not isinstance(rule, dict):
                 errors.append(f"{pool_name}[{idx}]: not an object")
                 continue
+
+            # Rules must not share a seed_offset (they would place on the same
+            # hashed cells) nor stack the same feature in the same biome.
+            seed_offset = rule.get("seed_offset")
+            if isinstance(seed_offset, int):
+                if seed_offset in seed_owner:
+                    errors.append(
+                        f"{pool_name}[{idx}]: seed_offset {seed_offset} already used "
+                        f"by {pool_name}[{seed_owner[seed_offset]}]"
+                    )
+                else:
+                    seed_owner[seed_offset] = idx
+            feature_id = (
+                rule.get("species")
+                or rule.get("object")
+                or rule.get("block")
+                or ""
+            )
+            for biome_name in rule.get("biomes") or []:
+                owner = biome_owner.get((feature_id, biome_name))
+                if owner is not None and not rule.get("calibrated"):
+                    errors.append(
+                        f"{pool_name}[{idx}]: {feature_id!r} already placed in biome "
+                        f"{biome_name!r} by {pool_name}[{owner}]"
+                    )
+                else:
+                    biome_owner[(feature_id, biome_name)] = idx
 
             mode = rule.get("mode", "object")
             object_name = rule.get("object")

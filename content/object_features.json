@@ -363,10 +363,7 @@
     },
     {
       "object": "bush_pine",
-      "biomes": [
-        "tundra",
-        "forest"
-      ],
+      "biomes": ["tundra"],
       "weight": 2,
       "seed_offset": 4103,
       "spacing": 18,
@@ -669,21 +666,6 @@
       }
     },
     {
-      "object": "flower_scatter_plains",
-      "biomes": [
-        "plains"
-      ],
-      "weight": 2,
-      "seed_offset": 4120,
-      "spacing": 12,
-      "ecology": {
-        "temperature": [0.22, 0.92],
-        "moisture": [0.2, 0.65],
-        "elevation": {"above_sea_level": [-3, 42]},
-        "max_slope": 9.0
-      }
-    },
-    {
       "biomes": [
         "forest"
       ],
@@ -828,19 +810,6 @@
     }
   ],
   "decoration": [
-    {
-      "object": "campfire_ring",
-      "biomes": [
-        "plains",
-        "forest",
-        "hills",
-        "tundra"
-      ],
-      "weight": 1,
-      "seed_offset": 9201,
-      "spacing": 120,
-      "surface_constraint": "grass"
-    },
     {
       "object": "deco_log_acacia",
       "biomes": [
