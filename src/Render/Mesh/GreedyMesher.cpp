@@ -73,7 +73,10 @@ public:
     const UChunk *chunk = World.GetChunkManager().GetChunk(chunk_coord);
     if (!chunk)
     {
-      return 0;
+      // Absent slice above a resident column = open sky (see snapshot).
+      return ChunkMeshSnapshot::IsAbsentOpenSkyChunk(World, chunk_coord)
+                 ? PackLight(kMaxLightLevel, 0)
+                 : 0;
     }
     return chunk->GetLightPackedLocal(UChunkManager::WorldToLocal(world_pos));
   }
@@ -100,6 +103,11 @@ public:
       const int sign = delta[axis] < 0 ? -1 : 1;
       const int manhattan = std::abs(delta.x) + std::abs(delta.y) +
                             std::abs(delta.z);
+      // Same policy as ChunkMeshSnapshot: an absent +Y slice is open air.
+      if (manhattan == 1 && axis == 1 && sign > 0)
+      {
+        return NeighborLoadState::Air;
+      }
       if (manhattan == 1 && ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(
                                 World, chunk_coord, axis, sign))
       {

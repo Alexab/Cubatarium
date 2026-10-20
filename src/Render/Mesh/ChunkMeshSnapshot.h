@@ -49,6 +49,12 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, kLightHaloVolume> paddedLight{};
   /// Exact per-neighbor light samples used from the outer padded halo.
   std::array<uint64_t, kChunkMeshNeighborStampCount> lightHaloSignatures{};
+  /// Bit (dy+1)*9+(dz+1)*3+(dx+1): that ABSENT neighbor chunk is open sky
+  /// above a resident column (terrain streaming never materializes air-only
+  /// slices), so light samples inside it read as full sky instead of 0.
+  /// Without this, top faces on a chunk's upper layer (e.g. a beach at sea
+  /// level y=63) sampled light 0 and rendered black.
+  uint32_t openSkyAbsentMask{0};
   std::array<uint8_t, kShellCells> shellNeighborState{};
   uint64_t sourceRevision{0};
   std::array<ChunkInputStamp, kChunkMeshInputStampCount> inputStamps{};
@@ -75,6 +81,9 @@ struct ChunkMeshSnapshot
   /// A column with no resident slice at all stays Unknown (not streamed yet).
   /// If the neighbor slice later materializes, its ChunkInputStamp changes and
   /// the mesh is rebuilt.
+  /// Absent chunk lying above a resident slice of its own column.
+  static bool IsAbsentOpenSkyChunk(const UBlockWorld &world,
+                                   glm::ivec3 chunk_coord);
   static bool IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
                                            glm::ivec3 neighbor_coord,
                                            int axis, int sign);

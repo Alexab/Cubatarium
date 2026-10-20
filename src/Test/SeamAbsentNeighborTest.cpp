@@ -88,8 +88,48 @@ static int BorderFaces(bool neighbor_column_resident)
   return CountPlusXFacesAtBorder(quads);
 }
 
+// Top faces on the upper layer of a chunk whose +Y neighbor is an absent
+// (air-only, never materialized) slice must sample open-sky light, not 0.
+static void CheckOpenSkyLightAboveAbsentSlice()
+{
+  const auto definitions = MakeDefinitions();
+  cutum::UBlockRegistry registry(nullptr, definitions);
+  cutum::UBlockWorld world;
+  // Chunk (0,3,0) spans y 48..63; the beach top at y=63 is its upper layer.
+  for (int x = 0; x < 4; ++x)
+  {
+    for (int z = 0; z < 4; ++z)
+    {
+      world.SetBlock(glm::ivec3(x, 62, z), kStone);
+      world.SetBlock(glm::ivec3(x, 63, z), kStone);
+    }
+  }
+  const glm::ivec3 coord(0, 3, 0);
+  Expect(world.GetChunkManager().GetChunk(glm::ivec3(0, 4, 0)) == nullptr,
+         "slice above must be absent");
+  const cutum::ChunkMeshSnapshot snapshot =
+      cutum::ChunkMeshSnapshot::Capture(world, coord, 1);
+  const auto quads = cutum::UGreedyMesher::BuildChunkMesh(snapshot, registry);
+  const auto live = cutum::UGreedyMesher::BuildChunkMesh(world, coord, registry);
+  int tops = 0;
+  for (const auto *set : {&quads, &live})
+  {
+    for (const cutum::GreedyQuad &q : *set)
+    {
+      if (q.axis == 1 && q.faceSign > 0 && q.slice == cutum::CHUNK_SIZE - 1)
+      {
+        ++tops;
+        Expect((q.LightPacked & 0x0F) == 15,
+               "top face under an absent slice must use open-sky light");
+      }
+    }
+  }
+  Expect(tops >= 2, "expected top quads in both mesher paths");
+}
+
 int main()
 {
+  CheckOpenSkyLightAboveAbsentSlice();
   Expect(BorderFaces(true) >= 1,
          "wall toward an absent slice of a resident column must be emitted");
   Expect(BorderFaces(false) == 0,

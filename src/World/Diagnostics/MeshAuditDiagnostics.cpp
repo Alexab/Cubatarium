@@ -13,6 +13,7 @@
 #include <cmath>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <map>
 #include <set>
 #include <tuple>
 #include <vector>
@@ -23,6 +24,30 @@ namespace cutum
 namespace
 {
 using json = nlohmann::json;
+
+const char *BlockReasonName(ColumnRenderableState::BlockReason reason)
+{
+  switch (reason)
+  {
+  case ColumnRenderableState::BlockReason::None:
+    return "none";
+  case ColumnRenderableState::BlockReason::PendingLight:
+    return "pending_light";
+  case ColumnRenderableState::BlockReason::StickyRemesh:
+    return "sticky_remesh";
+  case ColumnRenderableState::BlockReason::StaleDark:
+    return "stale_dark";
+  case ColumnRenderableState::BlockReason::MissingMesh:
+    return "missing_mesh";
+  case ColumnRenderableState::BlockReason::GpuInFlight:
+    return "gpu_in_flight";
+  case ColumnRenderableState::BlockReason::NotLoaded:
+    return "not_loaded";
+  case ColumnRenderableState::BlockReason::NotReadyState:
+    return "not_ready_state";
+  }
+  return "unknown";
+}
 
 bool IsOpaqueSolid(UBlockRegistry &registry, BlockId id)
 {
@@ -63,6 +88,11 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
   out["schema"] = "mesh_audit.v1";
   out["audited_chunks"] = coords.size();
   json bad = json::array();
+  json dark = json::array();
+  json dark_top = json::array();
+  json published_dark_chunks = json::array();
+  int total_published_dark = 0;
+  int total_dark_top_cells = 0;
   int total_missing = 0;
   int total_expected = 0;
   int total_published_missing = 0;
@@ -110,6 +140,68 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
         }
       }
     }
+    // Exposed top cells whose air-above has zero sky and block light.
+    int dark_top_cells = 0;
+    json dark_sample = json::array();
+    for (const auto &cell : expected)
+    {
+      const glm::ivec3 above = coord * CHUNK_SIZE +
+                               glm::ivec3(std::get<0>(cell), std::get<1>(cell) + 1,
+                                          std::get<2>(cell));
+      const UChunk *above_chunk = block_world.GetChunkManager().GetChunk(
+          UChunkManager::WorldToChunk(above));
+      if (!above_chunk)
+      {
+        continue; // absent slice above terrain: open sky
+      }
+      const uint8_t packed = above_chunk->GetLightPackedLocal(
+          UChunkManager::WorldToLocal(above));
+      if (packed == 0)
+      {
+        bool sky_open = true;
+        for (int sy = above.y; sy < 320; ++sy)
+        {
+          if (block_world.GetBlock(glm::ivec3(above.x, sy, above.z)) != BLOCK_AIR)
+          {
+            sky_open = false;
+            break;
+          }
+        }
+        if (!sky_open)
+        {
+          continue; // covered (cave / overhang / underwater): dark is legal
+        }
+        ++dark_top_cells;
+        if (dark_sample.size() < 3)
+        {
+          json s;
+          s["world"] = {above.x, above.y - 1, above.z};
+          s["block"] = registry.GetTypeNameById(block_world.GetBlock(above - glm::ivec3(0, 1, 0)));
+          json up = json::array();
+          for (int dy = 0; dy < 4; ++dy)
+          {
+            up.push_back(registry.GetTypeNameById(
+                block_world.GetBlock(above + glm::ivec3(0, dy, 0))));
+          }
+          s["above_1_4"] = up;
+          dark_sample.push_back(s);
+        }
+      }
+    }
+    if (dark_top_cells > 0)
+    {
+      json e;
+      e["chunk"] = {coord.x, coord.y, coord.z};
+      e["dark_top_cells"] = dark_top_cells;
+      e["expected_top_faces"] = expected.size();
+      e["samples"] = dark_sample;
+      e["light_field_rev"] = chunk->GetLightFieldRevision();
+      e["pending_light_slice"] = world.IsPendingLightBeforeMeshSlice(coord);
+      e["pending_light_column"] =
+          world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z));
+      dark_top.push_back(std::move(e));
+      total_dark_top_cells += dark_top_cells;
+    }
     // Fresh mesh from the same world state.
     const ChunkMeshSnapshot snapshot = ChunkMeshSnapshot::Capture(
         block_world, coord, /*sourceRevision=*/1, nullptr, nullptr);
@@ -133,6 +225,7 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
     }
     // Published CPU mesh (cache): +Y face cells (faceIndex 4).
     std::set<std::tuple<int, int, int>> published;
+    std::map<std::tuple<int, int, int>, bool> published_dark;
     bool have_cpu_batches = false;
     if (const auto *batches = mesh.GetCache().DebugGetChunkBatches(coord))
     {
@@ -168,10 +261,51 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
                  z < static_cast<int>(std::floor(maxz + 0.5f)); ++z)
             {
               published.emplace(x, y, z);
+              published_dark[std::make_tuple(x, y, z)] =
+                  (v0.skyLight <= 0.0f && v0.blockLight <= 0.0f);
             }
           }
         }
       }
+    }
+    // Published vertex light dark while the light field above is lit.
+    int published_dark_but_field_lit = 0;
+    json pdark_sample = json::array();
+    for (const auto &entry : published_dark)
+    {
+      if (!entry.second || expected.count(entry.first) == 0)
+      {
+        continue;
+      }
+      const auto &c = entry.first;
+      const glm::ivec3 above = coord * CHUNK_SIZE +
+                               glm::ivec3(std::get<0>(c), std::get<1>(c) + 1, std::get<2>(c));
+      const UChunk *ac = block_world.GetChunkManager().GetChunk(
+          UChunkManager::WorldToChunk(above));
+      const uint8_t packed =
+          ac ? ac->GetLightPackedLocal(UChunkManager::WorldToLocal(above)) : 0xFF;
+      if (packed != 0)
+      {
+        ++published_dark_but_field_lit;
+        if (pdark_sample.size() < 3)
+        {
+          pdark_sample.push_back({above.x, above.y - 1, above.z, packed});
+        }
+      }
+    }
+    if (published_dark_but_field_lit > 0)
+    {
+      json e;
+      e["chunk"] = {coord.x, coord.y, coord.z};
+      e["cells"] = published_dark_but_field_lit;
+      e["samples"] = pdark_sample;
+      e["meshed_light_rev"] = mesh.GetCache().GetMeshedLightRevision(coord);
+      e["light_field_rev"] = chunk->GetLightFieldRevision();
+      e["preview"] = mesh.GetCache().HasProvisionalLightPreview(coord);
+      e["draws_preview"] = world.ShouldDrawProvisionalLightPreview(coord);
+      e["mesh_dirty"] = mesh.IsChunkMeshDirty(coord);
+      published_dark_chunks.push_back(std::move(e));
+      total_published_dark += published_dark_but_field_lit;
     }
     int published_missing = 0;
     json published_samples = json::array();
@@ -209,6 +343,25 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
     total_expected += static_cast<int>(expected.size());
     const bool drawable = mesh.HasDrawableGreedyMesh(coord);
     const bool has_mesh = mesh.HasGreedyMesh(coord);
+    if (drawable && mesh.GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      const ColumnRenderableState col =
+          world.GetColumnRenderableState(glm::ivec2(coord.x, coord.z));
+      json d;
+      d["chunk"] = {coord.x, coord.y, coord.z};
+      d["lit_drawable_face"] = mesh.ChunkHasLitDrawableFace(coord);
+      d["provisional_preview"] = mesh.GetCache().HasProvisionalLightPreview(coord);
+      d["draws_preview"] = world.ShouldDrawProvisionalLightPreview(coord);
+      d["pending_light_slice"] = world.IsPendingLightBeforeMeshSlice(coord);
+      d["pending_light_column"] =
+          world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z));
+      d["light_field_rev"] = chunk->GetLightFieldRevision();
+      d["meshed_light_rev"] = mesh.GetCache().GetMeshedLightRevision(coord);
+      d["column_reason"] = BlockReasonName(col.reason);
+      d["column_ticket"] = col.has_repair_ticket;
+      d["mesh_dirty"] = mesh.IsChunkMeshDirty(coord);
+      dark.push_back(std::move(d));
+    }
     if (missing > 0 || published_missing > 0 ||
         (!expected.empty() && !drawable))
     {
@@ -319,6 +472,11 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
   out["total_published_cpu_missing_top_faces"] = total_published_missing;
   out["reconcile_redirty_total"] = mesh.GetCache().GetReconcileRedirtyCount();
   out["suspect_chunks"] = bad;
+  out["dark_drawable_chunks"] = dark;
+  out["dark_top_chunks"] = dark_top;
+  out["published_dark_field_lit_chunks"] = published_dark_chunks;
+  out["total_published_dark_field_lit_cells"] = total_published_dark;
+  out["total_dark_top_cells"] = total_dark_top_cells;
   std::ofstream file(path_override.empty() ? DefaultPath() : path_override,
                      std::ios::trunc);
   if (!file)
