@@ -109,6 +109,9 @@ def metrics_for(world: Path, sea_level: int) -> dict:
 
 def check(m: dict, gates: dict) -> list[str]:
     fails = []
+    # Deserts/oceans have too few trees for clustering statistics.
+    if m.get("trees", 0) < gates.get("min_trees_for_gate", 100):
+        return fails
     def lt(key, gate):
         if gate in gates and key in m and m[key] < gates[gate]:
             fails.append(f"{key}={m[key]:.2f} < {gates[gate]}")
