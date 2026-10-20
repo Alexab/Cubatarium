@@ -18,10 +18,12 @@
 
 #include <cstring>
 #include <cstdlib>
+#include "App/Platform/SampleProfiler.h"
 int main(int argc, char *argv[])
 {
 #ifdef _WIN32
   cutum::CubatariumInstallWindowsDiagnostics();
+  cutum::StartSampleProfilerIfRequested();
 #endif
   bool flight_sim_mode = false;
   bool explicit_console = false;

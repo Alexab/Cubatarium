@@ -314,6 +314,7 @@ set(SOURCES
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
     src/World/Mesh/EditMeshRemeshPolicy.cpp
     src/App/Platform/WindowManager.cpp
+    src/App/Platform/SampleProfiler.cpp
     src/Render/Engine/GeometryEngine.cpp
     src/Render/Engine/FluidSurfaceMap.cpp
     src/Render/Engine/UnderwaterFogPass.cpp

@@ -1211,30 +1211,69 @@ void ApplyGreedyEnvironmentUniformsToShader(
     const UWorld::EnvironmentState *env,
     const UWorld::LightingSettings *lighting)
 {
+  static constexpr const char *kNames[9] = {
+      "uEnvFogMultiplier", "uEnvMinAmbient",     "uEnvDayFactor",
+      "uEnvNightFactor",   "uEnvSkyLightScale",  "uEnvLightDebug",
+      "uEnvLightDebugMode", "uEnvPrecipIntensity", "uEnvWetness"};
+  float values[9];
   if (env && lighting)
   {
-    shader->SetFloat("uEnvFogMultiplier", env->WeatherFogMultiplier);
-    shader->SetFloat("uEnvMinAmbient", lighting->MinAmbient);
-    shader->SetFloat("uEnvDayFactor", env->DayNightFactor);
-    shader->SetFloat("uEnvNightFactor", env->MoonNightFactor);
-    shader->SetFloat("uEnvSkyLightScale", EnvironmentSkyLightScale(*env));
-    shader->SetFloat("uEnvLightDebug", lighting->DebugEnabled ? 1.0f : 0.0f);
-    shader->SetFloat("uEnvLightDebugMode",
-                     static_cast<float>(lighting->DebugMode));
-    shader->SetFloat("uEnvPrecipIntensity",
-                     std::clamp(env->PrecipitationIntensity, 0.0f, 1.0f));
-    shader->SetFloat("uEnvWetness", std::clamp(env->SurfaceWetness, 0.0f, 1.0f));
-    return;
+    values[0] = env->WeatherFogMultiplier;
+    values[1] = lighting->MinAmbient;
+    values[2] = env->DayNightFactor;
+    values[3] = env->MoonNightFactor;
+    values[4] = EnvironmentSkyLightScale(*env);
+    values[5] = lighting->DebugEnabled ? 1.0f : 0.0f;
+    values[6] = static_cast<float>(lighting->DebugMode);
+    values[7] = std::clamp(env->PrecipitationIntensity, 0.0f, 1.0f);
+    values[8] = std::clamp(env->SurfaceWetness, 0.0f, 1.0f);
   }
-  shader->SetFloat("uEnvFogMultiplier", 1.0f);
-  shader->SetFloat("uEnvMinAmbient", 0.12f);
-  shader->SetFloat("uEnvDayFactor", 1.0f);
-  shader->SetFloat("uEnvNightFactor", 0.0f);
-  shader->SetFloat("uEnvSkyLightScale", 1.0f);
-  shader->SetFloat("uEnvLightDebug", 0.0f);
-  shader->SetFloat("uEnvLightDebugMode", 0.0f);
-  shader->SetFloat("uEnvPrecipIntensity", 0.0f);
-  shader->SetFloat("uEnvWetness", 0.0f);
+  else
+  {
+    const float defaults[9] = {1.0f, 0.12f, 1.0f, 0.0f, 1.0f,
+                               0.0f, 0.0f,  0.0f, 0.0f};
+    std::copy(defaults, defaults + 9, values);
+  }
+  // This runs once per drawn chunk, but only the weather values vary between
+  // chunks (and often not at all). Every SetFloat builds a std::string and
+  // hashes it (profile: ~8% of the main thread), so only upload values that
+  // changed since this program last received them. These uniforms are written
+  // nowhere else.
+  struct Cached
+  {
+    GLuint program{0};
+    const UShaderProgram *owner{nullptr};
+    bool valid[9]{};
+    float value[9]{};
+  };
+  static Cached cache[8];
+  const GLuint program = shader->GetProgramID();
+  Cached *slot = nullptr;
+  for (Cached &entry : cache)
+  {
+    if (entry.owner == shader.get() && entry.program == program)
+    {
+      slot = &entry;
+      break;
+    }
+  }
+  if (!slot)
+  {
+    static size_t next_slot = 0;
+    slot = &cache[next_slot++ % 8];
+    *slot = Cached{};
+    slot->owner = shader.get();
+    slot->program = program;
+  }
+  for (int i = 0; i < 9; ++i)
+  {
+    if (!slot->valid[i] || slot->value[i] != values[i])
+    {
+      shader->SetFloat(kNames[i], values[i]);
+      slot->valid[i] = true;
+      slot->value[i] = values[i];
+    }
+  }
 }
 
 void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,

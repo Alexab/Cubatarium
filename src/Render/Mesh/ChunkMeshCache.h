@@ -628,6 +628,11 @@ public:
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                               const UBlockWorld &world,
                               StaleDarkWitness *witness = nullptr) const;
+  bool ChunkHasStaleDarkFacesUncached(glm::ivec3 chunk_coord,
+                                      const UBlockWorld &world,
+                                      StaleDarkWitness *witness) const;
+  mutable std::unordered_map<glm::ivec3, std::pair<uint64_t, bool>, IVec3Hash>
+      StaleDarkMemo_;
   /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
   /// Inline like GetMeshPublishRevs — GreedyGpuPublication links without
   /// ChunkMeshCache.cpp (publication_audit / greedy_vertex_pool_production_test).

@@ -1438,6 +1438,61 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                                              const UBlockWorld &world,
                                              StaleDarkWitness *witness) const
 {
+  // The scan below samples light of the chunk itself and of its six face
+  // neighbors and reads the published vertices; the answer can only change
+  // when one of those inputs changes. Profiling (sample_profile) showed this
+  // function at ~17% of the main thread, called many times per frame per
+  // chunk, so memoize on the exact inputs. Witness callers want the sampled
+  // cell, so they take the uncached path.
+  if (witness)
+  {
+    return ChunkHasStaleDarkFacesUncached(chunk_coord, world, witness);
+  }
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  uint64_t key = 1469598103934665603ull;
+  auto mix = [&key](uint64_t value)
+  {
+    key ^= value + 0x9e3779b97f4a7c15ull + (key << 6) + (key >> 2);
+  };
+  const ChunkGreedyMesh &mesh = it->second;
+  mix(mesh.PublishRevs.geom_rev);
+  mix(mesh.MeshedLightRevision);
+  mix(mesh.GpuResident ? (1ull + mesh.GpuQuadCount) : 0ull);
+  mix(mesh.GpuHasDarkFace ? 1ull : 0ull);
+  mix(static_cast<uint64_t>(mesh.batches.size()));
+  static constexpr glm::ivec3 kOffsets[7] = {{0, 0, 0}, {1, 0, 0},  {-1, 0, 0},
+                                             {0, 1, 0}, {0, -1, 0}, {0, 0, 1},
+                                             {0, 0, -1}};
+  for (const glm::ivec3 &offset : kOffsets)
+  {
+    const UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord + offset);
+    mix(chunk ? chunk->GetIncarnation() : 0ull);
+    mix(chunk ? chunk->GetLightFieldRevision() : 0ull);
+    mix(chunk ? chunk->GetContentRevision() : 0ull);
+  }
+  const auto memo = StaleDarkMemo_.find(chunk_coord);
+  if (memo != StaleDarkMemo_.end() && memo->second.first == key)
+  {
+    return memo->second.second;
+  }
+  const bool result =
+      ChunkHasStaleDarkFacesUncached(chunk_coord, world, nullptr);
+  if (StaleDarkMemo_.size() > 16384)
+  {
+    StaleDarkMemo_.clear();
+  }
+  StaleDarkMemo_[chunk_coord] = {key, result};
+  return result;
+}
+
+bool UChunkMeshCache::ChunkHasStaleDarkFacesUncached(glm::ivec3 chunk_coord,
+                                             const UBlockWorld &world,
+                                             StaleDarkWitness *witness) const
+{
   if (witness)
   {
     *witness = {};
@@ -8398,7 +8453,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     double max_sync_ms, bool skip_gpu_consume)
 {
   Dirty.AdvanceScheduleFrame();
-  ReconcilePublishedMeshInputs(world, 16);
+  {
+    static const bool reconcile_off = std::getenv("CUBA_NO_RECONCILE") != nullptr;
+    if (!reconcile_off)
+    {
+      ReconcilePublishedMeshInputs(world, 16);
+    }
+  }
   const auto dirty_tick_t0 = std::chrono::high_resolution_clock::now();
   auto seg_t0 = dirty_tick_t0;
   auto take_seg_ms = [&seg_t0]() -> double
