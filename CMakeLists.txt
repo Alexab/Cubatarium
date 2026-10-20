@@ -1396,6 +1396,23 @@ target_compile_definitions(fluid_mesh_faces_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_mesh_faces_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(greedy_cross_plant_ground_face_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/GreedyCrossPlantGroundFaceTest.cpp)
+target_include_directories(greedy_cross_plant_ground_face_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(greedy_cross_plant_ground_face_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(greedy_cross_plant_ground_face_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(underwater_fog_column_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Core/FluidColumnSurfaceQuery.cpp
