@@ -263,7 +263,9 @@ void main()
     } else if (uLightPreviewFade > 0.001 && uEnvLightDebugMode <= 0.5) {
         // The chunk just left the ambient preview: ease from the preview level
         // to the real light instead of snapping (visible light blink).
-        lit = mix(lit, 0.42, clamp(uLightPreviewFade, 0.0, 1.0));
+        // Ease only the dark-floor part: bright meshes were never raised by the
+        // preview, so they must not be pulled down to the floor here.
+        lit = mix(lit, max(lit, 0.42), clamp(uLightPreviewFade, 0.0, 1.0));
     }
     FragColor.rgb *= lit;
     if (uEnvLightDebugMode > 0.5) {

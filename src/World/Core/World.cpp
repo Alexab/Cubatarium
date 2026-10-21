@@ -3253,6 +3253,12 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   const bool light_repair_pending = IsPendingLightBeforeMesh(column) ||
                                     demand_owns_light_repair ||
                                     unsettled_repair_owned;
+  static const bool old_preview_policy =
+      std::getenv("CUBA_PREVIEW_OLD_POLICY") != nullptr;
+  if (old_preview_policy && !light_repair_pending)
+  {
+    return false;
+  }
   if (settled_mesh_light_current)
   {
     return false;

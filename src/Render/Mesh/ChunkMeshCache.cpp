@@ -5920,6 +5920,28 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
   }
 
+  if (std::getenv("CUBA_TRACE_LIT_TO_DARK") != nullptr)
+  {
+    // A republish that turns a lit drawable into an all-dark one is what reads
+    // as a chunk-wide light blink; log every one with its light provenance.
+    const auto prior = GreedyCache.find(coord);
+    const bool prior_lit = prior != GreedyCache.end() &&
+                           prior->second.GpuHasLitDrawableFace;
+    if (prior_lit && gpu_result.quadCount > 0 &&
+        !gpu_result.hasLitDrawableFace)
+    {
+      const UChunk *tc = world.GetChunkManager().GetChunk(coord);
+      std::ostringstream message;
+      message << "lit_to_dark coord=(" << coord.x << "," << coord.y << ","
+              << coord.z << ") srcLight=" << source_light_revision
+              << " nowLight=" << (tc ? tc->GetLightFieldRevision() : 0)
+              << " acceptedStale=" << accepted_input_stale
+              << " preview=" << gpu_result.provisionalLightPreview
+              << " quads=" << gpu_result.quadCount
+              << " transparent=" << gpu_result.transparent;
+      CubatariumLogInfo("LitToDark", message.str());
+    }
+  }
   ChunkGreedyMesh &chunkMesh = GreedyCache[coord];
   int resident_slot_index =
       gpu_result.quadCount > 0 ? gpu_result.slotIndex : -1;

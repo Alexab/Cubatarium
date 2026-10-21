@@ -1259,6 +1259,11 @@ LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
     const double t = (now - state.fade_start) / kFadeSeconds;
     out.fade = t >= 1.0 ? 0.0f : static_cast<float>(1.0 - t);
   }
+  static const bool no_fade = std::getenv("CUBA_NO_PREVIEW_FADE") != nullptr;
+  if (no_fade)
+  {
+    out.fade = 0.0f;
+  }
   return out;
 }
 
