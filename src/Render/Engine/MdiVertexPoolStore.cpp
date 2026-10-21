@@ -59,7 +59,7 @@ private:
 
 GpuCullMode ResolveGpuCullMode()
 {
-  const char *env = std::getenv("CUBATARIUM_GPU_CULL_MODE");
+  static const char *const env = std::getenv("CUBATARIUM_GPU_CULL_MODE");
   if (!env || !*env)
   {
     return GpuCullMode::Aabb;

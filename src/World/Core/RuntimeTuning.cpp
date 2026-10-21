@@ -3,6 +3,7 @@
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Physics/FluidTuning.h"
 
+#include <chrono>
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
@@ -85,6 +86,15 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   static std::string last_path;
   static std::filesystem::file_time_type last_mtime{};
   static bool have_mtime = false;
+  // Called every streaming tick; a filesystem stat per frame is measurable.
+  static std::chrono::steady_clock::time_point last_check{};
+  const auto now = std::chrono::steady_clock::now();
+  if (have_mtime && path == last_path &&
+      now - last_check < std::chrono::seconds(1))
+  {
+    return;
+  }
+  last_check = now;
   std::error_code ec;
   const auto mtime = std::filesystem::last_write_time(path, ec);
   if (ec)
@@ -476,25 +486,42 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
 void URuntimeTuning::ApplyEnvOverrides()
 {
   URuntimeTuning &t = Get();
-  auto apply_bool_env = [](const char *name, bool &dst)
+  // Env is process-constant; parse once (called every streaming tick).
+  struct EnvBool
   {
+    int value{-1};
+  };
+  static const auto read_env = [](const char *name) -> EnvBool
+  {
+    EnvBool out;
     if (const char *env = std::getenv(name))
     {
       if (env[0] == '1' || env[0] == 't' || env[0] == 'T' || env[0] == 'y' ||
           env[0] == 'Y')
       {
-        dst = true;
+        out.value = 1;
       }
       else if (env[0] == '0' || env[0] == 'f' || env[0] == 'F' ||
                env[0] == 'n' || env[0] == 'N')
       {
-        dst = false;
+        out.value = 0;
       }
     }
+    return out;
   };
-  apply_bool_env("CUBA_STREAM_SIMPLE", t.StreamSimple);
-  apply_bool_env("CUBA_SCHEDULE_SHED_UV1", t.ScheduleShedUv1);
-  apply_bool_env("CUBA_RELIGHT_REPLACE_OWNER", t.RelightReplaceDirtyOwner);
+  static const EnvBool stream_simple = read_env("CUBA_STREAM_SIMPLE");
+  static const EnvBool shed_uv1 = read_env("CUBA_SCHEDULE_SHED_UV1");
+  static const EnvBool replace_owner = read_env("CUBA_RELIGHT_REPLACE_OWNER");
+  auto apply = [](const EnvBool &e, bool &dst)
+  {
+    if (e.value >= 0)
+    {
+      dst = e.value != 0;
+    }
+  };
+  apply(stream_simple, t.StreamSimple);
+  apply(shed_uv1, t.ScheduleShedUv1);
+  apply(replace_owner, t.RelightReplaceDirtyOwner);
   // Keep MeshApplyPolicy atomic in sync with tuning (AF bisect / streaming_tune).
   SetRelightReplaceDirtyOwnerEnabled(t.RelightReplaceDirtyOwner);
 }

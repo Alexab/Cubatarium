@@ -2,14 +2,17 @@
 
 #include <cctype>
 #include <cstdlib>
+#include <cstring>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace cutum
 {
 
 /// Treat common textual false values as disabled for environment feature flags.
 /// In particular, setting a flag to "0" must not enable diagnostic work.
-inline bool IsEnvironmentFlagEnabled(const char *name) noexcept
+inline bool IsEnvironmentFlagEnabledUncached(const char *name) noexcept
 {
   if (!name)
   {
@@ -60,6 +63,33 @@ inline bool IsEnvironmentFlagEnabled(const char *name) noexcept
     }
   }
   return true;
+}
+
+/// Cached variant for per-frame call sites: getenv scans and locks the whole
+/// environment block. Flags are process-constant in the app; the cache is
+/// per-thread and keyed by name.
+inline bool IsEnvironmentFlagEnabled(const char *name) noexcept
+{
+  if (!name)
+  {
+    return false;
+  }
+  struct Entry
+  {
+    std::string name;
+    bool value;
+  };
+  thread_local std::vector<Entry> cache;
+  for (const Entry &entry : cache)
+  {
+    if (entry.name == name)
+    {
+      return entry.value;
+    }
+  }
+  const bool value = IsEnvironmentFlagEnabledUncached(name);
+  cache.push_back(Entry{name, value});
+  return value;
 }
 
 } // namespace cutum

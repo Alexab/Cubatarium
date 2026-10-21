@@ -1457,6 +1457,7 @@ public:
   const FocusRingVisualSample &GetFocusRingVisualSample() const;
   void SetFocusRingVisualSample(const FocusRingVisualSample &sample) const;
   uint64_t GetStreamingFrameEpoch() const { return StreamingFrameEpoch; }
+  const UWorldStreaming *GetStreamingService() const { return Streaming.get(); }
   void AdvanceStreamingFrameEpoch() { ++StreamingFrameEpoch; }
   /// Split unfinished focus by movement/view forward (dot>=0 ahead, else behind).
   void CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,

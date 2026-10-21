@@ -7,7 +7,10 @@
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Chunks/ChunkLoadScheduler.h"
+#include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/World.h"
+#include "World/Streaming/WorldStreaming.h"
 #include "World/Mesh/WorldMeshService.h"
 
 #include <algorithm>
@@ -773,6 +776,26 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   static double frame_ms_sum = 0.0;
   static double frame_ms_max = 0.0;
   static int frame_n = 0;
+  static long st_candidates = 0, st_ring_blocked = 0, st_async_queued = 0,
+              st_loads = 0, st_near_skipped = 0;
+  static int st_pending_max = 0, st_inflight_max = 0, st_ready_max = 0;
+  if (const StreamingFrameStats *st = world.GetStreamingService()
+                                          ? world.GetStreamingService()->GetLastFrameStats()
+                                          : nullptr)
+  {
+    st_candidates += st->loadCandidates;
+    st_ring_blocked += st->ringGateBlocked;
+    st_async_queued += st->asyncQueuedThisFrame;
+    st_loads += st->loadsThisFrame;
+    st_near_skipped += st->nearLoadSkipped;
+  }
+  if (const UChunkLoadScheduler *sched =
+          world.GetStreamingService() ? world.GetStreamingService()->GetChunkScheduler() : nullptr)
+  {
+    st_pending_max = std::max(st_pending_max, sched->GetPendingQueueCount());
+    st_inflight_max = std::max(st_inflight_max, sched->GetGenInFlightCount());
+    st_ready_max = std::max(st_ready_max, sched->GetCompletedReadyCount());
+  }
   const auto now = std::chrono::steady_clock::now();
   const double frame_ms =
       std::chrono::duration<double, std::milli>(now - last_frame).count();
@@ -814,7 +837,7 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   {
     resident = false;
     drawable = false;
-    for (int cy = std::max(0, cam_cy - 6); cy <= cam_cy + 1; ++cy)
+    for (int cy = std::max(-4, cam_cy - 40); cy <= cam_cy + 1; ++cy)
     {
       const glm::ivec3 c(cx, cy, cz);
       if (chunks.GetChunk(c))
@@ -872,6 +895,17 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   line["frame_ms_max"] = frame_ms_max;
   line["dirty_count"] = mesh.GetDirtyCount();
   line["async_in_flight"] = mesh.GetAsyncInFlightCount();
+  line["stream_candidates"] = st_candidates;
+  line["stream_ring_blocked"] = st_ring_blocked;
+  line["stream_async_queued"] = st_async_queued;
+  line["stream_loads"] = st_loads;
+  line["stream_near_skipped"] = st_near_skipped;
+  line["gen_pending_max"] = st_pending_max;
+  line["gen_inflight_max"] = st_inflight_max;
+  line["gen_ready_max"] = st_ready_max;
+  st_candidates = st_ring_blocked = st_async_queued = st_loads =
+      st_near_skipped = 0;
+  st_pending_max = st_inflight_max = st_ready_max = 0;
   line["greedy_cache"] = mesh.GetGreedyCacheSize();
   file << line.dump() << '\n';
   file.flush();

@@ -286,7 +286,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.fluid_packed = chunk->GetFluidData();
   snapshot.light_packed = chunk->GetLightData();
   note_slow_stage("center_chunk_copy");
-  if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+  if (const char *trace_env = []() -> const char * { static const char *const v = std::getenv("CUBA_TRACE_CHUNK"); return v; }())
   {
     int tx = 0, ty = 0, tz = 0;
     if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&

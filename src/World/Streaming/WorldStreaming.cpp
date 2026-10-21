@@ -116,14 +116,22 @@ float MoveFogRangeToward(float current, float target, float max_delta)
 
 bool IsWorldColumnSourceTraceEnabled()
 {
-  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
-  return value && value[0] == '1';
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+    return value && value[0] == '1';
+  }();
+  return enabled;
 }
 
 bool IsStreamerUnloadTraceEnabled()
 {
-  const char *value = std::getenv("CUBA_STREAMER_UNLOAD_TRACE");
-  return value && value[0] == '1';
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_STREAMER_UNLOAD_TRACE");
+    return value && value[0] == '1';
+  }();
+  return enabled;
 }
 
 void LogWorldColumnSource(const char *source, const char *outcome,
@@ -2411,7 +2419,7 @@ void UWorldStreaming::RefreshStreamingPressure(
   pt.PrepRefreshStickyMs = lap_ms(sticky_t0);
   if (pt.PrepRefreshRingResyncMs >= 5.0)
   {
-    const char *detail_trace_env =
+    static const char *const detail_trace_env =
         std::getenv("CUBA_STREAMING_DETAIL_TRACE");
     if (detail_trace_env && detail_trace_env[0] == '1')
     {

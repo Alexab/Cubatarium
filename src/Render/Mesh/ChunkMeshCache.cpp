@@ -3172,7 +3172,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
     ++RedundantRepairSkipN;
     return;
   }
-  if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+  if (const char *trace_env = []() -> const char * { static const char *const v = std::getenv("CUBA_TRACE_CHUNK"); return v; }())
   {
     int tx = 0, ty = 0, tz = 0;
     if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
@@ -3369,7 +3369,7 @@ void UChunkMeshCache::MarkDirtyPriorityImpl(
     ++RedundantRepairSkipN;
     return;
   }
-  if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+  if (const char *trace_env = []() -> const char * { static const char *const v = std::getenv("CUBA_TRACE_CHUNK"); return v; }())
   {
     int tx = 0, ty = 0, tz = 0;
     if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
@@ -5607,7 +5607,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
 {
   (void)registry;
   (void)source_revision;
-  if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+  if (const char *trace_env = []() -> const char * { static const char *const v = std::getenv("CUBA_TRACE_CHUNK"); return v; }())
   {
     int tx = 0, ty = 0, tz = 0;
     if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
@@ -5920,7 +5920,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
   }
 
-  if (std::getenv("CUBA_TRACE_LIT_TO_DARK") != nullptr)
+  if ([]() { static const bool v = std::getenv("CUBA_TRACE_LIT_TO_DARK") != nullptr; return v; }())
   {
     // A republish that turns a lit drawable into an all-dark one is what reads
     // as a chunk-wide light blink; log every one with its light provenance.
@@ -6240,7 +6240,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   using GpuProfileClock = std::chrono::steady_clock;
   static std::ofstream gpu_process_profile_file;
   static uint64_t gpu_process_profile_sequence = 0;
-  const char *gpu_process_profile_env =
+  static const char *const gpu_process_profile_env =
       std::getenv("CUBA_GPU_PROCESS_PROFILE");
   std::ostream *gpu_process_profile_sink = nullptr;
   uint64_t gpu_process_profile_seq = 0;
@@ -7592,7 +7592,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
 {
   static std::ofstream apply_profile_file;
   static uint64_t apply_profile_sequence = 0;
-  const char *profile_enabled_env = std::getenv("CUBA_MESH_APPLY_PROFILE");
+  static const char *const profile_enabled_env = std::getenv("CUBA_MESH_APPLY_PROFILE");
   std::ostream *profile_sink = nullptr;
   uint64_t profile_sequence = 0;
   if (profile_enabled_env && profile_enabled_env[0] == '1')
@@ -8338,7 +8338,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     chunkMesh.PublishRevs.geom_rev = result.sourceRevision;
     chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
-    if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+    if (const char *trace_env = []() -> const char * { static const char *const v = std::getenv("CUBA_TRACE_CHUNK"); return v; }())
     {
       int tx = 0, ty = 0, tz = 0;
       if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&

@@ -73,6 +73,7 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -4173,7 +4174,9 @@ void UGeometryEngine::EnsureRenderBackendsBound()
   if (WorldInstance && RenderBackends.Store)
   {
     bool prefer_patch = RenderBackends.Store->SupportsMultiDrawIndirect();
-    if (const char *env = std::getenv("CUBATARIUM_PREFER_GPU_STORE_PATCH"))
+    static const char *const prefer_patch_env =
+        std::getenv("CUBATARIUM_PREFER_GPU_STORE_PATCH");
+    if (const char *env = prefer_patch_env)
     {
       if (env[0] == '0')
       {
@@ -4607,7 +4610,7 @@ void UGeometryEngine::DrawCubeGeometry()
     }
   }
 
-  auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
   UWorldMeshService *mesh_service =
       WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
                            : &WorldInstance->GetMeshService();
@@ -5329,14 +5332,30 @@ namespace
 
 bool DebugDisableOpaqueDepthGuard()
 {
-  const char *value = std::getenv("CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD");
-  return value != nullptr && value[0] != '\0' && value[0] != '0';
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
 }
 
 bool EnvironmentFlagEnabled(const char *name)
 {
+  // Process-lifetime cache: getenv scans (and locks) the whole environment
+  // block and this is polled from per-frame draw paths.
+  static std::mutex cache_mutex;
+  static std::unordered_map<std::string, bool> cache;
+  std::lock_guard<std::mutex> lock(cache_mutex);
+  const auto it = cache.find(name);
+  if (it != cache.end())
+  {
+    return it->second;
+  }
   const char *value = std::getenv(name);
-  return value != nullptr && value[0] != '\0' && value[0] != '0';
+  const bool enabled = value != nullptr && value[0] != '\0' && value[0] != '0';
+  cache.emplace(name, enabled);
+  return enabled;
 }
 
 struct FluidRenderDiagnosticWindow
@@ -6317,7 +6336,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   const std::vector<GreedyBatchRef> filtered_transparent =
       filter_render_ready_refs(draw.transparentRefs);
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-  const auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
 
   DrawGreedyOpaqueBatches(draw.cache, filtered_opaque, vp,
                           camera->GetPosition(), textures, draw.meshRevision,
@@ -7817,7 +7836,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
   {
     return;
   }
-  const auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
   const auto texIt = textures.find(static_cast<size_t>(OverlayBlockId));
   if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
   {

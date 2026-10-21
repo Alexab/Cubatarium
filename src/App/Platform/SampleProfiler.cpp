@@ -287,8 +287,8 @@ void DumpProfileImpl()
   };
   std::ofstream out(GetExecutableDirectory() / "sample_profile.txt",
                     std::ios::trunc);
-  out << "samples=" << count << "\n\n== inclusive (top 70) ==\n";
-  for (const auto &entry : top(incl_count, 70))
+  out << "samples=" << count << "\n\n== inclusive (top 300) ==\n";
+  for (const auto &entry : top(incl_count, 300))
   {
     out << (100.0 * entry.second / static_cast<double>(count)) << "%  "
         << entry.second << "  " << entry.first << "\n";

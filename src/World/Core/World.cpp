@@ -3956,7 +3956,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   }
   ++UnfinishedVisualCache.prep_calls_n;
   auto &cache = UnfinishedVisualCache;
-  const char *detail_trace_env = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+  static const char *const detail_trace_env = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
   const bool detail_trace = detail_trace_env && detail_trace_env[0] == '1';
   const auto detail_trace_started = std::chrono::steady_clock::now();
   auto note_detail_trace = [&](const char *path, std::size_t work_n,
@@ -4354,8 +4354,9 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     constexpr int kDefaultFocusSliceTracePerState = 12;
     constexpr long kMaxFocusSliceTracePerState = 64;
     int focus_slice_trace_per_state = kDefaultFocusSliceTracePerState;
-    if (const char *trace_cap_env =
-            std::getenv("CUBA_FOCUS_SLICE_TRACE_PER_STATE"))
+    static const char *const trace_cap_env_cached =
+        std::getenv("CUBA_FOCUS_SLICE_TRACE_PER_STATE");
+    if (const char *trace_cap_env = trace_cap_env_cached)
     {
       char *end = nullptr;
       const long requested = std::strtol(trace_cap_env, &end, 10);
@@ -6275,7 +6276,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
 void UWorld::KickUnfinishedVisualRemesh(int max_n)
 {
   // A37 H6: symptom Kick off by default — use AdmitUnfinishedVisualDemand.
-  if (const char *env = std::getenv("CUBA_KICK_UNFINISHED"))
+  static const char *const kick_env = std::getenv("CUBA_KICK_UNFINISHED");
+  if (const char *env = kick_env)
   {
     if (!(env[0] == '1' || env[0] == 't' || env[0] == 'T'))
     {
