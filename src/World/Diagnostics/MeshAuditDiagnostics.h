@@ -25,6 +25,10 @@ public:
   static void TraceFlickerFrame(UWorld &world);
   /// Writes <exe_dir>/light_flicker_trace.json (idempotent).
   static void FinishFlickerTrace();
+  /// CUBA_FLIGHT_TELEMETRY=1: every ~2 s append one JSON line to
+  /// <exe_dir>/flight_telemetry.jsonl (position, speed, how far ahead columns
+  /// are resident/drawable, ring coverage, queue depths, frame time).
+  static void TraceFlightTelemetry(UWorld &world);
 };
 
 } // namespace cutum

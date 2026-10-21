@@ -884,6 +884,13 @@ void UWindowManager::Run()
       {
         UMeshAuditDiagnostics::TraceFlickerFrame(*World);
       }
+      static const bool flight_telemetry =
+          std::getenv("CUBA_FLIGHT_TELEMETRY") != nullptr;
+      if (flight_telemetry && World && Application &&
+          Application->GetState() == AppState::InGame)
+      {
+        UMeshAuditDiagnostics::TraceFlightTelemetry(*World);
+      }
     }
     // Opt-in oracle for see-through holes (CUBA_MESH_AUDIT_AFTER_SEC=<sec>):
     // one mesh_audit.json per process after the given in-game time.

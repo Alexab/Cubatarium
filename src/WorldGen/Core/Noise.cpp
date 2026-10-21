@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <unordered_map>
 
 namespace cutum
 {
@@ -176,31 +177,25 @@ std::array<int, 512> PermutationForSeedUncached(uint32_t Seed)
 
 const std::array<int, 512> &PermutationForSeed(uint32_t Seed)
 {
-  // Thread-local LRU of recent seeds — same math as uncached BuildPermutation.
-  constexpr size_t kCacheSlots = 16;
-  struct Slot
+  // Per-thread map keyed by seed. World generation derives one noise seed per
+  // layer (climate, biome weights, routes, warps, ...): far more than a few
+  // distinct seeds per column, so the previous 16-slot round-robin cache
+  // missed on almost every call and rebuilt the 512-entry permutation each
+  // time (~40% of column generation in a sampling profile). Seeds per world
+  // are few; entries are node-based so references stay valid on rehash.
+  static thread_local std::unordered_map<uint32_t, std::array<int, 512>> cache;
+  const auto it = cache.find(Seed);
+  if (it != cache.end())
   {
-    uint32_t seed{0};
-    bool valid{false};
-    std::array<int, 512> perm{};
-  };
-  static thread_local Slot cache[kCacheSlots];
-  static thread_local size_t next_slot = 0;
-
-  for (size_t i = 0; i < kCacheSlots; ++i)
-  {
-    if (cache[i].valid && cache[i].seed == Seed)
-    {
-      return cache[i].perm;
-    }
+    return it->second;
   }
-
-  Slot &slot = cache[next_slot];
-  next_slot = (next_slot + 1) % kCacheSlots;
-  slot.seed = Seed;
-  BuildPermutation(Seed, slot.perm);
-  slot.valid = true;
-  return slot.perm;
+  if (cache.size() >= 2048)
+  {
+    cache.clear(); // runaway seed set (e.g. per-chunk seeds): start over
+  }
+  auto &slot = cache[Seed];
+  BuildPermutation(Seed, slot);
+  return slot;
 }
 
 } // namespace

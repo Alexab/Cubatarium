@@ -757,3 +757,128 @@ void UMeshAuditDiagnostics::FinishFlickerTrace()
 }
 
 } // namespace cutum
+
+namespace cutum
+{
+
+void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
+{
+  using json = nlohmann::json;
+  static std::ofstream file;
+  static bool opened = false;
+  static auto last_emit = std::chrono::steady_clock::now();
+  static auto last_frame = std::chrono::steady_clock::now();
+  static glm::vec3 last_pos(0.0f);
+  static bool have_last_pos = false;
+  static double frame_ms_sum = 0.0;
+  static double frame_ms_max = 0.0;
+  static int frame_n = 0;
+  const auto now = std::chrono::steady_clock::now();
+  const double frame_ms =
+      std::chrono::duration<double, std::milli>(now - last_frame).count();
+  last_frame = now;
+  frame_ms_sum += frame_ms;
+  frame_ms_max = std::max(frame_ms_max, frame_ms);
+  ++frame_n;
+  const auto camera = world.GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+  const double since =
+      std::chrono::duration<double>(now - last_emit).count();
+  if (since < 2.0)
+  {
+    return;
+  }
+  if (!opened)
+  {
+    file.open(GetExecutableDirectory() / "flight_telemetry.jsonl",
+              std::ios::trunc);
+    opened = true;
+  }
+  const glm::vec3 pos = camera->GetPosition();
+  const glm::vec3 front = camera->GetFront();
+  glm::vec2 dir(front.x, front.z);
+  const float dir_len = glm::length(dir);
+  dir = dir_len > 1e-4f ? dir / dir_len : glm::vec2(0.0f, 1.0f);
+  const double speed =
+      have_last_pos ? glm::length(glm::vec2(pos.x - last_pos.x, pos.z - last_pos.z)) / since
+                    : 0.0;
+  last_pos = pos;
+  have_last_pos = true;
+  const UWorldMeshService &mesh = world.GetMeshService();
+  const UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
+  const int cam_cy = static_cast<int>(std::floor(pos.y / CHUNK_SIZE));
+  auto column_state = [&](int cx, int cz, bool &resident, bool &drawable)
+  {
+    resident = false;
+    drawable = false;
+    for (int cy = std::max(0, cam_cy - 6); cy <= cam_cy + 1; ++cy)
+    {
+      const glm::ivec3 c(cx, cy, cz);
+      if (chunks.GetChunk(c))
+      {
+        resident = true;
+        if (mesh.HasDrawableGreedyMesh(c))
+        {
+          drawable = true;
+          return;
+        }
+      }
+    }
+  };
+  const int cam_cx = static_cast<int>(std::floor(pos.x / CHUNK_SIZE));
+  const int cam_cz = static_cast<int>(std::floor(pos.z / CHUNK_SIZE));
+  int first_missing_resident = -1;
+  int first_missing_drawable = -1;
+  for (int d = 1; d <= 24; ++d)
+  {
+    const int cx = static_cast<int>(std::floor((pos.x + dir.x * d * CHUNK_SIZE) / CHUNK_SIZE));
+    const int cz = static_cast<int>(std::floor((pos.z + dir.y * d * CHUNK_SIZE) / CHUNK_SIZE));
+    bool resident = false, drawable = false;
+    column_state(cx, cz, resident, drawable);
+    if (!resident && first_missing_resident < 0)
+    {
+      first_missing_resident = d;
+    }
+    if (!drawable && first_missing_drawable < 0)
+    {
+      first_missing_drawable = d;
+    }
+  }
+  int ring_total = 0, ring_resident = 0, ring_drawable = 0;
+  constexpr int kRing = 8;
+  for (int dx = -kRing; dx <= kRing; ++dx)
+  {
+    for (int dz = -kRing; dz <= kRing; ++dz)
+    {
+      bool resident = false, drawable = false;
+      column_state(cam_cx + dx, cam_cz + dz, resident, drawable);
+      ++ring_total;
+      ring_resident += resident;
+      ring_drawable += drawable;
+    }
+  }
+  json line;
+  line["t_wall_s"] = std::chrono::duration<double>(now.time_since_epoch()).count();
+  line["pos"] = {pos.x, pos.y, pos.z};
+  line["speed_bps"] = speed;
+  line["ahead_first_missing_resident_chunks"] = first_missing_resident;
+  line["ahead_first_missing_drawable_chunks"] = first_missing_drawable;
+  line["ring8_resident_frac"] = ring_total ? double(ring_resident) / ring_total : 0.0;
+  line["ring8_drawable_frac"] = ring_total ? double(ring_drawable) / ring_total : 0.0;
+  line["frame_ms_mean"] = frame_n ? frame_ms_sum / frame_n : 0.0;
+  line["frame_ms_max"] = frame_ms_max;
+  line["dirty_count"] = mesh.GetDirtyCount();
+  line["async_in_flight"] = mesh.GetAsyncInFlightCount();
+  line["greedy_cache"] = mesh.GetGreedyCacheSize();
+  file << line.dump() << '\n';
+  file.flush();
+  frame_ms_sum = 0.0;
+  frame_ms_max = 0.0;
+  frame_n = 0;
+  last_emit = now;
+}
+
+} // namespace cutum

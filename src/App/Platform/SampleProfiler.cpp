@@ -4,6 +4,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <tlhelp32.h>
 // clang-format off
 #include <dbghelp.h>
 // clang-format on
@@ -43,6 +44,120 @@ std::atomic<size_t> gSampleCount{0};
 std::atomic<bool> gStop{false};
 std::thread gThread;
 HANDLE gMainThread = nullptr;
+
+bool CaptureThreadStack(HANDLE thread, Sample &sample)
+{
+  if (SuspendThread(thread) == static_cast<DWORD>(-1))
+  {
+    return false;
+  }
+  CONTEXT context{};
+  context.ContextFlags = CONTEXT_FULL;
+  sample.depth = 0;
+  if (GetThreadContext(thread, &context))
+  {
+    for (int i = 0; i < kMaxFrames; ++i)
+    {
+      const uint64_t pc = context.Rip;
+      if (pc == 0)
+      {
+        break;
+      }
+      sample.frames[sample.depth++] = pc;
+      DWORD64 image_base = 0;
+      const PRUNTIME_FUNCTION entry =
+          RtlLookupFunctionEntry(pc, &image_base, nullptr);
+      if (!entry)
+      {
+        context.Rip = *reinterpret_cast<uint64_t *>(context.Rsp);
+        context.Rsp += 8;
+        continue;
+      }
+      void *handler_data = nullptr;
+      DWORD64 establisher = 0;
+      RtlVirtualUnwind(UNW_FLAG_NHANDLER, image_base, pc, entry, &context,
+                       &handler_data, &establisher, nullptr);
+    }
+  }
+  ResumeThread(thread);
+  return sample.depth > 0;
+}
+
+/// CUBA_SAMPLE_PROFILE_ALL_THREADS=1: sample every thread of the process
+/// (worker pools included) in round-robin; used to profile world generation
+/// and meshing workers.
+void SamplerLoopAllThreads(int interval_ms, int delay_ms)
+{
+  const auto t0 = std::chrono::steady_clock::now();
+  const DWORD self_tid = GetCurrentThreadId();
+  std::vector<std::pair<DWORD, HANDLE>> threads;
+  auto refresh = [&]()
+  {
+    for (auto &entry : threads)
+    {
+      CloseHandle(entry.second);
+    }
+    threads.clear();
+    const HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (snap == INVALID_HANDLE_VALUE)
+    {
+      return;
+    }
+    THREADENTRY32 te{};
+    te.dwSize = sizeof(te);
+    const DWORD pid = GetCurrentProcessId();
+    if (Thread32First(snap, &te))
+    {
+      do
+      {
+        if (te.th32OwnerProcessID == pid && te.th32ThreadID != self_tid)
+        {
+          HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT |
+                                    THREAD_QUERY_INFORMATION,
+                                FALSE, te.th32ThreadID);
+          if (h)
+          {
+            threads.emplace_back(te.th32ThreadID, h);
+          }
+        }
+      } while (Thread32Next(snap, &te));
+    }
+    CloseHandle(snap);
+  };
+  int ticks = 0;
+  while (!gStop.load(std::memory_order_relaxed))
+  {
+    Sleep(static_cast<DWORD>(interval_ms));
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t0)
+            .count() < delay_ms)
+    {
+      continue;
+    }
+    if (ticks++ % 50 == 0)
+    {
+      refresh();
+    }
+    for (const auto &entry : threads)
+    {
+      const size_t index = gSampleCount.load(std::memory_order_relaxed);
+      if (index >= kMaxSamples)
+      {
+        break;
+      }
+      Sample &sample = gSamples[index];
+      if (CaptureThreadStack(entry.second, sample))
+      {
+        // Skip threads parked in a wait: they are idle, not working.
+        gSampleCount.store(index + 1, std::memory_order_relaxed);
+      }
+    }
+  }
+  for (auto &entry : threads)
+  {
+    CloseHandle(entry.second);
+  }
+}
 
 void SamplerLoop(int interval_ms, int delay_ms)
 {
@@ -279,7 +394,15 @@ void StartSampleProfilerIfRequested()
   {
     delay_ms = std::max(0, std::atoi(value)) * 1000;
   }
-  gThread = std::thread(SamplerLoop, interval_ms, delay_ms);
+  if (const char *all = std::getenv("CUBA_SAMPLE_PROFILE_ALL_THREADS");
+      all && all[0] != 'x' && all[0] != '0')
+  {
+    gThread = std::thread(SamplerLoopAllThreads, interval_ms, delay_ms);
+  }
+  else
+  {
+    gThread = std::thread(SamplerLoop, interval_ms, delay_ms);
+  }
   std::atexit(FinishSampleProfiler);
 }
 
