@@ -27,6 +27,10 @@ public:
   std::shared_ptr<const BlockDefinitionCatalog> GetCatalogSnapshot() const;
 
   const BlockDefinition *GetById(BlockId Id) const;
+  /// Same lookup via a per-thread snapshot cache (no shared_ptr atomic load).
+  /// For per-block hot loops only (chunk commit); GetById keeps the original
+  /// per-call snapshot semantics.
+  const BlockDefinition *GetByIdFast(BlockId Id) const;
   const BlockDefinition *GetByName(const std::string &Name) const;
 
 private:

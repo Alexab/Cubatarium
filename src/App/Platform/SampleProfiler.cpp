@@ -404,6 +404,22 @@ void StartSampleProfilerIfRequested()
     gThread = std::thread(SamplerLoop, interval_ms, delay_ms);
   }
   std::atexit(FinishSampleProfiler);
+  // Hang diagnosis: write the report from a watchdog thread after N seconds
+  // even if the main thread never reaches exit.
+  if (const char *dump_at = std::getenv("CUBA_SAMPLE_PROFILE_DUMP_AT_SEC"))
+  {
+    const int seconds = std::atoi(dump_at);
+    if (seconds > 0)
+    {
+      std::thread(
+          [seconds]()
+          {
+            Sleep(static_cast<DWORD>(seconds) * 1000u);
+            FinishSampleProfiler();
+          })
+          .detach();
+    }
+  }
 }
 
 } // namespace cutum

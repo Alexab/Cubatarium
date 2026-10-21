@@ -1,4 +1,5 @@
 #include "Blocks/BlockDefinitionStorage.h"
+#include <cstdlib>
 #include <atomic>
 #include <filesystem>
 #include <fstream>
@@ -15,9 +16,7 @@ using json = nlohmann::json;
 std::shared_ptr<const BlockDefinitionCatalog>
 UBlockDefinitionStorage::GetCatalogSnapshot() const
 {
-  // A refcount copy of the per-thread cached snapshot; the shared_ptr atomic
-  // load (a lock on MSVC) only happens when a new catalog was published.
-  return ThreadSnapshot();
+  return std::atomic_load_explicit(&Active, std::memory_order_acquire);
 }
 
 uint64_t UBlockDefinitionStorage::NextRevision()
@@ -60,7 +59,11 @@ void UBlockDefinitionStorage::Publish(
 
 const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
 {
-  const std::shared_ptr<const BlockDefinitionCatalog> &keep = ThreadSnapshot();
+  // Keep the RCU snapshot alive for this thread until the next Get* call so
+  // returned pointers remain valid for synchronous reads (same pattern as
+  // UObjectLibrary::Get).
+  thread_local std::shared_ptr<const BlockDefinitionCatalog> keep;
+  keep = GetCatalogSnapshot();
   if (!keep)
   {
     return nullptr;
@@ -73,10 +76,22 @@ const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
   return nullptr;
 }
 
+const BlockDefinition *UBlockDefinitionStorage::GetByIdFast(BlockId Id) const
+{
+  const std::shared_ptr<const BlockDefinitionCatalog> &keep = ThreadSnapshot();
+  if (!keep)
+  {
+    return nullptr;
+  }
+  const auto it = keep->ById.find(Id);
+  return it != keep->ById.end() ? &it->second : nullptr;
+}
+
 const BlockDefinition *
 UBlockDefinitionStorage::GetByName(const std::string &Name) const
 {
-  const std::shared_ptr<const BlockDefinitionCatalog> &keep = ThreadSnapshot();
+  thread_local std::shared_ptr<const BlockDefinitionCatalog> keep;
+  keep = GetCatalogSnapshot();
   if (!keep)
   {
     return nullptr;
