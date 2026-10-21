@@ -2,6 +2,8 @@
 #define BLOCKDEFINITIONSTORAGE_H
 
 #include "Blocks/BlockDefinition.h"
+#include <atomic>
+#include <cstdint>
 #include <memory>
 #include <unordered_map>
 
@@ -28,6 +30,14 @@ public:
   const BlockDefinition *GetByName(const std::string &Name) const;
 
 private:
+  /// Globally unique id of the currently published catalog (changes on every
+  /// Load/ReplaceAll) so per-thread snapshot caches can skip the shared_ptr
+  /// atomic load on the hot GetById path.
+  static uint64_t NextRevision();
+  const std::shared_ptr<const BlockDefinitionCatalog> &
+  ThreadSnapshot() const;
+  void Publish(std::shared_ptr<const BlockDefinitionCatalog> catalog);
+  std::atomic<uint64_t> Revision{NextRevision()};
   // Published via atomic_load/store for cross-thread readers.
   mutable std::shared_ptr<const BlockDefinitionCatalog> Active{
       std::make_shared<BlockDefinitionCatalog>()};

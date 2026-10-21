@@ -15,16 +15,52 @@ using json = nlohmann::json;
 std::shared_ptr<const BlockDefinitionCatalog>
 UBlockDefinitionStorage::GetCatalogSnapshot() const
 {
-  return std::atomic_load_explicit(&Active, std::memory_order_acquire);
+  // A refcount copy of the per-thread cached snapshot; the shared_ptr atomic
+  // load (a lock on MSVC) only happens when a new catalog was published.
+  return ThreadSnapshot();
+}
+
+uint64_t UBlockDefinitionStorage::NextRevision()
+{
+  static std::atomic<uint64_t> counter{1};
+  return counter.fetch_add(1, std::memory_order_relaxed);
+}
+
+const std::shared_ptr<const BlockDefinitionCatalog> &
+UBlockDefinitionStorage::ThreadSnapshot() const
+{
+  // Keep the RCU snapshot alive for this thread until it is refreshed so
+  // pointers returned by Get* stay valid for synchronous reads (same pattern
+  // as UObjectLibrary::Get). The catalog is only re-fetched when the storage
+  // publishes a new one: GetById sits on per-block hot paths (chunk commit).
+  struct Cache
+  {
+    const UBlockDefinitionStorage *owner{nullptr};
+    uint64_t revision{0};
+    std::shared_ptr<const BlockDefinitionCatalog> snapshot;
+  };
+  thread_local Cache cache;
+  const uint64_t revision = Revision.load(std::memory_order_acquire);
+  if (cache.owner != this || cache.revision != revision)
+  {
+    cache.snapshot = std::atomic_load_explicit(&Active, std::memory_order_acquire);
+    cache.owner = this;
+    cache.revision = revision;
+  }
+  return cache.snapshot;
+}
+
+void UBlockDefinitionStorage::Publish(
+    std::shared_ptr<const BlockDefinitionCatalog> catalog)
+{
+  std::atomic_store_explicit(&Active, std::move(catalog),
+                             std::memory_order_release);
+  Revision.store(NextRevision(), std::memory_order_release);
 }
 
 const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
 {
-  // Keep the RCU snapshot alive for this thread until the next Get* call so
-  // returned pointers remain valid for synchronous reads (same pattern as
-  // UObjectLibrary::Get).
-  thread_local std::shared_ptr<const BlockDefinitionCatalog> keep;
-  keep = GetCatalogSnapshot();
+  const std::shared_ptr<const BlockDefinitionCatalog> &keep = ThreadSnapshot();
   if (!keep)
   {
     return nullptr;
@@ -40,8 +76,7 @@ const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
 const BlockDefinition *
 UBlockDefinitionStorage::GetByName(const std::string &Name) const
 {
-  thread_local std::shared_ptr<const BlockDefinitionCatalog> keep;
-  keep = GetCatalogSnapshot();
+  const std::shared_ptr<const BlockDefinitionCatalog> &keep = ThreadSnapshot();
   if (!keep)
   {
     return nullptr;
@@ -135,9 +170,7 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
   {
     std::cerr << "UBlockDefinitionStorage::Load: " << ex.what() << std::endl;
   }
-  std::atomic_store_explicit(&Active, std::shared_ptr<const BlockDefinitionCatalog>(
-                                          std::move(catalog)),
-                              std::memory_order_release);
+  Publish(std::shared_ptr<const BlockDefinitionCatalog>(std::move(catalog)));
 }
 
 void UBlockDefinitionStorage::ReplaceAll(
@@ -147,9 +180,7 @@ void UBlockDefinitionStorage::ReplaceAll(
   auto catalog = std::make_shared<BlockDefinitionCatalog>();
   catalog->ById = std::move(newById);
   catalog->NameToId = std::move(newNameToId);
-  std::atomic_store_explicit(&Active, std::shared_ptr<const BlockDefinitionCatalog>(
-                                          std::move(catalog)),
-                              std::memory_order_release);
+  Publish(std::shared_ptr<const BlockDefinitionCatalog>(std::move(catalog)));
 }
 
 } // namespace cutum
