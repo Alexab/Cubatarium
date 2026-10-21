@@ -11,6 +11,7 @@
 #include "World/Mesh/WorldMeshService.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -514,6 +515,26 @@ struct FlickerChunkState
 };
 std::map<std::tuple<int, int, int>, FlickerChunkState> gFlicker;
 uint64_t gFlickerFrames = 0;
+
+struct EditTrack
+{
+  uint64_t last_content{0};
+  bool pending{false};
+  uint64_t pending_rev{0};
+  double start_ms{0.0};
+  bool stuck_reported{false};
+};
+std::map<std::tuple<int, int, int>, EditTrack> gEditTracks;
+std::vector<double> gEditLatenciesMs;
+int gEditPublishState[4] = {0, 0, 0, 0}; // bit1=gpu_resident bit0=cpu_batches
+nlohmann::json gStuckEdits = nlohmann::json::array();
+double NowMs()
+{
+  static const auto t0 = std::chrono::steady_clock::now();
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now() - t0)
+      .count();
+}
 } // namespace
 
 void UMeshAuditDiagnostics::TraceFlickerFrame(UWorld &world)
@@ -529,6 +550,75 @@ void UMeshAuditDiagnostics::TraceFlickerFrame(UWorld &world)
                              static_cast<int>(std::floor(pos.y / CHUNK_SIZE)),
                              static_cast<int>(std::floor(pos.z / CHUNK_SIZE)));
   const UWorldMeshService &mesh = world.GetMeshService();
+  {
+    // Edit visibility: a content change of a chunk that already has a published
+    // mesh must reach a newly published mesh quickly. Track the delay and dump
+    // the state of edits that stay unpublished.
+    const double now_ms = NowMs();
+    for (int dx = -4; dx <= 4; ++dx)
+    {
+      for (int dz = -4; dz <= 4; ++dz)
+      {
+        for (int dy = -2; dy <= 2; ++dy)
+        {
+          const glm::ivec3 coord = cam_chunk + glm::ivec3(dx, dy, dz);
+          const UChunk *chunk =
+              world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+          if (!chunk)
+          {
+            continue;
+          }
+          const uint64_t published = mesh.GetCache().GetDrawnCenterContentRev(coord);
+          EditTrack &t = gEditTracks[std::make_tuple(coord.x, coord.y, coord.z)];
+          const uint64_t content = chunk->GetContentRevision();
+          if (t.last_content != 0 && content != t.last_content && published != 0)
+          {
+            if (!t.pending)
+            {
+              t.pending = true;
+              t.start_ms = now_ms;
+              t.stuck_reported = false;
+            }
+            t.pending_rev = content;
+          }
+          t.last_content = content;
+          if (t.pending && published >= t.pending_rev)
+          {
+            gEditLatenciesMs.push_back(now_ms - t.start_ms);
+            t.pending = false;
+            {
+              const bool gpu = mesh.GetCache().QueryGreedyGpuResident(coord);
+              const auto *batches = mesh.GetCache().DebugGetChunkBatches(coord);
+              const bool cpu = batches && !batches->empty();
+              ++gEditPublishState[(gpu ? 2 : 0) + (cpu ? 1 : 0)];
+            }
+          }
+          else if (t.pending && !t.stuck_reported && now_ms - t.start_ms > 2000.0)
+          {
+            t.stuck_reported = true;
+            nlohmann::json e;
+            e["chunk"] = {coord.x, coord.y, coord.z};
+            e["pending_content_rev"] = t.pending_rev;
+            e["drawn_content_rev"] = published;
+            e["published_cpu_content_rev"] = mesh.GetCache().GetPublishedCenterContentRev(coord);
+            e["age_ms"] = now_ms - t.start_ms;
+            e["drawable"] = mesh.HasDrawableGreedyMesh(coord);
+            e["gpu_resident"] = mesh.GetCache().QueryGreedyGpuResident(coord);
+            e["dirty"] = mesh.IsChunkMeshDirty(coord);
+            e["inflight"] = mesh.HasInflightMeshBuild(coord);
+            e["pending_gpu_apply"] = mesh.IsPendingGpuApply(coord);
+            e["gpu_extract_in_flight"] = mesh.IsGpuExtractInFlight(coord);
+            e["remesh_after_apply"] = mesh.IsRemeshAfterApplyPending(coord);
+            e["softdefer_held"] = mesh.IsSoftDeferHeld(coord);
+            e["defer_until_lit"] = mesh.GetCache().IsDeferMeshUntilLit(coord);
+            e["pending_light_slice"] = world.IsPendingLightBeforeMeshSlice(coord);
+            e["slice_render_ready"] = world.IsChunkSliceRenderReady(coord);
+            gStuckEdits.push_back(std::move(e));
+          }
+        }
+      }
+    }
+  }
   constexpr int kRadius = 6;
   for (int dx = -kRadius; dx <= kRadius; ++dx)
   {
@@ -623,6 +713,35 @@ void UMeshAuditDiagnostics::FinishFlickerTrace()
                    {"field_light_rev_changes", s.field_rev_changes}});
   }
   out["top_chunks"] = top;
+  {
+    std::vector<double> lat = gEditLatenciesMs;
+    std::sort(lat.begin(), lat.end());
+    json l;
+    l["count"] = lat.size();
+    if (!lat.empty())
+    {
+      l["median_ms"] = lat[lat.size() / 2];
+      l["p90_ms"] = lat[lat.size() * 9 / 10];
+      l["max_ms"] = lat.back();
+    }
+    l["state_cpu_only"] = gEditPublishState[1];
+    l["state_gpu_only"] = gEditPublishState[2];
+    l["state_gpu_and_cpu"] = gEditPublishState[3];
+    l["state_neither"] = gEditPublishState[0];
+    out["edit_publish_latency"] = l;
+    out["stuck_edits"] = gStuckEdits;
+    json unresolved = json::array();
+    const double end_ms = NowMs();
+    for (const auto &entry : gEditTracks)
+    {
+      if (entry.second.pending && end_ms - entry.second.start_ms > 2000.0)
+      {
+        unresolved.push_back({{"chunk", {std::get<0>(entry.first), std::get<1>(entry.first), std::get<2>(entry.first)}},
+                              {"age_ms", end_ms - entry.second.start_ms}});
+      }
+    }
+    out["unresolved_edits_at_end"] = unresolved;
+  }
   std::ofstream file(GetExecutableDirectory() / "light_flicker_trace.json",
                      std::ios::trunc);
   file << out.dump(1) << '\n';

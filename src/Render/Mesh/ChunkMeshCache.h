@@ -489,6 +489,32 @@ public:
   bool IsPublishedMeshCurrentForInputs(glm::ivec3 chunk_coord,
                                        const UBlockWorld &world) const;
   uint64_t GetRedundantRepairSkipCount() const { return RedundantRepairSkipN; }
+  /// Content revision of the center chunk the published mesh was built from
+  /// (0 when unknown). Diagnostics: edit-visibility tracing.
+  uint64_t GetPublishedCenterContentRev(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    return (it != GreedyCache.end() && it->second.PublishedGeomStampsValid)
+               ? it->second.PublishedGeomStamps[0].content
+               : 0;
+  }
+  /// Content revision of what is actually drawn: the live GPU slot when the
+  /// chunk is GPU-resident, otherwise the published CPU mesh.
+  uint64_t GetDrawnCenterContentRev(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    if (it == GreedyCache.end())
+    {
+      return 0;
+    }
+    if (it->second.GpuResident)
+    {
+      return it->second.GpuBoundContentRev;
+    }
+    return it->second.PublishedGeomStampsValid
+               ? it->second.PublishedGeomStamps[0].content
+               : 0;
+  }
   uint32_t GetPublishCount(glm::ivec3 chunk_coord) const
   {
     const auto it = GreedyCache.find(chunk_coord);
@@ -1215,6 +1241,8 @@ private:
     std::array<ChunkInputStamp, 7> PublishedGeomStamps{};
     bool PublishedGeomStampsValid{false};
     uint32_t PublishCount{0};
+    /// Center content revision baked into the live GPU packed slot (0 unknown).
+    uint64_t GpuBoundContentRev{0};
   };
   static void RecordPublishedGeomStamps(
       ChunkGreedyMesh &mesh,

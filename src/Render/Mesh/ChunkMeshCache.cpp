@@ -6007,6 +6007,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     chunkMesh.PublishRevs.geom_rev = source_revision;
     chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
     RecordPublishedGeomStamps(chunkMesh, source_stamps);
+    chunkMesh.GpuBoundContentRev = source_stamps ? (*source_stamps)[0].content : 0;
   }
   if (kChunkDemandShadow())
   {
@@ -12003,7 +12004,16 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     // Underfeet: retain on intentional empty (no PreferKick).
     // P4: vis/keep ring also keeps until Bind.
     // LitRing: lit GpuPacked keep-until-replace.
-    if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
+    // Edit visibility: this Immediate path only produced CPU batches. Keeping
+    // the old packed slot "until BindCommitted" leaves the previous geometry on
+    // screen forever when no packed replacement is queued (traced: chunk drawn
+    // at content revision 4096 while 4099 was published, nothing pending), so
+    // a dig/place stayed invisible although the world data changed. A lit,
+    // drawable CPU result has no hole/flicker risk: show it now.
+    const bool show_new_cpu_now =
+        had_gpu_drawable && new_cpu_drawable && !new_dark && !defer_until_lit;
+    if (!show_new_cpu_now &&
+        ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                                new_cpu_drawable) &&
         (!intentional_empty ||
          ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
@@ -12032,6 +12042,14 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
               had_lit_mesh && had_gpu_drawable, new_dark))
       {
         PreferKickPendingGpuQueued(chunkCoord);
+      }
+      else if (!IsPendingGpuApply(chunkCoord) && !Dirty.Contains(chunkCoord) &&
+               !HasInflightMeshBuild(chunkCoord) &&
+               RemeshAfterApply.count(chunkCoord) == 0)
+      {
+        // The kept packed slot now shows outdated geometry: make sure a packed
+        // replacement is actually scheduled instead of waiting for one.
+        MarkDirtyPriority(chunkCoord);
       }
       if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
       {
