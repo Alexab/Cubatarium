@@ -1053,6 +1053,19 @@ public:
   void BuildWeatherCoverageField(const glm::vec2 &center, float world_size,
                                  int resolution,
                                  std::vector<uint8_t> &out_pixels) const;
+  /// Snapshot of everything the (expensive) cloud-coverage field needs, so it
+  /// can be computed off the render thread with ComputeWeatherCoverageField.
+  struct WeatherCoverageFieldRequest
+  {
+    bool uniform{false};
+    uint8_t uniform_value{0};
+    uint32_t seed{0};
+    double simulation_time_sec{0.0};
+  };
+  WeatherCoverageFieldRequest MakeWeatherCoverageFieldRequest() const;
+  static void ComputeWeatherCoverageField(
+      const WeatherCoverageFieldRequest &request, const glm::vec2 &center,
+      float world_size, int resolution, std::vector<uint8_t> &out_pixels);
   const EnvironmentState &GetEnvironmentState() const
   {
     return EnvironmentStateData;

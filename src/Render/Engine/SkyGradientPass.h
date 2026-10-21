@@ -3,6 +3,7 @@
 #include "App/Settings/RenderSettings.h"
 #include "World/Core/World.h"
 #include <glm/glm.hpp>
+#include <future>
 #include <memory>
 #include <vector>
 
@@ -40,6 +41,15 @@ private:
   float WeatherFieldWorldSize{8192.0f};
   float WeatherFieldLastUpdateSec{-1.0f};
   std::vector<uint8_t> WeatherFieldPixels;
+  /// Cloud coverage is ~0.45 s of CPU at 256^2; it is built on a worker and
+  /// swapped in when ready instead of stalling the render thread every second.
+  struct PendingWeatherField
+  {
+    std::future<std::vector<uint8_t>> pixels;
+    glm::vec2 center{0.0f};
+    int resolution{0};
+  };
+  PendingWeatherField PendingField;
   double LastDrawMs{0.0};
 };
 

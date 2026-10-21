@@ -96,15 +96,49 @@ bool USkyGradientPass::UpdateWeatherFieldTexture(const UWorld &world,
   const bool moved = center != WeatherFieldCenter;
   const bool stale = WeatherFieldLastUpdateSec < 0.0f ||
                      elapsed_sec - WeatherFieldLastUpdateSec >= 1.0f;
-  const bool changed = resized || moved || stale;
-  if (changed)
+  bool changed = false;
+  // Collect a finished background build.
+  if (PendingField.pixels.valid() &&
+      PendingField.pixels.wait_for(std::chrono::seconds(0)) ==
+          std::future_status::ready)
   {
+    WeatherFieldPixels = PendingField.pixels.get();
     WeatherFieldWorldSize = kWorldSize;
-    WeatherFieldResolution = resolution;
-    WeatherFieldCenter = center;
+    WeatherFieldResolution = PendingField.resolution;
+    WeatherFieldCenter = PendingField.center;
+    changed = !WeatherFieldPixels.empty();
+  }
+  // Start the next build when needed. The very first field is computed
+  // synchronously so the sky has valid data on frame one.
+  if ((resized || moved || stale) && !PendingField.pixels.valid())
+  {
     WeatherFieldLastUpdateSec = elapsed_sec;
-    world.BuildWeatherCoverageField(center, kWorldSize, resolution,
-                                    WeatherFieldPixels);
+    const UWorld::WeatherCoverageFieldRequest request =
+        world.MakeWeatherCoverageFieldRequest();
+    if (WeatherFieldPixels.empty() || request.uniform)
+    {
+      // Uniform fields cost nothing; the first field must not be late.
+      UWorld::ComputeWeatherCoverageField(request, center, kWorldSize,
+                                          resolution, WeatherFieldPixels);
+      WeatherFieldWorldSize = kWorldSize;
+      WeatherFieldResolution = resolution;
+      WeatherFieldCenter = center;
+      changed = true;
+    }
+    else
+    {
+      PendingField.center = center;
+      PendingField.resolution = resolution;
+      PendingField.pixels = std::async(
+          std::launch::async,
+          [request, center, resolution, world_size = kWorldSize]()
+          {
+            std::vector<uint8_t> pixels;
+            UWorld::ComputeWeatherCoverageField(request, center, world_size,
+                                                resolution, pixels);
+            return pixels;
+          });
+    }
   }
   if (WeatherFieldPixels.empty())
   {
@@ -126,7 +160,8 @@ bool USkyGradientPass::UpdateWeatherFieldTexture(const UWorld &world,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, resolution, resolution, 0, GL_RED,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, WeatherFieldResolution,
+                 WeatherFieldResolution, 0, GL_RED,
                  GL_UNSIGNED_BYTE, WeatherFieldPixels.data());
     glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE0);

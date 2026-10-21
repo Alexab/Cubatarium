@@ -1194,9 +1194,33 @@ void UWorld::UpdateChunkWeatherState(glm::ivec3 chunk_coord,
   chunk->SetWeatherState(wetness, weather_time);
 }
 
-void UWorld::BuildWeatherCoverageField(
-    const glm::vec2 &center, float world_size, int resolution,
-    std::vector<uint8_t> &out_pixels) const
+UWorld::WeatherCoverageFieldRequest
+UWorld::MakeWeatherCoverageFieldRequest() const
+{
+  WeatherCoverageFieldRequest request;
+  request.seed = WorldSeed;
+  request.simulation_time_sec =
+      EnvironmentSettingsData.WeatherRuntime.FieldSimulationTimeSec;
+  if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
+  {
+    request.uniform = true;
+    request.uniform_value = static_cast<uint8_t>(std::clamp(
+        std::lround(Clamp01(EnvironmentStateData.CloudCoverageOverride) * 255.0f),
+        0l, 255l));
+  }
+  else if (!IsWeatherAutoEnabled() ||
+           EnvironmentSettingsData.WeatherRuntime.ManualOverride)
+  {
+    request.uniform = true;
+    request.uniform_value = static_cast<uint8_t>(std::clamp(
+        std::lround(EnvironmentStateData.CloudCoverage * 255.0f), 0l, 255l));
+  }
+  return request;
+}
+
+void UWorld::ComputeWeatherCoverageField(
+    const WeatherCoverageFieldRequest &request, const glm::vec2 &center,
+    float world_size, int resolution, std::vector<uint8_t> &out_pixels)
 {
   if (resolution <= 0 || !std::isfinite(world_size) || world_size <= 0.0f)
   {
@@ -1204,26 +1228,13 @@ void UWorld::BuildWeatherCoverageField(
     return;
   }
   out_pixels.resize(static_cast<size_t>(resolution) * resolution);
-  if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
+  if (request.uniform)
   {
-    const uint8_t coverage = static_cast<uint8_t>(std::clamp(
-        std::lround(Clamp01(EnvironmentStateData.CloudCoverageOverride) * 255.0f),
-        0l, 255l));
-    std::fill(out_pixels.begin(), out_pixels.end(), coverage);
+    std::fill(out_pixels.begin(), out_pixels.end(), request.uniform_value);
     return;
   }
-  if (!IsWeatherAutoEnabled() ||
-      EnvironmentSettingsData.WeatherRuntime.ManualOverride)
-  {
-    const uint8_t coverage = static_cast<uint8_t>(std::clamp(
-        std::lround(EnvironmentStateData.CloudCoverage * 255.0f), 0l, 255l));
-    std::fill(out_pixels.begin(), out_pixels.end(), coverage);
-    return;
-  }
-
-  WeatherFrontField field(WorldSeed);
-  field.SetSimulationTimeSec(
-      EnvironmentSettingsData.WeatherRuntime.FieldSimulationTimeSec);
+  WeatherFrontField field(request.seed);
+  field.SetSimulationTimeSec(request.simulation_time_sec);
   const float step = world_size / static_cast<float>(resolution);
   const float half = world_size * 0.5f;
   for (int y = 0; y < resolution; ++y)
@@ -1239,6 +1250,14 @@ void UWorld::BuildWeatherCoverageField(
                                           0l, 255l));
     }
   }
+}
+
+void UWorld::BuildWeatherCoverageField(
+    const glm::vec2 &center, float world_size, int resolution,
+    std::vector<uint8_t> &out_pixels) const
+{
+  ComputeWeatherCoverageField(MakeWeatherCoverageFieldRequest(), center,
+                              world_size, resolution, out_pixels);
 }
 
 void UWorld::RebuildAllLightingDirtyMeshes()
