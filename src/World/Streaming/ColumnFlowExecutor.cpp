@@ -152,12 +152,19 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   }
 
   UWorldMeshService &mesh = world.GetMeshService();
+  const UChunkManager &chunk_manager = world.GetBlockWorld().GetChunkManager();
   bool gpu_pending = false;
   bool meshing = false;
   bool pending_light = false;
   for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(column.x, cy, column.y);
+    // Terrain columns only materialise slices up to the highest non-air one;
+    // an absent slice has no mesh work, so skip its seven mesh-state lookups.
+    if (!chunk_manager.HasChunk(coord))
+    {
+      continue;
+    }
     if (mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord))
     {
       gpu_pending = true;
