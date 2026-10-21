@@ -480,6 +480,20 @@ public:
   /// invalidation event was dropped (stale meshes = see-through holes).
   void ReconcilePublishedMeshInputs(const UBlockWorld &world, int max_checks);
   uint64_t GetReconcileRedirtyCount() const { return ReconcileRedirtyN; }
+  /// World used by the redundant-repair guard (set once by UWorld).
+  void SetRepairGuardWorld(const UBlockWorld *world) { RepairGuardWorld = world; }
+  /// True when the drawable published mesh was baked from exactly the current
+  /// geometry inputs and light (content/incarnation of center + 6 face
+  /// neighbors, light revision, neighbor light halos): rebuilding it would
+  /// reproduce the same vertices.
+  bool IsPublishedMeshCurrentForInputs(glm::ivec3 chunk_coord,
+                                       const UBlockWorld &world) const;
+  uint64_t GetRedundantRepairSkipCount() const { return RedundantRepairSkipN; }
+  uint32_t GetPublishCount(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    return it != GreedyCache.end() ? it->second.PublishCount : 0;
+  }
   /// Diagnostics only: published CPU batches of a chunk (nullptr if none).
   const std::vector<GreedyMeshBatch> *DebugGetChunkBatches(
       glm::ivec3 chunk_coord) const
@@ -1200,6 +1214,7 @@ private:
     /// any lost invalidation (level-triggered check, not event-triggered).
     std::array<ChunkInputStamp, 7> PublishedGeomStamps{};
     bool PublishedGeomStampsValid{false};
+    uint32_t PublishCount{0};
   };
   static void RecordPublishedGeomStamps(
       ChunkGreedyMesh &mesh,
@@ -1444,6 +1459,8 @@ private:
   /// Reconciliation: published meshes found built from outdated geometry
   /// inputs with no pending work, re-dirtied by the periodic sweep.
   uint64_t ReconcileRedirtyN{0};
+  uint64_t RedundantRepairSkipN{0};
+  const UBlockWorld *RepairGuardWorld{nullptr};
   uint64_t ReconcileFrame{0};
   size_t ReconcileCursor{0};
   std::vector<glm::ivec3> ReconcileKeys;

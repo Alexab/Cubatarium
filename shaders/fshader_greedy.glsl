@@ -46,6 +46,7 @@ uniform float uEnvSkyLightScale;
 uniform float uEnvLightDebug;
 uniform float uEnvLightDebugMode;
 uniform float uLightPreviewOverride;
+uniform float uLightPreviewFade;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
 uniform vec2 uFluidSurfaceOrigin;
@@ -259,6 +260,10 @@ void main()
     if ((vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
         uEnvLightDebugMode <= 0.5) {
         lit = max(lit, 0.42);
+    } else if (uLightPreviewFade > 0.001 && uEnvLightDebugMode <= 0.5) {
+        // The chunk just left the ambient preview: ease from the preview level
+        // to the real light instead of snapping (visible light blink).
+        lit = mix(lit, 0.42, clamp(uLightPreviewFade, 0.0, 1.0));
     }
     FragColor.rgb *= lit;
     if (uEnvLightDebugMode > 0.5) {

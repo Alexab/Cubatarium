@@ -2,6 +2,7 @@
 
 #include "App/Core.h"
 #include "Blocks/BlockRegistry.h"
+#include "Render/Camera/Camera.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Chunks/ChunkManager.h"
@@ -485,6 +486,146 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
   }
   file << out.dump(1) << '\n';
   return static_cast<int>(coords.size());
+}
+
+} // namespace cutum
+
+namespace cutum
+{
+
+namespace
+{
+struct FlickerChunkState
+{
+  bool seen{false};
+  bool preview{false};
+  bool ready{false};
+  bool dark{false};
+  uint64_t meshed_light_rev{0};
+  uint64_t pub_geom_rev{0};
+  uint64_t field_light_rev{0};
+  int preview_toggles{0};
+  int ready_toggles{0};
+  int dark_toggles{0};
+  int light_rev_changes{0};
+  int geom_rev_changes{0};
+  int field_rev_changes{0};
+  int frames{0};
+};
+std::map<std::tuple<int, int, int>, FlickerChunkState> gFlicker;
+uint64_t gFlickerFrames = 0;
+} // namespace
+
+void UMeshAuditDiagnostics::TraceFlickerFrame(UWorld &world)
+{
+  ++gFlickerFrames;
+  const auto camera = world.GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+  const glm::vec3 pos = camera->GetPosition();
+  const glm::ivec3 cam_chunk(static_cast<int>(std::floor(pos.x / CHUNK_SIZE)),
+                             static_cast<int>(std::floor(pos.y / CHUNK_SIZE)),
+                             static_cast<int>(std::floor(pos.z / CHUNK_SIZE)));
+  const UWorldMeshService &mesh = world.GetMeshService();
+  constexpr int kRadius = 6;
+  for (int dx = -kRadius; dx <= kRadius; ++dx)
+  {
+    for (int dz = -kRadius; dz <= kRadius; ++dz)
+    {
+      for (int dy = -2; dy <= 2; ++dy)
+      {
+        const glm::ivec3 coord = cam_chunk + glm::ivec3(dx, dy, dz);
+        if (!mesh.HasDrawableGreedyMesh(coord))
+        {
+          continue;
+        }
+        const UChunk *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        FlickerChunkState &s = gFlicker[std::make_tuple(coord.x, coord.y, coord.z)];
+        const bool preview = world.ShouldDrawProvisionalLightPreview(coord);
+        const bool ready = world.IsChunkSliceRenderReady(coord);
+        const bool dark = mesh.GetCache().ChunkHasFullyDarkFace(coord) &&
+                          !mesh.ChunkHasLitDrawableFace(coord);
+        const uint64_t lrev = mesh.GetCache().GetMeshedLightRevision(coord);
+        const uint64_t grev = mesh.GetCache().GetPublishCount(coord);
+        const uint64_t frev = chunk->GetLightFieldRevision();
+        if (s.seen)
+        {
+          s.preview_toggles += preview != s.preview;
+          s.ready_toggles += ready != s.ready;
+          s.dark_toggles += dark != s.dark;
+          s.light_rev_changes += lrev != s.meshed_light_rev;
+          s.geom_rev_changes += grev != s.pub_geom_rev;
+          s.field_rev_changes += frev != s.field_light_rev;
+        }
+        s.seen = true;
+        s.preview = preview;
+        s.ready = ready;
+        s.dark = dark;
+        s.meshed_light_rev = lrev;
+        s.pub_geom_rev = grev;
+        s.field_light_rev = frev;
+        ++s.frames;
+      }
+    }
+  }
+}
+
+void UMeshAuditDiagnostics::FinishFlickerTrace()
+{
+  static bool done = false;
+  if (done || gFlicker.empty())
+  {
+    return;
+  }
+  done = true;
+  using json = nlohmann::json;
+  json out;
+  out["frames"] = gFlickerFrames;
+  long long preview = 0, ready = 0, dark = 0, light = 0, geom = 0, field = 0;
+  std::vector<std::pair<int, const std::pair<const std::tuple<int, int, int>, FlickerChunkState> *>> ranked;
+  for (const auto &entry : gFlicker)
+  {
+    const FlickerChunkState &s = entry.second;
+    preview += s.preview_toggles;
+    ready += s.ready_toggles;
+    dark += s.dark_toggles;
+    light += s.light_rev_changes;
+    geom += s.geom_rev_changes;
+    field += s.field_rev_changes;
+    ranked.emplace_back(s.preview_toggles + s.ready_toggles + s.dark_toggles +
+                            s.light_rev_changes + s.geom_rev_changes,
+                        &entry);
+  }
+  out["chunks_tracked"] = gFlicker.size();
+  out["totals"] = {{"preview_toggles", preview}, {"ready_toggles", ready},
+                   {"dark_toggles", dark},       {"meshed_light_rev_changes", light},
+                   {"geom_rev_changes", geom},   {"field_light_rev_changes", field}};
+  std::sort(ranked.begin(), ranked.end(),
+            [](const auto &a, const auto &b) { return a.first > b.first; });
+  json top = json::array();
+  for (size_t i = 0; i < ranked.size() && i < 20; ++i)
+  {
+    const auto &key = ranked[i].second->first;
+    const FlickerChunkState &s = ranked[i].second->second;
+    top.push_back({{"chunk", {std::get<0>(key), std::get<1>(key), std::get<2>(key)}},
+                   {"frames", s.frames},
+                   {"preview_toggles", s.preview_toggles},
+                   {"ready_toggles", s.ready_toggles},
+                   {"dark_toggles", s.dark_toggles},
+                   {"meshed_light_rev_changes", s.light_rev_changes},
+                   {"geom_rev_changes", s.geom_rev_changes},
+                   {"field_light_rev_changes", s.field_rev_changes}});
+  }
+  out["top_chunks"] = top;
+  std::ofstream file(GetExecutableDirectory() / "light_flicker_trace.json",
+                     std::ios::trunc);
+  file << out.dump(1) << '\n';
 }
 
 } // namespace cutum

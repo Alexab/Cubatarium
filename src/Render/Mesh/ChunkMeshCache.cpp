@@ -1459,6 +1459,24 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
     key ^= value + 0x9e3779b97f4a7c15ull + (key << 6) + (key >> 2);
   };
   const ChunkGreedyMesh &mesh = it->second;
+  // A mesh baked from exactly the light that is current now (same light
+  // revision, same neighbor halo signatures) is a deterministic function of
+  // that input: rebuilding it would reproduce the same vertices. Its dark
+  // faces are real (caves, undersides), so it cannot be "stale dark". Without
+  // this the heuristic scan below kept flagging such chunks and the remesh
+  // loop republished identical meshes (traced: same chunk, same light/content
+  // revisions, dozens of consecutive commits) which also flipped the
+  // provisional-light preview flag and made light levels blink while moving.
+  if (mesh.MeshedLightHaloSignaturesValid && mesh.MeshedLightRevision != 0)
+  {
+    const UChunk *center = world.GetChunkManager().GetChunk(chunk_coord);
+    if (center && center->GetLightFieldRevision() == mesh.MeshedLightRevision &&
+        GetPublishedLightHaloState(chunk_coord, world, nullptr, nullptr) ==
+            PublishedLightHaloState::MatchesCurrent)
+    {
+      return false;
+    }
+  }
   mix(mesh.PublishRevs.geom_rev);
   mix(mesh.MeshedLightRevision);
   mix(mesh.GpuResident ? (1ull + mesh.GpuQuadCount) : 0ull);
@@ -2997,6 +3015,7 @@ void UChunkMeshCache::RecordPublishedGeomStamps(
     ChunkGreedyMesh &mesh,
     const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps)
 {
+  ++mesh.PublishCount;
   if (!stamps)
   {
     mesh.PublishedGeomStampsValid = false;
@@ -3079,6 +3098,53 @@ void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
   }
 }
 
+bool UChunkMeshCache::IsPublishedMeshCurrentForInputs(
+    glm::ivec3 chunk_coord, const UBlockWorld &world) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end() || !it->second.PublishedGeomStampsValid ||
+      !it->second.MeshedLightHaloSignaturesValid ||
+      it->second.MeshedLightRevision == 0)
+  {
+    return false;
+  }
+  if (!HasDrawableGreedyMesh(chunk_coord))
+  {
+    return false;
+  }
+  const UChunkManager &chunks = world.GetChunkManager();
+  const UChunk *center = chunks.GetChunk(chunk_coord);
+  if (!center ||
+      center->GetLightFieldRevision() != it->second.MeshedLightRevision)
+  {
+    return false;
+  }
+  for (const ChunkInputStamp &stamp : it->second.PublishedGeomStamps)
+  {
+    if (!stamp.Matches(chunks.GetChunk(stamp.coord)))
+    {
+      return false;
+    }
+  }
+  return GetPublishedLightHaloState(chunk_coord, world, nullptr, nullptr) ==
+         PublishedLightHaloState::MatchesCurrent;
+}
+
+namespace
+{
+/// Repair-class dirty reasons: re-requested by census/repair passes. They never
+/// carry new input (edits and streaming commits use other reasons), so when the
+/// published mesh already reflects the current inputs they only cause identical
+/// republications (traced: dozens per chunk, flipping the light preview).
+bool IsRedundantRepairReason(MeshRevisionBumpReason reason)
+{
+  return reason == MeshRevisionBumpReason::PriorityWorldStreamingRepair ||
+         reason == MeshRevisionBumpReason::PriorityChunkEmergeRepair ||
+         reason == MeshRevisionBumpReason::PriorityWorldCoreRepair ||
+         reason == MeshRevisionBumpReason::PriorityLightDependencyRepair;
+}
+} // namespace
+
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
   MarkDirty(chunkCoord, MeshRevisionBumpReason::MarkDirtyEnqueued);
@@ -3087,6 +3153,39 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
                                 MeshRevisionBumpReason reason)
 {
+  static const bool repair_guard_off =
+      std::getenv("CUBA_NO_REPAIR_GUARD") != nullptr;
+  if (!repair_guard_off && RepairGuardWorld &&
+      IsRedundantRepairReason(reason) &&
+      IsPublishedMeshCurrentForInputs(chunkCoord, *RepairGuardWorld))
+  {
+    // The published mesh is a function of exactly these inputs: nothing to
+    // repair. Adopt the requested revision so geometry-debt checks that compare
+    // Current() with the published revision settle.
+    const auto adopt = GreedyCache.find(chunkCoord);
+    if (adopt != GreedyCache.end())
+    {
+      adopt->second.PublishRevs.geom_rev =
+          std::max(adopt->second.PublishRevs.geom_rev,
+                   MeshRevisions.Current(chunkCoord));
+    }
+    ++RedundantRepairSkipN;
+    return;
+  }
+  if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+  {
+    int tx = 0, ty = 0, tz = 0;
+    if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
+        chunkCoord == glm::ivec3(tx, ty, tz))
+    {
+      std::ostringstream message;
+      message << "mark_dirty" << "" << " coord=(" << tx << "," << ty
+              << "," << tz << ") reason=" << static_cast<int>(reason)
+              << " drawable=" << HasDrawableGreedyMesh(chunkCoord)
+              << " inDirty=" << Dirty.Contains(chunkCoord);
+      CubatariumLogInfo("ChunkTrace", message.str());
+    }
+  }
   if (!ShouldAdmitDirtyCoord(chunkCoord))
   {
     return;
@@ -3251,6 +3350,39 @@ void UChunkMeshCache::RequeueDirtyPriority(
 void UChunkMeshCache::MarkDirtyPriorityImpl(
     glm::ivec3 chunkCoord, MeshRevisionBumpReason reason, bool bump_revision)
 {
+  static const bool repair_guard_off =
+      std::getenv("CUBA_NO_REPAIR_GUARD") != nullptr;
+  if (!repair_guard_off && RepairGuardWorld &&
+      IsRedundantRepairReason(reason) &&
+      IsPublishedMeshCurrentForInputs(chunkCoord, *RepairGuardWorld))
+  {
+    // The published mesh is a function of exactly these inputs: nothing to
+    // repair. Adopt the requested revision so geometry-debt checks that compare
+    // Current() with the published revision settle.
+    const auto adopt = GreedyCache.find(chunkCoord);
+    if (adopt != GreedyCache.end())
+    {
+      adopt->second.PublishRevs.geom_rev =
+          std::max(adopt->second.PublishRevs.geom_rev,
+                   MeshRevisions.Current(chunkCoord));
+    }
+    ++RedundantRepairSkipN;
+    return;
+  }
+  if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+  {
+    int tx = 0, ty = 0, tz = 0;
+    if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
+        chunkCoord == glm::ivec3(tx, ty, tz))
+    {
+      std::ostringstream message;
+      message << "mark_dirty" << "_priority" << " coord=(" << tx << "," << ty
+              << "," << tz << ") reason=" << static_cast<int>(reason)
+              << " drawable=" << HasDrawableGreedyMesh(chunkCoord)
+              << " inDirty=" << Dirty.Contains(chunkCoord);
+      CubatariumLogInfo("ChunkTrace", message.str());
+    }
+  }
   if (!ShouldAdmitDirtyCoord(chunkCoord))
   {
     return;
@@ -5475,6 +5607,28 @@ bool UChunkMeshCache::CommitGpuMeshResult(
 {
   (void)registry;
   (void)source_revision;
+  if (const char *trace_env = std::getenv("CUBA_TRACE_CHUNK"))
+  {
+    int tx = 0, ty = 0, tz = 0;
+    if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
+        coord == glm::ivec3(tx, ty, tz))
+    {
+      const UChunk *tc = world.GetChunkManager().GetChunk(coord);
+      std::ostringstream message;
+      message << "gpu_commit coord=(" << tx << "," << ty << "," << tz
+              << ") sourceRev=" << source_revision
+              << " srcLight=" << source_light_revision
+              << " hasSrcLight=" << has_source_light_revision
+              << " nowLight=" << (tc ? tc->GetLightFieldRevision() : 0)
+              << " acceptedStale=" << accepted_input_stale
+              << " acceptedGeomStale=" << accepted_geom_stale
+              << " quads=" << gpu_result.quadCount
+              << " darkFace=" << gpu_result.hasFullyDarkFace
+              << " litFace=" << gpu_result.hasLitDrawableFace
+              << " preview=" << gpu_result.provisionalLightPreview;
+      CubatariumLogInfo("ChunkTrace", message.str());
+    }
+  }
   const auto note_terminal = [&](JobTerminalReason reason,
                                  uint8_t outcome = 0)
   {
@@ -8173,6 +8327,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                 << ") sourceRev=" << result.sourceRevision
                 << " stampsValid=" << result.InputStampsValid
                 << " stampContent=" << result.InputStamps[0].content
+                << " stampLight=" << result.InputStamps[0].light
+                << " nowLight=" << (tc ? tc->GetLightFieldRevision() : 0)
                 << " stampIncarnation=" << result.InputStamps[0].incarnation
                 << " nowContent=" << (tc ? tc->GetContentRevision() : 0)
                 << " nowIncarnation=" << (tc ? tc->GetIncarnation() : 0)

@@ -1,4 +1,3 @@
-
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Core/FrameDeadline.h"
@@ -1204,6 +1203,71 @@ float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
     scale *= 1.0f - std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f) * 0.12f;
   }
   return std::clamp(scale, 0.82f, 1.0f);
+}
+
+/// Per-chunk eased exit from the provisional light preview. The preview shows
+/// dark/unsettled meshes at an ambient floor; snapping from that floor to the
+/// real baked light read as a brightness blink on whole groups of blocks. The
+/// returned fade is 1 right after the chunk leaves preview and eases to 0.
+struct LightPreviewUniforms
+{
+  float override_value{0.0f};
+  float fade{0.0f};
+};
+
+LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
+                                                 glm::ivec3 coord)
+{
+  struct State
+  {
+    bool preview{false};
+    double fade_start{-1.0};
+  };
+  thread_local std::unordered_map<glm::ivec3, State, IVec3Hash> states;
+  LightPreviewUniforms out;
+  if (!world)
+  {
+    return out;
+  }
+  static const auto t0 = std::chrono::steady_clock::now();
+  const double now =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t0)
+          .count();
+  const bool preview = world->ShouldDrawProvisionalLightPreview(coord);
+  if (!preview && states.find(coord) == states.end())
+  {
+    return out; // never previewed: nothing to ease
+  }
+  if (states.size() > 8192)
+  {
+    states.clear();
+  }
+  State &state = states[coord];
+  if (preview)
+  {
+    state.fade_start = -1.0;
+  }
+  else if (state.preview)
+  {
+    state.fade_start = now;
+  }
+  state.preview = preview;
+  out.override_value = preview ? 1.0f : 0.0f;
+  constexpr double kFadeSeconds = 0.6;
+  if (!preview && state.fade_start >= 0.0)
+  {
+    const double t = (now - state.fade_start) / kFadeSeconds;
+    out.fade = t >= 1.0 ? 0.0f : static_cast<float>(1.0 - t);
+  }
+  return out;
+}
+
+void SetLightPreviewUniforms(const std::shared_ptr<UShaderProgram> &shader,
+                             const UWorld *world, glm::ivec3 coord)
+{
+  const LightPreviewUniforms u = ComputeLightPreviewUniforms(world, coord);
+  shader->SetFloat("uLightPreviewOverride", u.override_value);
+  shader->SetFloat("uLightPreviewFade", u.fade);
 }
 
 void ApplyGreedyEnvironmentUniformsToShader(
@@ -5490,6 +5554,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     OpaqueDepthCapture.Bind();
   }
   greedyShader->SetFloat("uLightPreviewOverride", 0.0f);
+  greedyShader->SetFloat("uLightPreviewFade", 0.0f);
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
@@ -5690,9 +5755,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         continue;
       }
 
-      const bool light_preview =
-          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
-                               head.chunkCoord);
+      const LightPreviewUniforms light_preview =
+          ComputeLightPreviewUniforms(WorldInstance.get(), head.chunkCoord);
       size_t j = i + 1;
       while (j < cache.batches.size() && cache.batches[j].pooled &&
              cache.batches[j].indexCountGl > 0 &&
@@ -5701,8 +5765,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
              (!regional_weather ||
               cache.batches[j].chunkCoord == head.chunkCoord) &&
              (!WorldInstance ||
-              WorldInstance->ShouldDrawProvisionalLightPreview(
-                  cache.batches[j].chunkCoord) == light_preview))
+              [&]
+              {
+                const LightPreviewUniforms other = ComputeLightPreviewUniforms(
+                    WorldInstance.get(), cache.batches[j].chunkCoord);
+                return other.override_value == light_preview.override_value &&
+                       std::abs(other.fade - light_preview.fade) < 1e-3f;
+              }()))
       {
         ++j;
       }
@@ -5720,7 +5789,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
               ? 1.0f
               : 0.0f);
       greedyShader->SetFloat("uLightPreviewOverride",
-                             light_preview ? 1.0f : 0.0f);
+                             light_preview.override_value);
+      greedyShader->SetFloat("uLightPreviewFade", light_preview.fade);
       glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
       // P2: prefer GPU-resident 1:1 cmd table (instanceCount from compact).
       size_t witness_batch_index = cache.batches.size();
@@ -5877,12 +5947,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         ApplyGreedyChunkWeatherUniforms(greedyShader, gpu.chunkCoord);
       }
-      greedyShader->SetFloat(
-          "uLightPreviewOverride",
-          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
-                               gpu.chunkCoord)
-              ? 1.0f
-              : 0.0f);
+      SetLightPreviewUniforms(greedyShader, WorldInstance.get(), gpu.chunkCoord);
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
       set_alpha_cutout_for_batch(gpu.AlphaCutout);
       greedyShader->SetFloat(
@@ -5973,12 +6038,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         continue;
       }
-      greedyShader->SetFloat(
-          "uLightPreviewOverride",
-          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
-                               gpu.chunkCoord)
-              ? 1.0f
-              : 0.0f);
+      SetLightPreviewUniforms(greedyShader, WorldInstance.get(), gpu.chunkCoord);
       glBindTexture(GL_TEXTURE_2D, textureId);
       glBindBuffer(GL_ARRAY_BUFFER, vbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -7008,6 +7068,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     ApplyGreedyEnvironmentUniforms(packedGreedyShader);
   }
   packedGreedyShader->SetFloat("uLightPreviewOverride", 0.0f);
+  packedGreedyShader->SetFloat("uLightPreviewFade", 0.0f);
   glActiveTexture(GL_TEXTURE0);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
                    pipeline->GetAllocator().GetQuadSsbo());
@@ -7070,12 +7131,8 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     ++packed_draw_chunks;
     const glm::ivec3 origin = chunk.chunkCoord * CHUNK_SIZE;
     packedGreedyShader->SetIVec3("chunkOrigin", origin);
-    packedGreedyShader->SetFloat(
-        "uLightPreviewOverride",
-        WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
-                             chunk.chunkCoord)
-            ? 1.0f
-            : 0.0f);
+    SetLightPreviewUniforms(packedGreedyShader, WorldInstance.get(),
+                            chunk.chunkCoord);
     for (const GpuBlockDrawRange &range : chunk.blockRanges)
     {
       if (range.Transparent != transparent_pass)

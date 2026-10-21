@@ -1,3 +1,4 @@
+#include "World/Diagnostics/MeshAuditDiagnostics.h"
 #include "App/Platform/SampleProfiler.h"
 #include "App/Platform/AppRunner.h"
 
@@ -1599,6 +1600,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     // the app log after cancellation so the final audit/shutdown records are
     // persisted even though normal logging destructors will not run.
     FinishSampleProfiler();
+    UMeshAuditDiagnostics::FinishFlickerTrace();
     CubatariumFlushLogs();
 
     std::cout << "flight-sim: done exit=" << exit_code

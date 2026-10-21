@@ -322,6 +322,7 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
         std::make_unique<UBlockRegistry>(TextureCubeInstance, BlockDefinitions);
     Collision.SetBlockRegistry(BlockRegistry.get());
   }
+  MeshService->GetCache().SetRepairGuardWorld(&BlockWorld);
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
   Environment.Initialize();

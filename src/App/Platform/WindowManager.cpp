@@ -876,6 +876,15 @@ void UWindowManager::Run()
               .count());
     }
 
+    {
+      static const bool flicker_trace =
+          std::getenv("CUBA_LIGHT_FLICKER_TRACE") != nullptr;
+      if (flicker_trace && World && Application &&
+          Application->GetState() == AppState::InGame)
+      {
+        UMeshAuditDiagnostics::TraceFlickerFrame(*World);
+      }
+    }
     // Opt-in oracle for see-through holes (CUBA_MESH_AUDIT_AFTER_SEC=<sec>):
     // one mesh_audit.json per process after the given in-game time.
     {

@@ -19,6 +19,12 @@ public:
   static std::filesystem::path DefaultPath();
   /// Returns number of chunks audited, or -1 on failure.
   static int Run(UWorld &world, const std::filesystem::path &path = {});
+  /// CUBA_LIGHT_FLICKER_TRACE=1: per-frame sampling of light-related state of
+  /// resident chunks near the camera; counts toggles (preview flag, meshed
+  /// light revision, published geometry revision, draw gate) per chunk.
+  static void TraceFlickerFrame(UWorld &world);
+  /// Writes <exe_dir>/light_flicker_trace.json (idempotent).
+  static void FinishFlickerTrace();
 };
 
 } // namespace cutum

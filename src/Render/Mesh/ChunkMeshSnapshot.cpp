@@ -296,6 +296,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       message << "capture coord=(" << tx << "," << ty << "," << tz
               << ") content=" << chunk->GetContentRevision()
               << " incarnation=" << chunk->GetIncarnation()
+              << " light=" << chunk->GetLightFieldRevision()
               << " nonair=" << chunk->GetNonAirCount()
               << " b(8,3,8)=" << chunk->GetBlockLocal({8, 3, 8})
               << " b(8,4,8)=" << chunk->GetBlockLocal({8, 4, 8})
