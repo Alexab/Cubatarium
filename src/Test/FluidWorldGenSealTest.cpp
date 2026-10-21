@@ -361,9 +361,11 @@ static void TestRestoreWaterColumnReplacesPrefabDirt()
                     "shore sand floor preserved");
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 64, 0)) == kTallGrass,
                     kTestName, "reeds above sea preserved");
+  // Decor above the sea surface must not be waterlogged: the flooded cell
+  // would render as a water cube standing on the surface with the plant inside.
   FluidTest::Expect(
-      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 64, 0))) != 0,
-      kTestName, "reeds above sea waterlogged");
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 64, 0))) == 0,
+      kTestName, "reeds above sea not waterlogged");
 }
 
 static void TestSealAirAboveWaterloggedDecor()

@@ -57,6 +57,8 @@ private:
   float ApplyCaveDensityOffset(int x, int y, int z, int surface_y,
                                float density) const;
   DensityRouteParams RouteAt(int x, int z) const;
+  int DensityScanTop(const DensityRouteParams &route, float horizontal_wobble,
+                     int octaves) const;
   float HorizontalWobbleAt(int x, int z,
                            const DensityRouteParams &route) const;
 

@@ -563,6 +563,15 @@ bool RestoreWaterColumnCell(WorldGenContext &ctx, glm::ivec3 pos, int floor_y,
   }
   if (ctx.Registry.IsFluidPermeable(id))
   {
+    if (pos.y <= sea && ctx.Registry.GetTypeNameById(id) == "lily_pad")
+    {
+      // A floating pad only lives on the surface. When the column is restored
+      // to sea level the pad is submerged: turn the cell into plain water
+      // instead of a waterlogged plant (a water cube with a pad inside).
+      ctx.World.SetBlock(pos, water);
+      ctx.World.SetFluidState(pos, FluidCellState::Source().WithKind(FluidKind::Water));
+      return true;
+    }
     if (PackFluidCellState(ctx.World.GetFluidState(pos)) != 0)
     {
       return false;
@@ -600,8 +609,10 @@ bool WaterlogCoastalPermeableStack(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  const int max_y =
-      std::min(ctx.Settings.MaxHeight - 1, sea + 8);
+  // Never waterlog above the sea surface: floating decor (lily pads) and plant
+  // tops sit in the air cell over the water; flooding them draws a water cube
+  // standing on the surface with the plant inside.
+  const int max_y = std::min(ctx.Settings.MaxHeight - 1, sea);
   bool changed = false;
   for (int y = floor_y + 1; y <= max_y; ++y)
   {
@@ -678,6 +689,78 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
   return any_filled;
 }
 
+namespace
+{
+
+/// Removes single-cell water spikes: a surface water cell whose horizontal
+/// neighbours (at least three) are air above lower water. River columns derive
+/// their own surface from local terrain, so an isolated column can end up one
+/// block higher than the whole surrounding body and reads as a water cube
+/// standing on the water.
+bool TrimWaterSurfaceSpikesInChunk(WorldGenContext &ctx, int base_x, int base_z)
+{
+  const BlockId water = ctx.Blocks.Water;
+  const int top_y = std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 1);
+  static constexpr glm::ivec3 kHoriz[4] = {
+      {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+  bool changed = false;
+  for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+  {
+    for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+    {
+      const int x = base_x + lx;
+      const int z = base_z + lz;
+      int surface_y = ctx.Settings.MinHeight - 1;
+      for (int y = top_y; y >= ctx.Settings.MinHeight; --y)
+      {
+        const BlockId id = ctx.World.GetBlock(glm::ivec3(x, y, z));
+        if (id == BLOCK_AIR)
+        {
+          continue;
+        }
+        if (id == water)
+        {
+          surface_y = y;
+        }
+        break;
+      }
+      if (surface_y < ctx.Settings.MinHeight)
+      {
+        continue;
+      }
+      const glm::ivec3 pos(x, surface_y, z);
+      if (PackFluidCellState(ctx.World.GetFluidState(pos)) == 0 ||
+          !ctx.World.IsAir(pos + glm::ivec3(0, 1, 0)))
+      {
+        continue;
+      }
+      int lower_neighbours = 0;
+      for (const glm::ivec3 &offset : kHoriz)
+      {
+        const glm::ivec3 n = pos + offset;
+        if (ctx.World.IsAir(n) &&
+            ctx.World.GetBlock(n - glm::ivec3(0, 1, 0)) == water)
+        {
+          ++lower_neighbours;
+        }
+      }
+      if (lower_neighbours >= 3)
+      {
+        ctx.World.SetBlock(pos, BLOCK_AIR);
+        ctx.World.SetFluidState(pos, FluidCellState{});
+        changed = true;
+      }
+    }
+  }
+  if (changed)
+  {
+    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, top_y);
+  }
+  return changed;
+}
+
+} // namespace
+
 bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,
@@ -706,7 +789,8 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
   {
     shore_air = SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
   }
-  return sealed || permeable || sealed_after_permeable || shore_air;
+  const bool trimmed = TrimWaterSurfaceSpikesInChunk(ctx, base_x, base_z);
+  return sealed || permeable || sealed_after_permeable || shore_air || trimmed;
 }
 
 bool SealFluidShoreAirOnChunkCommitted(

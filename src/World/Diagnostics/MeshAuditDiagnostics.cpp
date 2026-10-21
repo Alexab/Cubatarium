@@ -476,6 +476,200 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
   out["total_mesher_missing_top_faces"] = total_missing;
   out["total_published_cpu_missing_top_faces"] = total_published_missing;
   out["reconcile_redirty_total"] = mesh.GetCache().GetReconcileRedirtyCount();
+  // Waterlogged decor audit: permeable (plant) cells carrying fluid, and whether
+  // any face of such a cell is exposed to air (reads as a water cube with the
+  // plant inside, especially above the sea surface).
+  {
+    const int sea = world.GetProceduralSettings().SeaLevel;
+    long total_waterlogged = 0, exposed_above_sea = 0, exposed_below_sea = 0,
+         above_sea = 0;
+    std::map<std::string, int> by_type;
+    json wl_samples = json::array();
+    static const glm::ivec3 kOff[6] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
+                                       {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
+    for (const glm::ivec3 &coord : coords)
+    {
+      const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord);
+      if (!chunk)
+      {
+        continue;
+      }
+      for (int z = 0; z < CHUNK_SIZE; ++z)
+      {
+        for (int y = 0; y < CHUNK_SIZE; ++y)
+        {
+          for (int x = 0; x < CHUNK_SIZE; ++x)
+          {
+            const BlockId id = chunk->GetBlockLocal(glm::ivec3(x, y, z));
+            if (id == BLOCK_AIR || registry.IsLiquid(id) ||
+                !registry.IsFluidPermeable(id))
+            {
+              continue;
+            }
+            const glm::ivec3 wp = coord * CHUNK_SIZE + glm::ivec3(x, y, z);
+            if (PackFluidCellState(block_world.GetFluidState(wp)) == 0)
+            {
+              continue;
+            }
+            ++total_waterlogged;
+            const bool over = wp.y > sea;
+            above_sea += over ? 1 : 0;
+            bool exposed = false;
+            for (const glm::ivec3 &o : kOff)
+            {
+              const glm::ivec3 np = wp + o;
+              if (block_world.GetBlock(np) == BLOCK_AIR &&
+                  PackFluidCellState(block_world.GetFluidState(np)) == 0)
+              {
+                exposed = true;
+                break;
+              }
+            }
+            if (exposed)
+            {
+              (over ? exposed_above_sea : exposed_below_sea) += 1;
+              const std::string name = registry.GetTypeNameById(id);
+              by_type[name + (over ? "@above_sea" : "@below_sea")] += 1;
+              if (wl_samples.size() < 8)
+              {
+                wl_samples.push_back({{"pos", {wp.x, wp.y, wp.z}},
+                                      {"type", name}});
+              }
+            }
+          }
+        }
+      }
+    }
+    // Water body consistency: submerged non-source cells and water blocks with
+    // no fluid state read as cubes inside the body.
+    {
+      long water_cells = 0, source_cells = 0, flowing_cells = 0,
+           zero_state_cells = 0, submerged_nonsource = 0, falling_cells = 0;
+      json ws = json::array();
+      for (const glm::ivec3 &coord : coords)
+      {
+        const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        for (int z = 0; z < CHUNK_SIZE; ++z)
+        {
+          for (int y = 0; y < CHUNK_SIZE; ++y)
+          {
+            for (int x = 0; x < CHUNK_SIZE; ++x)
+            {
+              const BlockId id = chunk->GetBlockLocal(glm::ivec3(x, y, z));
+              if (id == BLOCK_AIR || !registry.IsLiquid(id))
+              {
+                continue;
+              }
+              const glm::ivec3 wp = coord * CHUNK_SIZE + glm::ivec3(x, y, z);
+              const FluidCellState st = block_world.GetFluidState(wp);
+              ++water_cells;
+              if (PackFluidCellState(st) == 0)
+              {
+                ++zero_state_cells;
+                continue;
+              }
+              if (st.IsSource())
+              {
+                ++source_cells;
+                continue;
+              }
+              ++flowing_cells;
+              falling_cells += st.Falling ? 1 : 0;
+              const glm::ivec3 up = wp + glm::ivec3(0, 1, 0);
+              if (registry.IsLiquid(block_world.GetBlock(up)))
+              {
+                ++submerged_nonsource;
+                if (ws.size() < 8)
+                {
+                  ws.push_back({{"pos", {wp.x, wp.y, wp.z}},
+                                {"level", int(st.Level)},
+                                {"falling", int(st.Falling)}});
+                }
+              }
+            }
+          }
+        }
+      }
+      // Surface steps: a water cell with air above whose horizontal neighbour is
+      // air over a lower water cell (side wall of the higher surface is visible).
+      long surface_cells = 0, step_cells = 0, pillar_cells = 0;
+      json step_samples = json::array();
+      for (const glm::ivec3 &coord : coords)
+      {
+        const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        for (int z = 0; z < CHUNK_SIZE; ++z)
+        {
+          for (int y = 0; y < CHUNK_SIZE; ++y)
+          {
+            for (int x = 0; x < CHUNK_SIZE; ++x)
+            {
+              const BlockId id = chunk->GetBlockLocal(glm::ivec3(x, y, z));
+              if (id == BLOCK_AIR || !registry.IsLiquid(id))
+              {
+                continue;
+              }
+              const glm::ivec3 wp = coord * CHUNK_SIZE + glm::ivec3(x, y, z);
+              if (block_world.GetBlock(wp + glm::ivec3(0, 1, 0)) != BLOCK_AIR)
+              {
+                continue;
+              }
+              ++surface_cells;
+              static const glm::ivec3 kH[4] = {
+                  {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+              int lower_water_neighbors = 0;
+              for (const glm::ivec3 &o : kH)
+              {
+                const glm::ivec3 n = wp + o;
+                if (block_world.GetBlock(n) == BLOCK_AIR &&
+                    registry.IsLiquid(block_world.GetBlock(n - glm::ivec3(0, 1, 0))))
+                {
+                  ++lower_water_neighbors;
+                }
+              }
+              if (lower_water_neighbors > 0)
+              {
+                ++step_cells;
+                if (lower_water_neighbors >= 3)
+                {
+                  ++pillar_cells;
+                  if (step_samples.size() < 8)
+                  {
+                    step_samples.push_back({wp.x, wp.y, wp.z});
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      out["liquid_surface_cells"] = surface_cells;
+      out["liquid_surface_step_cells"] = step_cells;
+      out["liquid_surface_pillar_cells"] = pillar_cells;
+      out["liquid_surface_pillar_samples"] = step_samples;
+      out["liquid_cells"] = water_cells;
+      out["liquid_source_cells"] = source_cells;
+      out["liquid_flowing_cells"] = flowing_cells;
+      out["liquid_falling_cells"] = falling_cells;
+      out["liquid_zero_state_cells"] = zero_state_cells;
+      out["liquid_submerged_nonsource"] = submerged_nonsource;
+      out["liquid_submerged_nonsource_samples"] = ws;
+    }
+    out["waterlogged_total"] = total_waterlogged;
+    out["waterlogged_above_sea"] = above_sea;
+    out["waterlogged_exposed_above_sea"] = exposed_above_sea;
+    out["waterlogged_exposed_below_sea"] = exposed_below_sea;
+    out["waterlogged_exposed_by_type"] = by_type;
+    out["waterlogged_exposed_samples"] = wl_samples;
+    out["sea_level"] = sea;
+  }
   out["suspect_chunks"] = bad;
   out["dark_drawable_chunks"] = dark;
   out["dark_top_chunks"] = dark_top;
