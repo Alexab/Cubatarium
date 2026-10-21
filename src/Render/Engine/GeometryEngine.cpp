@@ -1215,15 +1215,22 @@ struct LightPreviewUniforms
   float fade{0.0f};
 };
 
+long long gLightPreviewRawToggles = 0;
+long long gLightPreviewShownToggles = 0;
+
 LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
                                                  glm::ivec3 coord)
 {
   struct State
   {
-    bool preview{false};
+    bool shown{false};        // preview state actually used for drawing
+    bool raw{false};          // last raw policy answer
+    double last_change{-1e9}; // when `shown` last changed
+    double pending_since{-1.0};
     double fade_start{-1.0};
   };
   thread_local std::unordered_map<glm::ivec3, State, IVec3Hash> states;
+  thread_local uint64_t last_epoch = UINT64_MAX;
   LightPreviewUniforms out;
   if (!world)
   {
@@ -1233,8 +1240,9 @@ LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
   const double now =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - t0)
           .count();
-  const bool preview = world->ShouldDrawProvisionalLightPreview(coord);
-  if (!preview && states.find(coord) == states.end())
+  const bool raw = world->ShouldDrawProvisionalLightPreview(coord);
+  const auto found = states.find(coord);
+  if (!raw && found == states.end())
   {
     return out; // never previewed: nothing to ease
   }
@@ -1242,16 +1250,48 @@ LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
   {
     states.clear();
   }
+  const bool first_sight = states.find(coord) == states.end();
   State &state = states[coord];
-  if (preview)
+  if (first_sight)
   {
-    state.fade_start = -1.0;
+    state.shown = raw;
+    state.raw = raw;
+    state.last_change = now;
   }
-  else if (state.preview)
+  // The preview policy follows repair ownership, which flips on and off while
+  // light/mesh work is scheduled around a chunk. Showing every flip makes the
+  // dark faces of the chunk (the only ones the preview changes) blink between
+  // their real level and the ambient floor. Debounce: a change must persist
+  // before it is applied and may not follow the previous change too quickly.
+  // A chunk that was never drawn before takes the raw value immediately.
+  if (raw != state.raw)
   {
-    state.fade_start = now;
+    ++gLightPreviewRawToggles;
+    state.raw = raw;
   }
-  state.preview = preview;
+  if (raw == state.shown)
+  {
+    state.pending_since = -1.0;
+  }
+  else
+  {
+    if (state.pending_since < 0.0)
+    {
+      state.pending_since = now;
+    }
+    constexpr double kPersistSeconds = 0.5;
+    constexpr double kMinDwellSeconds = 0.75;
+    if (now - state.pending_since >= kPersistSeconds &&
+        now - state.last_change >= kMinDwellSeconds)
+    {
+      state.shown = raw;
+      state.last_change = now;
+      state.pending_since = -1.0;
+      ++gLightPreviewShownToggles;
+      state.fade_start = raw ? -1.0 : now;
+    }
+  }
+  const bool preview = state.shown;
   out.override_value = preview ? 1.0f : 0.0f;
   constexpr double kFadeSeconds = 0.6;
   if (!preview && state.fade_start >= 0.0)
@@ -1264,6 +1304,7 @@ LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
   {
     out.fade = 0.0f;
   }
+  (void)last_epoch;
   return out;
 }
 
@@ -9061,6 +9102,13 @@ void UGeometryEngine::RenderBiomeDebugOverlay()
       DrawBoxWireframe(mvp * model, color);
     }
   }
+}
+
+void GetLightPreviewDebounceCounters(long long &raw_toggles,
+                                     long long &shown_toggles)
+{
+  raw_toggles = gLightPreviewRawToggles;
+  shown_toggles = gLightPreviewShownToggles;
 }
 
 } // namespace cutum

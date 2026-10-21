@@ -494,6 +494,9 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
 namespace cutum
 {
 
+void GetLightPreviewDebounceCounters(long long &raw_toggles,
+                                     long long &shown_toggles);
+
 namespace
 {
 struct FlickerChunkState
@@ -691,6 +694,12 @@ void UMeshAuditDiagnostics::FinishFlickerTrace()
     ranked.emplace_back(s.preview_toggles + s.ready_toggles + s.dark_toggles +
                             s.light_rev_changes + s.geom_rev_changes,
                         &entry);
+  }
+  {
+    long long raw_t = 0, shown_t = 0;
+    GetLightPreviewDebounceCounters(raw_t, shown_t);
+    out["preview_raw_toggles_in_render"] = raw_t;
+    out["preview_shown_toggles_in_render"] = shown_t;
   }
   out["chunks_tracked"] = gFlicker.size();
   out["totals"] = {{"preview_toggles", preview}, {"ready_toggles", ready},
