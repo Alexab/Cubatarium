@@ -19,6 +19,24 @@ struct BlockDefinitionCatalog
 class UBlockDefinitionStorage
 {
 public:
+  UBlockDefinitionStorage() = default;
+  /// Copies share the current immutable catalog; the copy gets its own
+  /// revision so per-thread snapshot caches never confuse the two instances.
+  UBlockDefinitionStorage(const UBlockDefinitionStorage &other)
+      : Active(std::atomic_load_explicit(&other.Active,
+                                         std::memory_order_acquire))
+  {
+  }
+  UBlockDefinitionStorage &operator=(const UBlockDefinitionStorage &other)
+  {
+    if (this != &other)
+    {
+      Publish(std::atomic_load_explicit(&other.Active,
+                                        std::memory_order_acquire));
+    }
+    return *this;
+  }
+
   void Load(const std::string &modelsPath);
   void ReplaceAll(std::unordered_map<BlockId, BlockDefinition> byId,
                   std::unordered_map<std::string, BlockId> nameToId);

@@ -973,6 +973,10 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   static long st_candidates = 0, st_ring_blocked = 0, st_async_queued = 0,
               st_loads = 0, st_near_skipped = 0;
   static int st_pending_max = 0, st_inflight_max = 0, st_ready_max = 0;
+  static float fog_prev = -1.0f, fog_prev_start = -1.0f;
+  static double fog_tv = 0.0, fog_max_rate = 0.0, fog_max_accel = 0.0;
+  static double fog_prev_rate = 0.0;
+  static float fog_min = 1e9f, fog_max = -1e9f;
   if (const StreamingFrameStats *st = world.GetStreamingService()
                                           ? world.GetStreamingService()->GetLastFrameStats()
                                           : nullptr)
@@ -991,6 +995,26 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
     st_ready_max = std::max(st_ready_max, sched->GetCompletedReadyCount());
   }
   const auto now = std::chrono::steady_clock::now();
+  {
+    const float fog_h = world.GetPresentedFogHorizonBlocks();
+    const double dt_s =
+        std::chrono::duration<double>(now - last_frame).count();
+    if (fog_h >= 0.0f)
+    {
+      fog_min = std::min(fog_min, fog_h);
+      fog_max = std::max(fog_max, fog_h);
+      if (fog_prev >= 0.0f && dt_s > 1e-4)
+      {
+        const double rate = (fog_h - fog_prev) / dt_s;
+        fog_tv += std::fabs(fog_h - fog_prev);
+        fog_max_rate = std::max(fog_max_rate, std::fabs(rate));
+        fog_max_accel = std::max(fog_max_accel,
+                                 std::fabs(rate - fog_prev_rate) / dt_s);
+        fog_prev_rate = rate;
+      }
+      fog_prev = fog_h;
+    }
+  }
   const double frame_ms =
       std::chrono::duration<double, std::milli>(now - last_frame).count();
   last_frame = now;
@@ -1089,6 +1113,14 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   line["frame_ms_max"] = frame_ms_max;
   line["dirty_count"] = mesh.GetDirtyCount();
   line["async_in_flight"] = mesh.GetAsyncInFlightCount();
+  line["fog_horizon_min"] = fog_min < 1e8f ? fog_min : -1.0f;
+  line["fog_horizon_max"] = fog_max > -1e8f ? fog_max : -1.0f;
+  line["fog_horizon_tv"] = fog_tv;
+  line["fog_horizon_max_rate"] = fog_max_rate;
+  line["fog_horizon_max_accel"] = fog_max_accel;
+  fog_tv = fog_max_rate = fog_max_accel = 0.0;
+  fog_min = 1e9f;
+  fog_max = -1e9f;
   line["stream_candidates"] = st_candidates;
   line["stream_ring_blocked"] = st_ring_blocked;
   line["stream_async_queued"] = st_async_queued;

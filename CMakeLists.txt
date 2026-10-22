@@ -1424,6 +1424,11 @@ target_compile_definitions(fluid_mesh_faces_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_mesh_faces_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fog_range_smoother_test
+    src/Test/FogRangeSmootherTest.cpp)
+target_include_directories(fog_range_smoother_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(seam_absent_neighbor_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Render/Mesh/ChunkMeshSnapshot.cpp
@@ -2919,6 +2924,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   chunk_render_demand_test
   packed_quad_parity_test
   seam_absent_neighbor_test
+  fog_range_smoother_test
   gpu_extract_mesher_parity_test
 )
 foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
