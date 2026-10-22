@@ -436,6 +436,24 @@ bool AirTouchesLiquidBlock(const WorldGenContext &ctx, glm::ivec3 pos)
   return false;
 }
 
+/// Water above or beside the cell (water only below it is a legitimate pool
+/// surface inside a cave).
+bool AirTouchesLiquidSideOrAbove(const WorldGenContext &ctx, glm::ivec3 pos)
+{
+  static constexpr std::array<glm::ivec3, 5> kDirs = {
+      glm::ivec3(0, 1, 0), glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1)};
+  for (const glm::ivec3 &offset : kDirs)
+  {
+    const BlockId id = ctx.World.GetBlock(pos + offset);
+    if (id != BLOCK_AIR && ctx.Registry.IsLiquid(id))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
 {
   const int sea = ctx.Settings.SeaLevel;
@@ -466,6 +484,17 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
           if (!AllowsAquiferWater(aquifer_sampler ? &*aquifer_sampler : nullptr,
                                   pos, sea))
           {
+            // A dry aquifer pocket must not border water directly: that shows
+            // as a translucent water wall/ceiling from inside the sea. Seal
+            // the interface with a barrier (as the aquifer sampler's own
+            // Barrier class does) instead of leaving a bare water face.
+            if (ctx.Blocks.Stone != BLOCK_AIR && AirTouchesLiquidSideOrAbove(ctx, pos))
+            {
+              ctx.World.SetBlock(pos, ctx.Blocks.Stone);
+              ctx.World.SetFluidState(pos, FluidCellState{});
+              changed = true;
+              any = true;
+            }
             continue;
           }
           if (!AirTouchesLiquidBlock(ctx, pos))
@@ -735,16 +764,29 @@ bool TrimWaterSurfaceSpikesInChunk(WorldGenContext &ctx, int base_x, int base_z)
         continue;
       }
       int lower_neighbours = 0;
+      int overtopped_banks = 0;
       for (const glm::ivec3 &offset : kHoriz)
       {
         const glm::ivec3 n = pos + offset;
-        if (ctx.World.IsAir(n) &&
-            ctx.World.GetBlock(n - glm::ivec3(0, 1, 0)) == water)
+        if (!ctx.World.IsAir(n))
+        {
+          continue;
+        }
+        const BlockId below_n = ctx.World.GetBlock(n - glm::ivec3(0, 1, 0));
+        if (below_n == water)
         {
           ++lower_neighbours;
         }
+        else if (below_n != BLOCK_AIR && !ctx.Registry.IsLiquid(below_n) &&
+                 ctx.Registry.BlocksMovement(below_n))
+        {
+          ++overtopped_banks;
+        }
       }
-      if (lower_neighbours >= 3)
+      // River/lake water below sea level standing one block above the
+      // neighbouring bank is a free-standing water wall: lower it to the bank.
+      if (lower_neighbours >= 3 ||
+          (overtopped_banks >= 1 && surface_y <= ctx.Settings.SeaLevel - 2))
       {
         ctx.World.SetBlock(pos, BLOCK_AIR);
         ctx.World.SetFluidState(pos, FluidCellState{});

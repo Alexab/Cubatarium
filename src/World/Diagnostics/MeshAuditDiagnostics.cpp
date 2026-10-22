@@ -10,6 +10,7 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/World.h"
+#include "World/Lighting/LightUtil.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Mesh/WorldMeshService.h"
 
@@ -102,6 +103,13 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
   int total_expected = 0;
   int total_published_missing = 0;
   long internal_fluid_faces = 0, fluid_quads = 0;
+  // Water side faces open to air below sea level: "dams" of water around an
+  // air-filled basin, seen as translucent walls from inside the sea.
+  long sub_sea_side_walls = 0, sub_sea_side_wall_cells_deep = 0;
+  std::map<int, long> sub_sea_wall_by_y;
+  std::map<std::string, long> sub_sea_wall_kind;
+  json sub_sea_wall_samples = json::array();
+  const int audit_sea = world.GetProceduralSettings().SeaLevel;
   std::map<std::string, long> internal_fluid_by_neighbor_kind;
   json internal_fluid_samples = json::array();
   for (const glm::ivec3 &coord : coords)
@@ -246,6 +254,34 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
           outward[q.axis] = q.faceSign;
           const glm::ivec3 world_cell = coord * CHUNK_SIZE + cell;
           const BlockId neighbour = block_world.GetBlock(world_cell + outward);
+          if (neighbour == BLOCK_AIR && q.axis != 1 &&
+              world_cell.y < audit_sea - 1)
+          {
+            ++sub_sea_side_walls;
+            ++sub_sea_wall_by_y[world_cell.y];
+            {
+              const glm::ivec3 air_cell = world_cell + outward;
+              const bool water_above = registry.IsLiquid(
+                  block_world.GetBlock(air_cell + glm::ivec3(0, 1, 0)));
+              const bool water_below = registry.IsLiquid(
+                  block_world.GetBlock(air_cell - glm::ivec3(0, 1, 0)));
+              ++sub_sea_wall_kind[water_above ? (water_below ? "air_between_water"
+                                                             : "air_under_water_ceiling")
+                                              : (water_below ? "surface_step"
+                                                             : "air_pocket_other")];
+            }
+            if (sub_sea_wall_samples.size() < 10)
+            {
+              const glm::ivec3 air = world_cell + outward;
+              sub_sea_wall_samples.push_back(
+                  {{"water", {world_cell.x, world_cell.y, world_cell.z}},
+                   {"air", {air.x, air.y, air.z}},
+                   {"air_above_is", registry.GetTypeNameById(block_world.GetBlock(
+                                        air + glm::ivec3(0, 1, 0)))},
+                   {"air_below_is", registry.GetTypeNameById(block_world.GetBlock(
+                                        air - glm::ivec3(0, 1, 0)))}});
+            }
+          }
           if (neighbour != BLOCK_AIR && registry.IsLiquid(neighbour))
           {
             ++internal_fluid_faces;
@@ -715,6 +751,141 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
       out["liquid_submerged_nonsource"] = submerged_nonsource;
       out["liquid_submerged_nonsource_samples"] = ws;
     }
+    // Sky light just under the water surface (open sky above): zero there means
+    // the back side of the surface is rendered black (light not ready).
+    {
+      std::map<int, std::pair<long, long>> by_depth; // depth -> {cells, sky==0}
+      std::map<std::string, long> zero_kind;
+      json zero_samples = json::array();
+      json zero_profiles = json::array();
+      for (const glm::ivec3 &coord : coords)
+      {
+        const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        for (int z = 0; z < CHUNK_SIZE; ++z)
+        {
+          for (int y = 0; y < CHUNK_SIZE; ++y)
+          {
+            for (int x = 0; x < CHUNK_SIZE; ++x)
+            {
+              const BlockId id = chunk->GetBlockLocal(glm::ivec3(x, y, z));
+              if (id == BLOCK_AIR || !registry.IsLiquid(id))
+              {
+                continue;
+              }
+              const glm::ivec3 wp = coord * CHUNK_SIZE + glm::ivec3(x, y, z);
+              if (block_world.GetBlock(wp + glm::ivec3(0, 1, 0)) != BLOCK_AIR)
+              {
+                continue; // not a surface cell
+              }
+              // open sky above the surface?
+              bool open = true;
+              for (int sy = wp.y + 1; sy < wp.y + 24; ++sy)
+              {
+                if (block_world.GetBlock(glm::ivec3(wp.x, sy, wp.z)) != BLOCK_AIR)
+                {
+                  open = false;
+                  break;
+                }
+              }
+              if (!open)
+              {
+                continue;
+              }
+              for (int d = 0; d <= 3; ++d)
+              {
+                const glm::ivec3 cell = wp - glm::ivec3(0, d, 0);
+                if (!registry.IsLiquid(block_world.GetBlock(cell)))
+                {
+                  break;
+                }
+                const UChunk *cc = block_world.GetChunkManager().GetChunk(
+                    UChunkManager::WorldToChunk(cell));
+                if (!cc)
+                {
+                  break;
+                }
+                const uint8_t packed =
+                    cc->GetLightPackedLocal(UChunkManager::WorldToLocal(cell));
+                int cam_dist_chunks = 99;
+                if (const auto cam = world.GetCurrentUserCamera())
+                {
+                  const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
+                      glm::ivec3(glm::floor(cam->GetPosition())));
+                  const glm::ivec3 cell_chunk = UChunkManager::WorldToChunk(cell);
+                  cam_dist_chunks = std::max(std::abs(cell_chunk.x - cam_chunk.x),
+                                             std::abs(cell_chunk.z - cam_chunk.z));
+                }
+                if (cam_dist_chunks > 4)
+                {
+                  break; // outside the visible radius (keep shell)
+                }
+                auto &slot = by_depth[d];
+                ++slot.first;
+                if (UnpackSky(packed) == 0)
+                {
+                  ++slot.second;
+                  if (d == 0)
+                  {
+                    const glm::ivec3 cc_coord = UChunkManager::WorldToChunk(cell);
+                    const bool never_lit = cc->GetLightFieldRevision() <= 1;
+                    const bool pending = world.IsPendingLightBeforeMesh(
+                        glm::ivec2(cc_coord.x, cc_coord.z));
+                    ++zero_kind[std::string(never_lit ? "never_lit" : "lit_once") +
+                                (pending ? "+pending" : "+settled")];
+                    if (zero_samples.size() < 8)
+                    {
+                      json profile = json::array();
+                      for (int dy = 1; dy <= 20; dy += 1)
+                      {
+                        const glm::ivec3 pc = cell + glm::ivec3(0, dy, 0);
+                        const UChunk *pch = block_world.GetChunkManager().GetChunk(
+                            UChunkManager::WorldToChunk(pc));
+                        profile.push_back(pch ? UnpackSky(pch->GetLightPackedLocal(
+                                                   UChunkManager::WorldToLocal(pc)))
+                                              : -1);
+                      }
+                      json above_chunks = json::array();
+                      for (int k = 1; k <= 3; ++k)
+                      {
+                        const UChunk *ac = block_world.GetChunkManager().GetChunk(
+                            cc_coord + glm::ivec3(0, k, 0));
+                        above_chunks.push_back(ac ? int(ac->GetLightFieldRevision())
+                                                  : -1);
+                      }
+                      zero_profiles.push_back({{"cell", {cell.x, cell.y, cell.z}},
+                                               {"sky_up_1_20", profile},
+                                               {"light_rev_chunks_above", above_chunks}});
+                      zero_samples.push_back(
+                          {{"cell", {cell.x, cell.y, cell.z}},
+                           {"light_rev", cc->GetLightFieldRevision()},
+                           {"neighbors_sky",
+                            {UnpackSky(cc->GetLightPackedLocal(
+                                 UChunkManager::WorldToLocal(cell + glm::ivec3(1, 0, 0)) )),
+                             UnpackSky(cc->GetLightPackedLocal(
+                                 UChunkManager::WorldToLocal(cell + glm::ivec3(0, 1, 0)) ))}}});
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      json depth_json = json::object();
+      for (const auto &entry : by_depth)
+      {
+        depth_json[std::to_string(entry.first)] = {{"cells", entry.second.first},
+                                                   {"sky_zero", entry.second.second}};
+      }
+      out["water_surface_sky_light_by_depth"] = depth_json;
+      out["water_surface_sky_zero_kind"] = zero_kind;
+      out["water_surface_sky_zero_samples"] = zero_samples;
+      out["water_surface_sky_zero_profiles"] = zero_profiles;
+    }
     // Lily pad placement: it must rest on the water surface (water below,
     // air above, no fluid in its own cell).
     {
@@ -809,6 +980,10 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
     out["waterlogged_exposed_samples"] = wl_samples;
     out["sea_level"] = sea;
   }
+  out["sub_sea_water_side_walls"] = sub_sea_side_walls;
+  out["sub_sea_water_side_walls_by_y"] = sub_sea_wall_by_y;
+  out["sub_sea_water_side_walls_by_kind"] = sub_sea_wall_kind;
+  out["sub_sea_water_side_wall_samples"] = sub_sea_wall_samples;
   out["fluid_quads"] = fluid_quads;
   out["internal_fluid_faces"] = internal_fluid_faces;
   out["internal_fluid_faces_by_kind"] = internal_fluid_by_neighbor_kind;
