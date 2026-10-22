@@ -215,6 +215,9 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
     const UChunk *neighbor_chunk =
         world.GetChunkManager().GetChunk(neighbor_coord);
     const bool neighbor_loaded = neighbor_chunk != nullptr;
+    const bool known_world_exterior =
+        !neighbor_loaded && ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(
+                                world, neighbor_coord, axis, sign);
     bool neighbor_visually_drawable = neighbor_loaded;
     if (neighbor_loaded && NeighborDrawableFn_)
     {
@@ -251,15 +254,18 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
         }
         snap.shellBlocks[static_cast<size_t>(flat)] = raw;
         snap.shellNeighborState[static_cast<size_t>(flat)] =
-            static_cast<uint8_t>(ClassifyShellCell(
-                neighbor_loaded, raw, neighbor_visually_drawable));
+            static_cast<uint8_t>(
+                known_world_exterior
+                    ? NeighborLoadState::Air
+                    : ClassifyShellCell(neighbor_loaded, raw,
+                                        neighbor_visually_drawable));
         snap.shellFluid[static_cast<size_t>(flat)] =
             PackFluidCellState(world.GetFluidState(worldPos));
       }
     }
     // Same contract as full Capture: Missing only for true unload. SoftDefer /
     // !drawable stays in ClassifyShellCell (Unlit), not overlay Missing.
-    if (!neighbor_loaded)
+    if (!neighbor_loaded && !known_world_exterior)
       missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
     else
       missing_faces = static_cast<uint8_t>(missing_faces & ~(1u << face));

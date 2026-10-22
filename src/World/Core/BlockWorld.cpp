@@ -37,7 +37,7 @@ void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
   Chunks.SetBlock(pos, Id);
   if (FluidDefinitions != nullptr)
   {
-    if (const BlockDefinition *def = FluidDefinitions->GetById(Id))
+    if (const BlockDefinition *def = FluidDefinitions->GetByIdFast(Id))
     {
       if (def->Physics.IsLiquid)
       {
@@ -70,7 +70,7 @@ void UBlockWorld::SetBlockInChunk(UChunk &chunk, glm::ivec3 pos, BlockId Id)
   chunk.SetBlockLocal(local, Id);
   if (FluidDefinitions != nullptr)
   {
-    if (const BlockDefinition *def = FluidDefinitions->GetById(Id))
+    if (const BlockDefinition *def = FluidDefinitions->GetByIdFast(Id))
     {
       if (def->Physics.IsLiquid)
       {

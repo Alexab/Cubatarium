@@ -132,6 +132,75 @@ bool AppendJsonLine(const std::filesystem::path &path, const json &record)
   return out.good();
 }
 
+const char *BlockReasonName(ColumnRenderableState::BlockReason reason)
+{
+  switch (reason)
+  {
+  case ColumnRenderableState::BlockReason::None:
+    return "none";
+  case ColumnRenderableState::BlockReason::PendingLight:
+    return "pending_light";
+  case ColumnRenderableState::BlockReason::StickyRemesh:
+    return "sticky_remesh";
+  case ColumnRenderableState::BlockReason::StaleDark:
+    return "stale_dark";
+  case ColumnRenderableState::BlockReason::MissingMesh:
+    return "missing_mesh";
+  case ColumnRenderableState::BlockReason::GpuInFlight:
+    return "gpu_in_flight";
+  case ColumnRenderableState::BlockReason::NotLoaded:
+    return "not_loaded";
+  case ColumnRenderableState::BlockReason::NotReadyState:
+    return "not_ready_state";
+  }
+  return "unknown";
+}
+
+/// Per-chunk draw-gate facts: why a chunk may be invisible although its voxels
+/// exist (phase-0 diagnostics for see-through holes).
+json ChunkDrawGateJson(const UWorld &world, glm::ivec3 chunk_coord)
+{
+  const UBlockWorld &block_world = world.GetBlockWorld();
+  const UWorldMeshService &mesh = world.GetMeshService();
+  const UChunk *chunk = block_world.GetChunkManager().GetChunk(chunk_coord);
+  json out;
+  out["chunk_coord"] = Vec3Json(chunk_coord);
+  out["loaded"] = chunk != nullptr;
+  out["air_only"] = chunk ? chunk->IsAirOnly() : false;
+  out["non_air_count"] = chunk ? chunk->GetNonAirCount() : 0;
+  out["has_greedy_mesh"] = mesh.HasGreedyMesh(chunk_coord);
+  out["drawable_greedy_mesh"] = mesh.HasDrawableGreedyMesh(chunk_coord);
+  out["gpu_resident"] = mesh.GetCache().QueryGreedyGpuResident(chunk_coord);
+  out["mesh_dirty"] = mesh.IsChunkMeshDirty(chunk_coord);
+  out["mesh_revision"] = mesh.GetChunkMeshRevision(chunk_coord);
+  out["async_inflight"] = mesh.HasInflightMeshBuild(chunk_coord);
+  out["pending_gpu_apply"] = mesh.IsPendingGpuApply(chunk_coord);
+  out["gpu_extract_in_flight"] = mesh.IsGpuExtractInFlight(chunk_coord);
+  out["softdefer_held"] = mesh.IsSoftDeferHeld(chunk_coord);
+  out["defer_mesh_until_lit"] =
+      mesh.GetCache().IsDeferMeshUntilLit(chunk_coord);
+  out["meshed_light_revision"] =
+      mesh.GetCache().GetMeshedLightRevision(chunk_coord);
+  out["pending_light_before_mesh"] =
+      world.IsPendingLightBeforeMeshSlice(chunk_coord);
+  out["provisional_light_preview"] =
+      world.ShouldDrawProvisionalLightPreview(chunk_coord);
+  out["slice_render_ready"] = world.IsChunkSliceRenderReady(chunk_coord);
+  json overlay = json::array();
+  for (int face = 0; face < 6; ++face)
+  {
+    overlay.push_back(mesh.HasActiveBoundaryOverlayFace(chunk_coord, face));
+  }
+  out["boundary_overlay_missing_face"] = overlay;
+  const ColumnRenderableState column = world.GetColumnRenderableState(
+      glm::ivec2(chunk_coord.x, chunk_coord.z));
+  out["column"] = json{{"draw_ok", column.draw_ok},
+                       {"reason", BlockReasonName(column.reason)},
+                       {"has_repair_ticket", column.has_repair_ticket},
+                       {"stage", static_cast<int>(column.stage)}};
+  return out;
+}
+
 } // namespace
 
 std::filesystem::path UBlockInspectDiagnostics::DefaultLogPath()
@@ -253,6 +322,19 @@ int UBlockInspectDiagnostics::CaptureAndAppend(const UWorld &world,
       {"dirty_chunks_pending", mesh.GetDirtyCount()},
       {"async_in_flight_total", mesh.GetAsyncInFlightCount()},
       {"global_mesh_revision", mesh.GetMeshRevision()}};
+  {
+    json gate;
+    gate["self"] = ChunkDrawGateJson(world, chunk_coord);
+    json neighbors = json::array();
+    static constexpr glm::ivec3 kFaceOffsets[6] = {
+        {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+    for (const glm::ivec3 &offset : kFaceOffsets)
+    {
+      neighbors.push_back(ChunkDrawGateJson(world, chunk_coord + offset));
+    }
+    gate["face_neighbors"] = neighbors;
+    record["draw_gate"] = gate;
+  }
   record["texture"] = json{{"texture_map_has_entry", texture_map_has_entry},
                            {"texture_gl_id", texture_gl_id}};
   record["suspected_causes"] = suspected_causes;

@@ -150,8 +150,12 @@ bool IsWorldColumnSourceTraceEnabled()
 
 bool IsWorldColumnSaveTraceEnabled()
 {
-  const char *value = std::getenv("CUBA_WORLD_COLUMN_SAVE_TRACE");
-  return value && value[0] == '1';
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_WORLD_COLUMN_SAVE_TRACE");
+    return value && value[0] == '1';
+  }();
+  return enabled;
 }
 
 bool IsStreamingDetailTraceEnabled()

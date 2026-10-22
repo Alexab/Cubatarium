@@ -474,6 +474,59 @@ public:
   int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                             int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
+  /// Budgeted round-robin sweep: any published mesh whose recorded geometry
+  /// input stamps no longer match the resident chunks (and that has no pending
+  /// rebuild) is re-dirtied. Guarantees eventual consistency even if an
+  /// invalidation event was dropped (stale meshes = see-through holes).
+  void ReconcilePublishedMeshInputs(const UBlockWorld &world, int max_checks);
+  uint64_t GetReconcileRedirtyCount() const { return ReconcileRedirtyN; }
+  /// World used by the redundant-repair guard (set once by UWorld).
+  void SetRepairGuardWorld(const UBlockWorld *world) { RepairGuardWorld = world; }
+  /// True when the drawable published mesh was baked from exactly the current
+  /// geometry inputs and light (content/incarnation of center + 6 face
+  /// neighbors, light revision, neighbor light halos): rebuilding it would
+  /// reproduce the same vertices.
+  bool IsPublishedMeshCurrentForInputs(glm::ivec3 chunk_coord,
+                                       const UBlockWorld &world) const;
+  uint64_t GetRedundantRepairSkipCount() const { return RedundantRepairSkipN; }
+  /// Content revision of the center chunk the published mesh was built from
+  /// (0 when unknown). Diagnostics: edit-visibility tracing.
+  uint64_t GetPublishedCenterContentRev(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    return (it != GreedyCache.end() && it->second.PublishedGeomStampsValid)
+               ? it->second.PublishedGeomStamps[0].content
+               : 0;
+  }
+  /// Content revision of what is actually drawn: the live GPU slot when the
+  /// chunk is GPU-resident, otherwise the published CPU mesh.
+  uint64_t GetDrawnCenterContentRev(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    if (it == GreedyCache.end())
+    {
+      return 0;
+    }
+    if (it->second.GpuResident)
+    {
+      return it->second.GpuBoundContentRev;
+    }
+    return it->second.PublishedGeomStampsValid
+               ? it->second.PublishedGeomStamps[0].content
+               : 0;
+  }
+  uint32_t GetPublishCount(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    return it != GreedyCache.end() ? it->second.PublishCount : 0;
+  }
+  /// Diagnostics only: published CPU batches of a chunk (nullptr if none).
+  const std::vector<GreedyMeshBatch> *DebugGetChunkBatches(
+      glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    return it != GreedyCache.end() ? &it->second.batches : nullptr;
+  }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   size_t GetGreedyVertexCount(glm::ivec3 chunk_coord) const
   {
@@ -615,6 +668,11 @@ public:
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                               const UBlockWorld &world,
                               StaleDarkWitness *witness = nullptr) const;
+  bool ChunkHasStaleDarkFacesUncached(glm::ivec3 chunk_coord,
+                                      const UBlockWorld &world,
+                                      StaleDarkWitness *witness) const;
+  mutable std::unordered_map<glm::ivec3, std::pair<uint64_t, bool>, IVec3Hash>
+      StaleDarkMemo_;
   /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
   /// Inline like GetMeshPublishRevs — GreedyGpuPublication links without
   /// ChunkMeshCache.cpp (publication_audit / greedy_vertex_pool_production_test).
@@ -1177,7 +1235,18 @@ private:
     /// S4 versioned neighbor-missing overlay (independent of stamp).
     BoundaryOverlayState BoundaryOverlay{};
     std::vector<GpuBlockDrawRange> GpuBlockRanges;
+    /// Geometry inputs (center + 6 face neighbors, content/incarnation only)
+    /// this mesh was built from; used by ReconcilePublishedMeshInputs to heal
+    /// any lost invalidation (level-triggered check, not event-triggered).
+    std::array<ChunkInputStamp, 7> PublishedGeomStamps{};
+    bool PublishedGeomStampsValid{false};
+    uint32_t PublishCount{0};
+    /// Center content revision baked into the live GPU packed slot (0 unknown).
+    uint64_t GpuBoundContentRev{0};
   };
+  static void RecordPublishedGeomStamps(
+      ChunkGreedyMesh &mesh,
+      const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps);
   struct PendingGpuApply
   {
     enum class Phase : uint8_t
@@ -1213,7 +1282,9 @@ private:
       bool has_source_light_revision = false,
       BoundaryOverlayState boundary_overlay = {},
       bool accepted_geom_stale = false,
-      JobStageSpan stage_trace = {});
+      JobStageSpan stage_trace = {},
+      const std::array<ChunkInputStamp, kChunkMeshInputStampCount>
+          *source_stamps = nullptr);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);
@@ -1413,6 +1484,15 @@ private:
   uint64_t MeshApplyStaleGeomAcceptedCount{0};
   /// N04 H4: Dirty refresh queued after accepting light/geom stale drawable.
   uint64_t MeshApplyStaleAcceptedRefreshCount{0};
+  /// Reconciliation: published meshes found built from outdated geometry
+  /// inputs with no pending work, re-dirtied by the periodic sweep.
+  uint64_t ReconcileRedirtyN{0};
+  uint64_t RedundantRepairSkipN{0};
+  const UBlockWorld *RepairGuardWorld{nullptr};
+  uint64_t ReconcileFrame{0};
+  size_t ReconcileCursor{0};
+  std::vector<glm::ivec3> ReconcileKeys;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ReconcileLastMarkFrame;
   /// SoT 100303: accepted-stale would have held empty spoof — publish instead.
   uint64_t I3tHoldEmptySpoofN{0};
   /// I3t: last ApplyMeshResult held prior draw (not a Completed publish).

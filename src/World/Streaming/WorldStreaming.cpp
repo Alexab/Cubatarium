@@ -102,28 +102,25 @@ constexpr double kAdaptiveRdHysteresisSec = 2.5;
 // the pulled horizon until readiness has stayed clear long enough to avoid
 // exposing those short gaps as a moving fog boundary.
 constexpr double kFogDebtClearGraceSec = 4.0;
-constexpr float kFogHorizonContractBlocksPerSec = 72.0f;
-constexpr float kFogHorizonExpandBlocksPerSec = 28.0f;
-
-float MoveFogRangeToward(float current, float target, float max_delta)
-{
-  if (current < target)
-  {
-    return std::min(target, current + max_delta);
-  }
-  return std::max(target, current - max_delta);
-}
 
 bool IsWorldColumnSourceTraceEnabled()
 {
-  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
-  return value && value[0] == '1';
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+    return value && value[0] == '1';
+  }();
+  return enabled;
 }
 
 bool IsStreamerUnloadTraceEnabled()
 {
-  const char *value = std::getenv("CUBA_STREAMER_UNLOAD_TRACE");
-  return value && value[0] == '1';
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_STREAMER_UNLOAD_TRACE");
+    return value && value[0] == '1';
+  }();
+  return enabled;
 }
 
 void LogWorldColumnSource(const char *source, const char *outcome,
@@ -2411,7 +2408,7 @@ void UWorldStreaming::RefreshStreamingPressure(
   pt.PrepRefreshStickyMs = lap_ms(sticky_t0);
   if (pt.PrepRefreshRingResyncMs >= 5.0)
   {
-    const char *detail_trace_env =
+    static const char *const detail_trace_env =
         std::getenv("CUBA_STREAMING_DETAIL_TRACE");
     if (detail_trace_env && detail_trace_env[0] == '1')
     {
@@ -6897,6 +6894,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       {
         FogPresentedHorizonBlocks = target_horizon;
         FogPresentedStartBlocks = target_start;
+        FogHorizonSmoother = {target_horizon, 0.0f};
+        FogStartSmoother = {target_start, 0.0f};
       }
       else
       {
@@ -6907,18 +6906,16 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                       .count();
         // A suspend/resume or debugger pause must not cause a fog teleport.
         delta_sec = std::clamp(delta_sec, 0.0, 0.1);
-        const float horizon_rate = target_horizon < FogPresentedHorizonBlocks
-                                       ? kFogHorizonContractBlocksPerSec
-                                       : kFogHorizonExpandBlocksPerSec;
-        const float start_rate = target_start < FogPresentedStartBlocks
-                                     ? kFogHorizonContractBlocksPerSec
-                                     : kFogHorizonExpandBlocksPerSec;
-        FogPresentedHorizonBlocks = MoveFogRangeToward(
-            FogPresentedHorizonBlocks, target_horizon,
-            horizon_rate * static_cast<float>(delta_sec));
-        FogPresentedStartBlocks = MoveFogRangeToward(
-            FogPresentedStartBlocks, target_start,
-            start_rate * static_cast<float>(delta_sec));
+        // Asymmetric second-order smoothing (see FogRangeSmoother.h): the wall
+        // eases in/out instead of snapping, contracts moderately fast and
+        // expands slowly.
+        const FogRangeSmootherParams smoother_params{};
+        FogPresentedHorizonBlocks = StepFogRangeSmoother(
+            FogHorizonSmoother, target_horizon,
+            static_cast<float>(delta_sec), smoother_params);
+        FogPresentedStartBlocks = StepFogRangeSmoother(
+            FogStartSmoother, target_start, static_cast<float>(delta_sec),
+            smoother_params);
       }
       // Never fog past geometry that the current visual render radius can draw.
       FogPresentedHorizonBlocks = std::min(
@@ -6927,6 +6924,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       FogPresentedStartBlocks = std::clamp(
           FogPresentedStartBlocks, 16.0f,
           std::max(16.0f, FogPresentedHorizonBlocks * 0.85f));
+      // Keep the filter state on what is actually presented (the clamps above
+      // can lower it when the visual render radius shrinks).
+      FogHorizonSmoother.Value = FogPresentedHorizonBlocks;
+      FogStartSmoother.Value = FogPresentedStartBlocks;
       FogPresentationLastUpdate = now;
       world.SetPresentedFogRange(FogPresentedStartBlocks,
                                  FogPresentedHorizonBlocks);

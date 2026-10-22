@@ -322,6 +322,7 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
         std::make_unique<UBlockRegistry>(TextureCubeInstance, BlockDefinitions);
     Collision.SetBlockRegistry(BlockRegistry.get());
   }
+  MeshService->GetCache().SetRepairGuardWorld(&BlockWorld);
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
   Environment.Initialize();
@@ -721,6 +722,19 @@ void UWorld::TickEnvironment(float dtSeconds)
   }
   EnvironmentSettingsData.WeatherRuntime.WeatherSimulationTimeSec +=
       static_cast<double>(dtSeconds);
+
+  // Harness/diagnostics: pin the time of day (0..1, e.g. 0.5 = noon-ish) so
+  // captured frames are comparable. In game use `time set <0..1>` and
+  // `time freeze`.
+  {
+    static const char *const fixed_time_env = std::getenv("CUBA_FIXED_TIME");
+    if (fixed_time_env && !FixedTimeApplied)
+    {
+      SetTimeOfDayNormalized(std::strtof(fixed_time_env, nullptr));
+      SetTimeFrozen(true);
+      FixedTimeApplied = true;
+    }
+  }
 
   if (!EnvironmentStateData.TimeFrozen)
   {
@@ -1193,9 +1207,33 @@ void UWorld::UpdateChunkWeatherState(glm::ivec3 chunk_coord,
   chunk->SetWeatherState(wetness, weather_time);
 }
 
-void UWorld::BuildWeatherCoverageField(
-    const glm::vec2 &center, float world_size, int resolution,
-    std::vector<uint8_t> &out_pixels) const
+UWorld::WeatherCoverageFieldRequest
+UWorld::MakeWeatherCoverageFieldRequest() const
+{
+  WeatherCoverageFieldRequest request;
+  request.seed = WorldSeed;
+  request.simulation_time_sec =
+      EnvironmentSettingsData.WeatherRuntime.FieldSimulationTimeSec;
+  if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
+  {
+    request.uniform = true;
+    request.uniform_value = static_cast<uint8_t>(std::clamp(
+        std::lround(Clamp01(EnvironmentStateData.CloudCoverageOverride) * 255.0f),
+        0l, 255l));
+  }
+  else if (!IsWeatherAutoEnabled() ||
+           EnvironmentSettingsData.WeatherRuntime.ManualOverride)
+  {
+    request.uniform = true;
+    request.uniform_value = static_cast<uint8_t>(std::clamp(
+        std::lround(EnvironmentStateData.CloudCoverage * 255.0f), 0l, 255l));
+  }
+  return request;
+}
+
+void UWorld::ComputeWeatherCoverageField(
+    const WeatherCoverageFieldRequest &request, const glm::vec2 &center,
+    float world_size, int resolution, std::vector<uint8_t> &out_pixels)
 {
   if (resolution <= 0 || !std::isfinite(world_size) || world_size <= 0.0f)
   {
@@ -1203,26 +1241,13 @@ void UWorld::BuildWeatherCoverageField(
     return;
   }
   out_pixels.resize(static_cast<size_t>(resolution) * resolution);
-  if (EnvironmentStateData.CloudCoverageOverride >= 0.0f)
+  if (request.uniform)
   {
-    const uint8_t coverage = static_cast<uint8_t>(std::clamp(
-        std::lround(Clamp01(EnvironmentStateData.CloudCoverageOverride) * 255.0f),
-        0l, 255l));
-    std::fill(out_pixels.begin(), out_pixels.end(), coverage);
+    std::fill(out_pixels.begin(), out_pixels.end(), request.uniform_value);
     return;
   }
-  if (!IsWeatherAutoEnabled() ||
-      EnvironmentSettingsData.WeatherRuntime.ManualOverride)
-  {
-    const uint8_t coverage = static_cast<uint8_t>(std::clamp(
-        std::lround(EnvironmentStateData.CloudCoverage * 255.0f), 0l, 255l));
-    std::fill(out_pixels.begin(), out_pixels.end(), coverage);
-    return;
-  }
-
-  WeatherFrontField field(WorldSeed);
-  field.SetSimulationTimeSec(
-      EnvironmentSettingsData.WeatherRuntime.FieldSimulationTimeSec);
+  WeatherFrontField field(request.seed);
+  field.SetSimulationTimeSec(request.simulation_time_sec);
   const float step = world_size / static_cast<float>(resolution);
   const float half = world_size * 0.5f;
   for (int y = 0; y < resolution; ++y)
@@ -1238,6 +1263,14 @@ void UWorld::BuildWeatherCoverageField(
                                           0l, 255l));
     }
   }
+}
+
+void UWorld::BuildWeatherCoverageField(
+    const glm::vec2 &center, float world_size, int resolution,
+    std::vector<uint8_t> &out_pixels) const
+{
+  ComputeWeatherCoverageField(MakeWeatherCoverageFieldRequest(), center,
+                              world_size, resolution, out_pixels);
 }
 
 void UWorld::RebuildAllLightingDirtyMeshes()
@@ -3252,9 +3285,25 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   const bool light_repair_pending = IsPendingLightBeforeMesh(column) ||
                                     demand_owns_light_repair ||
                                     unsettled_repair_owned;
-  if (!light_repair_pending || settled_mesh_light_current)
+  static const bool old_preview_policy =
+      std::getenv("CUBA_PREVIEW_OLD_POLICY") != nullptr;
+  if (old_preview_policy && !light_repair_pending)
   {
     return false;
+  }
+  if (settled_mesh_light_current)
+  {
+    return false;
+  }
+  if (!light_repair_pending)
+  {
+    // A drawable with zero-light faces and no settled matching light image
+    // used to fall through to the hide gate in IsChunkSliceRenderReady, which
+    // turned retained meshes (and every dig/place remesh of them) into
+    // see-through holes whenever no repair owner was visible. An ambient
+    // preview is strictly better than a hole, and the preview flag also makes
+    // the slice request its own relight (provisional_preview_needs_lighting).
+    return true;
   }
 
   // PendingLight and its FIFO key are column-scoped, while Capture advances
@@ -3758,16 +3807,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       saw_gpu_inflight = true;
       continue;
     }
-    bool any_solid = false;
-    for (const BlockId block : chunk->GetData())
-    {
-      if (block != BLOCK_AIR)
-      {
-        any_solid = true;
-        break;
-      }
-    }
-    if (!any_solid)
+    // O(1) maintained counter instead of scanning 4096 voxels per call.
+    if (chunk->IsAirOnly())
     {
       continue;
     }
@@ -3928,7 +3969,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   }
   ++UnfinishedVisualCache.prep_calls_n;
   auto &cache = UnfinishedVisualCache;
-  const char *detail_trace_env = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+  static const char *const detail_trace_env = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
   const bool detail_trace = detail_trace_env && detail_trace_env[0] == '1';
   const auto detail_trace_started = std::chrono::steady_clock::now();
   auto note_detail_trace = [&](const char *path, std::size_t work_n,
@@ -4326,8 +4367,9 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     constexpr int kDefaultFocusSliceTracePerState = 12;
     constexpr long kMaxFocusSliceTracePerState = 64;
     int focus_slice_trace_per_state = kDefaultFocusSliceTracePerState;
-    if (const char *trace_cap_env =
-            std::getenv("CUBA_FOCUS_SLICE_TRACE_PER_STATE"))
+    static const char *const trace_cap_env_cached =
+        std::getenv("CUBA_FOCUS_SLICE_TRACE_PER_STATE");
+    if (const char *trace_cap_env = trace_cap_env_cached)
     {
       char *end = nullptr;
       const long requested = std::strtol(trace_cap_env, &end, 10);
@@ -6247,7 +6289,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
 void UWorld::KickUnfinishedVisualRemesh(int max_n)
 {
   // A37 H6: symptom Kick off by default — use AdmitUnfinishedVisualDemand.
-  if (const char *env = std::getenv("CUBA_KICK_UNFINISHED"))
+  static const char *const kick_env = std::getenv("CUBA_KICK_UNFINISHED");
+  if (const char *env = kick_env)
   {
     if (!(env[0] == '1' || env[0] == 't' || env[0] == 'T'))
     {
@@ -14845,8 +14888,34 @@ bool UWorld::HasNearbyFluidSurface(glm::ivec3 cameraBlock,
   {
     return false;
   }
-  return HasFluidSurfaceNear(BlockWorld, *BlockRegistry, cameraBlock.x,
-                             cameraBlock.z, cameraBlock.y, radiusBlocks);
+  // Called 4+ times per frame with the same arguments (fog pass, streaming
+  // pressure, mesh emerge, ...); every call scans a column grid through the
+  // block registry (~7% of the main thread). Memoize per streaming epoch.
+  struct Memo
+  {
+    bool valid{false};
+    const UWorld *owner{nullptr};
+    uint64_t epoch{0};
+    glm::ivec3 block{0};
+    int radius{0};
+    bool value{false};
+  };
+  thread_local Memo memo[4];
+  thread_local size_t next_slot = 0;
+  for (const Memo &entry : memo)
+  {
+    if (entry.valid && entry.owner == this && entry.epoch == StreamingFrameEpoch &&
+        entry.block == cameraBlock && entry.radius == radiusBlocks)
+    {
+      return entry.value;
+    }
+  }
+  const bool value =
+      HasFluidSurfaceNear(BlockWorld, *BlockRegistry, cameraBlock.x,
+                          cameraBlock.z, cameraBlock.y, radiusBlocks);
+  memo[next_slot++ % 4] = {true, this, StreamingFrameEpoch, cameraBlock,
+                           radiusBlocks, value};
+  return value;
 }
 
 bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const

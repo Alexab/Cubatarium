@@ -8,6 +8,8 @@
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <vector>
 
 namespace cutum
 {
@@ -207,6 +209,33 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
     return;
   }
 
+  // Terrain height is the expensive part of the lowland fade (five lookups per
+  // river column, most shared with neighbours). Memoise it over the chunk plus
+  // the 3-block fade reach so each height is evaluated once.
+  constexpr int kReach = 3;
+  constexpr int kSpan = CHUNK_SIZE + 2 * kReach;
+  std::vector<int> surface_cache(static_cast<size_t>(kSpan) * kSpan,
+                                 std::numeric_limits<int>::min());
+  const ValleySurfaceYCallback cached_surface_y =
+      get_surface_y
+          ? ValleySurfaceYCallback(
+                [&](int wx, int wz) -> int
+                {
+                  const int ix = wx - (base_x - kReach);
+                  const int iz = wz - (base_z - kReach);
+                  if (ix < 0 || iz < 0 || ix >= kSpan || iz >= kSpan)
+                  {
+                    return get_surface_y(wx, wz);
+                  }
+                  int &slot = surface_cache[static_cast<size_t>(iz) * kSpan + ix];
+                  if (slot == std::numeric_limits<int>::min())
+                  {
+                    slot = get_surface_y(wx, wz);
+                  }
+                  return slot;
+                })
+          : ValleySurfaceYCallback();
+
   for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {
     for (int lx = 0; lx < CHUNK_SIZE; ++lx)
@@ -220,7 +249,7 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
         continue;
       }
       const int column_surface_y =
-          LocalSurfaceY(wx, wz, sea_level, get_surface_y);
+          LocalSurfaceY(wx, wz, sea_level, cached_surface_y);
       const float moisture = SampleClimate(wx, wz, seed).moisture;
       int column_depth =
           std::max(1, static_cast<int>(static_cast<float>(params.maxDepth) *
@@ -230,7 +259,7 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
         column_depth = static_cast<int>(
             static_cast<float>(column_depth) *
             ValleyLowlandFade(wx, wz, column_surface_y, sea_level,
-                              get_surface_y));
+                              cached_surface_y));
         if (column_depth <= 0)
         {
           continue;

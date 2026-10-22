@@ -46,6 +46,7 @@ uniform float uEnvSkyLightScale;
 uniform float uEnvLightDebug;
 uniform float uEnvLightDebugMode;
 uniform float uLightPreviewOverride;
+uniform float uLightPreviewFade;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
 uniform vec2 uFluidSurfaceOrigin;
@@ -256,9 +257,22 @@ void main()
     float lit = clamp(max(skyLit, blockLit), 0.0, 1.0);
     // Unsettled first meshes use an explicitly marked ambient presentation
     // until the light solver publishes a replacement. Light debug remains raw.
+    // Upward faces (grass tops, water surfaces) are almost always open to the
+    // sky, so their provisional level follows the daylight instead of the
+    // generic 0.42 floor: an unlit ocean tile used to read as a dark navy
+    // rectangle next to lit water, then jump when its light published.
+    float previewFloor = (vFaceIndex == 4)
+        ? mix(0.42, 0.80, daySky)
+        : 0.42;
     if ((vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
         uEnvLightDebugMode <= 0.5) {
-        lit = max(lit, 0.42);
+        lit = max(lit, previewFloor);
+    } else if (uLightPreviewFade > 0.001 && uEnvLightDebugMode <= 0.5) {
+        // The chunk just left the ambient preview: ease from the preview level
+        // to the real light instead of snapping (visible light blink).
+        // Ease only the dark-floor part: bright meshes were never raised by the
+        // preview, so they must not be pulled down to the floor here.
+        lit = mix(lit, max(lit, previewFloor), clamp(uLightPreviewFade, 0.0, 1.0));
     }
     FragColor.rgb *= lit;
     if (uEnvLightDebugMode > 0.5) {

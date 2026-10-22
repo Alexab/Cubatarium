@@ -417,18 +417,17 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
             }
             GreedyQuad q;
             q.axis = axis;
-            q.slice = (axis == 0 ? x : (axis == 1 ? y : z)) + (sign > 0 ? 1 : 0);
-            q.u = (axis == 0) ? z : x;
-            q.v = (axis == 1) ? z : y;
+            // UGreedyMesher convention: slice = voxel coordinate; u/v = (axis+1)%3,(axis+2)%3.
+            q.slice = (axis == 0 ? x : (axis == 1 ? y : z));
             if (axis == 0)
             {
-              q.u = z;
-              q.v = y;
+              q.u = y;
+              q.v = z;
             }
             else if (axis == 1)
             {
-              q.u = x;
-              q.v = z;
+              q.u = z;
+              q.v = x;
             }
             else
             {
@@ -601,16 +600,16 @@ DecodeFaceMasks(const ChunkMeshSnapshot &snap, UBlockRegistry &registry,
       }
       GreedyQuad q;
       q.axis = axis;
-      q.slice = (axis == 0 ? x : (axis == 1 ? y : z)) + (sign > 0 ? 1 : 0);
+      q.slice = (axis == 0 ? x : (axis == 1 ? y : z)); // voxel coordinate
       if (axis == 0)
       {
-        q.u = z;
-        q.v = y;
+        q.u = y;
+        q.v = z;
       }
       else if (axis == 1)
       {
-        q.u = x;
-        q.v = z;
+        q.u = z;
+        q.v = x;
       }
       else
       {

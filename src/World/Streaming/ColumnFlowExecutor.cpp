@@ -20,6 +20,7 @@
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 
+#include <cstdlib>
 #include <algorithm>
 #include <chrono>
 #include <cmath>

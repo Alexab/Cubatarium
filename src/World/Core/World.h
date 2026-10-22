@@ -1053,6 +1053,19 @@ public:
   void BuildWeatherCoverageField(const glm::vec2 &center, float world_size,
                                  int resolution,
                                  std::vector<uint8_t> &out_pixels) const;
+  /// Snapshot of everything the (expensive) cloud-coverage field needs, so it
+  /// can be computed off the render thread with ComputeWeatherCoverageField.
+  struct WeatherCoverageFieldRequest
+  {
+    bool uniform{false};
+    uint8_t uniform_value{0};
+    uint32_t seed{0};
+    double simulation_time_sec{0.0};
+  };
+  WeatherCoverageFieldRequest MakeWeatherCoverageFieldRequest() const;
+  static void ComputeWeatherCoverageField(
+      const WeatherCoverageFieldRequest &request, const glm::vec2 &center,
+      float world_size, int resolution, std::vector<uint8_t> &out_pixels);
   const EnvironmentState &GetEnvironmentState() const
   {
     return EnvironmentStateData;
@@ -1444,6 +1457,7 @@ public:
   const FocusRingVisualSample &GetFocusRingVisualSample() const;
   void SetFocusRingVisualSample(const FocusRingVisualSample &sample) const;
   uint64_t GetStreamingFrameEpoch() const { return StreamingFrameEpoch; }
+  const UWorldStreaming *GetStreamingService() const { return Streaming.get(); }
   void AdvanceStreamingFrameEpoch() { ++StreamingFrameEpoch; }
   /// Split unfinished focus by movement/view forward (dot>=0 ahead, else behind).
   void CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
@@ -1760,6 +1774,7 @@ private:
   /// Dynamic fog end margin (pull-in boost); 0 → RenderSettings default.
   int EffectiveFogEndMarginBlocks{0};
   float PresentedFogHorizonBlocks{-1.0f};
+  bool FixedTimeApplied{false};
   float PresentedFogStartBlocks{-1.0f};
   /// Hole/unfinished debt while near fluid / sea — fog A+B boost.
   bool NearWaterUnfinishedFog{false};

@@ -1,3 +1,5 @@
+#include "World/Diagnostics/MeshAuditDiagnostics.h"
+#include "App/Platform/SampleProfiler.h"
 #include "App/Platform/AppRunner.h"
 
 #include "App/Application.h"
@@ -840,7 +842,83 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                               static_cast<float>(CHUNK_SIZE) +
                           8.0f;
                 }
-                if (!options.BreakStandMode)
+                // Diagnostics: CUBA_FLIGHT_FIND_WATER=1 drops the camera a few
+                // blocks under the surface of the nearest water body (>=6 deep,
+                // open sky above) so underwater/surface-underside captures are
+                // reproducible without hand-picked coordinates.
+                bool placed_underwater = false;
+                if (const char *find_water = std::getenv("CUBA_FLIGHT_FIND_WATER");
+                    find_water && find_water[0] == '1')
+                {
+                  const UBlockWorld &bw = world->GetBlockWorld();
+                  UBlockRegistry &reg = world->GetBlockRegistry();
+                  const int sea_i = world->GetProceduralSettings().SeaLevel;
+                  const int origin_x = static_cast<int>(std::floor(pos.x));
+                  const int origin_z = static_cast<int>(std::floor(pos.z));
+                  float depth_under = 2.5f;
+                  if (const char *du = std::getenv("CUBA_FLIGHT_WATER_UNDER"))
+                  {
+                    depth_under = std::strtof(du, nullptr);
+                  }
+                  int best_d2 = 1 << 30;
+                  glm::ivec3 best(0);
+                  for (int dz = -64; dz <= 64; dz += 3)
+                  {
+                    for (int dx = -64; dx <= 64; dx += 3)
+                    {
+                      const int x = origin_x + dx;
+                      const int z = origin_z + dz;
+                      int top = -1;
+                      for (int y = sea_i + 2; y >= sea_i - 40; --y)
+                      {
+                        const BlockId id = bw.GetBlock(glm::ivec3(x, y, z));
+                        if (id == BLOCK_AIR)
+                        {
+                          continue;
+                        }
+                        if (reg.IsLiquid(id))
+                        {
+                          top = y;
+                        }
+                        break;
+                      }
+                      if (top < 0)
+                      {
+                        continue;
+                      }
+                      int depth = 0;
+                      for (int y = top; y > top - 12; --y)
+                      {
+                        if (!reg.IsLiquid(bw.GetBlock(glm::ivec3(x, y, z))))
+                        {
+                          break;
+                        }
+                        ++depth;
+                      }
+                      const int d2 = dx * dx + dz * dz;
+                      if (depth >= 6 && d2 < best_d2)
+                      {
+                        best_d2 = d2;
+                        best = glm::ivec3(x, top, z);
+                      }
+                    }
+                  }
+                  if (best_d2 < (1 << 30))
+                  {
+                    pos = glm::vec3(best.x + 0.5f,
+                                    static_cast<float>(best.y + 1) - depth_under,
+                                    best.z + 0.5f);
+                    placed_underwater = true;
+                    std::cout << "flight-sim: underwater probe at " << best.x
+                              << "," << best.y << "," << best.z << std::endl;
+                  }
+                  else
+                  {
+                    std::cout << "flight-sim: underwater probe found no water"
+                              << std::endl;
+                  }
+                }
+                if (!options.BreakStandMode && !placed_underwater)
                 {
                   // Land/ocean cruise eye: set every arm (floor/ceil).
                   const float target_y =
@@ -1597,6 +1675,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     // Flight-sim exits with std::_Exit to avoid unbounded worker joins. Flush
     // the app log after cancellation so the final audit/shutdown records are
     // persisted even though normal logging destructors will not run.
+    FinishSampleProfiler();
+    UMeshAuditDiagnostics::FinishFlickerTrace();
     CubatariumFlushLogs();
 
     std::cout << "flight-sim: done exit=" << exit_code

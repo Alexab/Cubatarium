@@ -4,9 +4,11 @@
 #include "App/Platform/Log.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Lighting/LightUtil.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <sstream>
 
@@ -143,6 +145,41 @@ bool LightHaloSignaturesMatch(
 
 } // namespace
 
+bool ChunkMeshSnapshot::IsAbsentOpenSkyChunk(const UBlockWorld &world,
+                                             glm::ivec3 chunk_coord)
+{
+  const UChunkManager &chunks = world.GetChunkManager();
+  if (chunks.GetChunk(chunk_coord))
+  {
+    return false;
+  }
+  const int min_cy = world.GetVerticalProfile().MinChunkY(CHUNK_SIZE);
+  for (int cy = chunk_coord.y - 1; cy >= min_cy; --cy)
+  {
+    if (chunks.GetChunk(glm::ivec3(chunk_coord.x, cy, chunk_coord.z)))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
+                                                     glm::ivec3 neighbor_coord,
+                                                     int axis, int sign)
+{
+  if (world.GetChunkManager().GetChunk(neighbor_coord))
+  {
+    return false;
+  }
+  if (axis == 1)
+  {
+    return sign < 0 &&
+           neighbor_coord.y < world.GetVerticalProfile().MinChunkY(CHUNK_SIZE);
+  }
+  return IsAbsentOpenSkyChunk(world, neighbor_coord);
+}
+
 bool ChunkMeshSnapshot::InputsStillValid(
     const UBlockWorld &world, NeighborVisualDrawableFn /*neighbor_drawable*/,
     void * /*neighbor_drawable_ctx*/) const
@@ -249,6 +286,24 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.fluid_packed = chunk->GetFluidData();
   snapshot.light_packed = chunk->GetLightData();
   note_slow_stage("center_chunk_copy");
+  if (const char *trace_env = []() -> const char * { static const char *const v = std::getenv("CUBA_TRACE_CHUNK"); return v; }())
+  {
+    int tx = 0, ty = 0, tz = 0;
+    if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
+        chunkCoord == glm::ivec3(tx, ty, tz))
+    {
+      std::ostringstream message;
+      message << "capture coord=(" << tx << "," << ty << "," << tz
+              << ") content=" << chunk->GetContentRevision()
+              << " incarnation=" << chunk->GetIncarnation()
+              << " light=" << chunk->GetLightFieldRevision()
+              << " nonair=" << chunk->GetNonAirCount()
+              << " b(8,3,8)=" << chunk->GetBlockLocal({8, 3, 8})
+              << " b(8,4,8)=" << chunk->GetBlockLocal({8, 4, 8})
+              << " sourceRev=" << sourceRevision;
+      CubatariumLogInfo("ChunkTrace", message.str());
+    }
+  }
 
   const glm::ivec3 origin = snapshot.ChunkOrigin();
   // Capture exactly the radius-2 light neighborhood read by FaceLightPacked.
@@ -296,6 +351,12 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
             }
           }
         }
+        if ((dx != 0 || dy != 0 || dz != 0) && !light_chunk &&
+            IsAbsentOpenSkyChunk(world, chunkCoord + chunk_offset))
+        {
+          snapshot.openSkyAbsentMask |=
+              1u << ((dy + 1) * 9 + (dz + 1) * 3 + (dx + 1));
+        }
         if (dx != 0 || dy != 0 || dz != 0)
         {
           snapshot.lightHaloSignatures[signature_index++] =
@@ -321,10 +382,8 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       // A missing chunk below the configured world floor is known exterior,
       // while missing slices inside the world remain Unknown until streamed.
       const bool known_world_exterior =
-          axis == 1 && sign < 0 &&
-          neighbor_coord.y <
-              world.GetVerticalProfile().MinChunkY(CHUNK_SIZE) &&
-          !neighbor_loaded;
+          !neighbor_loaded &&
+          IsKnownAirAbsentFaceNeighbor(world, neighbor_coord, axis, sign);
       // Stamp = geom/light only. Drawable fn affects shell occlusion preview.
       snapshot.inputStamps[static_cast<size_t>(face + 1)] =
           ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk,
@@ -487,6 +546,17 @@ uint8_t ChunkMeshSnapshot::GetLightPacked(glm::ivec3 worldPos) const
   if (local.x >= kMin && local.x <= kMax && local.y >= kMin &&
       local.y <= kMax && local.z >= kMin && local.z <= kMax)
   {
+    if (openSkyAbsentMask != 0)
+    {
+      const int dx = local.x < 0 ? -1 : (local.x >= CHUNK_SIZE ? 1 : 0);
+      const int dy = local.y < 0 ? -1 : (local.y >= CHUNK_SIZE ? 1 : 0);
+      const int dz = local.z < 0 ? -1 : (local.z >= CHUNK_SIZE ? 1 : 0);
+      if ((openSkyAbsentMask &
+           (1u << ((dy + 1) * 9 + (dz + 1) * 3 + (dx + 1)))) != 0)
+      {
+        return PackLight(kMaxLightLevel, 0);
+      }
+    }
     return paddedLight[static_cast<size_t>(LightHaloFlatIndex(local))];
   }
   return 0;

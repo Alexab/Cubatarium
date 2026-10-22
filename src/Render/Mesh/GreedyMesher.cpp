@@ -20,6 +20,7 @@
 #include "World/Lighting/LightUtil.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 #include <cstring>
 
@@ -72,7 +73,10 @@ public:
     const UChunk *chunk = World.GetChunkManager().GetChunk(chunk_coord);
     if (!chunk)
     {
-      return 0;
+      // Absent slice above a resident column = open sky (see snapshot).
+      return ChunkMeshSnapshot::IsAbsentOpenSkyChunk(World, chunk_coord)
+                 ? PackLight(kMaxLightLevel, 0)
+                 : 0;
     }
     return chunk->GetLightPackedLocal(UChunkManager::WorldToLocal(world_pos));
   }
@@ -94,6 +98,21 @@ public:
     const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
     if (!World.GetChunkManager().GetChunk(chunk_coord))
     {
+      const glm::ivec3 delta = chunk_coord - ChunkCoordValue;
+      const int axis = delta.x != 0 ? 0 : (delta.y != 0 ? 1 : 2);
+      const int sign = delta[axis] < 0 ? -1 : 1;
+      const int manhattan = std::abs(delta.x) + std::abs(delta.y) +
+                            std::abs(delta.z);
+      // Same policy as ChunkMeshSnapshot: an absent +Y slice is open air.
+      if (manhattan == 1 && axis == 1 && sign > 0)
+      {
+        return NeighborLoadState::Air;
+      }
+      if (manhattan == 1 && ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(
+                                World, chunk_coord, axis, sign))
+      {
+        return NeighborLoadState::Air;
+      }
       return NeighborLoadState::Unknown;
     }
     return NeighborLoadState::Loaded;

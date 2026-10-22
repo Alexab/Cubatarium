@@ -1,6 +1,7 @@
 #ifndef WORLDSTREAMING_H
 #define WORLDSTREAMING_H
 
+#include "Render/Engine/FogRangeSmoother.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkStreamer.h"
@@ -143,6 +144,8 @@ private:
   float FogPullInStartRatioHeld{-1.0f};
   float FogPresentedHorizonBlocks{-1.0f};
   float FogPresentedStartBlocks{-1.0f};
+  FogRangeSmootherState FogHorizonSmoother{};
+  FogRangeSmootherState FogStartSmoother{};
   std::chrono::steady_clock::time_point FogPresentationLastUpdate{};
   StreamingPressureState PressureState{};
   StreamingPressureCaps LastPressureCaps{};

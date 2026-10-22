@@ -50,6 +50,7 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include "World/Diagnostics/MeshAuditDiagnostics.h"
 
 namespace cutum
 {
@@ -873,6 +874,51 @@ void UWindowManager::Run()
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - render_begin)
               .count());
+    }
+
+    {
+      static const bool flicker_trace =
+          std::getenv("CUBA_LIGHT_FLICKER_TRACE") != nullptr;
+      if (flicker_trace && World && Application &&
+          Application->GetState() == AppState::InGame)
+      {
+        UMeshAuditDiagnostics::TraceFlickerFrame(*World);
+      }
+      static const bool flight_telemetry =
+          std::getenv("CUBA_FLIGHT_TELEMETRY") != nullptr;
+      if (flight_telemetry && World && Application &&
+          Application->GetState() == AppState::InGame)
+      {
+        UMeshAuditDiagnostics::TraceFlightTelemetry(*World);
+      }
+    }
+    // Opt-in oracle for see-through holes (CUBA_MESH_AUDIT_AFTER_SEC=<sec>):
+    // one mesh_audit.json per process after the given in-game time.
+    {
+      static const float audit_after_sec =
+          ReadFlightCaptureEnvFloat("CUBA_MESH_AUDIT_AFTER_SEC", -1.0f);
+      static int audit_runs = 0;
+      static std::chrono::steady_clock::time_point audit_t0{};
+      if (audit_after_sec >= 0.0f && audit_runs < 2 && World && Application &&
+          Application->GetState() == AppState::InGame)
+      {
+        const auto audit_now = std::chrono::steady_clock::now();
+        if (audit_t0 == std::chrono::steady_clock::time_point{})
+        {
+          audit_t0 = audit_now;
+        }
+        if (std::chrono::duration<float>(audit_now - audit_t0).count() >=
+            audit_after_sec + 20.0f * static_cast<float>(audit_runs))
+        {
+          const int audited = UMeshAuditDiagnostics::Run(
+              *World, audit_runs == 0
+                          ? std::filesystem::path()
+                          : GetExecutableDirectory() / "mesh_audit_2.json");
+          ++audit_runs;
+          CubatariumLogInfo("MeshAudit",
+                            "audited_chunks=" + std::to_string(audited));
+        }
+      }
     }
 
     // Opt-in visual evidence for visible flight-sim runs. Queue a back-buffer

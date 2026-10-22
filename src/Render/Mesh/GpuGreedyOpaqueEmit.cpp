@@ -169,7 +169,11 @@ void main() {
       uint idx = atomicAdd(rectCount, 1u);
       if (idx >= 16384u) return;
       rects[idx].axis = axisU; rects[idx].faceSign = signIdx;
-      rects[idx].slice = sliceU; rects[idx].u = uint(u); rects[idx].v = uint(v);
+      // sliceU is the plane index 0..16 (a + face of voxel k lies on plane
+      // k+1). Store the VOXEL coordinate like GreedyQuad::slice so the vertex
+      // and packed emitters (slice +/- 0.5) place the face on the right plane.
+      rects[idx].slice = faceSign > 0 ? sliceU - 1u : sliceU;
+      rects[idx].u = uint(u); rects[idx].v = uint(v);
       rects[idx].width = uint(width); rects[idx].height = uint(height);
       rects[idx].blockId = val & 0x3FFu; rects[idx].lightPacked = (val >> 10u) & 0xFFu;
     }

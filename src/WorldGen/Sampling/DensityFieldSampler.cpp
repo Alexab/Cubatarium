@@ -9,6 +9,10 @@
 #include <algorithm>
 #include <cmath>
 
+#include <cstdlib>
+
+#include <iostream>
+
 namespace cutum
 {
 
@@ -300,12 +304,40 @@ float UDensityFieldSampler::SampleDensity(const Column &column, int y) const
   return ApplyCaveDensityOffset(column.x, y, column.z, column.surfaceY, density);
 }
 
+int UDensityFieldSampler::DensityScanTop(const DensityRouteParams &route,
+                                         float horizontal_wobble,
+                                         int octaves) const
+{
+  // density = base + noiseFactor * FBM3D * 0.55 + wobble - y, with
+  // |FBM3D| <= sum(persistence^i) * max|Perlin3D|. Above the bound below the
+  // density cannot be positive, so the downward surface scan may start there.
+  constexpr float kPerlinMaxAbs = 1.5f; // conservative (improved Perlin <= 1)
+  const int effective_octaves = octaves > 0 ? octaves : std::max(1, Params.octaves);
+  float amplitude = 1.0f;
+  float amplitude_sum = 0.0f;
+  for (int i = 0; i < effective_octaves; ++i)
+  {
+    amplitude_sum += amplitude;
+    amplitude *= Params.persistence;
+  }
+  const float upper = route.baseHeightBlocks + horizontal_wobble +
+                      std::fabs(route.noiseFactor) * 0.55f * kPerlinMaxAbs *
+                          amplitude_sum;
+  if (!(upper < static_cast<float>(MaxHeight)))
+  {
+    return MaxHeight;
+  }
+  return std::clamp(static_cast<int>(std::floor(upper)) + 1, MinHeight,
+                    MaxHeight);
+}
+
 int UDensityFieldSampler::SurfaceYAt(int x, int z) const
 {
   const DensityRouteParams route = RouteAt(x, z);
   const float wobble = HorizontalWobbleAt(x, z, route);
   int terrain_surface = MinHeight;
-  for (int y = MaxHeight; y >= MinHeight; --y)
+  const int scan_top = DensityScanTop(route, wobble, Params.octaves);
+  for (int y = scan_top; y >= MinHeight; --y)
   {
     if (SampleTerrainDensityAt(x, y, z, Params.octaves, route, wobble) > 0.0f)
     {
@@ -336,7 +368,13 @@ int UDensityFieldSampler::CoarseSurfaceYAt(int x, int z) const
   const DensityRouteParams route = RouteAt(x, z);
   const float wobble = HorizontalWobbleAt(x, z, route);
   const int coarse_octaves = std::max(1, Params.octaves - 2);
-  for (int y = MaxHeight; y >= MinHeight; y -= 2)
+  // Keep the original 2-step lattice (MaxHeight - 2k) but start it at the
+  // first lattice point at or below the density upper bound.
+  const int bound_top = DensityScanTop(route, wobble, coarse_octaves);
+  const int coarse_top =
+      bound_top >= MaxHeight ? MaxHeight
+                             : MaxHeight - 2 * ((MaxHeight - bound_top + 1) / 2);
+  for (int y = coarse_top; y >= MinHeight; y -= 2)
   {
     if (SampleTerrainDensityAt(x, y, z, coarse_octaves, route, wobble) > 0.0f)
     {

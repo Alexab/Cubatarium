@@ -1,4 +1,3 @@
-
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Core/FrameDeadline.h"
@@ -74,6 +73,7 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -1206,35 +1206,185 @@ float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
   return std::clamp(scale, 0.82f, 1.0f);
 }
 
+/// Per-chunk eased exit from the provisional light preview. The preview shows
+/// dark/unsettled meshes at an ambient floor; snapping from that floor to the
+/// real baked light read as a brightness blink on whole groups of blocks. The
+/// returned fade is 1 right after the chunk leaves preview and eases to 0.
+struct LightPreviewUniforms
+{
+  float override_value{0.0f};
+  float fade{0.0f};
+};
+
+long long gLightPreviewRawToggles = 0;
+long long gLightPreviewShownToggles = 0;
+
+LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
+                                                 glm::ivec3 coord)
+{
+  struct State
+  {
+    bool shown{false};        // preview state actually used for drawing
+    bool raw{false};          // last raw policy answer
+    double last_change{-1e9}; // when `shown` last changed
+    double pending_since{-1.0};
+    double fade_start{-1.0};
+  };
+  thread_local std::unordered_map<glm::ivec3, State, IVec3Hash> states;
+  thread_local uint64_t last_epoch = UINT64_MAX;
+  LightPreviewUniforms out;
+  if (!world)
+  {
+    return out;
+  }
+  static const auto t0 = std::chrono::steady_clock::now();
+  const double now =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t0)
+          .count();
+  const bool raw = world->ShouldDrawProvisionalLightPreview(coord);
+  const auto found = states.find(coord);
+  if (!raw && found == states.end())
+  {
+    return out; // never previewed: nothing to ease
+  }
+  if (states.size() > 8192)
+  {
+    states.clear();
+  }
+  const bool first_sight = states.find(coord) == states.end();
+  State &state = states[coord];
+  if (first_sight)
+  {
+    state.shown = raw;
+    state.raw = raw;
+    state.last_change = now;
+  }
+  // The preview policy follows repair ownership, which flips on and off while
+  // light/mesh work is scheduled around a chunk. Showing every flip makes the
+  // dark faces of the chunk (the only ones the preview changes) blink between
+  // their real level and the ambient floor. Debounce: a change must persist
+  // before it is applied and may not follow the previous change too quickly.
+  // A chunk that was never drawn before takes the raw value immediately.
+  if (raw != state.raw)
+  {
+    ++gLightPreviewRawToggles;
+    state.raw = raw;
+  }
+  if (raw == state.shown)
+  {
+    state.pending_since = -1.0;
+  }
+  else
+  {
+    if (state.pending_since < 0.0)
+    {
+      state.pending_since = now;
+    }
+    constexpr double kPersistSeconds = 0.5;
+    constexpr double kMinDwellSeconds = 0.75;
+    if (now - state.pending_since >= kPersistSeconds &&
+        now - state.last_change >= kMinDwellSeconds)
+    {
+      state.shown = raw;
+      state.last_change = now;
+      state.pending_since = -1.0;
+      ++gLightPreviewShownToggles;
+      state.fade_start = raw ? -1.0 : now;
+    }
+  }
+  const bool preview = state.shown;
+  out.override_value = preview ? 1.0f : 0.0f;
+  constexpr double kFadeSeconds = 0.6;
+  if (!preview && state.fade_start >= 0.0)
+  {
+    const double t = (now - state.fade_start) / kFadeSeconds;
+    out.fade = t >= 1.0 ? 0.0f : static_cast<float>(1.0 - t);
+  }
+  static const bool no_fade = std::getenv("CUBA_NO_PREVIEW_FADE") != nullptr;
+  if (no_fade)
+  {
+    out.fade = 0.0f;
+  }
+  (void)last_epoch;
+  return out;
+}
+
+void SetLightPreviewUniforms(const std::shared_ptr<UShaderProgram> &shader,
+                             const UWorld *world, glm::ivec3 coord)
+{
+  const LightPreviewUniforms u = ComputeLightPreviewUniforms(world, coord);
+  shader->SetFloat("uLightPreviewOverride", u.override_value);
+  shader->SetFloat("uLightPreviewFade", u.fade);
+}
+
 void ApplyGreedyEnvironmentUniformsToShader(
     const std::shared_ptr<UShaderProgram> &shader,
     const UWorld::EnvironmentState *env,
     const UWorld::LightingSettings *lighting)
 {
+  static constexpr const char *kNames[9] = {
+      "uEnvFogMultiplier", "uEnvMinAmbient",     "uEnvDayFactor",
+      "uEnvNightFactor",   "uEnvSkyLightScale",  "uEnvLightDebug",
+      "uEnvLightDebugMode", "uEnvPrecipIntensity", "uEnvWetness"};
+  float values[9];
   if (env && lighting)
   {
-    shader->SetFloat("uEnvFogMultiplier", env->WeatherFogMultiplier);
-    shader->SetFloat("uEnvMinAmbient", lighting->MinAmbient);
-    shader->SetFloat("uEnvDayFactor", env->DayNightFactor);
-    shader->SetFloat("uEnvNightFactor", env->MoonNightFactor);
-    shader->SetFloat("uEnvSkyLightScale", EnvironmentSkyLightScale(*env));
-    shader->SetFloat("uEnvLightDebug", lighting->DebugEnabled ? 1.0f : 0.0f);
-    shader->SetFloat("uEnvLightDebugMode",
-                     static_cast<float>(lighting->DebugMode));
-    shader->SetFloat("uEnvPrecipIntensity",
-                     std::clamp(env->PrecipitationIntensity, 0.0f, 1.0f));
-    shader->SetFloat("uEnvWetness", std::clamp(env->SurfaceWetness, 0.0f, 1.0f));
-    return;
+    values[0] = env->WeatherFogMultiplier;
+    values[1] = lighting->MinAmbient;
+    values[2] = env->DayNightFactor;
+    values[3] = env->MoonNightFactor;
+    values[4] = EnvironmentSkyLightScale(*env);
+    values[5] = lighting->DebugEnabled ? 1.0f : 0.0f;
+    values[6] = static_cast<float>(lighting->DebugMode);
+    values[7] = std::clamp(env->PrecipitationIntensity, 0.0f, 1.0f);
+    values[8] = std::clamp(env->SurfaceWetness, 0.0f, 1.0f);
   }
-  shader->SetFloat("uEnvFogMultiplier", 1.0f);
-  shader->SetFloat("uEnvMinAmbient", 0.12f);
-  shader->SetFloat("uEnvDayFactor", 1.0f);
-  shader->SetFloat("uEnvNightFactor", 0.0f);
-  shader->SetFloat("uEnvSkyLightScale", 1.0f);
-  shader->SetFloat("uEnvLightDebug", 0.0f);
-  shader->SetFloat("uEnvLightDebugMode", 0.0f);
-  shader->SetFloat("uEnvPrecipIntensity", 0.0f);
-  shader->SetFloat("uEnvWetness", 0.0f);
+  else
+  {
+    const float defaults[9] = {1.0f, 0.12f, 1.0f, 0.0f, 1.0f,
+                               0.0f, 0.0f,  0.0f, 0.0f};
+    std::copy(defaults, defaults + 9, values);
+  }
+  // This runs once per drawn chunk, but only the weather values vary between
+  // chunks (and often not at all). Every SetFloat builds a std::string and
+  // hashes it (profile: ~8% of the main thread), so only upload values that
+  // changed since this program last received them. These uniforms are written
+  // nowhere else.
+  struct Cached
+  {
+    GLuint program{0};
+    const UShaderProgram *owner{nullptr};
+    bool valid[9]{};
+    float value[9]{};
+  };
+  static Cached cache[8];
+  const GLuint program = shader->GetProgramID();
+  Cached *slot = nullptr;
+  for (Cached &entry : cache)
+  {
+    if (entry.owner == shader.get() && entry.program == program)
+    {
+      slot = &entry;
+      break;
+    }
+  }
+  if (!slot)
+  {
+    static size_t next_slot = 0;
+    slot = &cache[next_slot++ % 8];
+    *slot = Cached{};
+    slot->owner = shader.get();
+    slot->program = program;
+  }
+  for (int i = 0; i < 9; ++i)
+  {
+    if (!slot->valid[i] || slot->value[i] != values[i])
+    {
+      shader->SetFloat(kNames[i], values[i]);
+      slot->valid[i] = true;
+      slot->value[i] = values[i];
+    }
+  }
 }
 
 void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
@@ -3894,7 +4044,11 @@ void UGeometryEngine::ApplyGreedyChunkWeatherUniforms(
   {
     return;
   }
-  const uint64_t frame = WorldInstance->GetStreamingFrameEpoch();
+  const uint64_t epoch = WorldInstance->GetStreamingFrameEpoch();
+  // Weather varies smoothly: resample each chunk every 8 streaming epochs
+  // instead of every frame (SampleWeatherAt + state update were ~6% of the
+  // main thread with ~1000 chunks drawn).
+  const uint64_t frame = epoch >> 3;
   if (!ChunkWeatherFrameValid || CachedChunkWeatherFrame != frame)
   {
     ChunkWeatherSamplesForFrame.clear();
@@ -3913,7 +4067,18 @@ void UGeometryEngine::ApplyGreedyChunkWeatherUniforms(
   }
   const WeatherSample &weather = weather_it->second;
 
-  UWorld::EnvironmentState local_env = WorldInstance->GetEnvironmentState();
+  // The base environment is copied once per streaming epoch into a scratch
+  // object; only the weather fields below differ per chunk. Copying the whole
+  // (string/vector holding) state for every drawn chunk allocated each time.
+  thread_local UWorld::EnvironmentState local_env;
+  thread_local uint64_t scratch_epoch = UINT64_MAX;
+  thread_local const UWorld *scratch_owner = nullptr;
+  if (scratch_epoch != epoch || scratch_owner != WorldInstance.get())
+  {
+    local_env = WorldInstance->GetEnvironmentState();
+    scratch_epoch = epoch;
+    scratch_owner = WorldInstance.get();
+  }
   local_env.Cloudiness = weather.CloudCoverage;
   local_env.CloudCoverage = weather.CloudCoverage;
   local_env.PrecipitationIntensity = weather.PrecipitationIntensity;
@@ -4009,7 +4174,9 @@ void UGeometryEngine::EnsureRenderBackendsBound()
   if (WorldInstance && RenderBackends.Store)
   {
     bool prefer_patch = RenderBackends.Store->SupportsMultiDrawIndirect();
-    if (const char *env = std::getenv("CUBATARIUM_PREFER_GPU_STORE_PATCH"))
+    static const char *const prefer_patch_env =
+        std::getenv("CUBATARIUM_PREFER_GPU_STORE_PATCH");
+    if (const char *env = prefer_patch_env)
     {
       if (env[0] == '0')
       {
@@ -4443,7 +4610,7 @@ void UGeometryEngine::DrawCubeGeometry()
     }
   }
 
-  auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
   UWorldMeshService *mesh_service =
       WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
                            : &WorldInstance->GetMeshService();
@@ -5165,14 +5332,30 @@ namespace
 
 bool DebugDisableOpaqueDepthGuard()
 {
-  const char *value = std::getenv("CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD");
-  return value != nullptr && value[0] != '\0' && value[0] != '0';
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
 }
 
 bool EnvironmentFlagEnabled(const char *name)
 {
+  // Process-lifetime cache: getenv scans (and locks) the whole environment
+  // block and this is polled from per-frame draw paths.
+  static std::mutex cache_mutex;
+  static std::unordered_map<std::string, bool> cache;
+  std::lock_guard<std::mutex> lock(cache_mutex);
+  const auto it = cache.find(name);
+  if (it != cache.end())
+  {
+    return it->second;
+  }
   const char *value = std::getenv(name);
-  return value != nullptr && value[0] != '\0' && value[0] != '0';
+  const bool enabled = value != nullptr && value[0] != '\0' && value[0] != '0';
+  cache.emplace(name, enabled);
+  return enabled;
 }
 
 struct FluidRenderDiagnosticWindow
@@ -5436,6 +5619,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     OpaqueDepthCapture.Bind();
   }
   greedyShader->SetFloat("uLightPreviewOverride", 0.0f);
+  greedyShader->SetFloat("uLightPreviewFade", 0.0f);
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
@@ -5636,9 +5820,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         continue;
       }
 
-      const bool light_preview =
-          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
-                               head.chunkCoord);
+      const LightPreviewUniforms light_preview =
+          ComputeLightPreviewUniforms(WorldInstance.get(), head.chunkCoord);
       size_t j = i + 1;
       while (j < cache.batches.size() && cache.batches[j].pooled &&
              cache.batches[j].indexCountGl > 0 &&
@@ -5647,8 +5830,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
              (!regional_weather ||
               cache.batches[j].chunkCoord == head.chunkCoord) &&
              (!WorldInstance ||
-              WorldInstance->ShouldDrawProvisionalLightPreview(
-                  cache.batches[j].chunkCoord) == light_preview))
+              [&]
+              {
+                const LightPreviewUniforms other = ComputeLightPreviewUniforms(
+                    WorldInstance.get(), cache.batches[j].chunkCoord);
+                return other.override_value == light_preview.override_value &&
+                       std::abs(other.fade - light_preview.fade) < 1e-3f;
+              }()))
       {
         ++j;
       }
@@ -5666,7 +5854,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
               ? 1.0f
               : 0.0f);
       greedyShader->SetFloat("uLightPreviewOverride",
-                             light_preview ? 1.0f : 0.0f);
+                             light_preview.override_value);
+      greedyShader->SetFloat("uLightPreviewFade", light_preview.fade);
       glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
       // P2: prefer GPU-resident 1:1 cmd table (instanceCount from compact).
       size_t witness_batch_index = cache.batches.size();
@@ -5823,12 +6012,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         ApplyGreedyChunkWeatherUniforms(greedyShader, gpu.chunkCoord);
       }
-      greedyShader->SetFloat(
-          "uLightPreviewOverride",
-          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
-                               gpu.chunkCoord)
-              ? 1.0f
-              : 0.0f);
+      SetLightPreviewUniforms(greedyShader, WorldInstance.get(), gpu.chunkCoord);
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
       set_alpha_cutout_for_batch(gpu.AlphaCutout);
       greedyShader->SetFloat(
@@ -5919,12 +6103,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         continue;
       }
-      greedyShader->SetFloat(
-          "uLightPreviewOverride",
-          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
-                               gpu.chunkCoord)
-              ? 1.0f
-              : 0.0f);
+      SetLightPreviewUniforms(greedyShader, WorldInstance.get(), gpu.chunkCoord);
       glBindTexture(GL_TEXTURE_2D, textureId);
       glBindBuffer(GL_ARRAY_BUFFER, vbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -6157,7 +6336,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   const std::vector<GreedyBatchRef> filtered_transparent =
       filter_render_ready_refs(draw.transparentRefs);
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-  const auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
 
   DrawGreedyOpaqueBatches(draw.cache, filtered_opaque, vp,
                           camera->GetPosition(), textures, draw.meshRevision,
@@ -6954,6 +7133,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     ApplyGreedyEnvironmentUniforms(packedGreedyShader);
   }
   packedGreedyShader->SetFloat("uLightPreviewOverride", 0.0f);
+  packedGreedyShader->SetFloat("uLightPreviewFade", 0.0f);
   glActiveTexture(GL_TEXTURE0);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
                    pipeline->GetAllocator().GetQuadSsbo());
@@ -7016,12 +7196,8 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     ++packed_draw_chunks;
     const glm::ivec3 origin = chunk.chunkCoord * CHUNK_SIZE;
     packedGreedyShader->SetIVec3("chunkOrigin", origin);
-    packedGreedyShader->SetFloat(
-        "uLightPreviewOverride",
-        WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
-                             chunk.chunkCoord)
-            ? 1.0f
-            : 0.0f);
+    SetLightPreviewUniforms(packedGreedyShader, WorldInstance.get(),
+                            chunk.chunkCoord);
     for (const GpuBlockDrawRange &range : chunk.blockRanges)
     {
       if (range.Transparent != transparent_pass)
@@ -7660,7 +7836,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
   {
     return;
   }
-  const auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
   const auto texIt = textures.find(static_cast<size_t>(OverlayBlockId));
   if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
   {
@@ -8945,6 +9121,13 @@ void UGeometryEngine::RenderBiomeDebugOverlay()
       DrawBoxWireframe(mvp * model, color);
     }
   }
+}
+
+void GetLightPreviewDebounceCounters(long long &raw_toggles,
+                                     long long &shown_toggles)
+{
+  raw_toggles = gLightPreviewRawToggles;
+  shown_toggles = gLightPreviewShownToggles;
 }
 
 } // namespace cutum

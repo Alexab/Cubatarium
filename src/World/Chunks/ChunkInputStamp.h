@@ -1,6 +1,7 @@
 #pragma once
 #include "World/Chunks/Chunk.h"
 #include <cstddef>
+#include <mutex>
 
 namespace cutum
 {
@@ -15,8 +16,45 @@ inline constexpr int kChunkMeshLightHaloRadius = 2;
 /// Hash the exact light cells a chunk at `neighbor_offset` contributes to a
 /// center chunk's radius-2 padded light input. The signature intentionally
 /// ignores unrelated light changes in the neighbor's interior.
+inline uint64_t ChunkMeshLightHaloSignatureUncached(const UChunk *neighbor,
+                                                    glm::ivec3 neighbor_offset);
+
 inline uint64_t ChunkMeshLightHaloSignature(const UChunk *neighbor,
                                            glm::ivec3 neighbor_offset)
+{
+  const int index = (neighbor_offset.y + 1) * 9 +
+                    (neighbor_offset.z + 1) * 3 + (neighbor_offset.x + 1);
+  if (index < 0 || index >= 27)
+  {
+    return ChunkMeshLightHaloSignatureUncached(neighbor, neighbor_offset);
+  }
+  if (!neighbor)
+  {
+    // An absent chunk contributes all-zero light; constant per offset.
+    static uint64_t absent[27];
+    static bool absent_valid[27];
+    static std::mutex absent_mutex;
+    std::lock_guard<std::mutex> lock(absent_mutex);
+    if (!absent_valid[index])
+    {
+      absent[index] = ChunkMeshLightHaloSignatureUncached(nullptr, neighbor_offset);
+      absent_valid[index] = true;
+    }
+    return absent[index];
+  }
+  uint64_t cached = 0;
+  if (neighbor->TryGetCachedHaloSignature(index, cached))
+  {
+    return cached;
+  }
+  const uint64_t value =
+      ChunkMeshLightHaloSignatureUncached(neighbor, neighbor_offset);
+  neighbor->StoreCachedHaloSignature(index, value);
+  return value;
+}
+
+inline uint64_t ChunkMeshLightHaloSignatureUncached(const UChunk *neighbor,
+                                                    glm::ivec3 neighbor_offset)
 {
   constexpr uint64_t kFnvOffset = 1469598103934665603ull;
   constexpr uint64_t kFnvPrime = 1099511628211ull;

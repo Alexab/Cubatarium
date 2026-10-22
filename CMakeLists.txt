@@ -308,11 +308,13 @@ set(SOURCES
     src/World/Streaming/ChunkRenderDemand.cpp
     src/World/Diagnostics/EnterLitDiagnostics.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
+    src/World/Diagnostics/MeshAuditDiagnostics.cpp
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
     src/World/Mesh/EditMeshRemeshPolicy.cpp
     src/App/Platform/WindowManager.cpp
+    src/App/Platform/SampleProfiler.cpp
     src/Render/Engine/GeometryEngine.cpp
     src/Render/Engine/FluidSurfaceMap.cpp
     src/Render/Engine/UnderwaterFogPass.cpp
@@ -922,6 +924,14 @@ target_include_directories(terrain_mesh_dirty_seam_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(terrain_mesh_dirty_seam_test glm::glm)
 
+add_executable(packed_quad_parity_test
+    src/Test/PackedQuadParityTest.cpp)
+target_include_directories(packed_quad_parity_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(packed_quad_parity_test PRIVATE
+    CUBATARIUM_PACKED_SHADER_PATH="${CMAKE_SOURCE_DIR}/shaders/vshader_packed_greedy.glsl")
+target_link_libraries(packed_quad_parity_test glm::glm)
+
 add_executable(navigation_pathfinder_test
     src/Navigation/UNavigationPathfinder.cpp
     src/Navigation/UWaypointFollower.cpp
@@ -1414,6 +1424,28 @@ target_compile_definitions(fluid_mesh_faces_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_mesh_faces_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fog_range_smoother_test
+    src/Test/FogRangeSmootherTest.cpp)
+target_include_directories(fog_range_smoother_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(seam_absent_neighbor_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/LiquidDebugTrace.cpp
+    src/Test/SeamAbsentNeighborTest.cpp)
+target_include_directories(seam_absent_neighbor_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(seam_absent_neighbor_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(seam_absent_neighbor_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(greedy_cross_plant_ground_face_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Render/Mesh/ChunkMeshSnapshot.cpp
@@ -1681,6 +1713,24 @@ target_include_directories(gpu_greedy_face_extract_test PRIVATE
 target_compile_definitions(gpu_greedy_face_extract_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(gpu_greedy_face_extract_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(gpu_extract_mesher_parity_test
+    src/Test/GpuExtractMesherParityTest.cpp
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/GreedyMesher.cpp
+    src/World/Physics/FluidSpreadSystem.cpp
+    src/World/Physics/FluidFloodService.cpp
+    src/World/Physics/FluidFillPolicy.cpp
+    src/World/Physics/FluidTransformSim.cpp
+    src/World/Physics/FluidBlockResolver.cpp
+    src/World/Physics/LiquidDebugTrace.cpp)
+target_include_directories(gpu_extract_mesher_parity_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(gpu_extract_mesher_parity_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF}
+    CUBATARIUM_GPU_EMIT_SOURCE_PATH="${CMAKE_SOURCE_DIR}/src/Render/Mesh/GpuGreedyOpaqueEmit.cpp")
+target_link_libraries(gpu_extract_mesher_parity_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(greedy_transparent_sort_test
     src/Test/GreedyTransparentSortTest.cpp
@@ -2872,6 +2922,10 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   frame_streaming_budget_test
   idle_recovery_policy_test
   chunk_render_demand_test
+  packed_quad_parity_test
+  seam_absent_neighbor_test
+  fog_range_smoother_test
+  gpu_extract_mesher_parity_test
 )
 foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
   if(TARGET ${_t})
