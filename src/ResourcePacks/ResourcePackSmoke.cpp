@@ -5,6 +5,7 @@
 #include "ResourcePacks/PlaceholderTextureCache.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "ResourcePacks/TextureOverrides.h"
+#include "Gui/Widgets/ResourcePackPickerForm.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
@@ -168,14 +169,19 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
   const auto upgradedDefaults = UResourcePackResolver::ParseFromJson(
       nlohmann::json{{"resource_packs",
                       {{"default_primary", {"minetest_default_16"}},
-                       {"default_secondary", {"cubatarium_geology_cc0"}}}}});
-  if (std::find(upgradedDefaults.DefaultSecondary.begin(),
-                upgradedDefaults.DefaultSecondary.end(),
-                "cubatarium_worldgen_cc0") ==
-      upgradedDefaults.DefaultSecondary.end())
+                       {"default_secondary", {"cubatarium_geology_cc0",
+                                               "cubatarium_worldgen_cc0"}},
+                       {"default_enabled", {"minetest_default_16",
+                                             "cubatarium_geology_cc0",
+                                             "cubatarium_worldgen_cc0"}}}}});
+  if (upgradedDefaults.DefaultPrimary !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"} ||
+      !upgradedDefaults.DefaultSecondary.empty() ||
+      upgradedDefaults.DefaultEnabled !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"})
   {
     std::cerr << "ResourcePackSmoke: legacy secondary defaults did not migrate "
-                 "to include original Cubatarium assets"
+                 "to the Worldgen-only defaults"
               << std::endl;
     return false;
   }
@@ -183,25 +189,84 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
       nlohmann::json{{"resource_packs",
                       {{"default_primary", {"minetest_default_16"}},
                        {"default_enabled", {"minetest_default_16",
-                                             "cubatarium_geology_cc0"}}}}});
-  if (std::find(upgradedFlatDefaults.DefaultSecondary.begin(),
-                upgradedFlatDefaults.DefaultSecondary.end(),
-                "cubatarium_worldgen_cc0") ==
-      upgradedFlatDefaults.DefaultSecondary.end())
+                                             "cubatarium_geology_cc0",
+                                             "cubatarium_worldgen_cc0"}}}}});
+  if (upgradedFlatDefaults.DefaultPrimary !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"} ||
+      !upgradedFlatDefaults.DefaultSecondary.empty() ||
+      upgradedFlatDefaults.DefaultEnabled !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"})
   {
     std::cerr << "ResourcePackSmoke: legacy flattened defaults did not migrate "
-                 "to include original Cubatarium assets"
+                 "to the Worldgen-only defaults"
+              << std::endl;
+    return false;
+  }
+  const auto explicitVersionedDefaults = UResourcePackResolver::ParseFromJson(
+      nlohmann::json{{"resource_packs",
+                      {{"default_selection_version", 2},
+                       {"default_primary", {"minetest_default_16"}},
+                       {"default_secondary", nlohmann::json::array()}}}});
+  if (explicitVersionedDefaults.DefaultPrimary !=
+          std::vector<std::string>{"minetest_default_16"} ||
+      !explicitVersionedDefaults.DefaultSecondary.empty())
+  {
+    std::cerr << "ResourcePackSmoke: versioned explicit pack selection was "
+                 "unexpectedly migrated"
+              << std::endl;
+    return false;
+  }
+  const auto oldMinetestOnlyDefaults = UResourcePackResolver::ParseFromJson(
+      nlohmann::json{{"resource_packs",
+                      {{"default_primary", {"minetest_default_16"}},
+                       {"default_secondary", nlohmann::json::array()},
+                       {"default_enabled", {"minetest_default_16"}}}}});
+  if (oldMinetestOnlyDefaults.DefaultPrimary !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"} ||
+      !oldMinetestOnlyDefaults.DefaultSecondary.empty() ||
+      oldMinetestOnlyDefaults.DefaultEnabled !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"})
+  {
+    std::cerr << "ResourcePackSmoke: legacy Minetest-only defaults did not "
+                 "migrate to the Cubatarium pack"
+              << std::endl;
+    return false;
+  }
+
+  UResourcePackPickerForm picker(nullptr);
+  ResourcePackSelection staleOwnerSelection;
+  staleOwnerSelection.Primary = {"cubatarium_worldgen_cc0"};
+  staleOwnerSelection.WorldgenOwner = "minetest_default_16";
+  picker.SetSelection(staleOwnerSelection);
+  if (picker.ReadSelection().WorldgenOwner != "cubatarium_worldgen_cc0")
+  {
+    std::cerr << "ResourcePackSmoke: picker kept a worldgen owner that was "
+                 "unchecked"
+              << std::endl;
+    return false;
+  }
+
+  ResourcePackSelection conflictingSelection;
+  conflictingSelection.Primary = {"cubatarium_worldgen_cc0",
+                                  "minetest_default_16"};
+  conflictingSelection.WorldgenOwner = "cubatarium_worldgen_cc0";
+  UResourcePackResolver conflictResolver;
+  if (!conflictResolver.Resolve(conflictingSelection, assetRoot, writableRoot)
+           .empty())
+  {
+    std::cerr << "ResourcePackSmoke: conflicting Cubatarium and Minetest "
+                 "packs were accepted"
               << std::endl;
     return false;
   }
   auto registry = std::make_shared<UBlockMergeRegistry>();
   const ResourcePackSelection defaults = DefaultResourcePackSelection();
-  if (defaults.WorldgenOwner != "minetest_default_16" ||
-      std::find(defaults.Secondary.begin(), defaults.Secondary.end(),
-                "cubatarium_worldgen_cc0") == defaults.Secondary.end())
+  if (defaults.WorldgenOwner != "cubatarium_worldgen_cc0" ||
+      defaults.Primary != std::vector<std::string>{"cubatarium_worldgen_cc0"} ||
+      !defaults.Secondary.empty())
   {
-    std::cerr << "ResourcePackSmoke: default selection must keep Minetest as "
-                 "worldgen owner and enable the Cubatarium asset pack"
+    std::cerr << "ResourcePackSmoke: default selection must use only the "
+                 "Cubatarium Worldgen pack"
               << std::endl;
     return false;
   }

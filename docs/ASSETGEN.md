@@ -13,9 +13,12 @@ block definitions and 1,405 files under `assets/minecraft/textures/block/`.
 Those figures measure different things. The texture number counts paths/files,
 not distinct pixel images. Cubatarium's own acceptance measure is at least
 1,286 block definitions and 1,405 texture files, with pixel-identical images
-reported as duplicates. The current generated pack contains 1,396 block
-definitions and 1,718 textures: 1,396 material variants, 313 replacements for
-the Minetest PNGs, and replacements for the nine geology PNGs.
+reported as duplicates. The current generated pack contains 1,664 block
+definitions and 1,718 textures: 1,396 procedurally catalogued material blocks,
+258 Cubatarium definitions previously bundled with the Minetest-reference
+texture pack, and 10 geology definitions. Textures include 1,396 material
+variants, 313 replacements for the Minetest reference PNGs, and replacements
+for the nine geology PNGs.
 
 The benchmark sources and snapshot date are recorded in `asset_catalog.yaml`
 and each generated `asset_manifest.json`:
@@ -172,8 +175,13 @@ material families. It records reference file hashes for QA but does not sample
 the source pixels. `preview --compare-reference` creates temporary side-by-side
 QA sheets under `assetgen_output/reference_qa/`, outside the distributable pack.
 Its output is new pixel art, quantized to a compact palette,
-16×16, alpha-aware, and edge-periodic. Minetest source textures remain licensed
-under their original terms and are not copied into this CC0 pack.
+16×16, alpha-aware, and edge-periodic. Animated liquids use vertical strips
+of square 16×16 frames. The Minetest source pixels remain under
+their original license and are not copied into this CC0 pack. The block JSON
+formerly distributed with `minetest_default_16` is generated from Cubatarium's
+own mappings and gameplay metadata; those authored definitions are included
+with replacement texture stems. The pack also integrates the CC0 geology
+definitions.
 
 Every generated texture records its seed, material, variant, backend, source
 hash when applicable, model and revision when available, and license review

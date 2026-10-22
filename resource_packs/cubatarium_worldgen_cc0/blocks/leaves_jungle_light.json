@@ -1,0 +1,40 @@
+{
+  "name": "leaves_jungle_light",
+  "id": 390,
+  "hardness": 0.2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3,
+      "snappy": 3
+    }
+  },
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "mt_leaves_jungle",
+    "mt_leaves_jungle",
+    "mt_leaves_jungle",
+    "mt_leaves_jungle",
+    "mt_leaves_jungle",
+    "mt_leaves_jungle"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "displayName": "Jungle Leaves",
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

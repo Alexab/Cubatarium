@@ -1,0 +1,30 @@
+{
+  "name": "mtg_pine_tree",
+  "id": 487,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_pine_tree_default_pine_tree",
+    "mt_mtg_pine_tree_default_pine_tree",
+    "mt_mtg_pine_tree_default_pine_tree",
+    "mt_mtg_pine_tree_default_pine_tree",
+    "mt_mtg_pine_tree_default_pine_tree_top",
+    "mt_mtg_pine_tree_default_pine_tree_top"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "hopper",
+  "id": 381,
+  "hardness": 3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_hopper",
+    "mt_hopper",
+    "mt_hopper",
+    "mt_hopper",
+    "mt_hopper_top",
+    "mt_hopper_inside"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

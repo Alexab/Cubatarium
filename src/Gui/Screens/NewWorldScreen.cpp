@@ -63,19 +63,29 @@ void UNewWorldScreen::OnCreate()
   const WorldDifficulty difficulty = ReadSelectedDifficulty();
   ResourcePackSelection packs =
       PackForm ? PackForm->ReadSelection() : ResourcePackSelection{};
-  if (packs.Primary.empty())
+  if (!PackForm && packs.Primary.empty())
   {
     packs = Host->GetDefaultResourcePackSelection();
   }
   if (packs.Primary.empty())
   {
     // Keep the dialog open but make the failure visible in logs/console.
-    std::cerr << "NewWorld: Create ignored — no primary resource pack selected "
-                 "and no default packs configured."
+    std::cerr << "NewWorld: Create ignored — no primary resource pack "
+                 "selected."
               << std::endl;
     return;
   }
-  if (packs.WorldgenOwner.empty())
+  if (PackForm && !PackForm->HasValidSelection())
+  {
+    std::cerr << "NewWorld: Create ignored — resource-pack selection has "
+                 "missing dependencies or conflicts."
+              << std::endl;
+    return;
+  }
+  // The picker derives its owner from the first checked primary pack. Keep
+  // this guard for hosts without a picker and any future alternate entry path.
+  if (std::find(packs.Primary.begin(), packs.Primary.end(),
+                packs.WorldgenOwner) == packs.Primary.end())
   {
     packs.WorldgenOwner = packs.Primary.front();
   }

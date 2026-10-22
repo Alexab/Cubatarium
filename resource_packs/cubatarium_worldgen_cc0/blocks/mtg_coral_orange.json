@@ -1,0 +1,30 @@
+{
+  "name": "mtg_coral_orange",
+  "id": 430,
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_coral_orange_default_coral_orange",
+    "mt_mtg_coral_orange_default_coral_orange",
+    "mt_mtg_coral_orange_default_coral_orange",
+    "mt_mtg_coral_orange_default_coral_orange",
+    "mt_mtg_coral_orange_default_coral_orange",
+    "mt_mtg_coral_orange_default_coral_orange"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

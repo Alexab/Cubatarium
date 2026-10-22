@@ -1,0 +1,31 @@
+{
+  "name": "mycelium",
+  "id": 518,
+  "hardness": 0.6,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2,
+      "oddly_breakable_by_hand": 2
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_mycel_side",
+    "mt_mycel_side",
+    "mt_mycel_side",
+    "mt_mycel_side",
+    "mt_mycel_top",
+    "mt_dirt"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

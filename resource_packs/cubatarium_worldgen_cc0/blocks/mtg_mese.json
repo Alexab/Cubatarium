@@ -1,0 +1,30 @@
+{
+  "name": "mtg_mese",
+  "id": 471,
+  "hardness": 5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_mese_default_mese_block",
+    "mt_mtg_mese_default_mese_block",
+    "mt_mtg_mese_default_mese_block",
+    "mt_mtg_mese_default_mese_block",
+    "mt_mtg_mese_default_mese_block",
+    "mt_mtg_mese_default_mese_block"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "furnace_lit",
+  "id": 374,
+  "hardness": 3.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_furnace_front_lit",
+    "mt_furnace_side",
+    "mt_furnace_side",
+    "mt_furnace_side",
+    "mt_furnace_top",
+    "mt_furnace_top"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

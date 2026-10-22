@@ -1,0 +1,30 @@
+{
+  "name": "brewing_stand",
+  "id": 350,
+  "hardness": 0.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_wood",
+    "mt_wood",
+    "mt_wood",
+    "mt_wood",
+    "mt_brewingstand",
+    "mt_brewingstand_base"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

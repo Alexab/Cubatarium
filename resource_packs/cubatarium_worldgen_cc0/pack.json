@@ -1,14 +1,16 @@
 {
   "id": "cubatarium_worldgen_cc0",
-  "name": "Cubatarium Original Worldgen CC0",
+  "name": "Cubatarium Worldgen",
   "version": 1,
   "license": "CC0-1.0",
   "resolution": 16,
   "priority": 21,
   "pack_format": 1,
-  "worldgen_role": "secondary",
-  "merge_mode": "skip_existing",
+  "worldgen_role": "primary",
+  "merge_mode": "override",
   "depends": [],
-  "conflicts": [],
+  "conflicts": [
+    "minetest_default_16"
+  ],
   "min_game_version": "0.1.0"
 }

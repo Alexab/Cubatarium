@@ -1,0 +1,30 @@
+{
+  "name": "jukebox",
+  "id": 386,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_wood",
+    "mt_wood",
+    "mt_wood",
+    "mt_wood",
+    "mt_jukebox_top",
+    "mt_wood"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

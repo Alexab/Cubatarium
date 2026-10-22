@@ -1,0 +1,31 @@
+{
+  "name": "blockEmerald",
+  "id": 344,
+  "hardness": 5,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_blockemerald",
+    "mt_blockemerald",
+    "mt_blockemerald",
+    "mt_blockemerald",
+    "mt_blockemerald",
+    "mt_blockemerald"
+  ],
+  "displayName": "Emerald Block",
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

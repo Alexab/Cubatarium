@@ -1,0 +1,32 @@
+{
+  "name": "wool_4",
+  "id": 591,
+  "hardness": 0.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 2,
+      "snappy": 2
+    }
+  },
+  "types": [
+    "decorative"
+  ],
+  "textures": [
+    "mt_cloth_4",
+    "mt_cloth_4",
+    "mt_cloth_4",
+    "mt_cloth_4",
+    "mt_cloth_4",
+    "mt_cloth_4"
+  ],
+  "displayName": "Yellow Wool",
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

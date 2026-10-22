@@ -789,6 +789,7 @@ void UCore::SaveConfigFile()
   system_data["environment"] = environment_json;
   WriteUiSettings(system_data, Ui);
   json resource_packs;
+  resource_packs["default_selection_version"] = 2;
   resource_packs["default_primary"] = ResourcePacks.DefaultPrimary;
   resource_packs["default_secondary"] = ResourcePacks.DefaultSecondary;
   if (!ResourcePacks.DefaultEnabled.empty())

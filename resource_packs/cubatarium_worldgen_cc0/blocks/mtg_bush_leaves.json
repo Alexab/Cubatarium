@@ -1,0 +1,39 @@
+{
+  "name": "mtg_bush_leaves",
+  "id": 417,
+  "hardness": 0.2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3,
+      "snappy": 3
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_bush_leaves_default_leaves_simple",
+    "mt_mtg_bush_leaves_default_leaves_simple",
+    "mt_mtg_bush_leaves_default_leaves_simple",
+    "mt_mtg_bush_leaves_default_leaves_simple",
+    "mt_mtg_bush_leaves_default_leaves_simple",
+    "mt_mtg_bush_leaves_default_leaves_simple"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

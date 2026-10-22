@@ -1,0 +1,30 @@
+{
+  "name": "mtg_desert_stone_block",
+  "id": 439,
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_desert_stone_block_default_desert_stone_block",
+    "mt_mtg_desert_stone_block_default_desert_stone_block",
+    "mt_mtg_desert_stone_block_default_desert_stone_block",
+    "mt_mtg_desert_stone_block_default_desert_stone_block",
+    "mt_mtg_desert_stone_block_default_desert_stone_block",
+    "mt_mtg_desert_stone_block_default_desert_stone_block"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

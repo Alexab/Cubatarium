@@ -1,0 +1,30 @@
+{
+  "name": "smooth_basalt",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "geo_stone",
+    "geo_stone",
+    "geo_stone",
+    "geo_stone",
+    "geo_stone",
+    "geo_stone"
+  ],
+  "hardness": 1.25,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "displayName": "Smooth Basalt",
+  "render": {},
+  "id": 2429,
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "cubatarium_geology_cc0",
+    "license": "CC0-1.0"
+  }
+}

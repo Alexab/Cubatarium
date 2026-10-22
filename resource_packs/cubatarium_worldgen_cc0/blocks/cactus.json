@@ -1,0 +1,33 @@
+{
+  "name": "cactus",
+  "id": 353,
+  "hardness": 0.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 3,
+      "oddly_breakable_by_hand": 3
+    }
+  },
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "mt_cactus_side",
+    "mt_cactus_side",
+    "mt_cactus_side",
+    "mt_cactus_side",
+    "mt_cactus_top",
+    "mt_cactus_bottom"
+  ],
+  "displayName": "Cactus",
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

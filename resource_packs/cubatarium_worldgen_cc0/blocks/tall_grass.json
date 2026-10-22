@@ -1,0 +1,41 @@
+{
+  "name": "tall_grass",
+  "id": 568,
+  "hardness": 0.05,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3,
+      "snappy": 3
+    }
+  },
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "mt_tallgrass",
+    "mt_tallgrass",
+    "mt_tallgrass",
+    "mt_tallgrass",
+    "mt_tallgrass",
+    "mt_tallgrass"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "displayName": "Tall Grass",
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

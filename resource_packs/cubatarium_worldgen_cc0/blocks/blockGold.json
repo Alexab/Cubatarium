@@ -1,0 +1,31 @@
+{
+  "name": "blockGold",
+  "id": 345,
+  "hardness": 3,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_blockgold",
+    "mt_blockgold",
+    "mt_blockgold",
+    "mt_blockgold",
+    "mt_blockgold",
+    "mt_blockgold"
+  ],
+  "displayName": "Gold Block",
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

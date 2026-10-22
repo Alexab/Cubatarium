@@ -1,0 +1,31 @@
+{
+  "name": "obsidian",
+  "id": 521,
+  "hardness": 50,
+  "dig": {
+    "level": 3,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_obsidian",
+    "mt_obsidian",
+    "mt_obsidian",
+    "mt_obsidian",
+    "mt_obsidian",
+    "mt_obsidian"
+  ],
+  "displayName": "Obsidian",
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

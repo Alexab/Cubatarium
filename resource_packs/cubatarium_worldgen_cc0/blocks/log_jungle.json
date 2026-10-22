@@ -1,0 +1,30 @@
+{
+  "name": "log_jungle",
+  "id": 397,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_tree_jungle",
+    "mt_tree_jungle",
+    "mt_tree_jungle",
+    "mt_tree_jungle",
+    "mt_wood_jungle",
+    "mt_wood_jungle"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

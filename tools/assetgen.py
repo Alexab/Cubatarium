@@ -29,7 +29,7 @@ except ImportError as exc:  # pragma: no cover - covered by CLI error path
     raise SystemExit("assetgen needs PyYAML; install requirements-assetgen.txt") from exc
 
 try:
-    from PIL import Image, ImageDraw, ImageFont, ImageOps
+    from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageOps
 except ImportError as exc:  # pragma: no cover - covered by CLI error path
     raise SystemExit("assetgen needs Pillow; install requirements-assetgen.txt") from exc
 
@@ -38,7 +38,6 @@ REPO = Path(__file__).resolve().parents[1]
 PACK_ID = "cubatarium_worldgen_cc0"
 PACK_DIR = REPO / "resource_packs" / PACK_ID
 CATALOG_PATH = REPO / "tools" / "asset_catalog.yaml"
-DEFAULT_PACKS = ("minetest_default_16", "cubatarium_geology_cc0", PACK_ID)
 MINECRAFT_REFERENCE = {
     "version": "26.3",
     "block_definitions": 1286,
@@ -345,6 +344,17 @@ def image_pixel_hash(image: Image.Image) -> str:
     return hashlib.sha256(image.convert("RGBA").tobytes()).hexdigest()
 
 
+def save_texture_if_changed(image: Image.Image, path: Path) -> None:
+    if path.is_file():
+        try:
+            with Image.open(path) as existing:
+                if image_pixel_hash(existing) == image_pixel_hash(image):
+                    return
+        except Exception:
+            pass
+    image.save(path, format="PNG", optimize=True)
+
+
 def texture_path(pack_dir: Path, stem: str) -> Path:
     return pack_dir / "textures" / "blocks" / f"{stem}.png"
 
@@ -363,6 +373,38 @@ def load_block_files(pack_id: str) -> list[dict[str, Any]]:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
         if data.get("name"):
             result.append(data)
+    return result
+
+
+def remap_block_textures(block: dict[str, Any], replacements: dict[str, str]) -> dict[str, Any]:
+    adapted = copy.deepcopy(block)
+    source_stems = adapted.get("textures") or []
+    missing = sorted({stem for stem in source_stems if stem not in replacements})
+    if missing:
+        raise ValueError(f"{block.get('name', '<unknown>')}: no replacement texture for {', '.join(missing)}")
+    adapted["textures"] = [replacements[stem] for stem in source_stems]
+    return adapted
+
+
+def ensure_stable_block_ids(blocks: list[dict[str, Any]], reserved_start: int = 1025) -> list[dict[str, Any]]:
+    """Copy definitions and assign deterministic IDs where a legacy source omitted one."""
+    result = copy.deepcopy(blocks)
+    used_ids = {
+        block["id"]
+        for block in result
+        if isinstance(block.get("id"), int) and 1 <= block["id"] < reserved_start
+    }
+    next_id = max(used_ids, default=0) + 1
+    for block in result:
+        if isinstance(block.get("id"), int) and 1 <= block["id"] < reserved_start:
+            continue
+        while next_id in used_ids and next_id < reserved_start:
+            next_id += 1
+        if next_id >= reserved_start:
+            raise ValueError(f"no stable block IDs remain below reserved range {reserved_start}")
+        block["id"] = next_id
+        used_ids.add(next_id)
+        next_id += 1
     return result
 
 
@@ -503,7 +545,7 @@ def material_variant(stem: str, family: str) -> tuple[str, str]:
     return selected, variant
 
 
-def make_replacement_texture(source_stem: str, target_stem: str, family: str, kind: str, output_dir: Path, hashes: set[str]) -> dict[str, Any]:
+def make_replacement_texture(source_stem: str, target_stem: str, family: str, kind: str, output_dir: Path, hashes: set[str], frame_count: int = 1) -> dict[str, Any]:
     material, variant = material_variant(source_stem, family)
     base_seed = stable_seed(f"cubatarium:{kind}:{source_stem}:{family}")
     image = periodize(generated_texture(family, material, variant, base_seed), 16, 2)
@@ -514,8 +556,22 @@ def make_replacement_texture(source_stem: str, target_stem: str, family: str, ki
         image = periodize(generated_texture(family, material, f"{variant}_{salt}", base_seed + salt), 16, 2)
         digest = image_pixel_hash(image)
     hashes.add(digest)
-    image.save(texture_path(output_dir, target_stem), format="PNG", optimize=True)
-    return {
+    if frame_count > 1:
+        # Animate Cubatarium-authored water and lava as a wrapped scrolling
+        # tile. ImageChops.offset wraps edges, so every frame remains tileable
+        # and the final frame transitions continuously back to the first.
+        motion_x, motion_y = ((1, 0) if "water" in source_stem.lower() else (1, 1))
+        strip = Image.new("RGBA", (image.width, image.height * frame_count))
+        for frame_index in range(frame_count):
+            shifted = ImageChops.offset(image, motion_x * frame_index,
+                                        motion_y * frame_index)
+            frame = periodize(shifted, image.width, 2)
+            strip.paste(frame, (0, frame_index * image.height))
+        image = strip
+    save_texture_if_changed(image, texture_path(output_dir, target_stem))
+    digest = image_pixel_hash(image)
+    hashes.add(digest)
+    entry = {
         "stem": target_stem,
         "family": family,
         "material": material,
@@ -531,6 +587,9 @@ def make_replacement_texture(source_stem: str, target_stem: str, family: str, ki
         },
         "license": "CC0-1.0",
     }
+    if frame_count > 1:
+        entry["animation_frame_count"] = frame_count
+    return entry
 
 
 def block_definition(record: dict[str, str], texture_stem: str, block_id: int) -> dict[str, Any]:
@@ -911,25 +970,37 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
     (PACK_DIR / "textures" / "blocks").mkdir(parents=True, exist_ok=True)
     write_json(PACK_DIR / "pack.json", {
         "id": PACK_ID,
-        "name": "Cubatarium Original Worldgen CC0",
+        "name": "Cubatarium Worldgen",
         "version": 1,
         "license": "CC0-1.0",
         "resolution": 16,
         "priority": 21,
         "pack_format": 1,
-        "worldgen_role": "secondary",
-        "merge_mode": "skip_existing",
+        "worldgen_role": "primary",
+        "merge_mode": "override",
         "depends": [],
-        "conflicts": [],
+        "conflicts": ["minetest_default_16"],
         "min_game_version": "0.1.0",
     })
+    minetest_blocks = ensure_stable_block_ids(load_block_files("minetest_default_16"))
+    animated_texture_frames: dict[str, int] = {}
+    for block in minetest_blocks:
+        animation = block.get("animation")
+        textures = block.get("textures", [])
+        frame_count = animation.get("frame_count") if isinstance(animation, dict) else None
+        if len(textures) == 6 and isinstance(frame_count, int) and frame_count > 1:
+            for stem in textures:
+                if isinstance(stem, str):
+                    animated_texture_frames[stem] = max(
+                        animated_texture_frames.get(stem, 1), frame_count
+                    )
     minetest_stems = minetest_replacement_stems()
     geology_stems = {p.stem: f"geo_{safe_name(p.stem)}" for p in (REPO / "resource_packs" / "cubatarium_geology_cc0" / "textures" / "blocks").glob("*.png")}
     hashes: set[str] = set()
     manifest_textures: list[dict[str, Any]] = []
     preview_entries: list[tuple[str, Path]] = []
     for stem, target in minetest_stems.items():
-        entry = make_replacement_texture(stem, target, infer_family(stem), "minetest_reference_only", PACK_DIR, hashes)
+        entry = make_replacement_texture(stem, target, infer_family(stem), "minetest_reference_only", PACK_DIR, hashes, animated_texture_frames.get(stem, 1))
         manifest_textures.append(entry)
         preview_entries.append((target, texture_path(PACK_DIR, target)))
     for stem, target in geology_stems.items():
@@ -950,12 +1021,47 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
             image = periodize(generated_texture(record["family"], record["material"], f"{record['variant']}_{salt}", seed + salt), 16, 2)
             digest = image_pixel_hash(image)
         hashes.add(digest)
-        image.save(texture_path(PACK_DIR, target), format="PNG", optimize=True)
+        save_texture_if_changed(image, texture_path(PACK_DIR, target))
         write_json(PACK_DIR / "blocks" / f"{target}.json", block_definition(record, target, first_generated_block_id + block_index))
         manifest_textures.append({"stem": target, "family": record["family"], "material": record["material"], "variant": record["variant"], "seed": seed, "pixel_sha256": digest, "source": {"kind": "procedural_parameters"}, "license": "CC0-1.0"})
         preview_entries.append((target, texture_path(PACK_DIR, target)))
-    minetest_blocks = load_block_files("minetest_default_16")
     geology_blocks = load_block_files("cubatarium_geology_cc0")
+    included_block_sources: list[dict[str, Any]] = []
+    for block in minetest_blocks:
+        adapted = remap_block_textures(block, minetest_stems)
+        adapted["license"] = "CC0-1.0"
+        adapted["provenance"] = {
+            "source_pack": "minetest_default_16",
+            "source_kind": "Cubatarium-authored block definition",
+            "license": "CC0-1.0",
+            "adaptation": "Cubatarium replacement texture stems",
+        }
+        write_json(PACK_DIR / "blocks" / f"{adapted['name']}.json", adapted)
+        included_block_sources.append({
+            "name": adapted["name"],
+            "id": adapted["id"],
+            "source_pack": "minetest_default_16",
+            "source_kind": "Cubatarium-authored block definition",
+            "license": "CC0-1.0",
+        })
+    first_geology_block_id = first_generated_block_id + len(records)
+    if first_geology_block_id + len(geology_blocks) - 1 > 4095:
+        raise ValueError("integrated geology definitions exceed the stable pack id range")
+    for block_index, block in enumerate(geology_blocks):
+        adapted = remap_block_textures(block, geology_stems)
+        adapted["id"] = first_geology_block_id + block_index
+        adapted["license"] = "CC0-1.0"
+        adapted["provenance"] = {
+            "source_pack": "cubatarium_geology_cc0",
+            "license": "CC0-1.0",
+        }
+        write_json(PACK_DIR / "blocks" / f"{adapted['name']}.json", adapted)
+        included_block_sources.append({
+            "name": adapted["name"],
+            "id": adapted["id"],
+            "source_pack": "cubatarium_geology_cc0",
+            "license": "CC0-1.0",
+        })
     override_map: dict[str, list[dict[str, Any]]] = {}
     for pack_id, blocks, replacements in (("minetest_default_16", minetest_blocks, minetest_stems), ("cubatarium_geology_cc0", geology_blocks, geology_stems)):
         for block in blocks:
@@ -990,7 +1096,10 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {"name": "Cubatarium AssetGen", "version": 1, "backend": "procedural", "resolution": 16},
         "counts": {
-            "block_definitions": len(records),
+            "block_definitions": len(records) + len(minetest_blocks) + len(geology_blocks),
+            "procedural_cc0_block_definitions": len(records),
+            "minetest_block_definitions_included": len(minetest_blocks),
+            "geology_block_definitions_included": len(geology_blocks),
             "textures": len(manifest_textures),
             "minetest_textures_replaced": len(minetest_stems),
             "geology_textures_replaced": len(geology_stems),
@@ -1001,18 +1110,23 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
             "worldgen_rules_added_this_build": worldgen_rules_added,
         },
         "reference_inventory": {"minetest_default_16_pngs": original_minetest_count, "cubatarium_geology_cc0_pngs": original_geology_count},
+        "block_provenance": included_block_sources,
         "textures": sorted(manifest_textures, key=lambda item: item["stem"]),
     }
     write_json(PACK_DIR / "asset_manifest.json", texture_manifest)
+    geology_notice = (REPO / "resource_packs" / "cubatarium_geology_cc0" / "LICENSE.txt").read_text(encoding="utf-8-sig").strip()
     (PACK_DIR / "LICENSE.txt").write_text(
-        "Original Cubatarium procedural block textures, block definitions, and voxel objects in this pack are dedicated to the public domain under CC0 1.0.\n"
-        "License: https://creativecommons.org/publicdomain/zero/1.0/\n"
+        "All block definitions, voxel objects, and texture images in this pack are Cubatarium content released under CC0-1.0.\n"
+        "License: https://creativecommons.org/publicdomain/zero/1.0/\n\n"
+        "The Cubatarium-authored block definitions formerly distributed in the minetest_default_16 pack are included here with Cubatarium replacement texture stems. The minetest_default_16 texture pixels were used only as external references and are not included in this pack.\n\n"
+        "The integrated Cubatarium Geology definitions and their replacement textures are CC0. The source pack notice follows:\n"
+        f"{geology_notice}\n\n"
         "Reference texture file names were inspected to classify broad material families. Source texture pixels were not used by the procedural generator.\n"
         "Minecraft Java Edition 26.3 counts are used only as a catalog-size benchmark; no Minecraft assets are included.\n",
         encoding="utf-8",
     )
     create_previews(PACK_DIR, preview_entries, no_preview)
-    return {"blocks": len(records), "textures": len(manifest_textures), "minetest_replacements": len(minetest_stems), "geology_replacements": len(geology_stems), "objects": len(objects), "worldgen_rules": worldgen_rule_count, "worldgen_rules_added_this_build": worldgen_rules_added}
+    return {"blocks": len(records) + len(minetest_blocks) + len(geology_blocks), "textures": len(manifest_textures), "minetest_block_definitions": len(minetest_blocks), "geology_block_definitions": len(geology_blocks), "minetest_replacements": len(minetest_stems), "geology_replacements": len(geology_stems), "objects": len(objects), "worldgen_rules": worldgen_rule_count, "worldgen_rules_added_this_build": worldgen_rules_added}
 
 
 def memory_available_gb() -> float | None:
@@ -1583,16 +1697,28 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
     errors: list[str] = []
     try:
         pack_manifest = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8-sig"))
-        geology_manifest = json.loads((REPO / "resource_packs" / "cubatarium_geology_cc0" / "pack.json").read_text(encoding="utf-8-sig"))
-        if int(pack_manifest.get("priority", 0)) <= int(geology_manifest.get("priority", 0)) + 10:
-            errors.append("pack priority must exceed geology priority by more than one secondary selection rank (10) so original textures win overrides")
+        if pack_manifest.get("worldgen_role") != "primary":
+            errors.append("standalone worldgen pack must declare worldgen_role=primary")
+        if pack_manifest.get("license") != "CC0-1.0":
+            errors.append("standalone worldgen pack must declare CC0-1.0")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        errors.append(f"cannot read pack priority metadata: {exc}")
+        errors.append(f"cannot read pack metadata: {exc}")
     blocks_dir = pack_dir / "blocks"
     textures_dir = pack_dir / "textures" / "blocks"
     objects_dir = pack_dir / "objects"
     blocks = [json.loads(path.read_text(encoding="utf-8-sig")) for path in sorted(blocks_dir.glob("*.json"))] if blocks_dir.exists() else []
     textures = sorted(textures_dir.glob("*.png")) if textures_dir.exists() else []
+    animated_texture_frames: dict[str, int] = {}
+    for block in blocks:
+        animation = block.get("animation")
+        block_textures = block.get("textures", [])
+        frame_count = animation.get("frame_count") if isinstance(animation, dict) else None
+        if len(block_textures) == 6 and isinstance(frame_count, int) and frame_count > 1:
+            for stem in block_textures:
+                if isinstance(stem, str):
+                    animated_texture_frames[stem] = max(
+                        animated_texture_frames.get(stem, 1), frame_count
+                    )
     unique_pixels: set[str] = set()
     duplicate_pixels: list[str] = []
     alpha_extrema: dict[str, tuple[int, int]] = {}
@@ -1602,15 +1728,21 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
         except Exception as exc:
             errors.append(f"invalid image {path.name}: {exc}")
             continue
-        if image.size != (16, 16):
-            errors.append(f"{path.name}: expected 16x16, got {image.size}")
+        frame_count = animated_texture_frames.get(path.stem, 1)
+        expected_size = (16, 16 * frame_count)
+        if image.size != expected_size:
+            errors.append(f"{path.name}: expected {expected_size[0]}x{expected_size[1]}, got {image.size}")
+            continue
         colors = image.getcolors(maxcolors=257)
         if colors is None or len(colors) > 32:
             errors.append(f"{path.name}: palette exceeds 32 RGBA colors")
         alpha_extrema[path.stem] = image.getchannel("A").getextrema()
-        pixels = image.load()
-        if any(pixels[0, y] != pixels[15, y] for y in range(16)) or any(pixels[x, 0] != pixels[x, 15] for x in range(16)):
-            errors.append(f"{path.name}: texture edges are not seamless")
+        for frame_index in range(frame_count):
+            frame = image.crop((0, frame_index * 16, 16, (frame_index + 1) * 16))
+            pixels = frame.load()
+            if any(pixels[0, y] != pixels[15, y] for y in range(16)) or any(pixels[x, 0] != pixels[x, 15] for x in range(16)):
+                errors.append(f"{path.name}: animation frame {frame_index} is not seamless")
+                break
         digest = image_pixel_hash(image)
         if digest in unique_pixels:
             duplicate_pixels.append(path.name)
@@ -1640,18 +1772,38 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
         if block_id in ids:
             errors.append(f"duplicate block id {block_id}: {ids[block_id]} and {block.get('name')}")
         ids[block_id] = str(block.get("name", "<unknown>"))
-    active_block_ids = {
-        int(block["id"])
-        for pack_id in ("minetest_default_16", "cubatarium_geology_cc0")
-        for block in load_block_files(pack_id)
-        if isinstance(block.get("id"), int)
-    }
-    if active_block_ids.intersection(ids):
-        errors.append(f"new pack stable block ids collide with default packs: {sorted(active_block_ids.intersection(ids))[:10]}")
     manifest_path = pack_dir / "texture_overrides.json"
     overrides = json.loads(manifest_path.read_text(encoding="utf-8-sig")) if manifest_path.exists() else {}
-    minetest_blocks = load_block_files("minetest_default_16")
+    minetest_blocks = ensure_stable_block_ids(load_block_files("minetest_default_16"))
     geology_blocks = load_block_files("cubatarium_geology_cc0")
+    replacement_maps = {
+        "minetest_default_16": minetest_replacement_stems(),
+        "cubatarium_geology_cc0": {path.stem: f"geo_{safe_name(path.stem)}" for path in (REPO / "resource_packs" / "cubatarium_geology_cc0" / "textures" / "blocks").glob("*.png")},
+    }
+    geology_first_id = 1025 + len(family_records(load_catalog()))
+    for source_pack, source_blocks in (("minetest_default_16", minetest_blocks), ("cubatarium_geology_cc0", geology_blocks)):
+        replacements = replacement_maps[source_pack]
+        for index, source_block in enumerate(source_blocks):
+            included = name_to_block.get(source_block["name"])
+            if included is None:
+                errors.append(f"standalone pack is missing {source_pack} block {source_block['name']}")
+                continue
+            try:
+                expected_textures = remap_block_textures(source_block, replacements)["textures"]
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
+            if included.get("textures") != expected_textures:
+                errors.append(f"{source_pack}/{source_block['name']}: standalone block definition does not use its replacement textures")
+            expected_id = source_block.get("id") if source_pack == "minetest_default_16" else geology_first_id + index
+            if included.get("id") != expected_id:
+                errors.append(f"{source_pack}/{source_block['name']}: stable id {included.get('id')} does not match expected {expected_id}")
+            if included.get("license") != "CC0-1.0":
+                errors.append(f"{source_pack}/{source_block['name']}: included Cubatarium block definition must declare CC0-1.0")
+            expected_source_kind = "Cubatarium-authored block definition" if source_pack == "minetest_default_16" else None
+            included_provenance = included.get("provenance", {})
+            if expected_source_kind and (not isinstance(included_provenance, dict) or included_provenance.get("source_kind") != expected_source_kind):
+                errors.append(f"{source_pack}/{source_block['name']}: missing Cubatarium-authored provenance")
     missing_overrides = sorted(block["name"] for block in minetest_blocks + geology_blocks if block["name"] not in overrides)
     if missing_overrides:
         errors.append(f"missing default-pack face overrides for {len(missing_overrides)} blocks: {', '.join(missing_overrides[:8])}")
@@ -1664,10 +1816,6 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
             if not isinstance(stem, str) or not (textures_dir / f"{stem}.png").is_file():
                 errors.append(f"{name}: override texture {stem!r} does not resolve")
     face_names = ("top", "bottom", "north", "south", "west", "east")
-    replacement_maps = {
-        "minetest_default_16": minetest_replacement_stems(),
-        "cubatarium_geology_cc0": {path.stem: f"geo_{safe_name(path.stem)}" for path in (REPO / "resource_packs" / "cubatarium_geology_cc0" / "textures" / "blocks").glob("*.png")},
-    }
     for pack_id, source_blocks in (("minetest_default_16", minetest_blocks), ("cubatarium_geology_cc0", geology_blocks)):
         replacement_map = replacement_maps[pack_id]
         for block in source_blocks:
@@ -1740,7 +1888,17 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
                 errors.append(f"{object_path.name}: duplicate voxel coordinate {position}")
                 break
             positions.add(position)
-    return errors, {"blocks": len(blocks), "textures": len(textures), "unique_pixel_textures": len(unique_pixels), "minetest_textures": minetest_count, "minetest_overrides": len(overrides), "objects": object_count}
+    return errors, {
+        "blocks": len(blocks),
+        "procedural_cc0_blocks": len(family_records(load_catalog())),
+        "integrated_minetest_blocks": len(minetest_blocks),
+        "integrated_geology_blocks": len(geology_blocks),
+        "textures": len(textures),
+        "unique_pixel_textures": len(unique_pixels),
+        "minetest_textures": minetest_count,
+        "minetest_overrides": len(overrides),
+        "objects": object_count,
+    }
 
 
 def command_audit(args: argparse.Namespace) -> int:

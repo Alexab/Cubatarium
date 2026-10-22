@@ -1,0 +1,40 @@
+{
+  "name": "tree_leaves",
+  "id": 572,
+  "hardness": 0.2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3,
+      "snappy": 3
+    }
+  },
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "mt_leaves_opaque",
+    "mt_leaves_opaque",
+    "mt_leaves_opaque",
+    "mt_leaves_opaque",
+    "mt_leaves_opaque",
+    "mt_leaves_opaque"
+  ],
+  "displayName": "Leaves",
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

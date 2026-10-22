@@ -1,0 +1,37 @@
+{
+  "name": "mtg_bush_stem",
+  "id": 419,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_bush_stem_default_bush_stem",
+    "mt_mtg_bush_stem_default_bush_stem",
+    "mt_mtg_bush_stem_default_bush_stem",
+    "mt_mtg_bush_stem_default_bush_stem",
+    "mt_mtg_bush_stem_default_bush_stem",
+    "mt_mtg_bush_stem_default_bush_stem"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

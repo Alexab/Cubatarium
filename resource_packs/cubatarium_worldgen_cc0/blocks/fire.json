@@ -1,0 +1,49 @@
+{
+  "name": "fire",
+  "id": 371,
+  "hardness": 100,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_fire_0",
+    "mt_fire_0",
+    "mt_fire_0",
+    "mt_fire_0",
+    "mt_fire_0",
+    "mt_fire_0",
+    "mt_fire_1",
+    "mt_fire_1",
+    "mt_fire_1",
+    "mt_fire_1",
+    "mt_fire_1",
+    "mt_fire_1"
+  ],
+  "physics": {
+    "preset": "fire"
+  },
+  "render": {
+    "transparent": true
+  },
+  "animation": {
+    "frame_count": 2,
+    "frametime": 6
+  },
+  "displayName": "Fire",
+  "lighting": {
+    "emission": 14
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

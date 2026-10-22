@@ -1,0 +1,32 @@
+{
+  "name": "sandstone",
+  "id": 550,
+  "hardness": 0.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "mt_sandstone",
+    "mt_sandstone",
+    "mt_sandstone",
+    "mt_sandstone",
+    "mt_sandstone",
+    "mt_sandstone"
+  ],
+  "displayName": "Sandstone",
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "log_birch",
+  "id": 396,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_tree_birch",
+    "mt_tree_birch",
+    "mt_tree_birch",
+    "mt_tree_birch",
+    "mt_wood_birch",
+    "mt_wood_birch"
+  ],
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

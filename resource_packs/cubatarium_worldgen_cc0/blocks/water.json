@@ -1,0 +1,42 @@
+{
+  "name": "water",
+  "id": 575,
+  "hardness": 100,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "fluid",
+    "natural"
+  ],
+  "textures": [
+    "mt_water",
+    "mt_water",
+    "mt_water",
+    "mt_water",
+    "mt_water",
+    "mt_water"
+  ],
+  "physics": {
+    "preset": "water"
+  },
+  "render": {
+    "transparent": true,
+    "style": "fluid"
+  },
+  "animation": {
+    "frame_count": 4,
+    "frametime": 6
+  },
+  "displayName": "Water",
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

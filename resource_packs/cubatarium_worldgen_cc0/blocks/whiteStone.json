@@ -1,0 +1,32 @@
+{
+  "name": "whiteStone",
+  "id": 577,
+  "hardness": 3,
+  "dig": {
+    "level": 1,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "mt_whitestone",
+    "mt_whitestone",
+    "mt_whitestone",
+    "mt_whitestone",
+    "mt_whitestone",
+    "mt_whitestone"
+  ],
+  "displayName": "Quartz Block",
+  "render": {},
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}
