@@ -723,6 +723,19 @@ void UWorld::TickEnvironment(float dtSeconds)
   EnvironmentSettingsData.WeatherRuntime.WeatherSimulationTimeSec +=
       static_cast<double>(dtSeconds);
 
+  // Harness/diagnostics: pin the time of day (0..1, e.g. 0.5 = noon-ish) so
+  // captured frames are comparable. In game use `time set <0..1>` and
+  // `time freeze`.
+  {
+    static const char *const fixed_time_env = std::getenv("CUBA_FIXED_TIME");
+    if (fixed_time_env && !FixedTimeApplied)
+    {
+      SetTimeOfDayNormalized(std::strtof(fixed_time_env, nullptr));
+      SetTimeFrozen(true);
+      FixedTimeApplied = true;
+    }
+  }
+
   if (!EnvironmentStateData.TimeFrozen)
   {
     const float cycle_seconds =

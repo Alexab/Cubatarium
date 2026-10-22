@@ -759,6 +759,68 @@ bool TrimWaterSurfaceSpikesInChunk(WorldGenContext &ctx, int base_x, int base_z)
   return changed;
 }
 
+/// Floating surface decor (lily pads) is not fluid permeable and lives only on
+/// the water surface (water directly below, nothing but air above). A pad that ends up with water above it (the shore/pocket
+/// seals fill air above sea-level basins) would sit in the water body as an
+/// isolated pocket with water walls around it: turn that cell into water.
+bool RemoveSubmergedFloatingDecorInChunk(WorldGenContext &ctx, int base_x,
+                                         int base_z)
+{
+  const BlockId water = ctx.Blocks.Water;
+  const BlockId pad = ctx.Registry.GetIdByTypeName("lily_pad");
+  if (pad == BLOCK_AIR || water == BLOCK_AIR)
+  {
+    return false;
+  }
+  const int top_y = std::min(ctx.Settings.MaxHeight - 1, ctx.Settings.SeaLevel + 2);
+  bool changed = false;
+  // One column of margin: a pad prefab spilling over a chunk border is written
+  // into the neighbouring column after that column's own pass ran.
+  for (int lz = -1; lz <= CHUNK_SIZE; ++lz)
+  {
+    for (int lx = -1; lx <= CHUNK_SIZE; ++lx)
+    {
+      const int x = base_x + lx;
+      const int z = base_z + lz;
+      // Walk the open stack (air / pad / water) down to the first solid cell.
+      for (int y = top_y; y >= ctx.Settings.MinHeight; --y)
+      {
+        const glm::ivec3 pos(x, y, z);
+        const BlockId id = ctx.World.GetBlock(pos);
+        if (id == pad)
+        {
+          // The two-pad prefab places its second pad blindly: a pad without
+          // water directly below would float over air or sit on land.
+          if (!ctx.Registry.IsLiquid(ctx.World.GetBlock(pos - glm::ivec3(0, 1, 0))))
+          {
+            ctx.World.SetBlock(pos, BLOCK_AIR);
+            ctx.World.SetFluidState(pos, FluidCellState{});
+            changed = true;
+            continue;
+          }
+          if (ctx.Registry.IsLiquid(ctx.World.GetBlock(pos + glm::ivec3(0, 1, 0))))
+          {
+            ctx.World.SetBlock(pos, water);
+            ctx.World.SetFluidState(
+                pos, FluidCellState::Source().WithKind(FluidKind::Water));
+            changed = true;
+          }
+          continue;
+        }
+        if (id != BLOCK_AIR && id != water)
+        {
+          break;
+        }
+      }
+    }
+  }
+  if (changed)
+  {
+    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, top_y);
+  }
+  return changed;
+}
+
 } // namespace
 
 bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
@@ -790,7 +852,9 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
     shore_air = SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
   }
   const bool trimmed = TrimWaterSurfaceSpikesInChunk(ctx, base_x, base_z);
-  return sealed || permeable || sealed_after_permeable || shore_air || trimmed;
+  const bool pads_fixed = RemoveSubmergedFloatingDecorInChunk(ctx, base_x, base_z);
+  return sealed || permeable || sealed_after_permeable || shore_air || trimmed ||
+         pads_fixed;
 }
 
 bool SealFluidShoreAirOnChunkCommitted(

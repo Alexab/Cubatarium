@@ -1774,6 +1774,7 @@ private:
   /// Dynamic fog end margin (pull-in boost); 0 → RenderSettings default.
   int EffectiveFogEndMarginBlocks{0};
   float PresentedFogHorizonBlocks{-1.0f};
+  bool FixedTimeApplied{false};
   float PresentedFogStartBlocks{-1.0f};
   /// Hole/unfinished debt while near fluid / sea — fog A+B boost.
   bool NearWaterUnfinishedFog{false};

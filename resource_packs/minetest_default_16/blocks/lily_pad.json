@@ -28,7 +28,8 @@
   "physics": {
     "movement": {
       "occupancy": 0
-    }
+    },
+    "fluid_permeable": false
   },
   "displayName": "Lily Pad"
 }

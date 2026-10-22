@@ -101,6 +101,9 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
   int total_missing = 0;
   int total_expected = 0;
   int total_published_missing = 0;
+  long internal_fluid_faces = 0, fluid_quads = 0;
+  std::map<std::string, long> internal_fluid_by_neighbor_kind;
+  json internal_fluid_samples = json::array();
   for (const glm::ivec3 &coord : coords)
   {
     const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord);
@@ -212,6 +215,56 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
         block_world, coord, /*sourceRevision=*/1, nullptr, nullptr);
     const std::vector<GreedyQuad> quads =
         UGreedyMesher::BuildChunkMesh(snapshot, registry);
+    // Fluid faces whose outward neighbour is the same liquid are hidden walls
+    // that must not exist: they render as translucent "walls" inside a water
+    // body (decor cells carrying their own fluid are the usual cause).
+    for (const GreedyQuad &q : quads)
+    {
+      if (!registry.IsLiquid(q.Id))
+      {
+        continue;
+      }
+      ++fluid_quads;
+      for (int dv = 0; dv < q.height; ++dv)
+      {
+        for (int du = 0; du < q.width; ++du)
+        {
+          glm::ivec3 cell(0);
+          if (q.axis == 0)
+          {
+            cell = glm::ivec3(q.slice, q.u + du, q.v + dv);
+          }
+          else if (q.axis == 1)
+          {
+            cell = glm::ivec3(q.v + dv, q.slice, q.u + du);
+          }
+          else
+          {
+            cell = glm::ivec3(q.u + du, q.v + dv, q.slice);
+          }
+          glm::ivec3 outward(0);
+          outward[q.axis] = q.faceSign;
+          const glm::ivec3 world_cell = coord * CHUNK_SIZE + cell;
+          const BlockId neighbour = block_world.GetBlock(world_cell + outward);
+          if (neighbour != BLOCK_AIR && registry.IsLiquid(neighbour))
+          {
+            ++internal_fluid_faces;
+            const std::string own = registry.GetTypeNameById(
+                block_world.GetBlock(world_cell));
+            ++internal_fluid_by_neighbor_kind[own + " -> " +
+                                              registry.GetTypeNameById(neighbour)];
+            if (internal_fluid_samples.size() < 8)
+            {
+              internal_fluid_samples.push_back(
+                  {{"cell", {world_cell.x, world_cell.y, world_cell.z}},
+                   {"axis", q.axis},
+                   {"sign", q.faceSign},
+                   {"fluid_packed", int(q.FluidPacked)}});
+            }
+          }
+        }
+      }
+    }
     std::set<std::tuple<int, int, int>> covered;
     for (const GreedyQuad &q : quads)
     {
@@ -662,6 +715,92 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
       out["liquid_submerged_nonsource"] = submerged_nonsource;
       out["liquid_submerged_nonsource_samples"] = ws;
     }
+    // Lily pad placement: it must rest on the water surface (water below,
+    // air above, no fluid in its own cell).
+    {
+      const BlockId pad = registry.GetIdByTypeName("lily_pad");
+      long pads = 0, ok = 0, over_land = 0, over_air = 0, submerged = 0,
+           fluid_in_cell = 0, water_below_not_source = 0;
+      std::map<int, int> height_over_sea;
+      json bad_samples = json::array();
+      if (pad != BLOCK_AIR)
+      {
+        for (const glm::ivec3 &coord : coords)
+        {
+          const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord);
+          if (!chunk)
+          {
+            continue;
+          }
+          for (int z = 0; z < CHUNK_SIZE; ++z)
+          {
+            for (int y = 0; y < CHUNK_SIZE; ++y)
+            {
+              for (int x = 0; x < CHUNK_SIZE; ++x)
+              {
+                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != pad)
+                {
+                  continue;
+                }
+                const glm::ivec3 wp = coord * CHUNK_SIZE + glm::ivec3(x, y, z);
+                ++pads;
+                ++height_over_sea[wp.y - sea];
+                const BlockId below = block_world.GetBlock(wp - glm::ivec3(0, 1, 0));
+                const BlockId above = block_world.GetBlock(wp + glm::ivec3(0, 1, 0));
+                const bool water_below = registry.IsLiquid(below);
+                const bool liquid_above = registry.IsLiquid(above);
+                const bool fluid_here =
+                    PackFluidCellState(block_world.GetFluidState(wp)) != 0;
+                bool good = true;
+                if (!water_below)
+                {
+                  ++(below == BLOCK_AIR ? over_air : over_land);
+                  good = false;
+                }
+                else
+                {
+                  const FluidCellState below_state =
+                      block_world.GetFluidState(wp - glm::ivec3(0, 1, 0));
+                  if (!below_state.IsSource())
+                  {
+                    ++water_below_not_source;
+                  }
+                }
+                if (liquid_above)
+                {
+                  ++submerged;
+                  good = false;
+                }
+                if (fluid_here)
+                {
+                  ++fluid_in_cell;
+                  good = false;
+                }
+                if (good)
+                {
+                  ++ok;
+                }
+                else if (bad_samples.size() < 8)
+                {
+                  bad_samples.push_back({{"pos", {wp.x, wp.y, wp.z}},
+                                         {"below", registry.GetTypeNameById(below)},
+                                         {"above", registry.GetTypeNameById(above)}});
+                }
+              }
+            }
+          }
+        }
+      }
+      out["lily_pads"] = {{"total", pads},
+                          {"ok_on_surface", ok},
+                          {"over_land", over_land},
+                          {"over_air", over_air},
+                          {"submerged", submerged},
+                          {"fluid_in_cell", fluid_in_cell},
+                          {"water_below_not_source", water_below_not_source},
+                          {"height_over_sea", height_over_sea},
+                          {"bad_samples", bad_samples}};
+    }
     out["waterlogged_total"] = total_waterlogged;
     out["waterlogged_above_sea"] = above_sea;
     out["waterlogged_exposed_above_sea"] = exposed_above_sea;
@@ -670,6 +809,10 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
     out["waterlogged_exposed_samples"] = wl_samples;
     out["sea_level"] = sea;
   }
+  out["fluid_quads"] = fluid_quads;
+  out["internal_fluid_faces"] = internal_fluid_faces;
+  out["internal_fluid_faces_by_kind"] = internal_fluid_by_neighbor_kind;
+  out["internal_fluid_face_samples"] = internal_fluid_samples;
   out["suspect_chunks"] = bad;
   out["dark_drawable_chunks"] = dark;
   out["dark_top_chunks"] = dark_top;
