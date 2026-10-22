@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_amber_glazed",
+  "id": 1698,
+  "displayName": "Ceramic Amber Glazed",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_amber_glazed",
+    "cu_ceramic_amber_glazed",
+    "cu_ceramic_amber_glazed",
+    "cu_ceramic_amber_glazed",
+    "cu_ceramic_amber_glazed",
+    "cu_ceramic_amber_glazed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "amber",
+    "variant": "glazed"
+  }
+}

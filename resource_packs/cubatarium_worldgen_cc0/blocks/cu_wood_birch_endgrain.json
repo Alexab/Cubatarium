@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_birch_endgrain",
+  "id": 1376,
+  "displayName": "Wood Birch Endgrain",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_birch_endgrain",
+    "cu_wood_birch_endgrain",
+    "cu_wood_birch_endgrain",
+    "cu_wood_birch_endgrain",
+    "cu_wood_birch_endgrain",
+    "cu_wood_birch_endgrain"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "birch",
+    "variant": "endgrain"
+  }
+}

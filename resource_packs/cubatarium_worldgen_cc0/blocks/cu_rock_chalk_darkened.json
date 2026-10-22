@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_chalk_darkened",
+  "id": 1154,
+  "displayName": "Rock Chalk Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_chalk_darkened",
+    "cu_rock_chalk_darkened",
+    "cu_rock_chalk_darkened",
+    "cu_rock_chalk_darkened",
+    "cu_rock_chalk_darkened",
+    "cu_rock_chalk_darkened"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "chalk",
+    "variant": "darkened"
+  }
+}

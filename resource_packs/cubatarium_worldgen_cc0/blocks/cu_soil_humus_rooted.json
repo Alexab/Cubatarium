@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_humus_rooted",
+  "id": 1292,
+  "displayName": "Soil Humus Rooted",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_humus_rooted",
+    "cu_soil_humus_rooted",
+    "cu_soil_humus_rooted",
+    "cu_soil_humus_rooted",
+    "cu_soil_humus_rooted",
+    "cu_soil_humus_rooted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "humus",
+    "variant": "rooted"
+  }
+}

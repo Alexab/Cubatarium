@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_quartz_fractured",
+  "id": 2137,
+  "displayName": "Crystal Quartz Fractured",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_quartz_fractured",
+    "cu_crystal_quartz_fractured",
+    "cu_crystal_quartz_fractured",
+    "cu_crystal_quartz_fractured",
+    "cu_crystal_quartz_fractured",
+    "cu_crystal_quartz_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "quartz",
+    "variant": "fractured"
+  }
+}

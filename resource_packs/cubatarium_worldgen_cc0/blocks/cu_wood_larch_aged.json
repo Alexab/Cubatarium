@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_larch_aged",
+  "id": 1489,
+  "displayName": "Wood Larch Aged",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_larch_aged",
+    "cu_wood_larch_aged",
+    "cu_wood_larch_aged",
+    "cu_wood_larch_aged",
+    "cu_wood_larch_aged",
+    "cu_wood_larch_aged"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "larch",
+    "variant": "aged"
+  }
+}

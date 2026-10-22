@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_granite_cut",
+  "id": 1508,
+  "displayName": "Masonry Granite Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_granite_cut",
+    "cu_masonry_granite_cut",
+    "cu_masonry_granite_cut",
+    "cu_masonry_granite_cut",
+    "cu_masonry_granite_cut",
+    "cu_masonry_granite_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "granite",
+    "variant": "cut"
+  }
+}

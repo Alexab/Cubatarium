@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_diorite_banded",
+  "id": 1053,
+  "displayName": "Rock Diorite Banded",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_diorite_banded",
+    "cu_rock_diorite_banded",
+    "cu_rock_diorite_banded",
+    "cu_rock_diorite_banded",
+    "cu_rock_diorite_banded",
+    "cu_rock_diorite_banded"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "diorite",
+    "variant": "banded"
+  }
+}

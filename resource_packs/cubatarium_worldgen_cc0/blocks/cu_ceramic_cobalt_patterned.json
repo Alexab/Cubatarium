@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cobalt_patterned",
+  "id": 1742,
+  "displayName": "Ceramic Cobalt Patterned",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cobalt_patterned",
+    "cu_ceramic_cobalt_patterned",
+    "cu_ceramic_cobalt_patterned",
+    "cu_ceramic_cobalt_patterned",
+    "cu_ceramic_cobalt_patterned",
+    "cu_ceramic_cobalt_patterned"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cobalt",
+    "variant": "patterned"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_malachite_cluster",
+  "id": 2211,
+  "displayName": "Crystal Malachite Cluster",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_malachite_cluster",
+    "cu_crystal_malachite_cluster",
+    "cu_crystal_malachite_cluster",
+    "cu_crystal_malachite_cluster",
+    "cu_crystal_malachite_cluster",
+    "cu_crystal_malachite_cluster"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "malachite",
+    "variant": "cluster"
+  }
+}

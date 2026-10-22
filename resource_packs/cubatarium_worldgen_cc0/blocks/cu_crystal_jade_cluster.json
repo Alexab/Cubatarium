@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_jade_cluster",
+  "id": 2171,
+  "displayName": "Crystal Jade Cluster",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_jade_cluster",
+    "cu_crystal_jade_cluster",
+    "cu_crystal_jade_cluster",
+    "cu_crystal_jade_cluster",
+    "cu_crystal_jade_cluster",
+    "cu_crystal_jade_cluster"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "jade",
+    "variant": "cluster"
+  }
+}

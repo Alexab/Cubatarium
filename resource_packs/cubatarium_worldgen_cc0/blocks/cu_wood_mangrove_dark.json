@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_mangrove_dark",
+  "id": 1480,
+  "displayName": "Wood Mangrove Dark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_mangrove_dark",
+    "cu_wood_mangrove_dark",
+    "cu_wood_mangrove_dark",
+    "cu_wood_mangrove_dark",
+    "cu_wood_mangrove_dark",
+    "cu_wood_mangrove_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "mangrove",
+    "variant": "dark"
+  }
+}

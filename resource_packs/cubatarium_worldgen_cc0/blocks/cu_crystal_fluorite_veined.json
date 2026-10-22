@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_fluorite_veined",
+  "id": 2196,
+  "displayName": "Crystal Fluorite Veined",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_fluorite_veined",
+    "cu_crystal_fluorite_veined",
+    "cu_crystal_fluorite_veined",
+    "cu_crystal_fluorite_veined",
+    "cu_crystal_fluorite_veined",
+    "cu_crystal_fluorite_veined"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "fluorite",
+    "variant": "veined"
+  }
+}

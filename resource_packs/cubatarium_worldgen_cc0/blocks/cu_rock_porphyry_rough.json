@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_porphyry_rough",
+  "id": 1166,
+  "displayName": "Rock Porphyry Rough",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_porphyry_rough",
+    "cu_rock_porphyry_rough",
+    "cu_rock_porphyry_rough",
+    "cu_rock_porphyry_rough",
+    "cu_rock_porphyry_rough",
+    "cu_rock_porphyry_rough"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "porphyry",
+    "variant": "rough"
+  }
+}

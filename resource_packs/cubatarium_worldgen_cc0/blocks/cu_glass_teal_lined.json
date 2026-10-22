@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_teal_lined",
+  "id": 2099,
+  "displayName": "Glass Teal Lined",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_teal_lined",
+    "cu_glass_teal_lined",
+    "cu_glass_teal_lined",
+    "cu_glass_teal_lined",
+    "cu_glass_teal_lined",
+    "cu_glass_teal_lined"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "teal",
+    "variant": "lined"
+  }
+}

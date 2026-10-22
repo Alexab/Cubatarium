@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_schist_darkened",
+  "id": 1104,
+  "displayName": "Rock Schist Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_schist_darkened",
+    "cu_rock_schist_darkened",
+    "cu_rock_schist_darkened",
+    "cu_rock_schist_darkened",
+    "cu_rock_schist_darkened",
+    "cu_rock_schist_darkened"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "schist",
+    "variant": "darkened"
+  }
+}

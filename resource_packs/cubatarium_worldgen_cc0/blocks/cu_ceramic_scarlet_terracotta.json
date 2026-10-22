@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_scarlet_terracotta",
+  "id": 1711,
+  "displayName": "Ceramic Scarlet Terracotta",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_scarlet_terracotta",
+    "cu_ceramic_scarlet_terracotta",
+    "cu_ceramic_scarlet_terracotta",
+    "cu_ceramic_scarlet_terracotta",
+    "cu_ceramic_scarlet_terracotta",
+    "cu_ceramic_scarlet_terracotta"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "scarlet",
+    "variant": "terracotta"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_quartz_veined",
+  "id": 2136,
+  "displayName": "Crystal Quartz Veined",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_quartz_veined",
+    "cu_crystal_quartz_veined",
+    "cu_crystal_quartz_veined",
+    "cu_crystal_quartz_veined",
+    "cu_crystal_quartz_veined",
+    "cu_crystal_quartz_veined"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "quartz",
+    "variant": "veined"
+  }
+}

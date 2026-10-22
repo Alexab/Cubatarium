@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_reed_spotted",
+  "id": 2255,
+  "displayName": "Organic Reed Spotted",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_reed_spotted",
+    "cu_organic_reed_spotted",
+    "cu_organic_reed_spotted",
+    "cu_organic_reed_spotted",
+    "cu_organic_reed_spotted",
+    "cu_organic_reed_spotted"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "reed",
+    "variant": "spotted"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_silver_brushed",
+  "id": 1962,
+  "displayName": "Metal Silver Brushed",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_silver_brushed",
+    "cu_metal_silver_brushed",
+    "cu_metal_silver_brushed",
+    "cu_metal_silver_brushed",
+    "cu_metal_silver_brushed",
+    "cu_metal_silver_brushed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "silver",
+    "variant": "brushed"
+  }
+}

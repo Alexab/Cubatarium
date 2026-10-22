@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_rose_plain",
+  "id": 2071,
+  "displayName": "Glass Rose Plain",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_rose_plain",
+    "cu_glass_rose_plain",
+    "cu_glass_rose_plain",
+    "cu_glass_rose_plain",
+    "cu_glass_rose_plain",
+    "cu_glass_rose_plain"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "rose",
+    "variant": "plain"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_conglomerate_polished",
+  "id": 1200,
+  "displayName": "Rock Conglomerate Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_conglomerate_polished",
+    "cu_rock_conglomerate_polished",
+    "cu_rock_conglomerate_polished",
+    "cu_rock_conglomerate_polished",
+    "cu_rock_conglomerate_polished",
+    "cu_rock_conglomerate_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "conglomerate",
+    "variant": "polished"
+  }
+}

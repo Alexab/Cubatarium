@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_opal_fractured",
+  "id": 2187,
+  "displayName": "Crystal Opal Fractured",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_opal_fractured",
+    "cu_crystal_opal_fractured",
+    "cu_crystal_opal_fractured",
+    "cu_crystal_opal_fractured",
+    "cu_crystal_opal_fractured",
+    "cu_crystal_opal_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "opal",
+    "variant": "fractured"
+  }
+}

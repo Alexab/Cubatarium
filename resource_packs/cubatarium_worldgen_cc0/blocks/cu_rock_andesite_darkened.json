@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_andesite_darkened",
+  "id": 1064,
+  "displayName": "Rock Andesite Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_andesite_darkened",
+    "cu_rock_andesite_darkened",
+    "cu_rock_andesite_darkened",
+    "cu_rock_andesite_darkened",
+    "cu_rock_andesite_darkened",
+    "cu_rock_andesite_darkened"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "andesite",
+    "variant": "darkened"
+  }
+}

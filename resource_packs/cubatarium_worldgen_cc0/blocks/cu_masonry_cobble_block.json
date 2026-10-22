@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_cobble_block",
+  "id": 1585,
+  "displayName": "Masonry Cobble Block",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_cobble_block",
+    "cu_masonry_cobble_block",
+    "cu_masonry_cobble_block",
+    "cu_masonry_cobble_block",
+    "cu_masonry_cobble_block",
+    "cu_masonry_cobble_block"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "cobble",
+    "variant": "block"
+  }
+}

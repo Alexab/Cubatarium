@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_terrazzo_cobble",
+  "id": 1617,
+  "displayName": "Masonry Terrazzo Cobble",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_terrazzo_cobble",
+    "cu_masonry_terrazzo_cobble",
+    "cu_masonry_terrazzo_cobble",
+    "cu_masonry_terrazzo_cobble",
+    "cu_masonry_terrazzo_cobble",
+    "cu_masonry_terrazzo_cobble"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "terrazzo",
+    "variant": "cobble"
+  }
+}

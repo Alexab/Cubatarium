@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_lime_prism",
+  "id": 2112,
+  "displayName": "Glass Lime Prism",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_lime_prism",
+    "cu_glass_lime_prism",
+    "cu_glass_lime_prism",
+    "cu_glass_lime_prism",
+    "cu_glass_lime_prism",
+    "cu_glass_lime_prism"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "lime",
+    "variant": "prism"
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "name": "asset_tree_birch",
+  "version": 2,
+  "displayName": "Tree Birch",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 8039764520555439151,
+    "license": "CC0-1.0",
+    "material_parameter": "birch"
+  },
+  "tags": [
+    "worldgen",
+    "vegetation"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_wood_birch_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_wood_birch_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_wood_birch_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": 0,
+      "type": "cu_wood_birch_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_wood_birch_bark"
+    },
+    {
+      "dx": -1,
+      "dy": 3,
+      "dz": 0,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": -1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": 1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 3,
+      "dz": 0,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": -1,
+      "dy": 4,
+      "dz": -1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": -1,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": -1,
+      "dy": 4,
+      "dz": 1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 4,
+      "dz": -1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 4,
+      "dz": 1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": -1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": -1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_fresh"
+    }
+  ]
+}

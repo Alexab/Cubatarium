@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_scarlet_bubbled",
+  "id": 2066,
+  "displayName": "Glass Scarlet Bubbled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_scarlet_bubbled",
+    "cu_glass_scarlet_bubbled",
+    "cu_glass_scarlet_bubbled",
+    "cu_glass_scarlet_bubbled",
+    "cu_glass_scarlet_bubbled",
+    "cu_glass_scarlet_bubbled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "scarlet",
+    "variant": "bubbled"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_cedar_carved",
+  "id": 1392,
+  "displayName": "Wood Cedar Carved",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_cedar_carved",
+    "cu_wood_cedar_carved",
+    "cu_wood_cedar_carved",
+    "cu_wood_cedar_carved",
+    "cu_wood_cedar_carved",
+    "cu_wood_cedar_carved"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "cedar",
+    "variant": "carved"
+  }
+}

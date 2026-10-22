@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_concrete_tiled",
+  "id": 1610,
+  "displayName": "Masonry Concrete Tiled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_concrete_tiled",
+    "cu_masonry_concrete_tiled",
+    "cu_masonry_concrete_tiled",
+    "cu_masonry_concrete_tiled",
+    "cu_masonry_concrete_tiled",
+    "cu_masonry_concrete_tiled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "concrete",
+    "variant": "tiled"
+  }
+}

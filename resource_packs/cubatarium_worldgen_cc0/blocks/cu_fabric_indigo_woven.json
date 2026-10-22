@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_indigo_woven",
+  "id": 1849,
+  "displayName": "Fabric Indigo Woven",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_indigo_woven",
+    "cu_fabric_indigo_woven",
+    "cu_fabric_indigo_woven",
+    "cu_fabric_indigo_woven",
+    "cu_fabric_indigo_woven",
+    "cu_fabric_indigo_woven"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "indigo",
+    "variant": "woven"
+  }
+}

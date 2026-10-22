@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_silver_dark",
+  "id": 1968,
+  "displayName": "Metal Silver Dark",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_silver_dark",
+    "cu_metal_silver_dark",
+    "cu_metal_silver_dark",
+    "cu_metal_silver_dark",
+    "cu_metal_silver_dark",
+    "cu_metal_silver_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "silver",
+    "variant": "dark"
+  }
+}

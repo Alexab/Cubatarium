@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_cream_checked",
+  "id": 1797,
+  "displayName": "Fabric Cream Checked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_cream_checked",
+    "cu_fabric_cream_checked",
+    "cu_fabric_cream_checked",
+    "cu_fabric_cream_checked",
+    "cu_fabric_cream_checked",
+    "cu_fabric_cream_checked"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "cream",
+    "variant": "checked"
+  }
+}

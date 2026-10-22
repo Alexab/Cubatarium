@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_reed_pale",
+  "id": 2257,
+  "displayName": "Organic Reed Pale",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_reed_pale",
+    "cu_organic_reed_pale",
+    "cu_organic_reed_pale",
+    "cu_organic_reed_pale",
+    "cu_organic_reed_pale",
+    "cu_organic_reed_pale"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "reed",
+    "variant": "pale"
+  }
+}

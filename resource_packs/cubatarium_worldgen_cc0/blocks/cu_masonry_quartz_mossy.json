@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_quartz_mossy",
+  "id": 1654,
+  "displayName": "Masonry Quartz Mossy",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_quartz_mossy",
+    "cu_masonry_quartz_mossy",
+    "cu_masonry_quartz_mossy",
+    "cu_masonry_quartz_mossy",
+    "cu_masonry_quartz_mossy",
+    "cu_masonry_quartz_mossy"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "quartz",
+    "variant": "mossy"
+  }
+}

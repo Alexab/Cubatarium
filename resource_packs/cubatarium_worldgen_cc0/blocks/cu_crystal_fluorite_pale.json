@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_fluorite_pale",
+  "id": 2194,
+  "displayName": "Crystal Fluorite Pale",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_fluorite_pale",
+    "cu_crystal_fluorite_pale",
+    "cu_crystal_fluorite_pale",
+    "cu_crystal_fluorite_pale",
+    "cu_crystal_fluorite_pale",
+    "cu_crystal_fluorite_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "fluorite",
+    "variant": "pale"
+  }
+}

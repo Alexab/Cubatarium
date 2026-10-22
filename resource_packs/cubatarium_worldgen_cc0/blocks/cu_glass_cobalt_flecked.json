@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_cobalt_flecked",
+  "id": 2086,
+  "displayName": "Glass Cobalt Flecked",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_cobalt_flecked",
+    "cu_glass_cobalt_flecked",
+    "cu_glass_cobalt_flecked",
+    "cu_glass_cobalt_flecked",
+    "cu_glass_cobalt_flecked",
+    "cu_glass_cobalt_flecked"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "cobalt",
+    "variant": "flecked"
+  }
+}

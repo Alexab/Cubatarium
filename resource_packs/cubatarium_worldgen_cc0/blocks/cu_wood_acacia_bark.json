@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_acacia_bark",
+  "id": 1455,
+  "displayName": "Wood Acacia Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_acacia_bark",
+    "cu_wood_acacia_bark",
+    "cu_wood_acacia_bark",
+    "cu_wood_acacia_bark",
+    "cu_wood_acacia_bark",
+    "cu_wood_acacia_bark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "acacia",
+    "variant": "bark"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_opal_raw",
+  "id": 2182,
+  "displayName": "Crystal Opal Raw",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_opal_raw",
+    "cu_crystal_opal_raw",
+    "cu_crystal_opal_raw",
+    "cu_crystal_opal_raw",
+    "cu_crystal_opal_raw",
+    "cu_crystal_opal_raw"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "opal",
+    "variant": "raw"
+  }
+}

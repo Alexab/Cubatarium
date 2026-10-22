@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_dolomite_polished",
+  "id": 1190,
+  "displayName": "Rock Dolomite Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_dolomite_polished",
+    "cu_rock_dolomite_polished",
+    "cu_rock_dolomite_polished",
+    "cu_rock_dolomite_polished",
+    "cu_rock_dolomite_polished",
+    "cu_rock_dolomite_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "dolomite",
+    "variant": "polished"
+  }
+}

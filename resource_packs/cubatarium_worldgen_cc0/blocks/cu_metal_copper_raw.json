@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_copper_raw",
+  "id": 1929,
+  "displayName": "Metal Copper Raw",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_copper_raw",
+    "cu_metal_copper_raw",
+    "cu_metal_copper_raw",
+    "cu_metal_copper_raw",
+    "cu_metal_copper_raw",
+    "cu_metal_copper_raw"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "copper",
+    "variant": "raw"
+  }
+}

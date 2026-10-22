@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_smoke_flecked",
+  "id": 2122,
+  "displayName": "Glass Smoke Flecked",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_smoke_flecked",
+    "cu_glass_smoke_flecked",
+    "cu_glass_smoke_flecked",
+    "cu_glass_smoke_flecked",
+    "cu_glass_smoke_flecked",
+    "cu_glass_smoke_flecked"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "smoke",
+    "variant": "flecked"
+  }
+}

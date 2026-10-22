@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_frosted_prism",
+  "id": 2052,
+  "displayName": "Glass Frosted Prism",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_frosted_prism",
+    "cu_glass_frosted_prism",
+    "cu_glass_frosted_prism",
+    "cu_glass_frosted_prism",
+    "cu_glass_frosted_prism",
+    "cu_glass_frosted_prism"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "frosted",
+    "variant": "prism"
+  }
+}

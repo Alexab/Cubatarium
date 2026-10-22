@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_black_iron_brushed",
+  "id": 2026,
+  "displayName": "Metal Black Iron Brushed",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_black_iron_brushed",
+    "cu_metal_black_iron_brushed",
+    "cu_metal_black_iron_brushed",
+    "cu_metal_black_iron_brushed",
+    "cu_metal_black_iron_brushed",
+    "cu_metal_black_iron_brushed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "black_iron",
+    "variant": "brushed"
+  }
+}

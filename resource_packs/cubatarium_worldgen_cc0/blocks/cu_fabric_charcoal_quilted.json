@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_charcoal_quilted",
+  "id": 1903,
+  "displayName": "Fabric Charcoal Quilted",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_charcoal_quilted",
+    "cu_fabric_charcoal_quilted",
+    "cu_fabric_charcoal_quilted",
+    "cu_fabric_charcoal_quilted",
+    "cu_fabric_charcoal_quilted",
+    "cu_fabric_charcoal_quilted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "charcoal",
+    "variant": "quilted"
+  }
+}

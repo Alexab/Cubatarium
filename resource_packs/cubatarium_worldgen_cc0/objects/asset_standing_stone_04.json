@@ -1,0 +1,58 @@
+{
+  "name": "asset_standing_stone_04",
+  "version": 2,
+  "displayName": "Standing Stone 04",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 8011447781134852167,
+    "license": "CC0-1.0",
+    "material_parameter": "sandstone"
+  },
+  "tags": [
+    "decoration",
+    "structure"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_sandstone_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_sandstone_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_sandstone_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": 0,
+      "type": "cu_rock_sandstone_weathered"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_sandstone_weathered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_sandstone_weathered"
+    }
+  ]
+}

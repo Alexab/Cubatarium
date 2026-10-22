@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_violet_glazed",
+  "id": 1728,
+  "displayName": "Ceramic Violet Glazed",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_violet_glazed",
+    "cu_ceramic_violet_glazed",
+    "cu_ceramic_violet_glazed",
+    "cu_ceramic_violet_glazed",
+    "cu_ceramic_violet_glazed",
+    "cu_ceramic_violet_glazed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "violet",
+    "variant": "glazed"
+  }
+}

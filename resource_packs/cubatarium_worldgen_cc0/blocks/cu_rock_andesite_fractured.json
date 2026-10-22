@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_andesite_fractured",
+  "id": 1058,
+  "displayName": "Rock Andesite Fractured",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_andesite_fractured",
+    "cu_rock_andesite_fractured",
+    "cu_rock_andesite_fractured",
+    "cu_rock_andesite_fractured",
+    "cu_rock_andesite_fractured",
+    "cu_rock_andesite_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "andesite",
+    "variant": "fractured"
+  }
+}

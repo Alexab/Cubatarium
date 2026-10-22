@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_jade_mosaic",
+  "id": 1760,
+  "displayName": "Ceramic Jade Mosaic",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_jade_mosaic",
+    "cu_ceramic_jade_mosaic",
+    "cu_ceramic_jade_mosaic",
+    "cu_ceramic_jade_mosaic",
+    "cu_ceramic_jade_mosaic",
+    "cu_ceramic_jade_mosaic"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "jade",
+    "variant": "mosaic"
+  }
+}

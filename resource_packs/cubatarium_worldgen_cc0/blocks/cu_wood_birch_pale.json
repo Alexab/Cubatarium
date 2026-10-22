@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_birch_pale",
+  "id": 1381,
+  "displayName": "Wood Birch Pale",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_birch_pale",
+    "cu_wood_birch_pale",
+    "cu_wood_birch_pale",
+    "cu_wood_birch_pale",
+    "cu_wood_birch_pale",
+    "cu_wood_birch_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "birch",
+    "variant": "pale"
+  }
+}

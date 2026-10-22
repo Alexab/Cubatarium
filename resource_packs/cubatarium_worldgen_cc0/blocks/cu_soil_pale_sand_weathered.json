@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_pale_sand_weathered",
+  "id": 1344,
+  "displayName": "Soil Pale Sand Weathered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_pale_sand_weathered",
+    "cu_soil_pale_sand_weathered",
+    "cu_soil_pale_sand_weathered",
+    "cu_soil_pale_sand_weathered",
+    "cu_soil_pale_sand_weathered",
+    "cu_soil_pale_sand_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "pale_sand",
+    "variant": "weathered"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_greystone_layered",
+  "id": 1237,
+  "displayName": "Rock Greystone Layered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_greystone_layered",
+    "cu_rock_greystone_layered",
+    "cu_rock_greystone_layered",
+    "cu_rock_greystone_layered",
+    "cu_rock_greystone_layered",
+    "cu_rock_greystone_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "greystone",
+    "variant": "layered"
+  }
+}

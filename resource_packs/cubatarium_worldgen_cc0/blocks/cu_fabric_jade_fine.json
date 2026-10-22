@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_jade_fine",
+  "id": 1883,
+  "displayName": "Fabric Jade Fine",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_jade_fine",
+    "cu_fabric_jade_fine",
+    "cu_fabric_jade_fine",
+    "cu_fabric_jade_fine",
+    "cu_fabric_jade_fine",
+    "cu_fabric_jade_fine"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "jade",
+    "variant": "fine"
+  }
+}

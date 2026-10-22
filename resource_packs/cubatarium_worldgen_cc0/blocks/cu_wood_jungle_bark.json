@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_jungle_bark",
+  "id": 1465,
+  "displayName": "Wood Jungle Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_jungle_bark",
+    "cu_wood_jungle_bark",
+    "cu_wood_jungle_bark",
+    "cu_wood_jungle_bark",
+    "cu_wood_jungle_bark",
+    "cu_wood_jungle_bark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "jungle",
+    "variant": "bark"
+  }
+}

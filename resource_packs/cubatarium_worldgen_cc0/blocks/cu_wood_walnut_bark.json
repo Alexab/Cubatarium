@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_walnut_bark",
+  "id": 1415,
+  "displayName": "Wood Walnut Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_walnut_bark",
+    "cu_wood_walnut_bark",
+    "cu_wood_walnut_bark",
+    "cu_wood_walnut_bark",
+    "cu_wood_walnut_bark",
+    "cu_wood_walnut_bark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "walnut",
+    "variant": "bark"
+  }
+}

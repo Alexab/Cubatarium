@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_tuff_fractured",
+  "id": 1228,
+  "displayName": "Rock Tuff Fractured",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_tuff_fractured",
+    "cu_rock_tuff_fractured",
+    "cu_rock_tuff_fractured",
+    "cu_rock_tuff_fractured",
+    "cu_rock_tuff_fractured",
+    "cu_rock_tuff_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "tuff",
+    "variant": "fractured"
+  }
+}

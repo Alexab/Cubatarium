@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_charcoal_flecked",
+  "id": 2128,
+  "displayName": "Glass Charcoal Flecked",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_charcoal_flecked",
+    "cu_glass_charcoal_flecked",
+    "cu_glass_charcoal_flecked",
+    "cu_glass_charcoal_flecked",
+    "cu_glass_charcoal_flecked",
+    "cu_glass_charcoal_flecked"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "charcoal",
+    "variant": "flecked"
+  }
+}

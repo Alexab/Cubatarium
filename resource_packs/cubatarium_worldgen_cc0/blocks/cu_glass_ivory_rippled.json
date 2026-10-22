@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_ivory_rippled",
+  "id": 2055,
+  "displayName": "Glass Ivory Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_ivory_rippled",
+    "cu_glass_ivory_rippled",
+    "cu_glass_ivory_rippled",
+    "cu_glass_ivory_rippled",
+    "cu_glass_ivory_rippled",
+    "cu_glass_ivory_rippled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "ivory",
+    "variant": "rippled"
+  }
+}

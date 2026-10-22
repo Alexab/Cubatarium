@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_sandstone_polished",
+  "id": 1130,
+  "displayName": "Rock Sandstone Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_sandstone_polished",
+    "cu_rock_sandstone_polished",
+    "cu_rock_sandstone_polished",
+    "cu_rock_sandstone_polished",
+    "cu_rock_sandstone_polished",
+    "cu_rock_sandstone_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "sandstone",
+    "variant": "polished"
+  }
+}

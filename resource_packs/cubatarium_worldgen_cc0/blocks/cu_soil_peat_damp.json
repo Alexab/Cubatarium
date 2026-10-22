@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_peat_damp",
+  "id": 1267,
+  "displayName": "Soil Peat Damp",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_peat_damp",
+    "cu_soil_peat_damp",
+    "cu_soil_peat_damp",
+    "cu_soil_peat_damp",
+    "cu_soil_peat_damp",
+    "cu_soil_peat_damp"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "peat",
+    "variant": "damp"
+  }
+}

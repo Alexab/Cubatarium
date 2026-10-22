@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_mushroom_fresh",
+  "id": 2261,
+  "displayName": "Organic Mushroom Fresh",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_fresh",
+    "cu_organic_mushroom_fresh",
+    "cu_organic_mushroom_fresh",
+    "cu_organic_mushroom_fresh",
+    "cu_organic_mushroom_fresh",
+    "cu_organic_mushroom_fresh"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom",
+    "variant": "fresh"
+  }
+}

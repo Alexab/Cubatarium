@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_coral_young",
+  "id": 2279,
+  "displayName": "Organic Coral Young",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_coral_young",
+    "cu_organic_coral_young",
+    "cu_organic_coral_young",
+    "cu_organic_coral_young",
+    "cu_organic_coral_young",
+    "cu_organic_coral_young"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "coral",
+    "variant": "young"
+  }
+}

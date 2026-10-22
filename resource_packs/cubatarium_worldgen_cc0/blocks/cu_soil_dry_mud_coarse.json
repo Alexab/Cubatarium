@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_dry_mud_coarse",
+  "id": 1319,
+  "displayName": "Soil Dry Mud Coarse",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_dry_mud_coarse",
+    "cu_soil_dry_mud_coarse",
+    "cu_soil_dry_mud_coarse",
+    "cu_soil_dry_mud_coarse",
+    "cu_soil_dry_mud_coarse",
+    "cu_soil_dry_mud_coarse"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "dry_mud",
+    "variant": "coarse"
+  }
+}

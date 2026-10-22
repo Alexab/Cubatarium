@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_pine_endgrain",
+  "id": 1366,
+  "displayName": "Wood Pine Endgrain",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_pine_endgrain",
+    "cu_wood_pine_endgrain",
+    "cu_wood_pine_endgrain",
+    "cu_wood_pine_endgrain",
+    "cu_wood_pine_endgrain",
+    "cu_wood_pine_endgrain"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "pine",
+    "variant": "endgrain"
+  }
+}

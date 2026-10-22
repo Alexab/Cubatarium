@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_pine_stripped",
+  "id": 1368,
+  "displayName": "Wood Pine Stripped",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_pine_stripped",
+    "cu_wood_pine_stripped",
+    "cu_wood_pine_stripped",
+    "cu_wood_pine_stripped",
+    "cu_wood_pine_stripped",
+    "cu_wood_pine_stripped"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "pine",
+    "variant": "stripped"
+  }
+}

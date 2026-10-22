@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cream_glazed",
+  "id": 1678,
+  "displayName": "Ceramic Cream Glazed",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cream_glazed",
+    "cu_ceramic_cream_glazed",
+    "cu_ceramic_cream_glazed",
+    "cu_ceramic_cream_glazed",
+    "cu_ceramic_cream_glazed",
+    "cu_ceramic_cream_glazed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cream",
+    "variant": "glazed"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_umber_fine",
+  "id": 1907,
+  "displayName": "Fabric Umber Fine",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_umber_fine",
+    "cu_fabric_umber_fine",
+    "cu_fabric_umber_fine",
+    "cu_fabric_umber_fine",
+    "cu_fabric_umber_fine",
+    "cu_fabric_umber_fine"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "umber",
+    "variant": "fine"
+  }
+}

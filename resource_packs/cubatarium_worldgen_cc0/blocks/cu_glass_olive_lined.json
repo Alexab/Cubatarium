@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_olive_lined",
+  "id": 2117,
+  "displayName": "Glass Olive Lined",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_olive_lined",
+    "cu_glass_olive_lined",
+    "cu_glass_olive_lined",
+    "cu_glass_olive_lined",
+    "cu_glass_olive_lined",
+    "cu_glass_olive_lined"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "olive",
+    "variant": "lined"
+  }
+}

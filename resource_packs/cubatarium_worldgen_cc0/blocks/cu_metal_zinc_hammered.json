@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_zinc_hammered",
+  "id": 1996,
+  "displayName": "Metal Zinc Hammered",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_zinc_hammered",
+    "cu_metal_zinc_hammered",
+    "cu_metal_zinc_hammered",
+    "cu_metal_zinc_hammered",
+    "cu_metal_zinc_hammered",
+    "cu_metal_zinc_hammered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "zinc",
+    "variant": "hammered"
+  }
+}

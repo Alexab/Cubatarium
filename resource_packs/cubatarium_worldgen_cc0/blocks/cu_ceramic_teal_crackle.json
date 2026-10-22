@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_teal_crackle",
+  "id": 1749,
+  "displayName": "Ceramic Teal Crackle",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_teal_crackle",
+    "cu_ceramic_teal_crackle",
+    "cu_ceramic_teal_crackle",
+    "cu_ceramic_teal_crackle",
+    "cu_ceramic_teal_crackle",
+    "cu_ceramic_teal_crackle"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "teal",
+    "variant": "crackle"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_pumice_banded",
+  "id": 1223,
+  "displayName": "Rock Pumice Banded",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_pumice_banded",
+    "cu_rock_pumice_banded",
+    "cu_rock_pumice_banded",
+    "cu_rock_pumice_banded",
+    "cu_rock_pumice_banded",
+    "cu_rock_pumice_banded"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "pumice",
+    "variant": "banded"
+  }
+}

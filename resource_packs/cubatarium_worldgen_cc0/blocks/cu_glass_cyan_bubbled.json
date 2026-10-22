@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_cyan_bubbled",
+  "id": 2090,
+  "displayName": "Glass Cyan Bubbled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_cyan_bubbled",
+    "cu_glass_cyan_bubbled",
+    "cu_glass_cyan_bubbled",
+    "cu_glass_cyan_bubbled",
+    "cu_glass_cyan_bubbled",
+    "cu_glass_cyan_bubbled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "cyan",
+    "variant": "bubbled"
+  }
+}

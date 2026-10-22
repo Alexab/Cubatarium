@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_violet_pale",
+  "id": 1733,
+  "displayName": "Ceramic Violet Pale",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_violet_pale",
+    "cu_ceramic_violet_pale",
+    "cu_ceramic_violet_pale",
+    "cu_ceramic_violet_pale",
+    "cu_ceramic_violet_pale",
+    "cu_ceramic_violet_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "violet",
+    "variant": "pale"
+  }
+}

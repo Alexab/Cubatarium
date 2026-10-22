@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_clay_compact",
+  "id": 1258,
+  "displayName": "Soil Clay Compact",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_clay_compact",
+    "cu_soil_clay_compact",
+    "cu_soil_clay_compact",
+    "cu_soil_clay_compact",
+    "cu_soil_clay_compact",
+    "cu_soil_clay_compact"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "clay",
+    "variant": "compact"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_steel_dark",
+  "id": 1928,
+  "displayName": "Metal Steel Dark",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_steel_dark",
+    "cu_metal_steel_dark",
+    "cu_metal_steel_dark",
+    "cu_metal_steel_dark",
+    "cu_metal_steel_dark",
+    "cu_metal_steel_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "steel",
+    "variant": "dark"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_ivory_patterned",
+  "id": 1672,
+  "displayName": "Ceramic Ivory Patterned",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_ivory_patterned",
+    "cu_ceramic_ivory_patterned",
+    "cu_ceramic_ivory_patterned",
+    "cu_ceramic_ivory_patterned",
+    "cu_ceramic_ivory_patterned",
+    "cu_ceramic_ivory_patterned"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "ivory",
+    "variant": "patterned"
+  }
+}

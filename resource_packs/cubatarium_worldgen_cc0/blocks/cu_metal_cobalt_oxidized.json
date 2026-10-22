@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_cobalt_oxidized",
+  "id": 1990,
+  "displayName": "Metal Cobalt Oxidized",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_cobalt_oxidized",
+    "cu_metal_cobalt_oxidized",
+    "cu_metal_cobalt_oxidized",
+    "cu_metal_cobalt_oxidized",
+    "cu_metal_cobalt_oxidized",
+    "cu_metal_cobalt_oxidized"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "cobalt",
+    "variant": "oxidized"
+  }
+}

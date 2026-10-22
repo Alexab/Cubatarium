@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_serpentine_layered",
+  "id": 1177,
+  "displayName": "Rock Serpentine Layered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_serpentine_layered",
+    "cu_rock_serpentine_layered",
+    "cu_rock_serpentine_layered",
+    "cu_rock_serpentine_layered",
+    "cu_rock_serpentine_layered",
+    "cu_rock_serpentine_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "serpentine",
+    "variant": "layered"
+  }
+}

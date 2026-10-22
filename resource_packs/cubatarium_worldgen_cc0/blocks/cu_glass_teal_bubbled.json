@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_teal_bubbled",
+  "id": 2096,
+  "displayName": "Glass Teal Bubbled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_teal_bubbled",
+    "cu_glass_teal_bubbled",
+    "cu_glass_teal_bubbled",
+    "cu_glass_teal_bubbled",
+    "cu_glass_teal_bubbled",
+    "cu_glass_teal_bubbled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "teal",
+    "variant": "bubbled"
+  }
+}

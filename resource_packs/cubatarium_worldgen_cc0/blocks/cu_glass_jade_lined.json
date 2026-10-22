@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_jade_lined",
+  "id": 2105,
+  "displayName": "Glass Jade Lined",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_jade_lined",
+    "cu_glass_jade_lined",
+    "cu_glass_jade_lined",
+    "cu_glass_jade_lined",
+    "cu_glass_jade_lined",
+    "cu_glass_jade_lined"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "jade",
+    "variant": "lined"
+  }
+}

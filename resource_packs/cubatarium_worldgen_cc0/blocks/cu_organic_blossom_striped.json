@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_blossom_striped",
+  "id": 2296,
+  "displayName": "Organic Blossom Striped",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_blossom_striped",
+    "cu_organic_blossom_striped",
+    "cu_organic_blossom_striped",
+    "cu_organic_blossom_striped",
+    "cu_organic_blossom_striped",
+    "cu_organic_blossom_striped"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "blossom",
+    "variant": "striped"
+  }
+}

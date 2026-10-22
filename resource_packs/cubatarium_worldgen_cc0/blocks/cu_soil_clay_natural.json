@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_clay_natural",
+  "id": 1255,
+  "displayName": "Soil Clay Natural",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_clay_natural",
+    "cu_soil_clay_natural",
+    "cu_soil_clay_natural",
+    "cu_soil_clay_natural",
+    "cu_soil_clay_natural",
+    "cu_soil_clay_natural"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "clay",
+    "variant": "natural"
+  }
+}

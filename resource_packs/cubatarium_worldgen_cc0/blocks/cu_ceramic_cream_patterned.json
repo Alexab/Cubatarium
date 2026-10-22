@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cream_patterned",
+  "id": 1682,
+  "displayName": "Ceramic Cream Patterned",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cream_patterned",
+    "cu_ceramic_cream_patterned",
+    "cu_ceramic_cream_patterned",
+    "cu_ceramic_cream_patterned",
+    "cu_ceramic_cream_patterned",
+    "cu_ceramic_cream_patterned"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cream",
+    "variant": "patterned"
+  }
+}

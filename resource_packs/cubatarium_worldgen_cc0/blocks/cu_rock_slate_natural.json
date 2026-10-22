@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_slate_natural",
+  "id": 1085,
+  "displayName": "Rock Slate Natural",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_slate_natural",
+    "cu_rock_slate_natural",
+    "cu_rock_slate_natural",
+    "cu_rock_slate_natural",
+    "cu_rock_slate_natural",
+    "cu_rock_slate_natural"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "slate",
+    "variant": "natural"
+  }
+}

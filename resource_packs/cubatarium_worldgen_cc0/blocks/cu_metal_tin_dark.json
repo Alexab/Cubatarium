@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_tin_dark",
+  "id": 1960,
+  "displayName": "Metal Tin Dark",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_tin_dark",
+    "cu_metal_tin_dark",
+    "cu_metal_tin_dark",
+    "cu_metal_tin_dark",
+    "cu_metal_tin_dark",
+    "cu_metal_tin_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "tin",
+    "variant": "dark"
+  }
+}

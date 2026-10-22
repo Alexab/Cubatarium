@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_greystone_rough",
+  "id": 1236,
+  "displayName": "Rock Greystone Rough",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_greystone_rough",
+    "cu_rock_greystone_rough",
+    "cu_rock_greystone_rough",
+    "cu_rock_greystone_rough",
+    "cu_rock_greystone_rough",
+    "cu_rock_greystone_rough"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "greystone",
+    "variant": "rough"
+  }
+}

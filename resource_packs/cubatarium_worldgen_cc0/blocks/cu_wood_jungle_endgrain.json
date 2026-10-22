@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_jungle_endgrain",
+  "id": 1466,
+  "displayName": "Wood Jungle Endgrain",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_jungle_endgrain",
+    "cu_wood_jungle_endgrain",
+    "cu_wood_jungle_endgrain",
+    "cu_wood_jungle_endgrain",
+    "cu_wood_jungle_endgrain",
+    "cu_wood_jungle_endgrain"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "jungle",
+    "variant": "endgrain"
+  }
+}

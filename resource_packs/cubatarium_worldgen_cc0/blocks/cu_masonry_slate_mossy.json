@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_slate_mossy",
+  "id": 1534,
+  "displayName": "Masonry Slate Mossy",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_slate_mossy",
+    "cu_masonry_slate_mossy",
+    "cu_masonry_slate_mossy",
+    "cu_masonry_slate_mossy",
+    "cu_masonry_slate_mossy",
+    "cu_masonry_slate_mossy"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "slate",
+    "variant": "mossy"
+  }
+}

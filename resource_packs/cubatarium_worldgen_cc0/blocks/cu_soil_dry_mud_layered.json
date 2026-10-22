@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_dry_mud_layered",
+  "id": 1323,
+  "displayName": "Soil Dry Mud Layered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_dry_mud_layered",
+    "cu_soil_dry_mud_layered",
+    "cu_soil_dry_mud_layered",
+    "cu_soil_dry_mud_layered",
+    "cu_soil_dry_mud_layered",
+    "cu_soil_dry_mud_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "dry_mud",
+    "variant": "layered"
+  }
+}

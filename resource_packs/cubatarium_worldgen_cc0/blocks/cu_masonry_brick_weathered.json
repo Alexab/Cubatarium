@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_brick_weathered",
+  "id": 1572,
+  "displayName": "Masonry Brick Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_brick_weathered",
+    "cu_masonry_brick_weathered",
+    "cu_masonry_brick_weathered",
+    "cu_masonry_brick_weathered",
+    "cu_masonry_brick_weathered",
+    "cu_masonry_brick_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "brick",
+    "variant": "weathered"
+  }
+}

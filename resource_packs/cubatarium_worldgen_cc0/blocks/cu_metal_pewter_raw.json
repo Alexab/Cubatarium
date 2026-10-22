@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_pewter_raw",
+  "id": 2009,
+  "displayName": "Metal Pewter Raw",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_pewter_raw",
+    "cu_metal_pewter_raw",
+    "cu_metal_pewter_raw",
+    "cu_metal_pewter_raw",
+    "cu_metal_pewter_raw",
+    "cu_metal_pewter_raw"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "pewter",
+    "variant": "raw"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_red_earth_coarse",
+  "id": 1329,
+  "displayName": "Soil Red Earth Coarse",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_red_earth_coarse",
+    "cu_soil_red_earth_coarse",
+    "cu_soil_red_earth_coarse",
+    "cu_soil_red_earth_coarse",
+    "cu_soil_red_earth_coarse",
+    "cu_soil_red_earth_coarse"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "red_earth",
+    "variant": "coarse"
+  }
+}

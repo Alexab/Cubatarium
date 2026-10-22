@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_redwood_aged",
+  "id": 1499,
+  "displayName": "Wood Redwood Aged",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_redwood_aged",
+    "cu_wood_redwood_aged",
+    "cu_wood_redwood_aged",
+    "cu_wood_redwood_aged",
+    "cu_wood_redwood_aged",
+    "cu_wood_redwood_aged"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "redwood",
+    "variant": "aged"
+  }
+}

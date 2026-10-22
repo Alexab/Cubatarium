@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_jade_pale",
+  "id": 2174,
+  "displayName": "Crystal Jade Pale",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_jade_pale",
+    "cu_crystal_jade_pale",
+    "cu_crystal_jade_pale",
+    "cu_crystal_jade_pale",
+    "cu_crystal_jade_pale",
+    "cu_crystal_jade_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "jade",
+    "variant": "pale"
+  }
+}

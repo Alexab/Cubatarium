@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_diorite_speckled",
+  "id": 1052,
+  "displayName": "Rock Diorite Speckled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_diorite_speckled",
+    "cu_rock_diorite_speckled",
+    "cu_rock_diorite_speckled",
+    "cu_rock_diorite_speckled",
+    "cu_rock_diorite_speckled",
+    "cu_rock_diorite_speckled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "diorite",
+    "variant": "speckled"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_mangrove_pale",
+  "id": 1481,
+  "displayName": "Wood Mangrove Pale",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_mangrove_pale",
+    "cu_wood_mangrove_pale",
+    "cu_wood_mangrove_pale",
+    "cu_wood_mangrove_pale",
+    "cu_wood_mangrove_pale",
+    "cu_wood_mangrove_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "mangrove",
+    "variant": "pale"
+  }
+}

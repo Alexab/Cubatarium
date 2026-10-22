@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_teal_checked",
+  "id": 1877,
+  "displayName": "Fabric Teal Checked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_teal_checked",
+    "cu_fabric_teal_checked",
+    "cu_fabric_teal_checked",
+    "cu_fabric_teal_checked",
+    "cu_fabric_teal_checked",
+    "cu_fabric_teal_checked"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "teal",
+    "variant": "checked"
+  }
+}

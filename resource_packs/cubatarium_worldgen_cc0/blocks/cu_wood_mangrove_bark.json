@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_mangrove_bark",
+  "id": 1475,
+  "displayName": "Wood Mangrove Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_mangrove_bark",
+    "cu_wood_mangrove_bark",
+    "cu_wood_mangrove_bark",
+    "cu_wood_mangrove_bark",
+    "cu_wood_mangrove_bark",
+    "cu_wood_mangrove_bark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "mangrove",
+    "variant": "bark"
+  }
+}

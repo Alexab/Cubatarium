@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_chalk_weathered",
+  "id": 1149,
+  "displayName": "Rock Chalk Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_chalk_weathered",
+    "cu_rock_chalk_weathered",
+    "cu_rock_chalk_weathered",
+    "cu_rock_chalk_weathered",
+    "cu_rock_chalk_weathered",
+    "cu_rock_chalk_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "chalk",
+    "variant": "weathered"
+  }
+}

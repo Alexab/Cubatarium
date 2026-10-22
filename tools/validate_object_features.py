@@ -16,6 +16,7 @@ FEATURES = REPO / "content" / "object_features.json"
 MANIFEST = REPO / "tools" / "object_manifest.yaml"
 OBJECTS = REPO / "objects"
 DEFAULT_BLOCKS = REPO / "resource_packs" / "minetest_default_16" / "blocks"
+RESOURCE_PACKS = REPO / "resource_packs"
 
 VALID_SURFACE_CONSTRAINTS = {
     "any_land",
@@ -37,6 +38,21 @@ def load_object_names() -> set[str]:
             continue
         name = data.get("name") or path.stem
         names.add(name)
+    for pack_dir in RESOURCE_PACKS.iterdir():
+        pack_json = pack_dir / "pack.json"
+        objects_dir = pack_dir / "objects"
+        if not pack_json.is_file() or not objects_dir.is_dir():
+            continue
+        try:
+            pack_id = json.loads(pack_json.read_text(encoding="utf-8-sig")).get("id", pack_dir.name)
+        except (OSError, json.JSONDecodeError):
+            pack_id = pack_dir.name
+        for path in objects_dir.rglob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            names.add(f"{pack_id}::{data.get('name') or path.stem}")
     return names
 
 
@@ -49,6 +65,14 @@ def load_block_names() -> set[str]:
             continue
         name = data.get("name") or path.stem
         names.add(name)
+    for pack_dir in RESOURCE_PACKS.iterdir():
+        for path in (pack_dir / "blocks").glob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            name = data.get("name") or path.stem
+            names.add(name)
     return names
 
 

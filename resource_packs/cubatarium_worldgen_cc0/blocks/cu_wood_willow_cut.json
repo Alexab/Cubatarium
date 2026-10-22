@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_willow_cut",
+  "id": 1443,
+  "displayName": "Wood Willow Cut",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_willow_cut",
+    "cu_wood_willow_cut",
+    "cu_wood_willow_cut",
+    "cu_wood_willow_cut",
+    "cu_wood_willow_cut",
+    "cu_wood_willow_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "willow",
+    "variant": "cut"
+  }
+}

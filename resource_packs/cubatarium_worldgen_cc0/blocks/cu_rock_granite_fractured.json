@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_granite_fractured",
+  "id": 1038,
+  "displayName": "Rock Granite Fractured",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_granite_fractured",
+    "cu_rock_granite_fractured",
+    "cu_rock_granite_fractured",
+    "cu_rock_granite_fractured",
+    "cu_rock_granite_fractured",
+    "cu_rock_granite_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "granite",
+    "variant": "fractured"
+  }
+}

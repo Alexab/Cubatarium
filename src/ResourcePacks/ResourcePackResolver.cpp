@@ -132,6 +132,16 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
     if (rp.contains("default_secondary") && rp["default_secondary"].is_array())
     {
       ParseEnabledArray(rp["default_secondary"], cfg.DefaultSecondary);
+      const bool hasGeology =
+          std::find(cfg.DefaultSecondary.begin(), cfg.DefaultSecondary.end(),
+                    "cubatarium_geology_cc0") != cfg.DefaultSecondary.end();
+      const bool hasOriginalAssets =
+          std::find(cfg.DefaultSecondary.begin(), cfg.DefaultSecondary.end(),
+                    "cubatarium_worldgen_cc0") != cfg.DefaultSecondary.end();
+      if (hasGeology && !hasOriginalAssets)
+      {
+        cfg.DefaultSecondary.push_back("cubatarium_worldgen_cc0");
+      }
     }
     if (rp.contains("default_enabled") && rp["default_enabled"].is_array())
     {
@@ -144,6 +154,26 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
     if (cfg.DefaultPrimary.empty() && !cfg.DefaultEnabled.empty())
     {
       cfg.DefaultPrimary = cfg.DefaultEnabled;
+    }
+    if (!rp.contains("default_secondary"))
+    {
+      if (cfg.DefaultEnabled.empty() && !cfg.DefaultPrimary.empty())
+      {
+        for (const auto &packId : DefaultResourcePackSelection().Secondary)
+        {
+          if (std::find(cfg.DefaultPrimary.begin(), cfg.DefaultPrimary.end(),
+                        packId) == cfg.DefaultPrimary.end())
+          {
+            cfg.DefaultSecondary.push_back(packId);
+          }
+        }
+      }
+      else if (!cfg.DefaultEnabled.empty() &&
+               std::find(cfg.DefaultPrimary.begin(), cfg.DefaultPrimary.end(),
+                         "cubatarium_worldgen_cc0") == cfg.DefaultPrimary.end())
+      {
+        cfg.DefaultSecondary.push_back("cubatarium_worldgen_cc0");
+      }
     }
     if (rp.contains("placeholder") && rp["placeholder"].is_object())
     {

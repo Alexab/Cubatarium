@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_lichen_young",
+  "id": 2239,
+  "displayName": "Organic Lichen Young",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_lichen_young",
+    "cu_organic_lichen_young",
+    "cu_organic_lichen_young",
+    "cu_organic_lichen_young",
+    "cu_organic_lichen_young",
+    "cu_organic_lichen_young"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "lichen",
+    "variant": "young"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_quartz_cut",
+  "id": 2133,
+  "displayName": "Crystal Quartz Cut",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_quartz_cut",
+    "cu_crystal_quartz_cut",
+    "cu_crystal_quartz_cut",
+    "cu_crystal_quartz_cut",
+    "cu_crystal_quartz_cut",
+    "cu_crystal_quartz_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "quartz",
+    "variant": "cut"
+  }
+}

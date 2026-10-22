@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_pumice_layered",
+  "id": 1217,
+  "displayName": "Rock Pumice Layered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_pumice_layered",
+    "cu_rock_pumice_layered",
+    "cu_rock_pumice_layered",
+    "cu_rock_pumice_layered",
+    "cu_rock_pumice_layered",
+    "cu_rock_pumice_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "pumice",
+    "variant": "layered"
+  }
+}

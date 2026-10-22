@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_larch_pale",
+  "id": 1491,
+  "displayName": "Wood Larch Pale",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_larch_pale",
+    "cu_wood_larch_pale",
+    "cu_wood_larch_pale",
+    "cu_wood_larch_pale",
+    "cu_wood_larch_pale",
+    "cu_wood_larch_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "larch",
+    "variant": "pale"
+  }
+}

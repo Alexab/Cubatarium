@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_ivory_glossy",
+  "id": 1666,
+  "displayName": "Ceramic Ivory Glossy",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_ivory_glossy",
+    "cu_ceramic_ivory_glossy",
+    "cu_ceramic_ivory_glossy",
+    "cu_ceramic_ivory_glossy",
+    "cu_ceramic_ivory_glossy",
+    "cu_ceramic_ivory_glossy"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "ivory",
+    "variant": "glossy"
+  }
+}

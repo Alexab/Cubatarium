@@ -1,0 +1,215 @@
+{
+  "name": "asset_shrub_fern",
+  "version": 2,
+  "displayName": "Shrub Fern",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 8345891860246352419,
+    "license": "CC0-1.0",
+    "material_parameter": "fern"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "vegetation"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_organic_fern_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_organic_fern_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": -1,
+      "type": "cu_organic_fern_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 1,
+      "type": "cu_organic_fern_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": -1,
+      "type": "cu_organic_fern_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_fern_spotted"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_organic_fern_spotted"
+    }
+  ]
+}

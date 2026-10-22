@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_oak_carved",
+  "id": 1362,
+  "displayName": "Wood Oak Carved",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_oak_carved",
+    "cu_wood_oak_carved",
+    "cu_wood_oak_carved",
+    "cu_wood_oak_carved",
+    "cu_wood_oak_carved",
+    "cu_wood_oak_carved"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "oak",
+    "variant": "carved"
+  }
+}

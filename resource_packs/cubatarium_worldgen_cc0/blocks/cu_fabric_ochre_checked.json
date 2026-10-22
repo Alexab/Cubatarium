@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_ochre_checked",
+  "id": 1813,
+  "displayName": "Fabric Ochre Checked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_ochre_checked",
+    "cu_fabric_ochre_checked",
+    "cu_fabric_ochre_checked",
+    "cu_fabric_ochre_checked",
+    "cu_fabric_ochre_checked",
+    "cu_fabric_ochre_checked"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "ochre",
+    "variant": "checked"
+  }
+}

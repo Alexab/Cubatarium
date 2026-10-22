@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_gneiss_fractured",
+  "id": 1108,
+  "displayName": "Rock Gneiss Fractured",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_gneiss_fractured",
+    "cu_rock_gneiss_fractured",
+    "cu_rock_gneiss_fractured",
+    "cu_rock_gneiss_fractured",
+    "cu_rock_gneiss_fractured",
+    "cu_rock_gneiss_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "gneiss",
+    "variant": "fractured"
+  }
+}

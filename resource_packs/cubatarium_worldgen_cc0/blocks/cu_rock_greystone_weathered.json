@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_greystone_weathered",
+  "id": 1239,
+  "displayName": "Rock Greystone Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_greystone_weathered",
+    "cu_rock_greystone_weathered",
+    "cu_rock_greystone_weathered",
+    "cu_rock_greystone_weathered",
+    "cu_rock_greystone_weathered",
+    "cu_rock_greystone_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "greystone",
+    "variant": "weathered"
+  }
+}

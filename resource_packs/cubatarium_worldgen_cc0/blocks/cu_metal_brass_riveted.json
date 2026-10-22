@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_brass_riveted",
+  "id": 1949,
+  "displayName": "Metal Brass Riveted",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_brass_riveted",
+    "cu_metal_brass_riveted",
+    "cu_metal_brass_riveted",
+    "cu_metal_brass_riveted",
+    "cu_metal_brass_riveted",
+    "cu_metal_brass_riveted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "brass",
+    "variant": "riveted"
+  }
+}

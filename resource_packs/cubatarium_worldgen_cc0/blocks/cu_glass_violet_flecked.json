@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_violet_flecked",
+  "id": 2080,
+  "displayName": "Glass Violet Flecked",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_violet_flecked",
+    "cu_glass_violet_flecked",
+    "cu_glass_violet_flecked",
+    "cu_glass_violet_flecked",
+    "cu_glass_violet_flecked",
+    "cu_glass_violet_flecked"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "violet",
+    "variant": "flecked"
+  }
+}

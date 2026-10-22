@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_iron_plated",
+  "id": 1919,
+  "displayName": "Metal Iron Plated",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_iron_plated",
+    "cu_metal_iron_plated",
+    "cu_metal_iron_plated",
+    "cu_metal_iron_plated",
+    "cu_metal_iron_plated",
+    "cu_metal_iron_plated"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "iron",
+    "variant": "plated"
+  }
+}

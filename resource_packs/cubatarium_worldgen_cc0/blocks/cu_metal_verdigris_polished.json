@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_verdigris_polished",
+  "id": 2019,
+  "displayName": "Metal Verdigris Polished",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_verdigris_polished",
+    "cu_metal_verdigris_polished",
+    "cu_metal_verdigris_polished",
+    "cu_metal_verdigris_polished",
+    "cu_metal_verdigris_polished",
+    "cu_metal_verdigris_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "verdigris",
+    "variant": "polished"
+  }
+}

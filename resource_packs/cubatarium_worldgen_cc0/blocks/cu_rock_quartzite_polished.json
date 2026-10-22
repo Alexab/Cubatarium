@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_quartzite_polished",
+  "id": 1120,
+  "displayName": "Rock Quartzite Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_quartzite_polished",
+    "cu_rock_quartzite_polished",
+    "cu_rock_quartzite_polished",
+    "cu_rock_quartzite_polished",
+    "cu_rock_quartzite_polished",
+    "cu_rock_quartzite_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "quartzite",
+    "variant": "polished"
+  }
+}

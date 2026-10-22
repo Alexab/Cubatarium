@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_jade_glossy",
+  "id": 1756,
+  "displayName": "Ceramic Jade Glossy",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_jade_glossy",
+    "cu_ceramic_jade_glossy",
+    "cu_ceramic_jade_glossy",
+    "cu_ceramic_jade_glossy",
+    "cu_ceramic_jade_glossy",
+    "cu_ceramic_jade_glossy"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "jade",
+    "variant": "glossy"
+  }
+}

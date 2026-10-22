@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_cedar_bark",
+  "id": 1385,
+  "displayName": "Wood Cedar Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_cedar_bark",
+    "cu_wood_cedar_bark",
+    "cu_wood_cedar_bark",
+    "cu_wood_cedar_bark",
+    "cu_wood_cedar_bark",
+    "cu_wood_cedar_bark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "cedar",
+    "variant": "bark"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cream_glossy",
+  "id": 1676,
+  "displayName": "Ceramic Cream Glossy",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cream_glossy",
+    "cu_ceramic_cream_glossy",
+    "cu_ceramic_cream_glossy",
+    "cu_ceramic_cream_glossy",
+    "cu_ceramic_cream_glossy",
+    "cu_ceramic_cream_glossy"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cream",
+    "variant": "glossy"
+  }
+}

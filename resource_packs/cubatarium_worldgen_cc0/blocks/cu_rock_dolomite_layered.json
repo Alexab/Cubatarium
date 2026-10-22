@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_dolomite_layered",
+  "id": 1187,
+  "displayName": "Rock Dolomite Layered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_dolomite_layered",
+    "cu_rock_dolomite_layered",
+    "cu_rock_dolomite_layered",
+    "cu_rock_dolomite_layered",
+    "cu_rock_dolomite_layered",
+    "cu_rock_dolomite_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "dolomite",
+    "variant": "layered"
+  }
+}

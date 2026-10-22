@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_blossom_dense",
+  "id": 2293,
+  "displayName": "Organic Blossom Dense",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_blossom_dense",
+    "cu_organic_blossom_dense",
+    "cu_organic_blossom_dense",
+    "cu_organic_blossom_dense",
+    "cu_organic_blossom_dense",
+    "cu_organic_blossom_dense"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "blossom",
+    "variant": "dense"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_diorite_weathered",
+  "id": 1049,
+  "displayName": "Rock Diorite Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_diorite_weathered",
+    "cu_rock_diorite_weathered",
+    "cu_rock_diorite_weathered",
+    "cu_rock_diorite_weathered",
+    "cu_rock_diorite_weathered",
+    "cu_rock_diorite_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "diorite",
+    "variant": "weathered"
+  }
+}

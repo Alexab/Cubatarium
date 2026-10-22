@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_gneiss_weathered",
+  "id": 1109,
+  "displayName": "Rock Gneiss Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_gneiss_weathered",
+    "cu_rock_gneiss_weathered",
+    "cu_rock_gneiss_weathered",
+    "cu_rock_gneiss_weathered",
+    "cu_rock_gneiss_weathered",
+    "cu_rock_gneiss_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "gneiss",
+    "variant": "weathered"
+  }
+}

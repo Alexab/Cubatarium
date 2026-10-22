@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_acacia_carved",
+  "id": 1462,
+  "displayName": "Wood Acacia Carved",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_acacia_carved",
+    "cu_wood_acacia_carved",
+    "cu_wood_acacia_carved",
+    "cu_wood_acacia_carved",
+    "cu_wood_acacia_carved",
+    "cu_wood_acacia_carved"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "acacia",
+    "variant": "carved"
+  }
+}

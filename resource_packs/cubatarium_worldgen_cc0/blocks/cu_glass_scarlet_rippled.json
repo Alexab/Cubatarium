@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_scarlet_rippled",
+  "id": 2067,
+  "displayName": "Glass Scarlet Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_scarlet_rippled",
+    "cu_glass_scarlet_rippled",
+    "cu_glass_scarlet_rippled",
+    "cu_glass_scarlet_rippled",
+    "cu_glass_scarlet_rippled",
+    "cu_glass_scarlet_rippled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "scarlet",
+    "variant": "rippled"
+  }
+}

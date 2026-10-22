@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_porphyry_natural",
+  "id": 1165,
+  "displayName": "Rock Porphyry Natural",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_porphyry_natural",
+    "cu_rock_porphyry_natural",
+    "cu_rock_porphyry_natural",
+    "cu_rock_porphyry_natural",
+    "cu_rock_porphyry_natural",
+    "cu_rock_porphyry_natural"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "porphyry",
+    "variant": "natural"
+  }
+}

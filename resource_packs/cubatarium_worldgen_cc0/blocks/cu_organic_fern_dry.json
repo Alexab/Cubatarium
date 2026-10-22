@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_fern_dry",
+  "id": 2242,
+  "displayName": "Organic Fern Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_fern_dry",
+    "cu_organic_fern_dry",
+    "cu_organic_fern_dry",
+    "cu_organic_fern_dry",
+    "cu_organic_fern_dry",
+    "cu_organic_fern_dry"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "fern",
+    "variant": "dry"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_podzol_weathered",
+  "id": 1284,
+  "displayName": "Soil Podzol Weathered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_podzol_weathered",
+    "cu_soil_podzol_weathered",
+    "cu_soil_podzol_weathered",
+    "cu_soil_podzol_weathered",
+    "cu_soil_podzol_weathered",
+    "cu_soil_podzol_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "podzol",
+    "variant": "weathered"
+  }
+}

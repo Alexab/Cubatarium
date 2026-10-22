@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_porphyry_polished",
+  "id": 1170,
+  "displayName": "Rock Porphyry Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_porphyry_polished",
+    "cu_rock_porphyry_polished",
+    "cu_rock_porphyry_polished",
+    "cu_rock_porphyry_polished",
+    "cu_rock_porphyry_polished",
+    "cu_rock_porphyry_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "porphyry",
+    "variant": "polished"
+  }
+}

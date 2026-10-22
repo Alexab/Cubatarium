@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_smoke_prism",
+  "id": 2124,
+  "displayName": "Glass Smoke Prism",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_smoke_prism",
+    "cu_glass_smoke_prism",
+    "cu_glass_smoke_prism",
+    "cu_glass_smoke_prism",
+    "cu_glass_smoke_prism",
+    "cu_glass_smoke_prism"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "smoke",
+    "variant": "prism"
+  }
+}

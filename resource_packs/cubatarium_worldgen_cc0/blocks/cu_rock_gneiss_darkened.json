@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_gneiss_darkened",
+  "id": 1114,
+  "displayName": "Rock Gneiss Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_gneiss_darkened",
+    "cu_rock_gneiss_darkened",
+    "cu_rock_gneiss_darkened",
+    "cu_rock_gneiss_darkened",
+    "cu_rock_gneiss_darkened",
+    "cu_rock_gneiss_darkened"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "gneiss",
+    "variant": "darkened"
+  }
+}

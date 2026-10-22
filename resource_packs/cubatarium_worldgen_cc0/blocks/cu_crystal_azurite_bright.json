@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_azurite_bright",
+  "id": 2208,
+  "displayName": "Crystal Azurite Bright",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_azurite_bright",
+    "cu_crystal_azurite_bright",
+    "cu_crystal_azurite_bright",
+    "cu_crystal_azurite_bright",
+    "cu_crystal_azurite_bright",
+    "cu_crystal_azurite_bright"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "azurite",
+    "variant": "bright"
+  }
+}

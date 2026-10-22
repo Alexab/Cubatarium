@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_ochre_striped",
+  "id": 1812,
+  "displayName": "Fabric Ochre Striped",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_ochre_striped",
+    "cu_fabric_ochre_striped",
+    "cu_fabric_ochre_striped",
+    "cu_fabric_ochre_striped",
+    "cu_fabric_ochre_striped",
+    "cu_fabric_ochre_striped"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "ochre",
+    "variant": "striped"
+  }
+}

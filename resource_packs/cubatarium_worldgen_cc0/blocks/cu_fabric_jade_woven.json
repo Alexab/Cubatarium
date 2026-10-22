@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_jade_woven",
+  "id": 1881,
+  "displayName": "Fabric Jade Woven",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_jade_woven",
+    "cu_fabric_jade_woven",
+    "cu_fabric_jade_woven",
+    "cu_fabric_jade_woven",
+    "cu_fabric_jade_woven",
+    "cu_fabric_jade_woven"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "jade",
+    "variant": "woven"
+  }
+}

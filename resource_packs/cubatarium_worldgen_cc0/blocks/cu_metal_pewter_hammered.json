@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_pewter_hammered",
+  "id": 2012,
+  "displayName": "Metal Pewter Hammered",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_pewter_hammered",
+    "cu_metal_pewter_hammered",
+    "cu_metal_pewter_hammered",
+    "cu_metal_pewter_hammered",
+    "cu_metal_pewter_hammered",
+    "cu_metal_pewter_hammered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "pewter",
+    "variant": "hammered"
+  }
+}

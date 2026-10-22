@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_citrine_cluster",
+  "id": 2151,
+  "displayName": "Crystal Citrine Cluster",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_citrine_cluster",
+    "cu_crystal_citrine_cluster",
+    "cu_crystal_citrine_cluster",
+    "cu_crystal_citrine_cluster",
+    "cu_crystal_citrine_cluster",
+    "cu_crystal_citrine_cluster"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "citrine",
+    "variant": "cluster"
+  }
+}

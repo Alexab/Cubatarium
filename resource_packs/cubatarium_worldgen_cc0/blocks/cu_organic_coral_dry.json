@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_coral_dry",
+  "id": 2272,
+  "displayName": "Organic Coral Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_coral_dry",
+    "cu_organic_coral_dry",
+    "cu_organic_coral_dry",
+    "cu_organic_coral_dry",
+    "cu_organic_coral_dry",
+    "cu_organic_coral_dry"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "coral",
+    "variant": "dry"
+  }
+}

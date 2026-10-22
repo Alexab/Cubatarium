@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_zinc_plated",
+  "id": 1999,
+  "displayName": "Metal Zinc Plated",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_zinc_plated",
+    "cu_metal_zinc_plated",
+    "cu_metal_zinc_plated",
+    "cu_metal_zinc_plated",
+    "cu_metal_zinc_plated",
+    "cu_metal_zinc_plated"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "zinc",
+    "variant": "plated"
+  }
+}

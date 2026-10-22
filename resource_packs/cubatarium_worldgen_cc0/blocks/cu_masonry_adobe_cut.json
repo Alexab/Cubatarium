@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_adobe_cut",
+  "id": 1578,
+  "displayName": "Masonry Adobe Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_adobe_cut",
+    "cu_masonry_adobe_cut",
+    "cu_masonry_adobe_cut",
+    "cu_masonry_adobe_cut",
+    "cu_masonry_adobe_cut",
+    "cu_masonry_adobe_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "adobe",
+    "variant": "cut"
+  }
+}

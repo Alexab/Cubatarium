@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_ivory_prism",
+  "id": 2058,
+  "displayName": "Glass Ivory Prism",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_ivory_prism",
+    "cu_glass_ivory_prism",
+    "cu_glass_ivory_prism",
+    "cu_glass_ivory_prism",
+    "cu_glass_ivory_prism",
+    "cu_glass_ivory_prism"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "ivory",
+    "variant": "prism"
+  }
+}

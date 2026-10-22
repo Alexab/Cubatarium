@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_jade_raw",
+  "id": 2172,
+  "displayName": "Crystal Jade Raw",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_jade_raw",
+    "cu_crystal_jade_raw",
+    "cu_crystal_jade_raw",
+    "cu_crystal_jade_raw",
+    "cu_crystal_jade_raw",
+    "cu_crystal_jade_raw"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "jade",
+    "variant": "raw"
+  }
+}

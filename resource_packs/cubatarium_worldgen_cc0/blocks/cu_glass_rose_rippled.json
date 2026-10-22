@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_rose_rippled",
+  "id": 2073,
+  "displayName": "Glass Rose Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_rose_rippled",
+    "cu_glass_rose_rippled",
+    "cu_glass_rose_rippled",
+    "cu_glass_rose_rippled",
+    "cu_glass_rose_rippled",
+    "cu_glass_rose_rippled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "rose",
+    "variant": "rippled"
+  }
+}

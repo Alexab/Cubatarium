@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_verdigris_oxidized",
+  "id": 2022,
+  "displayName": "Metal Verdigris Oxidized",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_verdigris_oxidized",
+    "cu_metal_verdigris_oxidized",
+    "cu_metal_verdigris_oxidized",
+    "cu_metal_verdigris_oxidized",
+    "cu_metal_verdigris_oxidized",
+    "cu_metal_verdigris_oxidized"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "verdigris",
+    "variant": "oxidized"
+  }
+}

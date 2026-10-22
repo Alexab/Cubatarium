@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_fluorite_cut",
+  "id": 2193,
+  "displayName": "Crystal Fluorite Cut",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_fluorite_cut",
+    "cu_crystal_fluorite_cut",
+    "cu_crystal_fluorite_cut",
+    "cu_crystal_fluorite_cut",
+    "cu_crystal_fluorite_cut",
+    "cu_crystal_fluorite_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "fluorite",
+    "variant": "cut"
+  }
+}

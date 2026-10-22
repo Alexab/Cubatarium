@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_acacia_endgrain",
+  "id": 1456,
+  "displayName": "Wood Acacia Endgrain",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_acacia_endgrain",
+    "cu_wood_acacia_endgrain",
+    "cu_wood_acacia_endgrain",
+    "cu_wood_acacia_endgrain",
+    "cu_wood_acacia_endgrain",
+    "cu_wood_acacia_endgrain"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "acacia",
+    "variant": "endgrain"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_marble_cut",
+  "id": 1558,
+  "displayName": "Masonry Marble Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_marble_cut",
+    "cu_masonry_marble_cut",
+    "cu_masonry_marble_cut",
+    "cu_masonry_marble_cut",
+    "cu_masonry_marble_cut",
+    "cu_masonry_marble_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "marble",
+    "variant": "cut"
+  }
+}

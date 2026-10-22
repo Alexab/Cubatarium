@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_podzol_natural",
+  "id": 1275,
+  "displayName": "Soil Podzol Natural",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_podzol_natural",
+    "cu_soil_podzol_natural",
+    "cu_soil_podzol_natural",
+    "cu_soil_podzol_natural",
+    "cu_soil_podzol_natural",
+    "cu_soil_podzol_natural"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "podzol",
+    "variant": "natural"
+  }
+}

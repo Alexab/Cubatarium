@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_kelp_spotted",
+  "id": 2285,
+  "displayName": "Organic Kelp Spotted",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_kelp_spotted",
+    "cu_organic_kelp_spotted",
+    "cu_organic_kelp_spotted",
+    "cu_organic_kelp_spotted",
+    "cu_organic_kelp_spotted",
+    "cu_organic_kelp_spotted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "kelp",
+    "variant": "spotted"
+  }
+}

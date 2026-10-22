@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_amethyst_cut",
+  "id": 2143,
+  "displayName": "Crystal Amethyst Cut",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_amethyst_cut",
+    "cu_crystal_amethyst_cut",
+    "cu_crystal_amethyst_cut",
+    "cu_crystal_amethyst_cut",
+    "cu_crystal_amethyst_cut",
+    "cu_crystal_amethyst_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "amethyst",
+    "variant": "cut"
+  }
+}

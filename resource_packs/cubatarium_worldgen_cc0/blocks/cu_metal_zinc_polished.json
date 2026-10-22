@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_zinc_polished",
+  "id": 1995,
+  "displayName": "Metal Zinc Polished",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_zinc_polished",
+    "cu_metal_zinc_polished",
+    "cu_metal_zinc_polished",
+    "cu_metal_zinc_polished",
+    "cu_metal_zinc_polished",
+    "cu_metal_zinc_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "zinc",
+    "variant": "polished"
+  }
+}

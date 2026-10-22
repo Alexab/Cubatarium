@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_ochre_fine",
+  "id": 1811,
+  "displayName": "Fabric Ochre Fine",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_ochre_fine",
+    "cu_fabric_ochre_fine",
+    "cu_fabric_ochre_fine",
+    "cu_fabric_ochre_fine",
+    "cu_fabric_ochre_fine",
+    "cu_fabric_ochre_fine"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "ochre",
+    "variant": "fine"
+  }
+}

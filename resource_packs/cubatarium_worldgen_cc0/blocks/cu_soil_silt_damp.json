@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_silt_damp",
+  "id": 1297,
+  "displayName": "Soil Silt Damp",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_silt_damp",
+    "cu_soil_silt_damp",
+    "cu_soil_silt_damp",
+    "cu_soil_silt_damp",
+    "cu_soil_silt_damp",
+    "cu_soil_silt_damp"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "silt",
+    "variant": "damp"
+  }
+}

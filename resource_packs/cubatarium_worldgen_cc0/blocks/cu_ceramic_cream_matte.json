@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cream_matte",
+  "id": 1675,
+  "displayName": "Ceramic Cream Matte",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cream_matte",
+    "cu_ceramic_cream_matte",
+    "cu_ceramic_cream_matte",
+    "cu_ceramic_cream_matte",
+    "cu_ceramic_cream_matte",
+    "cu_ceramic_cream_matte"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cream",
+    "variant": "matte"
+  }
+}

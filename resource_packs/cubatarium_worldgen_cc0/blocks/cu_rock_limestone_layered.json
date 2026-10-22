@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_limestone_layered",
+  "id": 1067,
+  "displayName": "Rock Limestone Layered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_limestone_layered",
+    "cu_rock_limestone_layered",
+    "cu_rock_limestone_layered",
+    "cu_rock_limestone_layered",
+    "cu_rock_limestone_layered",
+    "cu_rock_limestone_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "limestone",
+    "variant": "layered"
+  }
+}

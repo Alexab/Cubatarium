@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_terrazzo_weathered",
+  "id": 1622,
+  "displayName": "Masonry Terrazzo Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_terrazzo_weathered",
+    "cu_masonry_terrazzo_weathered",
+    "cu_masonry_terrazzo_weathered",
+    "cu_masonry_terrazzo_weathered",
+    "cu_masonry_terrazzo_weathered",
+    "cu_masonry_terrazzo_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "terrazzo",
+    "variant": "weathered"
+  }
+}

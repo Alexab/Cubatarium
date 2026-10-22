@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_amber_rippled",
+  "id": 2061,
+  "displayName": "Glass Amber Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_amber_rippled",
+    "cu_glass_amber_rippled",
+    "cu_glass_amber_rippled",
+    "cu_glass_amber_rippled",
+    "cu_glass_amber_rippled",
+    "cu_glass_amber_rippled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "amber",
+    "variant": "rippled"
+  }
+}

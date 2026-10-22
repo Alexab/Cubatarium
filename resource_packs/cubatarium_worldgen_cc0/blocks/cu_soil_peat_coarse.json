@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_peat_coarse",
+  "id": 1269,
+  "displayName": "Soil Peat Coarse",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_peat_coarse",
+    "cu_soil_peat_coarse",
+    "cu_soil_peat_coarse",
+    "cu_soil_peat_coarse",
+    "cu_soil_peat_coarse",
+    "cu_soil_peat_coarse"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "peat",
+    "variant": "coarse"
+  }
+}

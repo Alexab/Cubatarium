@@ -1,0 +1,83 @@
+{
+  "name": "asset_mushroom_cluster_08",
+  "version": 2,
+  "displayName": "Mushroom Cluster 08",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 6125072618384773096,
+    "license": "CC0-1.0",
+    "material_parameter": "mushroom_red"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "fungi"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_soil_pale_sand_compact"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_soil_pale_sand_compact"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_organic_mushroom_red_striped"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_soil_pale_sand_compact"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_soil_pale_sand_compact"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": -1,
+      "type": "cu_soil_pale_sand_compact"
+    },
+    {
+      "dx": -1,
+      "dy": 3,
+      "dz": -1,
+      "type": "cu_organic_mushroom_red_striped"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_soil_pale_sand_compact"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_soil_pale_sand_compact"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_organic_mushroom_red_striped"
+    }
+  ]
+}

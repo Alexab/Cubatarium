@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_sandstone_block",
+  "id": 1535,
+  "displayName": "Masonry Sandstone Block",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_sandstone_block",
+    "cu_masonry_sandstone_block",
+    "cu_masonry_sandstone_block",
+    "cu_masonry_sandstone_block",
+    "cu_masonry_sandstone_block",
+    "cu_masonry_sandstone_block"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "sandstone",
+    "variant": "block"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_redwood_pale",
+  "id": 1501,
+  "displayName": "Wood Redwood Pale",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_redwood_pale",
+    "cu_wood_redwood_pale",
+    "cu_wood_redwood_pale",
+    "cu_wood_redwood_pale",
+    "cu_wood_redwood_pale",
+    "cu_wood_redwood_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "redwood",
+    "variant": "pale"
+  }
+}

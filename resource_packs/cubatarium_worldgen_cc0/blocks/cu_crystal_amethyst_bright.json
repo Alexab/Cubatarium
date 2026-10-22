@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_amethyst_bright",
+  "id": 2148,
+  "displayName": "Crystal Amethyst Bright",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_amethyst_bright",
+    "cu_crystal_amethyst_bright",
+    "cu_crystal_amethyst_bright",
+    "cu_crystal_amethyst_bright",
+    "cu_crystal_amethyst_bright",
+    "cu_crystal_amethyst_bright"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "amethyst",
+    "variant": "bright"
+  }
+}

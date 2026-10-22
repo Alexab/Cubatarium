@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_rose_lined",
+  "id": 2075,
+  "displayName": "Glass Rose Lined",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_rose_lined",
+    "cu_glass_rose_lined",
+    "cu_glass_rose_lined",
+    "cu_glass_rose_lined",
+    "cu_glass_rose_lined",
+    "cu_glass_rose_lined"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "rose",
+    "variant": "lined"
+  }
+}

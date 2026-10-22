@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_indigo_flecked",
+  "id": 1854,
+  "displayName": "Fabric Indigo Flecked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_indigo_flecked",
+    "cu_fabric_indigo_flecked",
+    "cu_fabric_indigo_flecked",
+    "cu_fabric_indigo_flecked",
+    "cu_fabric_indigo_flecked",
+    "cu_fabric_indigo_flecked"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "indigo",
+    "variant": "flecked"
+  }
+}

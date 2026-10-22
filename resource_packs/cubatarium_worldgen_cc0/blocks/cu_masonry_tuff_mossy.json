@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_tuff_mossy",
+  "id": 1604,
+  "displayName": "Masonry Tuff Mossy",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_tuff_mossy",
+    "cu_masonry_tuff_mossy",
+    "cu_masonry_tuff_mossy",
+    "cu_masonry_tuff_mossy",
+    "cu_masonry_tuff_mossy",
+    "cu_masonry_tuff_mossy"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "tuff",
+    "variant": "mossy"
+  }
+}

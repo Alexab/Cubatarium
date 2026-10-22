@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_dolomite_rough",
+  "id": 1186,
+  "displayName": "Rock Dolomite Rough",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_dolomite_rough",
+    "cu_rock_dolomite_rough",
+    "cu_rock_dolomite_rough",
+    "cu_rock_dolomite_rough",
+    "cu_rock_dolomite_rough",
+    "cu_rock_dolomite_rough"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "dolomite",
+    "variant": "rough"
+  }
+}

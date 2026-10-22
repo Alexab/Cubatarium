@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_flower_red_fresh",
+  "id": 2331,
+  "displayName": "Organic Flower Red Fresh",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_flower_red_fresh",
+    "cu_organic_flower_red_fresh",
+    "cu_organic_flower_red_fresh",
+    "cu_organic_flower_red_fresh",
+    "cu_organic_flower_red_fresh",
+    "cu_organic_flower_red_fresh"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "flower_red",
+    "variant": "fresh"
+  }
+}

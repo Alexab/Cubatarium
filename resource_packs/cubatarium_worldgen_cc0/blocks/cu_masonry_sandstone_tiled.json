@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_sandstone_tiled",
+  "id": 1540,
+  "displayName": "Masonry Sandstone Tiled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_sandstone_tiled",
+    "cu_masonry_sandstone_tiled",
+    "cu_masonry_sandstone_tiled",
+    "cu_masonry_sandstone_tiled",
+    "cu_masonry_sandstone_tiled",
+    "cu_masonry_sandstone_tiled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "sandstone",
+    "variant": "tiled"
+  }
+}

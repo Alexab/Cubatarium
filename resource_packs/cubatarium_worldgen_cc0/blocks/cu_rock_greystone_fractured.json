@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_greystone_fractured",
+  "id": 1238,
+  "displayName": "Rock Greystone Fractured",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_greystone_fractured",
+    "cu_rock_greystone_fractured",
+    "cu_rock_greystone_fractured",
+    "cu_rock_greystone_fractured",
+    "cu_rock_greystone_fractured",
+    "cu_rock_greystone_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "greystone",
+    "variant": "fractured"
+  }
+}

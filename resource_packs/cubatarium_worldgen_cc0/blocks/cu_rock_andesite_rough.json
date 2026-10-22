@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_andesite_rough",
+  "id": 1056,
+  "displayName": "Rock Andesite Rough",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_andesite_rough",
+    "cu_rock_andesite_rough",
+    "cu_rock_andesite_rough",
+    "cu_rock_andesite_rough",
+    "cu_rock_andesite_rough",
+    "cu_rock_andesite_rough"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "andesite",
+    "variant": "rough"
+  }
+}

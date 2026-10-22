@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_peat_pebbled",
+  "id": 1271,
+  "displayName": "Soil Peat Pebbled",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_peat_pebbled",
+    "cu_soil_peat_pebbled",
+    "cu_soil_peat_pebbled",
+    "cu_soil_peat_pebbled",
+    "cu_soil_peat_pebbled",
+    "cu_soil_peat_pebbled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "peat",
+    "variant": "pebbled"
+  }
+}

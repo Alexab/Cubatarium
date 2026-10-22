@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_lichen_dry",
+  "id": 2232,
+  "displayName": "Organic Lichen Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_lichen_dry",
+    "cu_organic_lichen_dry",
+    "cu_organic_lichen_dry",
+    "cu_organic_lichen_dry",
+    "cu_organic_lichen_dry",
+    "cu_organic_lichen_dry"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "lichen",
+    "variant": "dry"
+  }
+}

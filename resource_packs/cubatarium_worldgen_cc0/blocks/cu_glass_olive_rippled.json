@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_olive_rippled",
+  "id": 2115,
+  "displayName": "Glass Olive Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_olive_rippled",
+    "cu_glass_olive_rippled",
+    "cu_glass_olive_rippled",
+    "cu_glass_olive_rippled",
+    "cu_glass_olive_rippled",
+    "cu_glass_olive_rippled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "olive",
+    "variant": "rippled"
+  }
+}

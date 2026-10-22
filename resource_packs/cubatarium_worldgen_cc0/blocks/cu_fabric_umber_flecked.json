@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_umber_flecked",
+  "id": 1910,
+  "displayName": "Fabric Umber Flecked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_umber_flecked",
+    "cu_fabric_umber_flecked",
+    "cu_fabric_umber_flecked",
+    "cu_fabric_umber_flecked",
+    "cu_fabric_umber_flecked",
+    "cu_fabric_umber_flecked"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "umber",
+    "variant": "flecked"
+  }
+}

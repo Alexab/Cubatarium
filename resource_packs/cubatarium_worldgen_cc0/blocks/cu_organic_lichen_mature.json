@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_lichen_mature",
+  "id": 2240,
+  "displayName": "Organic Lichen Mature",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_lichen_mature",
+    "cu_organic_lichen_mature",
+    "cu_organic_lichen_mature",
+    "cu_organic_lichen_mature",
+    "cu_organic_lichen_mature",
+    "cu_organic_lichen_mature"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "lichen",
+    "variant": "mature"
+  }
+}

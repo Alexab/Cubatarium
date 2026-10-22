@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_steel_raw",
+  "id": 1921,
+  "displayName": "Metal Steel Raw",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_steel_raw",
+    "cu_metal_steel_raw",
+    "cu_metal_steel_raw",
+    "cu_metal_steel_raw",
+    "cu_metal_steel_raw",
+    "cu_metal_steel_raw"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "steel",
+    "variant": "raw"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_charcoal_plain",
+  "id": 2125,
+  "displayName": "Glass Charcoal Plain",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_charcoal_plain",
+    "cu_glass_charcoal_plain",
+    "cu_glass_charcoal_plain",
+    "cu_glass_charcoal_plain",
+    "cu_glass_charcoal_plain",
+    "cu_glass_charcoal_plain"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "charcoal",
+    "variant": "plain"
+  }
+}

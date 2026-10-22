@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_malachite_veined",
+  "id": 2216,
+  "displayName": "Crystal Malachite Veined",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_malachite_veined",
+    "cu_crystal_malachite_veined",
+    "cu_crystal_malachite_veined",
+    "cu_crystal_malachite_veined",
+    "cu_crystal_malachite_veined",
+    "cu_crystal_malachite_veined"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "malachite",
+    "variant": "veined"
+  }
+}

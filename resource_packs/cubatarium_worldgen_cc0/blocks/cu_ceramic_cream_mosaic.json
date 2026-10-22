@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cream_mosaic",
+  "id": 1680,
+  "displayName": "Ceramic Cream Mosaic",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cream_mosaic",
+    "cu_ceramic_cream_mosaic",
+    "cu_ceramic_cream_mosaic",
+    "cu_ceramic_cream_mosaic",
+    "cu_ceramic_cream_mosaic",
+    "cu_ceramic_cream_mosaic"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cream",
+    "variant": "mosaic"
+  }
+}

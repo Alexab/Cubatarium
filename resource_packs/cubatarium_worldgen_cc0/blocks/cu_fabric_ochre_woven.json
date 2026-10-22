@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_ochre_woven",
+  "id": 1809,
+  "displayName": "Fabric Ochre Woven",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_ochre_woven",
+    "cu_fabric_ochre_woven",
+    "cu_fabric_ochre_woven",
+    "cu_fabric_ochre_woven",
+    "cu_fabric_ochre_woven",
+    "cu_fabric_ochre_woven"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "ochre",
+    "variant": "woven"
+  }
+}

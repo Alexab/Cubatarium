@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_olive_matte",
+  "id": 1765,
+  "displayName": "Ceramic Olive Matte",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_olive_matte",
+    "cu_ceramic_olive_matte",
+    "cu_ceramic_olive_matte",
+    "cu_ceramic_olive_matte",
+    "cu_ceramic_olive_matte",
+    "cu_ceramic_olive_matte"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "olive",
+    "variant": "matte"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_basalt_cut",
+  "id": 1031,
+  "displayName": "Rock Basalt Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_basalt_cut",
+    "cu_rock_basalt_cut",
+    "cu_rock_basalt_cut",
+    "cu_rock_basalt_cut",
+    "cu_rock_basalt_cut",
+    "cu_rock_basalt_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "basalt",
+    "variant": "cut"
+  }
+}

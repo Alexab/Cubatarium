@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_red_earth_rooted",
+  "id": 1332,
+  "displayName": "Soil Red Earth Rooted",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_red_earth_rooted",
+    "cu_soil_red_earth_rooted",
+    "cu_soil_red_earth_rooted",
+    "cu_soil_red_earth_rooted",
+    "cu_soil_red_earth_rooted",
+    "cu_soil_red_earth_rooted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "red_earth",
+    "variant": "rooted"
+  }
+}

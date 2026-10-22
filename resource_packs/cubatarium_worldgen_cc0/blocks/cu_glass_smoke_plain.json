@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_smoke_plain",
+  "id": 2119,
+  "displayName": "Glass Smoke Plain",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_smoke_plain",
+    "cu_glass_smoke_plain",
+    "cu_glass_smoke_plain",
+    "cu_glass_smoke_plain",
+    "cu_glass_smoke_plain",
+    "cu_glass_smoke_plain"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "smoke",
+    "variant": "plain"
+  }
+}

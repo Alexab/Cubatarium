@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_acacia_dark",
+  "id": 1460,
+  "displayName": "Wood Acacia Dark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_acacia_dark",
+    "cu_wood_acacia_dark",
+    "cu_wood_acacia_dark",
+    "cu_wood_acacia_dark",
+    "cu_wood_acacia_dark",
+    "cu_wood_acacia_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "acacia",
+    "variant": "dark"
+  }
+}

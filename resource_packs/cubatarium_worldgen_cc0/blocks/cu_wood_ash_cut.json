@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_ash_cut",
+  "id": 1413,
+  "displayName": "Wood Ash Cut",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_ash_cut",
+    "cu_wood_ash_cut",
+    "cu_wood_ash_cut",
+    "cu_wood_ash_cut",
+    "cu_wood_ash_cut",
+    "cu_wood_ash_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "ash",
+    "variant": "cut"
+  }
+}

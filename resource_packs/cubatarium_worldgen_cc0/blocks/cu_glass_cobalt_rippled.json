@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_cobalt_rippled",
+  "id": 2085,
+  "displayName": "Glass Cobalt Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_cobalt_rippled",
+    "cu_glass_cobalt_rippled",
+    "cu_glass_cobalt_rippled",
+    "cu_glass_cobalt_rippled",
+    "cu_glass_cobalt_rippled",
+    "cu_glass_cobalt_rippled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "cobalt",
+    "variant": "rippled"
+  }
+}

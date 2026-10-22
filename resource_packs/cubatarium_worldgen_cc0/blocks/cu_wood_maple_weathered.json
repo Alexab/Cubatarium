@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_maple_weathered",
+  "id": 1404,
+  "displayName": "Wood Maple Weathered",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_maple_weathered",
+    "cu_wood_maple_weathered",
+    "cu_wood_maple_weathered",
+    "cu_wood_maple_weathered",
+    "cu_wood_maple_weathered",
+    "cu_wood_maple_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "maple",
+    "variant": "weathered"
+  }
+}

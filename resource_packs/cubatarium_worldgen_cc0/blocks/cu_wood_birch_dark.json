@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_birch_dark",
+  "id": 1380,
+  "displayName": "Wood Birch Dark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_birch_dark",
+    "cu_wood_birch_dark",
+    "cu_wood_birch_dark",
+    "cu_wood_birch_dark",
+    "cu_wood_birch_dark",
+    "cu_wood_birch_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "birch",
+    "variant": "dark"
+  }
+}

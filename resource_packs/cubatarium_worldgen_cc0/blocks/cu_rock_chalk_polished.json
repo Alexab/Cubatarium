@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_chalk_polished",
+  "id": 1150,
+  "displayName": "Rock Chalk Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_chalk_polished",
+    "cu_rock_chalk_polished",
+    "cu_rock_chalk_polished",
+    "cu_rock_chalk_polished",
+    "cu_rock_chalk_polished",
+    "cu_rock_chalk_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "chalk",
+    "variant": "polished"
+  }
+}

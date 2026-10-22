@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_meteoric_iron_dark",
+  "id": 2040,
+  "displayName": "Metal Meteoric Iron Dark",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_meteoric_iron_dark",
+    "cu_metal_meteoric_iron_dark",
+    "cu_metal_meteoric_iron_dark",
+    "cu_metal_meteoric_iron_dark",
+    "cu_metal_meteoric_iron_dark",
+    "cu_metal_meteoric_iron_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "meteoric_iron",
+    "variant": "dark"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_titanium_dark",
+  "id": 2008,
+  "displayName": "Metal Titanium Dark",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_titanium_dark",
+    "cu_metal_titanium_dark",
+    "cu_metal_titanium_dark",
+    "cu_metal_titanium_dark",
+    "cu_metal_titanium_dark",
+    "cu_metal_titanium_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "titanium",
+    "variant": "dark"
+  }
+}

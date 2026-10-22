@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cream_speckled",
+  "id": 1677,
+  "displayName": "Ceramic Cream Speckled",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cream_speckled",
+    "cu_ceramic_cream_speckled",
+    "cu_ceramic_cream_speckled",
+    "cu_ceramic_cream_speckled",
+    "cu_ceramic_cream_speckled",
+    "cu_ceramic_cream_speckled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cream",
+    "variant": "speckled"
+  }
+}

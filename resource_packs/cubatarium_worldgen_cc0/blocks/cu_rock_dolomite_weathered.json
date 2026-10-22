@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_dolomite_weathered",
+  "id": 1189,
+  "displayName": "Rock Dolomite Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_dolomite_weathered",
+    "cu_rock_dolomite_weathered",
+    "cu_rock_dolomite_weathered",
+    "cu_rock_dolomite_weathered",
+    "cu_rock_dolomite_weathered",
+    "cu_rock_dolomite_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "dolomite",
+    "variant": "weathered"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_kelp_fresh",
+  "id": 2281,
+  "displayName": "Organic Kelp Fresh",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_kelp_fresh",
+    "cu_organic_kelp_fresh",
+    "cu_organic_kelp_fresh",
+    "cu_organic_kelp_fresh",
+    "cu_organic_kelp_fresh",
+    "cu_organic_kelp_fresh"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "kelp",
+    "variant": "fresh"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_ash_endgrain",
+  "id": 1406,
+  "displayName": "Wood Ash Endgrain",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_ash_endgrain",
+    "cu_wood_ash_endgrain",
+    "cu_wood_ash_endgrain",
+    "cu_wood_ash_endgrain",
+    "cu_wood_ash_endgrain",
+    "cu_wood_ash_endgrain"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "ash",
+    "variant": "endgrain"
+  }
+}

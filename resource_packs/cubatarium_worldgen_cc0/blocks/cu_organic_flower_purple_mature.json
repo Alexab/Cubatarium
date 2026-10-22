@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_flower_purple_mature",
+  "id": 2370,
+  "displayName": "Organic Flower Purple Mature",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_flower_purple_mature",
+    "cu_organic_flower_purple_mature",
+    "cu_organic_flower_purple_mature",
+    "cu_organic_flower_purple_mature",
+    "cu_organic_flower_purple_mature",
+    "cu_organic_flower_purple_mature"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "flower_purple",
+    "variant": "mature"
+  }
+}

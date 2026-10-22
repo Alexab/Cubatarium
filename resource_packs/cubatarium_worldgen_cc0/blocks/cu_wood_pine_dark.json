@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_pine_dark",
+  "id": 1370,
+  "displayName": "Wood Pine Dark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_pine_dark",
+    "cu_wood_pine_dark",
+    "cu_wood_pine_dark",
+    "cu_wood_pine_dark",
+    "cu_wood_pine_dark",
+    "cu_wood_pine_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "pine",
+    "variant": "dark"
+  }
+}

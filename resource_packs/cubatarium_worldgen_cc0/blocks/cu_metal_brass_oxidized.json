@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_brass_oxidized",
+  "id": 1950,
+  "displayName": "Metal Brass Oxidized",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_brass_oxidized",
+    "cu_metal_brass_oxidized",
+    "cu_metal_brass_oxidized",
+    "cu_metal_brass_oxidized",
+    "cu_metal_brass_oxidized",
+    "cu_metal_brass_oxidized"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "brass",
+    "variant": "oxidized"
+  }
+}

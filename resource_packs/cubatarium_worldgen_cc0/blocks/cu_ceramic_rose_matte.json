@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_rose_matte",
+  "id": 1715,
+  "displayName": "Ceramic Rose Matte",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_rose_matte",
+    "cu_ceramic_rose_matte",
+    "cu_ceramic_rose_matte",
+    "cu_ceramic_rose_matte",
+    "cu_ceramic_rose_matte",
+    "cu_ceramic_rose_matte"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "rose",
+    "variant": "matte"
+  }
+}

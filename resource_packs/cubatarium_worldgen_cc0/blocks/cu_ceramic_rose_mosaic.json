@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_rose_mosaic",
+  "id": 1720,
+  "displayName": "Ceramic Rose Mosaic",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_rose_mosaic",
+    "cu_ceramic_rose_mosaic",
+    "cu_ceramic_rose_mosaic",
+    "cu_ceramic_rose_mosaic",
+    "cu_ceramic_rose_mosaic",
+    "cu_ceramic_rose_mosaic"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "rose",
+    "variant": "mosaic"
+  }
+}

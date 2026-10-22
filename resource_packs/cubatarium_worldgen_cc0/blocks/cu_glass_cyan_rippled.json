@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_cyan_rippled",
+  "id": 2091,
+  "displayName": "Glass Cyan Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_cyan_rippled",
+    "cu_glass_cyan_rippled",
+    "cu_glass_cyan_rippled",
+    "cu_glass_cyan_rippled",
+    "cu_glass_cyan_rippled",
+    "cu_glass_cyan_rippled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "cyan",
+    "variant": "rippled"
+  }
+}

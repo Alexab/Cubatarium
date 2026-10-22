@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_gold_hammered",
+  "id": 1972,
+  "displayName": "Metal Gold Hammered",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_gold_hammered",
+    "cu_metal_gold_hammered",
+    "cu_metal_gold_hammered",
+    "cu_metal_gold_hammered",
+    "cu_metal_gold_hammered",
+    "cu_metal_gold_hammered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "gold",
+    "variant": "hammered"
+  }
+}

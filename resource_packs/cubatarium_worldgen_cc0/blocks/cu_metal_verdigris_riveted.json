@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_verdigris_riveted",
+  "id": 2021,
+  "displayName": "Metal Verdigris Riveted",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_verdigris_riveted",
+    "cu_metal_verdigris_riveted",
+    "cu_metal_verdigris_riveted",
+    "cu_metal_verdigris_riveted",
+    "cu_metal_verdigris_riveted",
+    "cu_metal_verdigris_riveted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "verdigris",
+    "variant": "riveted"
+  }
+}

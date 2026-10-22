@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_malachite_deep",
+  "id": 2215,
+  "displayName": "Crystal Malachite Deep",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_malachite_deep",
+    "cu_crystal_malachite_deep",
+    "cu_crystal_malachite_deep",
+    "cu_crystal_malachite_deep",
+    "cu_crystal_malachite_deep",
+    "cu_crystal_malachite_deep"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "malachite",
+    "variant": "deep"
+  }
+}

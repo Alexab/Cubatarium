@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_redwood_stripped",
+  "id": 1498,
+  "displayName": "Wood Redwood Stripped",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_redwood_stripped",
+    "cu_wood_redwood_stripped",
+    "cu_wood_redwood_stripped",
+    "cu_wood_redwood_stripped",
+    "cu_wood_redwood_stripped",
+    "cu_wood_redwood_stripped"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "redwood",
+    "variant": "stripped"
+  }
+}

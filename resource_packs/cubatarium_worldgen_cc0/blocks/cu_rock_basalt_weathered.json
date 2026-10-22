@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_basalt_weathered",
+  "id": 1029,
+  "displayName": "Rock Basalt Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_basalt_weathered",
+    "cu_rock_basalt_weathered",
+    "cu_rock_basalt_weathered",
+    "cu_rock_basalt_weathered",
+    "cu_rock_basalt_weathered",
+    "cu_rock_basalt_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "basalt",
+    "variant": "weathered"
+  }
+}

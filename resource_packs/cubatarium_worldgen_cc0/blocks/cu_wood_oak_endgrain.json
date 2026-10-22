@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_oak_endgrain",
+  "id": 1356,
+  "displayName": "Wood Oak Endgrain",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_oak_endgrain",
+    "cu_wood_oak_endgrain",
+    "cu_wood_oak_endgrain",
+    "cu_wood_oak_endgrain",
+    "cu_wood_oak_endgrain",
+    "cu_wood_oak_endgrain"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "oak",
+    "variant": "endgrain"
+  }
+}

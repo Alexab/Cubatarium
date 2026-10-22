@@ -19,6 +19,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
 namespace cutum
 {
@@ -164,8 +165,46 @@ bool SmokeSelection(const ResourcePackSelection &selection,
 bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
                     std::shared_ptr<UPlaceholderTextureCache> placeholders)
 {
+  const auto upgradedDefaults = UResourcePackResolver::ParseFromJson(
+      nlohmann::json{{"resource_packs",
+                      {{"default_primary", {"minetest_default_16"}},
+                       {"default_secondary", {"cubatarium_geology_cc0"}}}}});
+  if (std::find(upgradedDefaults.DefaultSecondary.begin(),
+                upgradedDefaults.DefaultSecondary.end(),
+                "cubatarium_worldgen_cc0") ==
+      upgradedDefaults.DefaultSecondary.end())
+  {
+    std::cerr << "ResourcePackSmoke: legacy secondary defaults did not migrate "
+                 "to include original Cubatarium assets"
+              << std::endl;
+    return false;
+  }
+  const auto upgradedFlatDefaults = UResourcePackResolver::ParseFromJson(
+      nlohmann::json{{"resource_packs",
+                      {{"default_primary", {"minetest_default_16"}},
+                       {"default_enabled", {"minetest_default_16",
+                                             "cubatarium_geology_cc0"}}}}});
+  if (std::find(upgradedFlatDefaults.DefaultSecondary.begin(),
+                upgradedFlatDefaults.DefaultSecondary.end(),
+                "cubatarium_worldgen_cc0") ==
+      upgradedFlatDefaults.DefaultSecondary.end())
+  {
+    std::cerr << "ResourcePackSmoke: legacy flattened defaults did not migrate "
+                 "to include original Cubatarium assets"
+              << std::endl;
+    return false;
+  }
   auto registry = std::make_shared<UBlockMergeRegistry>();
   const ResourcePackSelection defaults = DefaultResourcePackSelection();
+  if (defaults.WorldgenOwner != "minetest_default_16" ||
+      std::find(defaults.Secondary.begin(), defaults.Secondary.end(),
+                "cubatarium_worldgen_cc0") == defaults.Secondary.end())
+  {
+    std::cerr << "ResourcePackSmoke: default selection must keep Minetest as "
+                 "worldgen owner and enable the Cubatarium asset pack"
+              << std::endl;
+    return false;
+  }
   if (!SmokeSelection(defaults, assetRoot, writableRoot, *registry,
                       placeholders))
   {
@@ -182,6 +221,18 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
       return false;
     }
   }
+  const auto granite = std::find_if(
+      registry->GetCubeDescriptors().begin(),
+      registry->GetCubeDescriptors().end(),
+      [](const MergedCubeDesc &descriptor) { return descriptor.Name == "granite"; });
+  if (granite == registry->GetCubeDescriptors().end() ||
+      granite->Stems[0].rfind("cubatarium_worldgen_cc0/", 0) != 0)
+  {
+    std::cerr << "ResourcePackSmoke: default Cubatarium textures did not win "
+                 "the geology override"
+              << std::endl;
+    return false;
+  }
 
   UResourcePackResolver resolver;
   const auto packs = resolver.Resolve(defaults, assetRoot, writableRoot);
@@ -190,6 +241,13 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
 
   UObjectLibrary objects;
   objects.LoadMerged(assetRoot / "objects", packs, blockRegistry);
+  if (!registry->HasBlock("cu_rock_basalt_natural") ||
+      !objects.Get("cubatarium_worldgen_cc0::asset_tree_birch"))
+  {
+    std::cerr << "ResourcePackSmoke: default Cubatarium assets were not loaded"
+              << std::endl;
+    return false;
+  }
 
   // Simulate worldgen slot resolution creating synthetic blocks (e.g. ore_coal).
   (void)blockRegistry.GetIdByTypeName("ore_coal");

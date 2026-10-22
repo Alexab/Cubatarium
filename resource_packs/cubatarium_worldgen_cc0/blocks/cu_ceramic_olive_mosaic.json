@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_olive_mosaic",
+  "id": 1770,
+  "displayName": "Ceramic Olive Mosaic",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_olive_mosaic",
+    "cu_ceramic_olive_mosaic",
+    "cu_ceramic_olive_mosaic",
+    "cu_ceramic_olive_mosaic",
+    "cu_ceramic_olive_mosaic",
+    "cu_ceramic_olive_mosaic"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "olive",
+    "variant": "mosaic"
+  }
+}

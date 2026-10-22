@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_quartz_tiled",
+  "id": 1650,
+  "displayName": "Masonry Quartz Tiled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_quartz_tiled",
+    "cu_masonry_quartz_tiled",
+    "cu_masonry_quartz_tiled",
+    "cu_masonry_quartz_tiled",
+    "cu_masonry_quartz_tiled",
+    "cu_masonry_quartz_tiled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "quartz",
+    "variant": "tiled"
+  }
+}

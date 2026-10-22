@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_teal_coarse",
+  "id": 1874,
+  "displayName": "Fabric Teal Coarse",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_teal_coarse",
+    "cu_fabric_teal_coarse",
+    "cu_fabric_teal_coarse",
+    "cu_fabric_teal_coarse",
+    "cu_fabric_teal_coarse",
+    "cu_fabric_teal_coarse"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "teal",
+    "variant": "coarse"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_black_iron_riveted",
+  "id": 2029,
+  "displayName": "Metal Black Iron Riveted",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_black_iron_riveted",
+    "cu_metal_black_iron_riveted",
+    "cu_metal_black_iron_riveted",
+    "cu_metal_black_iron_riveted",
+    "cu_metal_black_iron_riveted",
+    "cu_metal_black_iron_riveted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "black_iron",
+    "variant": "riveted"
+  }
+}

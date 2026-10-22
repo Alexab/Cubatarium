@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_flower_blue_striped",
+  "id": 2356,
+  "displayName": "Organic Flower Blue Striped",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_flower_blue_striped",
+    "cu_organic_flower_blue_striped",
+    "cu_organic_flower_blue_striped",
+    "cu_organic_flower_blue_striped",
+    "cu_organic_flower_blue_striped",
+    "cu_organic_flower_blue_striped"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "flower_blue",
+    "variant": "striped"
+  }
+}

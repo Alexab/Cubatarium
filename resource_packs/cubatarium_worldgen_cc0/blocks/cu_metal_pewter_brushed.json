@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_pewter_brushed",
+  "id": 2010,
+  "displayName": "Metal Pewter Brushed",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_pewter_brushed",
+    "cu_metal_pewter_brushed",
+    "cu_metal_pewter_brushed",
+    "cu_metal_pewter_brushed",
+    "cu_metal_pewter_brushed",
+    "cu_metal_pewter_brushed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "pewter",
+    "variant": "brushed"
+  }
+}

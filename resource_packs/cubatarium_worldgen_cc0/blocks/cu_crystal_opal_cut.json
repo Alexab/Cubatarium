@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_opal_cut",
+  "id": 2183,
+  "displayName": "Crystal Opal Cut",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_opal_cut",
+    "cu_crystal_opal_cut",
+    "cu_crystal_opal_cut",
+    "cu_crystal_opal_cut",
+    "cu_crystal_opal_cut",
+    "cu_crystal_opal_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "opal",
+    "variant": "cut"
+  }
+}

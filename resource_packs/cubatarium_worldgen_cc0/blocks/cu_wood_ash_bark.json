@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_ash_bark",
+  "id": 1405,
+  "displayName": "Wood Ash Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_ash_bark",
+    "cu_wood_ash_bark",
+    "cu_wood_ash_bark",
+    "cu_wood_ash_bark",
+    "cu_wood_ash_bark",
+    "cu_wood_ash_bark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "ash",
+    "variant": "bark"
+  }
+}

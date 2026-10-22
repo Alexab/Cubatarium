@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_flower_white_sparse",
+  "id": 2314,
+  "displayName": "Organic Flower White Sparse",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_flower_white_sparse",
+    "cu_organic_flower_white_sparse",
+    "cu_organic_flower_white_sparse",
+    "cu_organic_flower_white_sparse",
+    "cu_organic_flower_white_sparse",
+    "cu_organic_flower_white_sparse"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "flower_white",
+    "variant": "sparse"
+  }
+}

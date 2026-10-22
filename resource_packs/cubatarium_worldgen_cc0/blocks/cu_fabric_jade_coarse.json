@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_jade_coarse",
+  "id": 1882,
+  "displayName": "Fabric Jade Coarse",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_jade_coarse",
+    "cu_fabric_jade_coarse",
+    "cu_fabric_jade_coarse",
+    "cu_fabric_jade_coarse",
+    "cu_fabric_jade_coarse",
+    "cu_fabric_jade_coarse"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "jade",
+    "variant": "coarse"
+  }
+}

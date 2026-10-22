@@ -1,0 +1,2562 @@
+anvil:
+- stem: mt_anvil_base
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+- stem: mt_anvil_top
+  faces:
+  - west
+bedrock:
+- stem: mt_bedrock
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+blockDiamond:
+- stem: mt_blockdiamond
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+blockEmerald:
+- stem: mt_blockemerald
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+blockGold:
+- stem: mt_blockgold
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+blockIron:
+- stem: mt_blockiron
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+blockLapis:
+- stem: mt_blocklapis
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+blockRedstone:
+- stem: mt_blockredstone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+bookshelf:
+- stem: mt_bookshelf
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+brewing_stand:
+- stem: mt_brewingstand
+  faces:
+  - west
+- stem: mt_brewingstand_base
+  faces:
+  - east
+- stem: mt_wood
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+brown_mushroom:
+- stem: mt_mushroom_brown
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+brown_mushroom_block:
+- stem: mt_mushroom_skin_brown
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+cactus:
+- stem: mt_cactus_bottom
+  faces:
+  - east
+- stem: mt_cactus_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_cactus_top
+  faces:
+  - west
+cake:
+- stem: mt_cake_bottom
+  faces:
+  - east
+- stem: mt_cake_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_cake_top
+  faces:
+  - west
+carrots:
+- stem: mt_carrots_3
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+cauldron:
+- stem: mt_cauldron_bottom
+  faces:
+  - east
+- stem: mt_cauldron_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_cauldron_top
+  faces:
+  - west
+clay:
+- stem: mt_clay
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+cocoa:
+- stem: mt_cocoa_2
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+crafting_table:
+- stem: mt_workbench_front
+  faces:
+  - top
+- stem: mt_workbench_side
+  faces:
+  - bottom
+  - north
+  - south
+  - east
+- stem: mt_workbench_top
+  faces:
+  - west
+daylight_sensor:
+- stem: mt_daylightdetector_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+- stem: mt_daylightdetector_top
+  faces:
+  - west
+deadbush:
+- stem: mt_deadbush
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+dirt:
+- stem: mt_dirt
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+dispenser:
+- stem: mt_dispenser_front
+  faces:
+  - top
+- stem: mt_furnace_side
+  faces:
+  - bottom
+  - north
+  - south
+- stem: mt_furnace_top
+  faces:
+  - west
+  - east
+dropper:
+- stem: mt_dropper_front
+  faces:
+  - top
+- stem: mt_furnace_side
+  faces:
+  - bottom
+  - north
+  - south
+- stem: mt_furnace_top
+  faces:
+  - west
+  - east
+enchantment_table:
+- stem: mt_enchantment_bottom
+  faces:
+  - east
+- stem: mt_enchantment_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_enchantment_top
+  faces:
+  - west
+end_portal_frame:
+- stem: mt_endframe_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+- stem: mt_endframe_top
+  faces:
+  - west
+end_portal_frame_eye:
+- stem: mt_endframe_eye
+  faces:
+  - west
+- stem: mt_endframe_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+farmland_dry:
+- stem: mt_dirt
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+- stem: mt_farmland_dry
+  faces:
+  - west
+farmland_wet:
+- stem: mt_dirt
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+- stem: mt_farmland_wet
+  faces:
+  - west
+fern:
+- stem: mt_fern
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+fire:
+- stem: mt_fire_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+flower:
+- stem: mt_flower
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+furnace:
+- stem: mt_furnace_front
+  faces:
+  - top
+- stem: mt_furnace_side
+  faces:
+  - bottom
+  - north
+  - south
+- stem: mt_furnace_top
+  faces:
+  - west
+  - east
+furnace_lit:
+- stem: mt_furnace_front_lit
+  faces:
+  - top
+- stem: mt_furnace_side
+  faces:
+  - bottom
+  - north
+  - south
+- stem: mt_furnace_top
+  faces:
+  - west
+  - east
+glass:
+- stem: mt_glass
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+glowstone:
+- stem: mt_lightgem
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+grass:
+- stem: mt_dirt
+  faces:
+  - east
+- stem: mt_grass_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_grass_top
+  faces:
+  - west
+gravel:
+- stem: mt_gravel
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+hellrock:
+- stem: mt_hellrock
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+hellsand:
+- stem: mt_hellsand
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+hopper:
+- stem: mt_hopper
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_hopper_inside
+  faces:
+  - east
+- stem: mt_hopper_top
+  faces:
+  - west
+ice:
+- stem: mt_ice
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+iron_bars:
+- stem: mt_fenceiron
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+item_frame:
+- stem: mt_itemframe_back
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+jack_o_lantern:
+- stem: mt_pumpkin_jack
+  faces:
+  - bottom
+  - south
+- stem: mt_pumpkin_side
+  faces:
+  - top
+  - north
+  - east
+- stem: mt_pumpkin_top
+  faces:
+  - west
+jukebox:
+- stem: mt_jukebox_top
+  faces:
+  - west
+- stem: mt_wood
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+ladder:
+- stem: mt_ladder
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+lava:
+- stem: mt_lava
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+leaves_jungle:
+- stem: mt_leaves_jungle_opaque
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+leaves_jungle_light:
+- stem: mt_leaves_jungle
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+leaves_spruce:
+- stem: mt_leaves_spruce_opaque
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+leaves_spruce_light:
+- stem: mt_leaves_spruce
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+leaves_transparent:
+- stem: mt_leaves
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+lever:
+- stem: mt_lever
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+lily_pad:
+- stem: mt_waterlily
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+log_birch:
+- stem: mt_tree_birch
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_wood_birch
+  faces:
+  - west
+  - east
+log_jungle:
+- stem: mt_tree_jungle
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_wood_jungle
+  faces:
+  - west
+  - east
+log_spruce:
+- stem: mt_tree_spruce
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_wood_spruce
+  faces:
+  - west
+  - east
+melon:
+- stem: mt_melon_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+- stem: mt_melon_top
+  faces:
+  - west
+melon_stem:
+- stem: mt_stem_straight
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_acacia_bush_leaves:
+- stem: mt_mtg_acacia_bush_leaves_default_acacia_leaves_simple
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_acacia_bush_sapling:
+- stem: mt_mtg_acacia_bush_sapling_default_acacia_bush_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_acacia_bush_stem:
+- stem: mt_mtg_acacia_bush_stem_default_acacia_bush_stem
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_acacia_leaves:
+- stem: mt_mtg_acacia_leaves_default_acacia_leaves
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_acacia_sapling:
+- stem: mt_mtg_acacia_sapling_default_acacia_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_acacia_tree:
+- stem: mt_mtg_acacia_tree_default_acacia_tree
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_acacia_tree_default_acacia_tree_top
+  faces:
+  - west
+  - east
+mtg_acacia_wood:
+- stem: mt_mtg_acacia_wood_default_acacia_wood
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_apple:
+- stem: mt_mtg_apple_default_apple
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_aspen_leaves:
+- stem: mt_mtg_aspen_leaves_default_aspen_leaves
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_aspen_sapling:
+- stem: mt_mtg_aspen_sapling_default_aspen_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_aspen_tree:
+- stem: mt_mtg_aspen_tree_default_aspen_tree
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_aspen_tree_default_aspen_tree_top
+  faces:
+  - west
+  - east
+mtg_aspen_wood:
+- stem: mt_mtg_aspen_wood_default_aspen_wood
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_blueberry_bush_leaves:
+- stem: mt_mtg_blueberry_bush_leaves_default_blueberry_bush_leaves
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_blueberry_bush_leaves_with_berries:
+- stem: mt_mtg_blueberry_bush_leaves_with_berries_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_blueberry_bush_sapling:
+- stem: mt_mtg_blueberry_bush_sapling_default_blueberry_bush_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_bronzeblock:
+- stem: mt_mtg_bronzeblock_default_bronze_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_bush_leaves:
+- stem: mt_mtg_bush_leaves_default_leaves_simple
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_bush_sapling:
+- stem: mt_mtg_bush_sapling_default_bush_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_bush_stem:
+- stem: mt_mtg_bush_stem_default_bush_stem
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_cactus:
+- stem: mt_mtg_cactus_default_cactus_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_cactus_default_cactus_top
+  faces:
+  - west
+  - east
+mtg_cave_ice:
+- stem: mt_mtg_cave_ice_default_ice
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_clay:
+- stem: mt_mtg_clay_default_clay
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_cloud:
+- stem: mt_mtg_cloud_default_cloud
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_coalblock:
+- stem: mt_mtg_coalblock_default_coal_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_cobble:
+- stem: mt_mtg_cobble_default_cobble
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_copperblock:
+- stem: mt_mtg_copperblock_default_copper_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_coral_brown:
+- stem: mt_mtg_coral_brown_default_coral_brown
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_coral_cyan:
+- stem: mt_mtg_coral_cyan_default_coral_skeleton
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_coral_green:
+- stem: mt_mtg_coral_green_default_coral_skeleton
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_coral_orange:
+- stem: mt_mtg_coral_orange_default_coral_orange
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_coral_pink:
+- stem: mt_mtg_coral_pink_default_coral_skeleton
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_coral_skeleton:
+- stem: mt_mtg_coral_skeleton_default_coral_skeleton
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_desert_cobble:
+- stem: mt_mtg_desert_cobble_default_desert_cobble
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_desert_sand:
+- stem: mt_mtg_desert_sand_default_desert_sand
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_desert_sandstone:
+- stem: mt_mtg_desert_sandstone_default_desert_sandstone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_desert_sandstone_block:
+- stem: mt_mtg_desert_sandstone_block_default_desert_sandstone_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_desert_sandstone_brick:
+- stem: mt_mtg_desert_sandstone_brick_default_desert_sandstone_brick
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_desert_stone:
+- stem: mt_mtg_desert_stone_default_desert_stone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_desert_stone_block:
+- stem: mt_mtg_desert_stone_block_default_desert_stone_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_desert_stonebrick:
+- stem: mt_mtg_desert_stonebrick_default_desert_stone_brick
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_diamondblock:
+- stem: mt_mtg_diamondblock_default_diamond_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_dirt:
+- stem: mt_mtg_dirt_default_dirt
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_dirt_with_coniferous_litter:
+- stem: mt_mtg_dirt_with_coniferous_litter_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_dirt_with_coniferous_litter_default_coniferous_litter
+  faces:
+  - west
+- stem: mt_mtg_dirt_with_coniferous_litter_default_dirt
+  faces:
+  - east
+mtg_dirt_with_dry_grass:
+- stem: mt_mtg_dirt_with_dry_grass_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_dirt_with_dry_grass_default_dirt
+  faces:
+  - east
+- stem: mt_mtg_dirt_with_dry_grass_default_dry_grass
+  faces:
+  - west
+mtg_dirt_with_grass:
+- stem: mt_mtg_dirt_with_grass_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_dirt_with_grass_default_dirt
+  faces:
+  - east
+- stem: mt_mtg_dirt_with_grass_default_grass
+  faces:
+  - west
+mtg_dirt_with_grass_footsteps:
+- stem: mt_mtg_dirt_with_grass_footsteps_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_dirt_with_grass_footsteps_composite_1
+  faces:
+  - west
+- stem: mt_mtg_dirt_with_grass_footsteps_default_dirt
+  faces:
+  - east
+mtg_dirt_with_rainforest_litter:
+- stem: mt_mtg_dirt_with_rainforest_litter_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_dirt_with_rainforest_litter_default_dirt
+  faces:
+  - east
+- stem: mt_mtg_dirt_with_rainforest_litter_default_rainforest_litter
+  faces:
+  - west
+mtg_dirt_with_snow:
+- stem: mt_mtg_dirt_with_snow_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_dirt_with_snow_default_dirt
+  faces:
+  - east
+- stem: mt_mtg_dirt_with_snow_default_snow
+  faces:
+  - west
+mtg_dry_dirt:
+- stem: mt_mtg_dry_dirt_default_dry_dirt
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_dry_dirt_with_dry_grass:
+- stem: mt_mtg_dry_dirt_with_dry_grass_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_dry_dirt_with_dry_grass_default_dry_dirt
+  faces:
+  - east
+- stem: mt_mtg_dry_dirt_with_dry_grass_default_dry_grass
+  faces:
+  - west
+mtg_dry_grass_1:
+- stem: mt_mtg_dry_grass_1_default_dry_grass_1
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_dry_shrub:
+- stem: mt_mtg_dry_shrub_default_dry_shrub
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_emergent_jungle_sapling:
+- stem: mt_mtg_emergent_jungle_sapling_default_emergent_jungle_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_fern_1:
+- stem: mt_mtg_fern_1_default_fern_1
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_glass:
+- stem: mt_mtg_glass_default_glass
+  faces:
+  - west
+- stem: mt_mtg_glass_default_glass_detail
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+mtg_goldblock:
+- stem: mt_mtg_goldblock_default_gold_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_grass_1:
+- stem: mt_mtg_grass_1_default_grass_1
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_gravel:
+- stem: mt_mtg_gravel_default_gravel
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_ice:
+- stem: mt_mtg_ice_default_ice
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_junglegrass:
+- stem: mt_mtg_junglegrass_default_junglegrass
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_jungleleaves:
+- stem: mt_mtg_jungleleaves_default_jungleleaves
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_junglesapling:
+- stem: mt_mtg_junglesapling_default_junglesapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_jungletree:
+- stem: mt_mtg_jungletree_default_jungletree
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_jungletree_default_jungletree_top
+  faces:
+  - west
+  - east
+mtg_junglewood:
+- stem: mt_mtg_junglewood_default_junglewood
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_ladder_steel:
+- stem: mt_mtg_ladder_steel_default_ladder_steel
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_ladder_wood:
+- stem: mt_mtg_ladder_wood_default_ladder_wood
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_large_cactus_seedling:
+- stem: mt_mtg_large_cactus_seedling_default_large_cactus_seedling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_lava_flowing:
+- stem: mt_mtg_lava_flowing_default_lava
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_leaves:
+- stem: mt_mtg_leaves_default_leaves
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_marram_grass_1:
+- stem: mt_mtg_marram_grass_1_default_marram_grass_1
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_mese:
+- stem: mt_mtg_mese_default_mese_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_meselamp:
+- stem: mt_mtg_meselamp_default_meselamp
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_mossycobble:
+- stem: mt_mtg_mossycobble_default_mossycobble
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_obsidian:
+- stem: mt_mtg_obsidian_default_obsidian
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_obsidian_block:
+- stem: mt_mtg_obsidian_block_default_obsidian_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_obsidian_glass:
+- stem: mt_mtg_obsidian_glass_default_obsidian_glass
+  faces:
+  - west
+- stem: mt_mtg_obsidian_glass_default_obsidian_glass_detail
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+mtg_obsidianbrick:
+- stem: mt_mtg_obsidianbrick_default_obsidian_brick
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_papyrus:
+- stem: mt_mtg_papyrus_default_papyrus
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_permafrost:
+- stem: mt_mtg_permafrost_default_permafrost
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_permafrost_with_moss:
+- stem: mt_mtg_permafrost_with_moss_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_permafrost_with_moss_default_moss
+  faces:
+  - west
+- stem: mt_mtg_permafrost_with_moss_default_permafrost
+  faces:
+  - east
+mtg_permafrost_with_stones:
+- stem: mt_mtg_permafrost_with_stones_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_permafrost_with_stones_composite_1
+  faces:
+  - west
+- stem: mt_mtg_permafrost_with_stones_default_permafrost
+  faces:
+  - east
+mtg_pine_bush_needles:
+- stem: mt_mtg_pine_bush_needles_default_pine_needles
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_pine_bush_sapling:
+- stem: mt_mtg_pine_bush_sapling_default_pine_bush_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_pine_bush_stem:
+- stem: mt_mtg_pine_bush_stem_default_pine_bush_stem
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_pine_needles:
+- stem: mt_mtg_pine_needles_default_pine_needles
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_pine_sapling:
+- stem: mt_mtg_pine_sapling_default_pine_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_pine_tree:
+- stem: mt_mtg_pine_tree_default_pine_tree
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_pine_tree_default_pine_tree_top
+  faces:
+  - west
+  - east
+mtg_pine_wood:
+- stem: mt_mtg_pine_wood_default_pine_wood
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_river_water_flowing:
+- stem: mt_mtg_river_water_flowing_default_river_water
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_sand:
+- stem: mt_mtg_sand_default_sand
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_sand_with_kelp:
+- stem: mt_mtg_sand_with_kelp_default_sand
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_sandstone:
+- stem: mt_mtg_sandstone_default_sandstone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_sandstone_block:
+- stem: mt_mtg_sandstone_block_default_sandstone_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_sandstonebrick:
+- stem: mt_mtg_sandstonebrick_default_sandstone_brick
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_sapling:
+- stem: mt_mtg_sapling_default_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_silver_sand:
+- stem: mt_mtg_silver_sand_default_silver_sand
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_silver_sandstone:
+- stem: mt_mtg_silver_sandstone_default_silver_sandstone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_silver_sandstone_block:
+- stem: mt_mtg_silver_sandstone_block_default_silver_sandstone_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_silver_sandstone_brick:
+- stem: mt_mtg_silver_sandstone_brick_default_silver_sandstone_brick
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_snow:
+- stem: mt_mtg_snow_default_snow
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_snowblock:
+- stem: mt_mtg_snowblock_default_snow
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_steelblock:
+- stem: mt_mtg_steelblock_default_steel_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone:
+- stem: mt_mtg_stone_default_stone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone_block:
+- stem: mt_mtg_stone_block_default_stone_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone_with_coal:
+- stem: mt_mtg_stone_with_coal_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone_with_copper:
+- stem: mt_mtg_stone_with_copper_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone_with_diamond:
+- stem: mt_mtg_stone_with_diamond_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone_with_gold:
+- stem: mt_mtg_stone_with_gold_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone_with_iron:
+- stem: mt_mtg_stone_with_iron_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone_with_mese:
+- stem: mt_mtg_stone_with_mese_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stone_with_tin:
+- stem: mt_mtg_stone_with_tin_composite_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_stonebrick:
+- stem: mt_mtg_stonebrick_default_stone_brick
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_tinblock:
+- stem: mt_mtg_tinblock_default_tin_block
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_tree:
+- stem: mt_mtg_tree_default_tree
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mtg_tree_default_tree_top
+  faces:
+  - west
+  - east
+mtg_water_flowing:
+- stem: mt_mtg_water_flowing_default_water
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mtg_wood:
+- stem: mt_mtg_wood_default_wood
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mushroom_stem:
+- stem: mt_mushroom_skin_stem
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+mycelium:
+- stem: mt_dirt
+  faces:
+  - east
+- stem: mt_mycel_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_mycel_top
+  faces:
+  - west
+nether_brick:
+- stem: mt_netherbrick
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+nether_wart:
+- stem: mt_netherstalk_2
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+obsidian:
+- stem: mt_obsidian
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+oreCoal:
+- stem: mt_orecoal
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+oreDiamond:
+- stem: mt_orediamond
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+oreEmerald:
+- stem: mt_oreemerald
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+oreGold:
+- stem: mt_oregold
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+oreIron:
+- stem: mt_oreiron
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+oreLapis:
+- stem: mt_orelapis
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+oreRedstone:
+- stem: mt_oreredstone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+piston:
+- stem: mt_piston_bottom
+  faces:
+  - east
+- stem: mt_piston_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_piston_top
+  faces:
+  - west
+planks_birch:
+- stem: mt_wood_birch
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+planks_jungle:
+- stem: mt_wood_jungle
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+planks_spruce:
+- stem: mt_wood_spruce
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+potatoes:
+- stem: mt_potatoes_3
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+pumpkin_stem:
+- stem: mt_stem_bent
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+quartz_block:
+- stem: mt_quartzblock_bottom
+  faces:
+  - east
+- stem: mt_quartzblock_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_quartzblock_top
+  faces:
+  - west
+quartz_chiseled:
+- stem: mt_quartzblock_bottom
+  faces:
+  - east
+- stem: mt_quartzblock_chiseled
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_quartzblock_chiseled_top
+  faces:
+  - west
+quartz_pillar:
+- stem: mt_quartzblock_lines
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_quartzblock_lines_top
+  faces:
+  - west
+  - east
+rail:
+- stem: mt_rail
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+red_mushroom:
+- stem: mt_mushroom_red
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+red_mushroom_block:
+- stem: mt_mushroom_skin_red
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+redstone_dust:
+- stem: mt_redstonedust_cross
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+redstone_dust_line:
+- stem: mt_redstonedust_line
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+redstone_lamp:
+- stem: mt_redstonelight
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+redstone_lamp_on:
+- stem: mt_redstonelight_lit
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+redstone_torch:
+- stem: mt_redtorch
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+redstone_torch_on:
+- stem: mt_redtorch_lit
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+reeds:
+- stem: mt_reeds
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+rose:
+- stem: mt_rose
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sand:
+- stem: mt_sand
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sandstone:
+- stem: mt_sandstone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sandstone_carved:
+- stem: mt_sandstone_carved
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sandstone_smooth:
+- stem: mt_sandstone_smooth
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sapling_birch:
+- stem: mt_sapling_birch
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sapling_jungle:
+- stem: mt_sapling_jungle
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sapling_oak:
+- stem: mt_sapling
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sapling_spruce:
+- stem: mt_sapling_spruce
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+snow:
+- stem: mt_snow
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+snow_layer:
+- stem: mt_snow_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+sponge:
+- stem: mt_sponge
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+stone:
+- stem: mt_stone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+stone_slab:
+- stem: mt_stoneslab_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+stone_slab_top:
+- stem: mt_stoneslab_top
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+stonebricksmooth:
+- stem: mt_stonebricksmooth
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+stonebricksmooth_carved:
+- stem: mt_stonebricksmooth_carved
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+stonebricksmooth_cracked:
+- stem: mt_stonebricksmooth_cracked
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+stonebricksmooth_mossy:
+- stem: mt_stonebricksmooth_mossy
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+stoneMoss:
+- stem: mt_stonemoss
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+tall_grass:
+- stem: mt_tallgrass
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+thin_glass:
+- stem: mt_thinglass_top
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+torch:
+- stem: mt_torch
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+trapdoor:
+- stem: mt_trapdoor
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+tree_bark:
+- stem: mt_tree_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+tree_branch:
+- stem: mt_tree_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+tree_leaves:
+- stem: mt_leaves_opaque
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+tree_log:
+- stem: mt_tree_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_tree_top
+  faces:
+  - west
+  - east
+vines:
+- stem: mt_vine
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+water:
+- stem: mt_water
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wheat:
+- stem: mt_crops_7
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+whiteStone:
+- stem: mt_whitestone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wood:
+- stem: mt_tree_side
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+- stem: mt_tree_top
+  faces:
+  - west
+  - east
+wooden_door:
+- stem: mt_doorwood_lower
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wooden_door_upper:
+- stem: mt_doorwood_upper
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_0:
+- stem: mt_cloth_0
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_1:
+- stem: mt_cloth_1
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_10:
+- stem: mt_cloth_10
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_11:
+- stem: mt_cloth_11
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_12:
+- stem: mt_cloth_12
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_13:
+- stem: mt_cloth_13
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_14:
+- stem: mt_cloth_14
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_15:
+- stem: mt_cloth_15
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_2:
+- stem: mt_cloth_2
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_3:
+- stem: mt_cloth_3
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_4:
+- stem: mt_cloth_4
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_5:
+- stem: mt_cloth_5
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_6:
+- stem: mt_cloth_6
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_7:
+- stem: mt_cloth_7
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_8:
+- stem: mt_cloth_8
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+wool_9:
+- stem: mt_cloth_9
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+amethyst_block:
+- stem: geo_greystone_ruby
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+andesite:
+- stem: geo_stone_dirt
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+calcite:
+- stem: geo_greystone_ruby_alt
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+deepslate:
+- stem: geo_greystone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+diorite:
+- stem: geo_greystone_sand
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+granite:
+- stem: geo_stone_browniron
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+moss_block:
+- stem: geo_grass_top
+  faces:
+  - west
+- stem: geo_greystone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - east
+rooted_dirt:
+- stem: geo_dirt_grass
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+smooth_basalt:
+- stem: geo_stone
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east
+tuff:
+- stem: geo_greystone_sand
+  faces:
+  - top
+  - bottom
+  - north
+  - south
+  - west
+  - east

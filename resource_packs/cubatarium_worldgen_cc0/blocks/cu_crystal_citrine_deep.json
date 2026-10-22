@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_citrine_deep",
+  "id": 2155,
+  "displayName": "Crystal Citrine Deep",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_citrine_deep",
+    "cu_crystal_citrine_deep",
+    "cu_crystal_citrine_deep",
+    "cu_crystal_citrine_deep",
+    "cu_crystal_citrine_deep",
+    "cu_crystal_citrine_deep"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "citrine",
+    "variant": "deep"
+  }
+}

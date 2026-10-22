@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_charcoal_crackle",
+  "id": 1779,
+  "displayName": "Ceramic Charcoal Crackle",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_charcoal_crackle",
+    "cu_ceramic_charcoal_crackle",
+    "cu_ceramic_charcoal_crackle",
+    "cu_ceramic_charcoal_crackle",
+    "cu_ceramic_charcoal_crackle",
+    "cu_ceramic_charcoal_crackle"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "charcoal",
+    "variant": "crackle"
+  }
+}

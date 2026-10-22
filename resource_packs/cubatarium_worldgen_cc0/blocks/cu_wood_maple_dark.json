@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_maple_dark",
+  "id": 1400,
+  "displayName": "Wood Maple Dark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_maple_dark",
+    "cu_wood_maple_dark",
+    "cu_wood_maple_dark",
+    "cu_wood_maple_dark",
+    "cu_wood_maple_dark",
+    "cu_wood_maple_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "maple",
+    "variant": "dark"
+  }
+}

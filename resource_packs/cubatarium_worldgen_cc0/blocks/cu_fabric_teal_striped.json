@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_teal_striped",
+  "id": 1876,
+  "displayName": "Fabric Teal Striped",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_teal_striped",
+    "cu_fabric_teal_striped",
+    "cu_fabric_teal_striped",
+    "cu_fabric_teal_striped",
+    "cu_fabric_teal_striped",
+    "cu_fabric_teal_striped"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "teal",
+    "variant": "striped"
+  }
+}

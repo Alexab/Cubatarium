@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_silt_compact",
+  "id": 1298,
+  "displayName": "Soil Silt Compact",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_silt_compact",
+    "cu_soil_silt_compact",
+    "cu_soil_silt_compact",
+    "cu_soil_silt_compact",
+    "cu_soil_silt_compact",
+    "cu_soil_silt_compact"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "silt",
+    "variant": "compact"
+  }
+}

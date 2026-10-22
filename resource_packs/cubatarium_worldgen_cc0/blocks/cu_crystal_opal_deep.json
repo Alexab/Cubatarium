@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_opal_deep",
+  "id": 2185,
+  "displayName": "Crystal Opal Deep",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_opal_deep",
+    "cu_crystal_opal_deep",
+    "cu_crystal_opal_deep",
+    "cu_crystal_opal_deep",
+    "cu_crystal_opal_deep",
+    "cu_crystal_opal_deep"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "opal",
+    "variant": "deep"
+  }
+}

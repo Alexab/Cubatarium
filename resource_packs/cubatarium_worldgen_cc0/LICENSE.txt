@@ -1,0 +1,4 @@
+Original Cubatarium procedural block textures, block definitions, and voxel objects in this pack are dedicated to the public domain under CC0 1.0.
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Reference texture file names were inspected to classify broad material families. Source texture pixels were not used by the procedural generator.
+Minecraft Java Edition 26.3 counts are used only as a catalog-size benchmark; no Minecraft assets are included.

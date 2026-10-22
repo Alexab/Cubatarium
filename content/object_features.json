@@ -300,7 +300,63 @@
         "elevation": {"above_sea_level": [-8, 52]},
         "max_slope": 10.0
       }
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_tree_birch",
+      "biomes": [
+        "forest",
+        "plains"
+      ],
+      "weight": 2,
+      "seed_offset": 10001,
+      "calibrated": true,
+      "spacing": 28
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_tree_cedar",
+      "biomes": [
+        "mountains",
+        "foothills"
+      ],
+      "weight": 2,
+      "seed_offset": 10002,
+      "calibrated": true,
+      "spacing": 34
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_tree_maple",
+      "biomes": [
+        "forest",
+        "hills"
+      ],
+      "weight": 2,
+      "seed_offset": 10003,
+      "calibrated": true,
+      "spacing": 30
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_tree_poplar",
+      "biomes": [
+        "cold_steppe",
+        "tundra"
+      ],
+      "weight": 1,
+      "seed_offset": 10004,
+      "calibrated": true,
+      "spacing": 36
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_tree_willow",
+      "biomes": [
+        "forest",
+        "beach"
+      ],
+      "weight": 1,
+      "seed_offset": 10005,
+      "calibrated": true,
+      "spacing": 38
     }
+
   ],
   "ground_cover": [
     {
@@ -807,7 +863,79 @@
         "elevation": {"above_sea_level": [-3, 62]},
         "max_slope": 12.0
       }
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_shrub_moss",
+      "biomes": [
+        "forest",
+        "lush_caves"
+      ],
+      "weight": 2,
+      "seed_offset": 10001,
+      "calibrated": true,
+      "spacing": 18
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_shrub_reed",
+      "biomes": [
+        "beach",
+        "ocean",
+        "plains"
+      ],
+      "weight": 2,
+      "seed_offset": 10002,
+      "calibrated": true,
+      "spacing": 20
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_mushroom_cluster_01",
+      "biomes": [
+        "forest",
+        "lush_caves",
+        "deep_dark"
+      ],
+      "weight": 1,
+      "seed_offset": 10003,
+      "calibrated": true,
+      "spacing": 24
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_boulder_granite",
+      "biomes": [
+        "hills",
+        "mountains",
+        "foothills"
+      ],
+      "weight": 2,
+      "seed_offset": 10004,
+      "calibrated": true,
+      "spacing": 28
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_boulder_basalt",
+      "biomes": [
+        "jagged_peaks",
+        "mountains",
+        "dripstone_caves"
+      ],
+      "weight": 2,
+      "seed_offset": 10005,
+      "calibrated": true,
+      "spacing": 30
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_flower_patch_01",
+      "biomes": [
+        "plains",
+        "forest",
+        "savanna"
+      ],
+      "weight": 1,
+      "seed_offset": 10006,
+      "calibrated": true,
+      "spacing": 22
     }
+
   ],
   "decoration": [
     {
@@ -1005,7 +1133,56 @@
       "surface_constraint": "grass",
       "calibrated": true,
       "object": "deco_log_pine"
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_coral_fan",
+      "biomes": [
+        "beach"
+      ],
+      "weight": 1,
+      "seed_offset": 10001,
+      "calibrated": true,
+      "spacing": 72,
+      "surface_constraint": "any_land"
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_stalagmite_cluster",
+      "biomes": [
+        "dripstone_caves",
+        "deep_dark"
+      ],
+      "weight": 1,
+      "seed_offset": 10002,
+      "calibrated": true,
+      "spacing": 84,
+      "surface_constraint": "any_land"
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_crystal_cluster",
+      "biomes": [
+        "deep_dark",
+        "mountains"
+      ],
+      "weight": 1,
+      "seed_offset": 10003,
+      "calibrated": true,
+      "spacing": 96,
+      "surface_constraint": "any_land"
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_mossy_ruin_piece",
+      "biomes": [
+        "forest",
+        "hills",
+        "scrubland"
+      ],
+      "weight": 1,
+      "seed_offset": 10004,
+      "calibrated": true,
+      "spacing": 110,
+      "surface_constraint": "any_land"
     }
+
   ],
   "structures": [
     {
@@ -1137,7 +1314,31 @@
       "weight": 1,
       "seed_offset": 9103,
       "chance_per_column": 5000
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_cairn",
+      "biomes": [
+        "hills",
+        "mountains",
+        "tundra"
+      ],
+      "weight": 1,
+      "seed_offset": 10001,
+      "calibrated": true,
+      "chance_per_column": 6200
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_woodland_shrine",
+      "biomes": [
+        "forest",
+        "plains"
+      ],
+      "weight": 1,
+      "seed_offset": 10002,
+      "calibrated": true,
+      "chance_per_column": 7600
     }
+
   ],
   "cave_features": [
     {

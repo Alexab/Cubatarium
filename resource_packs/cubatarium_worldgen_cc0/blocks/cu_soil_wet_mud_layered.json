@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_wet_mud_layered",
+  "id": 1313,
+  "displayName": "Soil Wet Mud Layered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_wet_mud_layered",
+    "cu_soil_wet_mud_layered",
+    "cu_soil_wet_mud_layered",
+    "cu_soil_wet_mud_layered",
+    "cu_soil_wet_mud_layered",
+    "cu_soil_wet_mud_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "wet_mud",
+    "variant": "layered"
+  }
+}

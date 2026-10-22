@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_schist_banded",
+  "id": 1103,
+  "displayName": "Rock Schist Banded",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_schist_banded",
+    "cu_rock_schist_banded",
+    "cu_rock_schist_banded",
+    "cu_rock_schist_banded",
+    "cu_rock_schist_banded",
+    "cu_rock_schist_banded"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "schist",
+    "variant": "banded"
+  }
+}

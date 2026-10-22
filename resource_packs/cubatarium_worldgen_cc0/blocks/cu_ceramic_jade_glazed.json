@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_jade_glazed",
+  "id": 1758,
+  "displayName": "Ceramic Jade Glazed",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_jade_glazed",
+    "cu_ceramic_jade_glazed",
+    "cu_ceramic_jade_glazed",
+    "cu_ceramic_jade_glazed",
+    "cu_ceramic_jade_glazed",
+    "cu_ceramic_jade_glazed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "jade",
+    "variant": "glazed"
+  }
+}

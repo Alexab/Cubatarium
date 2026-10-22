@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_mushroom_gold_pale",
+  "id": 2397,
+  "displayName": "Organic Mushroom Gold Pale",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_gold_pale",
+    "cu_organic_mushroom_gold_pale",
+    "cu_organic_mushroom_gold_pale",
+    "cu_organic_mushroom_gold_pale",
+    "cu_organic_mushroom_gold_pale",
+    "cu_organic_mushroom_gold_pale"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom_gold",
+    "variant": "pale"
+  }
+}

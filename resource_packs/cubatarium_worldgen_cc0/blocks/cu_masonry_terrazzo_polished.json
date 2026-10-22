@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_terrazzo_polished",
+  "id": 1621,
+  "displayName": "Masonry Terrazzo Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_terrazzo_polished",
+    "cu_masonry_terrazzo_polished",
+    "cu_masonry_terrazzo_polished",
+    "cu_masonry_terrazzo_polished",
+    "cu_masonry_terrazzo_polished",
+    "cu_masonry_terrazzo_polished"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "terrazzo",
+    "variant": "polished"
+  }
+}

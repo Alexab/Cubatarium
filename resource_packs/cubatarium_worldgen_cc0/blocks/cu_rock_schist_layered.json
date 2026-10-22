@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_schist_layered",
+  "id": 1097,
+  "displayName": "Rock Schist Layered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_schist_layered",
+    "cu_rock_schist_layered",
+    "cu_rock_schist_layered",
+    "cu_rock_schist_layered",
+    "cu_rock_schist_layered",
+    "cu_rock_schist_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "schist",
+    "variant": "layered"
+  }
+}

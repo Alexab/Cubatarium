@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_coral_mature",
+  "id": 2280,
+  "displayName": "Organic Coral Mature",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_coral_mature",
+    "cu_organic_coral_mature",
+    "cu_organic_coral_mature",
+    "cu_organic_coral_mature",
+    "cu_organic_coral_mature",
+    "cu_organic_coral_mature"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "coral",
+    "variant": "mature"
+  }
+}

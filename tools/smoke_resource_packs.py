@@ -24,6 +24,10 @@ MERGE_SCENARIOS = [
         "primary": ["minetest_default_16"],
         "secondary": ["cubatarium_geology_cc0"],
     },
+    {
+        "primary": ["minetest_default_16"],
+        "secondary": ["cubatarium_geology_cc0", "cubatarium_worldgen_cc0"],
+    },
 ]
 
 GEOLOGY_BLOCKS = {
@@ -89,6 +93,18 @@ def check_geology_pack() -> None:
                     f"geology texture missing for {block_name!r}: {stem!r}"
                 )
     print(f"geology pack OK ({len(blocks)} CC0 blocks, source notice present)")
+
+
+def check_worldgen_asset_pack() -> None:
+    pack_dir = PACKS / "cubatarium_worldgen_cc0"
+    manifest = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8-sig"))
+    if manifest.get("license") != "CC0-1.0" or manifest.get("worldgen_role") != "secondary":
+        raise SystemExit("worldgen asset pack must be CC0-1.0 and secondary")
+    config = json.loads(CONFIG_EXAMPLE.read_text(encoding="utf-8-sig"))
+    defaults = config.get("resource_packs", {}).get("default_secondary", [])
+    if "cubatarium_worldgen_cc0" not in defaults:
+        raise SystemExit("config.json.example does not enable cubatarium_worldgen_cc0 by default")
+    run([sys.executable, "tools/assetgen.py", "validate", "--pack", str(pack_dir.relative_to(REPO))])
 
 
 def check_validate_primary() -> None:
@@ -247,6 +263,7 @@ def main() -> int:
     print("=== resource pack smoke ===")
     check_worldgen_refs_drift()
     check_geology_pack()
+    check_worldgen_asset_pack()
     check_texture_overrides_sync()
     merge_smoke()
     check_object_prefab_blocks()

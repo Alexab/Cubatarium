@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_cyan_plain",
+  "id": 2089,
+  "displayName": "Glass Cyan Plain",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_cyan_plain",
+    "cu_glass_cyan_plain",
+    "cu_glass_cyan_plain",
+    "cu_glass_cyan_plain",
+    "cu_glass_cyan_plain",
+    "cu_glass_cyan_plain"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "cyan",
+    "variant": "plain"
+  }
+}

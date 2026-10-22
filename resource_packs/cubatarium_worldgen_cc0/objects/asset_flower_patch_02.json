@@ -1,0 +1,71 @@
+{
+  "name": "asset_flower_patch_02",
+  "version": 2,
+  "displayName": "Flower Patch 02",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 7321703413861604272,
+    "license": "CC0-1.0",
+    "material_parameter": "flower_white,flower_yellow,flower_red,flower_pink,flower_blue,flower_purple,flower_orange"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "plants"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_soil_loam_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_soil_loam_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_soil_loam_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_soil_loam_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_soil_loam_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_organic_flower_orange_sparse"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_organic_flower_orange_mature"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_organic_flower_pink_mature"
+    }
+  ]
+}

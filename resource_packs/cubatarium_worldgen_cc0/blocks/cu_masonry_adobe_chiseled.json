@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_adobe_chiseled",
+  "id": 1579,
+  "displayName": "Masonry Adobe Chiseled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_adobe_chiseled",
+    "cu_masonry_adobe_chiseled",
+    "cu_masonry_adobe_chiseled",
+    "cu_masonry_adobe_chiseled",
+    "cu_masonry_adobe_chiseled",
+    "cu_masonry_adobe_chiseled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "adobe",
+    "variant": "chiseled"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_mushroom_sparse",
+  "id": 2264,
+  "displayName": "Organic Mushroom Sparse",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_sparse",
+    "cu_organic_mushroom_sparse",
+    "cu_organic_mushroom_sparse",
+    "cu_organic_mushroom_sparse",
+    "cu_organic_mushroom_sparse",
+    "cu_organic_mushroom_sparse"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom",
+    "variant": "sparse"
+  }
+}

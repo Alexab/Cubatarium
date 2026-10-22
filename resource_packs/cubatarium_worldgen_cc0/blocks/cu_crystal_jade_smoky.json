@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_jade_smoky",
+  "id": 2179,
+  "displayName": "Crystal Jade Smoky",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_jade_smoky",
+    "cu_crystal_jade_smoky",
+    "cu_crystal_jade_smoky",
+    "cu_crystal_jade_smoky",
+    "cu_crystal_jade_smoky",
+    "cu_crystal_jade_smoky"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "jade",
+    "variant": "smoky"
+  }
+}

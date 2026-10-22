@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_humus_compact",
+  "id": 1288,
+  "displayName": "Soil Humus Compact",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_humus_compact",
+    "cu_soil_humus_compact",
+    "cu_soil_humus_compact",
+    "cu_soil_humus_compact",
+    "cu_soil_humus_compact",
+    "cu_soil_humus_compact"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "humus",
+    "variant": "compact"
+  }
+}

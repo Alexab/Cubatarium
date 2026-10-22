@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_olive_flecked",
+  "id": 2116,
+  "displayName": "Glass Olive Flecked",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_olive_flecked",
+    "cu_glass_olive_flecked",
+    "cu_glass_olive_flecked",
+    "cu_glass_olive_flecked",
+    "cu_glass_olive_flecked",
+    "cu_glass_olive_flecked"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "olive",
+    "variant": "flecked"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_porphyry_fractured",
+  "id": 1168,
+  "displayName": "Rock Porphyry Fractured",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_porphyry_fractured",
+    "cu_rock_porphyry_fractured",
+    "cu_rock_porphyry_fractured",
+    "cu_rock_porphyry_fractured",
+    "cu_rock_porphyry_fractured",
+    "cu_rock_porphyry_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "porphyry",
+    "variant": "fractured"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_cobble_weathered",
+  "id": 1592,
+  "displayName": "Masonry Cobble Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_cobble_weathered",
+    "cu_masonry_cobble_weathered",
+    "cu_masonry_cobble_weathered",
+    "cu_masonry_cobble_weathered",
+    "cu_masonry_cobble_weathered",
+    "cu_masonry_cobble_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "cobble",
+    "variant": "weathered"
+  }
+}

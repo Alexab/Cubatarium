@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_amber_pale",
+  "id": 1703,
+  "displayName": "Ceramic Amber Pale",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_amber_pale",
+    "cu_ceramic_amber_pale",
+    "cu_ceramic_amber_pale",
+    "cu_ceramic_amber_pale",
+    "cu_ceramic_amber_pale",
+    "cu_ceramic_amber_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "amber",
+    "variant": "pale"
+  }
+}

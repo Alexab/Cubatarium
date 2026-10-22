@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_sandstone_rough",
+  "id": 1126,
+  "displayName": "Rock Sandstone Rough",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_sandstone_rough",
+    "cu_rock_sandstone_rough",
+    "cu_rock_sandstone_rough",
+    "cu_rock_sandstone_rough",
+    "cu_rock_sandstone_rough",
+    "cu_rock_sandstone_rough"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "sandstone",
+    "variant": "rough"
+  }
+}

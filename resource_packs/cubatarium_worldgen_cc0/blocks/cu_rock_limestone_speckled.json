@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_limestone_speckled",
+  "id": 1072,
+  "displayName": "Rock Limestone Speckled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_limestone_speckled",
+    "cu_rock_limestone_speckled",
+    "cu_rock_limestone_speckled",
+    "cu_rock_limestone_speckled",
+    "cu_rock_limestone_speckled",
+    "cu_rock_limestone_speckled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "limestone",
+    "variant": "speckled"
+  }
+}

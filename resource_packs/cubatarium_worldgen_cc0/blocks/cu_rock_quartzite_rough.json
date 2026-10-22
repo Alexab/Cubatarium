@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_quartzite_rough",
+  "id": 1116,
+  "displayName": "Rock Quartzite Rough",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_quartzite_rough",
+    "cu_rock_quartzite_rough",
+    "cu_rock_quartzite_rough",
+    "cu_rock_quartzite_rough",
+    "cu_rock_quartzite_rough",
+    "cu_rock_quartzite_rough"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "quartzite",
+    "variant": "rough"
+  }
+}

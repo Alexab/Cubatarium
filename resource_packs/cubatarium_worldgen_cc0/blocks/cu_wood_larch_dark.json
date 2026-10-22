@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_larch_dark",
+  "id": 1490,
+  "displayName": "Wood Larch Dark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_larch_dark",
+    "cu_wood_larch_dark",
+    "cu_wood_larch_dark",
+    "cu_wood_larch_dark",
+    "cu_wood_larch_dark",
+    "cu_wood_larch_dark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "larch",
+    "variant": "dark"
+  }
+}

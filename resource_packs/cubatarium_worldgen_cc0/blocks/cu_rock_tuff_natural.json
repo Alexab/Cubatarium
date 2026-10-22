@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_tuff_natural",
+  "id": 1225,
+  "displayName": "Rock Tuff Natural",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_tuff_natural",
+    "cu_rock_tuff_natural",
+    "cu_rock_tuff_natural",
+    "cu_rock_tuff_natural",
+    "cu_rock_tuff_natural",
+    "cu_rock_tuff_natural"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "tuff",
+    "variant": "natural"
+  }
+}

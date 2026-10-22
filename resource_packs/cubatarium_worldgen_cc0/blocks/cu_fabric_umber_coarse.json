@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_umber_coarse",
+  "id": 1906,
+  "displayName": "Fabric Umber Coarse",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_umber_coarse",
+    "cu_fabric_umber_coarse",
+    "cu_fabric_umber_coarse",
+    "cu_fabric_umber_coarse",
+    "cu_fabric_umber_coarse",
+    "cu_fabric_umber_coarse"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "umber",
+    "variant": "coarse"
+  }
+}

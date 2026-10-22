@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_concrete_cobble",
+  "id": 1607,
+  "displayName": "Masonry Concrete Cobble",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_concrete_cobble",
+    "cu_masonry_concrete_cobble",
+    "cu_masonry_concrete_cobble",
+    "cu_masonry_concrete_cobble",
+    "cu_masonry_concrete_cobble",
+    "cu_masonry_concrete_cobble"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "concrete",
+    "variant": "cobble"
+  }
+}

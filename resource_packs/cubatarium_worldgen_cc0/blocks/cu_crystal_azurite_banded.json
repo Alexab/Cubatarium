@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_azurite_banded",
+  "id": 2210,
+  "displayName": "Crystal Azurite Banded",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_azurite_banded",
+    "cu_crystal_azurite_banded",
+    "cu_crystal_azurite_banded",
+    "cu_crystal_azurite_banded",
+    "cu_crystal_azurite_banded",
+    "cu_crystal_azurite_banded"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "azurite",
+    "variant": "banded"
+  }
+}

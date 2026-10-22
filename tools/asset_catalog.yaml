@@ -1,0 +1,48 @@
+schema_version: 1
+benchmark:
+  minecraft_java_version: "26.3"
+  block_definitions_minimum: 1286
+  texture_files_minimum: 1405
+  minetest_replacements: all
+  resolution: 16
+families:
+  rock:
+    count: 220
+    materials: [basalt, granite, diorite, andesite, limestone, marble, slate, schist, gneiss, quartzite, sandstone, shale, chalk, travertine, porphyry, serpentine, dolomite, conglomerate, obsidian, pumice, tuff, greystone]
+    variants: [natural, rough, layered, fractured, weathered, polished, cut, speckled, banded, darkened]
+  soil:
+    count: 110
+    materials: [loam, clay, peat, podzol, humus, silt, wet_mud, dry_mud, red_earth, pale_sand, volcanic_ash]
+    variants: [natural, dry, damp, compact, coarse, fine, pebbled, rooted, layered, weathered]
+  wood:
+    count: 150
+    materials: [oak, pine, birch, cedar, maple, ash, walnut, beech, willow, poplar, acacia, jungle, mangrove, larch, redwood]
+    variants: [bark, endgrain, plank, stripped, aged, dark, pale, carved, cut, weathered]
+  masonry:
+    count: 160
+    materials: [granite, limestone, slate, sandstone, basalt, marble, brick, adobe, cobble, tuff, concrete, terrazzo, flagstone, laterite, quartz, darkstone]
+    variants: [block, brick, cobble, cut, chiseled, tiled, polished, weathered, cracked, mossy]
+  ceramic:
+    count: 120
+    materials: [ivory, cream, ochre, amber, scarlet, rose, violet, cobalt, teal, jade, olive, charcoal]
+    variants: [matte, glossy, speckled, glazed, crackle, mosaic, terracotta, patterned, pale, deep]
+  fabric:
+    count: 128
+    materials: [ivory, cream, tan, ochre, scarlet, coral, rose, violet, indigo, cobalt, cyan, teal, jade, olive, charcoal, umber]
+    variants: [woven, coarse, fine, striped, checked, flecked, quilted, dyed]
+  metal:
+    count: 128
+    materials: [iron, steel, copper, bronze, brass, tin, silver, gold, nickel, cobalt, zinc, titanium, pewter, verdigris, black_iron, meteoric_iron]
+    variants: [raw, brushed, polished, hammered, riveted, oxidized, plated, dark]
+  glass:
+    count: 90
+    materials: [clear, frosted, ivory, amber, scarlet, rose, violet, cobalt, cyan, teal, jade, lime, olive, smoke, charcoal]
+    variants: [plain, bubbled, rippled, flecked, lined, prism]
+  crystal:
+    count: 90
+    materials: [quartz, amethyst, citrine, garnet, jade, opal, fluorite, azurite, malachite]
+    variants: [cluster, raw, cut, pale, deep, veined, fractured, bright, smoky, banded]
+  organic:
+    count: 200
+    materials: [moss, lichen, fern, reed, mushroom, coral, kelp, blossom, leaf, flower_white, flower_yellow, flower_red, flower_pink, flower_blue, flower_purple, flower_orange, mushroom_red, mushroom_gold, mushroom_blue, mushroom_pale]
+    variants: [fresh, dry, dense, sparse, spotted, striped, pale, dark, young, mature]

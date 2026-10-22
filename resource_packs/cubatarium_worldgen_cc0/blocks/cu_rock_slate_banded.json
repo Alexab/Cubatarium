@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_slate_banded",
+  "id": 1093,
+  "displayName": "Rock Slate Banded",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_slate_banded",
+    "cu_rock_slate_banded",
+    "cu_rock_slate_banded",
+    "cu_rock_slate_banded",
+    "cu_rock_slate_banded",
+    "cu_rock_slate_banded"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "slate",
+    "variant": "banded"
+  }
+}

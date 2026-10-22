@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cobalt_matte",
+  "id": 1735,
+  "displayName": "Ceramic Cobalt Matte",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cobalt_matte",
+    "cu_ceramic_cobalt_matte",
+    "cu_ceramic_cobalt_matte",
+    "cu_ceramic_cobalt_matte",
+    "cu_ceramic_cobalt_matte",
+    "cu_ceramic_cobalt_matte"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cobalt",
+    "variant": "matte"
+  }
+}

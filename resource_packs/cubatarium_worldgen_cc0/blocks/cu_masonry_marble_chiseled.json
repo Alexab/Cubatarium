@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_marble_chiseled",
+  "id": 1559,
+  "displayName": "Masonry Marble Chiseled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_marble_chiseled",
+    "cu_masonry_marble_chiseled",
+    "cu_masonry_marble_chiseled",
+    "cu_masonry_marble_chiseled",
+    "cu_masonry_marble_chiseled",
+    "cu_masonry_marble_chiseled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "marble",
+    "variant": "chiseled"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_teal_terracotta",
+  "id": 1751,
+  "displayName": "Ceramic Teal Terracotta",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_teal_terracotta",
+    "cu_ceramic_teal_terracotta",
+    "cu_ceramic_teal_terracotta",
+    "cu_ceramic_teal_terracotta",
+    "cu_ceramic_teal_terracotta",
+    "cu_ceramic_teal_terracotta"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "teal",
+    "variant": "terracotta"
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "name": "asset_mossy_ruin_piece",
+  "version": 2,
+  "displayName": "Mossy Ruin Piece",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 6798679517465969308,
+    "license": "CC0-1.0",
+    "material_parameter": "limestone"
+  },
+  "tags": [
+    "worldgen",
+    "structure",
+    "decoration"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": -2,
+      "type": "cu_organic_moss_mature"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": 2,
+      "type": "cu_organic_moss_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_organic_moss_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_block"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_block"
+    }
+  ]
+}

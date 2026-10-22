@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_willow_stripped",
+  "id": 1438,
+  "displayName": "Wood Willow Stripped",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_willow_stripped",
+    "cu_wood_willow_stripped",
+    "cu_wood_willow_stripped",
+    "cu_wood_willow_stripped",
+    "cu_wood_willow_stripped",
+    "cu_wood_willow_stripped"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "willow",
+    "variant": "stripped"
+  }
+}

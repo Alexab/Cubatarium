@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_brick_chiseled",
+  "id": 1569,
+  "displayName": "Masonry Brick Chiseled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_brick_chiseled",
+    "cu_masonry_brick_chiseled",
+    "cu_masonry_brick_chiseled",
+    "cu_masonry_brick_chiseled",
+    "cu_masonry_brick_chiseled",
+    "cu_masonry_brick_chiseled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "brick",
+    "variant": "chiseled"
+  }
+}

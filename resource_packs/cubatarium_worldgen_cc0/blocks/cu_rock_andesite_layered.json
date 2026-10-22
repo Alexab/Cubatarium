@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_andesite_layered",
+  "id": 1057,
+  "displayName": "Rock Andesite Layered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_andesite_layered",
+    "cu_rock_andesite_layered",
+    "cu_rock_andesite_layered",
+    "cu_rock_andesite_layered",
+    "cu_rock_andesite_layered",
+    "cu_rock_andesite_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "andesite",
+    "variant": "layered"
+  }
+}

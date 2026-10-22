@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_meteoric_iron_hammered",
+  "id": 2036,
+  "displayName": "Metal Meteoric Iron Hammered",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_meteoric_iron_hammered",
+    "cu_metal_meteoric_iron_hammered",
+    "cu_metal_meteoric_iron_hammered",
+    "cu_metal_meteoric_iron_hammered",
+    "cu_metal_meteoric_iron_hammered",
+    "cu_metal_meteoric_iron_hammered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "meteoric_iron",
+    "variant": "hammered"
+  }
+}

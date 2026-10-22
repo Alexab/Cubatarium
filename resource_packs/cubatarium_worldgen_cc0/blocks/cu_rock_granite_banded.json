@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_granite_banded",
+  "id": 1043,
+  "displayName": "Rock Granite Banded",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_granite_banded",
+    "cu_rock_granite_banded",
+    "cu_rock_granite_banded",
+    "cu_rock_granite_banded",
+    "cu_rock_granite_banded",
+    "cu_rock_granite_banded"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "granite",
+    "variant": "banded"
+  }
+}

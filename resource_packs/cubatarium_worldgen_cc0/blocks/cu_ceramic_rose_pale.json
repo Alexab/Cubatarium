@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_rose_pale",
+  "id": 1723,
+  "displayName": "Ceramic Rose Pale",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_rose_pale",
+    "cu_ceramic_rose_pale",
+    "cu_ceramic_rose_pale",
+    "cu_ceramic_rose_pale",
+    "cu_ceramic_rose_pale",
+    "cu_ceramic_rose_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "rose",
+    "variant": "pale"
+  }
+}

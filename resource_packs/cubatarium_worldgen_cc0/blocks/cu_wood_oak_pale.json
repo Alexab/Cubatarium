@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_oak_pale",
+  "id": 1361,
+  "displayName": "Wood Oak Pale",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_oak_pale",
+    "cu_wood_oak_pale",
+    "cu_wood_oak_pale",
+    "cu_wood_oak_pale",
+    "cu_wood_oak_pale",
+    "cu_wood_oak_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "oak",
+    "variant": "pale"
+  }
+}

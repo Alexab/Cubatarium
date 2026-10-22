@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_clay_layered",
+  "id": 1263,
+  "displayName": "Soil Clay Layered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_clay_layered",
+    "cu_soil_clay_layered",
+    "cu_soil_clay_layered",
+    "cu_soil_clay_layered",
+    "cu_soil_clay_layered",
+    "cu_soil_clay_layered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "clay",
+    "variant": "layered"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_cream_terracotta",
+  "id": 1681,
+  "displayName": "Ceramic Cream Terracotta",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cream_terracotta",
+    "cu_ceramic_cream_terracotta",
+    "cu_ceramic_cream_terracotta",
+    "cu_ceramic_cream_terracotta",
+    "cu_ceramic_cream_terracotta",
+    "cu_ceramic_cream_terracotta"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cream",
+    "variant": "terracotta"
+  }
+}

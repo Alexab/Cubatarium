@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_amber_plain",
+  "id": 2059,
+  "displayName": "Glass Amber Plain",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_amber_plain",
+    "cu_glass_amber_plain",
+    "cu_glass_amber_plain",
+    "cu_glass_amber_plain",
+    "cu_glass_amber_plain",
+    "cu_glass_amber_plain"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "amber",
+    "variant": "plain"
+  }
+}

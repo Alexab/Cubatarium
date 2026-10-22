@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_basalt_cracked",
+  "id": 1553,
+  "displayName": "Masonry Basalt Cracked",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_basalt_cracked",
+    "cu_masonry_basalt_cracked",
+    "cu_masonry_basalt_cracked",
+    "cu_masonry_basalt_cracked",
+    "cu_masonry_basalt_cracked",
+    "cu_masonry_basalt_cracked"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "basalt",
+    "variant": "cracked"
+  }
+}

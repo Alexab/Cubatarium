@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_walnut_plank",
+  "id": 1417,
+  "displayName": "Wood Walnut Plank",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_walnut_plank",
+    "cu_wood_walnut_plank",
+    "cu_wood_walnut_plank",
+    "cu_wood_walnut_plank",
+    "cu_wood_walnut_plank",
+    "cu_wood_walnut_plank"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "walnut",
+    "variant": "plank"
+  }
+}

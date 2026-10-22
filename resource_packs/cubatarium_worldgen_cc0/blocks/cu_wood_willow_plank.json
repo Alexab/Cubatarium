@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_willow_plank",
+  "id": 1437,
+  "displayName": "Wood Willow Plank",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_willow_plank",
+    "cu_wood_willow_plank",
+    "cu_wood_willow_plank",
+    "cu_wood_willow_plank",
+    "cu_wood_willow_plank",
+    "cu_wood_willow_plank"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "willow",
+    "variant": "plank"
+  }
+}

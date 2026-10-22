@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_schist_cut",
+  "id": 1101,
+  "displayName": "Rock Schist Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_schist_cut",
+    "cu_rock_schist_cut",
+    "cu_rock_schist_cut",
+    "cu_rock_schist_cut",
+    "cu_rock_schist_cut",
+    "cu_rock_schist_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "schist",
+    "variant": "cut"
+  }
+}

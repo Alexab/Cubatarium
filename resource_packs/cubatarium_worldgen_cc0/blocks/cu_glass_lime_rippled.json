@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_lime_rippled",
+  "id": 2109,
+  "displayName": "Glass Lime Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_lime_rippled",
+    "cu_glass_lime_rippled",
+    "cu_glass_lime_rippled",
+    "cu_glass_lime_rippled",
+    "cu_glass_lime_rippled",
+    "cu_glass_lime_rippled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "lime",
+    "variant": "rippled"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_pale_sand_natural",
+  "id": 1335,
+  "displayName": "Soil Pale Sand Natural",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_pale_sand_natural",
+    "cu_soil_pale_sand_natural",
+    "cu_soil_pale_sand_natural",
+    "cu_soil_pale_sand_natural",
+    "cu_soil_pale_sand_natural",
+    "cu_soil_pale_sand_natural"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "pale_sand",
+    "variant": "natural"
+  }
+}

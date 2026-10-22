@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_jade_bright",
+  "id": 2178,
+  "displayName": "Crystal Jade Bright",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_jade_bright",
+    "cu_crystal_jade_bright",
+    "cu_crystal_jade_bright",
+    "cu_crystal_jade_bright",
+    "cu_crystal_jade_bright",
+    "cu_crystal_jade_bright"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "jade",
+    "variant": "bright"
+  }
+}

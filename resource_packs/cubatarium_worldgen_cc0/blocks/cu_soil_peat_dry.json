@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_peat_dry",
+  "id": 1266,
+  "displayName": "Soil Peat Dry",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_peat_dry",
+    "cu_soil_peat_dry",
+    "cu_soil_peat_dry",
+    "cu_soil_peat_dry",
+    "cu_soil_peat_dry",
+    "cu_soil_peat_dry"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "peat",
+    "variant": "dry"
+  }
+}

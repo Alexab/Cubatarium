@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_charcoal_lined",
+  "id": 2129,
+  "displayName": "Glass Charcoal Lined",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_charcoal_lined",
+    "cu_glass_charcoal_lined",
+    "cu_glass_charcoal_lined",
+    "cu_glass_charcoal_lined",
+    "cu_glass_charcoal_lined",
+    "cu_glass_charcoal_lined"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "charcoal",
+    "variant": "lined"
+  }
+}

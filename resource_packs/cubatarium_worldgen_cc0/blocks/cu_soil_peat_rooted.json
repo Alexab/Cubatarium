@@ -1,0 +1,30 @@
+{
+  "name": "cu_soil_peat_rooted",
+  "id": 1272,
+  "displayName": "Soil Peat Rooted",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_peat_rooted",
+    "cu_soil_peat_rooted",
+    "cu_soil_peat_rooted",
+    "cu_soil_peat_rooted",
+    "cu_soil_peat_rooted",
+    "cu_soil_peat_rooted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "soil",
+    "material": "peat",
+    "variant": "rooted"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_fern_mature",
+  "id": 2250,
+  "displayName": "Organic Fern Mature",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_fern_mature",
+    "cu_organic_fern_mature",
+    "cu_organic_fern_mature",
+    "cu_organic_fern_mature",
+    "cu_organic_fern_mature",
+    "cu_organic_fern_mature"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "fern",
+    "variant": "mature"
+  }
+}

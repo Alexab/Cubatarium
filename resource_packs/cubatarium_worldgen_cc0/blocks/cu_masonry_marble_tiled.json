@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_marble_tiled",
+  "id": 1560,
+  "displayName": "Masonry Marble Tiled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_marble_tiled",
+    "cu_masonry_marble_tiled",
+    "cu_masonry_marble_tiled",
+    "cu_masonry_marble_tiled",
+    "cu_masonry_marble_tiled",
+    "cu_masonry_marble_tiled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "marble",
+    "variant": "tiled"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_malachite_bright",
+  "id": 2218,
+  "displayName": "Crystal Malachite Bright",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_malachite_bright",
+    "cu_crystal_malachite_bright",
+    "cu_crystal_malachite_bright",
+    "cu_crystal_malachite_bright",
+    "cu_crystal_malachite_bright",
+    "cu_crystal_malachite_bright"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "malachite",
+    "variant": "bright"
+  }
+}

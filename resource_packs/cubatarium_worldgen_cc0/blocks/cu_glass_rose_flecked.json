@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_rose_flecked",
+  "id": 2074,
+  "displayName": "Glass Rose Flecked",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_rose_flecked",
+    "cu_glass_rose_flecked",
+    "cu_glass_rose_flecked",
+    "cu_glass_rose_flecked",
+    "cu_glass_rose_flecked",
+    "cu_glass_rose_flecked"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "rose",
+    "variant": "flecked"
+  }
+}

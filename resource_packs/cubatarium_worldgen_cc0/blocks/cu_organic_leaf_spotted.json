@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_leaf_spotted",
+  "id": 2305,
+  "displayName": "Organic Leaf Spotted",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "leaf",
+    "variant": "spotted"
+  }
+}

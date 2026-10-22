@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_quartzite_darkened",
+  "id": 1124,
+  "displayName": "Rock Quartzite Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_quartzite_darkened",
+    "cu_rock_quartzite_darkened",
+    "cu_rock_quartzite_darkened",
+    "cu_rock_quartzite_darkened",
+    "cu_rock_quartzite_darkened",
+    "cu_rock_quartzite_darkened"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "quartzite",
+    "variant": "darkened"
+  }
+}

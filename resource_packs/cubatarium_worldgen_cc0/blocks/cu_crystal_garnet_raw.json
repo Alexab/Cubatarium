@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_garnet_raw",
+  "id": 2162,
+  "displayName": "Crystal Garnet Raw",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_garnet_raw",
+    "cu_crystal_garnet_raw",
+    "cu_crystal_garnet_raw",
+    "cu_crystal_garnet_raw",
+    "cu_crystal_garnet_raw",
+    "cu_crystal_garnet_raw"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "garnet",
+    "variant": "raw"
+  }
+}

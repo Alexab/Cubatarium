@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_beech_weathered",
+  "id": 1434,
+  "displayName": "Wood Beech Weathered",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_beech_weathered",
+    "cu_wood_beech_weathered",
+    "cu_wood_beech_weathered",
+    "cu_wood_beech_weathered",
+    "cu_wood_beech_weathered",
+    "cu_wood_beech_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "beech",
+    "variant": "weathered"
+  }
+}

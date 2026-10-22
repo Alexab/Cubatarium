@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_dolomite_darkened",
+  "id": 1194,
+  "displayName": "Rock Dolomite Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_dolomite_darkened",
+    "cu_rock_dolomite_darkened",
+    "cu_rock_dolomite_darkened",
+    "cu_rock_dolomite_darkened",
+    "cu_rock_dolomite_darkened",
+    "cu_rock_dolomite_darkened"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "dolomite",
+    "variant": "darkened"
+  }
+}

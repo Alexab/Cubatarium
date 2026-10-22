@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_brick_block",
+  "id": 1565,
+  "displayName": "Masonry Brick Block",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_brick_block",
+    "cu_masonry_brick_block",
+    "cu_masonry_brick_block",
+    "cu_masonry_brick_block",
+    "cu_masonry_brick_block",
+    "cu_masonry_brick_block"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "brick",
+    "variant": "block"
+  }
+}

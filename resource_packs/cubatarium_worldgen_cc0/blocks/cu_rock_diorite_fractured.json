@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_diorite_fractured",
+  "id": 1048,
+  "displayName": "Rock Diorite Fractured",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_diorite_fractured",
+    "cu_rock_diorite_fractured",
+    "cu_rock_diorite_fractured",
+    "cu_rock_diorite_fractured",
+    "cu_rock_diorite_fractured",
+    "cu_rock_diorite_fractured"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "diorite",
+    "variant": "fractured"
+  }
+}

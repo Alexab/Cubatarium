@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_maple_pale",
+  "id": 1401,
+  "displayName": "Wood Maple Pale",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_maple_pale",
+    "cu_wood_maple_pale",
+    "cu_wood_maple_pale",
+    "cu_wood_maple_pale",
+    "cu_wood_maple_pale",
+    "cu_wood_maple_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "maple",
+    "variant": "pale"
+  }
+}

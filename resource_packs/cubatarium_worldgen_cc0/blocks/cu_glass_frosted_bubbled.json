@@ -1,0 +1,32 @@
+{
+  "name": "cu_glass_frosted_bubbled",
+  "id": 2048,
+  "displayName": "Glass Frosted Bubbled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_frosted_bubbled",
+    "cu_glass_frosted_bubbled",
+    "cu_glass_frosted_bubbled",
+    "cu_glass_frosted_bubbled",
+    "cu_glass_frosted_bubbled",
+    "cu_glass_frosted_bubbled"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "frosted",
+    "variant": "bubbled"
+  }
+}

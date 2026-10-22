@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_rose_patterned",
+  "id": 1722,
+  "displayName": "Ceramic Rose Patterned",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_rose_patterned",
+    "cu_ceramic_rose_patterned",
+    "cu_ceramic_rose_patterned",
+    "cu_ceramic_rose_patterned",
+    "cu_ceramic_rose_patterned",
+    "cu_ceramic_rose_patterned"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "rose",
+    "variant": "patterned"
+  }
+}

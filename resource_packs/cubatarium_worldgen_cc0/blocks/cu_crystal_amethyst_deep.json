@@ -1,0 +1,30 @@
+{
+  "name": "cu_crystal_amethyst_deep",
+  "id": 2145,
+  "displayName": "Crystal Amethyst Deep",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_amethyst_deep",
+    "cu_crystal_amethyst_deep",
+    "cu_crystal_amethyst_deep",
+    "cu_crystal_amethyst_deep",
+    "cu_crystal_amethyst_deep",
+    "cu_crystal_amethyst_deep"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "crystal",
+    "material": "amethyst",
+    "variant": "deep"
+  }
+}

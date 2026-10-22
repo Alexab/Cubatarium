@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_tuff_cut",
+  "id": 1231,
+  "displayName": "Rock Tuff Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_tuff_cut",
+    "cu_rock_tuff_cut",
+    "cu_rock_tuff_cut",
+    "cu_rock_tuff_cut",
+    "cu_rock_tuff_cut",
+    "cu_rock_tuff_cut"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "tuff",
+    "variant": "cut"
+  }
+}

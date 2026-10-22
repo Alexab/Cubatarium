@@ -1,0 +1,33 @@
+{
+  "name": "cu_organic_mushroom_dark",
+  "id": 2268,
+  "displayName": "Organic Mushroom Dark",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_dark",
+    "cu_organic_mushroom_dark",
+    "cu_organic_mushroom_dark",
+    "cu_organic_mushroom_dark",
+    "cu_organic_mushroom_dark",
+    "cu_organic_mushroom_dark"
+  ],
+  "render": {
+    "style": "cross",
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom",
+    "variant": "dark"
+  }
+}

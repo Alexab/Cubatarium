@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_copper_brushed",
+  "id": 1930,
+  "displayName": "Metal Copper Brushed",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_copper_brushed",
+    "cu_metal_copper_brushed",
+    "cu_metal_copper_brushed",
+    "cu_metal_copper_brushed",
+    "cu_metal_copper_brushed",
+    "cu_metal_copper_brushed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "copper",
+    "variant": "brushed"
+  }
+}

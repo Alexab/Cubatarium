@@ -1,0 +1,46 @@
+{
+  "name": "asset_standing_stone_12",
+  "version": 2,
+  "displayName": "Standing Stone 12",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 13508673431248953230,
+    "license": "CC0-1.0",
+    "material_parameter": "tuff"
+  },
+  "tags": [
+    "decoration",
+    "structure"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_tuff_rough"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_tuff_rough"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_tuff_rough"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_tuff_rough"
+    }
+  ]
+}

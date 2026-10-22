@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_obsidian_banded",
+  "id": 1213,
+  "displayName": "Rock Obsidian Banded",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_obsidian_banded",
+    "cu_rock_obsidian_banded",
+    "cu_rock_obsidian_banded",
+    "cu_rock_obsidian_banded",
+    "cu_rock_obsidian_banded",
+    "cu_rock_obsidian_banded"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "obsidian",
+    "variant": "banded"
+  }
+}

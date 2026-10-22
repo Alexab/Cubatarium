@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_quartz_weathered",
+  "id": 1652,
+  "displayName": "Masonry Quartz Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_quartz_weathered",
+    "cu_masonry_quartz_weathered",
+    "cu_masonry_quartz_weathered",
+    "cu_masonry_quartz_weathered",
+    "cu_masonry_quartz_weathered",
+    "cu_masonry_quartz_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "quartz",
+    "variant": "weathered"
+  }
+}

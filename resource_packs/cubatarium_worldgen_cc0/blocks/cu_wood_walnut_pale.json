@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_walnut_pale",
+  "id": 1421,
+  "displayName": "Wood Walnut Pale",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_walnut_pale",
+    "cu_wood_walnut_pale",
+    "cu_wood_walnut_pale",
+    "cu_wood_walnut_pale",
+    "cu_wood_walnut_pale",
+    "cu_wood_walnut_pale"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "walnut",
+    "variant": "pale"
+  }
+}

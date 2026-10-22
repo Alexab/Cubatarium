@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_limestone_brick",
+  "id": 1516,
+  "displayName": "Masonry Limestone Brick",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_limestone_brick",
+    "cu_masonry_limestone_brick",
+    "cu_masonry_limestone_brick",
+    "cu_masonry_limestone_brick",
+    "cu_masonry_limestone_brick",
+    "cu_masonry_limestone_brick"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "limestone",
+    "variant": "brick"
+  }
+}

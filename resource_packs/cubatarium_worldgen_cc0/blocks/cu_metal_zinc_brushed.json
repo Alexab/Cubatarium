@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_zinc_brushed",
+  "id": 1994,
+  "displayName": "Metal Zinc Brushed",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_zinc_brushed",
+    "cu_metal_zinc_brushed",
+    "cu_metal_zinc_brushed",
+    "cu_metal_zinc_brushed",
+    "cu_metal_zinc_brushed",
+    "cu_metal_zinc_brushed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "zinc",
+    "variant": "brushed"
+  }
+}

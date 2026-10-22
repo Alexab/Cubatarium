@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_oak_bark",
+  "id": 1355,
+  "displayName": "Wood Oak Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_oak_bark",
+    "cu_wood_oak_bark",
+    "cu_wood_oak_bark",
+    "cu_wood_oak_bark",
+    "cu_wood_oak_bark",
+    "cu_wood_oak_bark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "oak",
+    "variant": "bark"
+  }
+}

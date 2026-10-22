@@ -1,0 +1,30 @@
+{
+  "name": "cu_organic_moss_spotted",
+  "id": 2225,
+  "displayName": "Organic Moss Spotted",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_moss_spotted",
+    "cu_organic_moss_spotted",
+    "cu_organic_moss_spotted",
+    "cu_organic_moss_spotted",
+    "cu_organic_moss_spotted",
+    "cu_organic_moss_spotted"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "organic",
+    "material": "moss",
+    "variant": "spotted"
+  }
+}

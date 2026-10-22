@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_poplar_bark",
+  "id": 1445,
+  "displayName": "Wood Poplar Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_poplar_bark",
+    "cu_wood_poplar_bark",
+    "cu_wood_poplar_bark",
+    "cu_wood_poplar_bark",
+    "cu_wood_poplar_bark",
+    "cu_wood_poplar_bark"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "poplar",
+    "variant": "bark"
+  }
+}

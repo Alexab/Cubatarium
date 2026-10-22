@@ -1,0 +1,30 @@
+{
+  "name": "cu_ceramic_amber_speckled",
+  "id": 1697,
+  "displayName": "Ceramic Amber Speckled",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_amber_speckled",
+    "cu_ceramic_amber_speckled",
+    "cu_ceramic_amber_speckled",
+    "cu_ceramic_amber_speckled",
+    "cu_ceramic_amber_speckled",
+    "cu_ceramic_amber_speckled"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "ceramic",
+    "material": "amber",
+    "variant": "speckled"
+  }
+}

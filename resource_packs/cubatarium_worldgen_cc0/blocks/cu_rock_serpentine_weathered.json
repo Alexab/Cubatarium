@@ -1,0 +1,30 @@
+{
+  "name": "cu_rock_serpentine_weathered",
+  "id": 1179,
+  "displayName": "Rock Serpentine Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_serpentine_weathered",
+    "cu_rock_serpentine_weathered",
+    "cu_rock_serpentine_weathered",
+    "cu_rock_serpentine_weathered",
+    "cu_rock_serpentine_weathered",
+    "cu_rock_serpentine_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "rock",
+    "material": "serpentine",
+    "variant": "weathered"
+  }
+}

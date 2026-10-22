@@ -1,0 +1,30 @@
+{
+  "name": "cu_fabric_violet_fine",
+  "id": 1843,
+  "displayName": "Fabric Violet Fine",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_violet_fine",
+    "cu_fabric_violet_fine",
+    "cu_fabric_violet_fine",
+    "cu_fabric_violet_fine",
+    "cu_fabric_violet_fine",
+    "cu_fabric_violet_fine"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "fabric",
+    "material": "violet",
+    "variant": "fine"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_metal_brass_brushed",
+  "id": 1946,
+  "displayName": "Metal Brass Brushed",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_brass_brushed",
+    "cu_metal_brass_brushed",
+    "cu_metal_brass_brushed",
+    "cu_metal_brass_brushed",
+    "cu_metal_brass_brushed",
+    "cu_metal_brass_brushed"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "metal",
+    "material": "brass",
+    "variant": "brushed"
+  }
+}

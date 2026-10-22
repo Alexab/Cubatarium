@@ -1,0 +1,30 @@
+{
+  "name": "cu_wood_mangrove_weathered",
+  "id": 1484,
+  "displayName": "Wood Mangrove Weathered",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_mangrove_weathered",
+    "cu_wood_mangrove_weathered",
+    "cu_wood_mangrove_weathered",
+    "cu_wood_mangrove_weathered",
+    "cu_wood_mangrove_weathered",
+    "cu_wood_mangrove_weathered"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "wood",
+    "material": "mangrove",
+    "variant": "weathered"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cu_masonry_darkstone_block",
+  "id": 1655,
+  "displayName": "Masonry Darkstone Block",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_darkstone_block",
+    "cu_masonry_darkstone_block",
+    "cu_masonry_darkstone_block",
+    "cu_masonry_darkstone_block",
+    "cu_masonry_darkstone_block",
+    "cu_masonry_darkstone_block"
+  ],
+  "render": {},
+  "assetgen": {
+    "family": "masonry",
+    "material": "darkstone",
+    "variant": "block"
+  }
+}
