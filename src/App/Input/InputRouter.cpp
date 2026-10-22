@@ -77,6 +77,21 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
 
   GuiKeyEvent event = MakeGuiKeyEvent(key, action, mods);
 
+  if (app.World && app.World->IsHardcoreDead() && !app.DeathScreenOpen)
+  {
+    if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
+    {
+      app.SaveIfNeededAndProceed([&app]() { app.ReturnToMainMenu(); });
+      return true;
+    }
+    const bool spectatorCameraKey =
+        key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S ||
+        key == GLFW_KEY_D || key == GLFW_KEY_SPACE ||
+        key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_LEFT_SHIFT ||
+        key == GLFW_KEY_RIGHT_SHIFT;
+    return !spectatorCameraKey;
+  }
+
   if (action == GLFW_PRESS && app.State == AppState::InGame)
   {
     if (key == GLFW_KEY_ESCAPE)

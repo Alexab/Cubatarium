@@ -7,7 +7,11 @@
       "hostile"
     ],
     "spawnable": true,
-    "sort_order": 46
+    "sort_order": 46,
+    "natural_spawnable": true,
+    "spawn_weight": 1.0,
+    "spawn_group_min": 1,
+    "spawn_group_max": 2
   },
   "role": "mob",
   "bounds": {
@@ -37,11 +41,14 @@
     "jump_height": 1.0,
     "walk_speed": 2.5
   },
-  "behavior": "wander",
+  "behavior": "melee_attack",
   "behavior_params": {
     "move_speed": 2.5,
     "wander_interval_min": 2.0,
-    "wander_interval_max": 4.0
+    "wander_interval_max": 4.0,
+    "aggro_radius": 12.0,
+    "attack_range": 1.4,
+    "attack_cooldown": 1.5
   },
   "visual": {
     "backend": "gltf_skeleton",
@@ -69,7 +76,12 @@
     },
     "sprite": {
       "billboard": true,
-      "emissive_tint": [1.2, 0.55, 0.15, 1.0]
+      "emissive_tint": [
+        1.2,
+        0.55,
+        0.15,
+        1.0
+      ]
     },
     "animation": {
       "walk_cycle_hz": 2.0,

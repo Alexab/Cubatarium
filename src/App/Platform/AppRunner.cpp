@@ -17,6 +17,11 @@
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureSpawnSource.h"
+#include "Creatures/Definition/CreatureDefinition.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -429,6 +434,13 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     window.SetStopPredicate(
         [&]()
         {
+          if (opt.ForceCreatureAiTicks)
+          {
+            // Headless smoke rendering may exceed the production hitch
+            // threshold continuously. Preserve normal simulation updates but
+            // let the AI scheduler exercise the same fixed-step behavior.
+            world->SetWallFrameDelta(1.0 / 60.0);
+          }
           const double elapsed_sec =
               std::chrono::duration<double>(std::chrono::steady_clock::now() -
                                             started)
@@ -455,6 +467,54 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
         });
 
     window.Run();
+
+    const std::filesystem::path creature_save_path =
+        paths.ResolveWritable("worlds") / world->GetWorldName() /
+        "creatures.json";
+    std::error_code creature_save_ec;
+    std::filesystem::create_directories(creature_save_path.parent_path(),
+                                        creature_save_ec);
+    if (!creature_save_ec)
+    {
+      world->SaveCreatures(creature_save_path.string());
+    }
+    const bool creatures_saved =
+        !creature_save_ec && std::filesystem::exists(creature_save_path);
+
+    size_t creature_count = 0;
+    size_t natural_creature_count = 0;
+    size_t hostile_creature_count = 0;
+    size_t natural_hostile_creature_count = 0;
+    world->ForEachCreature(
+        [&](const UCreature &creature)
+        {
+          if (creature.IsPlayerCharacter())
+          {
+            return;
+          }
+          ++creature_count;
+          if (creature.GetSpawnSource() ==
+              CreatureSpawnSource::SurvivalNatural)
+          {
+            ++natural_creature_count;
+          }
+          const CreatureDefinition *definition =
+              world->GetCreatureDefinition(creature.GetTypeId());
+          const bool hostile =
+              definition &&
+              std::find(definition->catalog.tags.begin(),
+                        definition->catalog.tags.end(), "hostile") !=
+                  definition->catalog.tags.end();
+          if (hostile)
+          {
+            ++hostile_creature_count;
+            if (creature.GetSpawnSource() ==
+                CreatureSpawnSource::SurvivalNatural)
+            {
+              ++natural_hostile_creature_count;
+            }
+          }
+        });
 
     world->PrepareForShutdown();
     LogWorldLoadDiag("autoload_last_world_end", *world);
@@ -494,6 +554,21 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
              << "loading_seen=" << (loading_seen ? 1 : 0) << '\n'
              << "ingame_frames=" << ingame_frames_seen << '\n'
              << "default_world=" << core->GetAppSettings().DefaultWorld << '\n'
+             << "game_mode=" << WorldGameModeToString(world->GetGameMode())
+             << '\n'
+             << "difficulty="
+             << WorldDifficultyToString(world->GetDifficulty()) << '\n'
+             << "player_dead=" << (world->IsPlayerDead() ? 1 : 0) << '\n'
+             << "hardcore_dead=" << (world->IsHardcoreDead() ? 1 : 0)
+             << '\n'
+             << "creatures=" << creature_count << '\n'
+             << "natural_creatures=" << natural_creature_count << '\n'
+             << "hostile_creatures=" << hostile_creature_count << '\n'
+             << "natural_hostile_creatures="
+             << natural_hostile_creature_count << '\n'
+             << "forced_creature_ai_ticks="
+             << (opt.ForceCreatureAiTicks ? 1 : 0) << '\n'
+             << "creatures_saved=" << (creatures_saved ? 1 : 0) << '\n'
              << "mesh_dirty=" << (blockers.dirty ? 1 : 0) << '\n'
              << "mesh_missing_greedy=" << (blockers.missing_greedy ? 1 : 0)
              << '\n'
@@ -510,7 +585,9 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     if (exit_code == 0)
     {
       std::cout << "autoload-last-world: PASS ingame_frames="
-                << ingame_frames_seen << std::endl;
+                << ingame_frames_seen << " creatures=" << creature_count
+                << " natural_creatures=" << natural_creature_count
+                << std::endl;
     }
     else
     {

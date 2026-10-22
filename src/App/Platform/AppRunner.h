@@ -20,6 +20,9 @@ struct AutoloadLastWorldOptions
   bool VisibleWindow{false};
   double TimeoutSec{600.0};
   int InGameFrames{5};
+  /// QA-only: keep the world AI scheduling gate on a 60 Hz wall-time value
+  /// while a hidden renderer is slower than the normal hitch threshold.
+  bool ForceCreatureAiTicks{false};
 };
 
 /// Era43f: visible/hidden GUI autoload of config default_world (or --world).

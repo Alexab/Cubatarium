@@ -4,6 +4,7 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureIntent.h"
 #include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Core/CreatureSpawnSource.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
@@ -35,6 +36,8 @@ public:
 
   CreatureId GetId() const { return Id; }
   const std::string &GetTypeId() const { return TypeId; }
+  CreatureSpawnSource GetSpawnSource() const { return SpawnSource; }
+  void SetSpawnSource(CreatureSpawnSource source) { SpawnSource = source; }
   const std::string &GetSkinId() const { return SkinId; }
   void SetSkinId(const std::string &Id) { SkinId = Id; }
   glm::vec3 GetBodyOrigin() const { return BodyOrigin; }
@@ -199,6 +202,7 @@ public:
 protected:
   CreatureId Id;
   std::string TypeId;
+  CreatureSpawnSource SpawnSource{CreatureSpawnSource::CreativeManual};
   std::string SkinId;
   glm::vec3 BodyOrigin;
   glm::vec3 EyeOffset;

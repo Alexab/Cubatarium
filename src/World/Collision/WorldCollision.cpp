@@ -23,6 +23,21 @@ namespace
 
 constexpr int kFootprintMinSolidSamples = 4;
 constexpr int kSubchunkSize = 4;
+constexpr float kAabbTouchingTolerance = 1e-4f;
+
+bool CheckAabbCollisionWithTouchingTolerance(const glm::vec3 &center,
+                                            const glm::vec3 &half_extents,
+                                            const glm::vec3 &other_center,
+                                            const glm::vec3 &other_half_extents)
+{
+  // Eye-height/feet calculations can turn exact face contact into a tiny
+  // overlap after float rounding. Shrink the tested volume by a negligible
+  // margin so standing on a block does not count as penetrating it.
+  const glm::vec3 tolerant_half = glm::max(
+      half_extents - glm::vec3(kAabbTouchingTolerance), glm::vec3(0.0f));
+  return UCube::CheckAabbCollision(center, tolerant_half, other_center,
+                                   other_half_extents);
+}
 
 int SubchunkBitIndex(glm::ivec3 local)
 {
@@ -485,7 +500,8 @@ bool UWorldCollision::CheckBlockCollisionVolume(
           continue;
         }
         const glm::vec3 blockCenter = BlockCenter(blockPos);
-        if (UCube::CheckAabbCollision(center, half, blockCenter, blockHalf))
+        if (CheckAabbCollisionWithTouchingTolerance(center, half, blockCenter,
+                                                    blockHalf))
         {
           return true;
         }

@@ -571,6 +571,7 @@ void UApplication::SetHotbarCountSetting(int count)
 
 void UApplication::ReturnToMainMenu()
 {
+  HardcoreSpectating = false;
   ScreenNav.ReturnToMainMenu();
 }
 
@@ -1110,7 +1111,8 @@ void UApplication::ShowInGameHud()
   DeathScreen->SetOnRespawn(
       [this]()
       {
-        if (!World)
+        if (!World ||
+            !ModePolicy::AllowsPlayerRespawn(World->GetDifficulty()))
         {
           return;
         }
@@ -1143,6 +1145,7 @@ void UApplication::ShowInGameHud()
         {
           return;
         }
+        HardcoreSpectating = World->IsHardcoreDead();
         if (UCreature *player = World->GetPlayerCreature())
         {
           player->GetLocomotion().SetMode(CreatureMovementMode::Flying);
@@ -1157,6 +1160,11 @@ void UApplication::ShowInGameHud()
           DeathScreen->SetVisible(false);
         }
         SyncCursorVisibility();
+      });
+  DeathScreen->SetOnReturnToMenu(
+      [this]()
+      {
+        SaveIfNeededAndProceed([this]() { ReturnToMainMenu(); });
       });
   DeathScreen->SetVisible(false);
 
@@ -1413,6 +1421,7 @@ void UApplication::EnterInGameInputState()
   CraftingOpen = false;
   AnvilOpen = false;
   DeathScreenOpen = false;
+  HardcoreSpectating = false;
   FreeCursor = false;
   if (WorldGenScreen)
   {
@@ -2117,6 +2126,7 @@ void UApplication::Update(double dt)
     if (World && World->IsPlayerDead() && !DeathScreenOpen && DeathScreen)
     {
       DeathScreenOpen = true;
+      DeathScreen->SetHardcore(World->IsHardcoreDead());
       DeathScreen->SetCause("Fatal wounds");
       DeathScreen->SetVisible(true);
       SyncCursorVisibility();
@@ -2500,7 +2510,8 @@ bool UApplication::AllowsWorldMousePlacement() const
 {
   return State == AppState::InGame && !ConsoleOpen && !PaletteOpen &&
          !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen && !CraftingOpen && !AnvilOpen &&
-         !DeathScreenOpen;
+         !DeathScreenOpen && !HardcoreSpectating &&
+         !(World && World->IsHardcoreDead());
 }
 
 bool UApplication::RouteKey(int key, int Action, int Mods)

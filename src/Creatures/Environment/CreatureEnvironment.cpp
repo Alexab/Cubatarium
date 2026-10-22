@@ -242,24 +242,6 @@ EnvironmentSample ProbeEnvironmentAt(const UWorld &world,
   return ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 1.0f);
 }
 
-bool HabitatMatches(CreatureHabitat habitat, const EnvironmentSample &env)
-{
-  switch (habitat)
-  {
-  case CreatureHabitat::Terrestrial:
-    return env.onSolidGround && !env.inFluid;
-  case CreatureHabitat::Aquatic:
-    return env.inWater;
-  case CreatureHabitat::Aerial:
-    return env.inOpenAir && !env.inFluid;
-  case CreatureHabitat::Amphibious:
-    return (env.onSolidGround && !env.inFluid) || env.inWater;
-  case CreatureHabitat::Lava:
-    return env.inLava;
-  }
-  return false;
-}
-
 float ResolveViewerEyeHeight(const UWorld &world)
 {
   if (const UCreature *player = world.GetPlayerCreature())
@@ -611,7 +593,7 @@ bool HabitatAllowsAtForSpawn(const UWorld &world, CreatureHabitat habitat,
 {
   if (habitat == CreatureHabitat::Aerial)
   {
-    return HabitatAllowsMovementAt(world, habitat, bodyOrigin, sizeBlocks);
+    return HabitatAllowsAt(world, habitat, bodyOrigin, sizeBlocks);
   }
   const EnvironmentSample env =
       ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 0.5f);

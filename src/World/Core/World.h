@@ -298,6 +298,15 @@ public:
   void SetSpawnPoint(glm::vec3 value);
   bool IsPlayerDead() const { return PlayerDead; }
   void SetPlayerDead(bool dead) { PlayerDead = dead; }
+  bool IsHardcoreDead() const { return HardcoreDead; }
+  void SetHardcoreDead(bool dead)
+  {
+    HardcoreDead = dead;
+    if (dead)
+    {
+      PlayerDead = true;
+    }
+  }
   glm::ivec3 GetPreferredLoadFocusBlock() const;
   glm::ivec3 GetEnterWarmupFocusBlock() const;
   bool UsesEnterWarmupFocus() const;
@@ -715,7 +724,9 @@ public:
                              float feetY) const;
   CreatureId SpawnCreature(const std::string &speciesId,
                            const glm::vec3 &bodyOrigin,
-                           const std::string &skinId = "");
+                           const std::string &skinId = "",
+                           CreatureSpawnSource source =
+                               CreatureSpawnSource::CreativeManual);
   bool SpawnCreatureByView(const std::string &speciesId);
   bool CanSpawnCreatureByView(const std::string &speciesId);
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId);
@@ -1618,6 +1629,7 @@ private:
   std::string WorldName;
   glm::vec3 SpawnPoint;
   bool PlayerDead{false};
+  bool HardcoreDead{false};
   std::string CurrentUserName;
   uint32_t WorldSeed{12345};
   std::string TerrainType{"heightmap"};

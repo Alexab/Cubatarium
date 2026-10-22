@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -72,7 +73,9 @@ public:
 
   CreatureId SpawnCreature(const std::string &speciesId,
                            const glm::vec3 &bodyOrigin,
-                           const std::string &skinId = "");
+                           const std::string &skinId = "",
+                           CreatureSpawnSource source =
+                               CreatureSpawnSource::CreativeManual);
   bool SpawnCreatureByView(const std::string &speciesId);
   bool CanSpawnCreatureByView(const std::string &speciesId);
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId);
@@ -101,6 +104,8 @@ public:
                     class UWorldCreatureActivitySink &sink, float dt,
                     bool stress_tick = false);
   void SyncCreatureSpatialIndex();
+  void TickNaturalPopulation(float dt);
+  void ValidateLoadedCreaturePositions();
   int GetLastActivityAgentsTicked() const
   {
     return ActivityDirector.GetLastAgentsTicked();
@@ -146,6 +151,10 @@ private:
   UCreaturePosePresenterRegistry PosePresenterRegistry;
   UCreatureSpatialIndex CreatureSpatialIndex;
   bool CreatureSpatialIndexReady{false};
+  float NaturalPopulationTimer{0.f};
+  float LoadedCreaturePositionValidationTimer{0.f};
+  bool LoadedCreaturePositionValidationPending{true};
+  std::mt19937 NaturalPopulationRng{0xC0BA7AULL};
 };
 
 } // namespace cutum

@@ -21,8 +21,10 @@ public:
 
   void SetVisible(bool visible);
   void SetCause(const std::string &cause);
+  void SetHardcore(bool hardcore);
   void SetOnRespawn(std::function<void()> handler);
   void SetOnSpectate(std::function<void()> handler);
+  void SetOnReturnToMenu(std::function<void()> handler);
 
 private:
   void Relayout();
@@ -33,9 +35,12 @@ private:
   UGuiLabel *CauseLabel{nullptr};
   UGuiButton *RespawnBtn{nullptr};
   UGuiButton *SpectateBtn{nullptr};
+  UGuiButton *ReturnToMenuBtn{nullptr};
   bool Visible{false};
+  bool Hardcore{false};
   std::function<void()> OnRespawn;
   std::function<void()> OnSpectate;
+  std::function<void()> OnReturnToMenu;
 };
 
 } // namespace cutum

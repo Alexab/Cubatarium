@@ -24,6 +24,25 @@ struct EnvironmentSample
   bool bodyBlocked{false};
 };
 
+inline bool HabitatMatches(CreatureHabitat habitat,
+                           const EnvironmentSample &env)
+{
+  switch (habitat)
+  {
+  case CreatureHabitat::Terrestrial:
+    return env.onSolidGround && !env.inFluid;
+  case CreatureHabitat::Aquatic:
+    return env.inWater;
+  case CreatureHabitat::Aerial:
+    return env.inOpenAir && !env.inFluid;
+  case CreatureHabitat::Amphibious:
+    return (env.onSolidGround && !env.inFluid) || env.inWater;
+  case CreatureHabitat::Lava:
+    return env.inLava;
+  }
+  return false;
+}
+
 void ApplyEnvironmentLocomotionFacts(const UWorld &world,
                                      const glm::vec3 &bodyOrigin,
                                      const glm::vec3 &sizeBlocks,
@@ -32,8 +51,6 @@ void ApplyEnvironmentLocomotionFacts(const UWorld &world,
 EnvironmentSample ProbeEnvironmentAt(const UWorld &world,
                                      const glm::vec3 &bodyOrigin,
                                      const glm::vec3 &sizeBlocks);
-
-bool HabitatMatches(CreatureHabitat habitat, const EnvironmentSample &env);
 
 bool CanCreatureOccupyAt(const UWorld &world, CreatureHabitat habitat,
                          const glm::vec3 &bodyOrigin,

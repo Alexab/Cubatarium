@@ -250,6 +250,7 @@ private:
   bool CraftingOpen{false};
   bool AnvilOpen{false};
   bool DeathScreenOpen{false};
+  bool HardcoreSpectating{false};
   bool FreeCursor{false};
   /// Подавить следующий glfw char после открытия консоли (символ
   /// клавиши-тоггла).

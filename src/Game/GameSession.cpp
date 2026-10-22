@@ -880,6 +880,11 @@ void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
 
 void UGameSession::SyncToWorldDifficulty(WorldDifficulty difficulty)
 {
+  if (World &&
+      !ModePolicy::AllowsDifficultyCommand(World->GetDifficulty(), difficulty))
+  {
+    return;
+  }
   ActiveWorldDifficulty = difficulty;
   if (World)
   {

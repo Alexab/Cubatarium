@@ -8,7 +8,8 @@
       "rigid_reference"
     ],
     "spawnable": true,
-    "sort_order": 901
+    "sort_order": 901,
+    "natural_spawnable": false
   },
   "role": "mob",
   "bounds": {
