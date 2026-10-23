@@ -31,6 +31,24 @@
       "type": "cu_organic_leaf_pale"
     },
     {
+      "dx": -2,
+      "dy": 10,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -2,
+      "dy": 11,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -1,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
       "dx": -1,
       "dy": 7,
       "dz": 0,
@@ -70,6 +88,48 @@
       "dx": -1,
       "dy": 9,
       "dz": 1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": 1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -1,
+      "dy": 11,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -1,
+      "dy": 11,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -1,
+      "dy": 12,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": -1,
+      "dy": 13,
+      "dz": 0,
       "type": "cu_organic_leaf_pale"
     },
     {
@@ -111,8 +171,20 @@
     {
       "dx": 0,
       "dy": 6,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
       "dz": 0,
       "type": "cu_wood_poplar_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": 1,
+      "type": "cu_organic_leaf_pale"
     },
     {
       "dx": 0,
@@ -169,6 +241,78 @@
       "type": "cu_organic_leaf_pale"
     },
     {
+      "dx": 0,
+      "dy": 10,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": 0,
+      "type": "cu_wood_poplar_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": 1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": 0,
+      "type": "cu_wood_poplar_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": 1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 0,
+      "dy": 12,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 0,
+      "dy": 12,
+      "dz": 0,
+      "type": "cu_wood_poplar_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 13,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 0,
+      "dy": 13,
+      "dz": 0,
+      "type": "cu_wood_poplar_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 13,
+      "dz": 1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
       "dx": 1,
       "dy": 7,
       "dz": 0,
@@ -195,12 +339,6 @@
     {
       "dx": 1,
       "dy": 9,
-      "dz": -1,
-      "type": "cu_organic_leaf_pale"
-    },
-    {
-      "dx": 1,
-      "dy": 9,
       "dz": 0,
       "type": "cu_organic_leaf_pale"
     },
@@ -208,6 +346,48 @@
       "dx": 1,
       "dy": 9,
       "dz": 1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
+      "dz": 1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 1,
+      "dy": 11,
+      "dz": -1,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 1,
+      "dy": 11,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 1,
+      "dy": 12,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 1,
+      "dy": 13,
+      "dz": 0,
       "type": "cu_organic_leaf_pale"
     },
     {
@@ -219,6 +399,12 @@
     {
       "dx": 2,
       "dy": 9,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
+      "dx": 2,
+      "dy": 11,
       "dz": 0,
       "type": "cu_organic_leaf_pale"
     }

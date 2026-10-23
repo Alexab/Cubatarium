@@ -32,37 +32,25 @@
     },
     {
       "dx": -3,
-      "dy": 4,
-      "dz": -1,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": -3,
-      "dy": 4,
-      "dz": 0,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": -3,
-      "dy": 4,
+      "dy": 3,
       "dz": 1,
       "type": "cu_organic_needle_fresh"
     },
     {
       "dx": -3,
-      "dy": 5,
+      "dy": 4,
       "dz": -1,
       "type": "cu_organic_needle_fresh"
     },
     {
       "dx": -3,
-      "dy": 5,
+      "dy": 4,
       "dz": 0,
       "type": "cu_organic_needle_fresh"
     },
     {
       "dx": -3,
-      "dy": 5,
+      "dy": 4,
       "dz": 1,
       "type": "cu_organic_needle_fresh"
     },
@@ -123,12 +111,6 @@
     {
       "dx": -2,
       "dy": 5,
-      "dz": -2,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
       "dz": -1,
       "type": "cu_organic_needle_fresh"
     },
@@ -142,12 +124,6 @@
       "dx": -2,
       "dy": 5,
       "dz": 1,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
-      "dz": 2,
       "type": "cu_organic_needle_fresh"
     },
     {
@@ -273,12 +249,6 @@
     {
       "dx": -1,
       "dy": 5,
-      "dz": -3,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 5,
       "dz": -2,
       "type": "cu_organic_needle_fresh"
     },
@@ -304,12 +274,6 @@
       "dx": -1,
       "dy": 5,
       "dz": 2,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 5,
-      "dz": 3,
       "type": "cu_organic_needle_fresh"
     },
     {
@@ -358,6 +322,12 @@
       "dx": -1,
       "dy": 7,
       "dz": 0,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
+      "dx": -1,
+      "dy": 7,
+      "dz": 1,
       "type": "cu_organic_needle_fresh"
     },
     {
@@ -483,12 +453,6 @@
     {
       "dx": 0,
       "dy": 5,
-      "dz": -3,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
       "dz": -2,
       "type": "cu_organic_needle_fresh"
     },
@@ -514,12 +478,6 @@
       "dx": 0,
       "dy": 5,
       "dz": 2,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
-      "dz": 3,
       "type": "cu_organic_needle_fresh"
     },
     {
@@ -578,6 +536,12 @@
     },
     {
       "dx": 0,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
+      "dx": 0,
       "dy": 8,
       "dz": -1,
       "type": "cu_organic_needle_fresh"
@@ -587,12 +551,6 @@
       "dy": 8,
       "dz": 0,
       "type": "cu_wood_cedar_bark"
-    },
-    {
-      "dx": 0,
-      "dy": 8,
-      "dz": 1,
-      "type": "cu_organic_needle_fresh"
     },
     {
       "dx": 0,
@@ -669,47 +627,47 @@
     {
       "dx": 1,
       "dy": 4,
-      "dz": -2,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": -1,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": 0,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": 2,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": 3,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
       "dz": -3,
       "type": "cu_organic_needle_fresh"
     },
     {
       "dx": 1,
+      "dy": 4,
+      "dz": -2,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": -1,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 1,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 2,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 3,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
+      "dx": 1,
       "dy": 5,
       "dz": -2,
       "type": "cu_organic_needle_fresh"
@@ -736,12 +694,6 @@
       "dx": 1,
       "dy": 5,
       "dz": 2,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": 3,
       "type": "cu_organic_needle_fresh"
     },
     {
@@ -811,6 +763,12 @@
       "type": "cu_organic_needle_fresh"
     },
     {
+      "dx": 1,
+      "dy": 9,
+      "dz": 0,
+      "type": "cu_organic_needle_fresh"
+    },
+    {
       "dx": 2,
       "dy": 3,
       "dz": -2,
@@ -873,12 +831,6 @@
     {
       "dx": 2,
       "dy": 5,
-      "dz": -2,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 2,
-      "dy": 5,
       "dz": -1,
       "type": "cu_organic_needle_fresh"
     },
@@ -892,12 +844,6 @@
       "dx": 2,
       "dy": 5,
       "dz": 1,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 2,
-      "dy": 5,
-      "dz": 2,
       "type": "cu_organic_needle_fresh"
     },
     {
@@ -963,18 +909,6 @@
     {
       "dx": 3,
       "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 3,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_needle_fresh"
-    },
-    {
-      "dx": 3,
-      "dy": 5,
       "dz": 1,
       "type": "cu_organic_needle_fresh"
     }

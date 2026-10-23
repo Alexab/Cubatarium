@@ -2755,10 +2755,10 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
     leaves = block_name(records, "organic", foliage_material, foliage_variant)
     voxels: list[dict[str, Any]] = []
     height = max(size, {
-        "oak": 8, "ash": 9, "beech": 8, "birch": 9,
+        "oak": 8, "ash": 9, "beech": 8, "birch": 11,
         "cedar": 11, "larch": 10, "pine": 10, "redwood": 13,
         "jungle": 11, "maple": 8, "walnut": 8, "willow": 9,
-        "poplar": 10, "acacia": 8, "mangrove": 8,
+        "poplar": 14, "acacia": 8, "mangrove": 8,
     }.get(wood, 7))
     tree_seed = stable_seed(f"tree:{wood}:{size}")
     rng = random.Random(tree_seed)
@@ -2793,10 +2793,21 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
         # A broad, tapered needle crown replaces the old narrow column. Larch
         # has gaps between its branch tiers; redwood keeps most foliage high.
         crown_bottom = max(2, round(height * (0.60 if wood == "redwood" else 0.30)))
+        radius_cap, radius_scale = {
+            "cedar": (3, 3.2),
+            "larch": (3, 3.2),
+            "pine": (4, 3.6),
+            "redwood": (3, 2.5),
+        }[wood]
+        gap_chance = {
+            "cedar": 0.025,
+            "larch": 0.30,
+            "pine": 0.16,
+            "redwood": 0.07,
+        }[wood]
         for y in range(crown_bottom, height + 1):
             progress = (height - y) / max(1, height - crown_bottom)
-            radius = min(4 if wood in ("pine", "cedar") else 3,
-                         max(0, round((3.4 if wood != "redwood" else 2.5) * progress)))
+            radius = min(radius_cap, max(0, round(radius_scale * progress)))
             if wood == "larch" and y % 3 == 0:
                 radius = max(0, radius - 1)
             if radius == 0:
@@ -2808,11 +2819,15 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
                         continue
                     if (x / max(1, radius)) ** 2 + (z / max(1, radius)) ** 2 > 1.35:
                         continue
-                    if rng.random() < (0.30 if wood == "larch" else 0.08):
+                    if rng.random() < gap_chance:
                         continue
                     add_object_block(voxels, x, y, z, leaves)
     else:
-        crown_bottom = height - (4 if wood in ("oak", "beech", "maple", "walnut", "ash", "jungle", "mangrove", "willow") else 3)
+        crown_bottom = height - {
+            "oak": 4, "beech": 4, "maple": 4, "walnut": 4, "ash": 4,
+            "jungle": 4, "mangrove": 4, "willow": 4,
+            "birch": 5, "poplar": 8,
+        }.get(wood, 3)
         profiles: dict[str, list[tuple[int, int]]] = {
             # Broadleaf species need different voxel silhouettes, not just
             # different leaf tints. The extra layer gives their crowns a
@@ -2820,11 +2835,11 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
             "oak": [(2, 2), (3, 2), (4, 3), (4, 2), (3, 3), (1, 1)],
             "ash": [(1, 1), (2, 2), (2, 2), (3, 2), (2, 2), (1, 1)],
             "beech": [(1, 1), (2, 2), (3, 3), (3, 3), (2, 2), (1, 1)],
-            "birch": [(1, 1), (2, 1), (2, 1), (1, 1)],
+            "birch": [(1, 1), (1, 1), (2, 1), (2, 1), (1, 1), (1, 1)],
             "jungle": [(2, 2), (3, 3), (4, 3), (3, 3), (2, 2)],
             "mangrove": [(2, 2), (3, 2), (3, 3), (2, 2), (1, 1)],
             "maple": [(1, 1), (2, 2), (3, 2), (3, 2), (2, 2), (1, 1)],
-            "poplar": [(1, 1), (2, 1), (2, 1), (1, 1)],
+            "poplar": [(1, 1), (1, 1), (2, 1), (2, 1), (2, 1), (2, 1), (1, 1), (1, 1), (1, 1)],
             "walnut": [(2, 2), (4, 3), (4, 2), (3, 2), (2, 1), (1, 1)],
             "willow": [(3, 2), (4, 3), (4, 3), (3, 2), (2, 2)],
             "acacia": [(3, 2), (4, 3), (4, 3), (2, 2)],
@@ -2840,6 +2855,7 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
         canopy_gap = {
             "oak": 0.18, "ash": 0.24, "beech": 0.03,
             "maple": 0.12, "walnut": 0.20,
+            "birch": 0.14, "poplar": 0.16,
         }.get(wood, 0.12)
         for level, (radius_x, radius_z) in enumerate(profile):
             y = crown_bottom + level
@@ -2936,13 +2952,14 @@ def make_shrub(name: str, material: str, records: list[dict[str, str]], seed: in
             if rng.random() > 0.16:
                 voxel_map[(x, 0, z)] = leaf
     elif material in ("reed", "kelp"):
-        # The reed mesh supplies several tall stalks within each voxel. Place
-        # one passable layer of stalk clusters rather than stacking collisions.
+        # Each voxel renders four tapered reed cards. Keep the prefab to a few
+        # adjacent clusters so that these do not multiply into a solid-looking
+        # wall of stems when several prefabs land close together.
         stalk_block = block_name(records, "organic", material, "fresh")
-        stalks = rng.choice((3, 4, 5))
+        cluster_count = rng.choice((1, 2, 2, 3))
         locations = [(0, 0)] + rng.sample(
             ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)),
-            stalks - 1,
+            cluster_count - 1,
         )
         for x, z in locations:
             voxel_map[(x, 0, z)] = stalk_block
@@ -2977,13 +2994,37 @@ def make_flower_patch(name: str, records: list[dict[str, str]], seed: int, flowe
     palette = ["flower_white", "flower_yellow", "flower_red", "flower_pink", "flower_blue", "flower_purple", "flower_orange"]
     if flower_material:
         palette = [flower_material]
-    soil = block_name(records, "soil", "loam", "natural")
-    flowers = [block_name(records, "organic", material, rng.choice(("fresh", "mature", "young", "bright", "spotted"))) for material in palette]
-    voxels = [{"dx": x, "dy": 0, "dz": z, "type": soil} for x, z in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1))]
-    for x, z in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)):
-        if rng.random() > 0.23:
-            voxels.append({"dx": x, "dy": 1, "dz": z, "type": rng.choice(flowers)})
-    return object_document(name, voxels, ["worldgen", "ground_cover", "plants"], seed, ",".join(palette), "surface_layer")
+    cells = ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1))
+    dominant = rng.choice(palette)
+    accent = rng.choice([material for material in palette if material != dominant]) if len(palette) > 1 else dominant
+    split_x, split_z = rng.choice(((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)))
+    split_threshold = rng.choice((0, 1))
+    voxels = []
+    used_materials: set[str] = set()
+    for x, z in cells:
+        if rng.random() <= 0.23:
+            continue
+        # A meadow patch should read as one or two nearby species, not as a
+        # random rainbow. Seeded half-plane clustering keeps each prefab stable.
+        side = x * split_x + z * split_z
+        material = accent if side >= split_threshold and rng.random() < 0.72 else dominant
+        variant = rng.choice(("fresh", "mature", "young", "bright", "spotted"))
+        used_materials.add(material)
+        voxels.append({
+            "dx": x, "dy": 0, "dz": z,
+            "type": block_name(records, "organic", material, variant),
+        })
+    if not voxels:
+        material = dominant
+        used_materials.add(material)
+        voxels.append({
+            "dx": 0, "dy": 0, "dz": 0,
+            "type": block_name(records, "organic", material, "fresh"),
+        })
+    return object_document(
+        name, voxels, ["worldgen", "ground_cover", "plants"], seed,
+        ",".join(sorted(used_materials)), "vertical_plant",
+    )
 
 
 def make_ruin(name: str, records: list[dict[str, str]], seed: int) -> dict[str, Any]:
@@ -3005,13 +3046,11 @@ def make_mushroom_cluster(name: str, records: list[dict[str, str]], seed: int) -
     cap_material = rng.choice(("mushroom_red", "mushroom_gold", "mushroom_blue", "mushroom_pale"))
     cap_variant = rng.choice(("fresh", "mature", "spotted", "striped", "bright"))
     cap = block_name(records, "organic", cap_material, cap_variant)
-    soil = block_name(records, "soil", "loam", "natural")
     voxels: list[dict[str, Any]] = []
     positions = rng.sample(((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)), rng.choice((2, 3, 4)))
     for x, z in positions:
-        voxels.append({"dx": x, "dy": 0, "dz": z, "type": soil})
-        voxels.append({"dx": x, "dy": 1, "dz": z, "type": cap})
-    return object_document(name, voxels, ["worldgen", "ground_cover", "fungi"], seed, cap_material, "surface_layer")
+        voxels.append({"dx": x, "dy": 0, "dz": z, "type": cap})
+    return object_document(name, voxels, ["worldgen", "ground_cover", "fungi"], seed, cap_material, "vertical_plant")
 
 
 def make_coral_fan(name: str, records: list[dict[str, str]], seed: int) -> dict[str, Any]:
@@ -4911,17 +4950,24 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
                     f"{object_path.name}: flower patch contains non-flower organic material "
                     f"{sorted(organic_materials)}"
                 )
+            if any(family != "organic" for family, _ in object_materials):
+                errors.append(f"{object_path.name}: flower patch must not replace ground voxels")
         elif object_name.startswith("asset_mushroom_cluster_"):
             if not any(
                 material.startswith("mushroom_") and material != "mushroom_stem"
                 for material in organic_materials
             ):
                 errors.append(f"{object_path.name}: mushroom cluster is missing a mushroom sprite")
-            if ("soil", "loam") not in object_materials:
-                errors.append(f"{object_path.name}: mushroom cluster is missing its loam ground layer")
+            if any(family != "organic" for family, _ in object_materials):
+                errors.append(f"{object_path.name}: mushroom cluster must not replace ground voxels")
 
         placement = obj.get("placement", {})
         placement_mode = placement.get("mode") if isinstance(placement, dict) else None
+        if (
+            object_name.startswith(("asset_flower_patch_", "asset_mushroom_cluster_"))
+            and placement_mode != "vertical_plant"
+        ):
+            errors.append(f"{object_path.name}: plant decor must use passable vertical_plant placement")
         if placement_mode == "vertical_plant":
             anchor = obj.get("anchor", [0, 0, 0])
             anchor_y = anchor[1] if isinstance(anchor, list) and len(anchor) == 3 else 0

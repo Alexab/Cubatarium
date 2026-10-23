@@ -6,7 +6,7 @@
     "mod": "cubatarium/assetgen",
     "seed": 10360652929007751314,
     "license": "CC0-1.0",
-    "material_parameter": "flower_white,flower_yellow,flower_red,flower_pink,flower_blue,flower_purple,flower_orange"
+    "material_parameter": "flower_orange,flower_pink"
   },
   "tags": [
     "worldgen",
@@ -23,70 +23,46 @@
       "dx": 0,
       "dy": 0,
       "dz": 0,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": 1,
-      "dy": 0,
-      "dz": 0,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": -1,
-      "dy": 0,
-      "dz": 0,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": 0,
-      "dy": 0,
-      "dz": 1,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": 0,
-      "dy": 0,
-      "dz": -1,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_flower_orange_young"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_flower_orange_young"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_flower_red_mature"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
-      "dz": -1,
-      "type": "cu_organic_flower_yellow_spotted"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": 1,
-      "type": "cu_organic_flower_blue_spotted"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": -1,
       "type": "cu_organic_flower_pink_young"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_flower_orange_mature"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_flower_orange_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_flower_pink_spotted"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_flower_orange_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_flower_pink_spotted"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_flower_orange_spotted"
     }
   ],
   "placement": {
-    "mode": "surface_layer"
+    "mode": "vertical_plant"
   }
 }

@@ -6,7 +6,7 @@
     "mod": "cubatarium/assetgen",
     "seed": 12432148845229642996,
     "license": "CC0-1.0",
-    "material_parameter": "flower_white,flower_yellow,flower_red,flower_pink,flower_blue,flower_purple,flower_orange"
+    "material_parameter": "flower_orange,flower_pink"
   },
   "tags": [
     "worldgen",
@@ -20,55 +20,25 @@
   ],
   "blocks": [
     {
-      "dx": 0,
-      "dy": 0,
-      "dz": 0,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": 1,
-      "dy": 0,
-      "dz": 0,
-      "type": "cu_soil_loam_natural"
-    },
-    {
       "dx": -1,
       "dy": 0,
       "dz": 0,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": 0,
-      "dy": 0,
-      "dz": 1,
-      "type": "cu_soil_loam_natural"
+      "type": "cu_organic_flower_orange_mature"
     },
     {
       "dx": 0,
       "dy": 0,
       "dz": -1,
-      "type": "cu_soil_loam_natural"
+      "type": "cu_organic_flower_orange_mature"
     },
     {
-      "dx": 0,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_flower_yellow_mature"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_flower_red_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
+      "dx": 1,
+      "dy": 0,
       "dz": 1,
-      "type": "cu_organic_flower_purple_mature"
+      "type": "cu_organic_flower_pink_fresh"
     }
   ],
   "placement": {
-    "mode": "surface_layer"
+    "mode": "vertical_plant"
   }
 }

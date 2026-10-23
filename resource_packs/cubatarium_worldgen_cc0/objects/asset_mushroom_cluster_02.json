@@ -23,28 +23,16 @@
       "dx": 0,
       "dy": 0,
       "dz": 1,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
-      "dz": 1,
       "type": "cu_organic_mushroom_red_spotted"
     },
     {
       "dx": 0,
       "dy": 0,
       "dz": -1,
-      "type": "cu_soil_loam_natural"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
-      "dz": -1,
       "type": "cu_organic_mushroom_red_spotted"
     }
   ],
   "placement": {
-    "mode": "surface_layer"
+    "mode": "vertical_plant"
   }
 }

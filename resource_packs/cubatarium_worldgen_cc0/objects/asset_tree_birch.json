@@ -20,13 +20,13 @@
   "blocks": [
     {
       "dx": -2,
-      "dy": 7,
+      "dy": 8,
       "dz": 0,
       "type": "cu_organic_leaf_young"
     },
     {
       "dx": -2,
-      "dy": 8,
+      "dy": 9,
       "dz": 0,
       "type": "cu_organic_leaf_young"
     },
@@ -39,19 +39,7 @@
     {
       "dx": -1,
       "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_leaf_young"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
       "dz": 0,
-      "type": "cu_organic_leaf_young"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
-      "dz": 1,
       "type": "cu_organic_leaf_young"
     },
     {
@@ -68,8 +56,20 @@
     },
     {
       "dx": -1,
-      "dy": 8,
-      "dz": 1,
+      "dy": 9,
+      "dz": -1,
+      "type": "cu_organic_leaf_young"
+    },
+    {
+      "dx": -1,
+      "dy": 9,
+      "dz": 0,
+      "type": "cu_organic_leaf_young"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": 0,
       "type": "cu_organic_leaf_young"
     },
     {
@@ -163,6 +163,30 @@
       "type": "cu_organic_leaf_young"
     },
     {
+      "dx": 0,
+      "dy": 9,
+      "dz": -1,
+      "type": "cu_organic_leaf_young"
+    },
+    {
+      "dx": 0,
+      "dy": 9,
+      "dz": 0,
+      "type": "cu_wood_birch_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": 0,
+      "type": "cu_wood_birch_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": 1,
+      "type": "cu_organic_leaf_young"
+    },
+    {
       "dx": 1,
       "dy": 6,
       "dz": 0,
@@ -171,36 +195,48 @@
     {
       "dx": 1,
       "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_leaf_young"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
       "dz": 0,
       "type": "cu_organic_leaf_young"
     },
     {
       "dx": 1,
-      "dy": 7,
-      "dz": 1,
+      "dy": 8,
+      "dz": 0,
       "type": "cu_organic_leaf_young"
     },
     {
       "dx": 1,
       "dy": 8,
+      "dz": 1,
+      "type": "cu_organic_leaf_young"
+    },
+    {
+      "dx": 1,
+      "dy": 9,
       "dz": -1,
       "type": "cu_organic_leaf_young"
     },
     {
       "dx": 1,
-      "dy": 8,
+      "dy": 9,
       "dz": 1,
       "type": "cu_organic_leaf_young"
     },
     {
+      "dx": 1,
+      "dy": 10,
+      "dz": 0,
+      "type": "cu_organic_leaf_young"
+    },
+    {
       "dx": 2,
-      "dy": 7,
+      "dy": 8,
+      "dz": 0,
+      "type": "cu_organic_leaf_young"
+    },
+    {
+      "dx": 2,
+      "dy": 9,
       "dz": 0,
       "type": "cu_organic_leaf_young"
     }
