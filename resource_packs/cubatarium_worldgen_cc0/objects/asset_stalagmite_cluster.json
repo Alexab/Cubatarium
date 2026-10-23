@@ -19,9 +19,27 @@
   ],
   "blocks": [
     {
+      "dx": -3,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
       "dx": -2,
       "dy": 0,
       "dz": 0,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 1,
       "type": "cu_rock_tuff_layered"
     },
     {
@@ -37,6 +55,36 @@
       "type": "cu_rock_tuff_layered"
     },
     {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
       "dx": 0,
       "dy": 0,
       "dz": 0,
@@ -44,8 +92,62 @@
     },
     {
       "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 0,
       "dy": 1,
       "dz": 0,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": 0,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": -1,
+      "type": "cu_rock_tuff_layered"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": -1,
       "type": "cu_rock_tuff_layered"
     },
     {
@@ -55,33 +157,21 @@
       "type": "cu_rock_tuff_layered"
     },
     {
-      "dx": -1,
+      "dx": 2,
       "dy": 0,
       "dz": 1,
       "type": "cu_rock_tuff_layered"
     },
     {
-      "dx": -1,
+      "dx": 2,
       "dy": 1,
-      "dz": 1,
+      "dz": 0,
       "type": "cu_rock_tuff_layered"
     },
     {
-      "dx": 1,
+      "dx": 3,
       "dy": 0,
-      "dz": -1,
-      "type": "cu_rock_tuff_layered"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": -1,
-      "type": "cu_rock_tuff_layered"
-    },
-    {
-      "dx": 1,
-      "dy": 2,
-      "dz": -1,
+      "dz": 0,
       "type": "cu_rock_tuff_layered"
     }
   ]

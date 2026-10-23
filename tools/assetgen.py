@@ -679,9 +679,9 @@ def generated_texture(
     if role == "water_surface":
         palette_factors = (0.78, 0.91, 1.04, 1.17)
     elif family == "soil" and material in ("pale_sand", "silt"):
-        # Six nearby tones provide visible 16px grain without rock-like
-        # high-contrast speckles.
-        palette_factors = (0.88, 0.92, 0.95, 0.98, 1.01, 1.05)
+        # Sand needs a wider range of tiny grain tones. A narrow palette makes
+        # large beaches read as a soft, repeated beige wash at game scale.
+        palette_factors = (0.85, 0.91, 0.96, 1.0, 1.05, 1.10)
     elif family == "soil" and material == "clay":
         # Sand and fine earth need grain detail without the dark, high-contrast
         # blotches that make a 16px tile read like stone or mud.
@@ -720,7 +720,7 @@ def generated_texture(
     sand_material = family == "soil" and material in ("pale_sand", "silt")
     detail_scale = max(
         0.55,
-        min(1.7, (calibration or {}).get("detail_scale", 0.80 if sand_material else 1.0)),
+        min(1.7, (calibration or {}).get("detail_scale", 0.90 if sand_material else 1.0)),
     )
     contrast_scale = max(0.65, min(1.5, (calibration or {}).get("contrast_scale", 1.0)))
     coarse_scale = max(0.6, min(1.5, (calibration or {}).get("coarse_scale", 1.0)))
@@ -746,14 +746,16 @@ def generated_texture(
                     + pixel_grain[i] * 0.37
                 ) * detail_scale
             elif family == "soil" and material in ("pale_sand", "silt"):
-                # Sand is approximately stationary at this scale. The
-                # correlated broad fields made gentle but persistent bands
-                # when a 16px tile repeated; use only a small clustered
-                # component and let independent wrapped texels carry the grain.
+                # Keep sand grains isotropic: broad correlated fields leave
+                # diagonal smears across a beach after the 16px tile repeats.
+                # A little 12-cell clustering groups grains without drawing
+                # long bands; independent wrapped texels preserve a crisp,
+                # seamless granular surface.
                 value = (
-                    medium[i] * 0.20 * coarse_scale
-                    + micro[i] * 0.08 * micro_scale
-                    + sand_grain[i] * 0.40
+                    fine[i] * 0.08 * micro_scale
+                    + micro[i] * 0.12 * micro_scale
+                    + sand_grain[i] * 0.32
+                    + pixel_grain[i] * 0.10
                 ) * detail_scale
             elif family == "soil":
                 # Shift detail from broad, soft blobs into individual wrapped
@@ -1947,6 +1949,27 @@ def periodize(
     return result
 
 
+def periodize_seamless(
+    image: Image.Image,
+    family: str,
+    material: str,
+    size: int,
+    role: str,
+    axes: tuple[str, ...],
+) -> tuple[Image.Image, int]:
+    """Use the smallest seam blend that passes the rendered wrap check."""
+    palette = texture_palette(role, size)
+    seam = default_texture_seam(family, material, size, role)
+    result = periodize(image, size, seam, palette, axes)
+    if seam == 0 and size <= 16:
+        for candidate_seam in range(1, max(1, size // 8) + 1):
+            if all(texture_wrap_is_continuous(result, axis) for axis in axes):
+                break
+            seam = candidate_seam
+            result = periodize(image, size, seam, palette, axes)
+    return result, seam
+
+
 def image_pixel_hash(image: Image.Image) -> str:
     return hashlib.sha256(image.convert("RGBA").tobytes()).hexdigest()
 
@@ -2447,11 +2470,11 @@ def make_replacement_texture(
     if sprite is not None:
         image = sprite
     image = add_semantic_face_detail(image, source_stem, base_seed)
+    seam_width = 0
     if role != "decor_sprite":
         axes = ("x",) if role in COMPOSITE_SIDE_ROLES else ("x", "y")
-        image = periodize(
-            image, size, default_texture_seam(family, material, size, role),
-            texture_palette(role, size), axes
+        image, seam_width = periodize_seamless(
+            image, family, material, size, role, axes
         )
     if role == "leaf_cutout":
         image = apply_leaf_cutout(image, base_seed, leaf_transparency or 0.38)
@@ -2477,9 +2500,8 @@ def make_replacement_texture(
         image = add_semantic_face_detail(image, source_stem, base_seed + salt)
         if role != "decor_sprite":
             axes = ("x",) if role in COMPOSITE_SIDE_ROLES else ("x", "y")
-            image = periodize(
-                image, size, default_texture_seam(family, material, size, role),
-                texture_palette(role, size), axes
+            image, seam_width = periodize_seamless(
+                image, family, material, size, role, axes
             )
         if role == "leaf_cutout":
             image = apply_leaf_cutout(image, base_seed + salt,
@@ -2516,7 +2538,7 @@ def make_replacement_texture(
         "role": role,
         "seed": base_seed,
         "backend": "procedural",
-        "seam_blend_width": default_texture_seam(family, material, size, role),
+        "seam_blend_width": seam_width,
         "reference_mode": calibration.get("mode", "qa-only") if calibration else "qa-only",
         "resolution": [size, size],
         "pixel_sha256": digest,
@@ -2619,12 +2641,11 @@ def create_catalog_texture(
     if sprite is not None:
         image = sprite
     image = add_semantic_face_detail(image, record["name"], seed)
+    seam_width = 0
     if output_role != "decor_sprite":
         axes = ("x",) if role in COMPOSITE_SIDE_ROLES else ("x", "y")
-        image = periodize(
-            image, size,
-            default_texture_seam(record["family"], record["material"], size, role),
-            texture_palette(role, size), axes
+        image, seam_width = periodize_seamless(
+            image, record["family"], record["material"], size, role, axes
         )
     if leaf_cutout:
         image = apply_leaf_cutout(image, seed, leaf_transparency)
@@ -2644,10 +2665,8 @@ def create_catalog_texture(
         image = add_semantic_face_detail(image, record["name"], seed + salt)
         if output_role != "decor_sprite":
             axes = ("x",) if role in COMPOSITE_SIDE_ROLES else ("x", "y")
-            image = periodize(
-                image, size,
-                default_texture_seam(record["family"], record["material"], size, role),
-                texture_palette(role, size), axes
+            image, seam_width = periodize_seamless(
+                image, record["family"], record["material"], size, role, axes
             )
         if leaf_cutout:
             image = apply_leaf_cutout(image, seed + salt, leaf_transparency)
@@ -2662,9 +2681,7 @@ def create_catalog_texture(
         "role": output_role,
         "seed": seed,
         "backend": "procedural",
-        "seam_blend_width": default_texture_seam(
-            record["family"], record["material"], size, role
-        ),
+        "seam_blend_width": seam_width,
         "reference_mode": calibration.get("mode", "qa-only") if calibration else "qa-only",
         "resolution": [size, size],
         "pixel_sha256": digest,
@@ -3010,13 +3027,24 @@ def make_coral_fan(name: str, records: list[dict[str, str]], seed: int) -> dict[
 def make_stalagmites(name: str, records: list[dict[str, str]], seed: int) -> dict[str, Any]:
     rng = random.Random(seed)
     stone = block_name(records, "rock", rng.choice(("limestone", "chalk", "tuff")), rng.choice(("natural", "layered", "rough")))
-    voxels: list[dict[str, Any]] = []
-    for x, z in ((-2, 0), (0, 0), (2, 0), (-1, 1), (1, -1)):
-        height = rng.choice((2, 3, 4, 5))
-        for y in range(height):
-            if y >= height - 1 and abs(x) + abs(z) > 1:
-                continue
-            voxels.append({"dx": x, "dy": y, "dz": z, "type": stone})
+    # A shared, uneven foot joins several pointed mineral columns into one
+    # cave formation. The old generator stacked isolated full-width columns,
+    # which read as fence posts instead of stalagmites in voxel silhouettes.
+    voxels_by_position: dict[tuple[int, int, int], dict[str, Any]] = {}
+    centers = ((-2, 0), (0, 0), (2, 0), (-1, 1), (1, -1))
+    for index, (x, z) in enumerate(centers):
+        height = rng.choice((2, 3, 4)) if index != 1 else rng.choice((4, 5))
+        for dx, dz in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+            position = (x + dx, 0, z + dz)
+            voxels_by_position[position] = {
+                "dx": position[0], "dy": 0, "dz": position[2], "type": stone,
+            }
+        for y in range(1, height):
+            position = (x, y, z)
+            voxels_by_position[position] = {
+                "dx": x, "dy": y, "dz": z, "type": stone,
+            }
+    voxels = [voxels_by_position[position] for position in sorted(voxels_by_position)]
     return object_document(name, voxels, ["decoration", "cave"], seed, "limestone")
 
 

@@ -3672,7 +3672,7 @@
       "role": "decor_sprite",
       "seed": 10486604567860546626,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3694,7 +3694,7 @@
       "role": "decor_sprite",
       "seed": 4550061738148701786,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3716,7 +3716,7 @@
       "role": "decor_sprite",
       "seed": 13843037669260725488,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3738,7 +3738,7 @@
       "role": "decor_sprite",
       "seed": 13007269525687411399,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3760,7 +3760,7 @@
       "role": "decor_sprite",
       "seed": 14976467160269496978,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3782,7 +3782,7 @@
       "role": "decor_sprite",
       "seed": 155333095495106504,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3804,7 +3804,7 @@
       "role": "decor_sprite",
       "seed": 12928481289913595005,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3826,7 +3826,7 @@
       "role": "decor_sprite",
       "seed": 14261585088358507367,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3848,7 +3848,7 @@
       "role": "decor_sprite",
       "seed": 369492416988404028,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -3870,7 +3870,7 @@
       "role": "decor_sprite",
       "seed": 8920689366816878607,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -6884,7 +6884,7 @@
       "role": "decor_sprite",
       "seed": 5327764790117369868,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -6906,7 +6906,7 @@
       "role": "decor_sprite",
       "seed": 4648102182718550677,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -6928,7 +6928,7 @@
       "role": "decor_sprite",
       "seed": 12949051075041654046,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -6950,7 +6950,7 @@
       "role": "decor_sprite",
       "seed": 1465810790284944452,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -6972,7 +6972,7 @@
       "role": "decor_sprite",
       "seed": 9524062004413268774,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -6994,7 +6994,7 @@
       "role": "decor_sprite",
       "seed": 8038560502005310759,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -7016,7 +7016,7 @@
       "role": "decor_sprite",
       "seed": 389009199636939729,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -7038,7 +7038,7 @@
       "role": "decor_sprite",
       "seed": 10164604309570519455,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -8292,7 +8292,7 @@
       "role": "decor_sprite",
       "seed": 2567387490776040947,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -8314,7 +8314,7 @@
       "role": "decor_sprite",
       "seed": 6718349865417183098,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -8336,7 +8336,7 @@
       "role": "decor_sprite",
       "seed": 10198692091447890679,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -8358,7 +8358,7 @@
       "role": "decor_sprite",
       "seed": 7292570224801972687,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -8380,7 +8380,7 @@
       "role": "decor_sprite",
       "seed": 2418365748186700009,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -8402,7 +8402,7 @@
       "role": "decor_sprite",
       "seed": 161989362014313136,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -8424,7 +8424,7 @@
       "role": "decor_sprite",
       "seed": 3711290843304830232,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -8446,7 +8446,7 @@
       "role": "decor_sprite",
       "seed": 7497175106667562341,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -10668,7 +10668,7 @@
       "role": "decor_sprite",
       "seed": 1253611238863735792,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -10690,7 +10690,7 @@
       "role": "decor_sprite",
       "seed": 12029806501796694699,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -10712,7 +10712,7 @@
       "role": "decor_sprite",
       "seed": 1640330020252401787,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -10734,7 +10734,7 @@
       "role": "decor_sprite",
       "seed": 10218824635955368009,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -10756,7 +10756,7 @@
       "role": "decor_sprite",
       "seed": 12979844375475661427,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -10778,7 +10778,7 @@
       "role": "decor_sprite",
       "seed": 2520643342191526037,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19776,7 +19776,7 @@
       "role": "decor_sprite",
       "seed": 13259946505889566092,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19798,7 +19798,7 @@
       "role": "decor_sprite",
       "seed": 3731010409505190127,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19820,7 +19820,7 @@
       "role": "decor_sprite",
       "seed": 8781556197271922438,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19842,7 +19842,7 @@
       "role": "decor_sprite",
       "seed": 2521166501068664080,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19864,7 +19864,7 @@
       "role": "decor_sprite",
       "seed": 13629176799043231999,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19886,7 +19886,7 @@
       "role": "decor_sprite",
       "seed": 10204324293745607238,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19908,7 +19908,7 @@
       "role": "decor_sprite",
       "seed": 6486254057468088539,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19930,7 +19930,7 @@
       "role": "decor_sprite",
       "seed": 7346098954505992869,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19952,7 +19952,7 @@
       "role": "decor_sprite",
       "seed": 12635955195552961858,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19974,7 +19974,7 @@
       "role": "decor_sprite",
       "seed": 16887022017583837691,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -19996,7 +19996,7 @@
       "role": "decor_sprite",
       "seed": 5831727044074196142,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20018,7 +20018,7 @@
       "role": "decor_sprite",
       "seed": 2919690864997216693,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20040,7 +20040,7 @@
       "role": "decor_sprite",
       "seed": 2630461246044006611,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20062,7 +20062,7 @@
       "role": "decor_sprite",
       "seed": 7616169488494283928,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20084,7 +20084,7 @@
       "role": "decor_sprite",
       "seed": 3288412378976764043,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20106,7 +20106,7 @@
       "role": "decor_sprite",
       "seed": 7118544888491012917,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20128,7 +20128,7 @@
       "role": "decor_sprite",
       "seed": 4751778904263728145,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20150,7 +20150,7 @@
       "role": "decor_sprite",
       "seed": 9502368062152019931,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20172,7 +20172,7 @@
       "role": "decor_sprite",
       "seed": 3080507100233521547,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20194,7 +20194,7 @@
       "role": "decor_sprite",
       "seed": 7276439903555661560,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20216,7 +20216,7 @@
       "role": "decor_sprite",
       "seed": 9260791884188517306,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20238,7 +20238,7 @@
       "role": "decor_sprite",
       "seed": 11734761888274241082,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20260,7 +20260,7 @@
       "role": "decor_sprite",
       "seed": 15955398906844936972,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20282,7 +20282,7 @@
       "role": "decor_sprite",
       "seed": 9036339359321990500,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20304,7 +20304,7 @@
       "role": "decor_sprite",
       "seed": 8656924704152864477,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20326,7 +20326,7 @@
       "role": "decor_sprite",
       "seed": 14313805723563181517,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20348,7 +20348,7 @@
       "role": "decor_sprite",
       "seed": 610601892777809994,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20370,7 +20370,7 @@
       "role": "decor_sprite",
       "seed": 17984266719873217311,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20392,7 +20392,7 @@
       "role": "decor_sprite",
       "seed": 1124708928115113323,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20414,7 +20414,7 @@
       "role": "decor_sprite",
       "seed": 9558768511785208111,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20436,7 +20436,7 @@
       "role": "decor_sprite",
       "seed": 8660571950534937333,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20458,7 +20458,7 @@
       "role": "decor_sprite",
       "seed": 3495092169539823106,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20480,7 +20480,7 @@
       "role": "decor_sprite",
       "seed": 14430155923421394978,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20502,7 +20502,7 @@
       "role": "decor_sprite",
       "seed": 16506602234471164701,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20524,7 +20524,7 @@
       "role": "decor_sprite",
       "seed": 8506403213713816946,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20546,7 +20546,7 @@
       "role": "decor_sprite",
       "seed": 7718338745745881116,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20568,7 +20568,7 @@
       "role": "decor_sprite",
       "seed": 15860400557883427620,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20590,7 +20590,7 @@
       "role": "decor_sprite",
       "seed": 12894077049976703755,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20612,7 +20612,7 @@
       "role": "decor_sprite",
       "seed": 4868048069324108859,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20634,7 +20634,7 @@
       "role": "decor_sprite",
       "seed": 3980429047551587147,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20656,7 +20656,7 @@
       "role": "decor_sprite",
       "seed": 13070237735791917328,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20678,7 +20678,7 @@
       "role": "decor_sprite",
       "seed": 10731357695939905817,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20700,7 +20700,7 @@
       "role": "decor_sprite",
       "seed": 18404708079273061160,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20722,7 +20722,7 @@
       "role": "decor_sprite",
       "seed": 5400508950221906467,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20744,7 +20744,7 @@
       "role": "decor_sprite",
       "seed": 645767001963772567,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20766,7 +20766,7 @@
       "role": "decor_sprite",
       "seed": 1136247006282619820,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20788,7 +20788,7 @@
       "role": "decor_sprite",
       "seed": 6192258093004714360,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20810,7 +20810,7 @@
       "role": "decor_sprite",
       "seed": 9775878222455370929,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20832,7 +20832,7 @@
       "role": "decor_sprite",
       "seed": 14966004981472325835,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20854,7 +20854,7 @@
       "role": "decor_sprite",
       "seed": 10965863284135345142,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20876,7 +20876,7 @@
       "role": "decor_sprite",
       "seed": 12137201866382282755,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20898,7 +20898,7 @@
       "role": "decor_sprite",
       "seed": 6560218484238610842,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20920,7 +20920,7 @@
       "role": "decor_sprite",
       "seed": 4363146580183125953,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20942,7 +20942,7 @@
       "role": "decor_sprite",
       "seed": 6602666658519812947,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20964,7 +20964,7 @@
       "role": "decor_sprite",
       "seed": 4553465230019644140,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -20986,7 +20986,7 @@
       "role": "decor_sprite",
       "seed": 14904728046390268510,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21008,7 +21008,7 @@
       "role": "decor_sprite",
       "seed": 6909200150995289574,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21030,7 +21030,7 @@
       "role": "decor_sprite",
       "seed": 6564185142165679992,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21052,7 +21052,7 @@
       "role": "decor_sprite",
       "seed": 6553498857859964647,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21074,7 +21074,7 @@
       "role": "decor_sprite",
       "seed": 3291832044888274578,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21096,7 +21096,7 @@
       "role": "decor_sprite",
       "seed": 10496175452285945131,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21118,7 +21118,7 @@
       "role": "decor_sprite",
       "seed": 3137796634527893845,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21140,7 +21140,7 @@
       "role": "decor_sprite",
       "seed": 9800751882681473248,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21162,7 +21162,7 @@
       "role": "decor_sprite",
       "seed": 4754307233308496291,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21184,7 +21184,7 @@
       "role": "decor_sprite",
       "seed": 8567577088064052347,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21206,7 +21206,7 @@
       "role": "decor_sprite",
       "seed": 16895648232958303052,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21228,7 +21228,7 @@
       "role": "decor_sprite",
       "seed": 6049297510780824379,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21250,7 +21250,7 @@
       "role": "decor_sprite",
       "seed": 1888118938092786921,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21272,7 +21272,7 @@
       "role": "decor_sprite",
       "seed": 3224284841904484978,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21294,7 +21294,7 @@
       "role": "decor_sprite",
       "seed": 17633657208273151893,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21316,7 +21316,7 @@
       "role": "decor_sprite",
       "seed": 7240996004409066550,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21338,7 +21338,7 @@
       "role": "decor_sprite",
       "seed": 10091753391690210653,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21360,7 +21360,7 @@
       "role": "decor_sprite",
       "seed": 2368004240900912071,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21382,7 +21382,7 @@
       "role": "decor_sprite",
       "seed": 8296399341122554855,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21404,7 +21404,7 @@
       "role": "decor_sprite",
       "seed": 15703202781269412924,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21426,7 +21426,7 @@
       "role": "decor_sprite",
       "seed": 14447535810384853307,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21448,7 +21448,7 @@
       "role": "decor_sprite",
       "seed": 8617138990447550863,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21470,7 +21470,7 @@
       "role": "decor_sprite",
       "seed": 17927105124257394118,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21492,7 +21492,7 @@
       "role": "decor_sprite",
       "seed": 69276262970105946,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21514,7 +21514,7 @@
       "role": "decor_sprite",
       "seed": 3390126930063667697,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21536,7 +21536,7 @@
       "role": "decor_sprite",
       "seed": 5723832564112648638,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21558,7 +21558,7 @@
       "role": "decor_sprite",
       "seed": 2392726794865193242,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21580,7 +21580,7 @@
       "role": "decor_sprite",
       "seed": 16850571190766031857,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21602,7 +21602,7 @@
       "role": "decor_sprite",
       "seed": 5935342210196180330,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21624,7 +21624,7 @@
       "role": "decor_sprite",
       "seed": 12366533573618297437,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21646,7 +21646,7 @@
       "role": "decor_sprite",
       "seed": 3230727160348587201,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21668,7 +21668,7 @@
       "role": "decor_sprite",
       "seed": 866183677998818516,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21690,7 +21690,7 @@
       "role": "decor_sprite",
       "seed": 1047869037818180369,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21712,7 +21712,7 @@
       "role": "decor_sprite",
       "seed": 8374226710497065001,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21734,7 +21734,7 @@
       "role": "decor_sprite",
       "seed": 1900322473954119318,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21756,7 +21756,7 @@
       "role": "decor_sprite",
       "seed": 16016740504200064031,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21778,7 +21778,7 @@
       "role": "decor_sprite",
       "seed": 4031155582578382572,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21800,7 +21800,7 @@
       "role": "decor_sprite",
       "seed": 16734038093294377760,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21822,7 +21822,7 @@
       "role": "decor_sprite",
       "seed": 10515187466308986028,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21844,7 +21844,7 @@
       "role": "decor_sprite",
       "seed": 11559244179101780446,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21866,7 +21866,7 @@
       "role": "decor_sprite",
       "seed": 16553592209389999269,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21888,7 +21888,7 @@
       "role": "decor_sprite",
       "seed": 2811506590930357097,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21910,7 +21910,7 @@
       "role": "decor_sprite",
       "seed": 15154575023255243591,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21932,7 +21932,7 @@
       "role": "decor_sprite",
       "seed": 1429827184819348803,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21954,7 +21954,7 @@
       "role": "decor_sprite",
       "seed": 16034872503983820687,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21976,7 +21976,7 @@
       "role": "decor_sprite",
       "seed": 10390652749582400143,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -21998,7 +21998,7 @@
       "role": "decor_sprite",
       "seed": 3528704556570345502,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22020,7 +22020,7 @@
       "role": "decor_sprite",
       "seed": 1084960941935421355,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22042,7 +22042,7 @@
       "role": "decor_sprite",
       "seed": 11748680403937551072,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22064,7 +22064,7 @@
       "role": "decor_sprite",
       "seed": 879703443227162578,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22086,7 +22086,7 @@
       "role": "decor_sprite",
       "seed": 15850549412714715955,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22108,7 +22108,7 @@
       "role": "decor_sprite",
       "seed": 11933877942758202620,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22130,7 +22130,7 @@
       "role": "decor_sprite",
       "seed": 12356751900905906302,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22152,7 +22152,7 @@
       "role": "decor_sprite",
       "seed": 16988899968045536926,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22174,7 +22174,7 @@
       "role": "decor_sprite",
       "seed": 12937524521687477414,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22196,7 +22196,7 @@
       "role": "decor_sprite",
       "seed": 5725157757649909167,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22218,7 +22218,7 @@
       "role": "decor_sprite",
       "seed": 5483947606859359300,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22240,7 +22240,7 @@
       "role": "decor_sprite",
       "seed": 17128904727499159820,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22262,7 +22262,7 @@
       "role": "decor_sprite",
       "seed": 4708425321823794115,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22284,7 +22284,7 @@
       "role": "decor_sprite",
       "seed": 4047395039226357347,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22306,7 +22306,7 @@
       "role": "decor_sprite",
       "seed": 16783504725623173596,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22328,7 +22328,7 @@
       "role": "decor_sprite",
       "seed": 10678628008979666247,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22350,7 +22350,7 @@
       "role": "decor_sprite",
       "seed": 5852167614022268700,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22372,7 +22372,7 @@
       "role": "decor_sprite",
       "seed": 7036279338978514404,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -22394,7 +22394,7 @@
       "role": "decor_sprite",
       "seed": 3537465054407395292,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23776,7 +23776,7 @@
       "role": "decor_sprite",
       "seed": 6111525875862186239,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23798,7 +23798,7 @@
       "role": "decor_sprite",
       "seed": 13861355853439237466,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23820,7 +23820,7 @@
       "role": "decor_sprite",
       "seed": 3851044102175093783,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23842,7 +23842,7 @@
       "role": "decor_sprite",
       "seed": 13539446946837015774,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23864,7 +23864,7 @@
       "role": "decor_sprite",
       "seed": 17839319825631915083,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23886,7 +23886,7 @@
       "role": "decor_sprite",
       "seed": 8076807841470843710,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23908,7 +23908,7 @@
       "role": "decor_sprite",
       "seed": 10324020493929932773,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23930,7 +23930,7 @@
       "role": "decor_sprite",
       "seed": 12256867527801136523,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23952,7 +23952,7 @@
       "role": "decor_sprite",
       "seed": 4547547435708961372,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23974,7 +23974,7 @@
       "role": "decor_sprite",
       "seed": 15418019600416951247,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -23996,7 +23996,7 @@
       "role": "decor_sprite",
       "seed": 16581204166093829113,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24018,7 +24018,7 @@
       "role": "decor_sprite",
       "seed": 2919385361144220007,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24040,7 +24040,7 @@
       "role": "decor_sprite",
       "seed": 8119762552209083345,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24062,7 +24062,7 @@
       "role": "decor_sprite",
       "seed": 11231721527193248741,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24084,7 +24084,7 @@
       "role": "decor_sprite",
       "seed": 2401967825416707997,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24106,7 +24106,7 @@
       "role": "decor_sprite",
       "seed": 7166376006739427752,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24128,7 +24128,7 @@
       "role": "decor_sprite",
       "seed": 7004781821118445560,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24150,7 +24150,7 @@
       "role": "decor_sprite",
       "seed": 282847961106446594,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24172,7 +24172,7 @@
       "role": "decor_sprite",
       "seed": 15967503947308496859,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24194,7 +24194,7 @@
       "role": "decor_sprite",
       "seed": 2389734893262759921,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24216,7 +24216,7 @@
       "role": "decor_sprite",
       "seed": 14610443901670779122,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24238,7 +24238,7 @@
       "role": "decor_sprite",
       "seed": 15703749608434489157,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24260,7 +24260,7 @@
       "role": "decor_sprite",
       "seed": 9899530806637579728,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24282,7 +24282,7 @@
       "role": "decor_sprite",
       "seed": 15687376286790706896,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24304,7 +24304,7 @@
       "role": "decor_sprite",
       "seed": 3019024715009350654,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24326,7 +24326,7 @@
       "role": "decor_sprite",
       "seed": 15575083654263446446,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24348,7 +24348,7 @@
       "role": "decor_sprite",
       "seed": 16071754689270310880,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24370,7 +24370,7 @@
       "role": "decor_sprite",
       "seed": 17975778653270490336,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24392,7 +24392,7 @@
       "role": "decor_sprite",
       "seed": 10695104117280596855,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24414,7 +24414,7 @@
       "role": "decor_sprite",
       "seed": 13004059013374672577,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24436,7 +24436,7 @@
       "role": "decor_sprite",
       "seed": 16565959035175529882,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24458,7 +24458,7 @@
       "role": "decor_sprite",
       "seed": 3300719679191834950,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24480,7 +24480,7 @@
       "role": "decor_sprite",
       "seed": 1172575751340678037,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24502,7 +24502,7 @@
       "role": "decor_sprite",
       "seed": 17246922737162975864,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24524,7 +24524,7 @@
       "role": "decor_sprite",
       "seed": 4947613796769422912,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24546,7 +24546,7 @@
       "role": "decor_sprite",
       "seed": 629937375845721949,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24568,7 +24568,7 @@
       "role": "decor_sprite",
       "seed": 10186944180056190587,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24590,7 +24590,7 @@
       "role": "decor_sprite",
       "seed": 2964453661114549343,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24612,7 +24612,7 @@
       "role": "decor_sprite",
       "seed": 6667116336411739005,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24634,7 +24634,7 @@
       "role": "decor_sprite",
       "seed": 1027557676110492608,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24656,7 +24656,7 @@
       "role": "decor_sprite",
       "seed": 3296245356866256368,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24678,7 +24678,7 @@
       "role": "decor_sprite",
       "seed": 9787429419530168068,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24700,7 +24700,7 @@
       "role": "decor_sprite",
       "seed": 331973090302656217,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24722,7 +24722,7 @@
       "role": "decor_sprite",
       "seed": 17485378676213586008,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24744,7 +24744,7 @@
       "role": "decor_sprite",
       "seed": 9338651639250786617,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24766,7 +24766,7 @@
       "role": "decor_sprite",
       "seed": 1104229995843175319,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24788,7 +24788,7 @@
       "role": "decor_sprite",
       "seed": 4664652545893501288,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24810,7 +24810,7 @@
       "role": "decor_sprite",
       "seed": 7443690623558612553,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24832,7 +24832,7 @@
       "role": "decor_sprite",
       "seed": 8214614535171333702,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24854,7 +24854,7 @@
       "role": "decor_sprite",
       "seed": 10487271026312450887,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24876,7 +24876,7 @@
       "role": "decor_sprite",
       "seed": 11742627903550986695,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24898,7 +24898,7 @@
       "role": "decor_sprite",
       "seed": 8080121023946041570,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24920,7 +24920,7 @@
       "role": "decor_sprite",
       "seed": 13186858724288454837,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24942,7 +24942,7 @@
       "role": "decor_sprite",
       "seed": 11830838282244218995,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24964,7 +24964,7 @@
       "role": "decor_sprite",
       "seed": 12224748305715420503,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -24986,7 +24986,7 @@
       "role": "decor_sprite",
       "seed": 14357443441367709498,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25008,7 +25008,7 @@
       "role": "decor_sprite",
       "seed": 16773195197360097601,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25030,7 +25030,7 @@
       "role": "decor_sprite",
       "seed": 4905920161262427363,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25052,7 +25052,7 @@
       "role": "decor_sprite",
       "seed": 11698894538041805675,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25074,7 +25074,7 @@
       "role": "decor_sprite",
       "seed": 16282527030634981348,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25576,7 +25576,7 @@
       "role": "decor_sprite",
       "seed": 15087045479800420659,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25598,7 +25598,7 @@
       "role": "decor_sprite",
       "seed": 18086802227149648916,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25620,7 +25620,7 @@
       "role": "decor_sprite",
       "seed": 4235261794320300084,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25642,7 +25642,7 @@
       "role": "decor_sprite",
       "seed": 17397688067302827980,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25664,7 +25664,7 @@
       "role": "decor_sprite",
       "seed": 9285291816123420099,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25686,7 +25686,7 @@
       "role": "decor_sprite",
       "seed": 14388081388639140007,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25708,7 +25708,7 @@
       "role": "decor_sprite",
       "seed": 9068336605415369253,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25730,7 +25730,7 @@
       "role": "decor_sprite",
       "seed": 2170369254800435338,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25752,7 +25752,7 @@
       "role": "decor_sprite",
       "seed": 16905709053004567443,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -25774,7 +25774,7 @@
       "role": "decor_sprite",
       "seed": 13312276129395166219,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -33282,7 +33282,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6c89498cd0403f63a8151844a06777fe3ec4e250f46fc8e70b3dff2d82532fcb",
+      "pixel_sha256": "5d56ed93af66e5676645bfefb24b00db9c17b8202e18311d925a4e51a0ce4dda",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33304,7 +33304,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7ffbfbd5082d959fc2b0cb8797f31258e612ce0065e6115d54e62d6a55594b5c",
+      "pixel_sha256": "fc8d479e5c5c20a277f0372f2fb613b980f1d0f5fe3c52c312cf86c04b1aeead",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33326,7 +33326,7 @@
         16,
         16
       ],
-      "pixel_sha256": "dbfcc8e091ed4a192290aa40706d1b6692a202bfd5ea656aa9b0eec307992ffe",
+      "pixel_sha256": "a161c00366997d4ca68cf7e65cbfb6460470d286a8d8b24641822e71c9be85c8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33348,7 +33348,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d42c0284899cee482d58243dea14e2381bd751a38f2f0ebdb7fad835667113e8",
+      "pixel_sha256": "5ac35515d9d65fbf1b5ca1706342154a8f92083c8756e7541b77e958ad5873de",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33370,7 +33370,7 @@
         16,
         16
       ],
-      "pixel_sha256": "61eb9406a532f1b840e78175f78e41c9cf78f77d3ec6b3a802d9496ac88c1475",
+      "pixel_sha256": "a6a4de99e9b7fa655e0ca6eeddd7c4b85c6bb78d28406c354bf7af6cf436dcf1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33392,7 +33392,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b006790c0ad16f577f236c23b9b52d790d1c2b38b8310d64621ebb3fe5b1fd56",
+      "pixel_sha256": "ac1eadc5c7d351a857f3f54bd384293a33ee7ceade5821f94cecece57f2fa69b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33414,7 +33414,7 @@
         16,
         16
       ],
-      "pixel_sha256": "697962b5863eea5923d4d286c3767fa8c5dfd188918f44913413bbebf8ef7893",
+      "pixel_sha256": "4522bc66362c40e224eac62b1e48b4c10b23a7c906b701b180243c988ba8d430",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33436,7 +33436,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ea6a048042f0048e822d70a7265eb050493b8bf0512ec0c7408222514404e85f",
+      "pixel_sha256": "a739add45adb1ee1d240a6da9f1c78d5f158b4101b3d579ac84e6b1ab70408f0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33458,7 +33458,7 @@
         16,
         16
       ],
-      "pixel_sha256": "584cba73f34fbc27b789bf52084b12dca1660f5cb3a272d620d65ca016325955",
+      "pixel_sha256": "9154e2b31dc6826a088c16dcbf8e9cf2ba182ed9a5f1b3e1b9818349e2e748f1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33480,7 +33480,7 @@
         16,
         16
       ],
-      "pixel_sha256": "36bee63eb8e13e6fdb264c399192470dcc533390b9c4eae9d6d2b09461504ef9",
+      "pixel_sha256": "c1c71e9ca82137d8019cfe617a257332c434fef6f24cfa8f39b98431ce250b0d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33502,7 +33502,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5e4a2a248b977f865c32159a5c173c2cee1950d688f8c840debf320225f61aed",
+      "pixel_sha256": "f0d98d1ef9139c73ca27cfdaa2b6993406a89b39ab4f7e6427b83babd16fffaf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33524,7 +33524,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a8db68cbfe327f7f0ce42dfa70bc3783c806f745462d3adb8c22ca7ad52263c1",
+      "pixel_sha256": "9bff3d62ea5b75aaf4133c88b6aac2ecc3aa349e3cd7c076f91162c0f7632807",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33546,7 +33546,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7c4ac68026602639cfe989574e00acd1747bd65ddc3ed8a889f52f09d9d7b9b8",
+      "pixel_sha256": "18ddd087f1756a9bdc93735477505e9e98ea51a4d4cd2c60c1159fe2ccbe7bbe",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33568,7 +33568,7 @@
         16,
         16
       ],
-      "pixel_sha256": "76eb56c18f8743d1c15237101ee0096c4a2dc520df7304ee66342f8b6bf69b1b",
+      "pixel_sha256": "4d4b8bc2651c6e7ab9965e98911c0f9448196506f2271106690eb1ffefc6d7df",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33590,7 +33590,7 @@
         16,
         16
       ],
-      "pixel_sha256": "eff04a87400527317d598fd3b59a48e358515cbe1599ac7587c90be6912d7631",
+      "pixel_sha256": "13f535bdfcf910b04c4f399a7b2357891987bda51c6e0a4d8f9badea25614b7b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33612,7 +33612,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3480ff1146b3dc7eb3d7e21e43caec3ae2198d03508005dbbac4480049ef106a",
+      "pixel_sha256": "9236a84f5eaa88c61523d75050d4f37993e8e5a1f4a7f2e246b31493374e2b06",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33634,7 +33634,7 @@
         16,
         16
       ],
-      "pixel_sha256": "86cbc26842ae09d7e11f55c3403adc3d21516c8d11f790fe25d8e982182b8391",
+      "pixel_sha256": "4de0e1bb8783886d2afe9db8a3e46070e060ca339a65775c149723730e020d15",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33656,7 +33656,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b29c4335cac6b201f7bba873b6d04a421616354a7d8c242da7fc7fceae591872",
+      "pixel_sha256": "f7652fb78762f1b1594ba846330f2dbb52544e0fed7d242b65ebeecf77d2846b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33678,7 +33678,7 @@
         16,
         16
       ],
-      "pixel_sha256": "445bc839ec2d1397fbca786424b656f61516fd4e431fa731dc69733794a74a8f",
+      "pixel_sha256": "94b1901476b80958290ece743065b20091898d978ee4f17726d956c63530dfd8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33700,7 +33700,7 @@
         16,
         16
       ],
-      "pixel_sha256": "796aebd98e92ad105b706719d66f09276e19632e7a07c7012aaf3d1768c4d2c0",
+      "pixel_sha256": "5aa4bdeb65a82d0620d317b1c238be32b636ed67f62fa5b78231a48aa436096f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33722,7 +33722,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b9d57aeee022badcc84d2af5bc060d06983c1e3d60c3284b4cb041900bc5b7ad",
+      "pixel_sha256": "2b77a1aced9926280bda98ab18c0aed685c24f207af83fa09a293f57976bb41d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33744,7 +33744,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a1c8da32c1a16c932a72edf29294898a20c03cc1bda0f9ff03d8c60ce1dad2cc",
+      "pixel_sha256": "039c587525c02b9da7c399bad192eb682db436bfad0fb6b1bcf4cd8ff8b522b6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33766,7 +33766,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1d9e1a1c8ecc19794b6789a3f7db7825639185d8160d0bd8b9e9c6fc87145d78",
+      "pixel_sha256": "2ade45db59d28f5475733a5573313824f0ef4b6e474df1e5194251192eb41567",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33788,7 +33788,7 @@
         16,
         16
       ],
-      "pixel_sha256": "79945f6f8f0e1fddb508a31372b9145fcd9274ae953eede068beb54d3a823b25",
+      "pixel_sha256": "6b509cd151911187478c76da174de32950e5a8b02628578efdc6910593b0c4f3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33810,7 +33810,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4a288cc21804bd8757f515fd4b351dbadfa87e291b48e95433a898a094867b1a",
+      "pixel_sha256": "40122601f84e8890255beb01023ed513f65af8195cd3e7af9cac423a94f59e69",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33832,7 +33832,7 @@
         16,
         16
       ],
-      "pixel_sha256": "bd67dad291ff59645733a7112725ed26f1dc69ff290c7f2d0b4e0ee7d83a5e5b",
+      "pixel_sha256": "cae29ce94eba4a5bf6fb17b7ce5369e5dddcba157f674ec3d750c5d2bea6ce63",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33854,7 +33854,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f8e3e0a2ffdb14a651df3beef58246c92cc66f97ae2b64674606bef4ff2e6ac3",
+      "pixel_sha256": "6eafd9b11d3793ea2e7b1b811428592b93c2996279c155905b96f3de19c8d95f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33876,7 +33876,7 @@
         16,
         16
       ],
-      "pixel_sha256": "77143cd9207b9b50600d6844ad60bb0259c09c16a3895af0e9c17c49079de7c2",
+      "pixel_sha256": "7d614aede8791074dcce0729afb6d84b855014170ac791008836555e12bd4861",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33898,7 +33898,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d16d9ee3428dacb591cb4e4d587e76dfa658abe8f8a5957c702884659c974ba0",
+      "pixel_sha256": "f57552683a96df204535fbea562a1eab9ef055538f7ec6f4302a1d305e6e00d5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33920,7 +33920,7 @@
         16,
         16
       ],
-      "pixel_sha256": "69bd3695737ad7e4f601dfd2b75c94b189293417ba5d8f95fe0ffc062fbedd94",
+      "pixel_sha256": "730ce9b6bd36671541047b8ae7644322eb35326967150f98399e777766994d78",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -35922,7 +35922,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e0baaa378ceebc7c0fd74eb75effc3c4dfc023d80f386656aa4531dbdfcaade3",
+      "pixel_sha256": "ca430a8f5cae27953f8eadaa4cbaf10b3064e7f6cf5cc6b27d1c593f8cf40b1a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -35944,7 +35944,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a712c7fee693f5beff3711ec94357a2620bf51a9d6956933b4b69ca0cfe48935",
+      "pixel_sha256": "6c95fcd52dbe7ca15298f03b5146bf4274959964251bab62e7950bf0e954033a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -35966,7 +35966,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6cd7978a5121f8b121ce05db1f2c99be83a1828bafc710e6c5703a910a82f537",
+      "pixel_sha256": "777a07b8093fdc845f6d24e68aae3c338d1b30a534b07ac86421bae273d0d1b2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -35988,7 +35988,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4e794701b9c9a9a6b86924e9bfd25524c3afd34f67d7c4c8a7aa5e309baf17b3",
+      "pixel_sha256": "cc8819194b93d2e8985c88981d0848576b27248f3ec9e8e4384a9a015d38ebd8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36010,7 +36010,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5053ecab555ac842981594f5cb192c90aa116b1ebee476005dc921d5c263b5d4",
+      "pixel_sha256": "dca9adf65d1a07e2bfdcf73c4944834ae12aac16a8028da4cfa0438234c4b35e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36032,7 +36032,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5707504e6b6e28a92ae0fb2032a2e5af7678d76443547332ce4b5a6b271ef256",
+      "pixel_sha256": "b81b3524eb2cbe880454510ba5a8c1327c1c00e0d2ce912c0fe430541011d6d1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36054,7 +36054,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0aab3631418800089d7c1ce7e059c62f243d4b4bcddfda47b981e853a1e84251",
+      "pixel_sha256": "a60dd7167204cf161c93ff8339be09b7568ebd019757075e803d5d01cd205721",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36070,13 +36070,13 @@
       "role": "bottom",
       "seed": 10389864239954620240,
       "backend": "procedural",
-      "seam_blend_width": 0,
+      "seam_blend_width": 1,
       "reference_mode": "qa-only",
       "resolution": [
         16,
         16
       ],
-      "pixel_sha256": "e58cebdc7da89d496e6dfac1af23b4ad7e43bc317b103427178ced7507c0c75d",
+      "pixel_sha256": "9b53c612b5e6eb5622ca8c70b7b5e7a392e2a108531b28a07ba7ade9b2a3cbd9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36098,7 +36098,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7b668ed64d72fa24db54bd6efb5366ded658fe1bfeb418fa305de4452cb487a6",
+      "pixel_sha256": "9562b662d65ac79dbd7eac0997809a112ee7b51ea3a509d42c1456c2b33ed728",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36120,7 +36120,7 @@
         16,
         16
       ],
-      "pixel_sha256": "bd382deb4b54e32862799602c245cc39bb9614f640fa6f0bd8204cb0e28d673e",
+      "pixel_sha256": "6d34e5d9b4cd548f02de6ffc853cb516008b2b86e76087d8f0173704feea458d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36142,7 +36142,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8ea2baabd22ead67b81c57a94ec5371afde05c2f868f7d9d2d8e6161ddb22d13",
+      "pixel_sha256": "e6e376640d08a996feff473c97938900683061f70229db58aa29bd5847a2599f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36164,7 +36164,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a65f3dc35815629ad6ad99486f30727f147be75c9c107d8369a336555ef0555b",
+      "pixel_sha256": "5cb7a081dadd6914fb2fc609fd93e8e6c12e66c0a8e2bcbadb4a29ed3ff92205",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36186,7 +36186,7 @@
         16,
         16
       ],
-      "pixel_sha256": "af8776b295554cf3469efa22b5bca031043a072c2e0ee66848d0c62830336e5f",
+      "pixel_sha256": "62f246edac0eed8148c85f78db27bace6eb32420bd18dbaef41ed0ca1d7f71c1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36208,7 +36208,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a8f340e50fa50f5e468efeb49e49cf9068deaf5189614b01d4fc191849504508",
+      "pixel_sha256": "c9ae4f3bfb72d3ada6be39ffa8a8e1a8c63e7c929a60e4e4d4049910aeb5deda",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36230,7 +36230,7 @@
         16,
         16
       ],
-      "pixel_sha256": "aa73f5703d7d773a4d3b8322b15540d9e1e8ccca8c79b68993fc5a709aa29264",
+      "pixel_sha256": "74f0ebd28e72981a2a8d201b3ea978d9b4fbddfe5e34c3294bbbfd0eb52c14b1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36252,7 +36252,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c81b2c01c02b0bb66993f0ecbb6654017743089474416a0bdd53bab920c785a8",
+      "pixel_sha256": "662741fba6e844452f2ee5f50cbeef6021d2f9c1f84ed7ae9d73fbe38f53e4b7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36274,7 +36274,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f014ae0b3c9472a0fa5e0bcb72b42fa4259cdea90a5f36e2a5fc9e60ad6873b0",
+      "pixel_sha256": "8352669638ff04a35bd50a746b16dd26761841d7ddf31d2b130503fda98ce561",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36296,7 +36296,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d7820028028bf2e3b0049400ecf5c5ecde147bee53f09cfc9bc29e535c7863c7",
+      "pixel_sha256": "f3acc6c8e6983e28f4302ed86453926467b6c780abd3f6d3a7afb43a4137ba2b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36318,7 +36318,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f51b572683babc740f7dd10356dbe2984ef86fb9eb9f8686302184ac3db4415b",
+      "pixel_sha256": "9286956b1414b9124b06fbe935dd734c4c4d066c561a966550065f7183743585",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36340,7 +36340,7 @@
         16,
         16
       ],
-      "pixel_sha256": "899556c1898653c18f7c1289f79051e02ac5022867cdd734f807ad79df189611",
+      "pixel_sha256": "75c49c34c0c9e759eff5a7ec25ad949eb9f84781a47b98dc0785e9ea8a923f48",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36362,7 +36362,7 @@
         16,
         16
       ],
-      "pixel_sha256": "cd691de61fd793e090f274f7a133c26c1d357bd76e8b46027ce6064c3dc765c5",
+      "pixel_sha256": "94399f33b3f6071623a2373b4c58f5f1c03c40f7d657db2bcd16fe2d21443092",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36384,7 +36384,7 @@
         16,
         16
       ],
-      "pixel_sha256": "602aedfd3f18ab368df652462a8ed1a0e7d14f1a514504b8a2179d61c4d3aa22",
+      "pixel_sha256": "79c696a3a1b3b92ca4ae05e817125085e5883020b40fad3cefe91cdb921dc909",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36406,7 +36406,7 @@
         16,
         16
       ],
-      "pixel_sha256": "513793db6e298755cd434d12a0422e47a8989f81a885148adf94434275f962ef",
+      "pixel_sha256": "181202620c0932c6bbac70a02d8cd0ac627a6bc9a4d16c20ee146acd52789d50",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36428,7 +36428,7 @@
         16,
         16
       ],
-      "pixel_sha256": "12104b567b6dd2061ee2eeedec06235713fce19eacffbafa47c818c07d1366dc",
+      "pixel_sha256": "5de121860071a6faa3a954ab20f6816d955e688c7dfc1d9a500987d8f50594cf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36450,7 +36450,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0277c8cc7aad82fe210b5780ea00713b2261b357a9dcab1171618a7f78ea1b8b",
+      "pixel_sha256": "f4ab53fec917baca59b35e83bd605f031117ace4e870d5c813af3b6dd8dd995d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36472,7 +36472,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3a6728ce878f9d835a57bb1648ef475c305e8e7b692542f93227b273091ffb33",
+      "pixel_sha256": "135061d9debcc04318882de8a5041749e321d5f27de1ceb56f1e5888809d210a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36494,7 +36494,7 @@
         16,
         16
       ],
-      "pixel_sha256": "500218a2f5b5ebd25a5e7f4cb21fba03426c7e844fb7a9da3b30ce49ee183c27",
+      "pixel_sha256": "9eab05bea3b504e75749d5e06286c8b848dbb3969e7ed93fe25b2b52315e379f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36516,7 +36516,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f724ee2890de25083f75a6e94467032fe7ad7b18ea4a75389d5fef1da79faed7",
+      "pixel_sha256": "d40e4d7348aec15d1982042b65f6dc2335c83eaaf2e0c7d54583cf4e9207f082",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36538,7 +36538,7 @@
         16,
         16
       ],
-      "pixel_sha256": "23364418fd308d454e1a0d5feb6532ad9b0e927771dc99962b5b8881d9d8f4b2",
+      "pixel_sha256": "e581a3f8f49f13b4838acfe9296f5429766f0932dfc7ceb9e7fda7705be465c7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36560,7 +36560,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d7542d43c707e444f168ac9d8396f8f2a820c755eeba333f9688a977907d9c7d",
+      "pixel_sha256": "ed7b163b913eab1e2c2d92818aa97e4864d6407b9c31141fadcada09311ee76d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -47454,7 +47454,7 @@
       "role": "decor_sprite",
       "seed": 4559872461014656811,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -47960,7 +47960,7 @@
       "role": "decor_sprite",
       "seed": 13695167852165676845,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -47986,7 +47986,7 @@
       "role": "decor_sprite",
       "seed": 7961790612250959605,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -48060,7 +48060,7 @@
       "role": "decor_sprite",
       "seed": 15726362971797371838,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -48422,7 +48422,7 @@
       "role": "decor_sprite",
       "seed": 2728453752430620034,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -48448,7 +48448,7 @@
       "role": "decor_sprite",
       "seed": 11793421252685365118,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -48474,7 +48474,7 @@
       "role": "decor_sprite",
       "seed": 17270892445305664228,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -48500,7 +48500,7 @@
       "role": "decor_sprite",
       "seed": 13412198500795382436,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -49244,7 +49244,7 @@
       "role": "decor_sprite",
       "seed": 3150902186098778555,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -49321,7 +49321,7 @@
       "role": "decor_sprite",
       "seed": 17726637536526781862,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -49419,7 +49419,7 @@
       "role": "decor_sprite",
       "seed": 18037386035953470554,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -49472,7 +49472,7 @@
       "role": "decor_sprite",
       "seed": 3808588992710767072,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -49624,7 +49624,7 @@
       "role": "decor_sprite",
       "seed": 8148509173641444519,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -49701,7 +49701,7 @@
       "role": "decor_sprite",
       "seed": 2905382861896165254,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -50117,7 +50117,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e56d2488cf5ecefc6152c3c804403b26fd8c1b4d8504cd37f082eb9ca8608421",
+      "pixel_sha256": "8ca09b7aa6e2cee2509232fb02ba158adef01264dae011c985423e5b832f6934",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_desert_sand_default_desert_sand",
@@ -50855,7 +50855,7 @@
       "role": "decor_sprite",
       "seed": 12070850781404211920,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -50881,7 +50881,7 @@
       "role": "decor_sprite",
       "seed": 9119735266146110038,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -50907,7 +50907,7 @@
       "role": "decor_sprite",
       "seed": 16721670007337138369,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -50933,7 +50933,7 @@
       "role": "decor_sprite",
       "seed": 10516948560291127020,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -51031,7 +51031,7 @@
       "role": "decor_sprite",
       "seed": 9248653111412101405,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -51105,7 +51105,7 @@
       "role": "decor_sprite",
       "seed": 8853017836299265651,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -51158,7 +51158,7 @@
       "role": "decor_sprite",
       "seed": 5522596270247105874,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -51304,7 +51304,7 @@
       "role": "decor_sprite",
       "seed": 13204861778044859630,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -51381,7 +51381,7 @@
       "role": "decor_sprite",
       "seed": 1519750411537765675,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -51599,7 +51599,7 @@
       "role": "decor_sprite",
       "seed": 6247486970953160413,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -51820,7 +51820,7 @@
       "role": "decor_sprite",
       "seed": 13924950003571374707,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -51897,7 +51897,7 @@
       "role": "decor_sprite",
       "seed": 17108515861715897264,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -52025,7 +52025,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1cd282021bdf05a1054494b7cdfb08084e478a0fac1b8183fc555d7bee371377",
+      "pixel_sha256": "8ed47c268855ea95b7f5d893d9c4630185fb3e50f4b86c2527ae7ac6ca4f627b",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_sand_default_sand",
@@ -52049,7 +52049,7 @@
         16,
         16
       ],
-      "pixel_sha256": "42236c347ba120aba3c4c2a93c9a63b5fd5f3d97d3efbb61b0bac3969eea4e19",
+      "pixel_sha256": "a8fbcefeef24f028368eabde4c26d7a0eb91d00b08ef95e5819baf7988b96951",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_sand_with_kelp_default_sand",
@@ -52139,7 +52139,7 @@
       "role": "decor_sprite",
       "seed": 5696105394602330265,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -52171,7 +52171,7 @@
         16,
         16
       ],
-      "pixel_sha256": "372aa241e0d3d8e253925f3c7fce504eec2bc90e0070c47320eaf1c9ff4ac1d2",
+      "pixel_sha256": "d41dd54622bba882f1a69fb480715e71832bf38fa077eb3a7de3bcd56c5bd60e",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_silver_sand_default_silver_sand",
@@ -52693,7 +52693,7 @@
       "role": "decor_sprite",
       "seed": 6410810547566326086,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -52719,7 +52719,7 @@
       "role": "decor_sprite",
       "seed": 16426089450381559362,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -52889,7 +52889,7 @@
       "role": "decor_sprite",
       "seed": 3416421938495982017,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53179,7 +53179,7 @@
       "role": "decor_sprite",
       "seed": 12008121182522014564,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53565,7 +53565,7 @@
       "role": "decor_sprite",
       "seed": 2420894185316725757,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53591,7 +53591,7 @@
       "role": "decor_sprite",
       "seed": 6992954291074856351,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53615,7 +53615,7 @@
       "role": "decor_sprite",
       "seed": 3857414789139743173,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53641,7 +53641,7 @@
       "role": "decor_sprite",
       "seed": 15258898344113795595,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53673,7 +53673,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6a05170770f7e3b0c852687a37ea693b3221be37cdcdd87193074589cb9765a7",
+      "pixel_sha256": "5509c0e4c887902883d963d7ca920e9432cd5d1435a0b5f318f971d7e29c5f21",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "sand",
@@ -53763,7 +53763,7 @@
       "role": "decor_sprite",
       "seed": 1507348574103247785,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53789,7 +53789,7 @@
       "role": "decor_sprite",
       "seed": 5163935005810564143,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53815,7 +53815,7 @@
       "role": "decor_sprite",
       "seed": 15236193843526604992,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -53841,7 +53841,7 @@
       "role": "decor_sprite",
       "seed": 10186159866761163281,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -54179,7 +54179,7 @@
       "role": "decor_sprite",
       "seed": 1391902316232650656,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -54229,7 +54229,7 @@
       "role": "decor_sprite",
       "seed": 8784198606369296640,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -54399,7 +54399,7 @@
       "role": "decor_sprite",
       "seed": 16591226711006293968,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
@@ -54450,7 +54450,7 @@
       "role": "decor_sprite",
       "seed": 11347538951685418081,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
