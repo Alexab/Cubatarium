@@ -21,7 +21,8 @@
     "mt_mtg_pine_bush_needles_default_pine_needles"
   ],
   "render": {
-    "style": "cutout"
+    "style": "cutout",
+    "texture_variation": 0.48
   },
   "physics": {
     "movement": {

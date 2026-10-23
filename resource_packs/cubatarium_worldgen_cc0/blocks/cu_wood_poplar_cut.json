@@ -18,10 +18,12 @@
     "cu_wood_poplar_cut",
     "cu_wood_poplar_cut",
     "cu_wood_poplar_cut",
-    "cu_wood_poplar_cut",
-    "cu_wood_poplar_cut"
+    "cu_wood_poplar_cut_endgrain",
+    "cu_wood_poplar_cut_endgrain"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "wood",
     "material": "poplar",

@@ -20,7 +20,9 @@
     "mt_mtg_gravel_default_gravel",
     "mt_mtg_gravel_default_gravel"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "license": "CC0-1.0",
   "provenance": {
     "source_pack": "minetest_default_16",

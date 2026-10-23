@@ -20,7 +20,9 @@
     "mt_lightgem",
     "mt_lightgem"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "displayName": "Glowstone",
   "lighting": {
     "emission": 15

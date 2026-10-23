@@ -21,7 +21,9 @@
     "cu_fabric_violet_checked",
     "cu_fabric_violet_checked"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "fabric",
     "material": "violet",

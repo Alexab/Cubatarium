@@ -21,7 +21,9 @@
     "cu_fabric_teal_flecked",
     "cu_fabric_teal_flecked"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "fabric",
     "material": "teal",

@@ -18,11 +18,13 @@
     "cu_organic_fern_young",
     "cu_organic_fern_young",
     "cu_organic_fern_young",
-    "cu_organic_fern_young",
+    "cu_organic_fern_young_top",
     "cu_organic_fern_young"
   ],
   "render": {
+    "texture_variation": 0.0,
     "style": "cross",
+    "shape": "tuft",
     "double_sided": true
   },
   "assetgen": {

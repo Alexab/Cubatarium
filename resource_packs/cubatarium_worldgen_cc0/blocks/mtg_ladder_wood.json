@@ -19,7 +19,9 @@
     "mt_mtg_ladder_wood_default_ladder_wood",
     "mt_mtg_ladder_wood_default_ladder_wood"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "license": "CC0-1.0",
   "provenance": {
     "source_pack": "minetest_default_16",

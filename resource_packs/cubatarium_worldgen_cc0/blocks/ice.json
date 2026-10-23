@@ -22,7 +22,8 @@
   ],
   "displayName": "Ice",
   "render": {
-    "transparent": true
+    "transparent": true,
+    "texture_variation": 0.48
   },
   "license": "CC0-1.0",
   "provenance": {

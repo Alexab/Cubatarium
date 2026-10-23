@@ -18,10 +18,12 @@
     "cu_organic_lichen_young",
     "cu_organic_lichen_young",
     "cu_organic_lichen_young",
-    "cu_organic_lichen_young",
+    "cu_organic_lichen_young_top",
     "cu_organic_lichen_young"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "organic",
     "material": "lichen",

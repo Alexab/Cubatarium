@@ -22,7 +22,8 @@
     "mt_leaves_spruce"
   ],
   "render": {
-    "style": "cutout"
+    "style": "cutout",
+    "texture_variation": 0.48
   },
   "displayName": "Spruce Leaves",
   "physics": {

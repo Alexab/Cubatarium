@@ -18,10 +18,12 @@
     "cu_organic_lichen_spotted",
     "cu_organic_lichen_spotted",
     "cu_organic_lichen_spotted",
-    "cu_organic_lichen_spotted",
+    "cu_organic_lichen_spotted_top",
     "cu_organic_lichen_spotted"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "organic",
     "material": "lichen",

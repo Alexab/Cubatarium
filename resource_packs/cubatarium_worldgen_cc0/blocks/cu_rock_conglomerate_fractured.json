@@ -21,7 +21,9 @@
     "cu_rock_conglomerate_fractured",
     "cu_rock_conglomerate_fractured"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "rock",
     "material": "conglomerate",

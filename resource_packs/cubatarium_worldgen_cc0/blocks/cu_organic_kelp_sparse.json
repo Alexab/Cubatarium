@@ -21,7 +21,12 @@
     "cu_organic_kelp_sparse",
     "cu_organic_kelp_sparse"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.0,
+    "style": "cross",
+    "shape": "reed",
+    "double_sided": true
+  },
   "assetgen": {
     "family": "organic",
     "material": "kelp",

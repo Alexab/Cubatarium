@@ -18,10 +18,12 @@
     "cu_organic_leaf_spotted",
     "cu_organic_leaf_spotted",
     "cu_organic_leaf_spotted",
-    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted_top",
     "cu_organic_leaf_spotted"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "organic",
     "material": "leaf",

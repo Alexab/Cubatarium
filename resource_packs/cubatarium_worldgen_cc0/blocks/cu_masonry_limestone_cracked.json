@@ -21,7 +21,9 @@
     "cu_masonry_limestone_cracked",
     "cu_masonry_limestone_cracked"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "masonry",
     "material": "limestone",

@@ -21,7 +21,8 @@
     "mt_mtg_bush_leaves_default_leaves_simple"
   ],
   "render": {
-    "style": "cutout"
+    "style": "cutout",
+    "texture_variation": 0.48
   },
   "physics": {
     "movement": {

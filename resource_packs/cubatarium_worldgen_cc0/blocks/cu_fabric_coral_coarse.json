@@ -21,7 +21,9 @@
     "cu_fabric_coral_coarse",
     "cu_fabric_coral_coarse"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "fabric",
     "material": "coral",

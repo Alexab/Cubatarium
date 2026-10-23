@@ -20,7 +20,9 @@
     "mt_redstonelight_lit",
     "mt_redstonelight_lit"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "displayName": "Redstone Lamp",
   "lighting": {
     "emission": 15

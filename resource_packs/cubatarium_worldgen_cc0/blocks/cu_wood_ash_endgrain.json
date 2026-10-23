@@ -18,10 +18,12 @@
     "cu_wood_ash_endgrain",
     "cu_wood_ash_endgrain",
     "cu_wood_ash_endgrain",
-    "cu_wood_ash_endgrain",
-    "cu_wood_ash_endgrain"
+    "cu_wood_ash_endgrain_endgrain",
+    "cu_wood_ash_endgrain_endgrain"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "wood",
     "material": "ash",

@@ -18,10 +18,12 @@
     "cu_soil_red_earth_coarse",
     "cu_soil_red_earth_coarse",
     "cu_soil_red_earth_coarse",
-    "cu_soil_red_earth_coarse",
-    "cu_soil_red_earth_coarse"
+    "cu_soil_red_earth_coarse_top",
+    "cu_soil_red_earth_coarse_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "soil",
     "material": "red_earth",

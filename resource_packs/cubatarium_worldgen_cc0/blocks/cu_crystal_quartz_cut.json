@@ -21,7 +21,9 @@
     "cu_crystal_quartz_cut",
     "cu_crystal_quartz_cut"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "crystal",
     "material": "quartz",

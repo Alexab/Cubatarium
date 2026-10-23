@@ -22,7 +22,9 @@
     "mt_dirt"
   ],
   "displayName": "Grass Block",
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "license": "CC0-1.0",
   "provenance": {
     "source_pack": "minetest_default_16",

@@ -25,7 +25,8 @@
   },
   "render": {
     "transparent": true,
-    "style": "fluid"
+    "style": "fluid",
+    "texture_variation": 0.0
   },
   "animation": {
     "frame_count": 4,

@@ -21,7 +21,12 @@
     "cu_organic_kelp_dry",
     "cu_organic_kelp_dry"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.0,
+    "style": "cross",
+    "shape": "reed",
+    "double_sided": true
+  },
   "assetgen": {
     "family": "organic",
     "material": "kelp",

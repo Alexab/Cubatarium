@@ -3,17 +3,17 @@
     {
       "stem": "mt_anvil_base",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     },
     {
       "stem": "mt_anvil_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -21,12 +21,12 @@
     {
       "stem": "mt_bedrock",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -34,12 +34,12 @@
     {
       "stem": "mt_blockdiamond",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -47,12 +47,12 @@
     {
       "stem": "mt_blockemerald",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -60,12 +60,12 @@
     {
       "stem": "mt_blockgold",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -73,12 +73,12 @@
     {
       "stem": "mt_blockiron",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -86,12 +86,12 @@
     {
       "stem": "mt_blocklapis",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -99,12 +99,12 @@
     {
       "stem": "mt_blockredstone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -112,12 +112,12 @@
     {
       "stem": "mt_bookshelf",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -125,22 +125,22 @@
     {
       "stem": "mt_brewingstand",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_brewingstand_base",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_wood",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     }
   ],
@@ -148,12 +148,12 @@
     {
       "stem": "mt_mushroom_brown",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -161,12 +161,12 @@
     {
       "stem": "mt_mushroom_skin_brown",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -174,22 +174,22 @@
     {
       "stem": "mt_cactus_bottom",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_cactus_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_cactus_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -197,22 +197,22 @@
     {
       "stem": "mt_cake_bottom",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_cake_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_cake_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -220,12 +220,12 @@
     {
       "stem": "mt_carrots_3",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -233,22 +233,22 @@
     {
       "stem": "mt_cauldron_bottom",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_cauldron_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_cauldron_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -256,12 +256,12 @@
     {
       "stem": "mt_clay",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -269,12 +269,12 @@
     {
       "stem": "mt_cocoa_2",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -282,22 +282,22 @@
     {
       "stem": "mt_workbench_front",
       "faces": [
-        "top"
+        "front"
       ]
     },
     {
       "stem": "mt_workbench_side",
       "faces": [
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     },
     {
       "stem": "mt_workbench_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -305,17 +305,17 @@
     {
       "stem": "mt_daylightdetector_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     },
     {
       "stem": "mt_daylightdetector_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -323,12 +323,12 @@
     {
       "stem": "mt_deadbush",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -336,12 +336,12 @@
     {
       "stem": "mt_dirt",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -349,22 +349,22 @@
     {
       "stem": "mt_dispenser_front",
       "faces": [
-        "top"
+        "front"
       ]
     },
     {
       "stem": "mt_furnace_side",
       "faces": [
-        "bottom",
-        "north",
-        "south"
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_furnace_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -372,22 +372,22 @@
     {
       "stem": "mt_dropper_front",
       "faces": [
-        "top"
+        "front"
       ]
     },
     {
       "stem": "mt_furnace_side",
       "faces": [
-        "bottom",
-        "north",
-        "south"
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_furnace_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -395,22 +395,22 @@
     {
       "stem": "mt_enchantment_bottom",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_enchantment_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_enchantment_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -418,17 +418,17 @@
     {
       "stem": "mt_endframe_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     },
     {
       "stem": "mt_endframe_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -436,17 +436,17 @@
     {
       "stem": "mt_endframe_eye",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_endframe_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     }
   ],
@@ -454,17 +454,17 @@
     {
       "stem": "mt_dirt",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     },
     {
       "stem": "mt_farmland_dry",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -472,17 +472,17 @@
     {
       "stem": "mt_dirt",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     },
     {
       "stem": "mt_farmland_wet",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -490,12 +490,12 @@
     {
       "stem": "mt_fern",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -503,12 +503,12 @@
     {
       "stem": "mt_fire_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -516,12 +516,12 @@
     {
       "stem": "mt_flower",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -529,22 +529,22 @@
     {
       "stem": "mt_furnace_front",
       "faces": [
-        "top"
+        "front"
       ]
     },
     {
       "stem": "mt_furnace_side",
       "faces": [
-        "bottom",
-        "north",
-        "south"
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_furnace_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -552,22 +552,22 @@
     {
       "stem": "mt_furnace_front_lit",
       "faces": [
-        "top"
+        "front"
       ]
     },
     {
       "stem": "mt_furnace_side",
       "faces": [
-        "bottom",
-        "north",
-        "south"
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_furnace_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -575,12 +575,12 @@
     {
       "stem": "mt_glass",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -588,12 +588,12 @@
     {
       "stem": "mt_lightgem",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -601,22 +601,22 @@
     {
       "stem": "mt_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_grass_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_grass_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -624,12 +624,12 @@
     {
       "stem": "mt_gravel",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -637,12 +637,12 @@
     {
       "stem": "mt_hellrock",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -650,12 +650,12 @@
     {
       "stem": "mt_hellsand",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -663,22 +663,22 @@
     {
       "stem": "mt_hopper",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_hopper_inside",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_hopper_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -686,12 +686,12 @@
     {
       "stem": "mt_ice",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -699,12 +699,12 @@
     {
       "stem": "mt_fenceiron",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -712,12 +712,12 @@
     {
       "stem": "mt_itemframe_back",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -725,22 +725,22 @@
     {
       "stem": "mt_pumpkin_jack",
       "faces": [
-        "bottom",
-        "south"
+        "right",
+        "left"
       ]
     },
     {
       "stem": "mt_pumpkin_side",
       "faces": [
-        "top",
-        "north",
-        "east"
+        "front",
+        "back",
+        "bottom"
       ]
     },
     {
       "stem": "mt_pumpkin_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -748,17 +748,17 @@
     {
       "stem": "mt_jukebox_top",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_wood",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     }
   ],
@@ -766,12 +766,12 @@
     {
       "stem": "mt_ladder",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -779,12 +779,12 @@
     {
       "stem": "mt_lava",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -792,12 +792,12 @@
     {
       "stem": "mt_leaves_jungle_opaque",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -805,12 +805,12 @@
     {
       "stem": "mt_leaves_jungle",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -818,12 +818,12 @@
     {
       "stem": "mt_leaves_spruce_opaque",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -831,12 +831,12 @@
     {
       "stem": "mt_leaves_spruce",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -844,12 +844,12 @@
     {
       "stem": "mt_leaves",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -857,12 +857,12 @@
     {
       "stem": "mt_lever",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -870,12 +870,12 @@
     {
       "stem": "mt_waterlily",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -883,17 +883,17 @@
     {
       "stem": "mt_tree_birch",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_wood_birch",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -901,17 +901,17 @@
     {
       "stem": "mt_tree_jungle",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_wood_jungle",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -919,17 +919,17 @@
     {
       "stem": "mt_tree_spruce",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_wood_spruce",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -937,17 +937,17 @@
     {
       "stem": "mt_melon_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     },
     {
       "stem": "mt_melon_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -955,12 +955,12 @@
     {
       "stem": "mt_stem_straight",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -968,12 +968,12 @@
     {
       "stem": "mt_mtg_acacia_bush_leaves_default_acacia_leaves_simple",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -981,12 +981,12 @@
     {
       "stem": "mt_mtg_acacia_bush_sapling_default_acacia_bush_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -994,12 +994,12 @@
     {
       "stem": "mt_mtg_acacia_bush_stem_default_acacia_bush_stem",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1007,12 +1007,12 @@
     {
       "stem": "mt_mtg_acacia_leaves_default_acacia_leaves",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1020,12 +1020,12 @@
     {
       "stem": "mt_mtg_acacia_sapling_default_acacia_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1033,17 +1033,17 @@
     {
       "stem": "mt_mtg_acacia_tree_default_acacia_tree",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_acacia_tree_default_acacia_tree_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -1051,12 +1051,12 @@
     {
       "stem": "mt_mtg_acacia_wood_default_acacia_wood",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1064,12 +1064,12 @@
     {
       "stem": "mt_mtg_apple_default_apple",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1077,12 +1077,12 @@
     {
       "stem": "mt_mtg_aspen_leaves_default_aspen_leaves",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1090,12 +1090,12 @@
     {
       "stem": "mt_mtg_aspen_sapling_default_aspen_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1103,17 +1103,17 @@
     {
       "stem": "mt_mtg_aspen_tree_default_aspen_tree",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_aspen_tree_default_aspen_tree_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -1121,12 +1121,12 @@
     {
       "stem": "mt_mtg_aspen_wood_default_aspen_wood",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1134,12 +1134,12 @@
     {
       "stem": "mt_mtg_blueberry_bush_leaves_default_blueberry_bush_leaves",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1147,12 +1147,12 @@
     {
       "stem": "mt_mtg_blueberry_bush_leaves_with_berries_composite_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1160,12 +1160,12 @@
     {
       "stem": "mt_mtg_blueberry_bush_sapling_default_blueberry_bush_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1173,12 +1173,12 @@
     {
       "stem": "mt_mtg_bronzeblock_default_bronze_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1186,12 +1186,12 @@
     {
       "stem": "mt_mtg_bush_leaves_default_leaves_simple",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1199,12 +1199,12 @@
     {
       "stem": "mt_mtg_bush_sapling_default_bush_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1212,12 +1212,12 @@
     {
       "stem": "mt_mtg_bush_stem_default_bush_stem",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1225,17 +1225,17 @@
     {
       "stem": "mt_mtg_cactus_default_cactus_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_cactus_default_cactus_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -1243,12 +1243,12 @@
     {
       "stem": "mt_mtg_cave_ice_default_ice",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1256,12 +1256,12 @@
     {
       "stem": "mt_mtg_clay_default_clay",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1269,12 +1269,12 @@
     {
       "stem": "mt_mtg_cloud_default_cloud",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1282,12 +1282,12 @@
     {
       "stem": "mt_mtg_coalblock_default_coal_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1295,12 +1295,12 @@
     {
       "stem": "mt_mtg_cobble_default_cobble",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1308,12 +1308,12 @@
     {
       "stem": "mt_mtg_copperblock_default_copper_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1321,12 +1321,12 @@
     {
       "stem": "mt_mtg_coral_brown_default_coral_brown",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1334,12 +1334,12 @@
     {
       "stem": "mt_mtg_coral_cyan_default_coral_skeleton",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1347,12 +1347,12 @@
     {
       "stem": "mt_mtg_coral_green_default_coral_skeleton",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1360,12 +1360,12 @@
     {
       "stem": "mt_mtg_coral_orange_default_coral_orange",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1373,12 +1373,12 @@
     {
       "stem": "mt_mtg_coral_pink_default_coral_skeleton",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1386,12 +1386,12 @@
     {
       "stem": "mt_mtg_coral_skeleton_default_coral_skeleton",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1399,12 +1399,12 @@
     {
       "stem": "mt_mtg_desert_cobble_default_desert_cobble",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1412,12 +1412,12 @@
     {
       "stem": "mt_mtg_desert_sand_default_desert_sand",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1425,12 +1425,12 @@
     {
       "stem": "mt_mtg_desert_sandstone_default_desert_sandstone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1438,12 +1438,12 @@
     {
       "stem": "mt_mtg_desert_sandstone_block_default_desert_sandstone_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1451,12 +1451,12 @@
     {
       "stem": "mt_mtg_desert_sandstone_brick_default_desert_sandstone_brick",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1464,12 +1464,12 @@
     {
       "stem": "mt_mtg_desert_stone_default_desert_stone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1477,12 +1477,12 @@
     {
       "stem": "mt_mtg_desert_stone_block_default_desert_stone_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1490,12 +1490,12 @@
     {
       "stem": "mt_mtg_desert_stonebrick_default_desert_stone_brick",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1503,12 +1503,12 @@
     {
       "stem": "mt_mtg_diamondblock_default_diamond_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1516,12 +1516,12 @@
     {
       "stem": "mt_mtg_dirt_default_dirt",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1529,22 +1529,22 @@
     {
       "stem": "mt_mtg_dirt_with_coniferous_litter_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_coniferous_litter_default_coniferous_litter",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_coniferous_litter_default_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1552,22 +1552,22 @@
     {
       "stem": "mt_mtg_dirt_with_dry_grass_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_dry_grass_default_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_dry_grass_default_dry_grass",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -1575,22 +1575,22 @@
     {
       "stem": "mt_mtg_dirt_with_grass_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_grass_default_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_grass_default_grass",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -1598,22 +1598,22 @@
     {
       "stem": "mt_mtg_dirt_with_grass_footsteps_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_grass_footsteps_composite_1",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_grass_footsteps_default_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1621,22 +1621,22 @@
     {
       "stem": "mt_mtg_dirt_with_rainforest_litter_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_rainforest_litter_default_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_rainforest_litter_default_rainforest_litter",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -1644,22 +1644,22 @@
     {
       "stem": "mt_mtg_dirt_with_snow_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_snow_default_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_mtg_dirt_with_snow_default_snow",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -1667,12 +1667,12 @@
     {
       "stem": "mt_mtg_dry_dirt_default_dry_dirt",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1680,22 +1680,22 @@
     {
       "stem": "mt_mtg_dry_dirt_with_dry_grass_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_dry_dirt_with_dry_grass_default_dry_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_mtg_dry_dirt_with_dry_grass_default_dry_grass",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -1703,12 +1703,12 @@
     {
       "stem": "mt_mtg_dry_grass_1_default_dry_grass_1",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1716,12 +1716,12 @@
     {
       "stem": "mt_mtg_dry_shrub_default_dry_shrub",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1729,12 +1729,12 @@
     {
       "stem": "mt_mtg_emergent_jungle_sapling_default_emergent_jungle_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1742,12 +1742,12 @@
     {
       "stem": "mt_mtg_fern_1_default_fern_1",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1755,17 +1755,17 @@
     {
       "stem": "mt_mtg_glass_default_glass",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_mtg_glass_default_glass_detail",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     }
   ],
@@ -1773,12 +1773,12 @@
     {
       "stem": "mt_mtg_goldblock_default_gold_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1786,12 +1786,12 @@
     {
       "stem": "mt_mtg_grass_1_default_grass_1",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1799,12 +1799,12 @@
     {
       "stem": "mt_mtg_gravel_default_gravel",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1812,12 +1812,12 @@
     {
       "stem": "mt_mtg_ice_default_ice",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1825,12 +1825,12 @@
     {
       "stem": "mt_mtg_junglegrass_default_junglegrass",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1838,12 +1838,12 @@
     {
       "stem": "mt_mtg_jungleleaves_default_jungleleaves",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1851,12 +1851,12 @@
     {
       "stem": "mt_mtg_junglesapling_default_junglesapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1864,17 +1864,17 @@
     {
       "stem": "mt_mtg_jungletree_default_jungletree",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_jungletree_default_jungletree_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -1882,12 +1882,12 @@
     {
       "stem": "mt_mtg_junglewood_default_junglewood",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1895,12 +1895,12 @@
     {
       "stem": "mt_mtg_ladder_steel_default_ladder_steel",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1908,12 +1908,12 @@
     {
       "stem": "mt_mtg_ladder_wood_default_ladder_wood",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1921,12 +1921,12 @@
     {
       "stem": "mt_mtg_large_cactus_seedling_default_large_cactus_seedling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1934,12 +1934,12 @@
     {
       "stem": "mt_mtg_lava_flowing_default_lava",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1947,12 +1947,12 @@
     {
       "stem": "mt_mtg_leaves_default_leaves",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1960,12 +1960,12 @@
     {
       "stem": "mt_mtg_marram_grass_1_default_marram_grass_1",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1973,12 +1973,12 @@
     {
       "stem": "mt_mtg_mese_default_mese_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1986,12 +1986,12 @@
     {
       "stem": "mt_mtg_meselamp_default_meselamp",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -1999,12 +1999,12 @@
     {
       "stem": "mt_mtg_mossycobble_default_mossycobble",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2012,12 +2012,12 @@
     {
       "stem": "mt_mtg_obsidian_default_obsidian",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2025,12 +2025,12 @@
     {
       "stem": "mt_mtg_obsidian_block_default_obsidian_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2038,17 +2038,17 @@
     {
       "stem": "mt_mtg_obsidian_glass_default_obsidian_glass",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_mtg_obsidian_glass_default_obsidian_glass_detail",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     }
   ],
@@ -2056,12 +2056,12 @@
     {
       "stem": "mt_mtg_obsidianbrick_default_obsidian_brick",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2069,12 +2069,12 @@
     {
       "stem": "mt_mtg_papyrus_default_papyrus",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2082,12 +2082,12 @@
     {
       "stem": "mt_mtg_permafrost_default_permafrost",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2095,22 +2095,22 @@
     {
       "stem": "mt_mtg_permafrost_with_moss_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_permafrost_with_moss_default_moss",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_mtg_permafrost_with_moss_default_permafrost",
       "faces": [
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2118,22 +2118,22 @@
     {
       "stem": "mt_mtg_permafrost_with_stones_composite_0",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_permafrost_with_stones_composite_1",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "mt_mtg_permafrost_with_stones_default_permafrost",
       "faces": [
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2141,12 +2141,12 @@
     {
       "stem": "mt_mtg_pine_bush_needles_default_pine_needles",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2154,12 +2154,12 @@
     {
       "stem": "mt_mtg_pine_bush_sapling_default_pine_bush_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2167,12 +2167,12 @@
     {
       "stem": "mt_mtg_pine_bush_stem_default_pine_bush_stem",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2180,12 +2180,12 @@
     {
       "stem": "mt_mtg_pine_needles_default_pine_needles",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2193,12 +2193,12 @@
     {
       "stem": "mt_mtg_pine_sapling_default_pine_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2206,17 +2206,17 @@
     {
       "stem": "mt_mtg_pine_tree_default_pine_tree",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_pine_tree_default_pine_tree_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -2224,12 +2224,12 @@
     {
       "stem": "mt_mtg_pine_wood_default_pine_wood",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2237,12 +2237,12 @@
     {
       "stem": "mt_mtg_river_water_flowing_default_river_water",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2250,12 +2250,12 @@
     {
       "stem": "mt_mtg_sand_default_sand",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2263,12 +2263,12 @@
     {
       "stem": "mt_mtg_sand_with_kelp_default_sand",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2276,12 +2276,12 @@
     {
       "stem": "mt_mtg_sandstone_default_sandstone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2289,12 +2289,12 @@
     {
       "stem": "mt_mtg_sandstone_block_default_sandstone_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2302,12 +2302,12 @@
     {
       "stem": "mt_mtg_sandstonebrick_default_sandstone_brick",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2315,12 +2315,12 @@
     {
       "stem": "mt_mtg_sapling_default_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2328,12 +2328,12 @@
     {
       "stem": "mt_mtg_silver_sand_default_silver_sand",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2341,12 +2341,12 @@
     {
       "stem": "mt_mtg_silver_sandstone_default_silver_sandstone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2354,12 +2354,12 @@
     {
       "stem": "mt_mtg_silver_sandstone_block_default_silver_sandstone_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2367,12 +2367,12 @@
     {
       "stem": "mt_mtg_silver_sandstone_brick_default_silver_sandstone_brick",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2380,12 +2380,12 @@
     {
       "stem": "mt_mtg_snow_default_snow",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2393,12 +2393,12 @@
     {
       "stem": "mt_mtg_snowblock_default_snow",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2406,12 +2406,12 @@
     {
       "stem": "mt_mtg_steelblock_default_steel_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2419,12 +2419,12 @@
     {
       "stem": "mt_mtg_stone_default_stone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2432,12 +2432,12 @@
     {
       "stem": "mt_mtg_stone_block_default_stone_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2445,12 +2445,12 @@
     {
       "stem": "mt_mtg_stone_with_coal_composite_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2458,12 +2458,12 @@
     {
       "stem": "mt_mtg_stone_with_copper_composite_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2471,12 +2471,12 @@
     {
       "stem": "mt_mtg_stone_with_diamond_composite_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2484,12 +2484,12 @@
     {
       "stem": "mt_mtg_stone_with_gold_composite_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2497,12 +2497,12 @@
     {
       "stem": "mt_mtg_stone_with_iron_composite_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2510,12 +2510,12 @@
     {
       "stem": "mt_mtg_stone_with_mese_composite_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2523,12 +2523,12 @@
     {
       "stem": "mt_mtg_stone_with_tin_composite_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2536,12 +2536,12 @@
     {
       "stem": "mt_mtg_stonebrick_default_stone_brick",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2549,12 +2549,12 @@
     {
       "stem": "mt_mtg_tinblock_default_tin_block",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2562,17 +2562,17 @@
     {
       "stem": "mt_mtg_tree_default_tree",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mtg_tree_default_tree_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -2580,12 +2580,12 @@
     {
       "stem": "mt_mtg_water_flowing_default_water",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2593,12 +2593,12 @@
     {
       "stem": "mt_mtg_wood_default_wood",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2606,12 +2606,12 @@
     {
       "stem": "mt_mushroom_skin_stem",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2619,22 +2619,22 @@
     {
       "stem": "mt_dirt",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_mycel_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_mycel_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -2642,12 +2642,12 @@
     {
       "stem": "mt_netherbrick",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2655,12 +2655,12 @@
     {
       "stem": "mt_netherstalk_2",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2668,12 +2668,12 @@
     {
       "stem": "mt_obsidian",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2681,12 +2681,12 @@
     {
       "stem": "mt_orecoal",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2694,12 +2694,12 @@
     {
       "stem": "mt_orediamond",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2707,12 +2707,12 @@
     {
       "stem": "mt_oreemerald",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2720,12 +2720,12 @@
     {
       "stem": "mt_oregold",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2733,12 +2733,12 @@
     {
       "stem": "mt_oreiron",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2746,12 +2746,12 @@
     {
       "stem": "mt_orelapis",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2759,12 +2759,12 @@
     {
       "stem": "mt_oreredstone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2772,22 +2772,22 @@
     {
       "stem": "mt_piston_bottom",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_piston_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_piston_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -2795,12 +2795,12 @@
     {
       "stem": "mt_wood_birch",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2808,12 +2808,12 @@
     {
       "stem": "mt_wood_jungle",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2821,12 +2821,12 @@
     {
       "stem": "mt_wood_spruce",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2834,12 +2834,12 @@
     {
       "stem": "mt_potatoes_3",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2847,12 +2847,12 @@
     {
       "stem": "mt_stem_bent",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2860,22 +2860,22 @@
     {
       "stem": "mt_quartzblock_bottom",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_quartzblock_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_quartzblock_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -2883,22 +2883,22 @@
     {
       "stem": "mt_quartzblock_bottom",
       "faces": [
-        "east"
+        "bottom"
       ]
     },
     {
       "stem": "mt_quartzblock_chiseled",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_quartzblock_chiseled_top",
       "faces": [
-        "west"
+        "top"
       ]
     }
   ],
@@ -2906,17 +2906,17 @@
     {
       "stem": "mt_quartzblock_lines",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_quartzblock_lines_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -2924,12 +2924,12 @@
     {
       "stem": "mt_rail",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2937,12 +2937,12 @@
     {
       "stem": "mt_mushroom_red",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2950,12 +2950,12 @@
     {
       "stem": "mt_mushroom_skin_red",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2963,12 +2963,12 @@
     {
       "stem": "mt_redstonedust_cross",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2976,12 +2976,12 @@
     {
       "stem": "mt_redstonedust_line",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -2989,12 +2989,12 @@
     {
       "stem": "mt_redstonelight",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3002,12 +3002,12 @@
     {
       "stem": "mt_redstonelight_lit",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3015,12 +3015,12 @@
     {
       "stem": "mt_redtorch",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3028,12 +3028,12 @@
     {
       "stem": "mt_redtorch_lit",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3041,12 +3041,12 @@
     {
       "stem": "mt_reeds",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3054,12 +3054,12 @@
     {
       "stem": "mt_rose",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3067,12 +3067,12 @@
     {
       "stem": "mt_sand",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3080,12 +3080,12 @@
     {
       "stem": "mt_sandstone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3093,12 +3093,12 @@
     {
       "stem": "mt_sandstone_carved",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3106,12 +3106,12 @@
     {
       "stem": "mt_sandstone_smooth",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3119,12 +3119,12 @@
     {
       "stem": "mt_sapling_birch",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3132,12 +3132,12 @@
     {
       "stem": "mt_sapling_jungle",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3145,12 +3145,12 @@
     {
       "stem": "mt_sapling",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3158,12 +3158,12 @@
     {
       "stem": "mt_sapling_spruce",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3171,12 +3171,12 @@
     {
       "stem": "mt_snow",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3184,12 +3184,12 @@
     {
       "stem": "mt_snow_side",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3197,12 +3197,12 @@
     {
       "stem": "mt_sponge",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3210,12 +3210,12 @@
     {
       "stem": "mt_stone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3223,12 +3223,12 @@
     {
       "stem": "mt_stoneslab_side",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3236,12 +3236,12 @@
     {
       "stem": "mt_stoneslab_top",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3249,12 +3249,12 @@
     {
       "stem": "mt_stonebricksmooth",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3262,12 +3262,12 @@
     {
       "stem": "mt_stonebricksmooth_carved",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3275,12 +3275,12 @@
     {
       "stem": "mt_stonebricksmooth_cracked",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3288,12 +3288,12 @@
     {
       "stem": "mt_stonebricksmooth_mossy",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3301,12 +3301,12 @@
     {
       "stem": "mt_stonemoss",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3314,12 +3314,12 @@
     {
       "stem": "mt_tallgrass",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3327,12 +3327,12 @@
     {
       "stem": "mt_thinglass_top",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3340,12 +3340,12 @@
     {
       "stem": "mt_torch",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3353,12 +3353,12 @@
     {
       "stem": "mt_trapdoor",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3366,12 +3366,12 @@
     {
       "stem": "mt_tree_side",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3379,12 +3379,12 @@
     {
       "stem": "mt_tree_side",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3392,12 +3392,12 @@
     {
       "stem": "mt_leaves_opaque",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3405,17 +3405,17 @@
     {
       "stem": "mt_tree_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_tree_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -3423,12 +3423,12 @@
     {
       "stem": "mt_vine",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3436,12 +3436,12 @@
     {
       "stem": "mt_water",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3449,12 +3449,12 @@
     {
       "stem": "mt_crops_7",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3462,12 +3462,12 @@
     {
       "stem": "mt_whitestone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3475,17 +3475,17 @@
     {
       "stem": "mt_tree_side",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south"
+        "front",
+        "right",
+        "back",
+        "left"
       ]
     },
     {
       "stem": "mt_tree_top",
       "faces": [
-        "west",
-        "east"
+        "top",
+        "bottom"
       ]
     }
   ],
@@ -3493,12 +3493,12 @@
     {
       "stem": "mt_doorwood_lower",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3506,12 +3506,12 @@
     {
       "stem": "mt_doorwood_upper",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3519,12 +3519,12 @@
     {
       "stem": "mt_cloth_0",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3532,12 +3532,12 @@
     {
       "stem": "mt_cloth_1",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3545,12 +3545,12 @@
     {
       "stem": "mt_cloth_10",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3558,12 +3558,12 @@
     {
       "stem": "mt_cloth_11",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3571,12 +3571,12 @@
     {
       "stem": "mt_cloth_12",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3584,12 +3584,12 @@
     {
       "stem": "mt_cloth_13",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3597,12 +3597,12 @@
     {
       "stem": "mt_cloth_14",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3610,12 +3610,12 @@
     {
       "stem": "mt_cloth_15",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3623,12 +3623,12 @@
     {
       "stem": "mt_cloth_2",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3636,12 +3636,12 @@
     {
       "stem": "mt_cloth_3",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3649,12 +3649,12 @@
     {
       "stem": "mt_cloth_4",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3662,12 +3662,12 @@
     {
       "stem": "mt_cloth_5",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3675,12 +3675,12 @@
     {
       "stem": "mt_cloth_6",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3688,12 +3688,12 @@
     {
       "stem": "mt_cloth_7",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3701,12 +3701,12 @@
     {
       "stem": "mt_cloth_8",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3714,12 +3714,12 @@
     {
       "stem": "mt_cloth_9",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3727,12 +3727,12 @@
     {
       "stem": "geo_greystone_ruby",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3740,12 +3740,12 @@
     {
       "stem": "geo_stone_dirt",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3753,12 +3753,12 @@
     {
       "stem": "geo_greystone_ruby_alt",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3766,12 +3766,12 @@
     {
       "stem": "geo_greystone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3779,12 +3779,12 @@
     {
       "stem": "geo_greystone_sand",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3792,12 +3792,12 @@
     {
       "stem": "geo_stone_browniron",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3805,17 +3805,17 @@
     {
       "stem": "geo_grass_top",
       "faces": [
-        "west"
+        "top"
       ]
     },
     {
       "stem": "geo_greystone",
       "faces": [
-        "top",
-        "bottom",
-        "north",
-        "south",
-        "east"
+        "front",
+        "right",
+        "back",
+        "left",
+        "bottom"
       ]
     }
   ],
@@ -3823,12 +3823,12 @@
     {
       "stem": "geo_dirt_grass",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3836,12 +3836,12 @@
     {
       "stem": "geo_stone",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ],
@@ -3849,12 +3849,12 @@
     {
       "stem": "geo_greystone_sand",
       "faces": [
+        "front",
+        "right",
+        "back",
+        "left",
         "top",
-        "bottom",
-        "north",
-        "south",
-        "west",
-        "east"
+        "bottom"
       ]
     }
   ]

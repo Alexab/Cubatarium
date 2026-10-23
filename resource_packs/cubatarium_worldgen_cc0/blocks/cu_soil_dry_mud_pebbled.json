@@ -18,10 +18,12 @@
     "cu_soil_dry_mud_pebbled",
     "cu_soil_dry_mud_pebbled",
     "cu_soil_dry_mud_pebbled",
-    "cu_soil_dry_mud_pebbled",
-    "cu_soil_dry_mud_pebbled"
+    "cu_soil_dry_mud_pebbled_top",
+    "cu_soil_dry_mud_pebbled_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "soil",
     "material": "dry_mud",

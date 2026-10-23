@@ -21,7 +21,9 @@
     "cu_crystal_malachite_raw",
     "cu_crystal_malachite_raw"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "crystal",
     "material": "malachite",

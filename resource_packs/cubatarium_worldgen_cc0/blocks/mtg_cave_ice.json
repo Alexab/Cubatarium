@@ -21,7 +21,8 @@
     "mt_mtg_cave_ice_default_ice"
   ],
   "render": {
-    "transparent": true
+    "transparent": true,
+    "texture_variation": 0.48
   },
   "displayName": "Cave Ice",
   "license": "CC0-1.0",

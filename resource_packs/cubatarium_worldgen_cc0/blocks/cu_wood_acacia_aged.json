@@ -18,10 +18,12 @@
     "cu_wood_acacia_aged",
     "cu_wood_acacia_aged",
     "cu_wood_acacia_aged",
-    "cu_wood_acacia_aged",
-    "cu_wood_acacia_aged"
+    "cu_wood_acacia_aged_endgrain",
+    "cu_wood_acacia_aged_endgrain"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "wood",
     "material": "acacia",

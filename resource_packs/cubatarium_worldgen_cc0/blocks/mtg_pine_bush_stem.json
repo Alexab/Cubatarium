@@ -20,7 +20,8 @@
     "mt_mtg_pine_bush_stem_default_pine_bush_stem"
   ],
   "render": {
-    "style": "cutout"
+    "style": "cutout",
+    "texture_variation": 0.48
   },
   "physics": {
     "movement": {

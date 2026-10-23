@@ -18,10 +18,12 @@
     "cu_soil_peat_damp",
     "cu_soil_peat_damp",
     "cu_soil_peat_damp",
-    "cu_soil_peat_damp",
-    "cu_soil_peat_damp"
+    "cu_soil_peat_damp_top",
+    "cu_soil_peat_damp_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "soil",
     "material": "peat",

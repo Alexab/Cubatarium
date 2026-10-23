@@ -21,7 +21,9 @@
     "cu_ceramic_cream_speckled",
     "cu_ceramic_cream_speckled"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "ceramic",
     "material": "cream",

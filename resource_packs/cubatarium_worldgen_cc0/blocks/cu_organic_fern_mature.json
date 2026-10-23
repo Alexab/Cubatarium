@@ -18,11 +18,13 @@
     "cu_organic_fern_mature",
     "cu_organic_fern_mature",
     "cu_organic_fern_mature",
-    "cu_organic_fern_mature",
+    "cu_organic_fern_mature_top",
     "cu_organic_fern_mature"
   ],
   "render": {
+    "texture_variation": 0.0,
     "style": "cross",
+    "shape": "tuft",
     "double_sided": true
   },
   "assetgen": {

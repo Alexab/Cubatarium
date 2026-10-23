@@ -21,7 +21,9 @@
     "cu_metal_titanium_hammered",
     "cu_metal_titanium_hammered"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "metal",
     "material": "titanium",

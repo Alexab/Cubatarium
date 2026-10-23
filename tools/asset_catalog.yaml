@@ -1,10 +1,44 @@
-schema_version: 1
+schema_version: 2
 benchmark:
   minecraft_java_version: "26.3"
   block_definitions_minimum: 1286
   texture_files_minimum: 1405
   minetest_replacements: all
   resolution: 16
+profiles:
+  voxel16:
+    resolution: 16
+    palette_colors: 16
+    default: true
+  photo64:
+    resolution: 64
+    palette_colors: null
+    default: false
+face_recipes:
+  wood:
+    side: side
+    top: endgrain
+    bottom: endgrain
+    split: true
+  soil:
+    side: side
+    top: top
+    bottom: bottom
+    split: true
+  masonry:
+    split_variants: [brick, cobble, tiled]
+    side: side
+    top: top
+    bottom: bottom
+  organic:
+    split_materials: [moss, lichen, leaf, fern]
+    side: side
+    top: grass_top
+    bottom: side
+reference_calibration:
+  modes: [qa-only, aggregate-calibration]
+  features: [family_medians, per_texture_color_centroid, luminance_spread, neighbor_contrast, alpha_coverage]
+  minetest_pixels_may_enter_output: false
 families:
   rock:
     count: 220

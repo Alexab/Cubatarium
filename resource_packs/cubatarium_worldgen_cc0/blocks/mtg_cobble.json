@@ -19,7 +19,9 @@
     "mt_mtg_cobble_default_cobble",
     "mt_mtg_cobble_default_cobble"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "license": "CC0-1.0",
   "provenance": {
     "source_pack": "minetest_default_16",

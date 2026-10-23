@@ -18,10 +18,12 @@
     "cu_soil_red_earth_pebbled",
     "cu_soil_red_earth_pebbled",
     "cu_soil_red_earth_pebbled",
-    "cu_soil_red_earth_pebbled",
-    "cu_soil_red_earth_pebbled"
+    "cu_soil_red_earth_pebbled_top",
+    "cu_soil_red_earth_pebbled_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "soil",
     "material": "red_earth",

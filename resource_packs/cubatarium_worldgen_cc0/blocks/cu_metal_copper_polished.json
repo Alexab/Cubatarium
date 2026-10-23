@@ -21,7 +21,9 @@
     "cu_metal_copper_polished",
     "cu_metal_copper_polished"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "metal",
     "material": "copper",

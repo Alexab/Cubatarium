@@ -21,7 +21,9 @@
     "cu_crystal_jade_smoky",
     "cu_crystal_jade_smoky"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "crystal",
     "material": "jade",

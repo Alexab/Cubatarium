@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+from functools import lru_cache
 import hashlib
 import json
 import math
@@ -16,6 +17,7 @@ import os
 import random
 import re
 import shutil
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -29,7 +31,7 @@ except ImportError as exc:  # pragma: no cover - covered by CLI error path
     raise SystemExit("assetgen needs PyYAML; install requirements-assetgen.txt") from exc
 
 try:
-    from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageOps
+    from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageOps, ImageStat
 except ImportError as exc:  # pragma: no cover - covered by CLI error path
     raise SystemExit("assetgen needs Pillow; install requirements-assetgen.txt") from exc
 
@@ -37,6 +39,10 @@ except ImportError as exc:  # pragma: no cover - covered by CLI error path
 REPO = Path(__file__).resolve().parents[1]
 PACK_ID = "cubatarium_worldgen_cc0"
 PACK_DIR = REPO / "resource_packs" / PACK_ID
+DEFAULT_TEXTURE_SIZE = 16
+PHOTO64_PACK_ID = "cubatarium_worldgen_photo64_cc0"
+PHOTO64_PACK_DIR = REPO / "resource_packs" / PHOTO64_PACK_ID
+STAGING_DIR = REPO / "assetgen_output" / "staging"
 CATALOG_PATH = REPO / "tools" / "asset_catalog.yaml"
 MINECRAFT_REFERENCE = {
     "version": "26.3",
@@ -72,6 +78,7 @@ WORLDGEN_RULES = {
         ("asset_woodland_shrine", ["forest", "plains"], 7600, 1),
     ],
 }
+FACE_NAMES = ("front", "right", "back", "left", "top", "bottom")
 
 FAMILY_COLORS: dict[str, list[tuple[int, int, int]]] = {
     "rock": [(105, 108, 111), (134, 130, 122), (85, 96, 106), (145, 125, 107), (123, 109, 123), (102, 119, 99), (164, 157, 143)],
@@ -207,9 +214,10 @@ def write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+@lru_cache(maxsize=8)
 def load_catalog(path: Path = CATALOG_PATH) -> dict[str, Any]:
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if doc.get("schema_version") != 1:
+    if doc.get("schema_version") != 2:
         raise ValueError(f"unsupported asset catalog schema in {path}")
     return doc
 
@@ -255,93 +263,594 @@ def shade(color: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
     return tuple(max(0, min(255, int(channel * amount))) for channel in color)
 
 
-def generated_texture(family: str, material: str, variant: str, seed: int, size: int = 16) -> Image.Image:
-    """Make a tileable, opaque pixel-art albedo texture from material parameters."""
-    rng = random.Random(seed)
+def _wrapped_noise(seed: int, size: int) -> tuple[list[float], list[float], list[float]]:
+    """Multi-scale periodic noise; coordinates wrap at the tile boundary."""
+    return (
+        tile_noise(seed ^ 0x5A17, size, size, max(2, size // 8)),
+        tile_noise(seed ^ 0x1B83, size, size, max(2, size // 4)),
+        tile_noise(seed ^ 0xC2B2, size, size, max(2, size // 2)),
+    )
+
+
+def generated_texture(
+    family: str,
+    material: str,
+    variant: str,
+    seed: int,
+    size: int = DEFAULT_TEXTURE_SIZE,
+    role: str = "side",
+    calibration: dict[str, float] | None = None,
+) -> Image.Image:
+    """Generate a semantic, seamless albedo texture from material parameters."""
     colors = FAMILY_COLORS[family]
     base = MATERIAL_TINTS.get((family, material), colors[stable_seed(f"{family}:{material}") % len(colors)])
-    colors4 = [shade(base, factor) for factor in (0.63, 0.82, 1.0, 1.19)]
-    noise = tile_noise(seed ^ 0x5A17, size, size, 4)
+    if calibration and all(key in calibration for key in ("mean_rgb_r", "mean_rgb_g", "mean_rgb_b")):
+        # Only the family's aggregate color centroid is transferred; no source
+        # pixels or spatial samples participate in texture synthesis.
+        weight = max(0.0, min(0.75, calibration.get("color_weight", 0.12)))
+        base = tuple(round(base[i] * (1.0 - weight) + calibration[key] * weight) for i, key in enumerate(("mean_rgb_r", "mean_rgb_g", "mean_rgb_b")))
+    colors4 = [shade(base, factor) for factor in (0.58, 0.79, 1.0, 1.24)]
+    coarse, medium, fine = _wrapped_noise(seed, size)
     style = PATTERN_BY_FAMILY[family]
     pixels: list[tuple[int, int, int, int]] = []
     material_bias = (stable_seed(material) % 7) - 3
     variant_bias = stable_seed(variant) % 5
+    detail_scale = max(0.55, min(1.7, (calibration or {}).get("detail_scale", 1.0)))
+    contrast_scale = max(0.65, min(1.5, (calibration or {}).get("contrast_scale", 1.0)))
+    if any(word in variant for word in ("polished", "smooth", "glazed")):
+        detail_scale *= 0.68
+    elif any(word in variant for word in ("rough", "fractured", "cracked", "speckled", "weathered")):
+        detail_scale *= 1.28
+
     for y in range(size):
         for x in range(size):
-            n = noise[y * size + x]
-            value = n * 0.75 + (rng.random() - 0.5) * 0.34
+            i = y * size + x
+            value = (coarse[i] * 0.56 + medium[i] * 0.29 + fine[i] * 0.15) * detail_scale
+            # Family patterns describe recognizable structure, while noise only
+            # perturbs that structure instead of becoming the whole texture.
             if style == "wood":
-                wave = int(1.2 * math.sin((y + seed % 7) * math.tau / 8))
-                grain = (x + wave + material_bias) % 8
-                value += 0.28 if grain in (0, 1) else (-0.12 if grain == 2 else 0.02)
-                if variant in ("endgrain", "cut"):
-                    ring = int(math.sqrt(((x - 7.5) ** 2) * 0.8 + ((y - 7.5) ** 2) * 1.1)) % 5
-                    value += 0.17 if ring in (0, 1) else -0.03
+                if role in ("top", "bottom", "endgrain") or "endgrain" in variant:
+                    dx = min(x, size - x) / max(1, size / 2)
+                    dy = min(y, size - y) / max(1, size / 2)
+                    ring = int(math.sqrt(dx * dx * 0.75 + dy * dy) * max(3, size / 2)) % max(3, size // 5)
+                    value += 0.22 if ring in (0, 1) else -0.07
+                else:
+                    wave = 1.5 * math.sin((y + seed % max(3, size // 3)) * math.tau / max(4, size))
+                    grain = (x + round(wave) + material_bias) % max(3, size // 4)
+                    ridge = grain == 0
+                    groove = grain == max(1, size // 8)
+                    value += 0.27 if ridge else (-0.18 if groove else 0.0)
+                    if variant == "bark":
+                        bark_ridge = (x + round(wave * 1.8) + material_bias) % max(3, size // 5)
+                        value += 0.24 if bark_ridge == 0 else -0.08 if bark_ridge == 1 else 0.0
+                    elif variant in ("aged", "weathered"):
+                        value += -0.18 if fine[i] > 0.78 and medium[i] < 0.0 else 0.0
+                    elif variant == "carved":
+                        carve = (x + round(2.0 * math.sin(y * math.tau / size)) + material_bias) % max(3, size // 4)
+                        value += 0.25 if carve == 0 else -0.12 if carve == 1 else 0.0
             elif style == "brick":
-                row = y // 4
-                col = (x + (4 if row % 2 else 0)) % 8
-                value += -0.58 if col == 0 or y % 4 == 0 else 0.08
+                if variant == "brick" or material == "brick":
+                    unit = max(3, size // 4)
+                    row = y // unit
+                    col = (x + (unit if row % 2 else 0)) % (unit * 2)
+                    value += -0.62 if col == 0 or y % unit == 0 else 0.04
+                elif variant == "tiled":
+                    unit = max(3, size // 4)
+                    seam = x % unit == 0 or y % unit == 0
+                    value += -0.52 if seam else 0.06
+                elif variant == "cobble" or material == "cobble":
+                    unit = max(5, size // 2)
+                    row = y // unit
+                    local_x = (x + (unit // 2 if row % 2 else 0)) % unit
+                    seam = local_x == 0 or y % unit == 0 or coarse[i] < -0.72
+                    value += -0.53 if seam else 0.09
+                else:
+                    value += coarse[i] * 0.20 + medium[i] * 0.12
+                    if variant == "chiseled":
+                        radius = size * 0.23
+                        diamond = abs(abs(x - (size - 1) / 2) + abs(y - (size - 1) / 2) - radius)
+                        value += 0.42 if diamond < 1.15 else -0.12 if diamond < 2.0 else 0.0
+                    elif variant == "cracked":
+                        crack = (x + y + seed % max(3, size // 2)) % max(5, size // 2)
+                        value += -0.54 if crack == 0 and medium[i] > -0.45 else 0.0
+                    elif variant == "mossy" and coarse[i] > 0.48:
+                        value += 0.32
+                    elif variant == "weathered":
+                        value += -0.24 if fine[i] > 0.64 and coarse[i] < 0.0 else 0.0
+                if role == "top":
+                    value += 0.08
             elif style == "tile":
-                seam = x % 8 == 0 or y % 8 == 0
-                value += -0.53 if seam else 0.06
+                unit = max(3, size // 2)
+                seam = x % unit == 0 or y % unit == 0
+                value += -0.48 if seam else 0.05
                 if variant in ("mosaic", "patterned", "checked"):
-                    value += 0.2 if ((x // 4 + y // 4 + variant_bias) % 2) else -0.04
+                    value += 0.18 if ((x // max(1, size // 4) + y // max(1, size // 4) + variant_bias) % 2) else -0.03
             elif style == "weave":
-                thread = (x + y + variant_bias) % 4
-                value += 0.2 if thread in (0, 1) else -0.12
-                if x % 4 == 0 or y % 4 == 0:
-                    value -= 0.06
+                thread = (x + y + variant_bias) % max(3, size // 4)
+                value += 0.19 if thread < max(1, size // 8) else -0.09
             elif style == "metal":
-                value += 0.16 if (y + seed % 4) % 5 == 0 else 0.0
-                if (x in (1, 14) and y in (1, 14)):
-                    value -= 0.34
+                value += 0.17 if (y + seed % max(3, size // 5)) % max(3, size // 4) == 0 else -0.015
             elif style == "glass":
-                value += 0.23 if (x - y - variant_bias) % 11 in (0, 1) else -0.02
-                if variant in ("frosted", "bubbled", "rippled"):
-                    value += n * 0.28
+                value += 0.16 if (x - y - variant_bias) % max(5, size // 2) in (0, 1) else -0.02
             elif style == "crystal":
-                facet = (x + y + (x // 4) * 2 + variant_bias) % 9
-                value += 0.34 if facet in (0, 1, 2) else -0.11
-            elif style == "organic":
-                patch = math.sin((x + seed % 9) * math.tau / 8) * math.cos((y + seed % 5) * math.tau / 8)
-                value += patch * 0.22
-            elif style == "mottle":
-                value += n * 0.24
-            index = max(0, min(3, int(round(1.5 + value + (variant_bias - 2) * 0.04))))
-            rgb = colors4[index]
-            if style in ("rock", "grain", "mottle", "organic", "crystal") and rng.random() < 0.055:
-                rgb = colors4[max(0, min(3, index + (1 if rng.random() > 0.5 else -1)))]
+                facet = (x + y + (x // max(1, size // 4)) * 2 + variant_bias) % max(5, size // 2)
+                value += 0.3 if facet < max(2, size // 8) else -0.08
+            elif style in ("organic", "mottle"):
+                patch = math.sin((x + seed % max(3, size // 2)) * math.tau / max(4, size // 2)) * math.cos((y + seed % max(3, size // 3)) * math.tau / max(4, size // 2))
+                value += patch * (0.21 if style == "organic" else 0.12)
+                if style == "mottle":
+                    if variant == "layered":
+                        value += 0.25 * math.sin((y + seed % size) * math.tau / size)
+                    elif variant == "cracked":
+                        crack = (x * 3 + y * 5 + seed) % max(7, size)
+                        value += -0.48 if crack in (0, 1) and coarse[i] > -0.25 else 0.0
+                    elif variant in ("coarse", "pebbled"):
+                        value += 0.30 if fine[i] > 0.64 and medium[i] > 0.05 else 0.0
+                    elif variant == "rooted":
+                        root = abs(math.sin((x + 0.45 * y + seed % size) * math.tau / size))
+                        value += -0.36 if root < 0.12 and coarse[i] > -0.2 else 0.0
+                    if material == "wet_mud":
+                        value += 0.24 if medium[i] > 0.42 else -0.06
+            if style == "grain":
+                if material in ("granite", "diorite", "porphyry", "conglomerate", "pumice", "tuff"):
+                    fleck = fine[i] > (0.48 if material in ("granite", "diorite", "conglomerate") else 0.72)
+                    value += 0.34 if fleck else -0.08 if fine[i] < -0.78 else 0.0
+                elif material in ("sandstone", "slate", "schist", "gneiss", "shale", "travertine"):
+                    band = math.sin((y + seed % size + coarse[i] * 1.7) * math.tau / size)
+                    value += band * (0.30 if material in ("gneiss", "schist", "travertine") else 0.20)
+                elif material == "marble":
+                    vein = abs(math.sin((x + y + seed % size + coarse[i] * 2.5) * math.tau / size))
+                    value += 0.48 if vein < 0.16 else -0.12
+                elif material == "obsidian":
+                    glint = fine[i] > 0.88 and medium[i] > 0.12
+                    value += 0.56 if glint else -0.18
+                elif material == "basalt":
+                    value += -0.13 if fine[i] > 0.70 else 0.0
+                if variant in ("layered", "banded"):
+                    value += 0.28 * math.sin((y + seed % size) * math.tau / size)
+                elif variant in ("fractured", "cracked"):
+                    fracture = (x * 5 + y * 3 + seed) % max(7, size)
+                    value += -0.48 if fracture == 0 and medium[i] > -0.25 else 0.0
+                elif variant == "speckled":
+                    value += 0.40 if fine[i] > 0.52 else 0.0
+                elif variant == "polished":
+                    value *= 0.70
+
+            if role == "bottom":
+                value -= 0.13
+            elif role == "top":
+                value += 0.04
+            value *= contrast_scale
+            index = max(0, min(3, int(round(1.5 + value + (variant_bias - 2) * 0.035))))
+            # Use a periodic field for micro accents. Independent per-pixel
+            # random draws create discontinuities at the wrap boundary.
+            if abs(fine[i]) > 0.68 and style in ("grain", "mottle", "organic", "crystal"):
+                index = max(0, min(3, index + (1 if fine[i] > 0 else -1)))
+            if size >= 32:
+                # 64px material maps retain continuous color variation instead
+                # of the restricted palette used by the pixel-art profile.
+                factor = max(0.58, min(1.42, 1.0 + value * 0.22 + fine[i] * 0.03))
+                rgb = tuple(max(0, min(255, round(channel * factor))) for channel in base)
+                if style in ("grain", "mottle", "organic", "crystal") and fine[i] > 0.94 * detail_scale:
+                    rgb = shade(rgb, 1.12)
+                elif style in ("grain", "mottle", "organic", "crystal") and fine[i] < -0.94 * detail_scale:
+                    rgb = shade(rgb, 0.88)
+            else:
+                rgb = colors4[index]
             pixels.append((*rgb, 176 if style == "glass" else 255))
+
     image = Image.new("RGBA", (size, size))
     image.putdata(pixels)
+
+    # Grass/dirt is a layered material: a ragged vegetation edge sits above
+    # exposed soil on side faces. Its thickness is proportional to resolution.
+    if role in ("grass_side", "dry_grass_side", "snow_side", "litter_side"):
+        px = image.load()
+        palettes = {
+            "grass_side": ((82, 124, 45, 255), (112, 150, 59, 255)),
+            "dry_grass_side": ((139, 132, 67, 255), (174, 159, 83, 255)),
+            "snow_side": ((207, 218, 223, 255), (235, 240, 239, 255)),
+            "litter_side": ((91, 76, 50, 255), (123, 99, 57, 255)),
+        }
+        lower, upper = palettes[role]
+        edge_rng = random.Random(seed ^ 0xA53C)
+        base_depth = max(2, size // 8)
+        edge = [max(1, min(size // 3, base_depth + edge_rng.randint(-max(1, size // 32), max(1, size // 24)))) for _ in range(size)]
+        for x, depth in enumerate(edge):
+            for y in range(depth):
+                px[x, y] = upper if (x * 7 + y * 11 + seed) % max(3, size // 4) == 0 else lower
+    elif role in ("grass_top", "dry_grass_top", "snow_top", "litter_top"):
+        px = image.load()
+        for y in range(size):
+            for x in range(size):
+                i = y * size + x
+                if role == "grass_top":
+                    # Turf covers the full top face; never reduce it to an edge mask.
+                    green = max(92, min(171, 139 + round(coarse[i] * 11 + medium[i] * 9 + fine[i] * 7)))
+                    red = max(35, min(98, 66 + round(coarse[i] * 8 + fine[i] * 4)))
+                    blue = max(24, min(74, 39 + round(medium[i] * 7 - fine[i] * 3)))
+                    px[x, y] = (red, green, blue, 255)
+                elif role == "dry_grass_top":
+                    px[x, y] = (
+                        max(109, min(188, 151 + round(coarse[i] * 12 + fine[i] * 8))),
+                        max(112, min(183, 147 + round(medium[i] * 13 + coarse[i] * 7))),
+                        max(48, min(104, 69 + round(fine[i] * 9 - medium[i] * 4))),
+                        255,
+                    )
+                elif role == "snow_top":
+                    shade_value = round(coarse[i] * 9 + fine[i] * 4)
+                    px[x, y] = (max(196, 232 + shade_value), max(205, 239 + shade_value), max(207, 242 + shade_value), 255)
+                else:
+                    px[x, y] = (143, 108, 62, 255) if fine[i] > 0.57 or medium[i] > 0.48 else (96, 70, 45, 255)
+    elif role == "ore":
+        px = image.load()
+        ore_colors = MATERIAL_TINTS.get(("crystal", material), (185, 143, 73))
+        for y in range(size):
+            for x in range(size):
+                cluster = (x * 13 + y * 7 + seed) % max(5, size // 2)
+                if cluster == 0 and coarse[y * size + x] > -0.2:
+                    px[x, y] = (*ore_colors, 255)
     return image
 
 
-def periodize(image: Image.Image, size: int = 16, seam: int = 2) -> Image.Image:
-    """Resize a texture and make opposite border pixels meet without a seam."""
-    image = ImageOps.fit(image.convert("RGBA"), (size, size), method=Image.Resampling.LANCZOS)
-    alpha = image.getchannel("A")
-    rgb = image.convert("RGB").quantize(colors=16, method=Image.Quantize.MEDIANCUT).convert("RGB")
-    rgb.putalpha(alpha)
-    image = rgb
-    width, height = image.size
-    px = image.load()
-    for distance in range(seam):
-        left, right = distance, width - 1 - distance
-        for y in range(height):
+def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Image | None:
+    """Draw original voxel foliage/flame silhouettes with transparent margins."""
+    name = source_stem.lower()
+    fire = "fire" in name or "flame" in name
+    fern = "fern" in name or "junglegrass" in name
+    reed = any(token in name for token in ("reed", "papyrus", "kelp", "seagrass"))
+    flower = any(token in name for token in ("flower", "blossom", "rose", "tulip", "dandelion"))
+    coral = "coral" in name
+    mushroom = "mushroom" in name and "skin" not in name
+    deadbush = "deadbush" in name
+    grass = any(token in name for token in ("grass_1", "dry_grass", "tallgrass", "marram", "junglegrass"))
+    if not any((fire, fern, reed, flower, coral, mushroom, deadbush, grass)):
+        return None
+
+    rng = random.Random(seed)
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    s = size / 64.0
+
+    def xy(x: float, y: float) -> tuple[int, int]:
+        return (round(x * s), round(y * s))
+
+    def polygon(points: list[tuple[float, float]], color: tuple[int, int, int, int]) -> None:
+        draw.polygon([xy(x, y) for x, y in points], fill=color)
+
+    if fire:
+        # Layered tongues form a readable flame silhouette on both crossed
+        # planes; transparent outside the flames lets the ground remain visible.
+        for center, height, width in ((22, 48, 14), (34, 60, 18), (45, 44, 13)):
+            drift = rng.randint(-8, 8)
+            polygon([(center-width/2, 63), (center-width/2+2, 43),
+                     (center-3+drift, 33), (center+2+drift, 25),
+                     (center+width/2, 63)], (188, 55, 23, 255))
+            polygon([(center-width/2+3, 63), (center-width/2+4, 45),
+                     (center+drift, 37), (center+4+drift, 31),
+                     (center+width/2-3, 63)], (241, 128, 34, 255))
+            polygon([(center-4, 63), (center-4, 48), (center+drift, 42),
+                     (center+5, 63)], (255, 211, 85, 255))
+    elif mushroom:
+        caps = ((157, 71, 59, 255), (204, 178, 124, 255), (172, 136, 94, 255))
+        for center, cap_y in ((rng.randint(18, 28), rng.randint(27, 35)),
+                              (rng.randint(37, 48), rng.randint(34, 42))):
+            cap_color = caps[rng.randrange(len(caps))]
+            cap_width = rng.randint(8, 13)
+            draw.rectangle((*xy(center-3, cap_y+5), *xy(center+3, 63)), fill=(222, 209, 173, 255))
+            draw.ellipse((*xy(center-cap_width, cap_y), *xy(center+cap_width, cap_y+13)), fill=cap_color)
+            draw.arc((*xy(center-cap_width, cap_y), *xy(center+cap_width, cap_y+13)), 180, 360, fill=(239, 214, 162, 255), width=max(1, round(2*s)))
+            draw.point(xy(center-rng.randint(2, 6), cap_y+4), fill=(245, 233, 194, 255))
+    elif flower:
+        petal_color = (203, 74, 112, 255) if "red" in name or "rose" in name else (232, 198, 74, 255)
+        if "blue" in name:
+            petal_color = (93, 147, 207, 255)
+        stem_color = (52, 113, 54, 255)
+        for center, top in ((rng.randint(18, 25), rng.randint(17, 25)),
+                            (rng.randint(30, 37), rng.randint(9, 16)),
+                            (rng.randint(42, 49), rng.randint(18, 27))):
+            center += rng.randint(-5, 5)
+            petal = rng.randint(5, 8)
+            draw.line([xy(center, 63), xy(center + rng.randint(-8, 8), top+9)], fill=stem_color, width=max(2, round(4*s)))
+            draw.ellipse((*xy(center-petal, top), *xy(center+petal, top+13)), fill=petal_color)
+            draw.ellipse((*xy(center-3, top+4), *xy(center+3, top+10)), fill=(245, 207, 77, 255))
+            polygon([(center, 46), (center-rng.randint(8, 14), 40), (center-7, 46), (center, 50)], (61, 130, 57, 255))
+    elif coral:
+        coral_color = (196, 83, 99, 255) if seed % 2 else (226, 142, 89, 255)
+        colors = (coral_color, (232, 162, 111, 255), (157, 70, 92, 255))
+        base_x = rng.randint(27, 37)
+        draw.line([xy(base_x, 63), xy(base_x + rng.randint(-5, 5), 23)], fill=colors[0], width=max(3, round(8*s)))
+        for branch_y, end_y in ((48, rng.randint(27, 37)), (42, rng.randint(21, 32)),
+                                (34, rng.randint(13, 23)), (30, rng.randint(11, 20))):
+            end_x = base_x + rng.randint(-19, 19)
+            color = colors[rng.randrange(len(colors))]
+            draw.line([xy(base_x, branch_y), xy(end_x, end_y)], fill=color, width=max(2, round(5*s)))
+            draw.ellipse((*xy(end_x-3, end_y-3), *xy(end_x+3, end_y+3)), fill=color)
+    elif deadbush:
+        branch_colors = ((128, 103, 57, 255), (154, 123, 68, 255), (102, 91, 56, 255))
+        for angle in (0.15, 0.92, 1.87, 2.61, 3.48, 4.42, 5.31):
+            base_x = rng.randint(26, 38)
+            end_x = base_x + round(math.cos(angle) * rng.randint(11, 24))
+            end_y = rng.randint(10, 38)
+            color = branch_colors[rng.randrange(len(branch_colors))]
+            draw.line([xy(base_x, 63), xy(end_x, end_y)], fill=color, width=max(1, round(3*s)))
+            for thorn in (0.34, 0.62, 0.83):
+                tx = base_x + (end_x-base_x)*thorn
+                ty = 63 + (end_y-63)*thorn
+                side = rng.choice((-1, 1))
+                draw.line([xy(tx, ty), xy(tx + side*rng.randint(5, 10), ty-rng.randint(3, 8))], fill=color, width=max(1, round(2*s)))
+    elif reed:
+        stem = (104, 130, 50, 255) if "kelp" not in name else (45, 126, 95, 255)
+        leaf = (138, 163, 67, 255) if "kelp" not in name else (62, 151, 111, 255)
+        for center, height in ((19, rng.randint(39, 51)), (33, rng.randint(53, 63)), (47, rng.randint(45, 57))):
+            center += rng.randint(-5, 5)
+            draw.line([xy(center, 63), xy(center + rng.randint(-8, 8), 63-height)], fill=stem, width=max(2, round(4*s)))
+            for row in (0.35, 0.55, 0.74):
+                y = 63 - height*row
+                polygon([(center, y), (center-13, y-8), (center-5, y+2)], leaf)
+                polygon([(center, y+4), (center+12, y-5), (center+5, y+6)], leaf)
+    elif fern:
+        stem_color = (73, 117, 48, 255)
+        leaflet = (91, 151, 61, 255)
+        for base_x, lean in ((rng.randint(18, 27), rng.randint(-12, -3)),
+                             (rng.randint(37, 47), rng.randint(3, 12))):
+            draw.line([xy(base_x, 63), xy(base_x+lean, 9)], fill=stem_color, width=max(2, round(3*s)))
+            for i in range(7):
+                y = 56 - i*rng.randint(5, 7)
+                x = base_x + lean*(56-y)/54
+                width = max(4, rng.randint(10, 16) - i)
+                polygon([(x, y), (x-width, y-7), (x-width+3, y+1)], leaflet)
+                polygon([(x, y), (x+width, y-7), (x+width-3, y+1)], (79, 137, 55, 255))
+    else:
+        # A small, seed-varied tuft keeps individual plants distinct at 16px.
+        dry = "dry" in name or "marram" in name
+        colors = ((150, 133, 66, 255), (178, 158, 78, 255), (195, 174, 95, 255), (125, 116, 61, 255)) if dry else ((61, 126, 44, 255), (78, 151, 51, 255), (102, 164, 62, 255), (52, 111, 42, 255))
+        blades = []
+        for index in range(5):
+            center = 9 + index * 11 + rng.randint(-5, 5)
+            height = rng.randint(31, 57)
+            blades.append((center, center + rng.randint(-10, 10), height, rng.randint(6, 10), rng.randrange(len(colors))))
+        for center, tip_x, height, width, color_index in blades:
+            base_y = 63
+            side = width / 2
+            polygon([(center-side, base_y), (center-2, base_y-height*0.48),
+                     (tip_x, base_y-height), (center+2, base_y-height*0.72),
+                     (center+side, base_y)], colors[color_index])
+            vein = (184, 175, 91, 255) if dry else (130, 181, 77, 255)
+            draw.line([xy(center, base_y), xy(tip_x, base_y-height)], fill=vein, width=max(1, round(s)))
+    return image
+
+
+def is_decor_sprite_source(source_stem: str) -> bool:
+    name = source_stem.lower()
+    if any(token in name for token in (
+        "_composite", "_grass_side", "_grass_top", "mushroom_skin",
+        "mushroom_block", "flower_pot", "flowerpot",
+    )):
+        return False
+    return any(token in name for token in (
+        "fire", "flame", "fern", "grass_1", "dry_grass", "tallgrass",
+        "marram", "junglegrass", "flower", "rose", "tulip", "dandelion",
+        "blossom", "mushroom", "coral", "reeds", "papyrus", "kelp",
+        "seagrass", "deadbush",
+    ))
+
+
+def add_semantic_face_detail(image: Image.Image, source_stem: str, seed: int) -> Image.Image:
+    """Preserve recognizable functional motifs on block face textures."""
+    name = source_stem.lower()
+    if not any(token in name for token in (
+        "furnace_front", "dispenser_front", "dropper_front", "workbench",
+        "crafting_table", "bookshelf", "anvil", "chest",
+    )):
+        return image
+    image = image.convert("RGBA")
+    draw = ImageDraw.Draw(image)
+    size = image.width
+    s = size / 64.0
+    def point(x: float, y: float) -> tuple[int, int]:
+        return round(x * s), round(y * s)
+    def box(x0: int, y0: int, x1: int, y1: int) -> tuple[int, int, int, int]:
+        return tuple(round(v*s) for v in (x0, y0, x1, y1))
+    if "furnace_front" in name:
+        lit = "_lit" in name
+        draw.rectangle(box(10, 13, 53, 55), fill=(63, 62, 60, 255), outline=(181, 177, 164, 255), width=max(1, round(3*s)))
+        draw.line([point(13, 16), point(49, 16), point(49, 50)], fill=(224, 219, 201, 255), width=max(1, round(2*s)))
+        draw.rectangle(box(17, 21, 47, 47), fill=(20, 19, 18, 255), outline=(91, 87, 81, 255), width=max(1, round(2*s)))
+        draw.rectangle(box(23, 36, 41, 43), fill=(54, 43, 35, 255))
+        if lit:
+            draw.polygon([point(25, 42), point(28, 35), point(31, 29), point(34, 36), point(37, 42)], fill=(245, 119, 32, 255))
+            draw.polygon([point(28, 42), point(30, 37), point(32, 33), point(35, 42)], fill=(255, 194, 67, 255))
+    elif "dispenser_front" in name or "dropper_front" in name:
+        center = round(size/2)
+        radius = round(size*0.24)
+        draw.ellipse((center-radius-3, center-radius-3, center+radius+3, center+radius+3), fill=(55, 55, 53, 255), outline=(183, 177, 162, 255), width=max(1, round(3*s)))
+        draw.ellipse((center-radius, center-radius, center+radius, center+radius), fill=(29, 30, 29, 255), outline=(108, 105, 99, 255), width=max(1, round(2*s)))
+        draw.ellipse((center-round(3*s), center-round(3*s), center+round(3*s), center+round(3*s)), fill=(131, 129, 122, 255))
+    elif "workbench_top" in name:
+        draw.rectangle(box(6, 6, 57, 57), outline=(81, 53, 32, 255), width=max(1, round(3*s)))
+        for x in (22, 39):
+            draw.line([point(x, 9), point(x, 54)], fill=(86, 56, 33, 255), width=max(1, round(2*s)))
+        for y in (22, 39):
+            draw.line([point(9, y), point(54, y)], fill=(86, 56, 33, 255), width=max(1, round(2*s)))
+    elif "workbench" in name or "crafting_table" in name:
+        draw.rectangle(box(8, 13, 55, 52), fill=(121, 76, 43, 255), outline=(65, 44, 29, 255), width=max(1, round(3*s)))
+        draw.rectangle(box(14, 20, 49, 24), fill=(196, 150, 87, 255))
+        draw.rectangle(box(28, 29, 36, 49), fill=(89, 56, 34, 255))
+        draw.line([point(17, 31), point(25, 42)], fill=(207, 174, 112, 255), width=max(1, round(2*s)))
+        draw.line([point(25, 31), point(17, 42)], fill=(207, 174, 112, 255), width=max(1, round(2*s)))
+    elif "bookshelf" in name:
+        draw.rectangle(box(4, 5, 59, 58), fill=(104, 65, 38, 255), outline=(62, 39, 26, 255), width=max(1, round(4*s)))
+        palette = ((156, 54, 46, 255), (56, 104, 136, 255), (203, 157, 58, 255), (73, 121, 70, 255), (126, 76, 147, 255))
+        for row, y in enumerate((9, 32)):
+            x = 9
+            while x < 55:
+                width = 5 + ((x*7 + seed + row*3) % 6)
+                draw.rectangle(box(x, y, min(55, x+width), y+18), fill=palette[(x+row+seed) % len(palette)], outline=(53, 43, 34, 255), width=max(1, round(s)))
+                draw.line([point(x+2, y+3), point(x+2, y+14)], fill=(230, 209, 156, 255), width=max(1, round(s)))
+                x += width + 1
+    elif "anvil" in name:
+        if "top" in name:
+            draw.rectangle(box(5, 7, 58, 56), fill=(105, 112, 116, 255), outline=(54, 59, 62, 255), width=max(1, round(3*s)))
+            draw.line([point(12, 16), point(50, 16)], fill=(174, 180, 181, 255), width=max(1, round(2*s)))
+        else:
+            draw.rectangle(box(11, 9, 52, 18), fill=(115, 121, 125, 255), outline=(54, 59, 62, 255), width=max(1, round(2*s)))
+            draw.polygon([point(19, 19), point(44, 19), point(39, 43), point(26, 43)], fill=(91, 98, 102, 255))
+            draw.rectangle(box(15, 44, 48, 53), fill=(65, 70, 73, 255), outline=(151, 157, 159, 255), width=max(1, round(2*s)))
+    elif "chest" in name:
+        front = "front" in name
+        draw.rectangle(box(7, 12, 56, 53), fill=(143, 91, 48, 255), outline=(66, 43, 28, 255), width=max(1, round(3*s)))
+        draw.rectangle(box(9, 16, 54, 24), fill=(183, 125, 67, 255))
+        draw.line([point(9, 27), point(54, 27)], fill=(80, 51, 31, 255), width=max(1, round(3*s)))
+        draw.rectangle(box(27, 23, 37, 34), fill=(196, 153, 68, 255) if front else (103, 68, 39, 255), outline=(66, 43, 28, 255), width=max(1, round(2*s)))
+    return image
+
+
+def periodize(image: Image.Image, size: int = 16, seam: int = 0, palette: int | None = None) -> Image.Image:
+    """Resize and, when needed, blend a narrow wrapped seam at the tile center."""
+    image = image.convert("RGBA")
+    method = Image.Resampling.NEAREST if size <= 16 else Image.Resampling.LANCZOS
+    if image.size != (size, size):
+        image = ImageOps.fit(image, (size, size), method=method)
+    if palette:
+        alpha = image.getchannel("A")
+        rgb = image.convert("RGB").quantize(colors=palette, method=Image.Quantize.MEDIANCUT).convert("RGB")
+        rgb.putalpha(alpha)
+        image = rgb
+    if seam <= 0:
+        return image
+
+    # Move the original borders to the middle, soften only the cut there, and
+    # shift back. This avoids flattening a permanent border band of every tile.
+    shifted = ImageChops.offset(image, size // 2, size // 2)
+    px = shifted.load()
+    cx = size // 2
+    cy = size // 2
+    radius = min(seam, max(1, size // 8))
+    for y in range(size):
+        for d in range(radius):
+            left, right = max(0, cx - 1 - d), min(size - 1, cx + d)
             a, b = px[left, y], px[right, y]
-            avg = tuple(round((a[c] + b[c]) / 2) for c in range(4))
-            px[left, y] = px[right, y] = avg
-        top, bottom = distance, height - 1 - distance
-        for x in range(width):
+            mix = tuple(round((a[k] + b[k]) / 2) for k in range(4))
+            blend = min(1.0, d / radius)
+            px[left, y] = tuple(round(mix[k] * (1-blend) + a[k] * blend) for k in range(4))
+            px[right, y] = tuple(round(mix[k] * (1-blend) + b[k] * blend) for k in range(4))
+    for x in range(size):
+        for d in range(radius):
+            top, bottom = max(0, cy - 1 - d), min(size - 1, cy + d)
             a, b = px[x, top], px[x, bottom]
-            avg = tuple(round((a[c] + b[c]) / 2) for c in range(4))
-            px[x, top] = px[x, bottom] = avg
-    return image
+            mix = tuple(round((a[k] + b[k]) / 2) for k in range(4))
+            blend = min(1.0, d / radius)
+            px[x, top] = tuple(round(mix[k] * (1-blend) + a[k] * blend) for k in range(4))
+            px[x, bottom] = tuple(round(mix[k] * (1-blend) + b[k] * blend) for k in range(4))
+    result = ImageChops.offset(shifted, size // 2, size // 2)
+    if palette:
+        alpha = result.getchannel("A")
+        rgb = result.convert("RGB").quantize(colors=palette, method=Image.Quantize.MEDIANCUT).convert("RGB")
+        rgb.putalpha(alpha)
+        result = rgb
+    return result
 
 
 def image_pixel_hash(image: Image.Image) -> str:
     return hashlib.sha256(image.convert("RGBA").tobytes()).hexdigest()
+
+
+def texture_statistics(image: Image.Image) -> dict[str, float]:
+    """Return coarse, non-reconstructive traits for aggregate calibration."""
+    rgba = image.convert("RGBA")
+    rgb = rgba.convert("RGB")
+    stat = ImageStat.Stat(rgb)
+    px = rgb.load()
+    width, height = rgb.size
+    neighbor_delta = 0.0
+    for y in range(height):
+        for x in range(width):
+            a = px[x, y]
+            b = px[(x + 1) % width, y]
+            c = px[x, (y + 1) % height]
+            neighbor_delta += sum(abs(a[i] - b[i]) + abs(a[i] - c[i]) for i in range(3)) / 6.0
+    neighbor_delta /= max(1, width * height)
+    alpha = rgba.getchannel("A")
+    return {
+        "mean_rgb_r": float(stat.mean[0]),
+        "mean_rgb_g": float(stat.mean[1]),
+        "mean_rgb_b": float(stat.mean[2]),
+        "luminance_std": float(stat.stddev[0] * 0.2126 + stat.stddev[1] * 0.7152 + stat.stddev[2] * 0.0722),
+        "neighbor_contrast": neighbor_delta,
+        "alpha_coverage": sum(1 for value in alpha.getdata() if value >= 128) / max(1, width * height),
+    }
+
+
+def derive_reference_calibration(reference_pack: Path) -> dict[str, Any]:
+    """Aggregate image traits by family; never returns or stores source pixels."""
+    texture_dir = reference_pack / "textures" / "blocks"
+    if not texture_dir.is_dir():
+        raise ValueError(f"reference pack has no textures/blocks directory: {reference_pack}")
+    families: dict[str, list[dict[str, float]]] = defaultdict(list)
+    source_textures: dict[str, dict[str, float]] = {}
+    source_hashes: dict[str, str] = {}
+    for path in sorted(texture_dir.glob("*.png")):
+        family = infer_family(path.stem)
+        with Image.open(path) as image:
+            stats = texture_statistics(image)
+        families[family].append(stats)
+        source_textures[path.stem] = stats
+        source_hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not families:
+        raise ValueError(f"reference pack has no PNG textures: {reference_pack}")
+    summary: dict[str, dict[str, float]] = {}
+    for family, samples in sorted(families.items()):
+        keys = samples[0].keys()
+        values = {key: statistics.median(sample[key] for sample in samples) for key in keys}
+        # Calibration consists only of broad numeric summaries. It cannot
+        # reconstruct an original tile or extract its patches.
+        contrast = values["neighbor_contrast"]
+        luminance = values["luminance_std"]
+        values["detail_scale"] = max(0.65, min(1.45, contrast / 22.0))
+        values["contrast_scale"] = max(0.7, min(1.35, luminance / 48.0))
+        summary[family] = values
+    license_path = reference_pack / "pack.json"
+    source_license = "UNKNOWN"
+    if license_path.is_file():
+        try:
+            source_license = json.loads(license_path.read_text(encoding="utf-8-sig")).get("license", "UNKNOWN")
+        except (OSError, json.JSONDecodeError):
+            pass
+    return {
+        "schema_version": 1,
+        "mode": "aggregate-calibration",
+        "source_pack": reference_pack.name,
+        "source_license": source_license,
+        "source_file_count": len(source_hashes),
+        "source_files_sha256": source_hashes,
+        "source_textures": source_textures,
+        "source_pixels_used_as_output": False,
+        "families": summary,
+    }
+
+
+def calibration_for_family(calibration: dict[str, Any] | None, family: str) -> dict[str, float] | None:
+    if not calibration:
+        return None
+    values = calibration.get("families", {}).get(family)
+    if not isinstance(values, dict):
+        return None
+    return {key: float(value) for key, value in values.items() if isinstance(value, (int, float))}
+
+
+def calibration_for_texture(
+    calibration: dict[str, Any] | None, source_stem: str, family: str,
+) -> dict[str, float] | None:
+    """Combine family calibration with pixel-free stats for one named source tile."""
+    values = calibration_for_family(calibration, family) or {}
+    texture_stats = (calibration or {}).get("source_textures", {}).get(source_stem)
+    if isinstance(texture_stats, dict):
+        values.update({key: float(value) for key, value in texture_stats.items() if isinstance(value, (int, float))})
+        values["detail_scale"] = max(0.65, min(1.45, values["neighbor_contrast"] / 22.0))
+        values["contrast_scale"] = max(0.7, min(1.35, values["luminance_std"] / 48.0))
+        values["color_weight"] = 0.58
+    return values or None
 
 
 def save_texture_if_changed(image: Image.Image, path: Path) -> None:
@@ -426,6 +935,8 @@ def infer_family(stem: str) -> str:
     value = stem.lower()
     if "default_grass" in value:
         return "organic"
+    if any(token in value for token in ("dirt_with_dry_grass", "litter")):
+        return "soil"
     if any(token in value for token in ("grass_side", "dirt_with_grass", "grass_with_dirt")):
         return "soil"
     if any(token in value for token in ("lava", "fire", "torch", "glowstone", "glow_")):
@@ -545,15 +1056,104 @@ def material_variant(stem: str, family: str) -> tuple[str, str]:
     return selected, variant
 
 
-def make_replacement_texture(source_stem: str, target_stem: str, family: str, kind: str, output_dir: Path, hashes: set[str], frame_count: int = 1) -> dict[str, Any]:
+def source_texture_role(source_stem: str, family: str) -> str:
+    value = source_stem.lower()
+    if value.endswith("default_dry_grass") or value.endswith("default_dry_grass_top"):
+        return "dry_grass_top"
+    if value.endswith("default_coniferous_litter") or value.endswith("default_rainforest_litter") or value.endswith("litter_top"):
+        return "litter_top"
+    if value.endswith("default_snow") or value in ("snow", "snow_top"):
+        return "snow_top"
+    if value.endswith("default_grass") or value == "default_grass" or value.endswith("grass_top"):
+        return "grass_top"
+    if any(token in value for token in ("dirt_with_snow", "snow_side", "snow_composite")):
+        return "snow_side"
+    if any(token in value for token in ("dirt_with_dry_grass", "dry_grass_side")):
+        return "dry_grass_side"
+    if any(token in value for token in ("coniferous_litter_composite", "rainforest_litter_composite")):
+        return "litter_side"
+    if any(token in value for token in ("dirt_with_grass", "grass_side", "grass_with_dirt", "grass_composite")):
+        return "grass_side"
+    if is_decor_sprite_source(source_stem):
+        return "decor_sprite"
+    if any(token in value for token in ("ore", "stone_with_", "mineral")):
+        return "ore"
+    if family == "wood" and any(token in value for token in ("top", "end", "tree_end")):
+        return "endgrain"
+    if family == "soil" and any(token in value for token in ("snow", "grass_top")):
+        return "top"
+    return "side"
+
+
+def block_face_textures(record: dict[str, str], base_stem: str) -> tuple[list[str], list[tuple[str, str]]]:
+    """Map material semantics to the renderer's 0..3 sides, 4 top, 5 bottom."""
+    family = record["family"]
+    material = record["material"]
+    variant = record["variant"]
+    recipe = load_catalog().get("face_recipes", {}).get(family, {})
+    split = bool(recipe.get("split"))
+    split = split or variant in recipe.get("split_variants", [])
+    split = split or material in recipe.get("split_materials", [])
+    if split:
+        derived: list[tuple[str, str]] = []
+        face_stems = [base_stem] * 4
+        for index, face in ((4, "top"), (5, "bottom")):
+            role = recipe.get(face, face)
+            if family == "organic" and role == "grass_top" and material != "moss":
+                role = "top"
+            if role == "side":
+                face_stems.append(base_stem)
+                continue
+            suffix = "endgrain" if role == "endgrain" else face
+            stem = f"{base_stem}_{suffix}"
+            face_stems.append(stem)
+            derived.append((stem, role))
+        return face_stems, derived
+    return [base_stem] * 6, []
+
+
+def make_replacement_texture(
+    source_stem: str,
+    target_stem: str,
+    family: str,
+    kind: str,
+    output_dir: Path,
+    hashes: set[str],
+    frame_count: int = 1,
+    calibration: dict[str, Any] | None = None,
+    size: int = DEFAULT_TEXTURE_SIZE,
+    review_required: bool = False,
+) -> dict[str, Any]:
     material, variant = material_variant(source_stem, family)
+    role = source_texture_role(source_stem, family)
+    if family == "soil" and role == "snow_side":
+        material, variant = "loam", "natural"
+    elif family == "soil" and role in ("dry_grass_side", "dry_grass_top"):
+        material, variant = "dry_mud", "dry"
+    elif family == "soil" and role in ("litter_side", "litter_top"):
+        material, variant = "peat", "rooted"
     base_seed = stable_seed(f"cubatarium:{kind}:{source_stem}:{family}")
-    image = periodize(generated_texture(family, material, variant, base_seed), 16, 2)
+    cal = calibration_for_texture(calibration, source_stem, family)
+    image = generated_texture(family, material, variant, base_seed, size, role, cal)
+    sprite = procedural_decor_sprite(source_stem, size, base_seed) if role == "decor_sprite" else None
+    if sprite is not None:
+        image = sprite
+    image = add_semantic_face_detail(image, source_stem, base_seed)
+    if role != "decor_sprite":
+        image = periodize(image, size, max(2, size // 16), 16 if size == 16 else None)
     digest = image_pixel_hash(image)
     salt = 0
     while digest in hashes:
         salt += 1
-        image = periodize(generated_texture(family, material, f"{variant}_{salt}", base_seed + salt), 16, 2)
+        if salt > 512:
+            raise RuntimeError(f"could not make a unique texture for {source_stem} after 512 deterministic variants")
+        image = generated_texture(family, material, f"{variant}_{salt}", base_seed + salt, size, role, cal)
+        sprite = procedural_decor_sprite(source_stem, size, base_seed + salt) if role == "decor_sprite" else None
+        if sprite is not None:
+            image = sprite
+        image = add_semantic_face_detail(image, source_stem, base_seed + salt)
+        if role != "decor_sprite":
+            image = periodize(image, size, max(2, size // 16), 16 if size == 16 else None)
         digest = image_pixel_hash(image)
     hashes.add(digest)
     if frame_count > 1:
@@ -563,9 +1163,13 @@ def make_replacement_texture(source_stem: str, target_stem: str, family: str, ki
         motion_x, motion_y = ((1, 0) if "water" in source_stem.lower() else (1, 1))
         strip = Image.new("RGBA", (image.width, image.height * frame_count))
         for frame_index in range(frame_count):
-            shifted = ImageChops.offset(image, motion_x * frame_index,
-                                        motion_y * frame_index)
-            frame = periodize(shifted, image.width, 2)
+            if role == "decor_sprite":
+                sprite_frame = procedural_decor_sprite(source_stem, size, base_seed + frame_index)
+                frame = sprite_frame if sprite_frame is not None else image
+            else:
+                shifted = ImageChops.offset(image, motion_x * frame_index,
+                                            motion_y * frame_index)
+                frame = periodize(shifted, image.width, 1, 16 if size == 16 else None)
             strip.paste(frame, (0, frame_index * image.height))
         image = strip
     save_texture_if_changed(image, texture_path(output_dir, target_stem))
@@ -576,31 +1180,40 @@ def make_replacement_texture(source_stem: str, target_stem: str, family: str, ki
         "family": family,
         "material": material,
         "variant": variant,
+        "role": role,
         "seed": base_seed,
+        "backend": "procedural",
+        "reference_mode": calibration.get("mode", "qa-only") if calibration else "qa-only",
+        "resolution": [size, size],
         "pixel_sha256": digest,
         "source": {
             "kind": kind,
             "reference_only": source_stem,
+            "source_license": "CC-BY-SA-3.0" if kind == "minetest_reference_only" else "CC0-1.0",
             "reference_file_sha256": hashlib.sha256(
                 (REPO / "resource_packs" / ("minetest_default_16" if kind == "minetest_reference_only" else "cubatarium_geology_cc0") / "textures" / "blocks" / f"{source_stem}.png").read_bytes()
             ).hexdigest(),
         },
-        "license": "CC0-1.0",
+        "license": "REVIEW_REQUIRED" if review_required else "CC0-1.0",
+        "license_review_required": review_required,
     }
     if frame_count > 1:
         entry["animation_frame_count"] = frame_count
     return entry
 
 
-def block_definition(record: dict[str, str], texture_stem: str, block_id: int) -> dict[str, Any]:
+def block_definition(record: dict[str, str], face_stems: list[str], block_id: int) -> dict[str, Any]:
     family = record["family"]
     hardness = {"soil": 0.65, "wood": 1.4, "fabric": 0.35, "glass": 0.45, "organic": 0.45, "ceramic": 1.1, "metal": 3.0, "crystal": 2.8}.get(family, 1.8)
     types = ["building", "natural"] if family in ("rock", "soil", "wood", "masonry") else ["building", "decoration"]
     render: dict[str, Any] = {}
+    render["texture_variation"] = 0.0 if any(token in record["name"] for token in ("furnace", "workbench", "crafting_table", "anvil", "dispenser", "dropper", "bookshelf")) else 0.48
     if family == "glass":
         render["transparent"] = True
-    if family == "organic" and (record["material"] in ("blossom", "fern", "reed", "mushroom") or record["material"].startswith(("flower_", "mushroom_"))):
-        render.update({"style": "cross", "double_sided": True})
+    if family == "organic" and (record["material"] in ("blossom", "fern", "reed", "mushroom", "kelp", "coral") or record["material"].startswith(("flower_", "mushroom_"))):
+        shape = "flame" if "fire" in record["name"] else "reed" if record["material"] in ("reed", "kelp") else "cluster" if record["material"] in ("blossom", "coral", "mushroom") or record["material"].startswith(("flower_", "mushroom_")) else "tuft"
+        render.update({"style": "cross", "shape": shape, "double_sided": True})
+        render["texture_variation"] = 0.0
     dig_group = "cracky" if family in ("rock", "masonry", "metal", "crystal") else "crumbly"
     return {
         "name": record["name"],
@@ -609,9 +1222,58 @@ def block_definition(record: dict[str, str], texture_stem: str, block_id: int) -
         "hardness": hardness,
         "dig": {"level": 0, "groups": {dig_group: 2}},
         "types": types,
-        "textures": [texture_stem] * 6,
+        "textures": face_stems,
         "render": render,
         "assetgen": {"family": family, "material": record["material"], "variant": record["variant"]},
+    }
+
+
+def create_catalog_texture(
+    record: dict[str, str], stem: str, role: str, output_dir: Path,
+    hashes: set[str], calibration: dict[str, Any] | None = None,
+    size: int = DEFAULT_TEXTURE_SIZE, review_required: bool = False,
+) -> dict[str, Any]:
+    seed = stable_seed(f"cubatarium:{record['name']}:{role}")
+    family_calibration = calibration_for_family(calibration, record["family"])
+    image = generated_texture(record["family"], record["material"], record["variant"], seed, size, role, family_calibration)
+    sprite = procedural_decor_sprite(record["name"], size, seed)
+    output_role = "decor_sprite" if sprite is not None else role
+    if sprite is not None:
+        image = sprite
+    image = add_semantic_face_detail(image, record["name"], seed)
+    if output_role != "decor_sprite":
+        image = periodize(image, size, max(2, size // 16), 16 if size == 16 else None)
+    digest = image_pixel_hash(image)
+    salt = 0
+    while digest in hashes:
+        salt += 1
+        if salt > 512:
+            raise RuntimeError(f"could not make a unique texture for {record['name']} after 512 deterministic variants")
+        image = generated_texture(record["family"], record["material"], f"{record['variant']}_{salt}", seed + salt, size, role, family_calibration)
+        sprite = procedural_decor_sprite(record["name"], size, seed + salt)
+        if sprite is not None:
+            image = sprite
+        image = add_semantic_face_detail(image, record["name"], seed + salt)
+        if output_role != "decor_sprite":
+            image = periodize(image, size, max(2, size // 16), 16 if size == 16 else None)
+        digest = image_pixel_hash(image)
+    hashes.add(digest)
+    save_texture_if_changed(image, texture_path(output_dir, stem))
+    return {
+        "stem": stem,
+        "family": record["family"],
+        "material": record["material"],
+        "variant": record["variant"],
+        "role": output_role,
+        "seed": seed,
+        "backend": "procedural",
+        "reference_mode": calibration.get("mode", "qa-only") if calibration else "qa-only",
+        "resolution": [size, size],
+        "pixel_sha256": digest,
+        "source": {"kind": "procedural_parameters"},
+        "reference_calibration": calibration.get("source_pack") if calibration else None,
+        "license": "REVIEW_REQUIRED" if review_required else "CC0-1.0",
+        "license_review_required": review_required,
     }
 
 
@@ -877,6 +1539,7 @@ def create_previews(pack_dir: Path, entries: list[tuple[str, Path]], no_preview:
     if no_preview:
         return
     create_texture_sheets(entries, pack_dir / "previews")
+    create_block_face_sheets(pack_dir, pack_dir / "previews" / "block_faces")
 
 
 def create_texture_sheets(entries: list[tuple[str, Path]], preview_dir: Path) -> None:
@@ -895,6 +1558,54 @@ def create_texture_sheets(entries: list[tuple[str, Path]], preview_dir: Path) ->
             canvas.paste(tile, (x + 20, y + 2), tile)
             draw.text((x + 2, y + 37), label[:11], font=font, fill=(230, 230, 230))
         canvas.save(preview_dir / f"texture_catalog_{page_start // per_page + 1:02d}.png", optimize=True)
+
+
+def create_block_face_sheets(pack_dir: Path, preview_dir: Path, limit: int = 120) -> int:
+    """Create representative six-face previews grouped across material families."""
+    blocks_dir = pack_dir / "blocks"
+    textures_dir = pack_dir / "textures" / "blocks"
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for path in sorted(blocks_dir.glob("*.json")):
+        try:
+            block = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        family = (block.get("assetgen") or {}).get("family") or "source"
+        grouped[str(family)].append(block)
+    selected: list[dict[str, Any]] = []
+    families = sorted(grouped)
+    while len(selected) < limit and any(grouped.values()):
+        for family in families:
+            if grouped[family] and len(selected) < limit:
+                selected.append(grouped[family].pop(0))
+    if not selected:
+        return 0
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    per_page, cols, cell_w, cell_h = 20, 4, 168, 176
+    font = ImageFont.load_default()
+    for page_start in range(0, len(selected), per_page):
+        page = selected[page_start:page_start + per_page]
+        rows = math.ceil(len(page) / cols)
+        canvas = Image.new("RGB", (cols * cell_w, rows * cell_h), (28, 31, 34))
+        draw = ImageDraw.Draw(canvas)
+        for offset, block in enumerate(page):
+            x, y = (offset % cols) * cell_w, (offset // cols) * cell_h
+            stems = block.get("textures", [])[:6]
+            layout = ((64, 0, 4, "top"), (4, 48, 0, "front"), (46, 48, 1, "right"),
+                      (88, 48, 2, "back"), (130, 48, 3, "left"), (64, 96, 5, "bottom"))
+            for px, py, face, label in layout:
+                if face >= len(stems):
+                    continue
+                image_path = textures_dir / f"{stems[face]}.png"
+                if not image_path.is_file():
+                    continue
+                with Image.open(image_path) as source:
+                    tile = source.convert("RGBA").crop((0, 0, source.width, source.width)).resize((40, 40), Image.Resampling.NEAREST)
+                canvas.paste(tile, (x + px, y + py + 4), tile)
+                draw.text((x + px, y + py + 44), label, font=font, fill=(220, 224, 228))
+            draw.text((x + 4, y + 160), str(block.get("name", "block"))[:24], font=font, fill=(245, 245, 245))
+        canvas.save(preview_dir / f"block_faces_{page_start // per_page + 1:02d}.png", optimize=True)
+    return len(selected)
 
 
 def create_reference_comparison(pack_dir: Path, reference_pack_id: str, output_dir: Path) -> int:
@@ -935,6 +1646,11 @@ def create_reference_comparison(pack_dir: Path, reference_pack_id: str, output_d
 
 
 def command_preview(args: argparse.Namespace) -> int:
+    if args.blocks:
+        output_dir = args.output or (args.blocks / "previews" / "block_faces")
+        count = create_block_face_sheets(args.blocks.resolve(), output_dir.resolve(), args.limit)
+        print(json.dumps({"blocks": count, "preview_directory": str(output_dir.resolve())}, ensure_ascii=False))
+        return 0
     if args.compare_reference:
         output_dir = args.output or (REPO / "assetgen_output" / "reference_qa" / args.compare_reference)
         resolved_pack = args.pack.resolve()
@@ -961,19 +1677,91 @@ def command_preview(args: argparse.Namespace) -> int:
     return 0
 
 
-def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str, int]:
+def command_calibrate(args: argparse.Namespace) -> int:
+    calibration = derive_reference_calibration(REPO / "resource_packs" / args.reference_pack)
+    output = args.output or (REPO / "assetgen_output" / "calibration" / f"{args.reference_pack}_aggregate.json")
+    write_json(output, calibration)
+    print(json.dumps({
+        "mode": calibration["mode"],
+        "reference_pack": calibration["source_pack"],
+        "source_file_count": calibration["source_file_count"],
+        "families": sorted(calibration["families"]),
+        "output": str(output.resolve()),
+        "source_pixels_used_as_output": False,
+    }, ensure_ascii=False))
+    return 0
+
+
+def command_compare(args: argparse.Namespace) -> int:
+    pack_dir = args.pack.resolve()
+    output_dir = args.output.resolve()
+    if output_dir.is_relative_to(pack_dir):
+        raise ValueError("comparison reports must be written outside the resource pack")
+    count = create_reference_comparison(pack_dir, args.reference_pack, output_dir)
+    face_preview_blocks = create_block_face_sheets(pack_dir, output_dir / "block_faces")
+    manifest = json.loads((pack_dir / "asset_manifest.json").read_text(encoding="utf-8-sig"))
+    expected_kind = "minetest_reference_only" if args.reference_pack == "minetest_default_16" else "geology_reference_only"
+    reference_dir = REPO / "resource_packs" / args.reference_pack / "textures" / "blocks"
+    metrics: list[dict[str, float]] = []
+    for item in manifest.get("textures", []):
+        source = item.get("source", {})
+        if source.get("kind") != expected_kind:
+            continue
+        source_path = reference_dir / f"{source.get('reference_only')}.png"
+        candidate_path = texture_path(pack_dir, item["stem"])
+        if not source_path.is_file() or not candidate_path.is_file():
+            continue
+        with Image.open(source_path) as source_image, Image.open(candidate_path) as candidate_image:
+            source_stats = texture_statistics(source_image)
+            candidate_stats = texture_statistics(candidate_image)
+        color_delta = sum(abs(source_stats[key] - candidate_stats[key]) for key in ("mean_rgb_r", "mean_rgb_g", "mean_rgb_b")) / 3.0
+        metrics.append({
+            "mean_rgb_delta": color_delta,
+            "neighbor_contrast_delta": abs(source_stats["neighbor_contrast"] - candidate_stats["neighbor_contrast"]),
+            "luminance_std_delta": abs(source_stats["luminance_std"] - candidate_stats["luminance_std"]),
+        })
+    averages = {
+        key: statistics.mean(row[key] for row in metrics) if metrics else 0.0
+        for key in ("mean_rgb_delta", "neighbor_contrast_delta", "luminance_std_delta")
+    }
+    calibration = derive_reference_calibration(reference_dir.parent.parent) if args.reference_mode == "aggregate-calibration" else None
+    report = {
+        "schema_version": 1,
+        "reference_pack": args.reference_pack,
+        "reference_mode": args.reference_mode,
+        "compared_textures": len(metrics),
+        "contact_sheets": math.ceil(count / 80),
+        "face_preview_blocks": face_preview_blocks,
+        "aggregate_diagnostics": averages,
+        "calibration_summary": ({"families": calibration["families"], "source_file_count": calibration["source_file_count"], "source_pixels_used_as_output": False} if calibration else None),
+        "note": "Numeric diagnostics describe broad material and detail differences; visual review of contact sheets remains required.",
+    }
+    write_json(output_dir / "comparison_report.json", report)
+    print(json.dumps({"report": str((output_dir / "comparison_report.json").resolve()), **{k: v for k, v in report.items() if k not in ("aggregate_diagnostics", "calibration_summary")}, "aggregate_diagnostics": averages}, ensure_ascii=False))
+    return 0
+
+
+def build_pack(
+    no_preview: bool = False,
+    add_worldgen: bool = True,
+    reference_mode: str = "qa-only",
+    size: int = DEFAULT_TEXTURE_SIZE,
+) -> dict[str, Any]:
     catalog = load_catalog()
     records = family_records(catalog)
-    PACK_DIR.mkdir(parents=True, exist_ok=True)
-    (PACK_DIR / "blocks").mkdir(parents=True, exist_ok=True)
-    (PACK_DIR / "objects").mkdir(parents=True, exist_ok=True)
-    (PACK_DIR / "textures" / "blocks").mkdir(parents=True, exist_ok=True)
-    write_json(PACK_DIR / "pack.json", {
+    calibration = derive_reference_calibration(REPO / "resource_packs" / "minetest_default_16") if reference_mode == "aggregate-calibration" else None
+    review_required = reference_mode == "aggregate-calibration"
+    pack_dir = PACK_DIR if not review_required else STAGING_DIR / "cubatarium_worldgen_aggregate_cc0_review"
+    pack_dir.mkdir(parents=True, exist_ok=True)
+    (pack_dir / "blocks").mkdir(parents=True, exist_ok=True)
+    (pack_dir / "objects").mkdir(parents=True, exist_ok=True)
+    (pack_dir / "textures" / "blocks").mkdir(parents=True, exist_ok=True)
+    write_json(pack_dir / "pack.json", {
         "id": PACK_ID,
-        "name": "Cubatarium Worldgen",
+        "name": "Cubatarium Worldgen" if not review_required else "Cubatarium Worldgen (license review required)",
         "version": 1,
-        "license": "CC0-1.0",
-        "resolution": 16,
+        "license": "REVIEW_REQUIRED" if review_required else "CC0-1.0",
+        "resolution": size,
         "priority": 21,
         "pack_format": 1,
         "worldgen_role": "primary",
@@ -981,8 +1769,35 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
         "depends": [],
         "conflicts": ["minetest_default_16"],
         "min_game_version": "0.1.0",
+        "assetgen_reference_mode": reference_mode,
     })
     minetest_blocks = ensure_stable_block_ids(load_block_files("minetest_default_16"))
+    for block in minetest_blocks:
+        name = block.get("name", "").lower()
+        render = block.setdefault("render", {})
+        if not isinstance(render, dict):
+            render = {}
+            block["render"] = render
+        if name in ("fern", "tall_grass", "tallgrass", "reeds", "fire"):
+            render["transparent"] = True
+            render["style"] = "cross"
+            render["double_sided"] = True
+        if render.get("style") == "cross":
+            render["shape"] = (
+                "flame" if name == "fire" else
+                "reed" if any(token in name for token in ("reed", "papyrus", "kelp")) else
+                "cluster" if any(token in name for token in ("flower", "mushroom", "coral")) else
+                "tuft" if any(token in name for token in ("grass", "fern", "deadbush")) else
+                "cross"
+            )
+            render["texture_variation"] = 0.0
+            render["double_sided"] = True
+        else:
+            machine_face = any(token in name for token in ("furnace", "crafting_table", "bookshelf", "anvil", "dispenser", "dropper"))
+            fluid_face = any(token in name for token in ("water", "lava"))
+            render["texture_variation"] = 0.0 if machine_face or fluid_face else 0.48
+        if name == "fire":
+            render.update({"transparent": True, "style": "cross", "shape": "flame", "double_sided": True})
     animated_texture_frames: dict[str, int] = {}
     for block in minetest_blocks:
         animation = block.get("animation")
@@ -1000,31 +1815,28 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
     manifest_textures: list[dict[str, Any]] = []
     preview_entries: list[tuple[str, Path]] = []
     for stem, target in minetest_stems.items():
-        entry = make_replacement_texture(stem, target, infer_family(stem), "minetest_reference_only", PACK_DIR, hashes, animated_texture_frames.get(stem, 1))
+        entry = make_replacement_texture(stem, target, infer_family(stem), "minetest_reference_only", pack_dir, hashes, animated_texture_frames.get(stem, 1), calibration, size, review_required)
         manifest_textures.append(entry)
-        preview_entries.append((target, texture_path(PACK_DIR, target)))
+        preview_entries.append((target, texture_path(pack_dir, target)))
     for stem, target in geology_stems.items():
-        entry = make_replacement_texture(stem, target, infer_family(stem), "geology_reference_only", PACK_DIR, hashes)
+        entry = make_replacement_texture(stem, target, infer_family(stem), "geology_reference_only", pack_dir, hashes, calibration=calibration, size=size, review_required=review_required)
         manifest_textures.append(entry)
-        preview_entries.append((target, texture_path(PACK_DIR, target)))
+        preview_entries.append((target, texture_path(pack_dir, target)))
     first_generated_block_id = 1025
     if first_generated_block_id + len(records) - 1 > 4095:
         raise ValueError("generated block catalog exceeds the stable pack id range")
     for block_index, record in enumerate(records):
         target = record["name"]
-        seed = stable_seed(f"cubatarium:{record['name']}")
-        image = periodize(generated_texture(record["family"], record["material"], record["variant"], seed), 16, 2)
-        digest = image_pixel_hash(image)
-        salt = 0
-        while digest in hashes:
-            salt += 1
-            image = periodize(generated_texture(record["family"], record["material"], f"{record['variant']}_{salt}", seed + salt), 16, 2)
-            digest = image_pixel_hash(image)
-        hashes.add(digest)
-        save_texture_if_changed(image, texture_path(PACK_DIR, target))
-        write_json(PACK_DIR / "blocks" / f"{target}.json", block_definition(record, target, first_generated_block_id + block_index))
-        manifest_textures.append({"stem": target, "family": record["family"], "material": record["material"], "variant": record["variant"], "seed": seed, "pixel_sha256": digest, "source": {"kind": "procedural_parameters"}, "license": "CC0-1.0"})
-        preview_entries.append((target, texture_path(PACK_DIR, target)))
+        face_stems, derived_roles = block_face_textures(record, target)
+        face_role_map = {"side": target, **{role: stem for stem, role in derived_roles}}
+        if target not in face_role_map.values():
+            face_role_map["side"] = target
+        roles_by_stem = {stem: role for role, stem in face_role_map.items()}
+        for stem, role in sorted(roles_by_stem.items()):
+            entry = create_catalog_texture(record, stem, role, pack_dir, hashes, calibration, size, review_required)
+            manifest_textures.append(entry)
+            preview_entries.append((stem, texture_path(pack_dir, stem)))
+        write_json(pack_dir / "blocks" / f"{target}.json", block_definition(record, face_stems, first_generated_block_id + block_index))
     geology_blocks = load_block_files("cubatarium_geology_cc0")
     included_block_sources: list[dict[str, Any]] = []
     for block in minetest_blocks:
@@ -1036,7 +1848,7 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
             "license": "CC0-1.0",
             "adaptation": "Cubatarium replacement texture stems",
         }
-        write_json(PACK_DIR / "blocks" / f"{adapted['name']}.json", adapted)
+        write_json(pack_dir / "blocks" / f"{adapted['name']}.json", adapted)
         included_block_sources.append({
             "name": adapted["name"],
             "id": adapted["id"],
@@ -1055,7 +1867,7 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
             "source_pack": "cubatarium_geology_cc0",
             "license": "CC0-1.0",
         }
-        write_json(PACK_DIR / "blocks" / f"{adapted['name']}.json", adapted)
+        write_json(pack_dir / "blocks" / f"{adapted['name']}.json", adapted)
         included_block_sources.append({
             "name": adapted["name"],
             "id": adapted["id"],
@@ -1068,17 +1880,17 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
             grouped: dict[str, list[str]] = defaultdict(list)
             for face_index, stem in enumerate((block.get("textures") or [])[:6]):
                 if stem in replacements:
-                    grouped[replacements[stem]].append(("top", "bottom", "north", "south", "west", "east")[face_index])
+                    grouped[replacements[stem]].append(FACE_NAMES[face_index])
             if grouped:
                 override_map.setdefault(block["name"], []).extend({"stem": stem, "faces": faces} for stem, faces in sorted(grouped.items()))
-    write_json(PACK_DIR / "texture_overrides.json", override_map)
-    (PACK_DIR / "texture_overrides.yaml").write_text(
+    write_json(pack_dir / "texture_overrides.json", override_map)
+    (pack_dir / "texture_overrides.yaml").write_text(
         yaml.safe_dump(override_map, sort_keys=False, allow_unicode=True), encoding="utf-8"
     )
     objects = generated_objects(records)
     for obj in objects:
-        write_json(PACK_DIR / "objects" / f"{obj['name']}.json", obj)
-    worldgen_rules_added = ensure_worldgen_rules(objects) if add_worldgen else 0
+        write_json(pack_dir / "objects" / f"{obj['name']}.json", obj)
+    worldgen_rules_added = ensure_worldgen_rules(objects) if add_worldgen and not review_required else 0
     feature_doc = json.loads((REPO / "content" / "object_features.json").read_text(encoding="utf-8-sig"))
     qualified_prefix = f"{PACK_ID}::"
     worldgen_rule_count = sum(
@@ -1094,7 +1906,8 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
     texture_manifest = {
         "schema_version": 1,
         "benchmark": MINECRAFT_REFERENCE,
-        "generator": {"name": "Cubatarium AssetGen", "version": 1, "backend": "procedural", "resolution": 16},
+        "generator": {"name": "Cubatarium AssetGen", "version": 4, "backend": "procedural", "resolution": size, "profile": "voxel64" if size > 16 else "voxel16", "reference_mode": reference_mode},
+        "reference_calibration": calibration,
         "counts": {
             "block_definitions": len(records) + len(minetest_blocks) + len(geology_blocks),
             "procedural_cc0_block_definitions": len(records),
@@ -1113,20 +1926,164 @@ def build_pack(no_preview: bool = False, add_worldgen: bool = True) -> dict[str,
         "block_provenance": included_block_sources,
         "textures": sorted(manifest_textures, key=lambda item: item["stem"]),
     }
-    write_json(PACK_DIR / "asset_manifest.json", texture_manifest)
+    write_json(pack_dir / "asset_manifest.json", texture_manifest)
     geology_notice = (REPO / "resource_packs" / "cubatarium_geology_cc0" / "LICENSE.txt").read_text(encoding="utf-8-sig").strip()
-    (PACK_DIR / "LICENSE.txt").write_text(
+    license_text = (
         "All block definitions, voxel objects, and texture images in this pack are Cubatarium content released under CC0-1.0.\n"
+        if not review_required else
+        "This staging pack requires license review before CC0 publication.\n"
+    )
+    license_text += (
         "License: https://creativecommons.org/publicdomain/zero/1.0/\n\n"
         "The Cubatarium-authored block definitions formerly distributed in the minetest_default_16 pack are included here with Cubatarium replacement texture stems. The minetest_default_16 texture pixels were used only as external references and are not included in this pack.\n\n"
         "The integrated Cubatarium Geology definitions and their replacement textures are CC0. The source pack notice follows:\n"
         f"{geology_notice}\n\n"
+    )
+    license_text += (
         "Reference texture file names were inspected to classify broad material families. Source texture pixels were not used by the procedural generator.\n"
-        "Minecraft Java Edition 26.3 counts are used only as a catalog-size benchmark; no Minecraft assets are included.\n",
+        if not review_required else
+        "Aggregate per-family color and spatial statistics from the CC BY-SA reference pack influenced generation. No source pixels or patches were copied; do not release this staging output as CC0 until its provenance has been reviewed.\n"
+    )
+    license_text += "Minecraft Java Edition 26.3 counts are used only as a catalog-size benchmark; no Minecraft assets are included.\n"
+    (pack_dir / "LICENSE.txt").write_text(license_text, encoding="utf-8")
+    create_previews(pack_dir, preview_entries, no_preview)
+    return {"blocks": len(records) + len(minetest_blocks) + len(geology_blocks), "textures": len(manifest_textures), "minetest_block_definitions": len(minetest_blocks), "geology_block_definitions": len(geology_blocks), "minetest_replacements": len(minetest_stems), "geology_replacements": len(geology_stems), "objects": len(objects), "worldgen_rules": worldgen_rule_count, "worldgen_rules_added_this_build": worldgen_rules_added, "reference_mode": reference_mode, "pack_directory": str(pack_dir.resolve()), "license_review_required": review_required}
+
+
+def build_photo64_overlay(
+    no_preview: bool = False,
+    reference_mode: str = "qa-only",
+) -> dict[str, Any]:
+    """Build a selectable 64px texture-only overlay for the default CC0 pack."""
+    base_pack = PACK_DIR if reference_mode == "qa-only" else STAGING_DIR / "cubatarium_worldgen_aggregate_cc0_review"
+    manifest_path = base_pack / "asset_manifest.json"
+    if not manifest_path.is_file():
+        raise RuntimeError(f"build the 16px base pack first: {manifest_path}")
+    base_manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    calibration = derive_reference_calibration(REPO / "resource_packs" / "minetest_default_16") if reference_mode == "aggregate-calibration" else None
+    review_required = reference_mode == "aggregate-calibration"
+    pack_dir = PHOTO64_PACK_DIR if not review_required else STAGING_DIR / "cubatarium_worldgen_photo64_aggregate_cc0_review"
+    for directory in (pack_dir / "blocks", pack_dir / "textures" / "blocks"):
+        directory.mkdir(parents=True, exist_ok=True)
+    write_json(pack_dir / "pack.json", {
+        "id": PHOTO64_PACK_ID,
+        "name": "Cubatarium Worldgen Photo 64" if not review_required else "Cubatarium Photo 64 (license review required)",
+        "version": 1,
+        "license": "REVIEW_REQUIRED" if review_required else "CC0-1.0",
+        "resolution": 64,
+        "priority": 22,
+        "pack_format": 1,
+        "worldgen_role": "secondary",
+        "merge_mode": "override",
+        "depends": [PACK_ID],
+        "conflicts": [],
+        "min_game_version": "0.1.0",
+        "allow_resolution_mix": True,
+        "assetgen_reference_mode": reference_mode,
+    })
+
+    texture_map: dict[str, str] = {}
+    overlay_textures: list[dict[str, Any]] = []
+    preview_entries: list[tuple[str, Path]] = []
+    hashes: set[str] = set()
+    for item in base_manifest.get("textures", []):
+        stem = item.get("stem")
+        if not isinstance(stem, str):
+            continue
+        source = item.get("source", {})
+        source_stem = source.get("reference_only") or stem
+        role = item.get("role") or source_texture_role(source_stem, item.get("family", "rock"))
+        family = item.get("family", "rock")
+        material = item.get("material", "granite")
+        variant = item.get("variant", "natural")
+        seed = int(item.get("seed", stable_seed(stem)))
+        frame_count = int(item.get("animation_frame_count", 1))
+
+        def make_overlay_image(texture_variant: str, texture_seed: int) -> Image.Image:
+            base = generated_texture(
+                family, material, texture_variant, texture_seed, 64, role,
+                calibration_for_texture(calibration, source_stem, family),
+            )
+            sprite = procedural_decor_sprite(source_stem, 64, texture_seed) if role == "decor_sprite" else None
+            if sprite is not None:
+                base = sprite
+            base = add_semantic_face_detail(base, source_stem, texture_seed)
+            if role != "decor_sprite":
+                base = periodize(base, 64, 4)
+            if frame_count <= 1:
+                return base
+            motion_x, motion_y = ((1, 0) if "water" in source_stem.lower() else (1, 1))
+            strip = Image.new("RGBA", (64, 64 * frame_count))
+            for frame_index in range(frame_count):
+                if role == "decor_sprite":
+                    sprite_frame = procedural_decor_sprite(source_stem, 64, texture_seed + frame_index)
+                    frame = sprite_frame if sprite_frame is not None else base
+                else:
+                    frame = periodize(ImageChops.offset(base, motion_x * frame_index, motion_y * frame_index), 64, 4)
+                strip.paste(frame, (0, frame_index * 64))
+            return strip
+
+        image = make_overlay_image(variant, seed)
+        overlay_stem = f"p64_{stem}"
+        digest = image_pixel_hash(image)
+        salt = 0
+        while digest in hashes:
+            salt += 1
+            if salt > 512:
+                raise RuntimeError(f"could not make a unique 64px overlay for {stem} after 512 deterministic variants")
+            image = make_overlay_image(f"{variant}_{salt}", seed + salt)
+            digest = image_pixel_hash(image)
+        hashes.add(digest)
+        save_texture_if_changed(image, texture_path(pack_dir, overlay_stem))
+        texture_map[stem] = overlay_stem
+        overlay_textures.append({
+            "stem": overlay_stem,
+            "source_16px_stem": stem,
+            "family": family,
+            "material": material,
+            "variant": variant,
+            "role": role,
+            "seed": seed,
+            "backend": "procedural",
+            "reference_mode": reference_mode,
+            "resolution": [64, 64],
+            "animation_frame_count": frame_count if frame_count > 1 else None,
+            "pixel_sha256": digest,
+            "source": {"kind": "material_parameters", "source_texture": stem},
+            "license": "REVIEW_REQUIRED" if review_required else "CC0-1.0",
+            "license_review_required": review_required,
+        })
+        preview_entries.append((overlay_stem, texture_path(pack_dir, overlay_stem)))
+
+    override_map: dict[str, list[dict[str, Any]]] = {}
+    for path in sorted((base_pack / "blocks").glob("*.json")):
+        block = json.loads(path.read_text(encoding="utf-8-sig"))
+        grouped: dict[str, list[str]] = defaultdict(list)
+        for index, stem in enumerate((block.get("textures") or [])[:6]):
+            target = texture_map.get(stem)
+            if target:
+                grouped[target].append(FACE_NAMES[index])
+        if grouped:
+            override_map[block["name"]] = [
+                {"stem": target, "faces": faces}
+                for target, faces in sorted(grouped.items())
+            ]
+    write_json(pack_dir / "texture_overrides.json", override_map)
+    (pack_dir / "texture_overrides.yaml").write_text(yaml.safe_dump(override_map, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    write_json(pack_dir / "asset_manifest.json", {
+        "schema_version": 1,
+        "generator": {"name": "Cubatarium AssetGen", "version": 2, "backend": "procedural", "resolution": 64, "profile": "photo64", "reference_mode": reference_mode},
+        "reference_calibration": calibration,
+        "counts": {"textures": len(overlay_textures), "block_face_overrides": len(override_map)},
+        "textures": overlay_textures,
+    })
+    (pack_dir / "LICENSE.txt").write_text(
+        "Texture-only 64px override pack for Cubatarium Worldgen.\n"
+        + ("CC0-1.0. All images were generated from material parameters.\n" if not review_required else "License review required before CC0 publication. Aggregate Minetest texture statistics affected synthesis; no source pixels or patches were copied.\n"),
         encoding="utf-8",
     )
-    create_previews(PACK_DIR, preview_entries, no_preview)
-    return {"blocks": len(records) + len(minetest_blocks) + len(geology_blocks), "textures": len(manifest_textures), "minetest_block_definitions": len(minetest_blocks), "geology_block_definitions": len(geology_blocks), "minetest_replacements": len(minetest_stems), "geology_replacements": len(geology_stems), "objects": len(objects), "worldgen_rules": worldgen_rule_count, "worldgen_rules_added_this_build": worldgen_rules_added}
+    create_previews(pack_dir, preview_entries, no_preview)
+    return {"pack_directory": str(pack_dir.resolve()), "textures": len(overlay_textures), "overridden_blocks": len(override_map), "reference_mode": reference_mode, "license_review_required": review_required}
 
 
 def memory_available_gb() -> float | None:
@@ -1264,7 +2221,9 @@ def run_diffusers(args: argparse.Namespace) -> Image.Image:
     else:
         pipe = pipe.to(device)
     generator = torch.Generator(device=device).manual_seed(args.seed)
-    prompt = args.prompt or f"seamless 16-bit voxel game texture, {args.material or 'natural material'}, hand painted pixel art, 16x16 game texture, no lighting, no shadows"
+    size = 16 if args.profile == "voxel16" else 64
+    style = "photo-based seamless game material" if args.profile == "photo64" else "seamless detailed voxel material"
+    prompt = args.prompt or f"{style}, {args.material or 'natural material'}, {size}x{size} tile, no lighting, no shadows, no perspective"
     call_args: dict[str, Any] = {"prompt": prompt, "generator": generator}
     if args.input:
         call_args.update({"image": Image.open(args.input).convert("RGB"), "strength": args.strength})
@@ -1272,16 +2231,77 @@ def run_diffusers(args: argparse.Namespace) -> Image.Image:
     return result
 
 
+def synthesize_quilt(reference_path: Path, size: int, seed: int) -> Image.Image:
+    """Small patch-quilting synthesizer for explicitly licensed photo inputs."""
+    with Image.open(reference_path) as source_image:
+        source = source_image.convert("RGBA")
+    patch = max(8, size // 2)
+    overlap = max(2, size // 8)
+    step = max(1, patch - overlap)
+    source_w, source_h = source.size
+    if source_w < patch or source_h < patch:
+        source = ImageOps.fit(source, (max(patch, source_w), max(patch, source_h)), method=Image.Resampling.LANCZOS)
+        source_w, source_h = source.size
+    rng = random.Random(seed)
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    for y in range(0, size, step):
+        for x in range(0, size, step):
+            w, h = min(patch, size - x), min(patch, size - y)
+            candidates: list[tuple[float, Image.Image]] = []
+            for _ in range(40):
+                sx = rng.randrange(max(1, source_w - w + 1))
+                sy = rng.randrange(max(1, source_h - h + 1))
+                candidate = source.crop((sx, sy, sx + w, sy + h))
+                score = 0.0
+                weight = 0
+                if x > 0:
+                    width = min(overlap, w, x)
+                    a = out.crop((x, y, x + width, y + h)).convert("RGB")
+                    b = candidate.crop((0, 0, width, h)).convert("RGB")
+                    diff = ImageChops.difference(a, b)
+                    score += sum(ImageStat.Stat(diff).mean) * width * h
+                    weight += width * h
+                if y > 0:
+                    height = min(overlap, h, y)
+                    a = out.crop((x, y, x + w, y + height)).convert("RGB")
+                    b = candidate.crop((0, 0, w, height)).convert("RGB")
+                    diff = ImageChops.difference(a, b)
+                    score += sum(ImageStat.Stat(diff).mean) * w * height
+                    weight += w * height
+                candidates.append((score / max(1, weight), candidate))
+            candidates.sort(key=lambda item: item[0])
+            pool = candidates[:max(1, len(candidates) // 8)]
+            tile = rng.choice(pool)[1]
+            mask = Image.new("L", (w, h), 255)
+            mask_px = mask.load()
+            for py in range(h):
+                for px in range(w):
+                    alpha = 255
+                    if x > 0 and px < overlap:
+                        alpha = min(alpha, int(255 * (px + 1) / (overlap + 1)))
+                    if y > 0 and py < overlap:
+                        alpha = min(alpha, int(255 * (py + 1) / (overlap + 1)))
+                    mask_px[px, py] = alpha
+            out.paste(tile, (x, y), mask)
+    return out
+
+
 def generate_texture_command(args: argparse.Namespace) -> int:
     backend = args.backend
+    size = 16 if args.profile == "voxel16" else 64
+    calibration = getattr(args, "_calibration", None)
+    if args.reference_mode == "aggregate-calibration" and calibration is None:
+        calibration = derive_reference_calibration(
+            REPO / "resource_packs" / args.reference_pack
+        )
     if args.resource_profile == "offline" and backend == "auto":
-        backend = "procedural"
+        backend = "quilting" if args.input else "procedural"
     elif args.resource_profile == "offline" and backend == "diffusers":
         raise RuntimeError("--backend diffusers requires a non-offline --resource-profile")
     if backend == "auto":
         if not args.model:
             args.model = cached_diffusers_model_id()
-        backend = "diffusers" if args.model else "procedural"
+        backend = "diffusers" if args.model else "quilting" if args.input else "procedural"
     if backend == "diffusers":
         try:
             image = run_diffusers(args)
@@ -1295,14 +2315,21 @@ def generate_texture_command(args: argparse.Namespace) -> int:
         family = args.family or infer_family(args.material or "rock")
         material = safe_name(args.material or "basalt")
         variant = safe_name(args.variant or "natural")
-        image = generated_texture(family, material, variant, args.seed)
+        image = generated_texture(
+            family, material, variant, args.seed, size,
+            getattr(args, "role", "side"), calibration_for_family(calibration, family)
+        )
         if args.input:
-            # Reference mode transfers broad colors only; original pixels are not copied.
+            # This mode transfers only a broad color centroid, not patches.
             reference = Image.open(args.input).convert("RGB").resize((4, 4), Image.Resampling.BOX)
             avg = tuple(sum(reference.getpixel((x, y))[c] for x in range(4) for y in range(4)) // 16 for c in range(3))
             tint = Image.new("RGBA", image.size, (*avg, 255))
             image = Image.blend(image, tint, 0.12)
-    output = periodize(image, 16, args.seam)
+    elif backend == "quilting":
+        if not args.input:
+            raise RuntimeError("--backend quilting requires --input with a reference image")
+        image = synthesize_quilt(args.input, size, args.seed)
+    output = periodize(image, size, args.seam, 16 if size == 16 else None)
     output_path = args.output.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output.save(output_path, format="PNG", optimize=True)
@@ -1312,6 +2339,15 @@ def generate_texture_command(args: argparse.Namespace) -> int:
     model_metadata = {}
     if model_path and (model_path / "assetgen-model.json").is_file():
         model_metadata = json.loads((model_path / "assetgen-model.json").read_text(encoding="utf-8-sig"))
+    calibration_metadata = None
+    if calibration:
+        calibration_bytes = json.dumps(calibration, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        calibration_metadata = {
+            "mode": calibration.get("mode"),
+            "source_pack": calibration.get("source_pack"),
+            "source_file_count": calibration.get("source_file_count"),
+            "summary_sha256": hashlib.sha256(calibration_bytes).hexdigest(),
+        }
     provenance = {
         "output": str(output_path),
         "backend": backend,
@@ -1322,10 +2358,12 @@ def generate_texture_command(args: argparse.Namespace) -> int:
         "model": args.model if backend == "diffusers" else None,
         "model_revision": (args.revision or model_metadata.get("revision")) if backend == "diffusers" else None,
         "input_sha256": hashlib.sha256(Path(args.input).read_bytes()).hexdigest() if args.input else None,
-        "source_license": "REVIEW_REQUIRED" if args.input else None,
-        "license": "REVIEW_REQUIRED" if args.input or backend == "diffusers" else "CC0-1.0",
-        "license_review_required": bool(args.input or backend == "diffusers"),
-        "resolution": [16, 16],
+        "source_license": args.source_license if args.input else None,
+        "reference_mode": args.reference_mode,
+        "reference_calibration": calibration_metadata,
+        "license": "CC0-1.0" if not (args.input and args.source_license != "CC0-1.0") and backend != "diffusers" and args.reference_mode == "qa-only" else "REVIEW_REQUIRED",
+        "license_review_required": bool((args.input and args.source_license != "CC0-1.0") or backend == "diffusers" or args.reference_mode == "aggregate-calibration"),
+        "resolution": [size, size],
     }
     write_json(output_path.with_suffix(output_path.suffix + ".assetgen.json"), provenance)
     if not getattr(args, "quiet", False):
@@ -1337,6 +2375,18 @@ def texture_batch_command(args: argparse.Namespace) -> int:
     catalog_path = args.catalog or CATALOG_PATH
     catalog = load_catalog(catalog_path)
     records = family_records(catalog)
+    calibration = None
+    if args.reference_mode == "aggregate-calibration":
+        calibration = derive_reference_calibration(REPO / "resource_packs" / args.reference_pack)
+    calibration_report = None
+    if calibration:
+        payload = json.dumps(calibration, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        calibration_report = {
+            "mode": calibration.get("mode"),
+            "source_pack": calibration.get("source_pack"),
+            "source_file_count": calibration.get("source_file_count"),
+            "summary_sha256": hashlib.sha256(payload).hexdigest(),
+        }
     output_dir = (args.output_dir or (REPO / "assetgen_output" / "textures")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     entries: list[dict[str, Any]] = []
@@ -1349,6 +2399,7 @@ def texture_batch_command(args: argparse.Namespace) -> int:
         item.seed = stable_seed(f"cubatarium:{record['name']}")
         item.output = output_dir / f"{record['name']}.png"
         item.prompt = args.prompt or f"seamless pixel-art voxel texture of {record['material']} {record['variant']}, no lighting, no shadows"
+        item._calibration = calibration
         item.quiet = True
         generate_texture_command(item)
         sidecar = item.output.with_suffix(item.output.suffix + ".assetgen.json")
@@ -1357,6 +2408,10 @@ def texture_batch_command(args: argparse.Namespace) -> int:
         "schema_version": 1,
         "catalog": str(catalog_path.resolve()),
         "backend_requested": args.backend,
+        "profile": args.profile,
+        "reference_mode": args.reference_mode,
+        "license_review_required": args.reference_mode == "aggregate-calibration" or args.backend == "diffusers",
+        "calibration": calibration_report,
         "count": len(entries),
         "output_directory": str(output_dir),
         "textures": entries,
@@ -1693,10 +2748,84 @@ def command_models(args: argparse.Namespace) -> int:
     return 0
 
 
+def audit_photo64_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
+    errors: list[str] = []
+    try:
+        pack_manifest = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8-sig"))
+        asset_manifest = json.loads((pack_dir / "asset_manifest.json").read_text(encoding="utf-8-sig"))
+        overrides = json.loads((pack_dir / "texture_overrides.json").read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"cannot read 64px overlay metadata: {exc}"], {}
+    if pack_manifest.get("id") != PHOTO64_PACK_ID or pack_manifest.get("resolution") != 64:
+        errors.append("photo overlay must declare cubatarium_worldgen_photo64_cc0 at 64px")
+    if pack_manifest.get("license") != "CC0-1.0":
+        errors.append("photo overlay is not cleared for CC0 publication")
+    texture_dir = pack_dir / "textures" / "blocks"
+    textures = list(texture_dir.glob("*.png"))
+    manifest_textures = asset_manifest.get("textures", [])
+    manifest_stems = {item.get("stem") for item in manifest_textures if isinstance(item, dict)}
+    if manifest_stems != {path.stem for path in textures}:
+        errors.append("64px overlay manifest stems do not match its PNG files")
+    unique: set[str] = set()
+    for path in textures:
+        try:
+            with Image.open(path) as image_file:
+                image = image_file.convert("RGBA")
+        except Exception as exc:
+            errors.append(f"invalid image {path.name}: {exc}")
+            continue
+        frames = 1
+        item = next((entry for entry in manifest_textures if isinstance(entry, dict) and entry.get("stem") == path.stem), {})
+        if isinstance(item.get("animation_frame_count"), int):
+            frames = max(1, item["animation_frame_count"])
+        if image.size != (64, 64 * frames):
+            errors.append(f"{path.name}: expected 64x{64 * frames}, got {image.width}x{image.height}")
+        alpha_min, _ = image.getchannel("A").getextrema()
+        role = item.get("role")
+        if item.get("family") == "glass" and alpha_min >= 255:
+            errors.append(f"{path.name}: glass texture must include alpha transparency")
+        elif role == "decor_sprite" and alpha_min >= 255:
+            errors.append(f"{path.name}: decor sprite must have transparent background pixels")
+        elif item.get("family") != "glass" and role != "decor_sprite" and alpha_min < 255:
+            errors.append(f"{path.name}: non-glass texture unexpectedly includes transparency")
+        for frame_index in range(frames):
+            frame = image.crop((0, frame_index * 64, 64, (frame_index + 1) * 64))
+            pixels = frame.load()
+            if role != "decor_sprite" and (any(pixels[0, y] != pixels[63, y] for y in range(64)) or any(pixels[x, 0] != pixels[x, 63] for x in range(64))):
+                errors.append(f"{path.name}: frame {frame_index} is not tileable")
+                break
+        if image_pixel_hash(image) in unique:
+            errors.append(f"pixel-identical duplicate texture {path.name}")
+        unique.add(image_pixel_hash(image))
+    base_pack = PACK_DIR if pack_manifest.get("assetgen_reference_mode") != "aggregate-calibration" else STAGING_DIR / "cubatarium_worldgen_aggregate_cc0_review"
+    base_blocks_dir = base_pack / "blocks"
+    base_blocks = [json.loads(path.read_text(encoding="utf-8-sig")) for path in sorted(base_blocks_dir.glob("*.json"))]
+    if set(overrides) != {block["name"] for block in base_blocks}:
+        errors.append("64px overlay must override every block in the base pack")
+    for name, entries in overrides.items():
+        resolved_faces: set[str] = set()
+        for entry in entries if isinstance(entries, list) else []:
+            stem = entry.get("stem") if isinstance(entry, dict) else None
+            if not isinstance(stem, str) or stem not in manifest_stems:
+                errors.append(f"{name}: unresolved 64px texture override {stem!r}")
+                continue
+            resolved_faces.update(face for face in entry.get("faces", []) if isinstance(face, str))
+        if resolved_faces != set(FACE_NAMES):
+            errors.append(f"{name}: expected overrides for all six face roles, got {sorted(resolved_faces)}")
+    return errors, {
+        "textures": len(textures),
+        "overridden_blocks": len(overrides),
+        "unique_pixel_textures": len(unique),
+        "resolution": 64,
+    }
+
+
 def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
     errors: list[str] = []
     try:
         pack_manifest = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8-sig"))
+        if pack_manifest.get("id") == PHOTO64_PACK_ID:
+            return audit_photo64_pack(pack_dir)
         if pack_manifest.get("worldgen_role") != "primary":
             errors.append("standalone worldgen pack must declare worldgen_role=primary")
         if pack_manifest.get("license") != "CC0-1.0":
@@ -1706,6 +2835,14 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
     blocks_dir = pack_dir / "blocks"
     textures_dir = pack_dir / "textures" / "blocks"
     objects_dir = pack_dir / "objects"
+    provenance_path = pack_dir / "asset_manifest.json"
+    try:
+        provenance = json.loads(provenance_path.read_text(encoding="utf-8-sig")) if provenance_path.is_file() else {}
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        provenance = {}
+        errors.append(f"cannot read asset manifest: {exc}")
+    manifest_textures = provenance.get("textures", [])
+    manifest_by_stem = {item.get("stem"): item for item in manifest_textures if isinstance(item, dict)}
     blocks = [json.loads(path.read_text(encoding="utf-8-sig")) for path in sorted(blocks_dir.glob("*.json"))] if blocks_dir.exists() else []
     textures = sorted(textures_dir.glob("*.png")) if textures_dir.exists() else []
     animated_texture_frames: dict[str, int] = {}
@@ -1729,18 +2866,20 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
             errors.append(f"invalid image {path.name}: {exc}")
             continue
         frame_count = animated_texture_frames.get(path.stem, 1)
-        expected_size = (16, 16 * frame_count)
+        resolution = int(pack_manifest.get("resolution", 16))
+        expected_size = (resolution, resolution * frame_count)
         if image.size != expected_size:
             errors.append(f"{path.name}: expected {expected_size[0]}x{expected_size[1]}, got {image.size}")
             continue
         colors = image.getcolors(maxcolors=257)
-        if colors is None or len(colors) > 32:
+        if resolution <= 16 and (colors is None or len(colors) > 32):
             errors.append(f"{path.name}: palette exceeds 32 RGBA colors")
         alpha_extrema[path.stem] = image.getchannel("A").getextrema()
+        role = manifest_by_stem.get(path.stem, {}).get("role")
         for frame_index in range(frame_count):
-            frame = image.crop((0, frame_index * 16, 16, (frame_index + 1) * 16))
+            frame = image.crop((0, frame_index * resolution, resolution, (frame_index + 1) * resolution))
             pixels = frame.load()
-            if any(pixels[0, y] != pixels[15, y] for y in range(16)) or any(pixels[x, 0] != pixels[x, 15] for x in range(16)):
+            if role != "decor_sprite" and (any(pixels[0, y] != pixels[resolution - 1, y] for y in range(resolution)) or any(pixels[x, 0] != pixels[x, resolution - 1] for x in range(resolution))):
                 errors.append(f"{path.name}: animation frame {frame_index} is not seamless")
                 break
         digest = image_pixel_hash(image)
@@ -1815,7 +2954,7 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
             stem = entry.get("stem") if isinstance(entry, dict) else None
             if not isinstance(stem, str) or not (textures_dir / f"{stem}.png").is_file():
                 errors.append(f"{name}: override texture {stem!r} does not resolve")
-    face_names = ("top", "bottom", "north", "south", "west", "east")
+    face_names = FACE_NAMES
     for pack_id, source_blocks in (("minetest_default_16", minetest_blocks), ("cubatarium_geology_cc0", geology_blocks)):
         replacement_map = replacement_maps[pack_id]
         for block in source_blocks:
@@ -1840,13 +2979,10 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
     if len(textures) < benchmark["texture_files_minimum"]:
         errors.append(f"texture count {len(textures)} is below {benchmark['texture_files_minimum']}")
     minetest_count = len(list((REPO / "resource_packs" / "minetest_default_16" / "textures" / "blocks").glob("*.png")))
-    provenance = json.loads((pack_dir / "asset_manifest.json").read_text(encoding="utf-8-sig")) if (pack_dir / "asset_manifest.json").is_file() else {}
     counts = provenance.get("counts", {})
     replaced = counts.get("minetest_textures_replaced", 0)
     if replaced < minetest_count:
         errors.append(f"Minetest texture replacement count {replaced} below source file count {minetest_count}")
-    manifest_textures = provenance.get("textures", [])
-    manifest_by_stem = {item.get("stem"): item for item in manifest_textures if isinstance(item, dict)}
     if len(manifest_textures) != len(textures):
         errors.append(f"asset manifest texture entries {len(manifest_textures)} do not match PNG count {len(textures)}")
     if len({item.get("stem") for item in manifest_textures if isinstance(item, dict)}) != len(manifest_textures):
@@ -1856,11 +2992,15 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
     if minetest_manifest_sources != expected_minetest_sources:
         errors.append(f"Minetest replacement source coverage differs: missing={sorted(expected_minetest_sources - minetest_manifest_sources)[:8]}, extra={sorted(minetest_manifest_sources - expected_minetest_sources)[:8]}")
     for stem, extrema in alpha_extrema.items():
-        family = manifest_by_stem.get(stem, {}).get("family")
+        item = manifest_by_stem.get(stem, {})
+        family = item.get("family")
+        role = item.get("role")
         has_transparency = extrema[0] < 255
         if family == "glass" and not has_transparency:
             errors.append(f"{stem}.png: glass texture must include alpha transparency")
-        elif family != "glass" and has_transparency:
+        elif role == "decor_sprite" and not has_transparency:
+            errors.append(f"{stem}.png: decor sprite must have transparent background pixels")
+        elif family != "glass" and role != "decor_sprite" and has_transparency:
             errors.append(f"{stem}.png: non-glass texture unexpectedly includes transparency")
     object_count = len(list(objects_dir.glob("*.json"))) if objects_dir.exists() else 0
     block_names = set(name_to_block)
@@ -1956,23 +3096,30 @@ def make_parser() -> argparse.ArgumentParser:
     build = sub.add_parser("build-pack", help="generate the full original CC0 block, texture, and decor pack")
     build.add_argument("--no-preview", action="store_true")
     build.add_argument("--no-worldgen", action="store_true")
+    build.add_argument("--profile", choices=("voxel16", "photo64"), default="voxel16")
+    build.add_argument("--reference-mode", choices=("qa-only", "aggregate-calibration"), default="qa-only")
     audit = sub.add_parser("audit", help="check generated pack against counts and current Minetest references")
     audit.add_argument("--minecraft-version", default="26.3")
     audit.add_argument("--pack", type=Path, default=PACK_DIR)
     benchmark = sub.add_parser("benchmark-minecraft", help="count extracted Minecraft assets without copying them")
     benchmark.add_argument("--minecraft-root", type=Path, required=True)
     benchmark.add_argument("--version", default="26.3")
-    texture = sub.add_parser("texture", help="generate a single 16x16 texture")
+    texture = sub.add_parser("texture", help="generate a single 16x16 or 64x64 material texture")
     texture.add_argument("action", nargs="?", choices=("batch",), help="use 'batch' to build the texture catalog")
     texture.add_argument("--material")
     texture.add_argument("--family", choices=sorted(FAMILY_COLORS))
     texture.add_argument("--variant", default="natural")
+    texture.add_argument("--role", choices=("side", "top", "bottom", "endgrain", "grass_side", "dry_grass_side", "snow_side", "litter_side", "grass_top", "dry_grass_top", "snow_top", "litter_top", "ore"), default="side")
+    texture.add_argument("--profile", choices=("voxel16", "voxel64", "photo64"), default="voxel16")
+    texture.add_argument("--reference-mode", choices=("qa-only", "aggregate-calibration"), default="qa-only")
+    texture.add_argument("--reference-pack", choices=("minetest_default_16", "cubatarium_geology_cc0"), default="minetest_default_16")
     texture.add_argument("--prompt")
     texture.add_argument("--input", type=Path)
+    texture.add_argument("--source-license", choices=("CC0-1.0", "CC-BY-3.0", "CC-BY-SA-3.0", "CC-BY-4.0", "CC-BY-SA-4.0", "REVIEW_REQUIRED"), default="REVIEW_REQUIRED")
     texture.add_argument("--output", type=Path)
     texture.add_argument("--output-dir", type=Path)
     texture.add_argument("--catalog", type=Path)
-    texture.add_argument("--backend", choices=("auto", "procedural", "diffusers"), default="auto")
+    texture.add_argument("--backend", choices=("auto", "procedural", "quilting", "diffusers"), default="auto")
     texture.add_argument("--model")
     texture.add_argument("--revision", help="pin a model revision when allowing runtime downloads")
     texture.add_argument("--allow-download", action="store_true", help="allow the model backend to access the network")
@@ -1982,6 +3129,14 @@ def make_parser() -> argparse.ArgumentParser:
     texture.add_argument("--strength", type=float, default=0.55)
     texture.add_argument("--seam", type=int, default=2)
     texture.add_argument("--quiet", action="store_true", help="suppress the generation manifest on stdout")
+    calibrate = sub.add_parser("calibrate", help="derive only aggregate texture statistics from a reference pack")
+    calibrate.add_argument("--reference-pack", choices=("minetest_default_16", "cubatarium_geology_cc0"), default="minetest_default_16")
+    calibrate.add_argument("--output", type=Path)
+    compare = sub.add_parser("compare", help="create reference contact sheets and broad material/detail diagnostics")
+    compare.add_argument("--reference-pack", choices=("minetest_default_16", "cubatarium_geology_cc0"), default="minetest_default_16")
+    compare.add_argument("--reference-mode", choices=("qa-only", "aggregate-calibration"), default="qa-only")
+    compare.add_argument("--pack", type=Path, default=PACK_DIR)
+    compare.add_argument("--output", type=Path, default=REPO / "assetgen_output" / "reference_qa" / "minetest_default_16")
     decor = sub.add_parser("decor", help="generate voxel decor as Cubatarium object JSON")
     decor.add_argument("--backend", choices=("parametric", "triposr"), default="parametric")
     decor.add_argument("--preset", help="tree:<species>, boulder:<material>, flower_patch, or ruin")
@@ -2006,15 +3161,17 @@ def make_parser() -> argparse.ArgumentParser:
     install = models_sub.add_parser("install")
     install.add_argument("model_id")
     install.add_argument("--revision", required=True)
-    validate = sub.add_parser("validate", help="validate the asset pack and 16x16 texture invariants")
+    validate = sub.add_parser("validate", help="validate pack definitions and their declared texture resolution")
     validate.add_argument("--pack", type=Path, default=PACK_DIR)
     preview = sub.add_parser("preview", help="create contact sheets or a voxel object preview")
     preview_target = preview.add_mutually_exclusive_group(required=True)
     preview_target.add_argument("--textures", type=Path)
     preview_target.add_argument("--object", type=Path)
+    preview_target.add_argument("--blocks", type=Path, help="resource pack directory for six-face contact sheets")
     preview_target.add_argument("--compare-reference", choices=("minetest_default_16", "cubatarium_geology_cc0"))
     preview.add_argument("--output", type=Path)
     preview.add_argument("--pack", type=Path, default=PACK_DIR)
+    preview.add_argument("--limit", type=int, default=120, help="maximum number of representative blocks in the face preview")
     return parser
 
 
@@ -2023,12 +3180,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "build-pack":
-            print(json.dumps(build_pack(args.no_preview, not args.no_worldgen), ensure_ascii=False))
+            result = build_photo64_overlay(args.no_preview, args.reference_mode) if args.profile == "photo64" else build_pack(args.no_preview, not args.no_worldgen, args.reference_mode, 16)
+            print(json.dumps(result, ensure_ascii=False))
             return 0
         if args.command == "audit":
             return command_audit(args)
         if args.command == "benchmark-minecraft":
             return command_benchmark(args)
+        if args.command == "calibrate":
+            return command_calibrate(args)
+        if args.command == "compare":
+            return command_compare(args)
         if args.command == "texture":
             if not 0 <= args.seam <= 8:
                 raise ValueError("--seam must be in [0, 8]")

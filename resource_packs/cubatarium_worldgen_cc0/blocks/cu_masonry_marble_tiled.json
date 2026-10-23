@@ -18,10 +18,12 @@
     "cu_masonry_marble_tiled",
     "cu_masonry_marble_tiled",
     "cu_masonry_marble_tiled",
-    "cu_masonry_marble_tiled",
-    "cu_masonry_marble_tiled"
+    "cu_masonry_marble_tiled_top",
+    "cu_masonry_marble_tiled_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "masonry",
     "material": "marble",

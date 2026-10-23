@@ -13,6 +13,7 @@
 #include "World/Streaming/VisualObligationPolicy.h"
 #include "World/View/ViewRayMath.h"
 #include "Blocks/BlockRegistry.h"
+#include "Blocks/BlockCatalogQueries.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
@@ -5250,6 +5251,18 @@ void UGeometryEngine::SetBlockAnimUniforms(
 
   shader->SetInt("uAnimFrame", frame);
   shader->SetInt("uAnimFrameCount", FrameCount);
+  float textureVariation = 0.0f;
+  if (WorldInstance)
+  {
+    const auto catalog = WorldInstance->GetBlockRegistry()
+                             .GetDefinitionsCatalogSnapshot();
+    if (const BlockDefinition *definition =
+            FindCatalogDefinition(catalog.get(), blockId))
+    {
+      textureVariation = definition->Render.TextureVariation;
+    }
+  }
+  shader->SetFloat("uTextureVariation", textureVariation);
 }
 
 void UGeometryEngine::PrepareFrameRendering()
@@ -6395,10 +6408,17 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   };
   std::vector<CrossInstanceBatch> filtered_batches;
   filtered_batches.reserve(batches.size());
+  const auto block_catalog =
+      WorldInstance->GetBlockRegistry().GetDefinitionsCatalogSnapshot();
   for (const CrossInstanceBatch &batch : batches)
   {
     CrossInstanceBatch fb;
     fb.blockId = batch.blockId;
+    if (const BlockDefinition *definition =
+            FindCatalogDefinition(block_catalog.get(), batch.blockId))
+    {
+      fb.shape = definition->Render.DecorShape;
+    }
     for (const CrossInstanceGpu &inst : batch.instances)
     {
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(
@@ -6449,7 +6469,6 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   ApplyGreedyEnvironmentUniforms(crossInstancedShader);
   glActiveTexture(GL_TEXTURE0);
 
-  const GLsizei index_count = CrossGpuBackend.GetTemplateIndexCount();
   for (const CrossGpuBatch &gpu : CrossGpuPass.batches)
   {
     if (gpu.instanceCount == 0 || gpu.instanceVbo == 0 || gpu.vao == 0)
@@ -6469,7 +6488,9 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     glBindTexture(GL_TEXTURE_2D, textureId);
     SetBlockAnimUniforms(crossInstancedShader, gpu.blockId, textures);
     glBindVertexArray(gpu.vao);
-    glDrawElementsInstanced(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, nullptr,
+    glDrawElementsInstanced(GL_TRIANGLES,
+                            CrossGpuBackend.GetTemplateIndexCount(gpu.shape),
+                            GL_UNSIGNED_INT, nullptr,
                             static_cast<GLsizei>(gpu.instanceCount));
   }
   glBindVertexArray(0);

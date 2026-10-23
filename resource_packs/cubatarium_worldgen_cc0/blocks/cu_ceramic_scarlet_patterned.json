@@ -21,7 +21,9 @@
     "cu_ceramic_scarlet_patterned",
     "cu_ceramic_scarlet_patterned"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "ceramic",
     "material": "scarlet",

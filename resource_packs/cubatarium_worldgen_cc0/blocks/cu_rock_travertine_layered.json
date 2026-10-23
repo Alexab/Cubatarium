@@ -21,7 +21,9 @@
     "cu_rock_travertine_layered",
     "cu_rock_travertine_layered"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "rock",
     "material": "travertine",

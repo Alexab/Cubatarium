@@ -21,7 +21,9 @@
     "cu_ceramic_jade_crackle",
     "cu_ceramic_jade_crackle"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "ceramic",
     "material": "jade",

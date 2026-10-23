@@ -18,10 +18,12 @@
     "cu_soil_clay_rooted",
     "cu_soil_clay_rooted",
     "cu_soil_clay_rooted",
-    "cu_soil_clay_rooted",
-    "cu_soil_clay_rooted"
+    "cu_soil_clay_rooted_top",
+    "cu_soil_clay_rooted_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "soil",
     "material": "clay",

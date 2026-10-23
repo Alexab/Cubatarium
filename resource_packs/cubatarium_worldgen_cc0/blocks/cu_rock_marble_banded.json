@@ -21,7 +21,9 @@
     "cu_rock_marble_banded",
     "cu_rock_marble_banded"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "rock",
     "material": "marble",

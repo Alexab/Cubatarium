@@ -18,10 +18,12 @@
     "cu_wood_cedar_dark",
     "cu_wood_cedar_dark",
     "cu_wood_cedar_dark",
-    "cu_wood_cedar_dark",
-    "cu_wood_cedar_dark"
+    "cu_wood_cedar_dark_endgrain",
+    "cu_wood_cedar_dark_endgrain"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "wood",
     "material": "cedar",

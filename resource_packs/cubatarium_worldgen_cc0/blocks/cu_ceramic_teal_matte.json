@@ -21,7 +21,9 @@
     "cu_ceramic_teal_matte",
     "cu_ceramic_teal_matte"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "ceramic",
     "material": "teal",

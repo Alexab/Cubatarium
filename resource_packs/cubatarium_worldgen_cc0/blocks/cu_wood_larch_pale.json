@@ -18,10 +18,12 @@
     "cu_wood_larch_pale",
     "cu_wood_larch_pale",
     "cu_wood_larch_pale",
-    "cu_wood_larch_pale",
-    "cu_wood_larch_pale"
+    "cu_wood_larch_pale_endgrain",
+    "cu_wood_larch_pale_endgrain"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "wood",
     "material": "larch",

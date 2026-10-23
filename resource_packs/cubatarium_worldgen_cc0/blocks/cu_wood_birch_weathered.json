@@ -18,10 +18,12 @@
     "cu_wood_birch_weathered",
     "cu_wood_birch_weathered",
     "cu_wood_birch_weathered",
-    "cu_wood_birch_weathered",
-    "cu_wood_birch_weathered"
+    "cu_wood_birch_weathered_endgrain",
+    "cu_wood_birch_weathered_endgrain"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "wood",
     "material": "birch",

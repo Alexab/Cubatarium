@@ -22,7 +22,9 @@
     "cu_organic_flower_pink_dry"
   ],
   "render": {
+    "texture_variation": 0.0,
     "style": "cross",
+    "shape": "cluster",
     "double_sided": true
   },
   "assetgen": {

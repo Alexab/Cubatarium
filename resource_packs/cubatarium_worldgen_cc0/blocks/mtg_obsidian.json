@@ -19,7 +19,9 @@
     "mt_mtg_obsidian_default_obsidian",
     "mt_mtg_obsidian_default_obsidian"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "license": "CC0-1.0",
   "provenance": {
     "source_pack": "minetest_default_16",

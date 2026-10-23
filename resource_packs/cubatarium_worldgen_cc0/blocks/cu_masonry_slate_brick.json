@@ -18,10 +18,12 @@
     "cu_masonry_slate_brick",
     "cu_masonry_slate_brick",
     "cu_masonry_slate_brick",
-    "cu_masonry_slate_brick",
-    "cu_masonry_slate_brick"
+    "cu_masonry_slate_brick_top",
+    "cu_masonry_slate_brick_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "masonry",
     "material": "slate",

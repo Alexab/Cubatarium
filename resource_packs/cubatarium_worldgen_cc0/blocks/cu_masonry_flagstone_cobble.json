@@ -18,10 +18,12 @@
     "cu_masonry_flagstone_cobble",
     "cu_masonry_flagstone_cobble",
     "cu_masonry_flagstone_cobble",
-    "cu_masonry_flagstone_cobble",
-    "cu_masonry_flagstone_cobble"
+    "cu_masonry_flagstone_cobble_top",
+    "cu_masonry_flagstone_cobble_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "masonry",
     "material": "flagstone",

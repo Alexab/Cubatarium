@@ -540,6 +540,13 @@ int RunResourcePackSmoke(IUPlatformPaths &paths)
               << std::endl;
     return 1;
   }
+  const auto &grassOverride = ogaOverrides.at("grass");
+  if (grassOverride.empty() || grassOverride.front().Faces != std::vector<int>{4})
+  {
+    std::cerr << "ResourcePackSmoke: top texture override must map to face 4"
+              << std::endl;
+    return 1;
+  }
   if (!SmokeSelection(oga, assetRoot, writableRoot, registry, placeholders))
   {
     return 1;
@@ -551,6 +558,29 @@ int RunResourcePackSmoke(IUPlatformPaths &paths)
   }
   if (!SmokePlaceholderVisualMarker(placeholders))
   {
+    return 1;
+  }
+
+  ResourcePackSelection photo64;
+  photo64.Primary = {"cubatarium_worldgen_cc0"};
+  photo64.Secondary = {"cubatarium_worldgen_photo64_cc0"};
+  photo64.WorldgenOwner = "cubatarium_worldgen_cc0";
+  if (!SmokeSelection(photo64, assetRoot, writableRoot, registry, placeholders))
+  {
+    return 1;
+  }
+  const auto photo64Granite = std::find_if(
+      registry.GetCubeDescriptors().begin(), registry.GetCubeDescriptors().end(),
+      [](const MergedCubeDesc &descriptor) { return descriptor.Name == "granite"; });
+  if (photo64Granite == registry.GetCubeDescriptors().end() ||
+      photo64Granite->Stems[0].rfind(
+          "cubatarium_worldgen_photo64_cc0/p64_", 0) != 0 ||
+      photo64Granite->Stems[4].rfind(
+          "cubatarium_worldgen_photo64_cc0/p64_", 0) != 0)
+  {
+    std::cerr << "ResourcePackSmoke: selected 64px overlay did not override "
+                 "block faces"
+              << std::endl;
     return 1;
   }
 

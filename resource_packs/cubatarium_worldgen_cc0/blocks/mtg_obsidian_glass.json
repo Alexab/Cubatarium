@@ -20,7 +20,8 @@
     "mt_mtg_obsidian_glass_default_obsidian_glass_detail"
   ],
   "render": {
-    "transparent": true
+    "transparent": true,
+    "texture_variation": 0.48
   },
   "displayName": "Obsidian Glass",
   "license": "CC0-1.0",

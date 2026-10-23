@@ -18,10 +18,12 @@
     "cu_organic_leaf_fresh",
     "cu_organic_leaf_fresh",
     "cu_organic_leaf_fresh",
-    "cu_organic_leaf_fresh",
+    "cu_organic_leaf_fresh_top",
     "cu_organic_leaf_fresh"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "organic",
     "material": "leaf",

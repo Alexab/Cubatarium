@@ -21,7 +21,9 @@
     "cu_metal_silver_dark",
     "cu_metal_silver_dark"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "metal",
     "material": "silver",

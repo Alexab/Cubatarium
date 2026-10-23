@@ -20,7 +20,9 @@
     "mt_mtg_meselamp_default_meselamp",
     "mt_mtg_meselamp_default_meselamp"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "displayName": "Meselamp",
   "lighting": {
     "emission": 15

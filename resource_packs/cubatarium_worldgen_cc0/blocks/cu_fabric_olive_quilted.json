@@ -21,7 +21,9 @@
     "cu_fabric_olive_quilted",
     "cu_fabric_olive_quilted"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "fabric",
     "material": "olive",

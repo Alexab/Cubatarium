@@ -22,7 +22,8 @@
     "mt_glass"
   ],
   "render": {
-    "transparent": true
+    "transparent": true,
+    "texture_variation": 0.48
   },
   "displayName": "Glass",
   "license": "CC0-1.0",

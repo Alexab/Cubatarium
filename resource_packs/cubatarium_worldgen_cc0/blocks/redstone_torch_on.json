@@ -20,7 +20,9 @@
     "mt_redtorch_lit",
     "mt_redtorch_lit"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "displayName": "Redstone Torch",
   "lighting": {
     "emission": 7

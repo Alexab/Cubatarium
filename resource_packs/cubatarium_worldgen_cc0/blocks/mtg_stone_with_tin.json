@@ -19,7 +19,9 @@
     "mt_mtg_stone_with_tin_composite_0",
     "mt_mtg_stone_with_tin_composite_0"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "license": "CC0-1.0",
   "provenance": {
     "source_pack": "minetest_default_16",

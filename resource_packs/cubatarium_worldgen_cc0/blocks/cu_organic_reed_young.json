@@ -22,7 +22,9 @@
     "cu_organic_reed_young"
   ],
   "render": {
+    "texture_variation": 0.0,
     "style": "cross",
+    "shape": "reed",
     "double_sided": true
   },
   "assetgen": {

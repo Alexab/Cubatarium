@@ -21,7 +21,9 @@
     "cu_masonry_flagstone_chiseled",
     "cu_masonry_flagstone_chiseled"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "masonry",
     "material": "flagstone",

@@ -21,7 +21,8 @@
     "mt_mtg_aspen_leaves_default_aspen_leaves"
   ],
   "render": {
-    "style": "cutout"
+    "style": "cutout",
+    "texture_variation": 0.48
   },
   "physics": {
     "movement": {

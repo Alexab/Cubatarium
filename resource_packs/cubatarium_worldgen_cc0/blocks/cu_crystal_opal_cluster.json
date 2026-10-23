@@ -21,7 +21,9 @@
     "cu_crystal_opal_cluster",
     "cu_crystal_opal_cluster"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "crystal",
     "material": "opal",

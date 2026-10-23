@@ -18,10 +18,12 @@
     "cu_soil_pale_sand_dry",
     "cu_soil_pale_sand_dry",
     "cu_soil_pale_sand_dry",
-    "cu_soil_pale_sand_dry",
-    "cu_soil_pale_sand_dry"
+    "cu_soil_pale_sand_dry_top",
+    "cu_soil_pale_sand_dry_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "soil",
     "material": "pale_sand",

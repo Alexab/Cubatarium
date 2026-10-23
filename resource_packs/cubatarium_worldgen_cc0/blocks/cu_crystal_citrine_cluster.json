@@ -21,7 +21,9 @@
     "cu_crystal_citrine_cluster",
     "cu_crystal_citrine_cluster"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "crystal",
     "material": "citrine",

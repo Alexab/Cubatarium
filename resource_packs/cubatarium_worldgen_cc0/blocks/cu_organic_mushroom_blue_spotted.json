@@ -22,7 +22,9 @@
     "cu_organic_mushroom_blue_spotted"
   ],
   "render": {
+    "texture_variation": 0.0,
     "style": "cross",
+    "shape": "cluster",
     "double_sided": true
   },
   "assetgen": {

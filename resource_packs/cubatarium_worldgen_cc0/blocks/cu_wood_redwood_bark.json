@@ -18,10 +18,12 @@
     "cu_wood_redwood_bark",
     "cu_wood_redwood_bark",
     "cu_wood_redwood_bark",
-    "cu_wood_redwood_bark",
-    "cu_wood_redwood_bark"
+    "cu_wood_redwood_bark_endgrain",
+    "cu_wood_redwood_bark_endgrain"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "wood",
     "material": "redwood",

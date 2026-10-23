@@ -20,7 +20,13 @@
     "mt_fern",
     "mt_fern"
   ],
-  "render": {},
+  "render": {
+    "transparent": true,
+    "style": "cross",
+    "double_sided": true,
+    "shape": "tuft",
+    "texture_variation": 0.0
+  },
   "license": "CC0-1.0",
   "provenance": {
     "source_pack": "minetest_default_16",

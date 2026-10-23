@@ -13,6 +13,7 @@ uniform sampler2D texture0;
 uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
+uniform float uTextureVariation;
 // uGreedyShaderMode: 0 = color, 1 = shell depth (discard a < threshold), 2 = fuzzy (discard a >= threshold)
 uniform int uGreedyShaderMode;
 uniform float uShellAlphaThreshold;
@@ -192,29 +193,33 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
     float u0 = float(faceIndex) * kCubeShift;
     float u1 = float(faceIndex + 1) * kCubeShift;
     vec2 inset = atlasHalfTexelInset();
-
+    vec2 tile;
     if (faceIndex == 0) {
-        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
-                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
+        tile = vec2(blockTileCoord(worldPos.x), blockTileCoord(worldPos.y));
+    } else if (faceIndex == 1) {
+        tile = vec2(1.0 - blockTileCoord(worldPos.z), blockTileCoord(worldPos.y));
+    } else if (faceIndex == 2) {
+        tile = vec2(1.0 - blockTileCoord(worldPos.x), blockTileCoord(worldPos.y));
+    } else if (faceIndex == 3) {
+        tile = vec2(blockTileCoord(worldPos.z), blockTileCoord(worldPos.y));
+    } else if (faceIndex == 4) {
+        tile = vec2(blockTileCoord(worldPos.x), 1.0 - blockTileCoord(worldPos.z));
+    } else {
+        tile = vec2(blockTileCoord(worldPos.x), blockTileCoord(worldPos.z));
     }
-    if (faceIndex == 1) {
-        return vec2(insetMix(u0, u1, 1.0 - blockTileCoord(worldPos.z), inset.x),
-                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
+    if (uTextureVariation > 0.001) {
+        vec3 cell = floor(worldPos + vec3(0.5));
+        float seed = dot(cell + vec3(float(faceIndex) * 17.0), vec3(127.1, 311.7, 74.7));
+        vec2 offset = vec2(
+            fract(sin(seed) * 43758.5453),
+            fract(sin(seed + 19.19) * 24634.6345)
+        ) * clamp(uTextureVariation, 0.0, 1.0);
+        tile = fract(tile + offset);
     }
-    if (faceIndex == 2) {
-        return vec2(insetMix(u0, u1, 1.0 - blockTileCoord(worldPos.x), inset.x),
-                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
-    }
-    if (faceIndex == 3) {
-        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.z), inset.x),
-                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
-    }
-    if (faceIndex == 4) {
-        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
-                    insetMix(0.0, 1.0, 1.0 - blockTileCoord(worldPos.z), inset.y));
-    }
-    return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
-                insetMix(0.0, 1.0, blockTileCoord(worldPos.z), inset.y));
+    float v0 = faceIndex < 4 ? 1.0 : 0.0;
+    float v1 = faceIndex < 4 ? 0.0 : 1.0;
+    return vec2(insetMix(u0, u1, tile.x, inset.x),
+                insetMix(v0, v1, tile.y, inset.y));
 }
 
 vec2 crossAtlasUV(vec2 meshUV)

@@ -19,7 +19,9 @@
     "mt_workbench_top",
     "mt_workbench_side"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.0
+  },
   "license": "CC0-1.0",
   "provenance": {
     "source_pack": "minetest_default_16",

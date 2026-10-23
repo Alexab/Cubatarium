@@ -21,7 +21,8 @@
     "mt_mtg_glass_default_glass_detail"
   ],
   "render": {
-    "transparent": true
+    "transparent": true,
+    "texture_variation": 0.48
   },
   "displayName": "Glass",
   "license": "CC0-1.0",

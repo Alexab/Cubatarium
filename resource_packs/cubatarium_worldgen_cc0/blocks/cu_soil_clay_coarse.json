@@ -18,10 +18,12 @@
     "cu_soil_clay_coarse",
     "cu_soil_clay_coarse",
     "cu_soil_clay_coarse",
-    "cu_soil_clay_coarse",
-    "cu_soil_clay_coarse"
+    "cu_soil_clay_coarse_top",
+    "cu_soil_clay_coarse_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "soil",
     "material": "clay",

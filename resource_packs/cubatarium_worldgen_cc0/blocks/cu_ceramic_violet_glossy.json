@@ -21,7 +21,9 @@
     "cu_ceramic_violet_glossy",
     "cu_ceramic_violet_glossy"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "ceramic",
     "material": "violet",

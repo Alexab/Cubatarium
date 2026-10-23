@@ -18,10 +18,12 @@
     "cu_organic_lichen_sparse",
     "cu_organic_lichen_sparse",
     "cu_organic_lichen_sparse",
-    "cu_organic_lichen_sparse",
+    "cu_organic_lichen_sparse_top",
     "cu_organic_lichen_sparse"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "organic",
     "material": "lichen",

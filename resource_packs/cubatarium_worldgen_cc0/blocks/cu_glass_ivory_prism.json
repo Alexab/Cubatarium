@@ -22,6 +22,7 @@
     "cu_glass_ivory_prism"
   ],
   "render": {
+    "texture_variation": 0.48,
     "transparent": true
   },
   "assetgen": {

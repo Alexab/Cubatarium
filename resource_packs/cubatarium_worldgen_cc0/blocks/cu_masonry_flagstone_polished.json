@@ -21,7 +21,9 @@
     "cu_masonry_flagstone_polished",
     "cu_masonry_flagstone_polished"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "masonry",
     "material": "flagstone",

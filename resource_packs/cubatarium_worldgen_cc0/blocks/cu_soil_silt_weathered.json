@@ -18,10 +18,12 @@
     "cu_soil_silt_weathered",
     "cu_soil_silt_weathered",
     "cu_soil_silt_weathered",
-    "cu_soil_silt_weathered",
-    "cu_soil_silt_weathered"
+    "cu_soil_silt_weathered_top",
+    "cu_soil_silt_weathered_bottom"
   ],
-  "render": {},
+  "render": {
+    "texture_variation": 0.48
+  },
   "assetgen": {
     "family": "soil",
     "material": "silt",

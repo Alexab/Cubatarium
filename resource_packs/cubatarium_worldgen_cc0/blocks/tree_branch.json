@@ -21,7 +21,10 @@
   ],
   "render": {
     "transparent": true,
-    "style": "cross"
+    "style": "cross",
+    "shape": "cross",
+    "texture_variation": 0.0,
+    "double_sided": true
   },
   "physics": {
     "movement": {

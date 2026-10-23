@@ -1,9 +1,10 @@
 # Cubatarium AssetGen
 
 `tools/assetgen.py` builds, audits, and previews the original texture and voxel
-decor library in `resource_packs/cubatarium_worldgen_cc0/`. The game reads only
-the generated PNG and JSON files; it does not need Python, PyTorch, or model
-weights.
+decor library in `resource_packs/cubatarium_worldgen_cc0/`, with an optional
+64px texture-only overlay in `resource_packs/cubatarium_worldgen_photo64_cc0/`.
+The game reads only generated PNG and JSON files; it does not need Python,
+PyTorch, or model weights.
 
 ## Library target
 
@@ -14,11 +15,11 @@ Those figures measure different things. The texture number counts paths/files,
 not distinct pixel images. Cubatarium's own acceptance measure is at least
 1,286 block definitions and 1,405 texture files, with pixel-identical images
 reported as duplicates. The current generated pack contains 1,664 block
-definitions and 1,718 textures: 1,396 procedurally catalogued material blocks,
-258 Cubatarium definitions previously bundled with the Minetest-reference
-texture pack, and 10 geology definitions. Textures include 1,396 material
-variants, 313 replacements for the Minetest reference PNGs, and replacements
-for the nine geology PNGs.
+definitions and 2,224 unique textures: 1,396 procedurally catalogued material
+blocks, 258 Cubatarium definitions previously bundled with the Minetest-reference
+texture pack, and 10 geology definitions. The 2,224 files comprise 1,396 base
+material textures, 313 new Minetest replacements, nine geology replacements,
+and 506 role-specific top, bottom, grass, masonry, and wood-end textures.
 
 The benchmark sources and snapshot date are recorded in `asset_catalog.yaml`
 and each generated `asset_manifest.json`:
@@ -45,34 +46,75 @@ stable block IDs, reference overrides, and an asset provenance manifest:
 
 ```sh
 python tools/assetgen.py build-pack
+python tools/assetgen.py build-pack --profile photo64
 python tools/assetgen.py audit --minecraft-version 26.3
 python tools/assetgen.py validate --pack cubatarium_worldgen_cc0
+python tools/assetgen.py validate --pack cubatarium_worldgen_photo64_cc0
 ```
+
+`voxel16` is the default world pack. Select `cubatarium_worldgen_photo64_cc0`
+as a secondary pack when creating a world to use the 64px face overrides.
+16×16 is the target resolution for the default pack and its pixel-art palette.
+The optional 64px overlay remains a separate preview profile. Texture dimensions
+are checked against each pack's declared resolution.
+
+The 16px generator preserves each material's large-scale pattern before adding
+periodic detail: rock families include mineral grains and strata, masonry uses
+different layouts for brick, cobble, tile, and cut stone, and wood uses grain or
+end-grain recipes. Grass top maps to a fully vegetated turf texture, while grass
+sides use a thin irregular turf layer above soil; dry grass, snow, and leaf litter
+have separate top-face treatments. Furnace, dispenser, workbench,
+bookshelf, anvil, and chest faces receive functional pixel motifs. A block's
+`render.texture_variation` gives ordinary cubes a deterministic, per-cell UV
+phase so repeated blocks do not line up as one identical large pattern; semantic
+machine faces keep their UV phase fixed. Alpha-cutout plant and fire sprites keep
+their transparent silhouettes and skip surface-tile seam blending. Their blocks
+use tuft, cluster, reed, or flame geometry, and opaque ground faces remain
+visible through the clear pixels.
 
 Generate the 1,396 catalog textures into a separate staging directory:
 
 ```sh
-python tools/assetgen.py texture batch --catalog tools/asset_catalog.yaml --backend procedural
+python tools/assetgen.py texture batch --catalog tools/asset_catalog.yaml --backend procedural --profile voxel16 --reference-mode qa-only
 ```
 
 Generate one deterministic texture or a parametric voxel object:
 
 ```sh
 python tools/assetgen.py texture --material basalt --variant fractured --backend procedural --seed 42 --output out/basalt.png
+python tools/assetgen.py texture --material loam --role grass_side --backend procedural --profile voxel16 --seed 42 --output out/loam_side.png
+python tools/assetgen.py texture --material basalt --input out/cc0_basalt_photo.png --source-license CC0-1.0 --backend quilting --profile photo64 --seed 42 --output out/basalt_photo64.png
 python tools/assetgen.py decor --preset tree:pine --seed 42 --output out/pine_tree.json
 python tools/assetgen.py preview --object out/pine_tree.json
-python tools/assetgen.py preview --compare-reference minetest_default_16
+python tools/assetgen.py preview --blocks resource_packs/cubatarium_worldgen_cc0
+python tools/assetgen.py compare --reference-pack minetest_default_16 --reference-mode qa-only --pack resource_packs/cubatarium_worldgen_cc0
+python tools/assetgen.py calibrate --reference-pack minetest_default_16
 ```
 
-Texture commands also accept `--input reference.png`; the offline backend uses
-only broad average color from the reference and creates a new image. Image or
-model-derived outputs are marked `REVIEW_REQUIRED` in their sidecar manifest.
-The generated object preview is saved beside its JSON file.
+`--reference-mode qa-only` uses Minetest only for comparison and visual QA.
+`aggregate-calibration` computes per-family medians and per-texture color,
+luminance spread, neighbor contrast, and alpha coverage. It feeds these numeric
+summaries into generation; it never uses reference patches or copies source
+pixels. For a matching reference texture, its color centroid has a stronger
+influence on the generated material, while catalog textures use the family
+median. Since
+the reference pack is CC BY-SA 3.0, aggregate-calibrated pack builds go to
+`assetgen_output/staging/` and are marked `REVIEW_REQUIRED` until their
+publication status is reviewed. The `compare` command writes contact sheets and
+broad diagnostics; block-face previews show front/right/back/left/top/bottom.
+
+`quilting` builds a new tile by selecting and blending small patches from an
+explicit input image. Use only photographs you can publish under CC0 for
+CC0-bound outputs, and set `--source-license CC0-1.0`; other or unknown licenses
+are retained in provenance and marked for review. Generated and photo-derived
+textures emit albedo/alpha only, which is what the current block renderer
+consumes.
 
 ## Optional neural generation
 
-The offline backend has no model dependency and is deterministic for the same
-catalog, material parameters, and seed. Diffusers is optional. First install a
+The procedural and quilting backends have no model dependency and are
+deterministic for the same catalog, material parameters, input, and seed.
+Diffusers is optional. First install a
 PyTorch wheel appropriate for the machine (CPU is supported), then install the
 additional Python packages. The ML extra pins the tested Diffusers 0.37.x and
 Transformers 4.x compatibility range because the model pipeline API and Hub
@@ -85,8 +127,9 @@ python tools/assetgen.py texture --material basalt --input reference.png --backe
 ```
 
 Weights are stored in the operating system's Cubatarium AssetGen cache, outside
-Git. The `auto` backend tries a named, locally cached model and falls back to
-procedural generation; without `--model`, it picks the first cached user
+Git. The `auto` backend tries a named, locally cached model and otherwise uses
+quilting when an input image is supplied, or procedural generation without one.
+Without `--model`, it picks the first cached user
 Diffusers pipeline in deterministic name order (Hub `hf-internal-testing`
 fixtures are ignored). It does not download unless
 `--allow-download --revision <revision>` are set. `--device cpu` always selects CPU inference. The
@@ -170,14 +213,18 @@ CPU implementation when no CUDA compiler is found.
 
 ## Asset and license rules
 
-The procedural backend uses the Minetest and geology file names only to select
-material families. It records reference file hashes for QA but does not sample
-the source pixels. `preview --compare-reference` creates temporary side-by-side
-QA sheets under `assetgen_output/reference_qa/`, outside the distributable pack.
-Its output is new pixel art, quantized to a compact palette,
-16×16, alpha-aware, and edge-periodic. Animated liquids use vertical strips
-of square 16×16 frames. The Minetest source pixels remain under
-their original license and are not copied into this CC0 pack. The block JSON
+The default `qa-only` generator uses Minetest names only to select material
+families and roles. It records source hashes for QA but does not sample source
+pixels. `aggregate-calibration` extracts per-family and per-texture numeric summaries
+and uses them to tune color and detail parameters. It does not sample patches
+or copy pixels; outputs remain in a review staging folder because the reference
+pack carries CC BY-SA 3.0. `compare` and `preview --compare-reference` write
+QA sheets outside the distributable pack. The 16px profile uses a compact
+palette and periodic noise; the 64px profile retains continuous color and
+detail. Layer recipes assign grass-over-soil sides, soil top/bottom, and bark
+versus endgrain. Animated liquids use vertical strips sized to their profile.
+The Minetest source pixels remain under their original license and are not
+copied into the CC0 pack. The block JSON
 formerly distributed with `minetest_default_16` is generated from Cubatarium's
 own mappings and gameplay metadata; those authored definitions are included
 with replacement texture stems. The pack also integrates the CC0 geology
@@ -190,10 +237,11 @@ declared CC0 by this pack. Review model terms and input rights before moving any
 neural or reference-derived result into a redistributable CC0 pack.
 
 Godot Voxel Tools' blocky terrain guidance describes per-face texture tiles and
-material reuse; Cubatarium uses a shared six-face image for most blocks and
-overrides faces only where a source block needs a distinct mapping. Seamless
-patch synthesis can use [Image Quilting](https://graphics.cs.cmu.edu/people/efros/research/quilting.html)
-as a future optional backend. The current renderer consumes albedo and alpha,
+material reuse. Cubatarium stores a canonical face order and generates distinct
+tiles only where a material recipe requires them. The `quilting` backend uses
+patch selection and blending for CC0 photo inputs; optional diffusion can
+provide a learned image-to-image path. [Image Quilting](https://graphics.cs.cmu.edu/people/efros/research/quilting.html)
+is the source method for patch synthesis. The current renderer consumes albedo and alpha,
 not a full PBR material set; one photograph does not determine complete
 SVBRDF properties ([single-image SVBRDF reconstruction study](https://diglib.eg.org/items/78c7597d-7e55-4365-90b2-4326f49d60fc)).
 
