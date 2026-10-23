@@ -176,6 +176,19 @@ float blockTileCoord(float axis)
     return fract(axis + 0.5);
 }
 
+vec3 voxelCellFromFace(int faceIndex, vec3 worldPos)
+{
+    // Move a face point a tiny distance inward before rounding to the owning
+    // voxel; otherwise opposite faces hash the adjacent cell at the boundary.
+    if (faceIndex == 0) worldPos.z -= 1e-4;
+    else if (faceIndex == 1) worldPos.x -= 1e-4;
+    else if (faceIndex == 2) worldPos.z += 1e-4;
+    else if (faceIndex == 3) worldPos.x += 1e-4;
+    else if (faceIndex == 4) worldPos.y -= 1e-4;
+    else if (faceIndex == 5) worldPos.y += 1e-4;
+    return floor(worldPos + vec3(0.5));
+}
+
 vec2 atlasHalfTexelInset()
 {
     ivec2 atlasSize = textureSize(texture0, 0);
@@ -201,9 +214,32 @@ vec2 materialPlanePosition(int faceIndex, vec3 worldPos)
     return worldPos.xz;
 }
 
+uint hashMix32(uint value)
+{
+    value = value ^ (value >> 16u);
+    value *= 0x7feb352du;
+    value = value ^ (value >> 15u);
+    value *= 0x846ca68bu;
+    return value ^ (value >> 16u);
+}
+
+uint hashVoxelCell(ivec3 cell, uint salt)
+{
+    uint value = uint(cell.x) * 0x8da6b343u;
+    value ^= uint(cell.y) * 0xd8163841u;
+    value ^= uint(cell.z) * 0xcb1ab31fu;
+    return hashMix32(value ^ salt);
+}
+
+float hashUnit(uint value)
+{
+    return float(value >> 8u) * (1.0 / 16777216.0);
+}
+
 float materialHash(vec2 p)
 {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    ivec2 cell = ivec2(floor(p));
+    return hashUnit(hashVoxelCell(ivec3(cell, 0), 0x68bc21ebu));
 }
 
 vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
@@ -228,28 +264,41 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
     }
     // Per-block discrete tile transforms break large repeated ground and rock
     // patterns while keeping each 16 px texture seamless and unwarped.
-    if (uTextureVariation >= 0.75) {
-        vec3 cell = floor(worldPos + vec3(0.5));
-        float seed = dot(cell + vec3(float(faceIndex) * 17.0), vec3(127.1, 311.7, 74.7));
-        float transform = floor(fract(sin(seed + 47.17) * 43758.5453) * 8.0);
-        float rotation = mod(transform, 4.0);
-        if (rotation < 0.5) {
-            tile = vec2(tile.y, 1.0 - tile.x);
-        } else if (rotation < 1.5) {
-            tile = vec2(1.0 - tile.x, 1.0 - tile.y);
-        } else if (rotation < 2.5) {
-            tile = vec2(1.0 - tile.y, tile.x);
-        }
-        if (transform >= 4.0) {
-            tile.x = 1.0 - tile.x;
+    // Structured blocks may still use safe rotations on their isotropic top
+    // and bottom tiles. On directional side faces, vary only the horizontal
+    // phase so bark, grass layers, and masonry keep their intended orientation.
+    bool canTransformTile = uTextureVariation >= 0.75 ||
+                            (uTextureVariation >= 0.45 && faceIndex >= 4);
+    bool directionalPhaseOnly = uTextureVariation >= 0.45 &&
+                                 uTextureVariation < 0.75 && faceIndex < 4;
+    if (canTransformTile || directionalPhaseOnly) {
+        ivec3 cell = ivec3(floor(worldPos + vec3(0.5)));
+        uint faceSalt = uint(faceIndex + 1) * 0x9e3779b9u;
+        uint seed = hashVoxelCell(cell, faceSalt);
+        if (canTransformTile) {
+            float transform = floor(hashUnit(hashMix32(seed ^ 0xa511e9b3u)) * 8.0);
+            float rotation = mod(transform, 4.0);
+            if (rotation < 0.5) {
+                tile = vec2(tile.y, 1.0 - tile.x);
+            } else if (rotation < 1.5) {
+                tile = vec2(1.0 - tile.x, 1.0 - tile.y);
+            } else if (rotation < 2.5) {
+                tile = vec2(1.0 - tile.y, tile.x);
+            }
+            if (transform >= 4.0) {
+                tile.x = 1.0 - tile.x;
+            }
         }
         vec2 tileResolution = vec2(textureSize(texture0, 0));
         tileResolution.x /= 6.0;
         tileResolution.y /= max(1.0, float(uAnimFrameCount));
         vec2 offsetRandom = vec2(
-            fract(sin(seed) * 43758.5453),
-            fract(sin(seed + 19.19) * 24634.6345)
+            hashUnit(hashMix32(seed ^ 0x63d83595u)),
+            hashUnit(hashMix32(seed ^ 0xb5297a4du))
         );
+        if (directionalPhaseOnly) {
+            offsetRandom.y = 0.0;
+        }
         // Keep randomized offsets on texel boundaries so nearest-filtered
         // 16px materials do not become subpixel-blurred or unevenly tiled.
         vec2 offset = floor(offsetRandom * tileResolution * clamp(uTextureVariation, 0.0, 1.0)) / tileResolution;
@@ -269,8 +318,9 @@ vec2 crossAtlasUV(vec2 meshUV)
     vec2 inset = atlasHalfTexelInset();
     vec2 tile = meshUV;
     if (uTextureVariation >= 0.75) {
-        float seed = dot(vInstanceCell, vec3(127.1, 311.7, 74.7));
-        float transform = floor(fract(sin(seed + 47.17) * 43758.5453) * 8.0);
+        ivec3 cell = ivec3(floor(vInstanceCell + vec3(0.5)));
+        uint seed = hashVoxelCell(cell, 0x4f1bbcdcu);
+        float transform = floor(hashUnit(hashMix32(seed ^ 0xa511e9b3u)) * 8.0);
         float rotation = mod(transform, 4.0);
         if (rotation < 0.5) {
             tile = vec2(tile.y, 1.0 - tile.x);
@@ -340,6 +390,14 @@ void main()
         float grainAmplitude = 0.18 * variation;
         FragColor.rgb *= 1.0 + (spatialTone - 0.5) * broadAmplitude
                          + (fineGrain - 0.5) * grainAmplitude;
+        // A block-local value breaks the remaining repeated-tile grid while
+        // keeping all six faces of a voxel on the same subtle color shift.
+        vec3 materialCell = voxelCellFromFace(vFaceIndex, vWorldPos);
+        uint blockSeed = hashVoxelCell(
+            ivec3(floor(materialCell + vec3(0.5))), 0xc2b2ae35u
+        );
+        float blockTone = hashUnit(blockSeed);
+        FragColor.rgb *= 1.0 + (blockTone - 0.5) * (0.08 * variation);
     }
     float sky01 = clamp(vSkyLight, 0.0, 1.0);
     float block01 = clamp(vBlockLight, 0.0, 1.0);

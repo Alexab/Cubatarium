@@ -150,6 +150,7 @@ def build_flight_route_identity(args: argparse.Namespace) -> dict:
             "CUBA_FLIGHT_MOVE_SPEED_SCALE", "1"
         ),
         "fog_pull_in_enabled": (force_fog_on if product_route else None),
+        "fixed_time_of_day": os.environ.get("CUBA_FIXED_TIME"),
         "require_existing_world": bool(
             getattr(args, "require_existing_world", False)
         ),

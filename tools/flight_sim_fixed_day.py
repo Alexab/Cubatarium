@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Run flight_sim_run.py under the established clear-day diagnostic profile.
 
-This changes only World_164 environment values for the lifetime of the runner.
-It restores the exact original world_data.json bytes in a finally block, even
-when the runner exits nonzero or raises. Camera, route, and movement settings
-are passed through unchanged.
+This temporarily applies the selected world's environment values, defaulting
+to frozen clear noon (time_of_day=0.25 for the current primary-sun orbit). It
+also pins the running engine through CUBA_FIXED_TIME so startup or cached world
+state cannot replace the requested time. The exact original world_data.json
+bytes are restored in a finally block, even when the runner exits nonzero or
+raises. Camera, route, and movement settings are passed through unchanged.
 """
 
 from __future__ import annotations
@@ -59,13 +61,20 @@ def fixed_day_payload(original: bytes, time_of_day: float) -> bytes:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--world", required=True)
-    parser.add_argument("--time-of-day", type=float, default=0.25)
+    parser.add_argument(
+        "--time-of-day",
+        type=float,
+        default=0.25,
+        help="normalized day phase in [0, 1); 0.25 is near solar noon in the default world",
+    )
     parser.add_argument(
         "runner_args",
         nargs=argparse.REMAINDER,
         help="arguments for tools/flight_sim_run.py after --",
     )
     args = parser.parse_args()
+    if not 0.0 <= args.time_of_day < 1.0:
+        parser.error("--time-of-day must be in [0, 1)")
     runner_args = list(args.runner_args)
     if runner_args and runner_args[0] == "--":
         runner_args.pop(0)
@@ -124,16 +133,21 @@ def main() -> int:
         atomic_write(world_data, overridden, ".fixed-day.tmp")
         print(
             "fixed-day profile: "
-            f"time_of_day={args.time_of_day} weather=clear clouds=0; "
+            f"time_of_day={args.time_of_day} (default-world noon=0.25) "
+            "weather=clear clouds=0; "
             f"original_sha256={sha256(original)}",
             flush=True,
         )
+        child_env = os.environ.copy()
+        child_env["CUBA_FIXED_TIME"] = str(args.time_of_day)
         command = [
             sys.executable,
             str(ROOT / "tools" / "flight_sim_run.py"),
             *runner_args,
         ]
-        result_code = subprocess.run(command, cwd=ROOT, check=False).returncode
+        result_code = subprocess.run(
+            command, cwd=ROOT, env=child_env, check=False
+        ).returncode
         return result_code
     finally:
         atomic_write(world_data, original, ".restore.tmp")

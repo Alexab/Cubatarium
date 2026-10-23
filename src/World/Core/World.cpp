@@ -723,7 +723,8 @@ void UWorld::TickEnvironment(float dtSeconds)
   EnvironmentSettingsData.WeatherRuntime.WeatherSimulationTimeSec +=
       static_cast<double>(dtSeconds);
 
-  // Harness/diagnostics: pin the time of day (0..1, e.g. 0.5 = noon-ish) so
+  // Harness/diagnostics: pin the time of day (0..1, e.g. 0.25 = noon-ish for
+  // the default primary-sun orbit; 0.5 is near the horizon) so
   // captured frames are comparable. In game use `time set <0..1>` and
   // `time freeze`.
   {
