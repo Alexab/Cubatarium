@@ -5231,6 +5231,8 @@ void UGeometryEngine::SetBlockAnimUniforms(
     FrameCount = 1;
   }
 
+  const float materialTimeSec = AnimationClock.ElapsedSeconds();
+  const float materialTimePhase = std::fmod(materialTimeSec, 100.0f) / 100.0f;
   int frame = 0;
   if (FrameCount > 1 && WorldInstance)
   {
@@ -5240,8 +5242,7 @@ void UGeometryEngine::SetBlockAnimUniforms(
     const float frameDuration = static_cast<float>(frametimeTicks) / 20.0f;
     if (frameDuration > 0.0f)
     {
-      const float elapsed = AnimationClock.ElapsedSeconds();
-      frame = static_cast<int>(elapsed / frameDuration) % FrameCount;
+      frame = static_cast<int>(materialTimeSec / frameDuration) % FrameCount;
       if (frame < 0)
       {
         frame = 0;
@@ -5251,6 +5252,7 @@ void UGeometryEngine::SetBlockAnimUniforms(
 
   shader->SetInt("uAnimFrame", frame);
   shader->SetInt("uAnimFrameCount", FrameCount);
+  shader->SetFloat("uMaterialTimePhase", materialTimePhase);
   float textureVariation = 0.0f;
   if (WorldInstance)
   {

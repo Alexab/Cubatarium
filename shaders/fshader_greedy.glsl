@@ -16,6 +16,7 @@ uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
 uniform float uTextureVariation;
+uniform float uMaterialTimePhase;
 // uGreedyShaderMode: 0 = color, 1 = shell depth (discard a < threshold), 2 = fuzzy (discard a >= threshold)
 uniform int uGreedyShaderMode;
 uniform float uShellAlphaThreshold;
@@ -377,27 +378,39 @@ vec4 materialVariation(vec2 planePosition)
 
 float waterSurfaceLight(vec2 planePosition)
 {
-    // A continuous, domain-warped field makes broken ripple crests without
-    // the parallel, evenly spaced bands produced by a sine wave. All terms
-    // use world coordinates, so the pattern stays continuous across blocks.
+    // Advect crossed, domain-warped noise fields at different speeds. Their
+    // overlap creates water movement without a repeated tile or parallel
+    // sine-wave bands; world-space coordinates keep block seams continuous.
+    float phase = uMaterialTimePhase * 6.28318530718;
+    vec2 flow = vec2(cos(phase), sin(phase * 2.0)) * 1.3;
     vec2 warp = vec2(
         materialNoise(planePosition * 0.16 + vec2(11.6, 24.2)),
         materialNoise(planePosition * 0.16 + vec2(26.4, 6.8))
     ) - 0.5;
-    vec2 warped = planePosition + warp * 3.6;
-    float swell = materialNoise(warped * 0.11 + vec2(8.7, 16.1));
-    float current = materialNoise(warped * 0.31 + vec2(21.4, 4.8));
-    float grain = materialNoise(warped * 0.92 + vec2(3.2, 29.6));
-    float ripple = materialNoise(warped * 2.4 + vec2(16.2, 12.7));
-    float microRipple = materialNoise(warped * 4.6 + vec2(7.9, 22.5));
-    float ridge = 1.0 - abs(ripple * 2.0 - 1.0);
-    float crest = smoothstep(0.69, 0.90, ridge) * (0.48 + current * 0.52);
-    float brokenCrest = smoothstep(0.76, 0.94, microRipple)
-                        * smoothstep(0.35, 0.82, grain);
-    return clamp(0.94 + (swell - 0.5) * 0.31
-                 + (current - 0.5) * 0.27 + (grain - 0.5) * 0.18
-                 + (microRipple - 0.5) * 0.10
-                 + crest * 0.14 + brokenCrest * 0.06, 0.68, 1.24);
+    vec2 warped = planePosition + warp * 4.2;
+    float swell = materialNoise(warped * 0.11 + vec2(8.7, 16.1) + flow * 0.30);
+    float current = materialNoise(warped * 0.31 + vec2(21.4, 4.8) + flow * 0.75);
+    float grain = materialNoise(warped * 0.92 + vec2(3.2, 29.6) + flow * 1.55);
+    float rippleA = materialNoise(
+        warped * vec2(0.72, 2.05) + vec2(16.2, 12.7) + flow * 3.0
+    );
+    float rippleB = materialNoise(
+        warped * vec2(2.10, 0.64) + vec2(7.9, 22.5) - flow * 2.35
+    );
+    float microRipple = materialNoise(
+        warped * vec2(3.7, 4.9) + vec2(19.3, 2.1) + flow * 4.2
+    );
+    float ridgeA = 1.0 - abs(rippleA * 2.0 - 1.0);
+    float ridgeB = 1.0 - abs(rippleB * 2.0 - 1.0);
+    float crestA = smoothstep(0.67, 0.91, ridgeA) * (0.42 + current * 0.58);
+    float crestB = smoothstep(0.72, 0.94, ridgeB) * (0.35 + grain * 0.65);
+    float brokenCrest = smoothstep(0.73, 0.95, microRipple)
+                        * smoothstep(0.31, 0.78, grain);
+    return clamp(0.98 + (swell - 0.5) * 0.48
+                 + (current - 0.5) * 0.50 + (grain - 0.5) * 0.38
+                 + (microRipple - 0.5) * 0.16
+                 + crestA * 0.19 + crestB * 0.14
+                 + brokenCrest * 0.12, 0.52, 1.48);
 }
 
 void main()
@@ -428,9 +441,11 @@ void main()
             float glintField = materialNoise(
                 materialPlane * 3.2 + vec2(17.8, 9.3)
                 + (materialFields.zw - 0.5) * 0.44
+                + vec2(sin(uMaterialTimePhase * 18.8495559),
+                       cos(uMaterialTimePhase * 12.5663706)) * 0.8
             );
-            float glint = smoothstep(0.82, 0.98, glintField);
-            FragColor.rgb = mix(FragColor.rgb, vec3(0.30, 0.66, 0.91), glint * 0.18);
+            float glint = smoothstep(0.80, 0.97, glintField);
+            FragColor.rgb = mix(FragColor.rgb, vec3(0.30, 0.66, 0.91), glint * 0.26);
         } else {
             float spatialTone = mix(materialFields.x, materialFields.w, 0.26);
             float fineTone = materialNoise(
