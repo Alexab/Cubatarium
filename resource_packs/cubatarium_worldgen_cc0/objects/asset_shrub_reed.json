@@ -26,18 +26,6 @@
       "type": "cu_organic_reed_fresh"
     },
     {
-      "dx": -1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 2,
-      "dz": 0,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
       "dx": 0,
       "dy": 0,
       "dz": -1,
@@ -50,36 +38,6 @@
       "type": "cu_organic_reed_fresh"
     },
     {
-      "dx": 0,
-      "dy": 1,
-      "dz": -1,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 2,
-      "dz": -1,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 2,
-      "dz": 0,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 3,
-      "dz": 0,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
       "dx": 1,
       "dy": 0,
       "dz": 0,
@@ -88,44 +46,11 @@
     {
       "dx": 1,
       "dy": 0,
-      "dz": 1,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": 1,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 2,
-      "dz": 0,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 2,
-      "dz": 1,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 3,
-      "dz": 1,
-      "type": "cu_organic_reed_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
       "dz": 1,
       "type": "cu_organic_reed_fresh"
     }
-  ]
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
 }

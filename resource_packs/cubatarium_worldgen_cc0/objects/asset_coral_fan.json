@@ -55,26 +55,8 @@
       "type": "cu_organic_coral_fresh"
     },
     {
-      "dx": -2,
-      "dy": 2,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
       "dx": -1,
       "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 2,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 3,
       "dz": 0,
       "type": "cu_organic_coral_fresh"
     },
@@ -85,58 +67,19 @@
       "type": "cu_organic_coral_fresh"
     },
     {
-      "dx": 0,
-      "dy": 2,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 3,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 4,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
       "dx": 1,
       "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 2,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 3,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
       "dz": 0,
       "type": "cu_organic_coral_fresh"
     },
     {
       "dx": 2,
       "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": 2,
-      "dy": 2,
       "dz": 0,
       "type": "cu_organic_coral_fresh"
     }
-  ]
+  ],
+  "placement": {
+    "mode": "surface_layer"
+  }
 }

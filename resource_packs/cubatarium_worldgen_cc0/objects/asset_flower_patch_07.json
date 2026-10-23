@@ -85,5 +85,8 @@
       "dz": -1,
       "type": "cu_organic_flower_white_mature"
     }
-  ]
+  ],
+  "placement": {
+    "mode": "surface_layer"
+  }
 }

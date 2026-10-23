@@ -1235,11 +1235,12 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
     reed = any(token in name for token in ("reed", "papyrus", "kelp", "seagrass"))
     flower = any(token in name for token in ("flower", "blossom", "rose", "tulip", "dandelion"))
     coral = "coral" in name
-    mushroom = "mushroom" in name and "skin" not in name
+    mushroom_stem = "mushroom_stem" in name
+    mushroom = "mushroom" in name and "skin" not in name and not mushroom_stem
     deadbush = "deadbush" in name or "dry_shrub" in name
     grass = any(token in name for token in ("grass_1", "dry_grass", "tallgrass", "marram", "junglegrass"))
     if not any((fire, torch, sapling, crop, cocoa, fruit, cactus_seedling, waterlily, vine,
-                fern, reed, flower, coral, mushroom, deadbush, grass)):
+                fern, reed, flower, coral, mushroom, mushroom_stem, deadbush, grass)):
         return None
 
     rng = random.Random(seed)
@@ -1341,6 +1342,28 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                       fill=vine_color, width=max(1, round(2*s)))
             for y in (18, 32, 46):
                 polygon([(x, y), (x - 10, y - 5), (x - 5, y + 2)], (91, 151, 61, 255))
+    elif mushroom_stem:
+        # This is a separate, transparent stem sprite. It is kept distinct
+        # from the complete mushroom silhouette used by mushroom cap blocks.
+        center = 31 + rng.randint(-2, 2)
+        top_half = rng.randint(4, 6)
+        bottom_half = rng.randint(6, 9)
+        base = (205, 194, 168) if "dark" not in name and "dry" not in name else (177, 161, 134)
+        draw.polygon([xy(center - top_half, 4), xy(center + top_half, 4),
+                      xy(center + bottom_half, 63), xy(center - bottom_half, 63)],
+                     fill=(*base, 255))
+        highlight = tuple(min(255, channel + 27) for channel in base)
+        draw.polygon([xy(center - top_half + 2, 5), xy(center - 1, 5),
+                      xy(center + 1, 62), xy(center - bottom_half + 2, 62)],
+                     fill=(*highlight, 255))
+        shadow = tuple(max(0, channel - 34) for channel in base)
+        draw.line([xy(center + top_half - 1, 12), xy(center + bottom_half - 1, 57)],
+                  fill=(*shadow, 255),
+                  width=max(1, round(2*s)))
+        for _ in range(3):
+            mark_y = rng.randint(9, 58)
+            mark_x = center + rng.randint(-bottom_half + 1, bottom_half - 1)
+            draw.point(xy(mark_x, mark_y), fill=(*highlight, 255))
     elif mushroom:
         cap_color = (
             (177, 52, 48, 255) if "red" in name else
@@ -1348,18 +1371,30 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
             (65, 119, 177, 255) if "blue" in name else
             (193, 179, 151, 255)
         )
-        for center, cap_y in ((rng.randint(18, 28), rng.randint(27, 35)),
-                              (rng.randint(37, 48), rng.randint(34, 42))):
-            cap_width = rng.randint(8, 13)
-            draw.rectangle((*xy(center-3, cap_y+5), *xy(center+3, 63)), fill=(222, 209, 173, 255))
-            draw.ellipse((*xy(center-cap_width, cap_y), *xy(center+cap_width, cap_y+13)), fill=cap_color)
-            rim = (229, 218, 190, 255) if "pale" in name else tuple(min(255, c + 50) for c in cap_color[:3]) + (255,)
-            draw.arc((*xy(center-cap_width, cap_y), *xy(center+cap_width, cap_y+13)), 180, 360, fill=rim, width=max(1, round(2*s)))
-            if "red" in name or "pale" in name:
-                for _ in range(rng.randint(2, 4)):
-                    spot_x = center + rng.randint(-cap_width + 2, cap_width - 2)
-                    spot_y = cap_y + rng.randint(3, 8)
-                    draw.ellipse((*xy(spot_x - 1.4, spot_y - 1.2), *xy(spot_x + 1.4, spot_y + 1.2)), fill=(245, 235, 210, 255))
+        center = 32 + rng.randint(-2, 2)
+        cap_y = 15 + rng.randint(-2, 2)
+        cap_width = rng.randint(13, 16)
+        stem_left = center - 5
+        stem_right = center + 5
+        draw.polygon([xy(stem_left + 2, cap_y + 12), xy(stem_right - 2, cap_y + 12),
+                      xy(stem_right + 2, 63), xy(stem_left - 2, 63)],
+                     fill=(210, 198, 171, 255))
+        draw.polygon([xy(stem_left + 3, cap_y + 13), xy(center - 1, cap_y + 13),
+                      xy(center, 62), xy(stem_left, 62)], fill=(236, 226, 205, 255))
+        draw.line([xy(stem_right - 1, cap_y + 16), xy(stem_right + 1, 57)],
+                  fill=(174, 157, 132, 255), width=max(1, round(2*s)))
+        cap_box = (xy(center - cap_width, cap_y), xy(center + cap_width, cap_y + 17))
+        draw.ellipse((*cap_box[0], *cap_box[1]), fill=cap_color)
+        rim = (229, 218, 190, 255) if "pale" in name else tuple(min(255, c + 50) for c in cap_color[:3]) + (255,)
+        draw.arc((*cap_box[0], *cap_box[1]), 180, 360, fill=rim,
+                 width=max(1, round(2*s)))
+        if "red" in name or "pale" in name:
+            for _ in range(rng.randint(3, 5)):
+                spot_x = center + rng.randint(-cap_width + 3, cap_width - 3)
+                spot_y = cap_y + rng.randint(4, 11)
+                draw.ellipse((*xy(spot_x - 1.8, spot_y - 1.5),
+                              *xy(spot_x + 1.8, spot_y + 1.5)),
+                             fill=(245, 235, 210, 255))
     elif flower:
         petal_color = (
             (226, 221, 207, 255) if "white" in name else
@@ -2430,8 +2465,15 @@ def block_definition(record: dict[str, str], face_stems: list[str], block_id: in
     mushroom_cap = record["material"].startswith("mushroom_") and record["material"] != "mushroom_stem"
     if family == "organic" and (record["material"] in ("blossom", "fern", "reed", "mushroom", "kelp", "coral") or record["material"].startswith("flower_") or mushroom_cap):
         shape = "flame" if "fire" in record["name"] else "reed" if record["material"] in ("reed", "kelp") else "cluster" if record["material"] in ("blossom", "coral", "mushroom") or record["material"].startswith(("flower_", "mushroom_")) else "tuft"
-        render.update({"style": "cross", "shape": shape, "double_sided": True})
+        if mushroom_cap or record["material"] == "mushroom":
+            shape = "cross"
+        render.update({"style": "cross", "shape": shape, "transparent": True, "double_sided": True})
         render["texture_variation"] = 1.0
+        physics = {"movement": {"occupancy": 0.0}}
+    elif family == "organic" and record["material"] == "mushroom_stem":
+        # A mushroom stem is a narrow cross-sprite decor voxel, so it keeps
+        # both its transparent silhouette and pass-through movement behavior.
+        render.update({"style": "cross", "transparent": True, "double_sided": True})
         physics = {"movement": {"occupancy": 0.0}}
     dig_group = "cracky" if family in ("rock", "masonry", "metal", "crystal") else "crumbly"
     definition = {
@@ -2549,11 +2591,29 @@ def add_object_block(blocks: list[dict[str, Any]], x: int, y: int, z: int, kind:
     blocks.append({"dx": x, "dy": y, "dz": z, "type": kind})
 
 
-def object_document(name: str, voxels: list[dict[str, Any]], tags: list[str], seed: int, material: str | None = None) -> dict[str, Any]:
+def object_document(
+    name: str,
+    voxels: list[dict[str, Any]],
+    tags: list[str],
+    seed: int,
+    material: str | None = None,
+    placement_mode: str | None = None,
+) -> dict[str, Any]:
     source: dict[str, Any] = {"mod": "cubatarium/assetgen", "seed": seed, "license": "CC0-1.0"}
     if material:
         source["material_parameter"] = material
-    return {"name": name, "version": 2, "displayName": name.replace("asset_", "").replace("_", " ").title(), "source": source, "tags": tags, "anchor": [0, 0, 0], "blocks": voxels}
+    document = {
+        "name": name,
+        "version": 2,
+        "displayName": name.replace("asset_", "").replace("_", " ").title(),
+        "source": source,
+        "tags": tags,
+        "anchor": [0, 0, 0],
+        "blocks": voxels,
+    }
+    if placement_mode:
+        document["placement"] = {"mode": placement_mode}
+    return document
 
 
 def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5) -> dict[str, Any]:
@@ -2708,17 +2768,14 @@ def make_shrub(name: str, material: str, records: list[dict[str, str]], seed: in
                 if rng.random() > 0.32 + 0.08 * (abs(x) + abs(z)):
                     voxel_map[(x, 0, z)] = leaf
     elif material == "fern":
-        # Fern fronds radiate from a low crown, with their tips rising outward.
-        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)):
-            length = rng.choice((2, 3, 4))
-            for step in range(length + 1):
-                x, z = dx * step, dz * step
-                y = max(0, round(step * 0.55))
-                voxel_map[(x, y, z)] = leaf
-                if step > 0 and step < length and rng.random() < 0.5:
-                    voxel_map[(x + dz, y, z - dx)] = leaf
+        # The renderer's tuft mesh supplies the frond height. Keep the prefab
+        # on one surface-following layer so it remains passable and placeable.
+        for x, z in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)):
+            if rng.random() > 0.16:
+                voxel_map[(x, 0, z)] = leaf
     elif material in ("reed", "kelp"):
-        # Reeds and kelp grow as separated vertical stalks, not leafy cubes.
+        # The reed mesh supplies several tall stalks within each voxel. Place
+        # one passable layer of stalk clusters rather than stacking collisions.
         stalk_block = block_name(records, "organic", material, "fresh")
         stalks = rng.choice((3, 4, 5))
         locations = [(0, 0)] + rng.sample(
@@ -2726,40 +2783,31 @@ def make_shrub(name: str, material: str, records: list[dict[str, str]], seed: in
             stalks - 1,
         )
         for x, z in locations:
-            height = rng.choice((3, 4, 5)) if material == "reed" else rng.choice((4, 5, 6))
-            for y in range(height):
-                offset_x = x + (1 if y >= height - 2 and rng.random() < 0.2 else 0)
-                voxel_map[(offset_x, y, z)] = stalk_block
+            voxel_map[(x, 0, z)] = stalk_block
     elif material == "coral":
-        # Branching voxel arms give coral a recognizable fan silhouette.
-        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1)):
-            height = rng.choice((2, 3, 4))
-            for step in range(height):
-                x, z = dx * step, dz * step
-                voxel_map[(x, step, z)] = leaf
-                if step == 1 and rng.random() < 0.72:
-                    voxel_map[(x + dz, step + 1, z - dx)] = leaf
+        # Cluster-shaped coral sprites carry the branch silhouette; a single
+        # vertical plant layer avoids stacked, unplaceable transparent voxels.
+        for x, z in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)):
+            if rng.random() > 0.14:
+                voxel_map[(x, 0, z)] = leaf
     elif material == "blossom":
-        # Build a leafy shrub body and place flowering voxels along its crown.
+        # A flat footprint uses layered leaf and flower sprite blocks; their
+        # renderer meshes provide height without solid collision voxels.
         foliage = block_name(records, "organic", "leaf", "fresh")
-        for y, radius in ((0, 1), (1, 1)):
-            for x in range(-radius, radius + 1):
-                for z in range(-radius, radius + 1):
-                    if abs(x) + abs(z) <= radius + 1 and rng.random() > 0.12:
-                        voxel_map[(x, y, z)] = foliage
-        for x, z in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
-            if rng.random() > 0.25:
-                voxel_map[(x, 2, z)] = leaf
+        for x, z in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)):
+            voxel_map[(x, 0, z)] = leaf if rng.random() > 0.32 else foliage
     else:
         radius = rng.choice((1, 2))
-        for y in range(2):
-            r = radius if y == 0 else max(1, radius - 1)
-            for x in range(-r, r + 1):
-                for z in range(-r, r + 1):
-                    if abs(x) + abs(z) <= r * 2 and rng.random() > (0.2 if y == 0 else 0.34):
-                        voxel_map[(x, y, z)] = leaf
+        for x in range(-radius, radius + 1):
+            for z in range(-radius, radius + 1):
+                if abs(x) + abs(z) <= radius * 2 and rng.random() > 0.26:
+                    voxel_map[(x, 0, z)] = leaf
     voxels = [{"dx": x, "dy": y, "dz": z, "type": block} for (x, y, z), block in sorted(voxel_map.items())]
-    return object_document(name, voxels, ["worldgen", "ground_cover", "vegetation"], seed, material)
+    placement_mode = None if material in ("moss", "lichen") else "vertical_plant"
+    return object_document(
+        name, voxels, ["worldgen", "ground_cover", "vegetation"], seed,
+        material, placement_mode,
+    )
 
 
 def make_flower_patch(name: str, records: list[dict[str, str]], seed: int, flower_material: str | None = None) -> dict[str, Any]:
@@ -2773,7 +2821,7 @@ def make_flower_patch(name: str, records: list[dict[str, str]], seed: int, flowe
     for x, z in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)):
         if rng.random() > 0.23:
             voxels.append({"dx": x, "dy": 1, "dz": z, "type": rng.choice(flowers)})
-    return object_document(name, voxels, ["worldgen", "ground_cover", "plants"], seed, ",".join(palette))
+    return object_document(name, voxels, ["worldgen", "ground_cover", "plants"], seed, ",".join(palette), "surface_layer")
 
 
 def make_ruin(name: str, records: list[dict[str, str]], seed: int) -> dict[str, Any]:
@@ -2795,15 +2843,13 @@ def make_mushroom_cluster(name: str, records: list[dict[str, str]], seed: int) -
     cap_material = rng.choice(("mushroom_red", "mushroom_gold", "mushroom_blue", "mushroom_pale"))
     cap_variant = rng.choice(("fresh", "mature", "spotted", "striped", "bright"))
     cap = block_name(records, "organic", cap_material, cap_variant)
-    stem = block_name(records, "organic", "mushroom_stem", "pale")
+    soil = block_name(records, "soil", "loam", "natural")
     voxels: list[dict[str, Any]] = []
     positions = rng.sample(((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)), rng.choice((2, 3, 4)))
     for x, z in positions:
-        height = rng.choice((2, 2, 3))
-        for y in range(height):
-            voxels.append({"dx": x, "dy": y, "dz": z, "type": stem})
-        voxels.append({"dx": x, "dy": height, "dz": z, "type": cap})
-    return object_document(name, voxels, ["worldgen", "ground_cover", "fungi"], seed, cap_material)
+        voxels.append({"dx": x, "dy": 0, "dz": z, "type": soil})
+        voxels.append({"dx": x, "dy": 1, "dz": z, "type": cap})
+    return object_document(name, voxels, ["worldgen", "ground_cover", "fungi"], seed, cap_material, "surface_layer")
 
 
 def make_coral_fan(name: str, records: list[dict[str, str]], seed: int) -> dict[str, Any]:
@@ -2812,10 +2858,8 @@ def make_coral_fan(name: str, records: list[dict[str, str]], seed: int) -> dict[
     sand = block_name(records, "soil", "pale_sand", "natural")
     voxels = [{"dx": x, "dy": 0, "dz": 0, "type": sand} for x in range(-2, 3)]
     for x in range(-2, 3):
-        height = max(1, 4 - abs(x) + rng.choice((0, 0, 1)))
-        for y in range(1, height + 1):
-            voxels.append({"dx": x, "dy": y, "dz": 0, "type": coral})
-    return object_document(name, voxels, ["decoration", "aquatic"], seed, "coral")
+        voxels.append({"dx": x, "dy": 1, "dz": 0, "type": coral})
+    return object_document(name, voxels, ["decoration", "aquatic"], seed, "coral", "surface_layer")
 
 
 def make_stalagmites(name: str, records: list[dict[str, str]], seed: int) -> dict[str, Any]:
@@ -3240,6 +3284,7 @@ def build_pack(
         if render.get("style") == "cross":
             render["shape"] = (
                 "flame" if "fire" in name or "torch" in name else
+                "cross" if "mushroom" in name else
                 "reed" if any(token in name for token in ("reed", "papyrus", "kelp", "vine")) else
                 "tuft" if any(token in name for token in ("grass", "fern", "deadbush", "shrub", "crop", "carrot", "potato", "wheat", "cactus_seedling", "pine_needles")) else
                 "cluster" if any(token in name for token in ("sapling", "flower", "mushroom", "cocoa", "apple", "waterlily")) else
@@ -3386,9 +3431,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-        "version": 22,
+        "version": 23,
             "backend": "procedural",
-        "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_v22",
+        "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_passable_decor_v23",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,
@@ -4623,6 +4668,27 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
         for name, block in name_to_block.items()
         if isinstance(block.get("assetgen"), dict)
     }
+    passable_organic_materials = {
+        "fern", "reed", "kelp", "coral", "blossom", "mushroom_stem",
+    }
+    for name, (family, material) in block_materials.items():
+        if family != "organic" or not material:
+            continue
+        is_passable_plant = (
+            material in passable_organic_materials
+            or material == "mushroom"
+            or material.startswith(("flower_", "mushroom_"))
+            or is_leaf_material(family, material, name)
+        )
+        if not is_passable_plant:
+            continue
+        block = name_to_block[name]
+        render = block.get("render", {})
+        movement = block.get("physics", {}).get("movement", {})
+        if render.get("style") not in ("cross", "cutout"):
+            errors.append(f"{name}: decorative plant must use cross or cutout rendering")
+        if float(movement.get("occupancy", 1.0)) >= 1.0:
+            errors.append(f"{name}: decorative plant must be passable")
     for object_path in sorted(objects_dir.glob("*.json")) if objects_dir.exists() else []:
         try:
             obj = json.loads(object_path.read_text(encoding="utf-8-sig"))
@@ -4635,11 +4701,13 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
             continue
         positions: set[tuple[int, int, int]] = set()
         object_materials: set[tuple[str | None, str | None]] = set()
+        voxel_types: list[str] = []
         for voxel in voxels:
             if not isinstance(voxel, dict) or voxel.get("type") not in block_names:
                 errors.append(f"{object_path.name}: unresolved voxel block {voxel.get('type') if isinstance(voxel, dict) else None!r}")
                 break
             object_materials.add(block_materials.get(voxel["type"], (None, None)))
+            voxel_types.append(str(voxel["type"]))
             try:
                 position = (int(voxel["dx"]), int(voxel["dy"]), int(voxel["dz"]))
             except (KeyError, TypeError, ValueError):
@@ -4671,14 +4739,43 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
                     f"{sorted(organic_materials)}"
                 )
         elif object_name.startswith("asset_mushroom_cluster_"):
-            if "mushroom_stem" not in organic_materials or not any(
+            if not any(
                 material.startswith("mushroom_") and material != "mushroom_stem"
                 for material in organic_materials
             ):
-                errors.append(
-                    f"{object_path.name}: mushroom cluster is missing a cap or stem "
-                    f"({sorted(organic_materials)})"
-                )
+                errors.append(f"{object_path.name}: mushroom cluster is missing a mushroom sprite")
+            if ("soil", "loam") not in object_materials:
+                errors.append(f"{object_path.name}: mushroom cluster is missing its loam ground layer")
+
+        placement = obj.get("placement", {})
+        placement_mode = placement.get("mode") if isinstance(placement, dict) else None
+        if placement_mode == "vertical_plant":
+            anchor = obj.get("anchor", [0, 0, 0])
+            anchor_y = anchor[1] if isinstance(anchor, list) and len(anchor) == 3 else 0
+            if any(
+                int(voxel["dy"]) != anchor_y
+                for voxel in voxels
+                if isinstance(voxel, dict) and "dy" in voxel
+            ):
+                errors.append(f"{object_path.name}: vertical plant voxels must share the anchor layer")
+            if any(
+                float(name_to_block[block_type].get("physics", {}).get("movement", {}).get("occupancy", 1.0)) >= 1.0
+                for block_type in voxel_types
+            ):
+                errors.append(f"{object_path.name}: vertical plant object contains a blocking voxel")
+        elif placement_mode == "surface_layer":
+            solid_dy: set[int] = set()
+            non_solid_dy: set[int] = set()
+            for voxel in voxels:
+                if not isinstance(voxel, dict) or voxel.get("type") not in name_to_block:
+                    continue
+                block = name_to_block[voxel["type"]]
+                occupancy = float(block.get("physics", {}).get("movement", {}).get("occupancy", 1.0))
+                (solid_dy if occupancy >= 1.0 else non_solid_dy).add(int(voxel["dy"]))
+            if len(solid_dy) != 1:
+                errors.append(f"{object_path.name}: surface-layer ground voxels must occupy one height")
+            elif non_solid_dy and non_solid_dy != {next(iter(solid_dy)) + 1}:
+                errors.append(f"{object_path.name}: surface-layer decor must sit directly above its ground layer")
     return errors, {
         "blocks": len(blocks),
         "procedural_cc0_blocks": len(family_records(load_catalog())),

@@ -22,12 +22,6 @@
     {
       "dx": -2,
       "dy": 0,
-      "dz": -2,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": -2,
-      "dy": 0,
       "dz": -1,
       "type": "cu_organic_leaf_fresh"
     },
@@ -52,12 +46,6 @@
     {
       "dx": -1,
       "dy": 0,
-      "dz": -1,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 0,
       "dz": 0,
       "type": "cu_organic_leaf_fresh"
     },
@@ -65,24 +53,6 @@
       "dx": -1,
       "dy": 0,
       "dz": 2,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": -1,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": 1,
       "type": "cu_organic_leaf_fresh"
     },
     {
@@ -94,24 +64,6 @@
     {
       "dx": 0,
       "dy": 0,
-      "dz": -1,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 0,
-      "dz": 1,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
       "dz": 1,
       "type": "cu_organic_leaf_fresh"
     },
@@ -131,18 +83,6 @@
       "dx": 1,
       "dy": 0,
       "dz": 2,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": -1,
-      "type": "cu_organic_leaf_fresh"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": 0,
       "type": "cu_organic_leaf_fresh"
     },
     {
@@ -169,5 +109,8 @@
       "dz": 2,
       "type": "cu_organic_leaf_fresh"
     }
-  ]
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
 }

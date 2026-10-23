@@ -23,17 +23,11 @@
       "dx": 0,
       "dy": 0,
       "dz": 0,
-      "type": "cu_organic_mushroom_stem_pale"
+      "type": "cu_soil_loam_natural"
     },
     {
       "dx": 0,
       "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_mushroom_stem_pale"
-    },
-    {
-      "dx": 0,
-      "dy": 2,
       "dz": 0,
       "type": "cu_organic_mushroom_red_striped"
     },
@@ -41,17 +35,11 @@
       "dx": 1,
       "dy": 0,
       "dz": 1,
-      "type": "cu_organic_mushroom_stem_pale"
+      "type": "cu_soil_loam_natural"
     },
     {
       "dx": 1,
       "dy": 1,
-      "dz": 1,
-      "type": "cu_organic_mushroom_stem_pale"
-    },
-    {
-      "dx": 1,
-      "dy": 2,
       "dz": 1,
       "type": "cu_organic_mushroom_red_striped"
     },
@@ -59,19 +47,16 @@
       "dx": 1,
       "dy": 0,
       "dz": 0,
-      "type": "cu_organic_mushroom_stem_pale"
+      "type": "cu_soil_loam_natural"
     },
     {
       "dx": 1,
       "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_mushroom_stem_pale"
-    },
-    {
-      "dx": 1,
-      "dy": 2,
       "dz": 0,
       "type": "cu_organic_mushroom_red_striped"
     }
-  ]
+  ],
+  "placement": {
+    "mode": "surface_layer"
+  }
 }

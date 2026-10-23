@@ -25,6 +25,7 @@
     "texture_variation": 1.0,
     "style": "cross",
     "shape": "tuft",
+    "transparent": true,
     "double_sided": true
   },
   "assetgen": {
