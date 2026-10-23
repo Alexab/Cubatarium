@@ -65,6 +65,11 @@ int main()
   Expect(!ModePolicy::AllowsHostileSpawning(survival,
                                             WorldDifficulty::Peaceful),
          "peaceful no hostile spawn");
+  Expect(ModePolicy::AllowsHostileSpawning(creative, WorldDifficulty::Normal),
+         "creative permits harmless hostile wildlife spawns");
+  Expect(!ModePolicy::AllowsHostileSpawning(creative,
+                                            WorldDifficulty::Peaceful),
+         "creative peaceful suppresses hostile spawns");
   Expect(ModePolicy::AllowsHostileSpawning(survival, WorldDifficulty::Hardcore),
          "hardcore hostile spawn");
   Expect(ModePolicy::HostileDamageMultiplier(WorldDifficulty::Hard) == 1.25f,
@@ -92,11 +97,11 @@ int main()
              survival, CreatureSpawnSource::DebugCommand),
          "survival blocks debug spawn");
   Expect(ModePolicy::AllowsCreatureSpawn(
-             survival, CreatureSpawnSource::SurvivalNatural),
+             survival, CreatureSpawnSource::NaturalPopulation),
          "survival natural spawn");
-  Expect(!ModePolicy::AllowsCreatureSpawn(
-             creative, CreatureSpawnSource::SurvivalNatural),
-         "creative blocks natural spawn");
+  Expect(ModePolicy::AllowsCreatureSpawn(
+             creative, CreatureSpawnSource::NaturalPopulation),
+         "creative natural spawn");
   Expect(ModePolicy::AllowsCreatureSpawn(creative, CreatureSpawnSource::Qa),
          "creative qa spawn");
   Expect(!ModePolicy::AllowsCreatureSpawn(survival, CreatureSpawnSource::Qa),
@@ -108,14 +113,17 @@ int main()
              survival, CreatureSpawnSource::LegacySave),
          "legacy source not a new spawn request");
   Expect(CreatureSpawnSourceFromString(CreatureSpawnSourceToString(
-             CreatureSpawnSource::SurvivalNatural)) ==
-             CreatureSpawnSource::SurvivalNatural,
+             CreatureSpawnSource::NaturalPopulation)) ==
+             CreatureSpawnSource::NaturalPopulation,
          "spawn source serialization roundtrip");
+  Expect(CreatureSpawnSourceFromString("survival_natural") ==
+             CreatureSpawnSource::NaturalPopulation,
+         "old survival natural source remains readable");
   Expect(CreatureSpawnSourceFromString("missing") ==
              CreatureSpawnSource::LegacySave,
          "unknown old spawn source remains legacy");
   Expect(CountsTowardNaturalPopulationLimit(
-             CreatureSpawnSource::SurvivalNatural),
+             CreatureSpawnSource::NaturalPopulation),
          "natural spawn counts against natural population cap");
   Expect(CountsTowardNaturalPopulationLimit(CreatureSpawnSource::LegacySave),
          "legacy creature counts conservatively against natural population cap");
@@ -125,7 +133,7 @@ int main()
   {
     const CreatureSpawnSource sources[] = {
         CreatureSpawnSource::CreativeManual,
-        CreatureSpawnSource::SurvivalNatural,
+        CreatureSpawnSource::NaturalPopulation,
         CreatureSpawnSource::DebugCommand,
         CreatureSpawnSource::Qa,
         CreatureSpawnSource::Persistence,
@@ -147,7 +155,7 @@ int main()
 
     nlohmann::json savedNaturalCreature;
     cutum::WriteCreatureSpawnSource(
-        savedNaturalCreature, CreatureSpawnSource::SurvivalNatural);
+        savedNaturalCreature, CreatureSpawnSource::NaturalPopulation);
     const glm::vec3 savedOrigin(13.5f, 27.f, -4.25f);
     cutum::WriteCreatureBodyOrigin(savedNaturalCreature, savedOrigin);
     const CreatureSpawnSource restoredSource =
@@ -189,8 +197,7 @@ int main()
              (source == CreatureSpawnSource::CreativeManual ||
               source == CreatureSpawnSource::DebugCommand ||
               source == CreatureSpawnSource::Qa)) ||
-            (mode == survival &&
-             source == CreatureSpawnSource::SurvivalNatural);
+            source == CreatureSpawnSource::NaturalPopulation;
         Expect(ModePolicy::AllowsCreatureSpawn(mode, source) == expected,
                "spawn policy covers every source and game mode");
       }
@@ -284,6 +291,18 @@ int main()
   Expect(!CreaturePopulationRules::CanAddNaturalCreature(
              CreaturePopulationCounts{}, true, WorldDifficulty::Peaceful),
          "peaceful rejects hostile fauna");
+  Expect(CreaturePopulationRules::CanAddNaturalCreature(
+             CreaturePopulationCounts{}, false, WorldDifficulty::Normal,
+             creative),
+         "creative allows natural passive fauna");
+  Expect(CreaturePopulationRules::CanAddNaturalCreature(
+             CreaturePopulationCounts{}, true, WorldDifficulty::Normal,
+             creative),
+         "creative permits natural hostile wildlife without aggro");
+  Expect(!CreaturePopulationRules::CanAddNaturalCreature(
+             CreaturePopulationCounts{}, true, WorldDifficulty::Peaceful,
+             creative),
+         "creative peaceful suppresses hostile population");
   Expect(!CreaturePopulationRules::CanAddNaturalCreature(
              CreaturePopulationCounts{CreaturePopulationRules::NaturalWorldLimit,
                                       0, 0, 0},

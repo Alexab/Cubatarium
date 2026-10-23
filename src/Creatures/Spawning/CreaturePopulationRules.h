@@ -48,7 +48,9 @@ struct CreaturePopulationRules
 
   static bool CanAddNaturalCreature(const CreaturePopulationCounts &counts,
                                     bool hostile,
-                                    WorldDifficulty difficulty)
+                                    WorldDifficulty difficulty,
+                                    WorldGameMode mode =
+                                        WorldGameMode::Survival)
   {
     if (counts.naturalWorld >= NaturalWorldLimit || counts.local >= LocalLimit)
     {
@@ -58,7 +60,7 @@ struct CreaturePopulationRules
     {
       return true;
     }
-    if (!ModePolicy::AllowsHostileSpawning(WorldGameMode::Survival, difficulty))
+    if (!ModePolicy::AllowsHostileSpawning(mode, difficulty))
     {
       return false;
     }

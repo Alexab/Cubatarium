@@ -117,6 +117,15 @@ int main(int argc, char *argv[])
         {
           opt.ForceCreatureAiTicks = true;
         }
+        else if (std::strcmp(argv[j], "--drop-player-at-y") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.DropPlayerAtY = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--force-hardcore-death") == 0)
+        {
+          opt.ForceHardcoreDeath = true;
+        }
         else if (argv[j][0] == '-')
         {
           break;

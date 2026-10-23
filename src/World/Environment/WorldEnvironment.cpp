@@ -348,7 +348,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   {
     return 0;
   }
-  if (source == CreatureSpawnSource::SurvivalNatural &&
+  if (source == CreatureSpawnSource::NaturalPopulation &&
       (!def->catalog.naturalSpawnable ||
        (HasCreatureTag(def->catalog.tags, "hostile") &&
         !ModePolicy::AllowsHostileSpawning(Owner.GetGameMode(),
@@ -356,7 +356,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   {
     return 0;
   }
-  if (source == CreatureSpawnSource::SurvivalNatural)
+  if (source == CreatureSpawnSource::NaturalPopulation)
   {
     CreaturePopulationCounts counts;
     const UCreature *player = Owner.GetPlayerCreature();
@@ -384,7 +384,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
         });
     if (!CreaturePopulationRules::CanAddNaturalCreature(
             counts, HasCreatureTag(def->catalog.tags, "hostile"),
-            Owner.GetDifficulty()))
+            Owner.GetDifficulty(), Owner.GetGameMode()))
     {
       return 0;
     }
@@ -402,7 +402,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
                                        spawnSize, 0);
   if (def->role != CreatureRole::ControlledDefault)
   {
-    if (source == CreatureSpawnSource::SurvivalNatural &&
+    if (source == CreatureSpawnSource::NaturalPopulation &&
         !IsCreatureVolumeLoadedAt(Owner, resolvedSpawn, spawnSize))
     {
       return 0;
@@ -1208,8 +1208,7 @@ void UWorldEnvironment::ValidateLoadedCreaturePositions()
 
 void UWorldEnvironment::TickNaturalPopulation(float dt)
 {
-  if (Owner.GetGameMode() != WorldGameMode::Survival || Owner.IsPlayerDead() ||
-      !CreatureDefinitions)
+  if (Owner.IsPlayerDead() || !CreatureDefinitions)
   {
     NaturalPopulationTimer = 0.f;
     return;
@@ -1250,7 +1249,7 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
             currentCounts, creature.GetSpawnSource(), hostile, local);
       });
   if (!CreaturePopulationRules::CanAddNaturalCreature(
-          currentCounts, false, Owner.GetDifficulty()))
+          currentCounts, false, Owner.GetDifficulty(), Owner.GetGameMode()))
   {
     return;
   }
@@ -1258,7 +1257,7 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
   const WorldDifficultyProfile profile =
       WorldDifficultyProfileFor(Owner.GetDifficulty());
   const bool hostileRoom = CreaturePopulationRules::CanAddNaturalCreature(
-      currentCounts, true, Owner.GetDifficulty());
+      currentCounts, true, Owner.GetDifficulty(), Owner.GetGameMode());
 
   std::vector<WeightedSpawnOption<const CreatureDefinition *>> eligible;
   float totalWeight = 0.f;
@@ -1367,7 +1366,8 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
           currentCounts.hostileWorld + (selectedHostile ? spawned : 0),
           currentCounts.hostileLocal + (selectedHostile ? spawned : 0)};
       if (!CreaturePopulationRules::CanAddNaturalCreature(
-              beforeSpawn, selectedHostile, Owner.GetDifficulty()))
+              beforeSpawn, selectedHostile, Owner.GetDifficulty(),
+              Owner.GetGameMode()))
       {
         break;
       }
@@ -1399,7 +1399,7 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
         continue;
       }
       if (SpawnCreature(selected->Id, groupOrigin, "",
-                        CreatureSpawnSource::SurvivalNatural) != 0)
+                        CreatureSpawnSource::NaturalPopulation) != 0)
       {
         ++spawned;
       }

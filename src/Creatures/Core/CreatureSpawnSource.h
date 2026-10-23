@@ -12,7 +12,7 @@ namespace cutum
 enum class CreatureSpawnSource : uint8_t
 {
   CreativeManual,
-  SurvivalNatural,
+  NaturalPopulation,
   DebugCommand,
   Qa,
   Persistence,
@@ -24,7 +24,7 @@ inline bool CountsTowardNaturalPopulationLimit(CreatureSpawnSource source)
   // Saves written before source tracking cannot distinguish natural animals
   // from other entities. Count them conservatively so upgrading an old world
   // cannot silently overfill the natural-population budget.
-  return source == CreatureSpawnSource::SurvivalNatural ||
+  return source == CreatureSpawnSource::NaturalPopulation ||
          source == CreatureSpawnSource::LegacySave;
 }
 
@@ -34,8 +34,8 @@ inline const char *CreatureSpawnSourceToString(CreatureSpawnSource source)
   {
   case CreatureSpawnSource::CreativeManual:
     return "creative_manual";
-  case CreatureSpawnSource::SurvivalNatural:
-    return "survival_natural";
+  case CreatureSpawnSource::NaturalPopulation:
+    return "natural_population";
   case CreatureSpawnSource::DebugCommand:
     return "debug_command";
   case CreatureSpawnSource::Qa:
@@ -55,9 +55,9 @@ CreatureSpawnSourceFromString(const std::string &source)
   {
     return CreatureSpawnSource::CreativeManual;
   }
-  if (source == "survival_natural")
+  if (source == "natural_population" || source == "survival_natural")
   {
-    return CreatureSpawnSource::SurvivalNatural;
+    return CreatureSpawnSource::NaturalPopulation;
   }
   if (source == "debug_command")
   {

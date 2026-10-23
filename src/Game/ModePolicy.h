@@ -62,8 +62,9 @@ struct ModePolicy
   static bool AllowsHostileSpawning(WorldGameMode mode,
                                     WorldDifficulty difficulty)
   {
-    return mode == WorldGameMode::Survival &&
-           difficulty != WorldDifficulty::Peaceful;
+    const bool knownMode = mode == WorldGameMode::Creative ||
+                           mode == WorldGameMode::Survival;
+    return knownMode && difficulty != WorldDifficulty::Peaceful;
   }
 
   static float HostileDamageMultiplier(WorldDifficulty difficulty)
@@ -79,8 +80,9 @@ struct ModePolicy
     case CreatureSpawnSource::CreativeManual:
     case CreatureSpawnSource::DebugCommand:
       return mode == WorldGameMode::Creative;
-    case CreatureSpawnSource::SurvivalNatural:
-      return mode == WorldGameMode::Survival;
+    case CreatureSpawnSource::NaturalPopulation:
+      return mode == WorldGameMode::Creative ||
+             mode == WorldGameMode::Survival;
     case CreatureSpawnSource::Qa:
       return AllowsQaSpawner(mode);
     case CreatureSpawnSource::Persistence:
