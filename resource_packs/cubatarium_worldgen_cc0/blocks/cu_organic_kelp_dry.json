@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_kelp_dry",
-  "id": 2282,
+  "id": 2318,
   "displayName": "Organic Kelp Dry",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_kelp_dry"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "reed",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "kelp",
     "variant": "dry"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

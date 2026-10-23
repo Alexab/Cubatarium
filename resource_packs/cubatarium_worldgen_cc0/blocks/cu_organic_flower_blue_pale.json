@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_flower_blue_pale",
-  "id": 2357,
+  "id": 2393,
   "displayName": "Organic Flower Blue Pale",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_flower_blue_pale"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "flower_blue",
     "variant": "pale"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

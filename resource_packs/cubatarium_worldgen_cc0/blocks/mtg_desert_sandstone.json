@@ -21,7 +21,7 @@
     "mt_mtg_desert_sandstone_default_desert_sandstone"
   ],
   "render": {
-    "texture_variation": 0.48
+    "texture_variation": 1.0
   },
   "license": "CC0-1.0",
   "provenance": {

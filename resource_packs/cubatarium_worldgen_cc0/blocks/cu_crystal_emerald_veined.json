@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_emerald_veined",
+  "id": 2252,
+  "displayName": "Crystal Emerald Veined",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_emerald_veined",
+    "cu_crystal_emerald_veined",
+    "cu_crystal_emerald_veined",
+    "cu_crystal_emerald_veined",
+    "cu_crystal_emerald_veined",
+    "cu_crystal_emerald_veined"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "emerald",
+    "variant": "veined"
+  }
+}

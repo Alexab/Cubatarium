@@ -21,7 +21,7 @@
     "mt_redstonelight"
   ],
   "render": {
-    "texture_variation": 0.48
+    "texture_variation": 1.0
   },
   "displayName": "Redstone Lamp",
   "lighting": {

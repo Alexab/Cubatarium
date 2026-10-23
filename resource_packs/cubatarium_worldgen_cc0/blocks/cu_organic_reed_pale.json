@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_reed_pale",
-  "id": 2257,
+  "id": 2293,
   "displayName": "Organic Reed Pale",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_reed_pale"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "reed",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "reed",
     "variant": "pale"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

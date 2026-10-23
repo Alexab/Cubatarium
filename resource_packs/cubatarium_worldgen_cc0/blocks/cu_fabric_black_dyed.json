@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_black_dyed",
+  "id": 1938,
+  "displayName": "Fabric Black Dyed",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_black_dyed",
+    "cu_fabric_black_dyed",
+    "cu_fabric_black_dyed",
+    "cu_fabric_black_dyed",
+    "cu_fabric_black_dyed",
+    "cu_fabric_black_dyed"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "black",
+    "variant": "dyed"
+  }
+}

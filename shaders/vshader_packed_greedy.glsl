@@ -6,6 +6,7 @@ uniform mat4 mvp_matrix;
 uniform ivec3 chunkOrigin;
 
 out vec3 vWorldPos;
+flat out vec3 vInstanceCell;
 flat out int vFaceIndex;
 out float vSkyLight;
 out float vBlockLight;
@@ -59,6 +60,7 @@ void main()
     vec3 worldPos = vec3(chunkOrigin) + pos + offset;
     gl_Position = mvp_matrix * vec4(worldPos, 1.0);
     vWorldPos = worldPos;
+    vInstanceCell = floor(worldPos + vec3(0.5));
     vFaceIndex = face;
     vSkyLight = sky;
     vBlockLight = blk;

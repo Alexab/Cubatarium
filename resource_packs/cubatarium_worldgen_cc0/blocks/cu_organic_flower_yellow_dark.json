@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_flower_yellow_dark",
-  "id": 2328,
+  "id": 2364,
   "displayName": "Organic Flower Yellow Dark",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_flower_yellow_dark"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "flower_yellow",
     "variant": "dark"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

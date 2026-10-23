@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_fern_spotted",
-  "id": 2245,
+  "id": 2281,
   "displayName": "Organic Fern Spotted",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_fern_spotted"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "tuft",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "fern",
     "variant": "spotted"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

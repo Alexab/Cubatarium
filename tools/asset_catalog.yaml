@@ -37,7 +37,7 @@ face_recipes:
     bottom: side
 reference_calibration:
   modes: [qa-only, aggregate-calibration]
-  features: [family_medians, per_texture_color_centroid, luminance_spread, neighbor_contrast, alpha_coverage]
+  features: [family_medians, per_texture_color_centroid, luminance_spread, coarse_contrast, directional_neighbor_contrast, alpha_coverage]
   minetest_pixels_may_enter_output: false
 families:
   rock:

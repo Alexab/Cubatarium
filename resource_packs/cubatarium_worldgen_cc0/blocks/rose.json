@@ -24,13 +24,13 @@
   "render": {
     "transparent": true,
     "style": "cross",
+    "double_sided": true,
     "shape": "cross",
-    "texture_variation": 0.0,
-    "double_sided": true
+    "texture_variation": 1.0
   },
   "physics": {
     "movement": {
-      "occupancy": 0
+      "occupancy": 0.0
     }
   },
   "displayName": "Rose",

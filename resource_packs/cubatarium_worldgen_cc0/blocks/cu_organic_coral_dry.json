@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_coral_dry",
-  "id": 2272,
+  "id": 2308,
   "displayName": "Organic Coral Dry",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_coral_dry"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "coral",
     "variant": "dry"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

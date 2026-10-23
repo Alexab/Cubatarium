@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_mushroom_pale_striped",
-  "id": 2416,
+  "id": 2452,
   "displayName": "Organic Mushroom Pale Striped",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_mushroom_pale_striped"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "mushroom_pale",
     "variant": "striped"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

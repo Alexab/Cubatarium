@@ -22,7 +22,7 @@
     "cu_rock_sandstone_natural"
   ],
   "render": {
-    "texture_variation": 0.48
+    "texture_variation": 1.0
   },
   "assetgen": {
     "family": "rock",

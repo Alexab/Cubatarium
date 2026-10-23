@@ -509,6 +509,19 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
     ApplyRenderPresetDefaults(out.Definition.Render,
                               j["physics"]["preset"].get<std::string>());
   }
+  // Cross geometry is rendered as thin cards outside the cube mesh. Unless a
+  // pack explicitly supplies collision occupancy, the plant must be passable.
+  // This also preserves older pack definitions that predate physics fields.
+  const bool explicit_occupancy =
+      j.contains("physics") && j["physics"].is_object() &&
+      j["physics"].contains("movement") &&
+      j["physics"]["movement"].is_object() &&
+      j["physics"]["movement"].contains("occupancy");
+  if (out.Definition.Render.Style == BlockRenderStyle::Cross &&
+      !explicit_occupancy)
+  {
+    out.Definition.Physics.Movement.Occupancy = 0.0f;
+  }
   const auto textures = j.value("textures", nlohmann::json::array());
   if (!textures.is_array() || textures.size() < 6)
   {

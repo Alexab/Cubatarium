@@ -9,6 +9,7 @@ layout (location = 5) in float aWetness;
 layout (location = 6) in float aLightPreview;
 
 out vec3 vWorldPos;
+flat out vec3 vInstanceCell;
 out vec2 vUV;
 flat out int vFaceIndex;
 out float vSkyLight;
@@ -22,6 +23,7 @@ void main()
 {
     gl_Position = mvp_matrix * vec4(aPos, 1.0);
     vWorldPos = aPos;
+    vInstanceCell = floor(aPos + vec3(0.50001));
     vUV = aUV;
     vFaceIndex = int(aFaceIndex + 0.5);
     vSkyLight = aSkyLight;

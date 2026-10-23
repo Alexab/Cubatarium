@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_kelp_dark",
-  "id": 2288,
+  "id": 2324,
   "displayName": "Organic Kelp Dark",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_kelp_dark"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "reed",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "kelp",
     "variant": "dark"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_flower_purple_fresh",
-  "id": 2361,
+  "id": 2397,
   "displayName": "Organic Flower Purple Fresh",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_flower_purple_fresh"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "flower_purple",
     "variant": "fresh"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

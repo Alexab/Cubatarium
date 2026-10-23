@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_coral_pale",
-  "id": 2277,
+  "id": 2313,
   "displayName": "Organic Coral Pale",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_coral_pale"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "coral",
     "variant": "pale"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

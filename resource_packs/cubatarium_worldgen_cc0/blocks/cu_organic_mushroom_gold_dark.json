@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_mushroom_gold_dark",
-  "id": 2398,
+  "id": 2434,
   "displayName": "Organic Mushroom Gold Dark",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_mushroom_gold_dark"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "mushroom_gold",
     "variant": "dark"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

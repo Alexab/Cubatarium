@@ -8,6 +8,7 @@ layout (location = 4) in float aSkyLight;
 layout (location = 5) in float aBlockLight;
 
 out vec3 vWorldPos;
+flat out vec3 vInstanceCell;
 out vec2 vUV;
 flat out int vFaceIndex;
 out float vSkyLight;
@@ -22,6 +23,7 @@ void main()
     vec3 worldPos = aPos + aInstanceOffset;
     gl_Position = mvp_matrix * vec4(worldPos, 1.0);
     vWorldPos = worldPos;
+    vInstanceCell = floor(aInstanceOffset + vec3(0.5));
     vUV = aUV;
     vFaceIndex = int(aFaceIndex + 0.5);
     vSkyLight = aSkyLight;

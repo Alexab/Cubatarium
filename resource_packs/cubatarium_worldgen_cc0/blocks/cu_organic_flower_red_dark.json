@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_flower_red_dark",
-  "id": 2338,
+  "id": 2374,
   "displayName": "Organic Flower Red Dark",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_flower_red_dark"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "flower_red",
     "variant": "dark"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

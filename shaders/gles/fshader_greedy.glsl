@@ -1,6 +1,7 @@
 #version 300 es
 precision mediump float;
 in vec3 vWorldPos;
+flat in vec3 vInstanceCell;
 in vec2 vUV;
 flat in int vFaceIndex;
 in float vSkyLight;
@@ -187,6 +188,21 @@ float insetMix(float a, float b, float t, float inset)
     return mix(a + dir * safeInset, b - dir * safeInset, t);
 }
 
+vec2 materialPlanePosition(int faceIndex, vec3 worldPos)
+{
+    if (faceIndex < 4) {
+        return (faceIndex == 0 || faceIndex == 2)
+            ? worldPos.xy
+            : worldPos.zy;
+    }
+    return worldPos.xz;
+}
+
+float materialHash(vec2 p)
+{
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
 vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
 {
     const float kCubeShift = 1.0 / 6.0;
@@ -207,13 +223,33 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
     } else {
         tile = vec2(blockTileCoord(worldPos.x), blockTileCoord(worldPos.z));
     }
-    if (uTextureVariation > 0.001) {
+    // Per-block discrete tile transforms break large repeated ground and rock
+    // patterns while keeping each 16 px texture seamless and unwarped.
+    if (uTextureVariation >= 0.75) {
         vec3 cell = floor(worldPos + vec3(0.5));
         float seed = dot(cell + vec3(float(faceIndex) * 17.0), vec3(127.1, 311.7, 74.7));
-        vec2 offset = vec2(
+        float transform = floor(fract(sin(seed + 47.17) * 43758.5453) * 8.0);
+        float rotation = mod(transform, 4.0);
+        if (rotation < 0.5) {
+            tile = vec2(tile.y, 1.0 - tile.x);
+        } else if (rotation < 1.5) {
+            tile = vec2(1.0 - tile.x, 1.0 - tile.y);
+        } else if (rotation < 2.5) {
+            tile = vec2(1.0 - tile.y, tile.x);
+        }
+        if (transform >= 4.0) {
+            tile.x = 1.0 - tile.x;
+        }
+        vec2 tileResolution = vec2(textureSize(texture0, 0));
+        tileResolution.x /= 6.0;
+        tileResolution.y /= max(1.0, float(uAnimFrameCount));
+        vec2 offsetRandom = vec2(
             fract(sin(seed) * 43758.5453),
             fract(sin(seed + 19.19) * 24634.6345)
-        ) * clamp(uTextureVariation, 0.0, 1.0);
+        );
+        // Keep randomized offsets on texel boundaries so nearest-filtered
+        // 16px materials do not become subpixel-blurred or unevenly tiled.
+        vec2 offset = floor(offsetRandom * tileResolution * clamp(uTextureVariation, 0.0, 1.0)) / tileResolution;
         tile = fract(tile + offset);
     }
     float v0 = faceIndex < 4 ? 1.0 : 0.0;
@@ -228,12 +264,56 @@ vec2 crossAtlasUV(vec2 meshUV)
     float u0 = 0.0;
     float u1 = kCubeShift;
     vec2 inset = atlasHalfTexelInset();
-    return vec2(insetMix(u0, u1, meshUV.x, inset.x), insetMix(1.0, 0.0, meshUV.y, inset.y));
+    vec2 tile = meshUV;
+    if (uTextureVariation >= 0.75) {
+        float seed = dot(vInstanceCell, vec3(127.1, 311.7, 74.7));
+        float transform = floor(fract(sin(seed + 47.17) * 43758.5453) * 8.0);
+        float rotation = mod(transform, 4.0);
+        if (rotation < 0.5) {
+            tile = vec2(tile.y, 1.0 - tile.x);
+        } else if (rotation < 1.5) {
+            tile = vec2(1.0 - tile.x, 1.0 - tile.y);
+        } else if (rotation < 2.5) {
+            tile = vec2(1.0 - tile.y, tile.x);
+        }
+        if (transform >= 4.0) {
+            tile.x = 1.0 - tile.x;
+        }
+    }
+    return vec2(insetMix(u0, u1, tile.x, inset.x), insetMix(1.0, 0.0, tile.y, inset.y));
+}
+
+float materialNoise(vec2 p)
+{
+    vec2 cell = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float n00 = materialHash(cell);
+    float n10 = materialHash(cell + vec2(1.0, 0.0));
+    float n01 = materialHash(cell + vec2(0.0, 1.0));
+    float n11 = materialHash(cell + vec2(1.0, 1.0));
+    return mix(mix(n00, n10, f.x), mix(n01, n11, f.x), f.y);
+}
+
+vec4 materialVariation(vec2 planePosition)
+{
+    return vec4(
+        materialNoise(planePosition * 0.16 + vec2(13.7, 3.1)),
+        materialNoise(planePosition * 0.16 + vec2(27.2, 11.3)),
+        materialNoise(planePosition * 0.43 + vec2(4.9, 23.1)),
+        materialNoise(planePosition * 0.43 + vec2(18.4, 7.7))
+    );
 }
 
 void main()
 {
     vec2 uv;
+    vec2 materialPlane = vec2(0.0);
+    vec4 materialFields = vec4(0.5);
+    if (vFaceIndex != kCrossFaceIndex && uTextureVariation > 0.001) {
+        materialPlane = materialPlanePosition(vFaceIndex, vWorldPos);
+        materialFields = materialVariation(materialPlane);
+    }
     if (vFaceIndex == kCrossFaceIndex) {
         uv = crossAtlasUV(vUV);
     } else {
@@ -244,6 +324,20 @@ void main()
         uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
     }
     FragColor = texture(texture0, uv);
+    if (vFaceIndex != kCrossFaceIndex && uTextureVariation > 0.001) {
+        float spatialTone = mix(materialFields.x, materialFields.w, 0.26);
+        float fineTone = materialNoise(
+            materialPlane * 7.5 + vec2(13.1, 5.7)
+            + (materialFields.zw - 0.5) * 0.68
+        );
+        spatialTone = mix(spatialTone, fineTone, 0.72);
+        float fineGrain = materialNoise(materialPlane * 15.0 + vec2(7.3, 29.1));
+        float variation = clamp(uTextureVariation, 0.0, 1.0);
+        float broadAmplitude = 0.30 * variation;
+        float grainAmplitude = 0.18 * variation;
+        FragColor.rgb *= 1.0 + (spatialTone - 0.5) * broadAmplitude
+                         + (fineGrain - 0.5) * grainAmplitude;
+    }
     float sky01 = clamp(vSkyLight, 0.0, 1.0);
     float block01 = clamp(vBlockLight, 0.0, 1.0);
     float nightAmbient = uEnvMinAmbient * (0.25 + 0.5 * uEnvNightFactor);

@@ -22,7 +22,7 @@
     "cu_soil_red_earth_layered_bottom"
   ],
   "render": {
-    "texture_variation": 0.48
+    "texture_variation": 1.0
   },
   "assetgen": {
     "family": "soil",

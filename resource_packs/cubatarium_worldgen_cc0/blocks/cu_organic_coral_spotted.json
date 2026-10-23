@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_coral_spotted",
-  "id": 2275,
+  "id": 2311,
   "displayName": "Organic Coral Spotted",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_coral_spotted"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "coral",
     "variant": "spotted"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_fern_dense",
-  "id": 2243,
+  "id": 2279,
   "displayName": "Organic Fern Dense",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_fern_dense"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "tuft",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "fern",
     "variant": "dense"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

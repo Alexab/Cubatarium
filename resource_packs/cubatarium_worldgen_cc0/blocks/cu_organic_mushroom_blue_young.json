@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_mushroom_blue_young",
-  "id": 2409,
+  "id": 2445,
   "displayName": "Organic Mushroom Blue Young",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_mushroom_blue_young"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "mushroom_blue",
     "variant": "young"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

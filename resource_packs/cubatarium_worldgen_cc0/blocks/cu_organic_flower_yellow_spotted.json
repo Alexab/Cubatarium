@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_flower_yellow_spotted",
-  "id": 2325,
+  "id": 2361,
   "displayName": "Organic Flower Yellow Spotted",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_flower_yellow_spotted"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "flower_yellow",
     "variant": "spotted"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

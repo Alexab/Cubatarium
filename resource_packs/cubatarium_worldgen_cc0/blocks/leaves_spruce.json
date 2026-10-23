@@ -23,12 +23,12 @@
   ],
   "render": {
     "style": "cutout",
-    "texture_variation": 0.48
+    "texture_variation": 1.0
   },
   "displayName": "Spruce Leaves",
   "physics": {
     "movement": {
-      "occupancy": 0
+      "occupancy": 0.0
     }
   },
   "license": "CC0-1.0",

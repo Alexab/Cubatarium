@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_leaf_young",
-  "id": 2309,
+  "id": 2345,
   "displayName": "Organic Leaf Young",
   "hardness": 0.45,
   "dig": {
@@ -22,11 +22,17 @@
     "cu_organic_leaf_young"
   ],
   "render": {
-    "texture_variation": 0.48
+    "texture_variation": 1.0,
+    "style": "cutout"
   },
   "assetgen": {
     "family": "organic",
     "material": "leaf",
     "variant": "young"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }

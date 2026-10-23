@@ -26,14 +26,17 @@
     "mt_fire_1"
   ],
   "physics": {
-    "preset": "fire"
+    "preset": "fire",
+    "movement": {
+      "occupancy": 0.0
+    }
   },
   "render": {
     "transparent": true,
     "style": "cross",
     "double_sided": true,
     "shape": "flame",
-    "texture_variation": 0.0
+    "texture_variation": 1.0
   },
   "animation": {
     "frame_count": 2,

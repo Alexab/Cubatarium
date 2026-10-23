@@ -22,7 +22,7 @@
     "cu_soil_pale_sand_pebbled_bottom"
   ],
   "render": {
-    "texture_variation": 0.48
+    "texture_variation": 1.0
   },
   "assetgen": {
     "family": "soil",

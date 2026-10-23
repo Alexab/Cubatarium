@@ -1,6 +1,6 @@
 {
   "name": "cu_organic_flower_blue_dense",
-  "id": 2353,
+  "id": 2389,
   "displayName": "Organic Flower Blue Dense",
   "hardness": 0.45,
   "dig": {
@@ -22,7 +22,7 @@
     "cu_organic_flower_blue_dense"
   ],
   "render": {
-    "texture_variation": 0.0,
+    "texture_variation": 1.0,
     "style": "cross",
     "shape": "cluster",
     "double_sided": true
@@ -31,5 +31,10 @@
     "family": "organic",
     "material": "flower_blue",
     "variant": "dense"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
   }
 }
