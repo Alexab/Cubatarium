@@ -70,7 +70,7 @@ WORLDGEN_RULES = {
         ("asset_flower_patch_01", ["plains", "forest", "savanna"], 22, 1),
     ],
     "decoration": [
-        ("asset_coral_fan", ["beach"], 72, 1),
+        ("asset_coral_fan", ["ocean"], 72, 1),
         ("asset_stalagmite_cluster", ["dripstone_caves", "deep_dark"], 84, 1),
         ("asset_crystal_cluster", ["deep_dark", "mountains"], 96, 1),
         ("asset_mossy_ruin_piece", ["forest", "hills", "scrubland"], 110, 1),
@@ -491,9 +491,10 @@ def _apply_birch_bark_marks(
 def _apply_needle_foliage(
     image: Image.Image, seed: int, variant: str = "fresh"
 ) -> Image.Image:
-    """Turn a generic organic tile into readable conifer sprigs."""
+    """Build short, directional conifer needles over a wrapped green base."""
     result = image.convert("RGBA")
     size = result.width
+    unique_size = max(2, size - 1)
     rng = random.Random(seed ^ 0x4E454544)
     pixels = result.load()
     variant = variant.lower()
@@ -507,36 +508,53 @@ def _apply_needle_foliage(
         ((34, 65, 34, 255), (48, 84, 41, 255), (72, 106, 49, 255), (94, 124, 59, 255))
     )
 
-    # Preserve the generated tile's fine value field while replacing its
-    # broadleaf color impression with a tighter, darker conifer palette.
+    # Keep subtle tile value variation, but remove the broad, leaf-like color
+    # patches that made spruce crowns read as generic deciduous foliage.
     for y in range(size):
         for x in range(size):
-            red, green, blue, alpha = pixels[x, y]
+            red, green, blue, _ = pixels[x % unique_size, y % unique_size]
             value = (red * 0.25 + green * 0.62 + blue * 0.13) / 255.0
-            palette_index = max(0, min(3, round(value * 3.0)))
-            pixels[x, y] = (*shades[palette_index][:3], alpha)
+            palette_index = max(0, min(2, round(value * 2.0)))
+            pixels[x, y] = (*shades[palette_index][:3], 0)
 
     def put_wrapped(x: int, y: int, color: tuple[int, int, int, int]) -> None:
-        pixels[x % size, y % size] = color
+        pixels[x % unique_size, y % unique_size] = color
 
-    # Short, branching sprigs read as needles at 16 px; random single-pixel
-    # flecks on a leaf-shaped noise field previously made pine foliage look
-    # like ordinary broadleaf canopy.
-    for _ in range(max(5, round(size * 0.34))):
-        x0, y0 = rng.randrange(size), rng.randrange(size)
-        dx, dy = rng.choice(((-1, -1), (0, -1), (1, -1), (-1, 0),
-                             (1, 0), (-1, 1), (0, 1), (1, 1)))
-        length = rng.randint(max(2, size // 8), max(3, size // 4))
-        twig = shades[rng.choice((0, 1, 1, 2))]
-        needle = shades[rng.choice((1, 2, 2, 3))]
+    # Pine and spruce needles grow in short fans off a twig. Several offset
+    # fans make a useful tile for the six faces of voxel leaf blocks: the
+    # direction stays legible at 16 px, while the cutout mask supplies canopy
+    # gaps between adjacent blocks. Sparse and dense variants change the
+    # number of fans as well as their alpha coverage later in the pipeline.
+    density = 0.70 if variant == "sparse" else 1.35 if variant == "dense" else 1.0
+    sprig_count = max(3, round((size / 2.5) * density))
+    directions = (
+        (-1, -1), (0, -1), (1, -1), (-1, 0),
+        (1, 0), (-1, 1), (0, 1), (1, 1),
+    )
+    for _ in range(sprig_count):
+        x0, y0 = rng.randrange(unique_size), rng.randrange(unique_size)
+        dx, dy = rng.choice(directions)
+        length = rng.randint(max(3, round(size * 0.24)),
+                             max(4, round(size * 0.52)))
+        twig = shades[rng.choice((0, 0, 1))]
         for step in range(length):
             x, y = x0 + dx * step, y0 + dy * step
             put_wrapped(x, y, twig)
-            # Paired, outward-facing needle tips create a small feathered
-            # silhouette instead of a row of horizontal bark-like stripes.
-            if step % 2 == 0 or size <= 16:
-                put_wrapped(x - dy, y + dx, needle)
-                put_wrapped(x + dy, y - dx, needle)
+            if step % 2 != 0:
+                continue
+            for side in (-1, 1):
+                needle_length = rng.choice((1, 1, 2))
+                needle = shades[rng.choice((1, 2, 2, 3))]
+                for reach in range(1, needle_length + 1):
+                    # A slight forward lean prevents the fans from forming
+                    # identical perpendicular rungs along every twig.
+                    along = step + (side if reach > 1 else 0)
+                    across = side * reach
+                    put_wrapped(x0 + dx * along - dy * across,
+                                y0 + dy * along + dx * across, needle)
+            if rng.random() < 0.20:
+                put_wrapped(x + dx, y + dy,
+                            shades[rng.choice((2, 3))])
     return result
 
 
@@ -683,6 +701,95 @@ def fit_alpha_coverage(image: Image.Image, coverage: float, seed: int) -> Image.
     result.putdata(adjusted)
     return result
 
+
+def apply_needle_cutout(image: Image.Image, seed: int,
+                        transparent_ratio: float,
+                        variant: str = "fresh") -> Image.Image:
+    """Fit alpha to the authored sprig silhouette, keeping gaps between fans."""
+    result = _apply_needle_foliage(image.convert("RGBA"), seed, variant)
+    size = result.width
+    unique_size = max(2, size - 1)
+    alpha = result.getchannel("A")
+    source = alpha.load()
+    transparent_ratio = max(0.05, min(0.75, transparent_ratio))
+    target_holes = round(size * size * transparent_ratio)
+
+    # Pick holes on the unique (size - 1)² tile and weight duplicated border
+    # texels. This keeps both the alpha silhouette and its exact coverage
+    # seamless. Distances preserve the largest natural gaps and grow new gaps
+    # from existing ones when a denser profile needs more transparency.
+    base_holes = {
+        (x, y)
+        for y in range(unique_size)
+        for x in range(unique_size)
+        if source[x, y] < 128
+    }
+    base_opaque = {
+        (x, y)
+        for y in range(unique_size)
+        for x in range(unique_size)
+        if (x, y) not in base_holes
+    }
+    rng = random.Random(seed ^ 0x4E454544)
+    ranked_cells: list[tuple[float, int, int, int]] = []
+    for y in range(unique_size):
+        for x in range(unique_size):
+            is_hole = (x, y) in base_holes
+            opposite = list(base_opaque if is_hole else base_holes)
+            if opposite:
+                distances = []
+                for ox, oy in opposite:
+                    dx = abs(x - ox)
+                    dy = abs(y - oy)
+                    dx = min(dx, unique_size - dx)
+                    dy = min(dy, unique_size - dy)
+                    distances.append(math.sqrt(dx * dx + dy * dy))
+                distance = min(distances)
+            else:
+                distance = float(unique_size)
+            # Existing holes rank ahead of foliage. If more holes are needed,
+            # expand from the nearest opening instead of punching new islands.
+            score = -distance if is_hole else distance
+            score += rng.random() * 0.001
+            weight = (2 if x == 0 else 1) * (2 if y == 0 else 1)
+            ranked_cells.append((score, y, x, weight))
+    ranked_cells.sort(key=lambda item: (item[0], item[1], item[2]))
+
+    best: list[tuple[int, tuple[tuple[int, int], ...]] | None] = [
+        None
+    ] * (target_holes + 1)
+    best[0] = (0, ())
+    for rank, (_, y, x, weight) in enumerate(ranked_cells):
+        for count in range(target_holes, weight - 1, -1):
+            previous = best[count - weight]
+            if previous is None:
+                continue
+            candidate = (previous[0] + rank, previous[1] + ((x, y),))
+            if best[count] is None or candidate[0] < best[count][0]:
+                best[count] = candidate
+    selected_holes = set(best[target_holes][1]) if best[target_holes] else set()
+    pixels = result.load()
+    for y in range(size):
+        for x in range(size):
+            r, g, b, _ = pixels[x, y]
+            hole = (x % unique_size, y % unique_size) in selected_holes
+            pixels[x, y] = (r, g, b, 0 if hole else 255)
+
+    alpha = result.getchannel("A")
+    for palette_size in range(32, 15, -1):
+        rgb = result.convert("RGB").quantize(
+            colors=palette_size, method=Image.Quantize.MEDIANCUT
+        ).convert("RGB")
+        rgb.putalpha(alpha)
+        palette = rgb.getcolors(maxcolors=49)
+        if palette is not None and len(palette) <= 48:
+            return rgb
+    rgb = result.convert("RGB").quantize(
+        colors=16, method=Image.Quantize.MEDIANCUT
+    ).convert("RGB")
+    rgb.putalpha(alpha)
+    return rgb
+
 def generated_texture(
     family: str,
     material: str,
@@ -729,7 +836,7 @@ def generated_texture(
         if pale_bark:
             # Birch is nearly white; aspen bark is a warmer gray with fewer
             # dark lenticels. Their species marks are drawn after shading.
-            base = (222, 221, 211) if birch_bark else (190, 187, 171)
+            base = (238, 238, 233) if birch_bark else (190, 187, 171)
         else:
             # Bark is darker and more chromatically varied than finished timber.
             base = tuple(round(channel * factor) for channel, factor in zip(base, (0.441, 0.512, 0.699)))
@@ -1090,7 +1197,10 @@ def generated_texture(
     if pale_bark:
         image = _apply_birch_bark_marks(image, seed, material)
     elif family == "organic" and material == "needle":
+        original_alpha = image.getchannel("A")
         image = _apply_needle_foliage(image, seed, variant)
+        if role != "leaf_cutout":
+            image.putalpha(original_alpha)
 
     # Grass/dirt is a layered material: a ragged vegetation edge sits above
     # exposed soil on side faces. Its thickness is proportional to resolution.
@@ -1424,12 +1534,13 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
     flower = any(token in name for token in ("flower", "blossom", "rose", "tulip", "dandelion"))
     coral = "coral" in name
     mushroom_stem = "mushroom_stem" in name
+    bush_stem = "bush_stem" in name and not mushroom_stem
     mushroom = "mushroom" in name and "skin" not in name and not mushroom_stem
     deadbush = "deadbush" in name or "dry_shrub" in name
     grass = any(token in name for token in ("grass_1", "dry_grass", "tallgrass", "marram"))
     if not any((fire, torch, sapling, crop, cocoa, fruit, cactus_seedling, waterlily, vine,
                 fern, junglegrass, reed, flower, coral, mushroom, mushroom_stem,
-                deadbush, grass)):
+                bush_stem, deadbush, grass)):
         return None
 
     rng = random.Random(seed)
@@ -1500,6 +1611,58 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                       fill=trunk, width=max(1, round(2*s)))
             draw.line([xy(center, top + 19), xy(center + 9, top + 12)],
                       fill=trunk, width=max(1, round(2*s)))
+    elif bush_stem:
+        # Minetest bush stems are open woody branches. Pine needles and bush
+        # leaves are separate blocks, so this sprite must stay brown and cut
+        # out instead of becoming a solid green foliage tile.
+        center = 32 + rng.randint(-2, 2)
+        lean = rng.randint(-2, 2)
+        if "acacia" in name:
+            bark = (112, 101, 86, 255)
+            highlight = (151, 137, 119, 255)
+            shadow = (76, 69, 61, 255)
+        elif "pine" in name:
+            bark = (91, 67, 45, 255)
+            highlight = (128, 99, 68, 255)
+            shadow = (60, 47, 35, 255)
+        else:
+            bark = (73, 53, 38, 255)
+            highlight = (108, 81, 57, 255)
+            shadow = (48, 37, 29, 255)
+
+        fork_y = rng.randint(42, 47)
+        leader_top = rng.randint(7, 12)
+        left_tip = rng.randint(4, 9)
+        right_tip = rng.randint(55, 60)
+        broad = max(3, round(13*s))
+        mid = max(2, round(8*s))
+        fine = max(1, round(4*s))
+        draw.line([xy(32, 63), xy(center + lean, leader_top)],
+                  fill=shadow, width=broad)
+        draw.line([xy(31, 59), xy(center + lean - 1, leader_top + 5)],
+                  fill=bark, width=mid)
+        draw.line([xy(center - 1, fork_y), xy(left_tip, 25 + rng.randint(-2, 3))],
+                  fill=shadow, width=broad)
+        draw.line([xy(center + 1, fork_y), xy(right_tip, 25 + rng.randint(-2, 3))],
+                  fill=shadow, width=broad)
+        draw.line([xy(center - 1, fork_y - 1), xy(left_tip + 2, 27)],
+                  fill=bark, width=mid)
+        draw.line([xy(center + 1, fork_y - 1), xy(right_tip - 2, 27)],
+                  fill=bark, width=mid)
+        for branch_x, branch_y, side in (
+            (center - 8, 39, -1), (center + 7, 36, 1),
+            (center - 3, 24, -1), (center + 5, 21, 1),
+        ):
+            end_x = max(3, min(60, branch_x + side * rng.randint(7, 12)))
+            end_y = max(8, branch_y - rng.randint(8, 14))
+            draw.line([xy(branch_x, branch_y), xy(end_x, end_y)],
+                      fill=bark, width=fine)
+        # Short bark flecks add texture without introducing regular vertical
+        # grooves into this small branch silhouette.
+        for x, y in ((center - 1, 54), (center + 1, 45),
+                     (center, 34), (center + 1, 23)):
+            draw.line([xy(x, y), xy(x + rng.choice((-1, 0, 1)), y - 3)],
+                      fill=highlight, width=fine)
     elif crop:
         dry = "netherstalk" not in name and "wheat" in name
         stem = (141, 113, 55, 255) if dry else (56, 116, 54, 255)
@@ -2001,6 +2164,7 @@ def is_decor_sprite_source(source_stem: str) -> bool:
         "marram", "junglegrass", "flower", "rose", "tulip", "dandelion",
         "blossom", "mushroom", "reeds", "papyrus", "kelp",
         "seagrass", "deadbush", "sapling", "torch", "dry_shrub", "shrub",
+        "bush_stem",
         "crops", "carrots", "potatoes", "wheat", "netherstalk", "pumpkin_stem",
         "melon_stem", "cocoa", "apple", "berry", "cactus_seedling", "waterlily", "vine",
     ))
@@ -2954,7 +3118,12 @@ def make_replacement_texture(
             image, family, material, size, role, axes
         )
     if role == "leaf_cutout":
-        image = apply_leaf_cutout(image, base_seed, leaf_transparency or 0.38)
+        if material == "needle":
+            image = apply_needle_cutout(
+                image, base_seed, leaf_transparency or 0.38, variant
+            )
+        else:
+            image = apply_leaf_cutout(image, base_seed, leaf_transparency or 0.38)
     digest = image_pixel_hash(image)
     salt = 0
     while digest in hashes:
@@ -2981,8 +3150,15 @@ def make_replacement_texture(
                 image, family, material, size, role, axes
             )
         if role == "leaf_cutout":
-            image = apply_leaf_cutout(image, base_seed + salt,
-                                      leaf_transparency or 0.38)
+            if material == "needle":
+                image = apply_needle_cutout(
+                    image, base_seed + salt, leaf_transparency or 0.38,
+                    variant,
+                )
+            else:
+                image = apply_leaf_cutout(
+                    image, base_seed + salt, leaf_transparency or 0.38
+                )
         digest = image_pixel_hash(image)
     hashes.add(digest)
     if frame_count > 1:
@@ -3135,7 +3311,12 @@ def create_catalog_texture(
             image, record["family"], record["material"], size, role, axes
         )
     if leaf_cutout:
-        image = apply_leaf_cutout(image, seed, leaf_transparency)
+        if record["material"] == "needle":
+            image = apply_needle_cutout(
+                image, seed, leaf_transparency, record["variant"]
+            )
+        else:
+            image = apply_leaf_cutout(image, seed, leaf_transparency)
     digest = image_pixel_hash(image)
     salt = 0
     while digest in hashes:
@@ -3156,7 +3337,12 @@ def create_catalog_texture(
                 image, record["family"], record["material"], size, role, axes
             )
         if leaf_cutout:
-            image = apply_leaf_cutout(image, seed + salt, leaf_transparency)
+            if record["material"] == "needle":
+                image = apply_needle_cutout(
+                    image, seed + salt, leaf_transparency, record["variant"]
+                )
+            else:
+                image = apply_leaf_cutout(image, seed + salt, leaf_transparency)
         digest = image_pixel_hash(image)
     hashes.add(digest)
     save_texture_if_changed(image, texture_path(output_dir, stem))
@@ -3234,7 +3420,7 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
     conifers = {"cedar", "larch", "pine", "redwood"}
     foliage_material = "needle" if wood in conifers else "leaf"
     foliage_variant = {
-        "acacia": "dry", "ash": "mature", "beech": "dense",
+        "acacia": "sparse", "ash": "mature", "beech": "dense",
         "birch": "young", "jungle": "dense", "mangrove": "dark",
         "maple": "fresh", "oak": "mature", "poplar": "pale",
         "walnut": "dark", "willow": "sparse",
@@ -3678,7 +3864,9 @@ def ensure_worldgen_rules(objects: list[dict[str, Any]]) -> int:
             else:
                 rule["spacing"] = spacing_or_chance
             if pool == "decoration":
-                rule["surface_constraint"] = "any_land"
+                rule["surface_constraint"] = (
+                    "underwater_floor" if name == "asset_coral_fan" else "any_land"
+                )
             existing.append(rule)
             next_seed += 1
             additions += 1

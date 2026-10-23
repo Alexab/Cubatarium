@@ -1137,13 +1137,13 @@
     {
       "object": "cubatarium_worldgen_cc0::asset_coral_fan",
       "biomes": [
-        "beach"
+        "ocean"
       ],
       "weight": 1,
       "seed_offset": 10001,
       "calibrated": true,
       "spacing": 72,
-      "surface_constraint": "any_land"
+      "surface_constraint": "underwater_floor"
     },
     {
       "object": "cubatarium_worldgen_cc0::asset_stalagmite_cluster",
