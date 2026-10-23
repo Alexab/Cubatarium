@@ -270,10 +270,10 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
     if (uTextureVariation >= 0.34 && uTextureVariation <= 0.40 && faceIndex >= 4) {
         vec2 waterPlane = worldPos.xz;
         vec2 phaseWarp = vec2(
-            materialNoise(waterPlane * 0.21 + vec2(17.8, 9.3)),
-            materialNoise(waterPlane * 0.21 + vec2(3.2, 29.6))
+            materialNoise(waterPlane * 0.27 + vec2(17.8, 9.3)),
+            materialNoise(waterPlane * 0.27 + vec2(3.2, 29.6))
         ) - 0.5;
-        tile = fract(tile + phaseWarp * 0.82);
+        tile = fract(tile + phaseWarp * 1.08);
     }
     // Per-block discrete tile transforms break large repeated ground and rock
     // patterns while keeping each 16 px texture seamless and unwarped.
@@ -381,19 +381,23 @@ float waterSurfaceLight(vec2 planePosition)
     // the parallel, evenly spaced bands produced by a sine wave. All terms
     // use world coordinates, so the pattern stays continuous across blocks.
     vec2 warp = vec2(
-        materialNoise(planePosition * 0.21 + vec2(11.6, 24.2)),
-        materialNoise(planePosition * 0.21 + vec2(26.4, 6.8))
+        materialNoise(planePosition * 0.16 + vec2(11.6, 24.2)),
+        materialNoise(planePosition * 0.16 + vec2(26.4, 6.8))
     ) - 0.5;
-    vec2 warped = planePosition + warp * 2.4;
-    float swell = materialNoise(warped * 0.19 + vec2(8.7, 16.1));
-    float current = materialNoise(warped * 0.57 + vec2(21.4, 4.8));
-    float grain = materialNoise(warped * 1.8 + vec2(3.2, 29.6));
-    float ripple = materialNoise(warped * 3.7 + vec2(16.2, 12.7));
+    vec2 warped = planePosition + warp * 3.6;
+    float swell = materialNoise(warped * 0.11 + vec2(8.7, 16.1));
+    float current = materialNoise(warped * 0.31 + vec2(21.4, 4.8));
+    float grain = materialNoise(warped * 0.92 + vec2(3.2, 29.6));
+    float ripple = materialNoise(warped * 2.4 + vec2(16.2, 12.7));
+    float microRipple = materialNoise(warped * 4.6 + vec2(7.9, 22.5));
     float ridge = 1.0 - abs(ripple * 2.0 - 1.0);
-    float crest = smoothstep(0.70, 0.91, ridge) * (0.55 + current * 0.45);
-    return clamp(0.80 + (swell - 0.5) * 0.34
-                 + (current - 0.5) * 0.24 + (grain - 0.5) * 0.15
-                 + crest * 0.13, 0.62, 1.18);
+    float crest = smoothstep(0.69, 0.90, ridge) * (0.48 + current * 0.52);
+    float brokenCrest = smoothstep(0.76, 0.94, microRipple)
+                        * smoothstep(0.35, 0.82, grain);
+    return clamp(0.94 + (swell - 0.5) * 0.31
+                 + (current - 0.5) * 0.27 + (grain - 0.5) * 0.18
+                 + (microRipple - 0.5) * 0.10
+                 + crest * 0.14 + brokenCrest * 0.06, 0.68, 1.24);
 }
 
 void main()
@@ -422,11 +426,11 @@ void main()
             float waterLight = waterSurfaceLight(materialPlane);
             FragColor.rgb *= waterLight;
             float glintField = materialNoise(
-                materialPlane * 2.6 + vec2(17.8, 9.3)
+                materialPlane * 3.2 + vec2(17.8, 9.3)
                 + (materialFields.zw - 0.5) * 0.44
             );
-            float glint = smoothstep(0.76, 0.96, glintField);
-            FragColor.rgb = mix(FragColor.rgb, vec3(0.14, 0.48, 0.79), glint * 0.16);
+            float glint = smoothstep(0.82, 0.98, glintField);
+            FragColor.rgb = mix(FragColor.rgb, vec3(0.30, 0.66, 0.91), glint * 0.18);
         } else {
             float spatialTone = mix(materialFields.x, materialFields.w, 0.26);
             float fineTone = materialNoise(
