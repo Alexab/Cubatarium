@@ -52001,7 +52001,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4cbd99a368a176e0fd66f08358be3930237ab6ed3475986f3452a3b79247ad26",
+      "pixel_sha256": "727ba87277eec45536366d30ef11868c25f4b7c7969e45859d87fcaab99c72ac",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_river_water_flowing_default_river_water",
@@ -52651,7 +52651,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c02a403a20ac788c1fe9cd6b808b3a844bd250f9cd81aa2dc23b0d7a66ce7f22",
+      "pixel_sha256": "356e6598ed78f08c803d270b0ba63f47178b76ff6848a6fbd390fd70798e4cc5",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_water_flowing_default_water",
@@ -54431,7 +54431,7 @@
         16,
         16
       ],
-      "pixel_sha256": "234564f519221c217747d8a37628331d96acd3d052d5a00cad06c05756ff8a58",
+      "pixel_sha256": "42881bb3dd77c44b18b3675bf375314508ef8e5cfc7a1af732236a9c359011c7",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "water",

@@ -655,10 +655,10 @@ def generated_texture(
             "young": (70, 111, 51), "dry": (117, 105, 49),
         }.get(variant, base)
     if role == "water_surface":
-        # A saturated blue water albedo keeps water distinct from cyan glass;
-        # its detail is built from compact ripples rather than large glassy
-        # blotches.
-        base = (34, 112, 194)
+        # Keep clear water bright enough to reveal its depth and substrate.
+        # The former low green/blue base made broad water surfaces read as
+        # opaque navy even though the shader supplied a continuous ripple field.
+        base = (28, 132, 224)
     if calibration and all(key in calibration for key in ("mean_rgb_r", "mean_rgb_g", "mean_rgb_b")):
         # Only the family's aggregate color centroid is transferred; no source
         # pixels or spatial samples participate in texture synthesis.
@@ -1025,7 +1025,8 @@ def generated_texture(
             if pixel_detail:
                 grain_delta = round(pixel_grain[i] * pixel_detail)
                 rgb = tuple(max(0, min(255, channel + grain_delta)) for channel in rgb)
-            pixels.append((*rgb, 176 if style == "glass" else 255))
+            alpha = 204 if role == "water_surface" else 176 if style == "glass" else 255
+            pixels.append((*rgb, alpha))
 
     image = Image.new("RGBA", (size, size))
     image.putdata(pixels)
