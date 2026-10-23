@@ -19,189 +19,249 @@
   ],
   "blocks": [
     {
-      "dx": -3,
+      "dx": -5,
       "dy": 5,
       "dz": -1,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -3,
+      "dx": -5,
       "dy": 5,
       "dz": 0,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -3,
+      "dx": -5,
       "dy": 5,
       "dz": 1,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -3,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 4,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
+      "dx": -5,
       "dy": 6,
       "dz": 1,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -2,
-      "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 4,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 4,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 4,
-      "dz": 2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -1,
+      "dx": -4,
       "dy": 5,
       "dz": -2,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -1,
+      "dx": -4,
       "dy": 5,
       "dz": -1,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -1,
+      "dx": -4,
       "dy": 5,
       "dz": 0,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -1,
+      "dx": -4,
       "dy": 5,
       "dz": 1,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -1,
+      "dx": -4,
       "dy": 5,
       "dz": 2,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -1,
+      "dx": -4,
       "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -4,
+      "dy": 6,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -4,
+      "dy": 6,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
+      "dz": -2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
+      "dz": -1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 6,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 6,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 7,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
       "dz": -3,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": -1,
-      "dy": 6,
+      "dx": -2,
+      "dy": 5,
       "dz": -2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": -1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": 3,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": -1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_wood_walnut_bark"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": 3,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": -2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": -1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_wood_walnut_bark"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": 3,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": -1,
       "dy": 6,
       "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 1,
       "type": "cu_organic_leaf_dark"
     },
     {
@@ -219,12 +279,6 @@
     {
       "dx": -1,
       "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
       "dz": -1,
       "type": "cu_organic_leaf_dark"
     },
@@ -237,13 +291,25 @@
     {
       "dx": -1,
       "dy": 7,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 7,
       "dz": 2,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": -1,
+      "dy": 7,
+      "dz": 3,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": -1,
       "dy": 8,
-      "dz": 0,
+      "dz": 1,
       "type": "cu_organic_leaf_dark"
     },
     {
@@ -273,12 +339,6 @@
     {
       "dx": 0,
       "dy": 4,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 4,
       "dz": -1,
       "type": "cu_organic_leaf_dark"
     },
@@ -303,56 +363,56 @@
     {
       "dx": 0,
       "dy": 5,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_wood_walnut_bark"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
-      "dz": 2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
       "dz": -3,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 0,
-      "dy": 6,
+      "dy": 5,
       "dz": -2,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 0,
-      "dy": 6,
+      "dy": 5,
       "dz": -1,
+      "type": "cu_wood_walnut_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 1,
+      "type": "cu_wood_walnut_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 3,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 0,
       "dy": 6,
-      "dz": 0,
+      "dz": -2,
       "type": "cu_wood_walnut_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 0,
@@ -364,7 +424,7 @@
       "dx": 0,
       "dy": 6,
       "dz": 2,
-      "type": "cu_organic_leaf_dark"
+      "type": "cu_wood_walnut_bark"
     },
     {
       "dx": 0,
@@ -375,181 +435,127 @@
     {
       "dx": 0,
       "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
       "dz": -1,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 0,
       "dy": 7,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 7,
+      "dz": 3,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 8,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 9,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": -1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
       "dz": 0,
       "type": "cu_wood_walnut_bark"
     },
     {
-      "dx": 0,
+      "dx": 1,
+      "dy": 5,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
       "dy": 7,
-      "dz": 1,
+      "dz": -1,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": 0,
+      "dx": 1,
+      "dy": 7,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
       "dy": 7,
       "dz": 2,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": 0,
-      "dy": 8,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 8,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
       "dx": 1,
-      "dy": 4,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
-      "dz": 2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": 2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
+      "dy": 7,
       "dz": 3,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 1,
-      "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 1,
       "dy": 8,
       "dz": 0,
       "type": "cu_organic_leaf_dark"
     },
     {
-      "dx": 2,
-      "dy": 4,
-      "dz": -1,
+      "dx": 1,
+      "dy": 8,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
+      "dy": 9,
+      "dz": 0,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 1,
+      "dy": 9,
+      "dz": 2,
       "type": "cu_organic_leaf_dark"
     },
     {
@@ -560,8 +566,8 @@
     },
     {
       "dx": 2,
-      "dy": 4,
-      "dz": 1,
+      "dy": 5,
+      "dz": -2,
       "type": "cu_organic_leaf_dark"
     },
     {
@@ -579,20 +585,14 @@
     {
       "dx": 2,
       "dy": 5,
-      "dz": 1,
+      "dz": 2,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 2,
       "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
       "dz": 0,
-      "type": "cu_organic_leaf_dark"
+      "type": "cu_wood_walnut_bark"
     },
     {
       "dx": 2,
@@ -609,25 +609,31 @@
     {
       "dx": 2,
       "dy": 7,
-      "dz": -1,
+      "dz": 0,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 2,
       "dy": 7,
-      "dz": 0,
+      "dz": 1,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_leaf_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 1,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 3,
       "dy": 5,
       "dz": -1,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 5,
-      "dz": 0,
       "type": "cu_organic_leaf_dark"
     },
     {
@@ -639,18 +645,12 @@
     {
       "dx": 3,
       "dy": 6,
-      "dz": -1,
+      "dz": 1,
       "type": "cu_organic_leaf_dark"
     },
     {
       "dx": 3,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 6,
+      "dy": 7,
       "dz": 1,
       "type": "cu_organic_leaf_dark"
     }

@@ -20,24 +20,6 @@
   "blocks": [
     {
       "dx": -3,
-      "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -3,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -3,
-      "dy": 5,
-      "dz": 1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -3,
       "dy": 6,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
@@ -55,99 +37,93 @@
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": -2,
-      "dy": 4,
+      "dx": -3,
+      "dy": 7,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": -2,
-      "dy": 4,
+      "dx": -3,
+      "dy": 7,
       "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": -2,
-      "dy": 4,
+      "dx": -3,
+      "dy": 7,
       "dz": 1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -2,
       "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
       "dz": -2,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -2,
-      "dy": 5,
+      "dy": 6,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -2,
-      "dy": 5,
+      "dy": 6,
       "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -2,
-      "dy": 5,
+      "dy": 6,
       "dz": 1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -2,
-      "dy": 5,
+      "dy": 6,
       "dz": 2,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -2,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -2,
       "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 0,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -1,
-      "dy": 4,
       "dz": -2,
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": -1,
-      "dy": 4,
+      "dx": -2,
+      "dy": 7,
       "dz": -1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": 0,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": 1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -2,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
@@ -158,80 +134,68 @@
     },
     {
       "dx": -1,
-      "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -1,
-      "dy": 4,
-      "dz": 2,
+      "dy": 5,
+      "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -1,
       "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": 1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -1,
+      "dy": 6,
       "dz": -3,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -1,
-      "dy": 5,
+      "dy": 6,
       "dz": -2,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -1,
-      "dy": 5,
+      "dy": 6,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -1,
-      "dy": 5,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -1,
+      "dy": 6,
       "dz": 1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -1,
-      "dy": 5,
+      "dy": 6,
       "dz": 2,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -1,
-      "dy": 5,
+      "dy": 6,
       "dz": 3,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -1,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 2,
+      "dy": 7,
+      "dz": -3,
       "type": "cu_organic_leaf_dense"
     },
     {
@@ -262,11 +226,35 @@
       "dx": -1,
       "dy": 7,
       "dz": 2,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -1,
+      "dy": 7,
+      "dz": 3,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": -1,
       "dy": 8,
+      "dz": -1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -1,
+      "dy": 8,
+      "dz": 0,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -1,
+      "dy": 8,
+      "dz": 1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": -1,
+      "dy": 9,
       "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
@@ -297,12 +285,6 @@
     {
       "dx": 0,
       "dy": 4,
-      "dz": -2,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 0,
-      "dy": 4,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
@@ -316,18 +298,6 @@
       "dx": 0,
       "dy": 4,
       "dz": 1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 0,
-      "dy": 4,
-      "dz": 2,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
-      "dz": -3,
       "type": "cu_organic_leaf_dense"
     },
     {
@@ -362,38 +332,44 @@
     },
     {
       "dx": 0,
-      "dy": 5,
+      "dy": 6,
+      "dz": -2,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": -1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_wood_beech_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": 1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": 2,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
       "dz": 3,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 0,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_wood_beech_bark"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": 2,
+      "dy": 7,
+      "dz": -3,
       "type": "cu_organic_leaf_dense"
     },
     {
@@ -428,6 +404,18 @@
     },
     {
       "dx": 0,
+      "dy": 7,
+      "dz": 3,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 0,
+      "dy": 8,
+      "dz": -2,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 0,
       "dy": 8,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
@@ -439,111 +427,99 @@
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": 1,
-      "dy": 4,
-      "dz": -2,
+      "dx": 0,
+      "dy": 8,
+      "dz": 2,
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": 1,
-      "dy": 4,
+      "dx": 0,
+      "dy": 9,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": 1,
-      "dy": 4,
-      "dz": 0,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
+      "dx": 0,
+      "dy": 9,
       "dz": 1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
       "dy": 4,
-      "dz": 2,
+      "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
       "dy": 5,
+      "dz": -1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
+      "dz": 1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
       "dz": -3,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
-      "dy": 5,
+      "dy": 6,
       "dz": -2,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
-      "dy": 5,
+      "dy": 6,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
-      "dy": 5,
+      "dy": 6,
       "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
-      "dy": 5,
+      "dy": 6,
       "dz": 1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
-      "dy": 5,
+      "dy": 6,
       "dz": 2,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
-      "dy": 5,
+      "dy": 6,
       "dz": 3,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": 1,
+      "dy": 7,
+      "dz": -3,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 1,
       "dy": 7,
       "dz": -2,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
@@ -562,6 +538,18 @@
       "dx": 1,
       "dy": 7,
       "dz": 2,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 1,
+      "dy": 7,
+      "dz": 3,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 1,
+      "dy": 8,
+      "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
@@ -571,69 +559,57 @@
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": 2,
-      "dy": 4,
-      "dz": -1,
+      "dx": 1,
+      "dy": 8,
+      "dz": 1,
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": 2,
-      "dy": 4,
+      "dx": 1,
+      "dy": 9,
       "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 2,
-      "dy": 4,
-      "dz": 1,
+      "dy": 5,
+      "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 2,
-      "dy": 5,
+      "dy": 6,
       "dz": -2,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 2,
-      "dy": 5,
+      "dy": 6,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 2,
-      "dy": 5,
+      "dy": 6,
       "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 2,
-      "dy": 5,
+      "dy": 6,
       "dz": 1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 2,
-      "dy": 5,
+      "dy": 6,
       "dz": 2,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 2,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_leaf_dense"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": 1,
+      "dy": 7,
+      "dz": -2,
       "type": "cu_organic_leaf_dense"
     },
     {
@@ -655,38 +631,50 @@
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": 3,
-      "dy": 5,
-      "dz": -1,
+      "dx": 2,
+      "dy": 7,
+      "dz": 2,
       "type": "cu_organic_leaf_dense"
     },
     {
-      "dx": 3,
-      "dy": 5,
+      "dx": 2,
+      "dy": 8,
       "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 3,
-      "dy": 5,
+      "dy": 6,
+      "dz": -1,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 3,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_dense"
+    },
+    {
+      "dx": 3,
+      "dy": 6,
       "dz": 1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 3,
-      "dy": 6,
+      "dy": 7,
       "dz": -1,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 3,
-      "dy": 6,
+      "dy": 7,
       "dz": 0,
       "type": "cu_organic_leaf_dense"
     },
     {
       "dx": 3,
-      "dy": 6,
+      "dy": 7,
       "dz": 1,
       "type": "cu_organic_leaf_dense"
     }

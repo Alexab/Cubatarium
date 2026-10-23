@@ -2797,43 +2797,79 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
     else:
         crown_bottom = height - (4 if wood in ("oak", "beech", "maple", "walnut", "ash", "jungle", "mangrove", "willow") else 3)
         profiles: dict[str, list[tuple[int, int]]] = {
-            "oak": [(2, 2), (3, 2), (3, 3), (2, 2), (1, 1)],
-            "ash": [(1, 1), (2, 2), (3, 2), (2, 2), (1, 1)],
-            "beech": [(2, 2), (3, 3), (3, 2), (2, 2), (1, 1)],
+            # Broadleaf species need different voxel silhouettes, not just
+            # different leaf tints. The extra layer gives their crowns a
+            # readable outline at the default worldgen object scale.
+            "oak": [(2, 2), (3, 2), (4, 3), (4, 2), (3, 3), (1, 1)],
+            "ash": [(1, 1), (2, 2), (2, 2), (3, 2), (2, 2), (1, 1)],
+            "beech": [(1, 1), (2, 2), (3, 3), (3, 3), (2, 2), (1, 1)],
             "birch": [(1, 1), (2, 1), (2, 1), (1, 1)],
             "jungle": [(2, 2), (3, 3), (4, 3), (3, 3), (2, 2)],
             "mangrove": [(2, 2), (3, 2), (3, 3), (2, 2), (1, 1)],
-            "maple": [(2, 2), (3, 2), (3, 3), (2, 2), (1, 1)],
+            "maple": [(1, 1), (2, 2), (3, 2), (3, 2), (2, 2), (1, 1)],
             "poplar": [(1, 1), (2, 1), (2, 1), (1, 1)],
-            "walnut": [(2, 2), (3, 2), (3, 3), (2, 2), (1, 1)],
+            "walnut": [(2, 2), (4, 3), (4, 2), (3, 2), (2, 1), (1, 1)],
             "willow": [(3, 2), (4, 3), (4, 3), (3, 2), (2, 2)],
             "acacia": [(3, 2), (4, 3), (4, 3), (2, 2)],
         }
         profile = profiles.get(wood, [(2, 2), (3, 2), (2, 2), (1, 1)])
+        crown_offsets = {
+            # Asymmetry suggests major limbs and keeps every specimen from
+            # reading as a centered sphere.
+            "oak": [(0, 0), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0)],
+            "ash": [(0, 0), (0, 0), (0, 0), (1, 0), (1, 0), (1, 0)],
+            "walnut": [(0, 0), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 1)],
+        }.get(wood, [(0, 0)] * len(profile))
+        canopy_gap = {
+            "oak": 0.18, "ash": 0.24, "beech": 0.03,
+            "maple": 0.12, "walnut": 0.20,
+        }.get(wood, 0.12)
         for level, (radius_x, radius_z) in enumerate(profile):
             y = crown_bottom + level
             if y > height + (1 if wood not in ("acacia",) else 0):
                 break
             if wood in ("birch", "poplar") and level == len(profile) - 1:
                 radius_x, radius_z = 0, 0
+            offset_x, offset_z = crown_offsets[level] if level < len(crown_offsets) else (0, 0)
             for x in range(-radius_x, radius_x + 1):
                 for z in range(-radius_z, radius_z + 1):
                     if x == 0 and z == 0:
                         continue
                     if radius_x and radius_z:
-                        if (x / radius_x) ** 2 + (z / radius_z) ** 2 > 1.35:
+                        edge_limit = 1.12 if wood in ("oak", "ash", "beech", "maple", "walnut") else 1.35
+                        if (x / radius_x) ** 2 + (z / radius_z) ** 2 > edge_limit:
                             continue
-                    if rng.random() < (0.03 if wood in ("beech", "jungle") else 0.12):
+                    if rng.random() < (0.03 if wood == "jungle" else canopy_gap):
                         continue
-                    add_object_block(voxels, x + center_x, y, z, leaves)
+                    add_object_block(voxels, x + center_x + offset_x, y, z + offset_z, leaves)
+
+        if wood in ("oak", "ash", "maple", "walnut"):
+            # Short, attached limbs break up the single-pole look and explain
+            # the crown's wider or offset silhouette. They stay inside foliage
+            # except for the last voxel, as on a low-resolution tree model.
+            branch_layout = {
+                "oak": ((1, 0, 2), (-1, 0, 2), (0, 1, 2), (0, -1, 2)),
+                "ash": ((1, 0, 2), (-1, 0, 2), (0, 1, 2), (0, -1, 1)),
+                "maple": ((1, 0, 3), (-1, 0, 3), (0, 1, 2), (0, -1, 2)),
+                "walnut": ((1, 0, 2), (-1, 0, 2), (0, 1, 2), (0, -1, 2)),
+            }[wood]
+            branch_y = max(crown_bottom, height - 3)
+            for dx, dz, length in branch_layout:
+                for step in range(1, length + 1):
+                    branch_x = center_x + dx * step
+                    branch_z = dz * step
+                    branch_level = branch_y + (1 if step == length and wood in ("ash", "maple", "walnut") else 0)
+                    add_object_block(voxels, branch_x, branch_level, branch_z, trunk)
 
         if wood == "maple":
-            # Four offset lobes break up the generic round crown silhouette.
-            for dx, dz in ((-2, 0), (2, 0), (0, -2), (0, 2)):
-                for y in range(height - 2, height + 1):
-                    for x, z in ((dx, dz), (dx + (1 if dx == 0 else 0), dz + (1 if dz == 0 else 0))):
-                        if rng.random() > 0.15:
-                            add_object_block(voxels, x, y, z, leaves)
+            # Four attached lobes break the rounded base into a maple-like
+            # crown without flattening its top into a broad rectangular cap.
+            for dx, dz in ((-4, 0), (4, 0), (0, -3), (0, 3)):
+                inward_x = -1 if dx > 0 else 1 if dx < 0 else 0
+                inward_z = -1 if dz > 0 else 1 if dz < 0 else 0
+                for y in (height - 2, height - 1):
+                    add_object_block(voxels, dx, y, dz, leaves)
+                    add_object_block(voxels, dx + inward_x, y, dz + inward_z, leaves)
 
         if wood == "willow":
             # Willow foliage hangs below its wide crown in separated curtains.

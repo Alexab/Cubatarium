@@ -19,9 +19,69 @@
   ],
   "blocks": [
     {
+      "dx": -5,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -5,
+      "dy": 6,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -5,
+      "dy": 6,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -4,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -4,
+      "dy": 6,
+      "dz": -1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -4,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -4,
+      "dy": 6,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -4,
+      "dy": 6,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -4,
+      "dy": 7,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
       "dx": -3,
       "dy": 5,
       "dz": -1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
+      "dz": 0,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -43,9 +103,27 @@
       "type": "cu_organic_leaf_mature"
     },
     {
-      "dx": -2,
-      "dy": 4,
-      "dz": -1,
+      "dx": -3,
+      "dy": 6,
+      "dz": 3,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -3,
+      "dy": 7,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -3,
+      "dy": 7,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -3,
+      "dy": 7,
+      "dz": 2,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -56,20 +134,32 @@
     },
     {
       "dx": -2,
-      "dy": 4,
+      "dy": 5,
+      "dz": -2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": -1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_wood_oak_bark"
+    },
+    {
+      "dx": -2,
+      "dy": 5,
       "dz": 1,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": -2,
       "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
-      "dz": 0,
+      "dz": 2,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -104,8 +194,14 @@
     },
     {
       "dx": -2,
-      "dy": 7,
-      "dz": -1,
+      "dy": 6,
+      "dz": 3,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -2,
+      "dy": 6,
+      "dz": 4,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -121,9 +217,27 @@
       "type": "cu_organic_leaf_mature"
     },
     {
-      "dx": -1,
-      "dy": 4,
-      "dz": -2,
+      "dx": -2,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": 2,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -140,20 +254,20 @@
     },
     {
       "dx": -1,
-      "dy": 5,
-      "dz": -2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": -1,
-      "dy": 5,
-      "dz": -1,
+      "dy": 4,
+      "dz": 1,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": -1,
       "dy": 5,
       "dz": 0,
+      "type": "cu_wood_oak_bark"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": 1,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -165,31 +279,13 @@
     {
       "dx": -1,
       "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
       "dz": -2,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": -1,
       "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
       "dz": 0,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 1,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -206,8 +302,8 @@
     },
     {
       "dx": -1,
-      "dy": 7,
-      "dz": -2,
+      "dy": 6,
+      "dz": 4,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -219,7 +315,7 @@
     {
       "dx": -1,
       "dy": 7,
-      "dz": 0,
+      "dz": 1,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -230,8 +326,38 @@
     },
     {
       "dx": -1,
+      "dy": 7,
+      "dz": 3,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -1,
+      "dy": 8,
+      "dz": -1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -1,
       "dy": 8,
       "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -1,
+      "dy": 8,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -1,
+      "dy": 8,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": -1,
+      "dy": 8,
+      "dz": 3,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -261,6 +387,12 @@
     {
       "dx": 0,
       "dy": 4,
+      "dz": -2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 4,
       "dz": -1,
       "type": "cu_organic_leaf_mature"
     },
@@ -272,39 +404,33 @@
     },
     {
       "dx": 0,
-      "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 0,
       "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
-      "dz": 0,
+      "dz": -2,
       "type": "cu_wood_oak_bark"
     },
     {
       "dx": 0,
       "dy": 5,
-      "dz": 1,
+      "dz": -1,
+      "type": "cu_wood_oak_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 0,
       "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 1,
+      "type": "cu_wood_oak_bark"
     },
     {
       "dx": 0,
       "dy": 5,
       "dz": 2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_leaf_mature"
+      "type": "cu_wood_oak_bark"
     },
     {
       "dx": 0,
@@ -322,144 +448,138 @@
       "dx": 0,
       "dy": 6,
       "dz": 0,
-      "type": "cu_wood_oak_bark"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": 2,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 0,
       "dy": 6,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 6,
+      "dz": 4,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 7,
+      "dz": -1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 7,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 7,
       "dz": 3,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 0,
-      "dy": 7,
+      "dy": 8,
       "dz": -2,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 0,
-      "dy": 7,
+      "dy": 8,
       "dz": -1,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 0,
-      "dy": 7,
+      "dy": 8,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 8,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 8,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 8,
+      "dz": 3,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 8,
+      "dz": 4,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 9,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 4,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
+      "dz": -1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
       "dz": 0,
       "type": "cu_wood_oak_bark"
     },
     {
-      "dx": 0,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 0,
-      "dy": 8,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 0,
-      "dy": 8,
+      "dx": 1,
+      "dy": 5,
       "dz": 1,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 1,
-      "dy": 4,
-      "dz": -2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
+      "dy": 6,
       "dz": -1,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 1,
-      "dy": 4,
+      "dy": 6,
       "dz": 0,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 1,
-      "dy": 4,
-      "dz": 2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": -2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": 1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": 2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
       "dy": 6,
       "dz": 1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": 2,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -471,18 +591,6 @@
     {
       "dx": 1,
       "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
       "dz": 0,
       "type": "cu_organic_leaf_mature"
     },
@@ -501,50 +609,50 @@
     {
       "dx": 1,
       "dy": 8,
-      "dz": 0,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 2,
-      "dy": 4,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 2,
-      "dy": 4,
-      "dz": 0,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 2,
-      "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 2,
-      "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 2,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 2,
-      "dy": 5,
-      "dz": 1,
-      "type": "cu_organic_leaf_mature"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
       "dz": -2,
       "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 8,
+      "dz": -1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 8,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 8,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 8,
+      "dz": 3,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 8,
+      "dz": 4,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 9,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_wood_oak_bark"
     },
     {
       "dx": 2,
@@ -572,8 +680,8 @@
     },
     {
       "dx": 2,
-      "dy": 7,
-      "dz": -1,
+      "dy": 6,
+      "dz": 3,
       "type": "cu_organic_leaf_mature"
     },
     {
@@ -583,27 +691,117 @@
       "type": "cu_organic_leaf_mature"
     },
     {
+      "dx": 2,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": -2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 3,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 4,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 9,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
       "dx": 3,
-      "dy": 5,
+      "dy": 6,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 3,
+      "dy": 7,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 3,
+      "dy": 7,
+      "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 3,
+      "dy": 7,
+      "dz": 2,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 3,
+      "dy": 8,
       "dz": -1,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 3,
-      "dy": 5,
+      "dy": 8,
       "dz": 0,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 3,
-      "dy": 6,
-      "dz": 0,
+      "dy": 8,
+      "dz": 2,
       "type": "cu_organic_leaf_mature"
     },
     {
       "dx": 3,
-      "dy": 6,
+      "dy": 8,
+      "dz": 3,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 4,
+      "dy": 7,
       "dz": 1,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 4,
+      "dy": 8,
+      "dz": 0,
+      "type": "cu_organic_leaf_mature"
+    },
+    {
+      "dx": 4,
+      "dy": 8,
+      "dz": 2,
       "type": "cu_organic_leaf_mature"
     }
   ]
