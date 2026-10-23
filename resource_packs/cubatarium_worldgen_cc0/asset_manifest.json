@@ -9,9 +9,9 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 25,
+    "version": 27,
     "backend": "procedural",
-    "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_passable_decor_v25",
+    "texture_synthesis": "broken_vertical_bark_water_ripples_birch_needles_species_trees_passable_decor_v27",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"
@@ -37968,7 +37968,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a49ea7bffec97ab64b78a88ccc94c935095ae8c83d2b552c04e7f3c3a25bbcaf",
+      "pixel_sha256": "183d52f79beda890b8b32cd4ddd1aa9ea29fd15eaa3b85d163cc1cdf2987dbe6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38562,7 +38562,7 @@
         16,
         16
       ],
-      "pixel_sha256": "749f37ec613c617cd8330f651e29acd536b023034bfab4386f34821c36e7e4bd",
+      "pixel_sha256": "8ace513fe879cb17c2ca726f943cb24cb9b9b23074de9a66c03ecafff691a218",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39156,7 +39156,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e305aabd88829a728eac5fbf952b1c972a6c7018e459f32fe6dd9b4aa780e314",
+      "pixel_sha256": "6ffa824f26483bd2bdbf8cda5b4ea22c3d83ea6e830d4dfe1a66cf06335599a0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40344,7 +40344,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d4c9f3ac17d71203f769d4e780cd91c51a86130c62358a2b75ac3659c6d443e6",
+      "pixel_sha256": "b3c5074fe00178996b8e6e6f9b81dff7a8b87e1577b6d82459a1abb3d050fe88",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40938,7 +40938,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7d7e9c93a88694f9051c98c85965961a6ef135a3e57acea3393a786e7f660f80",
+      "pixel_sha256": "869da4ca700f62d6c0a91cab9df0fffe6901a6c9ef8be8b9582af3c58d0f390e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41532,7 +41532,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6b527059b012f814aa2dc2779ef82055cc886be7849398b67356c035d83165bd",
+      "pixel_sha256": "b953ca5845a98142ca9d4bf5a852dba8348f5e158a321bd2d63d59695a29d8fb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42126,7 +42126,7 @@
         16,
         16
       ],
-      "pixel_sha256": "10fa969b65d9872671f99bc7580f09393fd625f06eaab733a675cfc4439c71bd",
+      "pixel_sha256": "5f344abe29bde88dcb970551471f5a7d7c721af92ad7e9938dcdb089348f1a94",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42720,7 +42720,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4b7d4cba6831a3817e9f774c64b14f69eac4d0c40114c83efa3f9b593e680c6b",
+      "pixel_sha256": "78f3a5e5613c175b0565bd778427b1f9bc276c12dc1685279437e07c2cbfdb71",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43314,7 +43314,7 @@
         16,
         16
       ],
-      "pixel_sha256": "91e3d776e45460d3f07abf601d11be50f5a2cbb01ea0ee5d844c4c5473102a57",
+      "pixel_sha256": "df5049226f84870a192a85d3cb4585f37a48095a524871f2b530893c0ea51e67",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43908,7 +43908,7 @@
         16,
         16
       ],
-      "pixel_sha256": "26b676cd83d11822a954a39ddff4dbd432f0ce0553bc6b4bc0e5813b34b68555",
+      "pixel_sha256": "dde3584b6ce0df72088cf0c31ee772e682b8ebcd72d6cd483f2b3ec51b95c76e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44502,7 +44502,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e850e1ba2f3747770fe60b4dd6fc27cffae36021f51d8da91375cf808aedaa19",
+      "pixel_sha256": "240a9579cf34b01095fc4ae5bc483315490b82ac047d283a78a4616c7fd362dd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -45096,7 +45096,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e9eeb79f55d76580089de8bfa6ded0716ba78929598f947cb521f31b664d3e39",
+      "pixel_sha256": "0afa21b77420e2ea33c9af9b3972b58eec755cd41a6f089f8b261ad18a7fe795",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -45690,7 +45690,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0d7d5002bb7b7d429a8f22e7b5d7f9321d8cf50475a6947f127c8051d2d5ad9d",
+      "pixel_sha256": "d209e132546da0183fa80a174ccf9afb15e5d5db32f3136ca63d36c0074a5fd4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -46284,7 +46284,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ff9398dd5fe4849ca27ef939c09c85e973035133e14492597fd8d4939e9b4c8c",
+      "pixel_sha256": "8cc52fe2601581ee950e7f76ba9c0ff70930bab1e7cbea91d83416d127b99b91",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -54333,7 +54333,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3ea551c09fb4219c3a1a53e874ba62b9656612de5d4d25b4f46b76206c287e42",
+      "pixel_sha256": "2e998be70e2c097499088f795a73de499618d2c3aac5b0df0e78b89f652fc720",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tree_side",
@@ -54626,7 +54626,7 @@
         16,
         16
       ],
-      "pixel_sha256": "241458e77f8c993ac7caedecbfbebe2eedbbe3e11d20686d8623914ad372ca86",
+      "pixel_sha256": "036ec38ea9d5bbc696419616917826ee0901921fed95dcbf6394d259d41a32c4",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "workbench_side",

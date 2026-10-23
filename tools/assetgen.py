@@ -390,8 +390,12 @@ def _wrapped_cellular_plates(seed: int, size: int) -> tuple[list[float], list[fl
     tiled. Cellular regions avoid long, parallel waves while retaining readable
     bark flakes and fissures at voxel scale.
     """
-    cells_x = max(3, round(size / 4.0))
-    cells_y = max(2, round(size / 6.0))
+    # Bark plates should run predominantly along the trunk axis. The previous
+    # near-square cells merged into horizontal rings on voxel faces. Narrower
+    # wrapped cells produce broken vertical fissures without a sinusoidal
+    # groove field or a continuous stripe at the tile boundary.
+    cells_x = max(5, round(size / 2.7))
+    cells_y = max(4, round(size / 4.5))
     spacing_x = size / cells_x
     spacing_y = size / cells_y
     rng = random.Random(seed ^ 0xB4A2C311)
@@ -2797,6 +2801,7 @@ def block_definition(record: dict[str, str], face_stems: list[str], block_id: in
         (family == "rock" and variant not in ("layered", "banded", "veined"))
     )
     render["texture_variation"] = (
+        0.56 if family == "wood" and variant == "bark" else
         0.0 if any(token in record["name"] for token in ("furnace", "workbench", "crafting_table", "anvil", "dispenser", "dropper", "bookshelf"))
         else 1.0 if randomizable_material and not structured_surface
         else 0.48
@@ -3737,6 +3742,7 @@ def build_pack(
         else:
             machine_face = any(token in name for token in ("furnace", "crafting_table", "bookshelf", "anvil", "dispenser", "dropper"))
             fluid_face = any(token in name for token in ("water", "lava"))
+            bark_side = name in ("tree_bark", "tree_log", "wood")
             randomizable_surface = (
                 any(token in name for token in ("sand", "dirt", "gravel", "stone", "clay", "mud"))
                 and not any(token in name for token in (
@@ -3745,7 +3751,8 @@ def build_pack(
                 ))
             )
             render["texture_variation"] = (
-                0.36 if fluid_face and "water" in name
+                0.56 if bark_side
+                else 0.36 if fluid_face and "water" in name
                 else 0.0 if machine_face or fluid_face
                 else 1.0 if randomizable_surface
                 else 0.48
@@ -3864,9 +3871,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 25,
+            "version": 27,
             "backend": "procedural",
-            "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_passable_decor_v25",
+            "texture_synthesis": "broken_vertical_bark_water_ripples_birch_needles_species_trees_passable_decor_v27",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,

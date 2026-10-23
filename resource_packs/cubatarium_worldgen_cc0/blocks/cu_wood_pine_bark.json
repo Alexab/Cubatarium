@@ -22,7 +22,7 @@
     "cu_wood_pine_bark_endgrain"
   ],
   "render": {
-    "texture_variation": 0.48
+    "texture_variation": 0.56
   },
   "assetgen": {
     "family": "wood",

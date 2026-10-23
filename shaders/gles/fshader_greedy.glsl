@@ -279,8 +279,12 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
     // phase so bark, grass layers, and masonry keep their intended orientation.
     bool canTransformTile = uTextureVariation >= 0.75 ||
                             (uTextureVariation >= 0.45 && faceIndex >= 4);
+    // Bark uses the 0.52-0.74 range: keep its vertical grain unrotated, while
+    // allowing both-axis texel phase changes so stacked logs do not form the
+    // same horizontal bands at every block boundary. Grass-side layers stay
+    // below 0.52 and only shift horizontally, preserving their top edge.
     bool directionalPhaseOnly = uTextureVariation >= 0.45 &&
-                                 uTextureVariation < 0.75 && faceIndex < 4;
+                                 uTextureVariation < 0.52 && faceIndex < 4;
     if (canTransformTile || directionalPhaseOnly) {
         ivec3 cell = ivec3(floor(worldPos + vec3(0.5)));
         uint faceSalt = uint(faceIndex + 1) * 0x9e3779b9u;
