@@ -65,13 +65,13 @@
       "dx": -1,
       "dy": 1,
       "dz": 0,
-      "type": "cu_organic_flower_orange_sparse"
+      "type": "cu_organic_flower_white_sparse"
     },
     {
       "dx": 1,
       "dy": 1,
       "dz": 1,
-      "type": "cu_organic_lichen_dark"
+      "type": "cu_organic_flower_pink_dark"
     },
     {
       "dx": -1,

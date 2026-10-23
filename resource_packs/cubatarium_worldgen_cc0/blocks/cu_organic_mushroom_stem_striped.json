@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_mushroom_stem_striped",
+  "id": 2436,
+  "displayName": "Organic Mushroom Stem Striped",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_stem_striped",
+    "cu_organic_mushroom_stem_striped",
+    "cu_organic_mushroom_stem_striped",
+    "cu_organic_mushroom_stem_striped",
+    "cu_organic_mushroom_stem_striped",
+    "cu_organic_mushroom_stem_striped"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom_stem",
+    "variant": "striped"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_mushroom_stem_young",
+  "id": 2439,
+  "displayName": "Organic Mushroom Stem Young",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_stem_young",
+    "cu_organic_mushroom_stem_young",
+    "cu_organic_mushroom_stem_young",
+    "cu_organic_mushroom_stem_young",
+    "cu_organic_mushroom_stem_young",
+    "cu_organic_mushroom_stem_young"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom_stem",
+    "variant": "young"
+  }
+}

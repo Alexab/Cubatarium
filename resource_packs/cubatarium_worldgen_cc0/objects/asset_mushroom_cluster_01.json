@@ -23,13 +23,13 @@
       "dx": 0,
       "dy": 0,
       "dz": 0,
-      "type": "cu_soil_pale_sand_compact"
+      "type": "cu_organic_mushroom_stem_pale"
     },
     {
       "dx": 0,
       "dy": 1,
       "dz": 0,
-      "type": "cu_soil_pale_sand_compact"
+      "type": "cu_organic_mushroom_stem_pale"
     },
     {
       "dx": 0,
@@ -41,13 +41,13 @@
       "dx": 1,
       "dy": 0,
       "dz": 1,
-      "type": "cu_soil_pale_sand_compact"
+      "type": "cu_organic_mushroom_stem_pale"
     },
     {
       "dx": 1,
       "dy": 1,
       "dz": 1,
-      "type": "cu_soil_pale_sand_compact"
+      "type": "cu_organic_mushroom_stem_pale"
     },
     {
       "dx": 1,
@@ -59,13 +59,13 @@
       "dx": 1,
       "dy": 0,
       "dz": 0,
-      "type": "cu_soil_pale_sand_compact"
+      "type": "cu_organic_mushroom_stem_pale"
     },
     {
       "dx": 1,
       "dy": 1,
       "dz": 0,
-      "type": "cu_soil_pale_sand_compact"
+      "type": "cu_organic_mushroom_stem_pale"
     },
     {
       "dx": 1,

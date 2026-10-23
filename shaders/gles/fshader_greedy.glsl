@@ -355,6 +355,22 @@ vec4 materialVariation(vec2 planePosition)
     );
 }
 
+float waterSurfaceLight(vec2 planePosition)
+{
+    // Use a continuous world-space field so adjacent 16px water tiles do not
+    // repeat as a visible grid. Multi-scale swell is bent into broken diagonal
+    // ripples; all terms share world coordinates and therefore meet at faces.
+    float swell = materialNoise(planePosition * 0.27 + vec2(8.7, 16.1));
+    float current = materialNoise(planePosition * 0.91 + vec2(21.4, 4.8));
+    float grain = materialNoise(planePosition * 3.3 + vec2(3.2, 29.6));
+    float phase = planePosition.x * 1.31 + planePosition.y * 0.47
+                  + (swell - 0.5) * 2.2 + (current - 0.5) * 1.5;
+    float crest = smoothstep(0.79, 0.94, 0.5 + 0.5 * cos(phase));
+    return clamp(0.76 + (swell - 0.5) * 0.48
+                 + (current - 0.5) * 0.34 + (grain - 0.5) * 0.18
+                 + crest * 0.12, 0.56, 1.20);
+}
+
 void main()
 {
     vec2 uv;
@@ -375,26 +391,38 @@ void main()
     }
     FragColor = texture(texture0, uv);
     if (vFaceIndex != kCrossFaceIndex && uTextureVariation > 0.001) {
-        float spatialTone = mix(materialFields.x, materialFields.w, 0.26);
-        float fineTone = materialNoise(
-            materialPlane * 7.5 + vec2(13.1, 5.7)
-            + (materialFields.zw - 0.5) * 0.68
-        );
-        spatialTone = mix(spatialTone, fineTone, 0.72);
-        float fineGrain = materialNoise(materialPlane * 15.0 + vec2(7.3, 29.1));
         float variation = clamp(uTextureVariation, 0.0, 1.0);
-        float broadAmplitude = 0.30 * variation;
-        float grainAmplitude = 0.18 * variation;
-        FragColor.rgb *= 1.0 + (spatialTone - 0.5) * broadAmplitude
-                         + (fineGrain - 0.5) * grainAmplitude;
-        // A block-local value breaks the remaining repeated-tile grid while
-        // keeping all six faces of a voxel on the same subtle color shift.
-        vec3 materialCell = voxelCellFromFace(vFaceIndex, vWorldPos);
-        uint blockSeed = hashVoxelCell(
-            ivec3(floor(materialCell + vec3(0.5))), 0xc2b2ae35u
-        );
-        float blockTone = hashUnit(blockSeed);
-        FragColor.rgb *= 1.0 + (blockTone - 0.5) * (0.08 * variation);
+        bool waterSurface = variation >= 0.34 && variation <= 0.40;
+        if (waterSurface) {
+            float waterLight = waterSurfaceLight(materialPlane);
+            FragColor.rgb *= waterLight;
+            float glintField = materialNoise(
+                materialPlane * 2.6 + vec2(17.8, 9.3)
+                + (materialFields.zw - 0.5) * 0.44
+            );
+            float glint = smoothstep(0.76, 0.96, glintField);
+            FragColor.rgb = mix(FragColor.rgb, vec3(0.14, 0.48, 0.79), glint * 0.16);
+        } else {
+            float spatialTone = mix(materialFields.x, materialFields.w, 0.26);
+            float fineTone = materialNoise(
+                materialPlane * 7.5 + vec2(13.1, 5.7)
+                + (materialFields.zw - 0.5) * 0.68
+            );
+            spatialTone = mix(spatialTone, fineTone, 0.72);
+            float fineGrain = materialNoise(materialPlane * 15.0 + vec2(7.3, 29.1));
+            float broadAmplitude = 0.30 * variation;
+            float grainAmplitude = 0.18 * variation;
+            FragColor.rgb *= 1.0 + (spatialTone - 0.5) * broadAmplitude
+                             + (fineGrain - 0.5) * grainAmplitude;
+            // A block-local value breaks the remaining repeated-tile grid while
+            // keeping all six faces of a voxel on the same subtle color shift.
+            vec3 materialCell = voxelCellFromFace(vFaceIndex, vWorldPos);
+            uint blockSeed = hashVoxelCell(
+                ivec3(floor(materialCell + vec3(0.5))), 0xc2b2ae35u
+            );
+            float blockTone = hashUnit(blockSeed);
+            FragColor.rgb *= 1.0 + (blockTone - 0.5) * (0.08 * variation);
+        }
     }
     float sky01 = clamp(vSkyLight, 0.0, 1.0);
     float block01 = clamp(vBlockLight, 0.0, 1.0);

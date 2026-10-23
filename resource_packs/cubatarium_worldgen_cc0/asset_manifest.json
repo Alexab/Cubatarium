@@ -9,20 +9,20 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 18,
+    "version": 22,
     "backend": "procedural",
-    "texture_synthesis": "wrapped_material_grammar_v17_balanced_family_detail_irregular_bark",
+    "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_v22",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"
   },
   "reference_calibration": null,
   "counts": {
-    "block_definitions": 1664,
-    "procedural_cc0_block_definitions": 1396,
+    "block_definitions": 1684,
+    "procedural_cc0_block_definitions": 1416,
     "minetest_block_definitions_included": 258,
     "geology_block_definitions_included": 10,
-    "textures": 2224,
+    "textures": 2254,
     "minetest_textures_replaced": 313,
     "geology_textures_replaced": 9,
     "minetest_block_definitions_overridden": 258,
@@ -1844,61 +1844,61 @@
     },
     {
       "name": "amethyst_block",
-      "id": 2421,
+      "id": 2441,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "andesite",
-      "id": 2422,
+      "id": 2442,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "calcite",
-      "id": 2423,
+      "id": 2443,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "deepslate",
-      "id": 2424,
+      "id": 2444,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "diorite",
-      "id": 2425,
+      "id": 2445,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "granite",
-      "id": 2426,
+      "id": 2446,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "moss_block",
-      "id": 2427,
+      "id": 2447,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "rooted_dirt",
-      "id": 2428,
+      "id": 2448,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "smooth_basalt",
-      "id": 2429,
+      "id": 2449,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     },
     {
       "name": "tuff",
-      "id": 2430,
+      "id": 2450,
       "source_pack": "cubatarium_geology_cc0",
       "license": "CC0-1.0"
     }
@@ -3678,7 +3678,7 @@
         16,
         16
       ],
-      "pixel_sha256": "86544f04dc0022cca8f5ec0a9494d059b10e31784350f953dd388ec162d37449",
+      "pixel_sha256": "d9f2149d3f149e54ec00642cfd97375a01d92defe039899f9da5d227822902fb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3700,7 +3700,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d8a13f13b0eadef12d8b4f4fc8a7f6e65fe7a2d5c8afada50ea49af88fa56dcd",
+      "pixel_sha256": "098d0b413b1ce92cf593dfa12aca93e6e3d298e6761a3e1da641a63af0c883c0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3722,7 +3722,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9b665edad0bb904524fc513c3f56f9e57f7d9eb07b025ef0e5a600625729c1a0",
+      "pixel_sha256": "aeea511456771a2628da122b0288111b7a9f6507bea6ded4e0cabaf10f777057",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3744,7 +3744,7 @@
         16,
         16
       ],
-      "pixel_sha256": "57535daef5a05efae621a64ce151dbb1127027202e4de9787fc15e486aec83ee",
+      "pixel_sha256": "d8cc37135bd749c97760d17774e41b7a4a1d8bd698c34fd7e25c1587a9606a16",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3766,7 +3766,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7d2ae1decf34a7dd500b7d2a1d248d1534c0ad95e791a3169b13ed62ffa43d5f",
+      "pixel_sha256": "3a93b94710a90ffeb5427817139e95dc222b233d46d03b352f35f42586530153",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3788,7 +3788,7 @@
         16,
         16
       ],
-      "pixel_sha256": "07e5d88c2f3fa54d3f566c363d03431db22e3a0a0960dc7de74d5ed0ad1b9867",
+      "pixel_sha256": "f4b9915ca6d64393404fa2a5b17d8080aae2dfaec59af95692f42bf88dd6b343",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3810,7 +3810,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b1aa9ce36e95d597c96edd5dd33fe4fc5011217e63c38ee78496291c9e2bfcdc",
+      "pixel_sha256": "32ed8451b328b9b658c3e89a17d36827a54e5da356cdfb3515f09496fd93c803",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3832,7 +3832,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4e95020c358a3adfd8b162f720ba397d6ad86c4e1bfc981283cce74c0dfb9b7c",
+      "pixel_sha256": "6011b4b17784c36fc727349c43a543f6c409c7f2aa5e3cc81c52217b0cc57482",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3854,7 +3854,7 @@
         16,
         16
       ],
-      "pixel_sha256": "09a8f5e9af3265744c62ec6f10dc1568a703a0addeb1e6714c4ca40d0d93a89a",
+      "pixel_sha256": "5c5a5c63b5d9370326673edbefcd7f61cb6757e95bcd5474971e0d4ebd914464",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -3876,7 +3876,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6344b730e0b21449239ade6a8a293920d0fbcd06d2b521fe5c6797e6075ecb25",
+      "pixel_sha256": "055a412dc692648279f513fef15cbe33884f8e23575e7a7326fc69ef909c9bff",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -8298,7 +8298,7 @@
         16,
         16
       ],
-      "pixel_sha256": "41600cb1b2c3648bddcf1a20399a6f19c8a7e62106eacea2340d7c518a1e1a4c",
+      "pixel_sha256": "5b830e297ea512dd46a665a8b4e606dc35d3b9466309617ae0fbbd242983fb4e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -8320,7 +8320,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8e1e99c7bc731f9f83817856c5f742a1bc763a42d080b9cd9e516e5f607e4388",
+      "pixel_sha256": "91801d9207527788211084eb18c940e87908fa8cac2e307fcd035f93780aec6b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -8342,7 +8342,7 @@
         16,
         16
       ],
-      "pixel_sha256": "24639376c7358882aebfeb33a6a15e536ead3a09f487f7bbdcf142564c597da2",
+      "pixel_sha256": "5a79beef0e4b95385e08ca00a8516444ae144f3ba9da4064c76cbddc0e58e111",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -8364,7 +8364,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1deb4f32b7fd07684dfffb19b0eb435444e7a220e2322886342378979367688d",
+      "pixel_sha256": "714128024d4dda6d353ba3820a16e3456dd397222536b684ddfa984abefc4ac2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -8386,7 +8386,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6ba3a9a1e71257e28825773e6eefc0a0d421803598aea0138ac3cce4c85e27bc",
+      "pixel_sha256": "2eac22d2dc5feeae2dd49f784e750ff3853906bef6b326593b3dc48e9e083775",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -8408,7 +8408,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fe1d23536b04d605a8577a32863881b1370ff2ef5543f134b0726303f3fb30f3",
+      "pixel_sha256": "aaa2df4ca2698d4e7221f2a0452117bc0188c2a6ba7726389b3e64ea3374b068",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -8430,7 +8430,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a94a1c10e17122f6e4df588aab8068a18a252c9146ab0c431793f6822ac10829",
+      "pixel_sha256": "73bd3091943734d7b7d2898b2eea8fc1274a2f2de0c714b29a98a830e20649e3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -8452,7 +8452,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9490ff5bb8021ec71db05b4b33fce0877d61216ba5e416b07532996cb4719bf9",
+      "pixel_sha256": "c8544bf08d8c740ead240337f7c4d414920f524e05997b59ac7d310b7892efac",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -10674,7 +10674,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1987aadc4aa414853865a0963a673305121aac153f6011c9c9910c660d7e62b5",
+      "pixel_sha256": "88aecc07a0ecb0f2c01cdfc28d5c4a21c12f502cbf5d92eebc15285fa06688be",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -10696,7 +10696,7 @@
         16,
         16
       ],
-      "pixel_sha256": "954df68ad7c46323eb23fea2c9b4c20b78a3eb70c7849ecc43ea4e5db1c3ad73",
+      "pixel_sha256": "0e96e42cccd5d9c193cbc7297770c5f19cad8a5a419f5dac38226cba9e31998a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -10718,7 +10718,7 @@
         16,
         16
       ],
-      "pixel_sha256": "14966233a0867fce03aedc7a079f09ad57d099053435fee8d5aebd83fcc766b0",
+      "pixel_sha256": "4395e7029e1d7814315de525e15f5648dda5cf1e6b5c0754c1a289d485696b8f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -10740,7 +10740,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c625f5c4b7e80818e4b53fe34988ac120c9a833528f54b4ae7c141d86d0ed52a",
+      "pixel_sha256": "66b509f5264f6abc3152783583aabd6d80fc3765510853f98766a64e6b1d81a3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -10762,7 +10762,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8e23737b362594d5775340c2db75bf3968d0bd8a67860b8d0eb28aca92c0fbd6",
+      "pixel_sha256": "39bbf3f3dc315f7be2fd8222bce117bc4a39629c1e7bce22dca504987a56267a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -10784,7 +10784,7 @@
         16,
         16
       ],
-      "pixel_sha256": "70eb2d19967322fb368a6ade663d03d21cd282970b89441715c1f8acf114e668",
+      "pixel_sha256": "8fde5dece9df28080fdfd02cb80146675f2ef31105a212a503a78efc54877216",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19782,7 +19782,7 @@
         16,
         16
       ],
-      "pixel_sha256": "02fb8c184f9700997c7f60060f00feccc8c20d289f1f34098f2cdb486e54d0fa",
+      "pixel_sha256": "59a485794739750aca3aa208092787834d479b6d3056083e2b7168e2f21305f5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19804,7 +19804,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2a24fc253715b21cc26e8af411a857f2f3d7a9f76aad551a9de01bcc7268bb46",
+      "pixel_sha256": "2813b4776d368a02567d28c8ac84ea1ce64951284785cf3d408b52d6f4706a4f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19826,7 +19826,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e76dcc7a2b1763016214ff63f022f941ad4f1c834723ab0ef4eaa927159f444d",
+      "pixel_sha256": "a5a70e10c6484ce0a9e1fc0db16ce2894923dd295a09544f84bdd62eef1e3287",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19848,7 +19848,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5cbe1d143f7ee51fe2fd72d16c4d42729067bb115a6a53b2b31df4371e3921b2",
+      "pixel_sha256": "42f5c81c1b86f33a7d735187837315acd3af8cfc5a2a9af10eb879497256e26d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19870,7 +19870,7 @@
         16,
         16
       ],
-      "pixel_sha256": "96d2a62f3b1acdabedd98c611a0f9c5b68c9a218cff8aaf19d3339d442a7961c",
+      "pixel_sha256": "079830e8e58467b7025f317791968cef9154de9286b69a9e13d55ad290d00d7f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19892,7 +19892,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9955396287543c917834e2328b36ea96aec3715d04914f96560a84fc163dbf42",
+      "pixel_sha256": "b6397685fbe8e009222a06de81fd2ab8ffa9ca40ec528179a734cb7c9b891a62",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19914,7 +19914,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4fd6553c2288f5b9f065a410fa0a13eca16d361a1a97d132b37ae4eaec4330ff",
+      "pixel_sha256": "22971602df190b726df1f75d8c6c843a43c82af2c774163540a9e1b83769c8df",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19936,7 +19936,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6b59408fcc51deffdd431e5eea8a28b4bb94f8eb63e2117c791c9db775abebbf",
+      "pixel_sha256": "6bf10a7f954c88c8151e03968c4dd51a6443e06120501af84e6acc8387ecf8bb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19958,7 +19958,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2f5afe93e381ca12a84bae63f5216e0ca81bc10a64b058df7b2a8a84f9e1589f",
+      "pixel_sha256": "02aa750ac57611c723679a5d8c30b8181e5228c7cff0c2d2766c727e4f53728d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -19980,7 +19980,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7b6fe0fac8fdfd895d426a734b562eefd568561e3ada24e0f351e7f2b322cf49",
+      "pixel_sha256": "6bae1dd7cb279e0dbb278b65c915705d4c6190f521cf1a00b66072981b0964f2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20662,7 +20662,7 @@
         16,
         16
       ],
-      "pixel_sha256": "57a948873eb38f04d0b5cf57264fe8fb5871c42345e809b4067ef09facf10f33",
+      "pixel_sha256": "223c07bfe5edf302b5a31c3867bea03af3b6e393095db233eb521030c4b0349b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20684,7 +20684,7 @@
         16,
         16
       ],
-      "pixel_sha256": "63cb9d72f842c60508eaad08da8674c7eb4319a3e00cfab9a1dda1c762cf190f",
+      "pixel_sha256": "acbe1599346c11ccf0941b6df3e99515b1f17ce244a94d9819f125030d765511",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20706,7 +20706,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1b4746a2850839060449cbab0036a4d7bfad9b8fe2c914d1ebd20e83cea3ab6b",
+      "pixel_sha256": "53ede20a8ddb1a2aaefb64e877c600616c7f1a34fb3ce9ab9d3b8e49c471bd41",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20728,7 +20728,7 @@
         16,
         16
       ],
-      "pixel_sha256": "45f006293fe473077e5e7bc0458e62be7c0ce4f71b35d2604b746b9ee953b3df",
+      "pixel_sha256": "a8d39e6f31bca3b8615a70d562ea9ddc8ec92745368e6b4153278a7dad19f9f5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20750,7 +20750,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6251201ec34ce689dd238aa1c927c7ed29742b93f2da164e2d62197879153808",
+      "pixel_sha256": "71f2b4838d39e75ce7c0cdee6969f5ac46902cea83be1da806eb4265c89a13b2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20772,7 +20772,7 @@
         16,
         16
       ],
-      "pixel_sha256": "08595b1a48709222f3408589bf71543660c508c7de1d0019c434500d18597a7e",
+      "pixel_sha256": "ba5d33a28a069d1a2c37754e34c4f447c7d508da344dbce43f150f50e153b379",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20794,7 +20794,7 @@
         16,
         16
       ],
-      "pixel_sha256": "24377597e23b236c206cba83ee2b9f4871259651f1b4843801d69b7a5b4e8e8a",
+      "pixel_sha256": "9cd7fd50c86b2151904723bf028387970950a189d03b5f1da066b23f5b929d7c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20816,7 +20816,7 @@
         16,
         16
       ],
-      "pixel_sha256": "324b4b358178b9044a60d4d7c19a349544211442c6fbc3ab65539c27a94ca3c0",
+      "pixel_sha256": "3228e1ae69e0480cb8409efbbb4402828f8f3a38c4a39518831682ad95a10951",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20838,7 +20838,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9a49c432685b80b727b9b6a185fba6cbd50ce2f2a0c5dc207c2c63aab7adaa54",
+      "pixel_sha256": "d9bacac0f1a6cbe92c2c112809060f410a5d58431177d36e468e13deb1154d77",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20860,7 +20860,7 @@
         16,
         16
       ],
-      "pixel_sha256": "de2dd7a246db6b1731d105efffe1a147a28c038d80996a2944fd1c12c418f7d7",
+      "pixel_sha256": "0a97eebea7ed79d64269da41aedda3bfd872997f397c82ef047dcdeb5d37b847",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20882,7 +20882,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a877d139c8a0d6f28cb7ee777ca110abf697d571696acbf4db4740430299df51",
+      "pixel_sha256": "8398da2da881b332e1aa9f7684fe546b9338d23dfd0de9070ba75ff237b2a496",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20904,7 +20904,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6eb195ff4047250ce661e99a1a0ead15335ca00a5bf0ae4a60fad173499a8779",
+      "pixel_sha256": "cff1de0ef448b72bc0f6a4499041bd03cb76de51b2d30a56f5c680c639bd53c5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20926,7 +20926,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8c397ef9c76123ae0937de35f3118932a82424d560ee49f2388417d2be531aba",
+      "pixel_sha256": "259ad720061aa1bdf1c90f62383709fd4011e5066c2a43b5ec93d494ed6c63ad",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20948,7 +20948,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c23577f8f0a874be2a72c1bb630fa8de9a4102e5068cb3d85e4ee443f69b1ab8",
+      "pixel_sha256": "5f7ecf7e3946eb9c754dc931b196d43d7d96ca529178c4c1ec992b29012a0c2d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20970,7 +20970,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d5b31d6f860cd46e4ee0f4f3a14c3314350000245cd54d4c65877c1a5f952c67",
+      "pixel_sha256": "ed2e54c74733ef8bfbfb928b2320287ac556b21d6352add6f1d2ce62f2c9c9aa",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20992,7 +20992,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8e9bbde74d4101b9b620294c03c8a655eeec1ddd2bdc9be1d0045934939ad632",
+      "pixel_sha256": "9cc7640fb04a85071846c693d5772a01691ebf98dacc33bbff6f59adb3bdaadb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21014,7 +21014,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1128e3b708e65ae9158eaf918c8a99d7f91d2a734524b0a4387b1a53571542ca",
+      "pixel_sha256": "f7f3092bab69c5e1f6649b94768fd6be43be5e20f4bc14d5b7395d257d0a95a5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21036,7 +21036,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d53913314cca85441a193bbf052f59ff7b02d3138569ed52683fee0b2175b114",
+      "pixel_sha256": "7eaf2abe7976c499f087d01ff69199b74ad5f105be3081e27b22177a95b08766",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21058,7 +21058,7 @@
         16,
         16
       ],
-      "pixel_sha256": "484f67cc182bc70e8834dfa734d0ed5cd283466ac4085d854198e8b90e47cd9e",
+      "pixel_sha256": "62b05ccadd3c2597ce47917c496df4e47bdf6082b35b907075ddf736b5253976",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21080,7 +21080,7 @@
         16,
         16
       ],
-      "pixel_sha256": "60e422dba10c74685d89f2e9053a9574ee583e9ddb8e0122b0f7de130b17357b",
+      "pixel_sha256": "1ba59bb4e206cedc10b04a8b3be5fae298cc0696bd9c2845e839b361d48f6e35",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21102,7 +21102,7 @@
         16,
         16
       ],
-      "pixel_sha256": "76e99b98edf351945d252111d0091b1e3e69a9e0ea58d6283c57e255ef6f66a9",
+      "pixel_sha256": "d0fe649d1aed337aceeae8e24999b24a84d0751db7670cf5c2941737594f5cef",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21124,7 +21124,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5edf6f0b898e2c79a289d1c850b2a2b9128a597e316231106e0319a0ccf65509",
+      "pixel_sha256": "19280abbc4bced58366aeb6c81696cd7c5764966946a7ef74256a895c16fc442",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21146,7 +21146,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b67e986fe145997ed3028ea054cec40580c17a7a91da63ca2db7afc02bde4b85",
+      "pixel_sha256": "737dd2169affb635f3001d558028225384e1816bf09e9115fd564cfa9def9bbb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21168,7 +21168,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ab5dbd3de76b610d77d9523eac06c240fcec63da392c32e985034648f5c858bf",
+      "pixel_sha256": "94c09f9b43333bd4c78f701c5c625f12bbf5b23a277feb2fe1ecd613932f2129",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21190,7 +21190,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4c3d0c855904e8563a583761f8546e4cbf8ecfdf53da9362c4ec6408f08f393b",
+      "pixel_sha256": "067a343f58f98b94d8c978c366d6c4902fab37169ba7c494321d1e5211996d2c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21212,7 +21212,7 @@
         16,
         16
       ],
-      "pixel_sha256": "228f77d48bc9f152a007a6a3d520a0d39ef42fe6eed094d0bf20fb441848d602",
+      "pixel_sha256": "4b75608abd712fcb900ec31c3bb64c886b3bc74f3b81bcf9e1d71fd1dc9a7287",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21234,7 +21234,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5d6b00d0897fe8261077dd329d638cbc62855a9ca35f9d72e2a0c3b8182345b1",
+      "pixel_sha256": "34d83ccd483edc00166ba309555d2559122c46d6aa41c9395608b16cdb2ba1ab",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21256,7 +21256,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5fcd8fdb9b79eefed8b5841d2e1e6025fd365ff78d84b6caf01191626e119940",
+      "pixel_sha256": "3a8862efdb00595d79c3262df81d921f7622fa2decaeadf1c3f5d219cf6bac8a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21278,7 +21278,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6498c45f4849d538fd9b5156305b241671a8f1243b41b7a91cf92d47d7a29385",
+      "pixel_sha256": "c8dc4af9f401a93d01ec5f555aabec8d93c29e6fbadba26a8631227bae2f250d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21300,7 +21300,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3f4cf0c5e246fe20d4df4f078dd87e6b8c6c105ebccb1814b32d89976877f172",
+      "pixel_sha256": "5a95b6890516116e5d40118b401d44f44999d86cf275ae7ec9857e29cb214090",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21322,7 +21322,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8c0f52e6f09db774db6fa491e62f4a8bcff9bccb3a5967dddcc5da2ec62e811a",
+      "pixel_sha256": "dba08f99484e3bb7bc2a8dc019744ac4da001b4bad97278e884b9cc109581439",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21344,7 +21344,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2cb7c9e1b1849bef819cf3104e67bc744501deb5d9c6fc49b96d840bbf95f86d",
+      "pixel_sha256": "3fdbf36371dc2fff7b2a4fcc9fbfd15b33d9853c04e27e86efe60a7f9911e56b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21366,7 +21366,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c051c5941a86e37735565db888398219e96514616c8c4d5a3ef3f09a2f170cde",
+      "pixel_sha256": "94a39afd22f919aed441d8d1f440cc6b17a103e2c4f8a62e3d9fc5097e42b0bf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21388,7 +21388,7 @@
         16,
         16
       ],
-      "pixel_sha256": "133588402a5176c544e05dbbf13fbd85280588103af3611974cab3965783b3c3",
+      "pixel_sha256": "8f0ad4282a3d422f0d52f12b74c732485b95a9caafb5f1253ca5e5098afa9366",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21410,7 +21410,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6122bef70abc31acfce55aab97df1e010a678125268254742389392a1c4fa95d",
+      "pixel_sha256": "7080e7937dbc63e1e1ff8598cee956eb99d2d2957dd2e08a78505467e469211e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21432,7 +21432,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f48c887c4e141bee6f856302871a8964387975b3612f2912adc06cd42937977b",
+      "pixel_sha256": "5a54f411b26a578933353d11207b69b72eb0bcb9c4c88af24d7be02869b8725d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21454,7 +21454,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f076489ac0b119420dbf717ed381d44b059a6287ef68995af20f75ca0324cb60",
+      "pixel_sha256": "f9b96990562a2100dfb3c7460a672c4bae8ed45adbe490c84ce06ccf3e8916f4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21476,7 +21476,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0baa963b1b321b5affd3392affa345db8e45598550f5176784b2a2b5f3e1484c",
+      "pixel_sha256": "a78b7f696834dca0272c1d7f507530dc75cc0e5ed5721b13aec5a0fa79406389",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21498,7 +21498,7 @@
         16,
         16
       ],
-      "pixel_sha256": "70d3a4a1c472d84da57ea62c935effd7a3cece1b84d47f58d9b3d2638ad34b6b",
+      "pixel_sha256": "dc66217d5a2ca72ced939dda8ee8d526ddbba7a2eacc2104775137a6b5f06d25",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21520,7 +21520,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1b516a735e8de040047738095a7f1b726ede64107bd54637deb38876a24bba1d",
+      "pixel_sha256": "727de2e0b7992c5b9f8fadd724adcdd9133c1616d0ac4fcff90ba61231cd4042",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21542,7 +21542,7 @@
         16,
         16
       ],
-      "pixel_sha256": "02b07b248fd629292f17560aab9e1f8fe1f85c6a1b92e2003bbc398e1d98f536",
+      "pixel_sha256": "78979a606944da93cd83fc5bc6c62a9bcd267924798d5a67233a44a34f193c84",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21564,7 +21564,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0ef1f44dffd746d997c696483d423cb2ccc4ba4b211817b125148478f6635f36",
+      "pixel_sha256": "cbd3d9e327bdc08d18de6bcee85c9600a9613828c0a7b8764ebe64a639bfe828",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21586,7 +21586,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9e5ebea7e4a68684108725e0875b1c8d96d37a7a21216651d263da1b0d22bcff",
+      "pixel_sha256": "c480c91e2db5078f07e1b1a45b66d0fb6c287f89ff9c06c2184d14b8340e2892",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21608,7 +21608,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e9555eb28a1b9e037a7c27ff1d73ea44889d4b6de0f3b651eb3986b7477cf752",
+      "pixel_sha256": "44923f546c56969a9d445acd932214721e7e861d3381e1aae177bef45706c76d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21630,7 +21630,7 @@
         16,
         16
       ],
-      "pixel_sha256": "cf5a9519f91effcf3a94af8fd144f558be0475812ba8609e3a7e34c43106d1b4",
+      "pixel_sha256": "8b5a5ed4142e66d58af4c03846a0ce0e50fbd3208e2837528b8a30211faaf9f0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21652,7 +21652,7 @@
         16,
         16
       ],
-      "pixel_sha256": "bbddb2fad5fc847d097de80e2eddb8a4276c2ece938e46466360cda1b118615d",
+      "pixel_sha256": "d78fad08f3293ce98d7808fde3824c46e25e7d4e6670a2f5af78e436be199107",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21674,7 +21674,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4f4779c328925465ca898fb4ac6e3d035e6e88c753bd9ea559c38f36e5bc8bdb",
+      "pixel_sha256": "2c47f0b5e68bb2e790700ce4eab581d22bcf6909029c49f71d85dbd348d4529d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21696,7 +21696,7 @@
         16,
         16
       ],
-      "pixel_sha256": "165a101b2bf4fb1a2d3f6910eae644f4fbd6d8e23f921bd47f9a084eeb92bcfb",
+      "pixel_sha256": "40bc7f3be0b2bb352584ba89566ea6ab39501e6def10844503e054dde9990999",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21718,7 +21718,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e96d5211f1d0fc783c15b819945a86061c55d93f60a4cc318ff0b2092a6491d0",
+      "pixel_sha256": "10fe3ae5fd3bf648921f946d50d5aeec2f3fcd66851ee70b29827215a97fe2ea",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21740,7 +21740,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fffb8f5e7475f98c3d2ff965ac3ba004b5a124e3e1d84fa88f6881eedba2360f",
+      "pixel_sha256": "b21f68b89a30660af86d2c9ae33fd84d815ebe35807fe58f7f4f980b58eebbba",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21762,7 +21762,7 @@
         16,
         16
       ],
-      "pixel_sha256": "26661e4ccfa756ccb28c1fb68e6388d5d278ed4cb6514cc2593192d72ef1e7e6",
+      "pixel_sha256": "981820fec274d16f296e6fc3e55b2e7ef270fb00dac71ac5738e57bf57cede5a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21784,7 +21784,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9e03ffead238acae6b8f3f44168fc760be21c1722e6dc51addd3192020a25da0",
+      "pixel_sha256": "3012c06b94b37c91d8caad78fae0f020c52fa9621144150a7eca4c9813af6746",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21806,7 +21806,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b2c027e3ff9374301de7033645734d77bab6769abd0d33d00b991423b3d95dfb",
+      "pixel_sha256": "0f0830e895f62d4e44d5f5fbc49804e5e1fbbd46a6256cfd27c8619ca55ab63c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21828,7 +21828,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c6fc28c0ff7d1bb30242c37530b48cea003786f9b8e5191d143e062815bfcf21",
+      "pixel_sha256": "b63c577ed3435e55b8f7beb4a52f8f7b14f28f289415cd07e01b86b5b309b74e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21850,7 +21850,7 @@
         16,
         16
       ],
-      "pixel_sha256": "112a335fe5350a321583d2038bc2ae8e16df5f8cc006442a42413f6ebd6fdd91",
+      "pixel_sha256": "842755a038d14313c32f20623b55ce75df82cfaaacbdc304c44d70595a250701",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21872,7 +21872,7 @@
         16,
         16
       ],
-      "pixel_sha256": "bb9310e69e5af0092a446c22d1bde7124992756e2f1abf011b1eb70a9c7108d1",
+      "pixel_sha256": "3b39ea9c63d0a1a2d4ccfe48b61ef745774a8615bf3a8319b5ac5fd6cb8fab94",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21894,7 +21894,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2791da1e86868dad1f97653e245f4be50da2a1b1283c7172c66d62f38696d10f",
+      "pixel_sha256": "c089e5211b6e92316fcb5ae70327f0b3cbb18edb53a7534f7286fe5a5dd71f22",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21916,7 +21916,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6a799cceff21324a77c94d28a212f5ffd082fca9642bf813d11926a8e4bab920",
+      "pixel_sha256": "ab7c70b5b69ef82be5c707f1803a013e97205522b1d53d7ad26584d2811c2e8a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21938,7 +21938,7 @@
         16,
         16
       ],
-      "pixel_sha256": "df9aeffe90924f8236f6e1b12ac0309e28626b94997f033a27a1246e31caa4cc",
+      "pixel_sha256": "0427e380d7e1dbedbee8483fec6fc562011eb081c0382b5197159378d23803cc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21960,7 +21960,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4f851866a9b6658fc4f2624f45b681c9f2960d63edcbe4b3dc2e5d4a1e64bf01",
+      "pixel_sha256": "c79d8e2767b2414b6ec20e6de0e00f7bd355ddeebb63ed6f0f751ae22a5439be",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -21982,7 +21982,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7e94e9d752d440f7130f5524567e9b4eb3bbd182d14fa3d1706cad80d4ccb55d",
+      "pixel_sha256": "7e46054f6fd60b7b3153cd0165cbfc2cf7685408b23ac4370d35bdb59f0b710e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22004,7 +22004,7 @@
         16,
         16
       ],
-      "pixel_sha256": "76f8020213a1c903e88f8fb6bd9c07f9103efb5fe1bc6091df01eb5cc8895abc",
+      "pixel_sha256": "333fbff1b791d227849831729ca8113ae9feb07c282e38d56b3ea213e18f3df0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22026,7 +22026,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8e7fdd5e37ffc6ba9a35394087ddc8acfd1166d5e7ced5e9b7c09d3385c5f29b",
+      "pixel_sha256": "fce84448640ff4a94c4007c050a8b90f04ca72ff9cc44eefcd7174d6a9a34f86",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22048,7 +22048,7 @@
         16,
         16
       ],
-      "pixel_sha256": "88b8cfb7b644f5b9d2186c51bf722ea466f8a6bad7975984109976263fa61eae",
+      "pixel_sha256": "355d07d523c4babb4aede8ef390497c93bd1e032142c5242a7033e85d89239d4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22070,7 +22070,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9a56125dc97819d5482c4d572409e9e158dc2f340454e3862db6c4b4e6da86ee",
+      "pixel_sha256": "e8536a59e19016d8d502adc9a07b5c44e501be1ffdefbd93b12234054a1870f9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22092,7 +22092,7 @@
         16,
         16
       ],
-      "pixel_sha256": "829f488e48e8102d438c44557923d8d8a9044378ef034dc2b42c91e1d9d63a8c",
+      "pixel_sha256": "0e36986713e461108f44fa7b1e14dd7dc3168a54972e5c94ced19726f7fd3add",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22114,7 +22114,7 @@
         16,
         16
       ],
-      "pixel_sha256": "175e327d1d556035004f576de26f7911a376368628008d04f0fc7d6264d2499b",
+      "pixel_sha256": "d602127d73a322686827869203faf159d0476e10eb9695013784bd95fc531ea2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22136,7 +22136,7 @@
         16,
         16
       ],
-      "pixel_sha256": "defdf19dc43779549d721a2f50ff228ec87f3bbe5c48e4698e1de509c5d00481",
+      "pixel_sha256": "4226ef0e790641dfa3a52d3f3ced9ed30020465d6714d3064c1bd59ae36f25b0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22158,7 +22158,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9de2a5f4be33a581e940e7df4e47f97b0f87e9e07c6cbf790db272c6c8451c98",
+      "pixel_sha256": "0a769d0154ebd62226dd13144bd8ecf1947aaaa54fc162a610e822ae5a14bf76",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22180,7 +22180,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6fcadca8d3145955dd9b4e907b7bd7e51878801e698f3dedb439d69b3ebba80d",
+      "pixel_sha256": "0e1894ad6d5d3d716e2b8aa2be7faae8f379e2b923ebe994e86ca43a39606fb2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22422,7 +22422,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c25536661517f0bf2d2d4f586026f2918add7869c7dbc987e863da4e0de78237",
+      "pixel_sha256": "57d3558cdb5fc07001aa809672392d460c705a647609e92485ba682966114099",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22446,7 +22446,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a520bf31ad0c706e32e724785dd01064e9a6886393260a926511ea735a30f39e",
+      "pixel_sha256": "d4d8dab306a79ce4275d1dfea21dbac7dab8bac4ea61781862e7e9ba8d090065",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22470,7 +22470,7 @@
         16,
         16
       ],
-      "pixel_sha256": "029907c5d3589cc45da7ecc37150d013750033c8a6bac968c24652462a77d524",
+      "pixel_sha256": "ebd144c482c7fa21f93fac6dd5b35e7798a990c50553216ed28b0a8419f0c301",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22494,7 +22494,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b48fb4e14cbbcb7556d20c6ea6449cc85851fc2119cf86dd5ed4179583772d32",
+      "pixel_sha256": "8d657d86d9301ab0a4635e3ae263c6f5d6d500b43c575b0960871abd143263a0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22518,7 +22518,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0ebf9e306d00d65a6b4034cd12c3b71f34a1d7607942118217f8be174e29fbb8",
+      "pixel_sha256": "79f31ff0e5889b7ff747c8b0817e76c2a8383898cbbe3583c8c6cda837b1b493",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22542,7 +22542,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6019a8374b0afc0e58def8334fc16d30a1eecfaaecbb97a8fd531c7619f32969",
+      "pixel_sha256": "77f7022668ce2c22642150f583424fb04b9fe90f10493dc3a8dc0325b62abe25",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22566,7 +22566,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7f7613b1d0fb24c60d2787827d1f86907a5e8262fc0a505a2119afaa40d49483",
+      "pixel_sha256": "9c00d1575469fcf274a9bcf02d8744ed7ee25f72c167317ba57fe49dbb02f870",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22590,7 +22590,7 @@
         16,
         16
       ],
-      "pixel_sha256": "106f2c4315016972abda9d90a8eca18853ad1a589379c31c633bb6d5c4abd5c8",
+      "pixel_sha256": "09be634f882ee9a86caf519fd37faa9ab3d8cba332d83e4b768c0b1a976fdbc2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22614,7 +22614,7 @@
         16,
         16
       ],
-      "pixel_sha256": "14c0a714e5845330656b1f7f081f3ec324dc5747355597635abc1b0abf9afdd6",
+      "pixel_sha256": "d539e18d5a9699acf6a502433c88876d003c7928d73486f99752025f6b5d3c5a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22638,7 +22638,7 @@
         16,
         16
       ],
-      "pixel_sha256": "39c3f632caa6a7978fc039d11dc6e8e7022549d4e4ffdebe654cd55be07e71a8",
+      "pixel_sha256": "4d92362bc78c52dea5d1d0007b15e2641c48ce78a545d9e4537333c893d48b25",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22662,7 +22662,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8a5bc5cb420c46d919687c6be14407fc46df5b473bd38a1462205e772f6da60f",
+      "pixel_sha256": "e8254e5e52f2dac856b4cb3b70a8c69650b043f8bf662e4b4f23633ca3ae76d3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22686,7 +22686,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5685e2f181c97a498d9e731e24f2ed5bd54c5d5c1396f12006565e91e28d6257",
+      "pixel_sha256": "d35f3be37c1882ae04f8666d80e537c3f4fda38b7e49a0a886c874a397a32662",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22710,7 +22710,7 @@
         16,
         16
       ],
-      "pixel_sha256": "11ed5cbcfb1ef9758217cceafed1f17218c028e8e2730473b03a3c0c7e84bc53",
+      "pixel_sha256": "66d561ebc492c73f0113a22e8aa74067b66d45d0c9bb01adb58dab36bcd9c415",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22734,7 +22734,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fa21a3cd2468864d6da98725fcba8582a0e7954a5e52bdabb661d4c1516e602d",
+      "pixel_sha256": "5ad13567f80065abcdf1ae575d7e3504dc778e47f669941391c00fa37b9e7475",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22758,7 +22758,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5eed67dd804a0b4d3a3e3c6a8b2b043e85473d2ff47a6ff23411b280a645b864",
+      "pixel_sha256": "f41ac1c62745c85183d1a7e40042a7440459ab3b15f8ed0dc83d881edae46a7d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22782,7 +22782,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f348a28a195ee13572174a16be6298f2cbc0834b63d4affc421743cc98600079",
+      "pixel_sha256": "76e6e129457e75e3699aebb7228be7cac1cbf28fe10abb74003aa76f17987f82",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22806,7 +22806,7 @@
         16,
         16
       ],
-      "pixel_sha256": "09c718d67ab6393f4373188a5e98c9ace41dd8b09ddf9bc9e996e095ba2c3d56",
+      "pixel_sha256": "a64e6ff4b890a8dd81a2e29b1995a161d7285eaa3b0ba24f2f881f7632121e65",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22830,7 +22830,7 @@
         16,
         16
       ],
-      "pixel_sha256": "36dbc11536149feadbaec33ebbd6c15e732eda270d1a4df32540e968576b660b",
+      "pixel_sha256": "7ba99e12ab39d3f30eeb6aa130e2a2b87acb036b2134bbe769ccc88ee4f5a100",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22854,7 +22854,7 @@
         16,
         16
       ],
-      "pixel_sha256": "58726aec6a5ced30fbe5119b06ebf7873a4237458a5107adcf955205a5e9ee34",
+      "pixel_sha256": "bb78b063fa748adb28942a552719371729d40f995eb7e946b92b6f7bf491a45f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -22878,7 +22878,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d90f9863454beaf1ec8510df290287e6aee346c29bfe30e63625fc077f177a1b",
+      "pixel_sha256": "0036a942fae0c4f718587b046e912db45f88132549c9f369981d31f74177fe26",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23782,7 +23782,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d2e3caf69be060bb2d6d8923976020f9593197f71f42338f9ad33db13a0aa3f8",
+      "pixel_sha256": "79ef2a3000c805c7055413cee3aacbc5c07e5ab22170e193547ca7202e2c8e6f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23804,7 +23804,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e14aad5b2c4f8d50b3b7aa17ff39b3c3d1142e4622202135811d3fb9f9c3a10d",
+      "pixel_sha256": "253e2c14d931cc1c9a87c8f232a566db5f7161584fac97411b5cb5fb67d824a7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23826,7 +23826,7 @@
         16,
         16
       ],
-      "pixel_sha256": "32f1a99cd7edaf163308215333ed388ee4f0f20d8dee3c8599fadb45c7d729b6",
+      "pixel_sha256": "8e1adea99586180c0e1fec88f6611b2a82aab7e68059fdb53cb407a73913df4f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23848,7 +23848,7 @@
         16,
         16
       ],
-      "pixel_sha256": "95bf6e2f1d9d2cab5b9a6ad6e3d8701fc64d2cf04b47b5745c901c3d7d6ca967",
+      "pixel_sha256": "238730a484b0d991e63591e7ff4fcf5414d7e904ac5207079823a544ec61f0ae",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23870,7 +23870,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a7c4f8cc618e48b44357a86303a420b4a3ecee9d004ea00a0174a533462c6702",
+      "pixel_sha256": "45f4fb04b000167556695f6fe7c71a760f595fb34afd6fb59c5b3ea5ea76eefd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23892,7 +23892,7 @@
         16,
         16
       ],
-      "pixel_sha256": "01808dcab26cfaee3261c95eb7457584becf1a50b65f1f92480e3ac3a943b2a0",
+      "pixel_sha256": "5ff498f342b2b37cdf6449f64772c846a3a25d70659af7a5c0620b14d3ca551e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23914,7 +23914,7 @@
         16,
         16
       ],
-      "pixel_sha256": "70af9ccd11b7a72dbe8d12c480245193267380807db6d76b9895a46297d5d882",
+      "pixel_sha256": "af804a0541120a6a7e61a1491aabb87447f2f50c83e792e979cc74c23e5a8c83",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23936,7 +23936,7 @@
         16,
         16
       ],
-      "pixel_sha256": "562d7ab7a4c36cb89818a4483d976dbbd96fd72b134e3e7ebca31b2e3d8a766e",
+      "pixel_sha256": "602ad6122cf50a2577c3114acc0ab8ab9280751dddca0ed7465170adb210cc3c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23958,7 +23958,7 @@
         16,
         16
       ],
-      "pixel_sha256": "083bbb0bd44ffc78c3d87b5cd502fe919ce806293bfedcf471ed68bf29ceeaf2",
+      "pixel_sha256": "1d6e43c43641a765d321904977aa930572c5a5ad44485db5e66f7da8766dffb6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23980,7 +23980,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7246804b8b60fafe4ba7c1a64ae802cae515a40aef3ea4ffd4c7b21167d7ff0a",
+      "pixel_sha256": "621f3c85e053e10a030a45c6bfb710279a975263c25c8cfe3760da20025a62aa",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24002,7 +24002,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9293f3b9c67379f0142163c69d85024b75b9de245708541e2d028ab0920e4fcf",
+      "pixel_sha256": "fd1f1ae09aa8bcfa484c1ff8130f9cf17949d288afc7efe85277796a486638f3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24024,7 +24024,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f4c4788e9c93b7c83003d42422f147a5292c0aae0fe279a03ae7ce3edc8b2946",
+      "pixel_sha256": "3963465ee6a87bc5ae012f29c47516cdab9a181307d5d23f2bb3f44cd7ab31bb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24046,7 +24046,7 @@
         16,
         16
       ],
-      "pixel_sha256": "34a1ef086a9b3f8fa040701829314493fa9a1f6fec94bfcc3ee99d4426d8f313",
+      "pixel_sha256": "7a00ea23a881a6947232cd8b758665bfd1034280a7944c4e3e104457eee96bd6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24068,7 +24068,7 @@
         16,
         16
       ],
-      "pixel_sha256": "52ee0913338a1648d6f38c1340879cf6e54152c5e0400dae479eedbc9a17e7e9",
+      "pixel_sha256": "8944638af6bfdc47e7e787f9c1cb19a555302aef2aa1a228946304bcf6920a3c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24090,7 +24090,7 @@
         16,
         16
       ],
-      "pixel_sha256": "dc15457b5003033b282791891627593a812fd38a64c4639cddff3acf484eb225",
+      "pixel_sha256": "94751db3e59b8ed1574bfe5f9b29b7003c294b5b8caedac1f12d5b7be6fa3dcc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24112,7 +24112,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2100858f6dba1ff9ac090d4078321a9234637a75cb36663dbc29af29de32b833",
+      "pixel_sha256": "fc93b9b847e4a4ddebdabcb9e51f49c8c167b0c419cff7fcfb65acccf8bbf0bc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24134,7 +24134,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9c0c61270a38a2b1814398f95b44ff0cff3db1d8e5e73c4fdb9ee81c350d139e",
+      "pixel_sha256": "a2fd6213aea3197a9a9cfb3a1a8ba4843f926b29247fa6ed94860faa7daf413e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24156,7 +24156,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e531a064d6b01709d88ca5aafb9ddac69ccc2834dfdc3f4b01d9e613b72a688d",
+      "pixel_sha256": "8f364a78fdece55a60db12979b0436af15d450d3256435a3832be000ef083591",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24178,7 +24178,7 @@
         16,
         16
       ],
-      "pixel_sha256": "79add1f31c102a41e965f926b271d4dbd4a62469dedbecbae4555d957deb8d5f",
+      "pixel_sha256": "78eb8c72d2515c9d7b984036d6d26e0ba1c8dec19be9dd107b18a2256944a4c8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24200,7 +24200,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6351e3588a0570d629d900299c17d84b525c00c751f26f61e02cdcc6f6d2de7d",
+      "pixel_sha256": "aa4b7b9e47c5f06345f030fabfee291d1b7e908bbff904bba52f8268e0aae8f7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24222,7 +24222,7 @@
         16,
         16
       ],
-      "pixel_sha256": "aa5121390cde38113ba6375ebf96a14e2bcaa06fabca750840a73c1ab05df0fd",
+      "pixel_sha256": "9be1eefc8242f59d4f60d15e52ad6e2d2f6a862b7d14abb426120e6c49a18937",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24244,7 +24244,7 @@
         16,
         16
       ],
-      "pixel_sha256": "47c0a39dccc5b0bd107df718792cad30fc9bfda6fdf6b284ce572a72c2b54f7a",
+      "pixel_sha256": "1f7df5dfa94c5bfb6ad5be793b909b48f5558a25ca29ec2aa5ad71095a800d70",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24266,7 +24266,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a0c655474a299ba718bbcd3b479a41edb801196f7ddb5b1a5d37a27979aa869c",
+      "pixel_sha256": "befd755f2558e28b36ad4eaf0241abd601c4f2166be887994517858673e7a26b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24288,7 +24288,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b9fa43d78196b10e2b9fc89266b620cf13a009dc828b05eeb9331a367f8f61df",
+      "pixel_sha256": "ce5147b4a2666b6cef12c973c954527f8d98b68e727ce4dff4a03de1b9eda0c1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24310,7 +24310,7 @@
         16,
         16
       ],
-      "pixel_sha256": "16620a73f48f55f5bce2921fdbaf0f9a1e03f8c5e95ba8a657d11034d5d55a14",
+      "pixel_sha256": "3c753b23e222d240a396d65022c348636d0be66a225e97f93d8ba035287f0225",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24332,7 +24332,7 @@
         16,
         16
       ],
-      "pixel_sha256": "dfc88f7fe83fcee22176a6e57b212ce43295c532ef28af1068ad848356ef44e3",
+      "pixel_sha256": "48a5b9fd88d5f255a9e9a46e647f7b7d2efa41c465861b58bdb1aa57969ba3c5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24354,7 +24354,7 @@
         16,
         16
       ],
-      "pixel_sha256": "639280f6044a9391363ceaaa1ad5c66ce60c7de39eb8af774b525201662d678a",
+      "pixel_sha256": "aaf360f0571b889c259ca3dc1aaa4cb08834aef187b4bd06202a5612c32270f9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24376,7 +24376,7 @@
         16,
         16
       ],
-      "pixel_sha256": "35cbbaa8370c59aa107503155a29b698982568e1f92ab9a973b3538b15cc11a4",
+      "pixel_sha256": "a06f933ba6e13a5b4ddb7d673ab0b517048055dc7f80f90370541652adec1d4f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24398,7 +24398,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6e4f298734e5c5c14e54f295ee15049f8eba5e38b38683faed46a0b97023da3e",
+      "pixel_sha256": "0297486d23f2c0379af7828a530b0c068f3a852e2f767ed55686650c95b87b0f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24420,7 +24420,7 @@
         16,
         16
       ],
-      "pixel_sha256": "58c66d04ee5f7989eb27c0d137eac5173d6c0ad901f0807bcd18c584304ebb99",
+      "pixel_sha256": "745671c7d850fbf7d916c407242ef61620ba415e75b6e4c0865651a0982e5ab4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24442,7 +24442,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d1214939d83bb3d4a9f8e158e2633579b49daab9357ca5314138acb5c3d34eba",
+      "pixel_sha256": "db0f836e516754979f6e5c14b4119a75c170231f9947d8f38b2277f323b2492a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24464,7 +24464,7 @@
         16,
         16
       ],
-      "pixel_sha256": "be8a6f92caa6cc6aa58443feedee95ac16e12d9c7ce4b94f0862b1383c419ed0",
+      "pixel_sha256": "009b39fd13822f8bc82241219e22b8a7fbfd7a9b8feb2158945d1b3f577404af",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24486,7 +24486,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fcf14aca5bbad796676ac0b273e2c50c156ee770f1d971c68512054fac1c76f7",
+      "pixel_sha256": "4a1ebbe385205c96eb3e2f6402c417c632c1f50899d7129f66eb14c66f5b085d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24508,7 +24508,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fdb60f68b51c3d84c38ecff64ee0ed6af79e1fa58817a95e27f0876048f4311b",
+      "pixel_sha256": "767fcb8eb54187d01caf1289d41501e74cb8cd9eb7c99a89a48eebb49fe490e5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24530,7 +24530,7 @@
         16,
         16
       ],
-      "pixel_sha256": "79689dae5cfd0c34d9d6db37d66f22fe6a12df86d0b2c9780bb0710e453a29bd",
+      "pixel_sha256": "7715a00d0c84c7b2de12f8de488186f31e215cbc16ab5cce6e41a3b6c7c7a983",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24552,7 +24552,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f2a237db0636778830d9e174f3d3e420a10f9d88c32fa616b0a4425cea9e8c4c",
+      "pixel_sha256": "90e6d6f80038a31fedd36b8ffe7a39798aedb431c1770384c72451a557a1fd47",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24574,7 +24574,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1903aa0e953d816c924e4a2041353d3edc36dc8446c9a17ed65de86994ecbf3d",
+      "pixel_sha256": "471349b0316d455650535518805a0de514841694045e80875f0f71fad795440a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24596,7 +24596,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d13a4bb0617004903bea668b6dbb3f47e7506cfa3647612584df5443eab13509",
+      "pixel_sha256": "64bd7b7d946838a16867bac818b244e692f1a610f3f75c0911e57683eb026ba7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24618,7 +24618,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a02a08530c57d8a6ebfbdad43c38f4f65a6f0542be524a698b80d4828b53571a",
+      "pixel_sha256": "7c9f69e12cd6e3dead27b4c62dec70bc92be580cea9caf58a69ef9ea01d15790",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24640,7 +24640,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9b643f3e3b6c8c5c6209aa72b5e29f6f0ca52608bd452b64cbf967efbf176316",
+      "pixel_sha256": "34c2ee6be3ef22b0de0d9e06ebbdc74afee9e0eb7de7f4be7922990b8607c9c6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24662,7 +24662,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d2dd01aadc58e380dbecf9281706ae285610136c095b6163cb55e949466020f7",
+      "pixel_sha256": "0c4996be5865ea781e589e4f08e63d865659d896256181ec295fdf066813a513",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24684,7 +24684,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c14f69344b2653ed7b0ff991d2727a5d2d78cf5a4eaa1b4ebc5a0034aa320478",
+      "pixel_sha256": "111fcaacea085b7e33d7eff4bf52d2a686b3f46f7fe5d86831d8ff0a4b822f6e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24706,7 +24706,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e331571eef35c8bba00a75dd39b046e939631116f12672328aa5654959829561",
+      "pixel_sha256": "d7ceb7ffa4e4ac0890b8f9fdaf1a807f59b5d7be0a142e99680da6227cceb63b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24728,7 +24728,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1abe6260be774f3b43be2fd219fe8267ace2390764a8454646060a02c08f8144",
+      "pixel_sha256": "7a070e858965e157ec0426eafa654027fbec115148b0ab5415faf9ad7f30cf74",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24750,7 +24750,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1cd89cba9216bebd635a8545d277f39622b3a3b68f7bbc98573fdf147e3d7336",
+      "pixel_sha256": "898ca53bcf658ebd4d5fb8f672db39db8f3b7550b43c79f92415434db42b0756",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24772,7 +24772,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2fee3a5fcd7bbdee7488888c4132162d022b94ab3c74573625aac1252142316d",
+      "pixel_sha256": "54284fdd6e56b0456da2a4484b3d2293adc7574dcf1a924c19235c12d126e1a5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24794,7 +24794,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4c906f784b033de26e7d57ed41b40672a5e381ff5c5dbf3d5451e314e88a1b6c",
+      "pixel_sha256": "4c03eb30eb452aca34a0e2f90ac4b55686089903720aa46c4d4d76b58411ee13",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24816,7 +24816,227 @@
         16,
         16
       ],
-      "pixel_sha256": "981d0249146a86c3040d3539c05de1817c6bd9abb4852f06d8e5b5c8faefc98a",
+      "pixel_sha256": "48365e587899c32fcb34adf03f65d2647a1dec71ae08cbfa7d7ae5ad21f3d11f",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_dark",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "dark",
+      "role": "decor_sprite",
+      "seed": 8214614535171333702,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "444a55c53b9764b5a0ba2f612a6dd069479e73790236443048b793ba62760d82",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_dense",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "dense",
+      "role": "decor_sprite",
+      "seed": 10487271026312450887,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "cafeb10109800286d82fdb7cdebeaab4d7e4e17fd8263998bf05a4256923f274",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_dry",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "dry",
+      "role": "decor_sprite",
+      "seed": 11742627903550986695,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "13fb2b7c3c2300586142e576e72bbfe1b2b158c2ed73d2d0192861e3b2e189cc",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_fresh",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "fresh",
+      "role": "decor_sprite",
+      "seed": 8080121023946041570,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "8cb85b58c21c45782f4dcfa025a833afa7686fea1dfb09c8b16d141265c99b37",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_mature",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "mature",
+      "role": "decor_sprite",
+      "seed": 13186858724288454837,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0d7d4275fd1d8dab9a586ce9f418df4977ef3ac52d8edf5f1fd4f181b0afc800",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_pale",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "pale",
+      "role": "decor_sprite",
+      "seed": 11830838282244218995,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d7e0d90f0418a0301d50c34d802706ee5899edcf2d64e6be14b89e768312c409",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_sparse",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "sparse",
+      "role": "decor_sprite",
+      "seed": 12224748305715420503,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3aded28bc5c5594cc49c3ba7fd0dbefae2f551766112ba8012d6066097808eb1",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_spotted",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "spotted",
+      "role": "decor_sprite",
+      "seed": 14357443441367709498,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "32ce13c0cc32b078828df182defb7404b31708ec420127f498dfb5f32782dc07",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_striped",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "striped",
+      "role": "decor_sprite",
+      "seed": 16773195197360097601,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "98252a4b15d0076c5b1b30d3726785f2cdb3d57a10b285c25a90b8b616fec7bf",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_stem_young",
+      "family": "organic",
+      "material": "mushroom_stem",
+      "variant": "young",
+      "role": "decor_sprite",
+      "seed": 4905920161262427363,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c58534bf468c15d39307dd12ab8107a60ead7ddda751de42078256c956afc5bb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24838,7 +25058,7 @@
         16,
         16
       ],
-      "pixel_sha256": "77f92ea229cbe6dda54cab3b57a41e6241f7aaf0d1f09e320c3ca3392cc734b9",
+      "pixel_sha256": "e1b80fc88301e235a9f16b73e674c1a10b5b920c57d158c66c389c4d64351133",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -24860,13 +25080,493 @@
         16,
         16
       ],
-      "pixel_sha256": "54c228386ba0ad4f8c0cb10767b13aa7bd758a64fd02cc8d0a2280059dea7059",
+      "pixel_sha256": "b11cd759d2586314a89fb68293d123b5ffdcfe4212015d178f3d50776eeb4af2",
       "source": {
         "kind": "procedural_parameters"
       },
       "reference_calibration": null,
       "license": "CC0-1.0",
       "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_needle_dark",
+      "family": "organic",
+      "material": "needle",
+      "variant": "dark",
+      "role": "leaf_cutout",
+      "seed": 14665789364150485835,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7ada80aee9345254d4fa579ec8bc82533a4acf6650ccae67827929b96782a754",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_dark_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "dark",
+      "role": "leaf_cutout",
+      "seed": 1447288068593133401,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e332314532f5439fb3568701a81bd122ee9f4470a69bac0f97f9a55e5d48f29a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_dense",
+      "family": "organic",
+      "material": "needle",
+      "variant": "dense",
+      "role": "leaf_cutout",
+      "seed": 18119231507622931541,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a4dfc7abfddd08be590877b4e5fce925633765c231a3fff14798cfd0cfe34848",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.4,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_dense_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "dense",
+      "role": "leaf_cutout",
+      "seed": 7563167714836002011,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d2b96077de3296d64c1a37a9844e5e35a3f9ffebf156e86aa59eca9735751ccd",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.4,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_dry",
+      "family": "organic",
+      "material": "needle",
+      "variant": "dry",
+      "role": "leaf_cutout",
+      "seed": 15431753416383402010,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "502830f8f69021be6f1c760b31b31fded6e2e15422799fd2d124ce5382b3c0cd",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_dry_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "dry",
+      "role": "leaf_cutout",
+      "seed": 974125507640406126,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a1211b989d001baeaa3be5847e67befe6a5e851b4ffe6c1d535ff80b690bd5d0",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_fresh",
+      "family": "organic",
+      "material": "needle",
+      "variant": "fresh",
+      "role": "leaf_cutout",
+      "seed": 9681130397317686665,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ee75eb8cc2be886f685b49b8f122f007cad3a3bc6d1c3bd9d72b63068b41b5fd",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_fresh_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "fresh",
+      "role": "leaf_cutout",
+      "seed": 13158374804741071462,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3aaab90068c7415b0da646682ae9542ff82501fd8e791a14a7f529dfab7a8f7d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_mature",
+      "family": "organic",
+      "material": "needle",
+      "variant": "mature",
+      "role": "leaf_cutout",
+      "seed": 2613230530369680227,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "672cc205afadc2717311f47cbd002de79377c5dc312f5feb5aee9d8a27a1cfdf",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_mature_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "mature",
+      "role": "leaf_cutout",
+      "seed": 15470720229018546474,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c6c64b6ebb2d42a3986578ca1bac1d2b54f7ae927aabdd9478954fbcef699cdf",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_pale",
+      "family": "organic",
+      "material": "needle",
+      "variant": "pale",
+      "role": "leaf_cutout",
+      "seed": 2823567400002075473,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "2248f651521d4dc56a0c8019b87c946a885c24ff38d5c0fe743e77e0f5176b3b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_pale_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "pale",
+      "role": "leaf_cutout",
+      "seed": 12409768647224703889,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e2a550ecb36f00ab8846cba82c18dbdb8603ddd2bfc30d8cd1d917b54ffaa5eb",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_sparse",
+      "family": "organic",
+      "material": "needle",
+      "variant": "sparse",
+      "role": "leaf_cutout",
+      "seed": 2793187288329280817,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "b15bc6c04d32e79b1918be727679c6f74bb5ea89b3c44609a91bc10b3a0326ac",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.64,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_sparse_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "sparse",
+      "role": "leaf_cutout",
+      "seed": 7888441442127173148,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c4c636efc93d5105fca5e3394350ee57f7cc7f70d8db21f9ef2328cdcd25fb10",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.64,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_spotted",
+      "family": "organic",
+      "material": "needle",
+      "variant": "spotted",
+      "role": "leaf_cutout",
+      "seed": 14977311357517155017,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "42894fe39c13fdeafc29544de6eddf099370fe6bd87a3ab7d8e6b2991a958ba7",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_spotted_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "spotted",
+      "role": "leaf_cutout",
+      "seed": 5196372536549996470,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "465722c91e5c9c435fd37e58ff64f0a0077f55e42301f1c7425f25609c11ac36",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_striped",
+      "family": "organic",
+      "material": "needle",
+      "variant": "striped",
+      "role": "leaf_cutout",
+      "seed": 12186031586561668971,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "63751340b4dea774fdd01f705c50f8874f5e7773615ff8c88591973eb81b3524",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_striped_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "striped",
+      "role": "leaf_cutout",
+      "seed": 12735296761384109233,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "451e0130ec05d6207685409347ac7da48d9456349e87ae4c83154db6b5a4ea63",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_young",
+      "family": "organic",
+      "material": "needle",
+      "variant": "young",
+      "role": "leaf_cutout",
+      "seed": 10608047229646550436,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "b28d1a0094a2e238d80ffb0b2c74bcacc9d04dfb7939d417c8ecf34a6f4131f4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_needle_young_top",
+      "family": "organic",
+      "material": "needle",
+      "variant": "young",
+      "role": "leaf_cutout",
+      "seed": 5869276317946637822,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "34a2787a9b646d39e82655f63666f62300ca5e5c16779e81deef40eb73deb145",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false,
+      "alpha_mask_target_transparency": 0.54,
+      "alpha_mask_reference_pack": "procedural_material_profile"
     },
     {
       "stem": "cu_organic_reed_dark",
@@ -37246,7 +37946,7 @@
         16,
         16
       ],
-      "pixel_sha256": "bb1bc4639436dcedfa1a727b5b0ecc0f9982c08a43c96b47e97cfca2af837a46",
+      "pixel_sha256": "a49ea7bffec97ab64b78a88ccc94c935095ae8c83d2b552c04e7f3c3a25bbcaf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -37686,7 +38386,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d3aa99418323c8bb2c43f054d1e03db6a648a91ec051e344faeeeb1c3d8fee32",
+      "pixel_sha256": "749f37ec613c617cd8330f651e29acd536b023034bfab4386f34821c36e7e4bd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38126,7 +38826,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4c33089b2c039734750a1bc6634432cf24c343899b576d5b3548516424f9bdad",
+      "pixel_sha256": "e305aabd88829a728eac5fbf952b1c972a6c7018e459f32fe6dd9b4aa780e314",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38566,7 +39266,7 @@
         16,
         16
       ],
-      "pixel_sha256": "58fbb5b99a96ddc35aee7443a9707db93fcb3c7afa9c5a9788d7c5d78aca5555",
+      "pixel_sha256": "7919f227d509c92a2671d54ecb8553feda59c5e780e895a57ed89c3ed7029468",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38588,7 +39288,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8bab3d7434362eccdf2417dfefe5ba049aa5ec6f38a176b8c969521ea20b4e72",
+      "pixel_sha256": "732256a23d70184698f5f6efa262f62fb6096814564f57e3a8818119b6a9897e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39006,7 +39706,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9ed182920ac931571f9ce21d80e7ec1ecbcc97b311a42618dc83d2f922ed1801",
+      "pixel_sha256": "d4c9f3ac17d71203f769d4e780cd91c51a86130c62358a2b75ac3659c6d443e6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39446,7 +40146,7 @@
         16,
         16
       ],
-      "pixel_sha256": "397ff25912690a5f897f1ec46031e491bcd53b11a04d10559bc1d73ed2e10693",
+      "pixel_sha256": "7d7e9c93a88694f9051c98c85965961a6ef135a3e57acea3393a786e7f660f80",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39886,7 +40586,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e318ecdba681978c258285b4f09a69253d27057ba7a29adf68fa4e6bb586916b",
+      "pixel_sha256": "6b527059b012f814aa2dc2779ef82055cc886be7849398b67356c035d83165bd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40326,7 +41026,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e48a79147498df6e9ec1f374493e20c9f82aa98b2ac7f88ba04f8db7037910d6",
+      "pixel_sha256": "10fa969b65d9872671f99bc7580f09393fd625f06eaab733a675cfc4439c71bd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40766,7 +41466,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f3435d0af80972aa934530c92dcc7b7add5a07027af251d29a1f4eda120ac15e",
+      "pixel_sha256": "4b7d4cba6831a3817e9f774c64b14f69eac4d0c40114c83efa3f9b593e680c6b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41206,7 +41906,7 @@
         16,
         16
       ],
-      "pixel_sha256": "19ac8c89cb247ce8ac23f062c723b20e4d0384dd1137ff2d58a2b46b2ffdb050",
+      "pixel_sha256": "91e3d776e45460d3f07abf601d11be50f5a2cbb01ea0ee5d844c4c5473102a57",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41646,7 +42346,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b1515972373f0832481a890e433b5b36f42eea728f8cae72384739e170762524",
+      "pixel_sha256": "26b676cd83d11822a954a39ddff4dbd432f0ce0553bc6b4bc0e5813b34b68555",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42086,7 +42786,7 @@
         16,
         16
       ],
-      "pixel_sha256": "94843cdb94951c94cf51236758031a758877bf379a0e2d0ccde44b7b7b485b70",
+      "pixel_sha256": "e850e1ba2f3747770fe60b4dd6fc27cffae36021f51d8da91375cf808aedaa19",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42526,7 +43226,7 @@
         16,
         16
       ],
-      "pixel_sha256": "795492d0e627dd61209ee7a5502b843f0afcd291c93e5460d72ec838e63cdfac",
+      "pixel_sha256": "e9eeb79f55d76580089de8bfa6ded0716ba78929598f947cb521f31b664d3e39",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42966,7 +43666,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a987d8bf486b5f78c7d1c5a0a98579d1c22d47af7bc5369dd4fea8e6d8afd0b7",
+      "pixel_sha256": "0d7d5002bb7b7d429a8f22e7b5d7f9321d8cf50475a6947f127c8051d2d5ad9d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43406,7 +44106,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7885043f9d744f3caa4a09d03ad6f2ea1022393f1d42717b88dc1829d73535b5",
+      "pixel_sha256": "ff9398dd5fe4849ca27ef939c09c85e973035133e14492597fd8d4939e9b4c8c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43802,7 +44502,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d93358bd6b4580543f9bc1386a75a99930f827e05c80ba91c079781c988dab46",
+      "pixel_sha256": "eb4f07bff7b9a41ad6cbcbb0ecc2d35862dd7d3d0e2ceb9441befeb493da4b48",
       "source": {
         "kind": "geology_reference_only",
         "reference_only": "dirt_grass",
@@ -44306,7 +45006,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e16ab127ed64fef7fec089b3ba8cd2ef6e48b60210c82205eba171c5b675e734",
+      "pixel_sha256": "bd327f5e692f3ef399fc260dea94231a8e7f7f4bf6716d3a5181f4231e7d9e32",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "cactus_bottom",
@@ -44330,7 +45030,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b4eb7451ca9f00d6bc35314666c2bcc66f60d126081952c7fa52a53523fa39ca",
+      "pixel_sha256": "31451ac12875435b4b296b8ac7f90dd6245eb0a4330c06ce0a11eb4df6ef8855",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "cactus_side",
@@ -44354,7 +45054,7 @@
         16,
         16
       ],
-      "pixel_sha256": "efb2b4b4e07b59d1ce006c35eb7651da7dc9e123b3782ae9e80eef96ff33a85f",
+      "pixel_sha256": "b71141fa8820e2227ade07a963ce814b6a6697ef669661f5bff0be2c651e0855",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "cactus_top",
@@ -45496,7 +46196,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5a361453290f2602a7f11a251a8d1932e4708229e12665ae70b4bf934fb0cea0",
+      "pixel_sha256": "9cd903254270d0727d3c533fb61938043510d88e6e387e42563d6d79891af7ac",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "flower",
@@ -45642,7 +46342,7 @@
         16,
         16
       ],
-      "pixel_sha256": "60c5db1a44f718545de9dca1965c8c9e488b719901f4e80b0ec3d2b517dd2cd2",
+      "pixel_sha256": "65e3c6f72ede30acf8b092c47d8be997683d2954f3bb5023fd3a12b2dceed5df",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "grass_side",
@@ -45955,7 +46655,7 @@
         16,
         16
       ],
-      "pixel_sha256": "bec65c2a45fba2a4eea15ea616115d97063fa7f607ad96a7f46e2a0c302e8023",
+      "pixel_sha256": "7503699a5e3cd308e733bdb256efdbc88da6eafdbe92de49debbf1acd491697a",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "leaves",
@@ -45982,7 +46682,7 @@
         16,
         16
       ],
-      "pixel_sha256": "080c6fd292f84c45dfb6953c16142015b243e23497cce02578db38022a717995",
+      "pixel_sha256": "7066e813b587e6195c5be00c1e501cffb857ce0aed3b8e0bb81730a42dd65c64",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "leaves_jungle",
@@ -46009,7 +46709,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1f199c6a6b40bc306cb41245fc5497f3bfc6d38d899a6fe412750dc6c41cde0b",
+      "pixel_sha256": "d538e304be89a5b2698736cccdd4ba1c9dcbf15d99c80b9a2e17fc5e745f2aa0",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "leaves_jungle_opaque",
@@ -46036,7 +46736,7 @@
         16,
         16
       ],
-      "pixel_sha256": "86d445727da634779ebaa40eda8cb46bf1b6b9e6021d7b98989d453a70c8abc2",
+      "pixel_sha256": "2ed02b39f11e8e87496a9134bd92d81ffa28c5149f9c018b2a67a4823c610efa",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "leaves_opaque",
@@ -46052,7 +46752,7 @@
     {
       "stem": "mt_leaves_spruce",
       "family": "organic",
-      "material": "moss",
+      "material": "needle",
       "variant": "fresh",
       "role": "leaf_cutout",
       "seed": 10593915130911568142,
@@ -46063,7 +46763,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fe1d64e24e7328d53be49e2fd2c509046f6261694bc19ad87c007609b9c0e7b6",
+      "pixel_sha256": "a58f4d4830e2065fefb28e1ca225f6636434944299c6de9a230a9680f077b2ff",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "leaves_spruce",
@@ -46079,7 +46779,7 @@
     {
       "stem": "mt_leaves_spruce_opaque",
       "family": "organic",
-      "material": "moss",
+      "material": "needle",
       "variant": "fresh",
       "role": "leaf_cutout",
       "seed": 4004256481258881148,
@@ -46090,7 +46790,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7e4436e2d0e642d58b299385fe0a5352f5a77e79b487b63fbf3b84064075ae2c",
+      "pixel_sha256": "715263dad91032da974b9e17c67bdd31bb7f9205d67d71372e7ec477fe52efef",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "leaves_spruce_opaque",
@@ -46165,7 +46865,7 @@
         16,
         16
       ],
-      "pixel_sha256": "593d26640fe26b37b4859bdd30ab4fd5ef66b34c1b831ceaf917cda724f6b45d",
+      "pixel_sha256": "8cb3b7b35d06a787c20b6d2ba4965650538af97dca242d1084583b9a195da0dc",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "melon_side",
@@ -46189,7 +46889,7 @@
         16,
         16
       ],
-      "pixel_sha256": "219a5cab2ec396386fd2cda0ca5f50ade29135b731517ff49ea619f3ce068199",
+      "pixel_sha256": "9ce19c672e835f1aa8087f59efc703cfba98ab1f9508cb374a72b83a3dd2f18c",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "melon_top",
@@ -46213,7 +46913,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b74661d001bfc12586a450fdf40d01abd394a0d5cba2f8d758912c0da0023460",
+      "pixel_sha256": "76e879c59201e924d4bbe0392edaf55822079b3686dab292ed53612f8fc827ed",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_acacia_bush_leaves_default_acacia_leaves_simple",
@@ -46266,7 +46966,7 @@
         16,
         16
       ],
-      "pixel_sha256": "bbff1e78ff45e5cb81c87ac0926dbe4e7860d185de05dcbc504b0cef58eecdd0",
+      "pixel_sha256": "0baf74fdd05eeafba8cc956e437083afd18cbcb956116addfc55cff7d62d02a9",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_acacia_bush_stem_default_acacia_bush_stem",
@@ -46290,7 +46990,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6b31a9742f47f0aa92e4f38f12ac9039584a2b934294cd69c1223356f0225c33",
+      "pixel_sha256": "cbb9f2bebfa80a301b0eb68eeaf4e20d5922b5d987007637cdd151cc999a268e",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_acacia_leaves_default_acacia_leaves",
@@ -46441,7 +47141,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2af5f2ed7063345fafe8c08af5d00079f6d992cc297776b2eb6ceaabfa6ef7ca",
+      "pixel_sha256": "db9b772e8d23ff402e419f6759980ebf4bb79cbafd08cf09c535add52c2bb0c6",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_aspen_leaves_default_aspen_leaves",
@@ -46670,7 +47370,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f9c1aed03f45c5ab56ba7777e15ec2c32de6201ad7236652715364823af74ad7",
+      "pixel_sha256": "be2515135a13fcecf67275ef6911f50a6fd5e9ed587b9fc7034c1ae8a425c4f5",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_bush_leaves_default_leaves_simple",
@@ -46723,7 +47423,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5d020eac3753cbd03880dba6974044882ee2439f27be7652606f21c49313985f",
+      "pixel_sha256": "4bc4c449dda082487ec055b1e7d0679fc1b78aadb9c9ffdd771b32f55c3ccc9f",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_bush_stem_default_bush_stem",
@@ -46747,7 +47447,7 @@
         16,
         16
       ],
-      "pixel_sha256": "53f31af2e5bb574723169cd31b0ef67becb33fb6a9c7b314c9acdff8847713fa",
+      "pixel_sha256": "f291b18c570c6db144791bec3445ab6278467d6630d4fe4f47873ef9e2138250",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_cactus_default_cactus_side",
@@ -46771,7 +47471,7 @@
         16,
         16
       ],
-      "pixel_sha256": "359ef1030654ee808196c821f5106f97f672ebfc1ac2cd916c728ff326a0d74f",
+      "pixel_sha256": "3d5ef5c6a2b25bcd9ff147f3ae2715c500271dbbc4a06afc59c508482be3eb32",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_cactus_default_cactus_top",
@@ -47467,7 +48167,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4368c47c708ce5a3d5494d4b048c73e8e2ddf595a058e9e97f6503a9e164bcfa",
+      "pixel_sha256": "c128ce185d60970243c6d404da7410508906b25ed65495167482980d6dac9f2f",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_dirt_with_grass_composite_0",
@@ -47491,7 +48191,7 @@
         16,
         16
       ],
-      "pixel_sha256": "805de5eec0e0187eb0d36f24ef8d1ec437c0bf79b9861cdca060b2f0f669a257",
+      "pixel_sha256": "0d80060c16798281718c991794bb6042350c1cbf149d364e23dc3de30d7f1584",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_dirt_with_grass_default_dirt",
@@ -47539,7 +48239,7 @@
         16,
         16
       ],
-      "pixel_sha256": "89183d02c2ae47ef9a71df4fb6f5f5dd56891f5626f5613939970ed335580fe0",
+      "pixel_sha256": "da00b9867f0456842c37aa7eca6f2a83a295a7922d9be2e8c5cc0991da47918b",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_dirt_with_grass_footsteps_composite_0",
@@ -47563,7 +48263,7 @@
         16,
         16
       ],
-      "pixel_sha256": "44a227d78e4f66ea25eab2607d875ed723646dc10c8aa3948ea248ce95c4dae9",
+      "pixel_sha256": "a72a2a0b0a5a9e826aa5c699d9994810411ae2c638f4a4f5a6300c578025d0df",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_dirt_with_grass_footsteps_composite_1",
@@ -47587,7 +48287,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0262c82aa3cdca95d4cffe4d2c85e33c99901403d7e2bfc44d2b2278f4b6a150",
+      "pixel_sha256": "51af96f9f772b9939abcb51217f7f760755b209f345481b43ac055b66946fdfb",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_dirt_with_grass_footsteps_default_dirt",
@@ -48127,7 +48827,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ac005e3213045080f581eb123a816b7e7a5cf7109c4dd0c0ae13425c792c7260",
+      "pixel_sha256": "c5304a3defa4f21cb42a6a308adacd36cca5bcdd09d2227cae5bc043acec18df",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_jungleleaves_default_jungleleaves",
@@ -48350,7 +49050,7 @@
         16,
         16
       ],
-      "pixel_sha256": "227a4652acd29b68b7468865d30ddb8d65915f2abff1c75d85dddeea6e4a5f7e",
+      "pixel_sha256": "2979e4597ffd4babe2e6e5f913bd4431500e79100bd58f56b7556bcc077b40f4",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_leaves_default_leaves",
@@ -48451,7 +49151,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b39edf58d2d61cb6afe06c19be881edf2af43b14752cdabb532fc3b047371950",
+      "pixel_sha256": "0b473af9df62088570b565286582fd5c8c427dacb1b1de2aa4170e0c3d69ef14",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_mossycobble_default_mossycobble",
@@ -48778,7 +49478,7 @@
     {
       "stem": "mt_mtg_pine_bush_needles_default_pine_needles",
       "family": "organic",
-      "material": "moss",
+      "material": "needle",
       "variant": "fresh",
       "role": "leaf_cutout",
       "seed": 2467511176391080838,
@@ -48789,7 +49489,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3476db6ed7826e1f52b8091cebb64873ebb601e9c49109b2a46af7f64ab7d8f9",
+      "pixel_sha256": "5dfe1005dbebf6d2d77e3f5b71a462a08405d7941e1c0c85214d9ac9e95075ff",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_pine_bush_needles_default_pine_needles",
@@ -48805,7 +49505,7 @@
     {
       "stem": "mt_mtg_pine_bush_sapling_default_pine_bush_sapling",
       "family": "organic",
-      "material": "moss",
+      "material": "needle",
       "variant": "fresh",
       "role": "decor_sprite",
       "seed": 13924950003571374707,
@@ -48831,7 +49531,7 @@
     {
       "stem": "mt_mtg_pine_bush_stem_default_pine_bush_stem",
       "family": "organic",
-      "material": "moss",
+      "material": "needle",
       "variant": "fresh",
       "role": "side",
       "seed": 12081787349821670479,
@@ -48842,7 +49542,7 @@
         16,
         16
       ],
-      "pixel_sha256": "be91425a23a03c69e1c0dd35bf9c9cefbbb9f08714addfb8a4a9fc49f174e878",
+      "pixel_sha256": "b89762dbe42cfe06bc305e88f832e7e1786115242e3c730c834138d794b82a06",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_pine_bush_stem_default_pine_bush_stem",
@@ -48855,7 +49555,7 @@
     {
       "stem": "mt_mtg_pine_needles_default_pine_needles",
       "family": "organic",
-      "material": "moss",
+      "material": "needle",
       "variant": "fresh",
       "role": "leaf_cutout",
       "seed": 14265090184525942466,
@@ -48866,7 +49566,7 @@
         16,
         16
       ],
-      "pixel_sha256": "639c221cf213104d97f2f0a649623a757454b2092fa7dae65ce9227b6c98cb5f",
+      "pixel_sha256": "460ff64f613945b95e8064be8d5f5acd28f5850cd2d2b17f614b260f3829dacf",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_pine_needles_default_pine_needles",
@@ -48882,7 +49582,7 @@
     {
       "stem": "mt_mtg_pine_sapling_default_pine_sapling",
       "family": "organic",
-      "material": "moss",
+      "material": "needle",
       "variant": "fresh",
       "role": "decor_sprite",
       "seed": 17108515861715897264,
@@ -48982,16 +49682,16 @@
       "family": "glass",
       "material": "cyan",
       "variant": "plain",
-      "role": "side",
+      "role": "water_surface",
       "seed": 7514957637801934344,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
         16
       ],
-      "pixel_sha256": "b6e013c284e9b4c247ab68a64486a44eba358f0d0c709964dc7ea335973392f0",
+      "pixel_sha256": "4cbd99a368a176e0fd66f08358be3930237ab6ed3475986f3452a3b79247ad26",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_river_water_flowing_default_river_water",
@@ -49632,16 +50332,16 @@
       "family": "glass",
       "material": "cyan",
       "variant": "plain",
-      "role": "side",
+      "role": "water_surface",
       "seed": 6218947524799974418,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
         16
       ],
-      "pixel_sha256": "5fcb7d5469fafc4029a4e6a268cfeff29327617599efaf403cdd19a2958d9f4a",
+      "pixel_sha256": "c02a403a20ac788c1fe9cd6b808b3a844bd250f9cd81aa2dc23b0d7a66ce7f22",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_water_flowing_default_water",
@@ -49689,7 +50389,7 @@
         16,
         16
       ],
-      "pixel_sha256": "eb461381a01d243d0533a6f8327b4c1c4c97bfe38cbc6f15e3f7f3cbf2134541",
+      "pixel_sha256": "2630ace5064b5c6fa4fccf0d332cbb98ecac8081d5367ee421b479d7c88d66eb",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mushroom_brown",
@@ -49715,7 +50415,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3d28292ec436c80ee391ec274c8be09f34c04724116fbf60110737f8efe50565",
+      "pixel_sha256": "69e088ef68aab5250454a904e5703fb40b72ecd4a0bc9ea09b544ae90c26f0c9",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mushroom_red",
@@ -50637,7 +51337,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9fbd5d95d5e757ef92ed5e4912dea4e3dec827430668d9a99ffd4624fe216739",
+      "pixel_sha256": "4d7940e6584099ae90021bfd2c4e764dc493ebfd7d76040780d354d4291c58eb",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "rose",
@@ -50826,7 +51526,7 @@
     {
       "stem": "mt_sapling_spruce",
       "family": "organic",
-      "material": "moss",
+      "material": "needle",
       "variant": "fresh",
       "role": "decor_sprite",
       "seed": 10186159866761163281,
@@ -50935,7 +51635,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5a9a3705889951e9ebe4c1dcbff3bc77aec84035d8ae0e5bd232659d43880009",
+      "pixel_sha256": "9427725eb8c44ef8f54d0b0070881e3264b9c0127e1049fd90a86c0714c6d9b4",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "stem_bent",
@@ -50959,7 +51659,7 @@
         16,
         16
       ],
-      "pixel_sha256": "151f56c94613fce99b3a00e7fda5e14f1cd24657cab2e745fe32f1a78e1c6f1b",
+      "pixel_sha256": "00cd2a9caae783ee32dfd04ad8bf9570f249ee192cd4d5c9a0211d04da604546",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "stem_straight",
@@ -51323,7 +52023,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d69dbab56bc07c3cc3bdbc2947528e1c0063fa47f387964e62a096099689a53d",
+      "pixel_sha256": "3ea551c09fb4219c3a1a53e874ba62b9656612de5d4d25b4f46b76206c287e42",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tree_side",
@@ -51412,16 +52112,16 @@
       "family": "glass",
       "material": "cyan",
       "variant": "plain",
-      "role": "side",
+      "role": "water_surface",
       "seed": 1083373271032244036,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
         16
       ],
-      "pixel_sha256": "ca7e299e556fb8590529b070ee9c4ca35e0c052b993b62b37def45c312b14df4",
+      "pixel_sha256": "234564f519221c217747d8a37628331d96acd3d052d5a00cad06c05756ff8a58",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "water",
@@ -51430,15 +52130,15 @@
       },
       "license": "CC0-1.0",
       "license_review_required": false,
-      "animation_frame_count": 4
+      "animation_frame_count": 16
     },
     {
       "stem": "mt_waterlily",
-      "family": "glass",
-      "material": "clear",
-      "variant": "plain",
+      "family": "organic",
+      "material": "leaf",
+      "variant": "fresh",
       "role": "decor_sprite",
-      "seed": 18025981168647666615,
+      "seed": 11347538951685418081,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -51446,7 +52146,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8d7adba089c5935979882f54c3dcc754a18312efd220d8a9a2b0f109f87b2843",
+      "pixel_sha256": "8a2f88ddb7142762bdee6213e5b11c4ba04e3e1b8641085aa7da72ee7f534631",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "waterlily",
@@ -51616,7 +52316,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d921a1046a20ea3822559bef5d9063a17864948d241f585ce20dd905a9373502",
+      "pixel_sha256": "241458e77f8c993ac7caedecbfbebe2eedbbe3e11d20686d8623914ad372ca86",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "workbench_side",

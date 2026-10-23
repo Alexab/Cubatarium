@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_needle_sparse",
+  "id": 2424,
+  "displayName": "Organic Needle Sparse",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_needle_sparse",
+    "cu_organic_needle_sparse",
+    "cu_organic_needle_sparse",
+    "cu_organic_needle_sparse",
+    "cu_organic_needle_sparse_top",
+    "cu_organic_needle_sparse"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "needle",
+    "variant": "sparse"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

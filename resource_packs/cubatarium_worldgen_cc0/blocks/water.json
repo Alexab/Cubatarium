@@ -26,10 +26,10 @@
   "render": {
     "transparent": true,
     "style": "fluid",
-    "texture_variation": 0.0
+    "texture_variation": 0.36
   },
   "animation": {
-    "frame_count": 4,
+    "frame_count": 16,
     "frametime": 6
   },
   "displayName": "Water",

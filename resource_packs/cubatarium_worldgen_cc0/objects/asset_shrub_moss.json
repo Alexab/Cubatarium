@@ -22,25 +22,7 @@
     {
       "dx": -2,
       "dy": 0,
-      "dz": -2,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": -2,
-      "dy": 0,
-      "dz": -1,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": -2,
-      "dy": 0,
       "dz": 0,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": -2,
-      "dy": 0,
-      "dz": 1,
       "type": "cu_organic_moss_spotted"
     },
     {
@@ -52,37 +34,7 @@
     {
       "dx": -1,
       "dy": 0,
-      "dz": -2,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": -1,
-      "dy": 0,
-      "dz": -1,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": -1,
-      "dy": 0,
       "dz": 0,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": -1,
-      "dy": 0,
-      "dz": 1,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": 1,
       "type": "cu_organic_moss_spotted"
     },
     {
@@ -94,67 +46,13 @@
     {
       "dx": 0,
       "dy": 0,
-      "dz": -1,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 0,
-      "dy": 0,
       "dz": 0,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 0,
-      "dy": 0,
-      "dz": 1,
       "type": "cu_organic_moss_spotted"
     },
     {
       "dx": 0,
       "dy": 0,
       "dz": 2,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
-      "dz": -1,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 1,
-      "dy": 0,
-      "dz": -2,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 1,
-      "dy": 0,
-      "dz": 1,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 1,
-      "dy": 0,
-      "dz": 2,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 1,
-      "dy": 1,
-      "dz": 1,
-      "type": "cu_organic_moss_spotted"
-    },
-    {
-      "dx": 2,
-      "dy": 0,
-      "dz": -2,
       "type": "cu_organic_moss_spotted"
     },
     {

@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_mushroom_stem_dry",
+  "id": 2432,
+  "displayName": "Organic Mushroom Stem Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_stem_dry",
+    "cu_organic_mushroom_stem_dry",
+    "cu_organic_mushroom_stem_dry",
+    "cu_organic_mushroom_stem_dry",
+    "cu_organic_mushroom_stem_dry",
+    "cu_organic_mushroom_stem_dry"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom_stem",
+    "variant": "dry"
+  }
+}

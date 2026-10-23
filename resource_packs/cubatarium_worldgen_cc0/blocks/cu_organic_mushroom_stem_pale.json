@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_mushroom_stem_pale",
+  "id": 2437,
+  "displayName": "Organic Mushroom Stem Pale",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_stem_pale",
+    "cu_organic_mushroom_stem_pale",
+    "cu_organic_mushroom_stem_pale",
+    "cu_organic_mushroom_stem_pale",
+    "cu_organic_mushroom_stem_pale",
+    "cu_organic_mushroom_stem_pale"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom_stem",
+    "variant": "pale"
+  }
+}

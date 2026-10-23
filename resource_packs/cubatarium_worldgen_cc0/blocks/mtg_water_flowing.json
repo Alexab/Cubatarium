@@ -20,7 +20,7 @@
     "mt_mtg_water_flowing_default_water"
   ],
   "render": {
-    "texture_variation": 0.0
+    "texture_variation": 0.36
   },
   "license": "CC0-1.0",
   "provenance": {
