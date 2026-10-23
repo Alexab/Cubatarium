@@ -51130,7 +51130,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7813326f65f8f4290002a7d3d4d663c5a5096231deb23e229cebdefa98ae8704",
+      "pixel_sha256": "e857289980d7e08f5c60310be151c3ceac1f9024a8e70b25b9fa068ebece74c4",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_junglegrass_default_junglegrass",
@@ -51140,7 +51140,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.625,
-      "sprite_alpha_target_coverage": 0.625,
+      "sprite_alpha_target_coverage": 0.42,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {

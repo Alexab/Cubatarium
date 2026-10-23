@@ -1373,7 +1373,12 @@ def semantic_sprite_alpha_coverage(
     if reference_coverage is None:
         return None
     name = source_stem.lower()
-    if any(token in name for token in ("tallgrass", "grass_1", "dry_grass", "junglegrass")):
+    if "junglegrass" in name:
+        # The legacy mask is a dense pixel clump. Keeping that full opacity
+        # made distinct 16px blades merge into one solid leaf shape; cap the
+        # new silhouette while retaining a minimum visible footprint.
+        return max(0.28, min(reference_coverage, 0.42))
+    if any(token in name for token in ("tallgrass", "grass_1", "dry_grass")):
         # The source masks are tiny flattened tufts. Applying their 8–11%
         # coverage to a single authored blade left only a few stray pixels;
         # the 3D tuft mesh supplies the other viewing angles at runtime.
@@ -1413,16 +1418,18 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
     cactus_seedling = "cactus_seedling" in name
     waterlily = "waterlily" in name
     vine = "vine" in name
-    fern = "fern" in name or "junglegrass" in name
+    fern = "fern" in name
+    junglegrass = "junglegrass" in name
     reed = any(token in name for token in ("reed", "papyrus", "kelp", "seagrass"))
     flower = any(token in name for token in ("flower", "blossom", "rose", "tulip", "dandelion"))
     coral = "coral" in name
     mushroom_stem = "mushroom_stem" in name
     mushroom = "mushroom" in name and "skin" not in name and not mushroom_stem
     deadbush = "deadbush" in name or "dry_shrub" in name
-    grass = any(token in name for token in ("grass_1", "dry_grass", "tallgrass", "marram", "junglegrass"))
+    grass = any(token in name for token in ("grass_1", "dry_grass", "tallgrass", "marram"))
     if not any((fire, torch, sapling, crop, cocoa, fruit, cactus_seedling, waterlily, vine,
-                fern, reed, flower, coral, mushroom, mushroom_stem, deadbush, grass)):
+                fern, junglegrass, reed, flower, coral, mushroom, mushroom_stem,
+                deadbush, grass)):
         return None
 
     rng = random.Random(seed)
@@ -1813,6 +1820,34 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                       fill=seed_head, width=max(1, round(2*s)))
             for spike in (-2, 0, 2):
                 draw.point(xy(tip_x + spike, tip_y - 2), fill=seed_head)
+    elif junglegrass:
+        # Junglegrass is a coarse, low clump of strap-like leaves. Drawing
+        # several broad, distinct blades keeps it readable at 16px and avoids
+        # the tiny feathered silhouette used by true ferns.
+        blade_colors = ((46, 113, 46, 255), (62, 137, 53, 255),
+                        (79, 151, 59, 255), (96, 161, 68, 255))
+        center = 32 + rng.randint(-2, 2)
+        leaves = (
+            (-13, rng.randint(27, 39), -7),
+            (-7, rng.randint(37, 51), -5),
+            (0, rng.randint(43, 57), rng.randint(-2, 2)),
+            (7, rng.randint(34, 49), 5),
+            (13, rng.randint(26, 39), 7),
+        )
+        for base_offset, height, lean in leaves:
+            base_x = center + base_offset
+            tip_x = base_x + lean
+            half_width = rng.randint(6, 9)
+            color = blade_colors[rng.randrange(len(blade_colors))]
+            polygon([
+                (base_x - half_width, 63),
+                (base_x - 3 + lean * 0.30, 63 - height * 0.48),
+                (tip_x, 63 - height),
+                (base_x + 3 + lean * 0.30, 63 - height * 0.50),
+                (base_x + half_width, 63),
+            ], color)
+            draw.line([xy(base_x, 63), xy(tip_x, 63 - height)],
+                      fill=(111, 169, 76, 255), width=max(1, round(1.25*s)))
     elif fern:
         stem_color = (62, 108, 44, 255)
         leaflet_colors = ((81, 137, 52, 255), (96, 151, 59, 255),
