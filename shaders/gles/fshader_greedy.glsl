@@ -173,6 +173,8 @@ float blockTileCoord(float axis)
     return fract(axis + 0.5);
 }
 
+float materialNoise(vec2 p);
+
 vec3 voxelCellFromFace(int faceIndex, vec3 worldPos)
 {
     // Move a face point a tiny distance inward before rounding to the owning
@@ -258,6 +260,17 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
         tile = vec2(blockTileCoord(worldPos.x), 1.0 - blockTileCoord(worldPos.z));
     } else {
         tile = vec2(blockTileCoord(worldPos.x), blockTileCoord(worldPos.z));
+    }
+    // Water's small source tile repeats too clearly across broad surfaces.
+    // Slowly warp its phase with a continuous world-space field so neighboring
+    // blocks meet without seams while the texture pattern drifts naturally.
+    if (uTextureVariation >= 0.34 && uTextureVariation <= 0.40 && faceIndex >= 4) {
+        vec2 waterPlane = worldPos.xz;
+        vec2 phaseWarp = vec2(
+            materialNoise(waterPlane * 0.21 + vec2(17.8, 9.3)),
+            materialNoise(waterPlane * 0.21 + vec2(3.2, 29.6))
+        ) - 0.5;
+        tile = fract(tile + phaseWarp * 0.82);
     }
     // Per-block discrete tile transforms break large repeated ground and rock
     // patterns while keeping each 16 px texture seamless and unwarped.
@@ -357,18 +370,23 @@ vec4 materialVariation(vec2 planePosition)
 
 float waterSurfaceLight(vec2 planePosition)
 {
-    // Use a continuous world-space field so adjacent 16px water tiles do not
-    // repeat as a visible grid. Multi-scale swell is bent into broken diagonal
-    // ripples; all terms share world coordinates and therefore meet at faces.
-    float swell = materialNoise(planePosition * 0.27 + vec2(8.7, 16.1));
-    float current = materialNoise(planePosition * 0.91 + vec2(21.4, 4.8));
-    float grain = materialNoise(planePosition * 3.3 + vec2(3.2, 29.6));
-    float phase = planePosition.x * 1.31 + planePosition.y * 0.47
-                  + (swell - 0.5) * 2.2 + (current - 0.5) * 1.5;
-    float crest = smoothstep(0.79, 0.94, 0.5 + 0.5 * cos(phase));
-    return clamp(0.76 + (swell - 0.5) * 0.48
-                 + (current - 0.5) * 0.34 + (grain - 0.5) * 0.18
-                 + crest * 0.12, 0.56, 1.20);
+    // A continuous, domain-warped field makes broken ripple crests without
+    // the parallel, evenly spaced bands produced by a sine wave. All terms
+    // use world coordinates, so the pattern stays continuous across blocks.
+    vec2 warp = vec2(
+        materialNoise(planePosition * 0.21 + vec2(11.6, 24.2)),
+        materialNoise(planePosition * 0.21 + vec2(26.4, 6.8))
+    ) - 0.5;
+    vec2 warped = planePosition + warp * 2.4;
+    float swell = materialNoise(warped * 0.19 + vec2(8.7, 16.1));
+    float current = materialNoise(warped * 0.57 + vec2(21.4, 4.8));
+    float grain = materialNoise(warped * 1.8 + vec2(3.2, 29.6));
+    float ripple = materialNoise(warped * 3.7 + vec2(16.2, 12.7));
+    float ridge = 1.0 - abs(ripple * 2.0 - 1.0);
+    float crest = smoothstep(0.70, 0.91, ridge) * (0.55 + current * 0.45);
+    return clamp(0.80 + (swell - 0.5) * 0.34
+                 + (current - 0.5) * 0.24 + (grain - 0.5) * 0.15
+                 + crest * 0.13, 0.62, 1.18);
 }
 
 void main()
