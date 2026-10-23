@@ -24,7 +24,7 @@
     "transparent": true,
     "style": "cross",
     "double_sided": true,
-    "shape": "cluster",
+    "shape": "cross",
     "texture_variation": 1.0
   },
   "physics": {

@@ -104,6 +104,20 @@ inline void AppendDecorSprite(BlockDecorShape shape, const glm::vec3 &center,
     AppendCrossSprite(center, vertices, indices);
     return;
   }
+  if (shape == BlockDecorShape::Pad)
+  {
+    // A waterlily is a low horizontal leaf. Its transparent texture defines
+    // the rounded edge and notch; the supporting block remains visible below.
+    const float half = 0.46f;
+    const float y = center.y - 0.48f;
+    const uint32_t base = static_cast<uint32_t>(vertices.size());
+    vertices.push_back(CrossVertex({center.x - half, y, center.z - half}, 0.0f, 0.0f));
+    vertices.push_back(CrossVertex({center.x + half, y, center.z - half}, 1.0f, 0.0f));
+    vertices.push_back(CrossVertex({center.x + half, y, center.z + half}, 1.0f, 1.0f));
+    vertices.push_back(CrossVertex({center.x - half, y, center.z + half}, 0.0f, 1.0f));
+    indices.insert(indices.end(), {base, base + 1, base + 2, base, base + 2, base + 3});
+    return;
+  }
   if (shape == BlockDecorShape::Tuft)
   {
     static constexpr float kAngles[] = {0.0f, 0.9f, 1.9f, 2.8f, 4.0f, 5.1f};

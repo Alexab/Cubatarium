@@ -66,7 +66,7 @@ private:
   void UploadBuffer(GLuint &buffer, size_t &capacity_bytes, unsigned int target,
                     const void *data, size_t byte_size);
 
-  std::array<TemplateMesh, 5> Templates{};
+  std::array<TemplateMesh, 6> Templates{};
 };
 
 } // namespace cutum

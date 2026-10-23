@@ -1495,12 +1495,31 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                 draw.line([xy(32, y), xy(32 + side * 7, y - 2)],
                           fill=(218, 207, 150, 255), width=max(1, round(s)))
     elif waterlily:
-        for angle in range(0, 360, 45):
+        center_x = 32 + rng.randint(-1, 1)
+        center_y = 32 + rng.randint(-1, 1)
+        radius_x, radius_y = 25, 23
+        arc = [
+            (center_x + math.cos(math.radians(angle)) * radius_x,
+             center_y + math.sin(math.radians(angle)) * radius_y)
+            for angle in range(45, 326, 8)
+        ]
+        # A waterlily is a nearly round floating leaf with a clear radial
+        # notch. Its old eight-blade flower silhouette was rendered upright
+        # and read as a tiny green star instead of a pond plant.
+        leaf = (64, 126, 57, 255)
+        polygon([(center_x, center_y), *arc], leaf)
+        outline = [xy(x, y) for x, y in arc]
+        draw.line(outline, fill=(45, 98, 46, 255), width=max(1, round(2*s)))
+        for angle in (70, 112, 154, 196, 238, 280):
             theta = math.radians(angle)
-            cx, cy = 32 + math.cos(theta) * 13, 40 + math.sin(theta) * 13
-            polygon([(32, 40), (cx - 6, cy - 4), (cx, cy), (cx + 4, cy - 6)],
-                    (74, 134, 59, 255))
-        draw.ellipse((*xy(27, 35), *xy(37, 45)), fill=(220, 190, 92, 255))
+            end_x = center_x + math.cos(theta) * (radius_x - 4)
+            end_y = center_y + math.sin(theta) * (radius_y - 4)
+            draw.line([xy(center_x, center_y), xy(end_x, end_y)],
+                      fill=(92, 151, 72, 255), width=max(1, round(s)))
+        # A small bud at the leaf root gives the top-down tile a focal point.
+        draw.ellipse((*xy(center_x - 2, center_y - 2),
+                      *xy(center_x + 2, center_y + 2)),
+                     fill=(226, 190, 91, 255))
     elif vine:
         vine_color = (66, 121, 49, 255)
         leaf_colors = ((74, 133, 52, 255), (92, 151, 60, 255),
@@ -2790,7 +2809,13 @@ def block_definition(record: dict[str, str], face_stems: list[str], block_id: in
         physics = {"movement": {"occupancy": 0.0}}
     mushroom_cap = record["material"].startswith("mushroom_") and record["material"] != "mushroom_stem"
     if family == "organic" and (record["material"] in ("blossom", "fern", "reed", "mushroom", "kelp", "coral") or record["material"].startswith("flower_") or mushroom_cap):
-        shape = "flame" if "fire" in record["name"] else "reed" if record["material"] in ("reed", "kelp") else "cluster" if record["material"] in ("blossom", "coral", "mushroom") or record["material"].startswith(("flower_", "mushroom_")) else "tuft"
+        shape = (
+            "flame" if "fire" in record["name"] else
+            "reed" if record["material"] in ("reed", "kelp") else
+            "cluster" if record["material"] == "coral" else
+            "tuft" if record["material"] == "fern" else
+            "cross"
+        )
         if mushroom_cap or record["material"] == "mushroom":
             shape = "cross"
         render.update({"style": "cross", "shape": shape, "transparent": True, "double_sided": True})
@@ -3691,10 +3716,11 @@ def build_pack(
         if render.get("style") == "cross":
             render["shape"] = (
                 "flame" if "fire" in name else
+                "pad" if any(token in name for token in ("waterlily", "lily_pad")) else
                 "cross" if "mushroom" in name else
                 "reed" if any(token in name for token in ("reed", "papyrus", "kelp", "seagrass", "vine")) else
                 "tuft" if any(token in name for token in ("grass", "fern", "deadbush", "shrub", "crop", "carrot", "potato", "wheat", "cactus_seedling", "pine_needles")) else
-                "cluster" if any(token in name for token in ("sapling", "flower", "mushroom", "cocoa", "apple", "waterlily")) else
+                "cluster" if "bush_sapling" in name else
                 "cross"
             )
             render["texture_variation"] = 1.0
@@ -3838,9 +3864,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 24,
+            "version": 25,
             "backend": "procedural",
-            "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_passable_decor_v24",
+            "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_passable_decor_v25",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,

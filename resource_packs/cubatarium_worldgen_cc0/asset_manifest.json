@@ -9,9 +9,9 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 24,
+    "version": 25,
     "backend": "procedural",
-    "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_passable_decor_v24",
+    "texture_synthesis": "wrapped_cellular_bark_water_ripples_birch_needles_species_trees_passable_decor_v25",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"
@@ -54456,7 +54456,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8a2f88ddb7142762bdee6213e5b11c4ba04e3e1b8641085aa7da72ee7f534631",
+      "pixel_sha256": "6ed47f553ca93090e5031b4ba94f4230e207444539628db7cfc32dcc73c1a67d",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "waterlily",

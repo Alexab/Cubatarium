@@ -24,7 +24,7 @@
   "render": {
     "texture_variation": 1.0,
     "style": "cross",
-    "shape": "cluster",
+    "shape": "cross",
     "transparent": true,
     "double_sided": true
   },

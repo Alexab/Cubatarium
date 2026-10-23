@@ -24,7 +24,7 @@
   "render": {
     "transparent": true,
     "style": "cross",
-    "shape": "cross",
+    "shape": "pad",
     "texture_variation": 1.0,
     "double_sided": true
   },
