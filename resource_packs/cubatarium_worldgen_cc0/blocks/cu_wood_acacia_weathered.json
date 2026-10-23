@@ -18,8 +18,8 @@
     "cu_wood_acacia_weathered",
     "cu_wood_acacia_weathered",
     "cu_wood_acacia_weathered",
-    "cu_wood_acacia_weathered_endgrain",
-    "cu_wood_acacia_weathered_endgrain"
+    "cu_wood_acacia_weathered_top",
+    "cu_wood_acacia_weathered_bottom"
   ],
   "render": {
     "texture_variation": 0.48

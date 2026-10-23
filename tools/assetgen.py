@@ -278,6 +278,110 @@ def _wrapped_noise(seed: int, size: int) -> tuple[list[float], list[float], list
     )
 
 
+def _wood_endgrain_texture(
+    base: tuple[int, int, int], variant: str, seed: int, size: int,
+) -> Image.Image:
+    """Draw a tileable cut-wood face with growth rings, pith, and fine rays."""
+    coarse, medium, fine = _wrapped_noise(seed, size)
+    grain = tile_noise(seed ^ 0x454E4447, size, size, size)
+    phase_offset = (stable_seed(variant) % 997) / 997.0 * math.tau
+    dark_variant = any(token in variant for token in ("dark", "aged", "weathered"))
+    pale_variant = "pale" in variant
+    tint = 0.84 if dark_variant else 1.08 if pale_variant else 1.0
+    wood = shade(base, tint)
+    palette = (0.72, 0.83, 0.92, 1.0, 1.08, 1.16)
+    ray_angles = tuple(
+        (phase_offset + index * math.tau / 5.0) % math.tau
+        for index in range(5)
+    )
+    pixels: list[tuple[int, int, int, int]] = []
+    ring_spacing = max(2.2, size * 0.17)
+    for y in range(size):
+        for x in range(size):
+            i = y * size + x
+            dx = x + 0.5 - size / 2.0
+            dy = y + 0.5 - size / 2.0
+            # Distances wrap around the tile. Matching distances at opposite
+            # edges keeps the annual rings continuous when adjacent blocks meet.
+            dx -= round(dx / size) * size
+            dy -= round(dy / size) * size
+            radius = math.hypot(dx, dy)
+            angle = math.atan2(dy, dx)
+            distortion = coarse[i] * 0.24 + medium[i] * 0.12
+            ring = math.cos((radius + distortion) * math.tau / ring_spacing + phase_offset * 0.08)
+            tone = 0.5 + 0.37 * ring + 0.08 * fine[i] + 0.05 * grain[i]
+            palette_index = max(0, min(len(palette) - 1, round(tone * (len(palette) - 1))))
+            factor = palette[palette_index]
+
+            # A handful of subdued radial rays makes the face read as cut
+            # timber instead of stone; they taper out before reaching the edge.
+            angular_distance = min(
+                abs((angle - ray + math.pi) % math.tau - math.pi)
+                for ray in ray_angles
+            )
+            if 1.5 < radius < size * 0.48 and angular_distance < 0.055:
+                factor *= 0.86
+            if radius < 0.9:
+                factor *= 0.72
+
+            rgb = shade(wood, factor)
+            pixels.append((*rgb, 255))
+    image = Image.new("RGBA", (size, size))
+    image.putdata(pixels)
+    return image
+
+
+def _wood_surface_texture(
+    base: tuple[int, int, int], variant: str, seed: int, size: int, role: str,
+) -> Image.Image:
+    """Draw long-grain wood faces with irregular fibers and an occasional knot."""
+    coarse, medium, fine = _wrapped_noise(seed, size)
+    grain = tile_noise(seed ^ 0x574F4F44, size, size, size)
+    knot_seed = stable_seed(f"wood-knot:{seed}")
+    knot_x = (knot_seed % size) + 0.5
+    knot_y = ((knot_seed // max(1, size)) % size) + 0.5
+    phase_offset = (stable_seed(variant) % 997) / 997.0 * math.tau
+    tint = (
+        0.78 if any(token in variant for token in ("dark", "aged", "weathered"))
+        else 1.10 if "pale" in variant else 1.0
+    )
+    if role == "bottom":
+        tint *= 0.92
+    wood = shade(base, tint)
+    pixels: list[tuple[int, int, int, int]] = []
+    for y in range(size):
+        for x in range(size):
+            i = y * size + x
+            flow = coarse[i] * 0.48 + medium[i] * 0.36 + fine[i] * 0.20
+            phase = (
+                (y + flow * max(1, size // 3)) * math.tau * 2.35 / size
+                + math.sin((x + phase_offset) * math.tau / size) * 0.34
+                + phase_offset
+            )
+            fibers = math.cos(phase) * 0.24 + math.cos(phase * 1.9 + fine[i]) * 0.09
+            tone = (
+                1.0 + fibers + coarse[i] * 0.10 + medium[i] * 0.12
+                + fine[i] * 0.11 + grain[i] * 0.08
+            )
+
+            dx = abs((x + 0.5) - knot_x)
+            dy = abs((y + 0.5) - knot_y)
+            dx = min(dx, size - dx)
+            dy = min(dy, size - dy)
+            knot_radius = math.sqrt(dx * dx + dy * dy * 0.52)
+            if 0.55 < knot_radius < 1.55:
+                tone *= 0.76
+            elif knot_radius <= 0.55:
+                tone *= 0.94
+
+            pixel_tone = tone + fine[i] * 0.025 + grain[i] * 0.025
+            rgb = shade(wood, max(0.64, min(1.32, pixel_tone)))
+            pixels.append((*rgb, 255))
+    image = Image.new("RGBA", (size, size))
+    image.putdata(pixels)
+    return image
+
+
 def _wrapped_cellular_plates(seed: int, size: int) -> tuple[list[float], list[float]]:
     """Return seamless irregular plate tones and crack strengths for bark.
 
@@ -535,7 +639,11 @@ def generated_texture(
     """Generate a semantic, seamless albedo texture from material parameters."""
     colors = FAMILY_COLORS[family]
     base = MATERIAL_TINTS.get((family, material), colors[stable_seed(f"{family}:{material}") % len(colors)])
-    birch_bark = family == "wood" and material == "birch" and variant == "bark"
+    birch_bark = (
+        family == "wood" and material == "birch" and variant == "bark"
+        and role != "endgrain"
+    )
+    bark_surface = family == "wood" and variant == "bark" and role != "endgrain"
     if family == "organic" and material == "leaf":
         # Leaf variants carry seasonal and canopy-density color roles instead
         # of changing only the noise seed.
@@ -556,7 +664,11 @@ def generated_texture(
         # pixels or spatial samples participate in texture synthesis.
         weight = max(0.0, min(0.75, calibration.get("color_weight", 0.12)))
         base = tuple(round(base[i] * (1.0 - weight) + calibration[key] * weight) for i, key in enumerate(("mean_rgb_r", "mean_rgb_g", "mean_rgb_b")))
-    if family == "wood" and variant == "bark":
+    if family == "wood" and (role == "endgrain" or "endgrain" in variant):
+        return _wood_endgrain_texture(base, variant, seed, size)
+    if family == "wood" and role in ("top", "bottom"):
+        return _wood_surface_texture(base, variant, seed, size, role)
+    if bark_surface:
         if birch_bark:
             # Birch bark stays pale; its short dark lenticels are laid over the
             # generated ivory surface after the material shading is complete.
@@ -578,7 +690,7 @@ def generated_texture(
         palette_factors = (0.70, 0.86, 1.0, 1.16)
     elif birch_bark:
         palette_factors = (0.84, 0.91, 0.96, 1.0, 1.04, 1.08)
-    elif family == "wood" and variant == "bark":
+    elif bark_surface:
         palette_factors = (0.45, 0.57, 0.69, 0.81, 0.93, 1.05, 1.17, 1.29, 1.41)
     elif family == "wood":
         palette_factors = (0.70, 0.86, 1.0, 1.15)
@@ -598,7 +710,7 @@ def generated_texture(
     )
     bark_plate_tones, bark_crack_strengths = (
         _wrapped_cellular_plates(seed, size)
-        if family == "wood" and variant == "bark"
+        if bark_surface
         else (None, None)
     )
     style = PATTERN_BY_FAMILY[family]
@@ -676,12 +788,7 @@ def generated_texture(
             # Family patterns describe recognizable structure, while noise only
             # perturbs that structure instead of becoming the whole texture.
             if style == "wood":
-                if role in ("top", "bottom", "endgrain") or "endgrain" in variant:
-                    dx = min(x, size - x) / max(1, size / 2)
-                    dy = min(y, size - y) / max(1, size / 2)
-                    ring = int(math.sqrt(dx * dx * 0.75 + dy * dy) * max(3, size / 2)) % max(3, size // 5)
-                    value += 0.22 if ring in (0, 1) else -0.07
-                elif variant == "bark":
+                if bark_surface:
                     # Bark is made of broken plates and short fissures. A
                     # wrapped cellular field replaces the earlier sinusoidal
                     # groove pattern that read as vertical waves on trunks.
@@ -822,7 +929,7 @@ def generated_texture(
             elif role == "top":
                 value += 0.04
             value *= contrast_scale
-            if family == "wood" and variant == "bark":
+            if bark_surface:
                 index = max(0, min(len(colors4) - 1, int(round((len(colors4) - 1) * 0.5 + value * 5.0 + (variant_bias - 2) * 0.035))))
             elif family == "soil" and material in ("pale_sand", "silt"):
                 index = max(0, min(len(colors4) - 1, int(round((len(colors4) - 1) * 0.5 + value * 5.0 + (variant_bias - 2) * 0.035))))
@@ -842,7 +949,7 @@ def generated_texture(
                 elif style in ("grain", "mottle", "organic", "crystal") and fine[i] < -0.94 * detail_scale:
                     rgb = shade(rgb, 0.88)
             else:
-                if family == "wood" and variant == "bark" and not birch_bark:
+                if bark_surface and not birch_bark:
                     bark_factor = palette_factors[index]
                     channel_contrast = (1.28, 1.55, 1.75)
                     rgb = tuple(
@@ -2259,6 +2366,8 @@ def block_face_textures(record: dict[str, str], base_stem: str) -> tuple[list[st
         face_stems = [base_stem] * 4
         for index, face in ((4, "top"), (5, "bottom")):
             role = recipe.get(face, face)
+            if family == "wood" and variant in ("bark", "endgrain", "stripped"):
+                role = "endgrain"
             if family == "organic" and role == "grass_top" and material != "moss":
                 role = "top"
             if role == "side":

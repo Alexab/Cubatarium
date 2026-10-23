@@ -18,8 +18,8 @@
     "cu_wood_maple_aged",
     "cu_wood_maple_aged",
     "cu_wood_maple_aged",
-    "cu_wood_maple_aged_endgrain",
-    "cu_wood_maple_aged_endgrain"
+    "cu_wood_maple_aged_top",
+    "cu_wood_maple_aged_bottom"
   ],
   "render": {
     "texture_variation": 0.48

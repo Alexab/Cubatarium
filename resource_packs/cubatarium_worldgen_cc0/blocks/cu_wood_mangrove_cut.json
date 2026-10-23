@@ -18,8 +18,8 @@
     "cu_wood_mangrove_cut",
     "cu_wood_mangrove_cut",
     "cu_wood_mangrove_cut",
-    "cu_wood_mangrove_cut_endgrain",
-    "cu_wood_mangrove_cut_endgrain"
+    "cu_wood_mangrove_cut_top",
+    "cu_wood_mangrove_cut_bottom"
   ],
   "render": {
     "texture_variation": 0.48

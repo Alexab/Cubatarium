@@ -18,8 +18,8 @@
     "cu_wood_oak_aged",
     "cu_wood_oak_aged",
     "cu_wood_oak_aged",
-    "cu_wood_oak_aged_endgrain",
-    "cu_wood_oak_aged_endgrain"
+    "cu_wood_oak_aged_top",
+    "cu_wood_oak_aged_bottom"
   ],
   "render": {
     "texture_variation": 0.48

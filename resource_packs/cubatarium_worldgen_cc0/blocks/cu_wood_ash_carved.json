@@ -18,8 +18,8 @@
     "cu_wood_ash_carved",
     "cu_wood_ash_carved",
     "cu_wood_ash_carved",
-    "cu_wood_ash_carved_endgrain",
-    "cu_wood_ash_carved_endgrain"
+    "cu_wood_ash_carved_top",
+    "cu_wood_ash_carved_bottom"
   ],
   "render": {
     "texture_variation": 0.48

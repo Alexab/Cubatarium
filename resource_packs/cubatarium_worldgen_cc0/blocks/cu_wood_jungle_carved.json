@@ -18,8 +18,8 @@
     "cu_wood_jungle_carved",
     "cu_wood_jungle_carved",
     "cu_wood_jungle_carved",
-    "cu_wood_jungle_carved_endgrain",
-    "cu_wood_jungle_carved_endgrain"
+    "cu_wood_jungle_carved_top",
+    "cu_wood_jungle_carved_bottom"
   ],
   "render": {
     "texture_variation": 0.48

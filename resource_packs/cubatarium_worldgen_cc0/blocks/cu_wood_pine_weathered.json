@@ -18,8 +18,8 @@
     "cu_wood_pine_weathered",
     "cu_wood_pine_weathered",
     "cu_wood_pine_weathered",
-    "cu_wood_pine_weathered_endgrain",
-    "cu_wood_pine_weathered_endgrain"
+    "cu_wood_pine_weathered_top",
+    "cu_wood_pine_weathered_bottom"
   ],
   "render": {
     "texture_variation": 0.48

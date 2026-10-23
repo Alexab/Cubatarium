@@ -18,8 +18,8 @@
     "cu_wood_oak_dark",
     "cu_wood_oak_dark",
     "cu_wood_oak_dark",
-    "cu_wood_oak_dark_endgrain",
-    "cu_wood_oak_dark_endgrain"
+    "cu_wood_oak_dark_top",
+    "cu_wood_oak_dark_bottom"
   ],
   "render": {
     "texture_variation": 0.48

@@ -18,8 +18,8 @@
     "cu_wood_redwood_carved",
     "cu_wood_redwood_carved",
     "cu_wood_redwood_carved",
-    "cu_wood_redwood_carved_endgrain",
-    "cu_wood_redwood_carved_endgrain"
+    "cu_wood_redwood_carved_top",
+    "cu_wood_redwood_carved_bottom"
   ],
   "render": {
     "texture_variation": 0.48

@@ -17,8 +17,8 @@ profiles:
 face_recipes:
   wood:
     side: side
-    top: endgrain
-    bottom: endgrain
+    top: top
+    bottom: bottom
     split: true
   soil:
     side: side

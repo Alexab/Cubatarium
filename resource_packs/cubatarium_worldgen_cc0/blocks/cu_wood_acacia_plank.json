@@ -18,8 +18,8 @@
     "cu_wood_acacia_plank",
     "cu_wood_acacia_plank",
     "cu_wood_acacia_plank",
-    "cu_wood_acacia_plank_endgrain",
-    "cu_wood_acacia_plank_endgrain"
+    "cu_wood_acacia_plank_top",
+    "cu_wood_acacia_plank_bottom"
   ],
   "render": {
     "texture_variation": 0.48

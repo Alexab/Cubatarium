@@ -22,7 +22,7 @@
     "procedural_cc0_block_definitions": 1416,
     "minetest_block_definitions_included": 258,
     "geology_block_definitions_included": 10,
-    "textures": 2254,
+    "textures": 2359,
     "minetest_textures_replaced": 313,
     "geology_textures_replaced": 9,
     "minetest_block_definitions_overridden": 258,
@@ -37911,12 +37911,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_acacia_aged_endgrain",
+      "stem": "cu_wood_acacia_aged_bottom",
       "family": "wood",
       "material": "acacia",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 9141747484175135190,
+      "role": "bottom",
+      "seed": 4059635455625236091,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -37924,7 +37924,29 @@
         16,
         16
       ],
-      "pixel_sha256": "4e9bfda49838979bb9a939df12a45082bccb84b56909e66c6d057e35fee3f86f",
+      "pixel_sha256": "9ae2043526da1ce2f0d5cb61ee7dc79257e402774d935f146c6eecf3652d5074",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_acacia_aged_top",
+      "family": "wood",
+      "material": "acacia",
+      "variant": "aged",
+      "role": "top",
+      "seed": 12465648006764798661,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a06a6b10d318b3c4f554fc6ec1819881ba1fdc9a84bcc5be6f483b4ced1d6d1c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -37968,7 +37990,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9c4eae9042fd76bf6fb8ea486736eb162f98ba5989f53614f477c6bc5d8ecd3e",
+      "pixel_sha256": "75d1d232151bfd1a745abe7fb4f483e1dd88c8ccf90cf3d46ebfa823e7f59db2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -37999,12 +38021,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_acacia_carved_endgrain",
+      "stem": "cu_wood_acacia_carved_bottom",
       "family": "wood",
       "material": "acacia",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 3258849377722005125,
+      "role": "bottom",
+      "seed": 18113909865533232831,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38012,7 +38034,29 @@
         16,
         16
       ],
-      "pixel_sha256": "87cf662462c1410ff7b9bcaddd8df1bd64d021f465948075486e5515582c2271",
+      "pixel_sha256": "4d6763e780a59489fc442f1c43bc066595a4749a37c851ee33e4cae36944eb49",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_acacia_carved_top",
+      "family": "wood",
+      "material": "acacia",
+      "variant": "carved",
+      "role": "top",
+      "seed": 4371849554348071539,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f01ade4df6c472e84f07b698b70af6449d4522d2bf018641b37173c3d1f8fb86",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38043,12 +38087,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_acacia_cut_endgrain",
+      "stem": "cu_wood_acacia_cut_bottom",
       "family": "wood",
       "material": "acacia",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 2033924501786630151,
+      "role": "bottom",
+      "seed": 16471979754845056137,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38056,7 +38100,29 @@
         16,
         16
       ],
-      "pixel_sha256": "09618e5ac5be08989bd48c369f04513915b522673098ae78264dbfaed8ed9122",
+      "pixel_sha256": "c61659c7521728a763a291061b29e558afe74ca9d5695c2df2851218ddd803af",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_acacia_cut_top",
+      "family": "wood",
+      "material": "acacia",
+      "variant": "cut",
+      "role": "top",
+      "seed": 9300121938701513476,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5e8e8292db1444b17fbf0777e6fa80541ae7a9f7756878c29a10ab6e9765343e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38087,12 +38153,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_acacia_dark_endgrain",
+      "stem": "cu_wood_acacia_dark_bottom",
       "family": "wood",
       "material": "acacia",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 4756336610238672004,
+      "role": "bottom",
+      "seed": 10159829681995384362,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38100,7 +38166,29 @@
         16,
         16
       ],
-      "pixel_sha256": "08a5ffcbb2d8bcdc4bfeb7bc19b38d20305a274e58ff0727ff6e593e525c6b16",
+      "pixel_sha256": "d09887b1c0935923d29d2063e68a681db17a330394633fa6cb4f04f2c27522cc",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_acacia_dark_top",
+      "family": "wood",
+      "material": "acacia",
+      "variant": "dark",
+      "role": "top",
+      "seed": 427824876979191632,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "060e94c137e95dccb92abdfd073bc0188f45c34d5559db724e4db8c173e07c4d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38122,7 +38210,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a9e40c4b0e3e2733f3b45e59fb8771a298cf64baaa72f72ba5413a9ab03c05cc",
+      "pixel_sha256": "b2d0b3a334888b4fc5091c7ba3a3033338c45bf4f3d72fab1623a848813a9d66",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38144,7 +38232,7 @@
         16,
         16
       ],
-      "pixel_sha256": "206a90f4c09a35c1781e689073657e310b56bffac9f5398ddbc1b57c4993744e",
+      "pixel_sha256": "c3d81dab01a52e8407170c3256aec5eec2698244cfe3aafbc7cadea50d2183ca",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38175,12 +38263,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_acacia_pale_endgrain",
+      "stem": "cu_wood_acacia_pale_bottom",
       "family": "wood",
       "material": "acacia",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 1101303443379743487,
+      "role": "bottom",
+      "seed": 16474303073333116668,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38188,7 +38276,29 @@
         16,
         16
       ],
-      "pixel_sha256": "d49e66063634f0744b804f1727035a2eeadc1092ae1be1cde42be91f4c6290a3",
+      "pixel_sha256": "ee1df27f2249d7095e3f8d860cd97ebe966d51a493a66dc3ab3c5987cd4aa5a4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_acacia_pale_top",
+      "family": "wood",
+      "material": "acacia",
+      "variant": "pale",
+      "role": "top",
+      "seed": 10730004158733863738,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "61490e34eae9c3c44f3ce8da97c0bb6bdce372d3a321ffd2764c7b63b064f320",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38219,12 +38329,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_acacia_plank_endgrain",
+      "stem": "cu_wood_acacia_plank_bottom",
       "family": "wood",
       "material": "acacia",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 3166427834735249424,
+      "role": "bottom",
+      "seed": 18432666118185116,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38232,7 +38342,29 @@
         16,
         16
       ],
-      "pixel_sha256": "c2e51730c11c91ff5f637c3246b2a22b79d6329dc8aa04688376a2c39cca240c",
+      "pixel_sha256": "d1c4830bd912a13774acfbc0e5f30deaa59db1e704673c37ccae86b2218ecdaf",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_acacia_plank_top",
+      "family": "wood",
+      "material": "acacia",
+      "variant": "plank",
+      "role": "top",
+      "seed": 14752853266395097356,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "8adc52ffdf3f751041e2cc40b9dc40a1461b8cf53359bd491d82d13ee9d2854c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38276,7 +38408,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ab54022debd153803b00d6f5b443686088ab71cc00bcaa880a47d122296499d7",
+      "pixel_sha256": "fbc22d5f4d5299c74f587e4946f99f4c25ca0817d6e6789ba438614f5ba62ae7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38307,12 +38439,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_acacia_weathered_endgrain",
+      "stem": "cu_wood_acacia_weathered_bottom",
       "family": "wood",
       "material": "acacia",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 5451921979936769730,
+      "role": "bottom",
+      "seed": 10398082030969739928,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38320,7 +38452,29 @@
         16,
         16
       ],
-      "pixel_sha256": "2f7a7520e76e84238e1e3b52f3b3a9f7aef5172aa4c0cb017639e9d0be209f84",
+      "pixel_sha256": "731be9477d87a5ac71996101c593b0d32b81d9b0d06a00644aed0c39b7e1a3c7",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_acacia_weathered_top",
+      "family": "wood",
+      "material": "acacia",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 2355261912768149309,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d6ec22de044aaaa4dc6df12b73b497257bdd94e8b42354dcdf476351b547750c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38351,12 +38505,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_ash_aged_endgrain",
+      "stem": "cu_wood_ash_aged_bottom",
       "family": "wood",
       "material": "ash",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 12599904670296364239,
+      "role": "bottom",
+      "seed": 12019268906776032865,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38364,7 +38518,29 @@
         16,
         16
       ],
-      "pixel_sha256": "3444338fc92d03dbeb6921eee687c3580d19c84d1a9540286796587aa46c55b2",
+      "pixel_sha256": "580a733ac0c617cc2548b8e745295ea990e09fa6567ac5b7f8e02defd4aaf60d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_ash_aged_top",
+      "family": "wood",
+      "material": "ash",
+      "variant": "aged",
+      "role": "top",
+      "seed": 7529581624571070643,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9899e7d628eab8cfc3fcd9440154695c20894031e04c8c4c91c0aaae09a19610",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38408,7 +38584,7 @@
         16,
         16
       ],
-      "pixel_sha256": "264e63278291e0b299fed3177295f54b7380bc16750f28066fb2402d467853b5",
+      "pixel_sha256": "1efc366bb4bf400b9fb725338f67a20a8c363d3d0029eccba6400e094ded7851",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38439,12 +38615,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_ash_carved_endgrain",
+      "stem": "cu_wood_ash_carved_bottom",
       "family": "wood",
       "material": "ash",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 10040659844918882517,
+      "role": "bottom",
+      "seed": 10216997483735353012,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38452,7 +38628,29 @@
         16,
         16
       ],
-      "pixel_sha256": "0339fab750583437d6c3a8ed9e7579b440ad11bd5e9a2ef742636a9abef7ed34",
+      "pixel_sha256": "7dd2145eae3fa416b022a41d0f2dfbeb3bfe43fb12ae945d06ee450feb368035",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_ash_carved_top",
+      "family": "wood",
+      "material": "ash",
+      "variant": "carved",
+      "role": "top",
+      "seed": 6777723312947707445,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "49279a937bf908cc4be47a8e724b94294e262d03ff875cb3d4b68b9b3004ebaa",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38483,12 +38681,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_ash_cut_endgrain",
+      "stem": "cu_wood_ash_cut_bottom",
       "family": "wood",
       "material": "ash",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 15726132417784827616,
+      "role": "bottom",
+      "seed": 2352097795672991450,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38496,7 +38694,29 @@
         16,
         16
       ],
-      "pixel_sha256": "e9428bb0daf91dc6e1e68e9651e7b19483b2cd94cf27ef3511649b311dac9607",
+      "pixel_sha256": "47a9f9553c5eb46f254e33b443e9f155d90e515cc399bf4ec3b3c9b04b0aa6ae",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_ash_cut_top",
+      "family": "wood",
+      "material": "ash",
+      "variant": "cut",
+      "role": "top",
+      "seed": 16980819470471603560,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "4ca7f7a79c2640b39dc2f5efe175409f8b2ce3d34c0fe22fe0ebb8a2eea40cf2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38527,12 +38747,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_ash_dark_endgrain",
+      "stem": "cu_wood_ash_dark_bottom",
       "family": "wood",
       "material": "ash",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 18427833423401920868,
+      "role": "bottom",
+      "seed": 17296061113051350746,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38540,7 +38760,29 @@
         16,
         16
       ],
-      "pixel_sha256": "01f9904e4e8079503ad61bab693ec283e0792527b3621219a00f29d5942da850",
+      "pixel_sha256": "83757aa35509a58678b047dc56184bd15f02c8a8a5c04b827dad21d45c508365",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_ash_dark_top",
+      "family": "wood",
+      "material": "ash",
+      "variant": "dark",
+      "role": "top",
+      "seed": 8352388353436716510,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ad780c0f3390c027e09d2dd61c8751257186c2b822c36d36d6f38977746c059e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38562,7 +38804,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5d8521b0671ded62cbb8a8d4c39260f0d9f3d324a9a13377658e9cbbae6db657",
+      "pixel_sha256": "bb5a37cc8c8421d6baa71a2f230a85971e01f304504feddb9b5bdf29cb0bd249",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38584,7 +38826,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e030c906e2beb6f67a2296e1bb2123dfbb8a55df66001e3a202909b7ce1788f3",
+      "pixel_sha256": "6bc8834fad530e31ee48e4b62db441321350712038008431c6cc4de46ec8e1a7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38615,12 +38857,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_ash_pale_endgrain",
+      "stem": "cu_wood_ash_pale_bottom",
       "family": "wood",
       "material": "ash",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 10672100236744771071,
+      "role": "bottom",
+      "seed": 18233774671833238557,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38628,7 +38870,29 @@
         16,
         16
       ],
-      "pixel_sha256": "1d98c186bee0ebba868526bbe5b4a4d94b21f30691d45921ef739aea7f1e5b74",
+      "pixel_sha256": "922bdb8b2b20cf53128e9dc5d914bb5304f8874e1dd2dfb450e5d6e38999f142",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_ash_pale_top",
+      "family": "wood",
+      "material": "ash",
+      "variant": "pale",
+      "role": "top",
+      "seed": 4513055995974495534,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "416a1d694880ff058570155dc3ca73f8950a1bb7f8b02b1768921b41dce74b5f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38659,12 +38923,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_ash_plank_endgrain",
+      "stem": "cu_wood_ash_plank_bottom",
       "family": "wood",
       "material": "ash",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 12210991752227564919,
+      "role": "bottom",
+      "seed": 15605864013220526351,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38672,7 +38936,29 @@
         16,
         16
       ],
-      "pixel_sha256": "2c0fe83d28d06b9ce63b507be02629b0107f4a4120767744761756d55979d8a2",
+      "pixel_sha256": "527800619cea2424fff5f8f3c6a2f5e445a8b4f534416f2ddb78f6f40c822de5",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_ash_plank_top",
+      "family": "wood",
+      "material": "ash",
+      "variant": "plank",
+      "role": "top",
+      "seed": 18298240500352407258,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "82d7d71a0bf4261a1043f8a7c4d194d037772b72e50aef749c0b3afee3643cbf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38716,7 +39002,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0d2fc4862bbe8887b67c313344e2d5e787d7b8384f75f243c5ac806535ce48d9",
+      "pixel_sha256": "a9113303af37a2999c539f2e8e5192b3fc8bc33d0ed0fdd0df2913c290a9b0a3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38747,12 +39033,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_ash_weathered_endgrain",
+      "stem": "cu_wood_ash_weathered_bottom",
       "family": "wood",
       "material": "ash",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 11496137131830877666,
+      "role": "bottom",
+      "seed": 16627196713907264303,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38760,7 +39046,29 @@
         16,
         16
       ],
-      "pixel_sha256": "2d5b127a005d1038ada8834561eda7c658f7c183e3aa967502d8fd7a9b47bec3",
+      "pixel_sha256": "4aa3c588be173bbe3fa097ecfeafe0c40caa270a78e3d6306835c2919c1692ab",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_ash_weathered_top",
+      "family": "wood",
+      "material": "ash",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 1112989249077485801,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "db968bc47d7baf6ac7d755710332477ed485fa0dbcb41ebaee23450293020c72",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38791,12 +39099,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_beech_aged_endgrain",
+      "stem": "cu_wood_beech_aged_bottom",
       "family": "wood",
       "material": "beech",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 3413416879431076906,
+      "role": "bottom",
+      "seed": 12336675023328586967,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38804,7 +39112,29 @@
         16,
         16
       ],
-      "pixel_sha256": "eb197562519edfcb69d8bbe6fbaba7210c6d95c36e79d4630f45b2c4815a18bd",
+      "pixel_sha256": "23bc9371afa2675d879241d560aa4d814b919a7f1463dd2760a2eb53b793443e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_beech_aged_top",
+      "family": "wood",
+      "material": "beech",
+      "variant": "aged",
+      "role": "top",
+      "seed": 11799558358980788704,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c5c02772258952623d319ba06f599a89233258c7e629ce645ddf06d5ec3ec09e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38848,7 +39178,7 @@
         16,
         16
       ],
-      "pixel_sha256": "189e894810efbe3f70a86d2e199780fefcdfc12388e57e5e6a07eedeee495534",
+      "pixel_sha256": "78ff157d7099beba3c59c9057ec11ff093eb2370e0b058045219523a48425636",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38879,12 +39209,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_beech_carved_endgrain",
+      "stem": "cu_wood_beech_carved_bottom",
       "family": "wood",
       "material": "beech",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 18171055523158899384,
+      "role": "bottom",
+      "seed": 11343878914494542688,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38892,7 +39222,29 @@
         16,
         16
       ],
-      "pixel_sha256": "856776081c56216ddd68f2e87d574dd3ee01901b1e837bd8324f783da793539d",
+      "pixel_sha256": "1d3b86dd23e658664565e89b2a4cc6212a1503da22ff5ec148160073632c7ab9",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_beech_carved_top",
+      "family": "wood",
+      "material": "beech",
+      "variant": "carved",
+      "role": "top",
+      "seed": 17532665954089540325,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3afd9802adf417a59b855e5ae0f2eceacd9cd234c0d6dd8e06ea99e0076ca9da",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38923,12 +39275,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_beech_cut_endgrain",
+      "stem": "cu_wood_beech_cut_bottom",
       "family": "wood",
       "material": "beech",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 6374836196176072601,
+      "role": "bottom",
+      "seed": 1742702485044104609,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38936,7 +39288,29 @@
         16,
         16
       ],
-      "pixel_sha256": "180c4e408650d18336efdabaaefd93c61dc6472d4a73f36b79f0b2e5c022a203",
+      "pixel_sha256": "bdb35e35195513afe776e78f812df9f1c328191345184c409a77526a6ae22b94",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_beech_cut_top",
+      "family": "wood",
+      "material": "beech",
+      "variant": "cut",
+      "role": "top",
+      "seed": 17045493494447292988,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7b2a28edbc645000244d3be70f324810ba377e9091cae2ac7fab6a77e626b1cf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38967,12 +39341,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_beech_dark_endgrain",
+      "stem": "cu_wood_beech_dark_bottom",
       "family": "wood",
       "material": "beech",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 8262225094447920846,
+      "role": "bottom",
+      "seed": 11699642428058850521,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -38980,7 +39354,29 @@
         16,
         16
       ],
-      "pixel_sha256": "04d53371e3296d7f5df40caa7ab24700cd198c40e54fc670e0854449ca9c06cb",
+      "pixel_sha256": "a51539f222a00b13c3017318947a4fccf35f45e5aeb4f5986aad09dd3d433fc3",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_beech_dark_top",
+      "family": "wood",
+      "material": "beech",
+      "variant": "dark",
+      "role": "top",
+      "seed": 10302693499423865248,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5afbf1f0fc5918de0e45e27861e75c67060587866de4938db75c47d60b8f5918",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39002,7 +39398,7 @@
         16,
         16
       ],
-      "pixel_sha256": "dd5a00025f1031efc8fd9a8a3660f7ab1fc23d1d7caee3a62a680fc02f37c421",
+      "pixel_sha256": "906a2a73d01dbbf4f8175b45c25a25d2fc28322cefbc63f5276c553044aa32c2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39024,7 +39420,7 @@
         16,
         16
       ],
-      "pixel_sha256": "50bb636eeab0401587b3eb9b7002640481076c7e4170fcd542180e9feb1afc99",
+      "pixel_sha256": "8f69ad5380958153942a7fa74639aa5e5880ee3c2ebaeda7c38f81354e5102a8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39055,12 +39451,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_beech_pale_endgrain",
+      "stem": "cu_wood_beech_pale_bottom",
       "family": "wood",
       "material": "beech",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 8907082962392310688,
+      "role": "bottom",
+      "seed": 14440944253680204661,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39068,7 +39464,29 @@
         16,
         16
       ],
-      "pixel_sha256": "e642b37e40259375971ff4b9a1b142a2ddb0a71faab33512ceb16c6876d5bd4e",
+      "pixel_sha256": "e82529abcdae76a2868d83de3580a71aa1b5a3bad042db6b193e0d9cdc95731e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_beech_pale_top",
+      "family": "wood",
+      "material": "beech",
+      "variant": "pale",
+      "role": "top",
+      "seed": 12089856347936467436,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3acdaeb6c707757c0c603a2195124a84854cfe18d2c803519f41f485953196b9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39099,12 +39517,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_beech_plank_endgrain",
+      "stem": "cu_wood_beech_plank_bottom",
       "family": "wood",
       "material": "beech",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 10594389722561380286,
+      "role": "bottom",
+      "seed": 3037152736352807593,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39112,7 +39530,29 @@
         16,
         16
       ],
-      "pixel_sha256": "78c0f735a8dd9bb864cfda68b9ad67a4b11dad8a9beed621cb5a2b2f999eeb39",
+      "pixel_sha256": "2c416231e95476b685664b146b985e4581368f721e2937e58d9059d3be79c629",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_beech_plank_top",
+      "family": "wood",
+      "material": "beech",
+      "variant": "plank",
+      "role": "top",
+      "seed": 11583215903819524319,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f549a6a437e98362d05359b4fbd7d61586f9bff8de69d9d8af2c401a2b228ecf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39156,7 +39596,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a95d8c73eaaf7e40a3e321f842578afe6d453dbd8c10285afbcd482035b32a50",
+      "pixel_sha256": "0bade10f1617580b91713a0641bf5531ad1430054e8c7c5f32159e937f23d05f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39187,12 +39627,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_beech_weathered_endgrain",
+      "stem": "cu_wood_beech_weathered_bottom",
       "family": "wood",
       "material": "beech",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 220049801242528393,
+      "role": "bottom",
+      "seed": 8132894002720923759,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39200,7 +39640,29 @@
         16,
         16
       ],
-      "pixel_sha256": "22dcdd945867ff625713084c3fd21916fde0e2bcf1581e0f30ae8bbd303c4db4",
+      "pixel_sha256": "7733045d54bd30514d734fed4c0400e4219c423d684760bf82c09b2cc1ae0efd",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_beech_weathered_top",
+      "family": "wood",
+      "material": "beech",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 8506672776695319435,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "fddba235347d2a24f261e78b0cd9d6a0e1ad74037393dfd53248611de4f326a9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39231,12 +39693,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_birch_aged_endgrain",
+      "stem": "cu_wood_birch_aged_bottom",
       "family": "wood",
       "material": "birch",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 14954198592678851290,
+      "role": "bottom",
+      "seed": 12094789362891405591,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39244,7 +39706,29 @@
         16,
         16
       ],
-      "pixel_sha256": "44e562319df8da0ee58ad496f18e3a7782e0270b93a7b66b89f8aaa714d40904",
+      "pixel_sha256": "3215c6f7168120398c35e7646d78ae8f479e6f19f90d6a287ac97c20cf435f77",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_birch_aged_top",
+      "family": "wood",
+      "material": "birch",
+      "variant": "aged",
+      "role": "top",
+      "seed": 2703463351762220831,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "afe85b6687bd2d1acfc218e24d812f96d910080ac8e52706f41abf38bf98c6d9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39288,7 +39772,7 @@
         16,
         16
       ],
-      "pixel_sha256": "732256a23d70184698f5f6efa262f62fb6096814564f57e3a8818119b6a9897e",
+      "pixel_sha256": "b9a21ba048950ed87a3f9c714047917a2c8804b35efb221b57b35563bb29de6e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39319,12 +39803,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_birch_carved_endgrain",
+      "stem": "cu_wood_birch_carved_bottom",
       "family": "wood",
       "material": "birch",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 13824279782608269648,
+      "role": "bottom",
+      "seed": 1950710120668139967,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39332,7 +39816,29 @@
         16,
         16
       ],
-      "pixel_sha256": "0ecc75fb08adc4bed9568f704da5a565104e6dabb2b7af6bcc304af61518155a",
+      "pixel_sha256": "336131622aed4944c7cf5c535531c59ab298834a7a294df65d17636597feec30",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_birch_carved_top",
+      "family": "wood",
+      "material": "birch",
+      "variant": "carved",
+      "role": "top",
+      "seed": 11544346387324947408,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ac96d1bb1e7083593721d99e8ec75a0805f5a404bf22df1fd83c3fb6560ef0ee",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39363,12 +39869,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_birch_cut_endgrain",
+      "stem": "cu_wood_birch_cut_bottom",
       "family": "wood",
       "material": "birch",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 5233186733066855115,
+      "role": "bottom",
+      "seed": 13246752677989184167,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39376,7 +39882,29 @@
         16,
         16
       ],
-      "pixel_sha256": "0fe221d0a94772148d204691aa394db0f4eb50e7ba4e778c38e89bf76541ca0e",
+      "pixel_sha256": "ac06712302d4fbf4b7bd18a7fee081692b48579e24ba300ae7f988c6c98e64a6",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_birch_cut_top",
+      "family": "wood",
+      "material": "birch",
+      "variant": "cut",
+      "role": "top",
+      "seed": 13351520566811039777,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9d2524429bac3d1a3be963413ef83ebffe4296932a5dceff64f29c91199f46e5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39407,12 +39935,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_birch_dark_endgrain",
+      "stem": "cu_wood_birch_dark_bottom",
       "family": "wood",
       "material": "birch",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 3266988175579158993,
+      "role": "bottom",
+      "seed": 2852638005841396321,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39420,7 +39948,29 @@
         16,
         16
       ],
-      "pixel_sha256": "706f39d694af72366f9b9b8b8c00cd3b366db9289ad9b368160a620a7cc35149",
+      "pixel_sha256": "ee38e6e960f64a8b1641f4c90790d30ae45f4f91686ec166bf09ea999f08caa5",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_birch_dark_top",
+      "family": "wood",
+      "material": "birch",
+      "variant": "dark",
+      "role": "top",
+      "seed": 14939046988779914840,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "754d337c2b1bc27e4a6dbeb20b5d2e55059d786a4866f883f71817208908c096",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39442,7 +39992,7 @@
         16,
         16
       ],
-      "pixel_sha256": "37bc25c97bd186b0d934ff143a105e9e89969f12603b3168eacc2bd9225b737b",
+      "pixel_sha256": "26781df89f5f43d70d19d13a0603ffa26ecb044c4a65b630beedef52fab1ab61",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39464,7 +40014,7 @@
         16,
         16
       ],
-      "pixel_sha256": "90dde7e8078635f9a119032512b5047bf2832ed87057cfc55b012ae8d33a7217",
+      "pixel_sha256": "b4fb04508512db211e0e0401fd4ce210747845f32ae51ba3f4d685a5812b1a0f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39495,12 +40045,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_birch_pale_endgrain",
+      "stem": "cu_wood_birch_pale_bottom",
       "family": "wood",
       "material": "birch",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 12583262408577949362,
+      "role": "bottom",
+      "seed": 13562290027099044589,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39508,7 +40058,29 @@
         16,
         16
       ],
-      "pixel_sha256": "f78f9d4b3294574d708efa42ff6de92da1b2b52250f344eb0d346f5f49554dcb",
+      "pixel_sha256": "2c4a4d78210097b5a453e67c548a861ce67349940f012134c4e6e71ee4ce13ff",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_birch_pale_top",
+      "family": "wood",
+      "material": "birch",
+      "variant": "pale",
+      "role": "top",
+      "seed": 8747417865307785144,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ec5cff1557f37ef9ebb10396ec20768e625dc75d64ee95af62e219458e54247a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39539,12 +40111,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_birch_plank_endgrain",
+      "stem": "cu_wood_birch_plank_bottom",
       "family": "wood",
       "material": "birch",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 12456607644099049164,
+      "role": "bottom",
+      "seed": 5244503099458636300,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39552,7 +40124,29 @@
         16,
         16
       ],
-      "pixel_sha256": "dc83dc414dd22559a89ae3d3489995389401b514f1e7b537727129ebfed61261",
+      "pixel_sha256": "1d928987aa3b538c9a973561ac159930a16224b77302fb41f7de6156b189a70d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_birch_plank_top",
+      "family": "wood",
+      "material": "birch",
+      "variant": "plank",
+      "role": "top",
+      "seed": 6808194051596659993,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "65d508fa3a955740927af34684680dfc34dd9ac3d06a55a6115885df67ee70cd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39596,7 +40190,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a3fe20e88cbbc152bab760edc6d4dcc91718f6ddf1dae437f648b3e99aa3a1f4",
+      "pixel_sha256": "e4e713d6c45f0fccd6019954ab86f251d117789ad614f04dc53daeb4613a90ea",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39627,12 +40221,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_birch_weathered_endgrain",
+      "stem": "cu_wood_birch_weathered_bottom",
       "family": "wood",
       "material": "birch",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 13998169569550416735,
+      "role": "bottom",
+      "seed": 16537442129857112774,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39640,7 +40234,29 @@
         16,
         16
       ],
-      "pixel_sha256": "273440aef81bb2c9c9fa5b220e0258747114f048a07aabadfea9f0594e596a4e",
+      "pixel_sha256": "7aab031f7a469b06231a196e063b0e58b71749fbe89d741000d34185c48adc4d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_birch_weathered_top",
+      "family": "wood",
+      "material": "birch",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 6806232141574462007,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ab0b4bf396cd4bf453c6472df4aefb621b1bda061ca2fade43a9e70872a50ed5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39671,12 +40287,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_cedar_aged_endgrain",
+      "stem": "cu_wood_cedar_aged_bottom",
       "family": "wood",
       "material": "cedar",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 15296907691827449924,
+      "role": "bottom",
+      "seed": 14374018329489202194,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39684,7 +40300,29 @@
         16,
         16
       ],
-      "pixel_sha256": "bb75d8e8da87e4481335f64be8a6f23fdc4c5bdaaccb506810148f065dde815f",
+      "pixel_sha256": "b21516d6dea96fb317669bab07dbd1f10def96613c7b297b91b220f78d696356",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_cedar_aged_top",
+      "family": "wood",
+      "material": "cedar",
+      "variant": "aged",
+      "role": "top",
+      "seed": 1399524441397803876,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ba8ff7c34a42af483889b24009c9164fe636ce3a18b35ab92a3f3400d6c7bafc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39728,7 +40366,7 @@
         16,
         16
       ],
-      "pixel_sha256": "62d28bd6346d9f0ef19afb1deaae5f236c84c92285a04c1f6bb862ed3cde3383",
+      "pixel_sha256": "4f8c420b904b1c3155edef84cb8b47527397ada3b2cf1e6062fa78a4336fc040",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39759,12 +40397,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_cedar_carved_endgrain",
+      "stem": "cu_wood_cedar_carved_bottom",
       "family": "wood",
       "material": "cedar",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 16466209279584870892,
+      "role": "bottom",
+      "seed": 1149581471714923153,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39772,7 +40410,29 @@
         16,
         16
       ],
-      "pixel_sha256": "39db41406ba57a950529aa3045f8dcaff6f132013b9c1393f01e295e331448af",
+      "pixel_sha256": "9ed47f689e80ffdb0a87f80c40cf28f67b4fbb37eec0118eb6c71281d2422e2a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_cedar_carved_top",
+      "family": "wood",
+      "material": "cedar",
+      "variant": "carved",
+      "role": "top",
+      "seed": 3212634964789320853,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9e09780afe245dd665d546bf97eceac0b9f6bd1c8d8a9401083c4ef1874c6f51",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39803,12 +40463,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_cedar_cut_endgrain",
+      "stem": "cu_wood_cedar_cut_bottom",
       "family": "wood",
       "material": "cedar",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 15757595835930188610,
+      "role": "bottom",
+      "seed": 6880945639414377263,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39816,7 +40476,29 @@
         16,
         16
       ],
-      "pixel_sha256": "e4f5c887d75336db286fd1cbeac3aad33f472a10d95be5b2286039a939e3d59e",
+      "pixel_sha256": "6edcd6607e3a3ef82e2e618b75fe08d50d274565aca033627fa41e26c720698a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_cedar_cut_top",
+      "family": "wood",
+      "material": "cedar",
+      "variant": "cut",
+      "role": "top",
+      "seed": 310759014657201698,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ef5c1cb2803bcb1ae5b73589bb8ac045f8d7c7b4f6f311b3963b2c8fdc771d26",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39847,12 +40529,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_cedar_dark_endgrain",
+      "stem": "cu_wood_cedar_dark_bottom",
       "family": "wood",
       "material": "cedar",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 12468479320621824118,
+      "role": "bottom",
+      "seed": 16690895268996618885,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39860,7 +40542,29 @@
         16,
         16
       ],
-      "pixel_sha256": "d881557dcb23fbb65b6ca002fa723d24d6001874192cd1e73c3a41a868e513f2",
+      "pixel_sha256": "581f9bcd1e045febe6dd23be79e1dcd417ba3f873dfe6c4ff8683baa7578b2de",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_cedar_dark_top",
+      "family": "wood",
+      "material": "cedar",
+      "variant": "dark",
+      "role": "top",
+      "seed": 7390799770794624855,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "15ea961a5a2d1234804f6b88c260335961796bdc93cbaf85fd40f5809c2f16f8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39882,7 +40586,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fc3f698aececf5ee1abedcd197b1fc8d7fe838a8463ea2d437aedb710e5e1ca9",
+      "pixel_sha256": "17602b19970d8a14ee9439a912dab6f6fb9ba862cea6af2f120beac3458272b1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39904,7 +40608,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5a26399b542002dfbd321cab78b4df96ea28e43eca6028821ce86425576be9f0",
+      "pixel_sha256": "045103f69a83229581a60bc3d1164a1a7498fa992409579f7e2aa762b8fd4db0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39935,12 +40639,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_cedar_pale_endgrain",
+      "stem": "cu_wood_cedar_pale_bottom",
       "family": "wood",
       "material": "cedar",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 8679546931061172825,
+      "role": "bottom",
+      "seed": 16449267792324567740,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39948,7 +40652,29 @@
         16,
         16
       ],
-      "pixel_sha256": "f520dc72684ea2178cd2b4555d845d4d123c830b9a33227ec361e23a6461ec1e",
+      "pixel_sha256": "00f7984d1561361bc642429a5ad348bc665114f8495fad079af19cdc88b9ad81",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_cedar_pale_top",
+      "family": "wood",
+      "material": "cedar",
+      "variant": "pale",
+      "role": "top",
+      "seed": 13702325792284621678,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9c4fe6ccb39424c6bdfdb41a9aff62a2326551561a5d34b30c67c15a4cef906c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39979,12 +40705,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_cedar_plank_endgrain",
+      "stem": "cu_wood_cedar_plank_bottom",
       "family": "wood",
       "material": "cedar",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 2240664897892526634,
+      "role": "bottom",
+      "seed": 7486255464038554314,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -39992,7 +40718,29 @@
         16,
         16
       ],
-      "pixel_sha256": "71fee5ebd47e4e1b45f0c64419ec526e1a5aedfe265ccfcfcefd5d41dc2fa1d5",
+      "pixel_sha256": "0f229dc20c6a9f526569302bc5d6b5d76b80e0ec99bb23ebe79c3ae3194f5517",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_cedar_plank_top",
+      "family": "wood",
+      "material": "cedar",
+      "variant": "plank",
+      "role": "top",
+      "seed": 15761189657996546673,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0343a38770856c4e3f6d86724093ddd67b0c8c85ce7d5d8ba3d77ab0212a94f8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40036,7 +40784,7 @@
         16,
         16
       ],
-      "pixel_sha256": "80837f9adc93362feb7d96dffaa130d058d6ebac01993bccf0be8a80662e0a37",
+      "pixel_sha256": "72942c8eee16e0106c15dce309078c4ff93e3f6d364bf71ad13cb22121587476",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40067,12 +40815,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_cedar_weathered_endgrain",
+      "stem": "cu_wood_cedar_weathered_bottom",
       "family": "wood",
       "material": "cedar",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 2302247043787887898,
+      "role": "bottom",
+      "seed": 805902876803574497,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40080,7 +40828,29 @@
         16,
         16
       ],
-      "pixel_sha256": "b53708501e3ed9a469e81ddb85e6abcaafe1a93c2232100271beef8737d63bce",
+      "pixel_sha256": "43a70f066c27ee9427d48fb634a2971eb20634f1bde10ebcd7a4a4254fbbdeaf",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_cedar_weathered_top",
+      "family": "wood",
+      "material": "cedar",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 12177790224055029060,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9813443d0285baddb25a8bb9ac3659e59405d522e52a112762a6b6948c83885f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40111,12 +40881,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_jungle_aged_endgrain",
+      "stem": "cu_wood_jungle_aged_bottom",
       "family": "wood",
       "material": "jungle",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 2978222434138144893,
+      "role": "bottom",
+      "seed": 11716703789024804153,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40124,7 +40894,29 @@
         16,
         16
       ],
-      "pixel_sha256": "f95f576ea27ea3ad0603c346f118dc9a8fee364bda3331817986644233585edc",
+      "pixel_sha256": "3f2af6e8df4e4029f63aaf91259a5628917ce8baccee9e4ff69ef0f5715b6aa8",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_jungle_aged_top",
+      "family": "wood",
+      "material": "jungle",
+      "variant": "aged",
+      "role": "top",
+      "seed": 14702569934515287196,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "73634466df1637fb7d2d3aca15ca732019f68702bd71b7f910538130b8943dfc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40168,7 +40960,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e0dd4a51be39d8763394eb915c761ef4306d0a19ab415dd575ebb236c29585cc",
+      "pixel_sha256": "83195fc30b28093cac85a46da09e92e920165e123f5d2789f946c7998d14ad85",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40199,12 +40991,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_jungle_carved_endgrain",
+      "stem": "cu_wood_jungle_carved_bottom",
       "family": "wood",
       "material": "jungle",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 10560523886599181093,
+      "role": "bottom",
+      "seed": 349689776132372617,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40212,7 +41004,29 @@
         16,
         16
       ],
-      "pixel_sha256": "ba55a71ff3982c51d14165b9fcf2004a23871f1b620f23d2c7497c6c448d9269",
+      "pixel_sha256": "aa0adc60e9b2176d75bc0dfad0e1c398d229a81d9addb02706cf509f3116bd11",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_jungle_carved_top",
+      "family": "wood",
+      "material": "jungle",
+      "variant": "carved",
+      "role": "top",
+      "seed": 2823961139129584853,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d8a5ce8c6434d97e7018484c45d500ac3deaeb41732e6e48baa274590eb0417e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40243,12 +41057,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_jungle_cut_endgrain",
+      "stem": "cu_wood_jungle_cut_bottom",
       "family": "wood",
       "material": "jungle",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 10544601118192902409,
+      "role": "bottom",
+      "seed": 16207015518944396039,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40256,7 +41070,29 @@
         16,
         16
       ],
-      "pixel_sha256": "c67c78703da78f55b5a9ce2c2903b4ef92af403bb446a2e9e908613a137ded8f",
+      "pixel_sha256": "2af5a5552aea70c4ea935fccf73bec1e0441b0795fbcf7ac8471b81077069e93",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_jungle_cut_top",
+      "family": "wood",
+      "material": "jungle",
+      "variant": "cut",
+      "role": "top",
+      "seed": 3592656215928366465,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d65a6c9dfe3d36f3061af1c47e68155e05caba6c791df7495dcfe09c19a8478b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40287,12 +41123,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_jungle_dark_endgrain",
+      "stem": "cu_wood_jungle_dark_bottom",
       "family": "wood",
       "material": "jungle",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 8032044081222953985,
+      "role": "bottom",
+      "seed": 12527622537356429922,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40300,7 +41136,29 @@
         16,
         16
       ],
-      "pixel_sha256": "57ed11f2f8d38ee67c58d7b732783d61080e1b9362decc9656bddce3c1b0ce15",
+      "pixel_sha256": "640629cf71e441d814f09ece4391651c26a9f4906cc8fa2571791daff7d22c46",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_jungle_dark_top",
+      "family": "wood",
+      "material": "jungle",
+      "variant": "dark",
+      "role": "top",
+      "seed": 7313843872848064253,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "22f1674edfdf29ac4ff0a66c594540427a7812a7734adc71c47f95200071e78b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40322,7 +41180,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ec12d573cc5c4bb9e2474261f73e52fef3c799800fd6c67f8e163f46bcee725b",
+      "pixel_sha256": "7410e7e446cfbd4b3706b814778098d69b25fef8d7dc5a61cb58b0fcee1ca73a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40344,7 +41202,7 @@
         16,
         16
       ],
-      "pixel_sha256": "51dfeec0aef8999eb46680f1814a5bb81c71af108575f7810171b431f5dd8fe0",
+      "pixel_sha256": "fbf07dfb415c5f9df41faddc646fcd0d1451fac5329009da01b5efad5439b67d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40375,12 +41233,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_jungle_pale_endgrain",
+      "stem": "cu_wood_jungle_pale_bottom",
       "family": "wood",
       "material": "jungle",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 13166527026094611095,
+      "role": "bottom",
+      "seed": 8818696798706888303,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40388,7 +41246,29 @@
         16,
         16
       ],
-      "pixel_sha256": "d203e90238e74b8061b913cf3189f9fd851491bd04f4dc3ea89808547199a6ca",
+      "pixel_sha256": "03376f520c054d78cedd502111bc5582f360744e0ca4934d635e24c1c0b49c44",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_jungle_pale_top",
+      "family": "wood",
+      "material": "jungle",
+      "variant": "pale",
+      "role": "top",
+      "seed": 14379897646980024357,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "18c6b12816ae78af8b820d5d941dd50eb7ff693bb6175dca4b77a26dd48d34fe",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40419,12 +41299,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_jungle_plank_endgrain",
+      "stem": "cu_wood_jungle_plank_bottom",
       "family": "wood",
       "material": "jungle",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 7790514147121283443,
+      "role": "bottom",
+      "seed": 16820320776636687308,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40432,7 +41312,29 @@
         16,
         16
       ],
-      "pixel_sha256": "8855a2d9a5eced6b732935759de3fdd2cb235fc7c351f6c4715d5c16ff78e206",
+      "pixel_sha256": "8043eeebe7d2b7f0e0595e70dd3898f61776ecc40070688b824e10abb42a2d4b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_jungle_plank_top",
+      "family": "wood",
+      "material": "jungle",
+      "variant": "plank",
+      "role": "top",
+      "seed": 11237314339785469673,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0930b82eaeb32bd765d4f0f4adc515085f24297d50f44e4e7ff776718f508c5c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40476,7 +41378,7 @@
         16,
         16
       ],
-      "pixel_sha256": "dada48053050ef28eb2ee1fc87bccd9e42cacdabaedea7ea18c807aef5a2d7c7",
+      "pixel_sha256": "945f8e12da84b73c601eaa571e91abb901fade6d4542b2e6ff245826bd2d7f4a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40507,12 +41409,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_jungle_weathered_endgrain",
+      "stem": "cu_wood_jungle_weathered_bottom",
       "family": "wood",
       "material": "jungle",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 1298549260919886487,
+      "role": "bottom",
+      "seed": 10561785574351423446,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40520,7 +41422,29 @@
         16,
         16
       ],
-      "pixel_sha256": "6d8a372888688cc64de0b0b78ff9b8b3721e80d69f838033a715a71d238815b2",
+      "pixel_sha256": "24856fdb0fa9fa7cd4ffea3f360da862be4fb002164d8760aad32b4fc99ad62c",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_jungle_weathered_top",
+      "family": "wood",
+      "material": "jungle",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 1744724745984793282,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f6d0f7957338a0b59696dd749e233a74376b08e3e232cfa1d269bb2b94e2621b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40551,12 +41475,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_larch_aged_endgrain",
+      "stem": "cu_wood_larch_aged_bottom",
       "family": "wood",
       "material": "larch",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 2689562188195219631,
+      "role": "bottom",
+      "seed": 4195683409514103413,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40564,7 +41488,29 @@
         16,
         16
       ],
-      "pixel_sha256": "814acba2519f81b46550c976a30af1907b25bbcb5da21bf978c6d03160dc094b",
+      "pixel_sha256": "960fa2d591a3c1c6cfe81d5120e2574f142f8a14a73878e508a936c6d700f374",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_larch_aged_top",
+      "family": "wood",
+      "material": "larch",
+      "variant": "aged",
+      "role": "top",
+      "seed": 10934762899029458554,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d06fa15e30e00b85a0528903e48b83564a57896ce355beea81472da3f381a885",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40608,7 +41554,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c249f6d59d66910043e5165f527f0143cca33b8d408554581fadcdd433a555b1",
+      "pixel_sha256": "4f1655d1b63a65accf47278e923635b818513e38ca42ba1cd096273d36edd4a4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40639,12 +41585,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_larch_carved_endgrain",
+      "stem": "cu_wood_larch_carved_bottom",
       "family": "wood",
       "material": "larch",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 2191395252061317724,
+      "role": "bottom",
+      "seed": 904031625801779453,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40652,7 +41598,29 @@
         16,
         16
       ],
-      "pixel_sha256": "42f1f4d715fdd91d1ebfd62dd33ebd448b90ceb8f0eb6f61544c397998583605",
+      "pixel_sha256": "f0c2b45f63bac94035db06cc2372bd80a05174ec73e8757661b13c2b0866d4c1",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_larch_carved_top",
+      "family": "wood",
+      "material": "larch",
+      "variant": "carved",
+      "role": "top",
+      "seed": 16899071253642733080,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c6ae1ddc5a93098d496f771345ef0975a1b12d5aef3982e685e57ae8cfa23e5e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40683,12 +41651,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_larch_cut_endgrain",
+      "stem": "cu_wood_larch_cut_bottom",
       "family": "wood",
       "material": "larch",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 15526918998278165826,
+      "role": "bottom",
+      "seed": 3623729084057032641,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40696,7 +41664,29 @@
         16,
         16
       ],
-      "pixel_sha256": "e519cd590ce1aa75f21b870c091efaf9b7010b97b18e7bcdd34e904fe5eb8b23",
+      "pixel_sha256": "fd08be683cfafbb6cdee4e28fbd76c094cf6eb61353fab826d04677d0e946603",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_larch_cut_top",
+      "family": "wood",
+      "material": "larch",
+      "variant": "cut",
+      "role": "top",
+      "seed": 4702018253370059308,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e6da77e075482a0726436ded4fdf33e2ff097af9b846c35dae0db7037bb179cd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40727,12 +41717,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_larch_dark_endgrain",
+      "stem": "cu_wood_larch_dark_bottom",
       "family": "wood",
       "material": "larch",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 11904523419750203934,
+      "role": "bottom",
+      "seed": 16420399140272661015,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40740,7 +41730,29 @@
         16,
         16
       ],
-      "pixel_sha256": "e317d49d4e5d47139daaff7ea54a5424c128343da46077f11af0f8c2e1364192",
+      "pixel_sha256": "78c5697af5e1be82bcd92fc4370646beca4eb86c8bbe8cb08f28c57f06316492",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_larch_dark_top",
+      "family": "wood",
+      "material": "larch",
+      "variant": "dark",
+      "role": "top",
+      "seed": 10787588370044183493,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "b93f8853937947a4352eb6bde03384d44732b3bdeda1498910256240a038a5d7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40762,7 +41774,7 @@
         16,
         16
       ],
-      "pixel_sha256": "685bdcd1a82d6889cdfa006d1d7723cc81d31b9a4307fdd94471984eb07eccb5",
+      "pixel_sha256": "b268f10df87ba4999e914064b6bfa08a19a155d00e010a4a79731121380a8f08",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40784,7 +41796,7 @@
         16,
         16
       ],
-      "pixel_sha256": "24f4b43302315631b93ed79f9ddc61075015c26a7daee0831c7efa73547f8d6d",
+      "pixel_sha256": "3488644862159596b29d1532d27b941b36e77f70eca5709cc19e143deb55cb3f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40815,12 +41827,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_larch_pale_endgrain",
+      "stem": "cu_wood_larch_pale_bottom",
       "family": "wood",
       "material": "larch",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 11952550762418752649,
+      "role": "bottom",
+      "seed": 4464969057904456398,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40828,7 +41840,29 @@
         16,
         16
       ],
-      "pixel_sha256": "2137b637b8dec3bffc2951b9e9032eb8fd58a90c82ad420b0c9b5f11099dd915",
+      "pixel_sha256": "09d7954e19118bb33901f4bc402bf48cb67234d7c97a87fd1360e59add3c2eeb",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_larch_pale_top",
+      "family": "wood",
+      "material": "larch",
+      "variant": "pale",
+      "role": "top",
+      "seed": 543510053410870415,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "08b5b796cfc4192588c96a0cfd5c775cfffa8dd91b9574fd02362f506abaff39",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40859,12 +41893,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_larch_plank_endgrain",
+      "stem": "cu_wood_larch_plank_bottom",
       "family": "wood",
       "material": "larch",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 7389101226448766565,
+      "role": "bottom",
+      "seed": 4193448184962520075,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40872,7 +41906,29 @@
         16,
         16
       ],
-      "pixel_sha256": "ff993f97a4dbadb55ed323fc1bb181aa58b4143895f3969810cd012f8a356b64",
+      "pixel_sha256": "c1c5d628176ca21992696cdd524a2a85b5a96f01c491f9c47f687c6593957124",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_larch_plank_top",
+      "family": "wood",
+      "material": "larch",
+      "variant": "plank",
+      "role": "top",
+      "seed": 13563704166490415231,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c6f19223e514b1ddf9aa62e6be602bf988df668d911dda34a030b260a12ea081",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40916,7 +41972,7 @@
         16,
         16
       ],
-      "pixel_sha256": "52a4e85f555df0a1cc7fcaef55a4f1bd2002bc0efc23df355c958a55fbee41c7",
+      "pixel_sha256": "27a1af0e76c1b8a8b34dbd2a746a59e79911e78c5a6f81d644f6c99b96d782d9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40947,12 +42003,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_larch_weathered_endgrain",
+      "stem": "cu_wood_larch_weathered_bottom",
       "family": "wood",
       "material": "larch",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 15927010303411378176,
+      "role": "bottom",
+      "seed": 8490121679499091531,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -40960,7 +42016,29 @@
         16,
         16
       ],
-      "pixel_sha256": "7051f7b19c648781a305870bdcd2dce391613f63127c7603435f7e529d186ce4",
+      "pixel_sha256": "37921c33715e6c7fdf94c422491509ab3f48e1aa73b3ccf1a444de5d94277d82",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_larch_weathered_top",
+      "family": "wood",
+      "material": "larch",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 14867537200472103190,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "77de1b54c9f166dccb6b9b514798b12f938a120a06dde80f94a6692b5d4c7eaa",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40991,12 +42069,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_mangrove_aged_endgrain",
+      "stem": "cu_wood_mangrove_aged_bottom",
       "family": "wood",
       "material": "mangrove",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 4461517079297313278,
+      "role": "bottom",
+      "seed": 8410533353048716712,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41004,7 +42082,29 @@
         16,
         16
       ],
-      "pixel_sha256": "01a391f9f63df867322e180540dba61780832a672f5ca23ebb2b53531ba28198",
+      "pixel_sha256": "b37f293be8fa572bceae13f75fcd9ce9bedf3882f30f58755e2a6ffad36ec308",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_mangrove_aged_top",
+      "family": "wood",
+      "material": "mangrove",
+      "variant": "aged",
+      "role": "top",
+      "seed": 17026861013978200616,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0aac015f7e8d0b065a3d62214267109f7c44d291ec25cdb0727b1c9d15090649",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41048,7 +42148,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c09e9d194e45c56cd33f8adc0b8c7e67dc306257e56350c14897530a254e626c",
+      "pixel_sha256": "c54763fc28e537243f48f4339f0eb939fa205e0d4880746454555d1195b6594d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41079,12 +42179,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_mangrove_carved_endgrain",
+      "stem": "cu_wood_mangrove_carved_bottom",
       "family": "wood",
       "material": "mangrove",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 2617197796295204978,
+      "role": "bottom",
+      "seed": 7854368779484324789,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41092,7 +42192,29 @@
         16,
         16
       ],
-      "pixel_sha256": "782ae91c45c9acca36950170661c57e9c4fa1b573f1682bef4d9e1d9d150e04c",
+      "pixel_sha256": "988b4c65542e8cfe77b379f7ebd8fec156033826ff65ac55777daa9f0b095c5b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_mangrove_carved_top",
+      "family": "wood",
+      "material": "mangrove",
+      "variant": "carved",
+      "role": "top",
+      "seed": 14422424623500523819,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c9964ca2b8058f5bfce5ec4818d4ce4b0083c42fafd1ea2c16e7a640e168233e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41123,12 +42245,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_mangrove_cut_endgrain",
+      "stem": "cu_wood_mangrove_cut_bottom",
       "family": "wood",
       "material": "mangrove",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 1976438384434366039,
+      "role": "bottom",
+      "seed": 13385961536997653426,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41136,7 +42258,29 @@
         16,
         16
       ],
-      "pixel_sha256": "5f1959bff9285811fd9b99112eae26c209d6d73e75f5bdf5fc7d3b6907072a1f",
+      "pixel_sha256": "dfa5f2b73f1cf3e6eb6452b0109b50321e0d9879bc5f109786b17a8668cdd2eb",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_mangrove_cut_top",
+      "family": "wood",
+      "material": "mangrove",
+      "variant": "cut",
+      "role": "top",
+      "seed": 16211956539008000885,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "fb6f868bc3751a7070dee44ca66a0309eddcfe80e54094e6d0af3ba36a4e40ba",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41167,12 +42311,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_mangrove_dark_endgrain",
+      "stem": "cu_wood_mangrove_dark_bottom",
       "family": "wood",
       "material": "mangrove",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 5463560319662740404,
+      "role": "bottom",
+      "seed": 3802629314769983434,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41180,7 +42324,29 @@
         16,
         16
       ],
-      "pixel_sha256": "c40da59e85a05a32610af82a0c3a23a1a880cb143fce0b4676343aa832926cc2",
+      "pixel_sha256": "ab7527a1809523b0fd6854cf6764f1d858cec2b139b943647dfdbbb0e97448e4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_mangrove_dark_top",
+      "family": "wood",
+      "material": "mangrove",
+      "variant": "dark",
+      "role": "top",
+      "seed": 16772753183680260134,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "6c79706d21c3fbac211e06899a82cab0372ef561d336353d83b3329cc40294c2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41202,7 +42368,7 @@
         16,
         16
       ],
-      "pixel_sha256": "065a743ad81c85dbcbad815540c1efa20fc3bb4eee4b87ad5ef7f253f38f356a",
+      "pixel_sha256": "caba9f00209fd0e6c58f61fc11289378efbbf05482f4ec52017e65f0f1bf98fc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41224,7 +42390,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9ca4410d5e8487e15f111dafc6d5c75fca3ddb5b6b88726dccbd03f21487b9f0",
+      "pixel_sha256": "7f7f3f53cb93e1a80d2331ae1093e393c134a41c1962aa8020e51aebe794e475",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41255,12 +42421,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_mangrove_pale_endgrain",
+      "stem": "cu_wood_mangrove_pale_bottom",
       "family": "wood",
       "material": "mangrove",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 5641762426319296522,
+      "role": "bottom",
+      "seed": 3224609417369848172,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41268,7 +42434,29 @@
         16,
         16
       ],
-      "pixel_sha256": "ab44c23968a2b0f5b98eb85d66153cb6451b334a9b2ce39e10fb119bd3b8b8bc",
+      "pixel_sha256": "97509875cebf5f0c5151aeccfa507e3070c56f4797da235c01e051a5b2cd5d3d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_mangrove_pale_top",
+      "family": "wood",
+      "material": "mangrove",
+      "variant": "pale",
+      "role": "top",
+      "seed": 12895013820736082018,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a3e3c26f2f80b15be8345c45ff6e1d3b7ba7dd737f67e79c616f05733819965a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41299,12 +42487,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_mangrove_plank_endgrain",
+      "stem": "cu_wood_mangrove_plank_bottom",
       "family": "wood",
       "material": "mangrove",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 4099511240481762109,
+      "role": "bottom",
+      "seed": 7901770393347254901,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41312,7 +42500,29 @@
         16,
         16
       ],
-      "pixel_sha256": "a5b306f0c3191a88db5d2b602fcf558e364d60f8c04f518b8e055dd6fcda6579",
+      "pixel_sha256": "2c93725975939aabd4144dccd0254b0bd749b7d54ae5e3852a0c5c18a06322c7",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_mangrove_plank_top",
+      "family": "wood",
+      "material": "mangrove",
+      "variant": "plank",
+      "role": "top",
+      "seed": 495621906539793857,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "2ffbb6ba284a12d86fa3e5d7c4c7b2a13155075c61beb07c241d1e1a02cfd080",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41356,7 +42566,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1a28d68a62d71dc665c6dfb1b2a5c56080b69430457ab5efdaa67480783324ce",
+      "pixel_sha256": "6a7f8cb829e82aa1403b464e268716fbc16125342838b3e7ae67fa90327ae523",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41387,12 +42597,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_mangrove_weathered_endgrain",
+      "stem": "cu_wood_mangrove_weathered_bottom",
       "family": "wood",
       "material": "mangrove",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 12046094675046184606,
+      "role": "bottom",
+      "seed": 12190503876346126287,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41400,7 +42610,29 @@
         16,
         16
       ],
-      "pixel_sha256": "6524544f6400e6893c2c933d668419ecf75afebf4c9700e5d716d9b09fea1cfa",
+      "pixel_sha256": "a453729358cf9785f86de84ebd92f9eef9809c53278ebed9dc15bfaae36edb59",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_mangrove_weathered_top",
+      "family": "wood",
+      "material": "mangrove",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 9704022849481037318,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5623d40e953e77973b1d3dc92555f5856b9b57f3ad9e6afb0e5f161bbcefe63f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41431,12 +42663,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_maple_aged_endgrain",
+      "stem": "cu_wood_maple_aged_bottom",
       "family": "wood",
       "material": "maple",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 264492795586508295,
+      "role": "bottom",
+      "seed": 14281955896816697016,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41444,7 +42676,29 @@
         16,
         16
       ],
-      "pixel_sha256": "cf6b84e5d5fdf077108afb24c2bc11b778e41249fa600821bdb178259a9ec8c5",
+      "pixel_sha256": "747600c2e5ce67a5a8498e48f726c5944ec0432c262e67b869b14430c0365d99",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_maple_aged_top",
+      "family": "wood",
+      "material": "maple",
+      "variant": "aged",
+      "role": "top",
+      "seed": 3206933277214703454,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "2c8fb6268e5c8a0824a8e69ea9827d2b94e7ad7829d7fcf4a6416e634f5d8263",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41488,7 +42742,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3a04375948b90fe0480dcbbd6760472e57cc1d7e3cf23eb567bc967b0bd262f7",
+      "pixel_sha256": "ee29b9364b034fb6f50b243dcce0586353391decdfa7fb7a86ed6ad4d50e8088",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41519,12 +42773,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_maple_carved_endgrain",
+      "stem": "cu_wood_maple_carved_bottom",
       "family": "wood",
       "material": "maple",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 17895530318664839097,
+      "role": "bottom",
+      "seed": 7587364718633481573,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41532,7 +42786,29 @@
         16,
         16
       ],
-      "pixel_sha256": "969bd8d32509de4952cd3a4285c75a687ad927a162916ba6558cc8faeb0a3a09",
+      "pixel_sha256": "98e92c2e0050326fd139c47d6b9f987642d833ce6086236ec6f382263900217b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_maple_carved_top",
+      "family": "wood",
+      "material": "maple",
+      "variant": "carved",
+      "role": "top",
+      "seed": 1965010477064963185,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "51d17241a460ae10a4d0848193b075a85ef1834faa98bef8b66df654646d028a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41563,12 +42839,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_maple_cut_endgrain",
+      "stem": "cu_wood_maple_cut_bottom",
       "family": "wood",
       "material": "maple",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 3311977518406343580,
+      "role": "bottom",
+      "seed": 9753119801945902098,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41576,7 +42852,29 @@
         16,
         16
       ],
-      "pixel_sha256": "bbf220b750a54d2421c03217eee0bd274870bf7f5842a78451593018afec5a75",
+      "pixel_sha256": "950465e2e0977364b058b25a645c50f58251d6d702f1a092f2e0535559425491",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_maple_cut_top",
+      "family": "wood",
+      "material": "maple",
+      "variant": "cut",
+      "role": "top",
+      "seed": 769446559764406428,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a0b13d72b60201c182c48f9d08304356a73dd36451f23d8a6eadb567279d07b9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41607,12 +42905,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_maple_dark_endgrain",
+      "stem": "cu_wood_maple_dark_bottom",
       "family": "wood",
       "material": "maple",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 12049260232613218376,
+      "role": "bottom",
+      "seed": 17522252556595859411,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41620,7 +42918,29 @@
         16,
         16
       ],
-      "pixel_sha256": "4fcd0b9d804447567ccdee231eb57c7a940e27eacbac62d3553a199a4781009e",
+      "pixel_sha256": "9cda931a757c536111f1a82f19f95905e2080a61a5b8ad7a9dbdd6393fe474d3",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_maple_dark_top",
+      "family": "wood",
+      "material": "maple",
+      "variant": "dark",
+      "role": "top",
+      "seed": 9028535690679120305,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "881121ab320b12e4cbedbdbd269e8a259171acdca253885f64b131ec76e6a448",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41642,7 +42962,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d315c33145bf4062d534e964f5d9b2353b6bcb88e7f6b4ce6e570ae74fba27bb",
+      "pixel_sha256": "63f7b266768e502688ae09bafeb586bf3d19ce3cde2b49d6863b6ac0f7aa7b8a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41664,7 +42984,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3d1975ae90cbff0ab91caed2592f28001591ceb37395fdd861a3a3ef9480dfb1",
+      "pixel_sha256": "54ec079c06ed2c6c51b359dbbaa5c8f26135cbe02e1a3911ee9bcd988f63df8d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41695,12 +43015,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_maple_pale_endgrain",
+      "stem": "cu_wood_maple_pale_bottom",
       "family": "wood",
       "material": "maple",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 16884412068722349105,
+      "role": "bottom",
+      "seed": 8971179603514034943,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41708,7 +43028,29 @@
         16,
         16
       ],
-      "pixel_sha256": "e8401767aea2396c1a43fe62b0f52a850098cd2f8678be55712ca70b6dcbdbdb",
+      "pixel_sha256": "c8f6c9acecb35a78f26b069b595fb8c650ea4c29f6b35b53981c4fe65a8acc23",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_maple_pale_top",
+      "family": "wood",
+      "material": "maple",
+      "variant": "pale",
+      "role": "top",
+      "seed": 10023587038191812120,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f62f53a4ac74edd0952958d633fcef2ec5b6e986f3506447e2fb573651059bcc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41739,12 +43081,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_maple_plank_endgrain",
+      "stem": "cu_wood_maple_plank_bottom",
       "family": "wood",
       "material": "maple",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 4846233902518422812,
+      "role": "bottom",
+      "seed": 4949063612748532681,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41752,7 +43094,29 @@
         16,
         16
       ],
-      "pixel_sha256": "29e24cf51ab7c29bf6b33c01426e861cd7cb23f1f18cfc13ae3cb7219ed7475d",
+      "pixel_sha256": "9b099e7994d0bd8d0d2d123ca5ad57ed3ce85db315dca85249a021d37a70a4c1",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_maple_plank_top",
+      "family": "wood",
+      "material": "maple",
+      "variant": "plank",
+      "role": "top",
+      "seed": 1699887880247999873,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "fc77eb2d448ad8d66b9edc459d8c88c86fc8cf8fe5f28cf951bfe711debef0b3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41796,7 +43160,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0bbbca7c03e98a261b71e88235a0d9f512ec59af87c92a39d26f884a77ff167b",
+      "pixel_sha256": "63c574674a46b8d3a6c555b68937d4694415c48a51f4b681135c1a436f290f97",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41827,12 +43191,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_maple_weathered_endgrain",
+      "stem": "cu_wood_maple_weathered_bottom",
       "family": "wood",
       "material": "maple",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 5038359917504418562,
+      "role": "bottom",
+      "seed": 1736000652703402470,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41840,7 +43204,29 @@
         16,
         16
       ],
-      "pixel_sha256": "4fea9f50b262c92b4b9ccd8eeec0856005f8353533da3b78355de777b9fb69b6",
+      "pixel_sha256": "63b19be012a7a9454fa3c0a73e37a6478d43ce08b576ee541c7f163db9c233b4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_maple_weathered_top",
+      "family": "wood",
+      "material": "maple",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 3997564459894333372,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "6bfad4fa4ad02032d7746f15649d1adfcc39a7b72f7dd5b265822b770003d16d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41871,12 +43257,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_oak_aged_endgrain",
+      "stem": "cu_wood_oak_aged_bottom",
       "family": "wood",
       "material": "oak",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 1712806324455919414,
+      "role": "bottom",
+      "seed": 17643329907043438451,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41884,7 +43270,29 @@
         16,
         16
       ],
-      "pixel_sha256": "9267969a4f0f781e57379c2fd9114046281517fd5f40d4c8d05f4763040024bb",
+      "pixel_sha256": "93c603f9b6b47c9eda6edff0ec2f14d0e5e4d88964f13ba65fd5952016564e7b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_oak_aged_top",
+      "family": "wood",
+      "material": "oak",
+      "variant": "aged",
+      "role": "top",
+      "seed": 2226445805298021154,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "677128024e2318b8e4c913ed61c7eb84a1769a96bd59a172bc066af0cf8567dd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41928,7 +43336,7 @@
         16,
         16
       ],
-      "pixel_sha256": "616f362628ecee2e76687102cad89e98b1e0b7c8ea5f22457457f5682d3f2997",
+      "pixel_sha256": "9f6ec8d13c7c5b443f1daec1f52d3a833955644c6ff958d89f1ba0a9fc80c3c1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41959,12 +43367,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_oak_carved_endgrain",
+      "stem": "cu_wood_oak_carved_bottom",
       "family": "wood",
       "material": "oak",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 15486220724973291179,
+      "role": "bottom",
+      "seed": 9826435152742480688,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -41972,7 +43380,29 @@
         16,
         16
       ],
-      "pixel_sha256": "a30d81d32a758f2f170aa539cd5fc850c8236c9910440d6230721389ebfa0a0b",
+      "pixel_sha256": "6d6ce6287348fa5201c06cfc8f6e5c122a9200b7d84d5b639c2b028b8c9b0256",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_oak_carved_top",
+      "family": "wood",
+      "material": "oak",
+      "variant": "carved",
+      "role": "top",
+      "seed": 12765664451625921557,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "13cb57b869253ff10bfb23f5e15293d604801239affe1c630ffd5644eaa2bf51",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42003,12 +43433,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_oak_cut_endgrain",
+      "stem": "cu_wood_oak_cut_bottom",
       "family": "wood",
       "material": "oak",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 14262626902570707308,
+      "role": "bottom",
+      "seed": 18131746962628792136,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42016,7 +43446,29 @@
         16,
         16
       ],
-      "pixel_sha256": "aba4940c67b1f1a8808e4b8a3e8ae73c3f9bafaf30290322ac21e06b6d985894",
+      "pixel_sha256": "4d57486742c7c0b5feb3cd5dd48a9b3805bf8a9e642c35b04ad026c8e9b9f0c8",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_oak_cut_top",
+      "family": "wood",
+      "material": "oak",
+      "variant": "cut",
+      "role": "top",
+      "seed": 1902995261497290156,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ee6c6827d9263cdf58ac93faf6d1bcb24277ebea1418279ca5b5641342a65ce2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42047,12 +43499,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_oak_dark_endgrain",
+      "stem": "cu_wood_oak_dark_bottom",
       "family": "wood",
       "material": "oak",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 9424162527892140201,
+      "role": "bottom",
+      "seed": 12033799202516861796,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42060,7 +43512,29 @@
         16,
         16
       ],
-      "pixel_sha256": "acf770c50b1c4f109590142a5d454a33d44169dda15468f6669bf1d4836f6a33",
+      "pixel_sha256": "8bf1c0c7aed994ec75d767215b80b3e3666eab28853c463aa1c0c9d73d3838f1",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_oak_dark_top",
+      "family": "wood",
+      "material": "oak",
+      "variant": "dark",
+      "role": "top",
+      "seed": 9692049741391900047,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "b9e6f05fe5d1706a61d5040006548082b41773fa0eca51a46341fa0a69a762ea",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42082,7 +43556,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c9e274349afdc2132b8ae75fd46a862cbdc3267531a17f5994ccf607ede6c410",
+      "pixel_sha256": "d7fe4d3cb8ce8d40bb5f7c71962cc1a11a2b66ff44b6079d5ebbeb4a13278acf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42104,7 +43578,7 @@
         16,
         16
       ],
-      "pixel_sha256": "169fb5021e73c0b7cc8ac5210557779809ff172bad684d966a70d3730dbdcb86",
+      "pixel_sha256": "3bd086d71c7d1dcfe99b726b2d603b96644225ffba1fb4d6fe0eb690f376d7a5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42135,12 +43609,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_oak_pale_endgrain",
+      "stem": "cu_wood_oak_pale_bottom",
       "family": "wood",
       "material": "oak",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 4261718307518782687,
+      "role": "bottom",
+      "seed": 8528311809719183337,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42148,7 +43622,29 @@
         16,
         16
       ],
-      "pixel_sha256": "066f7ea9dcc785394958b51f9a4bac5d31e3de62bac68f564ec27cf731fb0071",
+      "pixel_sha256": "93339cda87e25e56bffa2b1f73e02b2403c4737256ebad0e9290f2db33f3edb1",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_oak_pale_top",
+      "family": "wood",
+      "material": "oak",
+      "variant": "pale",
+      "role": "top",
+      "seed": 10980638524868836409,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7aab6ad3b831cd1b064a7cc59a07b87e9d38cc210a002f921017e2f711766ed2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42179,12 +43675,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_oak_plank_endgrain",
+      "stem": "cu_wood_oak_plank_bottom",
       "family": "wood",
       "material": "oak",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 8353402671186712541,
+      "role": "bottom",
+      "seed": 6597435130138557897,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42192,7 +43688,29 @@
         16,
         16
       ],
-      "pixel_sha256": "f6a5de4af75a2676599706af6ca388bc66c39edd6d13a76d2803387a8cee6851",
+      "pixel_sha256": "49e1528db11edd59dd0e026cee8d0343377cbde30817002530c794ebdfa5f44f",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_oak_plank_top",
+      "family": "wood",
+      "material": "oak",
+      "variant": "plank",
+      "role": "top",
+      "seed": 15972986989008733551,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "2069e71f4f02d894bafb3dc9db2ffa5e2e853db567f75215e929c5cba420594b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42236,7 +43754,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ce16547062d442fc1ed0aaef557f67bd3dc274db28f197313f4f852461a07534",
+      "pixel_sha256": "417e474e1aa0426e254fa1f9a70035b1dd5df1d39f6eabfefebf17b6ff863f96",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42267,12 +43785,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_oak_weathered_endgrain",
+      "stem": "cu_wood_oak_weathered_bottom",
       "family": "wood",
       "material": "oak",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 15200048047617608196,
+      "role": "bottom",
+      "seed": 7666881485133963381,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42280,7 +43798,29 @@
         16,
         16
       ],
-      "pixel_sha256": "b25b8cc1753e73a89a307889dcb66189c0ac7f13676bee0414f0f1b2205bbc67",
+      "pixel_sha256": "83a9a919dcc1a3e5bb68b4f5eb9e5a56e56f0042e81b8831b3ce828c7a9608f6",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_oak_weathered_top",
+      "family": "wood",
+      "material": "oak",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 16779046575109190895,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "86b9cffb1954a613c97e5712a41a14b4c58be36d1228825b03d8db4a6a5c1146",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42311,12 +43851,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_pine_aged_endgrain",
+      "stem": "cu_wood_pine_aged_bottom",
       "family": "wood",
       "material": "pine",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 3660553074181088287,
+      "role": "bottom",
+      "seed": 3075041341496493596,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42324,7 +43864,29 @@
         16,
         16
       ],
-      "pixel_sha256": "2e7ca7560f44fffc0f9d03bbaba083f9bb5da0a7526a9eb887103189c9070a1a",
+      "pixel_sha256": "335013ce0e44bb465b15d4f4ea4f00d1533e47885bc32181427357a50de38fee",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_pine_aged_top",
+      "family": "wood",
+      "material": "pine",
+      "variant": "aged",
+      "role": "top",
+      "seed": 2682355228976835181,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f49e53079a098ef976f66313223ecd92ab33846276ae06323bfe9b9c04a7435d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42368,7 +43930,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d7cc0217a2d983f9af2a9332a5cdb652369ee1ecf2fe7218c7d29b611577accf",
+      "pixel_sha256": "09a535ac2270664812b96221456c7b4da8be69d891c7acf3ce7b50cebb1ba911",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42399,12 +43961,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_pine_carved_endgrain",
+      "stem": "cu_wood_pine_carved_bottom",
       "family": "wood",
       "material": "pine",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 16311809906389427466,
+      "role": "bottom",
+      "seed": 16279634755383097979,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42412,7 +43974,29 @@
         16,
         16
       ],
-      "pixel_sha256": "44c4f1146b3fa9d72467ff25bda0ba993e19403dd15c54fec1c8260e7b6af4f5",
+      "pixel_sha256": "06f0c554e08aa5068b4a2fe9f1756032b6107d7ec72c74af89a2f0e2b4a0aed7",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_pine_carved_top",
+      "family": "wood",
+      "material": "pine",
+      "variant": "carved",
+      "role": "top",
+      "seed": 11146574721628570912,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e05e0fabcf76ba99d35a863a32aae98d8a8107dd43e49af1f37c3251cfdba1b9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42443,12 +44027,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_pine_cut_endgrain",
+      "stem": "cu_wood_pine_cut_bottom",
       "family": "wood",
       "material": "pine",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 17540192650720342927,
+      "role": "bottom",
+      "seed": 1018643451424759204,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42456,7 +44040,29 @@
         16,
         16
       ],
-      "pixel_sha256": "07a7192eabf8d0f4979fde8aacf226fbd13e8d149fea49dc6c6a75c70333a6f1",
+      "pixel_sha256": "82ed6089d41f7ce82c0c9e1b268a11762c3d28b92dbb41e6f3ec72ff9f37f567",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_pine_cut_top",
+      "family": "wood",
+      "material": "pine",
+      "variant": "cut",
+      "role": "top",
+      "seed": 3413911667506353376,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "925722fd22a76ceb82c379bbbb9c1084828f292ddfb270fb54c366e8825ff672",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42487,12 +44093,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_pine_dark_endgrain",
+      "stem": "cu_wood_pine_dark_bottom",
       "family": "wood",
       "material": "pine",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 13271636018903972547,
+      "role": "bottom",
+      "seed": 450579235905136789,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42500,7 +44106,29 @@
         16,
         16
       ],
-      "pixel_sha256": "cc795bedcf97d59648d634e7d268aa786c021a69ed48b347e1cdf6f301b80519",
+      "pixel_sha256": "6c508759ce4f907e3504932074bbdad2ee0d0e2b62a32b74b02bf4cca42b84f9",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_pine_dark_top",
+      "family": "wood",
+      "material": "pine",
+      "variant": "dark",
+      "role": "top",
+      "seed": 4030386760473055221,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "99813b96be974ad18d27301c9a82c025d180f1ef2cbeae1dd9f93fbf4f1bf274",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42522,7 +44150,7 @@
         16,
         16
       ],
-      "pixel_sha256": "88a5e86b576338c3b587faa877fc1c7e5e78a95bdf7f5cb81a8f12141e37586d",
+      "pixel_sha256": "43fbabddd32da197164bbaeae8389b286208085496cb23cbb48798932be3d8bf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42544,7 +44172,7 @@
         16,
         16
       ],
-      "pixel_sha256": "91048ab4594c84f76fc15a0fc447f227a10918a61321089832c144ce93b60b1c",
+      "pixel_sha256": "465211daae8105fe4bc4ebd5bf00e4692c73179082c280924c959094622b6b20",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42575,12 +44203,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_pine_pale_endgrain",
+      "stem": "cu_wood_pine_pale_bottom",
       "family": "wood",
       "material": "pine",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 9484620301772994210,
+      "role": "bottom",
+      "seed": 6382479620846796375,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42588,7 +44216,29 @@
         16,
         16
       ],
-      "pixel_sha256": "f372610bd0375a1c0cb1f7846f22c8588bf3b7e629311e74d2a042b835e43a17",
+      "pixel_sha256": "52d4807f2296f77ca09baac09b13502c44c6fa3cabeb86c6f4cd8aab9c224a54",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_pine_pale_top",
+      "family": "wood",
+      "material": "pine",
+      "variant": "pale",
+      "role": "top",
+      "seed": 6973196167704716024,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "156fa5b90ab4ecdc5a55066c894465d13f28dd482053eef850a4fa0f822eb6fa",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42619,12 +44269,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_pine_plank_endgrain",
+      "stem": "cu_wood_pine_plank_bottom",
       "family": "wood",
       "material": "pine",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 12892696648370661764,
+      "role": "bottom",
+      "seed": 3072578025008758736,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42632,7 +44282,29 @@
         16,
         16
       ],
-      "pixel_sha256": "2b3a9a5f220b4b83b1a9951e1e4be3486cdd74904a3ada70ade46b24af192837",
+      "pixel_sha256": "51a84589ad62afadd8d73f67efc7f644166552ab86416fec7b1cc92e24254b2c",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_pine_plank_top",
+      "family": "wood",
+      "material": "pine",
+      "variant": "plank",
+      "role": "top",
+      "seed": 11534778603523669676,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d19da204fa552675bf7fbf49091ba030d32ab871a881cf81f6740f721015ffa7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42676,7 +44348,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b8c89adf26aef0b5c96f7dbb3adf2fe1a133f049227af0c4e17a7bc466eb4d8c",
+      "pixel_sha256": "1ce6e5b87d5eabe8c1ae802a41c37e6861600c2f0266e1594c5201d9ca614f3b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42707,12 +44379,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_pine_weathered_endgrain",
+      "stem": "cu_wood_pine_weathered_bottom",
       "family": "wood",
       "material": "pine",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 9945131747530854367,
+      "role": "bottom",
+      "seed": 1977197463308159917,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42720,7 +44392,29 @@
         16,
         16
       ],
-      "pixel_sha256": "292adfb397cef9faddd92ef511dfb3678ec923b324e815c97fc33090e5f287d7",
+      "pixel_sha256": "c4b35dfc2afaf4b8e3a89631619f3861cd9b6e09ca47b89a2c002afe0ad3b9e8",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_pine_weathered_top",
+      "family": "wood",
+      "material": "pine",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 629308216053951733,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "095393c9ee270eb0a0970e4aa456903d851e5a2b3178b5a15c2b062f6514fea2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42751,12 +44445,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_poplar_aged_endgrain",
+      "stem": "cu_wood_poplar_aged_bottom",
       "family": "wood",
       "material": "poplar",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 16673672394279200929,
+      "role": "bottom",
+      "seed": 4727316242933033988,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42764,7 +44458,29 @@
         16,
         16
       ],
-      "pixel_sha256": "861c439ffb99485db29271471401217551c554d7f35fd9cab847b9eb20b927b4",
+      "pixel_sha256": "a145023dbfc77954baab19287c8752b7f3539014b6656939672c08d2bdf832e3",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_poplar_aged_top",
+      "family": "wood",
+      "material": "poplar",
+      "variant": "aged",
+      "role": "top",
+      "seed": 17049547653830729583,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "353101f165d3f114e46150007a5dd3b8164d941fd535c78051c9c45b105d241a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42808,7 +44524,7 @@
         16,
         16
       ],
-      "pixel_sha256": "394e137ef1857d627a0beb8017bd066affac56de95e9b1930d6a262fb638de66",
+      "pixel_sha256": "b3369608e585a6fffc2be3ae98ad5e5cab460ebc210b913d991e10c37d8b12e1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42839,12 +44555,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_poplar_carved_endgrain",
+      "stem": "cu_wood_poplar_carved_bottom",
       "family": "wood",
       "material": "poplar",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 3770311279386210692,
+      "role": "bottom",
+      "seed": 1836819021989229061,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42852,7 +44568,29 @@
         16,
         16
       ],
-      "pixel_sha256": "94db052cb9f7af88d52049f178bb8113274db9c96aacb997f82fe89c9dd7aa0d",
+      "pixel_sha256": "c05402614ca6030b66ae8eccf1c922f0cb606459b86383eb81d53decadf9b0c4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_poplar_carved_top",
+      "family": "wood",
+      "material": "poplar",
+      "variant": "carved",
+      "role": "top",
+      "seed": 13467903704584717025,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f65041702ca6106e5b36ca2ac204f760e0dab4ade3c4d4e4f3352ebba6b082fd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42883,12 +44621,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_poplar_cut_endgrain",
+      "stem": "cu_wood_poplar_cut_bottom",
       "family": "wood",
       "material": "poplar",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 7153597853324985306,
+      "role": "bottom",
+      "seed": 4109945335916417425,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42896,7 +44634,29 @@
         16,
         16
       ],
-      "pixel_sha256": "16eff234a56a37effaebae0ef76cde26459309ee9bf6f9c69dd7dc8dfb9e5a55",
+      "pixel_sha256": "8174572a2ceae676f808238bc23cb26bc91e60019b44ba46e37e663e920a6505",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_poplar_cut_top",
+      "family": "wood",
+      "material": "poplar",
+      "variant": "cut",
+      "role": "top",
+      "seed": 13577455723597014909,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "1dc3cef08c09b9b1529edcb763d683bd7d3c5f3d0db0ffe4d7714e0aa46d1c97",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42927,12 +44687,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_poplar_dark_endgrain",
+      "stem": "cu_wood_poplar_dark_bottom",
       "family": "wood",
       "material": "poplar",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 14412047509612371923,
+      "role": "bottom",
+      "seed": 9341976122544227157,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -42940,7 +44700,29 @@
         16,
         16
       ],
-      "pixel_sha256": "d9a3c6814331bfa659f93dfa038c41fc5882cf55ba6f62ef09e667115f09ac83",
+      "pixel_sha256": "934fcdf4d70f3c7bd5d0ccb7c691583525569fb80689e787b40b78dd392ef8f3",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_poplar_dark_top",
+      "family": "wood",
+      "material": "poplar",
+      "variant": "dark",
+      "role": "top",
+      "seed": 8334193296772554916,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "13b28bb7fefdbe60cfb7a34f87f838b434c1ef8a70f7514b0d3f0dbd67b30f21",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42962,7 +44744,7 @@
         16,
         16
       ],
-      "pixel_sha256": "dafdea8de5195493d938a458c39d6c8ac7fe27495f7cbb3a663e2914c8589c3b",
+      "pixel_sha256": "01c6deaae0c74eaad88fe15f967349272507e10b6ddb97777e1bc9cdca38d1e3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42984,7 +44766,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a31f59203fbc96b97a4435544128271dcd73ff9e508b4775996c7b72c8c8f745",
+      "pixel_sha256": "7da6d4a24f9dbeea4b7f9f59d450854e1283936bfc2c5fc65e5599fa97a67d12",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43015,12 +44797,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_poplar_pale_endgrain",
+      "stem": "cu_wood_poplar_pale_bottom",
       "family": "wood",
       "material": "poplar",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 1560593830803519699,
+      "role": "bottom",
+      "seed": 7591825029615901917,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43028,7 +44810,29 @@
         16,
         16
       ],
-      "pixel_sha256": "7e6df3a1b8f325f4c2e2182c0e111cfd222f85326ac620917c3e6bbd42ce49cf",
+      "pixel_sha256": "1ce0569d90c7dc7fb7763db5224fb3d5634432378d2da93a7b9a3ad06ac537f0",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_poplar_pale_top",
+      "family": "wood",
+      "material": "poplar",
+      "variant": "pale",
+      "role": "top",
+      "seed": 10796593643632141879,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "575743c1c929a48680fe77b147cf676c1e6d7ccd13d2e9efba9b44b46113c28c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43059,12 +44863,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_poplar_plank_endgrain",
+      "stem": "cu_wood_poplar_plank_bottom",
       "family": "wood",
       "material": "poplar",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 18205786500302423878,
+      "role": "bottom",
+      "seed": 13339161903436049414,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43072,7 +44876,29 @@
         16,
         16
       ],
-      "pixel_sha256": "c43a14bcfc4e0a651fa729281efd29152e602a8ba0190a638e3a2b86a9f0055e",
+      "pixel_sha256": "bbf86592abd54bd1a87f6768d3c6a55ac0e19e8b2d12553f8e4dd1292073f2fb",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_poplar_plank_top",
+      "family": "wood",
+      "material": "poplar",
+      "variant": "plank",
+      "role": "top",
+      "seed": 743857643618797699,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "cf9785080c464b87ed3c5c76d081318b17c8cf07657aebc28c2666d0c6e0a7f9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43116,7 +44942,7 @@
         16,
         16
       ],
-      "pixel_sha256": "23c94e80f873867f9a9112a6521e89299125a5cd4639a3e6ce9f5e41b0ddc7ab",
+      "pixel_sha256": "d6a1aa28bceaab8a3a5db64bda606c061369c21454e8a3eba8b9ac70ffa3225b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43147,12 +44973,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_poplar_weathered_endgrain",
+      "stem": "cu_wood_poplar_weathered_bottom",
       "family": "wood",
       "material": "poplar",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 7740109583884811828,
+      "role": "bottom",
+      "seed": 2725124843450426666,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43160,7 +44986,29 @@
         16,
         16
       ],
-      "pixel_sha256": "256076df183d53e2e16fe08669e9fc1e5b36fe30acda7ad9544574db5d660032",
+      "pixel_sha256": "315938c8ed43e24ec0324f5407f9e2d83da698d56c42c7b49a7f82925d17ed7d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_poplar_weathered_top",
+      "family": "wood",
+      "material": "poplar",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 10315254986748456569,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "05b90e8cb5ee6c4c27ccffb9373d8f5d066d8b9c96f10425cd878dd91f2a906c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43191,12 +45039,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_redwood_aged_endgrain",
+      "stem": "cu_wood_redwood_aged_bottom",
       "family": "wood",
       "material": "redwood",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 15322504971798642731,
+      "role": "bottom",
+      "seed": 13565854765078884739,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43204,7 +45052,29 @@
         16,
         16
       ],
-      "pixel_sha256": "4eacf670f33c4da246ca877744caac1bd24f68f5458579c8c80f74e8741c9817",
+      "pixel_sha256": "e2ba5ad10f168ad45d0fb6e497978109bfc6a0096f4ae48ddcf7ae8de03682ac",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_redwood_aged_top",
+      "family": "wood",
+      "material": "redwood",
+      "variant": "aged",
+      "role": "top",
+      "seed": 178057811284172207,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "34d863ec23574ff47322e041d2f1e01ab70596d83099acbbaae8fe6d15d0b727",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43248,7 +45118,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9af94d79249f88c52e886d7ff64956e17bd7f0e6f378749ea2f58d5e58b31c2d",
+      "pixel_sha256": "706f91377ef9d741a53c77f27edf37a2f476454e7b0985b77bac4e91cb3f3335",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43279,12 +45149,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_redwood_carved_endgrain",
+      "stem": "cu_wood_redwood_carved_bottom",
       "family": "wood",
       "material": "redwood",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 11261315593311665419,
+      "role": "bottom",
+      "seed": 14962128363788280128,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43292,7 +45162,29 @@
         16,
         16
       ],
-      "pixel_sha256": "09154cbf21d6fe8a2e28519376b93a86fffd7903553642fd28aff77dc4713477",
+      "pixel_sha256": "695613922a2a865d4ea9ebae34471a52d36929f63b12591e905f5e9aba360041",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_redwood_carved_top",
+      "family": "wood",
+      "material": "redwood",
+      "variant": "carved",
+      "role": "top",
+      "seed": 15584396710417192307,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d982551ab3743bec7f3658ccd56bc30ebe7fbf800ac563515c6cf7412e3ff8ac",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43323,12 +45215,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_redwood_cut_endgrain",
+      "stem": "cu_wood_redwood_cut_bottom",
       "family": "wood",
       "material": "redwood",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 11271228948315770418,
+      "role": "bottom",
+      "seed": 14887049098558051421,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43336,7 +45228,29 @@
         16,
         16
       ],
-      "pixel_sha256": "1e3e76add41c475e0414dd320c56212ca5cf77a5811e52e9c1b8e832c933375c",
+      "pixel_sha256": "9f527e923c10a1993ca5e5f59d06b33eb9e42af6ca755974ddcc35031e902d9b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_redwood_cut_top",
+      "family": "wood",
+      "material": "redwood",
+      "variant": "cut",
+      "role": "top",
+      "seed": 10067783930407729107,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "18da108ccf0d2de957e671f6b70417ed6400b2002af3c967d720a77360860bfe",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43367,12 +45281,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_redwood_dark_endgrain",
+      "stem": "cu_wood_redwood_dark_bottom",
       "family": "wood",
       "material": "redwood",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 16735644815672135385,
+      "role": "bottom",
+      "seed": 15963954971453973385,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43380,7 +45294,29 @@
         16,
         16
       ],
-      "pixel_sha256": "5d7263cc7b6632b05e69d83a0c0a227ddfc37bec9fcb0e9258d966cdf92aa12f",
+      "pixel_sha256": "53015b086ed3dd260d1073d90b1c7b23c9dfafb3cbdbc9d988484281b2af8cdb",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_redwood_dark_top",
+      "family": "wood",
+      "material": "redwood",
+      "variant": "dark",
+      "role": "top",
+      "seed": 15005194215117332979,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "fd009638789e39ac3d9ef9824584244bc30f2f951985703e5b66c32feb6426bd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43402,7 +45338,7 @@
         16,
         16
       ],
-      "pixel_sha256": "60c5ca4245de5c515f52a0a1f9931d8fd8cdcdaf994b4180855d59689622749f",
+      "pixel_sha256": "d1a8506635926474843fee9b0b4acd41868967394e6e4331fd21ac40a5ae0d90",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43424,7 +45360,7 @@
         16,
         16
       ],
-      "pixel_sha256": "25f35ac9e3000494f5c13bde52e18879e80a3262a70cee3fbfec882e75833bb9",
+      "pixel_sha256": "dd874218c21cf06d930a9ed6f209131b7860defebff67facf9e66492e39490e2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43455,12 +45391,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_redwood_pale_endgrain",
+      "stem": "cu_wood_redwood_pale_bottom",
       "family": "wood",
       "material": "redwood",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 17382774424006259242,
+      "role": "bottom",
+      "seed": 9561035292061091183,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43468,7 +45404,29 @@
         16,
         16
       ],
-      "pixel_sha256": "eed57068e0f598b516d40a5ccc6cdf7a4d6a9093c8c6cd278bddb24ded2a0f38",
+      "pixel_sha256": "70f02860219e62ad7c1172804095033dbc326672fca88a04af21d93ede7810a5",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_redwood_pale_top",
+      "family": "wood",
+      "material": "redwood",
+      "variant": "pale",
+      "role": "top",
+      "seed": 5945340406346058461,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "69faf33180749a2f1fd0d3168b09c1610e1061a109b89a07a26ce9c50a8737f3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43499,12 +45457,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_redwood_plank_endgrain",
+      "stem": "cu_wood_redwood_plank_bottom",
       "family": "wood",
       "material": "redwood",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 16973540715585080232,
+      "role": "bottom",
+      "seed": 18048191732463847806,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43512,7 +45470,29 @@
         16,
         16
       ],
-      "pixel_sha256": "d23e8a8a5ea3c099ec88d6ebc1dff6ee9131260a6a187ecb1cb1d7e5537ca777",
+      "pixel_sha256": "4a50db7fe803d4f5cf8abfe094ce626502fe476fde0de9e12802a624a6e59449",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_redwood_plank_top",
+      "family": "wood",
+      "material": "redwood",
+      "variant": "plank",
+      "role": "top",
+      "seed": 16721630522026946287,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "77d2d6d7918fe57f48759c750b7a445f076d9df3372e57691e1c5e6ffa69a336",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43556,7 +45536,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d4703b877243c6b12d47f6d10ebc43bb3af6ee21f103dfd4ad0e16150af89d69",
+      "pixel_sha256": "2d3a0990c4d0260f5b78bf97875677439d2bc410d915bc4c2c56d5625f5bc881",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43587,12 +45567,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_redwood_weathered_endgrain",
+      "stem": "cu_wood_redwood_weathered_bottom",
       "family": "wood",
       "material": "redwood",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 11485863163513310203,
+      "role": "bottom",
+      "seed": 6897011428043316408,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43600,7 +45580,29 @@
         16,
         16
       ],
-      "pixel_sha256": "be6dc76eb5814fbff0efd455d1ce21fa070b876dfef9accf6aabf8f8314a9866",
+      "pixel_sha256": "c0c862ee00f937315509b6ada4ce78b66f5179a6f9d8100e8a1f3daebf679124",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_redwood_weathered_top",
+      "family": "wood",
+      "material": "redwood",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 10511396399983679684,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e97b8a0f476af97430d79c1b94c48edf791d26d914b42871706d44229d2df568",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43631,12 +45633,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_walnut_aged_endgrain",
+      "stem": "cu_wood_walnut_aged_bottom",
       "family": "wood",
       "material": "walnut",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 14842411308444463063,
+      "role": "bottom",
+      "seed": 12682335703894315338,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43644,7 +45646,29 @@
         16,
         16
       ],
-      "pixel_sha256": "bbdd510f3ecfb849e629f1d2569dee64bcb842ea8111faac686ee36016912b53",
+      "pixel_sha256": "df0c982c2695f2e1182e4cd202bcd16487a9e2ee7f3000a10e09a7e9ebe39a90",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_walnut_aged_top",
+      "family": "wood",
+      "material": "walnut",
+      "variant": "aged",
+      "role": "top",
+      "seed": 11607879172692811213,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "55f7cbea56c13bc282469c33afcacd38531787ebfaeed8d4d09f67b3305bfe4f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43688,7 +45712,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d600c31f49b12093b78942028e977088852e09121ede7762adbd8502ba531b0c",
+      "pixel_sha256": "159dfbbc655105e67966dc5fb86f5ee5ffe60c2e1aae184328eef1433536be73",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43719,12 +45743,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_walnut_carved_endgrain",
+      "stem": "cu_wood_walnut_carved_bottom",
       "family": "wood",
       "material": "walnut",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 13603190107070145288,
+      "role": "bottom",
+      "seed": 15186999276584622440,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43732,7 +45756,29 @@
         16,
         16
       ],
-      "pixel_sha256": "96ffdf95184048efd0e27f2ee6a16a9a32f37eb27de92a94475ac3bf62982aad",
+      "pixel_sha256": "a967de485119494b445d95075cf07d8de93e71591a6ac7e57b2b7d807ea1df08",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_walnut_carved_top",
+      "family": "wood",
+      "material": "walnut",
+      "variant": "carved",
+      "role": "top",
+      "seed": 2171911283620261472,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "b86d292e1c3c6990f710335bd2b4a3021c490f211bef9ff4e69cadd7b88658b1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43763,12 +45809,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_walnut_cut_endgrain",
+      "stem": "cu_wood_walnut_cut_bottom",
       "family": "wood",
       "material": "walnut",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 11471326269296627936,
+      "role": "bottom",
+      "seed": 2355862566268942989,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43776,7 +45822,29 @@
         16,
         16
       ],
-      "pixel_sha256": "7131782e021b3934a3f86faa4773813e6c28c699a105d3313f52ebf2bd5f2f59",
+      "pixel_sha256": "956a3380b472bce8bc813ae4e9337d9e92d17451f34e00583971b1764b44c15e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_walnut_cut_top",
+      "family": "wood",
+      "material": "walnut",
+      "variant": "cut",
+      "role": "top",
+      "seed": 654218113858323698,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3323e712b703df09fb117511ef4322977cb997599dbf682a8ae0956091c6483b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43807,12 +45875,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_walnut_dark_endgrain",
+      "stem": "cu_wood_walnut_dark_bottom",
       "family": "wood",
       "material": "walnut",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 1759599793240744925,
+      "role": "bottom",
+      "seed": 14056370882948751625,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43820,7 +45888,29 @@
         16,
         16
       ],
-      "pixel_sha256": "c16436f19c23fe60908ba36061b32393b8d623fb80123082de06952f5a1a1de8",
+      "pixel_sha256": "27cfdb34025a23a5b6d6bd97ec8ae841c9a3b80b0c531aa278ee493b8ce471ed",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_walnut_dark_top",
+      "family": "wood",
+      "material": "walnut",
+      "variant": "dark",
+      "role": "top",
+      "seed": 2611395576824886644,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "220c463a721daca61b1a064ab2b11b0d94e709903c8987453441bb7d2d80a750",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43842,7 +45932,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e7d723bd01f07f2afc0e861df660a8061ca4fefdaf4224fe2f353cbc74a90436",
+      "pixel_sha256": "e742682f09844251dcc5e81b4ed58c7e67eb7e68cca1599c3928374c4d225fab",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43864,7 +45954,7 @@
         16,
         16
       ],
-      "pixel_sha256": "55a88d59402f0b08cea83b474dc71dc5c92f4a04e85a83e5131d4b8b1bc0252d",
+      "pixel_sha256": "72f5142b1c2b89c45e555a61a882d40c25d399c26ea59681c5389b0ebba9a82d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43895,12 +45985,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_walnut_pale_endgrain",
+      "stem": "cu_wood_walnut_pale_bottom",
       "family": "wood",
       "material": "walnut",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 11021690692480788590,
+      "role": "bottom",
+      "seed": 7635705798763768522,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43908,7 +45998,29 @@
         16,
         16
       ],
-      "pixel_sha256": "98d43f48c68757faa9529c487ca7fbabfe212b49497cf091b36cc1e5f6edf1e2",
+      "pixel_sha256": "65054aec66b684ae149818cb77c89ab2399c81321573412a0f826b7e210cb26d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_walnut_pale_top",
+      "family": "wood",
+      "material": "walnut",
+      "variant": "pale",
+      "role": "top",
+      "seed": 9700792719984950671,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "b53eab71d4f6c4e4814d5c6243e2cf0e6a54bd1f81167ed8d1878aa5e00000f8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43939,12 +46051,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_walnut_plank_endgrain",
+      "stem": "cu_wood_walnut_plank_bottom",
       "family": "wood",
       "material": "walnut",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 762058682294663125,
+      "role": "bottom",
+      "seed": 17705487603288844856,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -43952,7 +46064,29 @@
         16,
         16
       ],
-      "pixel_sha256": "f13fc135632f167a5ad1fc8d3bd8bdc2b756d462c7189521cbd01220377467b5",
+      "pixel_sha256": "a64e37581916e2af09dae8946d77ed6de61a12f14af6370a415932810171f30c",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_walnut_plank_top",
+      "family": "wood",
+      "material": "walnut",
+      "variant": "plank",
+      "role": "top",
+      "seed": 7087188372953698482,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7013e12007f0e6af67328cf9caf2a3dc5bd9e8769066f33a6f2a3d8806a78674",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43996,7 +46130,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4aa001919f2e1fa3d8f0da242b7b1188f60413d6510e400d3ca700212625e3b7",
+      "pixel_sha256": "63d2b2a091440b5c487e0dd2e9ef34755acb220ff28f543728fa466fa64f68f5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44027,12 +46161,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_walnut_weathered_endgrain",
+      "stem": "cu_wood_walnut_weathered_bottom",
       "family": "wood",
       "material": "walnut",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 12210010270236994344,
+      "role": "bottom",
+      "seed": 9939239028953295648,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -44040,7 +46174,29 @@
         16,
         16
       ],
-      "pixel_sha256": "44b987d542806d4ad488d508824b3ceb887290b469d80d0c8c3dc6d2a793c1e6",
+      "pixel_sha256": "941a75719f8bb46dc21927087b97137e2ba92959c24d5b076d3a0de79c3b6e56",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_walnut_weathered_top",
+      "family": "wood",
+      "material": "walnut",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 11445346081506039425,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c8fc5ff40d5d39f905c27aa8d07a7a8345b2f5c358e2202615080b4c317ed8e2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44071,12 +46227,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_willow_aged_endgrain",
+      "stem": "cu_wood_willow_aged_bottom",
       "family": "wood",
       "material": "willow",
       "variant": "aged",
-      "role": "endgrain",
-      "seed": 668507647085586627,
+      "role": "bottom",
+      "seed": 18150947488135006183,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -44084,7 +46240,29 @@
         16,
         16
       ],
-      "pixel_sha256": "87960d2a7bc1a67566577040da59d9f5c64e4d3e8c452f0ac64ef36daa31f00f",
+      "pixel_sha256": "c498f6b2b971cd65eb136eea08053b3f8133b29fe10889028d7edb8b5852c237",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_willow_aged_top",
+      "family": "wood",
+      "material": "willow",
+      "variant": "aged",
+      "role": "top",
+      "seed": 1839855029753982695,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "db8cebd7edab6fddaf711c040693036b53f96fbf6de6086dcd4426a84d96a6c4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44128,7 +46306,7 @@
         16,
         16
       ],
-      "pixel_sha256": "600ed7dac6e02e6ecc095fe049c43e9e57138f4c1d4c67866241c75c43fa8352",
+      "pixel_sha256": "e6411451c78c6766ff2a8c2c0c5e16b8928776977b941d2e91419a447b854dab",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44159,12 +46337,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_willow_carved_endgrain",
+      "stem": "cu_wood_willow_carved_bottom",
       "family": "wood",
       "material": "willow",
       "variant": "carved",
-      "role": "endgrain",
-      "seed": 970481022216097856,
+      "role": "bottom",
+      "seed": 11566674919309929475,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -44172,7 +46350,29 @@
         16,
         16
       ],
-      "pixel_sha256": "da2373b054cf2770774af0c917ac38d654ccd9d9ba6bd18be26fc2576738215b",
+      "pixel_sha256": "4917af57cd49b593f74d805126fa3ca43de22795fba05daaacdd7d8aea259e98",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_willow_carved_top",
+      "family": "wood",
+      "material": "willow",
+      "variant": "carved",
+      "role": "top",
+      "seed": 15776629046571370514,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "453c81d37b05d857587f5a64fdc401725a3062b50415db4e9343f90d34e178ea",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44203,12 +46403,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_willow_cut_endgrain",
+      "stem": "cu_wood_willow_cut_bottom",
       "family": "wood",
       "material": "willow",
       "variant": "cut",
-      "role": "endgrain",
-      "seed": 13696079936050821776,
+      "role": "bottom",
+      "seed": 8008148678931034421,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -44216,7 +46416,29 @@
         16,
         16
       ],
-      "pixel_sha256": "94af714f5d97a6b89830c3bd1c420f94dcb5b5598155f6fab7d59816b753f625",
+      "pixel_sha256": "ad5eb3a42aafa4abccd46a2d381d477393637cc18101bfc4289231bc73a018cf",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_willow_cut_top",
+      "family": "wood",
+      "material": "willow",
+      "variant": "cut",
+      "role": "top",
+      "seed": 5436768236157417239,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "803e0c4f12a19115a139c1f4731c79057dc69004da78e251d34136ded09fe640",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44247,12 +46469,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_willow_dark_endgrain",
+      "stem": "cu_wood_willow_dark_bottom",
       "family": "wood",
       "material": "willow",
       "variant": "dark",
-      "role": "endgrain",
-      "seed": 9763678350605183249,
+      "role": "bottom",
+      "seed": 7214685905081032951,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -44260,7 +46482,29 @@
         16,
         16
       ],
-      "pixel_sha256": "e68a803650ce13fa99ded6bb52224e2de23dad6dcd4c0e0ae6cd02bf3c6e787b",
+      "pixel_sha256": "058b1dbbe611077f54640705accd9d526e1f5443e7134f0d9e8a6bc91ed07410",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_willow_dark_top",
+      "family": "wood",
+      "material": "willow",
+      "variant": "dark",
+      "role": "top",
+      "seed": 7543023591106243568,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0a109359ce5128106ee49e73a84da92dbe1b55628a87b61b514ef26fff3f547c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44282,7 +46526,7 @@
         16,
         16
       ],
-      "pixel_sha256": "da7930e8abb727291ce5a5b395809d1351b70b0aa6e30c83e47829bedf4a3b2f",
+      "pixel_sha256": "7a3b999fe90e0637c3d20784b8e300c8db2751880788e987805ff668084e45df",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44304,7 +46548,7 @@
         16,
         16
       ],
-      "pixel_sha256": "62365863547a148db0848c49c08fccb6f82098bba56438180fc1dfee8d4c7bcd",
+      "pixel_sha256": "0e9fa1a5163ad816646c662de6eee33a3e53bc7eb3834a2972d9a5b3e3a426e4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44335,12 +46579,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_willow_pale_endgrain",
+      "stem": "cu_wood_willow_pale_bottom",
       "family": "wood",
       "material": "willow",
       "variant": "pale",
-      "role": "endgrain",
-      "seed": 8035168652407705206,
+      "role": "bottom",
+      "seed": 6909266259395823665,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -44348,7 +46592,29 @@
         16,
         16
       ],
-      "pixel_sha256": "69f4103086af182019bfb2c66421950da45b625d18a2fdf15c0b440804d3d5c0",
+      "pixel_sha256": "995e0d85b4d3fb1c8c0fc82cd621918c2766dfcd9840085715b68c9e771af713",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_willow_pale_top",
+      "family": "wood",
+      "material": "willow",
+      "variant": "pale",
+      "role": "top",
+      "seed": 7844743285766339993,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "93f1af47365ff30f2a3d99d8c640d4469a770ef636835c80aca7d79dc80aa443",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44379,12 +46645,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_willow_plank_endgrain",
+      "stem": "cu_wood_willow_plank_bottom",
       "family": "wood",
       "material": "willow",
       "variant": "plank",
-      "role": "endgrain",
-      "seed": 10999931670461976353,
+      "role": "bottom",
+      "seed": 8723365367607447025,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -44392,7 +46658,29 @@
         16,
         16
       ],
-      "pixel_sha256": "16a29e175dd6953034d961853c67c057d210f590b561c6d8261ad24362bc166e",
+      "pixel_sha256": "56e9f97795cd1f61ab104bdf14aedc54420bc2aeda739945b4ad4a7e196debe4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_willow_plank_top",
+      "family": "wood",
+      "material": "willow",
+      "variant": "plank",
+      "role": "top",
+      "seed": 8114020144889393596,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "55fb20bb5027632dddd4f0a445ee6cb87dba200ad883c2f75e9cda2d90cffbe9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44436,7 +46724,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9a8fb9dcb06443d5af5ac75399a8c129d04107ccbdc9893deee176b788321e8d",
+      "pixel_sha256": "677abb8d75739c12cf8b08f2cf75cc37f434e16c492ecb1cafd28ce30dbc79a0",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44467,12 +46755,12 @@
       "license_review_required": false
     },
     {
-      "stem": "cu_wood_willow_weathered_endgrain",
+      "stem": "cu_wood_willow_weathered_bottom",
       "family": "wood",
       "material": "willow",
       "variant": "weathered",
-      "role": "endgrain",
-      "seed": 18135669674357230448,
+      "role": "bottom",
+      "seed": 5750092016300149014,
       "backend": "procedural",
       "seam_blend_width": 2,
       "reference_mode": "qa-only",
@@ -44480,7 +46768,29 @@
         16,
         16
       ],
-      "pixel_sha256": "abf1e335033add14d3480d285e6a0b14f7b8091e05fc1cab8b2fe112aa4888ff",
+      "pixel_sha256": "a8dfd5b1d0a6a317e76a0e3f5bc80607fb5badb1d38cbec08c939c5ac49bebd5",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_willow_weathered_top",
+      "family": "wood",
+      "material": "willow",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 12813845497847993212,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "aa66724f5c5e0624d284ec2216ac2b26c7cc3c500f59ba9cb369009b7a0f46e4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -46582,7 +48892,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8162692e5c097f413be1a794c8371a819afa0381687ad7c3c92e1adc7680ba9d",
+      "pixel_sha256": "3a36e7b011c442316b088ba453da0e692691673f67b6478420dd143a0ecfa824",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "jukebox_top",
@@ -47067,7 +49377,7 @@
         16,
         16
       ],
-      "pixel_sha256": "08349a0adf5c1502c86cdcd77b3a2c5612d30a8f1c951bfe9eb3e7987e8b053f",
+      "pixel_sha256": "67fa81f57d21d90d6feccc54c6eafe134ded39501a8c3324d0ed96e6c093a30e",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_acacia_tree_default_acacia_tree_top",
@@ -47218,7 +49528,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1704d90146f93a799a53f3405545ace5d19f4428d99c9b3c930644e4897639eb",
+      "pixel_sha256": "74a708d559783ecfcafe9f231df129f44c40edc00f28e17e3e410497222f0c83",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_aspen_tree_default_aspen_tree_top",
@@ -48904,7 +51214,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2a3f3e200b96cbc801f5fce8fc6a735210716b53fb5979c8b12048a1c49f659c",
+      "pixel_sha256": "8e4c7dd81a4988827c6c17ced5e5a435359233bb4a5b92882afb5d184d96a3f3",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_jungletree_default_jungletree_top",
@@ -49643,7 +51953,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d9f962509611a4b393538aade60ae1e1ebeee64179365ae9b8ad2412b1b54952",
+      "pixel_sha256": "be4849b7200481ed0e5122b10f5a4e33f992ca389e631bd287195252a755670b",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_pine_tree_default_pine_tree_top",
@@ -50317,7 +52627,7 @@
         16,
         16
       ],
-      "pixel_sha256": "92ed103495b9885f864ca4262260a49e7b65f6815a8eb604296aa52523beec6e",
+      "pixel_sha256": "48cabf7c50e421bd27f26717e5e50307ba7a4bff9d9fd3dcaf9761b6385b0625",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_tree_default_tree_top",
@@ -52071,7 +54381,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b9d6a2fa144974a3089691e7b55782bfc62e141cd41529f1557c6292a619d801",
+      "pixel_sha256": "2d760827b6a3c6b657914ae219bf4721f7a03da61575c5ec6ed0e49948bf7553",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tree_top",
@@ -52340,7 +54650,7 @@
         16,
         16
       ],
-      "pixel_sha256": "22f43f720dd9fdf353f0867bb675dcbbb5d6d2b51013435adca6df98b47c51a3",
+      "pixel_sha256": "0b335b9e742fc02652e91e92420e3f27ccf0952ab180c89e210fed256082fa82",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "workbench_top",

@@ -18,8 +18,8 @@
     "cu_wood_beech_pale",
     "cu_wood_beech_pale",
     "cu_wood_beech_pale",
-    "cu_wood_beech_pale_endgrain",
-    "cu_wood_beech_pale_endgrain"
+    "cu_wood_beech_pale_top",
+    "cu_wood_beech_pale_bottom"
   ],
   "render": {
     "texture_variation": 0.48

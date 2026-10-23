@@ -18,8 +18,8 @@
     "cu_wood_beech_plank",
     "cu_wood_beech_plank",
     "cu_wood_beech_plank",
-    "cu_wood_beech_plank_endgrain",
-    "cu_wood_beech_plank_endgrain"
+    "cu_wood_beech_plank_top",
+    "cu_wood_beech_plank_bottom"
   ],
   "render": {
     "texture_variation": 0.48

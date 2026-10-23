@@ -18,8 +18,8 @@
     "cu_wood_oak_plank",
     "cu_wood_oak_plank",
     "cu_wood_oak_plank",
-    "cu_wood_oak_plank_endgrain",
-    "cu_wood_oak_plank_endgrain"
+    "cu_wood_oak_plank_top",
+    "cu_wood_oak_plank_bottom"
   ],
   "render": {
     "texture_variation": 0.48
