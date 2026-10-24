@@ -15,6 +15,7 @@ namespace cutum
 {
 
 class UWorld;
+class UWorldMeshService;
 struct ProceduralSettings;
 
 /// Per-frame budgets for chunk commit and mesh rebuild during streaming emerge.
@@ -56,6 +57,9 @@ private:
   FrameBudget LastBudget{};
   void EnqueueFaceDebtRepair(glm::ivec3 coord);
   void DrainFaceDebtRepairs(UWorld &world, int budget);
+  /// One-time SoftDefer/mesh-service callback installation (first
+  /// TickMeshEmerge). Callbacks read per-frame state from SoftDeferPolicy.
+  void InstallSoftDeferCallbacks(UWorldMeshService &mesh_service);
   int DualLaneRrToken_{0};
   /// A28 T1: DirtyDropped watermark for CapDirtyAdmitUnderThrash recent rate.
   uint64_t LastDirtyDroppedForAdmit_{0};

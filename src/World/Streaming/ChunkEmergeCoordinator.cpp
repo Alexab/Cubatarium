@@ -552,953 +552,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   SoftDeferPolicy.unlit_near_count = unlit_near_count;
   if (!SoftDeferCallbacksInstalled)
   {
-    mesh_service.SetDeferMeshUntilLitFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return false;
-          }
-          UWorld &world_ref = *world_ptr;
-          UWorldMeshService &mesh_svc = world_ref.GetMeshService();
-          const SoftDeferFramePolicy &pol = SoftDeferPolicy;
-          const int horiz =
-              std::max(std::abs(chunk_coord.x - pol.focus_ground.x),
-                       std::abs(chunk_coord.z - pol.focus_ground.z));
-          // SoftDefer ON while RelightDeferred / PendingLight. Lift SoftDefer
-          // spawn r≤2 only when !pending — else empty remesh + MarkEnter Dirty
-          // storm (110413 hang) or SoftDefer-empty sticky (102235).
-          if (ShouldSkipSpawnMeshWhileRelightDeferred(
-                  world_ref.IsLightingRelightDeferred(), horiz))
-          {
-            return true;
-          }
-          const bool underfeet = horiz <= 1;
-          const bool pending =
-              world_ref.IsPendingLightBeforeMeshSlice(chunk_coord);
-          if (EnterLitQuiesceMayLiftSpawnSoftDefer(
-                  world_ref.IsEnterLitQuiesceLatched(), horiz, pending,
-                  /*spawn_radius=*/2,
-                  world_ref.IsEnterLitGateActive() &&
-                      !world_ref.IsEnterUnderfeetPresentReady()))
-          {
-            return false;
-          }
-          const bool is_nearest_hole =
-              pol.have_nearest_missing &&
-              chunk_coord.x == pol.nearest_missing_hole.x &&
-              chunk_coord.z == pol.nearest_missing_hole.z;
-          const bool has_mesh = mesh_svc.HasDrawableGreedyMesh(chunk_coord);
-          const bool has_greedy = mesh_svc.HasGreedyMesh(chunk_coord);
-          const bool in_focus = horiz <= pol.focus_radius;
-          const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
-          const bool may_mesh =
-              world_ref.MayMeshColumn(ground, /*underfeet_preview=*/false);
-          const bool fully_dark =
-              has_greedy &&
-              mesh_svc.GetCache().ChunkHasFullyDarkFace(chunk_coord);
-          const bool starve_hinterland = StarveHinterlandUnlit(
-              world_ref.GetPhysicsTelemetry().SoftDeferEmptyNearN,
-              pol.pending_focus_count);
-          // Starvation applies to hinterland previews. The nearest missing
-          // first mesh is a bounded near-FOV exception; its snapshot is marked
-          // provisional and rendered with the ambient fallback until relight
-          // publishes the settled image.
-          const bool allow_unlit =
-              (is_nearest_hole || !starve_hinterland) &&
-              AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
-                                  kVisualStageLitDrawableHoriz);
-          const bool allow_unlit_hole = AllowUnlitDrawableUnderLightDebt(
-              pol.pending_focus_count, pol.unlit_near_count, horiz, fully_dark,
-              has_greedy, underfeet);
-          (void)pol.missing_visible_mesh;
-          return SoftDeferMeshUntilLitPolicy(
-              underfeet, has_mesh,
-              world_ref.RequiresLightingLitGate() && pending, in_focus, may_mesh,
-              allow_unlit, allow_unlit_hole);
-        });
-    // A42: SoftDefer must not RemoveAt LightRepair drawable remesh Dirty.
-    // A42b: PendingLight ⊆ LightRepair — treat PL as LightRepair for Capture/
-    // SoftDefer schedule even if stamp lag behind NotePending.
-    mesh_service.SetIsLightRepairRemeshFn(
-        [this](glm::ivec3 chunk_coord) -> bool
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return false;
-          }
-          const glm::ivec2 xz(chunk_coord.x, chunk_coord.z);
-          if (world_ptr->IsPendingLightBeforeMesh(xz))
-          {
-            return true;
-          }
-          if (world_ptr->IsSettledDrawGateMeshRepairPending(chunk_coord))
-          {
-            return true;
-          }
-          const ColumnRecord *rec = world_ptr->GetColumnRecords().Find(xz);
-          return rec &&
-                 rec->visual_obligation == VisualObligation::LightRepair;
-        });
-    mesh_service.SetOnLitPendingNeededFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          UWorld &world_ref = *world_ptr;
-          const glm::ivec2 key(chunk_coord.x, chunk_coord.z);
-          // ColPipe P5: drawable remesh is MarkRelit/Dirty — not RemeshSeam+sticky.
-          if (world_ref.GetMeshService().HasDrawableGreedyMesh(chunk_coord) ||
-              world_ref.GetMeshService().IsChunkMeshDirty(chunk_coord) ||
-              world_ref.GetMeshService().IsRemeshAfterApplyPending(chunk_coord) ||
-              world_ref.GetMeshService().IsPendingGpuApply(chunk_coord) ||
-              world_ref.GetMeshService().HasInflightMeshBuild(chunk_coord))
-          {
-            return;
-          }
-          // A completed no-change light calculation is still a settlement,
-          // including revision zero. Reopening PendingLight here invalidates
-          // the proof and repeats dark-first-mesh → relight indefinitely.
-          if (world_ref.HasCurrentChunkSliceLightSettlement(chunk_coord))
-          {
-            return;
-          }
-          const int light_band_min =
-              std::max(0, chunk_coord.y * CHUNK_SIZE);
-          const int light_band_max = std::min(
-              world_ref.GetProceduralSettings().MaxHeight,
-              (chunk_coord.y + 1) * CHUNK_SIZE - 1);
-          if (light_band_max < light_band_min)
-          {
-            return;
-          }
-          if (!world_ref.IsPendingLightBeforeMesh(key))
-          {
-            // The callback names the exact chunk whose dark first-mesh was
-            // deferred. A full-column note invalidates unrelated settled
-            // slices and causes the same column to cycle back through relight.
-            world_ref.TryNotePendingLightBeforeMesh(
-                glm::ivec3(key.x, 0, key.y), light_band_min,
-                light_band_max, "ChunkEmergeCoordinator.OnLitPendingNeeded");
-          }
-          // Phase 5.7R3: SoftDefer lit-pending Relight — same latch underfeet+fifo gate.
-          const auto &pt = world_ref.GetPhysicsTelemetry();
-          const bool latch_debt =
-              pt.EnterSettleSoftForceWithDebt != 0 && pt.VisibilityDebt > 0;
-          const bool moving = pt.MovementSpeed > 0.5f;
-          const bool vb_consume = IsTicketedVbConsumeMode(
-              pt.VisibleBlackNoTicketN, pt.VisibleBlackFocusN,
-              pt.VisibleBlackStalledN, moving);
-          if (!ShouldEnqueueLatchSideRelight(
-                  latch_debt, moving, pt.FocusMissingMesh != 0, pt.MissHoriz,
-                  pt.RelightFifoN, vb_consume))
-          {
-            return;
-          }
-          GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RelightThenMesh,
-                                          /*priority=*/70);
-          if (GetColumnFlowExecutor().HasRepairTicket(key))
-          {
-            world_ref.NoteVisibleFirstMeshRelightBand(
-                key, light_band_min, light_band_max);
-          }
-        });
-    mesh_service.SetOnSoftDeferHeldFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          UWorld &world_ref = *world_ptr;
-          const SoftDeferFramePolicy &pol = SoftDeferPolicy;
-          const int horiz =
-              std::max(std::abs(chunk_coord.x - pol.focus_ground.x),
-                       std::abs(chunk_coord.z - pol.focus_ground.z));
-          if (ShouldSkipSpawnMeshWhileRelightDeferred(
-                  world_ref.IsLightingRelightDeferred(), horiz))
-          {
-            return;
-          }
-          // A41: SoftDeferOwned only with repair ticket (FirstMesh enqueue).
-          // A42b: never demote live LightRepair — that breaks remesh Capture
-          // reserve / SoftDefer schedule fallthrough predicates.
-          ColumnRecord &orec = world_ref.GetColumnRecords().GetOrCreate(
-              glm::ivec2(chunk_coord.x, chunk_coord.z));
-          if (orec.visual_obligation != VisualObligation::LightRepair)
-          {
-            orec.visual_obligation = VisualObligation::SoftDeferOwned;
-            if (orec.visual_attempt_id == 0)
-            {
-              static uint64_t next_sd_attempt = 1;
-              orec.visual_attempt_id = next_sd_attempt++;
-              orec.visual_deadline_ms =
-                  StampLightRepairDeadlineMs(VisualObligationNowMs());
-            }
-          }
-          ColumnWorkItem item{};
-          item.column = glm::ivec2(chunk_coord.x, chunk_coord.z);
-          item.kind = ColumnWorkKind::FirstMesh;
-          item.priority = 100;
-          item.cy = chunk_coord.y;
-          GetColumnFlowExecutor().Enqueue(item);
-        });
-    mesh_service.SetOnLitDrawableCommittedFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          UWorld &world_ref = *world_ptr;
-          const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
-          world_ref.ClearStickyRemeshAfterLightColumn(col);
-          // A41: LitDrawable publish clears LightRepair attempt.
-          {
-            ColumnRecord &orec = world_ref.GetColumnRecords().GetOrCreate(col);
-            orec.visual_obligation = VisualObligation::LitDrawable;
-            orec.visual_attempt_id = 0;
-            orec.visual_deadline_ms = 0;
-            orec.legal_dark_settled = false;
-          }
-          // A21 P2.4/P2.7: per-chunk face debt clears publisher only.
-          // Cutover ON → no column ClearFaceDebt (dual-path ban / rollback OFF).
-          if (ChunkDemandAllowsColumnFaceDebtClear())
-          {
-            world_ref.GetColumnRecords().ClearFaceDebt(col);
-          }
-          if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
-          {
-            // A27/A32: publisher lit ⇒ per-face clear only when peer-ready;
-            // also satisfy subscriber neighbors facing this publisher.
-            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            // Coverage generations are typed independently from geometry revs.
-            const uint64_t pub_gen =
-                PublishedCoverageGeneration(demand, chunk_coord);
-            if (pub_gen != 0)
-            {
-              uint8_t clear_mask = 0;
-              if (const ChunkRenderDemandRecord *self =
-                      demand.Find(chunk_coord))
-              {
-                for (int f = 0; f < 6; ++f)
-                {
-                  const uint8_t bit = static_cast<uint8_t>(1u << f);
-                  if ((self->face_debt_mask & bit) == 0)
-                  {
-                    continue;
-                  }
-                  if (PeerCoverageMeets(pub_gen,
-                                        self->waiting_peer_gen[f]))
-                  {
-                    clear_mask = static_cast<uint8_t>(clear_mask | bit);
-                  }
-                }
-              }
-              else
-              {
-                // A37 H3: no record ⇒ do not fabricate clear of all faces.
-                clear_mask = 0;
-              }
-              if (clear_mask != 0)
-              {
-                demand.NoteFaceDebtSatisfied(chunk_coord, clear_mask, pub_gen);
-              }
-              static const glm::ivec3 kFaceNb[4] = {
-                  {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
-              for (const glm::ivec3 &d : kFaceNb)
-              {
-                const glm::ivec3 n = chunk_coord + d;
-                const int face_toward =
-                    SeaSeamPeerFaceTowardPublisher(d.x, d.z);
-                if (face_toward < 0 || face_toward > 5)
-                {
-                  continue;
-                }
-                const ChunkRenderDemandRecord *nr = demand.Find(n);
-                if (!nr ||
-                    (nr->face_debt_mask &
-                     static_cast<uint8_t>(1u << face_toward)) == 0)
-                {
-                  continue;
-                }
-                if (PeerCoverageMeets(
-                        pub_gen, nr->waiting_peer_gen[face_toward]))
-                {
-                  demand.NoteFaceDebtSatisfied(
-                      n, static_cast<uint8_t>(1u << face_toward), pub_gen);
-                }
-              }
-            }
-          }
-          if (!world_ref.IsPendingLightBeforeMesh(col))
-          {
-            const glm::ivec3 ground(col.x, 0, col.y);
-            // A22 S2 / A23 D2 / A40: sole RenderReady promotion site. One Y-slice
-            // lit commit must not Ready the column while another loaded slice is
-            // still FullyDark *without* LegalDarkSettled (multi-Y aggregate).
-            // GpuPipeline progress (~620) only flips visual→Publishing — never Ready.
-            bool sibling_fully_dark = false;
-            {
-              UWorldMeshService &mesh = world_ref.GetMeshService();
-              const ColumnRecord *settled_rec =
-                  world_ref.GetColumnRecords().Find(col);
-              const bool col_legal =
-                  settled_rec &&
-                  (settled_rec->legal_dark_settled ||
-                   settled_rec->visual_obligation ==
-                       VisualObligation::LegalDark ||
-                   settled_rec->visual_obligation ==
-                       VisualObligation::LitDrawable);
-              const auto &settings = world_ref.GetProceduralSettings();
-              const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
-              const int cy1 = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
-              for (int cy = min_cy; cy <= cy1; ++cy)
-              {
-                const glm::ivec3 sib(col.x, cy, col.y);
-                if (mesh.HasGreedyMesh(sib) &&
-                    mesh.GetCache().ChunkHasFullyDarkFace(sib) && !col_legal)
-                {
-                  sibling_fully_dark = true;
-                  break;
-                }
-              }
-            }
-            if (!sibling_fully_dark &&
-                (world_ref.IsColumnLitReady(ground) ||
-                 world_ref.GetColumnEmergeState(ground) ==
-                     ColumnEmergeState::Meshing ||
-                 world_ref.GetColumnEmergeState(ground) ==
-                     ColumnEmergeState::LitReady))
-            {
-              world_ref.SetColumnEmergeState(ground,
-                                             ColumnEmergeState::RenderReady);
-              GetColumnFlowExecutor().SetColumnJobStage(col,
-                                                        ColumnJobStage::RenderReady);
-            }
-          }
-        });
-    mesh_service.SetOnFaceDebtFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          UWorld &world_ref = *world_ptr;
-          const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
-          // FaceDebt census only — Dirty admission stays at mismatch writers
-          // (material / PublishedEmpty), not light-accepted Retain.
-          world_ref.GetColumnRecords().NoteFaceDebt(col);
-          EnqueueFaceDebtRepair(chunk_coord);
-          // A37 H2: single authority gate (cutover ⇒ authority).
-          if (ChunkDemandAuthorityEnabled())
-          {
-            // Face wait stamps are coverage generations; geometry revisions
-            // are a separate domain and cannot be used as a fallback.
-            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const uint64_t world_epoch =
-                world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
-            auto bind_current_identity = [&](glm::ivec3 coord)
-            {
-              if (const UChunk *ch =
-                      world_ref.GetBlockWorld().GetChunkManager().GetChunk(coord))
-              {
-                demand.BindIdentity(coord, world_epoch, ch->GetIncarnation());
-              }
-            };
-            bind_current_identity(chunk_coord);
-            auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
-              bind_current_identity(peer);
-              return PublishedCoverageGeneration(demand, peer);
-            };
-            for (int f = 0; f < 6; ++f)
-            {
-              const uint8_t bit = static_cast<uint8_t>(1u << f);
-              // A39 P3: UnknownPeer keeps waiting=0 (never fabricate need=1).
-              const uint64_t need =
-                  peer_cov_gen(chunk_coord +
-                               ChunkMeshFaceNeighborDelta(f));
-              demand.NoteFaceDebt(chunk_coord, bit, need);
-            }
-            // Coverage desire with face debt; geometry uses the mesh-revision
-            // domain consumed by publication, light uses the field revision.
-            // Never stub g=1,l=1 — that invents unrelated demand.
-            uint64_t g = 0, l = 0;
-            uint64_t incarnation = 0;
-            if (const UChunk *ch =
-                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(
-                        chunk_coord))
-            {
-              g = world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
-              l = ch->GetLightFieldRevision();
-              incarnation = ch->GetIncarnation();
-            }
-            if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
-            {
-              if (r->desired_geom_rev != 0)
-              {
-                g = r->desired_geom_rev;
-              }
-              if (r->desired_light_rev != 0)
-              {
-                l = r->desired_light_rev;
-              }
-              if (g == 0 && r->published_geom_rev != 0)
-              {
-                g = r->published_geom_rev;
-              }
-              if (l == 0 && r->published_light_rev != 0)
-              {
-                l = r->published_light_rev;
-              }
-            }
-            if (g != 0 || l != 0)
-            {
-              // Geometry and publication use the same mesh-revision domain;
-              // coverage can remain independently unsatisfied.
-              (void)demand.NoteDemand(chunk_coord, g, l,
-                                      /*desired_coverage_gen=*/1,
-                                      /*now_ms=*/0.0, world_epoch,
-                                      incarnation);
-            }
-          }
-          world_ref.NoteUnfinishedColumnDirty(col);
-        });
-    mesh_service.SetOnFaceDebtDirtyFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          UWorldMeshService &mesh_service = world_ptr->GetMeshService();
-          // A retained material upload still needs a successor, but repeated
-          // rejects must not advance the target that successor is building.
-          // Requeue only when demand owns this exact unpublished revision;
-          // otherwise create the first dirty target with a normal revision bump.
-          if (ChunkDemandAuthorityEnabled())
-          {
-            const UChunkRenderDemandStore &demand =
-                UChunkRenderDemandStore::Get();
-            const ChunkRenderDemandRecord *record = demand.Find(chunk_coord);
-            const uint64_t current_geom_rev =
-                mesh_service.GetChunkMeshRevision(chunk_coord);
-            if (record && record->has_active_attempt &&
-                record->desired_geom_rev == current_geom_rev &&
-                record->published_geom_rev < current_geom_rev)
-            {
-              mesh_service.RequeueDirtyPriority(
-                  chunk_coord,
-                  MeshRevisionBumpReason::FaceDebtMaterialRetry);
-              return;
-            }
-          }
-          mesh_service.MarkDirty(
-              chunk_coord, MeshRevisionBumpReason::FaceDebtMaterialRetry);
-        });
-    mesh_service.SetOnFaceDebtMaskFn(
-        [this](glm::ivec3 chunk_coord, uint8_t mask)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr || mask == 0)
-          {
-            return;
-          }
-          UWorld &world_ref = *world_ptr;
-          const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
-          if (ChunkDemandAuthorityEnabled())
-          {
-            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const uint64_t world_epoch =
-                world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
-            uint64_t incarnation = 0;
-            if (const UChunk *chunk =
-                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
-            {
-              incarnation = chunk->GetIncarnation();
-              demand.BindIdentity(chunk_coord, world_epoch, incarnation);
-            }
-            // BoundaryOverlay is a target-local stale-capture obligation. Do
-            // not encode it as a peer publication generation.
-            demand.NoteBoundaryOverlayDebt(chunk_coord, mask);
-            EnqueueFaceDebtRepair(chunk_coord);
-
-            uint64_t geom =
-                world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
-            uint64_t light = 0;
-            if (const UChunk *chunk =
-                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
-            {
-              light = chunk->GetLightFieldRevision();
-            }
-            if (const ChunkRenderDemandRecord *record = demand.Find(chunk_coord))
-            {
-              if (record->desired_geom_rev != 0)
-              {
-                geom = record->desired_geom_rev;
-              }
-              if (record->desired_light_rev != 0)
-              {
-                light = record->desired_light_rev;
-              }
-              if (geom == 0)
-              {
-                geom = record->published_geom_rev;
-              }
-              if (light == 0)
-              {
-                light = record->published_light_rev;
-              }
-            }
-            if (geom != 0 || light != 0)
-            {
-              (void)demand.NoteDemand(chunk_coord, geom, light,
-                                      /*desired_coverage_gen=*/1,
-                                      /*now_ms=*/0.0, world_epoch,
-                                      incarnation);
-            }
-          }
-          else
-          {
-            world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
-            EnqueueFaceDebtRepair(chunk_coord);
-          }
-          world_ref.NoteUnfinishedColumnDirty(col);
-        });
-    mesh_service.SetOnBoundaryOverlayPublishedFn(
-        [this](glm::ivec3 chunk_coord, uint8_t missing_face_mask)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          UWorld &world_ref = *world_ptr;
-          const uint64_t world_epoch =
-              world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
-          if (const UChunk *chunk =
-                  world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
-          {
-            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            demand.BindIdentity(chunk_coord, world_epoch, chunk->GetIncarnation());
-            if (chunk->GetNonAirCount() == 0)
-            {
-              missing_face_mask = 0;
-            }
-            demand.NoteBoundaryOverlayPublished(chunk_coord, missing_face_mask);
-          }
-          if (missing_face_mask != 0)
-          {
-            EnqueueFaceDebtRepair(chunk_coord);
-          }
-          world_ref.NoteUnfinishedColumnDirty(
-              glm::ivec2(chunk_coord.x, chunk_coord.z));
-        });
-    mesh_service.SetOnGpuPipelineProgressFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          UWorld &world_ref = *world_ptr;
-          const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
-          world_ref.GetColumnRecords().NotePublishProgress(col);
-          ColumnRecord &rec = world_ref.GetColumnRecords().GetOrCreate(col);
-          if (rec.visual == ColumnVisualState::NeedRelight ||
-              rec.visual == ColumnVisualState::NeedRemesh ||
-              rec.visual == ColumnVisualState::Ready)
-          {
-            rec.visual = ColumnVisualState::Publishing;
-          }
-        });
-    // R06: when coverage publishes, remesh face-neighbors in sea band that
-    // still carry sticky BoundaryOverlay toward the publisher (R2 overlay-only;
-    // no 3x3; underwater Y = publisher_cy; coalesce one dirty/col/frame).
-    // Regression 185830 H1/W1: do NOT broaden to any-active-overlay outside
-    // sea-band — remesh flood → FullyDark/blacks + flicker (R1 class).
-    // Sysreset v4: FaceDebt|overlay remesh in focus ring (cap 4).
-    mesh_service.SetOnFirstDrawableCoverageFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          UWorld &world_ref = *world_ptr;
-          // Publisher known → clear own face debt for this chunkXYZ (P2.4).
-          // Cutover ON → skip column ClearFaceDebt (would wipe other Y-slices).
-          if (ChunkDemandAllowsColumnFaceDebtClear())
-          {
-            world_ref.GetColumnRecords().ClearFaceDebt(
-                glm::ivec2(chunk_coord.x, chunk_coord.z));
-          }
-          if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
-          {
-            // A27/A32: first coverage — per-face clear + subscriber satisfy.
-            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const uint64_t pub_gen =
-                PublishedCoverageGeneration(demand, chunk_coord);
-            bool any_face_ready = false;
-            if (const ChunkRenderDemandRecord *self =
-                    demand.Find(chunk_coord))
-            {
-              for (int f = 0; f < 6; ++f)
-              {
-                if ((self->face_debt_mask &
-                     static_cast<uint8_t>(1u << f)) == 0)
-                {
-                  continue;
-                }
-                if (PeerCoverageMeets(pub_gen,
-                                      self->waiting_peer_gen[f]))
-                {
-                  any_face_ready = true;
-                  break;
-                }
-              }
-            }
-            // No record ⇒ do not fabricate any_face_ready from required=1.
-            if (any_face_ready)
-            {
-              uint8_t clear_mask = 0;
-              if (const ChunkRenderDemandRecord *self =
-                      demand.Find(chunk_coord))
-              {
-                for (int f = 0; f < 6; ++f)
-                {
-                  const uint8_t bit = static_cast<uint8_t>(1u << f);
-                  if ((self->face_debt_mask & bit) == 0)
-                  {
-                    continue;
-                  }
-                  if (PeerCoverageMeets(pub_gen,
-                                        self->waiting_peer_gen[f]))
-                  {
-                    clear_mask = static_cast<uint8_t>(clear_mask | bit);
-                  }
-                }
-              }
-              else
-              {
-                // A37 H3: no record ⇒ do not fabricate clear of all faces.
-                clear_mask = 0;
-              }
-              if (clear_mask != 0)
-              {
-                demand.NoteFaceDebtSatisfied(chunk_coord, clear_mask, pub_gen);
-              }
-              static const glm::ivec3 kSatNb[4] = {
-                  {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
-              for (const glm::ivec3 &d : kSatNb)
-              {
-                const glm::ivec3 n = chunk_coord + d;
-                const int face_toward =
-                    SeaSeamPeerFaceTowardPublisher(d.x, d.z);
-                if (face_toward < 0 || face_toward > 5)
-                {
-                  continue;
-                }
-                const ChunkRenderDemandRecord *nr = demand.Find(n);
-                if (!nr ||
-                    (nr->face_debt_mask &
-                     static_cast<uint8_t>(1u << face_toward)) == 0)
-                {
-                  continue;
-                }
-                const uint64_t need = nr->waiting_peer_gen[face_toward];
-                if (PeerCoverageMeets(pub_gen, need))
-                {
-                  demand.NoteFaceDebtSatisfied(
-                      n, static_cast<uint8_t>(1u << face_toward), pub_gen);
-                }
-              }
-            }
-          }
-          const ProceduralSettings &settings = world_ref.GetProceduralSettings();
-          const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
-          const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();
-          const glm::ivec3 focus_g =
-              UChunkManager::WorldToChunk(focus_block);
-          // SoT 090834: near-fluid from air must not open underwater subsea_band.
-          const SeaSeamEyeContext seam_eye = ClassifySeaSeamEyeContext(
-              static_cast<float>(focus_block.y),
-              static_cast<float>(settings.SeaLevel),
-              world_ref.HasNearbyFluidSurface(focus_block, 24));
-          UWorldMeshService &mesh = world_ref.GetMeshService();
-          static const glm::ivec3 kFaceNb[4] = {
-              {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
-          int face_debt_remesh_n = 0;
-          constexpr int kFaceDebtRemeshCap = 4;
-          for (const glm::ivec3 &d : kFaceNb)
-          {
-            if (face_debt_remesh_n >= kFaceDebtRemeshCap)
-            {
-              break;
-            }
-            const glm::ivec3 n = chunk_coord + d;
-            const int horiz =
-                std::max(std::abs(n.x - focus_g.x), std::abs(n.z - focus_g.z));
-            if (horiz > 4)
-            {
-              continue;
-            }
-            const int face_toward =
-                SeaSeamPeerFaceTowardPublisher(d.x, d.z);
-            const bool face_overlay =
-                mesh.HasActiveBoundaryOverlayFace(n, face_toward);
-            const bool face_debt =
-                world_ref.GetColumnRecords().HasFaceDebtFace(
-                    glm::ivec2(n.x, n.z), face_toward);
-            // SeamCoverageManifest carries coverage generations, never mesh
-            // geometry revisions. Unknown coverage remains unresolved.
-            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const uint64_t peer_pub =
-                PublishedCoverageGeneration(demand, chunk_coord);
-            uint64_t required = 1;
-            if (face_toward >= 0 && face_toward <= 5)
-            {
-              if (const ChunkRenderDemandRecord *nr = demand.Find(n))
-              {
-                if (nr->waiting_peer_gen[face_toward] > 0)
-                {
-                  required = nr->waiting_peer_gen[face_toward];
-                }
-              }
-            }
-            if (!PeerReadyBeforeSubscribe(peer_pub, required))
-            {
-              continue;
-            }
-            // A32 S4: per-face debt + published gens (no broadcast to all 6).
-            {
-              const uint64_t world_epoch =
-                  mesh.GetCache().GetCaptureStore().WorldEpoch();
-              SeamCoverageManifest seam_debt{};
-              seam_debt.chunk_xyz = n;
-              seam_debt.world_epoch = world_epoch;
-              seam_debt.seam_artifact_generation = peer_pub;
-              seam_debt.provisional = true;
-              uint64_t published_peer_gen[6]{};
-              // Face toward publisher requires peer_pub; other faces read
-              // that face's neighbor publish rev (0 = unused / satisfied).
-              for (int f = 0; f < 6; ++f)
-              {
-                const glm::ivec3 peer =
-                    n + ChunkMeshFaceNeighborDelta(f);
-                published_peer_gen[f] =
-                    PublishedCoverageGeneration(demand, peer);
-              }
-              if (face_toward >= 0 && face_toward <= 5)
-              {
-                seam_debt.peer_coverage_gen[face_toward] = peer_pub;
-                // Publisher is the peer across face_toward — ensure slot.
-                published_peer_gen[face_toward] = peer_pub;
-              }
-              if (!SeamCoverageFullySatisfied(seam_debt, published_peer_gen) ||
-                  !ShouldCommitSeamCoverage(seam_debt, peer_pub))
-              {
-                continue;
-              }
-            }
-            if (!ShouldCoalesceNeighborBecameKnownSeam(
-                    /*neighbor_now_known=*/true, face_overlay,
-                    /*already_coalesced=*/false, face_debt))
-            {
-              continue;
-            }
-            const uint64_t col_key =
-                (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 42) |
-                (static_cast<uint64_t>(static_cast<uint32_t>(n.z)) << 10) |
-                (static_cast<uint64_t>(static_cast<uint16_t>(n.y + 512)) &
-                 0x3FFull);
-            if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
-            {
-              continue;
-            }
-            world_ref.GetColumnRecords().NoteFaceDebt(
-                glm::ivec2(n.x, n.z), face_toward);
-            if (face_toward >= 0 && face_toward <= 5)
-            {
-              demand.NoteFaceDebt(
-                  n, static_cast<uint8_t>(1u << face_toward), peer_pub);
-            }
-            mesh.MarkDirtyPriority(n,
-                                   MeshRevisionBumpReason::FaceDebtCallback);
-            ++face_debt_remesh_n;
-          }
-
-          // Vertical shell dependencies are not part of the horizontal sea
-          // seam policy below. When a slice gains first drawable coverage,
-          // durably requeue an already-published vertical peer that captured
-          // this boundary as missing/unlit.
-          {
-            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const UChunk *publisher_chunk =
-                world_ref.GetBlockWorld().GetChunkManager().GetChunk(
-                    chunk_coord);
-            const uint64_t publisher_gen =
-                PublishedCoverageGeneration(demand, chunk_coord);
-            if (publisher_gen != 0)
-            {
-              for (int dy : {-1, 1})
-              {
-                const glm::ivec3 target = chunk_coord + glm::ivec3(0, dy, 0);
-                if (!mesh.HasDrawableGreedyMesh(target))
-                {
-                  continue;
-                }
-                const int face_toward_publisher =
-                    ChunkMeshFaceIndexForDelta({0, -dy, 0});
-                const uint8_t face_bit = static_cast<uint8_t>(
-                    1u << face_toward_publisher);
-                const bool has_overlay = mesh.HasActiveBoundaryOverlayFace(
-                    target, face_toward_publisher);
-                const UChunk *target_chunk =
-                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(
-                        target);
-                const ChunkRenderDemandRecord *target_demand =
-                    demand.Find(target);
-                const bool has_face_debt =
-                    target_demand &&
-                    (target_demand->face_debt_mask & face_bit) != 0;
-                if (!has_overlay && !has_face_debt)
-                {
-                  continue;
-                }
-                const uint64_t required_peer_gen =
-                    target_demand
-                        ? target_demand->waiting_peer_gen[
-                              face_toward_publisher]
-                        : 0;
-                if (required_peer_gen != 0 &&
-                    publisher_gen < required_peer_gen)
-                {
-                  continue;
-                }
-                if (has_overlay &&
-                    (!publisher_chunk || !target_chunk ||
-                     !demand.CanBeginBoundaryOverlayRepair(
-                         target, face_toward_publisher,
-                         publisher_chunk->GetIncarnation(), publisher_gen,
-                         target_chunk->GetLightFieldRevision())))
-                {
-                  if (has_face_debt)
-                  {
-                    demand.NoteFaceDebtSatisfied(target, face_bit,
-                                                 publisher_gen);
-                  }
-                  continue;
-                }
-                if (has_face_debt)
-                {
-                  demand.NoteFaceDebtSatisfied(target, face_bit,
-                                               publisher_gen);
-                }
-                if (has_overlay &&
-                    !demand.TryBeginBoundaryOverlayRepair(
-                        target, face_toward_publisher,
-                        publisher_chunk->GetIncarnation(), publisher_gen,
-                        target_chunk->GetLightFieldRevision()))
-                {
-                  continue;
-                }
-                mesh.QueueMeshDependencyInvalidation(target);
-              }
-            }
-          }
-          if (!ShouldRemeshSeaSeamOnFirstDrawable(chunk_coord.y, sea_cy,
-                                                 seam_eye))
-          {
-            return;
-          }
-          int remesh_min_y = 0;
-          int remesh_max_y = 0;
-          SeaSeamRemeshYRangeForPublisher(
-              settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight, chunk_coord.y,
-              seam_eye, remesh_min_y, remesh_max_y, settings.MinHeight);
-          for (const glm::ivec3 &d : kFaceNb)
-          {
-            const glm::ivec3 n = chunk_coord + d;
-            if (!mesh.HasDrawableGreedyMesh(n))
-            {
-              continue;
-            }
-            if (!ShouldRemeshSeaSeamOnFirstDrawable(n.y, sea_cy, seam_eye))
-            {
-              continue;
-            }
-            const int face_toward =
-                SeaSeamPeerFaceTowardPublisher(d.x, d.z);
-            const bool face_overlay =
-                mesh.HasActiveBoundaryOverlayFace(n, face_toward);
-            const bool peer_dark =
-                mesh.GetCache().ChunkHasFullyDarkFace(n) ||
-                mesh.ChunkHasStaleDarkFaces(n, world_ref.GetBlockWorld());
-            const bool became_known = ShouldCoalesceNeighborBecameKnownSeam(
-                /*neighbor_now_known=*/true, face_overlay,
-                /*already_coalesced=*/false);
-            const bool remesh_peer =
-                face_overlay || became_known ||
-                ShouldRemeshSeaSurfaceDarkPeer(
-                    seam_eye, /*peer_drawable=*/true,
-                    /*peer_in_surface_band=*/true, face_overlay, peer_dark);
-            if (!remesh_peer)
-            {
-              continue;
-            }
-            const uint64_t col_key =
-                (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 42) |
-                (static_cast<uint64_t>(static_cast<uint32_t>(n.z)) << 10) |
-                (static_cast<uint64_t>(static_cast<uint16_t>(n.y + 512)) &
-                 0x3FFull);
-            if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
-            {
-              continue;
-            }
-            mesh.MarkTerrainChunkMeshDirtySeamed(
-                glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, false,
-                MeshRevisionBumpReason::FirstDrawableSeaSeam);
-          }
-        });
-    mesh_service.SetOnMeshColumnDirtyFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return;
-          }
-          world_ptr->NoteUnfinishedColumnDirty(
-              glm::ivec2(chunk_coord.x, chunk_coord.z));
-        });
-    mesh_service.SetColumnFlowContainsFn(
-        [this](glm::ivec2 col)
-        { return GetColumnFlowExecutor().HasRepairTicket(col); });
-    mesh_service.SetChunkResidentFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          if (!world_ptr)
-          {
-            return true;
-          }
-          return world_ptr->GetBlockWorld().GetChunkManager().HasChunk(
-              chunk_coord);
-        });
-    SoftDeferCallbacksInstalled = true;
+    InstallSoftDeferCallbacks(mesh_service);
   }
   DrainFaceDebtRepairs(
       world, std::clamp(LastBudget.MaxMeshSchedule, 1, 8));
@@ -7605,5 +6659,958 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     EmptyBatchPrevBacklog = b;
   }
 }
+
+void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
+    UWorldMeshService &mesh_service)
+{
+  mesh_service.SetDeferMeshUntilLitFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return false;
+        }
+        UWorld &world_ref = *world_ptr;
+        UWorldMeshService &mesh_svc = world_ref.GetMeshService();
+        const SoftDeferFramePolicy &pol = SoftDeferPolicy;
+        const int horiz =
+            std::max(std::abs(chunk_coord.x - pol.focus_ground.x),
+                     std::abs(chunk_coord.z - pol.focus_ground.z));
+        // SoftDefer ON while RelightDeferred / PendingLight. Lift SoftDefer
+        // spawn r≤2 only when !pending — else empty remesh + MarkEnter Dirty
+        // storm (110413 hang) or SoftDefer-empty sticky (102235).
+        if (ShouldSkipSpawnMeshWhileRelightDeferred(
+                world_ref.IsLightingRelightDeferred(), horiz))
+        {
+          return true;
+        }
+        const bool underfeet = horiz <= 1;
+        const bool pending =
+            world_ref.IsPendingLightBeforeMeshSlice(chunk_coord);
+        if (EnterLitQuiesceMayLiftSpawnSoftDefer(
+                world_ref.IsEnterLitQuiesceLatched(), horiz, pending,
+                /*spawn_radius=*/2,
+                world_ref.IsEnterLitGateActive() &&
+                    !world_ref.IsEnterUnderfeetPresentReady()))
+        {
+          return false;
+        }
+        const bool is_nearest_hole =
+            pol.have_nearest_missing &&
+            chunk_coord.x == pol.nearest_missing_hole.x &&
+            chunk_coord.z == pol.nearest_missing_hole.z;
+        const bool has_mesh = mesh_svc.HasDrawableGreedyMesh(chunk_coord);
+        const bool has_greedy = mesh_svc.HasGreedyMesh(chunk_coord);
+        const bool in_focus = horiz <= pol.focus_radius;
+        const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
+        const bool may_mesh =
+            world_ref.MayMeshColumn(ground, /*underfeet_preview=*/false);
+        const bool fully_dark =
+            has_greedy &&
+            mesh_svc.GetCache().ChunkHasFullyDarkFace(chunk_coord);
+        const bool starve_hinterland = StarveHinterlandUnlit(
+            world_ref.GetPhysicsTelemetry().SoftDeferEmptyNearN,
+            pol.pending_focus_count);
+        // Starvation applies to hinterland previews. The nearest missing
+        // first mesh is a bounded near-FOV exception; its snapshot is marked
+        // provisional and rendered with the ambient fallback until relight
+        // publishes the settled image.
+        const bool allow_unlit =
+            (is_nearest_hole || !starve_hinterland) &&
+            AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
+                                kVisualStageLitDrawableHoriz);
+        const bool allow_unlit_hole = AllowUnlitDrawableUnderLightDebt(
+            pol.pending_focus_count, pol.unlit_near_count, horiz, fully_dark,
+            has_greedy, underfeet);
+        (void)pol.missing_visible_mesh;
+        return SoftDeferMeshUntilLitPolicy(
+            underfeet, has_mesh,
+            world_ref.RequiresLightingLitGate() && pending, in_focus, may_mesh,
+            allow_unlit, allow_unlit_hole);
+      });
+  // A42: SoftDefer must not RemoveAt LightRepair drawable remesh Dirty.
+  // A42b: PendingLight ⊆ LightRepair — treat PL as LightRepair for Capture/
+  // SoftDefer schedule even if stamp lag behind NotePending.
+  mesh_service.SetIsLightRepairRemeshFn(
+      [this](glm::ivec3 chunk_coord) -> bool
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return false;
+        }
+        const glm::ivec2 xz(chunk_coord.x, chunk_coord.z);
+        if (world_ptr->IsPendingLightBeforeMesh(xz))
+        {
+          return true;
+        }
+        if (world_ptr->IsSettledDrawGateMeshRepairPending(chunk_coord))
+        {
+          return true;
+        }
+        const ColumnRecord *rec = world_ptr->GetColumnRecords().Find(xz);
+        return rec &&
+               rec->visual_obligation == VisualObligation::LightRepair;
+      });
+  mesh_service.SetOnLitPendingNeededFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        UWorld &world_ref = *world_ptr;
+        const glm::ivec2 key(chunk_coord.x, chunk_coord.z);
+        // ColPipe P5: drawable remesh is MarkRelit/Dirty — not RemeshSeam+sticky.
+        if (world_ref.GetMeshService().HasDrawableGreedyMesh(chunk_coord) ||
+            world_ref.GetMeshService().IsChunkMeshDirty(chunk_coord) ||
+            world_ref.GetMeshService().IsRemeshAfterApplyPending(chunk_coord) ||
+            world_ref.GetMeshService().IsPendingGpuApply(chunk_coord) ||
+            world_ref.GetMeshService().HasInflightMeshBuild(chunk_coord))
+        {
+          return;
+        }
+        // A completed no-change light calculation is still a settlement,
+        // including revision zero. Reopening PendingLight here invalidates
+        // the proof and repeats dark-first-mesh → relight indefinitely.
+        if (world_ref.HasCurrentChunkSliceLightSettlement(chunk_coord))
+        {
+          return;
+        }
+        const int light_band_min =
+            std::max(0, chunk_coord.y * CHUNK_SIZE);
+        const int light_band_max = std::min(
+            world_ref.GetProceduralSettings().MaxHeight,
+            (chunk_coord.y + 1) * CHUNK_SIZE - 1);
+        if (light_band_max < light_band_min)
+        {
+          return;
+        }
+        if (!world_ref.IsPendingLightBeforeMesh(key))
+        {
+          // The callback names the exact chunk whose dark first-mesh was
+          // deferred. A full-column note invalidates unrelated settled
+          // slices and causes the same column to cycle back through relight.
+          world_ref.TryNotePendingLightBeforeMesh(
+              glm::ivec3(key.x, 0, key.y), light_band_min,
+              light_band_max, "ChunkEmergeCoordinator.OnLitPendingNeeded");
+        }
+        // Phase 5.7R3: SoftDefer lit-pending Relight — same latch underfeet+fifo gate.
+        const auto &pt = world_ref.GetPhysicsTelemetry();
+        const bool latch_debt =
+            pt.EnterSettleSoftForceWithDebt != 0 && pt.VisibilityDebt > 0;
+        const bool moving = pt.MovementSpeed > 0.5f;
+        const bool vb_consume = IsTicketedVbConsumeMode(
+            pt.VisibleBlackNoTicketN, pt.VisibleBlackFocusN,
+            pt.VisibleBlackStalledN, moving);
+        if (!ShouldEnqueueLatchSideRelight(
+                latch_debt, moving, pt.FocusMissingMesh != 0, pt.MissHoriz,
+                pt.RelightFifoN, vb_consume))
+        {
+          return;
+        }
+        GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RelightThenMesh,
+                                        /*priority=*/70);
+        if (GetColumnFlowExecutor().HasRepairTicket(key))
+        {
+          world_ref.NoteVisibleFirstMeshRelightBand(
+              key, light_band_min, light_band_max);
+        }
+      });
+  mesh_service.SetOnSoftDeferHeldFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        UWorld &world_ref = *world_ptr;
+        const SoftDeferFramePolicy &pol = SoftDeferPolicy;
+        const int horiz =
+            std::max(std::abs(chunk_coord.x - pol.focus_ground.x),
+                     std::abs(chunk_coord.z - pol.focus_ground.z));
+        if (ShouldSkipSpawnMeshWhileRelightDeferred(
+                world_ref.IsLightingRelightDeferred(), horiz))
+        {
+          return;
+        }
+        // A41: SoftDeferOwned only with repair ticket (FirstMesh enqueue).
+        // A42b: never demote live LightRepair — that breaks remesh Capture
+        // reserve / SoftDefer schedule fallthrough predicates.
+        ColumnRecord &orec = world_ref.GetColumnRecords().GetOrCreate(
+            glm::ivec2(chunk_coord.x, chunk_coord.z));
+        if (orec.visual_obligation != VisualObligation::LightRepair)
+        {
+          orec.visual_obligation = VisualObligation::SoftDeferOwned;
+          if (orec.visual_attempt_id == 0)
+          {
+            static uint64_t next_sd_attempt = 1;
+            orec.visual_attempt_id = next_sd_attempt++;
+            orec.visual_deadline_ms =
+                StampLightRepairDeadlineMs(VisualObligationNowMs());
+          }
+        }
+        ColumnWorkItem item{};
+        item.column = glm::ivec2(chunk_coord.x, chunk_coord.z);
+        item.kind = ColumnWorkKind::FirstMesh;
+        item.priority = 100;
+        item.cy = chunk_coord.y;
+        GetColumnFlowExecutor().Enqueue(item);
+      });
+  mesh_service.SetOnLitDrawableCommittedFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        UWorld &world_ref = *world_ptr;
+        const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+        world_ref.ClearStickyRemeshAfterLightColumn(col);
+        // A41: LitDrawable publish clears LightRepair attempt.
+        {
+          ColumnRecord &orec = world_ref.GetColumnRecords().GetOrCreate(col);
+          orec.visual_obligation = VisualObligation::LitDrawable;
+          orec.visual_attempt_id = 0;
+          orec.visual_deadline_ms = 0;
+          orec.legal_dark_settled = false;
+        }
+        // A21 P2.4/P2.7: per-chunk face debt clears publisher only.
+        // Cutover ON → no column ClearFaceDebt (dual-path ban / rollback OFF).
+        if (ChunkDemandAllowsColumnFaceDebtClear())
+        {
+          world_ref.GetColumnRecords().ClearFaceDebt(col);
+        }
+        if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
+        {
+          // A27/A32: publisher lit ⇒ per-face clear only when peer-ready;
+          // also satisfy subscriber neighbors facing this publisher.
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          // Coverage generations are typed independently from geometry revs.
+          const uint64_t pub_gen =
+              PublishedCoverageGeneration(demand, chunk_coord);
+          if (pub_gen != 0)
+          {
+            uint8_t clear_mask = 0;
+            if (const ChunkRenderDemandRecord *self =
+                    demand.Find(chunk_coord))
+            {
+              for (int f = 0; f < 6; ++f)
+              {
+                const uint8_t bit = static_cast<uint8_t>(1u << f);
+                if ((self->face_debt_mask & bit) == 0)
+                {
+                  continue;
+                }
+                if (PeerCoverageMeets(pub_gen,
+                                      self->waiting_peer_gen[f]))
+                {
+                  clear_mask = static_cast<uint8_t>(clear_mask | bit);
+                }
+              }
+            }
+            else
+            {
+              // A37 H3: no record ⇒ do not fabricate clear of all faces.
+              clear_mask = 0;
+            }
+            if (clear_mask != 0)
+            {
+              demand.NoteFaceDebtSatisfied(chunk_coord, clear_mask, pub_gen);
+            }
+            static const glm::ivec3 kFaceNb[4] = {
+                {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+            for (const glm::ivec3 &d : kFaceNb)
+            {
+              const glm::ivec3 n = chunk_coord + d;
+              const int face_toward =
+                  SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+              if (face_toward < 0 || face_toward > 5)
+              {
+                continue;
+              }
+              const ChunkRenderDemandRecord *nr = demand.Find(n);
+              if (!nr ||
+                  (nr->face_debt_mask &
+                   static_cast<uint8_t>(1u << face_toward)) == 0)
+              {
+                continue;
+              }
+              if (PeerCoverageMeets(
+                      pub_gen, nr->waiting_peer_gen[face_toward]))
+              {
+                demand.NoteFaceDebtSatisfied(
+                    n, static_cast<uint8_t>(1u << face_toward), pub_gen);
+              }
+            }
+          }
+        }
+        if (!world_ref.IsPendingLightBeforeMesh(col))
+        {
+          const glm::ivec3 ground(col.x, 0, col.y);
+          // A22 S2 / A23 D2 / A40: sole RenderReady promotion site. One Y-slice
+          // lit commit must not Ready the column while another loaded slice is
+          // still FullyDark *without* LegalDarkSettled (multi-Y aggregate).
+          // GpuPipeline progress (~620) only flips visual→Publishing — never Ready.
+          bool sibling_fully_dark = false;
+          {
+            UWorldMeshService &mesh = world_ref.GetMeshService();
+            const ColumnRecord *settled_rec =
+                world_ref.GetColumnRecords().Find(col);
+            const bool col_legal =
+                settled_rec &&
+                (settled_rec->legal_dark_settled ||
+                 settled_rec->visual_obligation ==
+                     VisualObligation::LegalDark ||
+                 settled_rec->visual_obligation ==
+                     VisualObligation::LitDrawable);
+            const auto &settings = world_ref.GetProceduralSettings();
+            const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+            const int cy1 = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+            for (int cy = min_cy; cy <= cy1; ++cy)
+            {
+              const glm::ivec3 sib(col.x, cy, col.y);
+              if (mesh.HasGreedyMesh(sib) &&
+                  mesh.GetCache().ChunkHasFullyDarkFace(sib) && !col_legal)
+              {
+                sibling_fully_dark = true;
+                break;
+              }
+            }
+          }
+          if (!sibling_fully_dark &&
+              (world_ref.IsColumnLitReady(ground) ||
+               world_ref.GetColumnEmergeState(ground) ==
+                   ColumnEmergeState::Meshing ||
+               world_ref.GetColumnEmergeState(ground) ==
+                   ColumnEmergeState::LitReady))
+          {
+            world_ref.SetColumnEmergeState(ground,
+                                           ColumnEmergeState::RenderReady);
+            GetColumnFlowExecutor().SetColumnJobStage(col,
+                                                      ColumnJobStage::RenderReady);
+          }
+        }
+      });
+  mesh_service.SetOnFaceDebtFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        UWorld &world_ref = *world_ptr;
+        const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+        // FaceDebt census only — Dirty admission stays at mismatch writers
+        // (material / PublishedEmpty), not light-accepted Retain.
+        world_ref.GetColumnRecords().NoteFaceDebt(col);
+        EnqueueFaceDebtRepair(chunk_coord);
+        // A37 H2: single authority gate (cutover ⇒ authority).
+        if (ChunkDemandAuthorityEnabled())
+        {
+          // Face wait stamps are coverage generations; geometry revisions
+          // are a separate domain and cannot be used as a fallback.
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          const uint64_t world_epoch =
+              world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+          auto bind_current_identity = [&](glm::ivec3 coord)
+          {
+            if (const UChunk *ch =
+                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(coord))
+            {
+              demand.BindIdentity(coord, world_epoch, ch->GetIncarnation());
+            }
+          };
+          bind_current_identity(chunk_coord);
+          auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
+            bind_current_identity(peer);
+            return PublishedCoverageGeneration(demand, peer);
+          };
+          for (int f = 0; f < 6; ++f)
+          {
+            const uint8_t bit = static_cast<uint8_t>(1u << f);
+            // A39 P3: UnknownPeer keeps waiting=0 (never fabricate need=1).
+            const uint64_t need =
+                peer_cov_gen(chunk_coord +
+                             ChunkMeshFaceNeighborDelta(f));
+            demand.NoteFaceDebt(chunk_coord, bit, need);
+          }
+          // Coverage desire with face debt; geometry uses the mesh-revision
+          // domain consumed by publication, light uses the field revision.
+          // Never stub g=1,l=1 — that invents unrelated demand.
+          uint64_t g = 0, l = 0;
+          uint64_t incarnation = 0;
+          if (const UChunk *ch =
+                  world_ref.GetBlockWorld().GetChunkManager().GetChunk(
+                      chunk_coord))
+          {
+            g = world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
+            l = ch->GetLightFieldRevision();
+            incarnation = ch->GetIncarnation();
+          }
+          if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
+          {
+            if (r->desired_geom_rev != 0)
+            {
+              g = r->desired_geom_rev;
+            }
+            if (r->desired_light_rev != 0)
+            {
+              l = r->desired_light_rev;
+            }
+            if (g == 0 && r->published_geom_rev != 0)
+            {
+              g = r->published_geom_rev;
+            }
+            if (l == 0 && r->published_light_rev != 0)
+            {
+              l = r->published_light_rev;
+            }
+          }
+          if (g != 0 || l != 0)
+          {
+            // Geometry and publication use the same mesh-revision domain;
+            // coverage can remain independently unsatisfied.
+            (void)demand.NoteDemand(chunk_coord, g, l,
+                                    /*desired_coverage_gen=*/1,
+                                    /*now_ms=*/0.0, world_epoch,
+                                    incarnation);
+          }
+        }
+        world_ref.NoteUnfinishedColumnDirty(col);
+      });
+  mesh_service.SetOnFaceDebtDirtyFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        UWorldMeshService &mesh_service = world_ptr->GetMeshService();
+        // A retained material upload still needs a successor, but repeated
+        // rejects must not advance the target that successor is building.
+        // Requeue only when demand owns this exact unpublished revision;
+        // otherwise create the first dirty target with a normal revision bump.
+        if (ChunkDemandAuthorityEnabled())
+        {
+          const UChunkRenderDemandStore &demand =
+              UChunkRenderDemandStore::Get();
+          const ChunkRenderDemandRecord *record = demand.Find(chunk_coord);
+          const uint64_t current_geom_rev =
+              mesh_service.GetChunkMeshRevision(chunk_coord);
+          if (record && record->has_active_attempt &&
+              record->desired_geom_rev == current_geom_rev &&
+              record->published_geom_rev < current_geom_rev)
+          {
+            mesh_service.RequeueDirtyPriority(
+                chunk_coord,
+                MeshRevisionBumpReason::FaceDebtMaterialRetry);
+            return;
+          }
+        }
+        mesh_service.MarkDirty(
+            chunk_coord, MeshRevisionBumpReason::FaceDebtMaterialRetry);
+      });
+  mesh_service.SetOnFaceDebtMaskFn(
+      [this](glm::ivec3 chunk_coord, uint8_t mask)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr || mask == 0)
+        {
+          return;
+        }
+        UWorld &world_ref = *world_ptr;
+        const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+        if (ChunkDemandAuthorityEnabled())
+        {
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          const uint64_t world_epoch =
+              world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+          uint64_t incarnation = 0;
+          if (const UChunk *chunk =
+                  world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
+          {
+            incarnation = chunk->GetIncarnation();
+            demand.BindIdentity(chunk_coord, world_epoch, incarnation);
+          }
+          // BoundaryOverlay is a target-local stale-capture obligation. Do
+          // not encode it as a peer publication generation.
+          demand.NoteBoundaryOverlayDebt(chunk_coord, mask);
+          EnqueueFaceDebtRepair(chunk_coord);
+
+          uint64_t geom =
+              world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
+          uint64_t light = 0;
+          if (const UChunk *chunk =
+                  world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
+          {
+            light = chunk->GetLightFieldRevision();
+          }
+          if (const ChunkRenderDemandRecord *record = demand.Find(chunk_coord))
+          {
+            if (record->desired_geom_rev != 0)
+            {
+              geom = record->desired_geom_rev;
+            }
+            if (record->desired_light_rev != 0)
+            {
+              light = record->desired_light_rev;
+            }
+            if (geom == 0)
+            {
+              geom = record->published_geom_rev;
+            }
+            if (light == 0)
+            {
+              light = record->published_light_rev;
+            }
+          }
+          if (geom != 0 || light != 0)
+          {
+            (void)demand.NoteDemand(chunk_coord, geom, light,
+                                    /*desired_coverage_gen=*/1,
+                                    /*now_ms=*/0.0, world_epoch,
+                                    incarnation);
+          }
+        }
+        else
+        {
+          world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
+          EnqueueFaceDebtRepair(chunk_coord);
+        }
+        world_ref.NoteUnfinishedColumnDirty(col);
+      });
+  mesh_service.SetOnBoundaryOverlayPublishedFn(
+      [this](glm::ivec3 chunk_coord, uint8_t missing_face_mask)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        UWorld &world_ref = *world_ptr;
+        const uint64_t world_epoch =
+            world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+        if (const UChunk *chunk =
+                world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
+        {
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          demand.BindIdentity(chunk_coord, world_epoch, chunk->GetIncarnation());
+          if (chunk->GetNonAirCount() == 0)
+          {
+            missing_face_mask = 0;
+          }
+          demand.NoteBoundaryOverlayPublished(chunk_coord, missing_face_mask);
+        }
+        if (missing_face_mask != 0)
+        {
+          EnqueueFaceDebtRepair(chunk_coord);
+        }
+        world_ref.NoteUnfinishedColumnDirty(
+            glm::ivec2(chunk_coord.x, chunk_coord.z));
+      });
+  mesh_service.SetOnGpuPipelineProgressFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        UWorld &world_ref = *world_ptr;
+        const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+        world_ref.GetColumnRecords().NotePublishProgress(col);
+        ColumnRecord &rec = world_ref.GetColumnRecords().GetOrCreate(col);
+        if (rec.visual == ColumnVisualState::NeedRelight ||
+            rec.visual == ColumnVisualState::NeedRemesh ||
+            rec.visual == ColumnVisualState::Ready)
+        {
+          rec.visual = ColumnVisualState::Publishing;
+        }
+      });
+  // R06: when coverage publishes, remesh face-neighbors in sea band that
+  // still carry sticky BoundaryOverlay toward the publisher (R2 overlay-only;
+  // no 3x3; underwater Y = publisher_cy; coalesce one dirty/col/frame).
+  // Regression 185830 H1/W1: do NOT broaden to any-active-overlay outside
+  // sea-band — remesh flood → FullyDark/blacks + flicker (R1 class).
+  // Sysreset v4: FaceDebt|overlay remesh in focus ring (cap 4).
+  mesh_service.SetOnFirstDrawableCoverageFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        UWorld &world_ref = *world_ptr;
+        // Publisher known → clear own face debt for this chunkXYZ (P2.4).
+        // Cutover ON → skip column ClearFaceDebt (would wipe other Y-slices).
+        if (ChunkDemandAllowsColumnFaceDebtClear())
+        {
+          world_ref.GetColumnRecords().ClearFaceDebt(
+              glm::ivec2(chunk_coord.x, chunk_coord.z));
+        }
+        if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
+        {
+          // A27/A32: first coverage — per-face clear + subscriber satisfy.
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          const uint64_t pub_gen =
+              PublishedCoverageGeneration(demand, chunk_coord);
+          bool any_face_ready = false;
+          if (const ChunkRenderDemandRecord *self =
+                  demand.Find(chunk_coord))
+          {
+            for (int f = 0; f < 6; ++f)
+            {
+              if ((self->face_debt_mask &
+                   static_cast<uint8_t>(1u << f)) == 0)
+              {
+                continue;
+              }
+              if (PeerCoverageMeets(pub_gen,
+                                    self->waiting_peer_gen[f]))
+              {
+                any_face_ready = true;
+                break;
+              }
+            }
+          }
+          // No record ⇒ do not fabricate any_face_ready from required=1.
+          if (any_face_ready)
+          {
+            uint8_t clear_mask = 0;
+            if (const ChunkRenderDemandRecord *self =
+                    demand.Find(chunk_coord))
+            {
+              for (int f = 0; f < 6; ++f)
+              {
+                const uint8_t bit = static_cast<uint8_t>(1u << f);
+                if ((self->face_debt_mask & bit) == 0)
+                {
+                  continue;
+                }
+                if (PeerCoverageMeets(pub_gen,
+                                      self->waiting_peer_gen[f]))
+                {
+                  clear_mask = static_cast<uint8_t>(clear_mask | bit);
+                }
+              }
+            }
+            else
+            {
+              // A37 H3: no record ⇒ do not fabricate clear of all faces.
+              clear_mask = 0;
+            }
+            if (clear_mask != 0)
+            {
+              demand.NoteFaceDebtSatisfied(chunk_coord, clear_mask, pub_gen);
+            }
+            static const glm::ivec3 kSatNb[4] = {
+                {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+            for (const glm::ivec3 &d : kSatNb)
+            {
+              const glm::ivec3 n = chunk_coord + d;
+              const int face_toward =
+                  SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+              if (face_toward < 0 || face_toward > 5)
+              {
+                continue;
+              }
+              const ChunkRenderDemandRecord *nr = demand.Find(n);
+              if (!nr ||
+                  (nr->face_debt_mask &
+                   static_cast<uint8_t>(1u << face_toward)) == 0)
+              {
+                continue;
+              }
+              const uint64_t need = nr->waiting_peer_gen[face_toward];
+              if (PeerCoverageMeets(pub_gen, need))
+              {
+                demand.NoteFaceDebtSatisfied(
+                    n, static_cast<uint8_t>(1u << face_toward), pub_gen);
+              }
+            }
+          }
+        }
+        const ProceduralSettings &settings = world_ref.GetProceduralSettings();
+        const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
+        const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();
+        const glm::ivec3 focus_g =
+            UChunkManager::WorldToChunk(focus_block);
+        // SoT 090834: near-fluid from air must not open underwater subsea_band.
+        const SeaSeamEyeContext seam_eye = ClassifySeaSeamEyeContext(
+            static_cast<float>(focus_block.y),
+            static_cast<float>(settings.SeaLevel),
+            world_ref.HasNearbyFluidSurface(focus_block, 24));
+        UWorldMeshService &mesh = world_ref.GetMeshService();
+        static const glm::ivec3 kFaceNb[4] = {
+            {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+        int face_debt_remesh_n = 0;
+        constexpr int kFaceDebtRemeshCap = 4;
+        for (const glm::ivec3 &d : kFaceNb)
+        {
+          if (face_debt_remesh_n >= kFaceDebtRemeshCap)
+          {
+            break;
+          }
+          const glm::ivec3 n = chunk_coord + d;
+          const int horiz =
+              std::max(std::abs(n.x - focus_g.x), std::abs(n.z - focus_g.z));
+          if (horiz > 4)
+          {
+            continue;
+          }
+          const int face_toward =
+              SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+          const bool face_overlay =
+              mesh.HasActiveBoundaryOverlayFace(n, face_toward);
+          const bool face_debt =
+              world_ref.GetColumnRecords().HasFaceDebtFace(
+                  glm::ivec2(n.x, n.z), face_toward);
+          // SeamCoverageManifest carries coverage generations, never mesh
+          // geometry revisions. Unknown coverage remains unresolved.
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          const uint64_t peer_pub =
+              PublishedCoverageGeneration(demand, chunk_coord);
+          uint64_t required = 1;
+          if (face_toward >= 0 && face_toward <= 5)
+          {
+            if (const ChunkRenderDemandRecord *nr = demand.Find(n))
+            {
+              if (nr->waiting_peer_gen[face_toward] > 0)
+              {
+                required = nr->waiting_peer_gen[face_toward];
+              }
+            }
+          }
+          if (!PeerReadyBeforeSubscribe(peer_pub, required))
+          {
+            continue;
+          }
+          // A32 S4: per-face debt + published gens (no broadcast to all 6).
+          {
+            const uint64_t world_epoch =
+                mesh.GetCache().GetCaptureStore().WorldEpoch();
+            SeamCoverageManifest seam_debt{};
+            seam_debt.chunk_xyz = n;
+            seam_debt.world_epoch = world_epoch;
+            seam_debt.seam_artifact_generation = peer_pub;
+            seam_debt.provisional = true;
+            uint64_t published_peer_gen[6]{};
+            // Face toward publisher requires peer_pub; other faces read
+            // that face's neighbor publish rev (0 = unused / satisfied).
+            for (int f = 0; f < 6; ++f)
+            {
+              const glm::ivec3 peer =
+                  n + ChunkMeshFaceNeighborDelta(f);
+              published_peer_gen[f] =
+                  PublishedCoverageGeneration(demand, peer);
+            }
+            if (face_toward >= 0 && face_toward <= 5)
+            {
+              seam_debt.peer_coverage_gen[face_toward] = peer_pub;
+              // Publisher is the peer across face_toward — ensure slot.
+              published_peer_gen[face_toward] = peer_pub;
+            }
+            if (!SeamCoverageFullySatisfied(seam_debt, published_peer_gen) ||
+                !ShouldCommitSeamCoverage(seam_debt, peer_pub))
+            {
+              continue;
+            }
+          }
+          if (!ShouldCoalesceNeighborBecameKnownSeam(
+                  /*neighbor_now_known=*/true, face_overlay,
+                  /*already_coalesced=*/false, face_debt))
+          {
+            continue;
+          }
+          const uint64_t col_key =
+              (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 42) |
+              (static_cast<uint64_t>(static_cast<uint32_t>(n.z)) << 10) |
+              (static_cast<uint64_t>(static_cast<uint16_t>(n.y + 512)) &
+               0x3FFull);
+          if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
+          {
+            continue;
+          }
+          world_ref.GetColumnRecords().NoteFaceDebt(
+              glm::ivec2(n.x, n.z), face_toward);
+          if (face_toward >= 0 && face_toward <= 5)
+          {
+            demand.NoteFaceDebt(
+                n, static_cast<uint8_t>(1u << face_toward), peer_pub);
+          }
+          mesh.MarkDirtyPriority(n,
+                                 MeshRevisionBumpReason::FaceDebtCallback);
+          ++face_debt_remesh_n;
+        }
+
+        // Vertical shell dependencies are not part of the horizontal sea
+        // seam policy below. When a slice gains first drawable coverage,
+        // durably requeue an already-published vertical peer that captured
+        // this boundary as missing/unlit.
+        {
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          const UChunk *publisher_chunk =
+              world_ref.GetBlockWorld().GetChunkManager().GetChunk(
+                  chunk_coord);
+          const uint64_t publisher_gen =
+              PublishedCoverageGeneration(demand, chunk_coord);
+          if (publisher_gen != 0)
+          {
+            for (int dy : {-1, 1})
+            {
+              const glm::ivec3 target = chunk_coord + glm::ivec3(0, dy, 0);
+              if (!mesh.HasDrawableGreedyMesh(target))
+              {
+                continue;
+              }
+              const int face_toward_publisher =
+                  ChunkMeshFaceIndexForDelta({0, -dy, 0});
+              const uint8_t face_bit = static_cast<uint8_t>(
+                  1u << face_toward_publisher);
+              const bool has_overlay = mesh.HasActiveBoundaryOverlayFace(
+                  target, face_toward_publisher);
+              const UChunk *target_chunk =
+                  world_ref.GetBlockWorld().GetChunkManager().GetChunk(
+                      target);
+              const ChunkRenderDemandRecord *target_demand =
+                  demand.Find(target);
+              const bool has_face_debt =
+                  target_demand &&
+                  (target_demand->face_debt_mask & face_bit) != 0;
+              if (!has_overlay && !has_face_debt)
+              {
+                continue;
+              }
+              const uint64_t required_peer_gen =
+                  target_demand
+                      ? target_demand->waiting_peer_gen[
+                            face_toward_publisher]
+                      : 0;
+              if (required_peer_gen != 0 &&
+                  publisher_gen < required_peer_gen)
+              {
+                continue;
+              }
+              if (has_overlay &&
+                  (!publisher_chunk || !target_chunk ||
+                   !demand.CanBeginBoundaryOverlayRepair(
+                       target, face_toward_publisher,
+                       publisher_chunk->GetIncarnation(), publisher_gen,
+                       target_chunk->GetLightFieldRevision())))
+              {
+                if (has_face_debt)
+                {
+                  demand.NoteFaceDebtSatisfied(target, face_bit,
+                                               publisher_gen);
+                }
+                continue;
+              }
+              if (has_face_debt)
+              {
+                demand.NoteFaceDebtSatisfied(target, face_bit,
+                                             publisher_gen);
+              }
+              if (has_overlay &&
+                  !demand.TryBeginBoundaryOverlayRepair(
+                      target, face_toward_publisher,
+                      publisher_chunk->GetIncarnation(), publisher_gen,
+                      target_chunk->GetLightFieldRevision()))
+              {
+                continue;
+              }
+              mesh.QueueMeshDependencyInvalidation(target);
+            }
+          }
+        }
+        if (!ShouldRemeshSeaSeamOnFirstDrawable(chunk_coord.y, sea_cy,
+                                               seam_eye))
+        {
+          return;
+        }
+        int remesh_min_y = 0;
+        int remesh_max_y = 0;
+        SeaSeamRemeshYRangeForPublisher(
+            settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight, chunk_coord.y,
+            seam_eye, remesh_min_y, remesh_max_y, settings.MinHeight);
+        for (const glm::ivec3 &d : kFaceNb)
+        {
+          const glm::ivec3 n = chunk_coord + d;
+          if (!mesh.HasDrawableGreedyMesh(n))
+          {
+            continue;
+          }
+          if (!ShouldRemeshSeaSeamOnFirstDrawable(n.y, sea_cy, seam_eye))
+          {
+            continue;
+          }
+          const int face_toward =
+              SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+          const bool face_overlay =
+              mesh.HasActiveBoundaryOverlayFace(n, face_toward);
+          const bool peer_dark =
+              mesh.GetCache().ChunkHasFullyDarkFace(n) ||
+              mesh.ChunkHasStaleDarkFaces(n, world_ref.GetBlockWorld());
+          const bool became_known = ShouldCoalesceNeighborBecameKnownSeam(
+              /*neighbor_now_known=*/true, face_overlay,
+              /*already_coalesced=*/false);
+          const bool remesh_peer =
+              face_overlay || became_known ||
+              ShouldRemeshSeaSurfaceDarkPeer(
+                  seam_eye, /*peer_drawable=*/true,
+                  /*peer_in_surface_band=*/true, face_overlay, peer_dark);
+          if (!remesh_peer)
+          {
+            continue;
+          }
+          const uint64_t col_key =
+              (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 42) |
+              (static_cast<uint64_t>(static_cast<uint32_t>(n.z)) << 10) |
+              (static_cast<uint64_t>(static_cast<uint16_t>(n.y + 512)) &
+               0x3FFull);
+          if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
+          {
+            continue;
+          }
+          mesh.MarkTerrainChunkMeshDirtySeamed(
+              glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, false,
+              MeshRevisionBumpReason::FirstDrawableSeaSeam);
+        }
+      });
+  mesh_service.SetOnMeshColumnDirtyFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return;
+        }
+        world_ptr->NoteUnfinishedColumnDirty(
+            glm::ivec2(chunk_coord.x, chunk_coord.z));
+      });
+  mesh_service.SetColumnFlowContainsFn(
+      [this](glm::ivec2 col)
+      { return GetColumnFlowExecutor().HasRepairTicket(col); });
+  mesh_service.SetChunkResidentFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        UWorld *world_ptr = SoftDeferPolicy.world;
+        if (!world_ptr)
+        {
+          return true;
+        }
+        return world_ptr->GetBlockWorld().GetChunkManager().HasChunk(
+            chunk_coord);
+      });
+  SoftDeferCallbacksInstalled = true;
+}
+
 
 } // namespace cutum
