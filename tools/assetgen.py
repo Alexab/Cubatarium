@@ -180,6 +180,10 @@ MATERIAL_TINTS = {
     ("organic", "mushroom_gold"): (203, 163, 64), ("organic", "mushroom_blue"): (73, 118, 149),
     ("organic", "mushroom_pale"): (192, 184, 163), ("organic", "needle"): (53, 91, 46),
     ("organic", "mushroom_stem"): (204, 194, 171),
+    ("organic", "crop"): (74, 119, 48),
+    ("organic", "cocoa_pod"): (137, 82, 45),
+    ("organic", "nether_wart"): (133, 43, 61),
+    ("organic", "mushroom_brown"): (132, 82, 45),
 }
 
 # Bark colors describe the finished bark surface rather than darkening the
@@ -1616,7 +1620,7 @@ def semantic_sprite_alpha_coverage(
         # The legacy mask is a dense pixel clump. Keeping that full opacity
         # made distinct 16px blades merge into one solid leaf shape; cap the
         # new silhouette while retaining a minimum visible footprint.
-        return max(0.28, min(reference_coverage, 0.42))
+        return max(0.28, min(reference_coverage, 0.34))
     if any(token in name for token in ("tallgrass", "grass_1", "dry_grass")):
         # The source masks are tiny flattened tufts. Applying their 8–11%
         # coverage to a single authored blade left only a few stray pixels;
@@ -1626,6 +1630,8 @@ def semantic_sprite_alpha_coverage(
         # Source textures contain whole stands. Our cards contain one named
         # stalk or blade, and the reed mesh supplies the other directions.
         # Matching a 50%+ source mask expands each single stalk into a blob.
+        if "papyrus" in name:
+            return min(reference_coverage, 0.18)
         return min(reference_coverage, 0.24)
     if any(token in name for token in ("mushroom", "cocoa", "cactus_seedling")):
         # Preserve cap, pod and seedling silhouettes instead of expanding them
@@ -1633,8 +1639,12 @@ def semantic_sprite_alpha_coverage(
         return min(reference_coverage, 0.32)
     if "vine" in name:
         return min(reference_coverage, 0.30)
+    if any(token in name for token in ("carrots", "potatoes")):
+        # Root-crop foliage is a sparse silhouette. The reference atlas uses
+        # filled masks; reproducing that coverage turns leaflets into a blob.
+        return min(reference_coverage, 0.25)
     if any(token in name for token in (
-        "netherstalk", "potatoes", "carrots", "wheat", "pumpkin_stem",
+        "netherstalk", "nether_wart", "potatoes", "carrots", "wheat", "pumpkin_stem",
         "melon_stem",
     )):
         return min(reference_coverage, 0.32)
@@ -1669,7 +1679,7 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
     torch = "torch" in name or "redtorch" in name
     sapling = "sapling" in name
     crop = any(token in name for token in (
-        "crops", "carrots", "potatoes", "wheat", "netherstalk", "pumpkin_stem", "melon_stem",
+        "crop", "carrots", "potatoes", "wheat", "netherstalk", "nether_wart", "pumpkin_stem", "melon_stem",
     ))
     cocoa = "cocoa" in name
     fruit = "apple" in name or "berry" in name
@@ -1729,7 +1739,7 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
     elif sapling:
         conifer = any(token in name for token in ("pine", "spruce", "cedar", "larch"))
         birch = "birch" in name
-        trunk = (211, 204, 176, 255) if birch else (105, 76, 45, 255)
+        trunk = (246, 246, 238, 255) if birch else (105, 76, 45, 255)
         green = ((45, 83, 42, 255), (61, 103, 47, 255), (83, 119, 54, 255)) if conifer else (
             (76, 133, 52, 255), (96, 151, 66, 255), (57, 111, 48, 255)
         )
@@ -1759,6 +1769,20 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                       fill=trunk, width=max(1, round(2*s)))
             draw.line([xy(center, top + 19), xy(center + 9, top + 12)],
                       fill=trunk, width=max(1, round(2*s)))
+        # Keep the leader visible through the small crown. This is especially
+        # important for birch, whose pale trunk and dark lenticels identify it.
+        draw.line([xy(32, 63), xy(center, top + 15)],
+                  fill=trunk, width=max(1, round(4*s)))
+        if birch:
+            # Birch bark is nearly white with short, sharp charcoal lenticels.
+            for mark_y, mark_x, span in ((top + 24, center - 1, 6),
+                                         (top + 33, center + 1, 5),
+                                         (top + 42, center - 1, 6),
+                                         (top + 51, center + 1, 5),
+                                         (top + 59, center, 5)):
+                draw.line([xy(mark_x - span / 2, mark_y),
+                           xy(mark_x + span / 2, mark_y - 1)],
+                          fill=(48, 48, 45, 255), width=max(1, round(2*s)))
     elif bush_stem:
         # Minetest bush stems are open woody branches. Pine needles and bush
         # leaves are separate blocks, so this sprite must stay brown and cut
@@ -1812,26 +1836,98 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
             draw.line([xy(x, y), xy(x + rng.choice((-1, 0, 1)), y - 3)],
                       fill=highlight, width=fine)
     elif crop:
-        dry = "netherstalk" not in name and "wheat" in name
-        stem = (141, 113, 55, 255) if dry else (56, 116, 54, 255)
-        leaf = (193, 167, 82, 255) if dry else (91, 151, 61, 255)
-        center = 32 + rng.randint(-3, 3)
-        height = rng.randint(43, 57)
-        lean = rng.randint(-5, 5)
-        tip_x = center + lean
-        draw.line([xy(center, 63), xy(tip_x, 63 - height)],
-                  fill=stem, width=max(1, round(3*s)))
-        for fraction, side in ((0.38, -1), (0.55, 1), (0.72, -1)):
-            y = 63 - height * fraction
-            x = center + lean * fraction
-            polygon([(x, y + 2), (x + side * 12, y - 5),
-                     (x + side * 9, y + 3)], leaf)
-        if dry:
-            # A compact grain head identifies ripe wheat without making each
-            # card an entire sheaf of stems.
-            for offset, y in ((-2, 0), (1, 4), (-1, 8), (2, 12)):
-                draw.ellipse((*xy(tip_x + offset - 2, 63 - height + y - 2),
-                              *xy(tip_x + offset + 2, 63 - height + y + 2)), fill=leaf)
+        nether_wart = "netherstalk" in name or "nether_wart" in name
+        mature_wheat = "wheat" in name or name == "crops_7"
+        if nether_wart:
+            # Nether wart is a low crimson cluster of swollen buds, not a
+            # green leaf crop. Several short stems keep that identity at 16px.
+            bud_colors = ((105, 32, 53, 255), (151, 43, 63, 255),
+                          (190, 62, 72, 255))
+            for stem_x, height in ((19, 25), (27, 34), (34, 31),
+                                   (42, 38), (49, 27)):
+                lean = rng.randint(-3, 3)
+                tip_x = stem_x + lean
+                top_y = 63 - height
+                draw.line([xy(stem_x, 63), xy(tip_x, top_y + 8)],
+                          fill=(83, 30, 48, 255), width=max(1, round(3*s)))
+                for offset_x, offset_y, radius in ((-3, 5, 4), (2, 1, 5),
+                                                   (0, 8, 3)):
+                    cx, cy = tip_x + offset_x, top_y + offset_y
+                    color = bud_colors[rng.randrange(len(bud_colors))]
+                    draw.ellipse((*xy(cx - radius, cy - radius),
+                                  *xy(cx + radius, cy + radius)), fill=color)
+                    draw.point(xy(cx - 1, cy - 1), fill=(220, 94, 88, 255))
+        elif "carrot" in name:
+            # Carrot tops are a low cluster of finely divided leaves, not a
+            # single grain-like stalk. Keep narrow leaflets readable in the
+            # 16px sprite mesh.
+            leaf_colors = ((50, 111, 48, 255), (67, 133, 54, 255), (87, 148, 60, 255))
+            center = 32 + rng.randint(-2, 2)
+            for index, offset in enumerate((-8, 0, 8)):
+                base_x = center + offset
+                height = rng.randint(27, 36) if offset else rng.randint(38, 47)
+                lean = rng.randint(-5, 5)
+                tip_x = base_x + lean
+                draw.line([xy(base_x, 63), xy(tip_x, 63 - height)],
+                          fill=(57, 105, 45, 255), width=max(1, round(2*s)))
+                for leaflet in range(4):
+                    fraction = 0.28 + leaflet * 0.16
+                    y = 63 - height * fraction
+                    x = base_x + lean * fraction
+                    side = -1 if (index + leaflet) % 2 == 0 else 1
+                    length = rng.randint(4, 7)
+                    color = leaf_colors[rng.randrange(len(leaf_colors))]
+                    polygon([(x, y), (x + side * length, y - 3),
+                             (x + side * (length - 2), y + 1),
+                             (x + side, y + 2)], color)
+        elif "potato" in name:
+            # Potato foliage forms a compact branching bush. Broad leaflets
+            # distinguish it from carrot's finely divided upright tops.
+            leaf_colors = ((57, 111, 48, 255), (76, 133, 55, 255), (97, 148, 62, 255))
+            center = 32 + rng.randint(-2, 2)
+            stems = ((-9, 33), (0, 45), (9, 36))
+            for index, (offset, height) in enumerate(stems):
+                base_x = center + offset // 2
+                tip_x = center + offset + rng.randint(-3, 3)
+                top_y = 63 - height
+                color = leaf_colors[index % len(leaf_colors)]
+                draw.line([xy(base_x, 63), xy(tip_x, top_y + 8)],
+                          fill=(58, 103, 45, 255), width=max(1, round(2*s)))
+                for leaf_y, side in ((top_y + 5, -1), (top_y + 12, 1)):
+                    draw.ellipse((*xy(tip_x + side * 4 - 4, leaf_y - 3),
+                                  *xy(tip_x + side * 4 + 4, leaf_y + 3)), fill=color)
+                draw.ellipse((*xy(tip_x - 2, top_y + 2),
+                              *xy(tip_x + 2, top_y + 7)), fill=color)
+        else:
+            # Ripe wheat keeps an olive-green stem and leaves under a golden
+            # ear, matching mature field plants instead of reading as dead grass.
+            stem = (103, 113, 54, 255) if mature_wheat else (56, 116, 54, 255)
+            leaf = (129, 151, 65, 255) if mature_wheat else (91, 151, 61, 255)
+            center = 32 + rng.randint(-3, 3)
+            height = rng.randint(43, 57)
+            lean = rng.randint(-5, 5)
+            tip_x = center + lean
+            draw.line([xy(center, 63), xy(tip_x, 63 - height)],
+                      fill=stem, width=max(1, round(3*s)))
+            for fraction, side in ((0.38, -1), (0.55, 1), (0.72, -1)):
+                y = 63 - height * fraction
+                x = center + lean * fraction
+                polygon([(x, y + 2), (x + side * 12, y - 5),
+                         (x + side * 9, y + 3)], leaf)
+            if mature_wheat:
+                # Ripe wheat gets a compact ear with visible grain and awns;
+                # a plain gold stalk would read as dry grass instead.
+                draw.line([xy(tip_x, 63 - height + 11),
+                           xy(tip_x, 63 - height - 3)],
+                          fill=(194, 157, 66, 255), width=max(1, round(2*s)))
+                for offset, grain_offset_y in ((-3, 0), (2, 3), (-2, 6), (3, 9), (0, 12)):
+                    grain_x = tip_x + offset
+                    grain_y = 63 - height + grain_offset_y
+                    grain_color = rng.choice(((196, 160, 70, 255),
+                                              (219, 187, 92, 255),
+                                              (164, 128, 53, 255)))
+                    draw.ellipse((*xy(grain_x - 2, grain_y - 2),
+                                  *xy(grain_x + 2, grain_y + 2)), fill=grain_color)
     elif cocoa:
         cx, cy = 32 + rng.randint(-3, 3), 39 + rng.randint(-3, 3)
         pod = (163, 89, 39, 255) if rng.random() > 0.25 else (93, 124, 50, 255)
@@ -1926,6 +2022,7 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
             (177, 52, 48, 255) if "red" in name else
             (207, 155, 47, 255) if "gold" in name or "yellow" in name else
             (65, 119, 177, 255) if "blue" in name else
+            (132, 82, 45, 255) if "brown" in name else
             (193, 179, 151, 255)
         )
         center = 32 + rng.randint(-2, 2)
@@ -1945,13 +2042,14 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
         rim = (229, 218, 190, 255) if "pale" in name else tuple(min(255, c + 50) for c in cap_color[:3]) + (255,)
         draw.arc((*cap_box[0], *cap_box[1]), 180, 360, fill=rim,
                  width=max(1, round(2*s)))
-        if "red" in name or "pale" in name:
+        if "red" in name or "pale" in name or "brown" in name:
+            spot_color = (226, 207, 169, 255) if "brown" in name else (245, 235, 210, 255)
             for _ in range(rng.randint(3, 5)):
                 spot_x = center + rng.randint(-cap_width + 3, cap_width - 3)
                 spot_y = cap_y + rng.randint(4, 11)
                 draw.ellipse((*xy(spot_x - 1.8, spot_y - 1.5),
                               *xy(spot_x + 1.8, spot_y + 1.5)),
-                             fill=(245, 235, 210, 255))
+                             fill=spot_color)
     elif flower:
         petal_color = (
             (226, 221, 207, 255) if "white" in name else
@@ -1961,7 +2059,7 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
             (82, 139, 204, 255) if "blue" in name else
             (139, 91, 177, 255) if "purple" in name else
             (224, 111, 48, 255) if "orange" in name else
-            (213, 121, 157, 255)
+            (213, 121, 157, 255) if "blossom" in name else (218, 185, 59, 255)
         )
         stem_color = (52, 113, 54, 255)
         center_color = (239, 194, 57, 255) if any(
@@ -2088,22 +2186,28 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                      (tip_x, 63 - height),
                      (tip_x - 2, 63 - height * 0.42)], blade_color)
         elif "papyrus" in name:
-            # A single papyrus stem and its radial crown per card.
+            # A papyrus has a thin culm with a light, separated umbrella head.
+            # Narrow blades preserve the sedge silhouette at 16x16 instead of
+            # expanding into a rounded bulb after alpha-coverage fitting.
             stem = (111, 130, 57, 255)
-            head = (147, 151, 75, 255)
+            head = (157, 161, 82, 255)
             center = 32 + rng.randint(-2, 2)
             top = rng.randint(13, 20)
-            draw.line([xy(32, 63), xy(center, top + 9)],
+            draw.line([xy(32, 63), xy(center, top + 11)],
                       fill=stem, width=max(1, round(3*s)))
-            crown_x, crown_y = center, top + 7
-            for angle in (-160, -135, -110, -85, -60, -35, -10):
+            for y, side, length in ((49, -1, 10), (40, 1, 9)):
+                x = 32 + (center - 32) * ((63 - y) / (63 - (top + 11)))
+                polygon([(x, y + 2), (x + side * length, y - 5),
+                         (x + side * (length - 2), y + 2)],
+                        (126, 145, 64, 255))
+            crown_x, crown_y = center, top + 9
+            for angle in (-150, -122, -94, -66, -38):
                 theta = math.radians(angle)
-                end_x = crown_x + math.cos(theta) * rng.randint(7, 11)
-                end_y = crown_y + math.sin(theta) * rng.randint(5, 8)
+                end_x = crown_x + math.cos(theta) * rng.randint(8, 12)
+                end_y = crown_y + math.sin(theta) * rng.randint(6, 10)
                 draw.line([xy(crown_x, crown_y), xy(end_x, end_y)],
-                          fill=head, width=max(1, round(2*s)))
-                draw.ellipse((*xy(end_x - 1.2, end_y - 1.5),
-                              *xy(end_x + 1.2, end_y + 1.5)), fill=head)
+                          fill=head, width=max(1, round(1.25*s)))
+                draw.point(xy(end_x, end_y), fill=(187, 177, 103, 255))
         else:
             # One upright reed culm with only a few narrow leaves. The mesh
             # supplies four viewing angles; a full stand in this bitmap made
@@ -2148,7 +2252,7 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
         for base_offset, height, lean in leaves:
             base_x = center + base_offset
             tip_x = base_x + lean
-            half_width = rng.randint(6, 9)
+            half_width = rng.randint(3, 6)
             color = blade_colors[rng.randrange(len(blade_colors))]
             polygon([
                 (base_x - half_width, 63),
@@ -2165,14 +2269,14 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                           (71, 123, 47, 255))
         base_x = 32 + rng.randint(-3, 3)
         tip_x = base_x + rng.randint(-8, 8)
-        top_y = rng.randint(5, 12)
+        top_y = rng.randint(14, 21)
         draw.line([xy(base_x, 63), xy(tip_x, top_y)],
                   fill=stem_color, width=max(1, round(3*s)))
-        for index in range(1, 8):
-            fraction = index / 8.0
+        for index in range(1, 6):
+            fraction = index / 6.0
             y = 63 + (top_y - 63) * fraction
             x = base_x + (tip_x - base_x) * fraction
-            leaflet_width = max(4, round((13 - index) * 0.82))
+            leaflet_width = max(4, round((12 - index) * 0.74))
             color = leaflet_colors[index % len(leaflet_colors)]
             for side in (-1, 1):
                 leaflet_tip = x + side * leaflet_width
@@ -2192,17 +2296,36 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
         else:
             colors = ((61, 126, 44, 255), (78, 151, 51, 255),
                       (102, 164, 62, 255), (52, 111, 42, 255))
-        center = 32 + rng.randint(-3, 3)
-        height = rng.randint(32, 59)
-        tip_x = center + rng.randint(-15, 15)
-        half_width = rng.randint(4, 7)
-        color = colors[rng.randrange(len(colors))]
-        polygon([(center - half_width, 63), (center - 1, 63 - height * 0.42),
-                 (tip_x, 63 - height), (center + 1, 63 - height * 0.70),
-                 (center + half_width, 63)], color)
-        vein = (184, 175, 91, 255) if dry else (130, 181, 77, 255)
-        draw.line([xy(center, 63), xy(tip_x, 63 - height)],
-                  fill=vein, width=max(1, round(s)))
+        if "dry_grass" in name or "marram" in name:
+            # Dry grass and dune marram grow as low tufts of separate blades.
+            # A single tall blade looked like a reed and did not match either
+            # named plant at the 16px gameplay scale.
+            heights = ((23, 35, 27, 18) if dry else (28, 41, 34, 24))
+            for index, (offset, height) in enumerate(zip((-12, -4, 5, 13), heights)):
+                center = 32 + offset + rng.randint(-2, 2)
+                tip_x = center + rng.randint(-8, 8)
+                half_width = rng.randint(2, 4)
+                color = colors[(seed + index) % len(colors)]
+                polygon([(center - half_width, 63),
+                         (center - 1, 63 - height * 0.40),
+                         (tip_x, 63 - height),
+                         (center + 1, 63 - height * 0.68),
+                         (center + half_width, 63)], color)
+                vein = (184, 175, 91, 255) if dry else (163, 180, 93, 255)
+                draw.line([xy(center, 63), xy(tip_x, 63 - height)],
+                          fill=vein, width=max(1, round(s)))
+        else:
+            center = 32 + rng.randint(-3, 3)
+            height = rng.randint(32, 59)
+            tip_x = center + rng.randint(-15, 15)
+            half_width = rng.randint(4, 7)
+            color = colors[rng.randrange(len(colors))]
+            polygon([(center - half_width, 63), (center - 1, 63 - height * 0.42),
+                     (tip_x, 63 - height), (center + 1, 63 - height * 0.70),
+                     (center + half_width, 63)], color)
+            vein = (184, 175, 91, 255) if dry else (130, 181, 77, 255)
+            draw.line([xy(center, 63), xy(tip_x, 63 - height)],
+                      fill=vein, width=max(1, round(s)))
     return image
 
 
@@ -2321,7 +2444,7 @@ def is_decor_sprite_source(source_stem: str) -> bool:
         "blossom", "mushroom", "reeds", "papyrus", "kelp",
         "seagrass", "deadbush", "sapling", "torch", "dry_shrub", "shrub",
         "bush_stem",
-        "crops", "carrots", "potatoes", "wheat", "netherstalk", "pumpkin_stem",
+        "crop", "carrots", "potatoes", "wheat", "netherstalk", "nether_wart", "pumpkin_stem",
         "melon_stem", "cocoa", "apple", "berry", "cactus_seedling", "waterlily", "vine",
     ))
 
@@ -2992,7 +3115,7 @@ def infer_family(stem: str) -> str:
         return "wood"
     if any(token in value for token in ("brick", "stone", "basalt", "granite", "slate", "rock", "pavement", "furnace", "dispenser", "dropper")):
         return "masonry" if "brick" in value else "rock"
-    if any(token in value for token in ("grass", "fern", "leaf", "leaves", "flower", "sapling", "mushroom", "cactus", "vine", "crop", "cocoa", "coral", "reed", "moss", "lichen", "bush", "shrub", "plant", "needle", "apple", "berry", "melon", "pumpkin", "potato", "carrot", "wheat", "lily", "papyrus", "deadbush", "mycel", "sponge", "stem")):
+    if any(token in value for token in ("grass", "fern", "leaf", "leaves", "flower", "rose", "dandelion", "sapling", "mushroom", "cactus", "vine", "crop", "cocoa", "coral", "reed", "moss", "lichen", "bush", "shrub", "plant", "needle", "apple", "berry", "melon", "pumpkin", "potato", "carrot", "wheat", "lily", "papyrus", "deadbush", "mycel", "sponge", "stem", "netherstalk", "nether_wart", "wart")):
         return "organic"
     if any(token in value for token in ("dirt", "sand", "clay", "mud", "gravel", "farmland", "snow")):
         return "soil"
@@ -3104,10 +3227,21 @@ def material_variant(stem: str, family: str) -> tuple[str, str]:
             selected = "flower_white"
         elif "shrub" in words or "deadbush" in words:
             selected = "lichen"
+        elif any(token in words for token in ("carrot", "carrots", "potato", "potatoes", "wheat", "crop", "crops")):
+            selected = "crop"
+        elif "cocoa" in words:
+            selected = "cocoa_pod"
+        elif "nether" in words and any(token in words for token in ("stalk", "wart")):
+            selected = "nether_wart"
         elif "flower" in words or "rose" in words or "dandelion" in words:
             selected = next((f"flower_{color}" for color in ("red", "yellow", "blue", "purple", "pink", "white", "orange") if color in words and f"flower_{color}" in materials), "flower_yellow" if "dandelion" in words or "flower" in words else "flower_red" if "rose" in words else "flower_white")
         elif "mushroom" in words:
-            selected = "mushroom_red" if "red" in words else "mushroom_gold" if "gold" in words or "yellow" in words else "mushroom_pale"
+            selected = (
+                "mushroom_red" if "red" in words else
+                "mushroom_gold" if "gold" in words or "yellow" in words else
+                "mushroom_brown" if "brown" in words else
+                "mushroom_pale"
+            )
         else:
             selected = (
                 "flower_red" if "apple" in words or "strawberry" in words else
@@ -4595,9 +4729,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 34,
+            "version": 36,
             "backend": "procedural",
-            "texture_synthesis": "named_tree_species_stable_ids_and_sand_match_v32",
+            "texture_synthesis": "species_matched_crops_birch_and_organic_materials_v36",
             "object_synthesis": "aspen_broad_crown_willow_drapes_mangrove_roots_coral_crystals_v34",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",

@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_nether_wart_dry",
+  "id": 2502,
+  "displayName": "Organic Nether Wart Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_nether_wart_dry",
+    "cu_organic_nether_wart_dry",
+    "cu_organic_nether_wart_dry",
+    "cu_organic_nether_wart_dry",
+    "cu_organic_nether_wart_dry",
+    "cu_organic_nether_wart_dry"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "nether_wart",
+    "variant": "dry"
+  }
+}

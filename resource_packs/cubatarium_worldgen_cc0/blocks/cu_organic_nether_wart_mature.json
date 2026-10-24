@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_nether_wart_mature",
+  "id": 2510,
+  "displayName": "Organic Nether Wart Mature",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_nether_wart_mature",
+    "cu_organic_nether_wart_mature",
+    "cu_organic_nether_wart_mature",
+    "cu_organic_nether_wart_mature",
+    "cu_organic_nether_wart_mature",
+    "cu_organic_nether_wart_mature"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "nether_wart",
+    "variant": "mature"
+  }
+}

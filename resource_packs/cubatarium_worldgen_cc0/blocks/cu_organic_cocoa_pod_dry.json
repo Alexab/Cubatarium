@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_cocoa_pod_dry",
+  "id": 2492,
+  "displayName": "Organic Cocoa Pod Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_cocoa_pod_dry",
+    "cu_organic_cocoa_pod_dry",
+    "cu_organic_cocoa_pod_dry",
+    "cu_organic_cocoa_pod_dry",
+    "cu_organic_cocoa_pod_dry",
+    "cu_organic_cocoa_pod_dry"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "cocoa_pod",
+    "variant": "dry"
+  }
+}

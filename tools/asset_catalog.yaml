@@ -77,6 +77,6 @@ families:
     materials: [quartz, amethyst, citrine, garnet, jade, opal, fluorite, azurite, malachite]
     variants: [cluster, raw, cut, pale, deep, veined, fractured, bright, smoky, banded]
   organic:
-    count: 220
-    materials: [moss, lichen, fern, reed, mushroom, coral, kelp, blossom, leaf, flower_white, flower_yellow, flower_red, flower_pink, flower_blue, flower_purple, flower_orange, mushroom_red, mushroom_gold, mushroom_blue, mushroom_pale, needle, mushroom_stem]
+    count: 260
+    materials: [moss, lichen, fern, reed, mushroom, coral, kelp, blossom, leaf, flower_white, flower_yellow, flower_red, flower_pink, flower_blue, flower_purple, flower_orange, mushroom_red, mushroom_gold, mushroom_blue, mushroom_pale, needle, mushroom_stem, crop, cocoa_pod, nether_wart, mushroom_brown]
     variants: [fresh, dry, dense, sparse, spotted, striped, pale, dark, young, mature]

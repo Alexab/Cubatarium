@@ -9,9 +9,9 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 34,
+    "version": 36,
     "backend": "procedural",
-    "texture_synthesis": "named_tree_species_stable_ids_and_sand_match_v32",
+    "texture_synthesis": "species_matched_crops_birch_and_organic_materials_v36",
     "object_synthesis": "aspen_broad_crown_willow_drapes_mangrove_roots_coral_crystals_v34",
     "resolution": 16,
     "profile": "voxel16",
@@ -19,11 +19,11 @@
   },
   "reference_calibration": null,
   "counts": {
-    "block_definitions": 1714,
-    "procedural_cc0_block_definitions": 1446,
+    "block_definitions": 1754,
+    "procedural_cc0_block_definitions": 1486,
     "minetest_block_definitions_included": 258,
     "geology_block_definitions_included": 10,
-    "textures": 2443,
+    "textures": 2483,
     "minetest_textures_replaced": 313,
     "geology_textures_replaced": 9,
     "minetest_block_definitions_overridden": 258,
@@ -19990,6 +19990,226 @@
       "license_review_required": false
     },
     {
+      "stem": "cu_organic_cocoa_pod_dark",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "dark",
+      "role": "decor_sprite",
+      "seed": 5289823144094845698,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c9a0312c5169c72caf83d0368bd2a847fa1a02df22a87e28c09bc8c5bae93d3b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_dense",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "dense",
+      "role": "decor_sprite",
+      "seed": 17481082137443683375,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d55df513dd83c209c3e7bd94faa5795c3f9835524cc88337f79b152fad972352",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_dry",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "dry",
+      "role": "decor_sprite",
+      "seed": 14810528881385586581,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d9157d18323bae50a8badcb28477bf3ac64cfe69b8d52010beeec3a8e8b9f2cf",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_fresh",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "fresh",
+      "role": "decor_sprite",
+      "seed": 16811640579313427671,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ff0b2214e2f9813a9330c62b49d0c1c190f468365518e01bd789c9b7aeeb8a32",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_mature",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "mature",
+      "role": "decor_sprite",
+      "seed": 16899434873626154352,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0135d42c0e0e683997e7b728b7b1004e737e2c33d746b85be22ff3d635ff2287",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_pale",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "pale",
+      "role": "decor_sprite",
+      "seed": 11787687803959290900,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7a3aad51b2815575e45927aacf4a5213d574648653d4731e9542faf907511dc6",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_sparse",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "sparse",
+      "role": "decor_sprite",
+      "seed": 3494846326913174945,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "fc0ce1542c4a689d7134ef0193f936a7b7c57a48a3cabff10bbf7367e118308a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_spotted",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "spotted",
+      "role": "decor_sprite",
+      "seed": 9676350816918986819,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "041fa9d1343ad530e05b1dbb43f094d37f794d8d9584d8cad4760c92cde2b986",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_striped",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "striped",
+      "role": "decor_sprite",
+      "seed": 1762523494440234138,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "77d40666f2796f7edd97c0e86128915a655e50fdc7fa5d6b5ccac6c0fbfed272",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_cocoa_pod_young",
+      "family": "organic",
+      "material": "cocoa_pod",
+      "variant": "young",
+      "role": "decor_sprite",
+      "seed": 821997734044833168,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "31cc18d5f673ef489917aa9fc0f058a605d9b2b803645cec8bf3ad141f1663bc",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
       "stem": "cu_organic_coral_dark",
       "family": "organic",
       "material": "coral",
@@ -20210,6 +20430,226 @@
       "license_review_required": false
     },
     {
+      "stem": "cu_organic_crop_dark",
+      "family": "organic",
+      "material": "crop",
+      "variant": "dark",
+      "role": "decor_sprite",
+      "seed": 17752763717066536734,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e5bdd317ff6a17276245e57d6e2ba9c87d272f56c6edfd067fd737e330ee9434",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_dense",
+      "family": "organic",
+      "material": "crop",
+      "variant": "dense",
+      "role": "decor_sprite",
+      "seed": 7769408223195947012,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "fed66ac6e0aac54651803ccef396d8750ab8ad68dbd05d784f66190db22233af",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_dry",
+      "family": "organic",
+      "material": "crop",
+      "variant": "dry",
+      "role": "decor_sprite",
+      "seed": 15734255211983523363,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "89acc6311cb8d48503db2119e095fd7dee9321f93da3ce34d92fde70ae595e2e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_fresh",
+      "family": "organic",
+      "material": "crop",
+      "variant": "fresh",
+      "role": "decor_sprite",
+      "seed": 6089348538128636151,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ef56dca2e83e12a02e28641b5c3f8800a54afb04fad05b50c84811b5f5e734e2",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_mature",
+      "family": "organic",
+      "material": "crop",
+      "variant": "mature",
+      "role": "decor_sprite",
+      "seed": 14981239658667472473,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "b4bb795f30c5dcf185602a54bcf6e12831f1991a6f90ed127094367948a149b8",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_pale",
+      "family": "organic",
+      "material": "crop",
+      "variant": "pale",
+      "role": "decor_sprite",
+      "seed": 13630171077648794462,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a70a7b74ebe72e6074c6ca7440390691ea9b6c0cf0cae43951ef590c12ae873e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_sparse",
+      "family": "organic",
+      "material": "crop",
+      "variant": "sparse",
+      "role": "decor_sprite",
+      "seed": 17220742939188957041,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0adf175d239d061934f298aff342a5195b12774ef6282f1ba4a0ab3923863674",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_spotted",
+      "family": "organic",
+      "material": "crop",
+      "variant": "spotted",
+      "role": "decor_sprite",
+      "seed": 2921802303180897632,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "85d61d252d1cd2fe0d9081e41884a32ce1f05122f16cd5389e44190ae4df6d0c",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_striped",
+      "family": "organic",
+      "material": "crop",
+      "variant": "striped",
+      "role": "decor_sprite",
+      "seed": 7755296471514660472,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f57f7224d6476dc05dd5fd23d49c64058aa2e60d8f65083d32e49eeebdc5c170",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_crop_young",
+      "family": "organic",
+      "material": "crop",
+      "variant": "young",
+      "role": "decor_sprite",
+      "seed": 18084627508490922166,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "12f1fec84b7cec3516c606f954457a4732bbc2d5fe765ff64b0a7f4b5d60d968",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
       "stem": "cu_organic_fern_dark",
       "family": "organic",
       "material": "fern",
@@ -20223,7 +20663,7 @@
         16,
         16
       ],
-      "pixel_sha256": "656834b2f0f1653b542fa48bf1ddbb4570ef122d39987e1e5bd09c3d3da2aa30",
+      "pixel_sha256": "4490b8b1ceba4af6262cd156e55926d93db436ff81d30b7455ff03d7fe0eef87",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20245,7 +20685,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4c346e415b42b2f050469ddbb7be04b7cce1c0d9dd38933f069662cfdac3c2bc",
+      "pixel_sha256": "dc75a23504fcdf7659dae0e3edacd9643cb0ad5256b090377395b8ce6a53314f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20267,7 +20707,7 @@
         16,
         16
       ],
-      "pixel_sha256": "62e6aa594f07e9a906bd0ec8b902bb7a5b46c4e36cfdab5bae7ac6bc91d87b54",
+      "pixel_sha256": "8b293860e9c1bf2c7ab4b0a3770c8b5ea57cd801299e12e1edc477a228d55baa",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20289,7 +20729,7 @@
         16,
         16
       ],
-      "pixel_sha256": "22407a3ef3bdf04e10af894e4ddddac111c03aabf6f6e08428cc346fa60e6e67",
+      "pixel_sha256": "80de90a3e512d3caaa5e3909be08b7a04b22a82edea26bf7e8629a1624318bbd",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20311,7 +20751,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f826cccafce2c18e5385e919848296bdef85f9b69d76ac02286d069bdb877f6f",
+      "pixel_sha256": "e2a89e3947f4c8a59f975c8abdea6e0b982417eb882541101ac9aad65eae75b2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20333,7 +20773,7 @@
         16,
         16
       ],
-      "pixel_sha256": "78e7408f737ec67c116fba6a3ceef4e1b6e20c20d04cd11a634372b70018b4df",
+      "pixel_sha256": "29720bc46738778a4b84890e6a29244f7ae5932ee9d1eedb569e7c856f63bf65",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20355,7 +20795,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7b41f1b502240275eaa7fee5a8a895a0ad19380fb6306b760bff9a2fd856b4ab",
+      "pixel_sha256": "3c54eaeac7a55206c4e4e94f9e0eda3b1e18eb12552148d9f1e04b664916301c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20377,7 +20817,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a679ee33b417370f5fe8031bdc8931c03b6e68c5c0024a3ed07b1cecc567c8d9",
+      "pixel_sha256": "4f2a94c57c341a334f2f2c4637be5e3e2fa1d79cd1cd6d40f36f693db8d7eff3",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20399,7 +20839,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1121ce5f124df84a868cc0c7aade89f944b8b722f4b0dc8d52c02ab5f1fe3831",
+      "pixel_sha256": "73508d916d0b0c9577eb1162b428d66fc288f21c068d9383850c39b3a0a6961f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20421,7 +20861,7 @@
         16,
         16
       ],
-      "pixel_sha256": "365cf1563f9d6cc8ba5d280eada0c68e5dd16cbcd3c59f8c19815871c360956e",
+      "pixel_sha256": "24032ead203d3bd1b8446703c3312b697ea40ee6d206a7800880776d0d31c84b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20443,7 +20883,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f76bea2a581b89fccc7d029519c50e9a91f6ab1c6b1dc1879d351b0c6b17084a",
+      "pixel_sha256": "7796ff701840e974ecf277f78c2ab3f845a95411451ef096d20eeff87a59ff9c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20465,7 +20905,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fb574a967c474f41f91d018530fbf875dda9a7824cfcbd50ef1c424dde587742",
+      "pixel_sha256": "7109e667499d13bb7cee091adc94c9767d3ffe5c93c549f23bb1e791cff812da",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20487,7 +20927,7 @@
         16,
         16
       ],
-      "pixel_sha256": "04f2e4aae379d00f291e67de63c289e93d5938e536281dda243ab10946d58c14",
+      "pixel_sha256": "fa58a396ed83c4ae108f771446958f4a06142c8c86c7e945f47fd086515c3221",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20509,7 +20949,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d9bded914a25e1845f74cc19b0b78f661b809aaad3d98c26effeae1fcdd745fc",
+      "pixel_sha256": "8128b397319f378c9ac9f71215eee5d1ca7e3219bd8b9421e1bb00926767df4d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20531,7 +20971,7 @@
         16,
         16
       ],
-      "pixel_sha256": "eed423ec19d8a74a1bf76ea80a190c38e0c8da7946bfb94f8902bb592f5888d8",
+      "pixel_sha256": "8c6509ba77d7a1c945b9878b65b7b394cfaf127891853c2ba5e24bd951e696dc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20553,7 +20993,7 @@
         16,
         16
       ],
-      "pixel_sha256": "aa16e5516c835626df19ae816fee03fcc4965f6fb9598668261b2000512d8f1c",
+      "pixel_sha256": "b72e9062d0fa8dc3f4f9090c0695ddcd176402e5804b2c81f05ad9b15cc962e6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20575,7 +21015,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5b6fb13d4943a9edcbaf1b6eaf8421e429620c48a89877790525a126632d1278",
+      "pixel_sha256": "4135af53c6c2d5cc13e267f65cde60885a00e752eebe30613d22eea9b4339e54",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20597,7 +21037,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4403a48ade9b8ff35a3d44c2cf42d14fcd56df436f7eb04de3605e2ad8a148e1",
+      "pixel_sha256": "c275f079ebbf26d5e3e1e9a4d4992c63451b5f53ca7ea3f7273d5eb6ea8377f1",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20619,7 +21059,7 @@
         16,
         16
       ],
-      "pixel_sha256": "737036e42b63ca94fb621af7b1fab7de92863d900118209e0f1e0661e3792d24",
+      "pixel_sha256": "9e6c31c80e0a65cf61a47dcc2a9717753d4e9122304d465a02f5b71e3aa01cd4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -20641,7 +21081,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b8871aeb1e738f08a3a4ff82050a29195437a0e673b2c45dd6718a701cc94f8c",
+      "pixel_sha256": "5632364231e6de8df7006ad42ade2d05ae7f8bd2c6fb87cc68d4a365ff9f5486",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -23990,6 +24430,226 @@
       "license_review_required": false
     },
     {
+      "stem": "cu_organic_mushroom_brown_dark",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "dark",
+      "role": "decor_sprite",
+      "seed": 12710421462450634429,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "6cf3e37b4ad67ae4b1ead85e999504a285877cee0c5e70cb8c261ccbd92bdf42",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_dense",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "dense",
+      "role": "decor_sprite",
+      "seed": 13235339615295631795,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ee1a151f6a5caad347f7a1cf64bf13000943ec9859872536d4523e59fdd79d4d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_dry",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "dry",
+      "role": "decor_sprite",
+      "seed": 11960277018060985527,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ffdacfc025baca0add3564cebaa66b30b6b1fe96de9925e1b2c1fe6c6d05ca2b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_fresh",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "fresh",
+      "role": "decor_sprite",
+      "seed": 10063064087159046581,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f49991156824536e25ad43031773ace457ece9cc481dd96cdc72a2eca53222bb",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_mature",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "mature",
+      "role": "decor_sprite",
+      "seed": 9131621924660195245,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "4af4b12497663c8a8eac0c8ca2813a71b4f8587274767cecaab874a3ecbea81d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_pale",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "pale",
+      "role": "decor_sprite",
+      "seed": 17731686519539161051,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "010f6b934360ce73eedc12cbd331c55978b9da6dc4abd5bafc71210347ec958b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_sparse",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "sparse",
+      "role": "decor_sprite",
+      "seed": 5927969012168592353,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d600570d17406dd38a67ba6b85ab2cd07afd3f373f7c4e9a3f8d6af59ce16327",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_spotted",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "spotted",
+      "role": "decor_sprite",
+      "seed": 14778900571801521730,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5fd9798b0ccfa7042e44d3c1e425f4c5c090beb4b718d5285bc98435c1a03e3d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_striped",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "striped",
+      "role": "decor_sprite",
+      "seed": 105761953882383794,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "6ad1e91bdc99742e2deb07cb70cbaa0f14d55d10c2febb7ddbc0e5701c0712b6",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_mushroom_brown_young",
+      "family": "organic",
+      "material": "mushroom_brown",
+      "variant": "young",
+      "role": "decor_sprite",
+      "seed": 17903531730702208835,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "231f16d89f8e201ccadc7a0b33ca84d6d91801ff0fd03d3635a952510abcb33b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
       "stem": "cu_organic_mushroom_dark",
       "family": "organic",
       "material": "mushroom",
@@ -25568,6 +26228,226 @@
       "license_review_required": false,
       "alpha_mask_target_transparency": 0.54,
       "alpha_mask_reference_pack": "procedural_material_profile"
+    },
+    {
+      "stem": "cu_organic_nether_wart_dark",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "dark",
+      "role": "decor_sprite",
+      "seed": 4002006759386560477,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "83eb0d7d67abcd49a9c450f3ef83cc315225db1fdfe3fc170b217bc6fd9da545",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_dense",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "dense",
+      "role": "decor_sprite",
+      "seed": 10088908487307892984,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "651d4b10695fab7905f37cabf310c6389227c7c0f844deda03cdf926285e1ebe",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_dry",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "dry",
+      "role": "decor_sprite",
+      "seed": 16061065414233266833,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "2ee2c7bbf50fee6fda0893da800a9cef315c7b5794045927682588e93697e55a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_fresh",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "fresh",
+      "role": "decor_sprite",
+      "seed": 4166972163349038908,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9ef657de80d1aab885fe32fb23063dc0915cee9be2edd574aeee77779ffdee79",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_mature",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "mature",
+      "role": "decor_sprite",
+      "seed": 5629454055746371094,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "341bbd956060c3039d2f460c0aa4eb0e8ba1526085b6dfc2fda2a283c8380c6c",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_pale",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "pale",
+      "role": "decor_sprite",
+      "seed": 1824155876384102977,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c663113b1174b1dfa84b982278d4339fe3ec9df311e79b9bc069d5fa1cdd4bf9",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_sparse",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "sparse",
+      "role": "decor_sprite",
+      "seed": 12181441820854314912,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9a0e307c821f14c17cfce382200c84bd685ad2e0cfacdf6ef72e2c2a84091723",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_spotted",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "spotted",
+      "role": "decor_sprite",
+      "seed": 6006051607766474290,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f290db2679e7e5ba1dfa8c0f5ed26015a6675fb7aac817dc8f19ee023e3d0d2b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_striped",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "striped",
+      "role": "decor_sprite",
+      "seed": 1591196268344651040,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "98789201a501e5f75eca13ba1e895e67d998e4335cf5096b7018b322295d0cd3",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_organic_nether_wart_young",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "young",
+      "role": "decor_sprite",
+      "seed": 2820579102759882308,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d81685b08ba8c046b5bdad109210809970c3021ce64e8c77274755bc08f97042",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
     },
     {
       "stem": "cu_organic_reed_dark",
@@ -49298,7 +50178,7 @@
     {
       "stem": "mt_carrots_3",
       "family": "organic",
-      "material": "flower_orange",
+      "material": "crop",
       "variant": "fresh",
       "role": "decor_sprite",
       "seed": 4559872461014656811,
@@ -49309,7 +50189,7 @@
         16,
         16
       ],
-      "pixel_sha256": "96781693d47fbc5ba6cedf906cdafa72056990745c5ca322329161f0b027f387",
+      "pixel_sha256": "6d6c0498ffe39135e47a8d57283f3a4b065327cac9320db740c6ac503a723633",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "carrots_3",
@@ -49319,7 +50199,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.3398,
-      "sprite_alpha_target_coverage": 0.32,
+      "sprite_alpha_target_coverage": 0.25,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -49805,7 +50685,7 @@
     {
       "stem": "mt_cocoa_2",
       "family": "organic",
-      "material": "flower_orange",
+      "material": "cocoa_pod",
       "variant": "fresh",
       "role": "decor_sprite",
       "seed": 13695167852165676845,
@@ -49832,7 +50712,7 @@
     {
       "stem": "mt_crops_7",
       "family": "organic",
-      "material": "leaf",
+      "material": "crop",
       "variant": "fresh",
       "role": "decor_sprite",
       "seed": 7961790612250959605,
@@ -49843,7 +50723,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a4468cd8e0d904b04ae3e703df50a01ec51be8b294df8cfbd216afd665b2ff80",
+      "pixel_sha256": "c28e564624dd0cf163fca4815e0aef39943ae045215768767fa64e02e8dfa2b2",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "crops_7",
@@ -50281,7 +51161,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3ae60e5393ec491f483a3ee7231909cf7c4538089f5effe97d3065fa6a6e631f",
+      "pixel_sha256": "7883f61e61d45aa485624165cdbd78d22c4cf3ed722ae267dde89d3b97e0aae5",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "fern",
@@ -50362,7 +51242,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6807f7c6b701456b8d20b6d741a8abfb57cf599fd6db809faf8a7da65cf7faee",
+      "pixel_sha256": "575947fcfbed5f3a1dfaef7ce717840db691a858d12eb7212ecb00f20bc3d0bc",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "flower",
@@ -52730,7 +53610,7 @@
         16,
         16
       ],
-      "pixel_sha256": "08f065dbfb6ef0a88b1af27cd8645ca131d436581813abca593ff31c74391913",
+      "pixel_sha256": "d2711688252a4802a7c3298a0fae16d37693dd7e834eee47e78fb1d0f2b45344",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_dry_grass_1_default_dry_grass_1",
@@ -52811,7 +53691,7 @@
         16,
         16
       ],
-      "pixel_sha256": "889cbdbb8202f2b5f028eb099e6d80360795398f8bfbfe23054b8507ff79bd93",
+      "pixel_sha256": "af3e7b902a1ff833c3cab65627ad9d58f427a040b02aae6ad4dbbd329e065cff",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_fern_1_default_fern_1",
@@ -52985,7 +53865,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e857289980d7e08f5c60310be151c3ceac1f9024a8e70b25b9fa068ebece74c4",
+      "pixel_sha256": "85ddf5ba352b517e41b83e5025292babda5212f38b22d7b5e5163c2a1029d47e",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_junglegrass_default_junglegrass",
@@ -52995,7 +53875,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.625,
-      "sprite_alpha_target_coverage": 0.42,
+      "sprite_alpha_target_coverage": 0.34,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -53264,7 +54144,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8b6d9854c3ef796c1f497f3b6447b05f24343b113196d1b008447d10cd2c8e8a",
+      "pixel_sha256": "c1d303bb1612759a51f1d81019702c2783fa233c261d8251ebfc593eca341447",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_marram_grass_1_default_marram_grass_1",
@@ -53483,7 +54363,7 @@
         16,
         16
       ],
-      "pixel_sha256": "64ad86af1b90d4998d724880be51f6439902c4394573805271e490c2886cdb48",
+      "pixel_sha256": "6109fb7eb745bcbe0d1eaf1f9f837ce7208e50bc58e04530e62b0688d532b621",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_papyrus_default_papyrus",
@@ -53493,7 +54373,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.5352,
-      "sprite_alpha_target_coverage": 0.24,
+      "sprite_alpha_target_coverage": 0.18,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -53705,7 +54585,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4066bdf9ab70d8c83f8eb0785351959b77b4dd388df87c276b2fc1837566f3c9",
+      "pixel_sha256": "c77e3bd6870f1c952385a35f8519790020f3bc66723618e0e98b8b91b55d3a45",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_pine_bush_sapling_default_pine_bush_sapling",
@@ -53786,7 +54666,7 @@
         16,
         16
       ],
-      "pixel_sha256": "cc5f6db19a227d3941b866fba96468556f13c7fda2be3c3295794ad3a7c88889",
+      "pixel_sha256": "e1de15f32307cb6f95a96314cd14520b36fb62a9ac980cc2c07c18d479cffdda",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_pine_sapling_default_pine_sapling",
@@ -54573,7 +55453,7 @@
     {
       "stem": "mt_mushroom_brown",
       "family": "organic",
-      "material": "mushroom_pale",
+      "material": "mushroom_brown",
       "variant": "fresh",
       "role": "decor_sprite",
       "seed": 6410810547566326086,
@@ -54584,7 +55464,7 @@
         16,
         16
       ],
-      "pixel_sha256": "20824481094b3110d3b32fbb8e2a7bb9199ff4f23840fcd62ed3b31ff6a6060a",
+      "pixel_sha256": "68d2cf9fb11a9b7f7387f9f24b299b63df9e069ac41990d0684b357402d47a04",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mushroom_brown",
@@ -54627,7 +55507,7 @@
     {
       "stem": "mt_mushroom_skin_brown",
       "family": "organic",
-      "material": "mushroom_pale",
+      "material": "mushroom_brown",
       "variant": "fresh",
       "role": "side",
       "seed": 9099350952251582056,
@@ -54638,7 +55518,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a9efe019bc7141d8d86127731000f325a09eee5cf0d8c799c8bbed44f3e5ab9e",
+      "pixel_sha256": "dc93aee377ff93192cd707917ac7a3d85183b7d515eabcb83616169f0f540e87",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mushroom_skin_brown",
@@ -54770,11 +55650,11 @@
     },
     {
       "stem": "mt_netherstalk_2",
-      "family": "rock",
-      "material": "granite",
-      "variant": "natural",
+      "family": "organic",
+      "material": "nether_wart",
+      "variant": "fresh",
       "role": "decor_sprite",
-      "seed": 3416421938495982017,
+      "seed": 8013919442221300997,
       "backend": "procedural",
       "seam_blend_width": 0,
       "reference_mode": "qa-only",
@@ -54782,7 +55662,7 @@
         16,
         16
       ],
-      "pixel_sha256": "98c6add6b02043cd2649e73f9d5126d26d56476416c3aa256926cc2f77473038",
+      "pixel_sha256": "692a427762951ea5dcbaaade0019290c4d51501e972b97583ed10aba34f1334f",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "netherStalk_2",
@@ -55062,7 +55942,7 @@
     {
       "stem": "mt_potatoes_3",
       "family": "organic",
-      "material": "leaf",
+      "material": "crop",
       "variant": "fresh",
       "role": "decor_sprite",
       "seed": 12008121182522014564,
@@ -55073,7 +55953,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2957f386a5d0c1c10e30fbb79b9cd50f455bce082cef206622a471cef7d06fff",
+      "pixel_sha256": "02c17267ef1705c849f3939f8672a2417a5f9ee2ed53a72bde557a750e86e35c",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "potatoes_3",
@@ -55083,7 +55963,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.4922,
-      "sprite_alpha_target_coverage": 0.32,
+      "sprite_alpha_target_coverage": 0.25,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -55526,11 +56406,11 @@
     },
     {
       "stem": "mt_rose",
-      "family": "rock",
-      "material": "granite",
-      "variant": "natural",
+      "family": "organic",
+      "material": "flower_red",
+      "variant": "fresh",
       "role": "decor_sprite",
-      "seed": 15258898344113795595,
+      "seed": 135597692925314927,
       "backend": "procedural",
       "seam_blend_width": 0,
       "reference_mode": "qa-only",
@@ -55538,7 +56418,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1152e231c20e2f0d72c450dce489e04b1fdf84282d379969fe802c93d11f98d2",
+      "pixel_sha256": "ccbb1db3affa8b9dd560bcce686e5a61ce615f646cf103264261c2a49f4c5b0b",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "rose",
@@ -55688,7 +56568,7 @@
         16,
         16
       ],
-      "pixel_sha256": "327236a0ccf7521e909e4808eb371750de626ce8b0bffda117446ed90273f0d7",
+      "pixel_sha256": "d2f48a7f4f5b2e74643018531d93bca74c81ce11bfe4e92127351912edf4c2f9",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "sapling_birch",
@@ -55742,7 +56622,7 @@
         16,
         16
       ],
-      "pixel_sha256": "56c3428abf6a1f8470ae4bd0ebde36b2d567d42036da3e4a120478c5303790a6",
+      "pixel_sha256": "22ac7e3546744b33a076e1ee1ef255c6548f09019accc8d527d98100cae0f593",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "sapling_spruce",
