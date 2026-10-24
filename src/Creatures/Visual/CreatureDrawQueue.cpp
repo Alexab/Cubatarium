@@ -6,25 +6,9 @@
 namespace cutum
 {
 
-void CreatureDrawQueue::Clear() { Requests.clear(); }
-
-void CreatureDrawQueue::Push(CreatureDrawRequest request)
-{
-  Requests.push_back(std::move(request));
-}
-
 void CreatureDrawQueue::Flush(UGeometryEngine &engine)
 {
-  std::stable_sort(
-      Requests.begin(), Requests.end(),
-      [](const CreatureDrawRequest &a, const CreatureDrawRequest &b)
-      {
-        if (a.Kind != b.Kind)
-        {
-          return static_cast<int>(a.Kind) < static_cast<int>(b.Kind);
-        }
-        return a.Texture < b.Texture;
-      });
+  SortCreatureDrawRequests(Requests);
 
   for (const CreatureDrawRequest &req : Requests)
   {
