@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_black_iron_plated",
+  "id": 2031,
+  "displayName": "Metal Black Iron Plated",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_black_iron_plated",
+    "cu_metal_black_iron_plated",
+    "cu_metal_black_iron_plated",
+    "cu_metal_black_iron_plated",
+    "cu_metal_black_iron_plated",
+    "cu_metal_black_iron_plated"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "black_iron",
+    "variant": "plated"
+  }
+}

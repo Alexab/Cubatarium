@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_sandstone_darkened",
+  "id": 1134,
+  "displayName": "Rock Sandstone Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_sandstone_darkened",
+    "cu_rock_sandstone_darkened",
+    "cu_rock_sandstone_darkened",
+    "cu_rock_sandstone_darkened",
+    "cu_rock_sandstone_darkened",
+    "cu_rock_sandstone_darkened"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "sandstone",
+    "variant": "darkened"
+  }
+}

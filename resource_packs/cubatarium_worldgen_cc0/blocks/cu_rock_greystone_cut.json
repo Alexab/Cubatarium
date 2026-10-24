@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_greystone_cut",
+  "id": 1241,
+  "displayName": "Rock Greystone Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_greystone_cut",
+    "cu_rock_greystone_cut",
+    "cu_rock_greystone_cut",
+    "cu_rock_greystone_cut",
+    "cu_rock_greystone_cut",
+    "cu_rock_greystone_cut"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "greystone",
+    "variant": "cut"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "mtg_stone",
+  "id": 503,
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_stone_default_stone",
+    "mt_mtg_stone_default_stone",
+    "mt_mtg_stone_default_stone",
+    "mt_mtg_stone_default_stone",
+    "mt_mtg_stone_default_stone",
+    "mt_mtg_stone_default_stone"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

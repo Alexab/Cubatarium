@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_basalt_block",
+  "id": 1545,
+  "displayName": "Masonry Basalt Block",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_basalt_block",
+    "cu_masonry_basalt_block",
+    "cu_masonry_basalt_block",
+    "cu_masonry_basalt_block",
+    "cu_masonry_basalt_block",
+    "cu_masonry_basalt_block"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "basalt",
+    "variant": "block"
+  }
+}

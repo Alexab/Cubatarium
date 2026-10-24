@@ -1,0 +1,58 @@
+{
+  "name": "asset_standing_stone_09",
+  "version": 2,
+  "displayName": "Standing Stone 09",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 5831579271456886711,
+    "license": "CC0-1.0",
+    "material_parameter": "chalk"
+  },
+  "tags": [
+    "decoration",
+    "structure"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_chalk_rough"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_chalk_rough"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_chalk_rough"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": 0,
+      "type": "cu_rock_chalk_rough"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_chalk_rough"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_chalk_rough"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_brass_dark",
+  "id": 1952,
+  "displayName": "Metal Brass Dark",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_brass_dark",
+    "cu_metal_brass_dark",
+    "cu_metal_brass_dark",
+    "cu_metal_brass_dark",
+    "cu_metal_brass_dark",
+    "cu_metal_brass_dark"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "brass",
+    "variant": "dark"
+  }
+}

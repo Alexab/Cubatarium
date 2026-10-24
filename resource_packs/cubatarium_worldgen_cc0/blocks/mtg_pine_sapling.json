@@ -1,0 +1,42 @@
+{
+  "name": "mtg_pine_sapling",
+  "id": 486,
+  "hardness": 0.05,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 3,
+      "oddly_breakable_by_hand": 3
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_pine_sapling_default_pine_sapling",
+    "mt_mtg_pine_sapling_default_pine_sapling",
+    "mt_mtg_pine_sapling_default_pine_sapling",
+    "mt_mtg_pine_sapling_default_pine_sapling",
+    "mt_mtg_pine_sapling_default_pine_sapling",
+    "mt_mtg_pine_sapling_default_pine_sapling"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross",
+    "double_sided": true,
+    "shape": "cluster",
+    "texture_variation": 1.0
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

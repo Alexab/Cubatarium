@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_basalt_polished",
+  "id": 1030,
+  "displayName": "Rock Basalt Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_basalt_polished",
+    "cu_rock_basalt_polished",
+    "cu_rock_basalt_polished",
+    "cu_rock_basalt_polished",
+    "cu_rock_basalt_polished",
+    "cu_rock_basalt_polished"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "basalt",
+    "variant": "polished"
+  }
+}

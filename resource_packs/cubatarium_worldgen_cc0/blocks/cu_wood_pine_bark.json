@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_pine_bark",
+  "id": 1365,
+  "displayName": "Wood Pine Bark",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_pine_bark",
+    "cu_wood_pine_bark",
+    "cu_wood_pine_bark",
+    "cu_wood_pine_bark",
+    "cu_wood_pine_bark_endgrain",
+    "cu_wood_pine_bark_endgrain"
+  ],
+  "render": {
+    "texture_variation": 0.56
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "pine",
+    "variant": "bark"
+  }
+}

@@ -56,6 +56,18 @@ enum class BlockRenderStyle
   Cutout,
 };
 
+enum class BlockDecorShape
+{
+  Cross,
+  Tuft,
+  Cluster,
+  Reed,
+  Flame,
+  Pad,
+  Mushroom,
+  Torch,
+};
+
 struct FluidViewProfile
 {
   glm::vec3 FogColor{0.02f, 0.12f, 0.22f};
@@ -73,6 +85,8 @@ struct BlockRenderProfile
   bool Transparent{false};
   bool DoubleSided{false};
   BlockRenderStyle Style{BlockRenderStyle::UCube};
+  BlockDecorShape DecorShape{BlockDecorShape::Cross};
+  float TextureVariation{0.0f};
   FluidViewProfile FluidView;
 };
 

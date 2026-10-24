@@ -35,7 +35,7 @@ BIOME_CONFIGS = EXPECTED_BIOMES + (
 )
 CAVE_BIOMES = ("lush_caves", "dripstone_caves", "deep_dark")
 CAVE_FEATURE_KINDS = {"moss_patch", "stalagmite", "amethyst_cluster"}
-WORLDGEN_PACKS = ("minetest_default_16", "cubatarium_geology_cc0")
+WORLDGEN_PACKS = ("minetest_default_16", "cubatarium_geology_cc0", "cubatarium_worldgen_cc0")
 
 
 def object_names(features: dict) -> set[str]:

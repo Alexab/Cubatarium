@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_nether_wart_dense",
+  "id": 2503,
+  "displayName": "Organic Nether Wart Dense",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_nether_wart_dense",
+    "cu_organic_nether_wart_dense",
+    "cu_organic_nether_wart_dense",
+    "cu_organic_nether_wart_dense",
+    "cu_organic_nether_wart_dense",
+    "cu_organic_nether_wart_dense"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "tuft",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "nether_wart",
+    "variant": "dense"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

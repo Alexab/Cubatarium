@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_volcanic_ash_coarse",
+  "id": 1349,
+  "displayName": "Soil Volcanic Ash Coarse",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_volcanic_ash_coarse",
+    "cu_soil_volcanic_ash_coarse",
+    "cu_soil_volcanic_ash_coarse",
+    "cu_soil_volcanic_ash_coarse",
+    "cu_soil_volcanic_ash_coarse_top",
+    "cu_soil_volcanic_ash_coarse_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "volcanic_ash",
+    "variant": "coarse"
+  }
+}

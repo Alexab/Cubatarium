@@ -106,12 +106,55 @@ ResourcePackSelection UResourcePackPickerForm::ReadSelection() const
   {
     result.Secondary = SecondaryList->GetCheckedIds();
   }
+  // The owner determines how unqualified worldgen block names are resolved.
+  // The first selected primary pack is the UI's effective owner (the primary
+  // list is reorderable), so never carry an owner from an earlier selection.
+  result.WorldgenOwner =
+      result.Primary.empty() ? std::string{} : result.Primary.front();
   return result;
 }
 
 bool UResourcePackPickerForm::HasValidPrimarySelection() const
 {
   return !ReadSelection().Primary.empty();
+}
+
+bool UResourcePackPickerForm::HasValidSelection() const
+{
+  const ResourcePackSelection current = ReadSelection();
+  if (current.Primary.empty())
+  {
+    return false;
+  }
+
+  std::vector<std::string> enabled = current.Primary;
+  enabled.insert(enabled.end(), current.Secondary.begin(),
+                 current.Secondary.end());
+  for (const std::string &id : enabled)
+  {
+    const auto pack = std::find_if(
+        InstalledPacks.begin(), InstalledPacks.end(),
+        [&](const InstalledPackInfo &item) { return item.Id == id; });
+    if (pack == InstalledPacks.end())
+    {
+      return false;
+    }
+    for (const std::string &dep : pack->Depends)
+    {
+      if (std::find(enabled.begin(), enabled.end(), dep) == enabled.end())
+      {
+        return false;
+      }
+    }
+    for (const std::string &conflict : pack->Conflicts)
+    {
+      if (std::find(enabled.begin(), enabled.end(), conflict) != enabled.end())
+      {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 void UResourcePackPickerForm::SetOnLayoutChanged(std::function<void()> handler)
@@ -210,6 +253,10 @@ void UResourcePackPickerForm::UpdateWarnings()
   };
 
   std::vector<std::string> warnings;
+  if (current.Primary.empty())
+  {
+    warnings.push_back("select at least one primary pack");
+  }
   for (const std::string &id : enabled)
   {
     const InstalledPackInfo *pack = findPack(id);

@@ -1,0 +1,18 @@
+{
+  "id": "cubatarium_worldgen_photo64_cc0",
+  "name": "Cubatarium Worldgen Photo 64",
+  "version": 1,
+  "license": "CC0-1.0",
+  "resolution": 64,
+  "priority": 22,
+  "pack_format": 1,
+  "worldgen_role": "secondary",
+  "merge_mode": "override",
+  "depends": [
+    "cubatarium_worldgen_cc0"
+  ],
+  "conflicts": [],
+  "min_game_version": "0.1.0",
+  "allow_resolution_mix": true,
+  "assetgen_reference_mode": "qa-only"
+}

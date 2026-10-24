@@ -1,0 +1,30 @@
+{
+  "name": "rooted_dirt",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "geo_dirt_grass",
+    "geo_dirt_grass",
+    "geo_dirt_grass",
+    "geo_dirt_grass",
+    "geo_dirt_grass",
+    "geo_dirt_grass"
+  ],
+  "hardness": 0.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 1
+    }
+  },
+  "displayName": "Rooted Dirt",
+  "render": {},
+  "id": 2448,
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "cubatarium_geology_cc0",
+    "license": "CC0-1.0"
+  }
+}

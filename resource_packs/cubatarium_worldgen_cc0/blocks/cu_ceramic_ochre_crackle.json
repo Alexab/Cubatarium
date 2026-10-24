@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_ochre_crackle",
+  "id": 1689,
+  "displayName": "Ceramic Ochre Crackle",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_ochre_crackle",
+    "cu_ceramic_ochre_crackle",
+    "cu_ceramic_ochre_crackle",
+    "cu_ceramic_ochre_crackle",
+    "cu_ceramic_ochre_crackle",
+    "cu_ceramic_ochre_crackle"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "ochre",
+    "variant": "crackle"
+  }
+}

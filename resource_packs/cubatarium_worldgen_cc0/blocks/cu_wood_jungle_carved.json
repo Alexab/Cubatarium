@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_jungle_carved",
+  "id": 1472,
+  "displayName": "Wood Jungle Carved",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_jungle_carved",
+    "cu_wood_jungle_carved",
+    "cu_wood_jungle_carved",
+    "cu_wood_jungle_carved",
+    "cu_wood_jungle_carved_top",
+    "cu_wood_jungle_carved_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "jungle",
+    "variant": "carved"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_pale_sand_layered",
+  "id": 1343,
+  "displayName": "Soil Pale Sand Layered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_pale_sand_layered",
+    "cu_soil_pale_sand_layered",
+    "cu_soil_pale_sand_layered",
+    "cu_soil_pale_sand_layered",
+    "cu_soil_pale_sand_layered_top",
+    "cu_soil_pale_sand_layered_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "pale_sand",
+    "variant": "layered"
+  }
+}

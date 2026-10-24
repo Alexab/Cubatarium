@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_sandstone_chiseled",
+  "id": 1539,
+  "displayName": "Masonry Sandstone Chiseled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_sandstone_chiseled",
+    "cu_masonry_sandstone_chiseled",
+    "cu_masonry_sandstone_chiseled",
+    "cu_masonry_sandstone_chiseled",
+    "cu_masonry_sandstone_chiseled",
+    "cu_masonry_sandstone_chiseled"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "sandstone",
+    "variant": "chiseled"
+  }
+}

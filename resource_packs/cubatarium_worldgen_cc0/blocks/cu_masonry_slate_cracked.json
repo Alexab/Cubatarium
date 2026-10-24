@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_slate_cracked",
+  "id": 1533,
+  "displayName": "Masonry Slate Cracked",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_slate_cracked",
+    "cu_masonry_slate_cracked",
+    "cu_masonry_slate_cracked",
+    "cu_masonry_slate_cracked",
+    "cu_masonry_slate_cracked",
+    "cu_masonry_slate_cracked"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "slate",
+    "variant": "cracked"
+  }
+}

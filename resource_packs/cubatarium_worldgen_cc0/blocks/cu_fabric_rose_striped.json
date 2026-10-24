@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_rose_striped",
+  "id": 1836,
+  "displayName": "Fabric Rose Striped",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_rose_striped",
+    "cu_fabric_rose_striped",
+    "cu_fabric_rose_striped",
+    "cu_fabric_rose_striped",
+    "cu_fabric_rose_striped",
+    "cu_fabric_rose_striped"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "rose",
+    "variant": "striped"
+  }
+}

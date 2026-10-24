@@ -1,0 +1,33 @@
+{
+  "name": "oreEmerald",
+  "id": 524,
+  "hardness": 3,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_oreemerald",
+    "mt_oreemerald",
+    "mt_oreemerald",
+    "mt_oreemerald",
+    "mt_oreemerald",
+    "mt_oreemerald"
+  ],
+  "displayName": "Emerald Ore",
+  "render": {
+    "texture_variation": 0.48
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

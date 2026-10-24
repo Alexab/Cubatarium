@@ -1,0 +1,46 @@
+{
+  "name": "asset_standing_stone_03",
+  "version": 2,
+  "displayName": "Standing Stone 03",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 18417718365983554016,
+    "license": "CC0-1.0",
+    "material_parameter": "basalt"
+  },
+  "tags": [
+    "decoration",
+    "structure"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_basalt_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_basalt_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_basalt_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_basalt_weathered"
+    }
+  ]
+}

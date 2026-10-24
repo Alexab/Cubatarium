@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_cobalt_glossy",
+  "id": 1736,
+  "displayName": "Ceramic Cobalt Glossy",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_cobalt_glossy",
+    "cu_ceramic_cobalt_glossy",
+    "cu_ceramic_cobalt_glossy",
+    "cu_ceramic_cobalt_glossy",
+    "cu_ceramic_cobalt_glossy",
+    "cu_ceramic_cobalt_glossy"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "cobalt",
+    "variant": "glossy"
+  }
+}

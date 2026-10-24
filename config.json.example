@@ -107,9 +107,10 @@
         "palette_key": "b"
     },
     "resource_packs": {
-        "default_primary": ["minetest_default_16"],
-        "default_secondary": ["cubatarium_geology_cc0"],
-        "default_enabled": ["minetest_default_16", "cubatarium_geology_cc0"],
+        "default_selection_version": 2,
+        "default_primary": ["cubatarium_worldgen_cc0"],
+        "default_secondary": [],
+        "default_enabled": ["cubatarium_worldgen_cc0"],
         "placeholder": { "tile_size": 16, "background": "#6b4a9e", "max_entries": 256 }
     },
     "environment": {

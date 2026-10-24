@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_scarlet_dyed",
+  "id": 1824,
+  "displayName": "Fabric Scarlet Dyed",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_scarlet_dyed",
+    "cu_fabric_scarlet_dyed",
+    "cu_fabric_scarlet_dyed",
+    "cu_fabric_scarlet_dyed",
+    "cu_fabric_scarlet_dyed",
+    "cu_fabric_scarlet_dyed"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "scarlet",
+    "variant": "dyed"
+  }
+}

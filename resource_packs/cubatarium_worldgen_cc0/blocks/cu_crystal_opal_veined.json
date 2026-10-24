@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_opal_veined",
+  "id": 2186,
+  "displayName": "Crystal Opal Veined",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_opal_veined",
+    "cu_crystal_opal_veined",
+    "cu_crystal_opal_veined",
+    "cu_crystal_opal_veined",
+    "cu_crystal_opal_veined",
+    "cu_crystal_opal_veined"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "opal",
+    "variant": "veined"
+  }
+}

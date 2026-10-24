@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_serpentine_speckled",
+  "id": 1182,
+  "displayName": "Rock Serpentine Speckled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_serpentine_speckled",
+    "cu_rock_serpentine_speckled",
+    "cu_rock_serpentine_speckled",
+    "cu_rock_serpentine_speckled",
+    "cu_rock_serpentine_speckled",
+    "cu_rock_serpentine_speckled"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "serpentine",
+    "variant": "speckled"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "cu_glass_teal_prism",
+  "id": 2100,
+  "displayName": "Glass Teal Prism",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_teal_prism",
+    "cu_glass_teal_prism",
+    "cu_glass_teal_prism",
+    "cu_glass_teal_prism",
+    "cu_glass_teal_prism",
+    "cu_glass_teal_prism"
+  ],
+  "render": {
+    "texture_variation": 0.48,
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "teal",
+    "variant": "prism"
+  }
+}

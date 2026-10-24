@@ -1,0 +1,17 @@
+All block definitions, voxel objects, and texture images in this pack are Cubatarium content released under CC0-1.0.
+License: https://creativecommons.org/publicdomain/zero/1.0/
+
+The Cubatarium-authored block definitions formerly distributed in the minetest_default_16 pack are included here with Cubatarium replacement texture stems. The minetest_default_16 texture pixels were used only as external references and are not included in this pack.
+
+The integrated Cubatarium Geology definitions and their replacement textures are CC0. The source pack notice follows:
+Cubatarium Geology CC0 uses textures from Kenney's Voxel Pack.
+Source: https://kenney.nl/assets/voxel-pack
+The Voxel Pack is released under Creative Commons CC0.
+Tile mapping: granite=stone_browniron, diorite=greystone_sand,
+andesite=stone_dirt, deepslate=greystone, tuff=greystone_sand,
+calcite=greystone_ruby_alt, smooth_basalt=stone,
+amethyst_block=greystone_ruby, moss_block sides/bottom=greystone and top=grass_top,
+rooted_dirt=dirt_grass.
+
+Reference file names classify material families. A small set of scalar properties, including foliage alpha coverage, calibrates newly drawn masks. Source pixel patterns are not copied into generated textures.
+Minecraft Java Edition 26.3 counts are used only as a catalog-size benchmark; no Minecraft assets are included.

@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_kelp_young",
+  "id": 2289,
+  "displayName": "Organic Kelp Young",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_kelp_young",
+    "cu_organic_kelp_young",
+    "cu_organic_kelp_young",
+    "cu_organic_kelp_young",
+    "cu_organic_kelp_young",
+    "cu_organic_kelp_young"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "reed",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "kelp",
+    "variant": "young"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

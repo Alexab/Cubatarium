@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_charcoal_flecked",
+  "id": 1902,
+  "displayName": "Fabric Charcoal Flecked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_charcoal_flecked",
+    "cu_fabric_charcoal_flecked",
+    "cu_fabric_charcoal_flecked",
+    "cu_fabric_charcoal_flecked",
+    "cu_fabric_charcoal_flecked",
+    "cu_fabric_charcoal_flecked"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "charcoal",
+    "variant": "flecked"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_loam_coarse",
+  "id": 1249,
+  "displayName": "Soil Loam Coarse",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_loam_coarse",
+    "cu_soil_loam_coarse",
+    "cu_soil_loam_coarse",
+    "cu_soil_loam_coarse",
+    "cu_soil_loam_coarse_top",
+    "cu_soil_loam_coarse_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "loam",
+    "variant": "coarse"
+  }
+}

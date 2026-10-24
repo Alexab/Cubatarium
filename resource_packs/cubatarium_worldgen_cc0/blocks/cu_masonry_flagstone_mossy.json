@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_flagstone_mossy",
+  "id": 1634,
+  "displayName": "Masonry Flagstone Mossy",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_flagstone_mossy",
+    "cu_masonry_flagstone_mossy",
+    "cu_masonry_flagstone_mossy",
+    "cu_masonry_flagstone_mossy",
+    "cu_masonry_flagstone_mossy",
+    "cu_masonry_flagstone_mossy"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "flagstone",
+    "variant": "mossy"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_redwood_weathered",
+  "id": 1504,
+  "displayName": "Wood Redwood Weathered",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_redwood_weathered",
+    "cu_wood_redwood_weathered",
+    "cu_wood_redwood_weathered",
+    "cu_wood_redwood_weathered",
+    "cu_wood_redwood_weathered_top",
+    "cu_wood_redwood_weathered_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "redwood",
+    "variant": "weathered"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_maple_cut",
+  "id": 1403,
+  "displayName": "Wood Maple Cut",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_maple_cut",
+    "cu_wood_maple_cut",
+    "cu_wood_maple_cut",
+    "cu_wood_maple_cut",
+    "cu_wood_maple_cut_top",
+    "cu_wood_maple_cut_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "maple",
+    "variant": "cut"
+  }
+}

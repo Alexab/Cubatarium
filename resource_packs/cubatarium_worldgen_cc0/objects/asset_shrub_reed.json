@@ -1,0 +1,44 @@
+{
+  "name": "asset_shrub_reed",
+  "version": 2,
+  "displayName": "Shrub Reed",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 18048600303904811510,
+    "license": "CC0-1.0",
+    "material_parameter": "reed"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "vegetation"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_reed_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_reed_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_reed_fresh"
+    }
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
+}

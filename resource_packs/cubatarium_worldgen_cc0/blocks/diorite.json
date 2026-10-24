@@ -1,0 +1,30 @@
+{
+  "name": "diorite",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "geo_greystone_sand",
+    "geo_greystone_sand",
+    "geo_greystone_sand",
+    "geo_greystone_sand",
+    "geo_greystone_sand",
+    "geo_greystone_sand"
+  ],
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "displayName": "Diorite",
+  "render": {},
+  "id": 2445,
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "cubatarium_geology_cc0",
+    "license": "CC0-1.0"
+  }
+}

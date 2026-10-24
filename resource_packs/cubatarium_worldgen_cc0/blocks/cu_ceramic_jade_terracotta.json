@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_jade_terracotta",
+  "id": 1761,
+  "displayName": "Ceramic Jade Terracotta",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_jade_terracotta",
+    "cu_ceramic_jade_terracotta",
+    "cu_ceramic_jade_terracotta",
+    "cu_ceramic_jade_terracotta",
+    "cu_ceramic_jade_terracotta",
+    "cu_ceramic_jade_terracotta"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "jade",
+    "variant": "terracotta"
+  }
+}

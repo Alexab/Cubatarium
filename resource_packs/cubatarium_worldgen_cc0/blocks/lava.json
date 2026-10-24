@@ -1,0 +1,46 @@
+{
+  "name": "lava",
+  "id": 388,
+  "hardness": 100,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "fluid",
+    "natural"
+  ],
+  "textures": [
+    "mt_lava",
+    "mt_lava",
+    "mt_lava",
+    "mt_lava",
+    "mt_lava",
+    "mt_lava"
+  ],
+  "physics": {
+    "preset": "lava"
+  },
+  "render": {
+    "transparent": true,
+    "style": "fluid",
+    "texture_variation": 0.0
+  },
+  "animation": {
+    "frame_count": 4,
+    "frametime": 6
+  },
+  "displayName": "Lava",
+  "lighting": {
+    "emission": 14
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

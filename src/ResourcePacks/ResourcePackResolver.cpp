@@ -95,11 +95,15 @@ int ComputeEffectivePriority(int tier, int invertedSelectionIndex, int packPrior
 
 int PrimaryPackListRank(const std::string &packId)
 {
-  if (packId == "minetest_default_16")
+  if (packId == "cubatarium_worldgen_cc0")
   {
     return 0;
   }
-  return 1;
+  if (packId == "minetest_default_16")
+  {
+    return 1;
+  }
+  return 2;
 }
 
 void SortInstalledPackList(std::vector<InstalledPackInfo> &packs)
@@ -122,9 +126,15 @@ ResourcePacksConfig
 UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
 {
   ResourcePacksConfig cfg;
+  int defaultSelectionVersion = 0;
   if (root.contains("resource_packs") && root["resource_packs"].is_object())
   {
     const auto &rp = root["resource_packs"];
+    if (rp.contains("default_selection_version") &&
+        rp["default_selection_version"].is_number_integer())
+    {
+      defaultSelectionVersion = rp["default_selection_version"].get<int>();
+    }
     if (rp.contains("default_primary") && rp["default_primary"].is_array())
     {
       ParseEnabledArray(rp["default_primary"], cfg.DefaultPrimary);
@@ -144,6 +154,60 @@ UResourcePackResolver::ParseFromJson(const nlohmann::json &root)
     if (cfg.DefaultPrimary.empty() && !cfg.DefaultEnabled.empty())
     {
       cfg.DefaultPrimary = cfg.DefaultEnabled;
+    }
+    const std::vector<std::string> legacyPrimary{"minetest_default_16"};
+    const std::vector<std::string> legacySecondary{
+        "cubatarium_geology_cc0", "cubatarium_worldgen_cc0"};
+    const std::vector<std::string> olderSecondary{"cubatarium_geology_cc0"};
+    const std::vector<std::string> legacyEnabled{
+        "minetest_default_16", "cubatarium_geology_cc0",
+        "cubatarium_worldgen_cc0"};
+    const std::vector<std::string> olderEnabled{
+        "minetest_default_16", "cubatarium_geology_cc0"};
+    const std::vector<std::string> legacyMinetestOnly{"minetest_default_16"};
+    const bool oldBundledDefault = defaultSelectionVersion < 2 &&
+        cfg.DefaultPrimary == legacyPrimary &&
+        ((cfg.DefaultSecondary == legacySecondary &&
+          (cfg.DefaultEnabled.empty() || cfg.DefaultEnabled == legacyEnabled)) ||
+         (cfg.DefaultSecondary == olderSecondary &&
+          (cfg.DefaultEnabled.empty() || cfg.DefaultEnabled == olderEnabled ||
+           cfg.DefaultEnabled == legacyEnabled)) ||
+         (cfg.DefaultSecondary.empty() &&
+          (cfg.DefaultEnabled == olderEnabled ||
+           cfg.DefaultEnabled == legacyEnabled)));
+    const bool oldFlattenedDefault = defaultSelectionVersion < 2 &&
+        cfg.DefaultSecondary.empty() &&
+        ((cfg.DefaultPrimary == legacyEnabled &&
+          cfg.DefaultEnabled == legacyEnabled) ||
+         (cfg.DefaultPrimary == olderEnabled &&
+          cfg.DefaultEnabled == olderEnabled) ||
+         (cfg.DefaultPrimary == legacyPrimary &&
+          (cfg.DefaultEnabled == legacyEnabled ||
+           cfg.DefaultEnabled == olderEnabled)));
+    const bool oldMinetestOnly = defaultSelectionVersion < 2 &&
+        cfg.DefaultPrimary == legacyPrimary && cfg.DefaultSecondary.empty() &&
+        (cfg.DefaultEnabled.empty() ||
+         cfg.DefaultEnabled == legacyMinetestOnly);
+    if (oldBundledDefault || oldFlattenedDefault || oldMinetestOnly)
+    {
+      const ResourcePackSelection defaults = DefaultResourcePackSelection();
+      cfg.DefaultPrimary = defaults.Primary;
+      cfg.DefaultSecondary = defaults.Secondary;
+      cfg.DefaultEnabled = defaults.AllIds();
+    }
+    if (!rp.contains("default_secondary"))
+    {
+      if (cfg.DefaultEnabled.empty() && !cfg.DefaultPrimary.empty())
+      {
+        for (const auto &packId : DefaultResourcePackSelection().Secondary)
+        {
+          if (std::find(cfg.DefaultPrimary.begin(), cfg.DefaultPrimary.end(),
+                        packId) == cfg.DefaultPrimary.end())
+          {
+            cfg.DefaultSecondary.push_back(packId);
+          }
+        }
+      }
     }
     if (rp.contains("placeholder") && rp["placeholder"].is_object())
     {
@@ -208,6 +272,7 @@ std::vector<ResourcePackManifest> UResourcePackResolver::Resolve(
 
   const auto enabled = selection.AllIds();
   std::unordered_set<std::string> enabledSet(enabled.begin(), enabled.end());
+  bool selectionValid = true;
   for (const auto &manifest : result)
   {
     for (const std::string &dep : manifest.Depends)
@@ -217,6 +282,7 @@ std::vector<ResourcePackManifest> UResourcePackResolver::Resolve(
         std::cerr << "UResourcePackResolver: pack '" << manifest.Id
                   << "' depends on '" << dep << "' which is not enabled"
                   << std::endl;
+        selectionValid = false;
       }
     }
     for (const std::string &conflict : manifest.Conflicts)
@@ -226,8 +292,17 @@ std::vector<ResourcePackManifest> UResourcePackResolver::Resolve(
         std::cerr << "UResourcePackResolver: pack '" << manifest.Id
                   << "' conflicts with enabled pack '" << conflict << "'"
                   << std::endl;
+        selectionValid = false;
       }
     }
+  }
+
+  // Dependencies and conflicts describe constraints, not advisory metadata.
+  // Refuse the complete merge so callers cannot accidentally run with only a
+  // partially valid resource-pack selection.
+  if (!selectionValid)
+  {
+    return {};
   }
 
   std::sort(result.begin(), result.end(),

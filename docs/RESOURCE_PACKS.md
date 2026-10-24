@@ -144,25 +144,38 @@ Unknown block names in saves/prefabs/worldgen get a synthetic solid block with d
 
 ## Configuration
 
-New worlds default to `minetest_default_16` as the primary pack and
-`cubatarium_geology_cc0` as the secondary pack. The geology pack supplies
-Minecraft-like strata and cave blocks while leaving the primary pack in charge
-of common terrain blocks. Its block textures are mapped from Kenney's Voxel
-Pack, which is CC0; the source and tile mapping are recorded in the pack's
-`LICENSE.txt` and `tools/geology_cc0_mapping.yaml`. The primary Minetest pack
-retains its CC-BY-SA-3.0 license and attribution notice.
+New worlds default to `cubatarium_worldgen_cc0` as the only primary pack.
+`minetest_default_16` is not enabled by default. Worldgen contains the 1,396
+procedurally catalogued Cubatarium blocks, all 258 Cubatarium block definitions
+previously shipped with `minetest_default_16`, and all 10 Cubatarium Geology
+definitions. It also contains 1,718 own 16×16 textures (including replacements
+for all 313 Minetest reference PNGs and 9 geology textures) and 77 voxel
+decoration objects. The standalone geology and Minetest packs remain available
+for existing worlds and manual selection. Geology source mapping is recorded in
+`tools/geology_cc0_mapping.yaml`. Block definitions are Cubatarium-authored;
+Minetest-derived source pixels are not included in Worldgen. See
+[`ASSETGEN.md`](ASSETGEN.md) for the catalog, generator, provenance, and model
+workflow.
+
+Worldgen declares a conflict with `minetest_default_16` because both packs
+provide overlapping block definitions. The resolver rejects selections with
+declared conflicts or missing dependencies.
 
 ### Global defaults — `config.json`
 
 ```json
 "resource_packs": {
-  "default_primary": ["minetest_default_16"],
-  "default_secondary": ["cubatarium_geology_cc0"],
+  "default_selection_version": 2,
+  "default_primary": ["cubatarium_worldgen_cc0"],
+  "default_secondary": [],
   "placeholder": { "tile_size": 16, "background": "#6b4a9e" }
 }
 ```
 
 - **default_primary** / **default_secondary**: defaults for **New World** UI.
+- Legacy defaults migrate once to Worldgen-only. Configurations saved after
+  this update use `default_selection_version: 2`, so later explicit pack
+  choices remain intact.
 - Legacy `default_enabled` / `enabled` arrays migrate to `primary` on read.
 
 Edit defaults in **Settings → Resource packs** (saved to `config.json`). This does **not** change packs for the currently loaded world.
@@ -173,9 +186,9 @@ To change packs for the **loaded world** (after Escape to main menu): **Main men
 
 ```json
 "resource_packs": {
-  "primary": ["minetest_default_16"],
-  "secondary": ["cubatarium_geology_cc0"],
-  "worldgen_owner": "minetest_default_16"
+  "primary": ["cubatarium_worldgen_cc0"],
+  "secondary": [],
+  "worldgen_owner": "cubatarium_worldgen_cc0"
 }
 ```
 
@@ -206,7 +219,9 @@ See also [`docs/ITEM_ASSETS.md`](ITEM_ASSETS.md) and [`docs/ITEMS_TOOLS.md`](ITE
 
 `WorkDir/prefabs/` is loaded first (short names). Each enabled pack may add `prefabs/*.json`; names are registered as `pack_id::local_name` (same pattern as duplicate blocks).
 
-Pack lists support **drag-reorder** (mouse) and **Ctrl+Up/Down** for priority. Missing `depends` / active `conflicts` show a **WARN** line under the lists.
+Pack lists support **drag-reorder** (mouse) and **Ctrl+Up/Down** for priority.
+Missing `depends` / active `conflicts` show a **WARN** line under the lists;
+New World creation and settings save are blocked until the selection is valid.
 
 ## Worldgen block resolution
 
@@ -256,7 +271,9 @@ Cubatarium.exe --smoke-packs
 
 Policy: [`tools/pack_dependencies.yaml`](../tools/pack_dependencies.yaml). Apply with `python tools/update_pack_metadata.py`.
 
-Partial pattern/terrain packs declare `depends: [kenney_voxel_16]`. `minetest_default_16` and `minecraft_legacy_16` declare mutual `conflicts`.
+Partial pattern/terrain packs declare `depends: [kenney_voxel_16]`.
+`cubatarium_worldgen_cc0` conflicts with `minetest_default_16`; the Minetest
+and Minecraft legacy packs also declare mutual conflicts.
 
 Offline merge:
 
@@ -300,6 +317,12 @@ Built from `E:/Work/Home/CubatariumTextureResearch/` via mapping YAML in `tools/
 | `sbs_sandbox_terrain_16` | ~13 | CC0 | `sbs_sandbox_terrain` |
 | `kenney_pattern_lines_16` | ~9 | CC0 | `kenney_pattern_lines` |
 | `oga_mc_inspired_16` | ~5 | CC0 | `oga_mc_inspired` |
+
+The `minetest_default_16` license applies to the Minetest-derived texture media
+in that standalone pack ([upstream source and media license notes](https://github.com/minetest-game/default)).
+Its block JSON is built from Cubatarium mappings and gameplay metadata;
+Worldgen includes those definitions with generated replacement textures and
+does not include the source texture pixels.
 
 1. Download research assets (once):
 

@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_clay_fine",
+  "id": 1260,
+  "displayName": "Soil Clay Fine",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_clay_fine",
+    "cu_soil_clay_fine",
+    "cu_soil_clay_fine",
+    "cu_soil_clay_fine",
+    "cu_soil_clay_fine_top",
+    "cu_soil_clay_fine_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "clay",
+    "variant": "fine"
+  }
+}

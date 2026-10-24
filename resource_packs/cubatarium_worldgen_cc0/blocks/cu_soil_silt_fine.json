@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_silt_fine",
+  "id": 1300,
+  "displayName": "Soil Silt Fine",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_silt_fine",
+    "cu_soil_silt_fine",
+    "cu_soil_silt_fine",
+    "cu_soil_silt_fine",
+    "cu_soil_silt_fine_top",
+    "cu_soil_silt_fine_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "silt",
+    "variant": "fine"
+  }
+}

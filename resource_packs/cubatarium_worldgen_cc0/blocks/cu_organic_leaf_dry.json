@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_leaf_dry",
+  "id": 2302,
+  "displayName": "Organic Leaf Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_leaf_dry",
+    "cu_organic_leaf_dry",
+    "cu_organic_leaf_dry",
+    "cu_organic_leaf_dry",
+    "cu_organic_leaf_dry_top",
+    "cu_organic_leaf_dry"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "leaf",
+    "variant": "dry"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

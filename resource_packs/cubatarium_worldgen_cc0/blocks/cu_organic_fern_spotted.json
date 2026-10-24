@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_fern_spotted",
+  "id": 2245,
+  "displayName": "Organic Fern Spotted",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_fern_spotted",
+    "cu_organic_fern_spotted",
+    "cu_organic_fern_spotted",
+    "cu_organic_fern_spotted",
+    "cu_organic_fern_spotted_top",
+    "cu_organic_fern_spotted"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "tuft",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "fern",
+    "variant": "spotted"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

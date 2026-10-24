@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_violet_mosaic",
+  "id": 1730,
+  "displayName": "Ceramic Violet Mosaic",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_violet_mosaic",
+    "cu_ceramic_violet_mosaic",
+    "cu_ceramic_violet_mosaic",
+    "cu_ceramic_violet_mosaic",
+    "cu_ceramic_violet_mosaic",
+    "cu_ceramic_violet_mosaic"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "violet",
+    "variant": "mosaic"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_wet_mud_natural",
+  "id": 1305,
+  "displayName": "Soil Wet Mud Natural",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_wet_mud_natural",
+    "cu_soil_wet_mud_natural",
+    "cu_soil_wet_mud_natural",
+    "cu_soil_wet_mud_natural",
+    "cu_soil_wet_mud_natural_top",
+    "cu_soil_wet_mud_natural_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "wet_mud",
+    "variant": "natural"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_amethyst_smoky",
+  "id": 2149,
+  "displayName": "Crystal Amethyst Smoky",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_amethyst_smoky",
+    "cu_crystal_amethyst_smoky",
+    "cu_crystal_amethyst_smoky",
+    "cu_crystal_amethyst_smoky",
+    "cu_crystal_amethyst_smoky",
+    "cu_crystal_amethyst_smoky"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "amethyst",
+    "variant": "smoky"
+  }
+}

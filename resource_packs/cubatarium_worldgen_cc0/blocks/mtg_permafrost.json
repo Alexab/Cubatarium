@@ -1,0 +1,32 @@
+{
+  "name": "mtg_permafrost",
+  "id": 479,
+  "hardness": 1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_permafrost_default_permafrost",
+    "mt_mtg_permafrost_default_permafrost",
+    "mt_mtg_permafrost_default_permafrost",
+    "mt_mtg_permafrost_default_permafrost",
+    "mt_mtg_permafrost_default_permafrost",
+    "mt_mtg_permafrost_default_permafrost"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

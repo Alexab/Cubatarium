@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_moss_mature",
+  "id": 2230,
+  "displayName": "Organic Moss Mature",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_moss_mature",
+    "cu_organic_moss_mature",
+    "cu_organic_moss_mature",
+    "cu_organic_moss_mature",
+    "cu_organic_moss_mature_top",
+    "cu_organic_moss_mature"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "moss",
+    "variant": "mature"
+  }
+}

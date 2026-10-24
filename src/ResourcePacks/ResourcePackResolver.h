@@ -51,9 +51,8 @@ struct InstalledPackInfo
 inline ResourcePackSelection DefaultResourcePackSelection()
 {
   ResourcePackSelection selection;
-  selection.Primary = {"minetest_default_16"};
-  selection.Secondary = {"cubatarium_geology_cc0"};
-  selection.WorldgenOwner = "minetest_default_16";
+  selection.Primary = {"cubatarium_worldgen_cc0"};
+  selection.WorldgenOwner = "cubatarium_worldgen_cc0";
   return selection;
 }
 

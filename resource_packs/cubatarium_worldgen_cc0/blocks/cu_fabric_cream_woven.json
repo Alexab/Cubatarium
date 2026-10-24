@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_cream_woven",
+  "id": 1793,
+  "displayName": "Fabric Cream Woven",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_cream_woven",
+    "cu_fabric_cream_woven",
+    "cu_fabric_cream_woven",
+    "cu_fabric_cream_woven",
+    "cu_fabric_cream_woven",
+    "cu_fabric_cream_woven"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "cream",
+    "variant": "woven"
+  }
+}

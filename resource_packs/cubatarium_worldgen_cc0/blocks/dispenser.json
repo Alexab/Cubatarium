@@ -1,0 +1,32 @@
+{
+  "name": "dispenser",
+  "id": 363,
+  "hardness": 3.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_dispenser_front",
+    "mt_furnace_side",
+    "mt_furnace_side",
+    "mt_furnace_side",
+    "mt_furnace_top",
+    "mt_furnace_top"
+  ],
+  "render": {
+    "texture_variation": 0.0
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

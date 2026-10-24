@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_umber_woven",
+  "id": 1905,
+  "displayName": "Fabric Umber Woven",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_umber_woven",
+    "cu_fabric_umber_woven",
+    "cu_fabric_umber_woven",
+    "cu_fabric_umber_woven",
+    "cu_fabric_umber_woven",
+    "cu_fabric_umber_woven"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "umber",
+    "variant": "woven"
+  }
+}

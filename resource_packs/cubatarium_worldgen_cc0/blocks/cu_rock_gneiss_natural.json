@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_gneiss_natural",
+  "id": 1105,
+  "displayName": "Rock Gneiss Natural",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_gneiss_natural",
+    "cu_rock_gneiss_natural",
+    "cu_rock_gneiss_natural",
+    "cu_rock_gneiss_natural",
+    "cu_rock_gneiss_natural",
+    "cu_rock_gneiss_natural"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "gneiss",
+    "variant": "natural"
+  }
+}

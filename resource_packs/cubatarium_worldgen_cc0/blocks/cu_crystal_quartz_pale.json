@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_quartz_pale",
+  "id": 2134,
+  "displayName": "Crystal Quartz Pale",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_quartz_pale",
+    "cu_crystal_quartz_pale",
+    "cu_crystal_quartz_pale",
+    "cu_crystal_quartz_pale",
+    "cu_crystal_quartz_pale",
+    "cu_crystal_quartz_pale"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "quartz",
+    "variant": "pale"
+  }
+}

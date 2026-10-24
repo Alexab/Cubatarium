@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_granite_cobble",
+  "id": 1507,
+  "displayName": "Masonry Granite Cobble",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_granite_cobble",
+    "cu_masonry_granite_cobble",
+    "cu_masonry_granite_cobble",
+    "cu_masonry_granite_cobble",
+    "cu_masonry_granite_cobble_top",
+    "cu_masonry_granite_cobble_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "granite",
+    "variant": "cobble"
+  }
+}

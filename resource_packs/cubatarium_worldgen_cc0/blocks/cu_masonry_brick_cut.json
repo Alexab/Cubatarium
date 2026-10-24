@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_brick_cut",
+  "id": 1568,
+  "displayName": "Masonry Brick Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_brick_cut",
+    "cu_masonry_brick_cut",
+    "cu_masonry_brick_cut",
+    "cu_masonry_brick_cut",
+    "cu_masonry_brick_cut",
+    "cu_masonry_brick_cut"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "brick",
+    "variant": "cut"
+  }
+}

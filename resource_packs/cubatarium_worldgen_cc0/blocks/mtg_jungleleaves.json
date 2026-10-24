@@ -1,0 +1,40 @@
+{
+  "name": "mtg_jungleleaves",
+  "id": 461,
+  "hardness": 0.2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3,
+      "snappy": 3
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_jungleleaves_default_jungleleaves",
+    "mt_mtg_jungleleaves_default_jungleleaves",
+    "mt_mtg_jungleleaves_default_jungleleaves",
+    "mt_mtg_jungleleaves_default_jungleleaves",
+    "mt_mtg_jungleleaves_default_jungleleaves",
+    "mt_mtg_jungleleaves_default_jungleleaves"
+  ],
+  "render": {
+    "style": "cutout",
+    "texture_variation": 1.0
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    },
+    "fluid_permeable": true
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

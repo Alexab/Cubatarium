@@ -98,6 +98,10 @@ def validate_pack(pack_dir: Path) -> int:
             warn(f"pack.json missing recommended field '{key}'")
 
     pack_id = manifest.get("id", pack_dir.name)
+    expected_resolution = manifest.get("resolution", 16)
+    if not isinstance(expected_resolution, int) or expected_resolution <= 0:
+        err(f"{pack_dir}: resolution must be a positive integer")
+        return 1
     blocks_dir = pack_dir / "blocks"
     tex_dir = pack_dir / "textures" / "blocks"
     if not blocks_dir.is_dir():
@@ -170,6 +174,9 @@ def validate_pack(pack_dir: Path) -> int:
                 h = struct.unpack(">I", raw[20:24])[0]
                 widths.add(w)
                 heights.add(h)
+                if w != expected_resolution:
+                    err(f"{png}: width {w} does not match pack resolution {expected_resolution}")
+                    errors += 1
                 if isinstance(frame_count, int) and frame_count > 0:
                     if len(textures) == FACE_COUNT:
                         expected_h = w * frame_count
@@ -192,11 +199,17 @@ def validate_pack(pack_dir: Path) -> int:
                                 f"{block_path}: {stem}.png must be square for layer animation ({w}×{h})"
                             )
                             errors += 1
+                elif h != w:
+                    err(f"{png}: non-animated block texture must be square ({w}x{h})")
+                    errors += 1
             except Exception:
                 warn(f"{png}: could not read PNG dimensions")
 
         if len(widths) > 1:
             err(f"{block_path}: face PNG widths differ: {widths}")
+            errors += 1
+        if len(heights) > 1:
+            err(f"{block_path}: face PNG heights differ: {heights}")
             errors += 1
 
     errors += validate_creatures(pack_dir, pack_id)

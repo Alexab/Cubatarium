@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_gneiss_banded",
+  "id": 1113,
+  "displayName": "Rock Gneiss Banded",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_gneiss_banded",
+    "cu_rock_gneiss_banded",
+    "cu_rock_gneiss_banded",
+    "cu_rock_gneiss_banded",
+    "cu_rock_gneiss_banded",
+    "cu_rock_gneiss_banded"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "gneiss",
+    "variant": "banded"
+  }
+}

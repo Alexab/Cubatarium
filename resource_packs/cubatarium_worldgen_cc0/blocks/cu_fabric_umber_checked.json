@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_umber_checked",
+  "id": 1909,
+  "displayName": "Fabric Umber Checked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_umber_checked",
+    "cu_fabric_umber_checked",
+    "cu_fabric_umber_checked",
+    "cu_fabric_umber_checked",
+    "cu_fabric_umber_checked",
+    "cu_fabric_umber_checked"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "umber",
+    "variant": "checked"
+  }
+}

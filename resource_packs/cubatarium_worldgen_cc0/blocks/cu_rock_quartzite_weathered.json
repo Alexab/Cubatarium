@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_quartzite_weathered",
+  "id": 1119,
+  "displayName": "Rock Quartzite Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_quartzite_weathered",
+    "cu_rock_quartzite_weathered",
+    "cu_rock_quartzite_weathered",
+    "cu_rock_quartzite_weathered",
+    "cu_rock_quartzite_weathered",
+    "cu_rock_quartzite_weathered"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "quartzite",
+    "variant": "weathered"
+  }
+}

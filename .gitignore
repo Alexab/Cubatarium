@@ -79,6 +79,7 @@
 
 # Local experiment artifacts (run manifests, logs, reports, captures)
 /artifacts/
+/assetgen_output/
 
 CMakeFiles
 Debug

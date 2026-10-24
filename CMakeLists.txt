@@ -2769,6 +2769,21 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/resource_packs")
     )
 endif()
 
+# Cubatarium AssetGen may remove generated blocks and textures after a catalog
+# change. Mirror only its owned pack so deleted assets cannot remain in bin and
+# create conflicting block IDs in previously saved worlds; user-installed packs
+# beside it stay untouched.
+if(EXISTS "${CMAKE_SOURCE_DIR}/resource_packs/cubatarium_worldgen_cc0")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            -DSYNC_SRC="${CMAKE_SOURCE_DIR}/resource_packs/cubatarium_worldgen_cc0"
+            -DSYNC_DST="${CUBATARIUM_RUN_DIR}/resource_packs/cubatarium_worldgen_cc0"
+            -DSYNC_MIRROR=ON
+            -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
+        COMMENT "Pruning removed generated assets from Cubatarium Worldgen runtime pack"
+    )
+endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/fonts")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND}

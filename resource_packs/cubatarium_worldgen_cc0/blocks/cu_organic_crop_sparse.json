@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_crop_sparse",
+  "id": 2454,
+  "displayName": "Organic Crop Sparse",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_crop_sparse",
+    "cu_organic_crop_sparse",
+    "cu_organic_crop_sparse",
+    "cu_organic_crop_sparse",
+    "cu_organic_crop_sparse",
+    "cu_organic_crop_sparse"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "crop",
+    "variant": "sparse"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_amethyst_raw",
+  "id": 2142,
+  "displayName": "Crystal Amethyst Raw",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_amethyst_raw",
+    "cu_crystal_amethyst_raw",
+    "cu_crystal_amethyst_raw",
+    "cu_crystal_amethyst_raw",
+    "cu_crystal_amethyst_raw",
+    "cu_crystal_amethyst_raw"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "amethyst",
+    "variant": "raw"
+  }
+}

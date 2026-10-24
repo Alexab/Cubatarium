@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_dry_mud_natural",
+  "id": 1315,
+  "displayName": "Soil Dry Mud Natural",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_dry_mud_natural",
+    "cu_soil_dry_mud_natural",
+    "cu_soil_dry_mud_natural",
+    "cu_soil_dry_mud_natural",
+    "cu_soil_dry_mud_natural_top",
+    "cu_soil_dry_mud_natural_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "dry_mud",
+    "variant": "natural"
+  }
+}

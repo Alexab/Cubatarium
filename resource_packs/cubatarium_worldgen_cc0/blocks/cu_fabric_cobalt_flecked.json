@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_cobalt_flecked",
+  "id": 1862,
+  "displayName": "Fabric Cobalt Flecked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_cobalt_flecked",
+    "cu_fabric_cobalt_flecked",
+    "cu_fabric_cobalt_flecked",
+    "cu_fabric_cobalt_flecked",
+    "cu_fabric_cobalt_flecked",
+    "cu_fabric_cobalt_flecked"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "cobalt",
+    "variant": "flecked"
+  }
+}

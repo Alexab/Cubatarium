@@ -33,6 +33,7 @@ bool HasOpenSurfaceAbove(const UBlockWorld &world, UBlockRegistry &registry,
 
 bool IsSolidPlantGround(const UBlockWorld &world, UBlockRegistry &registry,
                         glm::ivec3 groundPos);
+bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id);
 bool CanPlacePlantAt(const UBlockWorld &world, UBlockRegistry &registry,
                      glm::ivec3 worldPos);
 bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,

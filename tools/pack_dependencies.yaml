@@ -16,6 +16,11 @@ packs:
     conflicts: []
     worldgen_role: secondary
 
+  cubatarium_worldgen_cc0:
+    depends: []
+    conflicts: [minetest_default_16]
+    worldgen_role: primary
+
   kenney_voxel_16:
     depends: []
     conflicts: []

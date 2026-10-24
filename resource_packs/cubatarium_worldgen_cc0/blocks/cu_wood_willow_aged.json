@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_willow_aged",
+  "id": 1439,
+  "displayName": "Wood Willow Aged",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_willow_aged",
+    "cu_wood_willow_aged",
+    "cu_wood_willow_aged",
+    "cu_wood_willow_aged",
+    "cu_wood_willow_aged_top",
+    "cu_wood_willow_aged_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "willow",
+    "variant": "aged"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_gold_plated",
+  "id": 1975,
+  "displayName": "Metal Gold Plated",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_gold_plated",
+    "cu_metal_gold_plated",
+    "cu_metal_gold_plated",
+    "cu_metal_gold_plated",
+    "cu_metal_gold_plated",
+    "cu_metal_gold_plated"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "gold",
+    "variant": "plated"
+  }
+}

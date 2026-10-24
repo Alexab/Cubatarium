@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_coral_coarse",
+  "id": 1826,
+  "displayName": "Fabric Coral Coarse",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_coral_coarse",
+    "cu_fabric_coral_coarse",
+    "cu_fabric_coral_coarse",
+    "cu_fabric_coral_coarse",
+    "cu_fabric_coral_coarse",
+    "cu_fabric_coral_coarse"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "coral",
+    "variant": "coarse"
+  }
+}

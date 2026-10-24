@@ -279,6 +279,17 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   const BlockRenderStyle face_style =
       catalog ? CatalogGetRenderStyle(catalog, face_id)
               : registry.GetRenderStyle(face_id);
+  const BlockRenderStyle neighbor_style =
+      catalog ? CatalogGetRenderStyle(catalog, neighbor)
+              : registry.GetRenderStyle(neighbor);
+
+  // Cross plants are separate card geometry. Their movement occupancy (which
+  // may be explicitly solid for unusual content) must never hide the cube
+  // face beneath or beside the sprite.
+  if (neighbor_style == BlockRenderStyle::Cross)
+  {
+    return false;
+  }
 
   if (neighbor == BLOCK_AIR)
   {
@@ -307,9 +318,6 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
   {
 
-    const BlockRenderStyle neighbor_style =
-        catalog ? CatalogGetRenderStyle(catalog, neighbor)
-                : registry.GetRenderStyle(neighbor);
     if (neighbor_style == BlockRenderStyle::Cutout)
 
     {

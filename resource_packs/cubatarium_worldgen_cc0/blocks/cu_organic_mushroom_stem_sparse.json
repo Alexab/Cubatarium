@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_mushroom_stem_sparse",
+  "id": 2434,
+  "displayName": "Organic Mushroom Stem Sparse",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_stem_sparse",
+    "cu_organic_mushroom_stem_sparse",
+    "cu_organic_mushroom_stem_sparse",
+    "cu_organic_mushroom_stem_sparse",
+    "cu_organic_mushroom_stem_sparse",
+    "cu_organic_mushroom_stem_sparse"
+  ],
+  "render": {
+    "texture_variation": 0.48,
+    "style": "cross",
+    "shape": "mushroom",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom_stem",
+    "variant": "sparse"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

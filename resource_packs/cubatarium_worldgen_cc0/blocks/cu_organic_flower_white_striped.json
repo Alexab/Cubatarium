@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_flower_white_striped",
+  "id": 2316,
+  "displayName": "Organic Flower White Striped",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_flower_white_striped",
+    "cu_organic_flower_white_striped",
+    "cu_organic_flower_white_striped",
+    "cu_organic_flower_white_striped",
+    "cu_organic_flower_white_striped",
+    "cu_organic_flower_white_striped"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "cluster",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "flower_white",
+    "variant": "striped"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

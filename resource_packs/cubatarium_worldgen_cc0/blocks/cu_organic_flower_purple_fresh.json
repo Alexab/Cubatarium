@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_flower_purple_fresh",
+  "id": 2361,
+  "displayName": "Organic Flower Purple Fresh",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_flower_purple_fresh",
+    "cu_organic_flower_purple_fresh",
+    "cu_organic_flower_purple_fresh",
+    "cu_organic_flower_purple_fresh",
+    "cu_organic_flower_purple_fresh",
+    "cu_organic_flower_purple_fresh"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "cluster",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "flower_purple",
+    "variant": "fresh"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

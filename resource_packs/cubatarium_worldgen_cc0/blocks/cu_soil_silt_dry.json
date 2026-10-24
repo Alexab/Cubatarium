@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_silt_dry",
+  "id": 1296,
+  "displayName": "Soil Silt Dry",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_silt_dry",
+    "cu_soil_silt_dry",
+    "cu_soil_silt_dry",
+    "cu_soil_silt_dry",
+    "cu_soil_silt_dry_top",
+    "cu_soil_silt_dry_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "silt",
+    "variant": "dry"
+  }
+}

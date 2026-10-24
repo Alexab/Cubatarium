@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_bronze_riveted",
+  "id": 1941,
+  "displayName": "Metal Bronze Riveted",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_bronze_riveted",
+    "cu_metal_bronze_riveted",
+    "cu_metal_bronze_riveted",
+    "cu_metal_bronze_riveted",
+    "cu_metal_bronze_riveted",
+    "cu_metal_bronze_riveted"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "bronze",
+    "variant": "riveted"
+  }
+}

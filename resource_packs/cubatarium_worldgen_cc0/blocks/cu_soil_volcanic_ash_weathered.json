@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_volcanic_ash_weathered",
+  "id": 1354,
+  "displayName": "Soil Volcanic Ash Weathered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_volcanic_ash_weathered",
+    "cu_soil_volcanic_ash_weathered",
+    "cu_soil_volcanic_ash_weathered",
+    "cu_soil_volcanic_ash_weathered",
+    "cu_soil_volcanic_ash_weathered_top",
+    "cu_soil_volcanic_ash_weathered_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "volcanic_ash",
+    "variant": "weathered"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_conglomerate_cut",
+  "id": 1201,
+  "displayName": "Rock Conglomerate Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_conglomerate_cut",
+    "cu_rock_conglomerate_cut",
+    "cu_rock_conglomerate_cut",
+    "cu_rock_conglomerate_cut",
+    "cu_rock_conglomerate_cut",
+    "cu_rock_conglomerate_cut"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "conglomerate",
+    "variant": "cut"
+  }
+}

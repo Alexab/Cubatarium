@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_needle_young",
+  "id": 2429,
+  "displayName": "Organic Needle Young",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_needle_young",
+    "cu_organic_needle_young",
+    "cu_organic_needle_young",
+    "cu_organic_needle_young",
+    "cu_organic_needle_young_top",
+    "cu_organic_needle_young"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "needle",
+    "variant": "young"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

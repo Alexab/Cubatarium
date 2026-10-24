@@ -1,0 +1,37 @@
+{
+  "name": "glowstone",
+  "id": 376,
+  "hardness": 0.3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 3,
+      "oddly_breakable_by_hand": 3
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_lightgem",
+    "mt_lightgem",
+    "mt_lightgem",
+    "mt_lightgem",
+    "mt_lightgem",
+    "mt_lightgem"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "displayName": "Glowstone",
+  "lighting": {
+    "emission": 15
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

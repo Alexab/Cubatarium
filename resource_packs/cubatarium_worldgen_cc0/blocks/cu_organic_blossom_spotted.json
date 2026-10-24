@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_blossom_spotted",
+  "id": 2295,
+  "displayName": "Organic Blossom Spotted",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_blossom_spotted",
+    "cu_organic_blossom_spotted",
+    "cu_organic_blossom_spotted",
+    "cu_organic_blossom_spotted",
+    "cu_organic_blossom_spotted",
+    "cu_organic_blossom_spotted"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "cluster",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "blossom",
+    "variant": "spotted"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

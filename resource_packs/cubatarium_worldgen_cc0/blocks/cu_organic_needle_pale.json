@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_needle_pale",
+  "id": 2427,
+  "displayName": "Organic Needle Pale",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_needle_pale",
+    "cu_organic_needle_pale",
+    "cu_organic_needle_pale",
+    "cu_organic_needle_pale",
+    "cu_organic_needle_pale_top",
+    "cu_organic_needle_pale"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "needle",
+    "variant": "pale"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

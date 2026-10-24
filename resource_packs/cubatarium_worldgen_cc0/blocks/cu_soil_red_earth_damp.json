@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_red_earth_damp",
+  "id": 1327,
+  "displayName": "Soil Red Earth Damp",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_red_earth_damp",
+    "cu_soil_red_earth_damp",
+    "cu_soil_red_earth_damp",
+    "cu_soil_red_earth_damp",
+    "cu_soil_red_earth_damp_top",
+    "cu_soil_red_earth_damp_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "red_earth",
+    "variant": "damp"
+  }
+}

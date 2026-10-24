@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_ivory_terracotta",
+  "id": 1671,
+  "displayName": "Ceramic Ivory Terracotta",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_ivory_terracotta",
+    "cu_ceramic_ivory_terracotta",
+    "cu_ceramic_ivory_terracotta",
+    "cu_ceramic_ivory_terracotta",
+    "cu_ceramic_ivory_terracotta",
+    "cu_ceramic_ivory_terracotta"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "ivory",
+    "variant": "terracotta"
+  }
+}

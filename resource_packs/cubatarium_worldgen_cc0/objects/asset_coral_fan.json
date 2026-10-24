@@ -1,0 +1,67 @@
+{
+  "name": "asset_coral_fan",
+  "version": 2,
+  "displayName": "Coral Fan",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 12147822117472202871,
+    "license": "CC0-1.0",
+    "material_parameter": "coral"
+  },
+  "tags": [
+    "decoration",
+    "aquatic"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_soil_pale_sand_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_soil_pale_sand_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_soil_pale_sand_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_organic_coral_mature"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_organic_coral_striped"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_organic_coral_dense"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_organic_coral_fresh"
+    }
+  ],
+  "placement": {
+    "mode": "surface_layer"
+  }
+}

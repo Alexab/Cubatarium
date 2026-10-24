@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_opal_smoky",
+  "id": 2189,
+  "displayName": "Crystal Opal Smoky",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_opal_smoky",
+    "cu_crystal_opal_smoky",
+    "cu_crystal_opal_smoky",
+    "cu_crystal_opal_smoky",
+    "cu_crystal_opal_smoky",
+    "cu_crystal_opal_smoky"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "opal",
+    "variant": "smoky"
+  }
+}

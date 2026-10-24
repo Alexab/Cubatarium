@@ -1,0 +1,94 @@
+{
+  "name": "asset_boulder_sandstone",
+  "version": 2,
+  "displayName": "Boulder Sandstone",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 16875765538658433286,
+    "license": "CC0-1.0",
+    "material_parameter": "sandstone"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": -1,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 1,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_sandstone_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_sandstone_natural"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_greystone_speckled",
+  "id": 1242,
+  "displayName": "Rock Greystone Speckled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_greystone_speckled",
+    "cu_rock_greystone_speckled",
+    "cu_rock_greystone_speckled",
+    "cu_rock_greystone_speckled",
+    "cu_rock_greystone_speckled",
+    "cu_rock_greystone_speckled"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "greystone",
+    "variant": "speckled"
+  }
+}

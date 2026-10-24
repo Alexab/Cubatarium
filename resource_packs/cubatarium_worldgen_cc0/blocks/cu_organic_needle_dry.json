@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_needle_dry",
+  "id": 2422,
+  "displayName": "Organic Needle Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_needle_dry",
+    "cu_organic_needle_dry",
+    "cu_organic_needle_dry",
+    "cu_organic_needle_dry",
+    "cu_organic_needle_dry_top",
+    "cu_organic_needle_dry"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "needle",
+    "variant": "dry"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

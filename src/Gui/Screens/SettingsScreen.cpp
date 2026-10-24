@@ -62,6 +62,11 @@ void USettingsScreen::OnSave()
   {
     return;
   }
+  if (PackForm && !PackForm->HasValidSelection())
+  {
+    ShowTab(2);
+    return;
+  }
   AppSettingsSnapshot app = Host->LoadAppSettingsSnapshot();
   if (DefaultUserInput)
   {

@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_desert_sand_coarse",
+  "id": 2485,
+  "displayName": "Soil Desert Sand Coarse",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_desert_sand_coarse",
+    "cu_soil_desert_sand_coarse",
+    "cu_soil_desert_sand_coarse",
+    "cu_soil_desert_sand_coarse",
+    "cu_soil_desert_sand_coarse_top",
+    "cu_soil_desert_sand_coarse_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "desert_sand",
+    "variant": "coarse"
+  }
+}

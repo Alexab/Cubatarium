@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_garnet_pale",
+  "id": 2164,
+  "displayName": "Crystal Garnet Pale",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_garnet_pale",
+    "cu_crystal_garnet_pale",
+    "cu_crystal_garnet_pale",
+    "cu_crystal_garnet_pale",
+    "cu_crystal_garnet_pale",
+    "cu_crystal_garnet_pale"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "garnet",
+    "variant": "pale"
+  }
+}

@@ -481,7 +481,9 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
     selection.Secondary =
         core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, selection.Secondary);
   }
-  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
+  if (!selection.Primary.empty() &&
+      std::find(selection.Primary.begin(), selection.Primary.end(),
+                selection.WorldgenOwner) == selection.Primary.end())
   {
     selection.WorldgenOwner = selection.Primary.front();
   }

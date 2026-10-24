@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_meteoric_iron_polished",
+  "id": 2035,
+  "displayName": "Metal Meteoric Iron Polished",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_meteoric_iron_polished",
+    "cu_metal_meteoric_iron_polished",
+    "cu_metal_meteoric_iron_polished",
+    "cu_metal_meteoric_iron_polished",
+    "cu_metal_meteoric_iron_polished",
+    "cu_metal_meteoric_iron_polished"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "meteoric_iron",
+    "variant": "polished"
+  }
+}

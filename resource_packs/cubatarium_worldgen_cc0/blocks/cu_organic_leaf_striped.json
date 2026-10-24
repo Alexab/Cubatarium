@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_leaf_striped",
+  "id": 2306,
+  "displayName": "Organic Leaf Striped",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_leaf_striped",
+    "cu_organic_leaf_striped",
+    "cu_organic_leaf_striped",
+    "cu_organic_leaf_striped",
+    "cu_organic_leaf_striped_top",
+    "cu_organic_leaf_striped"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "leaf",
+    "variant": "striped"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

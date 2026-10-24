@@ -1,0 +1,33 @@
+{
+  "name": "farmland_wet",
+  "id": 369,
+  "hardness": 0.6,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2,
+      "oddly_breakable_by_hand": 2
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_dirt",
+    "mt_dirt",
+    "mt_dirt",
+    "mt_dirt",
+    "mt_farmland_wet",
+    "mt_dirt"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_beech_plank",
+  "id": 1427,
+  "displayName": "Wood Beech Plank",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_beech_plank",
+    "cu_wood_beech_plank",
+    "cu_wood_beech_plank",
+    "cu_wood_beech_plank",
+    "cu_wood_beech_plank_top",
+    "cu_wood_beech_plank_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "beech",
+    "variant": "plank"
+  }
+}

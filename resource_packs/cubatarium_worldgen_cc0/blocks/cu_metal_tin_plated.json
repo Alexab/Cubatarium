@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_tin_plated",
+  "id": 1959,
+  "displayName": "Metal Tin Plated",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_tin_plated",
+    "cu_metal_tin_plated",
+    "cu_metal_tin_plated",
+    "cu_metal_tin_plated",
+    "cu_metal_tin_plated",
+    "cu_metal_tin_plated"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "tin",
+    "variant": "plated"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_scarlet_deep",
+  "id": 1714,
+  "displayName": "Ceramic Scarlet Deep",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_scarlet_deep",
+    "cu_ceramic_scarlet_deep",
+    "cu_ceramic_scarlet_deep",
+    "cu_ceramic_scarlet_deep",
+    "cu_ceramic_scarlet_deep",
+    "cu_ceramic_scarlet_deep"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "scarlet",
+    "variant": "deep"
+  }
+}

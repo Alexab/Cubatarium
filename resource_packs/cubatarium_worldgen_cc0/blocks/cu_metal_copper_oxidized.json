@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_copper_oxidized",
+  "id": 1934,
+  "displayName": "Metal Copper Oxidized",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_copper_oxidized",
+    "cu_metal_copper_oxidized",
+    "cu_metal_copper_oxidized",
+    "cu_metal_copper_oxidized",
+    "cu_metal_copper_oxidized",
+    "cu_metal_copper_oxidized"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "copper",
+    "variant": "oxidized"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_charcoal_deep",
+  "id": 1784,
+  "displayName": "Ceramic Charcoal Deep",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_charcoal_deep",
+    "cu_ceramic_charcoal_deep",
+    "cu_ceramic_charcoal_deep",
+    "cu_ceramic_charcoal_deep",
+    "cu_ceramic_charcoal_deep",
+    "cu_ceramic_charcoal_deep"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "charcoal",
+    "variant": "deep"
+  }
+}

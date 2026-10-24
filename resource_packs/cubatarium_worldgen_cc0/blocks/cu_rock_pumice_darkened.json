@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_pumice_darkened",
+  "id": 1224,
+  "displayName": "Rock Pumice Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_pumice_darkened",
+    "cu_rock_pumice_darkened",
+    "cu_rock_pumice_darkened",
+    "cu_rock_pumice_darkened",
+    "cu_rock_pumice_darkened",
+    "cu_rock_pumice_darkened"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "pumice",
+    "variant": "darkened"
+  }
+}

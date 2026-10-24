@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_flower_pink_dark",
+  "id": 2348,
+  "displayName": "Organic Flower Pink Dark",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_flower_pink_dark",
+    "cu_organic_flower_pink_dark",
+    "cu_organic_flower_pink_dark",
+    "cu_organic_flower_pink_dark",
+    "cu_organic_flower_pink_dark",
+    "cu_organic_flower_pink_dark"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "cluster",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "flower_pink",
+    "variant": "dark"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

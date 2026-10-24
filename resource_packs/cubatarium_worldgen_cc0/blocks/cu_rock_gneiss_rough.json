@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_gneiss_rough",
+  "id": 1106,
+  "displayName": "Rock Gneiss Rough",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_gneiss_rough",
+    "cu_rock_gneiss_rough",
+    "cu_rock_gneiss_rough",
+    "cu_rock_gneiss_rough",
+    "cu_rock_gneiss_rough",
+    "cu_rock_gneiss_rough"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "gneiss",
+    "variant": "rough"
+  }
+}

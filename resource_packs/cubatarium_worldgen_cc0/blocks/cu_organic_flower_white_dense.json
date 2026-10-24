@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_flower_white_dense",
+  "id": 2313,
+  "displayName": "Organic Flower White Dense",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_flower_white_dense",
+    "cu_organic_flower_white_dense",
+    "cu_organic_flower_white_dense",
+    "cu_organic_flower_white_dense",
+    "cu_organic_flower_white_dense",
+    "cu_organic_flower_white_dense"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "cluster",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "flower_white",
+    "variant": "dense"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

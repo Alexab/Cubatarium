@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_poplar_pale",
+  "id": 1451,
+  "displayName": "Wood Poplar Pale",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_poplar_pale",
+    "cu_wood_poplar_pale",
+    "cu_wood_poplar_pale",
+    "cu_wood_poplar_pale",
+    "cu_wood_poplar_pale_top",
+    "cu_wood_poplar_pale_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "poplar",
+    "variant": "pale"
+  }
+}

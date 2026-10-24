@@ -1,0 +1,33 @@
+{
+  "name": "mtg_dry_dirt",
+  "id": 449,
+  "hardness": 0.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2,
+      "oddly_breakable_by_hand": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_dry_dirt_default_dry_dirt",
+    "mt_mtg_dry_dirt_default_dry_dirt",
+    "mt_mtg_dry_dirt_default_dry_dirt",
+    "mt_mtg_dry_dirt_default_dry_dirt",
+    "mt_mtg_dry_dirt_default_dry_dirt",
+    "mt_mtg_dry_dirt_default_dry_dirt"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

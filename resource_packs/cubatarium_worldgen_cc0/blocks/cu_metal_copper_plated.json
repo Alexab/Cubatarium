@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_copper_plated",
+  "id": 1935,
+  "displayName": "Metal Copper Plated",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_copper_plated",
+    "cu_metal_copper_plated",
+    "cu_metal_copper_plated",
+    "cu_metal_copper_plated",
+    "cu_metal_copper_plated",
+    "cu_metal_copper_plated"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "copper",
+    "variant": "plated"
+  }
+}
