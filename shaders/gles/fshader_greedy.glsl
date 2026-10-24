@@ -408,44 +408,41 @@ float worldGrainNoise(vec2 planePosition)
 
 float waterSurfaceLight(vec2 planePosition)
 {
-    // Advect isotropic, rotated noise fields at different scales. Avoid the
-    // old anisotropic ridge fields: they made long parallel bands over lakes.
-    // All coordinates remain world-space so the result is continuous across
-    // neighboring fluid blocks.
+    // Use a warped, multi-scale world-space field. Independent smooth fields
+    // at rotated scales break the large patches into irregular ripples while
+    // keeping the result continuous across neighboring fluid blocks.
     float phase = uMaterialTimePhase * 6.28318530718;
-    vec2 flow = vec2(cos(phase), sin(phase * 1.73)) * 1.1;
-    vec2 domainWarp = vec2(
-        materialNoise(planePosition * 0.13 + vec2(11.6, 24.2)),
-        materialNoise(planePosition * 0.13 + vec2(26.4, 6.8))
+    vec2 slowFlow = vec2(cos(phase * 0.31), sin(phase * 0.23)) * 0.38;
+    vec2 fastFlow = vec2(sin(phase * 0.73), cos(phase * 0.59)) * 0.19;
+    vec2 coarseWarp = vec2(
+        materialNoise(planePosition * 0.105 + vec2(11.6, 24.2) + slowFlow),
+        materialNoise(planePosition * 0.105 + vec2(26.4, 6.8) - slowFlow)
     ) - 0.5;
-    vec2 warped = planePosition + domainWarp * 4.0;
+    vec2 fineWarp = vec2(
+        materialNoise(planePosition * 0.29 + vec2(16.2, 12.7) + fastFlow),
+        materialNoise(planePosition * 0.29 + vec2(7.9, 22.5) - fastFlow)
+    ) - 0.5;
+    vec2 warped = planePosition + coarseWarp * 4.4 + fineWarp * 1.15;
     vec2 rotatedA = vec2(warped.x * 0.83 - warped.y * 0.56,
                          warped.x * 0.56 + warped.y * 0.83);
     vec2 rotatedB = vec2(warped.x * 0.39 + warped.y * 0.92,
                          -warped.x * 0.92 + warped.y * 0.39);
-    float swell = materialNoise(rotatedA * 0.095 + vec2(8.7, 16.1) + flow * 0.24);
-    float current = materialNoise(rotatedB * 0.27 + vec2(21.4, 4.8) + flow * 0.66);
-    float eddy = materialNoise(rotatedA * 0.64 + vec2(3.2, 29.6) + flow * 1.22);
-    vec2 fineWarp = vec2(
-        materialNoise(rotatedB * 0.31 + vec2(16.2, 12.7)),
-        materialNoise(rotatedB * 0.31 + vec2(7.9, 22.5))
-    ) - 0.5;
-    float ripple = materialNoise(
-        (rotatedA + fineWarp * 1.7) * 0.83 + vec2(16.2, 12.7) + flow * 1.55
-    );
-    float microRipple = materialNoise(
-        rotatedB * 1.48 + vec2(19.3, 2.1) + flow * 2.25
-    );
-    // Thresholded eddies form isolated, broken glints instead of connected
-    // contour lines that read as repeated sine waves at the waterline.
-    float crest = smoothstep(0.78, 0.96, ripple)
-                  * smoothstep(0.27, 0.76, eddy);
-    float brokenCrest = smoothstep(0.84, 0.98, microRipple)
-                        * smoothstep(0.34, 0.79, eddy);
-    return clamp(0.96 + (swell - 0.5) * 0.28
-                 + (current - 0.5) * 0.36 + (eddy - 0.5) * 0.24
-                 + (microRipple - 0.5) * 0.10
-                 + crest * 0.14 + brokenCrest * 0.08, 0.66, 1.34);
+    float swell = materialNoise(rotatedA * 0.092 + vec2(8.7, 16.1) + slowFlow * 0.58);
+    float current = materialNoise(rotatedB * 0.245 + vec2(21.4, 4.8) + slowFlow + fastFlow);
+    float ripple = materialNoise(rotatedA * 0.61 + vec2(3.2, 29.6) + fastFlow * 2.1);
+    float microRipple = materialNoise(rotatedB * 1.34 + vec2(19.3, 2.1) + fastFlow * 2.8);
+    float grain = worldGrainNoise(planePosition * 0.45 + slowFlow * 0.22);
+    // Thresholded highlights are broken up by both the fine animated field
+    // and a small world-aligned grain layer; this avoids parallel wave bands
+    // and a visible one-tile motif over broad water surfaces.
+    float crest = smoothstep(0.74, 0.96, ripple)
+                  * smoothstep(0.22, 0.82, current);
+    float grainCrest = smoothstep(0.79, 0.98, mix(microRipple, grain, 0.34))
+                       * smoothstep(0.18, 0.84, ripple);
+    return clamp(0.96 + (swell - 0.5) * 0.20
+                 + (current - 0.5) * 0.28 + (ripple - 0.5) * 0.20
+                 + (microRipple - 0.5) * 0.12 + (grain - 0.5) * 0.12
+                 + crest * 0.12 + grainCrest * 0.06, 0.68, 1.32);
 }
 
 void main()

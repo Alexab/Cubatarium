@@ -900,6 +900,97 @@ def apply_needle_cutout(image: Image.Image, seed: int,
     rgb.putalpha(alpha)
     return rgb
 
+def _water_surface_texture(
+    base: tuple[int, int, int], seed: int, size: int,
+) -> Image.Image:
+    """Synthesize a seamless water tile with irregular cellular ripples.
+
+    Water needs a readable pattern at 16px, rather than the nearly uniform
+    four-shade fill produced by the generic glass palette. A jittered toroidal
+    feature field creates broken, rounded ripple crests; wrapped noise warps
+    their shape so the tile has neither a grid nor straight repeated bands.
+    """
+    coarse, medium, fine = _wrapped_noise(seed ^ 0x57415452, size)
+    grain = tile_noise(seed ^ 0x5747524E, size, size, size)
+    cells = max(3, round(size / 4.0))
+    spacing = size / cells
+    rng = random.Random(seed ^ 0xA71E5C39)
+    sites: list[tuple[float, float, float]] = []
+    for gy in range(cells):
+        for gx in range(cells):
+            sites.append((
+                ((gx + 0.5 + rng.uniform(-0.38, 0.38)) * spacing) % size,
+                ((gy + 0.5 + rng.uniform(-0.38, 0.38)) * spacing) % size,
+                rng.random(),
+            ))
+
+    dark = (max(0, round(base[0] * 0.28)),
+            max(0, round(base[1] * 0.52)),
+            max(0, round(base[2] * 0.66)))
+    highlight = (min(255, round(base[0] * 1.9)),
+                 min(255, round(base[1] * 1.43)),
+                 min(255, round(base[2] * 1.15)))
+    palette: list[tuple[int, int, int]] = []
+    for color_index in range(16):
+        t = color_index / 15.0
+        if t <= 0.53:
+            mix = t / 0.53
+            endpoints = (dark, base)
+        else:
+            mix = (t - 0.53) / 0.47
+            endpoints = (base, highlight)
+        palette.append(tuple(
+            round(endpoints[0][channel] * (1.0 - mix)
+                  + endpoints[1][channel] * mix)
+            for channel in range(3)
+        ))
+
+    pixels: list[tuple[int, int, int, int]] = []
+    for y in range(size):
+        for x in range(size):
+            i = y * size + x
+            # Domain warping stays periodic because all source fields wrap.
+            px = (x + 0.5 + coarse[i] * 1.55 + fine[i] * 0.48) % size
+            py = (y + 0.5 + medium[i] * 1.55 - coarse[i] * 0.36) % size
+            nearest = float("inf")
+            second_nearest = float("inf")
+            nearest_phase = 0.0
+            for site_x, site_y, site_phase in sites:
+                dx = abs(px - site_x)
+                dy = abs(py - site_y)
+                dx = min(dx, size - dx)
+                dy = min(dy, size - dy)
+                distance = math.hypot(dx, dy)
+                if distance < nearest:
+                    second_nearest = nearest
+                    nearest = distance
+                    nearest_phase = site_phase
+                elif distance < second_nearest:
+                    second_nearest = distance
+
+            edge_gap = second_nearest - nearest
+            edge_width = 0.48 + 0.08 * medium[i]
+            edge_t = max(0.0, min(1.0, (edge_gap - 0.035) / edge_width))
+            edge_t = edge_t * edge_t * (3.0 - 2.0 * edge_t)
+            crest = 1.0 - edge_t
+            ring_phase = (
+                nearest * math.tau / max(1.8, spacing * 0.82)
+                + (nearest_phase - 0.5) * 0.72 + fine[i] * 0.55
+            )
+            ring = 0.5 + 0.5 * math.cos(ring_phase)
+            tone = (
+                0.47 + coarse[i] * 0.13 + medium[i] * 0.12
+                + fine[i] * 0.09 + grain[i] * 0.055
+                + (crest - 0.24) * 0.27 + (ring - 0.5) * 0.095
+            )
+            palette_index = max(0, min(15, round(tone * 15.0)))
+            pixels.append((*palette[palette_index], 204))
+
+    image = Image.new("RGBA", (size, size))
+    image.putdata(pixels)
+    return image
+
+
 def generated_texture(
     family: str,
     material: str,
@@ -933,15 +1024,16 @@ def generated_texture(
             "young": (70, 111, 51), "dry": (117, 105, 49),
         }.get(variant, base)
     if role == "water_surface":
-        # Keep the tile itself quiet so it does not stamp the same 16px motif
-        # over a whole lake. World-space shading supplies the broad, changing
-        # ripples; the base tile contributes only fine blue-water variation.
+        # Keep a consistent hue; the specialized tile recipe below supplies
+        # the multi-scale ripple structure and palette.
         base = (62, 151, 218)
     if calibration and all(key in calibration for key in ("mean_rgb_r", "mean_rgb_g", "mean_rgb_b")):
         # Only the family's aggregate color centroid is transferred; no source
         # pixels or spatial samples participate in texture synthesis.
         weight = max(0.0, min(0.75, calibration.get("color_weight", 0.12)))
         base = tuple(round(base[i] * (1.0 - weight) + calibration[key] * weight) for i, key in enumerate(("mean_rgb_r", "mean_rgb_g", "mean_rgb_b")))
+    if role == "water_surface":
+        return _water_surface_texture(base, seed, size)
     if family == "wood" and (role == "endgrain" or "endgrain" in variant):
         return _wood_endgrain_texture(base, variant, seed, size)
     if family == "wood" and role in ("top", "bottom"):
@@ -956,9 +1048,7 @@ def generated_texture(
         else:
             # Bark is darker and more chromatically varied than finished timber.
             base = tuple(round(channel * factor) for channel, factor in zip(base, (0.441, 0.512, 0.699)))
-    if role == "water_surface":
-        palette_factors = (0.96, 0.985, 1.015, 1.04)
-    elif family == "soil" and material in SAND_MATERIALS:
+    if family == "soil" and material in SAND_MATERIALS:
         # Fine sand uses restrained luminance steps; a wide palette creates
         # high-contrast diagonal patches when the 16px tile repeats at scale.
         palette_factors = (0.92, 0.96, 1.0, 1.04, 1.08)
@@ -1015,19 +1105,7 @@ def generated_texture(
     for y in range(size):
         for x in range(size):
             i = y * size + x
-            if role == "water_surface":
-                # Water needs small, multidirectional ripples. The previous
-                # glass-family mix was dominated by 2x2 and 4x4 cells, making
-                # broad stepped patches repeat visibly across every fluid
-                # block. Shift energy to the fine wrapped fields and texels.
-                value = (
-                    coarse[i] * 0.02
-                    + medium[i] * 0.06
-                    + fine[i] * 0.12 * micro_scale
-                    + micro[i] * 0.27 * micro_scale
-                    + pixel_grain[i] * 0.53
-                ) * detail_scale
-            elif family == "soil" and material in SAND_MATERIALS:
+            if family == "soil" and material in SAND_MATERIALS:
                 # Keep sand grains isotropic: broad correlated fields leave
                 # diagonal smears across a beach after the 16px tile repeats.
                 # A little 12-cell clustering groups grains without drawing
@@ -1156,9 +1234,7 @@ def generated_texture(
                 elif variant == "polished":
                     value *= 0.78
             elif style == "glass":
-                if role == "water_surface":
-                    value += fine[i] * 0.11 + micro[i] * 0.12 + pixel_grain[i] * 0.16
-                elif variant in ("lined", "rippled"):
+                if variant in ("lined", "rippled"):
                     line = math.cos((x - y + coarse[i] * 1.8 + variant_bias) * math.tau / max(5, size // 2))
                     value += line * 0.12
                 elif variant == "bubbled":
@@ -1255,9 +1331,7 @@ def generated_texture(
             # layer restores crisp 16px grain after palette quantization, which
             # otherwise turns dirt, stone and foliage into smooth bands.
             if size <= 16:
-                if role == "water_surface":
-                    pixel_detail = 1
-                elif soft_bark:
+                if soft_bark:
                     pixel_detail = 2
                 elif pale_bark:
                     pixel_detail = 2 if birch_bark else 3
@@ -1287,9 +1361,7 @@ def generated_texture(
                     pixel_detail = 0
             else:
                 scale_detail = 16.0 / size
-                if role == "water_surface":
-                    pixel_detail = max(1, round(2 * scale_detail))
-                elif soft_bark:
+                if soft_bark:
                     pixel_detail = max(1, round(2 * scale_detail))
                 elif family == "soil" and material not in SAND_MATERIALS:
                     pixel_detail = max(1, round(11 * scale_detail))
@@ -1318,7 +1390,7 @@ def generated_texture(
             if pixel_detail:
                 grain_delta = round(pixel_grain[i] * pixel_detail)
                 rgb = tuple(max(0, min(255, channel + grain_delta)) for channel in rgb)
-            alpha = 204 if role == "water_surface" else 176 if style == "glass" else 255
+            alpha = 176 if style == "glass" else 255
             pixels.append((*rgb, alpha))
 
     image = Image.new("RGBA", (size, size))
@@ -4740,9 +4812,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 36,
+            "version": 37,
             "backend": "procedural",
-            "texture_synthesis": "species_matched_crops_birch_and_organic_materials_v36",
+            "texture_synthesis": "cellular_water_ripples_and_species_matched_bark_v37",
             "object_synthesis": "aspen_broad_crown_willow_drapes_mangrove_roots_coral_crystals_v34",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",

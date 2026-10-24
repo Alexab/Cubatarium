@@ -9,9 +9,9 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 36,
+    "version": 37,
     "backend": "procedural",
-    "texture_synthesis": "species_matched_crops_birch_and_organic_materials_v36",
+    "texture_synthesis": "cellular_water_ripples_and_species_matched_bark_v37",
     "object_synthesis": "aspen_broad_crown_willow_drapes_mangrove_roots_coral_crystals_v34",
     "resolution": 16,
     "profile": "voxel16",
@@ -54765,7 +54765,7 @@
         16,
         16
       ],
-      "pixel_sha256": "661302337fc8c9c220d6cacbd917516371e1040c522c3686398b28a9c0a6dce0",
+      "pixel_sha256": "32feaa80f4247838a2c4f07b3a0c83ff159ec42fbe110e71769f047192937ffe",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_river_water_flowing_default_river_water",
@@ -55416,7 +55416,7 @@
         16,
         16
       ],
-      "pixel_sha256": "18d8ed6c66796eae87404ed5d60d288ba0d599e089d4d6f5584e7b9a91321d3d",
+      "pixel_sha256": "91848bc8acb7c35b818a649facc99ad301680168feec7725d67655939c8aaedc",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_water_flowing_default_water",
@@ -57210,7 +57210,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c53568da93b6050e3024bb8dd643b2cf31ea9cb9a5ac3682837ffaf6bdf13256",
+      "pixel_sha256": "332921a185457e9bfb72ed965737e4b389470332594e3035533228b74ec95e5b",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "water",
