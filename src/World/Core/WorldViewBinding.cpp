@@ -710,7 +710,6 @@ void UWorld::RunLegacyPhysicsFrame()
         // One-shot: clear Melee Intent after resolve attempt so hold-LMB dig
         // does not spam; cooldown still gates actual hits.
         CreatureIntent cleared = intent;
-        cleared.attackTargetId = 0;
         cleared.Influence = InfluenceIntent{};
         controlled_creature->SetIntent(cleared);
       }
@@ -719,7 +718,6 @@ void UWorld::RunLegacyPhysicsFrame()
       {
         CreatureCombat::TryRangedStrike(*this, *controlled_creature, GetGameMode());
         CreatureIntent cleared = intent;
-        cleared.attackTargetId = 0;
         cleared.Influence = InfluenceIntent{};
         controlled_creature->SetIntent(cleared);
       }

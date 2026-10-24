@@ -610,11 +610,9 @@ bool CanSpawnCreatureAt(const UWorld &world, const CreatureDefinition &def,
   {
     return false;
   }
-  CollisionVolume vol = CollisionVolumeFromBody(adjusted, size);
   // Slightly shrink spawn AABB so tall mobs (zombie) fit under low ceilings.
-  constexpr float kSpawnCollisionInset = 0.05f;
-  vol.halfExtents -= glm::vec3(kSpawnCollisionInset);
-  vol.halfExtents = glm::max(vol.halfExtents, glm::vec3(0.05f));
+  const CollisionVolume vol =
+      InsetCollisionVolumeForSpawn(CollisionVolumeFromBody(adjusted, size));
   if (world.CheckCreatureCollisionVolume(vol, 0))
   {
     return false;

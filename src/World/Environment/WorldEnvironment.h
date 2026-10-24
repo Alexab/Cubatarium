@@ -157,6 +157,10 @@ private:
   std::mt19937 NaturalPopulationRng{0xC0BA7AULL};
 };
 
+/// Body origin ~3 blocks ahead of the viewer camera (falls back to the world
+/// spawn point / player body). Shared by palette spawn, QA and /spawn.
+glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world);
+
 } // namespace cutum
 
 #endif // WORLDENVIRONMENT_H

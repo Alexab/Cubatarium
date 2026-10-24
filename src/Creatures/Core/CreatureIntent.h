@@ -31,8 +31,6 @@ struct CreatureIntent
   LocomotionState suggestedAnim{LocomotionState::Idle};
   glm::vec3 lookAtWorld{0.0f};
   float lookAtWeight{0.0f};
-  /// Deprecated: unused; melee targets live in Influence.TargetId only.
-  uint64_t attackTargetId{0};
   InfluenceIntent Influence{};
 };
 

@@ -68,10 +68,24 @@ void IndexPngTextures(const std::filesystem::path &texturesDir,
 
 } // namespace
 
+void DeleteCreatureGlTextures(std::unordered_map<std::string, GLuint> &textures)
+{
+  // Reload path (pack overlays): release the old GL names instead of leaking
+  // them (audit V5).
+  for (auto &entry : textures)
+  {
+    if (entry.second != 0)
+    {
+      glDeleteTextures(1, &entry.second);
+    }
+  }
+  textures.clear();
+}
+
 void UCreatureTextureStorage::LoadFromCreatureAndSkinRoots(
     const std::string &creaturesRoot, const std::string &skinsRoot)
 {
-  Textures.clear();
+  DeleteCreatureGlTextures(Textures);
   if (!std::filesystem::exists(creaturesRoot))
   {
     return;

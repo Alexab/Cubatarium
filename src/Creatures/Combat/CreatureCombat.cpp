@@ -25,6 +25,9 @@ bool CreatureCombat::TryMeleeStrike(UWorld &world, UCreature &attacker,
 bool CreatureCombat::TryRangedStrike(UWorld &world, UCreature &attacker,
                                      WorldGameMode mode)
 {
+  // Deliberate alias: "ranged" currently resolves through the same hitscan
+  // path as melee; real projectiles are backlog (CREATURES_AUDIT_2026-10_RU
+  // finding I2).
   return TryMeleeStrike(world, attacker, mode);
 }
 

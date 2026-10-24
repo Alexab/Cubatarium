@@ -41,8 +41,8 @@ glm::vec4 ReadVec4(const nlohmann::json &arr, const glm::vec4 &fallback)
 CreatureAnimationClipDef ReadClipDef(const nlohmann::json &clipJson)
 {
   CreatureAnimationClipDef clip;
-  clip.startSec = clipJson.value("start", clip.startSec);
-  clip.endSec = clipJson.value("end", clip.endSec);
+  // "start"/"end" sub-ranges in creature.json clips are accepted but
+  // intentionally ignored: clips always play whole-file (audit V14).
   clip.loop = clipJson.value("loop", clip.loop);
   clip.speed = clipJson.value("speed", clip.speed);
   return clip;
@@ -377,16 +377,8 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
         const auto &rig = vis["rig"];
         def.visual.rig.templateId =
             rig.value("template", def.visual.rig.templateId);
-        if (rig.contains("parts") && rig["parts"].is_array())
-        {
-          for (const auto &partId : rig["parts"])
-          {
-            if (partId.is_string())
-            {
-              def.visual.rig.partIds.push_back(partId.get<std::string>());
-            }
-          }
-        }
+        // rig.parts[] in creature.json listed part ids that nothing read;
+        // it is accepted but ignored (audit V14).
       }
       if (vis.contains("sprite") && vis["sprite"].is_object())
       {

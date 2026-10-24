@@ -1283,7 +1283,6 @@ void UWindowManager::Update()
         if (UCreature *controlled = World->GetControlledCreature())
         {
           CreatureIntent intent = controlled->GetIntent();
-          intent.attackTargetId = 0;
           intent.Influence = InfluenceIntent{};
           intent.Influence.Channel = InfluenceChannel::Dig;
           intent.Influence.TargetBlockPos = target;

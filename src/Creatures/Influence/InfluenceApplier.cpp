@@ -11,12 +11,21 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <random>
 
 namespace cutum
 {
 
 namespace
 {
+
+/// World sim is single-threaded; deterministic-per-tick picks (tick % size)
+/// made armor wear cycle the same slot (audit M9).
+std::mt19937 &ApplierRng()
+{
+  static std::mt19937 rng{static_cast<uint32_t>(0xC0BA7A5EULL)};
+  return rng;
+}
 
 void ApplyMeleeToolWear(UWorld &world, UCreature &source,
                         const InfluenceCapability &cap)
@@ -244,8 +253,9 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
           }
           if (!worn.empty())
           {
-            const size_t pick = worn[static_cast<size_t>(
-                world.GetPhysicsTickCounter() % worn.size())];
+            const size_t pick =
+                worn[std::uniform_int_distribution<size_t>{
+                    0, worn.size() - 1}(ApplierRng())];
             InventoryEntryRef armor = inv.GetEquippedArmor(pick);
             if (const ItemDefinition *def = items->Get(armor.Id))
             {

@@ -29,7 +29,7 @@ struct PlayerInteractionRouter
   /// Clear Dig channel on controlled creature if active.
   static void ClearDigIntent(UCreature &controlled);
 
-  /// Write Melee InfluenceIntent only (no legacy attackTargetId).
+  /// Write Melee InfluenceIntent only.
   static void SetMeleeIntent(UCreature &attacker, CreatureId targetId);
 
   /// Self-use (eat/drink) InfluenceIntent on controlled creature.

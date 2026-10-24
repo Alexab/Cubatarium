@@ -455,32 +455,6 @@ glm::mat4 FitGltfToBone(const CreatureGltfMeshAsset &asset, float targetSize)
          glm::translate(glm::mat4(1.f), -center);
 }
 
-void PushOrDraw(UGeometryEngine *engine, UShaderProgram *shader,
-                const glm::mat4 &mvp, GLuint tex,
-                const BoneSkeletonCubeMeshCpu &mesh)
-{
-  if (engine)
-  {
-    CreatureDrawRequest req;
-    req.Kind = CreatureDrawKind::SkeletalMesh;
-    req.Mvp = mvp;
-    req.Texture = tex;
-    req.SkeletalMesh = &mesh;
-    engine->GetCreatureDrawQueue().Push(std::move(req));
-    return;
-  }
-  if (!shader)
-  {
-    return;
-  }
-  // Immediate path for preview — upload stream VAO once per call site via
-  // GeometryEngine helpers aren't available; skip if no engine (preview uses
-  // its own draw below).
-  (void)mvp;
-  (void)tex;
-  (void)mesh;
-}
-
 void SubmitItemOnBones(UGeometryEngine *engine, UShaderProgram *shader,
                        const std::string &itemId, size_t slot,
                        const glm::mat4 &viewProj, const glm::mat4 &bodyMat,

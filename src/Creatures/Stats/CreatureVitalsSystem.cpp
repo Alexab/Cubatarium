@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <random>
 #include <vector>
 
 namespace cutum
@@ -15,6 +16,14 @@ namespace cutum
 
 namespace
 {
+
+/// Single-threaded world sim RNG; the old floor(dmg*100)%100 roll made the
+/// luck shrug deterministic per damage value (audit M9).
+std::mt19937 &VitalsRng()
+{
+  static std::mt19937 rng{static_cast<uint32_t>(0xC0BA7A6DULL)};
+  return rng;
+}
 
 constexpr float kSatietyDrainPerSec = 0.15f;
 constexpr float kThirstDrainPerSec = 0.2f;
@@ -153,7 +162,7 @@ bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
   // Luck: small chance to shrug off a hit.
   if (target.GetAttributes().luck >= 18 && mitigated > 0.f)
   {
-    const int roll = static_cast<int>(std::floor(mitigated * 100.f)) % 100;
+    const int roll = std::uniform_int_distribution<int>{0, 99}(VitalsRng());
     if (roll < target.GetAttributes().luck)
     {
       return false;
