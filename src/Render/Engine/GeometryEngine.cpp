@@ -6490,6 +6490,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     }
     glBindTexture(GL_TEXTURE_2D, textureId);
     SetBlockAnimUniforms(crossInstancedShader, gpu.blockId, textures);
+    crossInstancedShader->SetInt("uDecorShape", static_cast<int>(gpu.shape));
     glBindVertexArray(gpu.vao);
     glDrawElementsInstanced(GL_TRIANGLES,
                             CrossGpuBackend.GetTemplateIndexCount(gpu.shape),
