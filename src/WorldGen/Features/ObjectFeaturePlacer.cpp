@@ -275,6 +275,13 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     return false;
   }
 
+  if (IsTreeVegetationBlock(
+          ctx.Registry,
+          ctx.World.GetBlock(base - glm::ivec3(0, 1, 0))))
+  {
+    return false;
+  }
+
   const uint32_t heightHash = FeatureHash(base.x, base.z, seed + 0x31415927U);
   const int heightRange = profile.HeightMax - profile.HeightMin + 1;
   const int height =
@@ -746,6 +753,12 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
       return false;
     }
     const BlockId current = ctx.World.GetBlock(worldPos);
+    if (block == trunk && IsTreeVegetationBlock(ctx.Registry, current))
+    {
+      // A matching foliage block used to let another trunk overwrite it.
+      // Reject that candidate so trees cannot appear to root inside crowns.
+      return false;
+    }
     if (!ctx.World.IsAir(worldPos) && current != leaves)
     {
       const bool lateralVoxel = relative.x != 0 || relative.z != 0;
@@ -803,6 +816,13 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
   if (leaves == BLOCK_AIR || !ctx.Registry.HasRenderableTexture(leaves) ||
       base.y < ctx.Settings.MinHeight || base.y >= ctx.Settings.MaxHeight ||
       !CanPlacePlantAt(ctx.World, ctx.Registry, base))
+  {
+    return false;
+  }
+
+  if (IsTreeVegetationBlock(
+          ctx.Registry,
+          ctx.World.GetBlock(base - glm::ivec3(0, 1, 0))))
   {
     return false;
   }
@@ -1423,6 +1443,16 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
         continue;
       }
       ecologySurfaceY = landSurface.topSolidY;
+      if ((pool == ObjectFeaturePool::Vegetation ||
+           pool == ObjectFeaturePool::GroundCover) &&
+          IsTreeVegetationBlock(
+              ctx.Registry,
+              ctx.World.GetBlock(glm::ivec3(x, ecologySurfaceY, z))))
+      {
+        // Tree and ground-cover candidates must root in terrain, never on a
+        // trunk or canopy left by an earlier feature pass.
+        continue;
+      }
     }
     if (rule.Surface.Kind != SurfaceConstraintKind::WaterSurface &&
         rule.Surface.Kind != SurfaceConstraintKind::UnderwaterFloor &&

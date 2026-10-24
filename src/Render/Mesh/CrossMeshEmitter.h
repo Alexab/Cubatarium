@@ -72,7 +72,9 @@ inline void AppendDecorQuad(const glm::vec3 &center, float angle,
                             float lateral, float bottom, float width,
                             float height, float lean,
                             std::vector<GreedyMeshVertex> &vertices,
-                            std::vector<uint32_t> &indices)
+                            std::vector<uint32_t> &indices,
+                            float topWidthRatio = 0.18f,
+                            float topUvRatio = 0.24f)
 {
   const glm::vec2 tangent(std::cos(angle), std::sin(angle));
   const glm::vec2 origin = glm::vec2(center.x, center.z) +
@@ -87,8 +89,12 @@ inline void AppendDecorQuad(const glm::vec3 &center, float angle,
   { return glm::vec3(xz.x, y, xz.y); };
   vertices.push_back(CrossVertex(point3(origin - half, y0), 0.0f, 0.0f));
   vertices.push_back(CrossVertex(point3(origin + half, y0), 1.0f, 0.0f));
-  vertices.push_back(CrossVertex(point3(topCenter + half * 0.18f, y1), 0.62f, 1.0f));
-  vertices.push_back(CrossVertex(point3(topCenter - half * 0.18f, y1), 0.38f, 1.0f));
+  vertices.push_back(CrossVertex(
+      point3(topCenter + half * topWidthRatio, y1),
+      0.5f + topUvRatio * 0.5f, 1.0f));
+  vertices.push_back(CrossVertex(
+      point3(topCenter - half * topWidthRatio, y1),
+      0.5f - topUvRatio * 0.5f, 1.0f));
   indices.insert(indices.end(), {base, base + 1, base + 2, base, base + 2, base + 3});
 }
 
@@ -153,10 +159,10 @@ inline void AppendDecorSprite(BlockDecorShape shape, const glm::vec3 &center,
     static constexpr float kHeights[] = {0.58f, 0.82f, 0.94f, 0.67f, 0.78f, 0.55f};
     for (int i = 0; i < 6; ++i)
     {
-      const float lateral = (i % 2 == 0 ? -0.11f : 0.11f);
-      AppendDecorQuad(center, kAngles[i], lateral, 0.0f, 0.18f,
+      const float lateral = (i % 2 == 0 ? -0.17f : 0.17f);
+      AppendDecorQuad(center, kAngles[i], lateral, 0.0f, 0.56f,
                       kHeights[i], (i % 2 == 0 ? -0.08f : 0.08f),
-                      vertices, indices);
+                      vertices, indices, 0.58f, 0.86f);
     }
     return;
   }

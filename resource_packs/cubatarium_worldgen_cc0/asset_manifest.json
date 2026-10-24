@@ -9,9 +9,9 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 40,
+    "version": 43,
     "backend": "procedural",
-    "texture_synthesis": "cellular_water_ripples_and_species_matched_bark_v37",
+    "texture_synthesis": "transparent_cellular_water_species_crowns_and_three_blade_grass_v43",
     "object_synthesis": "named_decor_meshes_and_solid_tree_branch_v40",
     "resolution": 16,
     "profile": "voxel16",
@@ -53610,7 +53610,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d2711688252a4802a7c3298a0fae16d37693dd7e834eee47e78fb1d0f2b45344",
+      "pixel_sha256": "f227fc7ad07baf3e3fc3935328c6c2c65427ea78201d9ad7b04c33e9afc400e5",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_dry_grass_1_default_dry_grass_1",
@@ -53620,7 +53620,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.1094,
-      "sprite_alpha_target_coverage": 0.16,
+      "sprite_alpha_target_coverage": 0.18,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -53790,7 +53790,7 @@
         16,
         16
       ],
-      "pixel_sha256": "3fdd82d39e4806ef66706c3b746e05eeee08fa27f8ca76ea661b850f18cb7368",
+      "pixel_sha256": "72eeb3a9c4629089e4b1ac4a52a219fbeaa5b1bd672f469ca13d936764020f25",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_grass_1_default_grass_1",
@@ -53800,7 +53800,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.0781,
-      "sprite_alpha_target_coverage": 0.16,
+      "sprite_alpha_target_coverage": 0.22,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -54144,7 +54144,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c1d303bb1612759a51f1d81019702c2783fa233c261d8251ebfc593eca341447",
+      "pixel_sha256": "2ef76b9d1b3e5a73250ae68ceeeb8c1c881486dc15ba2cff8c74438ec9437274",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_marram_grass_1_default_marram_grass_1",
@@ -54154,7 +54154,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.1836,
-      "sprite_alpha_target_coverage": 0.1836,
+      "sprite_alpha_target_coverage": 0.22,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -54765,7 +54765,7 @@
         16,
         16
       ],
-      "pixel_sha256": "32feaa80f4247838a2c4f07b3a0c83ff159ec42fbe110e71769f047192937ffe",
+      "pixel_sha256": "d85cd4a61bd5056764ec4595525800dddf9645b89cf5373240460898ff01468e",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_river_water_flowing_default_river_water",
@@ -55416,7 +55416,7 @@
         16,
         16
       ],
-      "pixel_sha256": "91848bc8acb7c35b818a649facc99ad301680168feec7725d67655939c8aaedc",
+      "pixel_sha256": "f0af46b7736f047c4cad01d4186afadcd9fca5ec860eefada4d88aaa7b950aac",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_water_flowing_default_water",
@@ -56961,7 +56961,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a84e8f406b2d62044bb5959eadd7ca0436de0613861778707c47e4be31c670c7",
+      "pixel_sha256": "bd82bf56a10b84637e122fbe2ffc38e7d85b94642a2b753c7f88c09c70ded064",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tallgrass",
@@ -56971,7 +56971,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.0781,
-      "sprite_alpha_target_coverage": 0.16,
+      "sprite_alpha_target_coverage": 0.22,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -57210,7 +57210,7 @@
         16,
         16
       ],
-      "pixel_sha256": "332921a185457e9bfb72ed965737e4b389470332594e3035533228b74ec95e5b",
+      "pixel_sha256": "4a2ffdda0c0ed238654e5b589f405c611bbb2e3c05e2031b1f0c79c12ec6124d",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "water",

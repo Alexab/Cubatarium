@@ -307,6 +307,12 @@
       "type": "cu_organic_leaf_pale"
     },
     {
+      "dx": 0,
+      "dy": 14,
+      "dz": 0,
+      "type": "cu_organic_leaf_pale"
+    },
+    {
       "dx": 1,
       "dy": 6,
       "dz": 0,

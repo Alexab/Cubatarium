@@ -295,37 +295,40 @@ glm::ivec3 ResolveSurfaceFollowingPlantVoxelWorldPos(
   return worldPos;
 }
 
-bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id)
+bool IsTreeTrunkType(const std::string &type)
+{
+  if (type == "tree_log" || type == "tree_branch" || type == "tree")
+  {
+    return true;
+  }
+  if (type.rfind("cu_wood_", 0) == 0 && type.size() >= 5 &&
+      type.compare(type.size() - 5, 5, "_bark") == 0)
+  {
+    return true;
+  }
+  return type.find("tree") != std::string::npos &&
+         type.find("leaf") == std::string::npos &&
+         type.find("leave") == std::string::npos;
+}
+
+bool IsTreeVegetationBlockImpl(const UBlockRegistry &registry, BlockId id)
 {
   if (id == BLOCK_AIR)
   {
     return false;
   }
   const std::string &type = registry.GetTypeNameById(id);
-  return type == "tree_log" || type == "tree_leaves" || type == "tree_branch";
-}
-
-bool IsVerticalTreePrefab(const WorldObjectDefinition &object,
-                          const UBlockRegistry &registry)
-{
-  if (object.PlacementMode != ObjectPlacementMode::VerticalPlant)
+  if (IsTreeTrunkType(type) || type == "tree_leaves")
   {
-    return false;
+    return true;
   }
-  for (const auto &voxel : object.voxels)
+  if (type.rfind("cu_organic_leaf_", 0) == 0 ||
+      type.rfind("cu_organic_needle_", 0) == 0)
   {
-    const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
-    if (id == BLOCK_AIR)
-    {
-      continue;
-    }
-    const std::string &type = registry.GetTypeNameById(id);
-    if (type == "tree_log" || type == "tree_branch")
-    {
-      return true;
-    }
+    return true;
   }
-  return false;
+  return type.find("leaves") != std::string::npos ||
+         type.find("leaf") != std::string::npos;
 }
 
 bool HasTreeVegetationInFootprint(const UBlockWorld &world,
@@ -345,7 +348,26 @@ bool HasTreeVegetationInFootprint(const UBlockWorld &world,
   return false;
 }
 
+bool IsTreePrefab(const WorldObjectDefinition &object,
+                  const UBlockRegistry &registry)
+{
+  for (const ObjectVoxel &voxel : object.voxels)
+  {
+    const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
+    if (id != BLOCK_AIR && IsTreeTrunkType(registry.GetTypeNameById(id)))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
+
+bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id)
+{
+  return IsTreeVegetationBlockImpl(registry, id);
+}
 
 PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               UBlockRegistry &registry, int x,
@@ -715,7 +737,7 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
     }
   }
 
-  if (IsVerticalTreePrefab(object, registry) &&
+  if (IsTreePrefab(object, registry) &&
       HasTreeVegetationInFootprint(world, registry, object, anchorWorldPos,
                                    maxScanY))
   {

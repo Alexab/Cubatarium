@@ -984,7 +984,11 @@ def _water_surface_texture(
                 + (crest - 0.24) * 0.27 + (ring - 0.5) * 0.095
             )
             palette_index = max(0, min(15, round(tone * 15.0)))
-            pixels.append((*palette[palette_index], 204))
+            # Keep the surface colored while letting terrain and submerged
+            # blocks read through it. Two alpha levels preserve a stronger
+            # crest without exceeding the resource pack's compact palette cap.
+            alpha = 164 if crest >= 0.62 else 148
+            pixels.append((*palette[palette_index], alpha))
 
     image = Image.new("RGBA", (size, size))
     image.putdata(pixels)
@@ -1694,10 +1698,11 @@ def semantic_sprite_alpha_coverage(
         # new silhouette while retaining a minimum visible footprint.
         return max(0.28, min(reference_coverage, 0.34))
     if any(token in name for token in ("tallgrass", "grass_1", "dry_grass")):
-        # The source masks are tiny flattened tufts. Applying their 8–11%
-        # coverage to a single authored blade left only a few stray pixels;
-        # the 3D tuft mesh supplies the other viewing angles at runtime.
-        return max(reference_coverage, 0.16)
+        # The reference masks contain a sparse tuft. Preserve a little more
+        # authored leaf area so the 3D mesh reads as grass at game distance
+        # instead of repeating six isolated needle-thin blades.
+        minimum = 0.18 if "dry_grass" in name else 0.22
+        return max(reference_coverage, minimum)
     if any(token in name for token in ("reed", "papyrus", "kelp", "seagrass")):
         # Source textures contain whole stands. Our cards contain one named
         # stalk or blade, and the reed mesh supplies the other directions.
@@ -2355,9 +2360,10 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                 polygon([(x, y), (leaflet_tip, y - 5),
                          (leaflet_tip - side * 2, y + 1)], color)
     else:
-        # One grass blade per card. The tuft mesh arranges six differently
-        # angled blades in 3D, so a full five-blade bitmap made the tuft far
-        # too dense when projected onto every card.
+        # Common grass is a small tuft of three broad, separate leaves. The
+        # six-card mesh adds depth; a single blade on each card looked like a
+        # bundle of wires, while a full stand duplicated on every card became
+        # an opaque green ball.
         dry = "dry" in name or "wheat" in name
         if dry:
             colors = ((150, 133, 66, 255), (178, 158, 78, 255),
@@ -2387,17 +2393,29 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
                 draw.line([xy(center, 63), xy(tip_x, 63 - height)],
                           fill=vein, width=max(1, round(s)))
         else:
-            center = 32 + rng.randint(-3, 3)
-            height = rng.randint(32, 59)
-            tip_x = center + rng.randint(-15, 15)
-            half_width = rng.randint(4, 7)
-            color = colors[rng.randrange(len(colors))]
-            polygon([(center - half_width, 63), (center - 1, 63 - height * 0.42),
-                     (tip_x, 63 - height), (center + 1, 63 - height * 0.70),
-                     (center + half_width, 63)], color)
-            vein = (184, 175, 91, 255) if dry else (130, 181, 77, 255)
-            draw.line([xy(center, 63), xy(tip_x, 63 - height)],
-                      fill=vein, width=max(1, round(s)))
+            center = 32 + rng.randint(-2, 2)
+            leaves = ((-9, rng.randint(32, 43), -rng.randint(6, 12)),
+                      (0, rng.randint(47, 59), rng.randint(-4, 4)),
+                      (9, rng.randint(34, 46), rng.randint(6, 12)))
+            for index, (offset, height, lean) in enumerate(leaves):
+                base_x = center + offset + rng.randint(-2, 2)
+                tip_x = base_x + lean
+                half_width = rng.randint(5, 8)
+                color = colors[(seed + index) % len(colors)]
+                mid_y = 63 - height * 0.46
+                mid_x = base_x + lean * 0.44
+                polygon([(base_x - half_width, 63),
+                         (mid_x - 2, mid_y + 3),
+                         (tip_x, 63 - height),
+                         (mid_x + 2, mid_y + 2),
+                         (base_x + half_width, 63)], color)
+                vein = (184, 175, 91, 255) if dry else (130, 181, 77, 255)
+                draw.line([xy(base_x, 63), xy(tip_x, 63 - height)],
+                          fill=vein, width=max(1, round(s)))
+            # A two-pixel basal knot joins the blades into a plant without
+            # closing the negative spaces between their upper leaves.
+            draw.line([xy(center - 13, 62), xy(center + 13, 62)],
+                      fill=colors[3 if dry else 0], width=max(1, round(2*s)))
     return image
 
 
@@ -4021,7 +4039,7 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
             "oak": [(2, 2), (3, 2), (4, 3), (4, 2), (3, 3), (1, 1)],
             "ash": [(1, 1), (2, 2), (2, 2), (3, 2), (2, 2), (1, 1)],
             "beech": [(1, 1), (2, 2), (3, 3), (3, 3), (2, 2), (1, 1)],
-            "birch": [(1, 1), (1, 1), (2, 1), (2, 1), (1, 1), (1, 1)],
+            "birch": [(1, 1), (2, 1), (3, 2), (3, 2), (2, 1), (1, 1)],
             # Aspen has a rounded, spreading crown. Keep poplar as the narrow
             # columnar species so these two light-barked trees read differently.
             "aspen": [(1, 1), (2, 2), (3, 2), (4, 3), (4, 3), (3, 3), (2, 2), (1, 1)],
@@ -4040,6 +4058,7 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
             "oak": [(0, 0), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0)],
             "ash": [(0, 0), (0, 0), (0, 0), (1, 0), (1, 0), (1, 0)],
             "walnut": [(0, 0), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 1)],
+            "birch": [(0, 0), (0, 0), (1, 0), (1, 0), (0, 0), (0, 0)],
         }.get(wood, [(0, 0)] * len(profile))
         canopy_gap = {
             "oak": 0.18, "ash": 0.24, "beech": 0.03,
@@ -4053,6 +4072,11 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
             if wood in ("birch", "poplar") and level == len(profile) - 1:
                 radius_x, radius_z = 0, 0
             offset_x, offset_z = crown_offsets[level] if level < len(crown_offsets) else (0, 0)
+            if radius_x == 0 and radius_z == 0:
+                add_object_block(
+                    voxels, center_x + offset_x, y, offset_z, leaves
+                )
+                continue
             for x in range(-radius_x, radius_x + 1):
                 for z in range(-radius_z, radius_z + 1):
                     if x == 0 and z == 0:
@@ -4894,9 +4918,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 40,
+            "version": 43,
             "backend": "procedural",
-            "texture_synthesis": "cellular_water_ripples_and_species_matched_bark_v37",
+            "texture_synthesis": "transparent_cellular_water_species_crowns_and_three_blade_grass_v43",
             "object_synthesis": "named_decor_meshes_and_solid_tree_branch_v40",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
