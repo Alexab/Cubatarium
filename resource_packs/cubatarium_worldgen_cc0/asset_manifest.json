@@ -9,9 +9,9 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 43,
+    "version": 45,
     "backend": "procedural",
-    "texture_synthesis": "transparent_cellular_water_species_crowns_and_three_blade_grass_v43",
+    "texture_synthesis": "toroidal_dart_water_ripples_transparent_species_crowns_and_passable_nether_wart_v45",
     "object_synthesis": "named_decor_meshes_and_solid_tree_branch_v40",
     "resolution": 16,
     "profile": "voxel16",
@@ -54765,7 +54765,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d85cd4a61bd5056764ec4595525800dddf9645b89cf5373240460898ff01468e",
+      "pixel_sha256": "2c80e4379b8fe4d2b658b87125eb864479c94fa65b55f21a532ac68635a8ad74",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_river_water_flowing_default_river_water",
@@ -55416,7 +55416,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f0af46b7736f047c4cad01d4186afadcd9fca5ec860eefada4d88aaa7b950aac",
+      "pixel_sha256": "418a4e40eb526e8000b56ac06bfbb2df21a3fe1681ee1ff86e661c1e90ef3a46",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_water_flowing_default_water",
@@ -57210,7 +57210,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4a2ffdda0c0ed238654e5b589f405c611bbb2e3c05e2031b1f0c79c12ec6124d",
+      "pixel_sha256": "1c44d6b9b6628ecf6188c636b1968c94bf36a7039b2816cbfe3e49cbcb7745de",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "water",

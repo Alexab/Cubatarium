@@ -945,11 +945,15 @@ void UWindowManager::Run()
       static const float capture_interval_seconds = std::clamp(
           ReadFlightCaptureEnvFloat("CUBA_FLIGHT_CAPTURE_INTERVAL_SEC", 15.0f),
           0.1f, 3600.0f);
+      static const float capture_delay_seconds = std::clamp(
+          ReadFlightCaptureEnvFloat("CUBA_FLIGHT_CAPTURE_DELAY_SEC", 0.0f),
+          0.0f, 3600.0f);
       static const float capture_min_x = ReadFlightCaptureEnvFloat(
           "CUBA_FLIGHT_CAPTURE_MIN_X", -std::numeric_limits<float>::infinity());
       static const float capture_max_x = ReadFlightCaptureEnvFloat(
           "CUBA_FLIGHT_CAPTURE_MAX_X", std::numeric_limits<float>::infinity());
       static auto next_capture = std::chrono::steady_clock::time_point{};
+      static bool capture_schedule_initialized = false;
       static uint32_t capture_index = 0;
       const auto capture_now = std::chrono::steady_clock::now();
       const auto camera = World->GetCurrentUserCamera();
@@ -961,52 +965,64 @@ void UWindowManager::Run()
       {
         // Capture immediately on each entry into the selected X interval.
         next_capture = std::chrono::steady_clock::time_point{};
+        capture_schedule_initialized = false;
       }
-      else if (next_capture == std::chrono::steady_clock::time_point{} ||
-               capture_now >= next_capture)
+      else
       {
-        next_capture =
-            capture_now +
-            std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-                std::chrono::duration<double>(capture_interval_seconds));
-        std::ostringstream filename;
-        filename << "frame_" << std::setw(3) << std::setfill('0')
-                 << capture_index++ << ".png";
-        const std::filesystem::path capture_path =
-            std::filesystem::path(flight_capture_dir) / filename.str();
+        if (!capture_schedule_initialized)
         {
-          UFrameStageWatchdog::Scope stage("window.frame_capture");
-          const uint32_t frame_index = capture_index - 1;
-          const float camera_y = camera
-                                     ? camera->GetPosition().y
-                                     : std::numeric_limits<float>::quiet_NaN();
-          if (!FlightCapture->QueueCapture(Window, capture_path, frame_index,
-                                           camera_x, camera_y, GL_BACK))
+          next_capture =
+              capture_now +
+              std::chrono::duration_cast<
+                  std::chrono::steady_clock::duration>(
+                  std::chrono::duration<double>(capture_delay_seconds));
+          capture_schedule_initialized = true;
+        }
+        if (capture_now >= next_capture)
+        {
+          next_capture =
+              capture_now +
+              std::chrono::duration_cast<
+                  std::chrono::steady_clock::duration>(
+                  std::chrono::duration<double>(capture_interval_seconds));
+          std::ostringstream filename;
+          filename << "frame_" << std::setw(3) << std::setfill('0')
+                   << capture_index++ << ".png";
+          const std::filesystem::path capture_path =
+              std::filesystem::path(flight_capture_dir) / filename.str();
           {
-            CubatariumLogInfo("FlightCapture",
-                              "Unable to queue framebuffer capture index=" +
-                                  std::to_string(frame_index) +
-                                  " source=GL_BACK" +
-                                  " camera_x=" + std::to_string(camera_x));
-          }
-          else
-          {
-            CubatariumLogInfo("FlightCapture",
-                              "queued index=" + std::to_string(frame_index) +
-                                  " source=GL_BACK" +
-                                  " camera_x=" + std::to_string(camera_x) +
-                                  " camera_y=" + std::to_string(camera_y) +
-                                  " path=" + capture_path.string());
-            capture_front_after_swap =
-                flight_capture_front_after_swap;
-            if (capture_front_after_swap)
+            UFrameStageWatchdog::Scope stage("window.frame_capture");
+            const uint32_t frame_index = capture_index - 1;
+            const float camera_y = camera
+                                       ? camera->GetPosition().y
+                                       : std::numeric_limits<float>::quiet_NaN();
+            if (!FlightCapture->QueueCapture(Window, capture_path, frame_index,
+                                             camera_x, camera_y, GL_BACK))
             {
-              front_capture_path = capture_path.parent_path() /
-                                   (capture_path.stem().string() + "_front" +
-                                    capture_path.extension().string());
-              front_capture_index = frame_index;
-              front_capture_camera_x = camera_x;
-              front_capture_camera_y = camera_y;
+              CubatariumLogInfo("FlightCapture",
+                                "Unable to queue framebuffer capture index=" +
+                                    std::to_string(frame_index) +
+                                    " source=GL_BACK" +
+                                    " camera_x=" + std::to_string(camera_x));
+            }
+            else
+            {
+              CubatariumLogInfo("FlightCapture",
+                                "queued index=" + std::to_string(frame_index) +
+                                    " source=GL_BACK" +
+                                    " camera_x=" + std::to_string(camera_x) +
+                                    " camera_y=" + std::to_string(camera_y) +
+                                    " path=" + capture_path.string());
+              capture_front_after_swap = flight_capture_front_after_swap;
+              if (capture_front_after_swap)
+              {
+                front_capture_path = capture_path.parent_path() /
+                                     (capture_path.stem().string() + "_front" +
+                                      capture_path.extension().string());
+                front_capture_index = frame_index;
+                front_capture_camera_x = camera_x;
+                front_capture_camera_y = camera_y;
+              }
             }
           }
         }
@@ -1068,6 +1084,11 @@ void UWindowManager::Run()
 
   }
 
+  if (FlightCapture)
+  {
+    FlightCapture->Shutdown();
+    FlightCapture.reset();
+  }
   UFramePerfMonitor::Shutdown();
 }
 

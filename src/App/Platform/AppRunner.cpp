@@ -44,6 +44,8 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <map>
+#include <nlohmann/json.hpp>
 #include <sstream>
 #include <vector>
 
@@ -530,7 +532,67 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
 
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
 {
+  const double gallery_page_seconds =
+      std::clamp(options.AssetGalleryPageSeconds, 3.0, 3600.0);
+  std::vector<std::vector<std::string>> gallery_pages;
+  if (!options.AssetGalleryManifest.empty())
+  {
+    std::ifstream manifest_stream(options.AssetGalleryManifest);
+    if (!manifest_stream)
+    {
+      std::cerr << "flight-sim: could not read asset gallery manifest: "
+                << options.AssetGalleryManifest << std::endl;
+      return 1;
+    }
+    try
+    {
+      const nlohmann::json manifest = nlohmann::json::parse(manifest_stream);
+      std::map<int, std::vector<std::pair<int, std::string>>> indexed_pages;
+      for (const auto &entry : manifest.value("blocks", nlohmann::json::array()))
+      {
+        if (!entry.is_object() || !entry.contains("name") ||
+            !entry["name"].is_string())
+        {
+          continue;
+        }
+        const int page = entry.value("page", 0);
+        const int slot = entry.value("slot", 0);
+        if (page > 0)
+        {
+          indexed_pages[page].emplace_back(slot, entry["name"].get<std::string>());
+        }
+      }
+      for (auto &[page_number, entries] : indexed_pages)
+      {
+        (void)page_number;
+        std::sort(entries.begin(), entries.end());
+        auto &page = gallery_pages.emplace_back();
+        for (const auto &[slot, name] : entries)
+        {
+          (void)slot;
+          page.push_back(name);
+        }
+      }
+    }
+    catch (const std::exception &error)
+    {
+      std::cerr << "flight-sim: invalid asset gallery manifest: " << error.what()
+                << std::endl;
+      return 1;
+    }
+    if (gallery_pages.empty())
+    {
+      std::cerr << "flight-sim: asset gallery manifest contains no block pages"
+                << std::endl;
+      return 1;
+    }
+  }
+
   double in_game_seconds = options.InGameSeconds;
+  if (!gallery_pages.empty())
+  {
+    in_game_seconds = gallery_page_seconds * gallery_pages.size() + 2.5;
+  }
   if (options.FlyStopMode)
   {
     in_game_seconds = options.IdleBeforeFlySec + options.FlyPhaseSec +
@@ -620,6 +682,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       return 1;
     }
     application->SetMinimalOverlayForBench(true);
+    if (!gallery_pages.empty())
+    {
+      geometry_engine->SetShowHud(false);
+      geometry_engine->SetShowPerformance(false);
+      geometry_engine->SetShowCrosshair(false);
+    }
 
     if (!options.WorldName.empty())
     {
@@ -771,6 +839,162 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       return true;
     };
 
+    bool asset_gallery_initialized = false;
+    int asset_gallery_page = -1;
+    int asset_gallery_floor_y = 0;
+    int asset_gallery_start_x = 0;
+    int asset_gallery_start_z = 0;
+    constexpr int kAssetGalleryCols = 8;
+    constexpr int kAssetGalleryRows = 5;
+    constexpr int kAssetGallerySpacing = 2;
+    std::vector<glm::ivec3> asset_gallery_sample_positions;
+    auto install_asset_gallery_page = [&](int page_index)
+    {
+      if (page_index < 0 ||
+          page_index >= static_cast<int>(gallery_pages.size()))
+      {
+        return;
+      }
+      UBlockWorld &block_world = world->GetBlockWorld();
+      UBlockRegistry &registry = world->GetBlockRegistry();
+      std::vector<glm::ivec3> changed;
+      changed.reserve(asset_gallery_sample_positions.size() +
+                      gallery_pages[page_index].size());
+      for (const glm::ivec3 &pos : asset_gallery_sample_positions)
+      {
+        block_world.SetBlock(pos, BLOCK_AIR);
+        changed.push_back(pos);
+      }
+      asset_gallery_sample_positions.clear();
+      const auto &names = gallery_pages[page_index];
+      for (size_t slot = 0; slot <
+                           static_cast<size_t>(kAssetGalleryCols * kAssetGalleryRows);
+           ++slot)
+      {
+        const int x = asset_gallery_start_x +
+                      static_cast<int>(slot % kAssetGalleryCols) *
+                          kAssetGallerySpacing;
+        const int z = asset_gallery_start_z +
+                      static_cast<int>(slot / kAssetGalleryCols) *
+                          kAssetGallerySpacing;
+        const glm::ivec3 pos(x, asset_gallery_floor_y + 1, z);
+        if (slot >= names.size())
+        {
+          block_world.SetBlock(pos, BLOCK_AIR);
+          changed.push_back(pos);
+          continue;
+        }
+        const BlockId id = registry.GetIdByTypeName(names[slot]);
+        if (id == BLOCK_AIR)
+        {
+          CubatariumLogInfo("AssetGallery",
+                            "skipping unresolved block=" + names[slot]);
+          block_world.SetBlock(pos, BLOCK_AIR);
+        }
+        else
+        {
+          block_world.SetBlock(pos, id);
+          asset_gallery_sample_positions.push_back(pos);
+        }
+        changed.push_back(pos);
+      }
+      std::unordered_set<glm::ivec3, IVec3Hash> modified_chunks;
+      world->GetMeshService().MarkBlocksChunkDirtyBatchFromEdit(
+          block_world, &registry, changed, modified_chunks, true, false);
+      asset_gallery_page = page_index;
+      CubatariumLogInfo("AssetGallery",
+                        "page=" + std::to_string(page_index + 1) + "/" +
+                            std::to_string(gallery_pages.size()) +
+                            " blocks=" + std::to_string(names.size()));
+    };
+    auto initialize_asset_gallery = [&](const std::shared_ptr<UCamera> &camera)
+    {
+      if (!camera || gallery_pages.empty())
+      {
+        return;
+      }
+      camera->SetFreeMove(true);
+      const glm::vec3 spawn = camera->GetPosition();
+      const int center_x = static_cast<int>(std::floor(spawn.x));
+      const int center_z = static_cast<int>(std::floor(spawn.z));
+      asset_gallery_start_x =
+          center_x - (kAssetGalleryCols - 1) * kAssetGallerySpacing / 2;
+      asset_gallery_start_z =
+          center_z - (kAssetGalleryRows - 1) * kAssetGallerySpacing / 2;
+      asset_gallery_floor_y = static_cast<int>(std::floor(spawn.y)) - 2;
+      for (int z = 0; z < kAssetGalleryRows * kAssetGallerySpacing; ++z)
+      {
+        for (int x = 0; x < kAssetGalleryCols * kAssetGallerySpacing; ++x)
+        {
+          if (const auto top = world->FindHighestSolidY(
+                  asset_gallery_start_x + x, asset_gallery_start_z + z))
+          {
+            asset_gallery_floor_y =
+                (std::max)(asset_gallery_floor_y, *top);
+          }
+        }
+      }
+      BlockId floor_id = world->GetBlockRegistry().GetIdByTypeName("stone");
+      if (floor_id == BLOCK_AIR)
+      {
+        floor_id = world->GetBlockRegistry().GetIdByTypeName("dirt");
+      }
+      if (floor_id == BLOCK_AIR)
+      {
+        CubatariumLogError("AssetGallery", "no stone or dirt floor block available");
+        return;
+      }
+      UBlockWorld &block_world = world->GetBlockWorld();
+      std::vector<glm::ivec3> changed;
+      changed.reserve(kAssetGalleryCols * kAssetGalleryRows *
+                      kAssetGallerySpacing * kAssetGallerySpacing * 8);
+      for (int z = 0; z < kAssetGalleryRows * kAssetGallerySpacing; ++z)
+      {
+        for (int x = 0; x < kAssetGalleryCols * kAssetGallerySpacing; ++x)
+        {
+          for (int dy = 1; dy <= 7; ++dy)
+          {
+            const glm::ivec3 clear_pos(asset_gallery_start_x + x,
+                                       asset_gallery_floor_y + dy,
+                                       asset_gallery_start_z + z);
+            block_world.SetBlock(clear_pos, BLOCK_AIR);
+            changed.push_back(clear_pos);
+          }
+          const glm::ivec3 floor_pos(asset_gallery_start_x + x,
+                                    asset_gallery_floor_y,
+                                    asset_gallery_start_z + z);
+          block_world.SetBlock(floor_pos, floor_id);
+          changed.push_back(floor_pos);
+        }
+      }
+      std::unordered_set<glm::ivec3, IVec3Hash> modified_chunks;
+      world->GetMeshService().MarkBlocksChunkDirtyBatchFromEdit(
+          block_world, &world->GetBlockRegistry(), changed, modified_chunks,
+          true, false);
+      const glm::vec3 camera_pos(
+          static_cast<float>(center_x) + 0.5f,
+          static_cast<float>(asset_gallery_floor_y) + 9.5f,
+          static_cast<float>(center_z) + 13.5f);
+      camera->SetPosition(camera_pos);
+      camera->SetOrientation(-90.0f, -32.0f);
+      if (auto user = world->GetCurrentUser())
+      {
+        user->SetPosition(camera_pos);
+        user->SetCameraOrientation(-90.0f, -32.0f);
+      }
+      world->SetWeatherAutoEnabled(false);
+      world->SetWeather(UWorld::WeatherType::Clear, 0.0f);
+      world->SetWeatherParticlesEnabled(false);
+      world->SetWeatherOverlayEnabled(false);
+      asset_gallery_initialized = true;
+      install_asset_gallery_page(0);
+      CubatariumLogInfo("AssetGallery",
+                        "initialized floor_y=" +
+                            std::to_string(asset_gallery_floor_y) +
+                            " origin=" + std::to_string(asset_gallery_start_x) +
+                            "," + std::to_string(asset_gallery_start_z));
+    };
+
     window.SetStopPredicate(
         [&]()
         {
@@ -819,6 +1043,25 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                      excluded_before_ingame_sec));
             if (auto camera = world->GetCurrentUserCamera())
             {
+              if (!gallery_pages.empty())
+              {
+                if (!asset_gallery_initialized)
+                {
+                  initialize_asset_gallery(camera);
+                }
+                if (asset_gallery_initialized)
+                {
+                  const int desired_page = (std::min)(
+                      static_cast<int>(gallery_pages.size()) - 1,
+                      (std::max)(0, static_cast<int>(
+                                        ingame_sec / gallery_page_seconds)));
+                  if (desired_page != asset_gallery_page)
+                  {
+                    install_asset_gallery_page(desired_page);
+                  }
+                  world->SetTimeOfDayNormalized(0.32f);
+                }
+              }
               if (!autopilot_armed &&
                   (options.Fly || options.HoldForward ||
                    options.BreakStandMode || options.YawSweepMode))

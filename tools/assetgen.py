@@ -912,17 +912,27 @@ def _water_surface_texture(
     """
     coarse, medium, fine = _wrapped_noise(seed ^ 0x57415452, size)
     grain = tile_noise(seed ^ 0x5747524E, size, size, size)
-    cells = max(3, round(size / 4.0))
-    spacing = size / cells
     rng = random.Random(seed ^ 0xA71E5C39)
     sites: list[tuple[float, float, float]] = []
-    for gy in range(cells):
-        for gx in range(cells):
-            sites.append((
-                ((gx + 0.5 + rng.uniform(-0.38, 0.38)) * spacing) % size,
-                ((gy + 0.5 + rng.uniform(-0.38, 0.38)) * spacing) % size,
-                rng.random(),
-            ))
+    # Evenly spaced cells made the same diamond-like ripple appear at the
+    # same interval in every water block. Use a deterministic toroidal dart
+    # sampler instead: it avoids clustering without imposing a visible grid.
+    target_sites = max(6, round(size * 0.56))
+    min_spacing = size / math.sqrt(target_sites) * 0.46
+    for _ in range(target_sites * 80):
+        if len(sites) >= target_sites:
+            break
+        site_x, site_y = rng.random() * size, rng.random() * size
+        spaced = True
+        for other_x, other_y, _phase in sites:
+            dx = min(abs(site_x - other_x), size - abs(site_x - other_x))
+            dy = min(abs(site_y - other_y), size - abs(site_y - other_y))
+            if math.hypot(dx, dy) < min_spacing:
+                spaced = False
+                break
+        if spaced:
+            sites.append((site_x, site_y, rng.random()))
+    spacing = size / math.sqrt(max(1, len(sites)))
 
     dark = (max(0, round(base[0] * 0.28)),
             max(0, round(base[1] * 0.52)),
@@ -979,15 +989,15 @@ def _water_surface_texture(
             )
             ring = 0.5 + 0.5 * math.cos(ring_phase)
             tone = (
-                0.47 + coarse[i] * 0.13 + medium[i] * 0.12
-                + fine[i] * 0.09 + grain[i] * 0.055
-                + (crest - 0.24) * 0.27 + (ring - 0.5) * 0.095
+                0.45 + coarse[i] * 0.15 + medium[i] * 0.15
+                + fine[i] * 0.14 + grain[i] * 0.10
+                + (crest - 0.30) * 0.23 + (ring - 0.5) * 0.07
             )
             palette_index = max(0, min(15, round(tone * 15.0)))
-            # Keep the surface colored while letting terrain and submerged
-            # blocks read through it. Two alpha levels preserve a stronger
-            # crest without exceeding the resource pack's compact palette cap.
-            alpha = 164 if crest >= 0.62 else 148
+            # Let the shore and submerged blocks read clearly through the
+            # water. Two alpha levels retain a readable ripple crest while
+            # staying within the 16x16 palette budget.
+            alpha = 126 if crest >= 0.62 else 108
             pixels.append((*palette[palette_index], alpha))
 
     image = Image.new("RGBA", (size, size))
@@ -3709,7 +3719,7 @@ def block_definition(record: dict[str, str], face_stems: list[str], block_id: in
         render.update({"style": "cutout", "texture_variation": 1.0})
         physics = {"movement": {"occupancy": 0.0}}
     mushroom_cap = record["material"].startswith("mushroom_") and record["material"] != "mushroom_stem"
-    if family == "organic" and (record["material"] in ("blossom", "fern", "reed", "mushroom", "kelp", "coral") or record["material"].startswith("flower_") or mushroom_cap):
+    if family == "organic" and (record["material"] in ("blossom", "fern", "reed", "mushroom", "kelp", "coral", "nether_wart") or record["material"].startswith("flower_") or mushroom_cap):
         shape = decor_shape_for_name(record["name"], record["material"])
         render.update({"style": "cross", "shape": shape, "transparent": True, "double_sided": True})
         render["texture_variation"] = 1.0
@@ -4533,6 +4543,339 @@ def create_block_face_sheets(pack_dir: Path, preview_dir: Path, limit: int = 120
     return len(selected)
 
 
+def _gallery_texture(path: Path, size: int = 16) -> Image.Image:
+    """Load the first frame of a block texture without changing its pixels."""
+    with Image.open(path) as source:
+        frame = source.convert("RGBA").crop((0, 0, min(source.width, size), min(source.width, size)))
+    if frame.size != (size, size):
+        frame = frame.resize((size, size), Image.Resampling.NEAREST)
+    return frame
+
+
+def _draw_iso_face(
+    draw: ImageDraw.ImageDraw,
+    image: Image.Image,
+    origin: tuple[float, float],
+    vector_u: tuple[float, float],
+    vector_v: tuple[float, float],
+    scale: int = 2,
+    shade_factor: float = 1.0,
+) -> None:
+    """Draw a nearest-neighbour texture on a projected voxel face."""
+    pixels = image.convert("RGBA").load()
+    size = image.width
+    ox, oy = origin
+    ux, uy = vector_u
+    vx, vy = vector_v
+    for ty in range(size):
+        for tx in range(size):
+            u0, u1 = tx / size, (tx + 1) / size
+            v0, v1 = ty / size, (ty + 1) / size
+            points = [
+                (ox + ux * u0 + vx * v0, oy + uy * u0 + vy * v0),
+                (ox + ux * u1 + vx * v0, oy + uy * u1 + vy * v0),
+                (ox + ux * u1 + vx * v1, oy + uy * u1 + vy * v1),
+                (ox + ux * u0 + vx * v1, oy + uy * u0 + vy * v1),
+            ]
+            color = pixels[tx, ty]
+            if shade_factor != 1.0:
+                color = tuple(round(channel * shade_factor) for channel in color[:3]) + (color[3],)
+            draw.polygon(points, fill=color)
+
+
+def _draw_iso_block(
+    canvas: Image.Image,
+    block: dict[str, Any],
+    textures_dir: Path,
+    center: tuple[int, int],
+    scale: int = 2,
+    checker: bool = False,
+) -> list[Image.Image]:
+    """Render a textured isometric block and return its six source faces."""
+    # The six native-resolution swatches below carry exact detail. The cube
+    # itself is a thumbnail, so sample 8x8 texels and double their screen size.
+    size = 8
+    pixel = scale * 2
+    half = size * pixel
+    cx, top = center
+    if checker:
+        tile = Image.new("RGBA", (half * 2, half * 3), (70, 70, 70, 255))
+        checker_draw = ImageDraw.Draw(tile)
+        checker_size = max(4, scale * 5)
+        for gy in range(0, tile.height, checker_size):
+            for gx in range(0, tile.width, checker_size):
+                if ((gx // checker_size) + (gy // checker_size)) & 1:
+                    checker_draw.rectangle((gx, gy, gx + checker_size - 1, gy + checker_size - 1), fill=(124, 124, 124, 255))
+        canvas.alpha_composite(tile, (cx - half, top))
+    draw = ImageDraw.Draw(canvas, "RGBA")
+    stems = block.get("textures", [])
+    faces: list[Image.Image] = []
+    for index in range(6):
+        stem = stems[index] if isinstance(stems, list) and index < len(stems) else ""
+        path = textures_dir / f"{stem}.png"
+        faces.append(
+            _gallery_texture(path, 16).resize((size, size), Image.Resampling.BOX)
+            if stem and path.is_file()
+            else Image.new("RGBA", (size, size), (210, 40, 210, 255))
+        )
+    # Left and right vertical faces use block texture slots 0 and 1.
+    _draw_iso_face(draw, faces[0], (cx - half, top + half / 2), (half, half / 2), (0, half), pixel, 0.78)
+    _draw_iso_face(draw, faces[1], (cx, top), (half, half / 2), (0, half), pixel, 0.90)
+    # Top diamond uses slot 4. Draw last so its boundary stays crisp.
+    _draw_iso_face(draw, faces[4], (cx, top), (half, half / 2), (-half, half / 2), pixel, 1.0)
+    outline = (20, 22, 24, 255)
+    draw.line([(cx - half, top + half / 2), (cx, top + half), (cx + half, top + half / 2)], fill=outline, width=1)
+    draw.line([(cx - half, top + half / 2), (cx, top), (cx + half, top + half / 2)], fill=outline, width=1)
+    draw.line([(cx - half, top + half / 2), (cx - half, top + half / 2 + half), (cx, top + half + half)], fill=outline, width=1)
+    draw.line([(cx + half, top + half / 2), (cx + half, top + half / 2 + half), (cx, top + half + half)], fill=outline, width=1)
+    return faces
+
+
+def create_asset_gallery(pack_dir: Path, output_dir: Path, per_page: int = 40) -> dict[str, Any]:
+    """Create exhaustive, face-mapped block and object galleries plus diagnostics."""
+    if per_page < 1 or per_page > 80:
+        raise ValueError("gallery --per-page must be in [1, 80]")
+    asset_manifest_path = pack_dir / "asset_manifest.json"
+    texture_roles: dict[str, str] = {}
+    if asset_manifest_path.is_file():
+        try:
+            asset_manifest = json.loads(asset_manifest_path.read_text(encoding="utf-8-sig"))
+            texture_roles = {
+                str(entry["stem"]): str(entry.get("role", ""))
+                for entry in asset_manifest.get("textures", [])
+                if isinstance(entry, dict) and isinstance(entry.get("stem"), str)
+            }
+        except (OSError, json.JSONDecodeError):
+            texture_roles = {}
+    blocks_dir = pack_dir / "blocks"
+    textures_dir = pack_dir / "textures" / "blocks"
+    objects_dir = pack_dir / "objects"
+    blocks: list[dict[str, Any]] = []
+    block_errors: list[str] = []
+    texture_users: dict[str, list[str]] = defaultdict(list)
+    for path in sorted(blocks_dir.glob("*.json")):
+        try:
+            block = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError) as exc:
+            block_errors.append(f"{path.name}: {exc}")
+            continue
+        name = str(block.get("name") or path.stem)
+        stems = block.get("textures", [])
+        missing = []
+        for stem in stems if isinstance(stems, list) else []:
+            if isinstance(stem, str):
+                texture_users[stem].append(name)
+                if not (textures_dir / f"{stem}.png").is_file():
+                    missing.append(stem)
+        block["_gallery_name"] = name
+        block["_gallery_missing"] = missing
+        blocks.append(block)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    block_output = output_dir / "blocks"
+    object_output = output_dir / "objects"
+    texture_output = output_dir / "textures"
+    animation_output = output_dir / "animations"
+    block_output.mkdir(parents=True, exist_ok=True)
+    object_output.mkdir(parents=True, exist_ok=True)
+    texture_output.mkdir(parents=True, exist_ok=True)
+    animation_output.mkdir(parents=True, exist_ok=True)
+    page_rows: list[dict[str, Any]] = []
+    cols, cell_w, cell_h = 8, 160, 146
+    font = ImageFont.load_default()
+    for start in range(0, len(blocks), per_page):
+        page = blocks[start : start + per_page]
+        rows = math.ceil(len(page) / cols)
+        page_num = start // per_page + 1
+        canvas = Image.new("RGBA", (cols * cell_w, 28 + rows * cell_h), (34, 38, 43, 255))
+        draw = ImageDraw.Draw(canvas)
+        draw.text((8, 7), f"{pack_dir.name}: block gallery {page_num:03d} / {math.ceil(len(blocks) / per_page):03d}", font=font, fill=(240, 242, 245, 255))
+        for slot, block in enumerate(page):
+            name = block["_gallery_name"]
+            x, y = (slot % cols) * cell_w, 28 + (slot // cols) * cell_h
+            draw.rectangle((x + 2, y + 2, x + cell_w - 3, y + cell_h - 3), fill=(45, 50, 56, 255), outline=(68, 75, 82, 255))
+            _draw_iso_block(canvas, block, textures_dir, (x + 80, y + 8), scale=1, checker=True)
+            stems = block.get("textures", [])
+            for face in range(6):
+                tx = x + 20 + face * 20
+                ty = y + 78
+                if face < len(stems) and isinstance(stems[face], str) and (textures_dir / f"{stems[face]}.png").is_file():
+                    tile = _gallery_texture(textures_dir / f"{stems[face]}.png").resize((16, 16), Image.Resampling.NEAREST)
+                    canvas.alpha_composite(tile, (tx, ty))
+                else:
+                    draw.rectangle((tx, ty, tx + 15, ty + 15), fill=(220, 30, 190, 255))
+                draw.rectangle((tx, ty, tx + 15, ty + 15), outline=(16, 18, 20, 255), width=1)
+                draw.text((tx + 5, ty + 17), ("FRBLTB"[face]), font=font, fill=(202, 207, 213, 255))
+            render_style = (block.get("render") or {}).get("style", "cube")
+            label = str(block.get("displayName") or name)
+            draw.text((x + 6, y + 104), f"{name[:25]} [{render_style}]", font=font, fill=(244, 245, 246, 255))
+            draw.text((x + 6, y + 116), label[:27], font=font, fill=(185, 192, 199, 255))
+            if block["_gallery_missing"]:
+                draw.text((x + 6, y + 130), "MISSING: " + ",".join(block["_gallery_missing"])[:22], font=font, fill=(255, 90, 90, 255))
+            page_rows.append({"name": name, "display_name": label, "page": page_num, "slot": slot, "render_style": render_style, "textures": stems, "missing_textures": block["_gallery_missing"]})
+        canvas.convert("RGB").save(block_output / f"blocks_{page_num:03d}.png", optimize=True)
+
+    # One full catalog of source PNGs exposes orphaned and unexpectedly reused assets.
+    textures = sorted(textures_dir.glob("*.png"))
+    texture_hashes: dict[str, list[str]] = defaultdict(list)
+    texture_metrics: list[dict[str, Any]] = []
+    swatch_cols, swatch_w, swatch_h, swatch_per_page = 12, 104, 72, 96
+    for index, path in enumerate(textures):
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        texture_hashes[digest].append(path.stem)
+        with Image.open(path) as source:
+            image = source.convert("RGBA")
+        width, height = image.size
+        frame_count = height // width if width > 0 and height % width == 0 else 1
+        frame_h = width if frame_count > 1 else height
+        frame = image.crop((0, 0, width, frame_h))
+        stats = texture_statistics(frame)
+        alpha_values = list(frame.getchannel("A").getdata())
+        role_users = texture_users.get(path.stem, [])
+        texture_role = texture_roles.get(path.stem, "")
+        periodic_axes = (
+            () if texture_role == "decor_sprite" else
+            ("x",) if texture_role in COMPOSITE_SIDE_ROLES else
+            ("x", "y") if frame.size[0] == frame.size[1] else ()
+        )
+        wrap_x = texture_wrap_is_continuous(frame, "x") if "x" in periodic_axes else None
+        wrap_y = texture_wrap_is_continuous(frame, "y") if "y" in periodic_axes else None
+        animation_preview = None
+        if frame_count > 1:
+            cols, tile, padding = 4, 40, 4
+            rows = math.ceil(frame_count / cols)
+            animation = Image.new("RGBA", (cols * tile, rows * (tile + 14)), (39, 43, 48, 255))
+            animation_draw = ImageDraw.Draw(animation)
+            for frame_index in range(frame_count):
+                fx, fy = (frame_index % cols) * tile, (frame_index // cols) * (tile + 14)
+                for cy in range(fy, fy + tile, 8):
+                    for cx in range(fx, fx + tile, 8):
+                        fill = (110, 110, 110, 255) if ((cx // 8 + cy // 8) & 1) else (68, 68, 68, 255)
+                        animation_draw.rectangle((cx, cy, cx + 7, cy + 7), fill=fill)
+                animation_frame = image.crop((0, frame_index * width, width, (frame_index + 1) * width))
+                animation_frame = animation_frame.resize((32, 32), Image.Resampling.NEAREST)
+                animation.alpha_composite(animation_frame, (fx + padding, fy + padding))
+                animation_draw.text((fx + 3, fy + tile), f"frame {frame_index:02d}", font=font, fill=(232, 236, 240, 255))
+            animation_name = f"animation_{path.stem}.png"
+            animation.save(animation_output / animation_name, optimize=True)
+            animation_preview = f"animations/{animation_name}"
+        texture_metrics.append({
+            "name": path.stem,
+            "role": texture_role,
+            "size": [width, height],
+            "frame_count": frame_count,
+            "animation_preview": animation_preview,
+            "sha256": digest,
+            "referenced_by_blocks": sorted(set(role_users)),
+            "orphan": not bool(role_users),
+            "seam_checked_axes": list(periodic_axes),
+            "wrap_x": wrap_x,
+            "wrap_y": wrap_y,
+            "alpha_extrema": list(frame.getchannel("A").getextrema()),
+            "alpha_mean": statistics.mean(alpha_values),
+            "fully_transparent_fraction": sum(value == 0 for value in alpha_values) / len(alpha_values),
+            "partial_alpha_fraction": sum(0 < value < 255 for value in alpha_values) / len(alpha_values),
+            **stats,
+        })
+    for start in range(0, len(textures), swatch_per_page):
+        page_paths = textures[start : start + swatch_per_page]
+        page_num = start // swatch_per_page + 1
+        rows = math.ceil(len(page_paths) / swatch_cols)
+        canvas = Image.new("RGBA", (swatch_cols * swatch_w, rows * swatch_h), (36, 39, 43, 255))
+        draw = ImageDraw.Draw(canvas)
+        for offset, path in enumerate(page_paths):
+            x, y = (offset % swatch_cols) * swatch_w, (offset // swatch_cols) * swatch_h
+            for cy in range(y, y + 40, 8):
+                for cx in range(x + 34, x + 74, 8):
+                    fill = (112, 112, 112, 255) if ((cx // 8 + cy // 8) & 1) else (70, 70, 70, 255)
+                    draw.rectangle((cx, cy, cx + 7, cy + 7), fill=fill)
+            metric = texture_metrics[start + offset]
+            tile = _gallery_texture(path, metric["size"][0]).resize((32, 32), Image.Resampling.NEAREST)
+            canvas.alpha_composite(tile, (x + 38, y + 3))
+            mark = "!" if metric["orphan"] or metric["wrap_x"] is False or metric["wrap_y"] is False else ""
+            draw.text((x + 3, y + 39), f"{mark}{path.stem[:16]}", font=font, fill=(243, 244, 246, 255))
+            alpha_min, alpha_max = metric["alpha_extrema"]
+            detail = f"{metric['size'][0]}px a{alpha_min}-{alpha_max} f{metric['frame_count']} refs {len(metric['referenced_by_blocks'])}"
+            draw.text((x + 3, y + 51), detail, font=font, fill=(176, 184, 192, 255))
+        canvas.save(texture_output / f"textures_{page_num:03d}.png", optimize=True)
+
+    object_entries: list[dict[str, Any]] = []
+    for object_path in sorted(objects_dir.glob("*.json")):
+        try:
+            document = json.loads(object_path.read_text(encoding="utf-8-sig"))
+            preview = preview_object(document, object_output / object_path.name, pack_dir)
+            object_entries.append({"name": document.get("name", object_path.stem), "display_name": document.get("displayName", document.get("name", object_path.stem)), "voxels": len(document.get("blocks") or []), "preview": str(preview.relative_to(output_dir)).replace("\\", "/")})
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            object_entries.append({"name": object_path.stem, "error": str(exc)})
+
+    object_contact_pages: list[str] = []
+    contact_cols, contact_rows, contact_size, label_height = 4, 4, 192, 24
+    valid_objects = [entry for entry in object_entries if "preview" in entry]
+    for start in range(0, len(valid_objects), contact_cols * contact_rows):
+        page_entries = valid_objects[start : start + contact_cols * contact_rows]
+        page_number = start // (contact_cols * contact_rows) + 1
+        cell_w, cell_h = contact_size + 8, contact_size + label_height + 8
+        contact = Image.new(
+            "RGBA", (contact_cols * cell_w, contact_rows * cell_h),
+            (35, 39, 44, 255),
+        )
+        contact_draw = ImageDraw.Draw(contact)
+        for index, entry in enumerate(page_entries):
+            x, y = (index % contact_cols) * cell_w, (index // contact_cols) * cell_h
+            contact_draw.rectangle(
+                (x + 2, y + 2, x + cell_w - 3, y + cell_h - 3),
+                fill=(48, 53, 59, 255), outline=(76, 83, 90, 255),
+            )
+            preview_path = output_dir / entry["preview"]
+            with Image.open(preview_path) as preview_image:
+                image = preview_image.convert("RGBA").crop((0, 0, 320, 320))
+            image.thumbnail((contact_size, contact_size), Image.Resampling.NEAREST)
+            contact.alpha_composite(
+                image,
+                (x + 4 + (contact_size - image.width) // 2,
+                 y + 4 + (contact_size - image.height) // 2),
+            )
+            name = entry["name"]
+            short_name = name if len(name) <= 25 else f"{name[:18]}~{name[-3:]}"
+            label = f"{short_name} ({entry['voxels']}v)"
+            contact_draw.text(
+                (x + 5, y + 4 + contact_size), label, font=font,
+                fill=(235, 238, 241, 255),
+            )
+        contact_name = f"contact_sheet_{page_number:03d}.png"
+        contact.save(object_output / contact_name, optimize=True)
+        object_contact_pages.append(f"objects/{contact_name}")
+
+    duplicate_hashes = [names for names in texture_hashes.values() if len(names) > 1]
+    manifest = {
+        "schema_version": 1,
+        "pack": str(pack_dir.resolve()),
+        "block_count": len(blocks),
+        "texture_count": len(textures),
+        "object_count": len(object_entries),
+        "object_contact_sheets": object_contact_pages,
+        "object_gallery_pages": len(object_contact_pages),
+        "missing_texture_references": sum(len(row["missing_textures"]) for row in page_rows),
+        "orphan_textures": [row["name"] for row in texture_metrics if row["orphan"]],
+        "duplicate_pixel_groups": duplicate_hashes,
+        "seam_check_failures": [
+            {"name": row["name"], "axes": [axis for axis in row["seam_checked_axes"] if row[f"wrap_{axis}"] is False]}
+            for row in texture_metrics
+            if any(row[f"wrap_{axis}"] is False for axis in row["seam_checked_axes"])
+        ],
+        "animated_texture_count": sum(row["frame_count"] > 1 for row in texture_metrics),
+        "block_gallery_pages": math.ceil(len(blocks) / per_page),
+        "texture_gallery_pages": math.ceil(len(textures) / swatch_per_page),
+        "blocks": page_rows,
+        "textures": texture_metrics,
+        "objects": object_entries,
+        "errors": block_errors,
+        "render_note": "Isometric previews map the six block texture slots to visible faces at native detail, use a checker background to reveal transparency, and report seam continuity only on axes intended to repeat. Animated textures include every frame in a separate contact sheet. These are asset QA renders, not a replacement for final engine captures.",
+    }
+    write_json(output_dir / "gallery_manifest.json", manifest)
+    return {key: manifest[key] for key in ("block_count", "texture_count", "object_count", "object_gallery_pages", "missing_texture_references", "orphan_textures", "duplicate_pixel_groups", "seam_check_failures", "animated_texture_count", "block_gallery_pages", "texture_gallery_pages", "errors")}
+
+
 def create_reference_comparison(pack_dir: Path, reference_pack_id: str, output_dir: Path) -> int:
     manifest_path = pack_dir / "asset_manifest.json"
     if not manifest_path.is_file():
@@ -4588,7 +4931,7 @@ def command_preview(args: argparse.Namespace) -> int:
     if args.object:
         object_doc = json.loads(args.object.read_text(encoding="utf-8-sig"))
         output = args.output or args.object.with_name(args.object.stem + "_preview.png")
-        preview = preview_object(object_doc, output)
+        preview = preview_object(object_doc, output, args.pack.resolve())
         print(str(preview.resolve()))
         return 0
     if not args.textures or not args.textures.is_dir():
@@ -4600,6 +4943,196 @@ def command_preview(args: argparse.Namespace) -> int:
     create_texture_sheets(entries, output_dir)
     print(json.dumps({"count": len(entries), "preview_directory": str(output_dir.resolve())}, ensure_ascii=False))
     return 0
+
+
+def command_gallery(args: argparse.Namespace) -> int:
+    pack_dir = args.pack.resolve()
+    output_dir = args.output.resolve()
+    if output_dir.is_relative_to(pack_dir):
+        raise ValueError("visual audit output must be outside the distributable resource pack")
+    result = create_asset_gallery(pack_dir, output_dir, args.per_page)
+    if args.in_game:
+        result["in_game"] = run_in_game_asset_gallery(
+            pack_dir,
+            output_dir,
+            output_dir / "gallery_manifest.json",
+            args.executable,
+            args.page_seconds,
+        )
+    result["gallery_directory"] = str(output_dir)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    in_game_failed = args.in_game and (result.get("in_game") or {}).get("status") != "OK"
+    return 1 if result["errors"] or result["missing_texture_references"] or in_game_failed else 0
+
+
+def run_in_game_asset_gallery(
+    pack_dir: Path,
+    output_dir: Path,
+    manifest_path: Path,
+    executable: Path,
+    page_seconds: float,
+) -> dict[str, Any]:
+    """Create a disposable flat test world and capture every block page in-game."""
+    executable = executable.resolve()
+    if not executable.is_file():
+        raise ValueError(f"Release Cubatarium executable not found: {executable}")
+    if any(part.lower() == "debug" for part in executable.parts):
+        raise ValueError("asset gallery must use a Release executable")
+    if page_seconds < 3.0 or page_seconds > 60.0:
+        raise ValueError("in-game gallery --page-seconds must be in [3, 60]")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    game_dir = output_dir / "in_game"
+    capture_dir = game_dir / "frames"
+    capture_dir.mkdir(parents=True, exist_ok=True)
+    create_report = game_dir / "world_create_report.json"
+    flight_report = game_dir / "flight_sim_report.json"
+    for stale_output in (
+        *capture_dir.glob("frame_*.png"),
+        create_report,
+        game_dir / "world_create.log",
+        flight_report,
+        game_dir / "flight_sim.log",
+        game_dir / "game_gallery_report.json",
+        game_dir / "contact_sheet.png",
+    ):
+        if stale_output.is_file():
+            stale_output.unlink()
+    worlds_root = (REPO / "bin" / "worlds").resolve()
+    worlds_root.mkdir(parents=True, exist_ok=True)
+    world_name = f"_assetgen_gallery_{os.getpid()}_{random.randrange(1 << 32):08x}"
+    world_path = worlds_root / world_name
+    if world_path.exists():
+        raise RuntimeError(f"temporary gallery world already exists: {world_path}")
+    pack_manifest = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8-sig"))
+    pack_id = str(pack_manifest.get("id") or pack_dir.name)
+    create_cmd = [
+        str(executable), "--console", "--create-world",
+        "--name", world_name,
+        "--seed", "42",
+        "--generator", "flat",
+        "--preset", "balanced",
+        "--radius-chunks", "2",
+        "--pack", pack_id,
+        "--output", str(worlds_root),
+        "--report-json", str(create_report),
+    ]
+    created_world = False
+    try:
+        create_result = subprocess.run(
+            create_cmd, cwd=REPO, capture_output=True, text=True, timeout=600,
+            check=False,
+        )
+        (game_dir / "world_create.log").write_text(
+            create_result.stdout + "\n--- stderr ---\n" + create_result.stderr,
+            encoding="utf-8",
+        )
+        created_world = world_path.is_dir()
+        if create_result.returncode != 0 or not created_world:
+            raise RuntimeError(
+                "could not create temporary flat world; see "
+                f"{game_dir / 'world_create.log'}"
+            )
+
+        flight_cmd = [
+            str(executable), "--flight-sim",
+            "--world", world_name,
+            "--no-fly", "--no-hold-forward",
+            "--asset-gallery-manifest", str(manifest_path.resolve()),
+            "--asset-gallery-page-sec", str(page_seconds),
+            "--report", str(flight_report),
+        ]
+        env = os.environ.copy()
+        env["CUBA_FLIGHT_CAPTURE_DIR"] = str(capture_dir.resolve())
+        env["CUBA_FLIGHT_CAPTURE_INTERVAL_SEC"] = str(page_seconds)
+        env["CUBA_FLIGHT_CAPTURE_DELAY_SEC"] = "2.5"
+        env["CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP"] = "0"
+        env["CUBA_FIXED_TIME"] = "0.32"
+        flight_result = subprocess.run(
+            flight_cmd, cwd=REPO, env=env, capture_output=True, text=True,
+            timeout=1800, check=False,
+        )
+        (game_dir / "flight_sim.log").write_text(
+            flight_result.stdout + "\n--- stderr ---\n" + flight_result.stderr,
+            encoding="utf-8",
+        )
+        frames = sorted(capture_dir.glob("frame_*.png"))
+        flight_identity: dict[str, Any] = {}
+        if flight_report.is_file():
+            try:
+                flight_identity = json.loads(flight_report.read_text(encoding="utf-8-sig"))
+            except json.JSONDecodeError:
+                pass
+        gallery_manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+        pages_by_number: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        for entry in gallery_manifest.get("blocks", []):
+            pages_by_number[int(entry["page"])].append(entry)
+        game_pages = []
+        contact_cols, thumb_w, thumb_h, label_h = 4, 320, 180, 28
+        contact = Image.new(
+            "RGB",
+            (contact_cols * thumb_w, max(1, math.ceil(len(frames) / contact_cols)) * (thumb_h + label_h)),
+            (28, 31, 34),
+        )
+        contact_draw = ImageDraw.Draw(contact)
+        font = ImageFont.load_default()
+        for frame_index, frame_path in enumerate(frames):
+            page_number = frame_index + 1
+            page_entries = pages_by_number.get(page_number, [])
+            page_names = [entry["name"] for entry in page_entries]
+            game_pages.append({
+                "page": page_number,
+                "frame": str(frame_path.relative_to(output_dir)).replace("\\", "/"),
+                "block_count": len(page_entries),
+                "blocks": page_names,
+            })
+            with Image.open(frame_path) as source:
+                image = source.convert("RGB")
+                image.thumbnail((thumb_w, thumb_h), Image.Resampling.LANCZOS)
+                x = (frame_index % contact_cols) * thumb_w
+                y = (frame_index // contact_cols) * (thumb_h + label_h)
+                contact.paste(image, (x, y))
+                label = f"page {page_number:03d}: " + ", ".join(page_names[:3])
+                if len(page_names) > 3:
+                    label += f" +{len(page_names) - 3}"
+                contact_draw.text((x + 3, y + thumb_h + 4), label[:53], font=font, fill=(235, 238, 241))
+        if frames:
+            contact.save(game_dir / "contact_sheet.png", optimize=True)
+        expected_pages = len(pages_by_number)
+        status = "OK" if flight_result.returncode == 0 and len(frames) >= expected_pages else "INCOMPLETE"
+        report = {
+            "status": status,
+            "world": world_name,
+            "world_disposable": True,
+            "pack_id": pack_id,
+            "build_type": flight_identity.get("manifest", {}).get("build_type"),
+            "expected_pages": expected_pages,
+            "captured_pages": len(frames),
+            "capture_delay_seconds": 2.5,
+            "page_seconds": page_seconds,
+            "fixed_time_of_day": 0.32,
+            "weather": "clear",
+            "weather_auto_change": False,
+            "contact_sheet": "in_game/contact_sheet.png" if frames else None,
+            "pages": game_pages,
+            "process_exit_code": flight_result.returncode,
+            "flight_report": "in_game/flight_sim_report.json",
+            "logs": ["in_game/world_create.log", "in_game/flight_sim.log"],
+        }
+        write_json(game_dir / "game_gallery_report.json", report)
+        if status != "OK":
+            raise RuntimeError(
+                f"in-game asset gallery incomplete ({len(frames)}/{expected_pages} captures); "
+                f"see {game_dir / 'flight_sim.log'}"
+            )
+        return report
+    finally:
+        resolved_world = world_path.resolve()
+        if (
+            created_world
+            and world_name.startswith("_assetgen_gallery_")
+            and resolved_world.parent == worlds_root
+        ):
+            shutil.rmtree(resolved_world)
 
 
 def command_calibrate(args: argparse.Namespace) -> int:
@@ -4918,9 +5451,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 43,
+            "version": 45,
             "backend": "procedural",
-            "texture_synthesis": "transparent_cellular_water_species_crowns_and_three_blade_grass_v43",
+            "texture_synthesis": "toroidal_dart_water_ripples_transparent_species_crowns_and_passable_nether_wart_v45",
             "object_synthesis": "named_decor_meshes_and_solid_tree_branch_v40",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
@@ -5647,7 +6180,78 @@ def mesh_to_object(input_image: Path, output: Path, triposr_dir: Path, triposr_p
         write_object(output, object_doc)
 
 
-def preview_object(object_doc: dict[str, Any], output: Path) -> Path:
+@lru_cache(maxsize=8)
+def _preview_block_lookup(pack_path: str) -> dict[str, dict[str, Any]]:
+    lookup: dict[str, dict[str, Any]] = {}
+    for path in (Path(pack_path) / "blocks").glob("*.json"):
+        try:
+            block = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(block.get("name"), str):
+            lookup[block["name"]] = block
+    return lookup
+
+
+def _draw_textured_object_panel(
+    voxels: list[tuple[int, int, int, str]], pack_dir: Path, panel_size: int = 320,
+) -> Image.Image:
+    """Render a voxel prefab with the pack's real faces and alpha cutouts."""
+    half = 16
+    projected = [
+        ((x - z) * half, (x + z) * half / 2 - y * half * 2)
+        for x, y, z, _kind in voxels
+    ]
+    min_x = min(point[0] - half for point in projected)
+    max_x = max(point[0] + half for point in projected)
+    min_y = min(point[1] for point in projected)
+    max_y = max(point[1] + half * 3 for point in projected)
+    margin = 16
+    source = Image.new(
+        "RGBA", (math.ceil(max_x - min_x + margin * 2), math.ceil(max_y - min_y + margin * 2)),
+        (51, 55, 60, 255),
+    )
+    checker = ImageDraw.Draw(source)
+    for y in range(0, source.height, 8):
+        for x in range(0, source.width, 8):
+            if ((x // 8) + (y // 8)) & 1:
+                checker.rectangle((x, y, x + 7, y + 7), fill=(76, 80, 84, 255))
+    textures_dir = pack_dir / "textures" / "blocks"
+    blocks = _preview_block_lookup(str(pack_dir.resolve()))
+    draw_order = sorted(
+        voxels,
+        key=lambda voxel: (voxel[0] + voxel[2], -voxel[1], voxel[0] - voxel[2]),
+    )
+    for x, y, z, kind in draw_order:
+        top_x = (x - z) * half - min_x + margin
+        top_y = (x + z) * half / 2 - y * half * 2 - min_y + margin
+        block = blocks.get(kind)
+        if block is None:
+            block = {"name": kind, "textures": []}
+        style = str((block.get("render") or {}).get("style", "cube"))
+        if style == "cross":
+            stems = block.get("textures", [])
+            stem = stems[0] if isinstance(stems, list) and stems else ""
+            path = textures_dir / f"{stem}.png"
+            sprite = _gallery_texture(path) if stem and path.is_file() else Image.new("RGBA", (16, 16), (130, 170, 70, 255))
+            sprite = sprite.resize((24, 32), Image.Resampling.NEAREST)
+            source.alpha_composite(sprite, (round(top_x - 12), round(top_y + 8)))
+            source.alpha_composite(ImageOps.mirror(sprite), (round(top_x - 10), round(top_y + 8)))
+        else:
+            _draw_iso_block(
+                source, block, textures_dir,
+                (round(top_x), round(top_y)), scale=1, checker=False,
+            )
+    image = Image.new("RGBA", (panel_size, panel_size), (34, 38, 43, 255))
+    draw = ImageDraw.Draw(image)
+    draw.text((12, 8), "textured iso", font=ImageFont.load_default(), fill=(225, 230, 235, 255))
+    content = source.convert("RGBA")
+    content.thumbnail((panel_size - 24, panel_size - 36), Image.Resampling.NEAREST)
+    image.alpha_composite(content, ((panel_size - content.width) // 2, 26 + (panel_size - 26 - content.height) // 2))
+    return image
+
+
+def preview_object(object_doc: dict[str, Any], output: Path, pack_dir: Path = PACK_DIR) -> Path:
     voxels = object_doc.get("blocks") or []
     coords = [(int(v["dx"]), int(v["dy"]), int(v["dz"]), str(v["type"])) for v in voxels]
     if not coords:
@@ -5661,7 +6265,7 @@ def preview_object(object_doc: dict[str, Any], output: Path) -> Path:
     tile = 24
     pad = 12
     panel_width = 320
-    panels: list[Image.Image] = []
+    panels: list[Image.Image] = [_draw_textured_object_panel(coords, pack_dir)]
     for title, project in projections:
         points = [(project(x, y, z)[0], project(x, y, z)[1], kind) for x, y, z, kind in coords]
         min_x, max_x = min(p[0] for p in points), max(p[0] for p in points)
@@ -6172,6 +6776,7 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
     }
     passable_organic_materials = {
         "fern", "reed", "kelp", "coral", "blossom", "mushroom_stem",
+        "nether_wart",
     }
     for name, (family, material) in block_materials.items():
         if family != "organic" or not material:
@@ -6536,6 +7141,13 @@ def make_parser() -> argparse.ArgumentParser:
     preview.add_argument("--output", type=Path)
     preview.add_argument("--pack", type=Path, default=PACK_DIR)
     preview.add_argument("--limit", type=int, default=120, help="maximum number of representative blocks in the face preview")
+    gallery = sub.add_parser("gallery", help="render every block face, texture, and voxel object for visual asset QA")
+    gallery.add_argument("--pack", type=Path, default=PACK_DIR)
+    gallery.add_argument("--output", type=Path, default=REPO / "assetgen_output" / "visual_audit")
+    gallery.add_argument("--per-page", type=int, default=40, help="block samples per contact sheet (1-80)")
+    gallery.add_argument("--in-game", action="store_true", help="also render every page in a temporary flat world with the Release game renderer")
+    gallery.add_argument("--executable", type=Path, default=REPO / "bin" / "Cubatarium.exe")
+    gallery.add_argument("--page-seconds", type=float, default=6.0, help="in-game dwell time and screenshot interval for each page")
     return parser
 
 
@@ -6573,6 +7185,8 @@ def main(argv: list[str] | None = None) -> int:
             return command_validate(args)
         if args.command == "preview":
             return command_preview(args)
+        if args.command == "gallery":
+            return command_gallery(args)
         parser.error("unknown command")
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
         print(f"assetgen: {exc}", file=sys.stderr)

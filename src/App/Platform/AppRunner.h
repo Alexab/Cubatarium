@@ -84,6 +84,10 @@ struct FlightSimOptions
   /// Show GLFW window (default hidden). Hidden still has a GL context; lighting
   /// runs the same path — use visible only for human eyeballing.
   bool VisibleWindow{false};
+  /// Render every block in a generated visual QA gallery and capture one page
+  /// per interval. The input is tools/assetgen.py's gallery manifest.
+  std::string AssetGalleryManifest;
+  double AssetGalleryPageSeconds{6.0};
 };
 
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options);

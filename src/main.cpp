@@ -212,6 +212,19 @@ int main(int argc, char *argv[])
         {
           opt.ReportPath = argv[++j];
         }
+        else if (std::strcmp(argv[j], "--asset-gallery-manifest") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.AssetGalleryManifest = argv[++j];
+          opt.Fly = false;
+          opt.HoldForward = false;
+          opt.HoldSpace = false;
+        }
+        else if (std::strcmp(argv[j], "--asset-gallery-page-sec") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.AssetGalleryPageSeconds = std::atof(argv[++j]);
+        }
         else if (std::strcmp(argv[j], "--fly-stop") == 0)
         {
           opt.FlyStopMode = true;
