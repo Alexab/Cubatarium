@@ -9,9 +9,9 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 28,
+    "version": 30,
     "backend": "procedural",
-    "texture_synthesis": "species_scaled_bark_named_conifer_foliage_marram_grass_v28",
+    "texture_synthesis": "semantic_sprite_coverage_junglewood_species_named_decor_v30",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"
@@ -47460,7 +47460,7 @@
         16,
         16
       ],
-      "pixel_sha256": "78cedee6dd5ca6ec31add6d61cd6317473040b9a0a4896c24b0ac690e2847a95",
+      "pixel_sha256": "96781693d47fbc5ba6cedf906cdafa72056990745c5ca322329161f0b027f387",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "carrots_3",
@@ -47470,7 +47470,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.3398,
-      "sprite_alpha_target_coverage": 0.3398,
+      "sprite_alpha_target_coverage": 0.32,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -47967,7 +47967,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c4414b76ad974e30eb4d3b093b31e94912ad222f0402c9cfcf9e160fe3ebdf48",
+      "pixel_sha256": "5d2c5f61a2b5060c9e8c26f991c2d02b3d313eec209c0aa91cd57b2fdccd79c9",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "cocoa_2",
@@ -47977,7 +47977,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.6328,
-      "sprite_alpha_target_coverage": 0.6328,
+      "sprite_alpha_target_coverage": 0.32,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -48459,7 +48459,7 @@
         16,
         16
       ],
-      "pixel_sha256": "de52f76175325bd8a31ca099dc7f76a5d35c507c61ee42d1e15717dbd6006ec5",
+      "pixel_sha256": "0c682537e9e495ec7b0e1920ec16c68c90ec01ad1b663e18bcf7d82cefa68b42",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "fire_0",
@@ -48469,7 +48469,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.8672,
-      "sprite_alpha_target_coverage": 0.8672,
+      "sprite_alpha_target_coverage": 0.48,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -48486,7 +48486,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d29437e043623f552624d286063f4b2c80e12965fba139dfe00195a064f40f33",
+      "pixel_sha256": "be12b3cde59e32a4878a3791f2525e39ea33a2a2a466fc39ff8af9fb1640e1b3",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "fire_1",
@@ -48496,7 +48496,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.7969,
-      "sprite_alpha_target_coverage": 0.7969,
+      "sprite_alpha_target_coverage": 0.48,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -48890,8 +48890,8 @@
       "stem": "mt_jukebox_top",
       "family": "wood",
       "material": "oak",
-      "variant": "endgrain",
-      "role": "endgrain",
+      "variant": "plank",
+      "role": "top",
       "seed": 12405650634851044602,
       "backend": "procedural",
       "seam_blend_width": 2,
@@ -48900,7 +48900,7 @@
         16,
         16
       ],
-      "pixel_sha256": "973b5278f2445eccefc05d8313b94d8e1957093cc2695e40c62708eaa3abfaf5",
+      "pixel_sha256": "28c7947da24946c1371396da6c952042cfbafc88df6ffaccfc458b3abe902813",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "jukebox_top",
@@ -48914,7 +48914,7 @@
       "stem": "mt_ladder",
       "family": "wood",
       "material": "oak",
-      "variant": "stripped",
+      "variant": "plank",
       "role": "side",
       "seed": 5693547878894547462,
       "backend": "procedural",
@@ -51254,8 +51254,8 @@
     {
       "stem": "mt_mtg_junglewood_default_junglewood",
       "family": "wood",
-      "material": "oak",
-      "variant": "stripped",
+      "material": "jungle",
+      "variant": "plank",
       "role": "side",
       "seed": 773266474965319616,
       "backend": "procedural",
@@ -51265,7 +51265,7 @@
         16,
         16
       ],
-      "pixel_sha256": "cc95184f2965a2db6aea38f814eba7a210a02aefe107e0c42c1cebf158c10c30",
+      "pixel_sha256": "4c139b8dcdc58e2fe2ed565a5d52fddf247e08e99ad1d91c62f9d53c87e4e0fc",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_junglewood_default_junglewood",
@@ -51279,7 +51279,7 @@
       "stem": "mt_mtg_ladder_steel_default_ladder_steel",
       "family": "wood",
       "material": "oak",
-      "variant": "stripped",
+      "variant": "plank",
       "role": "side",
       "seed": 8967487000213324213,
       "backend": "procedural",
@@ -51337,7 +51337,7 @@
         16,
         16
       ],
-      "pixel_sha256": "12c7c48915e47349a2502bf76173d4c82011d09cb59dbfffbb02978abbe27f3a",
+      "pixel_sha256": "bd6230dac7e2c20c0284731097e558034a9ff1398fd2922a433e8c7591bd5618",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_large_cactus_seedling_default_large_cactus_seedling",
@@ -51347,7 +51347,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.5078,
-      "sprite_alpha_target_coverage": 0.5078,
+      "sprite_alpha_target_coverage": 0.32,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -51634,7 +51634,7 @@
         16,
         16
       ],
-      "pixel_sha256": "cc4515539ad8b0e198245c907b0549d44885d976258632cee5818e88140516b1",
+      "pixel_sha256": "64ad86af1b90d4998d724880be51f6439902c4394573805271e490c2886cdb48",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_papyrus_default_papyrus",
@@ -51644,7 +51644,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.5352,
-      "sprite_alpha_target_coverage": 0.5352,
+      "sprite_alpha_target_coverage": 0.24,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -52735,7 +52735,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a4dcc48bddba025d5d3c933ff09362d01f1cc8130f338c431a5b0b1183915947",
+      "pixel_sha256": "20824481094b3110d3b32fbb8e2a7bb9199ff4f23840fcd62ed3b31ff6a6060a",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mushroom_brown",
@@ -52745,7 +52745,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.5312,
-      "sprite_alpha_target_coverage": 0.5312,
+      "sprite_alpha_target_coverage": 0.32,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -52762,7 +52762,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4518fa3fc832c947a8c8c6b25f35b22ea3aa4d37e4120d8659445568a67e647a",
+      "pixel_sha256": "64f4ad26e873e4b7ee32ff19918b670907f774eb430db3124e51239374011ae4",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mushroom_red",
@@ -52772,7 +52772,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.7148,
-      "sprite_alpha_target_coverage": 0.7148,
+      "sprite_alpha_target_coverage": 0.32,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -52933,7 +52933,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b3d3334eef5f3a3bfd5314bb91a1412258bcbbfd9e84388721ef936ed60ded53",
+      "pixel_sha256": "98c6add6b02043cd2649e73f9d5126d26d56476416c3aa256926cc2f77473038",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "netherStalk_2",
@@ -52943,7 +52943,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.5352,
-      "sprite_alpha_target_coverage": 0.5352,
+      "sprite_alpha_target_coverage": 0.32,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -53224,7 +53224,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2d3e3bdb4fbc1af610a0208c054dfd69731e97b8e478c5f1a655453ecd81bc25",
+      "pixel_sha256": "2957f386a5d0c1c10e30fbb79b9cd50f455bce082cef206622a471cef7d06fff",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "potatoes_3",
@@ -53234,7 +53234,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.4922,
-      "sprite_alpha_target_coverage": 0.4922,
+      "sprite_alpha_target_coverage": 0.32,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -53662,7 +53662,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f64ef2c83cb424dc4e11ac7d8687cae9971d94a5e4723b689f94f5b5bf1131da",
+      "pixel_sha256": "a2a3fc4be5f15103be4ef324d17233449cce3e9dacbd703a2a9c6bc792997f13",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "reeds",
@@ -53672,7 +53672,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.5352,
-      "sprite_alpha_target_coverage": 0.5352,
+      "sprite_alpha_target_coverage": 0.24,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -54454,7 +54454,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d00bd9f0803fd850bb1c191f4a81f67e40a5ee7e0da26c3a2f6284f064f00f7d",
+      "pixel_sha256": "e346911c14a706f5101e5399bc845a83e9e4a9aaa88728fccb0b8de75c05155a",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "vine",
@@ -54464,7 +54464,7 @@
       "license": "CC0-1.0",
       "license_review_required": false,
       "sprite_alpha_reference_coverage": 0.5352,
-      "sprite_alpha_target_coverage": 0.5352,
+      "sprite_alpha_target_coverage": 0.3,
       "sprite_alpha_reference_pack": "minetest_default_16"
     },
     {
@@ -54643,7 +54643,7 @@
       "stem": "mt_workbench_front",
       "family": "wood",
       "material": "oak",
-      "variant": "stripped",
+      "variant": "plank",
       "role": "side",
       "seed": 15537460324512776813,
       "backend": "procedural",
@@ -54667,7 +54667,7 @@
       "stem": "mt_workbench_side",
       "family": "wood",
       "material": "oak",
-      "variant": "bark",
+      "variant": "plank",
       "role": "side",
       "seed": 3359357913122149351,
       "backend": "procedural",
@@ -54677,7 +54677,7 @@
         16,
         16
       ],
-      "pixel_sha256": "76601ce7ae3f9a0fcf78cd4d90e8d292e36407cf98cf9bb897770a111acd69d8",
+      "pixel_sha256": "19736117b1926a8238d821d1d034cd772b948260dc67b311563bb534ef49f3e0",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "workbench_side",
@@ -54691,8 +54691,8 @@
       "stem": "mt_workbench_top",
       "family": "wood",
       "material": "oak",
-      "variant": "endgrain",
-      "role": "endgrain",
+      "variant": "plank",
+      "role": "top",
       "seed": 8924861936677639380,
       "backend": "procedural",
       "seam_blend_width": 2,
@@ -54701,7 +54701,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7106534aff1b3b347ebcd5681d4954bbe200bdc67344ae17db83109fe983f2b0",
+      "pixel_sha256": "589c24a81eceda95b8b4d405888ababf013a9f3990f91a5d494bb95eb5729dcd",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "workbench_top",

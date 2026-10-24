@@ -1546,7 +1546,7 @@ def reference_alpha_coverage(source_stem: str, source_pack: str) -> float | None
 def semantic_sprite_alpha_coverage(
     source_stem: str, reference_coverage: float | None,
 ) -> float | None:
-    """Avoid thinning authored grass silhouettes to legacy alpha coverage."""
+    """Keep authored silhouettes readable when references use dense masks."""
     if reference_coverage is None:
         return None
     name = source_stem.lower()
@@ -1560,6 +1560,25 @@ def semantic_sprite_alpha_coverage(
         # coverage to a single authored blade left only a few stray pixels;
         # the 3D tuft mesh supplies the other viewing angles at runtime.
         return max(reference_coverage, 0.16)
+    if any(token in name for token in ("reed", "papyrus", "kelp", "seagrass")):
+        # Source textures contain whole stands. Our cards contain one named
+        # stalk or blade, and the reed mesh supplies the other directions.
+        # Matching a 50%+ source mask expands each single stalk into a blob.
+        return min(reference_coverage, 0.24)
+    if any(token in name for token in ("mushroom", "cocoa", "cactus_seedling")):
+        # Preserve cap, pod and seedling silhouettes instead of expanding them
+        # to the dense alpha masks used by the reference sprites.
+        return min(reference_coverage, 0.32)
+    if "vine" in name:
+        return min(reference_coverage, 0.30)
+    if any(token in name for token in (
+        "netherstalk", "potatoes", "carrots", "wheat", "pumpkin_stem",
+        "melon_stem",
+    )):
+        return min(reference_coverage, 0.32)
+    if "fire" in name or "flame" in name:
+        # Keep a broad flame silhouette while retaining its interior tongues.
+        return min(reference_coverage, 0.48)
     return reference_coverage
 
 
@@ -2936,7 +2955,7 @@ def material_variant(stem: str, family: str) -> tuple[str, str]:
         # bark never falls through to a random wood species.
         wood_aliases = (
             ("redwood", ("redwood",)), ("mangrove", ("mangrove",)),
-            ("jungle", ("jungle", "jungletree")),
+            ("jungle", ("jungle", "jungletree", "junglewood")),
             ("birch", ("birch",)), ("cedar", ("cedar",)),
             ("maple", ("maple",)), ("walnut", ("walnut",)),
             ("beech", ("beech",)), ("willow", ("willow",)),
@@ -3013,13 +3032,24 @@ def material_variant(stem: str, family: str) -> tuple[str, str]:
     elif family == "crystal" and ("block_emerald" in clean or "block_redstone" in clean):
         variant = "bright"
     elif family == "wood":
+        explicit_variant = next((
+            candidate for candidate in (
+                "stripped", "aged", "dark", "pale", "carved", "cut",
+                "weathered",
+            ) if candidate in words
+        ), None)
+        trunk_texture = (
+            any(token in words for token in ("bark", "log", "tree"))
+            or any(token.endswith("tree") for token in words)
+        )
+        # `_side` occurs on workbenches, chests, bookshelves and planks as
+        # often as it does on logs. Reserve bark/endgrain for named trunks;
+        # crafted wood faces use the plank grain unless explicitly labeled.
         variant = (
-            "endgrain" if any(t in words for t in ("top", "end")) else
-            "bark" if any(
-                t in words for t in ("side", "bark", "log", "tree")
-            ) or any(token.endswith("tree") for token in words) else
-            "plank" if any(t in words for t in ("wood", "plank", "door", "trapdoor", "bookshelf", "fence")) else
-            "stripped"
+            explicit_variant if explicit_variant is not None else
+            "endgrain" if trunk_texture and any(t in words for t in ("top", "end")) else
+            "bark" if trunk_texture else
+            "plank"
         )
     elif family == "masonry" and "brick" in words:
         variant = "brick"
@@ -3082,7 +3112,8 @@ def source_texture_role(source_stem: str, family: str) -> str:
     if any(token in value for token in ("ore", "stone_with_", "mineral")):
         return "ore"
     if family == "wood" and any(token in value for token in ("top", "end", "tree_end")):
-        return "endgrain"
+        trunk_texture = any(token in value for token in ("bark", "log", "tree"))
+        return "endgrain" if trunk_texture else "top"
     if family == "soil" and any(token in value for token in ("snow", "grass_top")):
         return "top"
     return "side"
@@ -4401,9 +4432,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 28,
+            "version": 30,
             "backend": "procedural",
-            "texture_synthesis": "species_scaled_bark_named_conifer_foliage_marram_grass_v28",
+            "texture_synthesis": "semantic_sprite_coverage_junglewood_species_named_decor_v30",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,
