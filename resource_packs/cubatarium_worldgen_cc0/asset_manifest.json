@@ -9,10 +9,10 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 37,
+    "version": 39,
     "backend": "procedural",
     "texture_synthesis": "cellular_water_ripples_and_species_matched_bark_v37",
-    "object_synthesis": "aspen_broad_crown_willow_drapes_mangrove_roots_coral_crystals_v34",
+    "object_synthesis": "pine_open_whorls_semantic_plant_meshes_v36",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"

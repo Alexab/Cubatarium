@@ -310,6 +310,10 @@ BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j)
     {
       r.DecorShape = BlockDecorShape::Pad;
     }
+    else if (shape == "mushroom")
+    {
+      r.DecorShape = BlockDecorShape::Mushroom;
+    }
   }
   if (j.contains("fog_color") && j["fog_color"].is_array() &&
       j["fog_color"].size() >= 3)

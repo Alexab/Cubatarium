@@ -24,6 +24,7 @@
   "render": {
     "texture_variation": 0.48,
     "style": "cross",
+    "shape": "mushroom",
     "transparent": true,
     "double_sided": true
   },

@@ -118,6 +118,22 @@ inline void AppendDecorSprite(BlockDecorShape shape, const glm::vec3 &center,
     indices.insert(indices.end(), {base, base + 1, base + 2, base, base + 2, base + 3});
     return;
   }
+  if (shape == BlockDecorShape::Mushroom)
+  {
+    // Three offset, differently-sized cards make one mushroom sprite read as
+    // a small volumetric clump from all directions instead of a flat X.
+    static constexpr float kAngles[] = {0.0f, 1.0472f, 2.0944f};
+    static constexpr float kOffsets[] = {-0.14f, 0.12f, 0.0f};
+    static constexpr float kWidths[] = {0.38f, 0.34f, 0.31f};
+    static constexpr float kHeights[] = {0.78f, 0.92f, 0.68f};
+    for (int i = 0; i < 3; ++i)
+    {
+      AppendDecorQuad(center, kAngles[i], kOffsets[i], 0.0f, kWidths[i],
+                      kHeights[i], (i == 1 ? 0.035f : -0.025f),
+                      vertices, indices);
+    }
+    return;
+  }
   if (shape == BlockDecorShape::Tuft)
   {
     static constexpr float kAngles[] = {0.0f, 0.9f, 1.9f, 2.8f, 4.0f, 5.1f};

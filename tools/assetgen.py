@@ -2543,6 +2543,32 @@ def is_cross_decor_block(block_name: str) -> bool:
     ))
 
 
+def decor_shape_for_name(block_name: str, material: str = "") -> str:
+    """Choose a transparent mesh from the plant's visible structure."""
+    name = f"{block_name} {material}".lower()
+    if any(token in name for token in ("fire", "flame")):
+        return "flame"
+    if any(token in name for token in ("waterlily", "lily_pad")):
+        return "pad"
+    if "mushroom" in name:
+        return "mushroom"
+    if any(token in name for token in (
+        "reed", "papyrus", "kelp", "seagrass", "vine",
+    )):
+        return "reed"
+    if any(token in name for token in (
+        "fern", "grass", "junglegrass", "crop", "carrot", "potato",
+        "wheat", "deadbush", "shrub", "pine_needles", "cactus_seedling",
+    )):
+        return "tuft"
+    if any(token in name for token in (
+        "flower", "rose", "tulip", "dandelion", "blossom", "coral",
+        "bush_sapling",
+    )):
+        return "cluster"
+    return "cross"
+
+
 def _cactus_surface_detail(image: Image.Image, source_stem: str, seed: int) -> Image.Image:
     """Give cactus side and end faces recognizable ribs and areoles at 16px."""
     size = image.width
@@ -3664,22 +3690,17 @@ def block_definition(record: dict[str, str], face_stems: list[str], block_id: in
         physics = {"movement": {"occupancy": 0.0}}
     mushroom_cap = record["material"].startswith("mushroom_") and record["material"] != "mushroom_stem"
     if family == "organic" and (record["material"] in ("blossom", "fern", "reed", "mushroom", "kelp", "coral") or record["material"].startswith("flower_") or mushroom_cap):
-        shape = (
-            "flame" if "fire" in record["name"] else
-            "reed" if record["material"] in ("reed", "kelp") else
-            "cluster" if record["material"] == "coral" else
-            "tuft" if record["material"] == "fern" else
-            "cross"
-        )
-        if mushroom_cap or record["material"] == "mushroom":
-            shape = "cross"
+        shape = decor_shape_for_name(record["name"], record["material"])
         render.update({"style": "cross", "shape": shape, "transparent": True, "double_sided": True})
         render["texture_variation"] = 1.0
         physics = {"movement": {"occupancy": 0.0}}
     elif family == "organic" and record["material"] == "mushroom_stem":
-        # A mushroom stem is a narrow cross-sprite decor voxel, so it keeps
-        # both its transparent silhouette and pass-through movement behavior.
-        render.update({"style": "cross", "transparent": True, "double_sided": True})
+        # The three-plane silhouette remains transparent and passable while
+        # avoiding the same two-card X used by every basic plant sprite.
+        render.update({
+            "style": "cross", "shape": "mushroom",
+            "transparent": True, "double_sided": True,
+        })
         physics = {"movement": {"occupancy": 0.0}}
     dig_group = "cracky" if family in ("rock", "masonry", "metal", "crystal") else "crumbly"
     definition = {
@@ -3846,7 +3867,7 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
     voxels: list[dict[str, Any]] = []
     height = max(size, {
         "oak": 8, "ash": 9, "beech": 8, "birch": 11, "aspen": 11,
-        "cedar": 11, "larch": 10, "pine": 10, "redwood": 13,
+        "cedar": 11, "larch": 10, "pine": 12, "redwood": 13,
         "spruce": 13, "jungle": 11, "maple": 8, "walnut": 8, "willow": 9,
         "poplar": 14, "acacia": 8, "mangrove": 8,
     }.get(wood, 7))
@@ -3881,7 +3902,63 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
                 y = max(0, 3 - step) if wood == "mangrove" else max(0, 2 - step)
                 add_object_block(voxels, x, y, z, trunk)
 
-    if wood in conifers:
+    if wood == "pine":
+        # Open-grown pine has a long, visible leader and spaced lateral
+        # whorls. A filled ellipsoid makes it read like a broadleaf tree, so
+        # model the branch structure directly and put needles in short tip
+        # clusters. The phase and branch lengths are seeded for repeatability.
+        branch_tiers = ((5, 4), (8, 3), (10, 2))
+        phase = rng.uniform(-0.24, 0.24)
+        for tier_index, (tier_y, nominal_length) in enumerate(branch_tiers):
+            branch_count = 5 if tier_index < 2 else 4
+            tier_phase = phase + tier_index * 0.29
+            for branch_index in range(branch_count):
+                angle = (
+                    tier_phase + math.tau * branch_index / branch_count
+                    + rng.uniform(-0.10, 0.10)
+                )
+                length = max(
+                    2,
+                    nominal_length + rng.choice((-1, 0, 0, 1)),
+                )
+                direction_x, direction_z = math.cos(angle), math.sin(angle)
+                normal_x, normal_z = -direction_z, direction_x
+                droop = 1 if tier_index == 0 and branch_index % 2 == 0 else 0
+                for step in range(1, length + 1):
+                    branch_x = round(direction_x * step)
+                    branch_z = round(direction_z * step)
+                    branch_y = tier_y - (
+                        droop if step >= length - 1 else 0
+                    )
+                    branch_block = (
+                        trunk if step <= max(1, length - 2) else leaves
+                    )
+                    add_object_block(voxels, branch_x, branch_y, branch_z,
+                                     branch_block)
+
+                # Short needle fans cover the distal branch segments, but
+                # leave the inner whorl and spaces between branches open.
+                for along in range(max(1, length - 2), length + 1):
+                    branch_x = round(direction_x * along)
+                    branch_z = round(direction_z * along)
+                    branch_y = tier_y - droop
+                    for side in (-1, 0, 1):
+                        tip_x = round(branch_x + normal_x * side)
+                        tip_z = round(branch_z + normal_z * side)
+                        if side == 0:
+                            if rng.random() < 0.58:
+                                add_object_block(
+                                    voxels, tip_x, branch_y + 1, tip_z, leaves
+                                )
+                        elif rng.random() < 0.74:
+                            add_object_block(
+                                voxels, tip_x, branch_y, tip_z, leaves
+                            )
+        # The narrow upper leader ends in a small tuft around its tip.
+        for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, 1)):
+            add_object_block(voxels, dx, height - 1, dz, leaves)
+        add_object_block(voxels, 0, height, 0, leaves)
+    elif wood in conifers:
         # A broad, tapered needle crown replaces the old narrow column. Larch
         # has gaps between its branch tiers; redwood keeps most foliage high.
         crown_bottom = max(2, round(height * (
@@ -4667,15 +4744,7 @@ def build_pack(
             render["style"] = "cross"
             render["double_sided"] = True
         if render.get("style") == "cross":
-            render["shape"] = (
-                "flame" if "fire" in name else
-                "pad" if any(token in name for token in ("waterlily", "lily_pad")) else
-                "cross" if "mushroom" in name else
-                "reed" if any(token in name for token in ("reed", "papyrus", "kelp", "seagrass", "vine")) else
-                "tuft" if any(token in name for token in ("grass", "fern", "deadbush", "shrub", "crop", "carrot", "potato", "wheat", "cactus_seedling", "pine_needles")) else
-                "cluster" if "bush_sapling" in name else
-                "cross"
-            )
+            render["shape"] = decor_shape_for_name(name)
             render["texture_variation"] = 1.0
             render["double_sided"] = True
             physics = block.setdefault("physics", {})
@@ -4812,10 +4881,10 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 37,
+            "version": 39,
             "backend": "procedural",
             "texture_synthesis": "cellular_water_ripples_and_species_matched_bark_v37",
-            "object_synthesis": "aspen_broad_crown_willow_drapes_mangrove_roots_coral_crystals_v34",
+            "object_synthesis": "pine_open_whorls_semantic_plant_meshes_v36",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,
@@ -6085,6 +6154,22 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
             errors.append(f"{name}: decorative plant must use cross or cutout rendering")
         if float(movement.get("occupancy", 1.0)) >= 1.0:
             errors.append(f"{name}: decorative plant must be passable")
+        expected_shape = decor_shape_for_name(name, material)
+        if render.get("shape", "cross") != expected_shape:
+            errors.append(
+                f"{name}: decor shape {render.get('shape', 'cross')!r} does not match "
+                f"its semantic profile {expected_shape!r}"
+            )
+    for block in blocks:
+        name = str(block.get("name", ""))
+        render = block.get("render", {})
+        if isinstance(render, dict) and render.get("style") == "cross" and is_cross_decor_block(name):
+            expected_shape = decor_shape_for_name(name)
+            if render.get("shape", "cross") != expected_shape:
+                errors.append(
+                    f"{name}: decor shape {render.get('shape', 'cross')!r} does not match "
+                    f"its semantic profile {expected_shape!r}"
+                )
     for object_path in sorted(objects_dir.glob("*.json")) if objects_dir.exists() else []:
         try:
             obj = json.loads(object_path.read_text(encoding="utf-8-sig"))
@@ -6173,22 +6258,25 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
                     foliage_by_y[int(voxel["dy"])] += 1
                 low_rows = sorted(foliage_by_y.items())[:2]
                 high_rows = sorted(foliage_by_y.items(), reverse=True)[:2]
-                if low_rows and high_rows and sum(count for _, count in low_rows) <= sum(count for _, count in high_rows):
+                if species != "pine" and low_rows and high_rows and sum(count for _, count in low_rows) <= sum(count for _, count in high_rows):
                     errors.append(f"{object_path.name}: conifer crown does not taper toward its top")
                 if species == "pine":
                     pine_rows = sorted(foliage_by_y)
-                    row_widths = [
-                        max(int(v["dx"]) for v in foliage_voxels if int(v["dy"]) == y)
-                        - min(int(v["dx"]) for v in foliage_voxels if int(v["dy"]) == y)
-                        + 1
-                        for y in pine_rows
+                    far_needles = [
+                        voxel for voxel in foliage_voxels
+                        if abs(int(voxel["dx"])) + abs(int(voxel["dz"])) >= 3
                     ]
-                    if (
-                        len(row_widths) < 4
-                        or max(row_widths[1:-1], default=0) <= max(row_widths[0], row_widths[-1])
-                    ):
+                    quadrants = {
+                        (int(int(voxel["dx"]) > 0), int(int(voxel["dz"]) > 0))
+                        for voxel in far_needles
+                    }
+                    if len(pine_rows) < 6 or len(foliage_voxels) > 128:
                         errors.append(
-                            f"{object_path.name}: pine crown should be rounded, with its widest branches in the middle"
+                            f"{object_path.name}: pine should have a sparse, vertically spaced crown"
+                        )
+                    if len(quadrants) < 4:
+                        errors.append(
+                            f"{object_path.name}: pine branch whorls must spread in all directions"
                         )
         elif object_name.startswith("asset_boulder_"):
             material = object_name.removeprefix("asset_boulder_")

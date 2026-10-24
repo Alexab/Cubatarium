@@ -19,231 +19,45 @@
   ],
   "blocks": [
     {
-      "dx": -5,
-      "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -5,
-      "dy": 7,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -5,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
       "dx": -4,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 7,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 7,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 7,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 7,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 8,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 8,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -4,
-      "dy": 8,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
       "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 6,
       "dz": -2,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": -3,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 6,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 7,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 7,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 7,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 7,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 8,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 8,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 8,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 8,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 8,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -3,
-      "dy": 9,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
       "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 4,
+      "dz": 2,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
+      "dz": -3,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
       "dz": -1,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 5,
+      "dz": 2,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": -3,
+      "dy": 6,
+      "dz": -3,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -261,187 +75,49 @@
     {
       "dx": -2,
       "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 5,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
       "dz": -4,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": -2,
-      "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
+      "dy": 5,
       "dz": -2,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": -2,
-      "dy": 6,
+      "dy": 5,
       "dz": -1,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": -2,
-      "dy": 6,
+      "dy": 8,
+      "dz": -3,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
+      "dz": -2,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": -2,
+      "dy": 8,
       "dz": 0,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": -2,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 6,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 7,
-      "dz": 5,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 8,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 8,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 8,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 8,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
       "dy": 8,
       "dz": 1,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": -2,
-      "dy": 8,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 9,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 9,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 9,
+      "dy": 10,
       "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 9,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -2,
-      "dy": 9,
-      "dz": 2,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -454,25 +130,19 @@
       "dx": -1,
       "dy": 5,
       "dz": -2,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": -1,
       "dy": 5,
       "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": -1,
       "dy": 5,
       "dz": 1,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": -1,
@@ -483,109 +153,13 @@
     {
       "dx": -1,
       "dy": 5,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 6,
       "dz": 4,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": -1,
-      "dy": 7,
-      "dz": -5,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
+      "dy": 6,
       "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 7,
-      "dz": 5,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 8,
-      "dz": -4,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -610,7 +184,7 @@
       "dx": -1,
       "dy": 8,
       "dz": 0,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": -1,
@@ -621,13 +195,7 @@
     {
       "dx": -1,
       "dy": 8,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": -1,
-      "dy": 8,
-      "dz": 4,
+      "dz": 2,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -639,7 +207,7 @@
     {
       "dx": -1,
       "dy": 9,
-      "dz": -1,
+      "dz": -2,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -650,14 +218,32 @@
     },
     {
       "dx": -1,
-      "dy": 9,
-      "dz": 2,
+      "dy": 10,
+      "dz": -1,
+      "type": "cu_wood_pine_bark"
+    },
+    {
+      "dx": -1,
+      "dy": 10,
+      "dz": 1,
+      "type": "cu_wood_pine_bark"
+    },
+    {
+      "dx": -1,
+      "dy": 11,
+      "dz": -1,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": -1,
-      "dy": 9,
-      "dz": 3,
+      "dy": 11,
+      "dz": 0,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 11,
+      "dz": 1,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -687,13 +273,7 @@
     {
       "dx": 0,
       "dy": 4,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 4,
-      "dz": -1,
+      "dz": -3,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -701,12 +281,6 @@
       "dy": 4,
       "dz": 0,
       "type": "cu_wood_pine_bark"
-    },
-    {
-      "dx": 0,
-      "dy": 4,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
     },
     {
       "dx": 0,
@@ -723,18 +297,6 @@
     {
       "dx": 0,
       "dy": 5,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 5,
       "dz": 0,
       "type": "cu_wood_pine_bark"
     },
@@ -742,36 +304,24 @@
       "dx": 0,
       "dy": 5,
       "dz": 1,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": 0,
       "dy": 5,
       "dz": 2,
+      "type": "cu_wood_pine_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 3,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 0,
-      "dy": 6,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": -1,
+      "dy": 5,
+      "dz": 4,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -779,18 +329,6 @@
       "dy": 6,
       "dz": 0,
       "type": "cu_wood_pine_bark"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
     },
     {
       "dx": 0,
@@ -800,87 +338,27 @@
     },
     {
       "dx": 0,
-      "dy": 6,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
+      "dy": 7,
+      "dz": 0,
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": 0,
-      "dy": 7,
-      "dz": -5,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
+      "dy": 8,
       "dz": -3,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 0,
-      "dy": 7,
+      "dy": 8,
       "dz": -2,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 0,
-      "dy": 7,
+      "dy": 8,
       "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
-      "dz": 0,
       "type": "cu_wood_pine_bark"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 7,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 8,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 8,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 8,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
     },
     {
       "dx": 0,
@@ -892,7 +370,7 @@
       "dx": 0,
       "dy": 8,
       "dz": 1,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": 0,
@@ -902,18 +380,6 @@
     },
     {
       "dx": 0,
-      "dy": 8,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
-      "dy": 9,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 0,
       "dy": 9,
       "dz": -1,
       "type": "cu_organic_needle_dark"
@@ -928,18 +394,60 @@
       "dx": 0,
       "dy": 9,
       "dz": 1,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 9,
+      "dz": 2,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": -2,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 0,
       "dy": 10,
       "dz": 0,
+      "type": "cu_wood_pine_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 10,
+      "dz": 2,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": -1,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": 0,
+      "type": "cu_wood_pine_bark"
+    },
+    {
+      "dx": 0,
+      "dy": 11,
+      "dz": 1,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 0,
+      "dy": 12,
+      "dz": 0,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 1,
       "dy": 4,
-      "dz": -2,
+      "dz": -4,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -951,44 +459,26 @@
     {
       "dx": 1,
       "dy": 4,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 4,
       "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": -3,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 1,
       "dy": 5,
       "dz": -2,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": 1,
       "dy": 5,
       "dz": -1,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": 1,
       "dy": 5,
       "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 5,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": 1,
@@ -999,139 +489,31 @@
     {
       "dx": 1,
       "dy": 5,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 6,
       "dz": 4,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 1,
-      "dy": 7,
-      "dz": -5,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 7,
-      "dz": 5,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
       "dy": 8,
-      "dz": -4,
+      "dz": -3,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 1,
       "dy": 8,
       "dz": -1,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": 1,
       "dy": 8,
       "dz": 0,
-      "type": "cu_organic_needle_dark"
+      "type": "cu_wood_pine_bark"
     },
     {
       "dx": 1,
       "dy": 8,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 9,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 1,
-      "dy": 9,
-      "dz": -2,
+      "dz": 2,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -1148,14 +530,32 @@
     },
     {
       "dx": 1,
-      "dy": 9,
+      "dy": 10,
+      "dz": -1,
+      "type": "cu_wood_pine_bark"
+    },
+    {
+      "dx": 1,
+      "dy": 10,
       "dz": 1,
+      "type": "cu_wood_pine_bark"
+    },
+    {
+      "dx": 1,
+      "dy": 11,
+      "dz": 0,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 1,
-      "dy": 9,
-      "dz": 2,
+      "dy": 11,
+      "dz": 1,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 4,
+      "dz": -3,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -1172,314 +572,80 @@
     },
     {
       "dx": 2,
+      "dy": 5,
+      "dz": -3,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 5,
+      "dz": 0,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": -2,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 0,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 1,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 8,
+      "dz": 2,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 9,
+      "dz": 1,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 2,
+      "dy": 10,
+      "dz": 0,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 3,
+      "dy": 4,
+      "dz": -2,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 3,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_organic_needle_dark"
+    },
+    {
+      "dx": 3,
       "dy": 4,
       "dz": 1,
       "type": "cu_organic_needle_dark"
     },
     {
-      "dx": 2,
-      "dy": 5,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 6,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": -5,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 7,
-      "dz": 5,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 8,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 8,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 8,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 8,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 8,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 8,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 8,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 9,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 9,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 9,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 9,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 2,
-      "dy": 9,
+      "dx": 3,
+      "dy": 4,
       "dz": 2,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 3,
       "dy": 5,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 5,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 5,
       "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 6,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 6,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 6,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 7,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 7,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 7,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 8,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 8,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 8,
-      "dz": -1,
       "type": "cu_organic_needle_dark"
     },
     {
@@ -1498,132 +664,12 @@
       "dx": 3,
       "dy": 8,
       "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 3,
-      "dy": 8,
-      "dz": 3,
       "type": "cu_organic_needle_dark"
     },
     {
       "dx": 3,
       "dy": 9,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 6,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 6,
       "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 6,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 7,
-      "dz": -4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 7,
-      "dz": -3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 7,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 7,
-      "dz": 2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 7,
-      "dz": 3,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 7,
-      "dz": 4,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 8,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 8,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 8,
-      "dz": 0,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 4,
-      "dy": 8,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 5,
-      "dy": 7,
-      "dz": -2,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 5,
-      "dy": 7,
-      "dz": -1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 5,
-      "dy": 7,
-      "dz": 1,
-      "type": "cu_organic_needle_dark"
-    },
-    {
-      "dx": 5,
-      "dy": 7,
-      "dz": 2,
       "type": "cu_organic_needle_dark"
     }
   ]
