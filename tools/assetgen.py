@@ -178,6 +178,29 @@ MATERIAL_TINTS = {
     ("organic", "mushroom_stem"): (204, 194, 171),
 }
 
+# Bark colors describe the finished bark surface rather than darkening the
+# timber species color with one shared multiplier. This keeps pale, smooth
+# species readable beside the rougher brown species at the 16px world scale.
+BARK_BASE_TINTS = {
+    "acacia": (137, 118, 88), "ash": (143, 137, 122),
+    "beech": (183, 177, 166), "cedar": (153, 82, 57),
+    "jungle": (130, 92, 60), "larch": (152, 112, 76),
+    "mangrove": (115, 83, 66), "maple": (144, 108, 78),
+    "oak": (139, 108, 78), "pine": (160, 124, 87),
+    "poplar": (178, 171, 157), "redwood": (158, 81, 56),
+    "walnut": (105, 79, 60), "willow": (147, 132, 102),
+}
+
+# Face-scale crack plates vary by species. Counts stay close to square so bark
+# reads as broken flakes and furrows, not continuous vertical waves.
+BARK_CELL_COUNTS = {
+    "acacia": (5, 5), "ash": (5, 5), "beech": (6, 6),
+    "cedar": (5, 5), "jungle": (5, 5), "larch": (6, 5),
+    "mangrove": (4, 5), "maple": (5, 5), "oak": (4, 4),
+    "pine": (6, 5), "poplar": (6, 5), "redwood": (4, 5),
+    "walnut": (5, 5), "willow": (5, 4),
+}
+
 for _material in ("granite", "limestone", "slate", "sandstone", "basalt", "marble", "tuff", "laterite", "quartz", "darkstone"):
     MATERIAL_TINTS[("masonry", _material)] = MATERIAL_TINTS.get(("rock", _material), (130, 128, 120))
 MATERIAL_TINTS.update({
@@ -392,7 +415,9 @@ def _wood_surface_texture(
     return image
 
 
-def _wrapped_cellular_plates(seed: int, size: int) -> tuple[list[float], list[float]]:
+def _wrapped_cellular_plates(
+    seed: int, size: int, species: str = "",
+) -> tuple[list[float], list[float]]:
     """Return seamless irregular plate tones and crack strengths for bark.
 
     A jittered feature grid keeps the small 16px tile covered evenly. Distances
@@ -400,12 +425,11 @@ def _wrapped_cellular_plates(seed: int, size: int) -> tuple[list[float], list[fl
     tiled. Cellular regions avoid long, parallel waves while retaining readable
     bark flakes and fissures at voxel scale.
     """
-    # Bark plates should run predominantly along the trunk axis. The previous
-    # near-square cells merged into horizontal rings on voxel faces. Narrower
-    # wrapped cells produce broken vertical fissures without a sinusoidal
-    # groove field or a continuous stripe at the tile boundary.
-    cells_x = max(5, round(size / 2.7))
-    cells_y = max(4, round(size / 4.5))
+    # Species profiles change flake scale while keeping the footprint
+    # irregular and short enough to avoid stripe-like trunk grain.
+    cells_x, cells_y = BARK_CELL_COUNTS.get(species, (6, 4))
+    cells_x = max(3, round(cells_x * size / 16))
+    cells_y = max(3, round(cells_y * size / 16))
     spacing_x = size / cells_x
     spacing_y = size / cells_y
     rng = random.Random(seed ^ 0xB4A2C311)
@@ -485,6 +509,29 @@ def _apply_birch_bark_marks(
             if rng.random() < 0.28:
                 split_x = (start_x + rng.randrange(length)) % size
                 pixels[split_x, (y + 1) % size] = colors[2]
+    return result
+
+
+def _apply_soft_bark_marks(
+    image: Image.Image, seed: int, species: str,
+) -> Image.Image:
+    """Add sparse horizontal lenticels to smooth beech and poplar bark."""
+    result = image.convert("RGBA")
+    size = result.width
+    beech = species == "beech"
+    rng = random.Random(seed ^ (0xBE3C if beech else 0xA510))
+    pixels = result.load()
+    dark = (91, 91, 85, 255) if beech else (79, 78, 72, 255)
+    mid = (119, 116, 106, 255) if beech else (103, 101, 92, 255)
+    mark_count = max(5, round(size * (0.40 if beech else 0.52)))
+    for _ in range(mark_count):
+        x, y = rng.randrange(size), rng.randrange(size)
+        length = rng.randint(1, max(2, size // (6 if beech else 5)))
+        color = dark if rng.random() < 0.68 else mid
+        for offset in range(length):
+            xx = (x + offset) % size
+            yy = (y + (1 if offset == length - 1 and rng.random() < 0.18 else 0)) % size
+            pixels[xx, yy] = color
     return result
 
 
@@ -807,6 +854,10 @@ def generated_texture(
         and variant == "bark" and role != "endgrain"
     )
     birch_bark = pale_bark and material == "birch"
+    soft_bark = (
+        family == "wood" and material in ("beech", "poplar")
+        and variant == "bark" and role != "endgrain"
+    )
     bark_surface = family == "wood" and variant == "bark" and role != "endgrain"
     if family == "organic" and material == "leaf":
         # Leaf variants carry seasonal and canopy-density color roles instead
@@ -837,6 +888,8 @@ def generated_texture(
             # Birch is nearly white; aspen bark is a warmer gray with fewer
             # dark lenticels. Their species marks are drawn after shading.
             base = (238, 238, 233) if birch_bark else (190, 187, 171)
+        elif material in BARK_BASE_TINTS:
+            base = BARK_BASE_TINTS[material]
         else:
             # Bark is darker and more chromatically varied than finished timber.
             base = tuple(round(channel * factor) for channel, factor in zip(base, (0.441, 0.512, 0.699)))
@@ -852,6 +905,8 @@ def generated_texture(
         palette_factors = (0.84, 0.93, 1.0, 1.08)
     elif family == "organic" and material in ("leaf", "moss", "lichen", "fern"):
         palette_factors = (0.70, 0.86, 1.0, 1.16)
+    elif soft_bark:
+        palette_factors = (0.91, 0.96, 1.0, 1.04, 1.08)
     elif pale_bark:
         palette_factors = (0.84, 0.91, 0.96, 1.0, 1.04, 1.08)
     elif bark_surface:
@@ -873,7 +928,7 @@ def generated_texture(
         if family == "soil" and material in ("pale_sand", "silt") else None
     )
     bark_plate_tones, bark_crack_strengths = (
-        _wrapped_cellular_plates(seed, size)
+        _wrapped_cellular_plates(seed, size, material)
         if bark_surface
         else (None, None)
     )
@@ -955,14 +1010,19 @@ def generated_texture(
             # perturbs that structure instead of becoming the whole texture.
             if style == "wood":
                 if bark_surface:
-                    # Bark is made of broken plates and short fissures. A
-                    # wrapped cellular field replaces the earlier sinusoidal
-                    # groove pattern that read as vertical waves on trunks.
+                    # Bark uses short, species-scaled flakes rather than the
+                    # vertical sinusoidal grain that made trunks look wavy.
                     if birch_bark:
                         value += coarse[i] * 0.10 + medium[i] * 0.08 + fine[i] * 0.07
+                    elif material == "beech":
+                        # Beech bark is smooth and pale, with subdued tonal
+                        # variation before its small lenticel marks.
+                        value += coarse[i] * 0.06 + medium[i] * 0.05 + fine[i] * 0.04
                     else:
-                        value += bark_plate_tones[i] * 0.44
-                        value -= bark_crack_strengths[i] * 0.31
+                        plate_strength = 0.24 if material == "poplar" else 0.44
+                        crack_strength = 0.17 if material == "poplar" else 0.31
+                        value += bark_plate_tones[i] * plate_strength
+                        value -= bark_crack_strengths[i] * crack_strength
                         if fine[i] > 0.67 and medium[i] < 0.18:
                             value += 0.14
                         elif fine[i] < -0.72:
@@ -1117,7 +1177,8 @@ def generated_texture(
             else:
                 if bark_surface and not pale_bark:
                     bark_factor = palette_factors[index]
-                    channel_contrast = (1.28, 1.55, 1.75)
+                    channel_contrast = ((0.62, 0.76, 0.88) if soft_bark
+                                        else (1.08, 1.24, 1.34))
                     rgb = tuple(
                         max(0, min(255, round(base[channel] * (
                             1.0 + (bark_factor - 1.0) * channel_contrast[channel]
@@ -1132,6 +1193,8 @@ def generated_texture(
             if size <= 16:
                 if role == "water_surface":
                     pixel_detail = 1
+                elif soft_bark:
+                    pixel_detail = 2
                 elif pale_bark:
                     pixel_detail = 2 if birch_bark else 3
                 elif family == "soil" and material not in ("pale_sand", "silt"):
@@ -1161,6 +1224,8 @@ def generated_texture(
             else:
                 scale_detail = 16.0 / size
                 if role == "water_surface":
+                    pixel_detail = max(1, round(2 * scale_detail))
+                elif soft_bark:
                     pixel_detail = max(1, round(2 * scale_detail))
                 elif family == "soil" and material not in ("pale_sand", "silt"):
                     pixel_detail = max(1, round(11 * scale_detail))
@@ -1196,6 +1261,8 @@ def generated_texture(
     image.putdata(pixels)
     if pale_bark:
         image = _apply_birch_bark_marks(image, seed, material)
+    elif soft_bark:
+        image = _apply_soft_bark_marks(image, seed, material)
     elif family == "organic" and material == "needle":
         original_alpha = image.getchannel("A")
         image = _apply_needle_foliage(image, seed, variant)
@@ -2034,8 +2101,16 @@ def procedural_decor_sprite(source_stem: str, size: int, seed: int) -> Image.Ima
         # One grass blade per card. The tuft mesh arranges six differently
         # angled blades in 3D, so a full five-blade bitmap made the tuft far
         # too dense when projected onto every card.
-        dry = "dry" in name or "marram" in name
-        colors = ((150, 133, 66, 255), (178, 158, 78, 255), (195, 174, 95, 255), (125, 116, 61, 255)) if dry else ((61, 126, 44, 255), (78, 151, 51, 255), (102, 164, 62, 255), (52, 111, 42, 255))
+        dry = "dry" in name or "wheat" in name
+        if dry:
+            colors = ((150, 133, 66, 255), (178, 158, 78, 255),
+                      (195, 174, 95, 255), (125, 116, 61, 255))
+        elif "marram" in name:
+            colors = ((103, 137, 62, 255), (128, 153, 71, 255),
+                      (151, 166, 82, 255), (82, 119, 55, 255))
+        else:
+            colors = ((61, 126, 44, 255), (78, 151, 51, 255),
+                      (102, 164, 62, 255), (52, 111, 42, 255))
         center = 32 + rng.randint(-3, 3)
         height = rng.randint(32, 59)
         tip_x = center + rng.randint(-15, 15)
@@ -3424,6 +3499,11 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
         "birch": "young", "jungle": "dense", "mangrove": "dark",
         "maple": "fresh", "oak": "mature", "poplar": "pale",
         "walnut": "dark", "willow": "sparse",
+        # Keep evergreen and deciduous conifers distinguishable in a scene:
+        # cedar is mature green, larch has lighter new needles, pine is dark,
+        # and redwood uses a dense deep-green crown.
+        "cedar": "mature", "larch": "young", "pine": "dark",
+        "redwood": "dense",
     }.get(wood, "fresh")
     leaves = block_name(records, "organic", foliage_material, foliage_variant)
     voxels: list[dict[str, Any]] = []
@@ -4321,9 +4401,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 27,
+            "version": 28,
             "backend": "procedural",
-            "texture_synthesis": "broken_vertical_bark_water_ripples_birch_needles_species_trees_passable_decor_v27",
+            "texture_synthesis": "species_scaled_bark_named_conifer_foliage_marram_grass_v28",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,

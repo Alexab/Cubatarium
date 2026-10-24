@@ -9,9 +9,9 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 27,
+    "version": 28,
     "backend": "procedural",
-    "texture_synthesis": "broken_vertical_bark_water_ripples_birch_needles_species_trees_passable_decor_v27",
+    "texture_synthesis": "species_scaled_bark_named_conifer_foliage_marram_grass_v28",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"
@@ -37968,7 +37968,7 @@
         16,
         16
       ],
-      "pixel_sha256": "183d52f79beda890b8b32cd4ddd1aa9ea29fd15eaa3b85d163cc1cdf2987dbe6",
+      "pixel_sha256": "92e3ce06c969c4c8edeb4019f6ee5eb4f9e7706ae9011b81c908094f096fc03d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -38562,7 +38562,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8ace513fe879cb17c2ca726f943cb24cb9b9b23074de9a66c03ecafff691a218",
+      "pixel_sha256": "99b8c3be141966fff5f2f4d3c9e3de861e74429727a8d7f7a7e54cd76bbbae7b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39156,7 +39156,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6ffa824f26483bd2bdbf8cda5b4ea22c3d83ea6e830d4dfe1a66cf06335599a0",
+      "pixel_sha256": "69656437b5fb7174ff0c6dbf188fbc897162b44a222c48130129a329b3db1897",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40344,7 +40344,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b3c5074fe00178996b8e6e6f9b81dff7a8b87e1577b6d82459a1abb3d050fe88",
+      "pixel_sha256": "d86f73254baa525f010b89ba81996952a9a34a9bfee155af094341dd3b298f8a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -40938,7 +40938,7 @@
         16,
         16
       ],
-      "pixel_sha256": "869da4ca700f62d6c0a91cab9df0fffe6901a6c9ef8be8b9582af3c58d0f390e",
+      "pixel_sha256": "ce8c824a6a2655f7b7f4842b6a2064165cdc48c6ecf7b6f9daf2307cf1e892e2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41532,7 +41532,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b953ca5845a98142ca9d4bf5a852dba8348f5e158a321bd2d63d59695a29d8fb",
+      "pixel_sha256": "599f5231f8a591b00ca0d8767d653d71883d414bf5f05d2014e5248e6c676543",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42126,7 +42126,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5f344abe29bde88dcb970551471f5a7d7c721af92ad7e9938dcdb089348f1a94",
+      "pixel_sha256": "807430d57a2c9180318e7083b5c63a423e218506e745068de155babfb16e49ac",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42720,7 +42720,7 @@
         16,
         16
       ],
-      "pixel_sha256": "78f3a5e5613c175b0565bd778427b1f9bc276c12dc1685279437e07c2cbfdb71",
+      "pixel_sha256": "6a1d3c1be50428bf5a23dc5e45933468115051faacb8c53e2972f4903d878e33",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43314,7 +43314,7 @@
         16,
         16
       ],
-      "pixel_sha256": "df5049226f84870a192a85d3cb4585f37a48095a524871f2b530893c0ea51e67",
+      "pixel_sha256": "48cec8f824c5e2c15e941f669274ba2667819002cdaf936229f028cc7911a84a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -43908,7 +43908,7 @@
         16,
         16
       ],
-      "pixel_sha256": "dde3584b6ce0df72088cf0c31ee772e682b8ebcd72d6cd483f2b3ec51b95c76e",
+      "pixel_sha256": "4c2bb21add9484557563c3573f4da00471a4f04310ca43a885eba0dbbd0e30c8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -44502,7 +44502,7 @@
         16,
         16
       ],
-      "pixel_sha256": "240a9579cf34b01095fc4ae5bc483315490b82ac047d283a78a4616c7fd362dd",
+      "pixel_sha256": "00843321e4057b13cfc4a8ac3976064a00ba3b69aa748496b67460876851008e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -45096,7 +45096,7 @@
         16,
         16
       ],
-      "pixel_sha256": "0afa21b77420e2ea33c9af9b3972b58eec755cd41a6f089f8b261ad18a7fe795",
+      "pixel_sha256": "a56229aef2c15a65f33d592325c6453b8ad20ae4cf67971bbae788fc348a6c44",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -45690,7 +45690,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d209e132546da0183fa80a174ccf9afb15e5d5db32f3136ca63d36c0074a5fd4",
+      "pixel_sha256": "f3c35d64efb243396c59c130b22bb6afd1fe178d58a3d3ef413b2109ed5f321a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -46284,7 +46284,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8cc52fe2601581ee950e7f76ba9c0ff70930bab1e7cbea91d83416d127b99b91",
+      "pixel_sha256": "18e6ae1cec2b30be85d890c7ecec67f369d68c4541765eb338d07d977da0253a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -49366,7 +49366,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6becd0eb57cef0b2cdb67e1c8f0be9aff7c991d8047f3206b18c0ad62d917a65",
+      "pixel_sha256": "06388ab368e10a912bddfea609d0150a4c5f419bc63d853385a3f724eaa1ff73",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_acacia_tree_default_acacia_tree",
@@ -51217,7 +51217,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f3b18bc1f25a5d1ca94afea320afe0a2afe0fa80329c40634e30186a6a889bd5",
+      "pixel_sha256": "d4b44ad6f5ddcf5d67d050c7059ee4c6d850d27309d6142f12b97497710fdbfb",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_jungletree_default_jungletree",
@@ -51415,7 +51415,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c70c7de8f6b3a9b900db8c43b12e755caf01a07e15a0aa4211ce782fe3a5dde9",
+      "pixel_sha256": "8b6d9854c3ef796c1f497f3b6447b05f24343b113196d1b008447d10cd2c8e8a",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_marram_grass_1_default_marram_grass_1",
@@ -51964,7 +51964,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f1073517398ee720e598bc28d7031dcb6ad920a31e40d13d40635ddb0ed8f6ba",
+      "pixel_sha256": "661175649d3cc532e310bd1db0fe14e2b4f56a673f065f41bc9f02db55578159",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_pine_tree_default_pine_tree",
@@ -52639,7 +52639,7 @@
         16,
         16
       ],
-      "pixel_sha256": "78c211998700b25b4c76f46cff158b9a6612604001f043ddb29aaf776563f436",
+      "pixel_sha256": "7aae0459291a51f7cac06f6d2ae3d6d5fb096d668707b544f0a5587e25802d3d",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_tree_default_tree",
@@ -54358,7 +54358,7 @@
         16,
         16
       ],
-      "pixel_sha256": "1e3f66a83b099d8749f7d94b81a40402b770cf7f49cd5d4fbb9214858c5acb7d",
+      "pixel_sha256": "9f5fa32ab039e421453c48017440179326c39834c02f071f38c486e2c98746aa",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tree_jungle",
@@ -54382,7 +54382,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2e998be70e2c097499088f795a73de499618d2c3aac5b0df0e78b89f652fc720",
+      "pixel_sha256": "880e56d58de3fd796cdcd9ee9058936b1fec6c65d9bff3cf3f71a9076f04febc",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tree_side",
@@ -54406,7 +54406,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5bd84ac7228f22767a0510ec9ba9a2b45bfabdb80263fb71d507a62f4a670ec6",
+      "pixel_sha256": "71271edf8e2dafc33c0bca0c20be1a7b48f6965a9a60595762a3f1b872977d81",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tree_spruce",
@@ -54677,7 +54677,7 @@
         16,
         16
       ],
-      "pixel_sha256": "036ec38ea9d5bbc696419616917826ee0901921fed95dcbf6394d259d41a32c4",
+      "pixel_sha256": "76601ce7ae3f9a0fcf78cd4d90e8d292e36407cf98cf9bb897770a111acd69d8",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "workbench_side",
