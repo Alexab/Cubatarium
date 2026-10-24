@@ -65,6 +65,9 @@
 # Scratch analysis / dumps next to exe
 /bin/_*.py
 /bin/_*.cpp
+/bin/_*.bat
+/bin/audit_*.py
+/bin/scripts/
 
 # Nested mistaken runtime copy (bin synced under bin/)
 /bin/bin/
