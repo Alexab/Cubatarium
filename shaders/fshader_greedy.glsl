@@ -16,6 +16,7 @@ uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
 uniform float uTextureVariation;
+uniform int uMaterialSeed;
 uniform float uMaterialTimePhase;
 // uGreedyShaderMode: 0 = color, 1 = shell depth (discard a < threshold), 2 = fuzzy (discard a >= threshold)
 uniform int uGreedyShaderMode;
@@ -378,6 +379,36 @@ vec4 materialVariation(vec2 planePosition)
     );
 }
 
+float worldGrainNoise(vec2 planePosition)
+{
+    vec2 texelResolution = vec2(textureSize(texture0, 0));
+    texelResolution.x /= 6.0;
+    texelResolution.y /= max(1.0, float(uAnimFrameCount));
+    // A two-texel lattice makes small coherent grain patches instead of
+    // independent salt-and-pepper pixels. The lattice is world-aligned and
+    // matches across neighboring block faces.
+    vec2 latticePosition = (planePosition + vec2(0.5)) * texelResolution * 0.5;
+    vec2 cell = floor(latticePosition);
+    vec2 f = fract(latticePosition);
+    f = f * f * (3.0 - 2.0 * f);
+    uint materialSalt = uint(uMaterialSeed) * 0x9e3779b9u;
+    materialSalt ^= uint(vFaceIndex + 1) * 0x85ebca6bu;
+    ivec2 cellCoord = ivec2(cell);
+    float n00 = hashUnit(hashVoxelCell(
+        ivec3(cellCoord, vFaceIndex), materialSalt ^ 0x68bc21ebu
+    ));
+    float n10 = hashUnit(hashVoxelCell(
+        ivec3(cellCoord + ivec2(1, 0), vFaceIndex), materialSalt ^ 0x68bc21ebu
+    ));
+    float n01 = hashUnit(hashVoxelCell(
+        ivec3(cellCoord + ivec2(0, 1), vFaceIndex), materialSalt ^ 0x68bc21ebu
+    ));
+    float n11 = hashUnit(hashVoxelCell(
+        ivec3(cellCoord + ivec2(1, 1), vFaceIndex), materialSalt ^ 0x68bc21ebu
+    ));
+    return mix(mix(n00, n10, f.x), mix(n01, n11, f.x), f.y);
+}
+
 float waterSurfaceLight(vec2 planePosition)
 {
     // Advect isotropic, rotated noise fields at different scales. Avoid the
@@ -463,10 +494,13 @@ void main()
                 materialPlane * 7.5 + vec2(13.1, 5.7)
                 + (materialFields.zw - 0.5) * 0.68
             );
-            spatialTone = mix(spatialTone, fineTone, 0.72);
-            float fineGrain = materialNoise(materialPlane * 15.0 + vec2(7.3, 29.1));
-            float broadAmplitude = 0.30 * variation;
-            float grainAmplitude = 0.18 * variation;
+            bool naturalSurface = variation >= 0.75;
+            spatialTone = mix(spatialTone, fineTone, naturalSurface ? 0.36 : 0.72);
+            float fineGrain = naturalSurface
+                ? worldGrainNoise(materialPlane)
+                : materialNoise(materialPlane * 15.0 + vec2(7.3, 29.1));
+            float broadAmplitude = (naturalSurface ? 0.20 : 0.30) * variation;
+            float grainAmplitude = (naturalSurface ? 0.22 : 0.18) * variation;
             FragColor.rgb *= 1.0 + (spatialTone - 0.5) * broadAmplitude
                              + (fineGrain - 0.5) * grainAmplitude;
         }

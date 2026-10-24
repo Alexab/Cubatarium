@@ -5252,6 +5252,7 @@ void UGeometryEngine::SetBlockAnimUniforms(
 
   shader->SetInt("uAnimFrame", frame);
   shader->SetInt("uAnimFrameCount", FrameCount);
+  shader->SetInt("uMaterialSeed", static_cast<int>(blockId));
   shader->SetFloat("uMaterialTimePhase", materialTimePhase);
   float textureVariation = 0.0f;
   if (WorldInstance)
