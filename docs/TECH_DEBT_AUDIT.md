@@ -16,6 +16,9 @@
 | TD-AUD-026 | 2026-07 | AUDIT-APP-003 UCore god-class | WorldLifecycleFacade + ResourcePackBootstrap + EnterGameWorld | partial |
 | TD-AUD-027 | 2026-07 | AUDIT-WORLD-006 World→Render headers | `URenderMeshSink` invalidation counter; read-model on arch_refactor3 | partial |
 | TD-AUD-032 | 2026-10 | 11 unit tests fail (pre-existing, exposed by full ctest registration): capture_incremental_test, deterministic_replay_test, mark_relit_characterization_test, fluid_surface_slice_test, fluid_surface_map_logic_test, liquid_non_renewable_flow_test, fluid_sim_mesh_integration_test, fluid_placement_liquid_decor_test, column_job_graph_stage_test, worldgen_vegetation_placement_test, fluid_permeable_decor_test | These tests were never ctest-registered and rotted while unrun (fluid/worldgen behavior evolved; goldens stale). Auto-registration in CMake (label `unit`, run via `ctest -L unit`) now keeps them visible | per-module fix PRs |
+| TD-AUD-033 | 2026-10 | TickMeshEmerge 7291→6345 lines: one-time SoftDefer callback install (948 lines) extracted to `InstallSoftDeferCallbacks`; remainder is per-frame phase logic (1089 top-level stmts, ~150 locals) — further phase-method split needs a TickContext struct + flight_sim gate run per slice | hot streaming path; silent frame-pacing regressions only visible in flight_sim gates; split incrementally, one phase per PR | incremental |
+| TD-AUD-034 | 2026-10 | `tools/audit_style.py` finds 58 violations on develop (25 classes without U/I prefix in WorldGen/Creatures/Roles/Diagnostics, 28 trailing_ members in Streaming/EnterVisualGate/ColumnFlowScheduler, 1 struct field) — CI "Style audit" step already red before the 2026-10 refactor branches | violations arrived via creature-spawn-survival / textures_exp merges; mechanical renames but wide blast radius | rename PR per module |
+
 
 ## Closed
 
