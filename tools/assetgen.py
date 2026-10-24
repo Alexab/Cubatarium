@@ -3666,11 +3666,13 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
     if wood in ("mangrove", "jungle"):
         # Buttress and stilt roots make these trees read differently at ground
         # level and keep the trunk from looking like a bare vertical pole.
+        # Mangrove roots rise from the trunk before stepping outward and down;
+        # a flat four-way footprint reads as a cross instead of stilt roots.
         for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             for step in range(1, 4 if wood == "mangrove" else 3):
                 x = round(dx * step * (0.85 if wood == "mangrove" else 0.55))
                 z = round(dz * step * (0.85 if wood == "mangrove" else 0.55))
-                y = max(0, 2 - step)
+                y = max(0, 3 - step) if wood == "mangrove" else max(0, 2 - step)
                 add_object_block(voxels, x, y, z, trunk)
 
     if wood in conifers:
@@ -3794,11 +3796,32 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
                     add_object_block(voxels, dx + inward_x, y, dz + inward_z, leaves)
 
         if wood == "willow":
-            # Willow foliage hangs below its wide crown in separated curtains.
-            for x, z in ((-3, 0), (3, 0), (0, -2), (0, 2), (-2, -2), (2, 2)):
-                length = rng.choice((2, 3, 4))
+            # Willow foliage hangs from most of the umbrella crown, with
+            # broken multi-voxel curtains rather than a few short tassels.
+            drapes = (
+                (-4, 0), (4, 0), (0, -3), (0, 3),
+                (-3, -2), (-3, 2), (3, -2), (3, 2),
+            )
+            for index, (anchor_x, anchor_z) in enumerate(drapes):
+                length = rng.choice((3, 4, 4, 5))
+                drift_x = 0
+                drift_z = 0
                 for drop in range(1, length + 1):
-                    add_object_block(voxels, x, height - 2 - drop, z, leaves)
+                    if drop in (2, 4) and rng.random() < 0.28:
+                        if abs(anchor_x) >= abs(anchor_z):
+                            drift_z += 1 if anchor_z >= 0 else -1
+                        else:
+                            drift_x += 1 if anchor_x >= 0 else -1
+                    y = height - 2 - drop
+                    x = anchor_x + drift_x
+                    z = anchor_z + drift_z
+                    add_object_block(voxels, x, y, z, leaves)
+                    # A small side cluster gives each curtain a leafy body
+                    # while retaining gaps between adjacent hanging strands.
+                    if drop in (2, length - 1) and rng.random() < 0.58:
+                        side = 1 if (index + drop) % 2 else -1
+                        side_x, side_z = (side, 0) if anchor_x == 0 else (0, side)
+                        add_object_block(voxels, x + side_x, y, z + side_z, leaves)
 
     unique_voxels: dict[tuple[int, int, int], dict[str, Any]] = {}
     for voxel in voxels:
@@ -3945,11 +3968,24 @@ def make_mushroom_cluster(name: str, records: list[dict[str, str]], seed: int) -
 
 def make_coral_fan(name: str, records: list[dict[str, str]], seed: int) -> dict[str, Any]:
     rng = random.Random(seed)
-    coral = block_name(records, "organic", "coral", rng.choice(("fresh", "dense", "bright", "mature")))
+    variants = ("fresh", "dense", "bright", "mature")
     sand = block_name(records, "soil", "pale_sand", "natural")
-    voxels = [{"dx": x, "dy": 0, "dz": 0, "type": sand} for x in range(-2, 3)]
-    for x in range(-2, 3):
-        voxels.append({"dx": x, "dy": 1, "dz": 0, "type": coral})
+    # A compact, uneven patch of substrate replaces the old straight sand
+    # bar. The renderer's branching coral clusters provide the varied height.
+    substrate = [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1), (-1, 1)]
+    base_sites = {(0, 0), *rng.sample(substrate[1:], rng.choice((2, 3, 4)))}
+    voxels = [
+        {"dx": x, "dy": 0, "dz": z, "type": sand}
+        for x, z in sorted(base_sites)
+    ]
+    coral_sites = [(0, 0)] + rng.sample(
+        ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)),
+        rng.choice((3, 4)),
+    )
+    for index, (x, z) in enumerate(coral_sites):
+        variant = variants[(seed + index * 3) % len(variants)]
+        coral = block_name(records, "organic", "coral", variant)
+        voxels.append({"dx": x, "dy": 1, "dz": z, "type": coral})
     return object_document(name, voxels, ["decoration", "aquatic"], seed, "coral", "surface_layer")
 
 
@@ -3981,11 +4017,20 @@ def make_crystal_cluster(name: str, records: list[dict[str, str]], seed: int) ->
     rng = random.Random(seed)
     base = block_name(records, "rock", "basalt", "natural")
     crystal_materials = ["quartz", "amethyst", "citrine", "garnet", "jade", "opal", "fluorite", "azurite", "malachite"]
-    voxels = [{"dx": x, "dy": 0, "dz": z, "type": base} for x, z in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1))]
-    for index, (x, z) in enumerate(((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1))):
-        crystal = block_name(records, "crystal", crystal_materials[(seed + index) % len(crystal_materials)], "cluster")
-        for y in range(rng.choice((2, 3, 4))):
-            voxels.append({"dx": x, "dy": y + 1, "dz": z, "type": crystal})
+    candidates = ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (2, 0), (0, 2))
+    crystal_sites = [(0, 0)] + rng.sample(candidates[1:], rng.choice((2, 3, 4)))
+    base_sites = set(crystal_sites)
+    base_sites.update(rng.sample(candidates[1:], rng.choice((1, 2))))
+    voxels = [
+        {"dx": x, "dy": 0, "dz": z, "type": base}
+        for x, z in sorted(base_sites)
+    ]
+    for index, (x, z) in enumerate(crystal_sites):
+        material = crystal_materials[(seed + index * 5) % len(crystal_materials)]
+        crystal = block_name(records, "crystal", material, "cluster")
+        height = rng.choice((4, 5)) if index == 0 else rng.choice((1, 2, 2, 3))
+        for y in range(1, height + 1):
+            voxels.append({"dx": x, "dy": y, "dz": z, "type": crystal})
     return object_document(name, voxels, ["decoration", "cave", "crystal"], seed, "crystal")
 
 
@@ -4547,9 +4592,10 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 32,
+            "version": 33,
             "backend": "procedural",
             "texture_synthesis": "named_tree_species_stable_ids_and_sand_match_v32",
+            "object_synthesis": "willow_drapes_mangrove_stilt_roots_coral_fan_irregular_crystals_v33",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,

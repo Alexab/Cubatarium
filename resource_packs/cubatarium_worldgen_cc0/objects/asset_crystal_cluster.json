@@ -22,31 +22,25 @@
     {
       "dx": 0,
       "dy": 0,
-      "dz": 0,
-      "type": "cu_rock_basalt_natural"
-    },
-    {
-      "dx": 1,
-      "dy": 0,
-      "dz": 0,
-      "type": "cu_rock_basalt_natural"
-    },
-    {
-      "dx": -1,
-      "dy": 0,
-      "dz": 0,
-      "type": "cu_rock_basalt_natural"
-    },
-    {
-      "dx": 0,
-      "dy": 0,
-      "dz": 1,
-      "type": "cu_rock_basalt_natural"
-    },
-    {
-      "dx": 0,
-      "dy": 0,
       "dz": -1,
+      "type": "cu_rock_basalt_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_basalt_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_rock_basalt_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
       "type": "cu_rock_basalt_natural"
     },
     {
@@ -68,70 +62,40 @@
       "type": "cu_crystal_opal_cluster"
     },
     {
-      "dx": 1,
+      "dx": 0,
+      "dy": 4,
+      "dz": 0,
+      "type": "cu_crystal_opal_cluster"
+    },
+    {
+      "dx": 2,
       "dy": 1,
       "dz": 0,
-      "type": "cu_crystal_fluorite_cluster"
+      "type": "cu_crystal_amethyst_cluster"
     },
     {
-      "dx": 1,
+      "dx": 2,
       "dy": 2,
       "dz": 0,
-      "type": "cu_crystal_fluorite_cluster"
-    },
-    {
-      "dx": 1,
-      "dy": 3,
-      "dz": 0,
-      "type": "cu_crystal_fluorite_cluster"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_crystal_azurite_cluster"
-    },
-    {
-      "dx": -1,
-      "dy": 2,
-      "dz": 0,
-      "type": "cu_crystal_azurite_cluster"
-    },
-    {
-      "dx": -1,
-      "dy": 3,
-      "dz": 0,
-      "type": "cu_crystal_azurite_cluster"
-    },
-    {
-      "dx": 0,
-      "dy": 1,
-      "dz": 1,
-      "type": "cu_crystal_malachite_cluster"
-    },
-    {
-      "dx": 0,
-      "dy": 2,
-      "dz": 1,
-      "type": "cu_crystal_malachite_cluster"
-    },
-    {
-      "dx": 0,
-      "dy": 3,
-      "dz": 1,
-      "type": "cu_crystal_malachite_cluster"
+      "type": "cu_crystal_amethyst_cluster"
     },
     {
       "dx": 0,
       "dy": 1,
       "dz": -1,
-      "type": "cu_crystal_quartz_cluster"
+      "type": "cu_crystal_fluorite_cluster"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_crystal_citrine_cluster"
     },
     {
       "dx": 0,
       "dy": 2,
-      "dz": -1,
-      "type": "cu_crystal_quartz_cluster"
+      "dz": 2,
+      "type": "cu_crystal_citrine_cluster"
     }
   ]
 }

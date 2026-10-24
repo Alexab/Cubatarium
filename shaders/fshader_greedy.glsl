@@ -281,12 +281,11 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
     // Structured blocks may still use safe rotations on their isotropic top
     // and bottom tiles. On directional side faces, vary only the horizontal
     // phase so bark, grass layers, and masonry keep their intended orientation.
-    bool waterSurfaceTile = uTextureVariation >= 0.34 &&
-                            uTextureVariation <= 0.40 &&
-                            faceIndex >= 4;
+    // Water already receives continuous world-space UV warping and lighting
+    // below. Independent per-voxel transforms leave square brightness seams
+    // on lakes, so keep its atlas coordinates continuous across block edges.
     bool canTransformTile = uTextureVariation >= 0.75 ||
-                            (uTextureVariation >= 0.45 && faceIndex >= 4) ||
-                            waterSurfaceTile;
+                            (uTextureVariation >= 0.45 && faceIndex >= 4);
     // Bark uses the 0.52-0.74 range: keep its vertical grain unrotated, while
     // allowing both-axis texel phase changes so stacked logs do not form the
     // same horizontal bands at every block boundary. Grass-side layers stay
@@ -382,39 +381,44 @@ vec4 materialVariation(vec2 planePosition)
 
 float waterSurfaceLight(vec2 planePosition)
 {
-    // Advect crossed, domain-warped noise fields at different speeds. Their
-    // overlap creates water movement without a repeated tile or parallel
-    // sine-wave bands; world-space coordinates keep block seams continuous.
+    // Advect isotropic, rotated noise fields at different scales. Avoid the
+    // old anisotropic ridge fields: they made long parallel bands over lakes.
+    // All coordinates remain world-space so the result is continuous across
+    // neighboring fluid blocks.
     float phase = uMaterialTimePhase * 6.28318530718;
-    vec2 flow = vec2(cos(phase), sin(phase * 2.0)) * 1.3;
-    vec2 warp = vec2(
-        materialNoise(planePosition * 0.16 + vec2(11.6, 24.2)),
-        materialNoise(planePosition * 0.16 + vec2(26.4, 6.8))
+    vec2 flow = vec2(cos(phase), sin(phase * 1.73)) * 1.1;
+    vec2 domainWarp = vec2(
+        materialNoise(planePosition * 0.13 + vec2(11.6, 24.2)),
+        materialNoise(planePosition * 0.13 + vec2(26.4, 6.8))
     ) - 0.5;
-    vec2 warped = planePosition + warp * 4.2;
-    float swell = materialNoise(warped * 0.11 + vec2(8.7, 16.1) + flow * 0.30);
-    float current = materialNoise(warped * 0.31 + vec2(21.4, 4.8) + flow * 0.75);
-    float grain = materialNoise(warped * 0.92 + vec2(3.2, 29.6) + flow * 1.55);
-    float rippleA = materialNoise(
-        warped * vec2(0.72, 2.05) + vec2(16.2, 12.7) + flow * 3.0
-    );
-    float rippleB = materialNoise(
-        warped * vec2(2.10, 0.64) + vec2(7.9, 22.5) - flow * 2.35
+    vec2 warped = planePosition + domainWarp * 4.0;
+    vec2 rotatedA = vec2(warped.x * 0.83 - warped.y * 0.56,
+                         warped.x * 0.56 + warped.y * 0.83);
+    vec2 rotatedB = vec2(warped.x * 0.39 + warped.y * 0.92,
+                         -warped.x * 0.92 + warped.y * 0.39);
+    float swell = materialNoise(rotatedA * 0.095 + vec2(8.7, 16.1) + flow * 0.24);
+    float current = materialNoise(rotatedB * 0.27 + vec2(21.4, 4.8) + flow * 0.66);
+    float eddy = materialNoise(rotatedA * 0.64 + vec2(3.2, 29.6) + flow * 1.22);
+    vec2 fineWarp = vec2(
+        materialNoise(rotatedB * 0.31 + vec2(16.2, 12.7)),
+        materialNoise(rotatedB * 0.31 + vec2(7.9, 22.5))
+    ) - 0.5;
+    float ripple = materialNoise(
+        (rotatedA + fineWarp * 1.7) * 0.83 + vec2(16.2, 12.7) + flow * 1.55
     );
     float microRipple = materialNoise(
-        warped * vec2(3.7, 4.9) + vec2(19.3, 2.1) + flow * 4.2
+        rotatedB * 1.48 + vec2(19.3, 2.1) + flow * 2.25
     );
-    float ridgeA = 1.0 - abs(rippleA * 2.0 - 1.0);
-    float ridgeB = 1.0 - abs(rippleB * 2.0 - 1.0);
-    float crestA = smoothstep(0.67, 0.91, ridgeA) * (0.42 + current * 0.58);
-    float crestB = smoothstep(0.72, 0.94, ridgeB) * (0.35 + grain * 0.65);
-    float brokenCrest = smoothstep(0.73, 0.95, microRipple)
-                        * smoothstep(0.31, 0.78, grain);
-    return clamp(0.98 + (swell - 0.5) * 0.48
-                 + (current - 0.5) * 0.50 + (grain - 0.5) * 0.38
-                 + (microRipple - 0.5) * 0.16
-                 + crestA * 0.19 + crestB * 0.14
-                 + brokenCrest * 0.12, 0.52, 1.48);
+    // Thresholded eddies form isolated, broken glints instead of connected
+    // contour lines that read as repeated sine waves at the waterline.
+    float crest = smoothstep(0.78, 0.96, ripple)
+                  * smoothstep(0.27, 0.76, eddy);
+    float brokenCrest = smoothstep(0.84, 0.98, microRipple)
+                        * smoothstep(0.34, 0.79, eddy);
+    return clamp(0.96 + (swell - 0.5) * 0.28
+                 + (current - 0.5) * 0.36 + (eddy - 0.5) * 0.24
+                 + (microRipple - 0.5) * 0.10
+                 + crest * 0.14 + brokenCrest * 0.08, 0.66, 1.34);
 }
 
 void main()
@@ -442,8 +446,12 @@ void main()
         if (waterSurface) {
             float waterLight = waterSurfaceLight(materialPlane);
             FragColor.rgb *= waterLight;
+            vec2 glintPlane = vec2(
+                materialPlane.x * 0.86 - materialPlane.y * 0.51,
+                materialPlane.x * 0.51 + materialPlane.y * 0.86
+            );
             float glintField = materialNoise(
-                materialPlane * 3.2 + vec2(17.8, 9.3)
+                glintPlane * 2.65 + vec2(17.8, 9.3)
                 + (materialFields.zw - 0.5) * 0.44
                 + vec2(sin(uMaterialTimePhase * 18.8495559),
                        cos(uMaterialTimePhase * 12.5663706)) * 0.8

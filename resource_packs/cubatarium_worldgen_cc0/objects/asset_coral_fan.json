@@ -19,12 +19,6 @@
   ],
   "blocks": [
     {
-      "dx": -2,
-      "dy": 0,
-      "dz": 0,
-      "type": "cu_soil_pale_sand_natural"
-    },
-    {
       "dx": -1,
       "dy": 0,
       "dz": 0,
@@ -37,45 +31,33 @@
       "type": "cu_soil_pale_sand_natural"
     },
     {
-      "dx": 1,
+      "dx": 0,
       "dy": 0,
-      "dz": 0,
+      "dz": 1,
       "type": "cu_soil_pale_sand_natural"
-    },
-    {
-      "dx": 2,
-      "dy": 0,
-      "dz": 0,
-      "type": "cu_soil_pale_sand_natural"
-    },
-    {
-      "dx": -2,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
-    },
-    {
-      "dx": -1,
-      "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
     },
     {
       "dx": 0,
       "dy": 1,
       "dz": 0,
-      "type": "cu_organic_coral_fresh"
+      "type": "cu_organic_coral_mature"
     },
     {
-      "dx": 1,
+      "dx": -1,
       "dy": 1,
-      "dz": 0,
-      "type": "cu_organic_coral_fresh"
+      "dz": -1,
+      "type": "cu_organic_coral_striped"
     },
     {
-      "dx": 2,
+      "dx": -1,
       "dy": 1,
       "dz": 0,
+      "type": "cu_organic_coral_dense"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -1,
       "type": "cu_organic_coral_fresh"
     }
   ],
