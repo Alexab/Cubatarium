@@ -284,7 +284,7 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
     // same horizontal bands at every block boundary. Grass-side layers stay
     // below 0.52 and only shift horizontally, preserving their top edge.
     bool directionalPhaseOnly = uTextureVariation >= 0.45 &&
-                                 uTextureVariation < 0.52 && faceIndex < 4;
+                                 uTextureVariation < 0.75 && faceIndex < 4;
     if (canTransformTile || directionalPhaseOnly) {
         ivec3 cell = ivec3(floor(worldPos + vec3(0.5)));
         uint faceSalt = uint(faceIndex + 1) * 0x9e3779b9u;
@@ -311,7 +311,7 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
             hashUnit(hashMix32(seed ^ 0x63d83595u)),
             hashUnit(hashMix32(seed ^ 0xb5297a4du))
         );
-        if (directionalPhaseOnly) {
+        if (directionalPhaseOnly && uTextureVariation < 0.52) {
             offsetRandom.y = 0.0;
         }
         // Keep randomized offsets on texel boundaries so nearest-filtered
