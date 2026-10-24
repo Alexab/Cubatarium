@@ -218,6 +218,7 @@ set(SOURCES
     src/Creatures/Visual/WornEquipmentDrawer.cpp
     src/Creatures/Visual/CreatureVisualGltf.cpp
     src/Creatures/Visual/CreatureVisualSprite.cpp
+    src/Creatures/Visual/CreatureVisualBackendSelect.cpp
     src/Creatures/Visual/CreatureVisualFactory.cpp
     src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
     src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp
@@ -1337,6 +1338,50 @@ cubatarium_add_test(NAME creature_spawn_selection_test
 add_test(NAME creature_spawn_selection_test
     COMMAND $<TARGET_FILE:creature_spawn_selection_test>)
 set_tests_properties(creature_spawn_selection_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME creature_spatial_index_test
+    SOURCES
+        src/World/Environment/CreatureSpatialIndex.cpp
+        src/World/Math/GridMath.cpp
+        src/Test/CreatureSpatialIndexTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_spatial_index_test
+    COMMAND $<TARGET_FILE:creature_spatial_index_test>)
+set_tests_properties(creature_spatial_index_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME creature_visual_backend_select_test
+    SOURCES
+        src/Creatures/Core/CreatureCatalogTypes.cpp
+        src/Creatures/Visual/CreatureVisualBackendSelect.cpp
+        src/Test/CreatureVisualBackendSelectTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_visual_backend_select_test
+    COMMAND $<TARGET_FILE:creature_visual_backend_select_test>)
+set_tests_properties(creature_visual_backend_select_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME creature_appearance_test
+    SOURCES
+        src/Creatures/Stats/CreatureStatsDefaults.cpp
+        src/Creatures/Stats/CreatureStatsJson.cpp
+        src/Creatures/Locomotion/LocomotionTypes.cpp
+        src/Creatures/Core/CreatureCatalogTypes.cpp
+        src/Creatures/Definition/CreatureDefinitionStorage.cpp
+        src/Creatures/Definition/SkinDefinitionStorage.cpp
+        src/Creatures/Visual/CreatureRigidModelLoader.cpp
+        src/Creatures/Visual/CreatureAppearance.cpp
+        src/Test/CreatureAppearanceTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME creature_appearance_test
+    COMMAND $<TARGET_FILE:creature_appearance_test>)
+set_tests_properties(creature_appearance_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME creature_draw_queue_test
+    SOURCES
+        src/Test/CreatureDrawQueueTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_draw_queue_test
+    COMMAND $<TARGET_FILE:creature_draw_queue_test>)
+set_tests_properties(creature_draw_queue_test PROPERTIES LABELS "unit;creatures")
 
 cubatarium_add_test(NAME chunk_lighting_propagation_test
     SOURCES
