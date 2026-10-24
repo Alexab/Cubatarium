@@ -16,6 +16,29 @@ project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
 enable_testing()
 
+# Helper for the hand-maintained unit-test executables: one call replaces the
+# add_executable + include/definitions/libraries boilerplate each test used to
+# repeat. Sources stay per-test on purpose (tests link minimal source subsets
+# with stubs instead of a monolithic library).
+function(cubatarium_add_test)
+    cmake_parse_arguments(CAT "" "NAME"
+        "SOURCES;DEFINITIONS;LIBRARIES;WIN32_LIBRARIES" ${ARGN})
+    if(NOT CAT_NAME)
+        message(FATAL_ERROR "cubatarium_add_test requires NAME")
+    endif()
+    add_executable(${CAT_NAME} ${CAT_SOURCES})
+    target_include_directories(${CAT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    if(CAT_DEFINITIONS)
+        target_compile_definitions(${CAT_NAME} PRIVATE ${CAT_DEFINITIONS})
+    endif()
+    if(CAT_LIBRARIES)
+        target_link_libraries(${CAT_NAME} ${CAT_LIBRARIES})
+    endif()
+    if(CAT_WIN32_LIBRARIES AND WIN32)
+        target_link_libraries(${CAT_NAME} ${CAT_WIN32_LIBRARIES})
+    endif()
+endfunction()
+
 # MSVC desktop static CRT (/MT). Skip for GNU-style Clang on Windows (e.g. linux-ninja preset).
 set(CUBATARIUM_MSVC_DESKTOP FALSE)
 if(WIN32)
@@ -107,21 +130,19 @@ if(NOT ANDROID)
     endif()
 endif()
 
+# Vendored stb headers (stb_image v2.30, stb_image_write v1.16) are tracked in
+# git. Do not silently download unpinned code from master at configure time;
+# fail loudly instead so builds stay reproducible.
 set(STB_IMAGE_HEADER "${CMAKE_SOURCE_DIR}/src/ThirdParty/stb_image.h")
-if(NOT EXISTS ${STB_IMAGE_HEADER})
-    file(DOWNLOAD 
-        "https://raw.githubusercontent.com/nothings/stb/master/stb_image.h"
-        ${STB_IMAGE_HEADER}
-    )
-endif()
-
 set(STB_IMAGE_WRITE_HEADER "${CMAKE_SOURCE_DIR}/src/ThirdParty/stb_image_write.h")
-if(NOT EXISTS ${STB_IMAGE_WRITE_HEADER})
-    file(DOWNLOAD
-        "https://raw.githubusercontent.com/nothings/stb/master/stb_image_write.h"
-        ${STB_IMAGE_WRITE_HEADER}
-    )
-endif()
+foreach(_stb_header IN ITEMS "${STB_IMAGE_HEADER}" "${STB_IMAGE_WRITE_HEADER}")
+    if(NOT EXISTS "${_stb_header}")
+        message(FATAL_ERROR
+            "Vendored stb header missing: ${_stb_header}\n"
+            "stb headers are tracked in git (src/ThirdParty/). "
+            "Restore it with: git checkout -- ${_stb_header}")
+    endif()
+endforeach()
 
 set(SOURCES
     src/ThirdParty/stb_image.cpp
@@ -845,207 +866,182 @@ if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /MP)
 endif()
 
-add_executable(chunk_load_priority_test
-    src/World/Chunks/ChunkLoadPriority.cpp
-    src/Test/ChunkLoadPriorityTest.cpp)
-target_include_directories(chunk_load_priority_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(chunk_load_priority_test glm::glm)
+cubatarium_add_test(NAME chunk_load_priority_test
+    SOURCES
+        src/World/Chunks/ChunkLoadPriority.cpp
+        src/Test/ChunkLoadPriorityTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(completed_job_queue_test
-    src/Test/CompletedJobQueueTest.cpp)
-target_include_directories(completed_job_queue_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
+cubatarium_add_test(NAME completed_job_queue_test
+    SOURCES
+        src/Test/CompletedJobQueueTest.cpp)
 
-add_executable(terrain_column_util_test
-    src/World/Chunks/Chunk.cpp
-    src/World/Chunks/ChunkManager.cpp
-    src/World/Chunks/ChunkBuffer.cpp
-    src/World/Chunks/TerrainColumnUtil.cpp
-    src/World/Core/BlockWorld.cpp
-    src/World/Core/IUBlockWriter.cpp
-    src/Blocks/BlockRegistry.cpp
-    src/Blocks/BlockDefinition.cpp
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/World/Physics/MaterialReactionRules.cpp
-    src/World/Physics/MaterialReactionRulesRegistry.cpp
-    src/World/Math/FluidCellState.cpp
-    src/World/Math/GridMath.cpp
-    src/Test/TerrainColumnUtilTest.cpp)
-target_include_directories(terrain_column_util_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(terrain_column_util_test PRIVATE
-    CUTUM_PHYSICS_LIGHT_REGISTRY)
-target_link_libraries(terrain_column_util_test glm::glm)
+cubatarium_add_test(NAME terrain_column_util_test
+    SOURCES
+        src/World/Chunks/Chunk.cpp
+        src/World/Chunks/ChunkManager.cpp
+        src/World/Chunks/ChunkBuffer.cpp
+        src/World/Chunks/TerrainColumnUtil.cpp
+        src/World/Core/BlockWorld.cpp
+        src/World/Core/IUBlockWriter.cpp
+        src/Blocks/BlockRegistry.cpp
+        src/Blocks/BlockDefinition.cpp
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/World/Physics/MaterialReactionRules.cpp
+        src/World/Physics/MaterialReactionRulesRegistry.cpp
+        src/World/Math/FluidCellState.cpp
+        src/World/Math/GridMath.cpp
+        src/Test/TerrainColumnUtilTest.cpp
+    DEFINITIONS CUTUM_PHYSICS_LIGHT_REGISTRY
+    LIBRARIES glm::glm)
 
-add_executable(negative_height_storage_test
-    src/World/Chunks/Chunk.cpp
-    src/World/Chunks/ChunkManager.cpp
-    src/World/Chunks/ChunkBuffer.cpp
-    src/World/Chunks/TerrainColumnUtil.cpp
-    src/World/Core/BlockWorld.cpp
-    src/World/Core/IUBlockWriter.cpp
-    src/World/IO/BinaryChunkSerializer.cpp
-    src/World/IO/JsonChunkSerializer.cpp
-    src/World/IO/ChunkStorageService.cpp
-    src/World/IO/ChunkStorageTypes.cpp
-    src/Blocks/BlockRegistry.cpp
-    src/Blocks/BlockDefinition.cpp
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/World/Physics/MaterialReactionRules.cpp
-    src/World/Physics/MaterialReactionRulesRegistry.cpp
-    src/World/Math/FluidCellState.cpp
-    src/World/Math/GridMath.cpp
-    src/Test/NegativeHeightStorageTest.cpp)
-target_include_directories(negative_height_storage_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(negative_height_storage_test PRIVATE
-    CUTUM_PHYSICS_LIGHT_REGISTRY)
-target_link_libraries(negative_height_storage_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME negative_height_storage_test
+    SOURCES
+        src/World/Chunks/Chunk.cpp
+        src/World/Chunks/ChunkManager.cpp
+        src/World/Chunks/ChunkBuffer.cpp
+        src/World/Chunks/TerrainColumnUtil.cpp
+        src/World/Core/BlockWorld.cpp
+        src/World/Core/IUBlockWriter.cpp
+        src/World/IO/BinaryChunkSerializer.cpp
+        src/World/IO/JsonChunkSerializer.cpp
+        src/World/IO/ChunkStorageService.cpp
+        src/World/IO/ChunkStorageTypes.cpp
+        src/Blocks/BlockRegistry.cpp
+        src/Blocks/BlockDefinition.cpp
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/World/Physics/MaterialReactionRules.cpp
+        src/World/Physics/MaterialReactionRulesRegistry.cpp
+        src/World/Math/FluidCellState.cpp
+        src/World/Math/GridMath.cpp
+        src/Test/NegativeHeightStorageTest.cpp
+    DEFINITIONS CUTUM_PHYSICS_LIGHT_REGISTRY
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(world_mesh_service_test
-    src/Render/Mesh/ChunkDirtySet.cpp
-    src/Test/WorldMeshServiceTest.cpp)
-target_include_directories(world_mesh_service_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(world_mesh_service_test glm::glm)
+cubatarium_add_test(NAME world_mesh_service_test
+    SOURCES
+        src/Render/Mesh/ChunkDirtySet.cpp
+        src/Test/WorldMeshServiceTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(chunk_mesh_revision_test
-    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
-    src/Test/ChunkMeshRevisionTest.cpp)
-target_include_directories(chunk_mesh_revision_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(chunk_mesh_revision_test glm::glm)
+cubatarium_add_test(NAME chunk_mesh_revision_test
+    SOURCES
+        src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
+        src/Test/ChunkMeshRevisionTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(terrain_mesh_dirty_seam_test
-    src/World/Math/GridMath.cpp
-    src/Test/TerrainMeshDirtySeamTest.cpp)
-target_include_directories(terrain_mesh_dirty_seam_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(terrain_mesh_dirty_seam_test glm::glm)
+cubatarium_add_test(NAME terrain_mesh_dirty_seam_test
+    SOURCES
+        src/World/Math/GridMath.cpp
+        src/Test/TerrainMeshDirtySeamTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(packed_quad_parity_test
-    src/Test/PackedQuadParityTest.cpp)
-target_include_directories(packed_quad_parity_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(packed_quad_parity_test PRIVATE
-    CUBATARIUM_PACKED_SHADER_PATH="${CMAKE_SOURCE_DIR}/shaders/vshader_packed_greedy.glsl")
-target_link_libraries(packed_quad_parity_test glm::glm)
+cubatarium_add_test(NAME packed_quad_parity_test
+    SOURCES
+        src/Test/PackedQuadParityTest.cpp
+    DEFINITIONS CUBATARIUM_PACKED_SHADER_PATH="${CMAKE_SOURCE_DIR}/shaders/vshader_packed_greedy.glsl"
+    LIBRARIES glm::glm)
 
-add_executable(navigation_pathfinder_test
-    src/Navigation/UNavigationPathfinder.cpp
-    src/Navigation/UWaypointFollower.cpp
-    src/Navigation/NavigationPathBudget.cpp
-    src/Test/NavigationPathfinderTest.cpp)
-target_include_directories(navigation_pathfinder_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(navigation_pathfinder_test glm::glm)
+cubatarium_add_test(NAME navigation_pathfinder_test
+    SOURCES
+        src/Navigation/UNavigationPathfinder.cpp
+        src/Navigation/UWaypointFollower.cpp
+        src/Navigation/NavigationPathBudget.cpp
+        src/Test/NavigationPathfinderTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(creature_activity_steering_test
-    src/Activity/Helpers/CreatureActivitySteering.cpp
-    src/Test/CreatureActivitySteeringTest.cpp)
-target_include_directories(creature_activity_steering_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(creature_activity_steering_test glm::glm)
+cubatarium_add_test(NAME creature_activity_steering_test
+    SOURCES
+        src/Activity/Helpers/CreatureActivitySteering.cpp
+        src/Test/CreatureActivitySteeringTest.cpp
+    LIBRARIES glm::glm)
 add_test(NAME creature_activity_steering_test
     COMMAND $<TARGET_FILE:creature_activity_steering_test>)
 set_tests_properties(creature_activity_steering_test PROPERTIES LABELS "unit;creatures")
 
-add_executable(locomotion_state_derive_test
-    src/Creatures/Locomotion/LocomotionStateDerive.cpp
-    src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
-    src/Test/LocomotionStateDeriveTest.cpp)
-target_include_directories(locomotion_state_derive_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(locomotion_state_derive_test glm::glm)
+cubatarium_add_test(NAME locomotion_state_derive_test
+    SOURCES
+        src/Creatures/Locomotion/LocomotionStateDerive.cpp
+        src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
+        src/Test/LocomotionStateDeriveTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(creature_movement_diag_test
-    src/World/Diagnostics/CreatureMovementDiagnostics.cpp
-    src/Test/CreatureMovementDiagTest.cpp)
-target_include_directories(creature_movement_diag_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(creature_movement_diag_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME creature_movement_diag_test
+    SOURCES
+        src/World/Diagnostics/CreatureMovementDiagnostics.cpp
+        src/Test/CreatureMovementDiagTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(wander_interval_test
-    src/Activity/Agents/WanderActivityAgent.cpp
-    src/Activity/Helpers/CreatureActivitySteering.cpp
-    src/Creatures/Locomotion/LocomotionTypes.cpp
-    src/World/Diagnostics/CreatureMovementDiagnostics.cpp
-    src/Test/WanderIntervalTest.cpp)
-target_include_directories(wander_interval_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(wander_interval_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME wander_interval_test
+    SOURCES
+        src/Activity/Agents/WanderActivityAgent.cpp
+        src/Activity/Helpers/CreatureActivitySteering.cpp
+        src/Creatures/Locomotion/LocomotionTypes.cpp
+        src/World/Diagnostics/CreatureMovementDiagnostics.cpp
+        src/Test/WanderIntervalTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME wander_interval_test COMMAND $<TARGET_FILE:wander_interval_test>)
 set_tests_properties(wander_interval_test PROPERTIES LABELS "unit;creatures")
 
-add_executable(creature_stats_test
-    src/Creatures/Stats/CreatureStatsDefaults.cpp
-    src/Creatures/Stats/CreatureStatsJson.cpp
-    src/Creatures/Locomotion/LocomotionTypes.cpp
-    src/Creatures/Core/CreatureCatalogTypes.cpp
-    src/Creatures/Definition/CreatureDefinitionStorage.cpp
-    src/Creatures/Visual/CreatureRigidModelLoader.cpp
-    src/Test/CreatureStatsTest.cpp)
-target_include_directories(creature_stats_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(creature_stats_test glm::glm nlohmann_json::nlohmann_json)
-target_compile_definitions(creature_stats_test PRIVATE
-    CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+cubatarium_add_test(NAME creature_stats_test
+    SOURCES
+        src/Creatures/Stats/CreatureStatsDefaults.cpp
+        src/Creatures/Stats/CreatureStatsJson.cpp
+        src/Creatures/Locomotion/LocomotionTypes.cpp
+        src/Creatures/Core/CreatureCatalogTypes.cpp
+        src/Creatures/Definition/CreatureDefinitionStorage.cpp
+        src/Creatures/Visual/CreatureRigidModelLoader.cpp
+        src/Test/CreatureStatsTest.cpp
+    DEFINITIONS CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME creature_stats_test COMMAND $<TARGET_FILE:creature_stats_test>)
 set_tests_properties(creature_stats_test PROPERTIES LABELS "unit;creatures")
 
-add_executable(influence_hit_math_test
-    src/Creatures/Influence/InfluenceHitMath.cpp
-    src/Items/ToolCapabilities.cpp
-    src/Test/InfluenceHitMathTest.cpp)
-target_include_directories(influence_hit_math_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(influence_hit_math_test glm::glm)
+cubatarium_add_test(NAME influence_hit_math_test
+    SOURCES
+        src/Creatures/Influence/InfluenceHitMath.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Test/InfluenceHitMathTest.cpp
+    LIBRARIES glm::glm)
 add_test(NAME influence_hit_math_test COMMAND $<TARGET_FILE:influence_hit_math_test>)
 set_tests_properties(influence_hit_math_test PROPERTIES LABELS "unit;creatures")
 
-add_executable(tool_capabilities_test
-    src/Items/ToolCapabilities.cpp
-    src/Test/ToolCapabilitiesTest.cpp)
-target_include_directories(tool_capabilities_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(tool_capabilities_test glm::glm)
+cubatarium_add_test(NAME tool_capabilities_test
+    SOURCES
+        src/Items/ToolCapabilities.cpp
+        src/Test/ToolCapabilitiesTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(armor_equipment_test
-    src/Items/ItemDefinitionStorage.cpp
-    src/Items/ItemVisualPresetLibrary.cpp
-    src/Creatures/Core/CreatureInventory.cpp
-    src/Items/ToolCapabilities.cpp
-    src/Test/ArmorEquipmentTest.cpp)
-target_include_directories(armor_equipment_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(armor_equipment_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME armor_equipment_test
+    SOURCES
+        src/Items/ItemDefinitionStorage.cpp
+        src/Items/ItemVisualPresetLibrary.cpp
+        src/Creatures/Core/CreatureInventory.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Test/ArmorEquipmentTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME creature_skinned_draw_test
+    SOURCES
+        src/Creatures/Visual/CreatureBonePaletteGpu.cpp
+        src/Test/CreatureSkinnedDrawTest.cpp
+    LIBRARIES OpenGL::GL glm::glm GLEW::GLEW)
 
-add_executable(creature_skinned_draw_test
-    src/Creatures/Visual/CreatureBonePaletteGpu.cpp
-    src/Test/CreatureSkinnedDrawTest.cpp)
-target_include_directories(creature_skinned_draw_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(creature_skinned_draw_test OpenGL::GL glm::glm GLEW::GLEW)
+cubatarium_add_test(NAME creature_bone_skeleton_loader_test
+    SOURCES
+        src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
+        src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.cpp
+        src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
+        src/Test/CreatureBoneSkeletonLoaderTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(creature_bone_skeleton_loader_test
-    src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
-    src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.cpp
-    src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
-    src/Test/CreatureBoneSkeletonLoaderTest.cpp)
-target_include_directories(creature_bone_skeleton_loader_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(creature_bone_skeleton_loader_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(creature_gltf_loader_test
-    src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
-    src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp
-    src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp
-    src/Test/CreatureGltfLoaderTest.cpp)
-target_include_directories(creature_gltf_loader_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(creature_gltf_loader_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME creature_gltf_loader_test
+    SOURCES
+        src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
+        src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp
+        src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp
+        src/Test/CreatureGltfLoaderTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
 set(PHYSICS_BLOCKWORLD_TEST_SOURCES
     src/World/Core/BlockWorld.cpp
@@ -1058,42 +1054,39 @@ set(PHYSICS_BLOCKWORLD_TEST_SOURCES
     src/Blocks/BlockDefinitionStorage.cpp
     src/Blocks/BlockDefinition.cpp)
 
-add_executable(capture_worker_integration_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Core/Jobs/JobThreadPool.cpp
-    src/App/Platform/WorkerJobKind.cpp
-    src/Core/Jobs/JobThreadBudget.cpp
-    src/Core/Jobs/PipelineAdmission.cpp
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/MeshCaptureWorker.cpp
-    src/Test/CaptureWorkerIntegrationTest.cpp)
-target_include_directories(capture_worker_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(capture_worker_integration_test glm::glm)
+cubatarium_add_test(NAME capture_worker_integration_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Core/Jobs/JobThreadPool.cpp
+        src/App/Platform/WorkerJobKind.cpp
+        src/Core/Jobs/JobThreadBudget.cpp
+        src/Core/Jobs/PipelineAdmission.cpp
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/MeshCaptureWorker.cpp
+        src/Test/CaptureWorkerIntegrationTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(capture_incremental_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Core/Jobs/PipelineAdmission.cpp
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/MeshCaptureStore.cpp
-    src/Test/CaptureIncrementalTest.cpp)
-target_include_directories(capture_incremental_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(capture_incremental_test glm::glm)
+cubatarium_add_test(NAME capture_incremental_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Core/Jobs/PipelineAdmission.cpp
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/MeshCaptureStore.cpp
+        src/Test/CaptureIncrementalTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(capture_token_validation_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Core/Jobs/JobThreadPool.cpp
-    src/App/Platform/WorkerJobKind.cpp
-    src/Core/Jobs/JobThreadBudget.cpp
-    src/Core/Jobs/PipelineAdmission.cpp
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/MeshCaptureStore.cpp
-    src/Render/Mesh/MeshCaptureWorker.cpp
-    src/Test/CaptureTokenValidationTest.cpp)
-target_include_directories(capture_token_validation_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(capture_token_validation_test glm::glm)
+cubatarium_add_test(NAME capture_token_validation_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Core/Jobs/JobThreadPool.cpp
+        src/App/Platform/WorkerJobKind.cpp
+        src/Core/Jobs/JobThreadBudget.cpp
+        src/Core/Jobs/PipelineAdmission.cpp
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/MeshCaptureStore.cpp
+        src/Render/Mesh/MeshCaptureWorker.cpp
+        src/Test/CaptureTokenValidationTest.cpp
+    LIBRARIES glm::glm)
 
 set(PHYSICS_FLUID_SIM_SOURCES
     src/World/Core/RuntimeTuning.cpp
@@ -1126,70 +1119,59 @@ set(PHYSICS_MATERIAL_UNIT_SOURCES
     src/World/Physics/MaterialReactionRules.cpp
     src/World/Physics/MaterialReactionRulesRegistry.cpp)
 
-add_executable(block_update_queue_purge_test
-    src/World/Physics/BlockUpdateQueue.cpp
-    src/World/Physics/PhysicsChunkDistance.cpp
-    src/World/Physics/PhysicsQueuePurge.cpp
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Test/BlockUpdateQueuePurgeTest.cpp)
-target_include_directories(block_update_queue_purge_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(block_update_queue_purge_test glm::glm)
+cubatarium_add_test(NAME block_update_queue_purge_test
+    SOURCES
+        src/World/Physics/BlockUpdateQueue.cpp
+        src/World/Physics/PhysicsChunkDistance.cpp
+        src/World/Physics/PhysicsQueuePurge.cpp
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Test/BlockUpdateQueuePurgeTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(liquid_queue_priority_test
-    src/World/Physics/FluidUpdateSet.cpp
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Test/LiquidQueuePriorityTest.cpp)
-target_include_directories(liquid_queue_priority_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(liquid_queue_priority_test glm::glm)
+cubatarium_add_test(NAME liquid_queue_priority_test
+    SOURCES
+        src/World/Physics/FluidUpdateSet.cpp
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Test/LiquidQueuePriorityTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(chunk_rebuild_queue_test
-    src/World/Physics/ChunkRebuildQueue.cpp
-    src/World/Physics/PhysicsChunkDistance.cpp
-    src/World/Physics/PhysicsQueuePurge.cpp
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Test/ChunkRebuildQueueTest.cpp)
-target_include_directories(chunk_rebuild_queue_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(chunk_rebuild_queue_test glm::glm)
+cubatarium_add_test(NAME chunk_rebuild_queue_test
+    SOURCES
+        src/World/Physics/ChunkRebuildQueue.cpp
+        src/World/Physics/PhysicsChunkDistance.cpp
+        src/World/Physics/PhysicsQueuePurge.cpp
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Test/ChunkRebuildQueueTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(block_update_queue_order_test
-    src/World/Physics/BlockUpdateQueue.cpp
-    src/World/Physics/PhysicsChunkDistance.cpp
-    src/World/Physics/PhysicsQueuePurge.cpp
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Test/BlockUpdateQueueOrderTest.cpp)
-target_include_directories(block_update_queue_order_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(block_update_queue_order_test glm::glm)
+cubatarium_add_test(NAME block_update_queue_order_test
+    SOURCES
+        src/World/Physics/BlockUpdateQueue.cpp
+        src/World/Physics/PhysicsChunkDistance.cpp
+        src/World/Physics/PhysicsQueuePurge.cpp
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Test/BlockUpdateQueueOrderTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(voxel_dda_traversal_test
-    src/World/Collision/VoxelDdaTraversal.cpp
-    src/Test/VoxelDdaTraversalTest.cpp)
-target_include_directories(voxel_dda_traversal_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(voxel_dda_traversal_test glm::glm)
+cubatarium_add_test(NAME voxel_dda_traversal_test
+    SOURCES
+        src/World/Collision/VoxelDdaTraversal.cpp
+        src/Test/VoxelDdaTraversalTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(physics_profile_parse_test
-    src/Test/PhysicsProfileParseTest.cpp)
-target_include_directories(physics_profile_parse_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(physics_profile_parse_test glm::glm)
+cubatarium_add_test(NAME physics_profile_parse_test
+    SOURCES
+        src/Test/PhysicsProfileParseTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(inventory_icon_fingerprint_test
-    src/App/Platform/IUPlatformPaths.cpp
-    src/ThirdParty/stb_image.cpp
-    src/ThirdParty/stb_image_write.cpp
-    src/Gui/Cache/InventoryIconService.cpp
-    src/Test/InventoryIconFingerprintTest.cpp)
-target_include_directories(inventory_icon_fingerprint_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(inventory_icon_fingerprint_test
-    OpenGL::GL
-    GLEW::GLEW
-    nlohmann_json::nlohmann_json
-    glm::glm)
+cubatarium_add_test(NAME inventory_icon_fingerprint_test
+    SOURCES
+        src/App/Platform/IUPlatformPaths.cpp
+        src/ThirdParty/stb_image.cpp
+        src/ThirdParty/stb_image_write.cpp
+        src/Gui/Cache/InventoryIconService.cpp
+        src/Test/InventoryIconFingerprintTest.cpp
+    LIBRARIES OpenGL::GL GLEW::GLEW nlohmann_json::nlohmann_json glm::glm)
 
 set(PHYSICS_REPLAY_TEST_SOURCES
     src/World/Physics/BlockUpdateQueue.cpp
@@ -1202,1024 +1184,897 @@ set(PHYSICS_REPLAY_TEST_SOURCES
     src/World/Physics/Replay/WorldStateHasher.cpp
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES})
 
-add_executable(deterministic_replay_test
-    ${PHYSICS_REPLAY_TEST_SOURCES}
-    src/Test/DeterministicReplayTest.cpp)
-target_include_directories(deterministic_replay_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(deterministic_replay_test glm::glm)
+cubatarium_add_test(NAME deterministic_replay_test
+    SOURCES
+        ${PHYSICS_REPLAY_TEST_SOURCES}
+        src/Test/DeterministicReplayTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(physics_budget_guard_test
-    ${PHYSICS_REPLAY_TEST_SOURCES}
-    src/Test/PhysicsBudgetGuardTest.cpp)
-target_include_directories(physics_budget_guard_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(physics_budget_guard_test glm::glm)
+cubatarium_add_test(NAME physics_budget_guard_test
+    SOURCES
+        ${PHYSICS_REPLAY_TEST_SOURCES}
+        src/Test/PhysicsBudgetGuardTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(liquid_queue_backpressure_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/FluidUpdateSet.cpp
-    src/Test/LiquidQueueBackpressureTest.cpp)
-target_include_directories(liquid_queue_backpressure_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(liquid_queue_backpressure_test glm::glm)
+cubatarium_add_test(NAME liquid_queue_backpressure_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/World/Physics/FluidUpdateSet.cpp
+        src/Test/LiquidQueueBackpressureTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(collision_readiness_gate_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/CollisionReadiness.cpp
-    src/Test/CollisionReadinessGateTest.cpp)
-target_include_directories(collision_readiness_gate_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(collision_readiness_gate_test glm::glm)
+cubatarium_add_test(NAME collision_readiness_gate_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/World/Physics/CollisionReadiness.cpp
+        src/Test/CollisionReadinessGateTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(movement_chunk_boundary_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Test/MovementChunkBoundaryTest.cpp)
-target_include_directories(movement_chunk_boundary_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(movement_chunk_boundary_test glm::glm)
+cubatarium_add_test(NAME movement_chunk_boundary_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Test/MovementChunkBoundaryTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(falling_blocks_stability_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Physics/FallingBlockRules.cpp
-    src/World/Physics/Replay/WorldStateHasher.cpp
-    src/Test/FallingBlocksStabilityTest.cpp)
-target_include_directories(falling_blocks_stability_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(falling_blocks_stability_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(falling_blocks_stability_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME falling_blocks_stability_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Physics/FallingBlockRules.cpp
+        src/World/Physics/Replay/WorldStateHasher.cpp
+        src/Test/FallingBlocksStabilityTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
 set(PHYSICS_REGISTRY_TEST_SOURCES
     src/Blocks/BlockRegistry.cpp
     src/Render/Textures/TextureBase.cpp
     src/Render/Textures/TextureCube.cpp)
 
-add_executable(fluid_state_pack_test
-    src/Test/FluidStatePackTest.cpp
-    src/World/Math/FluidCellState.cpp)
-target_include_directories(fluid_state_pack_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(fluid_state_pack_test glm::glm)
+cubatarium_add_test(NAME fluid_state_pack_test
+    SOURCES
+        src/Test/FluidStatePackTest.cpp
+        src/World/Math/FluidCellState.cpp
+    LIBRARIES glm::glm)
 
-add_executable(world_view_settings_test
-    src/Test/WorldViewSettingsTest.cpp
-    src/World/View/WorldViewSettings.cpp)
-target_include_directories(world_view_settings_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(world_view_settings_test nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME world_view_settings_test
+    SOURCES
+        src/Test/WorldViewSettingsTest.cpp
+        src/World/View/WorldViewSettings.cpp
+    LIBRARIES nlohmann_json::nlohmann_json)
 
-add_executable(view_ray_math_test
-    src/Test/ViewRayMathTest.cpp
-    src/World/View/ViewRayMath.cpp)
-target_include_directories(view_ray_math_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(view_ray_math_test glm::glm)
+cubatarium_add_test(NAME view_ray_math_test
+    SOURCES
+        src/Test/ViewRayMathTest.cpp
+        src/World/View/ViewRayMath.cpp
+    LIBRARIES glm::glm)
 
-add_executable(environment_config_celestial_test
-    src/Test/EnvironmentConfigCelestialTest.cpp
-    src/World/Environment/EnvironmentConfig.cpp)
-target_include_directories(environment_config_celestial_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(environment_config_celestial_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME environment_config_celestial_test
+    SOURCES
+        src/Test/EnvironmentConfigCelestialTest.cpp
+        src/World/Environment/EnvironmentConfig.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(weather_front_field_test
-    src/Test/WeatherFrontFieldTest.cpp
-    src/World/Environment/WeatherField.cpp)
-target_include_directories(weather_front_field_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(weather_front_field_test glm::glm)
+cubatarium_add_test(NAME weather_front_field_test
+    SOURCES
+        src/Test/WeatherFrontFieldTest.cpp
+        src/World/Environment/WeatherField.cpp
+    LIBRARIES glm::glm)
 
-add_executable(chunk_light_pack_test
-    src/Test/ChunkLightPackTest.cpp)
-target_include_directories(chunk_light_pack_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(chunk_light_pack_test glm::glm)
+cubatarium_add_test(NAME chunk_light_pack_test
+    SOURCES
+        src/Test/ChunkLightPackTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(block_light_emission_parse_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Blocks/BlockDefinition.cpp
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/Test/BlockLightEmissionParseTest.cpp)
-target_include_directories(block_light_emission_parse_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(block_light_emission_parse_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(block_light_emission_parse_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME block_light_emission_parse_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Blocks/BlockDefinition.cpp
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/Test/BlockLightEmissionParseTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(block_hardness_parse_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Blocks/BlockDefinition.cpp
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/Test/BlockHardnessParseTest.cpp)
-target_include_directories(block_hardness_parse_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(block_hardness_parse_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(block_hardness_parse_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME block_hardness_parse_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Blocks/BlockDefinition.cpp
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/Test/BlockHardnessParseTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(block_break_duration_test
-    src/Test/BlockBreakDurationTest.cpp)
-target_include_directories(block_break_duration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(block_break_duration_test glm::glm)
+cubatarium_add_test(NAME block_break_duration_test
+    SOURCES
+        src/Test/BlockBreakDurationTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(inventory_mode_test
-    src/Creatures/Core/CreatureInventory.cpp
-    src/Items/ItemDefinitionStorage.cpp
-    src/Items/ItemVisualPresetLibrary.cpp
-    src/Items/ToolCapabilities.cpp
-    src/Test/InventoryModeTest.cpp)
-target_include_directories(inventory_mode_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(inventory_mode_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME inventory_mode_test
+    SOURCES
+        src/Creatures/Core/CreatureInventory.cpp
+        src/Items/ItemDefinitionStorage.cpp
+        src/Items/ItemVisualPresetLibrary.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Test/InventoryModeTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(influence_use_test
-    src/Items/ItemUseRegistry.cpp
-    src/Test/InfluenceUseTest.cpp)
-target_include_directories(influence_use_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(influence_use_test glm::glm)
+cubatarium_add_test(NAME influence_use_test
+    SOURCES
+        src/Items/ItemUseRegistry.cpp
+        src/Test/InfluenceUseTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(recipe_registry_test
-    src/Creatures/Core/CreatureInventory.cpp
-    src/Items/ItemDefinitionStorage.cpp
-    src/Items/ItemVisualPresetLibrary.cpp
-    src/Items/ToolCapabilities.cpp
-    src/Game/Crafting/RecipeRegistry.cpp
-    src/Test/RecipeRegistryTest.cpp)
-target_include_directories(recipe_registry_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(recipe_registry_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME recipe_registry_test
+    SOURCES
+        src/Creatures/Core/CreatureInventory.cpp
+        src/Items/ItemDefinitionStorage.cpp
+        src/Items/ItemVisualPresetLibrary.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Game/Crafting/RecipeRegistry.cpp
+        src/Test/RecipeRegistryTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(resource_economy_test
-    src/Creatures/Core/CreatureInventory.cpp
-    src/Items/ItemDefinitionStorage.cpp
-    src/Items/ItemVisualPresetLibrary.cpp
-    src/Items/ToolCapabilities.cpp
-    src/Game/Economy/ResourceEconomy.cpp
-    src/Test/ResourceEconomyTest.cpp)
-target_include_directories(resource_economy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(resource_economy_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME resource_economy_test
+    SOURCES
+        src/Creatures/Core/CreatureInventory.cpp
+        src/Items/ItemDefinitionStorage.cpp
+        src/Items/ItemVisualPresetLibrary.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Game/Economy/ResourceEconomy.cpp
+        src/Test/ResourceEconomyTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(mode_policy_test
-    src/Test/ModePolicyTest.cpp)
-target_include_directories(mode_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(mode_policy_test glm::glm)
+cubatarium_add_test(NAME mode_policy_test
+    SOURCES
+        src/Test/ModePolicyTest.cpp
+    LIBRARIES glm::glm)
 add_test(NAME mode_policy_test COMMAND $<TARGET_FILE:mode_policy_test>)
 set_tests_properties(mode_policy_test PROPERTIES LABELS "unit;creatures")
 
-add_executable(creature_spawn_selection_test
-    src/Test/CreatureSpawnSelectionTest.cpp)
-target_include_directories(creature_spawn_selection_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(creature_spawn_selection_test glm::glm)
+cubatarium_add_test(NAME creature_spawn_selection_test
+    SOURCES
+        src/Test/CreatureSpawnSelectionTest.cpp
+    LIBRARIES glm::glm)
 add_test(NAME creature_spawn_selection_test
     COMMAND $<TARGET_FILE:creature_spawn_selection_test>)
 set_tests_properties(creature_spawn_selection_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME chunk_lighting_propagation_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Lighting/LightUtil.cpp
+        src/World/Lighting/ChunkLighting.cpp
+        src/World/Lighting/ChunkRelightSnapshot.cpp
+        src/Test/GpuBlocklightFloodHostStub.cpp
+        src/Test/GpuSkylightSeedHostStub.cpp
+        src/Test/ChunkLightingPropagationTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(chunk_lighting_propagation_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Lighting/LightUtil.cpp
-    src/World/Lighting/ChunkLighting.cpp
-    src/World/Lighting/ChunkRelightSnapshot.cpp
-    src/Test/GpuBlocklightFloodHostStub.cpp
-    src/Test/GpuSkylightSeedHostStub.cpp
-    src/Test/ChunkLightingPropagationTest.cpp)
-target_include_directories(chunk_lighting_propagation_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(chunk_lighting_propagation_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(chunk_lighting_propagation_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(chunk_bulk_blocklight_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Lighting/LightUtil.cpp
-    src/World/Lighting/ChunkLighting.cpp
-    src/Test/GpuBlocklightFloodHostStub.cpp
-    src/Test/GpuSkylightSeedHostStub.cpp
-    src/Test/ChunkBulkBlockLightTest.cpp)
-target_include_directories(chunk_bulk_blocklight_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(chunk_bulk_blocklight_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(chunk_bulk_blocklight_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME chunk_bulk_blocklight_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Lighting/LightUtil.cpp
+        src/World/Lighting/ChunkLighting.cpp
+        src/Test/GpuBlocklightFloodHostStub.cpp
+        src/Test/GpuSkylightSeedHostStub.cpp
+        src/Test/ChunkBulkBlockLightTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME chunk_bulk_blocklight_test
     COMMAND $<TARGET_FILE:chunk_bulk_blocklight_test>)
 set_tests_properties(chunk_bulk_blocklight_test PROPERTIES LABELS "unit;lighting")
 
-add_executable(fluid_chunk_io_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/IO/BinaryChunkSerializer.cpp
-    src/World/IO/JsonChunkSerializer.cpp
-    src/Test/FluidChunkIoTest.cpp)
-target_include_directories(fluid_chunk_io_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_chunk_io_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_chunk_io_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_spread_level_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    ${PHYSICS_FLUID_SIM_SOURCES}
-    src/Test/FluidSpreadLevelTest.cpp)
-target_include_directories(fluid_spread_level_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_spread_level_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_spread_level_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_mesh_faces_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/GreedyMesher.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidMeshFacesTest.cpp)
-target_include_directories(fluid_mesh_faces_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_mesh_faces_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_mesh_faces_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fog_range_smoother_test
-    src/Test/FogRangeSmootherTest.cpp)
-target_include_directories(fog_range_smoother_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(seam_absent_neighbor_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/GreedyMesher.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/SeamAbsentNeighborTest.cpp)
-target_include_directories(seam_absent_neighbor_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(seam_absent_neighbor_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(seam_absent_neighbor_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(greedy_cross_plant_ground_face_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/GreedyMesher.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/GreedyCrossPlantGroundFaceTest.cpp)
-target_include_directories(greedy_cross_plant_ground_face_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(greedy_cross_plant_ground_face_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(greedy_cross_plant_ground_face_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(underwater_fog_column_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Core/FluidColumnSurfaceQuery.cpp
-    src/Test/UnderwaterFogColumnTest.cpp)
-target_include_directories(underwater_fog_column_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(underwater_fog_column_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(underwater_fog_column_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(camera_stability_test src/Test/CameraStabilityTest.cpp)
-target_include_directories(camera_stability_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(camera_stability_test glm::glm)
-
-add_executable(streaming_render_ready_invariants_test
-    src/Test/StreamingRenderReadyInvariantsTest.cpp
-    src/World/Streaming/ColumnFlowScheduler.cpp)
-target_include_directories(streaming_render_ready_invariants_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(streaming_render_ready_invariants_test glm::glm)
-
-add_executable(mesh_neighbor_policy_test
-    src/Test/MeshNeighborPolicyTest.cpp
-    src/World/Math/GridMath.cpp)
-target_include_directories(mesh_neighbor_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(mesh_neighbor_policy_test PRIVATE glm::glm)
-
-add_executable(mesh_publish_contract_test
-    src/Test/MeshPublishContractTest.cpp)
-target_include_directories(mesh_publish_contract_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(mesh_publish_contract_test glm::glm)
-
-add_executable(miss_first_mesh_class_test
-    src/Test/MissFirstMeshClassTest.cpp
-    src/World/Streaming/EnterVisualGate.cpp
-    src/World/Streaming/MemoryBudgetController.cpp
-    src/World/Math/GridMath.cpp)
-target_include_directories(miss_first_mesh_class_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(miss_first_mesh_class_test glm::glm)
-
-add_executable(mark_relit_characterization_test
-    src/Test/MarkRelitCharacterizationTest.cpp)
-target_include_directories(mark_relit_characterization_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(mark_relit_characterization_test glm::glm)
-
-add_executable(mesh_light_stale_policy_test
-    src/Test/MeshLightStalePolicyTest.cpp)
-target_include_directories(mesh_light_stale_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(relight_install_planner_test
-    src/Test/RelightInstallPlannerTest.cpp)
-target_include_directories(relight_install_planner_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(relight_install_planner_test glm::glm)
-
-add_executable(chunk_render_demand_test
-    src/Test/ChunkRenderDemandTest.cpp
-    src/World/Streaming/ChunkRenderDemand.cpp
-    src/World/Diagnostics/JobStageTrace.cpp)
-target_include_directories(chunk_render_demand_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(chunk_render_demand_test glm::glm)
-
-add_executable(relight_result_install_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/World/Lighting/LightUtil.cpp
-    src/World/Lighting/ChunkRelightSnapshot.cpp
-    src/Test/RelightResultInstallTest.cpp)
-target_include_directories(relight_result_install_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(relight_result_install_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(relight_result_install_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(mark_relit_integration_test
-    src/Test/MarkRelitIntegrationTest.cpp)
-target_include_directories(mark_relit_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(mark_relit_integration_test glm::glm)
-
-add_executable(focus_ingress_policy_test
-    src/Test/FocusIngressPolicyTest.cpp)
-target_include_directories(focus_ingress_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(frame_streaming_budget_test
-    src/Test/FrameStreamingBudgetTest.cpp)
-target_include_directories(frame_streaming_budget_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(frame_streaming_budget_test PRIVATE glm::glm)
-
-add_executable(idle_recovery_policy_test
-    src/Test/IdleRecoveryPolicyTest.cpp)
-target_include_directories(idle_recovery_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(seed_decision_policy_test
-    src/Test/SeedDecisionPolicyTest.cpp)
-target_include_directories(seed_decision_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(column_desired_stage_test
-    src/Test/ColumnDesiredStageTest.cpp)
-target_include_directories(column_desired_stage_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(cruise_sot_phase_test
-    src/Test/CruiseSoTPhaseTest.cpp
-    src/World/Streaming/ColumnRecordCoordinator.cpp)
-target_include_directories(cruise_sot_phase_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(cruise_sot_phase_test PRIVATE glm::glm glog::glog)
-
-add_executable(visible_black_attribution_test
-    src/Test/VisibleBlackAttributionTest.cpp)
-target_include_directories(visible_black_attribution_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(draw_oracle_gate_test
-    src/Test/DrawOracleGateTest.cpp)
-target_include_directories(draw_oracle_gate_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(block_catalog_queries_test
-    src/Test/BlockCatalogQueriesTest.cpp)
-target_include_directories(block_catalog_queries_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(block_catalog_queries_test PRIVATE glm::glm)
-
-add_executable(mesh_inputs_catalog_test
-    src/Test/MeshInputsCatalogTest.cpp)
-target_include_directories(mesh_inputs_catalog_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(mesh_inputs_catalog_test PRIVATE glm::glm)
-
-add_executable(normal_shutdown_test
-    src/Test/NormalShutdownTest.cpp
-    src/Core/Jobs/JobThreadPool.cpp
-    src/App/Platform/WorkerJobKind.cpp
-    src/Core/Jobs/JobThreadBudget.cpp)
-target_include_directories(normal_shutdown_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(frame_deadline_test
-    src/Test/FrameDeadlineTest.cpp)
-target_include_directories(frame_deadline_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(streamer_deadline_policy_test
-    src/Test/StreamerDeadlinePolicyTest.cpp)
-target_include_directories(streamer_deadline_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(streamer_deadline_policy_test PRIVATE glm::glm)
-
-add_executable(streamer_amortize_policy_test
-    src/Test/StreamerAmortizePolicyTest.cpp)
-target_include_directories(streamer_amortize_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(sticky_overlay_remesh_policy_test
-    src/Test/StickyOverlayRemeshPolicyTest.cpp)
-target_include_directories(sticky_overlay_remesh_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(sticky_overlay_remesh_policy_test PRIVATE glm::glm)
-
-add_executable(column_emerge_bump_test
-    src/Test/ColumnEmergeBumpTest.cpp)
-target_include_directories(column_emerge_bump_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(column_emerge_bump_test glm::glm)
-
-add_executable(visual_ready_for_ring_policy_test
-    src/Test/VisualReadyForRingPolicyTest.cpp)
-target_include_directories(visual_ready_for_ring_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(frustum_clip_test
-    src/Test/FrustumClipTest.cpp)
-target_include_directories(frustum_clip_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(frustum_clip_test glm::glm)
-
-add_executable(column_flow_scheduler_test
-    src/Test/ColumnFlowSchedulerTest.cpp
-    src/World/Streaming/ColumnFlowScheduler.cpp)
-target_include_directories(column_flow_scheduler_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(column_flow_scheduler_test glm::glm)
-
-add_executable(column_scheduler_audit_repro
-    tools/research/ColumnSchedulerAuditRepro.cpp
-    src/World/Streaming/ColumnFlowScheduler.cpp)
-target_include_directories(column_scheduler_audit_repro PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(column_scheduler_audit_repro glm::glm)
-
-add_executable(edit_mesh_remesh_policy_test
-    src/Test/EditMeshRemeshPolicyTest.cpp
-    src/World/Mesh/EditMeshRemeshPolicy.cpp
-    src/World/Math/GridMath.cpp)
-target_include_directories(edit_mesh_remesh_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(edit_mesh_remesh_policy_test glm::glm)
-
-add_executable(dig_seam_queue_test
-    src/Test/DigSeamQueueTest.cpp)
-target_include_directories(dig_seam_queue_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(dig_seam_queue_test glm::glm)
-
-add_executable(render_backend_factory_test
-    src/Test/RenderBackendFactoryTest.cpp
-    src/Render/Backend/RenderBackendSelect.cpp
-    src/Render/Backend/RenderBackendCaps.cpp)
-target_include_directories(render_backend_factory_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(android_gpu_policy_test
-    src/Test/AndroidGpuPolicyTest.cpp
-    src/Render/Backend/AndroidGpuPolicy.cpp
-    src/Render/Backend/RenderBackendCaps.cpp)
-target_include_directories(android_gpu_policy_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(android_gpu_policy_test PRIVATE glog::glog)
-
-add_executable(mesh_gpu_store_mdi_test
-    src/Test/MeshGpuStoreMdiTest.cpp)
-target_include_directories(mesh_gpu_store_mdi_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(mesh_gpu_store_mdi_test PRIVATE glm::glm)
-
-add_executable(greedy_vertex_pool_lifetime_test
-    src/Test/GreedyVertexPoolLifetimeTest.cpp
-    src/Render/Engine/GreedyVertexPoolLifetime.cpp)
-target_include_directories(greedy_vertex_pool_lifetime_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(gpu_greedy_face_extract_test
-    src/Test/GpuGreedyFaceExtractTest.cpp
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Math/GridMath.cpp
-    src/Render/Mesh/ChunkMeshSnapshot.cpp)
-target_include_directories(gpu_greedy_face_extract_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(gpu_greedy_face_extract_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(gpu_greedy_face_extract_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(gpu_extract_mesher_parity_test
-    src/Test/GpuExtractMesherParityTest.cpp
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/GreedyMesher.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp)
-target_include_directories(gpu_extract_mesher_parity_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(gpu_extract_mesher_parity_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF}
-    CUBATARIUM_GPU_EMIT_SOURCE_PATH="${CMAKE_SOURCE_DIR}/src/Render/Mesh/GpuGreedyOpaqueEmit.cpp")
-target_link_libraries(gpu_extract_mesher_parity_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(greedy_transparent_sort_test
-    src/Test/GreedyTransparentSortTest.cpp
-    src/Render/Pipeline/GreedyTransparentSort.cpp
-    src/Render/Backend/RenderBackendCaps.cpp
-    src/Render/Backend/GpuHotPathFallback.cpp
-    src/Test/GpuTransparentSortHostStub.cpp
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Math/GridMath.cpp)
-target_include_directories(greedy_transparent_sort_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(greedy_transparent_sort_test PRIVATE
-    CUBATARIUM_GLES ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(greedy_transparent_sort_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(gpu_skylight_column_seed_test
-    src/Test/GpuSkylightColumnSeedTest.cpp)
-target_include_directories(gpu_skylight_column_seed_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(gpu_skylight_column_seed_test glm::glm)
-
-add_executable(gpu_skylight_merge_test
-    src/World/Chunks/Chunk.cpp
-    src/World/Math/FluidCellState.cpp
-    src/Test/GpuSkylightMergeTest.cpp)
-target_include_directories(gpu_skylight_merge_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(gpu_skylight_merge_test glm::glm)
-
-add_executable(gpu_fluid_column_scan_test
-    src/Test/GpuFluidColumnScanTest.cpp)
-target_include_directories(gpu_fluid_column_scan_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(gpu_fluid_column_scan_test glm::glm)
-
-add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp
-    src/Gui/Layout/DockedOverlayLayout.cpp)
-target_include_directories(docked_overlay_layout_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(docked_overlay_layout_test glm::glm)
-
-add_executable(gui_scrollbar_controller_test
-    src/Test/GuiScrollbarControllerTest.cpp
-    src/Gui/Core/GuiScrollbarController.cpp)
-target_include_directories(gui_scrollbar_controller_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-
-add_executable(touch_input_bridge_lifecycle_test
-    src/App/Platform/TouchInputBridge.cpp
-    src/Test/TouchInputBridgeLifecycleTest.cpp)
-target_include_directories(touch_input_bridge_lifecycle_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(touch_input_bridge_lifecycle_test glm::glm)
-
-add_executable(fluid_surface_slice_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Core/FluidColumnSurfaceQuery.cpp
-    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
-    src/Test/GpuFluidColumnScanHostStub.cpp
-    src/Test/FluidSurfaceSliceTest.cpp)
-target_include_directories(fluid_surface_slice_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_surface_slice_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_surface_slice_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_surface_pack_reuse_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Core/FluidColumnSurfaceQuery.cpp
-    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
-    src/Test/GpuFluidColumnScanPreferStub.cpp
-    src/Test/FluidSurfacePackReuseTest.cpp)
-target_include_directories(fluid_surface_pack_reuse_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_surface_pack_reuse_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_surface_pack_reuse_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_surface_map_logic_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Core/FluidColumnSurfaceQuery.cpp
-    src/World/Core/RuntimeTuning.cpp
-    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
-    src/Test/GpuFluidColumnScanHostStub.cpp
-    src/Test/FluidSurfaceMapLogicTest.cpp)
-target_include_directories(fluid_surface_map_logic_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_surface_map_logic_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_surface_map_logic_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(underwater_waterline_test
-    src/Test/UnderwaterWaterlineTest.cpp)
-target_include_directories(underwater_waterline_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(underwater_waterline_test glm::glm)
-
-add_executable(liquid_viscosity_gate_test
-    ${PHYSICS_FLUID_SIM_SOURCES}
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Test/LiquidViscosityGateTest.cpp)
-target_include_directories(liquid_viscosity_gate_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(liquid_viscosity_gate_test glm::glm)
-
-add_executable(liquid_non_renewable_flow_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    ${PHYSICS_FLUID_SIM_SOURCES}
-    src/Test/LiquidNonRenewableFlowTest.cpp)
-target_include_directories(liquid_non_renewable_flow_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(liquid_non_renewable_flow_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(liquid_flow_scenarios_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    ${PHYSICS_FLUID_SIM_SOURCES}
-    src/Test/LiquidFlowScenariosTest.cpp)
-target_include_directories(liquid_flow_scenarios_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(liquid_flow_scenarios_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_queue_integration_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    ${PHYSICS_FLUID_SIM_SOURCES}
-    src/World/Physics/FluidUpdateSet.cpp
-    src/Test/FluidQueueIntegrationTest.cpp)
-target_include_directories(fluid_queue_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(fluid_queue_integration_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_stable_puddle_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    ${PHYSICS_FLUID_SIM_SOURCES}
-    src/World/Physics/FluidUpdateSet.cpp
-    src/Test/FluidStablePuddleTest.cpp)
-target_include_directories(fluid_stable_puddle_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(fluid_stable_puddle_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_queue_drain_integration_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    ${PHYSICS_FLUID_SIM_SOURCES}
-    src/World/Physics/FluidUpdateSet.cpp
-    src/Test/FluidQueueDrainIntegrationTest.cpp)
-target_include_directories(fluid_queue_drain_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(fluid_queue_drain_integration_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_sim_mesh_integration_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/GreedyMesher.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/FluidUpdateSet.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidSimMeshIntegrationTest.cpp)
-target_include_directories(fluid_sim_mesh_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_sim_mesh_integration_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_sim_mesh_integration_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(fluid_placement_liquid_decor_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/GreedyMesher.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/FluidUpdateSet.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidPlacementLiquidDecorTest.cpp)
-target_include_directories(fluid_placement_liquid_decor_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_placement_liquid_decor_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_placement_liquid_decor_test glm::glm nlohmann_json::nlohmann_json)
-
-add_executable(decor_mesh_integration_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Core/Jobs/JobThreadPool.cpp
-    src/App/Platform/WorkerJobKind.cpp
-    src/Core/Jobs/JobThreadBudget.cpp
-    src/Core/Jobs/PipelineAdmission.cpp
-    src/Render/Engine/DistanceFog.cpp
-    src/Render/Engine/HorizonFogColor.cpp
-    src/Render/Gl/ComputeProgram.cpp
-    src/Render/Mesh/AsyncMeshBuilder.cpp
-    src/Render/Mesh/ChunkDirtySet.cpp
-    src/Render/Mesh/ChunkMeshCache.cpp
-    src/World/Streaming/ChunkRenderDemand.cpp
-    src/World/Diagnostics/JobStageTrace.cpp
-    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/MeshCaptureStore.cpp
-    src/Render/Mesh/MeshCaptureWorker.cpp
-    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
-    src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
-    src/Render/Mesh/GpuMeshPipeline.cpp
-    src/Render/Mesh/GpuMeshSlotAllocator.cpp
-    src/Render/Backend/RenderBackendCaps.cpp
-    src/Test/GpuFluidColumnScanHostStub.cpp
-    src/Render/Mesh/GreedyMesher.cpp
-    src/World/Core/FluidColumnSurfaceQuery.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/App/Platform/Log.cpp
-    src/Test/DecorMeshIntegrationTest.cpp)
-target_include_directories(decor_mesh_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(decor_mesh_integration_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json
-    glog::glog OpenGL::GL GLEW::GLEW)
+cubatarium_add_test(NAME fluid_chunk_io_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/IO/BinaryChunkSerializer.cpp
+        src/World/IO/JsonChunkSerializer.cpp
+        src/Test/FluidChunkIoTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_spread_level_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        ${PHYSICS_FLUID_SIM_SOURCES}
+        src/Test/FluidSpreadLevelTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_mesh_faces_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/GreedyMesher.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidMeshFacesTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fog_range_smoother_test
+    SOURCES
+        src/Test/FogRangeSmootherTest.cpp)
+
+cubatarium_add_test(NAME seam_absent_neighbor_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/GreedyMesher.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/SeamAbsentNeighborTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME greedy_cross_plant_ground_face_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/GreedyMesher.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/GreedyCrossPlantGroundFaceTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME underwater_fog_column_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Core/FluidColumnSurfaceQuery.cpp
+        src/Test/UnderwaterFogColumnTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME camera_stability_test
+    SOURCES
+        src/Test/CameraStabilityTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME streaming_render_ready_invariants_test
+    SOURCES
+        src/Test/StreamingRenderReadyInvariantsTest.cpp
+        src/World/Streaming/ColumnFlowScheduler.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME mesh_neighbor_policy_test
+    SOURCES
+        src/Test/MeshNeighborPolicyTest.cpp
+        src/World/Math/GridMath.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME mesh_publish_contract_test
+    SOURCES
+        src/Test/MeshPublishContractTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME miss_first_mesh_class_test
+    SOURCES
+        src/Test/MissFirstMeshClassTest.cpp
+        src/World/Streaming/EnterVisualGate.cpp
+        src/World/Streaming/MemoryBudgetController.cpp
+        src/World/Math/GridMath.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME mark_relit_characterization_test
+    SOURCES
+        src/Test/MarkRelitCharacterizationTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME mesh_light_stale_policy_test
+    SOURCES
+        src/Test/MeshLightStalePolicyTest.cpp)
+
+cubatarium_add_test(NAME relight_install_planner_test
+    SOURCES
+        src/Test/RelightInstallPlannerTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME chunk_render_demand_test
+    SOURCES
+        src/Test/ChunkRenderDemandTest.cpp
+        src/World/Streaming/ChunkRenderDemand.cpp
+        src/World/Diagnostics/JobStageTrace.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME relight_result_install_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/World/Lighting/LightUtil.cpp
+        src/World/Lighting/ChunkRelightSnapshot.cpp
+        src/Test/RelightResultInstallTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME mark_relit_integration_test
+    SOURCES
+        src/Test/MarkRelitIntegrationTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME focus_ingress_policy_test
+    SOURCES
+        src/Test/FocusIngressPolicyTest.cpp)
+
+cubatarium_add_test(NAME frame_streaming_budget_test
+    SOURCES
+        src/Test/FrameStreamingBudgetTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME idle_recovery_policy_test
+    SOURCES
+        src/Test/IdleRecoveryPolicyTest.cpp)
+
+cubatarium_add_test(NAME seed_decision_policy_test
+    SOURCES
+        src/Test/SeedDecisionPolicyTest.cpp)
+
+cubatarium_add_test(NAME column_desired_stage_test
+    SOURCES
+        src/Test/ColumnDesiredStageTest.cpp)
+
+cubatarium_add_test(NAME cruise_sot_phase_test
+    SOURCES
+        src/Test/CruiseSoTPhaseTest.cpp
+        src/World/Streaming/ColumnRecordCoordinator.cpp
+    LIBRARIES glm::glm glog::glog)
+
+cubatarium_add_test(NAME visible_black_attribution_test
+    SOURCES
+        src/Test/VisibleBlackAttributionTest.cpp)
+
+cubatarium_add_test(NAME draw_oracle_gate_test
+    SOURCES
+        src/Test/DrawOracleGateTest.cpp)
+
+cubatarium_add_test(NAME block_catalog_queries_test
+    SOURCES
+        src/Test/BlockCatalogQueriesTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME mesh_inputs_catalog_test
+    SOURCES
+        src/Test/MeshInputsCatalogTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME normal_shutdown_test
+    SOURCES
+        src/Test/NormalShutdownTest.cpp
+        src/Core/Jobs/JobThreadPool.cpp
+        src/App/Platform/WorkerJobKind.cpp
+        src/Core/Jobs/JobThreadBudget.cpp)
+
+cubatarium_add_test(NAME frame_deadline_test
+    SOURCES
+        src/Test/FrameDeadlineTest.cpp)
+
+cubatarium_add_test(NAME streamer_deadline_policy_test
+    SOURCES
+        src/Test/StreamerDeadlinePolicyTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME streamer_amortize_policy_test
+    SOURCES
+        src/Test/StreamerAmortizePolicyTest.cpp)
+
+cubatarium_add_test(NAME sticky_overlay_remesh_policy_test
+    SOURCES
+        src/Test/StickyOverlayRemeshPolicyTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME column_emerge_bump_test
+    SOURCES
+        src/Test/ColumnEmergeBumpTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME visual_ready_for_ring_policy_test
+    SOURCES
+        src/Test/VisualReadyForRingPolicyTest.cpp)
+
+cubatarium_add_test(NAME frustum_clip_test
+    SOURCES
+        src/Test/FrustumClipTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME column_flow_scheduler_test
+    SOURCES
+        src/Test/ColumnFlowSchedulerTest.cpp
+        src/World/Streaming/ColumnFlowScheduler.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME column_scheduler_audit_repro
+    SOURCES
+        tools/research/ColumnSchedulerAuditRepro.cpp
+        src/World/Streaming/ColumnFlowScheduler.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME edit_mesh_remesh_policy_test
+    SOURCES
+        src/Test/EditMeshRemeshPolicyTest.cpp
+        src/World/Mesh/EditMeshRemeshPolicy.cpp
+        src/World/Math/GridMath.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME dig_seam_queue_test
+    SOURCES
+        src/Test/DigSeamQueueTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME render_backend_factory_test
+    SOURCES
+        src/Test/RenderBackendFactoryTest.cpp
+        src/Render/Backend/RenderBackendSelect.cpp
+        src/Render/Backend/RenderBackendCaps.cpp)
+
+cubatarium_add_test(NAME android_gpu_policy_test
+    SOURCES
+        src/Test/AndroidGpuPolicyTest.cpp
+        src/Render/Backend/AndroidGpuPolicy.cpp
+        src/Render/Backend/RenderBackendCaps.cpp
+    LIBRARIES glog::glog)
+
+cubatarium_add_test(NAME mesh_gpu_store_mdi_test
+    SOURCES
+        src/Test/MeshGpuStoreMdiTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME greedy_vertex_pool_lifetime_test
+    SOURCES
+        src/Test/GreedyVertexPoolLifetimeTest.cpp
+        src/Render/Engine/GreedyVertexPoolLifetime.cpp)
+
+cubatarium_add_test(NAME gpu_greedy_face_extract_test
+    SOURCES
+        src/Test/GpuGreedyFaceExtractTest.cpp
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Math/GridMath.cpp
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME gpu_extract_mesher_parity_test
+    SOURCES
+        src/Test/GpuExtractMesherParityTest.cpp
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/GreedyMesher.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF} CUBATARIUM_GPU_EMIT_SOURCE_PATH="${CMAKE_SOURCE_DIR}/src/Render/Mesh/GpuGreedyOpaqueEmit.cpp"
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME greedy_transparent_sort_test
+    SOURCES
+        src/Test/GreedyTransparentSortTest.cpp
+        src/Render/Pipeline/GreedyTransparentSort.cpp
+        src/Render/Backend/RenderBackendCaps.cpp
+        src/Render/Backend/GpuHotPathFallback.cpp
+        src/Test/GpuTransparentSortHostStub.cpp
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Math/GridMath.cpp
+    DEFINITIONS CUBATARIUM_GLES ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME gpu_skylight_column_seed_test
+    SOURCES
+        src/Test/GpuSkylightColumnSeedTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME gpu_skylight_merge_test
+    SOURCES
+        src/World/Chunks/Chunk.cpp
+        src/World/Math/FluidCellState.cpp
+        src/Test/GpuSkylightMergeTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME gpu_fluid_column_scan_test
+    SOURCES
+        src/Test/GpuFluidColumnScanTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME docked_overlay_layout_test
+    SOURCES
+        src/Test/DockedOverlayLayoutTest.cpp
+        src/Gui/Layout/DockedOverlayLayout.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME gui_scrollbar_controller_test
+    SOURCES
+        src/Test/GuiScrollbarControllerTest.cpp
+        src/Gui/Core/GuiScrollbarController.cpp)
+
+cubatarium_add_test(NAME touch_input_bridge_lifecycle_test
+    SOURCES
+        src/App/Platform/TouchInputBridge.cpp
+        src/Test/TouchInputBridgeLifecycleTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME fluid_surface_slice_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Core/FluidColumnSurfaceQuery.cpp
+        src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+        src/Test/GpuFluidColumnScanHostStub.cpp
+        src/Test/FluidSurfaceSliceTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_surface_pack_reuse_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Core/FluidColumnSurfaceQuery.cpp
+        src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+        src/Test/GpuFluidColumnScanPreferStub.cpp
+        src/Test/FluidSurfacePackReuseTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_surface_map_logic_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Core/FluidColumnSurfaceQuery.cpp
+        src/World/Core/RuntimeTuning.cpp
+        src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+        src/Test/GpuFluidColumnScanHostStub.cpp
+        src/Test/FluidSurfaceMapLogicTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME underwater_waterline_test
+    SOURCES
+        src/Test/UnderwaterWaterlineTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME liquid_viscosity_gate_test
+    SOURCES
+        ${PHYSICS_FLUID_SIM_SOURCES}
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Test/LiquidViscosityGateTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME liquid_non_renewable_flow_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        ${PHYSICS_FLUID_SIM_SOURCES}
+        src/Test/LiquidNonRenewableFlowTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME liquid_flow_scenarios_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        ${PHYSICS_FLUID_SIM_SOURCES}
+        src/Test/LiquidFlowScenariosTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_queue_integration_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        ${PHYSICS_FLUID_SIM_SOURCES}
+        src/World/Physics/FluidUpdateSet.cpp
+        src/Test/FluidQueueIntegrationTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_stable_puddle_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        ${PHYSICS_FLUID_SIM_SOURCES}
+        src/World/Physics/FluidUpdateSet.cpp
+        src/Test/FluidStablePuddleTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_queue_drain_integration_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        ${PHYSICS_FLUID_SIM_SOURCES}
+        src/World/Physics/FluidUpdateSet.cpp
+        src/Test/FluidQueueDrainIntegrationTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_sim_mesh_integration_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/GreedyMesher.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/FluidUpdateSet.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidSimMeshIntegrationTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME fluid_placement_liquid_decor_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/GreedyMesher.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/FluidUpdateSet.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidPlacementLiquidDecorTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME decor_mesh_integration_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Core/Jobs/JobThreadPool.cpp
+        src/App/Platform/WorkerJobKind.cpp
+        src/Core/Jobs/JobThreadBudget.cpp
+        src/Core/Jobs/PipelineAdmission.cpp
+        src/Render/Engine/DistanceFog.cpp
+        src/Render/Engine/HorizonFogColor.cpp
+        src/Render/Gl/ComputeProgram.cpp
+        src/Render/Mesh/AsyncMeshBuilder.cpp
+        src/Render/Mesh/ChunkDirtySet.cpp
+        src/Render/Mesh/ChunkMeshCache.cpp
+        src/World/Streaming/ChunkRenderDemand.cpp
+        src/World/Diagnostics/JobStageTrace.cpp
+        src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/MeshCaptureStore.cpp
+        src/Render/Mesh/MeshCaptureWorker.cpp
+        src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+        src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
+        src/Render/Mesh/GpuMeshPipeline.cpp
+        src/Render/Mesh/GpuMeshSlotAllocator.cpp
+        src/Render/Backend/RenderBackendCaps.cpp
+        src/Test/GpuFluidColumnScanHostStub.cpp
+        src/Render/Mesh/GreedyMesher.cpp
+        src/World/Core/FluidColumnSurfaceQuery.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/App/Platform/Log.cpp
+        src/Test/DecorMeshIntegrationTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog OpenGL::GL GLEW::GLEW)
 if(WIN32)
     target_link_libraries(decor_mesh_integration_test dbghelp)
 endif()
 
-add_executable(mesh_schedule_retry_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Core/Jobs/JobThreadPool.cpp
-    src/App/Platform/WorkerJobKind.cpp
-    src/Core/Jobs/JobThreadBudget.cpp
-    src/Core/Jobs/PipelineAdmission.cpp
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/MeshCaptureWorker.cpp
-    src/Test/MeshScheduleRetryTest.cpp)
-target_include_directories(mesh_schedule_retry_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(mesh_schedule_retry_test glm::glm)
+cubatarium_add_test(NAME mesh_schedule_retry_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Core/Jobs/JobThreadPool.cpp
+        src/App/Platform/WorkerJobKind.cpp
+        src/Core/Jobs/JobThreadBudget.cpp
+        src/Core/Jobs/PipelineAdmission.cpp
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/MeshCaptureWorker.cpp
+        src/Test/MeshScheduleRetryTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(column_job_graph_stage_test
-    src/Test/ColumnJobGraphStageTest.cpp)
-target_include_directories(column_job_graph_stage_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
+cubatarium_add_test(NAME column_job_graph_stage_test
+    SOURCES
+        src/Test/ColumnJobGraphStageTest.cpp)
 
-add_executable(fluid_worldgen_seal_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/ResourcePacks/BlockNameUtil.cpp
-    src/World/Objects/ObjectUtil.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/WorldGen/Stages/WorldGenStages.cpp
-    src/WorldGen/Sampling/AquiferSampler.cpp
-    src/WorldGen/Core/WorldGenContext.cpp
-    src/WorldGen/Core/WorldGenBlockResolver.cpp
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/ThirdParty/stb_image.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/WorldGen/Core/Noise.cpp
-    src/Test/FluidWorldGenSealTest.cpp)
-target_include_directories(fluid_worldgen_seal_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_worldgen_seal_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_worldgen_seal_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_worldgen_seal_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/World/Objects/ObjectUtil.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/WorldGen/Stages/WorldGenStages.cpp
+        src/WorldGen/Sampling/AquiferSampler.cpp
+        src/WorldGen/Core/WorldGenContext.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/ThirdParty/stb_image.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/WorldGen/Core/Noise.cpp
+        src/Test/FluidWorldGenSealTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(ravine_carver_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/ResourcePacks/BlockNameUtil.cpp
-    src/WorldGen/Core/WorldGenContext.cpp
-    src/WorldGen/Core/WorldGenBlockResolver.cpp
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/ThirdParty/stb_image.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/WorldGen/Core/Noise.cpp
-    src/WorldGen/Features/RavineCarver.cpp
-    src/Test/RavineCarverTest.cpp)
-target_include_directories(ravine_carver_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(ravine_carver_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(ravine_carver_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME ravine_carver_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/WorldGen/Core/WorldGenContext.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/ThirdParty/stb_image.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/WorldGen/Core/Noise.cpp
+        src/WorldGen/Features/RavineCarver.cpp
+        src/Test/RavineCarverTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(valley_carver_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/ResourcePacks/BlockNameUtil.cpp
-    src/WorldGen/Core/WorldGenContext.cpp
-    src/WorldGen/Core/WorldGenBlockResolver.cpp
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Core/Noise.cpp
-    src/WorldGen/Sampling/ClimateSampler.cpp
-    src/WorldGen/Sampling/TerrainClimateMapper.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/WorldGen/Features/ValleyCarver.cpp
-    src/WorldGen/Features/LakeCarver.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/ThirdParty/stb_image.cpp
-    src/Test/ValleyCarverTest.cpp)
-target_include_directories(valley_carver_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(valley_carver_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(valley_carver_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME valley_carver_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/WorldGen/Core/WorldGenContext.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Core/Noise.cpp
+        src/WorldGen/Sampling/ClimateSampler.cpp
+        src/WorldGen/Sampling/TerrainClimateMapper.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/WorldGen/Features/ValleyCarver.cpp
+        src/WorldGen/Features/LakeCarver.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/ThirdParty/stb_image.cpp
+        src/Test/ValleyCarverTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(mudflow_erosion_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/ResourcePacks/BlockNameUtil.cpp
-    src/World/Objects/ObjectUtil.cpp
-    src/WorldGen/Core/WorldGenContext.cpp
-    src/WorldGen/Core/WorldGenBlockResolver.cpp
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/ThirdParty/stb_image.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/WorldGen/Stages/MudflowErosion.cpp
-    src/Test/MudflowErosionTest.cpp)
-target_include_directories(mudflow_erosion_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(mudflow_erosion_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(mudflow_erosion_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME mudflow_erosion_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/World/Objects/ObjectUtil.cpp
+        src/WorldGen/Core/WorldGenContext.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/ThirdParty/stb_image.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/WorldGen/Stages/MudflowErosion.cpp
+        src/Test/MudflowErosionTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(density_refine_parity_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenBlockResolver.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/ResourcePacks/BlockNameUtil.cpp
-    src/ThirdParty/stb_image.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Core/Noise.cpp
-    src/WorldGen/Sampling/BiomeSampler.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/WorldGen/Sampling/ClimateSampler.cpp
-    src/WorldGen/Sampling/TerrainClimateMapper.cpp
-    src/WorldGen/Sampling/OverworldHeightSampler.cpp
-    src/WorldGen/Sampling/DensityRouter.cpp
-    src/WorldGen/Sampling/DensityFieldSampler.cpp
-    src/WorldGen/Sampling/AquiferSampler.cpp
-    src/WorldGen/Sampling/ColumnSample.cpp
-    src/WorldGen/Sampling/CoarseHeightCache.cpp
-    src/WorldGen/Features/CaveDepthBand.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/ThirdParty/stb_image.cpp
-    src/Test/DensityRefineParityTest.cpp)
-target_include_directories(density_refine_parity_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(density_refine_parity_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(density_refine_parity_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME density_refine_parity_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/ThirdParty/stb_image.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Core/Noise.cpp
+        src/WorldGen/Sampling/BiomeSampler.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/WorldGen/Sampling/ClimateSampler.cpp
+        src/WorldGen/Sampling/TerrainClimateMapper.cpp
+        src/WorldGen/Sampling/OverworldHeightSampler.cpp
+        src/WorldGen/Sampling/DensityRouter.cpp
+        src/WorldGen/Sampling/DensityFieldSampler.cpp
+        src/WorldGen/Sampling/AquiferSampler.cpp
+        src/WorldGen/Sampling/ColumnSample.cpp
+        src/WorldGen/Sampling/CoarseHeightCache.cpp
+        src/WorldGen/Features/CaveDepthBand.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/ThirdParty/stb_image.cpp
+        src/Test/DensityRefineParityTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(noise_permutation_cache_test
-    src/WorldGen/Core/Noise.cpp
-    src/Test/NoisePermutationCacheTest.cpp)
-target_include_directories(noise_permutation_cache_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
+cubatarium_add_test(NAME noise_permutation_cache_test
+    SOURCES
+        src/WorldGen/Core/Noise.cpp
+        src/Test/NoisePermutationCacheTest.cpp)
 
-add_executable(chunk_buffer_capture_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Test/ChunkBufferCaptureTest.cpp)
-target_include_directories(chunk_buffer_capture_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(chunk_buffer_capture_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME chunk_buffer_capture_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Test/ChunkBufferCaptureTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(worldgen_smoothness_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/ResourcePacks/BlockNameUtil.cpp
-    src/WorldGen/Core/WorldGenContext.cpp
-    src/WorldGen/Core/WorldGenBlockResolver.cpp
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Core/Noise.cpp
-    src/WorldGen/Sampling/DensityRouter.cpp
-    src/WorldGen/Sampling/DensityFieldSampler.cpp
-    src/WorldGen/Sampling/BiomeSampler.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/WorldGen/Sampling/ClimateSampler.cpp
-    src/WorldGen/Sampling/TerrainClimateMapper.cpp
-    src/WorldGen/Sampling/OverworldHeightSampler.cpp
-    src/WorldGen/Sampling/ColumnSample.cpp
-    src/WorldGen/Sampling/CoarseHeightCache.cpp
-    src/WorldGen/Features/CaveDepthBand.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/ThirdParty/stb_image.cpp
-    src/Test/WorldGenSmoothnessTest.cpp)
-target_include_directories(worldgen_smoothness_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(worldgen_smoothness_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(worldgen_smoothness_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME worldgen_smoothness_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/WorldGen/Core/WorldGenContext.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Core/Noise.cpp
+        src/WorldGen/Sampling/DensityRouter.cpp
+        src/WorldGen/Sampling/DensityFieldSampler.cpp
+        src/WorldGen/Sampling/BiomeSampler.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/WorldGen/Sampling/ClimateSampler.cpp
+        src/WorldGen/Sampling/TerrainClimateMapper.cpp
+        src/WorldGen/Sampling/OverworldHeightSampler.cpp
+        src/WorldGen/Sampling/ColumnSample.cpp
+        src/WorldGen/Sampling/CoarseHeightCache.cpp
+        src/WorldGen/Features/CaveDepthBand.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/ThirdParty/stb_image.cpp
+        src/Test/WorldGenSmoothnessTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(worldgen_vegetation_placement_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/ResourcePacks/BlockNameUtil.cpp
-    src/World/Objects/ObjectUtil.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/WorldGen/Stages/WorldGenStages.cpp
-    src/WorldGen/Sampling/AquiferSampler.cpp
-    src/WorldGen/Core/WorldGenContext.cpp
-    src/WorldGen/Core/WorldGenBlockResolver.cpp
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/ThirdParty/stb_image.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/WorldGen/Features/ObjectPlacementConstraints.cpp
-    src/WorldGen/Core/Noise.cpp
-    src/Test/WorldGenVegetationPlacementTest.cpp)
-target_include_directories(worldgen_vegetation_placement_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(worldgen_vegetation_placement_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(worldgen_vegetation_placement_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME worldgen_vegetation_placement_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/World/Objects/ObjectUtil.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/WorldGen/Stages/WorldGenStages.cpp
+        src/WorldGen/Sampling/AquiferSampler.cpp
+        src/WorldGen/Core/WorldGenContext.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/ThirdParty/stb_image.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/WorldGen/Features/ObjectPlacementConstraints.cpp
+        src/WorldGen/Core/Noise.cpp
+        src/Test/WorldGenVegetationPlacementTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(worldgen_cave_depth_test
-    src/WorldGen/Features/CaveDepthBand.cpp
-    src/Test/WorldGenCaveDepthTest.cpp)
-target_include_directories(worldgen_cave_depth_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(worldgen_cave_depth_test glm::glm)
+cubatarium_add_test(NAME worldgen_cave_depth_test
+    SOURCES
+        src/WorldGen/Features/CaveDepthBand.cpp
+        src/Test/WorldGenCaveDepthTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(worldgen_aquifer_test
-    src/WorldGen/Core/Noise.cpp
-    src/WorldGen/Sampling/AquiferSampler.cpp
-    src/Test/WorldGenAquiferTest.cpp)
-target_include_directories(worldgen_aquifer_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(worldgen_aquifer_test glm::glm)
+cubatarium_add_test(NAME worldgen_aquifer_test
+    SOURCES
+        src/WorldGen/Core/Noise.cpp
+        src/WorldGen/Sampling/AquiferSampler.cpp
+        src/Test/WorldGenAquiferTest.cpp
+    LIBRARIES glm::glm)
 
 set(WORLDGEN_PIPELINE_TEST_SOURCES
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -2245,212 +2100,197 @@ set(WORLDGEN_PIPELINE_TEST_SOURCES
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Core/Noise.cpp)
 
-add_executable(worldgen_fluid_vegetation_pipeline_test
-    ${WORLDGEN_PIPELINE_TEST_SOURCES}
-    src/Test/WorldGenFluidVegetationPipelineTest.cpp)
-target_include_directories(worldgen_fluid_vegetation_pipeline_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(worldgen_fluid_vegetation_pipeline_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(worldgen_fluid_vegetation_pipeline_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME worldgen_fluid_vegetation_pipeline_test
+    SOURCES
+        ${WORLDGEN_PIPELINE_TEST_SOURCES}
+        src/Test/WorldGenFluidVegetationPipelineTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(worldgen_hills_vegetation_gate_test
-    src/World/Core/RuntimeTuning.cpp
-    src/Test/WorldGenHillsVegetationGateTest.cpp)
-target_include_directories(worldgen_hills_vegetation_gate_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(worldgen_hills_vegetation_gate_test glm::glm)
+cubatarium_add_test(NAME worldgen_hills_vegetation_gate_test
+    SOURCES
+        src/World/Core/RuntimeTuning.cpp
+        src/Test/WorldGenHillsVegetationGateTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(chunk_generation_registry_test
-    src/World/Chunks/ChunkGenerationToken.cpp
-    src/Test/ChunkGenerationRegistryTest.cpp)
-target_include_directories(chunk_generation_registry_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(chunk_generation_registry_test glm::glm)
+cubatarium_add_test(NAME chunk_generation_registry_test
+    SOURCES
+        src/World/Chunks/ChunkGenerationToken.cpp
+        src/Test/ChunkGenerationRegistryTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(worldgen_biome_features_test
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Core/Noise.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/ThirdParty/stb_image.cpp
-    src/Test/WorldGenBiomeFeaturesTest.cpp)
-target_include_directories(worldgen_biome_features_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(worldgen_biome_features_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME worldgen_biome_features_test
+    SOURCES
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Core/Noise.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/ThirdParty/stb_image.cpp
+        src/Test/WorldGenBiomeFeaturesTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(worldgen_structure_slope_gate_test
-    ${WORLDGEN_PIPELINE_TEST_SOURCES}
-    src/WorldGen/Features/ObjectPlacementConstraints.cpp
-    src/Test/WorldGenStructureSlopeGateTest.cpp)
-target_include_directories(worldgen_structure_slope_gate_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(worldgen_structure_slope_gate_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(worldgen_structure_slope_gate_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME worldgen_structure_slope_gate_test
+    SOURCES
+        ${WORLDGEN_PIPELINE_TEST_SOURCES}
+        src/WorldGen/Features/ObjectPlacementConstraints.cpp
+        src/Test/WorldGenStructureSlopeGateTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(worldgen_scatter_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Objects/ObjectUtil.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/WorldGenScatterTest.cpp)
-target_include_directories(worldgen_scatter_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(worldgen_scatter_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(worldgen_scatter_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME worldgen_scatter_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Objects/ObjectUtil.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/WorldGenScatterTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(worldgen_scatter_block_resolve_test
-    src/Blocks/BlockRegistry.cpp
-    src/Blocks/BlockDefinition.cpp
-    src/Blocks/BlockDefinitionStorage.cpp
-    src/ResourcePacks/BlockMergeRegistry.cpp
-    src/ResourcePacks/BlockNameUtil.cpp
-    src/ResourcePacks/ResourcePack.cpp
-    src/ResourcePacks/TextureOverrides.cpp
-    src/ResourcePacks/PlaceholderTextureCache.cpp
-    src/Render/Textures/TextureBase.cpp
-    src/Render/Textures/TextureCube.cpp
-    src/World/Physics/MaterialReactionRulesRegistry.cpp
-    src/ThirdParty/stb_image.cpp
-    src/WorldGen/Core/WorldGenBlockResolver.cpp
-    src/WorldGen/Core/WorldGenRefs.cpp
-    src/WorldGen/Core/WorldGenPack.cpp
-    src/WorldGen/Core/WorldGenStageMask.cpp
-    src/WorldGen/Sampling/BiomeRegistry.cpp
-    src/ThirdParty/stb_image.cpp
-    src/WorldGen/Core/WorldGenContentPin.cpp
-    src/WorldGen/Core/WorldGenContentPinTls.cpp
-    src/WorldGen/Features/ObjectFeatureConfig.cpp
-    src/Test/WorldGenScatterBlockResolveTest.cpp)
-target_include_directories(worldgen_scatter_block_resolve_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(worldgen_scatter_block_resolve_test glm::glm
-    nlohmann_json::nlohmann_json OpenGL::GL GLEW::GLEW)
+cubatarium_add_test(NAME worldgen_scatter_block_resolve_test
+    SOURCES
+        src/Blocks/BlockRegistry.cpp
+        src/Blocks/BlockDefinition.cpp
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/ResourcePacks/BlockMergeRegistry.cpp
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/ResourcePacks/ResourcePack.cpp
+        src/ResourcePacks/TextureOverrides.cpp
+        src/ResourcePacks/PlaceholderTextureCache.cpp
+        src/Render/Textures/TextureBase.cpp
+        src/Render/Textures/TextureCube.cpp
+        src/World/Physics/MaterialReactionRulesRegistry.cpp
+        src/ThirdParty/stb_image.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/ThirdParty/stb_image.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/Test/WorldGenScatterBlockResolveTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json OpenGL::GL GLEW::GLEW)
 
-add_executable(fluid_tuning_defaults_test
-    src/World/Core/RuntimeTuning.cpp
-    src/Test/FluidTuningDefaultsTest.cpp)
-target_include_directories(fluid_tuning_defaults_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(fluid_tuning_defaults_test glm::glm)
+cubatarium_add_test(NAME fluid_tuning_defaults_test
+    SOURCES
+        src/World/Core/RuntimeTuning.cpp
+        src/Test/FluidTuningDefaultsTest.cpp
+    LIBRARIES glm::glm)
 
-add_executable(fluid_block_resolver_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidBlockResolverTest.cpp)
-target_include_directories(fluid_block_resolver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_block_resolver_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_block_resolver_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_block_resolver_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidBlockResolverTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(fluid_flood_service_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidFloodServiceTest.cpp)
-target_include_directories(fluid_flood_service_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_flood_service_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_flood_service_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_flood_service_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidFloodServiceTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(fluid_fill_policy_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidFillPolicyTest.cpp)
-target_include_directories(fluid_fill_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_fill_policy_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_fill_policy_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_fill_policy_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidFillPolicyTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(fluid_kind_resolver_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidKindResolverTest.cpp)
-target_include_directories(fluid_kind_resolver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_kind_resolver_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_kind_resolver_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_kind_resolver_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidKindResolverTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(fluid_kind_preset_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/World/Physics/FluidBlockResolver.cpp
-    src/Test/FluidKindPresetTest.cpp)
-target_include_directories(fluid_kind_preset_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(fluid_kind_preset_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_kind_preset_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/World/Physics/FluidBlockResolver.cpp
+        src/Test/FluidKindPresetTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(object_placement_mode_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Objects/ObjectUtil.cpp
-    src/Test/ObjectPlacementModeTest.cpp)
-target_include_directories(object_placement_mode_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(object_placement_mode_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(object_placement_mode_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME object_placement_mode_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Objects/ObjectUtil.cpp
+        src/Test/ObjectPlacementModeTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(fluid_permeable_decor_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/FluidUpdateSet.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidPermeableDecorTest.cpp)
-target_include_directories(fluid_permeable_decor_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_permeable_decor_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_permeable_decor_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_permeable_decor_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/FluidUpdateSet.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidPermeableDecorTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(fluid_permeable_block_flag_test
-    src/Blocks/BlockDefinition.cpp
-    src/Test/FluidPermeableBlockFlagTest.cpp)
-target_include_directories(fluid_permeable_block_flag_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(fluid_permeable_block_flag_test
-    nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_permeable_block_flag_test
+    SOURCES
+        src/Blocks/BlockDefinition.cpp
+        src/Test/FluidPermeableBlockFlagTest.cpp
+    LIBRARIES nlohmann_json::nlohmann_json)
 
-add_executable(fluid_gameplay_fixes_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Render/Mesh/GreedyMesher.cpp
-    src/World/Objects/ObjectUtil.cpp
-    src/World/Physics/FluidSpreadSystem.cpp
-    src/World/Physics/FluidFloodService.cpp
-    src/World/Physics/FluidFillPolicy.cpp
-    src/World/Physics/FluidTransformSim.cpp
-    src/World/Physics/FluidBlockResolver.cpp
-    src/World/Physics/FluidUpdateSet.cpp
-    src/World/Physics/LiquidDebugTrace.cpp
-    src/Test/FluidGameplayFixesTest.cpp)
-target_include_directories(fluid_gameplay_fixes_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_gameplay_fixes_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_gameplay_fixes_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_gameplay_fixes_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Render/Mesh/GreedyMesher.cpp
+        src/World/Objects/ObjectUtil.cpp
+        src/World/Physics/FluidSpreadSystem.cpp
+        src/World/Physics/FluidFloodService.cpp
+        src/World/Physics/FluidFillPolicy.cpp
+        src/World/Physics/FluidTransformSim.cpp
+        src/World/Physics/FluidBlockResolver.cpp
+        src/World/Physics/FluidUpdateSet.cpp
+        src/World/Physics/LiquidDebugTrace.cpp
+        src/Test/FluidGameplayFixesTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
 set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -2515,44 +2355,38 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/App/Platform/Log.cpp
     src/App/Platform/WorkerJobKind.cpp)
 
-add_executable(fluid_worldgen_chunk_test
-    ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
-    src/Test/FluidWorldGenChunkTest.cpp)
-target_include_directories(fluid_worldgen_chunk_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_worldgen_chunk_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann_json glog::glog)
+cubatarium_add_test(NAME fluid_worldgen_chunk_test
+    SOURCES
+        ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
+        src/Test/FluidWorldGenChunkTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog)
 if(WIN32)
   target_link_libraries(fluid_worldgen_chunk_test dbghelp)
 endif()
 
-add_executable(worldgen_vegetation_placement_integration_test
-    ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
-    src/Test/WorldGenVegetationPlacementIntegrationTest.cpp)
-target_include_directories(worldgen_vegetation_placement_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(worldgen_vegetation_placement_integration_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(worldgen_vegetation_placement_integration_test glm::glm nlohmann_json::nlohmann_json glog::glog)
+cubatarium_add_test(NAME worldgen_vegetation_placement_integration_test
+    SOURCES
+        ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
+        src/Test/WorldGenVegetationPlacementIntegrationTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog)
 if(WIN32)
   target_link_libraries(worldgen_vegetation_placement_integration_test dbghelp)
 endif()
 
-add_executable(physics_integration_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    ${PHYSICS_FLUID_SIM_SOURCES}
-    src/Test/PhysicsIntegrationTest.cpp)
-target_include_directories(physics_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(physics_integration_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME physics_integration_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        ${PHYSICS_FLUID_SIM_SOURCES}
+        src/Test/PhysicsIntegrationTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(physics_profile_hash_test
-    ${PHYSICS_REPLAY_TEST_SOURCES}
-    src/Test/PhysicsProfileHashTest.cpp)
-target_include_directories(physics_profile_hash_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(physics_profile_hash_test glm::glm)
+cubatarium_add_test(NAME physics_profile_hash_test
+    SOURCES
+        ${PHYSICS_REPLAY_TEST_SOURCES}
+        src/Test/PhysicsProfileHashTest.cpp
+    LIBRARIES glm::glm)
 
 set(PHYSICS_UWORLD_TEST_SOURCES
     ${PHYSICS_REGISTRY_TEST_SOURCES}
@@ -2601,78 +2435,64 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Core/WorldCooperativeOps.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp)
 
-add_executable(collision_broadphase_subchunk_test
-    ${PHYSICS_COLLISION_UNIT_SOURCES}
-    src/Test/WorldCollisionCreatureStubs.cpp
-    src/Test/CollisionBroadphaseSubchunkTest.cpp)
-target_include_directories(collision_broadphase_subchunk_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(collision_broadphase_subchunk_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(collision_broadphase_subchunk_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME collision_broadphase_subchunk_test
+    SOURCES
+        ${PHYSICS_COLLISION_UNIT_SOURCES}
+        src/Test/WorldCollisionCreatureStubs.cpp
+        src/Test/CollisionBroadphaseSubchunkTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME collision_broadphase_subchunk_test
     COMMAND $<TARGET_FILE:collision_broadphase_subchunk_test>)
 set_tests_properties(collision_broadphase_subchunk_test PROPERTIES LABELS "unit;creatures")
 
-add_executable(fluid_placement_test
-    ${PHYSICS_COLLISION_UNIT_SOURCES}
-    src/Test/FluidPlacementTest.cpp)
-target_include_directories(fluid_placement_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(fluid_placement_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_placement_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME fluid_placement_test
+    SOURCES
+        ${PHYSICS_COLLISION_UNIT_SOURCES}
+        src/Test/FluidPlacementTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(block_placement_raycast_test
-    ${PHYSICS_COLLISION_UNIT_SOURCES}
-    src/Test/WorldCollisionCreatureStubs.cpp
-    src/Test/BlockPlacementRaycastTest.cpp)
-target_include_directories(block_placement_raycast_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(block_placement_raycast_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(block_placement_raycast_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME block_placement_raycast_test
+    SOURCES
+        ${PHYSICS_COLLISION_UNIT_SOURCES}
+        src/Test/WorldCollisionCreatureStubs.cpp
+        src/Test/BlockPlacementRaycastTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(material_reaction_rules_test
-    ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/Test/MaterialReactionRulesTest.cpp)
-target_include_directories(material_reaction_rules_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(material_reaction_rules_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(material_reaction_rules_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME material_reaction_rules_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Test/MaterialReactionRulesTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-add_executable(movement_integration_test
-    ${PHYSICS_COLLISION_UNIT_SOURCES}
-    src/Test/MovementIntegrationTest.cpp)
-target_include_directories(movement_integration_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(movement_integration_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(movement_integration_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME movement_integration_test
+    SOURCES
+        ${PHYSICS_COLLISION_UNIT_SOURCES}
+        src/Test/MovementIntegrationTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME movement_integration_test
     COMMAND $<TARGET_FILE:movement_integration_test>)
 set_tests_properties(movement_integration_test PROPERTIES LABELS "unit;creatures")
 
-add_executable(player_clearance_test
-    ${PHYSICS_COLLISION_UNIT_SOURCES}
-    src/Test/PlayerClearanceTest.cpp)
-target_include_directories(player_clearance_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(player_clearance_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(player_clearance_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME player_clearance_test
+    SOURCES
+        ${PHYSICS_COLLISION_UNIT_SOURCES}
+        src/Test/PlayerClearanceTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME player_clearance_test COMMAND $<TARGET_FILE:player_clearance_test>)
 set_tests_properties(player_clearance_test PROPERTIES LABELS "unit;creatures")
 
-add_executable(creature_terrestrial_gate_test
-    ${PHYSICS_COLLISION_UNIT_SOURCES}
-    src/Test/CreatureTerrestrialGateTest.cpp)
-target_include_directories(creature_terrestrial_gate_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_compile_definitions(creature_terrestrial_gate_test PRIVATE
-    ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(creature_terrestrial_gate_test glm::glm nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME creature_terrestrial_gate_test
+    SOURCES
+        ${PHYSICS_COLLISION_UNIT_SOURCES}
+        src/Test/CreatureTerrestrialGateTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME creature_terrestrial_gate_test
     COMMAND $<TARGET_FILE:creature_terrestrial_gate_test>)
 set_tests_properties(creature_terrestrial_gate_test PROPERTIES LABELS "unit;creatures")
@@ -2861,25 +2681,26 @@ add_custom_target(m4_ownership_lint
     COMMENT "M4 mesh ownership lint")
 
 # CTest registry (M01 / A14): unit/streaming/policy gates must run, not only build.
-add_executable(job_admission_lifetime_test
-  src/Test/JobAdmissionLifetimeTest.cpp
-  src/Core/Jobs/JobThreadPool.cpp src/Core/Jobs/JobThreadBudget.cpp
-  src/Core/Jobs/PipelineAdmission.cpp)
-target_include_directories(job_admission_lifetime_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(job_admission_lifetime_test PRIVATE Threads::Threads)
-add_executable(chunk_input_stamp_test src/Test/ChunkInputStampTest.cpp
-  src/World/Chunks/Chunk.cpp src/World/Math/FluidCellState.cpp)
-target_include_directories(chunk_input_stamp_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(chunk_input_stamp_test PRIVATE glm::glm)
+cubatarium_add_test(NAME job_admission_lifetime_test
+    SOURCES
+        src/Test/JobAdmissionLifetimeTest.cpp
+        src/Core/Jobs/JobThreadPool.cpp
+        src/Core/Jobs/JobThreadBudget.cpp
+        src/Core/Jobs/PipelineAdmission.cpp
+    LIBRARIES Threads::Threads)
+cubatarium_add_test(NAME chunk_input_stamp_test
+    SOURCES
+        src/Test/ChunkInputStampTest.cpp
+        src/World/Chunks/Chunk.cpp
+        src/World/Math/FluidCellState.cpp
+    LIBRARIES glm::glm)
 
-add_executable(inputs_still_valid_visual_test
-    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
-    src/Render/Mesh/ChunkMeshSnapshot.cpp
-    src/Test/InputsStillValidVisualTest.cpp)
-target_include_directories(inputs_still_valid_visual_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(inputs_still_valid_visual_test PRIVATE glm::glm
-    nlohmann_json::nlohmann_json)
+cubatarium_add_test(NAME inputs_still_valid_visual_test
+    SOURCES
+        ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+        src/Render/Mesh/ChunkMeshSnapshot.cpp
+        src/Test/InputsStillValidVisualTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   add_executable(greedy_vertex_pool_production_test
     src/Test/GreedyVertexPoolProductionTest.cpp
@@ -2989,6 +2810,28 @@ foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
     add_test(NAME ${_t} COMMAND $<TARGET_FILE:${_t}>)
     set_tests_properties(${_t} PROPERTIES LABELS "unit;streaming")
   endif()
+endforeach()
+
+# Auto-register every remaining *_test executable so a single `ctest` runs the
+# whole unit suite (tests above keep their unit;streaming labels; explicitly
+# registered GPU/audit tests keep theirs). CI's `ctest -L streaming` selection
+# is unaffected: these carry the plain "unit" label only.
+get_property(CUBATARIUM_REGISTERED_TESTS DIRECTORY PROPERTY TESTS)
+get_property(CUBATARIUM_ALL_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(_t IN LISTS CUBATARIUM_ALL_TARGETS)
+  if(NOT _t MATCHES "_test$")
+    continue()
+  endif()
+  if(_t IN_LIST CUBATARIUM_REGISTERED_TESTS)
+    continue()
+  endif()
+  # Registered separately as a --driver invocation with its own GPU gating.
+  if(_t STREQUAL "greedy_vertex_pool_production_test")
+    continue()
+  endif()
+  add_test(NAME ${_t} COMMAND $<TARGET_FILE:${_t}>
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  set_tests_properties(${_t} PROPERTIES LABELS "unit" TIMEOUT 300)
 endforeach()
 
 # Keep the lightweight test source sets linkable as the production chunk

@@ -8,14 +8,17 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$CMake = 'C:/Program Files/CMake/bin/cmake.exe'
+$CMake = Get-Command cmake -ErrorAction SilentlyContinue
+if (-not $CMake) {
+    $CMakePath = 'C:/Program Files/CMake/bin/cmake.exe'
+    if (Test-Path $CMakePath) { $CMake = $CMakePath } else { throw 'cmake not found on PATH' }
+} else {
+    $CMake = $CMake.Source
+}
 $BuildDir = Join-Path $Root 'build\desktop-msvc'
 $VcpkgRoot = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { 'E:/vcpkg' }
 $VcpkgToolchain = Join-Path $VcpkgRoot 'scripts\buildsystems\vcpkg.cmake'
 
-if (-not (Test-Path $CMake)) {
-    throw "CMake not found: $CMake"
-}
 if (-not (Test-Path $VcpkgToolchain)) {
     throw "vcpkg toolchain not found: $VcpkgToolchain (set VCPKG_ROOT)"
 }
