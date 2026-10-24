@@ -195,6 +195,7 @@ set(SOURCES
     src/Activity/Agents/MeleeAttackActivityAgent.cpp
     src/Activity/Agents/BotPlayerActivityAgent.cpp
     src/Activity/Brain/SimpleFsmBrain.cpp
+    src/Activity/Helpers/CreatureHostility.cpp
     src/Navigation/WorldNavigationQueries.cpp
     src/Navigation/UNavigationPathfinder.cpp
     src/Navigation/UWaypointFollower.cpp

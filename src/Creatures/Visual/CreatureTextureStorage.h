@@ -23,6 +23,9 @@ private:
   std::unordered_map<std::string, GLuint> Textures;
 };
 
+/// Deletes every GL texture name in the map, then clears it (reload path).
+void DeleteCreatureGlTextures(std::unordered_map<std::string, GLuint> &textures);
+
 } // namespace cutum
 
 #endif

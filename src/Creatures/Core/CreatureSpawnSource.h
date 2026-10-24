@@ -7,15 +7,15 @@
 namespace cutum
 {
 
-/// Who requested creation. Persistence is reserved for world restoration;
-/// LegacySave identifies entities written before source tracking existed.
+/// Who requested creation. LegacySave identifies entities written before
+/// source tracking existed (a stray "persistence" string from dead old code
+/// also reads back as LegacySave).
 enum class CreatureSpawnSource : uint8_t
 {
   CreativeManual,
   NaturalPopulation,
   DebugCommand,
   Qa,
-  Persistence,
   LegacySave,
 };
 
@@ -40,8 +40,6 @@ inline const char *CreatureSpawnSourceToString(CreatureSpawnSource source)
     return "debug_command";
   case CreatureSpawnSource::Qa:
     return "qa";
-  case CreatureSpawnSource::Persistence:
-    return "persistence";
   case CreatureSpawnSource::LegacySave:
   default:
     return "legacy_save";
@@ -66,10 +64,6 @@ CreatureSpawnSourceFromString(const std::string &source)
   if (source == "qa")
   {
     return CreatureSpawnSource::Qa;
-  }
-  if (source == "persistence")
-  {
-    return CreatureSpawnSource::Persistence;
   }
   return CreatureSpawnSource::LegacySave;
 }

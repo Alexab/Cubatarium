@@ -106,9 +106,6 @@ int main()
          "creative qa spawn");
   Expect(!ModePolicy::AllowsCreatureSpawn(survival, CreatureSpawnSource::Qa),
          "survival blocks qa spawn");
-  Expect(ModePolicy::AllowsCreatureSpawn(
-             survival, CreatureSpawnSource::Persistence),
-         "persistence restoration allowed");
   Expect(!ModePolicy::AllowsCreatureSpawn(
              survival, CreatureSpawnSource::LegacySave),
          "legacy source not a new spawn request");
@@ -136,7 +133,6 @@ int main()
         CreatureSpawnSource::NaturalPopulation,
         CreatureSpawnSource::DebugCommand,
         CreatureSpawnSource::Qa,
-        CreatureSpawnSource::Persistence,
         CreatureSpawnSource::LegacySave};
     for (const CreatureSpawnSource source : sources)
     {
@@ -192,7 +188,6 @@ int main()
       for (const CreatureSpawnSource source : sources)
       {
         const bool expected =
-            source == CreatureSpawnSource::Persistence ||
             (mode == creative &&
              (source == CreatureSpawnSource::CreativeManual ||
               source == CreatureSpawnSource::DebugCommand ||

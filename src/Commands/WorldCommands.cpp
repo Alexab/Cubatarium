@@ -696,24 +696,7 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
             return CommandResult{false, "Skin is not compatible with species"};
           }
         }
-        const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
-        glm::vec3 bodyOrigin = world->GetSpawnPoint();
-        bodyOrigin.y -= eyeOffset.y;
-        if (auto camera = world->GetCurrentUserCamera())
-        {
-          glm::vec3 forward = camera->GetFront();
-          forward.y = 0.0f;
-          if (glm::length(forward) > 0.01f)
-          {
-            bodyOrigin = camera->GetPosition() - eyeOffset +
-                         glm::normalize(forward) * 3.0f;
-          }
-          else
-          {
-            bodyOrigin =
-                camera->GetPosition() - eyeOffset + glm::vec3(3.0f, 0.0f, 0.0f);
-          }
-        }
+        const glm::vec3 bodyOrigin = ComputeSpawnBodyOriginAhead(*world);
         const CreatureId Id = world->SpawnCreature(
             species, bodyOrigin, skin, CreatureSpawnSource::DebugCommand);
         if (Id == 0)

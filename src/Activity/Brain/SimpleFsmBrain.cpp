@@ -1,6 +1,7 @@
 #include "Activity/Brain/SimpleFsmBrain.h"
 #include "Activity/Helpers/CreatureActivityNavigation.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
+#include "Activity/Helpers/CreatureHostility.h"
 #include "Creatures/Core/CreatureIntent.h"
 #include "Creatures/Influence/InfluenceIntentUtil.h"
 #include "Game/ModePolicy.h"
@@ -226,16 +227,32 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
 
   if (!controlled)
   {
-    // Mob↔mob fallback: chase/attack nearest other creature in aggro.
+    // Mob↔mob fallback: hunt prey inside aggro range. Target is sticky — it
+    // only changes when lost, so equidistant neighbors do not flap the FSM
+    // every tick (audit M3).
+    const UWorld &world = sink.GetWorld();
     CreatureId nearest_id = 0;
     glm::vec3 nearest_body = view->bodyOrigin;
     float nearest_dist = std::numeric_limits<float>::max();
+    bool sticky_valid = false;
     const auto neighbors = perception.QueryCreatureNeighborsInRadius(
         view->bodyOrigin, snapshot->behavior.aggroRadius, self_id);
     for (const CreatureNeighborView &n : neighbors)
     {
       const float d = HorizontalDistanceXZ(view->bodyOrigin, n.bodyOrigin);
-      if (d < nearest_dist)
+      if (n.Id == blackboard.targetId)
+      {
+        if (IsMeleeFallbackTarget(world, self_id, n.Id))
+        {
+          sticky_valid = true;
+          nearest_id = n.Id;
+          nearest_body = n.bodyOrigin;
+          nearest_dist = d;
+        }
+        continue;
+      }
+      if (!sticky_valid && d < nearest_dist &&
+          IsMeleeFallbackTarget(world, self_id, n.Id))
       {
         nearest_dist = d;
         nearest_id = n.Id;
@@ -245,6 +262,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     if (nearest_id == 0)
     {
       blackboard.state = CreatureFsmState::Idle;
+      blackboard.targetId = 0;
       intent.suggestedAnim = LocomotionState::Idle;
       sink.SetIntent(self_id, intent);
       RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,

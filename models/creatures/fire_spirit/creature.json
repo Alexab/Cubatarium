@@ -51,7 +51,7 @@
     "attack_cooldown": 1.5
   },
   "visual": {
-    "backend": "gltf_skeleton",
+    "backend": "rigid_voxels",
     "texture_layout": "rigid_crop",
     "default_texture": "body",
     "icon": {
@@ -62,14 +62,6 @@
         0.1568627450980392,
         1.0
       ]
-    },
-    "gltf": {
-      "model": "model.gltf",
-      "textures": [
-        "body"
-      ],
-      "model_scale": 1.0,
-      "model_yaw_offset_deg": 0
     },
     "rig": {
       "template": "aerial"

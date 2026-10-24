@@ -39,7 +39,6 @@ void PlayerInteractionRouter::BeginDigIntent(UCreature &controlled,
                                              glm::ivec3 blockPos)
 {
   CreatureIntent intent = controlled.GetIntent();
-  intent.attackTargetId = 0;
   intent.Influence = InfluenceIntent{};
   intent.Influence.Channel = InfluenceChannel::Dig;
   intent.Influence.TargetBlockPos = blockPos;
@@ -63,7 +62,6 @@ void PlayerInteractionRouter::SetMeleeIntent(UCreature &attacker,
                                              CreatureId targetId)
 {
   CreatureIntent intent = attacker.GetIntent();
-  intent.attackTargetId = 0;
   intent.Influence = InfluenceIntent{};
   intent.Influence.Channel = InfluenceChannel::Melee;
   intent.Influence.TargetId = targetId;
@@ -75,7 +73,6 @@ void PlayerInteractionRouter::SetMeleeIntent(UCreature &attacker,
 void PlayerInteractionRouter::SetUseIntent(UCreature &controlled)
 {
   CreatureIntent intent = controlled.GetIntent();
-  intent.attackTargetId = 0;
   intent.Influence = InfluenceIntent{};
   intent.Influence.Channel = InfluenceChannel::Use;
   intent.Influence.TargetId = controlled.GetId();
@@ -88,7 +85,6 @@ void PlayerInteractionRouter::SetRangedIntent(UCreature &attacker,
                                               CreatureId targetId)
 {
   CreatureIntent intent = attacker.GetIntent();
-  intent.attackTargetId = 0;
   intent.Influence = InfluenceIntent{};
   intent.Influence.Channel = InfluenceChannel::Ranged;
   intent.Influence.TargetId = targetId;

@@ -29,6 +29,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -37,6 +38,19 @@
 
 namespace cutum
 {
+
+namespace
+{
+
+/// Bumped when creatures.json layout changes; old versions keep loading via
+/// the migration notes in LoadCreatures.
+constexpr int kCreatureSaveFormatVersion = 2;
+
+/// Hard ceiling on simultaneously existing creatures, on top of the mode and
+/// population rules in CreaturePopulationRules.h.
+constexpr size_t kAbsoluteCreatureLimit = 128;
+
+} // namespace
 
 using json = nlohmann::json;
 
@@ -389,7 +403,6 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
       return 0;
     }
   }
-  constexpr size_t kAbsoluteCreatureLimit = 128;
   if (!controlledDefault && Creatures.size() >= kAbsoluteCreatureLimit)
   {
     return 0;
@@ -414,12 +427,8 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
                 << std::endl;
       return 0;
     }
-    const CollisionVolume vol =
-        CollisionVolumeFromBody(resolvedSpawn, spawnSize);
-    CollisionVolume spawnVol = vol;
-    constexpr float kSpawnCollisionInset = 0.05f;
-    spawnVol.halfExtents -= glm::vec3(kSpawnCollisionInset);
-    spawnVol.halfExtents = glm::max(spawnVol.halfExtents, glm::vec3(0.05f));
+    const CollisionVolume spawnVol = InsetCollisionVolumeForSpawn(
+        CollisionVolumeFromBody(resolvedSpawn, spawnSize));
     if (Owner.CheckCreatureCollisionVolume(spawnVol, 0) ||
         Owner.CheckBlockCollisionVolume(spawnVol))
     {
@@ -636,6 +645,8 @@ bool RayIntersectsAabb(const glm::vec3 &origin, const glm::vec3 &dir,
   return tmin >= 0.0f && tmin <= maxDistance;
 }
 
+} // namespace
+
 glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world)
 {
   const float eyeHeight = ResolveViewerEyeHeight(world);
@@ -663,6 +674,9 @@ glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world)
   }
   return bodyOrigin;
 }
+
+namespace
+{
 
 glm::vec3 ComputeSpawnProbeOrigin(UWorld &world, const CreatureDefinition &def)
 {
@@ -769,7 +783,7 @@ bool UWorldEnvironment::CanSpawnCreatureByView(const std::string &speciesId)
   {
     return false;
   }
-  if (Owner.IsHardcoreDead() || Creatures.size() >= 128)
+  if (Owner.IsHardcoreDead() || Creatures.size() >= kAbsoluteCreatureLimit)
   {
     return false;
   }
@@ -806,7 +820,7 @@ UWorldEnvironment::GetCreatureSpawnBlockedHint(const std::string &speciesId)
   {
     return "Creature spawning is disabled in a completed Hardcore world";
   }
-  if (Creatures.size() >= 128)
+  if (Creatures.size() >= kAbsoluteCreatureLimit)
   {
     return "Creature population limit reached";
   }
@@ -927,6 +941,12 @@ void UWorldEnvironment::LinkUsersToPlayerCreatures(
 
 void UWorldEnvironment::LoadCreatures(const std::string &file_name)
 {
+  if (!CreatureDefinitions)
+  {
+    std::cerr << "LoadCreatures: definition storage is not attached; skipping "
+              << file_name << std::endl;
+    return;
+  }
   if (!std::filesystem::exists(file_name))
   {
     return;
@@ -939,6 +959,18 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
     if (!data.contains("creatures") || !data["creatures"].is_array())
     {
       return;
+    }
+    const int formatVersion = data.value("format_version", 0);
+    if (formatVersion == 0)
+    {
+      std::cerr << "LoadCreatures: no format_version in " << file_name
+                << "; loading as pre-versioning save" << std::endl;
+    }
+    else if (formatVersion > kCreatureSaveFormatVersion)
+    {
+      std::cerr << "LoadCreatures: format_version " << formatVersion
+                << " is newer than supported " << kCreatureSaveFormatVersion
+                << "; attempting best-effort load" << std::endl;
     }
     ActivityDirector.Clear();
     for (const auto &c : data["creatures"])
@@ -1032,11 +1064,8 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
               {
                 return false;
               }
-              CollisionVolume volume = CollisionVolumeFromBody(
-                  candidate, def->bounds.restSizeBlocks);
-              volume.halfExtents =
-                  glm::max(volume.halfExtents - glm::vec3(0.05f),
-                           glm::vec3(0.05f));
+              const CollisionVolume volume = InsetCollisionVolumeForSpawn(
+                  CollisionVolumeFromBody(candidate, def->bounds.restSizeBlocks));
               return !Owner.CheckBlockCollisionVolume(volume) &&
                      !Owner.CheckCreatureCollisionVolume(volume, id);
             });
@@ -1071,7 +1100,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
 void UWorldEnvironment::SaveCreatures(const std::string &file_name)
 {
   json root;
-    root["format_version"] = 2;
+  root["format_version"] = kCreatureSaveFormatVersion;
   json arr = json::array();
   for (const auto &entry : Creatures)
   {
@@ -1100,8 +1129,46 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
     arr.push_back(item);
   }
   root["creatures"] = arr;
-  std::ofstream file(file_name);
-  file << root.dump(2);
+
+  // Atomic write: dump to a sibling temp file, then rename over the target so
+  // a crash mid-save cannot truncate an existing creatures.json.
+  const std::filesystem::path target(file_name);
+  const std::filesystem::path tmp = target.parent_path() /
+                                    (target.filename().string() + ".tmp");
+  {
+    std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
+    if (!file.is_open())
+    {
+      std::cerr << "SaveCreatures: cannot open " << tmp.string()
+                << " for writing" << std::endl;
+      return;
+    }
+    file << root.dump(2);
+    file.flush();
+    if (!file.good())
+    {
+      std::cerr << "SaveCreatures: write to " << tmp.string() << " failed"
+                << std::endl;
+      file.close();
+      std::error_code ignored;
+      std::filesystem::remove(tmp, ignored);
+      return;
+    }
+  }
+  std::error_code ec;
+  std::filesystem::rename(tmp, target, ec);
+  if (ec)
+  {
+    // Windows rename refuses to replace some destination states; fall back to
+    // remove+rename, which is not atomic but still leaves one complete file.
+    std::filesystem::remove(target, ec);
+    std::filesystem::rename(tmp, target, ec);
+  }
+  if (ec)
+  {
+    std::cerr << "SaveCreatures: could not move " << tmp.string() << " to "
+              << target.string() << ": " << ec.message() << std::endl;
+  }
 }
 
 void UWorldEnvironment::ReloadAllCreatureVisuals()
@@ -1183,11 +1250,9 @@ void UWorldEnvironment::ValidateLoadedCreaturePositions()
               {
                 return false;
               }
-              CollisionVolume volume = CollisionVolumeFromBody(
-                  candidate, definition->bounds.restSizeBlocks);
-              volume.halfExtents =
-                  glm::max(volume.halfExtents - glm::vec3(0.05f),
-                           glm::vec3(0.05f));
+              const CollisionVolume volume = InsetCollisionVolumeForSpawn(
+                  CollisionVolumeFromBody(
+                      candidate, definition->bounds.restSizeBlocks));
               return !Owner.CheckBlockCollisionVolume(volume) &&
                      !Owner.CheckCreatureCollisionVolume(
                          volume, creature.GetId());

@@ -109,8 +109,6 @@ struct CreatureVisualPartDef
 
 struct CreatureAnimationClipDef
 {
-  float startSec{0.f};
-  float endSec{0.f};
   bool loop{true};
   float speed{1.f};
 };
@@ -153,7 +151,6 @@ struct CreatureGltfSpec
 struct CreatureRigSpec
 {
   std::string templateId{"biped"};
-  std::vector<std::string> partIds;
 };
 
 struct CreatureSpriteSpec

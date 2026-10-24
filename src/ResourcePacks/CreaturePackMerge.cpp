@@ -2,6 +2,7 @@
 
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 
 #include <filesystem>
@@ -17,6 +18,7 @@ void ApplyCreaturePackOverlays(UCreatureDefinitionStorage &defs,
                                const std::vector<ResourcePackManifest> &packs)
 {
   defs.Load(baseCreaturesRoot.string());
+  CreatureRigidModelCache::Instance().Clear();
   for (const auto &pack : packs)
   {
     const std::filesystem::path creaturesDir = pack.Root / "creatures";

@@ -3,6 +3,7 @@
 
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
+#include "World/Math/CollisionVolume.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <string>
@@ -10,9 +11,20 @@
 namespace cutum
 {
 
-struct CollisionVolume;
 struct CreatureDefinition;
 class UWorld;
+
+/// Spawn/validate overlap volume: shrink by a small inset so skin-width
+/// contacts (and tall mobs under low ceilings) do not count as overlap,
+/// floored so the volume never collapses.
+inline CollisionVolume InsetCollisionVolumeForSpawn(CollisionVolume vol)
+{
+  constexpr float kSpawnCollisionInset = 0.05f;
+  vol.halfExtents =
+      glm::max(vol.halfExtents - glm::vec3(kSpawnCollisionInset),
+               glm::vec3(kSpawnCollisionInset));
+  return vol;
+}
 
 struct EnvironmentSample
 {

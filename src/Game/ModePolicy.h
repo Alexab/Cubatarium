@@ -85,8 +85,6 @@ struct ModePolicy
              mode == WorldGameMode::Survival;
     case CreatureSpawnSource::Qa:
       return AllowsQaSpawner(mode);
-    case CreatureSpawnSource::Persistence:
-      return true;
     case CreatureSpawnSource::LegacySave:
     default:
       return false;

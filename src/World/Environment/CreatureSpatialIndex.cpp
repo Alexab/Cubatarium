@@ -76,7 +76,18 @@ void UCreatureSpatialIndex::RemoveEntryFromCells(const Entry &entry)
 
 void UCreatureSpatialIndex::InsertEntryIntoCells(const Entry &entry)
 {
-  Cells[CellForPosition(entry.bodyOrigin)].push_back(entry);
+  // Insert into every cell the entry's AABB touches, mirroring
+  // RemoveEntryFromCells: queries gather cells by query volume, so a
+  // single-cell insert lets wide bodies slip past overlap checks.
+  CollisionVolume vol;
+  vol.center = entry.bodyOrigin;
+  vol.halfExtents = entry.halfExtents;
+  std::vector<CellKey> keys;
+  GatherCellsForVolume(vol, keys);
+  for (const CellKey &key : keys)
+  {
+    Cells[key].push_back(entry);
+  }
 }
 
 void UCreatureSpatialIndex::Upsert(CreatureId id, const glm::vec3 &origin,
@@ -148,6 +159,9 @@ UCreatureSpatialIndex::QueryRadius(const glm::vec3 &center, float radius,
                                    CreatureId skip_id) const
 {
   std::vector<CreatureId> out;
+  // Entries occupy every cell their AABB touches, so a query walking
+  // neighboring cells can meet the same entry twice — report each once.
+  std::vector<CreatureId> seen;
   const float radius_sq = radius * radius;
   const int cell_radius = static_cast<int>(std::ceil(radius / 2.0f)) + 1;
   const CellKey center_cell = CellForPosition(center);
@@ -163,7 +177,8 @@ UCreatureSpatialIndex::QueryRadius(const glm::vec3 &center, float radius,
       }
       for (const Entry &entry : it->second)
       {
-        if (entry.Id == skip_id)
+        if (entry.Id == skip_id ||
+            std::find(seen.begin(), seen.end(), entry.Id) != seen.end())
         {
           continue;
         }
@@ -171,6 +186,7 @@ UCreatureSpatialIndex::QueryRadius(const glm::vec3 &center, float radius,
         const float dist_sq = delta.x * delta.x + delta.z * delta.z;
         if (dist_sq <= radius_sq)
         {
+          seen.push_back(entry.Id);
           out.push_back(entry.Id);
         }
       }
@@ -184,6 +200,7 @@ UCreatureSpatialIndex::QueryNeighbors(const glm::vec3 &center, float radius,
                                       CreatureId skip_id) const
 {
   std::vector<CreatureNeighborView> out;
+  std::vector<CreatureId> seen;
   const float radius_sq = radius * radius;
   const int cell_radius = static_cast<int>(std::ceil(radius / 2.0f)) + 1;
   const CellKey center_cell = CellForPosition(center);
@@ -199,7 +216,8 @@ UCreatureSpatialIndex::QueryNeighbors(const glm::vec3 &center, float radius,
       }
       for (const Entry &entry : it->second)
       {
-        if (entry.Id == skip_id)
+        if (entry.Id == skip_id ||
+            std::find(seen.begin(), seen.end(), entry.Id) != seen.end())
         {
           continue;
         }
@@ -210,6 +228,7 @@ UCreatureSpatialIndex::QueryNeighbors(const glm::vec3 &center, float radius,
           CreatureNeighborView neighbor;
           neighbor.Id = entry.Id;
           neighbor.bodyOrigin = entry.bodyOrigin;
+          seen.push_back(entry.Id);
           out.push_back(neighbor);
         }
       }

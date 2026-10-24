@@ -89,34 +89,53 @@ int main()
   }
 
   {
-    // Characterizes CREATURES_AUDIT_2026-10_RU.md finding M1: insert puts an
-    // entry only into its origin cell while queries gather all cells of the
-    // query volume, so a wide body whose origin cell is outside the query's
-    // gathered cells is missed. The expectations marked M1 flip to the
-    // opposite value in refactor/4-creatures-bugfixes.
+    // Regression for CREATURES_AUDIT_2026-10_RU.md finding M1: insert used to
+    // put an entry only into its origin cell while queries gather all cells
+    // of the query volume, so a wide body whose origin cell was outside the
+    // query's gathered cells was missed. Insert now covers every cell of the
+    // body's AABB, mirroring removal.
     UCreatureSpatialIndex index;
     const glm::vec3 wideOrigin(0.5f, 64.f, 0.5f);
     const glm::vec3 wideHalf(8.f, 0.9f, 0.3f);
     index.Upsert(10, wideOrigin, wideHalf);
 
-    // Cells are 2x2 blocks; the wide body spans x blocks [-8, 9] but lives
-    // only in cell (0, 0). The query sits inside the body's AABB near its far
-    // edge; its gathered cells cover x cells [2, 4] and exclude (0, 0).
+    // Cells are 2x2 blocks; the wide body spans x blocks [-8, 9]. The query
+    // sits inside the body's AABB near its far edge, its gathered cells
+    // covering x cells [2, 4] — nowhere near the origin cell (0, 0).
     CollisionVolume insideFarEdge{glm::vec3(7.5f, 64.f, 0.5f),
                                   glm::vec3(0.4f, 0.4f, 0.4f)};
     Expect(AabbOverlap(insideFarEdge.center, insideFarEdge.halfExtents,
                        wideOrigin, wideHalf),
            "M1 setup: the query volume really overlaps the wide body", failures);
-    // M1: known miss — returns false today, true after the fix.
-    Expect(!index.AnyCreatureVolumeOverlaps(insideFarEdge, 0),
-           "M1: wide body is missed when its origin cell is outside the "
-           "query cells (bug, flips in refactor/4)", failures);
+    Expect(index.AnyCreatureVolumeOverlaps(insideFarEdge, 0),
+           "M1 regression: wide body is found even when its origin cell is "
+           "outside the query cells", failures);
 
-    // Same geometry queried near the origin cell is found today.
     CollisionVolume nearOrigin{glm::vec3(1.5f, 64.f, 0.5f),
                                glm::vec3(0.4f, 0.4f, 0.4f)};
     Expect(index.AnyCreatureVolumeOverlaps(nearOrigin, 0),
            "M1 contrast: query covering the origin cell finds the body", failures);
+
+    // Multi-cell insert must not duplicate the entry in the origin cell and
+    // removal must still clear every cell (no ghosts after remove).
+    index.Remove(10);
+    Expect(!index.AnyCreatureVolumeOverlaps(insideFarEdge, 0) &&
+               !index.AnyCreatureVolumeOverlaps(nearOrigin, 0),
+           "M1: remove clears the wide body from all cells", failures);
+  }
+
+  {
+    // Entries occupy several cells, so radius/neighbor queries walking those
+    // cells must still report each creature exactly once.
+    UCreatureSpatialIndex index;
+    index.Upsert(20, glm::vec3(0.5f, 64.f, 0.5f), glm::vec3(3.f, 0.9f, 3.f));
+    const glm::vec3 center(0.5f, 64.f, 0.5f);
+    const auto ids = index.QueryRadius(center, 6.f, 0);
+    Expect(ids.size() == 1 && ids[0] == 20,
+           "radius query reports a multi-cell creature once", failures);
+    const auto neighbors = index.QueryNeighbors(center, 6.f, 0);
+    Expect(neighbors.size() == 1 && neighbors[0].Id == 20,
+           "neighbor query reports a multi-cell creature once", failures);
   }
 
   if (failures != 0)

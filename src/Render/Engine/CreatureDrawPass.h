@@ -34,8 +34,6 @@ public:
                         CreaturePartMesh mesh = CreaturePartMesh::Box);
   void DrawBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
                             const BoneSkeletonCubeMeshCpu &mesh);
-  void DrawGltfMesh(const glm::mat4 &mvp, GLuint texture,
-                    const BoneSkeletonCubeMeshCpu &mesh);
   void DrawSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
                        const GltfPrimitiveCpu &mesh,
                        const std::vector<glm::mat4> &boneMatrices);

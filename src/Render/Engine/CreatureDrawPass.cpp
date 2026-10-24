@@ -398,12 +398,6 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(
   ++Stats.CreatureDrawCalls;
 }
 
-void UCreatureDrawPass::DrawGltfMesh(const glm::mat4 &mvp, GLuint texture,
-                                     const BoneSkeletonCubeMeshCpu &mesh)
-{
-  DrawBoneSkeletonMesh(mvp, texture, mesh);
-}
-
 void UCreatureDrawPass::DrawSkinnedMesh(
     const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
     const std::vector<glm::mat4> &boneMatrices)
@@ -430,6 +424,9 @@ void UCreatureDrawPass::DrawSkinnedMesh(
   glBindTexture(GL_TEXTURE_2D, texture);
   creatureSkinnedShader->Use();
   creatureSkinnedShader->SetInt("texture0", 0);
+  creatureSkinnedShader->SetVec4(
+      "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
+                         1.0f + ActiveHitFlash01, 1.0f));
   creatureSkinnedShader->SetMat4("mvp_matrix", mvp);
   BindCreatureBonePaletteBlock(creatureSkinnedShader->GetProgramID(),
                                kCreatureBonePaletteBindingPoint);
