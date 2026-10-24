@@ -134,6 +134,19 @@ inline void AppendDecorSprite(BlockDecorShape shape, const glm::vec3 &center,
     }
     return;
   }
+  if (shape == BlockDecorShape::Torch)
+  {
+    // The texture contains the flame and narrow wooden shaft. Two slim,
+    // perpendicular planes preserve it from all viewing directions without
+    // making the torch occupy the full crossed-plant silhouette.
+    static constexpr float kAngles[] = {0.0f, 1.5708f};
+    for (int i = 0; i < 2; ++i)
+    {
+      AppendDecorQuad(center, kAngles[i], 0.0f, 0.0f, 0.70f, 0.96f,
+                      i == 0 ? 0.045f : -0.035f, vertices, indices);
+    }
+    return;
+  }
   if (shape == BlockDecorShape::Tuft)
   {
     static constexpr float kAngles[] = {0.0f, 0.9f, 1.9f, 2.8f, 4.0f, 5.1f};

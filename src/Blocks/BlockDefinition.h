@@ -65,6 +65,7 @@ enum class BlockDecorShape
   Flame,
   Pad,
   Mushroom,
+  Torch,
 };
 
 struct FluidViewProfile

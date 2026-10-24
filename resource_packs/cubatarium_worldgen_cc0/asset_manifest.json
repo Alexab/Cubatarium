@@ -9,10 +9,10 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 39,
+    "version": 40,
     "backend": "procedural",
     "texture_synthesis": "cellular_water_ripples_and_species_matched_bark_v37",
-    "object_synthesis": "pine_open_whorls_semantic_plant_meshes_v36",
+    "object_synthesis": "named_decor_meshes_and_solid_tree_branch_v40",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"

@@ -24,7 +24,7 @@
     "transparent": true,
     "style": "cross",
     "double_sided": true,
-    "shape": "cross",
+    "shape": "torch",
     "texture_variation": 1.0
   },
   "displayName": "Redstone Torch",

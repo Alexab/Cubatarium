@@ -20,15 +20,13 @@
     "mt_tree_side"
   ],
   "render": {
-    "transparent": true,
-    "style": "cross",
-    "shape": "cross",
-    "texture_variation": 1.0,
-    "double_sided": true
+    "transparent": false,
+    "double_sided": false,
+    "texture_variation": 0.48
   },
   "physics": {
     "movement": {
-      "occupancy": 0.0
+      "occupancy": 1.0
     }
   },
   "displayName": "Tree Branch",

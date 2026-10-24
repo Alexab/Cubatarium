@@ -2548,6 +2548,8 @@ def decor_shape_for_name(block_name: str, material: str = "") -> str:
     name = f"{block_name} {material}".lower()
     if any(token in name for token in ("fire", "flame")):
         return "flame"
+    if "torch" in name:
+        return "torch"
     if any(token in name for token in ("waterlily", "lily_pad")):
         return "pad"
     if "mushroom" in name:
@@ -2557,13 +2559,13 @@ def decor_shape_for_name(block_name: str, material: str = "") -> str:
     )):
         return "reed"
     if any(token in name for token in (
-        "fern", "grass", "junglegrass", "crop", "carrot", "potato",
+        "fern", "grass", "junglegrass", "crop", "carrot", "potato", "nether_wart",
         "wheat", "deadbush", "shrub", "pine_needles", "cactus_seedling",
     )):
         return "tuft"
     if any(token in name for token in (
-        "flower", "rose", "tulip", "dandelion", "blossom", "coral",
-        "bush_sapling",
+        "flower", "rose", "tulip", "dandelion", "blossom", "coral", "cocoa",
+        "sapling",
     )):
         return "cluster"
     return "cross"
@@ -4739,6 +4741,17 @@ def build_pack(
                 # without a large jump at the end of the loop.
                 animation["frame_count"] = 16
                 animation.setdefault("frametime", 6)
+        if name == "tree_branch":
+            # This legacy block has an opaque bark tile, not a plant cutout.
+            # Let the normal cube mesher draw the solid wood instead of
+            # stretching bark over transparent, passable billboard planes.
+            render.pop("style", None)
+            render.pop("shape", None)
+            render["transparent"] = False
+            render["double_sided"] = False
+            physics = block.setdefault("physics", {})
+            movement = physics.setdefault("movement", {})
+            movement["occupancy"] = 1.0
         if is_cross_decor_block(name):
             render["transparent"] = True
             render["style"] = "cross"
@@ -4881,10 +4894,10 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 39,
+            "version": 40,
             "backend": "procedural",
             "texture_synthesis": "cellular_water_ripples_and_species_matched_bark_v37",
-            "object_synthesis": "pine_open_whorls_semantic_plant_meshes_v36",
+            "object_synthesis": "named_decor_meshes_and_solid_tree_branch_v40",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,
@@ -6163,6 +6176,14 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
     for block in blocks:
         name = str(block.get("name", ""))
         render = block.get("render", {})
+        if name == "tree_branch":
+            if not isinstance(render, dict):
+                render = {}
+            movement = block.get("physics", {}).get("movement", {})
+            if render.get("style") == "cross" or render.get("transparent") is True:
+                errors.append("tree_branch: opaque bark should use the solid cube mesh")
+            if float(movement.get("occupancy", 1.0)) < 1.0:
+                errors.append("tree_branch: solid wood block must have full movement occupancy")
         if isinstance(render, dict) and render.get("style") == "cross" and is_cross_decor_block(name):
             expected_shape = decor_shape_for_name(name)
             if render.get("shape", "cross") != expected_shape:
