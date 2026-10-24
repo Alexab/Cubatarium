@@ -15,6 +15,7 @@
 | TD-AUD-017 | 2026-06 | Orphan tools/scripts | fix_*.py archived; tools/README + scan_tools_usage improved | closed |
 | TD-AUD-026 | 2026-07 | AUDIT-APP-003 UCore god-class | WorldLifecycleFacade + ResourcePackBootstrap + EnterGameWorld | partial |
 | TD-AUD-027 | 2026-07 | AUDIT-WORLD-006 World→Render headers | `URenderMeshSink` invalidation counter; read-model on arch_refactor3 | partial |
+| TD-AUD-032 | 2026-10 | 11 unit tests fail (pre-existing, exposed by full ctest registration): capture_incremental_test, deterministic_replay_test, mark_relit_characterization_test, fluid_surface_slice_test, fluid_surface_map_logic_test, liquid_non_renewable_flow_test, fluid_sim_mesh_integration_test, fluid_placement_liquid_decor_test, column_job_graph_stage_test, worldgen_vegetation_placement_test, fluid_permeable_decor_test | These tests were never ctest-registered and rotted while unrun (fluid/worldgen behavior evolved; goldens stale). Auto-registration in CMake (label `unit`, run via `ctest -L unit`) now keeps them visible | per-module fix PRs |
 
 ## Closed
 
