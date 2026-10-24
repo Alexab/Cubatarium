@@ -3818,20 +3818,31 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
         radius_cap, radius_scale = {
             "cedar": (3, 3.2),
             "larch": (3, 3.2),
-            "pine": (4, 3.6),
+            "pine": (4, 4.0),
             "redwood": (3, 2.5),
             "spruce": (4, 3.6),
         }[wood]
         gap_chance = {
             "cedar": 0.025,
             "larch": 0.30,
-            "pine": 0.16,
+            "pine": 0.20,
             "redwood": 0.07,
             "spruce": 0.04,
         }[wood]
         for y in range(crown_bottom, height + 1):
             progress = (height - y) / max(1, height - crown_bottom)
-            radius = min(radius_cap, max(0, round(radius_scale * progress)))
+            if wood == "pine":
+                # Pine crowns are rounded and branch-heavy through the middle;
+                # spruce keeps the sharper, steadily tapering conifer profile.
+                radius = round(
+                    radius_scale * math.sin(math.pi * progress)
+                    * (1.0 - 0.20 * progress)
+                    + 2.0 * (1.0 - progress)
+                )
+                if y == height:
+                    radius = 0
+            else:
+                radius = min(radius_cap, max(0, round(radius_scale * progress)))
             if wood == "larch" and y % 3 == 0:
                 radius = max(0, radius - 1)
             if radius == 0:
@@ -6092,6 +6103,21 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
                 high_rows = sorted(foliage_by_y.items(), reverse=True)[:2]
                 if low_rows and high_rows and sum(count for _, count in low_rows) <= sum(count for _, count in high_rows):
                     errors.append(f"{object_path.name}: conifer crown does not taper toward its top")
+                if species == "pine":
+                    pine_rows = sorted(foliage_by_y)
+                    row_widths = [
+                        max(int(v["dx"]) for v in foliage_voxels if int(v["dy"]) == y)
+                        - min(int(v["dx"]) for v in foliage_voxels if int(v["dy"]) == y)
+                        + 1
+                        for y in pine_rows
+                    ]
+                    if (
+                        len(row_widths) < 4
+                        or max(row_widths[1:-1], default=0) <= max(row_widths[0], row_widths[-1])
+                    ):
+                        errors.append(
+                            f"{object_path.name}: pine crown should be rounded, with its widest branches in the middle"
+                        )
         elif object_name.startswith("asset_boulder_"):
             material = object_name.removeprefix("asset_boulder_")
             if object_materials != {("rock", material)}:
