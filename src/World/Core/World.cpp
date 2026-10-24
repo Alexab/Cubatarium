@@ -14165,6 +14165,8 @@ bool UWorld::TickCooperativeSave(IUProgressSink &sink, int chunkBudget)
 void UWorld::BeginCooperativeCreate(const std::string &world_name,
                                     const bool prepare_visuals)
 {
+  PlayerDead = false;
+  HardcoreDead = false;
   if (!CoopSession)
   {
     CoopSession = std::make_unique<UWorldCooperativeSession>();

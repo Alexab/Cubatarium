@@ -49,6 +49,18 @@ void UDeathScreen::Build(UGuiContext &ctx)
       });
   Panel->AddChild(std::move(spectate));
 
+  auto returnToMenu = std::make_unique<UGuiButton>(Theme, "Return to Menu");
+  ReturnToMenuBtn = returnToMenu.get();
+  ReturnToMenuBtn->SetOnClick(
+      [this]()
+      {
+        if (OnReturnToMenu)
+        {
+          OnReturnToMenu();
+        }
+      });
+  Panel->AddChild(std::move(returnToMenu));
+
   Root = std::move(panel);
   SetVisible(false);
 }
@@ -62,8 +74,30 @@ void UDeathScreen::SetVisible(bool visible)
   }
   if (visible)
   {
+    if (Title)
+    {
+      Title->SetText(Hardcore ? "Hardcore World Lost" : "You Died");
+    }
     Relayout();
   }
+}
+
+void UDeathScreen::SetHardcore(bool hardcore)
+{
+  Hardcore = hardcore;
+  if (RespawnBtn)
+  {
+    RespawnBtn->SetVisible(!hardcore);
+  }
+  if (ReturnToMenuBtn)
+  {
+    ReturnToMenuBtn->SetVisible(hardcore);
+  }
+  if (Title)
+  {
+    Title->SetText(hardcore ? "Hardcore World Lost" : "You Died");
+  }
+  Relayout();
 }
 
 void UDeathScreen::SetCause(const std::string &cause)
@@ -84,6 +118,11 @@ void UDeathScreen::SetOnSpectate(std::function<void()> handler)
   OnSpectate = std::move(handler);
 }
 
+void UDeathScreen::SetOnReturnToMenu(std::function<void()> handler)
+{
+  OnReturnToMenu = std::move(handler);
+}
+
 void UDeathScreen::Relayout()
 {
   if (!Panel || !Theme)
@@ -91,7 +130,7 @@ void UDeathScreen::Relayout()
     return;
   }
   const int w = 360;
-  const int h = 220;
+  const int h = Hardcore ? 250 : 220;
   const int x = (ViewportW - w) / 2;
   const int y = (ViewportH - h) / 2;
   Panel->SetBounds({x, y, w, h});
@@ -105,11 +144,16 @@ void UDeathScreen::Relayout()
   }
   if (RespawnBtn)
   {
-    RespawnBtn->SetBounds({x + 40, y + 110, w - 80, 36});
+    RespawnBtn->SetBounds({x + 40, y + 105, w - 80, 36});
   }
   if (SpectateBtn)
   {
-    SpectateBtn->SetBounds({x + 40, y + 156, w - 80, 36});
+    SpectateBtn->SetBounds(
+        {x + 40, y + (Hardcore ? 112 : 151), w - 80, 36});
+  }
+  if (ReturnToMenuBtn)
+  {
+    ReturnToMenuBtn->SetBounds({x + 40, y + 158, w - 80, 36});
   }
 }
 

@@ -120,6 +120,11 @@ WorldDifficulty UNewWorldScreen::ReadSelectedDifficulty() const
   case 1:
     return WorldDifficulty::Easy;
   case 2:
+    return WorldDifficulty::Normal;
+  case 3:
+    return WorldDifficulty::Hard;
+  case 4:
+    return WorldDifficulty::Hardcore;
   default:
     return WorldDifficulty::Normal;
   }
@@ -203,9 +208,10 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   body->AddChild(std::move(difficultySection));
   auto difficultyList = std::make_unique<UGuiListView>(&theme);
   DifficultyList = difficultyList.get();
-  DifficultyList->SetItems({"Peaceful", "Easy", "Normal"});
+  DifficultyList->SetItems(
+      {"Peaceful", "Easy", "Normal", "Hard", "Hardcore"});
   DifficultyList->SetSelectedIndex(2);
-  DifficultyList->SetVisibleRowCount(3);
+  DifficultyList->SetVisibleRowCount(5);
   body->AddChild(std::move(difficultyList));
 
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);

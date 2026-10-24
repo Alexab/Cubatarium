@@ -35,16 +35,8 @@ struct DifficultyVitalsScale
 
 DifficultyVitalsScale ScaleForDifficulty(WorldDifficulty difficulty)
 {
-  switch (difficulty)
-  {
-  case WorldDifficulty::Peaceful:
-    return {0.f, 0.f, 0.f, false};
-  case WorldDifficulty::Easy:
-    return {0.5f, 0.5f, 0.25f, true};
-  case WorldDifficulty::Normal:
-  default:
-    return {1.f, 1.f, 1.f, true};
-  }
+  const float needs = WorldDifficultyProfileFor(difficulty).NeedsDrainMultiplier;
+  return {needs, needs, needs, difficulty != WorldDifficulty::Peaceful};
 }
 
 } // namespace
@@ -197,6 +189,11 @@ bool CreatureVitalsSystem::HandleLethal(UWorld &world, UCreature &target,
       v.satiety = 0.f;
       v.thirst = 0.f;
       world.SetPlayerDead(true);
+      if (world.GetDifficulty() == WorldDifficulty::Hardcore)
+      {
+        world.SetHardcoreDead(true);
+        world.PersistWorldMetadata();
+      }
       return false;
     }
     return true;

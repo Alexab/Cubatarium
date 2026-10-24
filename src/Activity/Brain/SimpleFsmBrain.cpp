@@ -121,6 +121,25 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     return;
   }
 
+  if (Mode == SimpleFsmMode::Melee)
+  {
+    const UWorld &world = sink.GetWorld();
+    if (!ModePolicy::AllowsHostileAggro(world.GetGameMode(),
+                                        world.GetDifficulty()) ||
+        world.IsPlayerDead())
+    {
+      blackboard.state = CreatureFsmState::Idle;
+      blackboard.targetId = 0;
+      CreatureIntent idle;
+      idle.clearOnApply = false;
+      idle.suggestedAnim = LocomotionState::Idle;
+      sink.SetIntent(self_id, idle);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, idle,
+                        "melee_disabled_by_world_policy");
+      return;
+    }
+  }
+
   const std::optional<ControlledCreatureInfo> controlled =
       perception.QueryControlledCreatureInfo();
   CreatureIntent intent;
@@ -290,14 +309,18 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
 
   const glm::vec3 controlled_body =
       NavigationGoalBodyFromControlled(*controlled);
-  const float dist =
-      HorizontalDistanceXZ(view->bodyOrigin, controlled_body);
+  const bool aerial = snapshot->habitat == CreatureHabitat::Aerial;
+  const float dist = aerial
+                         ? glm::length(controlled_body - view->bodyOrigin)
+                         : HorizontalDistanceXZ(view->bodyOrigin,
+                                                controlled_body);
   blackboard.actionTimer -= dt;
 
   {
     const UWorld &world = sink.GetWorld();
     if (!ModePolicy::AllowsHostileAggro(world.GetGameMode(),
-                                        world.GetDifficulty()))
+                                        world.GetDifficulty()) ||
+        world.IsPlayerDead())
     {
       blackboard.state = CreatureFsmState::Idle;
       blackboard.targetId = 0;
@@ -326,7 +349,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   const float dy = controlled_body.y - view->bodyOrigin.y;
   // Attack only when close in XZ AND within ~1 block vertically; otherwise keep
   // chasing so mobs climb out of pits / up stairs toward the player.
-  if (dist <= snapshot->behavior.attackRange && std::abs(dy) <= 1.15f)
+  if (dist <= snapshot->behavior.attackRange &&
+      (aerial || std::abs(dy) <= 1.15f))
   {
     const UWorld &world = sink.GetWorld();
     if (!ModePolicy::AllowsHostileAggro(world.GetGameMode(),
@@ -355,6 +379,21 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   }
 
   blackboard.state = CreatureFsmState::Chase;
+  if (aerial)
+  {
+    glm::vec3 moveDir = controlled_body - view->bodyOrigin;
+    if (glm::length(moveDir) > 1e-4f)
+    {
+      moveDir = glm::normalize(moveDir);
+    }
+    intent.moveDirWorld = moveDir;
+    intent.moveSpeed = ResolveIntentMoveSpeed(*snapshot);
+    intent.suggestedAnim = LocomotionState::Run;
+    sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                      "chase_aerial_direct");
+    return;
+  }
   NavigationQuery query;
   query.search_distance = 32;
   query.body_height = NavigationBodyHeightForBounds(snapshot->boundsSize.y);

@@ -947,6 +947,9 @@ add_executable(creature_activity_steering_test
 target_include_directories(creature_activity_steering_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_activity_steering_test glm::glm)
+add_test(NAME creature_activity_steering_test
+    COMMAND $<TARGET_FILE:creature_activity_steering_test>)
+set_tests_properties(creature_activity_steering_test PROPERTIES LABELS "unit;creatures")
 
 add_executable(locomotion_state_derive_test
     src/Creatures/Locomotion/LocomotionStateDerive.cpp
@@ -972,6 +975,8 @@ add_executable(wander_interval_test
 target_include_directories(wander_interval_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(wander_interval_test glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME wander_interval_test COMMAND $<TARGET_FILE:wander_interval_test>)
+set_tests_properties(wander_interval_test PROPERTIES LABELS "unit;creatures")
 
 add_executable(creature_stats_test
     src/Creatures/Stats/CreatureStatsDefaults.cpp
@@ -984,6 +989,10 @@ add_executable(creature_stats_test
 target_include_directories(creature_stats_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_stats_test glm::glm nlohmann_json::nlohmann_json)
+target_compile_definitions(creature_stats_test PRIVATE
+    CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+add_test(NAME creature_stats_test COMMAND $<TARGET_FILE:creature_stats_test>)
+set_tests_properties(creature_stats_test PROPERTIES LABELS "unit;creatures")
 
 add_executable(influence_hit_math_test
     src/Creatures/Influence/InfluenceHitMath.cpp
@@ -992,6 +1001,8 @@ add_executable(influence_hit_math_test
 target_include_directories(influence_hit_math_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(influence_hit_math_test glm::glm)
+add_test(NAME influence_hit_math_test COMMAND $<TARGET_FILE:influence_hit_math_test>)
+set_tests_properties(influence_hit_math_test PROPERTIES LABELS "unit;creatures")
 
 add_executable(tool_capabilities_test
     src/Items/ToolCapabilities.cpp
@@ -1357,6 +1368,17 @@ add_executable(mode_policy_test
 target_include_directories(mode_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(mode_policy_test glm::glm)
+add_test(NAME mode_policy_test COMMAND $<TARGET_FILE:mode_policy_test>)
+set_tests_properties(mode_policy_test PROPERTIES LABELS "unit;creatures")
+
+add_executable(creature_spawn_selection_test
+    src/Test/CreatureSpawnSelectionTest.cpp)
+target_include_directories(creature_spawn_selection_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_spawn_selection_test glm::glm)
+add_test(NAME creature_spawn_selection_test
+    COMMAND $<TARGET_FILE:creature_spawn_selection_test>)
+set_tests_properties(creature_spawn_selection_test PROPERTIES LABELS "unit;creatures")
 
 
 add_executable(chunk_lighting_propagation_test
@@ -1385,6 +1407,9 @@ target_include_directories(chunk_bulk_blocklight_test PRIVATE
 target_compile_definitions(chunk_bulk_blocklight_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(chunk_bulk_blocklight_test glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME chunk_bulk_blocklight_test
+    COMMAND $<TARGET_FILE:chunk_bulk_blocklight_test>)
+set_tests_properties(chunk_bulk_blocklight_test PROPERTIES LABELS "unit;lighting")
 
 add_executable(fluid_chunk_io_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -1556,6 +1581,7 @@ add_executable(frame_streaming_budget_test
     src/Test/FrameStreamingBudgetTest.cpp)
 target_include_directories(frame_streaming_budget_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(frame_streaming_budget_test PRIVATE glm::glm)
 
 add_executable(idle_recovery_policy_test
     src/Test/IdleRecoveryPolicyTest.cpp)
@@ -2076,8 +2102,11 @@ target_compile_definitions(mudflow_erosion_test PRIVATE
 target_link_libraries(mudflow_erosion_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(density_refine_parity_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/ResourcePacks/BlockNameUtil.cpp
     src/ThirdParty/stb_image.cpp
     src/WorldGen/Core/WorldGenContentPin.cpp
     src/WorldGen/Core/WorldGenContentPinTls.cpp
@@ -2099,6 +2128,8 @@ add_executable(density_refine_parity_test
     src/Test/DensityRefineParityTest.cpp)
 target_include_directories(density_refine_parity_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(density_refine_parity_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(density_refine_parity_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(noise_permutation_cache_test
@@ -2579,6 +2610,9 @@ target_include_directories(collision_broadphase_subchunk_test PRIVATE
 target_compile_definitions(collision_broadphase_subchunk_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(collision_broadphase_subchunk_test glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME collision_broadphase_subchunk_test
+    COMMAND $<TARGET_FILE:collision_broadphase_subchunk_test>)
+set_tests_properties(collision_broadphase_subchunk_test PROPERTIES LABELS "unit;creatures")
 
 add_executable(fluid_placement_test
     ${PHYSICS_COLLISION_UNIT_SOURCES}
@@ -2616,6 +2650,9 @@ target_include_directories(movement_integration_test PRIVATE
 target_compile_definitions(movement_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(movement_integration_test glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME movement_integration_test
+    COMMAND $<TARGET_FILE:movement_integration_test>)
+set_tests_properties(movement_integration_test PROPERTIES LABELS "unit;creatures")
 
 add_executable(player_clearance_test
     ${PHYSICS_COLLISION_UNIT_SOURCES}
@@ -2625,6 +2662,8 @@ target_include_directories(player_clearance_test PRIVATE
 target_compile_definitions(player_clearance_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(player_clearance_test glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME player_clearance_test COMMAND $<TARGET_FILE:player_clearance_test>)
+set_tests_properties(player_clearance_test PROPERTIES LABELS "unit;creatures")
 
 add_executable(creature_terrestrial_gate_test
     ${PHYSICS_COLLISION_UNIT_SOURCES}
@@ -2634,6 +2673,9 @@ target_include_directories(creature_terrestrial_gate_test PRIVATE
 target_compile_definitions(creature_terrestrial_gate_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(creature_terrestrial_gate_test glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME creature_terrestrial_gate_test
+    COMMAND $<TARGET_FILE:creature_terrestrial_gate_test>)
+set_tests_properties(creature_terrestrial_gate_test PROPERTIES LABELS "unit;creatures")
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
@@ -2946,5 +2988,129 @@ foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
   if(TARGET ${_t})
     add_test(NAME ${_t} COMMAND $<TARGET_FILE:${_t}>)
     set_tests_properties(${_t} PROPERTIES LABELS "unit;streaming")
+  endif()
+endforeach()
+
+# Keep the lightweight test source sets linkable as the production chunk
+# sources acquire registry lookups and diagnostics. Compile these support
+# implementations once instead of copying test-only stubs into each target.
+add_library(physics_block_registry_test_support OBJECT
+  src/Blocks/BlockRegistry.cpp
+  src/World/Physics/MaterialReactionRulesRegistry.cpp)
+target_include_directories(physics_block_registry_test_support PRIVATE
+  ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(physics_block_registry_test_support PRIVATE
+  ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(physics_block_registry_test_support PUBLIC glm::glm)
+
+add_library(platform_log_test_support OBJECT
+  src/App/Platform/Log.cpp)
+target_include_directories(platform_log_test_support PRIVATE
+  ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(platform_log_test_support PUBLIC glog::glog)
+if(WIN32)
+  target_link_libraries(platform_log_test_support PUBLIC dbghelp)
+endif()
+
+add_library(platform_worker_job_kind_test_support OBJECT
+  src/App/Platform/WorkerJobKind.cpp)
+target_include_directories(platform_worker_job_kind_test_support PRIVATE
+  ${CMAKE_SOURCE_DIR}/src)
+
+get_property(_cutum_directory_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(_test_target IN LISTS _cutum_directory_targets)
+  if(_test_target STREQUAL PROJECT_NAME)
+    continue()
+  endif()
+  get_target_property(_test_sources ${_test_target} SOURCES)
+  if(NOT _test_sources)
+    continue()
+  endif()
+
+  set(_has_chunk_buffer FALSE)
+  set(_has_block_registry FALSE)
+  set(_has_chunk_mesh_snapshot FALSE)
+  set(_has_chunk_lighting FALSE)
+  set(_has_chunk_lighting_stubs FALSE)
+  set(_has_world_collision FALSE)
+  set(_has_world_collision_creature_stubs FALSE)
+  set(_has_platform_log FALSE)
+  set(_has_worker_job_kind FALSE)
+  set(_has_test_log_stub FALSE)
+  set(_has_job_stage_trace_stub FALSE)
+  foreach(_source IN LISTS _test_sources)
+    get_filename_component(_source_name "${_source}" NAME)
+    if(_source_name STREQUAL "ChunkBuffer.cpp")
+      set(_has_chunk_buffer TRUE)
+    elseif(_source_name STREQUAL "BlockRegistry.cpp")
+      set(_has_block_registry TRUE)
+    elseif(_source_name STREQUAL "ChunkMeshSnapshot.cpp")
+      set(_has_chunk_mesh_snapshot TRUE)
+    elseif(_source_name STREQUAL "ChunkLighting.cpp")
+      set(_has_chunk_lighting TRUE)
+    elseif(_source_name STREQUAL "ChunkLightingTestStubs.cpp")
+      set(_has_chunk_lighting_stubs TRUE)
+    elseif(_source_name STREQUAL "WorldCollision.cpp")
+      set(_has_world_collision TRUE)
+    elseif(_source_name STREQUAL "WorldCollisionCreatureStubs.cpp")
+      set(_has_world_collision_creature_stubs TRUE)
+    elseif(_source_name STREQUAL "Log.cpp")
+      set(_has_platform_log TRUE)
+    elseif(_source_name STREQUAL "WorkerJobKind.cpp")
+      set(_has_worker_job_kind TRUE)
+    endif()
+    if(_source_name MATCHES "Test\\.cpp$")
+      if(IS_ABSOLUTE "${_source}")
+        set(_source_path "${_source}")
+      else()
+        set(_source_path "${CMAKE_SOURCE_DIR}/${_source}")
+      endif()
+      if(EXISTS "${_source_path}")
+        file(STRINGS "${_source_path}" _logger_stub_lines
+          REGEX "void[ \t]+CubatariumLogInfo\\(")
+        if(_logger_stub_lines)
+          set(_has_test_log_stub TRUE)
+        endif()
+        file(STRINGS "${_source_path}" _job_stage_trace_stub_lines
+          REGEX "UJobStageTrace::GetStreamingFrameEpoch\\(")
+        if(_job_stage_trace_stub_lines)
+          set(_has_job_stage_trace_stub TRUE)
+        endif()
+      endif()
+    endif()
+  endforeach()
+
+  if(_has_chunk_buffer AND NOT _has_block_registry)
+    target_sources(${_test_target} PRIVATE
+      $<TARGET_OBJECTS:physics_block_registry_test_support>)
+  endif()
+  if(_has_world_collision AND NOT _has_world_collision_creature_stubs)
+    target_sources(${_test_target} PRIVATE
+      src/Test/WorldCollisionCreatureStubs.cpp)
+  endif()
+  if(_has_chunk_lighting AND NOT _has_chunk_lighting_stubs
+      AND NOT _has_job_stage_trace_stub)
+    target_sources(${_test_target} PRIVATE
+      src/Test/ChunkLightingTestStubs.cpp)
+  endif()
+  set(_needs_platform_log FALSE)
+  if(_has_chunk_mesh_snapshot AND NOT _has_platform_log
+      AND NOT _has_test_log_stub)
+    target_sources(${_test_target} PRIVATE
+      $<TARGET_OBJECTS:platform_log_test_support>)
+    set_property(TARGET ${_test_target} APPEND PROPERTY LINK_LIBRARIES
+      glog::glog)
+    if(WIN32)
+      set_property(TARGET ${_test_target} APPEND PROPERTY LINK_LIBRARIES
+        dbghelp)
+    endif()
+    set(_needs_platform_log TRUE)
+  elseif(_has_platform_log)
+    set(_needs_platform_log TRUE)
+  endif()
+  if(_needs_platform_log
+      AND NOT _has_worker_job_kind)
+    target_sources(${_test_target} PRIVATE
+      $<TARGET_OBJECTS:platform_worker_job_kind_test_support>)
   endif()
 endforeach()

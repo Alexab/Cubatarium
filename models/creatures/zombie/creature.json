@@ -7,7 +7,11 @@
       "hostile"
     ],
     "spawnable": true,
-    "sort_order": 32
+    "sort_order": 32,
+    "natural_spawnable": true,
+    "spawn_weight": 1.0,
+    "spawn_group_min": 1,
+    "spawn_group_max": 2
   },
   "role": "mob",
   "bounds": {

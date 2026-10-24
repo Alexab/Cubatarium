@@ -483,6 +483,12 @@ void UWorld::RunLegacyPhysicsFrame()
       ShouldTickWorldCreatures(streaming_red, GetWallFrameDelta() * 1000.0);
   const auto t_player = clock_t::now();
 
+  // Population maintenance runs on the world step even when expensive NPC
+  // brains are deferred for a streaming hitch. The manager is low frequency
+  // and independently checks mode, loaded terrain, habitat, and population
+  // limits before it can add anything.
+  Environment.TickNaturalPopulation(dt);
+
   const auto t_cam = clock_t::now();
   bool is_moved = camera && camera->DoMovement(this);
   PhysicsTelemetryData.CameraDoMovementMs =

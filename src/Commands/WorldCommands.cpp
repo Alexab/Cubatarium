@@ -107,15 +107,22 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         if (args.size() < 2)
         {
           return CommandResult{
-              false, "Usage: difficulty <peaceful|easy|normal>"};
+              false, "Usage: difficulty <peaceful|easy|normal|hard>"};
         }
         const std::string key = Lower(args[1]);
-        if (key != "peaceful" && key != "easy" && key != "normal")
+        if (key != "peaceful" && key != "easy" && key != "normal" &&
+            key != "hard")
         {
           return CommandResult{
-              false, "Unknown difficulty (peaceful|easy|normal)"};
+              false, "Unknown difficulty (peaceful|easy|normal|hard)"};
         }
         const WorldDifficulty difficulty = WorldDifficultyFromString(key);
+        if (!ModePolicy::AllowsDifficultyCommand(session.GetWorldDifficulty(),
+                                                 difficulty))
+        {
+          return CommandResult{false,
+                               "Hardcore difficulty cannot be changed"};
+        }
         session.SyncToWorldDifficulty(difficulty);
         return CommandResult{true, std::string("Difficulty: ") +
                                        WorldDifficultyToString(difficulty)};
@@ -707,7 +714,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                 camera->GetPosition() - eyeOffset + glm::vec3(3.0f, 0.0f, 0.0f);
           }
         }
-        const CreatureId Id = world->SpawnCreature(species, bodyOrigin, skin);
+        const CreatureId Id = world->SpawnCreature(
+            species, bodyOrigin, skin, CreatureSpawnSource::DebugCommand);
         if (Id == 0)
         {
           return CommandResult{false, "Spawn failed"};

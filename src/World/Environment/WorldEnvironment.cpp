@@ -6,11 +6,15 @@
 #include "Activity/IUWorldPerception.h"
 #include "Activity/WorldCreatureActivitySink.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreaturePersistenceJson.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/User.h"
+#include "Creatures/Spawning/CreaturePopulationRules.h"
+#include "Creatures/Spawning/CreatureLoadRecovery.h"
+#include "Creatures/Spawning/CreatureSpawnSelection.h"
 #include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreatureAppearance.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
@@ -22,6 +26,7 @@
 #include "Game/WorldGameMode.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
+#include "World/Chunks/ChunkManager.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -35,11 +40,46 @@ namespace cutum
 
 using json = nlohmann::json;
 
+namespace
+{
+bool HasCreatureTag(const std::vector<std::string> &tags, const char *tag)
+{
+  return std::find(tags.begin(), tags.end(), tag) != tags.end();
+}
+
+bool IsCreatureVolumeLoadedAt(const UWorld &world, const glm::vec3 &origin,
+                              const glm::vec3 &sizeBlocks)
+{
+  const CollisionVolume volume = CollisionVolumeFromBody(origin, sizeBlocks);
+  const glm::ivec3 minChunk = UChunkManager::WorldToChunk(
+      WorldPosToBlock(volume.center - volume.halfExtents));
+  const glm::ivec3 maxChunk = UChunkManager::WorldToChunk(
+      WorldPosToBlock(volume.center + volume.halfExtents));
+  const UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
+  for (int x = minChunk.x; x <= maxChunk.x; ++x)
+  {
+    for (int y = minChunk.y; y <= maxChunk.y; ++y)
+    {
+      for (int z = minChunk.z; z <= maxChunk.z; ++z)
+      {
+        if (!chunks.HasChunk(glm::ivec3(x, y, z)))
+        {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+} // namespace
+
 UWorldEnvironment::UWorldEnvironment(UWorld &owner) : Owner(owner) {}
 
 void UWorldEnvironment::Initialize()
 {
   RegisterDefaultCreaturePosePresenters(PosePresenterRegistry);
+  NaturalPopulationRng.seed(Owner.GetWorldSeed());
 }
 
 void UWorldEnvironment::SetCreatureDefinitionStorage(
@@ -188,6 +228,9 @@ void UWorldEnvironment::ClearCreatures()
 {
   ActivityDirector.Clear();
   Creatures.clear();
+  NaturalPopulationTimer = 0.f;
+  LoadedCreaturePositionValidationTimer = 0.f;
+  LoadedCreaturePositionValidationPending = true;
   CreatureSpatialIndex.Clear();
   CreatureSpatialIndexReady = false;
   NextCreatureId = 1;
@@ -277,7 +320,8 @@ void UWorldEnvironment::SnapCreatureFeetToGround(UCreature &creature) const
 
 CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
                                             const glm::vec3 &bodyOrigin,
-                                            const std::string &skinId)
+                                            const std::string &skinId,
+                                            CreatureSpawnSource source)
 {
   const CreatureDefinition *def =
       CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
@@ -288,6 +332,69 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
     return 0;
   }
 
+  const bool controlledDefault =
+      def->role == CreatureRole::ControlledDefault;
+  if (controlledDefault && PlayerCreatureId != 0)
+  {
+    return 0;
+  }
+  if (!controlledDefault && Owner.IsHardcoreDead())
+  {
+    return 0;
+  }
+  if (!controlledDefault &&
+      (!ModePolicy::AllowsCreatureSpawn(Owner.GetGameMode(), source) ||
+       !def->catalog.spawnable))
+  {
+    return 0;
+  }
+  if (source == CreatureSpawnSource::NaturalPopulation &&
+      (!def->catalog.naturalSpawnable ||
+       (HasCreatureTag(def->catalog.tags, "hostile") &&
+        !ModePolicy::AllowsHostileSpawning(Owner.GetGameMode(),
+                                           Owner.GetDifficulty()))))
+  {
+    return 0;
+  }
+  if (source == CreatureSpawnSource::NaturalPopulation)
+  {
+    CreaturePopulationCounts counts;
+    const UCreature *player = Owner.GetPlayerCreature();
+    if (!player)
+    {
+      return 0;
+    }
+    ForEachCreature(
+        [&](UCreature &creature)
+        {
+          if (creature.IsPlayerCharacter())
+          {
+            return;
+          }
+          const CreatureDefinition *other =
+              GetCreatureDefinition(creature.GetTypeId());
+          const bool hostile = other &&
+                               HasCreatureTag(other->catalog.tags, "hostile");
+          const bool local =
+              glm::distance(creature.GetBodyOrigin(),
+                            player->GetBodyOrigin()) <=
+              CreaturePopulationRules::LocalRadiusBlocks;
+          CreaturePopulationRules::Accumulate(
+              counts, creature.GetSpawnSource(), hostile, local);
+        });
+    if (!CreaturePopulationRules::CanAddNaturalCreature(
+            counts, HasCreatureTag(def->catalog.tags, "hostile"),
+            Owner.GetDifficulty(), Owner.GetGameMode()))
+    {
+      return 0;
+    }
+  }
+  constexpr size_t kAbsoluteCreatureLimit = 128;
+  if (!controlledDefault && Creatures.size() >= kAbsoluteCreatureLimit)
+  {
+    return 0;
+  }
+
   const glm::vec3 spawnOrigin = AdjustSpawnBodyOrigin(Owner, *def, bodyOrigin);
   const glm::vec3 spawnSize = def->bounds.restSizeBlocks;
   glm::vec3 resolvedSpawn =
@@ -295,6 +402,11 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
                                        spawnSize, 0);
   if (def->role != CreatureRole::ControlledDefault)
   {
+    if (source == CreatureSpawnSource::NaturalPopulation &&
+        !IsCreatureVolumeLoadedAt(Owner, resolvedSpawn, spawnSize))
+    {
+      return 0;
+    }
     if (!cutum::HabitatAllowsAtForSpawn(Owner, def->habitat, resolvedSpawn,
                                         spawnSize))
     {
@@ -337,6 +449,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
     creature->GetBoundsMutable().currentSizeBlocks = def->bounds.restSizeBlocks;
   }
   creature->SetCapabilities(def->locomotion);
+  creature->SetSpawnSource(source);
   creature->ApplyStatsFromDefinition(*def);
   creature->SetLocomotionArchetype(def->locomotionArchetype);
   creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
@@ -622,6 +735,11 @@ void RemapLegacySkinId(std::string &skinId)
 
 bool UWorldEnvironment::SpawnCreatureByView(const std::string &speciesId)
 {
+  if (!ModePolicy::AllowsCreatureSpawn(Owner.GetGameMode(),
+                                       CreatureSpawnSource::CreativeManual))
+  {
+    return false;
+  }
   const CreatureDefinition *def =
       CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
   if (!def)
@@ -635,7 +753,8 @@ bool UWorldEnvironment::SpawnCreatureByView(const std::string &speciesId)
   const glm::vec3 baseOrigin = ComputeSpawnProbeOrigin(Owner, *def);
   for (const glm::vec3 &probe : BuildSpawnProbeCandidates(baseOrigin))
   {
-    if (SpawnCreature(speciesId, probe) != 0)
+    if (SpawnCreature(speciesId, probe, "",
+                      CreatureSpawnSource::CreativeManual) != 0)
     {
       return true;
     }
@@ -645,6 +764,15 @@ bool UWorldEnvironment::SpawnCreatureByView(const std::string &speciesId)
 
 bool UWorldEnvironment::CanSpawnCreatureByView(const std::string &speciesId)
 {
+  if (!ModePolicy::AllowsCreatureSpawn(Owner.GetGameMode(),
+                                       CreatureSpawnSource::CreativeManual))
+  {
+    return false;
+  }
+  if (Owner.IsHardcoreDead() || Creatures.size() >= 128)
+  {
+    return false;
+  }
   const CreatureDefinition *def =
       CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
   if (!def)
@@ -669,6 +797,19 @@ bool UWorldEnvironment::CanSpawnCreatureByView(const std::string &speciesId)
 std::string
 UWorldEnvironment::GetCreatureSpawnBlockedHint(const std::string &speciesId)
 {
+  if (!ModePolicy::AllowsCreatureSpawn(Owner.GetGameMode(),
+                                       CreatureSpawnSource::CreativeManual))
+  {
+    return "Creature palette spawning is only available in Creative";
+  }
+  if (Owner.IsHardcoreDead())
+  {
+    return "Creature spawning is disabled in a completed Hardcore world";
+  }
+  if (Creatures.size() >= 128)
+  {
+    return "Creature population limit reached";
+  }
   const CreatureDefinition *def =
       CreatureDefinitions ? CreatureDefinitions->Get(speciesId) : nullptr;
   if (!def)
@@ -815,14 +956,8 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
       }
       std::string skin = c.value("skin_id", "");
       RemapLegacySkinId(skin);
-      glm::vec3 bodyOrigin(0.0f);
-      if (c.contains("body_origin") && c["body_origin"].is_array() &&
-          c["body_origin"].size() == 3)
-      {
-        bodyOrigin = glm::vec3(c["body_origin"][0].get<float>(),
-                               c["body_origin"][1].get<float>(),
-                               c["body_origin"][2].get<float>());
-      }
+      const glm::vec3 bodyOrigin =
+          ReadCreatureBodyOrigin(c, glm::vec3(0.0f));
       const CreatureDefinition *def = CreatureDefinitions->Get(type);
       if (!def)
       {
@@ -838,6 +973,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
       const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
       auto creature =
           std::make_unique<UCreature>(id, type, bodyOrigin, eyeOffset);
+      creature->SetSpawnSource(ReadCreatureSpawnSource(c));
       creature->GetBoundsMutable().profile = def->bounds;
       creature->GetBoundsMutable().currentSizeBlocks =
           def->bounds.restSizeBlocks;
@@ -870,11 +1006,49 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
         creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
       }
       creature->GetInventory().DeserializeFromJson(c);
+      // Cooperative loading restores entities before it reads terrain chunks.
+      // Only resolve collision/habitat now if this entity's chunk is present;
+      // otherwise retain its saved position and retry as streaming loads it.
       glm::vec3 loaded_origin = creature->GetBodyOrigin();
-      loaded_origin = cutum::TryDepenetrateSpawnOrigin(
-          Owner, def->habitat, loaded_origin, def->bounds.restSizeBlocks, id);
+      bool safePositionResolved = false;
+      if (IsCreatureVolumeLoadedAt(Owner, loaded_origin,
+                                   def->bounds.restSizeBlocks))
+      {
+        const auto safeOrigin = FindSafeCreatureOrigin(
+            loaded_origin,
+            [&](const glm::vec3 &candidate)
+            {
+              return AdjustSpawnBodyOrigin(Owner, *def, candidate);
+            },
+            [&](const glm::vec3 &candidate)
+            {
+              return IsCreatureVolumeLoadedAt(
+                  Owner, candidate, def->bounds.restSizeBlocks);
+            },
+            [&](const glm::vec3 &candidate)
+            {
+              if (!HabitatAllowsAtForSpawn(Owner, def->habitat, candidate,
+                                           def->bounds.restSizeBlocks))
+              {
+                return false;
+              }
+              CollisionVolume volume = CollisionVolumeFromBody(
+                  candidate, def->bounds.restSizeBlocks);
+              volume.halfExtents =
+                  glm::max(volume.halfExtents - glm::vec3(0.05f),
+                           glm::vec3(0.05f));
+              return !Owner.CheckBlockCollisionVolume(volume) &&
+                     !Owner.CheckCreatureCollisionVolume(volume, id);
+            });
+        if (safeOrigin)
+        {
+          loaded_origin = *safeOrigin;
+          safePositionResolved = true;
+        }
+      }
       creature->SetBodyOrigin(loaded_origin);
-      if (def->habitat == CreatureHabitat::Terrestrial)
+      if (safePositionResolved &&
+          def->habitat == CreatureHabitat::Terrestrial)
       {
         SnapCreatureFeetToGround(*creature);
       }
@@ -909,12 +1083,12 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
     json item;
     item["id"] = creature.GetId();
     item["type"] = creature.GetTypeId();
+    WriteCreatureSpawnSource(item, creature.GetSpawnSource());
     if (!creature.GetSkinId().empty())
     {
       item["skin_id"] = creature.GetSkinId();
     }
-    const glm::vec3 body = creature.GetBodyOrigin();
-    item["body_origin"] = json::array({body.x, body.y, body.z});
+    WriteCreatureBodyOrigin(item, creature.GetBodyOrigin());
     item["yaw"] = creature.GetYaw();
     item["pitch"] = creature.GetPitch();
     item["movement_mode"] = creature.GetMovementMode() == CreatureMovementMode::Flying
@@ -950,7 +1124,287 @@ void UWorldEnvironment::TickActivity(IUWorldPerception &perception,
                                      float dt, bool stress_tick)
 {
   SyncCreatureSpatialIndex();
+  if (!stress_tick)
+  {
+    LoadedCreaturePositionValidationTimer += std::max(0.f, dt);
+    if (LoadedCreaturePositionValidationPending ||
+        LoadedCreaturePositionValidationTimer >= 1.f)
+    {
+      LoadedCreaturePositionValidationTimer =
+          std::fmod(LoadedCreaturePositionValidationTimer, 1.f);
+      LoadedCreaturePositionValidationPending = false;
+      ValidateLoadedCreaturePositions();
+    }
+  }
   ActivityDirector.TickAgents(perception, sink, dt, stress_tick);
+}
+
+void UWorldEnvironment::ValidateLoadedCreaturePositions()
+{
+  if (!CreatureDefinitions)
+  {
+    return;
+  }
+  // Position changes during this pass must be visible to collision checks for
+  // later creatures; use the live map while repairing, then rebuild the index.
+  CreatureSpatialIndex.Clear();
+  CreatureSpatialIndexReady = false;
+  ForEachCreature(
+      [this](UCreature &creature)
+      {
+        if (creature.IsPlayerCharacter())
+        {
+          return;
+        }
+        const CreatureDefinition *definition =
+            GetCreatureDefinition(creature.GetTypeId());
+        if (!definition ||
+            !IsCreatureVolumeLoadedAt(Owner, creature.GetBodyOrigin(),
+                                      definition->bounds.restSizeBlocks))
+        {
+          return;
+        }
+        const auto safeOrigin = FindSafeCreatureOrigin(
+            creature.GetBodyOrigin(),
+            [&](const glm::vec3 &candidate)
+            {
+              return AdjustSpawnBodyOrigin(Owner, *definition, candidate);
+            },
+            [&](const glm::vec3 &candidate)
+            {
+              return IsCreatureVolumeLoadedAt(
+                  Owner, candidate, definition->bounds.restSizeBlocks);
+            },
+            [&](const glm::vec3 &candidate)
+            {
+              if (!HabitatAllowsAtForSpawn(
+                      Owner, definition->habitat, candidate,
+                      definition->bounds.restSizeBlocks))
+              {
+                return false;
+              }
+              CollisionVolume volume = CollisionVolumeFromBody(
+                  candidate, definition->bounds.restSizeBlocks);
+              volume.halfExtents =
+                  glm::max(volume.halfExtents - glm::vec3(0.05f),
+                           glm::vec3(0.05f));
+              return !Owner.CheckBlockCollisionVolume(volume) &&
+                     !Owner.CheckCreatureCollisionVolume(
+                         volume, creature.GetId());
+            });
+        if (!safeOrigin ||
+            glm::distance(*safeOrigin, creature.GetBodyOrigin()) < 1e-3f)
+        {
+          return;
+        }
+        creature.SetBodyOrigin(*safeOrigin);
+        if (definition->habitat == CreatureHabitat::Terrestrial)
+        {
+          SnapCreatureFeetToGround(creature);
+        }
+      });
+  SyncCreatureSpatialIndex();
+}
+
+void UWorldEnvironment::TickNaturalPopulation(float dt)
+{
+  if (Owner.IsPlayerDead() || !CreatureDefinitions)
+  {
+    NaturalPopulationTimer = 0.f;
+    return;
+  }
+  const UCreature *player = Owner.GetPlayerCreature();
+  if (!player)
+  {
+    return;
+  }
+
+  NaturalPopulationTimer += std::max(0.f, dt);
+  constexpr float kPopulationIntervalSec = 6.f;
+  if (NaturalPopulationTimer < kPopulationIntervalSec)
+  {
+    return;
+  }
+  NaturalPopulationTimer = std::fmod(NaturalPopulationTimer,
+                                    kPopulationIntervalSec);
+
+  CreaturePopulationCounts currentCounts;
+  const glm::vec3 playerOrigin = player->GetBodyOrigin();
+  ForEachCreature(
+      [&](UCreature &creature)
+      {
+        if (creature.IsPlayerCharacter())
+        {
+          return;
+        }
+        const CreatureDefinition *definition =
+            GetCreatureDefinition(creature.GetTypeId());
+        const bool hostile = definition &&
+                             HasCreatureTag(definition->catalog.tags,
+                                            "hostile");
+        const bool local =
+            glm::distance(creature.GetBodyOrigin(), playerOrigin) <=
+            CreaturePopulationRules::LocalRadiusBlocks;
+        CreaturePopulationRules::Accumulate(
+            currentCounts, creature.GetSpawnSource(), hostile, local);
+      });
+  if (!CreaturePopulationRules::CanAddNaturalCreature(
+          currentCounts, false, Owner.GetDifficulty(), Owner.GetGameMode()))
+  {
+    return;
+  }
+
+  const WorldDifficultyProfile profile =
+      WorldDifficultyProfileFor(Owner.GetDifficulty());
+  const bool hostileRoom = CreaturePopulationRules::CanAddNaturalCreature(
+      currentCounts, true, Owner.GetDifficulty(), Owner.GetGameMode());
+
+  std::vector<WeightedSpawnOption<const CreatureDefinition *>> eligible;
+  float totalWeight = 0.f;
+  for (const std::string &id : CreatureDefinitions->ListSpawnable())
+  {
+    const CreatureDefinition *definition = CreatureDefinitions->Get(id);
+    if (!definition || !definition->catalog.naturalSpawnable ||
+        definition->catalog.spawnWeight <= 0.f)
+    {
+      continue;
+    }
+    const bool hostile =
+        HasCreatureTag(definition->catalog.tags, "hostile");
+    if (hostile && !hostileRoom)
+    {
+      continue;
+    }
+    const float weight = definition->catalog.spawnWeight *
+                         (hostile ? profile.HostileSpawnPressureMultiplier
+                                  : 1.f);
+    if (weight > 0.f)
+    {
+      eligible.push_back({definition, weight});
+      totalWeight += weight;
+    }
+  }
+  if (eligible.empty() || totalWeight <= 0.f)
+  {
+    return;
+  }
+  std::uniform_real_distribution<float> angle(0.f, 6.28318530718f);
+  std::uniform_real_distribution<float> distance(22.f, 44.f);
+  std::uniform_int_distribution<int> heightOffset(-7, 7);
+  std::uniform_real_distribution<float> groupOffset(-2.f, 2.f);
+  size_t spawned = 0;
+  for (int candidateIndex = 0; candidateIndex < 8 && spawned == 0;
+       ++candidateIndex)
+  {
+    const float theta = angle(NaturalPopulationRng);
+    const float radius = distance(NaturalPopulationRng);
+    glm::vec3 candidate =
+        playerOrigin + glm::vec3(std::cos(theta) * radius,
+                                 static_cast<float>(heightOffset(
+                                     NaturalPopulationRng)),
+                                 std::sin(theta) * radius);
+    struct SpawnPlacement
+    {
+      const CreatureDefinition *definition{nullptr};
+      glm::vec3 origin{0.f};
+    };
+    std::vector<WeightedSpawnOption<SpawnPlacement>> placements;
+    placements.reserve(eligible.size());
+    for (const WeightedSpawnOption<const CreatureDefinition *> &entry : eligible)
+    {
+      const CreatureDefinition *definition = entry.value;
+      glm::vec3 origin = candidate;
+      if (definition->habitat == CreatureHabitat::Terrestrial)
+      {
+        const int gx = WorldCoordToBlockIndex(origin.x);
+        const int gz = WorldCoordToBlockIndex(origin.z);
+        const std::optional<float> ground =
+            Owner.QueryGroundFeetYColumn(gx, gz);
+        if (!ground)
+        {
+          continue;
+        }
+        origin.y = *ground;
+      }
+      placements.push_back({SpawnPlacement{definition, origin}, entry.weight});
+    }
+    const auto viable = FilterViableSpawnOptions(
+        placements, [&](const SpawnPlacement &placement)
+        {
+          return IsCreatureVolumeLoadedAt(
+                     Owner, placement.origin,
+                     placement.definition->bounds.restSizeBlocks) &&
+                 HabitatAllowsAtForSpawn(
+                     Owner, placement.definition->habitat, placement.origin,
+                     placement.definition->bounds.restSizeBlocks);
+        });
+    const float viableWeight = TotalSpawnOptionWeight(viable);
+    if (viableWeight <= 0.f)
+    {
+      continue;
+    }
+    std::uniform_real_distribution<float> chooseWeight(0.f, viableWeight);
+    const auto *choice = ChooseWeightedSpawnOption(
+        viable, chooseWeight(NaturalPopulationRng));
+    if (!choice)
+    {
+      continue;
+    }
+    const CreatureDefinition *selected = choice->value.definition;
+    const glm::vec3 spawnOrigin = choice->value.origin;
+    std::uniform_int_distribution<int> groupSize(
+        selected->catalog.spawnGroupMin, selected->catalog.spawnGroupMax);
+    const int requestedGroupSize = groupSize(NaturalPopulationRng);
+    const bool selectedHostile =
+        HasCreatureTag(selected->catalog.tags, "hostile");
+
+    for (int groupIndex = 0; groupIndex < requestedGroupSize; ++groupIndex)
+    {
+      const CreaturePopulationCounts beforeSpawn{
+          currentCounts.naturalWorld + spawned,
+          currentCounts.local + spawned,
+          currentCounts.hostileWorld + (selectedHostile ? spawned : 0),
+          currentCounts.hostileLocal + (selectedHostile ? spawned : 0)};
+      if (!CreaturePopulationRules::CanAddNaturalCreature(
+              beforeSpawn, selectedHostile, Owner.GetDifficulty(),
+              Owner.GetGameMode()))
+      {
+        break;
+      }
+      glm::vec3 groupOrigin = spawnOrigin;
+      if (groupIndex > 0)
+      {
+        groupOrigin.x += groupOffset(NaturalPopulationRng);
+        groupOrigin.z += groupOffset(NaturalPopulationRng);
+        if (selected->habitat == CreatureHabitat::Terrestrial)
+        {
+          const std::optional<float> ground = Owner.QueryGroundFeetYColumn(
+              WorldCoordToBlockIndex(groupOrigin.x),
+              WorldCoordToBlockIndex(groupOrigin.z));
+          if (!ground)
+          {
+            continue;
+          }
+          groupOrigin.y = *ground;
+        }
+      }
+      const glm::ivec3 groupChunk =
+          UChunkManager::WorldToChunk(WorldPosToBlock(groupOrigin));
+      if (!Owner.GetBlockWorld().GetChunkManager().HasChunk(groupChunk) ||
+          !IsCreatureVolumeLoadedAt(Owner, groupOrigin,
+                                    selected->bounds.restSizeBlocks) ||
+          !HabitatAllowsAtForSpawn(Owner, selected->habitat, groupOrigin,
+                                   selected->bounds.restSizeBlocks))
+      {
+        continue;
+      }
+      if (SpawnCreature(selected->Id, groupOrigin, "",
+                        CreatureSpawnSource::NaturalPopulation) != 0)
+      {
+        ++spawned;
+      }
+    }
+  }
 }
 
 bool UWorldEnvironment::CheckCreatureCollisionVolume(

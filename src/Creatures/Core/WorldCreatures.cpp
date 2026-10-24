@@ -204,9 +204,10 @@ void UWorld::SnapCreatureFeetToGround(UCreature &creature) const
 
 CreatureId UWorld::SpawnCreature(const std::string &speciesId,
                                  const glm::vec3 &bodyOrigin,
-                                 const std::string &skinId)
+                                 const std::string &skinId,
+                                 CreatureSpawnSource source)
 {
-  return Environment.SpawnCreature(speciesId, bodyOrigin, skinId);
+  return Environment.SpawnCreature(speciesId, bodyOrigin, skinId, source);
 }
 
 void UWorld::RemoveCreature(CreatureId id) { Environment.RemoveCreature(id); }

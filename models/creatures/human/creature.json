@@ -6,7 +6,8 @@
       "humanoid"
     ],
     "spawnable": false,
-    "sort_order": 0
+    "sort_order": 0,
+    "natural_spawnable": false
   },
   "role": "controlled_default",
   "bounds": {

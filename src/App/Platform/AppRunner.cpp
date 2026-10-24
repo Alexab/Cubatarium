@@ -17,6 +17,12 @@
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureSpawnSource.h"
+#include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Stats/CreatureVitalsSystem.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -428,9 +434,19 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     const auto started = std::chrono::steady_clock::now();
     int ingame_frames_seen = 0;
     bool loading_seen = false;
+    bool drop_player_applied = false;
+    glm::vec3 drop_start_position(0.0f);
+    bool forced_hardcore_death_applied = false;
     window.SetStopPredicate(
         [&]()
         {
+          if (opt.ForceCreatureAiTicks)
+          {
+            // Headless smoke rendering may exceed the production hitch
+            // threshold continuously. Preserve normal simulation updates but
+            // let the AI scheduler exercise the same fixed-step behavior.
+            world->SetWallFrameDelta(1.0 / 60.0);
+          }
           const double elapsed_sec =
               std::chrono::duration<double>(std::chrono::steady_clock::now() -
                                             started)
@@ -446,6 +462,47 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
           }
           if (application->GetState() == AppState::InGame)
           {
+            if (opt.ForceHardcoreDeath && !forced_hardcore_death_applied &&
+                world->GetGameMode() == WorldGameMode::Survival &&
+                world->GetDifficulty() == WorldDifficulty::Hardcore)
+            {
+              if (UCreature *player_creature = world->GetPlayerCreature())
+              {
+                CreatureVitals &vitals = player_creature->GetVitals();
+                vitals.fatalWounds =
+                    std::max(0, vitals.maxFatalWounds - 1);
+                vitals.health = 1.0f;
+                CreatureVitalsSystem::ApplyDamage(
+                    *world, *player_creature, 1.0f, world->GetGameMode(),
+                    "qa");
+                forced_hardcore_death_applied = true;
+              }
+            }
+            if (!drop_player_applied && opt.DropPlayerAtY > 0.0f)
+            {
+              auto camera = world->GetCurrentUserCamera();
+              auto user = world->GetCurrentUser();
+              if (camera && user)
+              {
+                drop_start_position = camera->GetPosition();
+                drop_start_position.y = opt.DropPlayerAtY;
+                camera->SetFreeMove(false);
+                camera->SetPosition(drop_start_position);
+                camera->ResetVerticalPhysics();
+                user->SetPosition(drop_start_position);
+                if (UCreature *controlled = world->GetControlledCreature())
+                {
+                  controlled->SetBodyOrigin(
+                      glm::vec3(drop_start_position.x,
+                                drop_start_position.y -
+                                    controlled->GetEyeOffset().y,
+                                drop_start_position.z));
+                  controlled->GetLocomotion().SetMode(
+                      CreatureMovementMode::Walking);
+                }
+                drop_player_applied = true;
+              }
+            }
             ++ingame_frames_seen;
             if (ingame_frames_seen >= opt.InGameFrames)
             {
@@ -457,6 +514,102 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
         });
 
     window.Run();
+
+    size_t creature_count = 0;
+    size_t natural_creature_count = 0;
+    size_t hostile_creature_count = 0;
+    size_t natural_hostile_creature_count = 0;
+    world->ForEachCreature(
+        [&](const UCreature &creature)
+        {
+          if (creature.IsPlayerCharacter())
+          {
+            return;
+          }
+          ++creature_count;
+          if (creature.GetSpawnSource() ==
+              CreatureSpawnSource::NaturalPopulation)
+          {
+            ++natural_creature_count;
+          }
+          const CreatureDefinition *definition =
+              world->GetCreatureDefinition(creature.GetTypeId());
+          const bool hostile =
+              definition &&
+              std::find(definition->catalog.tags.begin(),
+                        definition->catalog.tags.end(), "hostile") !=
+                  definition->catalog.tags.end();
+          if (hostile)
+          {
+            ++hostile_creature_count;
+            if (creature.GetSpawnSource() ==
+                CreatureSpawnSource::NaturalPopulation)
+            {
+              ++natural_hostile_creature_count;
+            }
+          }
+        });
+
+    const std::filesystem::path world_folder =
+        world->GetWorldFolderPath().empty()
+            ? (paths.ResolveWritable("worlds") / world->GetWorldName())
+            : std::filesystem::path(world->GetWorldFolderPath());
+    const std::filesystem::path creature_save_path =
+        world_folder / "creatures.json";
+    std::error_code creature_save_ec;
+    std::filesystem::create_directories(creature_save_path.parent_path(),
+                                        creature_save_ec);
+    if (!creature_save_ec)
+    {
+      world->SaveCreatures(creature_save_path.string());
+    }
+    size_t saved_creature_count = 0;
+    bool creatures_saved = false;
+    if (!creature_save_ec)
+    {
+      std::ifstream creature_save_file(creature_save_path);
+      if (creature_save_file)
+      {
+        try
+        {
+          nlohmann::json saved_creatures;
+          creature_save_file >> saved_creatures;
+          if (saved_creatures.contains("creatures") &&
+              saved_creatures["creatures"].is_array())
+          {
+            saved_creature_count = saved_creatures["creatures"].size();
+            creatures_saved = saved_creature_count == creature_count;
+          }
+        }
+        catch (const nlohmann::json::exception &)
+        {
+          creatures_saved = false;
+        }
+      }
+    }
+
+    const UCreature *player = world->GetPlayerCreature();
+    const auto player_camera = world->GetCurrentUserCamera();
+    const glm::vec3 player_position =
+        player_camera ? player_camera->GetPosition() : glm::vec3(0.0f);
+    const float player_health = player ? player->GetVitals().health : -1.0f;
+    bool drop_test_passed = opt.DropPlayerAtY <= 0.0f;
+    const bool hardcore_death_passed =
+        !opt.ForceHardcoreDeath ||
+        (forced_hardcore_death_applied && world->IsPlayerDead() &&
+         world->IsHardcoreDead());
+    if (opt.DropPlayerAtY > 0.0f && drop_player_applied && player &&
+        player_camera)
+    {
+      const float feet_y = player_position.y - player->GetEyeOffset().y;
+      const auto ground = world->QueryGroundFeetYUnder(
+          static_cast<int>(std::floor(player_position.x)),
+          static_cast<int>(std::floor(player_position.z)), feet_y);
+      drop_test_passed =
+          player_position.y < drop_start_position.y - 10.0f && ground &&
+          std::abs(feet_y - *ground) < 1.0f && !world->IsPlayerDead() &&
+          player_health > 0.0f;
+    }
 
     world->PrepareForShutdown();
     LogWorldLoadDiag("autoload_last_world_end", *world);
@@ -478,6 +631,16 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
       }
       exit_code = 1;
     }
+    else if (!drop_test_passed)
+    {
+      exit_reason = "player_drop_failed";
+      exit_code = 1;
+    }
+    else if (!hardcore_death_passed)
+    {
+      exit_reason = "hardcore_death_failed";
+      exit_code = 1;
+    }
 
     const std::filesystem::path report_path =
         GetExecutableDirectory() / "logs" / "autoload_report.txt";
@@ -496,6 +659,37 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
              << "loading_seen=" << (loading_seen ? 1 : 0) << '\n'
              << "ingame_frames=" << ingame_frames_seen << '\n'
              << "default_world=" << core->GetAppSettings().DefaultWorld << '\n'
+             << "loaded_world_name=" << world->GetWorldName() << '\n'
+             << "world_folder=" << world_folder.string() << '\n'
+             << "game_mode=" << WorldGameModeToString(world->GetGameMode())
+             << '\n'
+             << "difficulty="
+             << WorldDifficultyToString(world->GetDifficulty()) << '\n'
+             << "player_dead=" << (world->IsPlayerDead() ? 1 : 0) << '\n'
+             << "hardcore_dead=" << (world->IsHardcoreDead() ? 1 : 0)
+             << '\n'
+             << "creatures=" << creature_count << '\n'
+             << "natural_creatures=" << natural_creature_count << '\n'
+             << "hostile_creatures=" << hostile_creature_count << '\n'
+             << "natural_hostile_creatures="
+             << natural_hostile_creature_count << '\n'
+             << "player_health=" << player_health << '\n'
+             << "player_position=" << player_position.x << ','
+             << player_position.y << ',' << player_position.z << '\n'
+             << "forced_creature_ai_ticks="
+             << (opt.ForceCreatureAiTicks ? 1 : 0) << '\n'
+             << "drop_player_applied=" << (drop_player_applied ? 1 : 0)
+             << '\n'
+             << "drop_test_passed=" << (drop_test_passed ? 1 : 0) << '\n'
+             << "drop_start_position=" << drop_start_position.x << ','
+             << drop_start_position.y << ',' << drop_start_position.z << '\n'
+             << "forced_hardcore_death_applied="
+             << (forced_hardcore_death_applied ? 1 : 0) << '\n'
+             << "hardcore_death_passed="
+             << (hardcore_death_passed ? 1 : 0) << '\n'
+             << "creatures_saved=" << (creatures_saved ? 1 : 0) << '\n'
+             << "saved_creatures=" << saved_creature_count << '\n'
+             << "creature_save_path=" << creature_save_path.string() << '\n'
              << "mesh_dirty=" << (blockers.dirty ? 1 : 0) << '\n'
              << "mesh_missing_greedy=" << (blockers.missing_greedy ? 1 : 0)
              << '\n'
@@ -512,7 +706,9 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     if (exit_code == 0)
     {
       std::cout << "autoload-last-world: PASS ingame_frames="
-                << ingame_frames_seen << std::endl;
+                << ingame_frames_seen << " creatures=" << creature_count
+                << " natural_creatures=" << natural_creature_count
+                << std::endl;
     }
     else
     {

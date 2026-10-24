@@ -7,7 +7,11 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 77
+    "sort_order": 77,
+    "natural_spawnable": true,
+    "spawn_weight": 1.0,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4
   },
   "role": "mob",
   "bounds": {

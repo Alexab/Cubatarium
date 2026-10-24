@@ -1,5 +1,6 @@
 #include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Influence/BareHandToolInfluenceProvider.h"
 #include "Creatures/Influence/InfluenceHitMath.h"
 #include "Game/Inventory/InventoryTypes.h"
@@ -331,6 +332,19 @@ InfluencePrediction InfluenceResolver::Resolve(
   delta.TargetId = target_id;
   delta.TargetPos = target->GetBodyOrigin();
   float damage = hit.Damage;
+  if (target->IsPlayerCharacter())
+  {
+    const auto definitions = world.GetCreatureDefinitionStorage();
+    const CreatureDefinition *sourceDefinition =
+        definitions ? definitions->Get(source.GetTypeId()) : nullptr;
+    if (sourceDefinition &&
+        std::find(sourceDefinition->catalog.tags.begin(),
+                  sourceDefinition->catalog.tags.end(), "hostile") !=
+            sourceDefinition->catalog.tags.end())
+    {
+      damage *= ModePolicy::HostileDamageMultiplier(world.GetDifficulty());
+    }
+  }
   {
     const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
     const InventoryEntryRef &off = target->GetInventory().GetEquippedOffhand();

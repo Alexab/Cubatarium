@@ -20,6 +20,14 @@ struct AutoloadLastWorldOptions
   bool VisibleWindow{false};
   double TimeoutSec{600.0};
   int InGameFrames{5};
+  /// QA-only: keep the world AI scheduling gate on a 60 Hz wall-time value
+  /// while a hidden renderer is slower than the normal hitch threshold.
+  bool ForceCreatureAiTicks{false};
+  /// QA-only: move the player to this eye-height after entering the world and
+  /// let normal non-flight locomotion fall onto the terrain.
+  float DropPlayerAtY{-1.0f};
+  /// QA-only: apply a final lethal hit in a live Hardcore Survival world.
+  bool ForceHardcoreDeath{false};
 };
 
 /// Era43f: visible/hidden GUI autoload of config default_world (or --world).

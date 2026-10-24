@@ -2,6 +2,7 @@
 #define MODE_POLICY_H
 
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Core/CreatureSpawnSource.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 
@@ -56,6 +57,56 @@ struct ModePolicy
       return false;
     }
     return difficulty != WorldDifficulty::Peaceful;
+  }
+
+  static bool AllowsHostileSpawning(WorldGameMode mode,
+                                    WorldDifficulty difficulty)
+  {
+    const bool knownMode = mode == WorldGameMode::Creative ||
+                           mode == WorldGameMode::Survival;
+    return knownMode && difficulty != WorldDifficulty::Peaceful;
+  }
+
+  static float HostileDamageMultiplier(WorldDifficulty difficulty)
+  {
+    return WorldDifficultyProfileFor(difficulty).HostileDamageMultiplier;
+  }
+
+  static bool AllowsCreatureSpawn(WorldGameMode mode,
+                                  CreatureSpawnSource source)
+  {
+    switch (source)
+    {
+    case CreatureSpawnSource::CreativeManual:
+    case CreatureSpawnSource::DebugCommand:
+      return mode == WorldGameMode::Creative;
+    case CreatureSpawnSource::NaturalPopulation:
+      return mode == WorldGameMode::Creative ||
+             mode == WorldGameMode::Survival;
+    case CreatureSpawnSource::Qa:
+      return AllowsQaSpawner(mode);
+    case CreatureSpawnSource::Persistence:
+      return true;
+    case CreatureSpawnSource::LegacySave:
+    default:
+      return false;
+    }
+  }
+
+  static bool AllowsDifficultyCommand(WorldDifficulty current,
+                                      WorldDifficulty requested)
+  {
+    if (current == requested)
+    {
+      return true;
+    }
+    return current != WorldDifficulty::Hardcore &&
+           requested != WorldDifficulty::Hardcore;
+  }
+
+  static bool AllowsPlayerRespawn(WorldDifficulty difficulty)
+  {
+    return difficulty != WorldDifficulty::Hardcore;
   }
 
   static bool AllowsStatusDot(WorldGameMode mode)

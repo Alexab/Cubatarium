@@ -134,6 +134,15 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
         }
       }
       def.catalog.spawnable = catalog.value("spawnable", false);
+      def.catalog.naturalSpawnable =
+          catalog.value("natural_spawnable", false);
+      def.catalog.spawnWeight =
+          std::max(0.0f, catalog.value("spawn_weight", 1.0f));
+      def.catalog.spawnGroupMin =
+          std::max(1, catalog.value("spawn_group_min", 1));
+      def.catalog.spawnGroupMax = std::max(
+          def.catalog.spawnGroupMin,
+          catalog.value("spawn_group_max", def.catalog.spawnGroupMin));
       def.catalog.sortOrder = catalog.value("sort_order", 0);
     }
     def.role = ParseCreatureRole(data.value("role", ""));

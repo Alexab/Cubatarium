@@ -1,4 +1,5 @@
 #include "World/Persistence/WorldPersistence.h"
+#include "Game/WorldMetadataJson.h"
 #include "Core/Environment.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
@@ -5901,6 +5902,8 @@ void UWorldPersistence::SaveUsers(UWorld &world, const std::string &file_name)
 void UWorldPersistence::LoadWorldData(UWorld &world,
                                       const std::string &file_name)
 {
+  world.SetPlayerDead(false);
+  world.SetHardcoreDead(false);
   std::string val;
   std::ifstream file(file_name);
   if (file.is_open())
@@ -6065,15 +6068,13 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       world.SetGameMode(WorldGameMode::Creative);
     }
 
-    if (d.contains("difficulty") && d["difficulty"].is_string())
-    {
-      world.SetDifficulty(
-          WorldDifficultyFromString(d["difficulty"].get<std::string>()));
-    }
-    else
-    {
-      world.SetDifficulty(WorldDifficulty::Normal);
-    }
+    world.SetDifficulty(ReadWorldDifficulty(d));
+    const WorldDeathState deathState = ReadWorldDeathState(d);
+    world.SetHardcoreDead(deathState.HardcoreCompleted);
+    // The death overlay is driven by PlayerDead. Restore it from the saved
+    // Hardcore completion marker so reloading a lost world returns to the
+    // spectate/menu choices instead of an input-locked live game.
+    world.SetPlayerDead(deathState.PlayerDead);
 
     if (d.contains("environment") && d["environment"].is_object())
     {
@@ -6212,7 +6213,8 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
   world_data["environment"] = env;
   world_data["view"] = world.GetViewSettings().ToJson();
   world_data["game_mode"] = WorldGameModeToString(world.GetGameMode());
-  world_data["difficulty"] = WorldDifficultyToString(world.GetDifficulty());
+  WriteWorldDifficulty(world_data, world.GetDifficulty());
+  WriteHardcoreWorldCompleted(world_data, world.IsHardcoreDead());
 
   std::ofstream file(file_name);
   if (file.is_open())

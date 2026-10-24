@@ -14,6 +14,10 @@ struct CreatureCatalogInfo
 {
   std::vector<std::string> tags;
   bool spawnable{false};
+  bool naturalSpawnable{false};
+  float spawnWeight{1.f};
+  int spawnGroupMin{1};
+  int spawnGroupMax{1};
   int sortOrder{0};
 };
 
