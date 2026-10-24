@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_desert_sand_natural",
+  "id": 2481,
+  "displayName": "Soil Desert Sand Natural",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_desert_sand_natural",
+    "cu_soil_desert_sand_natural",
+    "cu_soil_desert_sand_natural",
+    "cu_soil_desert_sand_natural",
+    "cu_soil_desert_sand_natural_top",
+    "cu_soil_desert_sand_natural_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "desert_sand",
+    "variant": "natural"
+  }
+}

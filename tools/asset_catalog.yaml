@@ -45,12 +45,12 @@ families:
     materials: [basalt, granite, diorite, andesite, limestone, marble, slate, schist, gneiss, quartzite, sandstone, shale, chalk, travertine, porphyry, serpentine, dolomite, conglomerate, obsidian, pumice, tuff, greystone]
     variants: [natural, rough, layered, fractured, weathered, polished, cut, speckled, banded, darkened]
   soil:
-    count: 110
-    materials: [loam, clay, peat, podzol, humus, silt, wet_mud, dry_mud, red_earth, pale_sand, volcanic_ash]
+    count: 120
+    materials: [loam, clay, peat, podzol, humus, silt, wet_mud, dry_mud, red_earth, pale_sand, desert_sand, volcanic_ash]
     variants: [natural, dry, damp, compact, coarse, fine, pebbled, rooted, layered, weathered]
   wood:
-    count: 150
-    materials: [oak, pine, birch, cedar, maple, ash, walnut, beech, willow, poplar, acacia, jungle, mangrove, larch, redwood]
+    count: 170
+    materials: [oak, pine, birch, cedar, maple, ash, aspen, walnut, beech, willow, poplar, acacia, jungle, mangrove, larch, redwood, spruce]
     variants: [bark, endgrain, plank, stripped, aged, dark, pale, carved, cut, weathered]
   masonry:
     count: 160

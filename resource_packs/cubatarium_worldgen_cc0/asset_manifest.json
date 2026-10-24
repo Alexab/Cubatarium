@@ -9,26 +9,26 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 30,
+    "version": 32,
     "backend": "procedural",
-    "texture_synthesis": "semantic_sprite_coverage_junglewood_species_named_decor_v30",
+    "texture_synthesis": "named_tree_species_stable_ids_and_sand_match_v32",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"
   },
   "reference_calibration": null,
   "counts": {
-    "block_definitions": 1684,
-    "procedural_cc0_block_definitions": 1416,
+    "block_definitions": 1714,
+    "procedural_cc0_block_definitions": 1446,
     "minetest_block_definitions_included": 258,
     "geology_block_definitions_included": 10,
-    "textures": 2359,
+    "textures": 2443,
     "minetest_textures_replaced": 313,
     "geology_textures_replaced": 9,
     "minetest_block_definitions_overridden": 258,
     "geology_block_definitions_overridden": 10,
-    "objects": 77,
-    "worldgen_rules": 17,
+    "objects": 79,
+    "worldgen_rules": 19,
     "worldgen_rules_added_this_build": 0
   },
   "reference_inventory": {
@@ -31289,6 +31289,666 @@
       "license_review_required": false
     },
     {
+      "stem": "cu_soil_desert_sand_coarse",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "coarse",
+      "role": "side",
+      "seed": 7176781340723602409,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7534c9b1b8e0eaa81bfd86ab376dbe079c2d8a4b152b041b2c350146140034d6",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_coarse_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "coarse",
+      "role": "bottom",
+      "seed": 3681394228258887831,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "d16059f695260caafabb709c5d39dfcf991c11f439ee0a9e3b6c43fb6fb9f77a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_coarse_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "coarse",
+      "role": "top",
+      "seed": 14244029635261148796,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9eaa1953fa6dbf9c9003851fe6d981f658babec4267bcd68deaeffb59ca9c196",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_compact",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "compact",
+      "role": "side",
+      "seed": 13596864654995154619,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e5e4ed30b23e7198d1f1081ccd5e55bc75a88245b7bc77a66b34959fff70852e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_compact_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "compact",
+      "role": "bottom",
+      "seed": 8114695439687138995,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ae097de3c7afbb5d8a2bae92831293797ff072e6f4cf86b4c34337d122fa6604",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_compact_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "compact",
+      "role": "top",
+      "seed": 16948605602017936413,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "002bb0e8b520099075ad9a8410e14cbcb4b871610c6490376c708de5181b6fea",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_damp",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "damp",
+      "role": "side",
+      "seed": 15475637366521605476,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3ca0fe4947d71c0b4c6ba5a0aa41159c9e93398a082ee528773a9687c9d7ef03",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_damp_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "damp",
+      "role": "bottom",
+      "seed": 16582736614450489842,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "4bc8fabe61d28b946f5822e45670bca3d7f9c548f90fc501f3e45905ca0ce230",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_damp_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "damp",
+      "role": "top",
+      "seed": 16649966383863783432,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e480851bab5dda1be6353cd2772fc2b8621d038075193b7130531645e5b778ca",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_dry",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "dry",
+      "role": "side",
+      "seed": 8671699090734616541,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "df9558e26dba7b91867a41b9bffbdc9a0cda0ff37e2dafd26e3b2504908bd9ed",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_dry_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "dry",
+      "role": "bottom",
+      "seed": 15612261257576116448,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3939537d21735c44512d24cca2a369e5da21b0e116784b65589ae01836ae05f3",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_dry_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "dry",
+      "role": "top",
+      "seed": 747665318362953708,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a15d2c29570c7b2165b28da9181b7211ec049d4818e8cca22928ee587fa0beaa",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_fine",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "fine",
+      "role": "side",
+      "seed": 9598685051712845305,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "cb0ed94be0ed4cfdbba48fb35f8e2cb278ceefa1e112b2ed9ae2942d3d98d553",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_fine_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "fine",
+      "role": "bottom",
+      "seed": 10956057116872048084,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c65d1b1e61189656fa877d7dbbe453225ffdbac47460a20ab4c053fcabb5148a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_fine_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "fine",
+      "role": "top",
+      "seed": 567787203035338152,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "43de449a8c4c0b8e829244eee3fb611954644d9933dc59e825211ae5e7468271",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_layered",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "layered",
+      "role": "side",
+      "seed": 10232499924197221628,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ca28a83a7b43080e0b2867636b1ff12e70ef8c1adb5aac8e799df6714da99d93",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_layered_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "layered",
+      "role": "bottom",
+      "seed": 16383127183047124365,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "113674809949cdad684f0179fdbddaf2fffcde79350492f864f0a1fac57b81e7",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_layered_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "layered",
+      "role": "top",
+      "seed": 11446062358725533082,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0abfadcdee72a845959c675b3f3f21b4da4199b70c1039093bc19c62ab145beb",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_natural",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "natural",
+      "role": "side",
+      "seed": 3835665406028965463,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "30607dfa763f868622c7928dca6f8a501dbe279f8e866813c39dbf9c484e17e4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_natural_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "natural",
+      "role": "bottom",
+      "seed": 10233183937165301688,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ebc4d69ee8f39f45b29c981db3869004a87c8487117142bd9d823351b5ac57af",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_natural_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "natural",
+      "role": "top",
+      "seed": 17544095025534892310,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "2734fecd10cf6e313cdaf104111fe5b9f5f76f3545648c4726013d424e207ad5",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_pebbled",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "pebbled",
+      "role": "side",
+      "seed": 4714799140420646140,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "182cd9278287e1814ba7f1197b8b8e619681079f4c00103ff46714ce7e0137a5",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_pebbled_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "pebbled",
+      "role": "bottom",
+      "seed": 6352020103931570164,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "85dfe4851e89d9969a28196472a3acd83e237d95824d17292e55efdf00f0d50e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_pebbled_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "pebbled",
+      "role": "top",
+      "seed": 6567433993682494423,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "657e1f6e2bb23ad6dec68653e80649fc3eb099f9be59cafca8c843f4800006e6",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_rooted",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "rooted",
+      "role": "side",
+      "seed": 10126606607592926927,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "81a76e9b7e6bc13c662df6ea2954c31f22ec665a24d4d7cb909239bbdede0e3a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_rooted_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "rooted",
+      "role": "bottom",
+      "seed": 14912145091215270547,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "743b228d61192de313ccd8d8e4f651a8a31cfe62a624ee8fb8d106a0eec69700",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_rooted_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "rooted",
+      "role": "top",
+      "seed": 4098995772711227077,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "8fe2470827bbac9c2bd3e9b06efda7acb6aea75b1bbca7c85d11fc318ba9e5eb",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_weathered",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "weathered",
+      "role": "side",
+      "seed": 8223650649893886445,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "8b561ac65961f07681f3ff50427875dc7d60ef592632f5fba635888b5cabd2f4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_weathered_bottom",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "weathered",
+      "role": "bottom",
+      "seed": 12258345563971282401,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7ff612ff4bb9c66182c9dd3023d2ff9b2a6e75f3ddc4db4b2b5aaa5e4fbeb2c6",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_soil_desert_sand_weathered_top",
+      "family": "soil",
+      "material": "desert_sand",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 11472707631305130889,
+      "backend": "procedural",
+      "seam_blend_width": 0,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c61f35c51dbc1e9980fe89d4af657e431e38f10a6bed1870d9ece661692c2d82",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
       "stem": "cu_soil_dry_mud_coarse",
       "family": "soil",
       "material": "dry_mud",
@@ -33282,7 +33942,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5d56ed93af66e5676645bfefb24b00db9c17b8202e18311d925a4e51a0ce4dda",
+      "pixel_sha256": "ff3b9659f13503bbf54dcb63f6587947f8984547b16e6406a169b832a868bd88",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33304,7 +33964,7 @@
         16,
         16
       ],
-      "pixel_sha256": "fc8d479e5c5c20a277f0372f2fb613b980f1d0f5fe3c52c312cf86c04b1aeead",
+      "pixel_sha256": "8c9510850e6c58bb4f4aa9a9f5fc017e94d5de9f23aab7fef966da8211101f44",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33326,7 +33986,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a161c00366997d4ca68cf7e65cbfb6460470d286a8d8b24641822e71c9be85c8",
+      "pixel_sha256": "63f3ba18dd1112cda9c69836fd01b10f4550ed2e896168369c5517d8d6387b8a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33348,7 +34008,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5ac35515d9d65fbf1b5ca1706342154a8f92083c8756e7541b77e958ad5873de",
+      "pixel_sha256": "20f7491d50962a07702d7554af320fc650eb090c127bb8a219f805b108e70ee2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33370,7 +34030,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a6a4de99e9b7fa655e0ca6eeddd7c4b85c6bb78d28406c354bf7af6cf436dcf1",
+      "pixel_sha256": "e8c632c5e567a90e6e92ecd26e044a596cb81b104b8e3f48e936aa4ddd5fbc20",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33392,7 +34052,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ac1eadc5c7d351a857f3f54bd384293a33ee7ceade5821f94cecece57f2fa69b",
+      "pixel_sha256": "7f724bc9a04bee5fee5c46a87e80f8455071422a06b107bdea61fd6cf10ef4be",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33414,7 +34074,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4522bc66362c40e224eac62b1e48b4c10b23a7c906b701b180243c988ba8d430",
+      "pixel_sha256": "9f605254a7a4a7f23be4e200b25212fd0edc02893ff6c708cfb3c595b6edc8cb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33436,7 +34096,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a739add45adb1ee1d240a6da9f1c78d5f158b4101b3d579ac84e6b1ab70408f0",
+      "pixel_sha256": "cdbb997b4bccdfb832b161aa873b9374e13dad05c2d286c5b999d054d1299be7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33458,7 +34118,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9154e2b31dc6826a088c16dcbf8e9cf2ba182ed9a5f1b3e1b9818349e2e748f1",
+      "pixel_sha256": "b9833a354c22ba2ada802167d1eeff80e8ec5607225dfeb8253621385d4e3f9e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33480,7 +34140,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c1c71e9ca82137d8019cfe617a257332c434fef6f24cfa8f39b98431ce250b0d",
+      "pixel_sha256": "33ffa8350996c4edbfc58b32019cc0e5f75b894731163ad3b5006b3e7763fa2f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33502,7 +34162,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f0d98d1ef9139c73ca27cfdaa2b6993406a89b39ab4f7e6427b83babd16fffaf",
+      "pixel_sha256": "1ebd5b75c29866d57cdfb0dda3cdcdbadadd566f0f5cdbe4e28011b781bfc78a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33524,7 +34184,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9bff3d62ea5b75aaf4133c88b6aac2ecc3aa349e3cd7c076f91162c0f7632807",
+      "pixel_sha256": "1a66c212d939a23e72faba72e9586cd8c0bc180ece8784a9cb2af1138271f2c9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33546,7 +34206,7 @@
         16,
         16
       ],
-      "pixel_sha256": "18ddd087f1756a9bdc93735477505e9e98ea51a4d4cd2c60c1159fe2ccbe7bbe",
+      "pixel_sha256": "b1fb395ae5a5c733fa727d6b99064e1a5c6b70cab7ad4857790d875f8c32dc1b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33568,7 +34228,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4d4b8bc2651c6e7ab9965e98911c0f9448196506f2271106690eb1ffefc6d7df",
+      "pixel_sha256": "8cc3c1c3e12c8e0e6466fc1de136d96561bf0de7bef1baa43168553a06259a2a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33590,7 +34250,7 @@
         16,
         16
       ],
-      "pixel_sha256": "13f535bdfcf910b04c4f399a7b2357891987bda51c6e0a4d8f9badea25614b7b",
+      "pixel_sha256": "27a9edc35314a4d3261948ae56129b468402492eefb3c63024619409ffceedcf",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33612,7 +34272,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9236a84f5eaa88c61523d75050d4f37993e8e5a1f4a7f2e246b31493374e2b06",
+      "pixel_sha256": "ee09c3f430bb0b0f929645bf15631f48b0dee19874e749b500ac8c00099b1bfc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33634,7 +34294,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4de0e1bb8783886d2afe9db8a3e46070e060ca339a65775c149723730e020d15",
+      "pixel_sha256": "21205a749fe64c21063ba06a2904a126643293149f5ed1bac0fa20f4bffadc82",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33656,7 +34316,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f7652fb78762f1b1594ba846330f2dbb52544e0fed7d242b65ebeecf77d2846b",
+      "pixel_sha256": "e0ea62338d819e3ee905f0df8bc73034be68cc199678fadde7f03b82b204fbc4",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33678,7 +34338,7 @@
         16,
         16
       ],
-      "pixel_sha256": "94b1901476b80958290ece743065b20091898d978ee4f17726d956c63530dfd8",
+      "pixel_sha256": "38bc175a9381a2108f5890665303380046f88c0144281f3fd80527b6b10d19d9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33700,7 +34360,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5aa4bdeb65a82d0620d317b1c238be32b636ed67f62fa5b78231a48aa436096f",
+      "pixel_sha256": "13ea0ca0639a0073aaee221768bcd95f836eeef082c0633fac618587b3b0ec6a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33722,7 +34382,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2b77a1aced9926280bda98ab18c0aed685c24f207af83fa09a293f57976bb41d",
+      "pixel_sha256": "553c811d268b1d66aceedcf5cd1f1c682c4bee7ee7b99afcb686ae8d8ed87f64",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33744,7 +34404,7 @@
         16,
         16
       ],
-      "pixel_sha256": "039c587525c02b9da7c399bad192eb682db436bfad0fb6b1bcf4cd8ff8b522b6",
+      "pixel_sha256": "b4016071c173906eb6840760bf8034fb45fdb1687a52b3c34f1b6f3762d2245e",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33766,7 +34426,7 @@
         16,
         16
       ],
-      "pixel_sha256": "2ade45db59d28f5475733a5573313824f0ef4b6e474df1e5194251192eb41567",
+      "pixel_sha256": "18e183fb881121ed1c6d0412c56d627c319157fad2eb8de9d18007488600fe40",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33788,7 +34448,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6b509cd151911187478c76da174de32950e5a8b02628578efdc6910593b0c4f3",
+      "pixel_sha256": "f3f776e5be65ce7630cee2fb8f7706b5b6d3bdefba0227b826475e1b87302a02",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33810,7 +34470,7 @@
         16,
         16
       ],
-      "pixel_sha256": "40122601f84e8890255beb01023ed513f65af8195cd3e7af9cac423a94f59e69",
+      "pixel_sha256": "779e5102e7cf26bfa86e74fe13201a16ba8b476647cc39b98d697461cb8c19ef",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33832,7 +34492,7 @@
         16,
         16
       ],
-      "pixel_sha256": "cae29ce94eba4a5bf6fb17b7ce5369e5dddcba157f674ec3d750c5d2bea6ce63",
+      "pixel_sha256": "2a25e8e833af7c7b0fab66e99b894539de892c5593ca6a7ec07752026fb8b56b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33854,7 +34514,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6eafd9b11d3793ea2e7b1b811428592b93c2996279c155905b96f3de19c8d95f",
+      "pixel_sha256": "eaa900beb2a620d16f5cde69204fdb6fcd3d5c89b70b0d33df3965a9103937a9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33876,7 +34536,7 @@
         16,
         16
       ],
-      "pixel_sha256": "7d614aede8791074dcce0729afb6d84b855014170ac791008836555e12bd4861",
+      "pixel_sha256": "19d25041fb46da5a78012b6dc08f14a609a919b4adeef070945f7ba27ec75826",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33898,7 +34558,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f57552683a96df204535fbea562a1eab9ef055538f7ec6f4302a1d305e6e00d5",
+      "pixel_sha256": "5f4423223690088d4566351fd50f8a609f9736f32252bed0e8b6b01198ddf2dc",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -33920,7 +34580,7 @@
         16,
         16
       ],
-      "pixel_sha256": "730ce9b6bd36671541047b8ae7644322eb35326967150f98399e777766994d78",
+      "pixel_sha256": "e86238a503da477c7acafd929629db594439aec3a7752ae1cf528d1185d288da",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -35922,7 +36582,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ca430a8f5cae27953f8eadaa4cbaf10b3064e7f6cf5cc6b27d1c593f8cf40b1a",
+      "pixel_sha256": "b8fd4d228903984954889890441c37b5dbb5c5bbbba98e32e15bfdcf9b108e89",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -35944,7 +36604,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6c95fcd52dbe7ca15298f03b5146bf4274959964251bab62e7950bf0e954033a",
+      "pixel_sha256": "f132477f09d6e620ddf343f66f111259cb2749d408adcf066f15a689c3fb850d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -35966,7 +36626,7 @@
         16,
         16
       ],
-      "pixel_sha256": "777a07b8093fdc845f6d24e68aae3c338d1b30a534b07ac86421bae273d0d1b2",
+      "pixel_sha256": "b8abf05d13ddc8acefd4018b85c19b0640cec4187f64c808e972d528b8088d27",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -35988,7 +36648,7 @@
         16,
         16
       ],
-      "pixel_sha256": "cc8819194b93d2e8985c88981d0848576b27248f3ec9e8e4384a9a015d38ebd8",
+      "pixel_sha256": "dd7449031d87ee0d7b477fa277e00a3c3147f25f7d772d36e13db01e01b83354",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36010,7 +36670,7 @@
         16,
         16
       ],
-      "pixel_sha256": "dca9adf65d1a07e2bfdcf73c4944834ae12aac16a8028da4cfa0438234c4b35e",
+      "pixel_sha256": "a6a154be507046b98f275b2db2d1834688431e826421cdea2fddb56a23d2194d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36032,7 +36692,7 @@
         16,
         16
       ],
-      "pixel_sha256": "b81b3524eb2cbe880454510ba5a8c1327c1c00e0d2ce912c0fe430541011d6d1",
+      "pixel_sha256": "b51c12e2a338f8d679c78131c1750b2e9ddaac33b3ec4d33c211a3f8ea4ed525",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36054,7 +36714,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a60dd7167204cf161c93ff8339be09b7568ebd019757075e803d5d01cd205721",
+      "pixel_sha256": "02380d62f6fa7c71f8b8572ca35d27cdf7ce7880fb16722a21d29a5f67a2df9a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36070,13 +36730,13 @@
       "role": "bottom",
       "seed": 10389864239954620240,
       "backend": "procedural",
-      "seam_blend_width": 1,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
         16
       ],
-      "pixel_sha256": "9b53c612b5e6eb5622ca8c70b7b5e7a392e2a108531b28a07ba7ade9b2a3cbd9",
+      "pixel_sha256": "7653d1cf3943fb2bf03378c73b3d0168856d6f85b8c2a618d0b7f6e05ddcbca2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36098,7 +36758,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9562b662d65ac79dbd7eac0997809a112ee7b51ea3a509d42c1456c2b33ed728",
+      "pixel_sha256": "27a9880c502b54e3216d358501274989c46c8f8554c28fa006559fb6381de884",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36120,7 +36780,7 @@
         16,
         16
       ],
-      "pixel_sha256": "6d34e5d9b4cd548f02de6ffc853cb516008b2b86e76087d8f0173704feea458d",
+      "pixel_sha256": "43ba3fe337ee7e6c2b49a5d4348967c31db146e0de5b01894f5ae04f0a93c773",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36142,7 +36802,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e6e376640d08a996feff473c97938900683061f70229db58aa29bd5847a2599f",
+      "pixel_sha256": "13a2bda6d27e091f69f3f1e5c9cd781eeb8d3d4f46ab8fe440f71c38e3bf4c6c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36164,7 +36824,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5cb7a081dadd6914fb2fc609fd93e8e6c12e66c0a8e2bcbadb4a29ed3ff92205",
+      "pixel_sha256": "defd0e8e9273fb4b01963ac332879bfc6374e249dd224976dd04ce50f4e643f5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36186,7 +36846,7 @@
         16,
         16
       ],
-      "pixel_sha256": "62f246edac0eed8148c85f78db27bace6eb32420bd18dbaef41ed0ca1d7f71c1",
+      "pixel_sha256": "30f4f678be7f9cd3a4bc6d22e4a5d02537708eea6998367aaf31c83cec02e537",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36208,7 +36868,7 @@
         16,
         16
       ],
-      "pixel_sha256": "c9ae4f3bfb72d3ada6be39ffa8a8e1a8c63e7c929a60e4e4d4049910aeb5deda",
+      "pixel_sha256": "bb54c3bceff7721e61a4fa6b51bd08d8129715796c2aadd29f463b3ce9c058c2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36230,7 +36890,7 @@
         16,
         16
       ],
-      "pixel_sha256": "74f0ebd28e72981a2a8d201b3ea978d9b4fbddfe5e34c3294bbbfd0eb52c14b1",
+      "pixel_sha256": "ca99397972b9e2f246f0c7d45db346b0d56c8fc93b9370e489de80dff777c5f6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36252,7 +36912,7 @@
         16,
         16
       ],
-      "pixel_sha256": "662741fba6e844452f2ee5f50cbeef6021d2f9c1f84ed7ae9d73fbe38f53e4b7",
+      "pixel_sha256": "45bc6ee9ce5fa0b2afec0446b66eb489775f9107e0ad34bf87c1b6db84119c6d",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36274,7 +36934,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8352669638ff04a35bd50a746b16dd26761841d7ddf31d2b130503fda98ce561",
+      "pixel_sha256": "7e6eced14409261ca0a9b17d71c18eb77138f4e943a871c7c8b9cd8b81e716de",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36296,7 +36956,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f3acc6c8e6983e28f4302ed86453926467b6c780abd3f6d3a7afb43a4137ba2b",
+      "pixel_sha256": "b68988d9aacb1d328481d632ee24b8edd77814f8c9cfa9a98cf2b35684d2f7a5",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36318,7 +36978,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9286956b1414b9124b06fbe935dd734c4c4d066c561a966550065f7183743585",
+      "pixel_sha256": "6e5b3bc7a7a7c6f43d36b5362894e8c95d5837d7371459f08724e8dad270877f",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36340,7 +37000,7 @@
         16,
         16
       ],
-      "pixel_sha256": "75c49c34c0c9e759eff5a7ec25ad949eb9f84781a47b98dc0785e9ea8a923f48",
+      "pixel_sha256": "e7fb629706f1e8f12aff7abc8c963186748d6d5d4a2a01701798c7bfd5409345",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36362,7 +37022,7 @@
         16,
         16
       ],
-      "pixel_sha256": "94399f33b3f6071623a2373b4c58f5f1c03c40f7d657db2bcd16fe2d21443092",
+      "pixel_sha256": "1db5b78c2e2084018eeb2feac9bdd32a89b028232f08a922d5a26f4246ed759b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36384,7 +37044,7 @@
         16,
         16
       ],
-      "pixel_sha256": "79c696a3a1b3b92ca4ae05e817125085e5883020b40fad3cefe91cdb921dc909",
+      "pixel_sha256": "3318535927b2c60785c938e7e948248899e92512aeccf2eda1a79d008f6d6ab6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36406,7 +37066,7 @@
         16,
         16
       ],
-      "pixel_sha256": "181202620c0932c6bbac70a02d8cd0ac627a6bc9a4d16c20ee146acd52789d50",
+      "pixel_sha256": "3a1f66fb52fe49ed51c419c2e72a5f1d9bd16931c6a28dae6249b53b0a008bb9",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36428,7 +37088,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5de121860071a6faa3a954ab20f6816d955e688c7dfc1d9a500987d8f50594cf",
+      "pixel_sha256": "d03f3af6cf7a5dbcd0e65461e6562c36168b8c603e263a78dad93d3c5e86eaf2",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36450,7 +37110,7 @@
         16,
         16
       ],
-      "pixel_sha256": "f4ab53fec917baca59b35e83bd605f031117ace4e870d5c813af3b6dd8dd995d",
+      "pixel_sha256": "8757f6430f3c63e067b852f6566a125cf39efaddfa5349cd14042b31c85d0bef",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36472,7 +37132,7 @@
         16,
         16
       ],
-      "pixel_sha256": "135061d9debcc04318882de8a5041749e321d5f27de1ceb56f1e5888809d210a",
+      "pixel_sha256": "e0fb4d148f35d6525e180d9f5e4a2b3b8b33a3806b43ba0eccc18068c5ea4027",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36494,7 +37154,7 @@
         16,
         16
       ],
-      "pixel_sha256": "9eab05bea3b504e75749d5e06286c8b848dbb3969e7ed93fe25b2b52315e379f",
+      "pixel_sha256": "990bd896f3384036aee1bfcdd37333160885f88ed0f30dcb8cf930bd60d5a75c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36516,7 +37176,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d40e4d7348aec15d1982042b65f6dc2335c83eaaf2e0c7d54583cf4e9207f082",
+      "pixel_sha256": "84d2cf255972dab5c940d1bc7be2edef14615287e6f52e2bdbc5f391a2c37e0b",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36538,7 +37198,7 @@
         16,
         16
       ],
-      "pixel_sha256": "e581a3f8f49f13b4838acfe9296f5429766f0932dfc7ceb9e7fda7705be465c7",
+      "pixel_sha256": "3d52c887ac19d7901d16993c73516a73e78a3eb5e9a06eb2261b927e5218eeb7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -36560,7 +37220,7 @@
         16,
         16
       ],
-      "pixel_sha256": "ed7b163b913eab1e2c2d92818aa97e4864d6407b9c31141fadcada09311ee76d",
+      "pixel_sha256": "befaca20787a6273e3913ebc3d93b70a574966c4ebf77eb560b1741ae64f0be6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -39069,6 +39729,600 @@
         16
       ],
       "pixel_sha256": "db968bc47d7baf6ac7d755710332477ed485fa0dbcb41ebaee23450293020c72",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_aged",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "aged",
+      "role": "side",
+      "seed": 7672611378516277034,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7d935e015df921605e2c7011d76d9b4e33bb35b99ee420b6b73c8a8c00eb78e9",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_aged_bottom",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "aged",
+      "role": "bottom",
+      "seed": 15891394679749306264,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e5d8fcffe7279cb1c367816fdfc54c06880f09b7e18e702980f77c0784eaaa2e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_aged_top",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "aged",
+      "role": "top",
+      "seed": 8401860096239028063,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5255a8c45e87efe8bd8ec4f9f31856214a4fba9ec709e77f9dcf8c87aa014e77",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_bark",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "bark",
+      "role": "side",
+      "seed": 6346792308231955077,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "63f75f1ef0b3bc23ba7bb5805193cc1c5dab2e4317e1b9c232ece721d25e6d8e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_bark_endgrain",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "bark",
+      "role": "endgrain",
+      "seed": 9654175490937797556,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "32538132c81d57392144f6598838493e3fd4c279b31cdea1ed36f284be940754",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_carved",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "carved",
+      "role": "side",
+      "seed": 6194574483887976544,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "dddb8fee4573c89ce807c4b962debb07a78ea7acd27a2d0a7b44e20a18ace495",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_carved_bottom",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "carved",
+      "role": "bottom",
+      "seed": 6852187405540282883,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "1ef5e79bcd518a06fd287f61d03c358f7c9cc0e6605096ce817806645533d218",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_carved_top",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "carved",
+      "role": "top",
+      "seed": 17352259006921681971,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "16cc9a75d92af911b7a7e974b527b3a8d8fbb82720828127d7a894e6499b1f66",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_cut",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "cut",
+      "role": "side",
+      "seed": 2138621556864215553,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "4c3c753f12244cd12e125af8edb16877f3e65adfd5a77ad1f9021e050d743ca1",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_cut_bottom",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "cut",
+      "role": "bottom",
+      "seed": 724880444974616670,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "4621725f0d06a105bd0ac58fc716f0f76c1948773cc6cd06f0e420f390113f5d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_cut_top",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "cut",
+      "role": "top",
+      "seed": 14300872886683720435,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c807853cf8ca671b53dee2b56543053bf8b409e913ed8f611f4c5448d57e52f4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_dark",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "dark",
+      "role": "side",
+      "seed": 6779681639464434063,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "f99d42138b83494bb38bcc4d4f9b04a4c43c0db07982a8016a525fc5386f9f95",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_dark_bottom",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "dark",
+      "role": "bottom",
+      "seed": 1418720137774580417,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "2663e2d4abf77cb5462e79f56422683a3a256dcf7ffdd77eb97b562ca14a1499",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_dark_top",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "dark",
+      "role": "top",
+      "seed": 18401298256914548450,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3f14acb525416304aee25505eb4869586268f4a31b2fa3b804f79fc2bacf7cc9",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_endgrain",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "endgrain",
+      "role": "side",
+      "seed": 8151446310063625598,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "1f2d616d78339c99e135208e3643a972243682819e00c36f453550e2bdc82882",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_endgrain_endgrain",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "endgrain",
+      "role": "endgrain",
+      "seed": 9426354318540629528,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "08568143ab6f1f83d6cd7b534d5003d7c76559823fa75d3ba8cdbc6e3b4ea55d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_pale",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "pale",
+      "role": "side",
+      "seed": 7790822119692449902,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "65117406d39835727fb68e724f511c1323f3a216df42a2e72e5da7916dd4247f",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_pale_bottom",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "pale",
+      "role": "bottom",
+      "seed": 10088220888181107916,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9e339a7fa3d711046fcafd394e38e35c1487f738c0a5b25a2d55458b127a159f",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_pale_top",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "pale",
+      "role": "top",
+      "seed": 12003035744167328874,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "7d8842432d4e273fb069a1f7d4b2e791c687217c6993aa3517488987469216aa",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_plank",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "plank",
+      "role": "side",
+      "seed": 13951949907196215024,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "779d3ce3a191891656a8201b235298ec175d86f6601a53267b2c043302e03db0",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_plank_bottom",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "plank",
+      "role": "bottom",
+      "seed": 11647330722187015549,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5b4edc899e0759b6359c5d00e6937084674cb589d6facadf5d9c8a071f2932f3",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_plank_top",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "plank",
+      "role": "top",
+      "seed": 13244263585294368550,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "966c8fa6c9f0bde888fe0f2f9e6719fa991a9946dfda5e681159f7eda47b359f",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_stripped",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "stripped",
+      "role": "side",
+      "seed": 5942786652205645567,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0e5fbfea32ddde9b9bf291301b18dce5a83b1473b3e5823325d732d1552dffe2",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_stripped_endgrain",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "stripped",
+      "role": "endgrain",
+      "seed": 15665668859365382425,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "86585b7a7b2e4da3ad33ac5b24c0b185d6dd59dcc85beb4262f5088e8eb928c0",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_weathered",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "weathered",
+      "role": "side",
+      "seed": 8321036348566492623,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "59f30856e206927b7ee300d2dfac8d15185fa4bb77f6ade7b6a6588a2cb59639",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_weathered_bottom",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "weathered",
+      "role": "bottom",
+      "seed": 9123002056506598801,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "db3f8cf996da0638e712483ebf948a8cb7e2b8673f3eb00444e0281c2af4bb38",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_aspen_weathered_top",
+      "family": "wood",
+      "material": "aspen",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 12030505391480629638,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "cce1653f627ca0cf270c52aa28293a03547d0cde2789544b4747748e0634eef6",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -45611,6 +46865,600 @@
       "license_review_required": false
     },
     {
+      "stem": "cu_wood_spruce_aged",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "aged",
+      "role": "side",
+      "seed": 11978918623292492465,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3fe9fc1915e11655827362e01ae8bfebae7f9d402824ce4a9c05839696c18d3e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_aged_bottom",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "aged",
+      "role": "bottom",
+      "seed": 12034867036524793871,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0ef187e2d33328db78a390e97e3d786b489f97cf29ce85ccca2ff1272acd9345",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_aged_top",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "aged",
+      "role": "top",
+      "seed": 18002870274979631671,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a30e919380476ca3d0ec9dc0917b227800de34a46fd0224531640b8cc2896023",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_bark",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "bark",
+      "role": "side",
+      "seed": 15275143182150370898,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5400f96dfa5c6e676f557f9e4292f91ab9b43c2f3a87ef45d518f9712bf47ed1",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_bark_endgrain",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "bark",
+      "role": "endgrain",
+      "seed": 14588966013004448266,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c2642663d63ce7c3d86d5320cb410c84e6150c28237d6f611dfa29a4e8cd1927",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_carved",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "carved",
+      "role": "side",
+      "seed": 12543054585603377829,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "0a50bbacf377c4303797e59e3cfa7ad5c5e80cc4a89594605fc306b39ace2468",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_carved_bottom",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "carved",
+      "role": "bottom",
+      "seed": 16938383058009290071,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "e39356f91d2ebd1028e1c312f33894ae91f971a5dc88e08ba96a9bc46f89ed5f",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_carved_top",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "carved",
+      "role": "top",
+      "seed": 6668298624557429821,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a51cf4967ea50655fcb9f4ad95f8b30e5f20f22bbb766257084d6ffcffc8f4f1",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_cut",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "cut",
+      "role": "side",
+      "seed": 15662514663711450989,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "232fe37f5a73a90b4f6af4615a7150d0ba56a752fa8c333cb11950881a716f0f",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_cut_bottom",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "cut",
+      "role": "bottom",
+      "seed": 15611022601803561920,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a1e646b54c24d91fe4106717f49f5f846f5d80494f3a7c03b1251ca4d889427d",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_cut_top",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "cut",
+      "role": "top",
+      "seed": 7765254834061158775,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a9fe94805abaf1d6f13273769d20c96db07d86730b8d5c2c897a5dc8165253a0",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_dark",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "dark",
+      "role": "side",
+      "seed": 5178274360113848718,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "fd596648dad2f4e6011d1a051eff765a6071c72f8600a3728afccb1d7567a063",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_dark_bottom",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "dark",
+      "role": "bottom",
+      "seed": 6349741959565649651,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3658f926c51f004aeab07db019d34f187467997804befb4943fea158258d2919",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_dark_top",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "dark",
+      "role": "top",
+      "seed": 7719801116596210241,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "3bc6de2b4a84a79e33235b21a1d938f05eb58a9f20786cb95d0a2bdfbe1bf38a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_endgrain",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "endgrain",
+      "role": "side",
+      "seed": 2694393645345231600,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ab4284d221b890eec77cd731a246d423625cb9d6a6138c3d95840ca01526202b",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_endgrain_endgrain",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "endgrain",
+      "role": "endgrain",
+      "seed": 14159707391561067373,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5e18a435811e088ad83942d635bedfa75d035f8ac4271aafeed704a4ac86c8ec",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_pale",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "pale",
+      "role": "side",
+      "seed": 15235011899903842230,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "fd9f08a9a22769157b445872607d9a1d2e2c287962816efb56db55cd172f201e",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_pale_bottom",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "pale",
+      "role": "bottom",
+      "seed": 6194361224798210062,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "32c09838bdae69cb52dff5acba910f2d6eb50a52685a606a12839b222331d9f3",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_pale_top",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "pale",
+      "role": "top",
+      "seed": 6162696134237070174,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "2200d45c7e7f8b72bb9bdb2d1022faeb7fd9bdab335517d7a81e5ddb568a9ff9",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_plank",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "plank",
+      "role": "side",
+      "seed": 1631718593620356772,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ee1291e9575bdb416f605d059fc6703ff584d1fcab3324c546530c4ada40c00a",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_plank_bottom",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "plank",
+      "role": "bottom",
+      "seed": 8928253014468581419,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "c7bb4e5d9ffbb0fd98146fa8339a0a063c53048e2bbe3f87b9e1c9dea0264f2f",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_plank_top",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "plank",
+      "role": "top",
+      "seed": 9708826215302188305,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "4fbf05ad7c4deadeef80c52ca0c87fae6255bc3b5da9955da9d384b2617c0330",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_stripped",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "stripped",
+      "role": "side",
+      "seed": 2016439873594699883,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "ce4fa07ea914405ed738ffe9238fcdb9586724b088c921485304d1efd18b8642",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_stripped_endgrain",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "stripped",
+      "role": "endgrain",
+      "seed": 4371504917259259625,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "a740e44c9280145117faaa1670ecc319390aad3544d77c556664124f5dbf79d0",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_weathered",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "weathered",
+      "role": "side",
+      "seed": 17619466452261721577,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "5aea84239c233458e2f53c65355e5c7920adcc75c39b5a66d5a8af124c0b4ce4",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_weathered_bottom",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "weathered",
+      "role": "bottom",
+      "seed": 705938376870265603,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "9ab97b4e1561269f7dbdd4d549507f8fc61dcc49896fa58c92a25a290ad7eded",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
+      "stem": "cu_wood_spruce_weathered_top",
+      "family": "wood",
+      "material": "spruce",
+      "variant": "weathered",
+      "role": "top",
+      "seed": 14721912212073526538,
+      "backend": "procedural",
+      "seam_blend_width": 2,
+      "reference_mode": "qa-only",
+      "resolution": [
+        16,
+        16
+      ],
+      "pixel_sha256": "81c98dfb83b78daa365a9649820a43725d3b6ce4a476a2a9ae112cb6e9ed6864",
+      "source": {
+        "kind": "procedural_parameters"
+      },
+      "reference_calibration": null,
+      "license": "CC0-1.0",
+      "license_review_required": false
+    },
+    {
       "stem": "cu_wood_walnut_aged",
       "family": "wood",
       "material": "walnut",
@@ -48745,18 +50593,18 @@
     {
       "stem": "mt_hellsand",
       "family": "soil",
-      "material": "loam",
+      "material": "desert_sand",
       "variant": "natural",
       "role": "side",
       "seed": 6690729739678444973,
       "backend": "procedural",
-      "seam_blend_width": 2,
+      "seam_blend_width": 0,
       "reference_mode": "qa-only",
       "resolution": [
         16,
         16
       ],
-      "pixel_sha256": "0c5bdf2f1def74d02255f6b76181febed0ea311be312c485e9c92c148e63a3a1",
+      "pixel_sha256": "a75b263b3b0a981d01c078e92424252ab48eab321b45736edfd8b3d150305517",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "hellsand",
@@ -49519,7 +51367,7 @@
         16,
         16
       ],
-      "pixel_sha256": "da35c2e16e3161739f91e99664418285dd8f4ab18fd7b72420090ef6cc61a560",
+      "pixel_sha256": "75e916b5d0dae24c886f35570425153de49edace1d3b5956df49505db755642a",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_aspen_tree_default_aspen_tree",
@@ -50126,7 +51974,7 @@
     {
       "stem": "mt_mtg_desert_sand_default_desert_sand",
       "family": "soil",
-      "material": "pale_sand",
+      "material": "desert_sand",
       "variant": "natural",
       "role": "side",
       "seed": 10738225281419448410,
@@ -50137,7 +51985,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8ca09b7aa6e2cee2509232fb02ba158adef01264dae011c985423e5b832f6934",
+      "pixel_sha256": "b48fb7ea7f8fbcf96321e41a2dcdfc8739a2734326d70cc4716cc0a3d7abd84d",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_desert_sand_default_desert_sand",
@@ -52060,7 +53908,7 @@
         16,
         16
       ],
-      "pixel_sha256": "8ed47c268855ea95b7f5d893d9c4630185fb3e50f4b86c2527ae7ac6ca4f627b",
+      "pixel_sha256": "71cbe281466aa568a5642f8fb84e38efc058647e7fcd11cac032987ccebb104b",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_sand_default_sand",
@@ -52084,7 +53932,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a8fbcefeef24f028368eabde4c26d7a0eb91d00b08ef95e5819baf7988b96951",
+      "pixel_sha256": "cb40e61ac08035617d25370891c298ea587711828db9b5473dea06aa1dfb4638",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_sand_with_kelp_default_sand",
@@ -52207,7 +54055,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d41dd54622bba882f1a69fb480715e71832bf38fa077eb3a7de3bcd56c5bd60e",
+      "pixel_sha256": "eb6d8a75fbec44f3f730ab3c1e1ce6440141e8c0becec636014d3476e8b21a04",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_silver_sand_default_silver_sand",
@@ -53716,7 +55564,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5509c0e4c887902883d963d7ca920e9432cd5d1435a0b5f318f971d7e29c5f21",
+      "pixel_sha256": "9bccd76adcaa37d3a45873472d0c76574c8128d1982264f6b7d9fc31fc23e31c",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "sand",

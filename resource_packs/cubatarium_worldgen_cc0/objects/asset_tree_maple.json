@@ -34,7 +34,7 @@
       "dx": -3,
       "dy": 6,
       "dz": 0,
-      "type": "cu_organic_leaf_fresh"
+      "type": "cu_wood_maple_bark"
     },
     {
       "dx": -3,
@@ -274,7 +274,7 @@
       "dx": 0,
       "dy": 6,
       "dz": -2,
-      "type": "cu_organic_leaf_fresh"
+      "type": "cu_wood_maple_bark"
     },
     {
       "dx": 0,
@@ -292,7 +292,7 @@
       "dx": 0,
       "dy": 6,
       "dz": 2,
-      "type": "cu_organic_leaf_fresh"
+      "type": "cu_wood_maple_bark"
     },
     {
       "dx": 0,
@@ -538,7 +538,7 @@
       "dx": 3,
       "dy": 6,
       "dz": 0,
-      "type": "cu_organic_leaf_fresh"
+      "type": "cu_wood_maple_bark"
     },
     {
       "dx": 3,

@@ -56,9 +56,11 @@ MINECRAFT_REFERENCE = {
 WORLDGEN_RULES = {
     "vegetation": [
         ("asset_tree_birch", ["forest", "plains"], 28, 2),
+        ("asset_tree_aspen", ["forest", "plains", "cold_steppe"], 32, 1),
         ("asset_tree_cedar", ["mountains", "foothills"], 34, 2),
         ("asset_tree_maple", ["forest", "hills"], 30, 2),
         ("asset_tree_poplar", ["cold_steppe", "tundra"], 36, 1),
+        ("asset_tree_spruce", ["cold_steppe", "tundra", "mountains"], 30, 2),
         ("asset_tree_willow", ["forest", "beach"], 38, 1),
     ],
     "ground_cover": [
@@ -113,7 +115,8 @@ MATERIAL_TINTS = {
     ("soil", "peat"): (79, 57, 40), ("soil", "podzol"): (95, 71, 46),
     ("soil", "humus"): (88, 60, 40), ("soil", "silt"): (154, 131, 99),
     ("soil", "wet_mud"): (87, 70, 59), ("soil", "dry_mud"): (160, 122, 83),
-    ("soil", "red_earth"): (146, 75, 55), ("soil", "pale_sand"): (223, 216, 166),
+    ("soil", "red_earth"): (146, 75, 55), ("soil", "pale_sand"): (214, 207, 159),
+    ("soil", "desert_sand"): (211, 169, 103),
     ("soil", "volcanic_ash"): (74, 77, 79),
     # Timber species
     ("wood", "oak"): (146, 99, 54), ("wood", "pine"): (151, 110, 70),
@@ -125,6 +128,7 @@ MATERIAL_TINTS = {
     ("wood", "mangrove"): (125, 73, 47), ("wood", "larch"): (160, 105, 59),
     ("wood", "redwood"): (122, 64, 45),
     ("wood", "aspen"): (202, 188, 158),
+    ("wood", "spruce"): (121, 88, 54),
     # Shared dye / ceramic / glass colors
     ("ceramic", "ivory"): (220, 214, 190), ("fabric", "ivory"): (220, 214, 190),
     ("glass", "ivory"): (220, 226, 218), ("ceramic", "cream"): (218, 202, 168),
@@ -188,16 +192,17 @@ BARK_BASE_TINTS = {
     "mangrove": (115, 83, 66), "maple": (144, 108, 78),
     "oak": (139, 108, 78), "pine": (160, 124, 87),
     "poplar": (178, 171, 157), "redwood": (158, 81, 56),
+    "spruce": (113, 96, 73),
     "walnut": (105, 79, 60), "willow": (147, 132, 102),
 }
 
 # Face-scale crack plates vary by species. Counts stay close to square so bark
 # reads as broken flakes and furrows, not continuous vertical waves.
 BARK_CELL_COUNTS = {
-    "acacia": (5, 5), "ash": (5, 5), "beech": (6, 6),
+    "acacia": (5, 5), "ash": (5, 5), "aspen": (6, 5), "beech": (6, 6),
     "cedar": (5, 5), "jungle": (5, 5), "larch": (6, 5),
     "mangrove": (4, 5), "maple": (5, 5), "oak": (4, 4),
-    "pine": (6, 5), "poplar": (6, 5), "redwood": (4, 5),
+    "pine": (6, 5), "poplar": (6, 5), "redwood": (4, 5), "spruce": (5, 5),
     "walnut": (5, 5), "willow": (5, 4),
 }
 
@@ -214,6 +219,8 @@ MATERIAL_TINTS.update({
     ("glass", "smoke"): (112, 125, 132),
     ("ceramic", "teal"): (65, 143, 137), ("ceramic", "olive"): (119, 132, 69),
 })
+
+SAND_MATERIALS = frozenset(("pale_sand", "desert_sand", "silt"))
 
 PATTERN_BY_FAMILY = {
     "rock": "grain",
@@ -895,10 +902,10 @@ def generated_texture(
             base = tuple(round(channel * factor) for channel, factor in zip(base, (0.441, 0.512, 0.699)))
     if role == "water_surface":
         palette_factors = (0.96, 0.985, 1.015, 1.04)
-    elif family == "soil" and material in ("pale_sand", "silt"):
-        # Sand needs a wider range of tiny grain tones. A narrow palette makes
-        # large beaches read as a soft, repeated beige wash at game scale.
-        palette_factors = (0.85, 0.91, 0.96, 1.0, 1.05, 1.10)
+    elif family == "soil" and material in SAND_MATERIALS:
+        # Fine sand uses restrained luminance steps; a wide palette creates
+        # high-contrast diagonal patches when the 16px tile repeats at scale.
+        palette_factors = (0.92, 0.96, 1.0, 1.04, 1.08)
     elif family == "soil" and material == "clay":
         # Sand and fine earth need grain detail without the dark, high-contrast
         # blotches that make a 16px tile read like stone or mud.
@@ -925,7 +932,7 @@ def generated_texture(
     )
     sand_grain = (
         tile_noise(seed ^ 0x53414E44, size, size, size)
-        if family == "soil" and material in ("pale_sand", "silt") else None
+        if family == "soil" and material in SAND_MATERIALS else None
     )
     bark_plate_tones, bark_crack_strengths = (
         _wrapped_cellular_plates(seed, size, material)
@@ -936,10 +943,10 @@ def generated_texture(
     pixels: list[tuple[int, int, int, int]] = []
     material_bias = (stable_seed(material) % 7) - 3
     variant_bias = stable_seed(variant) % 5
-    sand_material = family == "soil" and material in ("pale_sand", "silt")
+    sand_material = family == "soil" and material in SAND_MATERIALS
     detail_scale = max(
         0.55,
-        min(1.7, (calibration or {}).get("detail_scale", 0.90 if sand_material else 1.0)),
+        min(1.7, (calibration or {}).get("detail_scale", 0.72 if sand_material else 1.0)),
     )
     contrast_scale = max(0.65, min(1.5, (calibration or {}).get("contrast_scale", 1.0)))
     coarse_scale = max(0.6, min(1.5, (calibration or {}).get("coarse_scale", 1.0)))
@@ -964,17 +971,17 @@ def generated_texture(
                     + micro[i] * 0.27 * micro_scale
                     + pixel_grain[i] * 0.53
                 ) * detail_scale
-            elif family == "soil" and material in ("pale_sand", "silt"):
+            elif family == "soil" and material in SAND_MATERIALS:
                 # Keep sand grains isotropic: broad correlated fields leave
                 # diagonal smears across a beach after the 16px tile repeats.
                 # A little 12-cell clustering groups grains without drawing
                 # long bands; independent wrapped texels preserve a crisp,
                 # seamless granular surface.
                 value = (
-                    fine[i] * 0.08 * micro_scale
-                    + micro[i] * 0.12 * micro_scale
-                    + sand_grain[i] * 0.32
-                    + pixel_grain[i] * 0.10
+                    fine[i] * 0.06 * micro_scale
+                    + micro[i] * 0.08 * micro_scale
+                    + sand_grain[i] * 0.30
+                    + pixel_grain[i] * 0.08
                 ) * detail_scale
             elif family == "soil":
                 # Shift detail from broad, soft blobs into individual wrapped
@@ -1107,7 +1114,7 @@ def generated_texture(
                 facet = (x + y + (x // max(1, size // 4)) * 2 + variant_bias) % max(5, size // 2)
                 value += 0.3 if facet < max(2, size // 8) else -0.08
             elif style in ("organic", "mottle"):
-                if not (style == "mottle" and material in ("pale_sand", "silt")):
+                if not (style == "mottle" and material in SAND_MATERIALS):
                     # Wrapped noise gives foliage, moss and soft stone
                     # mottling irregular clumps instead of a repeated sine grid.
                     patch = coarse[i] * 0.58 + medium[i] * 0.42
@@ -1157,13 +1164,13 @@ def generated_texture(
             value *= contrast_scale
             if bark_surface:
                 index = max(0, min(len(colors4) - 1, int(round((len(colors4) - 1) * 0.5 + value * 5.0 + (variant_bias - 2) * 0.035))))
-            elif family == "soil" and material in ("pale_sand", "silt"):
+            elif family == "soil" and material in SAND_MATERIALS:
                 index = max(0, min(len(colors4) - 1, int(round((len(colors4) - 1) * 0.5 + value * 5.0 + (variant_bias - 2) * 0.035))))
             else:
                 index = max(0, min(3, int(round(1.5 + value + (variant_bias - 2) * 0.035))))
             # Use a periodic field for micro accents. Independent per-pixel
             # random draws create discontinuities at the wrap boundary.
-            if abs(fine[i]) > 0.68 and style in ("grain", "mottle", "organic", "crystal") and not (family == "soil" and material in ("pale_sand", "silt")):
+            if abs(fine[i]) > 0.68 and style in ("grain", "mottle", "organic", "crystal") and not (family == "soil" and material in SAND_MATERIALS):
                 index = max(0, min(3, index + (1 if fine[i] > 0 else -1)))
             if size >= 32:
                 # 64px material maps retain continuous color variation instead
@@ -1197,10 +1204,10 @@ def generated_texture(
                     pixel_detail = 2
                 elif pale_bark:
                     pixel_detail = 2 if birch_bark else 3
-                elif family == "soil" and material not in ("pale_sand", "silt"):
+                elif family == "soil" and material not in SAND_MATERIALS:
                     pixel_detail = 11
                 elif sand_material:
-                    pixel_detail = 4
+                    pixel_detail = 2
                 elif family == "rock" and style == "grain":
                     pixel_detail = 7
                 elif family == "organic" and style in ("organic", "mottle"):
@@ -1227,10 +1234,10 @@ def generated_texture(
                     pixel_detail = max(1, round(2 * scale_detail))
                 elif soft_bark:
                     pixel_detail = max(1, round(2 * scale_detail))
-                elif family == "soil" and material not in ("pale_sand", "silt"):
+                elif family == "soil" and material not in SAND_MATERIALS:
                     pixel_detail = max(1, round(11 * scale_detail))
                 elif sand_material:
-                    pixel_detail = max(1, round(4 * scale_detail))
+                    pixel_detail = max(1, round(2 * scale_detail))
                 elif family == "rock" and style == "grain":
                     pixel_detail = max(1, round(7 * scale_detail))
                 elif family == "organic" and style in ("organic", "mottle"):
@@ -2541,7 +2548,7 @@ def default_texture_seam(family: str, material: str, size: int, role: str = "") 
         # Water fields are generated toroidally; blending the borders again
         # makes a visible grid in a large, flat surface.
         return 0
-    if size <= 16 and family == "soil" and material in ("pale_sand", "silt"):
+    if size <= 16 and family == "soil" and material in SAND_MATERIALS:
         # These fields are periodic by construction. Blending the wrapped edge
         # into a shared border texel creates a visible grid every 16 world units.
         return 0
@@ -2856,6 +2863,36 @@ def ensure_stable_block_ids(blocks: list[dict[str, Any]], reserved_start: int = 
     return result
 
 
+def stable_pack_block_ids(
+    names: list[str], previous_ids: dict[str, int], reserved_ids: set[int],
+    reserved_start: int = 1025, max_id: int = 4095,
+) -> dict[str, int]:
+    """Keep published IDs attached to names and allocate free IDs for additions."""
+    used_ids = {block_id for block_id in reserved_ids if 1 <= block_id <= max_id}
+    result: dict[str, int] = {}
+    for name in names:
+        previous_id = previous_ids.get(name)
+        if (
+            isinstance(previous_id, int)
+            and reserved_start <= previous_id <= max_id
+            and previous_id not in used_ids
+        ):
+            result[name] = previous_id
+            used_ids.add(previous_id)
+    next_id = reserved_start
+    for name in names:
+        if name in result:
+            continue
+        while next_id in used_ids and next_id <= max_id:
+            next_id += 1
+        if next_id > max_id:
+            raise ValueError(f"generated block catalog exceeds the stable pack ID range {reserved_start}..{max_id}")
+        result[name] = next_id
+        used_ids.add(next_id)
+        next_id += 1
+    return result
+
+
 def minetest_replacement_stems() -> dict[str, str]:
     source_dir = REPO / "resource_packs" / "minetest_default_16" / "textures" / "blocks"
     result: dict[str, str] = {}
@@ -2976,7 +3013,15 @@ def material_variant(stem: str, family: str) -> tuple[str, str]:
             selected = "aspen"
         selected = selected or "oak"
     elif family == "soil":
-        selected = "pale_sand" if "sand" in words or "snow" in words else "red_earth" if "red" in words else "clay" if "clay" in words else "peat" if "peat" in words else "loam"
+        selected = (
+            "desert_sand" if "desert" in words or "hellsand" in words else
+            "red_earth" if "red" in words and "sand" in words else
+            "pale_sand" if "sand" in words or "snow" in words else
+            "red_earth" if "red" in words else
+            "clay" if "clay" in words else
+            "peat" if "peat" in words else
+            "loam"
+        )
     elif family == "rock":
         selected = "chalk" if "white" in words else next((m for m in materials if m in words), "obsidian" if "bedrock" in words else "basalt" if "stone" in words else "granite")
     elif family == "masonry":
@@ -3523,25 +3568,25 @@ def object_document(
 
 def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5) -> dict[str, Any]:
     trunk = block_name(records, "wood", wood, "bark")
-    conifers = {"cedar", "larch", "pine", "redwood"}
+    conifers = {"cedar", "larch", "pine", "redwood", "spruce"}
     foliage_material = "needle" if wood in conifers else "leaf"
     foliage_variant = {
         "acacia": "sparse", "ash": "mature", "beech": "dense",
-        "birch": "young", "jungle": "dense", "mangrove": "dark",
+        "birch": "young", "aspen": "fresh", "jungle": "dense", "mangrove": "dark",
         "maple": "fresh", "oak": "mature", "poplar": "pale",
         "walnut": "dark", "willow": "sparse",
         # Keep evergreen and deciduous conifers distinguishable in a scene:
         # cedar is mature green, larch has lighter new needles, pine is dark,
         # and redwood uses a dense deep-green crown.
         "cedar": "mature", "larch": "young", "pine": "dark",
-        "redwood": "dense",
+        "redwood": "dense", "spruce": "fresh",
     }.get(wood, "fresh")
     leaves = block_name(records, "organic", foliage_material, foliage_variant)
     voxels: list[dict[str, Any]] = []
     height = max(size, {
-        "oak": 8, "ash": 9, "beech": 8, "birch": 11,
+        "oak": 8, "ash": 9, "beech": 8, "birch": 11, "aspen": 11,
         "cedar": 11, "larch": 10, "pine": 10, "redwood": 13,
-        "jungle": 11, "maple": 8, "walnut": 8, "willow": 9,
+        "spruce": 13, "jungle": 11, "maple": 8, "walnut": 8, "willow": 9,
         "poplar": 14, "acacia": 8, "mangrove": 8,
     }.get(wood, 7))
     tree_seed = stable_seed(f"tree:{wood}:{size}")
@@ -3576,18 +3621,22 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
     if wood in conifers:
         # A broad, tapered needle crown replaces the old narrow column. Larch
         # has gaps between its branch tiers; redwood keeps most foliage high.
-        crown_bottom = max(2, round(height * (0.60 if wood == "redwood" else 0.30)))
+        crown_bottom = max(2, round(height * (
+            0.60 if wood == "redwood" else 0.18 if wood == "spruce" else 0.30
+        )))
         radius_cap, radius_scale = {
             "cedar": (3, 3.2),
             "larch": (3, 3.2),
             "pine": (4, 3.6),
             "redwood": (3, 2.5),
+            "spruce": (4, 3.6),
         }[wood]
         gap_chance = {
             "cedar": 0.025,
             "larch": 0.30,
             "pine": 0.16,
             "redwood": 0.07,
+            "spruce": 0.04,
         }[wood]
         for y in range(crown_bottom, height + 1):
             progress = (height - y) / max(1, height - crown_bottom)
@@ -3610,7 +3659,7 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
         crown_bottom = height - {
             "oak": 4, "beech": 4, "maple": 4, "walnut": 4, "ash": 4,
             "jungle": 4, "mangrove": 4, "willow": 4,
-            "birch": 5, "poplar": 8,
+            "birch": 5, "aspen": 7, "poplar": 8,
         }.get(wood, 3)
         profiles: dict[str, list[tuple[int, int]]] = {
             # Broadleaf species need different voxel silhouettes, not just
@@ -3620,6 +3669,7 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
             "ash": [(1, 1), (2, 2), (2, 2), (3, 2), (2, 2), (1, 1)],
             "beech": [(1, 1), (2, 2), (3, 3), (3, 3), (2, 2), (1, 1)],
             "birch": [(1, 1), (1, 1), (2, 1), (2, 1), (1, 1), (1, 1)],
+            "aspen": [(1, 1), (1, 1), (2, 2), (2, 1), (2, 1), (2, 1), (1, 1), (1, 1)],
             "jungle": [(2, 2), (3, 3), (4, 3), (3, 3), (2, 2)],
             "mangrove": [(2, 2), (3, 2), (3, 3), (2, 2), (1, 1)],
             "maple": [(1, 1), (2, 2), (3, 2), (3, 2), (2, 2), (1, 1)],
@@ -3698,7 +3748,8 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
     unique_voxels: dict[tuple[int, int, int], dict[str, Any]] = {}
     for voxel in voxels:
         position = (voxel["dx"], voxel["dy"], voxel["dz"])
-        unique_voxels[position] = voxel
+        if position not in unique_voxels or voxel["type"] == trunk:
+            unique_voxels[position] = voxel
     voxels = [unique_voxels[position] for position in sorted(unique_voxels)]
     return object_document(name, voxels, ["worldgen", "vegetation"], tree_seed, wood)
 
@@ -3919,8 +3970,8 @@ def make_woodland_shrine(name: str, records: list[dict[str, str]], seed: int) ->
 
 def generated_objects(records: list[dict[str, str]]) -> list[dict[str, Any]]:
     objects: list[dict[str, Any]] = []
-    for wood in ("oak", "pine", "birch", "cedar", "maple", "ash", "walnut", "beech", "willow", "poplar", "acacia", "jungle", "mangrove", "larch", "redwood"):
-        objects.append(make_tree(f"asset_tree_{wood}", wood, records, 6 if wood in ("redwood", "jungle") else 5))
+    for wood in ("oak", "pine", "birch", "aspen", "cedar", "spruce", "maple", "ash", "walnut", "beech", "willow", "poplar", "acacia", "jungle", "mangrove", "larch", "redwood"):
+        objects.append(make_tree(f"asset_tree_{wood}", wood, records, 6 if wood in ("redwood", "jungle", "spruce") else 5))
     for material in ("moss", "fern", "reed", "leaf", "lichen", "blossom", "coral", "kelp"):
         name = f"asset_shrub_{material}"
         objects.append(make_shrub(name, material, records, stable_seed(name)))
@@ -4262,6 +4313,22 @@ def build_pack(
         "assetgen_reference_mode": reference_mode,
     })
     minetest_blocks = ensure_stable_block_ids(load_block_files("minetest_default_16"))
+    previous_pack_ids = {
+        str(block["name"]): block["id"]
+        for block in load_block_files(PACK_ID)
+        if isinstance(block.get("name"), str) and isinstance(block.get("id"), int)
+    }
+    geology_blocks = load_block_files("cubatarium_geology_cc0")
+    reserved_block_ids = {
+        block["id"] for block in minetest_blocks
+        if isinstance(block.get("id"), int)
+    }
+    pack_block_ids = stable_pack_block_ids(
+        [record["name"] for record in records]
+        + [str(block["name"]) for block in geology_blocks],
+        previous_pack_ids,
+        reserved_block_ids,
+    )
     for block in minetest_blocks:
         name = block.get("name", "").lower()
         render = block.setdefault("render", {})
@@ -4346,10 +4413,7 @@ def build_pack(
         entry = make_replacement_texture(stem, target, infer_family(stem), "geology_reference_only", pack_dir, hashes, calibration=calibration, size=size, review_required=review_required)
         manifest_textures.append(entry)
         preview_entries.append((target, texture_path(pack_dir, target)))
-    first_generated_block_id = 1025
-    if first_generated_block_id + len(records) - 1 > 4095:
-        raise ValueError("generated block catalog exceeds the stable pack id range")
-    for block_index, record in enumerate(records):
+    for record in records:
         target = record["name"]
         face_stems, derived_roles = block_face_textures(record, target)
         face_role_map = {"side": target, **{role: stem for stem, role in derived_roles}}
@@ -4360,8 +4424,7 @@ def build_pack(
             entry = create_catalog_texture(record, stem, role, pack_dir, hashes, calibration, size, review_required)
             manifest_textures.append(entry)
             preview_entries.append((stem, texture_path(pack_dir, stem)))
-        write_json(pack_dir / "blocks" / f"{target}.json", block_definition(record, face_stems, first_generated_block_id + block_index))
-    geology_blocks = load_block_files("cubatarium_geology_cc0")
+        write_json(pack_dir / "blocks" / f"{target}.json", block_definition(record, face_stems, pack_block_ids[target]))
     included_block_sources: list[dict[str, Any]] = []
     for block in minetest_blocks:
         adapted = remap_block_textures(block, minetest_stems)
@@ -4380,12 +4443,9 @@ def build_pack(
             "source_kind": "Cubatarium-authored block definition",
             "license": "CC0-1.0",
         })
-    first_geology_block_id = first_generated_block_id + len(records)
-    if first_geology_block_id + len(geology_blocks) - 1 > 4095:
-        raise ValueError("integrated geology definitions exceed the stable pack id range")
-    for block_index, block in enumerate(geology_blocks):
+    for block in geology_blocks:
         adapted = remap_block_textures(block, geology_stems)
-        adapted["id"] = first_geology_block_id + block_index
+        adapted["id"] = pack_block_ids[str(adapted["name"])]
         adapted["license"] = "CC0-1.0"
         adapted["provenance"] = {
             "source_pack": "cubatarium_geology_cc0",
@@ -4432,9 +4492,9 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 30,
+            "version": 32,
             "backend": "procedural",
-            "texture_synthesis": "semantic_sprite_coverage_junglewood_species_named_decor_v30",
+            "texture_synthesis": "named_tree_species_stable_ids_and_sand_match_v32",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,
@@ -5589,10 +5649,9 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
         "minetest_default_16": minetest_replacement_stems(),
         "cubatarium_geology_cc0": {path.stem: f"geo_{safe_name(path.stem)}" for path in (REPO / "resource_packs" / "cubatarium_geology_cc0" / "textures" / "blocks").glob("*.png")},
     }
-    geology_first_id = 1025 + len(family_records(load_catalog()))
     for source_pack, source_blocks in (("minetest_default_16", minetest_blocks), ("cubatarium_geology_cc0", geology_blocks)):
         replacements = replacement_maps[source_pack]
-        for index, source_block in enumerate(source_blocks):
+        for source_block in source_blocks:
             included = name_to_block.get(source_block["name"])
             if included is None:
                 errors.append(f"standalone pack is missing {source_pack} block {source_block['name']}")
@@ -5604,9 +5663,12 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
                 continue
             if included.get("textures") != expected_textures:
                 errors.append(f"{source_pack}/{source_block['name']}: standalone block definition does not use its replacement textures")
-            expected_id = source_block.get("id") if source_pack == "minetest_default_16" else geology_first_id + index
-            if included.get("id") != expected_id:
-                errors.append(f"{source_pack}/{source_block['name']}: stable id {included.get('id')} does not match expected {expected_id}")
+            if source_pack == "minetest_default_16" and included.get("id") != source_block.get("id"):
+                errors.append(f"{source_pack}/{source_block['name']}: imported block id changed from {source_block.get('id')} to {included.get('id')}")
+            elif source_pack == "cubatarium_geology_cc0" and (
+                not isinstance(included.get("id"), int) or not 1025 <= included["id"] <= 4095
+            ):
+                errors.append(f"{source_pack}/{source_block['name']}: integrated block id is outside the Cubatarium range")
             if included.get("license") != "CC0-1.0":
                 errors.append(f"{source_pack}/{source_block['name']}: included Cubatarium block definition must declare CC0-1.0")
             expected_source_kind = "Cubatarium-authored block definition" if source_pack == "minetest_default_16" else None
@@ -5739,12 +5801,62 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
             wood_species = {
                 material for family, material in object_materials if family == "wood" and material
             }
-            expected_foliage = "needle" if species in {"cedar", "larch", "pine", "redwood"} else "leaf"
+            conifers = {"cedar", "larch", "pine", "redwood", "spruce"}
+            expected_foliage = "needle" if species in conifers else "leaf"
             if wood_species != {species} or organic_materials != {expected_foliage}:
                 errors.append(
                     f"{object_path.name}: tree materials do not match its name "
                     f"(wood={sorted(wood_species)}, foliage={sorted(organic_materials)})"
                 )
+            wood_voxels = [
+                voxel for voxel in voxels
+                if block_materials.get(str(voxel.get("type")), (None, None))[0] == "wood"
+            ]
+            foliage_voxels = [
+                voxel for voxel in voxels
+                if block_materials.get(str(voxel.get("type")), (None, None)) == ("organic", expected_foliage)
+            ]
+            wood_rows = {int(voxel["dy"]) for voxel in wood_voxels}
+            if wood_rows and any(y not in wood_rows for y in range(min(wood_rows), max(wood_rows) + 1)):
+                errors.append(f"{object_path.name}: tree trunk has a gap in its vertical stem")
+            if species in {"birch", "aspen", "poplar"} and foliage_voxels:
+                canopy_width = max(int(voxel["dx"]) for voxel in foliage_voxels) - min(int(voxel["dx"]) for voxel in foliage_voxels) + 1
+                if canopy_width > 7:
+                    errors.append(f"{object_path.name}: columnar canopy is too wide for its named species ({canopy_width} voxels)")
+            if species == "acacia" and foliage_voxels:
+                canopy_width = max(int(voxel["dx"]) for voxel in foliage_voxels) - min(int(voxel["dx"]) for voxel in foliage_voxels) + 1
+                canopy_height = max(int(voxel["dy"]) for voxel in foliage_voxels) - min(int(voxel["dy"]) for voxel in foliage_voxels) + 1
+                if canopy_width < canopy_height + 2:
+                    errors.append(f"{object_path.name}: acacia canopy should be wide and flat")
+            if species == "willow" and foliage_voxels and wood_rows:
+                foliage_bottom = min(int(voxel["dy"]) for voxel in foliage_voxels)
+                if foliage_bottom >= max(wood_rows) - 2:
+                    errors.append(f"{object_path.name}: willow foliage is missing its hanging curtains")
+            if species == "mangrove" and wood_voxels:
+                base_roots = [
+                    voxel for voxel in wood_voxels
+                    if int(voxel["dy"]) == min(wood_rows)
+                    and abs(int(voxel["dx"])) + abs(int(voxel["dz"])) >= 2
+                ]
+                if not base_roots:
+                    errors.append(f"{object_path.name}: mangrove is missing exposed stilt roots")
+            if species in conifers and foliage_voxels:
+                foliage_by_y: dict[int, int] = defaultdict(int)
+                for voxel in foliage_voxels:
+                    foliage_by_y[int(voxel["dy"])] += 1
+                low_rows = sorted(foliage_by_y.items())[:2]
+                high_rows = sorted(foliage_by_y.items(), reverse=True)[:2]
+                if low_rows and high_rows and sum(count for _, count in low_rows) <= sum(count for _, count in high_rows):
+                    errors.append(f"{object_path.name}: conifer crown does not taper toward its top")
+        elif object_name.startswith("asset_boulder_"):
+            material = object_name.removeprefix("asset_boulder_")
+            if object_materials != {("rock", material)}:
+                errors.append(f"{object_path.name}: boulder material does not match its name {sorted(object_materials)}")
+        elif object_name.startswith("asset_shrub_"):
+            material = object_name.removeprefix("asset_shrub_")
+            expected = {material, "leaf"} if material == "blossom" else {material}
+            if organic_materials != expected:
+                errors.append(f"{object_path.name}: shrub material does not match its name {sorted(organic_materials)}")
         elif object_name.startswith("asset_flower_patch_"):
             if not organic_materials or any(not material.startswith("flower_") for material in organic_materials):
                 errors.append(
@@ -5761,6 +5873,15 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
                 errors.append(f"{object_path.name}: mushroom cluster is missing a mushroom sprite")
             if any(family != "organic" for family, _ in object_materials):
                 errors.append(f"{object_path.name}: mushroom cluster must not replace ground voxels")
+        elif object_name == "asset_coral_fan":
+            if ("organic", "coral") not in object_materials or ("soil", "pale_sand") not in object_materials:
+                errors.append(f"{object_path.name}: coral fan needs coral over a sand base")
+        elif object_name == "asset_crystal_cluster":
+            if not any(family == "crystal" for family, _ in object_materials) or not any(family == "rock" for family, _ in object_materials):
+                errors.append(f"{object_path.name}: crystal cluster needs crystals anchored in rock")
+        elif object_name == "asset_mossy_ruin_piece":
+            if not any(family == "masonry" for family, _ in object_materials) or ("organic", "moss") not in object_materials:
+                errors.append(f"{object_path.name}: mossy ruin needs masonry and visible moss")
 
         placement = obj.get("placement", {})
         placement_mode = placement.get("mode") if isinstance(placement, dict) else None

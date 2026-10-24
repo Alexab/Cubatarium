@@ -355,6 +355,22 @@
       "seed_offset": 10005,
       "calibrated": true,
       "spacing": 38
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_tree_aspen",
+      "biomes": ["forest", "plains", "cold_steppe"],
+      "weight": 1,
+      "seed_offset": 10006,
+      "calibrated": true,
+      "spacing": 32
+    },
+    {
+      "object": "cubatarium_worldgen_cc0::asset_tree_spruce",
+      "biomes": ["cold_steppe", "tundra", "mountains"],
+      "weight": 2,
+      "seed_offset": 10007,
+      "calibrated": true,
+      "spacing": 30
     }
 
   ],

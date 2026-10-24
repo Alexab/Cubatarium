@@ -178,13 +178,13 @@
       "dx": -1,
       "dy": 8,
       "dz": -1,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": -1,
       "dy": 8,
       "dz": 0,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": -1,
@@ -208,13 +208,13 @@
       "dx": -1,
       "dy": 9,
       "dz": -1,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": -1,
       "dy": 9,
       "dz": 0,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": -1,
@@ -238,13 +238,13 @@
       "dx": -1,
       "dy": 10,
       "dz": -1,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": -1,
       "dy": 10,
       "dz": 0,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": -1,
@@ -262,7 +262,7 @@
       "dx": -1,
       "dy": 11,
       "dz": 0,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": -1,
@@ -382,7 +382,7 @@
       "dx": 0,
       "dy": 8,
       "dz": -1,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": 0,
@@ -412,7 +412,7 @@
       "dx": 0,
       "dy": 9,
       "dz": -1,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": 0,
@@ -460,7 +460,7 @@
       "dx": 0,
       "dy": 11,
       "dz": -1,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": 0,
@@ -484,7 +484,7 @@
       "dx": 0,
       "dy": 12,
       "dz": 0,
-      "type": "cu_organic_needle_dense"
+      "type": "cu_wood_redwood_bark"
     },
     {
       "dx": 0,
