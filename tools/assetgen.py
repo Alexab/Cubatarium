@@ -187,22 +187,23 @@ MATERIAL_TINTS = {
 # species readable beside the rougher brown species at the 16px world scale.
 BARK_BASE_TINTS = {
     "acacia": (137, 118, 88), "ash": (143, 137, 122),
-    "beech": (183, 177, 166), "cedar": (153, 82, 57),
+    "beech": (183, 177, 166), "cedar": (133, 83, 62),
     "jungle": (130, 92, 60), "larch": (152, 112, 76),
     "mangrove": (115, 83, 66), "maple": (144, 108, 78),
-    "oak": (139, 108, 78), "pine": (160, 124, 87),
+    "oak": (139, 108, 78), "pine": (86, 76, 66),
     "poplar": (178, 171, 157), "redwood": (158, 81, 56),
-    "spruce": (113, 96, 73),
+    "spruce": (80, 81, 78),
     "walnut": (105, 79, 60), "willow": (147, 132, 102),
 }
 
-# Face-scale crack plates vary by species. Counts stay close to square so bark
-# reads as broken flakes and furrows, not continuous vertical waves.
+# Face-scale crack plates vary by species. Most bark keeps compact flakes;
+# conifers use short, vertically elongated plates so the texture reads as
+# bark furrows without becoming a continuous sinusoidal wood grain.
 BARK_CELL_COUNTS = {
     "acacia": (5, 5), "ash": (5, 5), "aspen": (6, 5), "beech": (6, 6),
-    "cedar": (5, 5), "jungle": (5, 5), "larch": (6, 5),
+    "cedar": (7, 4), "jungle": (5, 5), "larch": (7, 4),
     "mangrove": (4, 5), "maple": (5, 5), "oak": (4, 4),
-    "pine": (6, 5), "poplar": (6, 5), "redwood": (4, 5), "spruce": (5, 5),
+    "pine": (8, 4), "poplar": (6, 5), "redwood": (6, 4), "spruce": (7, 4),
     "walnut": (5, 5), "willow": (5, 4),
 }
 
@@ -516,6 +517,57 @@ def _apply_birch_bark_marks(
             if rng.random() < 0.28:
                 split_x = (start_x + rng.randrange(length)) % size
                 pixels[split_x, (y + 1) % size] = colors[2]
+    return result
+
+
+def _apply_conifer_bark_furrows(
+    image: Image.Image, seed: int, species: str,
+) -> Image.Image:
+    """Add short, broken bark fissures without wavy grain bands."""
+    result = image.convert("RGBA")
+    size = result.width
+    rng = random.Random(seed ^ stable_seed(f"conifer-furrows:{species}"))
+    pixels = result.load()
+    original = [pixels[x, y] for y in range(size) for x in range(size)]
+    weights = (1, 2, 3, 2, 1)
+    for y in range(size):
+        for x in range(size):
+            i = y * size + x
+            blurred = [
+                sum(original[((y + offset) % size) * size + x][channel] * weights[offset + 2]
+                    for offset in range(-2, 3)) / sum(weights)
+                for channel in range(3)
+            ]
+            color = original[i]
+            pixels[x, y] = (
+                *(round(color[channel] * 0.42 + blurred[channel] * 0.58)
+                  for channel in range(3)),
+                color[3],
+            )
+
+    fissure_count = max(6, round(size * 0.42))
+    for _ in range(fissure_count):
+        x = rng.randrange(size)
+        y = rng.randrange(size)
+        length = rng.randint(max(3, size // 4), max(4, size * 3 // 8))
+        drift = rng.choice((-1, 0, 0, 0, 1))
+        darken = rng.uniform(0.50, 0.70)
+        highlight = rng.random() < 0.55
+        for step in range(length):
+            # Short runs keep the bark direction readable, while gaps and
+            # slight offsets prevent continuous vertical or sinusoidal bands.
+            if step > 0 and rng.random() < 0.08:
+                continue
+            px = (x + round(step * drift * 0.18)) % size
+            py = (y + step) % size
+            red, green, blue, alpha = pixels[px, py]
+            factor = 1.06 if highlight else darken
+            pixels[px, py] = (
+                max(0, min(255, round(red * factor))),
+                max(0, min(255, round(green * factor))),
+                max(0, min(255, round(blue * factor))),
+                alpha,
+            )
     return result
 
 
@@ -894,7 +946,7 @@ def generated_texture(
         if pale_bark:
             # Birch is nearly white; aspen bark is a warmer gray with fewer
             # dark lenticels. Their species marks are drawn after shading.
-            base = (238, 238, 233) if birch_bark else (190, 187, 171)
+            base = (246, 246, 241) if birch_bark else (210, 207, 192)
         elif material in BARK_BASE_TINTS:
             base = BARK_BASE_TINTS[material]
         else:
@@ -1026,8 +1078,9 @@ def generated_texture(
                         # variation before its small lenticel marks.
                         value += coarse[i] * 0.06 + medium[i] * 0.05 + fine[i] * 0.04
                     else:
-                        plate_strength = 0.24 if material == "poplar" else 0.44
-                        crack_strength = 0.17 if material == "poplar" else 0.31
+                        conifer_bark = material in ("cedar", "larch", "pine", "redwood", "spruce")
+                        plate_strength = 0.24 if material == "poplar" else 0.30 if conifer_bark else 0.44
+                        crack_strength = 0.17 if material == "poplar" else 0.26 if conifer_bark else 0.31
                         value += bark_plate_tones[i] * plate_strength
                         value -= bark_crack_strengths[i] * crack_strength
                         if fine[i] > 0.67 and medium[i] < 0.18:
@@ -1270,6 +1323,8 @@ def generated_texture(
         image = _apply_birch_bark_marks(image, seed, material)
     elif soft_bark:
         image = _apply_soft_bark_marks(image, seed, material)
+    elif bark_surface and material in ("cedar", "larch", "pine", "redwood", "spruce"):
+        image = _apply_conifer_bark_furrows(image, seed, material)
     elif family == "organic" and material == "needle":
         original_alpha = image.getchannel("A")
         image = _apply_needle_foliage(image, seed, variant)

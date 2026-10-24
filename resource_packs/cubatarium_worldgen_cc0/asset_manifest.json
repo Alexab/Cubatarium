@@ -39816,7 +39816,7 @@
         16,
         16
       ],
-      "pixel_sha256": "63f75f1ef0b3bc23ba7bb5805193cc1c5dab2e4317e1b9c232ece721d25e6d8e",
+      "pixel_sha256": "c5f6efd758a29ac90df3efc619ddd0ff752b8a52a2e167fec4bb6182c05ce8a8",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41004,7 +41004,7 @@
         16,
         16
       ],
-      "pixel_sha256": "955c4e014ad3d6cce036758129d64e105b808f653f0169a132533bdc121ba4b6",
+      "pixel_sha256": "29de2acefb133a62bf52d13dc208134b846a57c4be8500ed252c2e9e0118615a",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -41598,7 +41598,7 @@
         16,
         16
       ],
-      "pixel_sha256": "d86f73254baa525f010b89ba81996952a9a34a9bfee155af094341dd3b298f8a",
+      "pixel_sha256": "99e4879550c7370581e0a3b64b38dabf9e0743275e873ec181a9a92ec7826875",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -42786,7 +42786,7 @@
         16,
         16
       ],
-      "pixel_sha256": "599f5231f8a591b00ca0d8767d653d71883d414bf5f05d2014e5248e6c676543",
+      "pixel_sha256": "a7e691b12f9f10dbc1d87582dbe4012546348eaaa337fb2f4a42e75e3277ad5c",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -45162,7 +45162,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4c2bb21add9484557563c3573f4da00471a4f04310ca43a885eba0dbbd0e30c8",
+      "pixel_sha256": "b6823011654052203e6b1ae52f8736789bb354a4c59c54b36b0a3797fb8fbc10",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -46350,7 +46350,7 @@
         16,
         16
       ],
-      "pixel_sha256": "a56229aef2c15a65f33d592325c6453b8ad20ae4cf67971bbae788fc348a6c44",
+      "pixel_sha256": "27df4009780c23eb7db3a71492c0bafd4f956b11ae6fa4af21bdf0e62629a2e7",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -46944,7 +46944,7 @@
         16,
         16
       ],
-      "pixel_sha256": "5400f96dfa5c6e676f557f9e4292f91ab9b43c2f3a87ef45d518f9712bf47ed1",
+      "pixel_sha256": "58bf7f7ed900998fba833c522e637cb855cd9da128f53e7c655a1ec878b0aceb",
       "source": {
         "kind": "procedural_parameters"
       },
@@ -51367,7 +51367,7 @@
         16,
         16
       ],
-      "pixel_sha256": "75e916b5d0dae24c886f35570425153de49edace1d3b5956df49505db755642a",
+      "pixel_sha256": "7f031a79ebdf34cad6359005b7fd3bc700f4b6eee73e8481fb2da368fd779dd8",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_aspen_tree_default_aspen_tree",
@@ -53812,7 +53812,7 @@
         16,
         16
       ],
-      "pixel_sha256": "661175649d3cc532e310bd1db0fe14e2b4f56a673f065f41bc9f02db55578159",
+      "pixel_sha256": "fb3c85ef7c5816072a7c81c7740e8460b8eb0ac2a70963c7aef48359bab7e18d",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "mtg_pine_tree_default_pine_tree",
@@ -56182,7 +56182,7 @@
         16,
         16
       ],
-      "pixel_sha256": "4fde91a2a89da08afc9267dd738b625f2c3bb95fcadfe30b822387a3c907672c",
+      "pixel_sha256": "abb3e934a932ba8cf72fdfbfa15fffef83984ac19ff45aa337796fb7c01c973e",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tree_birch",
@@ -56254,7 +56254,7 @@
         16,
         16
       ],
-      "pixel_sha256": "71271edf8e2dafc33c0bca0c20be1a7b48f6965a9a60595762a3f1b872977d81",
+      "pixel_sha256": "776c5030d525b8b7adf951b7202b882ef0fb01c3d21c90fcb9e1d1845476fdb3",
       "source": {
         "kind": "minetest_reference_only",
         "reference_only": "tree_spruce",

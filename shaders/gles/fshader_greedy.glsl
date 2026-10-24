@@ -278,8 +278,12 @@ vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
     // Structured blocks may still use safe rotations on their isotropic top
     // and bottom tiles. On directional side faces, vary only the horizontal
     // phase so bark, grass layers, and masonry keep their intended orientation.
+    bool waterSurfaceTile = uTextureVariation >= 0.34 &&
+                            uTextureVariation <= 0.40 &&
+                            faceIndex >= 4;
     bool canTransformTile = uTextureVariation >= 0.75 ||
-                            (uTextureVariation >= 0.45 && faceIndex >= 4);
+                            (uTextureVariation >= 0.45 && faceIndex >= 4) ||
+                            waterSurfaceTile;
     // Bark uses the 0.52-0.74 range: keep its vertical grain unrotated, while
     // allowing both-axis texel phase changes so stacked logs do not form the
     // same horizontal bands at every block boundary. Grass-side layers stay
