@@ -3726,7 +3726,9 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
             "ash": [(1, 1), (2, 2), (2, 2), (3, 2), (2, 2), (1, 1)],
             "beech": [(1, 1), (2, 2), (3, 3), (3, 3), (2, 2), (1, 1)],
             "birch": [(1, 1), (1, 1), (2, 1), (2, 1), (1, 1), (1, 1)],
-            "aspen": [(1, 1), (1, 1), (2, 2), (2, 1), (2, 1), (2, 1), (1, 1), (1, 1)],
+            # Aspen has a rounded, spreading crown. Keep poplar as the narrow
+            # columnar species so these two light-barked trees read differently.
+            "aspen": [(1, 1), (2, 2), (3, 2), (4, 3), (4, 3), (3, 3), (2, 2), (1, 1)],
             "jungle": [(2, 2), (3, 3), (4, 3), (3, 3), (2, 2)],
             "mangrove": [(2, 2), (3, 2), (3, 3), (2, 2), (1, 1)],
             "maple": [(1, 1), (2, 2), (3, 2), (3, 2), (2, 2), (1, 1)],
@@ -3767,13 +3769,14 @@ def make_tree(name: str, wood: str, records: list[dict[str, str]], size: int = 5
                         continue
                     add_object_block(voxels, x + center_x + offset_x, y, z + offset_z, leaves)
 
-        if wood in ("oak", "ash", "maple", "walnut"):
+        if wood in ("oak", "ash", "aspen", "maple", "walnut"):
             # Short, attached limbs break up the single-pole look and explain
             # the crown's wider or offset silhouette. They stay inside foliage
             # except for the last voxel, as on a low-resolution tree model.
             branch_layout = {
                 "oak": ((1, 0, 2), (-1, 0, 2), (0, 1, 2), (0, -1, 2)),
                 "ash": ((1, 0, 2), (-1, 0, 2), (0, 1, 2), (0, -1, 1)),
+                "aspen": ((1, 0, 2), (-1, 0, 2), (0, 1, 1), (0, -1, 1)),
                 "maple": ((1, 0, 3), (-1, 0, 3), (0, 1, 2), (0, -1, 2)),
                 "walnut": ((1, 0, 2), (-1, 0, 2), (0, 1, 2), (0, -1, 2)),
             }[wood]
@@ -4592,10 +4595,10 @@ def build_pack(
         "benchmark": MINECRAFT_REFERENCE,
         "generator": {
             "name": "Cubatarium AssetGen",
-            "version": 33,
+            "version": 34,
             "backend": "procedural",
             "texture_synthesis": "named_tree_species_stable_ids_and_sand_match_v32",
-            "object_synthesis": "willow_drapes_mangrove_stilt_roots_coral_fan_irregular_crystals_v33",
+            "object_synthesis": "aspen_broad_crown_willow_drapes_mangrove_roots_coral_crystals_v34",
             "resolution": size,
             "profile": "voxel64" if size > 16 else "voxel16",
             "reference_mode": reference_mode,
@@ -5920,10 +5923,16 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
             wood_rows = {int(voxel["dy"]) for voxel in wood_voxels}
             if wood_rows and any(y not in wood_rows for y in range(min(wood_rows), max(wood_rows) + 1)):
                 errors.append(f"{object_path.name}: tree trunk has a gap in its vertical stem")
-            if species in {"birch", "aspen", "poplar"} and foliage_voxels:
+            if species in {"birch", "poplar"} and foliage_voxels:
                 canopy_width = max(int(voxel["dx"]) for voxel in foliage_voxels) - min(int(voxel["dx"]) for voxel in foliage_voxels) + 1
                 if canopy_width > 7:
                     errors.append(f"{object_path.name}: columnar canopy is too wide for its named species ({canopy_width} voxels)")
+                if species == "poplar" and canopy_width > 5:
+                    errors.append(f"{object_path.name}: poplar canopy should keep its narrow columnar profile ({canopy_width} voxels)")
+            if species == "aspen" and foliage_voxels:
+                canopy_width = max(int(voxel["dx"]) for voxel in foliage_voxels) - min(int(voxel["dx"]) for voxel in foliage_voxels) + 1
+                if canopy_width < 7:
+                    errors.append(f"{object_path.name}: aspen canopy should be broad and rounded ({canopy_width} voxels)")
             if species == "acacia" and foliage_voxels:
                 canopy_width = max(int(voxel["dx"]) for voxel in foliage_voxels) - min(int(voxel["dx"]) for voxel in foliage_voxels) + 1
                 canopy_height = max(int(voxel["dy"]) for voxel in foliage_voxels) - min(int(voxel["dy"]) for voxel in foliage_voxels) + 1

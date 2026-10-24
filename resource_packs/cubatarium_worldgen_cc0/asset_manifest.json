@@ -9,10 +9,10 @@
   },
   "generator": {
     "name": "Cubatarium AssetGen",
-    "version": 33,
+    "version": 34,
     "backend": "procedural",
     "texture_synthesis": "named_tree_species_stable_ids_and_sand_match_v32",
-    "object_synthesis": "willow_drapes_mangrove_stilt_roots_coral_fan_irregular_crystals_v33",
+    "object_synthesis": "aspen_broad_crown_willow_drapes_mangrove_roots_coral_crystals_v34",
     "resolution": 16,
     "profile": "voxel16",
     "reference_mode": "qa-only"
