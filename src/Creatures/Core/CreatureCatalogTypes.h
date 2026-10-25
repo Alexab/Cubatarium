@@ -2,8 +2,10 @@
 #define CREATURECATALOGTYPES_H
 
 #include <cstdint>
+#include <algorithm>
 #include <glm/glm.hpp>
 #include <string>
+#include <vector>
 #include <unordered_map>
 #include <vector>
 
@@ -74,6 +76,12 @@ struct CreatureBehaviorParams
   float attackRange{2.f};
   float attackCooldown{1.5f};
 };
+
+inline bool HasCreatureTag(const std::vector<std::string> &tags,
+                             const char *tag)
+{
+  return std::find(tags.begin(), tags.end(), tag) != tags.end();
+}
 
 enum class CreatureVisualBackend : uint8_t
 {
