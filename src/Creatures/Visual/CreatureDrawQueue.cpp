@@ -25,14 +25,18 @@ void CreatureDrawQueue::Flush(UGeometryEngine &engine)
       }
       break;
     case CreatureDrawKind::SkinnedMesh:
-      if (req.SkinnedPrimitive != nullptr)
+      if (req.SkinnedPrimitive != nullptr && req.BoneMatrices != nullptr)
       {
         engine.DrawCreatureSkinnedMesh(req.Mvp, req.Texture,
-                                       *req.SkinnedPrimitive, req.BoneMatrices);
+                                       *req.SkinnedPrimitive,
+                                       req.BoneMatrices);
       }
       break;
     case CreatureDrawKind::WireframeBox:
       engine.DrawBoxWireframe(req.Mvp, req.WireColor);
+      break;
+    case CreatureDrawKind::Billboard:
+      engine.DrawCreatureBillboard(req.Mvp, req.Texture, req.Tint);
       break;
     }
   }

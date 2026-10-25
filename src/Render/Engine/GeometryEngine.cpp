@@ -8872,7 +8872,7 @@ void UGeometryEngine::DrawCreatureBoneSkeletonMesh(
 
 void UGeometryEngine::DrawCreatureSkinnedMesh(
     const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
-    const std::vector<glm::mat4> &boneMatrices)
+    const std::shared_ptr<const std::vector<glm::mat4>> &boneMatrices)
 {
   CreatureDraw_.DrawSkinnedMesh(mvp, texture, mesh, boneMatrices);
 }

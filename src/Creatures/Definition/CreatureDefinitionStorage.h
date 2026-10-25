@@ -2,6 +2,7 @@
 #define CREATUREDEFINITIONSTORAGE_H
 
 #include "Creatures/Definition/CreatureDefinition.h"
+#include <atomic>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -23,6 +24,10 @@ public:
   std::vector<std::string> ListAllIds() const;
   std::vector<std::string> ListSpawnable() const;
   std::string GetControlledDefaultSpeciesId() const;
+
+  /// Bumped on every Load/LoadOverlay/LoadFile; consumers cache resolved
+  /// data keyed on it (creature appearance cache, audit V6).
+  std::atomic<uint64_t> Revision{1};
 
 private:
   std::unordered_map<std::string, CreatureDefinition> Definitions;

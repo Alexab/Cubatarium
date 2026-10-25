@@ -39,6 +39,8 @@ CreatureGltfCache::Load(const std::string &speciesId,
       {
         return asset;
       }
+      // Evict the dead weak_ptr key so the map cannot grow without bound.
+      entries.erase(it);
     }
   }
 

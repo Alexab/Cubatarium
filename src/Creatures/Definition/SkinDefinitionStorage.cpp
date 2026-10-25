@@ -30,6 +30,7 @@ void USkinDefinitionStorage::Load(const std::string &folder)
   {
     std::unique_lock lock(DefinitionsMutex);
     Definitions.clear();
+    Revision.fetch_add(1, std::memory_order_relaxed);
   }
   if (!std::filesystem::exists(folder))
   {
@@ -142,6 +143,7 @@ bool USkinDefinitionStorage::LoadFile(const std::string &path)
 
     std::unique_lock lock(DefinitionsMutex);
     Definitions[def.Id] = std::move(def);
+    Revision.fetch_add(1, std::memory_order_relaxed);
     return true;
   }
   catch (const std::exception &e)

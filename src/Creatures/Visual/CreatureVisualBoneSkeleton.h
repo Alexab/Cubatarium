@@ -1,7 +1,7 @@
 #ifndef CREATURE_VISUAL_BONE_SKELETON_H
 #define CREATURE_VISUAL_BONE_SKELETON_H
 
-#include "Creatures/Visual/CreatureVisual.h"
+#include "Creatures/Visual/CreatureVisualBase.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 #include <array>
 #include <glm/glm.hpp>
@@ -14,7 +14,7 @@ namespace cutum
 
 class BoneSkeletonHierarchy;
 
-class UCreatureVisualBoneSkeleton : public IUCreatureVisual
+class UCreatureVisualBoneSkeleton : public UCreatureVisualBase
 {
 public:
   ~UCreatureVisualBoneSkeleton() override;
@@ -23,16 +23,12 @@ public:
                   const CreatureLocomotionFacts &facts,
                   const CreaturePoseParams & /*pose*/,
                   const CreatureDefinition &animDef, float dt) override;
-  void SubmitDraw(UGeometryEngine &engine, const glm::mat4 &viewProj) override;
+  void SubmitDraw(const CreatureDrawContext &ctx, const glm::mat4 &viewProj) override;
 
 private:
-  glm::vec3 BodyOrigin{0.f};
-  float BodyYaw{0.f};
-  std::string SpeciesId;
   std::string SkinId;
   std::string GeometryId;
   std::string TextureStem{"diffuse"};
-  std::string DefaultTextureKey{"body"};
   BoneSkeletonPose BonePose;
   std::vector<glm::mat4> CachedBoneMatrices;
   std::shared_ptr<const CreatureBoneSkeletonMeshAsset> MeshAsset;

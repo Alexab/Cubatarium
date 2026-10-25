@@ -1,5 +1,7 @@
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 
+#include "Creatures/Visual/CreatureMeshGpuHash.h"
+
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
@@ -460,6 +462,7 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
             MaterialTextureStem(gltf, primJson.value("material", -1));
         if (!prim.mesh.interleavedPosUv.empty() && !prim.mesh.indices.empty())
         {
+          prim.GpuHash = GltfSkinnedMeshGpuHash(prim);
           asset->primitives.push_back(std::move(prim));
         }
       }

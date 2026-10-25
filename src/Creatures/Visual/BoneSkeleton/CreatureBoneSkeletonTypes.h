@@ -61,6 +61,10 @@ struct BoneSkeletonCubeMeshCpu
   std::vector<float> interleavedPosUv;
   std::vector<unsigned int> indices;
   glm::mat4 restLocalMatrix{1.f};
+  /// Content hash for the GPU VAO cache, computed once at build time.
+  /// Mutable: the cache may lazily fill it for meshes built outside the
+  /// loaders (idempotent write of the same value).
+  mutable size_t GpuHash{0};
 };
 
 struct BoneSkeletonBoneMeshCpu
