@@ -333,7 +333,8 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
   else if (habitat == CreatureHabitat::Amphibious && !airMobility)
   {
     const EnvironmentSample env =
-        ProbeEnvironmentAt(world, BodyOrigin, Bounds.profile.restSizeBlocks);
+        ProbeEnvironmentAtMemoized(world, BodyOrigin,
+                                   Bounds.profile.restSizeBlocks);
     if (!env.inWater)
     {
       wish.y = 0.0f;

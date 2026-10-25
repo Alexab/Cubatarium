@@ -1,5 +1,4 @@
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
-#include "App/Platform/FlightSimHarness.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
@@ -8,6 +7,12 @@
 
 namespace cutum
 {
+
+float &CreatureMoveSpeedScaleOverride()
+{
+  static float scale = 1.0f;
+  return scale;
+}
 
 namespace
 {
@@ -65,8 +70,7 @@ float UCreatureLocomotionController::ResolveHorizontalSpeed(
   {
     speed = Caps.walkSpeed * Caps.sprintSpeedMultiplier;
   }
-  // A37 H0: far AF distance stress — harness-only scale (default 1).
-  speed *= FlightSimMoveSpeedScale();
+  speed *= CreatureMoveSpeedScaleOverride();
   return speed;
 }
 

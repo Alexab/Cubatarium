@@ -64,6 +64,14 @@ EnvironmentSample ProbeEnvironmentAt(const UWorld &world,
                                      const glm::vec3 &bodyOrigin,
                                      const glm::vec3 &sizeBlocks);
 
+/// TTL-memoized variant for per-frame callers (vitals, movement habitat
+/// gates, locomotion facts) — the volume scan is O(r^3) per block probe
+/// (audit M2). Freshness bound: ~0.2s; spawn-time paths keep the plain
+/// probe.
+EnvironmentSample
+ProbeEnvironmentAtMemoized(const UWorld &world, const glm::vec3 &bodyOrigin,
+                           const glm::vec3 &sizeBlocks);
+
 bool CanCreatureOccupyAt(const UWorld &world, CreatureHabitat habitat,
                          const glm::vec3 &bodyOrigin,
                          const glm::vec3 &sizeBlocks);

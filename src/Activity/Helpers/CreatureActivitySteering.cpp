@@ -117,27 +117,37 @@ glm::vec3 ApplyWallFeelers(IUWorldPerception &perception,
   return preferred;
 }
 
+std::mt19937 &ActivitySteeringRng()
+{
+  static std::mt19937 rng{std::random_device{}()};
+  return rng;
+}
+
 glm::vec3 RandomLocomotionDirection(CreatureHabitat habitat)
 {
-  const float angle = static_cast<float>(std::rand() % 628) / 100.0f;
+  const float angle = std::uniform_real_distribution<float>(0.f, 6.28f)(
+      ActivitySteeringRng());
   glm::vec3 dir(std::cos(angle), 0.0f, std::sin(angle));
   if (habitat == CreatureHabitat::Aquatic ||
       habitat == CreatureHabitat::Amphibious)
   {
     const float pitch =
-        static_cast<float>((std::rand() % 201) - 100) / 100.0f * 0.45f;
+        std::uniform_real_distribution<float>(-0.45f, 0.45f)(
+            ActivitySteeringRng());
     dir.y = pitch;
   }
   else if (habitat == CreatureHabitat::Lava)
   {
     const float pitch =
-        static_cast<float>((std::rand() % 101) - 50) / 100.0f * 0.25f;
+        std::uniform_real_distribution<float>(-0.25f, 0.25f)(
+            ActivitySteeringRng());
     dir.y = pitch;
   }
   else if (habitat == CreatureHabitat::Aerial)
   {
     const float pitch =
-        static_cast<float>((std::rand() % 101) - 50) / 100.0f * 0.35f;
+        std::uniform_real_distribution<float>(-0.35f, 0.35f)(
+            ActivitySteeringRng());
     dir.y = pitch;
   }
   if (glm::length(dir) > 1e-4f)
@@ -199,7 +209,9 @@ glm::vec3 ComputeSeparationDirection(
     if (dist_sq < 1e-8f)
     {
       const float angle =
-          static_cast<float>((std::rand() % 628) + neighbor.Id) / 100.0f;
+          std::uniform_real_distribution<float>(
+              0.f, 6.28f)(ActivitySteeringRng()) +
+              static_cast<float>(neighbor.Id % 628) / 100.0f;
       push_sum += glm::vec3(std::cos(angle), 0.0f, std::sin(angle));
       continue;
     }

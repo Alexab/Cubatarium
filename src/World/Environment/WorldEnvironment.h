@@ -106,6 +106,9 @@ public:
                     class UWorldCreatureActivitySink &sink, float dt,
                     bool stress_tick = false);
   void SyncCreatureSpatialIndex();
+  /// Per-move spatial index maintenance (skips player characters).
+  void UpdateCreatureInSpatialIndex(const UCreature &creature);
+
   CreaturePopulationCounts CountNaturalPopulation(
       const glm::vec3 &playerOrigin);
   void TryNaturalPopulationSpawn(

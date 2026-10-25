@@ -1,4 +1,6 @@
 #include "World/Diagnostics/MeshAuditDiagnostics.h"
+#include "App/Platform/FlightSimHarness.h"
+#include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "App/Platform/SampleProfiler.h"
 #include "App/Platform/AppRunner.h"
 
@@ -728,6 +730,9 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
 
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
 {
+  // Harness-only move-speed scale lives in locomotion as a plain hook; the
+  // App layer owns reading the env var (audit M7).
+  CreatureMoveSpeedScaleOverride() = FlightSimMoveSpeedScale();
   const double gallery_page_seconds =
       std::clamp(options.AssetGalleryPageSeconds, 3.0, 3600.0);
   std::vector<std::vector<std::string>> gallery_pages;
