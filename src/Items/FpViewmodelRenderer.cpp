@@ -1,4 +1,5 @@
 #include "Items/FpViewmodelRenderer.h"
+#include "Core/Json/JsonVec.h"
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
@@ -61,15 +62,6 @@ constexpr int kArmUvW = 4;
 constexpr int kArmUvH = 12;
 constexpr int kArmUvD = 4;
 
-glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
-{
-  if (!arr.is_array() || arr.size() < 3)
-  {
-    return fallback;
-  }
-  return glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
-                   arr[2].get<float>());
-}
 
 // Tool JSON is Y-up (handle along +Y). Arm local hangs along -Y; after root
 // Rx(+88°) that is camera-forward. Mapping JSON +Y onto arm -Y made tools

@@ -33,6 +33,9 @@ struct GltfPrimitiveCpu
   std::vector<float> jointWeights;
   std::string textureStem;
   bool skinned{false};
+  /// Content hash for the GPU VAO cache (pos/uv/indices + joints/weights),
+  /// computed once at load time; mutable for lazy fill by the cache.
+  mutable size_t GpuHash{0};
 };
 
 struct GltfAnimationChannelCpu

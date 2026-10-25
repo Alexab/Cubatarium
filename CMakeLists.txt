@@ -220,6 +220,7 @@ set(SOURCES
     src/Creatures/Visual/CreatureVisualGltf.cpp
     src/Creatures/Visual/CreatureVisualSprite.cpp
     src/Creatures/Visual/CreatureVisualBackendSelect.cpp
+    src/Creatures/Visual/CreatureVisualBase.cpp
     src/Creatures/Visual/CreatureVisualFactory.cpp
     src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
     src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp

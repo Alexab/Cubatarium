@@ -33,15 +33,9 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
                                      float dt)
 {
   BodyOrigin = creature.GetFeetPosition();
-  BodyYaw = creature.GetYaw() + animDef.visual.modelYawOffsetDeg;
+  BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
   SpeciesId = animDef.Id;
-  DefaultTextureKey = animDef.visual.defaultTextureKey.empty()
-                          ? Appearance.defaultTextureKey
-                          : animDef.visual.defaultTextureKey;
-  if (DefaultTextureKey.empty())
-  {
-    DefaultTextureKey = "body";
-  }
+  RefreshDefaultTextureKey(animDef);
   ModelFile = animDef.visual.gltf.modelPath.empty()
                   ? "model.gltf"
                   : animDef.visual.gltf.modelPath;
@@ -66,7 +60,7 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
 
   RootAnimMatrix = glm::mat4(1.f);
   ActiveAnimation = nullptr;
-  BoneMatrices.clear();
+  BoneMatrices.reset();
   if (MeshAsset)
   {
     const auto clipId =
@@ -113,8 +107,9 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
       ActiveAnimation = &MeshAsset->animations[animIt->second];
       if (MeshAsset->hasSkin)
       {
-        BoneMatrices = ComputeGltfSkinMatrices(*MeshAsset, ActiveAnimation,
-                                               AnimTimeSec, loop);
+        BoneMatrices = std::make_shared<const std::vector<glm::mat4>>(
+            ComputeGltfSkinMatrices(*MeshAsset, ActiveAnimation, AnimTimeSec,
+                                    loop));
       }
       else
       {
@@ -124,36 +119,30 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
     }
     else if (MeshAsset->hasSkin)
     {
-      BoneMatrices =
-          ComputeGltfSkinMatrices(*MeshAsset, nullptr, AnimTimeSec, loop);
+      BoneMatrices = std::make_shared<const std::vector<glm::mat4>>(
+          ComputeGltfSkinMatrices(*MeshAsset, nullptr, AnimTimeSec, loop));
     }
   }
 }
 
-void UCreatureVisualGltf::SubmitDraw(UGeometryEngine &engine,
+void UCreatureVisualGltf::SubmitDraw(const CreatureDrawContext &ctx,
                                      const glm::mat4 &viewProj)
 {
-  if (!MeshAsset)
+  if (!MeshAsset || !DrawEnabled(ctx))
   {
     return;
   }
-
-  const RenderSettings &settings = engine.GetRenderSettings();
-  auto creatureTextures = engine.GetCreatureTextureStorage();
-  if (!creatureTextures || !settings.CreatureTexturedParts)
-  {
-    return;
-  }
+  const UCreatureTextureStorage &creatureTextures = *ctx.Textures;
 
   const glm::mat4 bodyMat = BuildCreatureRootMatrix(
-      BodyOrigin, BodyYaw, ModelFeetOffsetY, []()
+      BodyOrigin, BodyYawDeg, ModelFeetOffsetY, []()
       { return GltfEntityConventionMatrix(); }, ModelScale, RootAnimMatrix);
 
-  CreatureDrawQueue &queue = engine.GetCreatureDrawQueue();
+  CreatureDrawQueue &queue = *ctx.Queue;
   for (const GltfPrimitiveCpu &prim : MeshAsset->primitives)
   {
     const GLuint tex = ResolveCreatureSpeciesTexture(
-        *creatureTextures, SpeciesId, prim.textureStem, DefaultTextureKey);
+        creatureTextures, SpeciesId, prim.textureStem, DefaultTextureKey);
     if (tex == 0)
     {
       const std::string key = SpeciesId + "|" + prim.textureStem;
@@ -166,7 +155,7 @@ void UCreatureVisualGltf::SubmitDraw(UGeometryEngine &engine,
     CreatureDrawRequest req;
     req.Mvp = mvp;
     req.Texture = tex;
-    if (prim.skinned && !BoneMatrices.empty())
+    if (prim.skinned && BoneMatrices && !BoneMatrices->empty())
     {
       req.Kind = CreatureDrawKind::SkinnedMesh;
       req.SkinnedPrimitive = &prim;

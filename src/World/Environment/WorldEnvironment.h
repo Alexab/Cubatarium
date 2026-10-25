@@ -155,6 +155,15 @@ private:
   float LoadedCreaturePositionValidationTimer{0.f};
   bool LoadedCreaturePositionValidationPending{true};
   std::mt19937 NaturalPopulationRng{0xC0BA7AULL};
+
+  // Resolved-appearance cache keyed "speciesskin"; validated against
+  // storage revisions/pointers so any reload invalidates it (audit V6).
+  mutable std::unordered_map<std::string, ResolvedCreatureAppearance>
+      CreatureAppearanceCache;
+  mutable uint64_t AppearanceCacheDefsRevision{0};
+  mutable uint64_t AppearanceCacheSkinsRevision{0};
+  mutable const UCreatureDefinitionStorage *AppearanceCacheDefsPtr{nullptr};
+  mutable const USkinDefinitionStorage *AppearanceCacheSkinsPtr{nullptr};
 };
 
 /// Body origin ~3 blocks ahead of the viewer camera (falls back to the world

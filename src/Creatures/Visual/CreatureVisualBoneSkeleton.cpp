@@ -34,7 +34,7 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     float dt)
 {
   BodyOrigin = creature.GetFeetPosition();
-  BodyYaw = creature.GetYaw() + animDef.visual.modelYawOffsetDeg;
+  BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
   SpeciesId = animDef.Id;
   SkinId = creature.GetSkinId();
   const std::string geoFile = animDef.visual.boneSkeleton.geometryFile.empty()
@@ -44,13 +44,7 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
   TextureStem = animDef.visual.boneSkeleton.textureStem.empty()
                     ? "diffuse"
                     : animDef.visual.boneSkeleton.textureStem;
-  DefaultTextureKey = animDef.visual.defaultTextureKey.empty()
-                          ? Appearance.defaultTextureKey
-                          : animDef.visual.defaultTextureKey;
-  if (DefaultTextureKey.empty())
-  {
-    DefaultTextureKey = "body";
-  }
+  RefreshDefaultTextureKey(animDef);
 
   if (!MeshAsset || MeshAsset->geometry.identifier != GeometryId)
   {
@@ -94,23 +88,19 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
   }
 }
 
-void UCreatureVisualBoneSkeleton::SubmitDraw(UGeometryEngine &engine,
+void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
                                             const glm::mat4 &viewProj)
 {
-  if (!MeshAsset || !Hierarchy || CachedBoneMatrices.empty())
+  if (!MeshAsset || !Hierarchy || CachedBoneMatrices.empty() ||
+      !DrawEnabled(ctx))
   {
     return;
   }
-
-  const RenderSettings &settings = engine.GetRenderSettings();
-  auto creatureTextures = engine.GetCreatureTextureStorage();
-  if (!creatureTextures || !settings.CreatureTexturedParts)
-  {
-    return;
-  }
+  const UCreatureTextureStorage &creatureTextures = *ctx.Textures;
+  const RenderSettings &settings = *ctx.Settings;
 
   const GLuint tex = ResolveCreatureSpeciesTexture(
-      *creatureTextures, SpeciesId, TextureStem, DefaultTextureKey, SkinId);
+      creatureTextures, SpeciesId, TextureStem, DefaultTextureKey, SkinId);
   if (tex == 0)
   {
     const std::string key =
@@ -123,10 +113,10 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(UGeometryEngine &engine,
   }
 
   const glm::mat4 bodyMat =
-      BuildCreatureRootMatrix(BodyOrigin, BodyYaw, 0.f, []()
+      BuildCreatureRootMatrix(BodyOrigin, BodyYawDeg, 0.f, []()
                               { return BoneSkeletonEntityConventionMatrix(); });
 
-  CreatureDrawQueue &queue = engine.GetCreatureDrawQueue();
+  CreatureDrawQueue &queue = *ctx.Queue;
   for (size_t boneIdx = 0; boneIdx < MeshAsset->boneMeshes.size(); ++boneIdx)
   {
     const glm::mat4 boneMat = bodyMat * CachedBoneMatrices[boneIdx];
@@ -188,12 +178,17 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(UGeometryEngine &engine,
           out = CachedBoneMatrices[it->second];
           return true;
         };
-    WornEquipmentDrawer::SubmitFromCreature(engine, *PoseCreature, viewProj,
-                                            bodyMat, boneLookup);
-    const UItemDefinitionStorage *items = nullptr;
-    // Items storage is optional; scale falls back to category defaults via id.
-    WornEquipmentDrawer::SubmitWieldedFromCreature(
-        engine, *PoseCreature, items, viewProj, bodyMat, boneLookup);
+    // Transitional: the worn-equipment drawer still submits through
+    // engine-level helpers shared with the GUI preview (audit V13 note).
+    if (ctx.Engine)
+    {
+      WornEquipmentDrawer::SubmitFromCreature(*ctx.Engine, *PoseCreature,
+                                              viewProj, bodyMat, boneLookup);
+      const UItemDefinitionStorage *items = nullptr;
+      // Items storage is optional; scale falls back to category defaults via id.
+      WornEquipmentDrawer::SubmitWieldedFromCreature(
+          *ctx.Engine, *PoseCreature, items, viewProj, bodyMat, boneLookup);
+    }
   }
 }
 

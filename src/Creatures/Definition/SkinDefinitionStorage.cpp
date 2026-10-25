@@ -1,4 +1,5 @@
 #include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Core/Json/JsonVec.h"
 #include "Core/Sort/CatalogSortUtil.h"
 #include <algorithm>
 #include <filesystem>
@@ -13,15 +14,6 @@ namespace cutum
 namespace
 {
 
-glm::vec4 ReadVec4(const nlohmann::json &arr, const glm::vec4 &fallback)
-{
-  if (!arr.is_array() || arr.size() < 4)
-  {
-    return fallback;
-  }
-  return glm::vec4(arr[0].get<float>(), arr[1].get<float>(),
-                   arr[2].get<float>(), arr[3].get<float>());
-}
 
 } // namespace
 
@@ -30,6 +22,7 @@ void USkinDefinitionStorage::Load(const std::string &folder)
   {
     std::unique_lock lock(DefinitionsMutex);
     Definitions.clear();
+    Revision.fetch_add(1, std::memory_order_relaxed);
   }
   if (!std::filesystem::exists(folder))
   {
@@ -142,6 +135,7 @@ bool USkinDefinitionStorage::LoadFile(const std::string &path)
 
     std::unique_lock lock(DefinitionsMutex);
     Definitions[def.Id] = std::move(def);
+    Revision.fetch_add(1, std::memory_order_relaxed);
     return true;
   }
   catch (const std::exception &e)

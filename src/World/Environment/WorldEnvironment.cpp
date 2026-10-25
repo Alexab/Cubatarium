@@ -586,9 +586,24 @@ UWorldEnvironment::GetResolvedAppearance(const UCreature &creature) const
   {
     return ResolvedCreatureAppearance{};
   }
+  const USkinDefinitionStorage *skins = SkinDefinitions.get();
+  const uint64_t defsRevision =
+      CreatureDefinitions->Revision.load(std::memory_order_relaxed);
+  const uint64_t skinsRevision =
+      skins ? skins->Revision.load(std::memory_order_relaxed) : 0;
+  if (defsRevision != AppearanceCacheDefsRevision ||
+      skinsRevision != AppearanceCacheSkinsRevision ||
+      CreatureDefinitions.get() != AppearanceCacheDefsPtr ||
+      skins != AppearanceCacheSkinsPtr)
+  {
+    CreatureAppearanceCache.clear();
+    AppearanceCacheDefsRevision = defsRevision;
+    AppearanceCacheSkinsRevision = skinsRevision;
+    AppearanceCacheDefsPtr = CreatureDefinitions.get();
+    AppearanceCacheSkinsPtr = skins;
+  }
   USkinDefinitionStorage empty;
-  const USkinDefinitionStorage &skins =
-      SkinDefinitions ? *SkinDefinitions : empty;
+  const USkinDefinitionStorage &skinStorage = skins ? *skins : empty;
   std::string skinId = creature.GetSkinId();
   if (skinId.empty() && creature.IsPlayerCharacter())
   {
@@ -604,8 +619,19 @@ UWorldEnvironment::GetResolvedAppearance(const UCreature &creature) const
       }
     }
   }
-  return ResolveCreatureAppearance(*CreatureDefinitions, skins,
-                                   creature.GetTypeId(), skinId);
+  // Resolving rebuilds part lists with storage lookups; cache per
+  // (species, effective skin) — this used to run per creature per frame
+  // (audit V6).
+  const std::string cacheKey = creature.GetTypeId() + '\x1f' + skinId;
+  if (const auto it = CreatureAppearanceCache.find(cacheKey);
+      it != CreatureAppearanceCache.end())
+  {
+    return it->second;
+  }
+  ResolvedCreatureAppearance resolved = ResolveCreatureAppearance(
+      *CreatureDefinitions, skinStorage, creature.GetTypeId(), skinId);
+  CreatureAppearanceCache[cacheKey] = resolved;
+  return resolved;
 }
 
 namespace

@@ -4,6 +4,7 @@
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Visual/CreatureDrawContext.h"
 #include "Pose/CreaturePoseParams.h"
 #include <glm/glm.hpp>
 
@@ -12,7 +13,6 @@ namespace cutum
 
 class UCreature;
 struct CreatureDefinition;
-class UGeometryEngine;
 
 class IUCreatureVisual
 {
@@ -26,7 +26,7 @@ public:
   {
     Appearance = appearance;
   }
-  virtual void SubmitDraw(UGeometryEngine &engine,
+  virtual void SubmitDraw(const CreatureDrawContext &ctx,
                           const glm::mat4 &viewProj) = 0;
 
 protected:

@@ -9,6 +9,7 @@
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureVisibility.h"
+#include "Creatures/Visual/CreatureDrawContext.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
 #include "Pose/IUCreaturePosePresenter.h"
@@ -400,11 +401,12 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(
 
 void UCreatureDrawPass::DrawSkinnedMesh(
     const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
-    const std::vector<glm::mat4> &boneMatrices)
+    const std::shared_ptr<const std::vector<glm::mat4>> &boneMatrices)
 {
   if (texture == 0 || mesh.mesh.interleavedPosUv.empty() ||
       mesh.mesh.indices.empty() || !creatureSkinnedShader ||
-      !creatureSkinnedShader->IsValid())
+      !creatureSkinnedShader->IsValid() || !boneMatrices ||
+      boneMatrices->empty())
   {
     return;
   }
@@ -430,10 +432,16 @@ void UCreatureDrawPass::DrawSkinnedMesh(
   creatureSkinnedShader->SetMat4("mvp_matrix", mvp);
   BindCreatureBonePaletteBlock(creatureSkinnedShader->GetProgramID(),
                                kCreatureBonePaletteBindingPoint);
-  const size_t boneCount = UploadCreatureBonePaletteGpu(boneMatrices);
-  if (boneCount > 0)
+  // All primitives of one creature share the palette pointer; upload it once
+  // per creature per frame instead of once per primitive (audit V7).
+  if (boneMatrices != FrameBonePalette)
   {
-    ++Stats.CreatureBoneMatrixUploads;
+    const size_t boneCount = UploadCreatureBonePaletteGpu(*boneMatrices);
+    if (boneCount > 0)
+    {
+      ++Stats.CreatureBoneMatrixUploads;
+    }
+    FrameBonePalette = boneMatrices;
   }
 
   glBindVertexArray(vao);
@@ -459,9 +467,21 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   const CreatureId controlledId = world.GetControlledCreatureId();
   Stats.Reset();
   Queue.Clear();
+  FrameBonePalette.reset();
 
   const Frustum frustum = Frustum::FromViewProjection(viewProj);
   const glm::vec3 cameraPos = camera->GetPosition();
+
+  // Narrow draw context for the visual backends: queue, textures, settings
+  // and camera position (audit V13/V9). The engine pointer is the
+  // transitional worn-equipment path.
+  CreatureDrawContext drawContext;
+  drawContext.Queue = &Queue;
+  drawContext.Textures = engine.GetCreatureTextureStorage().get();
+  drawContext.Settings = &engine.GetRenderSettings();
+  drawContext.CameraPosition = cameraPos;
+  drawContext.Engine = &engine;
+
   const float maxDistBlocks =
       static_cast<float>(world.GetEffectiveRenderDistance()) *
       static_cast<float>(CHUNK_SIZE);
@@ -477,38 +497,8 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
 
         auto draw_debug_bounds = [&]()
         {
-          if (!render.CreatureDebugBounds)
-          {
-            return;
-          }
-          const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
-          const glm::vec3 sizeBlocks = creature.GetBounds().currentSizeBlocks;
-          const glm::vec3 center =
-              BoundsCollisionCenter(bodyOrigin, sizeBlocks);
-          glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
-          model = glm::scale(model, sizeBlocks);
-          engine.DrawBoxWireframe(viewProj * model,
-                                  glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
-
-          const int gx = static_cast<int>(std::floor(bodyOrigin.x));
-          const int gz = static_cast<int>(std::floor(bodyOrigin.z));
-          const float feetY = BoundsFeetY(bodyOrigin);
-          float groundY = feetY;
-          float delta = 0.0f;
-          if (const std::optional<float> queryY =
-                  world.QueryGroundFeetYUnder(gx, gz, feetY))
-          {
-            groundY = *queryY;
-            delta = feetY - groundY;
-          }
-          const glm::vec3 groundCenter(static_cast<float>(gx) + 0.5f, groundY,
-                                       static_cast<float>(gz) + 0.5f);
-          glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), groundCenter);
-          groundModel = glm::scale(groundModel, glm::vec3(1.02f, 0.02f, 1.02f));
-          const float groundColor = std::abs(delta) < 0.05f ? 0.2f : 1.0f;
-          engine.DrawBoxWireframe(
-              viewProj * groundModel,
-              glm::vec4(groundColor, 1.0f - groundColor * 0.5f, 0.15f, 1.0f));
+          DrawCreatureDebugBounds(creature, world, viewProj, engine,
+                                  render.CreatureDebugBounds);
         };
 
         if (controlled_first_person)
@@ -536,71 +526,127 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           fallback.Id = animType;
           def = &fallback;
         }
-        if (IUCreatureVisual *visual = creature.GetVisual())
-        {
-          visual->SetAppearance(world.GetResolvedAppearance(creature));
-          const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
-          CreaturePoseParams pose;
-          const LocomotionArchetype poseArchetype =
-              ResolveCreaturePoseArchetype(def->visual.rig.templateId,
-                                           facts.archetype);
-          if (ParseCreatureVisualBackend(def->visual.backend) ==
-              CreatureVisualBackend::RigidVoxels)
-          {
-            if (IUCreaturePosePresenter *presenter =
-                    world.GetPosePresenterRegistry().Get(poseArchetype))
-            {
-              pose = presenter->Compute(facts, *def, dt);
-            }
-          }
-          visual->UpdatePose(creature, facts, pose, *def, dt);
-          ActiveHitFlash01 = creature.GetHitFlash01();
-          visual->SubmitDraw(engine, viewProj);
-          ActiveHitFlash01 = 0.f;
-        }
+        SubmitCreatureVisual(world, creature, *def, dt, drawContext, viewProj);
 
-        // World-space mob health bar (fade ~2s after damage).
-        if (!creature.IsPlayerCharacter() &&
-            creature.GetHealthBarVisibleSec() > 0.f)
-        {
-          const CreatureVitals &vitals = creature.GetVitals();
-          const float ratio =
-              vitals.maxHealth > 0.f
-                  ? std::clamp(vitals.health / vitals.maxHealth, 0.f, 1.f)
-                  : 0.f;
-          const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
-          const glm::vec3 sizeBlocks = creature.GetBounds().currentSizeBlocks;
-          const float topY =
-              BoundsFeetY(bodyOrigin) + std::max(0.6f, sizeBlocks.y) + 0.25f;
-          const glm::vec3 barCenter(bodyOrigin.x, topY, bodyOrigin.z);
-          const float barW = std::max(0.6f, sizeBlocks.x * 0.9f);
-          glm::mat4 bg = glm::translate(glm::mat4(1.0f), barCenter);
-          bg = glm::scale(bg, glm::vec3(barW, 0.08f, 0.08f));
-          engine.DrawBoxWireframe(viewProj * bg,
-                                  glm::vec4(0.15f, 0.15f, 0.15f, 0.9f));
-          if (ratio > 0.01f)
-          {
-            const float fillW = barW * ratio;
-            const glm::vec3 fillCenter =
-                barCenter + glm::vec3(-(barW - fillW) * 0.5f, 0.f, 0.f);
-            glm::mat4 fill = glm::translate(glm::mat4(1.0f), fillCenter);
-            fill = glm::scale(fill, glm::vec3(fillW, 0.06f, 0.06f));
-            glm::vec4 color{0.2f, 0.85f, 0.25f, 1.f};
-            if (ratio < 0.35f)
-            {
-              color = glm::vec4(0.9f, 0.2f, 0.15f, 1.f);
-            }
-            else if (ratio < 0.65f)
-            {
-              color = glm::vec4(0.9f, 0.85f, 0.15f, 1.f);
-            }
-            engine.DrawBoxWireframe(viewProj * fill, color);
-          }
-        }
+        DrawCreatureHealthBar(creature, viewProj, engine);
 
         draw_debug_bounds();
       });
   Queue.Flush(engine);
+}
+
+void UCreatureDrawPass::SubmitCreatureVisual(
+    UWorld &world, UCreature &creature, const CreatureDefinition &def,
+    float dt, const CreatureDrawContext &ctx, const glm::mat4 &viewProj)
+{
+  IUCreatureVisual *visual = creature.GetVisual();
+  if (!visual)
+  {
+    return;
+  }
+  visual->SetAppearance(world.GetResolvedAppearance(creature));
+  const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
+  CreaturePoseParams pose;
+  // Procedural pose parameters are only consumed by the rigid backend;
+  // skeleton/gltf backends derive pose from locomotion facts themselves.
+  const LocomotionArchetype poseArchetype =
+      ResolveCreaturePoseArchetype(def.visual.rig.templateId,
+                                   facts.archetype);
+  if (ParseCreatureVisualBackend(def.visual.backend) ==
+      CreatureVisualBackend::RigidVoxels)
+  {
+    if (IUCreaturePosePresenter *presenter =
+            world.GetPosePresenterRegistry().Get(poseArchetype))
+    {
+      pose = presenter->Compute(facts, def, dt);
+    }
+  }
+  visual->UpdatePose(creature, facts, pose, def, dt);
+  ActiveHitFlash01 = creature.GetHitFlash01();
+  visual->SubmitDraw(ctx, viewProj);
+  ActiveHitFlash01 = 0.f;
+}
+
+void UCreatureDrawPass::DrawCreatureHealthBar(const UCreature &creature,
+                                              const glm::mat4 &viewProj,
+                                              UGeometryEngine &engine)
+{
+  // World-space mob health bar (fade ~2s after damage).
+  if (creature.IsPlayerCharacter() || creature.GetHealthBarVisibleSec() <= 0.f)
+  {
+    return;
+  }
+  const CreatureVitals &vitals = creature.GetVitals();
+  const float ratio = vitals.maxHealth > 0.f
+                          ? std::clamp(vitals.health / vitals.maxHealth, 0.f, 1.f)
+                          : 0.f;
+  const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
+  const glm::vec3 sizeBlocks = creature.GetBounds().currentSizeBlocks;
+  const float topY =
+      BoundsFeetY(bodyOrigin) + std::max(0.6f, sizeBlocks.y) + 0.25f;
+  const glm::vec3 barCenter(bodyOrigin.x, topY, bodyOrigin.z);
+  const float barW = std::max(0.6f, sizeBlocks.x * 0.9f);
+  glm::mat4 bg = glm::translate(glm::mat4(1.0f), barCenter);
+  bg = glm::scale(bg, glm::vec3(barW, 0.08f, 0.08f));
+  engine.DrawBoxWireframe(viewProj * bg, glm::vec4(0.15f, 0.15f, 0.15f, 0.9f));
+  if (ratio > 0.01f)
+  {
+    const float fillW = barW * ratio;
+    const glm::vec3 fillCenter =
+        barCenter + glm::vec3(-(barW - fillW) * 0.5f, 0.f, 0.f);
+    glm::mat4 fill = glm::translate(glm::mat4(1.0f), fillCenter);
+    fill = glm::scale(fill, glm::vec3(fillW, 0.06f, 0.06f));
+    glm::vec4 color{0.2f, 0.85f, 0.25f, 1.f};
+    if (ratio < 0.35f)
+    {
+      color = glm::vec4(0.9f, 0.2f, 0.15f, 1.f);
+    }
+    else if (ratio < 0.65f)
+    {
+      color = glm::vec4(0.9f, 0.85f, 0.15f, 1.f);
+    }
+    engine.DrawBoxWireframe(viewProj * fill, color);
+  }
+}
+
+void UCreatureDrawPass::DrawCreatureDebugBounds(const UCreature &creature,
+                                                const UWorld &world,
+                                                const glm::mat4 &viewProj,
+                                                UGeometryEngine &engine,
+                                                bool enabled)
+{
+  if (!enabled)
+  {
+    return;
+  }
+  const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
+  const glm::vec3 sizeBlocks = creature.GetBounds().currentSizeBlocks;
+  const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, sizeBlocks);
+  glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
+  model = glm::scale(model, sizeBlocks);
+  engine.DrawBoxWireframe(viewProj * model,
+                          glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
+
+  // Ground-contact marker under the feet (green when grounded).
+  const int gx = static_cast<int>(std::floor(bodyOrigin.x));
+  const int gz = static_cast<int>(std::floor(bodyOrigin.z));
+  const float feetY = BoundsFeetY(bodyOrigin);
+  float groundY = feetY;
+  float delta = 0.0f;
+  if (const std::optional<float> queryY =
+          world.QueryGroundFeetYUnder(gx, gz, feetY))
+  {
+    groundY = *queryY;
+    delta = feetY - groundY;
+  }
+  const glm::vec3 groundCenter(static_cast<float>(gx) + 0.5f, groundY,
+                               static_cast<float>(gz) + 0.5f);
+  glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), groundCenter);
+  groundModel = glm::scale(groundModel, glm::vec3(1.02f, 0.02f, 1.02f));
+  const float groundColor = std::abs(delta) < 0.05f ? 0.2f : 1.0f;
+  engine.DrawBoxWireframe(
+      viewProj * groundModel,
+      glm::vec4(groundColor, 1.0f - groundColor * 0.5f, 0.15f, 1.0f));
 }
 
 } // namespace cutum
