@@ -2,6 +2,7 @@
 #define CREATUREDRAWQUEUE_H
 
 #include "Creatures/Visual/CreatureDrawRequest.h"
+#include "Creatures/Visual/CreatureDrawSink.h"
 #include <algorithm>
 #include <vector>
 
@@ -36,7 +37,7 @@ public:
   {
     Requests.push_back(std::move(request));
   }
-  void Flush(UGeometryEngine &engine);
+  void Flush(ICreatureDrawSink &sink);
 
   size_t Size() const { return Requests.size(); }
 

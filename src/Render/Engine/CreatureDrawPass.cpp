@@ -10,6 +10,7 @@
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureDrawContext.h"
+#include "Creatures/Visual/CreatureEngineDrawSink.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
 #include "Pose/IUCreaturePosePresenter.h"
@@ -532,7 +533,8 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
 
         draw_debug_bounds();
       });
-  Queue.Flush(engine);
+  UEngineCreatureDrawSink sink(engine);
+  Queue.Flush(sink);
 }
 
 void UCreatureDrawPass::SubmitCreatureVisual(

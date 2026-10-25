@@ -4,7 +4,14 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
+#include "App/Settings/RenderSettings.h"
+#include "Creatures/Core/Creature.h"
 #include "Creatures/Visual/CreatureAppearance.h"
+#include "Creatures/Visual/CreatureDrawContext.h"
+#include "Creatures/Visual/CreatureDrawQueue.h"
+#include "Creatures/Visual/CreatureDrawSink.h"
+#include "Creatures/Visual/CreatureVisual.h"
+#include "Creatures/Visual/CreatureVisualFactory.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureRootTransform.h"
@@ -70,41 +77,6 @@ void UploadIconCubeMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
                         reinterpret_cast<void *>(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
   glBindVertexArray(0);
-}
-
-GLuint GetOrCreatePreviewSkeletalVao(const cutum::BoneSkeletonCubeMeshCpu &mesh,
-                                     std::unordered_map<size_t, GLuint> &cache)
-{
-  (void)cache;
-  return cutum::CreatureMeshGpuCache::Instance().GetOrCreateSkeletalMeshVao(
-      mesh);
-}
-
-GLuint GetOrCreatePreviewSkinnedVao(const cutum::GltfPrimitiveCpu &mesh,
-                                    std::unordered_map<size_t, GLuint> &cache)
-{
-  (void)cache;
-  size_t indexCount = 0;
-  return cutum::CreatureMeshGpuCache::Instance().GetOrCreateGltfSkinnedMeshVao(
-      mesh, indexCount);
-}
-
-const GltfAnimationCpu *ResolvePreviewGltfClip(const CreatureGltfMeshAsset &asset,
-                                               bool preferWalk)
-{
-  static const char *kWalkFirst[] = {"walk", "idle", "run"};
-  static const char *kIdleFirst[] = {"idle", "walk"};
-  const char *const *order = preferWalk ? kWalkFirst : kIdleFirst;
-  const size_t orderLen = preferWalk ? 3 : 2;
-  for (size_t i = 0; i < orderLen; ++i)
-  {
-    const auto it = asset.animationIndexByName.find(order[i]);
-    if (it != asset.animationIndexByName.end())
-    {
-      return &asset.animations[it->second];
-    }
-  }
-  return nullptr;
 }
 
 void UploadPreviewSkinnedBones(class UShaderProgram &shader,
@@ -397,6 +369,132 @@ GLuint UCreaturePreviewRenderer::CreateSolidColorTexture(int size, float r,
   return tex;
 }
 
+// Queue sink for the preview FBO: draws creature requests with the preview
+// shaders and the shared GPU mesh cache (audit 2.5). Wireframes are not
+// shown in icon previews.
+class PreviewCreatureDrawSink final : public cutum::ICreatureDrawSink
+{
+public:
+  PreviewCreatureDrawSink(cutum::UShaderProgram *shader,
+                          cutum::UShaderProgram *skinnedShader, GLuint cubeVao,
+                          GLuint headVao, GLuint bodyVao, GLuint rigidHeadVao)
+      : Shader(shader), SkinnedShader(skinnedShader), CubeVao(cubeVao),
+        HeadVao(headVao), BodyVao(bodyVao), RigidHeadVao(rigidHeadVao) {}
+
+  void DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
+                        cutum::CreaturePartMesh mesh) override
+  {
+    if (!Shader || !Shader->IsValid() || texture == 0)
+    {
+      return;
+    }
+    GLuint vao = CubeVao;
+    if (mesh == cutum::CreaturePartMesh::Head)
+    {
+      vao = HeadVao;
+    }
+    else if (mesh == cutum::CreaturePartMesh::Body)
+    {
+      vao = BodyVao;
+    }
+    else if (mesh == cutum::CreaturePartMesh::RigidHead)
+    {
+      vao = RigidHeadVao;
+    }
+    DrawWithShader(*Shader, vao, mvp, texture, 36, glm::vec4(1.f));
+  }
+
+  void DrawBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
+                            const cutum::BoneSkeletonCubeMeshCpu &mesh) override
+  {
+    if (!Shader || !Shader->IsValid() || texture == 0 ||
+        mesh.interleavedPosUv.empty() || mesh.indices.empty())
+    {
+      return;
+    }
+    const GLuint vao = cutum::CreatureMeshGpuCache::Instance()
+                           .GetOrCreateSkeletalMeshVao(mesh);
+    DrawWithShader(*Shader, vao, mvp, texture,
+                   static_cast<GLsizei>(mesh.indices.size()), glm::vec4(1.f));
+  }
+
+  void DrawSkinnedMesh(
+      const glm::mat4 &mvp, GLuint texture, const cutum::GltfPrimitiveCpu &mesh,
+      const std::shared_ptr<const std::vector<glm::mat4>> &boneMatrices) override
+  {
+    if (!SkinnedShader || !SkinnedShader->IsValid() || texture == 0 ||
+        mesh.mesh.interleavedPosUv.empty() || mesh.mesh.indices.empty() ||
+        !boneMatrices || boneMatrices->empty())
+    {
+      return;
+    }
+    size_t indexCount = 0;
+    const GLuint vao = cutum::CreatureMeshGpuCache::Instance()
+                           .GetOrCreateGltfSkinnedMeshVao(mesh, indexCount);
+    if (vao == 0)
+    {
+      return;
+    }
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    SkinnedShader->Use();
+    SkinnedShader->SetInt("texture0", 0);
+    SkinnedShader->SetMat4("mvp_matrix", mvp);
+    UploadPreviewSkinnedBones(*SkinnedShader, *boneMatrices);
+    glBindVertexArray(vao);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
+                   GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
+    SkinnedShader->Unuse();
+    glBindTexture(GL_TEXTURE_2D, 0);
+  }
+
+  void DrawBoxWireframe(const glm::mat4 &mvp,
+                        const glm::vec4 &color) override
+  {
+    (void)mvp;
+    (void)color;
+  }
+
+  void DrawBillboard(const glm::mat4 &mvp, GLuint texture,
+                     const glm::vec4 &tint) override
+  {
+    if (!Shader || !Shader->IsValid() || texture == 0)
+    {
+      return;
+    }
+    // Billboards render as a tinted textured cube in icon previews.
+    DrawWithShader(*Shader, CubeVao, mvp, texture, 36, tint);
+  }
+
+private:
+  void DrawWithShader(cutum::UShaderProgram &shader, GLuint vao,
+                      const glm::mat4 &mvp, GLuint texture, GLsizei count,
+                      const glm::vec4 &tint)
+  {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    shader.Use();
+    shader.SetInt("texture0", 0);
+    shader.SetInt("uAnimFrame", 0);
+    shader.SetInt("uAnimFrameCount", 1);
+    shader.SetVec4("uTint", tint);
+    shader.SetMat4("mvp_matrix", mvp);
+    glBindVertexArray(vao);
+    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
+    shader.Unuse();
+    glBindTexture(GL_TEXTURE_2D, 0);
+  }
+
+  cutum::UShaderProgram *Shader;
+  cutum::UShaderProgram *SkinnedShader;
+  GLuint CubeVao;
+  GLuint HeadVao;
+  GLuint BodyVao;
+  GLuint RigidHeadVao;
+};
+
 bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
                                                 const std::string &skinId,
                                                 int viewportSize, float yawDeg,
@@ -417,273 +515,131 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     return false;
   }
 
-  if (ParseCreatureVisualBackend(def->visual.backend) ==
-      CreatureVisualBackend::GltfSkeleton)
+  const CreatureVisualBackend backend =
+      ParseCreatureVisualBackend(def->visual.backend);
+  if (backend == CreatureVisualBackend::GltfSkeleton ||
+      backend == CreatureVisualBackend::BoneSkeleton)
   {
-    const std::string modelFile = def->visual.gltf.modelPath.empty()
-                                      ? "model.gltf"
-                                      : def->visual.gltf.modelPath;
-    const auto meshAsset =
-        CreatureGltfCache::Instance().Load(speciesId, modelFile);
-    const std::string defaultTex = def->visual.defaultTextureKey.empty()
-                                       ? "body"
-                                       : def->visual.defaultTextureKey;
-
-    const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
-    glClearColor(bg.r, bg.g, bg.b, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    if (!meshAsset)
+    // Shared visual backends draw the preview (audit 2.5): a throwaway
+    // creature standing at the origin, preview locomotion facts, and the
+    // submitted requests flushed through the preview sink. This replaces
+    // per-backend re-implementations with their own VAO caches.
+    const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
+    UCreature previewCreature(1, speciesId, glm::vec3(0.0f), eyeOffset);
+    previewCreature.GetBoundsMutable().profile = def->bounds;
+    previewCreature.GetBoundsMutable().currentSizeBlocks =
+        def->bounds.restSizeBlocks;
+    if (!skinId.empty())
     {
-      const std::string key = speciesId + "|" + modelFile;
-      if (gPreviewGltfMissingLogged.insert(key).second)
-      {
-        std::cerr << "CreaturePreviewRenderer: missing glTF mesh for species="
-                  << speciesId << " model=" << modelFile << std::endl;
-      }
-      return false;
+      previewCreature.SetSkinId(skinId);
     }
-
-    const glm::mat4 projection =
-        glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 30.0f);
-    const glm::mat4 view = OrbitView(yawDeg, pitchDeg, kOrbitDistance);
-    const float feetOffsetY =
-        def->visual.gltf.modelOffsetY - meshAsset->bindMinY;
-    glm::mat4 bodyMat = GltfPreviewRootMatrix(*meshAsset, 1.2f, feetOffsetY);
-    const float modelScale = def->visual.gltf.modelScale;
-    if (modelScale != 1.f)
-    {
-      bodyMat = bodyMat * glm::scale(glm::mat4(1.f), glm::vec3(modelScale));
-    }
-
-    static std::unordered_map<size_t, GLuint> previewGltfVaoCache;
-    static std::unordered_map<size_t, GLuint> previewGltfSkinnedVaoCache;
-    const glm::mat4 mvp = projection * view * bodyMat;
-    const GltfAnimationCpu *previewAnim =
-        ResolvePreviewGltfClip(*meshAsset, animateWalk);
-    const std::vector<glm::mat4> skinBones =
-        meshAsset->hasSkin
-            ? ComputeGltfSkinMatrices(*meshAsset, previewAnim, animTimeSec,
-                                      true)
-            : std::vector<glm::mat4>{};
-
-    bool drewAny = false;
-    std::vector<std::string> missingTextureStems;
-    for (const GltfPrimitiveCpu &prim : meshAsset->primitives)
-    {
-      const GLuint tex = cutum::ResolveCreatureSpeciesTexture(
-          *Textures, speciesId, prim.textureStem, defaultTex);
-      if (tex == 0)
-      {
-        missingTextureStems.push_back(prim.textureStem);
-        continue;
-      }
-
-      const BoneSkeletonCubeMeshCpu &cube = prim.mesh;
-      if (cube.interleavedPosUv.empty() || cube.indices.empty())
-      {
-        continue;
-      }
-
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, tex);
-
-      if (prim.skinned && SkinnedShader && SkinnedShader->IsValid() &&
-          !skinBones.empty())
-      {
-        SkinnedShader->Use();
-        SkinnedShader->SetInt("texture0", 0);
-        SkinnedShader->SetMat4("mvp_matrix", mvp);
-        UploadPreviewSkinnedBones(*SkinnedShader, skinBones);
-        const GLuint vao =
-            GetOrCreatePreviewSkinnedVao(prim, previewGltfSkinnedVaoCache);
-        glBindVertexArray(vao);
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(cube.indices.size()),
-                       GL_UNSIGNED_INT, nullptr);
-        SkinnedShader->Unuse();
-      }
-      else if (prim.skinned && !skinBones.empty())
-      {
-        Shader->Use();
-        Shader->SetInt("texture0", 0);
-        Shader->SetInt("uAnimFrame", 0);
-        Shader->SetInt("uAnimFrameCount", 1);
-        const GLuint vao =
-            GetOrCreatePreviewSkeletalVao(cube, previewGltfVaoCache);
-        glBindVertexArray(vao);
-        Shader->SetMat4("mvp_matrix", mvp);
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(cube.indices.size()),
-                       GL_UNSIGNED_INT, nullptr);
-        Shader->Unuse();
-      }
-      else
-      {
-        Shader->Use();
-        Shader->SetInt("texture0", 0);
-        Shader->SetInt("uAnimFrame", 0);
-        Shader->SetInt("uAnimFrameCount", 1);
-        const GLuint vao =
-            GetOrCreatePreviewSkeletalVao(cube, previewGltfVaoCache);
-        glBindVertexArray(vao);
-        Shader->SetMat4("mvp_matrix", mvp);
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(cube.indices.size()),
-                       GL_UNSIGNED_INT, nullptr);
-        Shader->Unuse();
-      }
-      drewAny = true;
-    }
-
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    if (!drewAny)
-    {
-      const std::string key = speciesId + "|textures";
-      if (gPreviewGltfMissingLogged.insert(key).second)
-      {
-        std::cerr
-            << "CreaturePreviewRenderer: missing glTF textures for species="
-            << speciesId;
-        if (!missingTextureStems.empty())
-        {
-          std::cerr << " stems:";
-          for (const std::string &stem : missingTextureStems)
-          {
-            std::cerr << " " << stem;
-          }
-        }
-        std::cerr << std::endl;
-      }
-      return false;
-    }
-    return true;
-  }
-
-  if (ParseCreatureVisualBackend(def->visual.backend) ==
-      CreatureVisualBackend::BoneSkeleton)
-  {
-    const std::string geoFile = def->visual.boneSkeleton.geometryFile.empty()
-                                    ? "geometry.geo.json"
-                                    : def->visual.boneSkeleton.geometryFile;
-    const auto meshAsset = CreatureBoneSkeletonCache::Instance().Load(
-        speciesId, geoFile, def->visual.boneSkeleton.geometryId);
-    const std::string texStem = def->visual.boneSkeleton.textureStem.empty()
-                                    ? "diffuse"
-                                    : def->visual.boneSkeleton.textureStem;
-    const std::string defaultTex = def->visual.defaultTextureKey.empty()
-                                       ? "body"
-                                       : def->visual.defaultTextureKey;
-    GLuint tex = cutum::ResolveCreatureSpeciesTexture(
-        *Textures, speciesId, texStem, defaultTex, skinId);
-    if (!meshAsset || tex == 0)
-    {
-      const std::string key = speciesId + "|" + geoFile + "|" +
-                              def->visual.boneSkeleton.geometryId + "|" + texStem;
-      if (gPreviewSkeletalMissingLogged.insert(key).second)
-      {
-        std::cerr << "CreaturePreviewRenderer: missing bone_skeleton "
-                  << (!meshAsset ? "mesh" : "texture")
-                  << " for species=" << speciesId << " geoFile=" << geoFile
-                  << " geometryId=" << def->visual.boneSkeleton.geometryId
-                  << " texStem=" << texStem << " skin=" << skinId << std::endl;
-      }
-      return false;
-    }
-
-    const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
-    glClearColor(bg.r, bg.g, bg.b, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    const glm::mat4 projection =
-        glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 30.0f);
-    const glm::mat4 view = OrbitView(yawDeg, pitchDeg, kOrbitDistance);
-    const glm::mat4 bodyMat =
-        BoneSkeletonPreviewRootMatrix(meshAsset->geometry, 1.2f);
 
     CreatureLocomotionFacts facts;
     if (animateWalk)
     {
       facts.state = LocomotionState::Walk;
-      facts.animPhase =
-          animTimeSec * (2.f * 3.14159265f * 0.35f);
+      facts.horizontalSpeed = def->locomotion.walkSpeed;
     }
     else
     {
       facts.state = LocomotionState::Idle;
-      facts.animPhase = 0.f;
     }
-    const BoneSkeletonPose pose =
-        BoneSkeletonPoseEngine::Compute(facts, *def, 0.f);
-    BoneSkeletonHierarchy hierarchy(meshAsset->geometry);
 
-    static std::unordered_map<size_t, GLuint> previewSkeletalVaoCache;
-    Shader->Use();
-    Shader->SetInt("texture0", 0);
-    Shader->SetInt("uAnimFrame", 0);
-    Shader->SetInt("uAnimFrameCount", 1);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    for (size_t boneIdx = 0; boneIdx < meshAsset->boneMeshes.size(); ++boneIdx)
+    std::unique_ptr<IUCreatureVisual> visual = CreateCreatureVisual(*def);
+    visual->SetAppearance(
+        ResolveCreatureAppearance(*Species, *Skins, speciesId, skinId));
+    // Fresh visual each render: advance its animation clock by the preview
+    // anim time in one step.
+    visual->UpdatePose(previewCreature, facts, CreaturePoseParams{}, *def,
+                       animTimeSec);
+
+    RenderSettings previewSettings;
+    CreatureDrawQueue queue;
+    CreatureDrawContext ctx;
+    ctx.Queue = &queue;
+    ctx.Textures = Textures.get();
+    ctx.Settings = &previewSettings;
+
+    // Backends place the model on its feet at the origin growing along +Y;
+    // aim the orbit camera at mid-height and scale distance by body size.
+    const float height = std::max(def->bounds.restSizeBlocks.y, 0.1f);
+    const float fitScale = glm::clamp(height / 1.8f, 0.55f, 3.0f);
+    const glm::mat4 projection =
+        glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 30.0f);
+    const glm::mat4 view =
+        OrbitView(yawDeg, pitchDeg, kOrbitDistance * fitScale) *
+        glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, height * 0.5f, 0.0f));
+    const glm::mat4 viewProj = projection * view;
+
+    visual->SubmitDraw(ctx, viewProj);
+    if (queue.Size() == 0)
     {
-      const glm::mat4 boneMat =
-          bodyMat * hierarchy.ComputeBoneMatrix(boneIdx, pose);
-      for (const BoneSkeletonCubeMeshCpu &cube :
-           meshAsset->boneMeshes[boneIdx].cubes)
+      const std::string key = speciesId + "|preview";
+      if (gPreviewGltfMissingLogged.insert(key).second)
       {
-        if (cube.interleavedPosUv.empty() || cube.indices.empty())
-        {
-          continue;
-        }
-        const GLuint vao =
-            GetOrCreatePreviewSkeletalVao(cube, previewSkeletalVaoCache);
-        glBindVertexArray(vao);
-        Shader->SetMat4("mvp_matrix",
-                        projection * view * boneMat * cube.restLocalMatrix);
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(cube.indices.size()),
-                       GL_UNSIGNED_INT, nullptr);
+        std::cerr << "CreaturePreviewRenderer: no drawable parts for species="
+                  << speciesId << std::endl;
       }
+      return false;
     }
-    glBindVertexArray(0);
-    Shader->Unuse();
-    glBindTexture(GL_TEXTURE_2D, 0);
 
-    if (armor)
+    const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
+    glClearColor(bg.r, bg.g, bg.b, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    PreviewCreatureDrawSink drawSink(Shader.get(), SkinnedShader.get(),
+                                     CubeVao, HeadCubeVao, BodyCubeVao,
+                                     RigidHeadCubeVao);
+    queue.Flush(drawSink);
+
+    // Armor / wielded overlays keep their own submission, aligned with the
+    // backend root matrix the body was drawn with.
+    const bool wantsEquipment =
+        (armor != nullptr) || (mainItemId && !mainItemId->empty()) ||
+        (offhandItemId && !offhandItemId->empty());
+    if (backend == CreatureVisualBackend::BoneSkeleton && wantsEquipment)
     {
-      const glm::mat4 viewProj = projection * view;
-      WornEquipmentDrawer::DrawImmediate(
-          *armor, viewProj, bodyMat,
-          [&](const std::string &boneName, glm::mat4 &out) -> bool
-          {
-            const auto it = meshAsset->geometry.boneIndexByName.find(boneName);
-            if (it == meshAsset->geometry.boneIndexByName.end())
-            {
-              return false;
-            }
-            out = hierarchy.ComputeBoneMatrix(it->second, pose);
-            return true;
-          },
-          Shader.get());
-    }
-    if ((mainItemId && !mainItemId->empty()) ||
-        (offhandItemId && !offhandItemId->empty()))
-    {
-      const glm::mat4 viewProj = projection * view;
-      const BoneMatrixLookupFn boneLookup =
-          [&](const std::string &boneName, glm::mat4 &out) -> bool
+      const std::string geoFile =
+          def->visual.boneSkeleton.geometryFile.empty()
+              ? "geometry.geo.json"
+              : def->visual.boneSkeleton.geometryFile;
+      const auto meshAsset = CreatureBoneSkeletonCache::Instance().Load(
+          speciesId, geoFile, def->visual.boneSkeleton.geometryId);
+      if (meshAsset)
       {
-        const auto it = meshAsset->geometry.boneIndexByName.find(boneName);
-        if (it == meshAsset->geometry.boneIndexByName.end())
+        BoneSkeletonHierarchy hierarchy(meshAsset->geometry);
+        const BoneSkeletonPose pose =
+            BoneSkeletonPoseEngine::Compute(facts, *def, 0.f);
+        const glm::mat4 bodyMat =
+            BuildCreatureRootMatrix(glm::vec3(0.0f),
+                                    def->visual.modelYawOffsetDeg, 0.f, []()
+                                    { return BoneSkeletonEntityConventionMatrix(); });
+        const BoneMatrixLookupFn boneLookup =
+            [&](const std::string &boneName, glm::mat4 &out) -> bool
         {
-          return false;
+          const auto it = meshAsset->geometry.boneIndexByName.find(boneName);
+          if (it == meshAsset->geometry.boneIndexByName.end())
+          {
+            return false;
+          }
+          out = hierarchy.ComputeBoneMatrix(it->second, pose);
+          return true;
+        };
+        if (armor)
+        {
+          WornEquipmentDrawer::DrawImmediate(*armor, viewProj, bodyMat,
+                                             boneLookup, Shader.get());
         }
-        out = hierarchy.ComputeBoneMatrix(it->second, pose);
-        return true;
-      };
-      WornEquipmentDrawer::SubmitWieldedPreview(
-          nullptr, Shader.get(), mainItemId ? *mainItemId : std::string(),
-          offhandItemId ? *offhandItemId : std::string(),
-          WornEquipmentDrawer::ItemDefinitions(), viewProj, bodyMat, boneLookup,
-          true);
+        if ((mainItemId && !mainItemId->empty()) ||
+            (offhandItemId && !offhandItemId->empty()))
+        {
+          WornEquipmentDrawer::SubmitWieldedPreview(
+              nullptr, Shader.get(),
+              mainItemId ? *mainItemId : std::string(),
+              offhandItemId ? *offhandItemId : std::string(),
+              WornEquipmentDrawer::ItemDefinitions(), viewProj, bodyMat,
+              boneLookup, true);
+        }
+      }
     }
     return true;
   }
