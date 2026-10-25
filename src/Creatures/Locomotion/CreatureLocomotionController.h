@@ -66,6 +66,13 @@ public:
   bool ConsumeClearShiftRequest();
 
 private:
+  // UpdateLocomotion mode branches (audit 4.2 tail).
+  void UpdateFlight(const UWorld *world, glm::vec3 &eyePos,
+                    const CreatureInput &input);
+  void UpdateSwimming(const UWorld *world, glm::vec3 &eyePos,
+                      const CreatureInput &input, float dt,
+                      const struct SampledFluidState &fluid,
+                      const PlayerCapsule &cap, CreatureId skipCreatureId);
   void updateLocomotionState(const CreatureInput &input);
   bool anchorFeetFromStandingEye(const UWorld *world, const glm::vec3 &eyePos);
   void syncEyeFromFeet(glm::vec3 &eyePos) const;
