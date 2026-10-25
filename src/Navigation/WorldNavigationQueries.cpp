@@ -25,7 +25,7 @@ UWorldNavigationQueries::UWorldNavigationQueries(const UWorld &world)
 }
 
 bool UWorldNavigationQueries::IsTerrestrialStandNode(
-    const NavigationStandNode &node, float body_height) const
+    const NavigationStandNode &node, float body_height, float body_width) const
 {
   const UBlockRegistry &registry = World.GetBlockRegistry();
   const glm::ivec3 ground(node.x, node.ground_y, node.z);
@@ -35,7 +35,7 @@ bool UWorldNavigationQueries::IsTerrestrialStandNode(
     return false;
   }
   const float feet_y = BlockTopY(node.ground_y);
-  const glm::vec3 size_blocks(0.6f, body_height, 0.6f);
+  const glm::vec3 size_blocks(body_width, body_height, body_width);
   const glm::vec3 body_origin(static_cast<float>(node.x), feet_y,
                               static_cast<float>(node.z));
   // Nav-hot path: ground + block clearance only (no fluid volume probe).
@@ -44,7 +44,8 @@ bool UWorldNavigationQueries::IsTerrestrialStandNode(
 
 bool UWorldNavigationQueries::CanStepTerrestrial(
     const NavigationStandNode &from, const NavigationStandNode &to,
-    float max_jump, float max_drop, float body_height) const
+    float max_jump, float max_drop, float body_height,
+    float body_width) const
 {
   const int dx = std::abs(to.x - from.x);
   const int dz = std::abs(to.z - from.z);

@@ -167,6 +167,7 @@ void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
       query.search_distance = 32;
       query.body_height =
           NavigationBodyHeightForBounds(snapshot->boundsSize.y);
+      query.body_width = std::max(0.6f, snapshot->boundsSize.x);
       query.max_jump = snapshot->locomotion.jumpHeightBlocks;
       const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
           bb.navigation, world, view->bodyOrigin, goal, query, dt, 0.45f, Id,
@@ -202,6 +203,7 @@ void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
         query.search_distance = 32;
         query.body_height =
             NavigationBodyHeightForBounds(snapshot->boundsSize.y);
+        query.body_width = std::max(0.6f, snapshot->boundsSize.x);
         query.max_jump = snapshot->locomotion.jumpHeightBlocks;
         const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
             bb.navigation, world, view->bodyOrigin, goal, query, dt, 0.45f, Id,

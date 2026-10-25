@@ -18,7 +18,8 @@ public:
   explicit UFlatNavigationMock(int ground_y) : GroundY(ground_y) {}
 
   bool IsTerrestrialStandNode(const cutum::NavigationStandNode &node,
-                              float /*body_height*/) const override
+                              float /*body_height*/,
+                              float /*body_width*/) const override
   {
     return node.ground_y == GroundY;
   }
@@ -26,7 +27,8 @@ public:
   bool CanStepTerrestrial(const cutum::NavigationStandNode &from,
                           const cutum::NavigationStandNode &to,
                           float max_jump, float max_drop,
-                          float /*body_height*/) const override
+                          float /*body_height*/,
+                          float /*body_width*/) const override
   {
     const int dx = std::abs(to.x - from.x);
     const int dz = std::abs(to.z - from.z);
@@ -51,7 +53,8 @@ class UWalledNavigationMock : public cutum::IUWorldNavigation
 {
 public:
   bool IsTerrestrialStandNode(const cutum::NavigationStandNode &node,
-                              float /*body_height*/) const override
+                              float /*body_height*/,
+                              float /*body_width*/) const override
   {
     return node.ground_y == 64;
   }
@@ -59,7 +62,8 @@ public:
   bool CanStepTerrestrial(const cutum::NavigationStandNode &from,
                           const cutum::NavigationStandNode &to,
                           float max_jump, float max_drop,
-                          float /*body_height*/) const override
+                          float /*body_height*/,
+                          float /*body_width*/) const override
   {
     const int dx = std::abs(to.x - from.x);
     const int dz = std::abs(to.z - from.z);
@@ -139,16 +143,17 @@ int main()
   {
   public:
     bool IsTerrestrialStandNode(const cutum::NavigationStandNode &node,
-                                float /*body_height*/) const override
+                                float /*body_height*/,
+                                float /*body_width*/) const override
     {
       return node.ground_y == 64 && node.x == 1 && node.z == 0;
     }
     bool CanStepTerrestrial(const cutum::NavigationStandNode & /*from*/,
                             const cutum::NavigationStandNode &to,
                             float /*max_jump*/, float /*max_drop*/,
-                            float body_height) const override
+                            float body_height, float body_width) const override
     {
-      return IsTerrestrialStandNode(to, body_height);
+      return IsTerrestrialStandNode(to, body_height, body_width);
     }
   };
   UEdgeNavigationMock edge_nav;
@@ -177,7 +182,8 @@ int main()
   {
   public:
     bool IsTerrestrialStandNode(const cutum::NavigationStandNode &node,
-                                float /*body_height*/) const override
+                                float /*body_height*/,
+                                float /*body_width*/) const override
     {
       // Pit floor at y=63 for x<=0; plateau at y=64 for x>=1.
       if (node.x <= 0)
@@ -189,11 +195,11 @@ int main()
     bool CanStepTerrestrial(const cutum::NavigationStandNode &from,
                             const cutum::NavigationStandNode &to,
                             float max_jump, float max_drop,
-                            float body_height) const override
+                            float body_height, float body_width) const override
     {
       const int dx = std::abs(to.x - from.x);
       const int dz = std::abs(to.z - from.z);
-      if (dx + dz != 1 || !IsTerrestrialStandNode(to, body_height))
+      if (dx + dz != 1 || !IsTerrestrialStandNode(to, body_height, body_width))
       {
         return false;
       }
