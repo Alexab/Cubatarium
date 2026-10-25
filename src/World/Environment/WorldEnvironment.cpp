@@ -176,6 +176,19 @@ void UWorldEnvironment::SyncCreatureSpatialIndex()
   CreatureSpatialIndexReady = true;
 }
 
+void UWorldEnvironment::UpdateCreatureInSpatialIndex(
+    const UCreature &creature)
+{
+  if (creature.IsPlayerCharacter())
+  {
+    return;
+  }
+  const CollisionVolume vol = creature.GetCollisionVolume();
+  CreatureSpatialIndex.Upsert(creature.GetId(), creature.GetBodyOrigin(),
+                              vol.halfExtents);
+  CreatureSpatialIndexReady = true;
+}
+
 std::vector<CreatureId>
 UWorldEnvironment::CreaturesInRadius(const glm::vec3 &center,
                                      float radius) const
@@ -1161,7 +1174,10 @@ void UWorldEnvironment::TickActivity(IUWorldPerception &perception,
                                      UWorldCreatureActivitySink &sink,
                                      float dt, bool stress_tick)
 {
-  SyncCreatureSpatialIndex();
+  // The index is maintained incrementally: spawn/remove and per-move
+  // upserts keep it exact, so the per-activity-tick full rebuild is gone
+  // (audit S7). ValidateLoadedCreaturePositions still rebuilds after
+  // repairing positions.
   if (!stress_tick)
   {
     LoadedCreaturePositionValidationTimer += std::max(0.f, dt);

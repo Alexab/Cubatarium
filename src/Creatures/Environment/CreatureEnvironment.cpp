@@ -13,6 +13,7 @@
 #include "World/Core/World.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
+#include <chrono>
 #include <unordered_map>
 #include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
@@ -241,6 +242,49 @@ bool HasAerialClearance(const UWorld &world, const CollisionVolume &vol,
   return !registry.BlocksMovement(world.GetBlockWorld().GetBlock(cell));
 }
 
+// Position-quantized memo for the environment probe (audit M2): the
+// O(r^3) volume scan used to run per creature per physics frame from
+// vitals, movement habitat gates and locomotion facts. Entries expire
+// after kProbeTtlSec, so block and fluid changes surface within that
+// bound; spawn-time decisions keep reading fresh (ForSpawn uses its own
+// clearance, aerial delegates here with at most one TTL of staleness).
+struct ProbeMemoKey
+{
+  int32_t x{0}, y{0}, z{0};
+  int32_t sx{0}, sy{0}, sz{0};
+  bool operator==(const ProbeMemoKey &o) const
+  {
+    return x == o.x && y == o.y && z == o.z && sx == o.sx && sy == o.sy &&
+           sz == o.sz;
+  }
+};
+
+struct ProbeMemoKeyHash
+{
+  size_t operator()(const ProbeMemoKey &k) const
+  {
+    size_t h = 1469598103934665603ull;
+    for (int32_t v : {k.x, k.y, k.z, k.sx, k.sy, k.sz})
+    {
+      h ^= static_cast<uint32_t>(v);
+      h *= 1099511628211ull;
+    }
+    return h;
+  }
+};
+
+constexpr float kProbeTtlSec = 0.2f;
+constexpr size_t kProbeMemoMaxEntries = 8192;
+std::unordered_map<ProbeMemoKey, std::pair<EnvironmentSample,
+                                           std::chrono::steady_clock::time_point>,
+                   ProbeMemoKeyHash>
+    gProbeMemo;
+
+int32_t QuantizeProbeCoord(float v)
+{
+  return static_cast<int32_t>(std::floor(v * 4.0f));
+}
+
 EnvironmentSample ProbeEnvironmentAtEx(const UWorld &world,
                                        const glm::vec3 &bodyOrigin,
                                        const glm::vec3 &sizeBlocks,
@@ -266,6 +310,35 @@ EnvironmentSample ProbeEnvironmentAt(const UWorld &world,
                                      const glm::vec3 &sizeBlocks)
 {
   return ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 1.0f);
+}
+
+EnvironmentSample ProbeEnvironmentAtMemoized(const UWorld &world,
+                                             const glm::vec3 &bodyOrigin,
+                                             const glm::vec3 &sizeBlocks)
+{
+  const ProbeMemoKey key{QuantizeProbeCoord(bodyOrigin.x),
+                         QuantizeProbeCoord(bodyOrigin.y),
+                         QuantizeProbeCoord(bodyOrigin.z),
+                         QuantizeProbeCoord(sizeBlocks.x),
+                         QuantizeProbeCoord(sizeBlocks.y),
+                         QuantizeProbeCoord(sizeBlocks.z)};
+  const auto now = std::chrono::steady_clock::now();
+  if (const auto it = gProbeMemo.find(key); it != gProbeMemo.end())
+  {
+    if (std::chrono::duration<float>(now - it->second.second).count() <
+        kProbeTtlSec)
+    {
+      return it->second.first;
+    }
+  }
+  const EnvironmentSample sample =
+      ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 1.0f);
+  if (gProbeMemo.size() >= kProbeMemoMaxEntries)
+  {
+    gProbeMemo.clear();
+  }
+  gProbeMemo[key] = {sample, now};
+  return sample;
 }
 
 float ResolveViewerEyeHeight(const UWorld &world)
@@ -453,7 +526,7 @@ bool CanCreatureOccupyAt(const UWorld &world, CreatureHabitat habitat,
                          const glm::vec3 &sizeBlocks)
 {
   const EnvironmentSample env =
-      ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+      ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
   if (!HabitatMatches(habitat, env))
   {
     return false;
@@ -565,7 +638,7 @@ bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
                      const glm::vec3 &sizeBlocks)
 {
   const EnvironmentSample env =
-      ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+      ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
   return HabitatMatches(habitat, env);
 }
 
@@ -582,7 +655,7 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
   if (habitat == CreatureHabitat::Amphibious)
   {
     const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
     if (env.inWater)
     {
       return true;
@@ -592,13 +665,13 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
   if (habitat == CreatureHabitat::Aquatic)
   {
     const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
     return env.inWater;
   }
   if (habitat == CreatureHabitat::Lava)
   {
     const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
     return env.inLava;
   }
   const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
@@ -856,7 +929,7 @@ void ApplyEnvironmentLocomotionFacts(const UWorld &world,
                                      CreatureLocomotionFacts &facts)
 {
   const EnvironmentSample env =
-      ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+      ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
   facts.inFluid = env.inWater || env.inLava;
   facts.onFluidBottom = env.inFluid && env.onSolidGround;
 }

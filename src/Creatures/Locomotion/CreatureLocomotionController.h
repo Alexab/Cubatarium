@@ -14,6 +14,12 @@ using CreatureId = uint64_t;
 
 class UWorld;
 
+/// Global move-speed multiplier for external harnesses (flight-sim far
+/// distance stress). Production default 1; the App layer wires its harness
+/// env var into this at startup — locomotion itself must not include
+/// App/Platform (audit M7).
+float &CreatureMoveSpeedScaleOverride();
+
 class UCreatureLocomotionController
 {
 public:

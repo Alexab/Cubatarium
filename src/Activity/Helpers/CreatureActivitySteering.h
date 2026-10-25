@@ -5,12 +5,17 @@
 #include "Activity/IUWorldPerception.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include <glm/glm.hpp>
+#include <random>
 #include <vector>
 
 namespace cutum
 {
 
 glm::vec3 RandomLocomotionDirection(CreatureHabitat habitat);
+
+/// Seeded RNG for activity steering and wander timing — replaces the
+/// unseedable global std::rand() (audit M6). Single-threaded world sim.
+std::mt19937 &ActivitySteeringRng();
 
 bool PickLocomotionDirection(IUWorldPerception &perception,
                              const CreatureActivityView &view,

@@ -80,7 +80,7 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
 
         const bool sprinting =
             creature.GetLocomotionFacts().state == LocomotionState::Run;
-        const EnvironmentSample env = ProbeEnvironmentAt(
+        const EnvironmentSample env = ProbeEnvironmentAtMemoized(
             world, creature.GetBodyOrigin(),
             creature.GetBounds().profile.restSizeBlocks);
         float fatigueGain = 0.f;

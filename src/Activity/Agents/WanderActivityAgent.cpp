@@ -71,7 +71,8 @@ void UWanderActivityAgent::ResetWanderState(CreatureId Id, float intervalMin,
   const float span = intervalMax - intervalMin;
   WanderAgentState &st = State[Id];
   st.timer =
-      intervalMin + static_cast<float>(std::rand() % 1001) / 1000.0f * span;
+      intervalMin + std::uniform_real_distribution<float>(0.f, 1.f)(
+                        ActivitySteeringRng()) * span;
 }
 
 void UWanderActivityAgent::Tick(IUWorldPerception &perception,

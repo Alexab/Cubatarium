@@ -623,7 +623,8 @@ void UWorld::RunLegacyPhysicsFrame()
   }
   else
   {
-    Environment.SyncCreatureSpatialIndex();
+    // No activity this frame: nothing moves, so the incrementally
+    // maintained index stays valid — no rebuild needed (audit S7).
   }
   PhysicsTelemetryData.EnvironmentTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
@@ -661,6 +662,10 @@ void UWorld::RunLegacyPhysicsFrame()
           CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
         }
         creature.ExecuteIntent(*this, dt);
+        // Keep the spatial index live as bodies move (audit S7): per-move
+        // upserts replace the full per-activity-tick rebuild; Upsert no-ops
+        // when position and extents are unchanged.
+        Environment.UpdateCreatureInSpatialIndex(creature);
       });
   PhysicsTelemetryData.NpcIntentExecuteMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_npc).count();
