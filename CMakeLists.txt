@@ -161,6 +161,7 @@ set(SOURCES
     src/Creatures/Locomotion/CreatureMotor.cpp
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
+    src/Creatures/Core/CreatureFactory.cpp
     src/Creatures/Core/CreatureInventory.cpp
     src/Creatures/Roles/CreatureRoleHandlerFactory.cpp
     src/Creatures/Stats/CreatureStatsDefaults.cpp

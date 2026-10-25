@@ -6,6 +6,7 @@
 #include "Activity/IUWorldPerception.h"
 #include "Activity/WorldCreatureActivitySink.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureFactory.h"
 #include "Creatures/Core/CreaturePersistenceJson.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
@@ -242,6 +243,9 @@ void UWorldEnvironment::ClearCreatures()
 {
   ActivityDirector.Clear();
   Creatures.clear();
+  // Reseed so a world reloaded in one session does not replay the exact
+  // same natural-population random stream.
+  NaturalPopulationRng.seed(Owner.GetWorldSeed());
   NaturalPopulationTimer = 0.f;
   LoadedCreaturePositionValidationTimer = 0.f;
   LoadedCreaturePositionValidationPending = true;
@@ -372,30 +376,13 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   }
   if (source == CreatureSpawnSource::NaturalPopulation)
   {
-    CreaturePopulationCounts counts;
     const UCreature *player = Owner.GetPlayerCreature();
     if (!player)
     {
       return 0;
     }
-    ForEachCreature(
-        [&](UCreature &creature)
-        {
-          if (creature.IsPlayerCharacter())
-          {
-            return;
-          }
-          const CreatureDefinition *other =
-              GetCreatureDefinition(creature.GetTypeId());
-          const bool hostile = other &&
-                               HasCreatureTag(other->catalog.tags, "hostile");
-          const bool local =
-              glm::distance(creature.GetBodyOrigin(),
-                            player->GetBodyOrigin()) <=
-              CreaturePopulationRules::LocalRadiusBlocks;
-          CreaturePopulationRules::Accumulate(
-              counts, creature.GetSpawnSource(), hostile, local);
-        });
+    const CreaturePopulationCounts counts =
+        CountNaturalPopulation(player->GetBodyOrigin());
     if (!CreaturePopulationRules::CanAddNaturalCreature(
             counts, HasCreatureTag(def->catalog.tags, "hostile"),
             Owner.GetDifficulty(), Owner.GetGameMode()))
@@ -439,42 +426,15 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   }
 
   const CreatureId id = NextCreatureId++;
-  const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
 
-  std::unique_ptr<UCreature> creature;
-  if (def->role == CreatureRole::ControlledDefault)
-  {
-    creature = std::make_unique<UPlayer>(id, speciesId, resolvedSpawn, eyeOffset);
-  }
-  else
-  {
-    creature =
-        std::make_unique<UCreature>(id, speciesId, resolvedSpawn, eyeOffset);
-  }
-
-  creature->GetBoundsMutable().profile = def->bounds;
-  if (def->bounds.restSizeBlocks.x > 0.0f)
-  {
-    creature->GetBoundsMutable().currentSizeBlocks = def->bounds.restSizeBlocks;
-  }
-  creature->SetCapabilities(def->locomotion);
-  creature->SetSpawnSource(source);
-  creature->ApplyStatsFromDefinition(*def);
-  creature->SetLocomotionArchetype(def->locomotionArchetype);
-  creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
-  creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
-  creature->GetLocomotion().SetCollisionProfile(
-      creature->GetBounds().currentSizeBlocks, def->eyeHeight);
-  if (def->habitat != CreatureHabitat::Terrestrial)
-  {
-    creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
-  }
-  if (!skinId.empty())
-  {
-    creature->SetSkinId(skinId);
-  }
-  creature->SetVisual(CreateCreatureVisual(*def));
-  Creatures[id] = std::move(creature);
+  CreatureBuildParams buildParams;
+  buildParams.Id = id;
+  buildParams.bodyOrigin = resolvedSpawn;
+  buildParams.Source = source;
+  buildParams.SkinId = skinId;
+  buildParams.AllowFlight =
+      ModePolicy::AllowsFlight(Owner.GetGameMode(), def->habitat);
+  Creatures[id] = CreatureFactory::Build(*def, buildParams);
   if (def->habitat == CreatureHabitat::Terrestrial)
   {
     SnapCreatureFeetToGround(*Creatures[id]);
@@ -498,19 +458,33 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
     CreatureSpatialIndex.Upsert(id, Creatures[id]->GetBodyOrigin(), vol.halfExtents);
     CreatureSpatialIndexReady = true;
   }
-  // Survival: strip creative fly unless aerial habitat allows it.
-  if (!ModePolicy::AllowsFlight(Owner.GetGameMode(), def->habitat))
-  {
-    CreatureLocomotionCapabilities caps = def->locomotion;
-    caps.canFly = false;
-    Creatures[id]->SetCapabilities(caps);
-    if (def->habitat == CreatureHabitat::Terrestrial &&
-        Creatures[id]->GetMovementMode() == CreatureMovementMode::Flying)
-    {
-      Creatures[id]->GetLocomotion().SetMode(CreatureMovementMode::Walking);
-    }
-  }
   return id;
+}
+
+CreaturePopulationCounts UWorldEnvironment::CountNaturalPopulation(
+    const glm::vec3 &playerOrigin)
+{
+  // Single scan shared by cap checks and the population tick (audit S4 —
+  // the loop was duplicated in SpawnCreature and TickNaturalPopulation).
+  CreaturePopulationCounts counts;
+  ForEachCreature(
+      [&](UCreature &creature)
+      {
+        if (creature.IsPlayerCharacter())
+        {
+          return;
+        }
+        const CreatureDefinition *definition =
+            GetCreatureDefinition(creature.GetTypeId());
+        const bool hostile =
+            definition && HasCreatureTag(definition->catalog.tags, "hostile");
+        const bool local =
+            glm::distance(creature.GetBodyOrigin(), playerOrigin) <=
+            CreaturePopulationRules::LocalRadiusBlocks;
+        CreaturePopulationRules::Accumulate(counts, creature.GetSpawnSource(),
+                                            hostile, local);
+      });
+  return counts;
 }
 
 void UWorldEnvironment::RemoveCreature(CreatureId id)
@@ -1028,42 +1002,17 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
       {
         continue;
       }
-      const glm::vec3 eyeOffset(0.0f, def->eyeHeight, 0.0f);
-      auto creature =
-          std::make_unique<UCreature>(id, type, bodyOrigin, eyeOffset);
-      creature->SetSpawnSource(ReadCreatureSpawnSource(c));
-      creature->GetBoundsMutable().profile = def->bounds;
-      creature->GetBoundsMutable().currentSizeBlocks =
-          def->bounds.restSizeBlocks;
-      creature->SetCapabilities(def->locomotion);
-      creature->ApplyStatsFromDefinition(*def);
-      if (!CreatureStatsJson::Read(c, creature->GetVitals(),
-                                   creature->GetAttributes()))
-      {
-        // Keep definition defaults when save has no stats block.
-      }
-      else
-      {
-        creature->GetAttributes().ClampAll();
-        creature->GetVitals().ClampCurrents();
-      }
-      creature->SetLocomotionArchetype(def->locomotionArchetype);
-      creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
-      creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
-      creature->GetLocomotion().SetCollisionProfile(
-          creature->GetBounds().currentSizeBlocks, def->eyeHeight);
-      if (!skin.empty())
-      {
-        creature->SetSkinId(skin);
-      }
-      creature->SetVisual(CreateCreatureVisual(*def));
-      creature->SetOrientation(c.value("yaw", 0.0f), c.value("pitch", 0.0f));
-      if (def->habitat != CreatureHabitat::Terrestrial ||
-          c.value("movement_mode", "walking") == "flying")
-      {
-        creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
-      }
-      creature->GetInventory().DeserializeFromJson(c);
+      CreatureBuildParams buildParams;
+      buildParams.Id = id;
+      buildParams.bodyOrigin = bodyOrigin;
+      buildParams.Source = ReadCreatureSpawnSource(c);
+      buildParams.SkinId = skin;
+      // Restored creatures clamp flight exactly like fresh spawns (audit S3).
+      buildParams.AllowFlight =
+          ModePolicy::AllowsFlight(Owner.GetGameMode(), def->habitat);
+      buildParams.SavedState = &c;
+      buildParams.AllowPlayerRole = false;
+      auto creature = CreatureFactory::Build(*def, buildParams);
       // Cooperative loading restores entities before it reads terrain chunks.
       // Only resolve collision/habitat now if this entity's chunk is present;
       // otherwise retain its saved position and retry as streaming loads it.
@@ -1319,26 +1268,9 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
   NaturalPopulationTimer = std::fmod(NaturalPopulationTimer,
                                     kPopulationIntervalSec);
 
-  CreaturePopulationCounts currentCounts;
   const glm::vec3 playerOrigin = player->GetBodyOrigin();
-  ForEachCreature(
-      [&](UCreature &creature)
-      {
-        if (creature.IsPlayerCharacter())
-        {
-          return;
-        }
-        const CreatureDefinition *definition =
-            GetCreatureDefinition(creature.GetTypeId());
-        const bool hostile = definition &&
-                             HasCreatureTag(definition->catalog.tags,
-                                            "hostile");
-        const bool local =
-            glm::distance(creature.GetBodyOrigin(), playerOrigin) <=
-            CreaturePopulationRules::LocalRadiusBlocks;
-        CreaturePopulationRules::Accumulate(
-            currentCounts, creature.GetSpawnSource(), hostile, local);
-      });
+  const CreaturePopulationCounts currentCounts =
+      CountNaturalPopulation(playerOrigin);
   if (!CreaturePopulationRules::CanAddNaturalCreature(
           currentCounts, false, Owner.GetDifficulty(), Owner.GetGameMode()))
   {
