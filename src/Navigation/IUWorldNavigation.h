@@ -19,11 +19,13 @@ class IUWorldNavigation
 public:
   virtual ~IUWorldNavigation() = default;
   virtual bool IsTerrestrialStandNode(const NavigationStandNode &node,
-                                      float body_height) const = 0;
+                                      float body_height,
+                                      float body_width = 0.6f) const = 0;
   virtual bool CanStepTerrestrial(const NavigationStandNode &from,
                                   const NavigationStandNode &to,
                                   float max_jump, float max_drop,
-                                  float body_height) const = 0;
+                                  float body_height,
+                                  float body_width = 0.6f) const = 0;
 };
 
 } // namespace cutum

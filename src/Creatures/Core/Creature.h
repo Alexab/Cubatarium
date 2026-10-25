@@ -191,6 +191,31 @@ public:
 
   virtual void ExecuteIntent(UWorld &world, float dt);
 
+  // ExecuteIntent stages (audit 4.2): idle fast path, mode switch, wish
+  // shaping, motor step, post-move habitat gate with recovery, idle fluid
+  // sink, travel-facing yaw, facts/diagnostics finish.
+  bool TryIdleIntentFastPath(UWorld &world, float dt,
+                             const glm::vec3 &bodyOriginBefore,
+                             CreatureHabitat habitat, bool airMobility);
+  void UpdateMovementModeForHabitat(CreatureHabitat habitat, bool airMobility);
+  void ShapeMovementWishAndSpeed(const UWorld &world, CreatureHabitat habitat,
+                                 bool airMobility, glm::vec3 &wish,
+                                 float &speed);
+  void RunMotorStep(UWorld &world, glm::vec3 &eye,
+                    const CreatureInput &verticalInput, const glm::vec3 &wish,
+                    float speed, float dt);
+  void EnforceHabitatAfterMove(UWorld &world, CreatureHabitat habitat,
+                               const glm::vec3 &bodyOriginBefore,
+                               const glm::vec3 &diagIntentDir,
+                               float diagIntentSpeed, const glm::vec3 &wish);
+  void ApplyIdleFluidSink(UWorld &world, CreatureHabitat habitat,
+                          const glm::vec3 &wish, float dt,
+                          const CreatureInput &verticalInput);
+  void FaceTravelDirection(const glm::vec3 &bodyOriginBefore);
+  void FinishIntentFrame(UWorld &world, float dt,
+                         const glm::vec3 &bodyOriginBefore,
+                         const glm::vec3 &diagIntentDir, float diagIntentSpeed);
+
   IUCreatureVisual *GetVisual() { return Visual.get(); }
   void SetVisual(std::unique_ptr<IUCreatureVisual> visual);
 

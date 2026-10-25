@@ -30,6 +30,9 @@ struct NavigationQuery
   float max_jump{1.0f};
   float max_drop{3.0f};
   float body_height{1.8f};
+  /// Body XZ width for stand-clearance checks; 0.6 was hardcoded before
+  /// per-species bounds existed in these queries (audit 4.6).
+  float body_width{0.6f};
   /// Soft per-search expand cap (0 = default local max). Global tick budget
   /// still applies via UNavigationPathBudget.
   int max_expands{0};

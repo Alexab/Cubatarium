@@ -384,13 +384,33 @@ glm::ivec2 ResolveSpawnProbeColumn(const UWorld &world)
                     WorldCoordToBlockIndex(spawn.z));
 }
 
+/// Resolve the fluid column for a spawn probe: the probe's own column when
+/// it holds the wanted fluid, else the nearest such column around the
+/// probe, else around the view-ray ground column (audit 4.2 — this
+/// sequence was copy-pasted across the aquatic/lava/amphibious branches).
+std::optional<glm::ivec2> ResolveSpawnFluidColumn(const UWorld &world,
+                                                  const glm::ivec2 &rayColumn,
+                                                  int probeGx, int probeGz,
+                                                  bool wantLava)
+{
+  if (FindAquaticFeetY(world, probeGx, probeGz, wantLava))
+  {
+    return glm::ivec2(probeGx, probeGz);
+  }
+  if (const std::optional<glm::ivec2> nearCol = FindNearestFluidColumn(
+          world, probeGx, probeGz, wantLava, kFluidColumnSearchRadius))
+  {
+    return nearCol;
+  }
+  return FindNearestFluidColumn(world, rayColumn.x, rayColumn.y, wantLava,
+                                kFluidColumnSearchRadius);
+}
+
 glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
                                   const CreatureDefinition &def,
                                   const glm::vec3 &viewProbe)
 {
   const glm::ivec2 column = ResolveSpawnProbeColumn(world);
-  const int gx = column.x;
-  const int gz = column.y;
   const float bodyHeight = def.bounds.restSizeBlocks.y;
 
   if (def.habitat == CreatureHabitat::Terrestrial)
@@ -409,31 +429,20 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
   {
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
-    glm::ivec2 fluidCol(probeGx, probeGz);
-    if (!FindAquaticFeetY(world, probeGx, probeGz, false))
+    const auto fluidCol =
+        ResolveSpawnFluidColumn(world, column, probeGx, probeGz, false);
+    if (fluidCol)
     {
-      if (const std::optional<glm::ivec2> nearCol =
-              FindNearestFluidColumn(world, probeGx, probeGz, false,
-                                     kFluidColumnSearchRadius))
+      if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
+              world, fluidCol->x, fluidCol->y, false, bodyHeight))
       {
-        fluidCol = *nearCol;
+        return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
-      else if (const std::optional<glm::ivec2> rayCol =
-                   FindNearestFluidColumn(world, gx, gz, false,
-                                          kFluidColumnSearchRadius))
+      if (const std::optional<float> feetY =
+              FindAquaticFeetY(world, fluidCol->x, fluidCol->y, false))
       {
-        fluidCol = *rayCol;
+        return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
-    }
-    if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
-            world, fluidCol.x, fluidCol.y, false, bodyHeight))
-    {
-      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
-    }
-    if (const std::optional<float> feetY =
-            FindAquaticFeetY(world, fluidCol.x, fluidCol.y, false))
-    {
-      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
     return viewProbe;
   }
@@ -442,26 +451,15 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
   {
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
-    glm::ivec2 fluidCol(probeGx, probeGz);
-    if (!FindAquaticFeetY(world, probeGx, probeGz, true))
+    const auto fluidCol =
+        ResolveSpawnFluidColumn(world, column, probeGx, probeGz, true);
+    if (fluidCol)
     {
-      if (const std::optional<glm::ivec2> nearCol =
-              FindNearestFluidColumn(world, probeGx, probeGz, true,
-                                     kFluidColumnSearchRadius))
+      if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
+              world, fluidCol->x, fluidCol->y, true, bodyHeight))
       {
-        fluidCol = *nearCol;
+        return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
-      else if (const std::optional<glm::ivec2> rayCol =
-                   FindNearestFluidColumn(world, gx, gz, true,
-                                          kFluidColumnSearchRadius))
-      {
-        fluidCol = *rayCol;
-      }
-    }
-    if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
-            world, fluidCol.x, fluidCol.y, true, bodyHeight))
-    {
-      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
     return viewProbe;
   }
@@ -470,29 +468,12 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
   {
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
-    glm::ivec2 fluidCol(probeGx, probeGz);
-    bool hasWater = static_cast<bool>(FindAquaticFeetY(world, probeGx, probeGz, false));
-    if (!hasWater)
-    {
-      if (const std::optional<glm::ivec2> nearCol =
-              FindNearestFluidColumn(world, probeGx, probeGz, false,
-                                     kFluidColumnSearchRadius))
-      {
-        fluidCol = *nearCol;
-        hasWater = true;
-      }
-      else if (const std::optional<glm::ivec2> rayCol =
-                   FindNearestFluidColumn(world, gx, gz, false,
-                                          kFluidColumnSearchRadius))
-      {
-        fluidCol = *rayCol;
-        hasWater = true;
-      }
-    }
-    if (hasWater)
+    const auto fluidCol =
+        ResolveSpawnFluidColumn(world, column, probeGx, probeGz, false);
+    if (fluidCol)
     {
       if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
-              world, fluidCol.x, fluidCol.y, false, bodyHeight))
+              world, fluidCol->x, fluidCol->y, false, bodyHeight))
       {
         return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
