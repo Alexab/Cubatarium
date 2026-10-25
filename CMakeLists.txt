@@ -162,6 +162,7 @@ set(SOURCES
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
     src/Creatures/Core/CreatureFactory.cpp
+    src/Creatures/Spawning/CreatureSpawnPlanner.cpp
     src/Creatures/Core/CreatureInventory.cpp
     src/Creatures/Roles/CreatureRoleHandlerFactory.cpp
     src/Creatures/Stats/CreatureStatsDefaults.cpp
@@ -1377,6 +1378,21 @@ cubatarium_add_test(NAME creature_appearance_test
 add_test(NAME creature_appearance_test
     COMMAND $<TARGET_FILE:creature_appearance_test>)
 set_tests_properties(creature_appearance_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME creature_spawn_planner_test
+    SOURCES
+        src/Creatures/Definition/CreatureDefinitionStorage.cpp
+        src/Creatures/Stats/CreatureStatsDefaults.cpp
+        src/Creatures/Stats/CreatureStatsJson.cpp
+        src/Creatures/Locomotion/LocomotionTypes.cpp
+        src/Creatures/Core/CreatureCatalogTypes.cpp
+        src/Creatures/Visual/CreatureRigidModelLoader.cpp
+        src/Creatures/Spawning/CreatureSpawnPlanner.cpp
+        src/Test/CreatureSpawnPlannerTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME creature_spawn_planner_test
+    COMMAND $<TARGET_FILE:creature_spawn_planner_test>)
+set_tests_properties(creature_spawn_planner_test PROPERTIES LABELS "unit;creatures")
 
 cubatarium_add_test(NAME creature_draw_queue_test
     SOURCES

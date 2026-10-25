@@ -57,11 +57,6 @@ using json = nlohmann::json;
 
 namespace
 {
-bool HasCreatureTag(const std::vector<std::string> &tags, const char *tag)
-{
-  return std::find(tags.begin(), tags.end(), tag) != tags.end();
-}
-
 bool IsCreatureVolumeLoadedAt(const UWorld &world, const glm::vec3 &origin,
                               const glm::vec3 &sizeBlocks)
 {
@@ -89,7 +84,8 @@ bool IsCreatureVolumeLoadedAt(const UWorld &world, const glm::vec3 &origin,
 
 } // namespace
 
-UWorldEnvironment::UWorldEnvironment(UWorld &owner) : Owner(owner) {}
+UWorldEnvironment::UWorldEnvironment(UWorld &owner)
+    : Owner(owner), SpawnPlanner(NaturalPopulationRng) {}
 
 void UWorldEnvironment::Initialize()
 {
@@ -1276,61 +1272,41 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
   {
     return;
   }
-
   const WorldDifficultyProfile profile =
       WorldDifficultyProfileFor(Owner.GetDifficulty());
   const bool hostileRoom = CreaturePopulationRules::CanAddNaturalCreature(
       currentCounts, true, Owner.GetDifficulty(), Owner.GetGameMode());
 
-  std::vector<WeightedSpawnOption<const CreatureDefinition *>> eligible;
-  float totalWeight = 0.f;
+  std::vector<const CreatureDefinition *> spawnable;
   for (const std::string &id : CreatureDefinitions->ListSpawnable())
   {
-    const CreatureDefinition *definition = CreatureDefinitions->Get(id);
-    if (!definition || !definition->catalog.naturalSpawnable ||
-        definition->catalog.spawnWeight <= 0.f)
-    {
-      continue;
-    }
-    const bool hostile =
-        HasCreatureTag(definition->catalog.tags, "hostile");
-    if (hostile && !hostileRoom)
-    {
-      continue;
-    }
-    const float weight = definition->catalog.spawnWeight *
-                         (hostile ? profile.HostileSpawnPressureMultiplier
-                                  : 1.f);
-    if (weight > 0.f)
-    {
-      eligible.push_back({definition, weight});
-      totalWeight += weight;
-    }
+    spawnable.push_back(CreatureDefinitions->Get(id));
   }
-  if (eligible.empty() || totalWeight <= 0.f)
+  const auto eligible = SpawnPlanner.BuildEligibleOptions(
+      spawnable, hostileRoom, profile.HostileSpawnPressureMultiplier);
+  if (eligible.empty() || TotalSpawnOptionWeight(eligible) <= 0.f)
   {
     return;
   }
-  std::uniform_real_distribution<float> angle(0.f, 6.28318530718f);
-  std::uniform_real_distribution<float> distance(22.f, 44.f);
-  std::uniform_int_distribution<int> heightOffset(-7, 7);
-  std::uniform_real_distribution<float> groupOffset(-2.f, 2.f);
+  TryNaturalPopulationSpawn(playerOrigin, currentCounts, eligible);
+}
+
+void UWorldEnvironment::TryNaturalPopulationSpawn(
+    const glm::vec3 &playerOrigin, const CreaturePopulationCounts &counts,
+    const std::vector<WeightedSpawnOption<const CreatureDefinition *>>
+        &eligible)
+{
+  struct SpawnPlacement
+  {
+    const CreatureDefinition *definition{nullptr};
+    glm::vec3 origin{0.f};
+  };
   size_t spawned = 0;
   for (int candidateIndex = 0; candidateIndex < 8 && spawned == 0;
        ++candidateIndex)
   {
-    const float theta = angle(NaturalPopulationRng);
-    const float radius = distance(NaturalPopulationRng);
-    glm::vec3 candidate =
-        playerOrigin + glm::vec3(std::cos(theta) * radius,
-                                 static_cast<float>(heightOffset(
-                                     NaturalPopulationRng)),
-                                 std::sin(theta) * radius);
-    struct SpawnPlacement
-    {
-      const CreatureDefinition *definition{nullptr};
-      glm::vec3 origin{0.f};
-    };
+    const glm::vec3 candidate =
+        SpawnPlanner.NextCandidateOrigin(playerOrigin);
     std::vector<WeightedSpawnOption<SpawnPlacement>> placements;
     placements.reserve(eligible.size());
     for (const WeightedSpawnOption<const CreatureDefinition *> &entry : eligible)
@@ -1366,28 +1342,26 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
     {
       continue;
     }
-    std::uniform_real_distribution<float> chooseWeight(0.f, viableWeight);
     const auto *choice = ChooseWeightedSpawnOption(
-        viable, chooseWeight(NaturalPopulationRng));
+        viable, SpawnPlanner.NextWeightRoll(viableWeight));
     if (!choice)
     {
       continue;
     }
     const CreatureDefinition *selected = choice->value.definition;
     const glm::vec3 spawnOrigin = choice->value.origin;
-    std::uniform_int_distribution<int> groupSize(
+    const int requestedGroupSize = SpawnPlanner.NextGroupSize(
         selected->catalog.spawnGroupMin, selected->catalog.spawnGroupMax);
-    const int requestedGroupSize = groupSize(NaturalPopulationRng);
     const bool selectedHostile =
         HasCreatureTag(selected->catalog.tags, "hostile");
 
     for (int groupIndex = 0; groupIndex < requestedGroupSize; ++groupIndex)
     {
       const CreaturePopulationCounts beforeSpawn{
-          currentCounts.naturalWorld + spawned,
-          currentCounts.local + spawned,
-          currentCounts.hostileWorld + (selectedHostile ? spawned : 0),
-          currentCounts.hostileLocal + (selectedHostile ? spawned : 0)};
+          counts.naturalWorld + spawned,
+          counts.local + spawned,
+          counts.hostileWorld + (selectedHostile ? spawned : 0),
+          counts.hostileLocal + (selectedHostile ? spawned : 0)};
       if (!CreaturePopulationRules::CanAddNaturalCreature(
               beforeSpawn, selectedHostile, Owner.GetDifficulty(),
               Owner.GetGameMode()))
@@ -1397,8 +1371,8 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
       glm::vec3 groupOrigin = spawnOrigin;
       if (groupIndex > 0)
       {
-        groupOrigin.x += groupOffset(NaturalPopulationRng);
-        groupOrigin.z += groupOffset(NaturalPopulationRng);
+        groupOrigin.x += SpawnPlanner.NextGroupJitter();
+        groupOrigin.z += SpawnPlanner.NextGroupJitter();
         if (selected->habitat == CreatureHabitat::Terrestrial)
         {
           const std::optional<float> ground = Owner.QueryGroundFeetYColumn(
