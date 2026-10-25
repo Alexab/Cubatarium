@@ -1,4 +1,5 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
+#include "Core/Json/JsonVec.h"
 
 #include "Items/ItemGltfTextureCache.h"
 
@@ -70,15 +71,6 @@ struct Rgb
     return Rgb{158, 107, 56};
   }
 
-glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
-{
-  if (!arr.is_array() || arr.size() < 3)
-  {
-    return fallback;
-  }
-  return glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
-                   arr[2].get<float>());
-}
 
 } // namespace
 

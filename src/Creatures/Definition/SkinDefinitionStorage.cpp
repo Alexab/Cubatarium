@@ -1,4 +1,5 @@
 #include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Core/Json/JsonVec.h"
 #include "Core/Sort/CatalogSortUtil.h"
 #include <algorithm>
 #include <filesystem>
@@ -13,15 +14,6 @@ namespace cutum
 namespace
 {
 
-glm::vec4 ReadVec4(const nlohmann::json &arr, const glm::vec4 &fallback)
-{
-  if (!arr.is_array() || arr.size() < 4)
-  {
-    return fallback;
-  }
-  return glm::vec4(arr[0].get<float>(), arr[1].get<float>(),
-                   arr[2].get<float>(), arr[3].get<float>());
-}
 
 } // namespace
 
