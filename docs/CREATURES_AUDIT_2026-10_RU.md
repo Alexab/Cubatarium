@@ -127,6 +127,8 @@
 M1 (симметричный индекс + регресс-тест), M3 (предикат враждебности по образцу `BotPlayerActivityAgent::IsHostileTarget` + интервал переоценки цели), V2 (root-translation), V3 (uTint в skinned, десктоп+gles), S1 (атомарная запись + ошибки потока + проверка format_version), S2 (null-check, `<filesystem>`), M9 (нормальный RNG), V5 (glDeleteTextures, мьютекс rigid-кэша, синхронизация лог-сета), S4-дубли (константа 128, хелпер инсета), V14/S10/M10 (удаление мёртвого кода), честный alias `TryRangedStrike`, дедуп `ComputeSpawnBodyOriginAhead` (`WorldEnvironment.cpp:639` vs `WorldCommands.cpp:700`).
 
 ### Фаза 2 — `refactor/5-creatures-visual`: визуал/рендер-конвейер (первая предметная область)
+
+> **Статус (2026-10-25, merge `65b072e8e`)**: выполнено 2.1–2.4, 2.6, 2.7 (V1, V4, V6–V8-частично, V9, V12, V13; `CreatureDrawContext`, `UCreatureVisualBase`, shared-палитра, appearance-кэш, разбор Render 168→80 строк, ParseVisualSpec 392→196, ReadVec3/4 в `Core/Json/JsonVec.h`). Осталось: 2.5 (превью на `IUCreatureVisual`, 342-строчный дубль в `CreaturePreviewRenderer`), V8-батчинг (numeric-ключ сортировки стал незначим после shared-палитры), перевод WornEquipmentDrawer с переходного `ctx.Engine` на очередь. Сортировка очереди теперь по числовому GL-id + новый kind Billboard.
 2.1 Базовый класс бэкендов: appearance, yaw+offset (устранить рассинхрон V1), fallback-цепочка текстур, логирование, guard-ы (V10).
 2.2 Кэши: V12 (выровнять инвалидацию), выкидывать мёртвые ключи, V4-лок вокруг GL-генерации.
 2.3 Производительность кадра: V4 (хэш при загрузке), V7 (разделяемые кости/палитра раз в кадр на существо), V6 (appearance-кэш), V8 (numeric-ключ сортировки), V9 (sprite через очередь, камера в контексте).
