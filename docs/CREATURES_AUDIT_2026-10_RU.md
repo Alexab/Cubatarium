@@ -139,6 +139,8 @@ M1 (симметричный индекс + регресс-тест), M3 (пре
 2.8 Тесты: V16.
 
 ### Фаза 3 — `refactor/6-creatures-spawn`: спавн и популяция
+
+> **Статус (2026-10-25, merge `3ca597f29`, часть 1)**: 3.2 `CreatureFactory` готова (спавн/загрузка/QA/игрок — единая сборка; flight-клэмп теперь применяется и при загрузке); дедуп подсчёта населения в `CountNaturalPopulation` (S4); RNG-ресид при `ClearCreatures`; мемоизация классификации флюидов `ClassifyFluidBlock` (S9). Осталось: вынос `UCreatureSpawner` из WorldEnvironment, `ICreatureWorldQueries`, спавнер-тесты; S8-окно для `ScanFluidColumn` отклонено — полные границы колонки нужны проверкам глубины спавна (вернуться через кэш колонок в фазе 4); PickCreatureByView через индекс отложен (при капе 128 линейный пик дёшев).
 3.1 `UCreatureSpawner` + счётчики населения на add/remove (S4, S5); `CreaturePopulationRules` → .cpp.
 3.2 `CreatureFactory` для спавна/загрузки/QA/игрока (S3).
 3.3 Persistence: миграции за `format_version`, RNG-ресид при `ClearCreatures`.
