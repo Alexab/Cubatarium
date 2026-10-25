@@ -13,6 +13,7 @@
 #include "World/Core/World.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
+#include <unordered_map>
 #include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
 #include <cmath>
@@ -44,28 +45,53 @@ bool IsPassableBlock(const UBlockRegistry &registry, BlockId id)
   return id != BLOCK_AIR && !registry.BlocksMovement(id);
 }
 
+enum class FluidKind : uint8_t
+{
+  None,
+  Water,
+  Lava,
+};
+
+FluidKind ClassifyFluidBlock(const UBlockRegistry &registry, BlockId id)
+{
+  // Fluid identity by name/render style, memoized per block id: the raw
+  // string find used to run inside every probe of every scanned block
+  // (audit S9). World sim is single-threaded; a benign recompute race
+  // yields the same value.
+  static std::unordered_map<const void *,
+                            std::unordered_map<BlockId, FluidKind>>
+      cache;
+  auto &perRegistry = cache[&registry];
+  if (const auto it = perRegistry.find(id); it != perRegistry.end())
+  {
+    return it->second;
+  }
+  FluidKind kind = FluidKind::None;
+  if (IsPassableBlock(registry, id))
+  {
+    const std::string &name = registry.GetTypeNameById(id);
+    if (name.find("lava") != std::string::npos)
+    {
+      kind = FluidKind::Lava;
+    }
+    else if (registry.GetRenderStyle(id) == BlockRenderStyle::Fluid ||
+             name.find("water") != std::string::npos)
+    {
+      kind = FluidKind::Water;
+    }
+  }
+  perRegistry[id] = kind;
+  return kind;
+}
+
 bool IsLavaBlock(const UBlockRegistry &registry, BlockId id)
 {
-  if (!IsPassableBlock(registry, id))
-  {
-    return false;
-  }
-  const std::string &name = registry.GetTypeNameById(id);
-  return name.find("lava") != std::string::npos;
+  return ClassifyFluidBlock(registry, id) == FluidKind::Lava;
 }
 
 bool IsWaterBlock(const UBlockRegistry &registry, BlockId id)
 {
-  if (!IsPassableBlock(registry, id) || IsLavaBlock(registry, id))
-  {
-    return false;
-  }
-  if (registry.GetRenderStyle(id) == BlockRenderStyle::Fluid)
-  {
-    return true;
-  }
-  const std::string &name = registry.GetTypeNameById(id);
-  return name.find("water") != std::string::npos;
+  return ClassifyFluidBlock(registry, id) == FluidKind::Water;
 }
 
 void SampleHabitatFluidsInVolume(const UWorld &world, const CollisionVolume &vol,

@@ -7,6 +7,7 @@
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
+#include "Creatures/Spawning/CreaturePopulationRules.h"
 #include "World/Environment/CreatureSpatialIndex.h"
 #include <functional>
 #include <map>
@@ -104,6 +105,8 @@ public:
                     class UWorldCreatureActivitySink &sink, float dt,
                     bool stress_tick = false);
   void SyncCreatureSpatialIndex();
+  CreaturePopulationCounts CountNaturalPopulation(
+      const glm::vec3 &playerOrigin);
   void TickNaturalPopulation(float dt);
   void ValidateLoadedCreaturePositions();
   int GetLastActivityAgentsTicked() const
