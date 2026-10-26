@@ -821,6 +821,20 @@ public:
   void RunLegacyPhysicsFrame();
   /// Era14: streaming/mesh phase outside locomotion (TD-ARCH-040).
   void TickWorldStreamingPhase();
+
+  // RunLegacyPhysicsFrame stages (audit phase 6): streaming collision
+  // readiness, controlled-body camera sync, NPC intents, controlled
+  // influence, vitals/status.
+  void EnsureCollisionRingReadiness(const std::shared_ptr<UCamera> &camera,
+                                    const glm::ivec3 &feetBlock);
+  void UpdateCollisionReadinessGate(const std::shared_ptr<UCamera> &camera,
+                                    const glm::ivec3 &feetBlock,
+                                    bool hasFeetBlock);
+  bool SyncControlledBodyFromCamera(UCreature *controlled,
+                                    const std::shared_ptr<UCamera> &camera);
+  void TickNpcCreatureIntents(float dt, bool tick_world_ai);
+  void ResolveControlledCreatureInfluence(float dt);
+  void TickSurvivalSystems(float dt);
   void UpdateIntersection(const glm::vec3 &position, const glm::vec3 &front);
   void UpdateStreaming();
   size_t GetRenderInstanceCount() const;

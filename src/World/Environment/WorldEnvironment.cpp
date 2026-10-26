@@ -6,7 +6,7 @@
 #include "Activity/IUWorldPerception.h"
 #include "Activity/WorldCreatureActivitySink.h"
 #include "Creatures/Core/Creature.h"
-#include "Creatures/Core/CreatureFactory.h"
+#include "Creatures/Core/UCreatureFactory.h"
 #include "Creatures/Core/CreaturePersistenceJson.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
@@ -443,7 +443,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   buildParams.SkinId = skinId;
   buildParams.AllowFlight =
       ModePolicy::AllowsFlight(Owner.GetGameMode(), def->habitat);
-  Creatures[id] = CreatureFactory::Build(*def, buildParams);
+  Creatures[id] = UCreatureFactory::Build(*def, buildParams);
   if (def->habitat == CreatureHabitat::Terrestrial)
   {
     SnapCreatureFeetToGround(*Creatures[id]);
@@ -1021,7 +1021,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
           ModePolicy::AllowsFlight(Owner.GetGameMode(), def->habitat);
       buildParams.SavedState = &c;
       buildParams.AllowPlayerRole = false;
-      auto creature = CreatureFactory::Build(*def, buildParams);
+      auto creature = UCreatureFactory::Build(*def, buildParams);
       // Cooperative loading restores entities before it reads terrain chunks.
       // Only resolve collision/habitat now if this entity's chunk is present;
       // otherwise retain its saved position and retry as streaming loads it.

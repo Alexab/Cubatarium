@@ -34,7 +34,7 @@ struct CreatureBuildParams
 /// Single construction path for creatures — spawn, save-load, QA and player
 /// creation all build here (audit S3: spawn and load used to assemble the
 /// entity by hand in parallel, silently diverging).
-class CreatureFactory
+class UCreatureFactory
 {
 public:
   static std::unique_ptr<UCreature> Build(const CreatureDefinition &definition,

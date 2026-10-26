@@ -1,5 +1,5 @@
 #include "Creatures/Definition/CreatureDefinition.h"
-#include "Creatures/Spawning/CreatureSpawnPlanner.h"
+#include "Creatures/Spawning/UCreatureSpawnPlanner.h"
 
 #include <cmath>
 #include <iostream>
@@ -44,7 +44,7 @@ int main()
 
   {
     std::mt19937 rng{42};
-    CreatureSpawnPlanner planner(rng);
+    UCreatureSpawnPlanner planner(rng);
 
     CreatureDefinition sheep =
         MakeSpecies("sheep", true, 1.f, false, 2, 4);
@@ -72,7 +72,7 @@ int main()
 
   {
     std::mt19937 rng{7};
-    CreatureSpawnPlanner planner(rng);
+    UCreatureSpawnPlanner planner(rng);
     const glm::vec3 player(100.f, 64.f, -50.f);
     for (int i = 0; i < 500; ++i)
     {
@@ -110,8 +110,8 @@ int main()
     // Same seed -> same planning stream (world reload determinism).
     std::mt19937 rngA{0xC0BA};
     std::mt19937 rngB{0xC0BA};
-    CreatureSpawnPlanner plannerA(rngA);
-    CreatureSpawnPlanner plannerB(rngB);
+    UCreatureSpawnPlanner plannerA(rngA);
+    UCreatureSpawnPlanner plannerB(rngB);
     bool identical = true;
     for (int i = 0; i < 64; ++i)
     {
