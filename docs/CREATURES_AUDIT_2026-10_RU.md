@@ -160,6 +160,8 @@ M1 (симметричный индекс + регресс-тест), M3 (пре
 4.7 Тесты (M11).
 
 ### Фаза 5 — `refactor/8-creatures-combat`: взаимодействия
+
+> **Статус (2026-10-26, merge `a102e84aa`, часть 1)**: 5.2 Roles распущены (флаги на UCreature), 5.3 фасад удалён + `GetArmorGroups() const` по значению без mutable-кэша, 5.1 резолвер 356→189 строк (Use/Dig/Radius/DamageModifiers вынесены; общий attack-хвост с bare-hand fallback в Resolve). Остаток: вынос износа щита и расхода стрел из Applier (343→306, цель <250), 5.4 тесты по каналам.
 5.1 По-канальный разбор Resolver/Applier (I1).
 5.2 Распустить слой Roles (I3).
 5.3 Убрать `WorldCreatureFacade`; заморозить UWorld-шимы; const-корректность брони (I4); radius/aura — тест или удаление.
