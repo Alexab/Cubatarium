@@ -167,7 +167,23 @@ M1 (симметричный индекс + регресс-тест), M3 (пре
 5.3 Убрать `WorldCreatureFacade`; заморозить UWorld-шимы; const-корректность брони (I4); radius/aura — тест или удаление.
 5.4 Тесты по каналам + матрица фракций.
 
-### Фаза 6 — `refactor/9-creatures-frame-split`: интеграция
+### Фаза 6 — `refactor/9-creatures-frame-split`: интеграция — ЗАКРЫТА (merge `56bdfc2a9`, 2026-10-26)
+
+`RunLegacyPhysicsFrame` 375→170 строк (стадии: EnsureCollisionRingReadiness, UpdateCollisionReadinessGate, SyncControlledBodyFromCamera, TickNpcCreatureIntents, ResolveControlledCreatureInfluence, TickSurvivalSystems; function-statics → file-scope). Гейт ≤300 строк теперь принудителен для creature-файлов: базлайны LoadFile/Resolve/Apply/SimpleFsmBrain::Tick/RunLegacyPhysicsFrame удалены (функции под лимитом). Новые классы под U-префикс (UCreatureFactory, UCreatureSpawnPlanner, UPreviewCreatureDrawSink, UTempCatalog); violations по creature/activity/preview-файлам = 0 (55 оставшихся в аудите — предсуществующие вне области существ).
+
+## Финальный статус плана (2026-10-26)
+
+| Фаза | Статус |
+|---|---|
+| 0 аудит+характеризация | ✅ `51842a2d8` |
+| 1 P0-фиксы | ✅ `62eee89a4` |
+| 2 визуал | ✅ `65b072e8e`+`15e04be68` (остаток: WornEquipmentDrawer на ctx.Engine — переходный) |
+| 3 спавн | ✅ `3ca597f29`+`36f922064` |
+| 4 движение/ИИ | ✅ кроме 4.4 (локомоция игрока в существо за флагом — осознанно отложено: самый рискованный, требует ручной проверки ощущений) и 4.7 (тесты контроллера/гейтов) |
+| 5 взаимодействия | ✅ `a102e84aa`+`3bb0e9e36` (radius/aura — тест при появлении потребителя) |
+| 6 интеграция | ✅ `56bdfc2a9` |
+
+Незакрытые хвосты оформлены выше; всё остальное из §2 закрыто или закрыто с обоснованием (S8-окно, индексный PickCreatureByView, Persistence enum и т.д.).
 Разбор `RunLegacyPhysicsFrame` на именованные стадии; creature-файлы под CI-гейт «функция ≤300 строк»; обновить этот документ статусами.
 
 ## 5. Верификация (каждая фаза)
