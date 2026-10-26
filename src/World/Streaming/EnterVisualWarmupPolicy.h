@@ -1053,23 +1053,44 @@ inline float EnterGpuWarmupMonotonicProgress(float raw_prog, float &display_prog
 
 /// Era51: mesh warmup bar — resolved/total from queue depth (not cumulative
 /// rebuild ops).
-inline float MeshWarmupResolvedFraction(size_t start_pending, size_t pending_now)
+/// Monotonic substage total for mesh warmup: pending work can GROW
+/// mid-phase (re-dirty, relight installs), so the displayed total is
+/// max(start, seen) - it never decreases, and the raw pending number stays
+/// out of the user-facing text (progress-bar UX plan U1).
+inline size_t MeshWarmupDisplayTotal(size_t start_pending,
+                                     size_t max_pending_seen)
 {
-  const size_t total = std::max<size_t>(1, start_pending);
-  const size_t resolved =
-      pending_now >= total ? total : total - pending_now;
-  return static_cast<float>(resolved) / static_cast<float>(total);
+  return std::max<size_t>({1, start_pending, max_pending_seen});
 }
 
-inline std::string FormatMeshWarmupProgress(size_t start_pending,
-                                            size_t pending_now)
+inline size_t MeshWarmupResolved(size_t pending_now, size_t display_total)
 {
-  const size_t total = std::max<size_t>(1, start_pending);
-  const size_t resolved =
-      pending_now >= total ? total : total - pending_now;
-  return "Building meshes... " + std::to_string(resolved) + "/" +
-         std::to_string(total) + " (" + std::to_string(pending_now) +
-         " pending)";
+  return pending_now >= display_total ? display_total
+                                      : display_total - pending_now;
+}
+
+inline float MeshWarmupResolvedFraction(size_t pending_now,
+                                        size_t display_total)
+{
+  const size_t total = MeshWarmupDisplayTotal(display_total, 1);
+  return static_cast<float>(MeshWarmupResolved(pending_now, total)) /
+         static_cast<float>(total);
+}
+
+inline std::string FormatMeshWarmupProgress(size_t pending_now,
+                                            size_t display_total)
+{
+  const size_t total = MeshWarmupDisplayTotal(display_total, 1);
+  return "Building meshes... " +
+         std::to_string(MeshWarmupResolved(pending_now, total)) + "/" +
+         std::to_string(total);
+}
+
+/// Monotonic display debt: only decreases, never jumps up (single home for
+/// the pattern previously duplicated in the coop session and the runner).
+inline int MonotonicDisplayDebt(int prevDisplay, int rawDebt)
+{
+  return prevDisplay < rawDebt ? prevDisplay : rawDebt;
 }
 
 /// Diagnostic: mesh/light holes remaining. Not an enter InGame gate (SOTA:

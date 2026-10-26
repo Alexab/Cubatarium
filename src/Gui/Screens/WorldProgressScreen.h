@@ -24,6 +24,7 @@ private:
 
   UGuiLabel *TitleLabel{nullptr};
   UGuiLabel *PhaseLabel{nullptr};
+  UGuiLabel *SubstageLabel{nullptr};
   UGuiProgressBar *ProgressBar{nullptr};
 };
 

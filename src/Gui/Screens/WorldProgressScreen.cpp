@@ -60,6 +60,12 @@ void UWorldProgressScreen::Build(UGuiContext &ctx)
   PhaseLabel = phase.get();
   card->AddChild(std::move(phase));
 
+  auto substage = std::make_unique<UGuiLabel>(&ctx.GetTheme(), " ");
+  substage->SetTextAlign(GuiTextAlign::Center);
+  substage->SetUseSecondaryColor(true);
+  SubstageLabel = substage.get();
+  card->AddChild(std::move(substage));
+
   auto bar = std::make_unique<UGuiProgressBar>(&ctx.GetTheme());
   bar->SetIndeterminate(true);
   bar->SetShowPercent(true);
@@ -118,6 +124,15 @@ void UWorldProgressScreen::ApplySnapshot(const ProgressSnapshot &snapshot)
   if (PhaseLabel)
   {
     PhaseLabel->SetText(snapshot.message.empty() ? " " : snapshot.message);
+  }
+  if (SubstageLabel)
+  {
+    // Structured counters from the snapshot - no message-string parsing.
+    SubstageLabel->SetText(
+        snapshot.subTotal > 0
+            ? std::to_string(std::max(0, snapshot.subDone)) + "/" +
+                  std::to_string(snapshot.subTotal)
+            : std::string(" "));
   }
   if (ProgressBar)
   {
