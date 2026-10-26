@@ -130,6 +130,19 @@ size_t UBlockWorld::CountNonAir() const
   return count;
 }
 
+bool UBlockWorld::HasAnyNonAir() const
+{
+  bool found = false;
+  ForEachBlock([&found](glm::ivec3, BlockId id)
+               {
+                 if (id != BLOCK_AIR)
+                 {
+                   found = true;
+                 }
+               });
+  return found;
+}
+
 void UBlockWorld::ForEachBlock(
     const std::function<void(glm::ivec3, BlockId)> &fn) const
 {

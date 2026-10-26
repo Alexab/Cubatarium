@@ -133,6 +133,111 @@ glm::vec3 IUWorldGenPipeline::ResolvePlayerSpawnPosition(
   return fallback;
 }
 
+bool IUWorldGenPipeline::TickSpawnResolve(const UBlockWorld &world,
+                                         UBlockRegistry &registry, int centerX,
+                                         int centerZ, int probesPerTick,
+                                         glm::vec3 &SpawnPointOut,
+                                         float eyeHeight)
+{
+  if (!SpawnResolveStarted)
+  {
+    SpawnResolveStarted = true;
+    SpawnResolveDone = false;
+    SpawnResolveCandidates.clear();
+    SpawnResolveCandidateIndex = 0;
+
+    constexpr int kMaxRadius = 96;
+    constexpr int kStep = 4;
+    struct SpawnCandidate
+    {
+      int x;
+      int z;
+      int dist2;
+    };
+    std::vector<SpawnCandidate> raw;
+    raw.reserve(static_cast<size_t>(
+        (kMaxRadius / kStep + 1) * (kMaxRadius / kStep + 1) * 4));
+    for (int x = centerX - kMaxRadius; x <= centerX + kMaxRadius; x += kStep)
+    {
+      for (int z = centerZ - kMaxRadius; z <= centerZ + kMaxRadius; z += kStep)
+      {
+        const int dx = x - centerX;
+        const int dz = z - centerZ;
+        const int dist2 = dx * dx + dz * dz;
+        if (dist2 > kMaxRadius * kMaxRadius)
+        {
+          continue;
+        }
+        raw.push_back({x, z, dist2});
+      }
+    }
+    std::sort(raw.begin(), raw.end(),
+              [](const SpawnCandidate &a, const SpawnCandidate &b)
+              { return a.dist2 < b.dist2; });
+    SpawnResolveCandidates.clear();
+    SpawnResolveCandidates.reserve(raw.size());
+    for (const SpawnCandidate &cand : raw)
+    {
+      SpawnResolveCandidates.push_back({cand.x, cand.z});
+    }
+
+    const ProceduralSettings &settings = Ctx.Settings;
+    SpawnResolveEyeHeight = eyeHeight;
+    SpawnResolveSettings = &settings;
+  }
+
+  const ProceduralSettings &settings = *SpawnResolveSettings;
+  int probed = 0;
+  while (SpawnResolveCandidateIndex < SpawnResolveCandidates.size() &&
+         probed < probesPerTick)
+  {
+    const auto &candidate = SpawnResolveCandidates[SpawnResolveCandidateIndex++];
+    ++probed;
+    const int heightmap_y = SurfaceYAt(candidate.x, candidate.z);
+    const PlacementSurfaceInfo surface = ResolvePlacementSurfaceY(
+        world, registry, candidate.x, candidate.z, heightmap_y,
+        settings.MaxHeight, settings.SeaLevel, settings.MinHeight);
+    if (surface.topSolidY < 0)
+    {
+      continue;
+    }
+    if (!IsExposedLandSurface(world, registry, candidate.x, candidate.z,
+                              surface.topSolidY))
+    {
+      continue;
+    }
+    SpawnPointOut = glm::vec3(static_cast<float>(candidate.x),
+                              static_cast<float>(surface.topSolidY) +
+                                  SpawnResolveEyeHeight + 0.5f,
+                              static_cast<float>(candidate.z));
+    SpawnResolveDone = true;
+    SpawnResolveStarted = false;
+    return true;
+  }
+
+  if (SpawnResolveCandidateIndex >= SpawnResolveCandidates.size())
+  {
+    const glm::vec3 fallback =
+        DefaultSpawnPosition(centerX, centerZ, SpawnResolveEyeHeight);
+    if (settings.FillWater)
+    {
+      const float aboveSeaSpawnY =
+          static_cast<float>(settings.SeaLevel) + SpawnResolveEyeHeight + 0.5f;
+      SpawnPointOut = glm::vec3(fallback.x,
+                                std::max(fallback.y, aboveSeaSpawnY),
+                                fallback.z);
+    }
+    else
+    {
+      SpawnPointOut = fallback;
+    }
+    SpawnResolveDone = true;
+    SpawnResolveStarted = false;
+    return true;
+  }
+  return false;
+}
+
 void IUWorldGenPipeline::GenerateSpawnPatch(int centerX, int centerZ,
                                            int radiusBlocks,
                                            WorldGenColumnProgressFn onProgress)
