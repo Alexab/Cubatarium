@@ -372,10 +372,10 @@ GLuint UCreaturePreviewRenderer::CreateSolidColorTexture(int size, float r,
 // Queue sink for the preview FBO: draws creature requests with the preview
 // shaders and the shared GPU mesh cache (audit 2.5). Wireframes are not
 // shown in icon previews.
-class PreviewCreatureDrawSink final : public cutum::ICreatureDrawSink
+class UPreviewCreatureDrawSink final : public cutum::ICreatureDrawSink
 {
 public:
-  PreviewCreatureDrawSink(cutum::UShaderProgram *shader,
+  UPreviewCreatureDrawSink(cutum::UShaderProgram *shader,
                           cutum::UShaderProgram *skinnedShader, GLuint cubeVao,
                           GLuint headVao, GLuint bodyVao, GLuint rigidHeadVao)
       : Shader(shader), SkinnedShader(skinnedShader), CubeVao(cubeVao),
@@ -586,7 +586,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
     glClearColor(bg.r, bg.g, bg.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    PreviewCreatureDrawSink drawSink(Shader.get(), SkinnedShader.get(),
+    UPreviewCreatureDrawSink drawSink(Shader.get(), SkinnedShader.get(),
                                      CubeVao, HeadCubeVao, BodyCubeVao,
                                      RigidHeadCubeVao);
     queue.Flush(drawSink);

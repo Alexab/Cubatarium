@@ -34,16 +34,16 @@ FindPart(const cutum::ResolvedCreatureAppearance &appearance,
   return nullptr;
 }
 
-class TempCatalog
+class UTempCatalog
 {
 public:
-  TempCatalog()
+  UTempCatalog()
   {
     Root = std::filesystem::temp_directory_path() /
            ("creature_appearance_test_" + std::to_string(++Counter));
     std::filesystem::create_directories(Root);
   }
-  ~TempCatalog() { std::filesystem::remove_all(Root); }
+  ~UTempCatalog() { std::filesystem::remove_all(Root); }
 
   std::string WriteCreature(const std::string &id, const std::string &body)
   {
@@ -71,7 +71,7 @@ private:
   static int Counter;
 };
 
-int TempCatalog::Counter = 0;
+int UTempCatalog::Counter = 0;
 
 } // namespace
 
@@ -79,7 +79,7 @@ int main()
 {
   using namespace cutum;
   int failures = 0;
-  TempCatalog catalog;
+  UTempCatalog catalog;
 
   UCreatureDefinitionStorage species;
   Expect(species.LoadFile(catalog.WriteCreature(

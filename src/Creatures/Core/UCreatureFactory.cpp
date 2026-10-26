@@ -1,4 +1,4 @@
-#include "Creatures/Core/CreatureFactory.h"
+#include "Creatures/Core/UCreatureFactory.h"
 
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinition.h"
@@ -11,7 +11,7 @@ namespace cutum
 {
 
 std::unique_ptr<UCreature>
-CreatureFactory::Build(const CreatureDefinition &definition,
+UCreatureFactory::Build(const CreatureDefinition &definition,
                        const CreatureBuildParams &params)
 {
   const glm::vec3 eyeOffset(0.0f, definition.eyeHeight, 0.0f);

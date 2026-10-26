@@ -1,4 +1,4 @@
-#include "Creatures/Spawning/CreatureSpawnPlanner.h"
+#include "Creatures/Spawning/UCreatureSpawnPlanner.h"
 
 #include "Creatures/Definition/CreatureDefinition.h"
 #include <cmath>
@@ -7,7 +7,7 @@ namespace cutum
 {
 
 std::vector<WeightedSpawnOption<const CreatureDefinition *>>
-CreatureSpawnPlanner::BuildEligibleOptions(
+UCreatureSpawnPlanner::BuildEligibleOptions(
     const std::vector<const CreatureDefinition *> &spawnable, bool hostileRoom,
     float hostilePressure) const
 {
@@ -34,7 +34,7 @@ CreatureSpawnPlanner::BuildEligibleOptions(
   return eligible;
 }
 
-glm::vec3 CreatureSpawnPlanner::NextCandidateOrigin(
+glm::vec3 UCreatureSpawnPlanner::NextCandidateOrigin(
     const glm::vec3 &playerOrigin)
 {
   std::uniform_real_distribution<float> angle(0.f, 6.28318530718f);
@@ -47,19 +47,19 @@ glm::vec3 CreatureSpawnPlanner::NextCandidateOrigin(
                                   std::sin(theta) * radius);
 }
 
-float CreatureSpawnPlanner::NextWeightRoll(float totalWeight)
+float UCreatureSpawnPlanner::NextWeightRoll(float totalWeight)
 {
   std::uniform_real_distribution<float> chooseWeight(0.f, totalWeight);
   return chooseWeight(Rng);
 }
 
-int CreatureSpawnPlanner::NextGroupSize(int groupMin, int groupMax)
+int UCreatureSpawnPlanner::NextGroupSize(int groupMin, int groupMax)
 {
   std::uniform_int_distribution<int> groupSize(groupMin, groupMax);
   return groupSize(Rng);
 }
 
-float CreatureSpawnPlanner::NextGroupJitter()
+float UCreatureSpawnPlanner::NextGroupJitter()
 {
   std::uniform_real_distribution<float> groupOffset(-2.f, 2.f);
   return groupOffset(Rng);

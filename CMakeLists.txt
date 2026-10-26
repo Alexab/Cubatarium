@@ -161,8 +161,8 @@ set(SOURCES
     src/Creatures/Locomotion/CreatureMotor.cpp
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
-    src/Creatures/Core/CreatureFactory.cpp
-    src/Creatures/Spawning/CreatureSpawnPlanner.cpp
+    src/Creatures/Core/UCreatureFactory.cpp
+    src/Creatures/Spawning/UCreatureSpawnPlanner.cpp
     src/Creatures/Core/CreatureInventory.cpp
     src/Creatures/Stats/CreatureStatsDefaults.cpp
     src/Creatures/Stats/CreatureStatsJson.cpp
@@ -1395,7 +1395,7 @@ cubatarium_add_test(NAME creature_spawn_planner_test
         src/Creatures/Locomotion/LocomotionTypes.cpp
         src/Creatures/Core/CreatureCatalogTypes.cpp
         src/Creatures/Visual/CreatureRigidModelLoader.cpp
-        src/Creatures/Spawning/CreatureSpawnPlanner.cpp
+        src/Creatures/Spawning/UCreatureSpawnPlanner.cpp
         src/Test/CreatureSpawnPlannerTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME creature_spawn_planner_test

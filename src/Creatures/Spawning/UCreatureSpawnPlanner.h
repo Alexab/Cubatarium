@@ -16,10 +16,10 @@ struct CreatureDefinition;
 /// species choice, group size and group jitter. Extracted from
 /// UWorldEnvironment::TickNaturalPopulation so planning is unit-testable
 /// without a world (audit phase 3, S5).
-class CreatureSpawnPlanner
+class UCreatureSpawnPlanner
 {
 public:
-  explicit CreatureSpawnPlanner(std::mt19937 &rng) : Rng(rng) {}
+  explicit UCreatureSpawnPlanner(std::mt19937 &rng) : Rng(rng) {}
 
   /// Natural-spawnable species with positive weight; hostile species are
   /// dropped without hostile room and their weight scaled by pressure.

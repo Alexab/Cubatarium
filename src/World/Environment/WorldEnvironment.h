@@ -8,7 +8,7 @@
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
 #include "Creatures/Spawning/CreaturePopulationRules.h"
-#include "Creatures/Spawning/CreatureSpawnPlanner.h"
+#include "Creatures/Spawning/UCreatureSpawnPlanner.h"
 #include "World/Environment/CreatureSpatialIndex.h"
 #include <functional>
 #include <map>
@@ -166,7 +166,7 @@ private:
   float LoadedCreaturePositionValidationTimer{0.f};
   bool LoadedCreaturePositionValidationPending{true};
   std::mt19937 NaturalPopulationRng{0xC0BA7AULL};
-  CreatureSpawnPlanner SpawnPlanner;
+  UCreatureSpawnPlanner SpawnPlanner;
 
   // Resolved-appearance cache keyed "speciesskin"; validated against
   // storage revisions/pointers so any reload invalidates it (audit V6).

@@ -447,8 +447,6 @@ void UWorld::RunLegacyPhysicsFrame()
   const float dt = camera ? camera->GetDeltaTime() : 0.0f;
   glm::ivec3 feetBlockForReadiness(0);
   bool hasFeetBlockForReadiness = false;
-  static bool prev_collision_ring_ready = true;
-
   if (camera && Streaming->HasStreamer() && IsStreamingEnabled())
   {
     const glm::vec3 eyePos = camera->GetPosition();
@@ -459,20 +457,10 @@ void UWorld::RunLegacyPhysicsFrame()
     {
       feetY = BoundsFeetY(controlled->GetBodyOrigin());
     }
-    const glm::ivec3 feetBlock =
+    feetBlockForReadiness =
         WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
-    feetBlockForReadiness = feetBlock;
     hasFeetBlockForReadiness = true;
-    glm::vec3 forward = camera->GetFront();
-    forward.y = 0.0f;
-    if (prev_collision_ring_ready || (PhysicsTickCounter % 2) == 0)
-    {
-      const auto t_ec = clock_t::now();
-      Streaming->EnsureCollisionChunks(feetBlock, forward);
-      PhysicsTelemetryData.EnsureCollisionMs =
-          std::chrono::duration<double, std::milli>(clock_t::now() - t_ec)
-              .count();
-    }
+    EnsureCollisionRingReadiness(camera, feetBlockForReadiness);
   }
 
   const bool streaming_red = IsStreamingPhysicsRed(
@@ -516,89 +504,11 @@ void UWorld::RunLegacyPhysicsFrame()
         camera->GetLastFreeMoveAtStart() ? 1 : 0;
   }
   const auto t_sync = clock_t::now();
-  static bool was_collision_ready = true;
-  const bool collision_ready =
-      !hasFeetBlockForReadiness ||
-      (camera && camera->GetFreeMove()) ||
-      IsCollisionReadyAtFeet(feetBlockForReadiness);
-  if (!collision_ready && camera)
-  {
-    PhysicsTelemetryData.CollisionReadyWaitMs +=
-        static_cast<double>(camera->GetDeltaTime()) * 1000.0;
-  }
-  if (collision_ready != was_collision_ready)
-  {
-    ++PhysicsTelemetryData.CollisionReadyTransitions;
-    was_collision_ready = collision_ready;
-  }
-  prev_collision_ring_ready = collision_ready;
-  if (camera && hasFeetBlockForReadiness &&
-      (!collision_ready || PhysicsTelemetryData.UnderfeetHasMesh == 0))
-  {
-    camera->SuspendFallThroughUnloadedChunks();
-  }
-  if (Streaming && Streaming->GetStreamer() && hasFeetBlockForReadiness)
-  {
-    const glm::ivec3 feet_chunk =
-        UChunkManager::WorldToChunk(feetBlockForReadiness);
-    Streaming->GetStreamer()->SetCollisionUrgentRing(
-        feet_chunk, PhysicsBudgetConfig.CollisionSafetyRadiusChunks,
-        !collision_ready);
-  }
+  UpdateCollisionReadinessGate(camera, feetBlockForReadiness,
+                               hasFeetBlockForReadiness);
 
-  if (controlled && camera)
+  if (controlled && camera && SyncControlledBodyFromCamera(controlled, camera))
   {
-    // Camera locomotion is the source of truth for the controlled player;
-    // sync body origin / facts from the camera controller (not UpdateControlled).
-    const glm::vec3 eye = camera->GetPosition();
-    float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
-    if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
-    {
-      const int gx = WorldCoordToBlockIndex(eye.x);
-      const int gz = WorldCoordToBlockIndex(eye.z);
-      if (const std::optional<float> gy = QueryGroundFeetYUnder(gx, gz, feetY))
-      {
-        feetY = *gy;
-      }
-    }
-    controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
-    controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
-    controlled->GetLocomotion().SyncFeetAnchorFromView(
-        feetY, camera->HasAnchoredFeet());
-    const CreatureViewOrientation view_orient =
-        camera->ResolveCreatureViewOrientation();
-    controlled->SetOrientation(view_orient.YawDeg, view_orient.PitchDeg);
-    controlled->SyncBoundsFromStance();
-    controlled->GetLocomotion().SetMode(camera->GetFreeMove()
-                                            ? CreatureMovementMode::Flying
-                                            : CreatureMovementMode::Walking);
-    float horizontalSpeed = 0.0f;
-    const UCreatureLocomotionController &camLoc =
-        camera->GetLocomotionController();
-    const LocomotionState camState = camLoc.GetLocomotionState();
-    const PlayerInput moveInput = camera->GetMovementInput();
-    if (camState == LocomotionState::Walk || camState == LocomotionState::Run ||
-        camState == LocomotionState::Crouch)
-    {
-      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
-    }
-    else if (camState == LocomotionState::Fly ||
-             camState == LocomotionState::Glide ||
-             camState == LocomotionState::Hover)
-    {
-      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
-    }
-    // P3: soft streaming integrity clamp (same scale as Camera::ProcessKeyboard).
-    {
-      const float clamp = GetPhysicsTelemetry().StreamSpeedClampScale;
-      if (clamp > 0.0f && clamp < 1.0f)
-      {
-        horizontalSpeed *= clamp;
-      }
-    }
-    controlled->RebuildLocomotionFactsFromController(
-        camLoc, controlled->GetLocomotion().GetCapabilities(),
-        static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
     is_moved = true;
   }
 
@@ -629,6 +539,173 @@ void UWorld::RunLegacyPhysicsFrame()
   PhysicsTelemetryData.EnvironmentTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
 
+  TickNpcCreatureIntents(dt, tick_world_ai);
+
+  // Controlled / possessed player: resolve Influence after agents (input may
+  // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
+  // player-gated in Resolver; session tick uses the world DigSession.
+  ResolveControlledCreatureInfluence(dt);
+
+  PhysicsTelemetryData.WorldAiAfterPlayerMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_ai).count();
+  PhysicsTelemetryData.CreatureTickMs = PhysicsTelemetryData.WorldAiAfterPlayerMs;
+
+  // After player facts sync so sprint/swim fatigue sees this frame's state.
+  TickSurvivalSystems(dt);
+
+  const auto t_after_move = std::chrono::high_resolution_clock::now();
+  // Era14 TD-ARCH-040: UpdateStreaming / TickMeshEmerge run in
+  // TickWorldStreamingPhase (WindowManager, after DoMovement) so phys_ms /
+  // MovementStepMs stay locomotion-only.
+
+  if (is_moved && camera)
+  {
+    if (auto user = GetCurrentUser())
+    {
+      user->SetPosition(camera->GetPosition());
+      user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
+    }
+    if (ViewBinding)
+    {
+      ViewBinding->RefreshIntersectionFromCurrentView(*this);
+    }
+  }
+
+  auto t_end = clock_t::now();
+  DurationDoMovementMks = static_cast<uint64_t>(
+      std::chrono::duration<double, std::micro>(t_end - t_begin).count());
+  PhysicsTelemetryData.MovementStepMs =
+      std::chrono::duration<double, std::milli>(t_after_move - t_begin).count();
+  PhysicsTelemetryData.PhysicsStepMs = PhysicsTelemetryData.MovementStepMs;
+  if (camera)
+  {
+    PhysicsTelemetryData.PhysicsSubsteps = camera->GetLastPhysicsSubsteps();
+    PhysicsTelemetryData.PhysicsAccumMs =
+        static_cast<double>(camera->GetPhysicsAccumulatorSec()) * 1000.0;
+  }
+  const double hitch_ms =
+      GetWallFrameDelta() > 0.0 ? GetWallFrameDelta() * 1000.0
+                                : PhysicsTelemetryData.MovementStepMs;
+  SetLastMovementFrameMs(hitch_ms);
+  UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
+}
+
+namespace
+{
+// Frame-local persistence for the streaming collision readiness gate (was
+// function-local statics inside RunLegacyPhysicsFrame).
+bool gPrevCollisionRingReady = true;
+bool gWasCollisionReady = true;
+} // namespace
+
+void UWorld::EnsureCollisionRingReadiness(const std::shared_ptr<UCamera> &camera,
+                                          const glm::ivec3 &feetBlock)
+{
+  glm::vec3 forward = camera->GetFront();
+  forward.y = 0.0f;
+  if (gPrevCollisionRingReady || (PhysicsTickCounter % 2) == 0)
+  {
+    const auto t_ec = std::chrono::high_resolution_clock::now();
+    Streaming->EnsureCollisionChunks(feetBlock, forward);
+    PhysicsTelemetryData.EnsureCollisionMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - t_ec)
+            .count();
+  }
+}
+
+void UWorld::UpdateCollisionReadinessGate(
+    const std::shared_ptr<UCamera> &camera, const glm::ivec3 &feetBlock,
+    bool hasFeetBlock)
+{
+  const bool collision_ready =
+      !hasFeetBlock || (camera && camera->GetFreeMove()) ||
+      IsCollisionReadyAtFeet(feetBlock);
+  if (!collision_ready && camera)
+  {
+    PhysicsTelemetryData.CollisionReadyWaitMs +=
+        static_cast<double>(camera->GetDeltaTime()) * 1000.0;
+  }
+  if (collision_ready != gWasCollisionReady)
+  {
+    ++PhysicsTelemetryData.CollisionReadyTransitions;
+    gWasCollisionReady = collision_ready;
+  }
+  gPrevCollisionRingReady = collision_ready;
+  if (camera && hasFeetBlock &&
+      (!collision_ready || PhysicsTelemetryData.UnderfeetHasMesh == 0))
+  {
+    camera->SuspendFallThroughUnloadedChunks();
+  }
+  if (Streaming && Streaming->GetStreamer() && hasFeetBlock)
+  {
+    const glm::ivec3 feet_chunk = UChunkManager::WorldToChunk(feetBlock);
+    Streaming->GetStreamer()->SetCollisionUrgentRing(
+        feet_chunk, PhysicsBudgetConfig.CollisionSafetyRadiusChunks,
+        !collision_ready);
+  }
+}
+
+bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
+                                          const std::shared_ptr<UCamera> &camera)
+{
+  // Camera locomotion is the source of truth for the controlled player;
+  // sync body origin / facts from the camera controller (not UpdateControlled).
+  const glm::vec3 eye = camera->GetPosition();
+  float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
+  if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
+  {
+    const int gx = WorldCoordToBlockIndex(eye.x);
+    const int gz = WorldCoordToBlockIndex(eye.z);
+    if (const std::optional<float> gy = QueryGroundFeetYUnder(gx, gz, feetY))
+    {
+      feetY = *gy;
+    }
+  }
+  controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
+  controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
+  controlled->GetLocomotion().SyncFeetAnchorFromView(feetY,
+                                                     camera->HasAnchoredFeet());
+  const CreatureViewOrientation view_orient =
+      camera->ResolveCreatureViewOrientation();
+  controlled->SetOrientation(view_orient.YawDeg, view_orient.PitchDeg);
+  controlled->SyncBoundsFromStance();
+  controlled->GetLocomotion().SetMode(camera->GetFreeMove()
+                                          ? CreatureMovementMode::Flying
+                                          : CreatureMovementMode::Walking);
+  float horizontalSpeed = 0.0f;
+  const UCreatureLocomotionController &camLoc =
+      camera->GetLocomotionController();
+  const LocomotionState camState = camLoc.GetLocomotionState();
+  const PlayerInput moveInput = camera->GetMovementInput();
+  if (camState == LocomotionState::Walk || camState == LocomotionState::Run ||
+      camState == LocomotionState::Crouch)
+  {
+    horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
+  }
+  else if (camState == LocomotionState::Fly ||
+           camState == LocomotionState::Glide ||
+           camState == LocomotionState::Hover)
+  {
+    horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
+  }
+  // P3: soft streaming integrity clamp (same scale as Camera::ProcessKeyboard).
+  {
+    const float clamp = GetPhysicsTelemetry().StreamSpeedClampScale;
+    if (clamp > 0.0f && clamp < 1.0f)
+    {
+      horizontalSpeed *= clamp;
+    }
+  }
+  controlled->RebuildLocomotionFactsFromController(
+      camLoc, controlled->GetLocomotion().GetCapabilities(),
+      static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
+  return true;
+}
+
+void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai)
+{
+  using clock_t = std::chrono::high_resolution_clock;
   int creatures_total = 0;
   int creatures_ai_ticked = 0;
   int world_creatures_skipped = 0;
@@ -684,10 +761,11 @@ void UWorld::RunLegacyPhysicsFrame()
     PhysicsTelemetryData.CreaturesAiBudget = 0;
     PhysicsTelemetryData.CreaturesAiDeferred = 0;
   }
+}
 
-  // Controlled / possessed player: resolve Influence after agents (input may
-  // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
-  // player-gated in Resolver; session tick uses the world DigSession.
+void UWorld::ResolveControlledCreatureInfluence(float dt)
+{
+  using clock_t = std::chrono::high_resolution_clock;
   const auto t_infl = clock_t::now();
   if (Environment.GetControlledCreatureId() != 0)
   {
@@ -697,9 +775,8 @@ void UWorld::RunLegacyPhysicsFrame()
       const CreatureIntent &intent = controlled_creature->GetIntent();
       if (intent.Influence.Channel == InfluenceChannel::Dig)
       {
-        InfluencePrediction pred =
-            InfluenceResolver::Resolve(*this, *controlled_creature, GetGameMode(),
-                                       nullptr);
+        InfluencePrediction pred = InfluenceResolver::Resolve(
+            *this, *controlled_creature, GetGameMode(), nullptr);
         InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
         if (!HasBreakSession())
         {
@@ -728,9 +805,8 @@ void UWorld::RunLegacyPhysicsFrame()
       }
       else if (intent.Influence.Channel == InfluenceChannel::Use)
       {
-        InfluencePrediction pred =
-            InfluenceResolver::Resolve(*this, *controlled_creature, GetGameMode(),
-                                       nullptr);
+        InfluencePrediction pred = InfluenceResolver::Resolve(
+            *this, *controlled_creature, GetGameMode(), nullptr);
         InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
         CreatureIntent cleared = intent;
         cleared.Influence = InfluenceIntent{};
@@ -741,12 +817,11 @@ void UWorld::RunLegacyPhysicsFrame()
   PhysicsTelemetryData.ControlledInfluenceMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_infl)
           .count();
+}
 
-  PhysicsTelemetryData.WorldAiAfterPlayerMs =
-      std::chrono::duration<double, std::milli>(clock_t::now() - t_ai).count();
-  PhysicsTelemetryData.CreatureTickMs = PhysicsTelemetryData.WorldAiAfterPlayerMs;
-
-  // After player facts sync so sprint/swim fatigue sees this frame's state.
+void UWorld::TickSurvivalSystems(float dt)
+{
+  using clock_t = std::chrono::high_resolution_clock;
   const auto t_vitals = clock_t::now();
   CreatureVitalsSystem::Tick(*this, GetGameMode(), GetDifficulty(), dt);
   PhysicsTelemetryData.VitalsTickMs =
@@ -757,42 +832,6 @@ void UWorld::RunLegacyPhysicsFrame()
   PhysicsTelemetryData.StatusEffectsTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_status)
           .count();
-
-  const auto t_after_move = std::chrono::high_resolution_clock::now();
-  // Era14 TD-ARCH-040: UpdateStreaming / TickMeshEmerge run in
-  // TickWorldStreamingPhase (WindowManager, after DoMovement) so phys_ms /
-  // MovementStepMs stay locomotion-only.
-
-  if (is_moved && camera)
-  {
-    if (auto user = GetCurrentUser())
-    {
-      user->SetPosition(camera->GetPosition());
-      user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
-    }
-    if (ViewBinding)
-    {
-      ViewBinding->RefreshIntersectionFromCurrentView(*this);
-    }
-  }
-
-  auto t_end = clock_t::now();
-  DurationDoMovementMks = static_cast<uint64_t>(
-      std::chrono::duration<double, std::micro>(t_end - t_begin).count());
-  PhysicsTelemetryData.MovementStepMs =
-      std::chrono::duration<double, std::milli>(t_after_move - t_begin).count();
-  PhysicsTelemetryData.PhysicsStepMs = PhysicsTelemetryData.MovementStepMs;
-  if (camera)
-  {
-    PhysicsTelemetryData.PhysicsSubsteps = camera->GetLastPhysicsSubsteps();
-    PhysicsTelemetryData.PhysicsAccumMs =
-        static_cast<double>(camera->GetPhysicsAccumulatorSec()) * 1000.0;
-  }
-  const double hitch_ms =
-      GetWallFrameDelta() > 0.0 ? GetWallFrameDelta() * 1000.0
-                                : PhysicsTelemetryData.MovementStepMs;
-  SetLastMovementFrameMs(hitch_ms);
-  UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
 }
 
 void UWorld::TickWorldStreamingPhase()
