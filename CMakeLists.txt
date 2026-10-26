@@ -164,7 +164,6 @@ set(SOURCES
     src/Creatures/Core/CreatureFactory.cpp
     src/Creatures/Spawning/CreatureSpawnPlanner.cpp
     src/Creatures/Core/CreatureInventory.cpp
-    src/Creatures/Roles/CreatureRoleHandlerFactory.cpp
     src/Creatures/Stats/CreatureStatsDefaults.cpp
     src/Creatures/Stats/CreatureStatsJson.cpp
     src/Creatures/Stats/CreatureVitalsSystem.cpp
@@ -265,7 +264,6 @@ set(SOURCES
     src/World/Core/WorldViewBinding.cpp
     src/World/Core/RuntimeTuning.cpp
     src/World/Core/WorldFluidFacade.cpp
-    src/World/Core/WorldCreatureFacade.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Collision/WorldCollision.cpp
     src/World/Collision/VoxelDdaTraversal.cpp

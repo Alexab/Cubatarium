@@ -12,7 +12,6 @@
 #include "Creatures/Influence/StatusEffectTypes.h"
 #include "Creatures/Stats/CreatureAttributes.h"
 #include "Creatures/Stats/CreatureVitals.h"
-#include "Creatures/Roles/ICreatureRoleHandler.h"
 #include <algorithm>
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -78,15 +77,16 @@ public:
   void SetNeedsNeedsTick(bool v) { NeedsTick = v; }
 
   ArmorGroups &GetArmorGroups() { return Armor; }
-  const ArmorGroups &GetArmorGroups() const
+  /// Total includes equipped armor contributions (pre-aggregated in
+  /// CreatureInventory) plus offhand shield armor_groups. By value: the old
+  /// const overload aggregated into a mutable cache member (audit 5.3).
+  ArmorGroups GetArmorGroups() const
   {
-    // Total includes equipped armor contributions (pre-aggregated in
-    // CreatureInventory) plus offhand shield armor_groups.
-    TotalArmorGroups = Armor;
+    ArmorGroups total = Armor;
     const ArmorGroups &eq = Inventory.GetEquippedArmorGroups();
     for (const auto &pair : eq.Ratings)
     {
-      TotalArmorGroups.Ratings[pair.first] += pair.second;
+      total.Ratings[pair.first] += pair.second;
     }
     const InventoryEntryRef &off = Inventory.GetEquippedOffhand();
     if (!off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
@@ -96,10 +96,10 @@ public:
       const ArmorGroups &offGroups = Inventory.GetOffhandArmorGroups();
       for (const auto &pair : offGroups.Ratings)
       {
-        TotalArmorGroups.Ratings[pair.first] += pair.second;
+        total.Ratings[pair.first] += pair.second;
       }
     }
-    return TotalArmorGroups;
+    return total;
   }
   void SetArmorGroups(const ArmorGroups &g) { Armor = g; }
   /// -1 = use strength formula for bare-hand fleshy damage.
@@ -170,24 +170,14 @@ public:
       float horizontalSpeedOverride = -1.0f,
       const UWorld *world = nullptr);
 
-  bool IsPlayerCharacter() const
-  {
-    return RoleHandler ? RoleHandler->IsPlayer() : PlayerCharacter;
-  }
+  /// Role flags (audit 5.2: the ICreatureRoleHandler strategy layer stored
+  /// nothing but copies of these two bits and is gone).
+  bool IsPlayerCharacter() const { return PlayerCharacter; }
   void SetPlayerCharacter(bool v);
-  bool IsPossessed() const
-  {
-    return RoleHandler ? RoleHandler->IsExternallyControlled() : Possessed;
-  }
+  bool IsPossessed() const { return Possessed; }
   void SetPossessed(bool v);
 
-  virtual bool IsPlayer() const
-  {
-    return RoleHandler ? RoleHandler->IsPlayer() : false;
-  }
-  ICreatureRoleHandler &GetRoleHandler();
-  const ICreatureRoleHandler &GetRoleHandler() const;
-  void SetRoleHandler(std::unique_ptr<ICreatureRoleHandler> handler);
+  virtual bool IsPlayer() const { return PlayerCharacter; }
 
   virtual void ExecuteIntent(UWorld &world, float dt);
 
@@ -240,7 +230,6 @@ protected:
   CreatureVitals Vitals{};
   CreatureAttributes Attributes{};
   ArmorGroups Armor{ArmorGroups::DefaultFleshy()};
-  mutable ArmorGroups TotalArmorGroups{};
   int BareHandFleshyOverride{-1};
   float BareHandIntervalOverride{-1.f};
   float TimeSinceLastInfluenceSec{1000.f};
@@ -252,7 +241,6 @@ protected:
   CreatureIntent Intent{};
   bool PlayerCharacter{false};
   bool Possessed{false};
-  std::unique_ptr<ICreatureRoleHandler> RoleHandler;
   std::unique_ptr<IUCreatureVisual> Visual;
   LocomotionArchetype LocomotionArchetype{
       LocomotionArchetype::TerrestrialBiped};

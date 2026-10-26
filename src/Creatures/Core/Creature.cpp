@@ -5,7 +5,6 @@
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Locomotion/CreatureMotor.h"
 #include "Creatures/Player/PlayerCapsule.h"
-#include "Creatures/Roles/CreatureRoleHandlerFactory.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "World/Core/World.h"
@@ -22,8 +21,7 @@ namespace cutum
 UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
                      glm::vec3 eyeOffset)
     : Id(Id), TypeId(std::move(typeId)), BodyOrigin(bodyOrigin),
-      EyeOffset(eyeOffset),
-      RoleHandler(CreateCreatureRoleHandler(CreatureRoleKind::Mob))
+      EyeOffset(eyeOffset)
 {
   Bounds.profile.restSizeBlocks = glm::vec3(0.6f, 1.8f, 0.6f);
   Bounds.profile.minSizeBlocks = glm::vec3(0.6f, 1.5f, 0.6f);
@@ -35,55 +33,10 @@ UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
 
 UCreature::~UCreature() = default;
 
-void UCreature::SetPlayerCharacter(bool v)
-{
-  PlayerCharacter = v;
-  if (v)
-  {
-    RoleHandler = CreateCreatureRoleHandler(CreatureRoleKind::Player);
-  }
-  else if (!RoleHandler || RoleHandler->IsPlayer())
-  {
-    RoleHandler = CreateCreatureRoleHandler(CreatureRoleKind::Mob);
-  }
-  if (RoleHandler)
-  {
-    RoleHandler->SetExternallyControlled(Possessed);
-  }
-}
+void UCreature::SetPlayerCharacter(bool v) { PlayerCharacter = v; }
 
-void UCreature::SetPossessed(bool v)
-{
-  Possessed = v;
-  if (RoleHandler)
-  {
-    RoleHandler->SetExternallyControlled(v);
-  }
-}
+void UCreature::SetPossessed(bool v) { Possessed = v; }
 
-ICreatureRoleHandler &UCreature::GetRoleHandler()
-{
-  if (!RoleHandler)
-  {
-    RoleHandler = CreateCreatureRoleHandler(CreatureRoleKind::Mob);
-  }
-  return *RoleHandler;
-}
-
-const ICreatureRoleHandler &UCreature::GetRoleHandler() const
-{
-  return const_cast<UCreature *>(this)->GetRoleHandler();
-}
-
-void UCreature::SetRoleHandler(std::unique_ptr<ICreatureRoleHandler> handler)
-{
-  RoleHandler = std::move(handler);
-  if (RoleHandler)
-  {
-    PlayerCharacter = RoleHandler->IsPlayer();
-    RoleHandler->SetExternallyControlled(Possessed);
-  }
-}
 
 void UCreature::ApplyStatsFromDefinition(const CreatureDefinition &def)
 {
