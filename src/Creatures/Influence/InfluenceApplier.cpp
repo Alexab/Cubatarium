@@ -70,6 +70,105 @@ void ApplyArmorWearForHit(UWorld &world, UCreature &target,
   }
 }
 
+// Active frontal block wears offhand even when damage mul zeroes the hit.
+void ApplyShieldWearForBlock(UWorld &world, UCreature &target,
+                             WorldGameMode mode)
+{
+  if (!(ModePolicy::AllowsCombatDamage(mode) &&
+        ModePolicy::AllowsToolWear(mode, world.GetDifficulty())))
+  {
+    return;
+  }
+  auto &inv = target.GetInventory();
+  const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+  if (!items)
+  {
+    return;
+  }
+  InventoryEntryRef off = inv.GetEquippedOffhand();
+  if (off.empty || off.broken || off.kind != InventoryEntryKind::Item)
+  {
+    return;
+  }
+  const ItemDefinition *shield = items->Get(off.Id);
+  if (!shield || !shield->Block.Enabled)
+  {
+    return;
+  }
+  int uses = shield->Block.BlockUses;
+  if (uses <= 0)
+  {
+    uses = shield->Tool.PunchAttackUses;
+  }
+  if (uses <= 0)
+  {
+    uses = 100;
+  }
+  const float shieldWear = 1.f / static_cast<float>(uses);
+  if (ApplyItemWear(off, *shield, shieldWear, true))
+  {
+    inv.UnequipOffhand(*items);
+  }
+  else
+  {
+    inv.EquipOffhand(off, *items);
+  }
+}
+
+/// Consume one arrow from storage, then hotbar slots (negative storage
+/// counts are unlimited creative stock).
+void ConsumeRangedAmmo(UWorld &world, UCreature &source, const std::string &capabilityId)
+{
+  const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+  if (!items)
+  {
+    return;
+  }
+  const ItemDefinition *bow = items->Get(capabilityId);
+  if (!bow || bow->Ranged.AmmoId.empty())
+  {
+    return;
+  }
+  auto &storage = source.GetInventory().GetStorageMutable();
+  const auto it = storage.find(bow->Ranged.AmmoId);
+  if (it != storage.end() && it->second < 0)
+  {
+    // Unlimited creative stock.
+    return;
+  }
+  if (it != storage.end() && it->second > 0)
+  {
+    --it->second;
+    if (it->second <= 0)
+    {
+      storage.erase(it);
+    }
+    return;
+  }
+  auto &hotbars = source.GetInventory().GetHotbarsMutable();
+  for (auto &bar : hotbars)
+  {
+    for (auto &slot : bar.slots)
+    {
+      if (slot.entry.empty || slot.entry.kind != InventoryEntryKind::Item ||
+          slot.entry.Id != bow->Ranged.AmmoId)
+      {
+        continue;
+      }
+      if (slot.entry.count > 1)
+      {
+        --slot.entry.count;
+      }
+      else
+      {
+        slot.entry = InventoryEntryRef{};
+        slot.empty = true;
+      }
+      return;
+    }
+  }
+}
+
 void ApplyMeleeToolWear(UWorld &world, UCreature &source,
                         const InfluenceCapability &cap)
 {
@@ -279,44 +378,9 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
 
       ApplyArmorWearForHit(world, *target, mode, amount);
     }
-    // Active frontal block wears offhand even when damage mul zeroes the hit.
-    if (delta.ShieldBlocked &&
-        ModePolicy::AllowsCombatDamage(mode) &&
-        ModePolicy::AllowsToolWear(mode, world.GetDifficulty()))
+    if (delta.ShieldBlocked)
     {
-      auto &inv = target->GetInventory();
-      const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
-      if (items)
-      {
-        InventoryEntryRef off = inv.GetEquippedOffhand();
-        if (!off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
-        {
-          if (const ItemDefinition *shield = items->Get(off.Id))
-          {
-            if (shield->Block.Enabled)
-            {
-              int uses = shield->Block.BlockUses;
-              if (uses <= 0)
-              {
-                uses = shield->Tool.PunchAttackUses;
-              }
-              if (uses <= 0)
-              {
-                uses = 100;
-              }
-              const float shieldWear = 1.f / static_cast<float>(uses);
-              if (ApplyItemWear(off, *shield, shieldWear, true))
-              {
-                inv.UnequipOffhand(*items);
-              }
-              else
-              {
-                inv.EquipOffhand(off, *items);
-              }
-            }
-          }
-        }
-      }
+      ApplyShieldWearForBlock(world, *target, mode);
     }
     for (const std::string &status_id : delta.StatusIdsToAdd)
     {
@@ -331,62 +395,7 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     ApplyMeleeToolWear(world, *source, pred.Capability);
     if (pred.Capability.Channel == InfluenceChannel::Ranged)
     {
-      const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
-      if (items)
-      {
-        if (const ItemDefinition *bow = items->Get(pred.Capability.Id))
-        {
-          if (!bow->Ranged.AmmoId.empty())
-          {
-            auto &storage = source->GetInventory().GetStorageMutable();
-            const auto it = storage.find(bow->Ranged.AmmoId);
-            if (it != storage.end() && it->second < 0)
-            {
-              // Unlimited creative stock.
-            }
-            else if (it != storage.end() && it->second > 0)
-            {
-              --it->second;
-              if (it->second <= 0)
-              {
-                storage.erase(it);
-              }
-            }
-            else
-            {
-              auto &hotbars = source->GetInventory().GetHotbarsMutable();
-              bool done = false;
-              for (auto &bar : hotbars)
-              {
-                for (auto &slot : bar.slots)
-                {
-                  if (slot.entry.empty ||
-                      slot.entry.kind != InventoryEntryKind::Item ||
-                      slot.entry.Id != bow->Ranged.AmmoId)
-                  {
-                    continue;
-                  }
-                  if (slot.entry.count > 1)
-                  {
-                    --slot.entry.count;
-                  }
-                  else
-                  {
-                    slot.entry = InventoryEntryRef{};
-                    slot.empty = true;
-                  }
-                  done = true;
-                  break;
-                }
-                if (done)
-                {
-                  break;
-                }
-              }
-            }
-          }
-        }
-      }
+      ConsumeRangedAmmo(world, *source, pred.Capability.Id);
     }
   }
 
