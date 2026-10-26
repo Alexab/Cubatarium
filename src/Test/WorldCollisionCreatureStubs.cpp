@@ -18,4 +18,11 @@ UWorldEnvironment::QueryCreatureNeighborsInRadius(const glm::vec3 &, float,
   return {};
 }
 
+std::vector<CreatureNeighborView>
+UWorldEnvironment::QueryCreatureNeighborsOverlappingVolume(
+    const CollisionVolume &, CreatureId) const
+{
+  return {};
+}
+
 } // namespace cutum

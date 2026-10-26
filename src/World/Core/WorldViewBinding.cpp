@@ -477,8 +477,36 @@ void UWorld::RunLegacyPhysicsFrame()
   // limits before it can add anything.
   Environment.TickNaturalPopulation(dt);
 
+  // Rider mount (runtime issue 5): resolve what the player stands on
+  // before the movement step; the mount is excluded from the rider's
+  // collisions for the step and its back acts as the ground plane.
+  CreatureId mountId = 0;
+  glm::vec3 mountOriginBefore(0.0f);
+  if (camera && controlled && controlled->GetId() != 0)
+  {
+    const CollisionVolume riderVol = controlled->GetCollisionVolume();
+    const glm::vec3 &feetPos = controlled->GetBodyOrigin();
+    if (const auto mount = FindMountCreatureUnder(
+            feetPos, riderVol.halfExtents, controlled->GetId()))
+    {
+      mountId = mount->first;
+      mountOriginBefore = Environment.GetCreature(mountId)
+                              ? Environment.GetCreature(mountId)->GetBodyOrigin()
+                              : glm::vec3(0.0f);
+      camera->GetLocomotionController().SetMountSupport(
+          mountId, mount->second);
+      Collision.SetRiderMountId(mountId);
+    }
+    else
+    {
+      camera->GetLocomotionController().ClearMountSupport();
+      Collision.SetRiderMountId(0);
+    }
+  }
+
   const auto t_cam = clock_t::now();
   bool is_moved = camera && camera->DoMovement(this);
+  Collision.SetRiderMountId(0);
   PhysicsTelemetryData.CameraDoMovementMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_cam).count();
   if (camera)
@@ -539,7 +567,13 @@ void UWorld::RunLegacyPhysicsFrame()
   PhysicsTelemetryData.EnvironmentTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
 
-  TickNpcCreatureIntents(dt, tick_world_ai);
+  TickNpcCreatureIntents(dt, tick_world_ai, mountId, mountOriginBefore);
+  if (mountId != 0 && camera)
+  {
+    // Riding counts as movement: user position/intersection follow the
+    // camera even when the rider itself is idle.
+    is_moved = true;
+  }
 
   // Controlled / possessed player: resolve Influence after agents (input may
   // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
@@ -703,7 +737,9 @@ bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
   return true;
 }
 
-void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai)
+void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
+                                    CreatureId mountId,
+                                    const glm::vec3 &mountOriginBefore)
 {
   using clock_t = std::chrono::high_resolution_clock;
   int creatures_total = 0;
@@ -743,6 +779,24 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai)
         // upserts replace the full per-activity-tick rebuild; Upsert no-ops
         // when position and extents are unchanged.
         Environment.UpdateCreatureInSpatialIndex(creature);
+        // Riding carry (runtime issue 5): the player standing on this
+        // creature moves with it this frame.
+        if (mountId != 0 && creature.GetId() == mountId)
+        {
+          if (auto riderCamera = GetCurrentUserCamera())
+          {
+            if (UCreature *rider = GetControlledCreature())
+            {
+              const glm::vec3 carry =
+                  creature.GetBodyOrigin() - mountOriginBefore;
+              if (glm::dot(carry, carry) > 1e-10f)
+              {
+                riderCamera->SetPosition(riderCamera->GetPosition() + carry);
+                rider->SetBodyOrigin(rider->GetBodyOrigin() + carry);
+              }
+            }
+          }
+        }
       });
   PhysicsTelemetryData.NpcIntentExecuteMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_npc).count();

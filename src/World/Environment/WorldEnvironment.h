@@ -72,6 +72,20 @@ public:
   std::vector<CreatureNeighborView>
   QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
                                  CreatureId skip_id) const;
+  /// Neighbors whose AABB overlaps the volume (sees big bodies whose origin
+  /// is far from the volume - used by depenetration and mounts).
+  std::vector<CreatureNeighborView> QueryCreatureNeighborsOverlappingVolume(
+      const CollisionVolume &vol, CreatureId skip_id) const;
+  bool AnyCreatureVolumeOverlapsExcluding(const CollisionVolume &vol,
+                                          CreatureId skipA,
+                                          CreatureId skipB) const;
+
+  /// Rider mount discovery (runtime issue 5): the creature whose back the
+  /// given body stands on, if it is large enough to ride. Returns its id
+  /// and the world-space Y of its back.
+  std::optional<std::pair<CreatureId, float>>
+  FindMountUnder(const glm::vec3 &feetPos, const glm::vec3 &halfExtents,
+                 CreatureId skipId) const;
 
   CreatureId SpawnCreature(const std::string &speciesId,
                            const glm::vec3 &bodyOrigin,

@@ -217,6 +217,106 @@ UWorldEnvironment::CreaturesInRadius(const glm::vec3 &center,
 }
 
 std::vector<CreatureNeighborView>
+UWorldEnvironment::QueryCreatureNeighborsOverlappingVolume(
+    const CollisionVolume &vol, CreatureId skip_id) const
+{
+  if (CreatureSpatialIndexReady)
+  {
+    return CreatureSpatialIndex.QueryNeighborsOverlappingVolume(vol,
+                                                                skip_id);
+  }
+  std::vector<CreatureNeighborView> out;
+  for (const auto &entry : Creatures)
+  {
+    if (entry.first == skip_id)
+    {
+      continue;
+    }
+    const CollisionVolume other = entry.second->GetCollisionVolume();
+    if (UCube::CheckAabbCollision(vol.center, vol.halfExtents, other.center,
+                                  other.halfExtents))
+    {
+      CreatureNeighborView view;
+      view.Id = entry.first;
+      view.bodyOrigin = entry.second->GetBodyOrigin();
+      out.push_back(view);
+    }
+  }
+  return out;
+}
+
+bool UWorldEnvironment::AnyCreatureVolumeOverlapsExcluding(
+    const CollisionVolume &vol, CreatureId skipA, CreatureId skipB) const
+{
+  for (const CreatureNeighborView &neighbor :
+       QueryCreatureNeighborsOverlappingVolume(vol, skipA))
+  {
+    if (neighbor.Id == skipB)
+    {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+std::optional<std::pair<CreatureId, float>>
+UWorldEnvironment::FindMountUnder(const glm::vec3 &feetPos,
+                                  const glm::vec3 &halfExtents,
+                                  CreatureId skipId) const
+{
+  // Riding threshold (runtime issue 5): backs must be big enough to stand
+  // on - tiny flyers/swimmers (owl, fish) are excluded.
+  constexpr float kMinMountHeightBlocks = 1.0f;
+  constexpr float kMinMountWidthBlocks = 0.9f;
+  constexpr float kMountTopToleranceDown = 0.45f;
+  constexpr float kMountTopToleranceUp = 0.25f;
+
+  CollisionVolume riderVol;
+  riderVol.center = feetPos + glm::vec3(0.f, halfExtents.y, 0.f);
+  riderVol.halfExtents = halfExtents;
+  std::optional<std::pair<CreatureId, float>> best;
+  for (const CreatureNeighborView &neighbor :
+       QueryCreatureNeighborsOverlappingVolume(riderVol, skipId))
+  {
+    const UCreature *candidate = GetCreature(neighbor.Id);
+    if (!candidate || candidate->IsPlayerCharacter() ||
+        candidate->IsPossessed())
+    {
+      continue;
+    }
+    const CollisionVolume body = candidate->GetCollisionVolume();
+    if (body.halfExtents.y * 2.f < kMinMountHeightBlocks ||
+        std::max(body.halfExtents.x, body.halfExtents.z) * 2.f <
+            kMinMountWidthBlocks)
+    {
+      continue;
+    }
+    const float backY = body.center.y + body.halfExtents.y;
+    if (backY < feetPos.y - kMountTopToleranceDown ||
+        backY > feetPos.y + kMountTopToleranceUp)
+    {
+      continue;
+    }
+    const float overlapX =
+        riderVol.halfExtents.x + body.halfExtents.x -
+        std::abs(riderVol.center.x - body.center.x);
+    const float overlapZ =
+        riderVol.halfExtents.z + body.halfExtents.z -
+        std::abs(riderVol.center.z - body.center.z);
+    if (overlapX < 0.05f || overlapZ < 0.05f)
+    {
+      continue;
+    }
+    if (!best || backY > best->second)
+    {
+      best = std::make_pair(neighbor.Id, backY);
+    }
+  }
+  return best;
+}
+
+std::vector<CreatureNeighborView>
 UWorldEnvironment::QueryCreatureNeighborsInRadius(const glm::vec3 &center,
                                                   float radius,
                                                   CreatureId skip_id) const

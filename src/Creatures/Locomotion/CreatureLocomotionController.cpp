@@ -482,18 +482,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
 
   if (Mode == CreatureMovementMode::Flying)
   {
-    StanceBlend = 0.0f;
-    const PlayerCapsule cap = GetCapsule();
-    if (world->HasGroundSupport(eyePos, cap))
-    {
-      OnLandedFromFlight(world, eyePos, false);
-    }
-    if (!input.jumpHeld)
-    {
-      SuppressNextJump = false;
-    }
-    SpaceWasPressed = input.jumpHeld;
-    updateLocomotionState(input);
+    UpdateFlight(world, eyePos, input);
     return;
   }
 
@@ -556,40 +545,25 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
 
   if (swimmingFluid)
   {
-    OnGround = false;
-    FeetAnchored = false;
-    if (jumpEdge)
-    {
-      VerticalVelocity = std::max(VerticalVelocity, 6.5f);
-    }
-    if (input.jumpHeld)
-    {
-      VerticalVelocity += fluid.RiseSpeed * 5.0f * dt;
-    }
-    VerticalVelocity *= 1.0f - std::min(0.9f, fluid.DragHorizontal * dt * 6.0f);
-    if (!input.jumpHeld)
-    {
-      VerticalVelocity -= fluid.SinkSpeed * dt;
-    }
-    VerticalVelocity += kGravity * 0.15f * dt;
-    const glm::vec3 verticalDelta(0.0f, VerticalVelocity * dt, 0.0f);
-    eyePos = world->ResolveMovement(eyePos, verticalDelta, cap, skipCreatureId);
-    updateStanceBlend(world, eyePos, input, dt, skipCreatureId);
-    if (!input.crouchHeld && StanceBlend > 0.0f)
-    {
-      const float step = dt / kStanceTransitionDuration;
-      StanceBlend = std::max(0.0f, StanceBlend - step * 2.5f);
-    }
-    SpaceWasPressed = input.jumpHeld;
-    updateLocomotionState(input);
+    UpdateSwimming(world, eyePos, input, dt, fluid, cap, skipCreatureId);
     return;
   }
 
-  const bool groundedPose = VerticalVelocity <= 0.05f && supported;
+  const bool mountSupported = MountSupportId != 0 &&
+                             MountSupportId != skipCreatureId && !supported;
+  const bool groundedPose =
+      VerticalVelocity <= 0.05f && (supported || mountSupported);
 
   if (groundedPose)
   {
-    syncGroundedPose(world, eyePos, input, dt, skipCreatureId);
+    if (mountSupported)
+    {
+      SyncMountedPose(world, eyePos, input, dt, skipCreatureId);
+    }
+    else
+    {
+      syncGroundedPose(world, eyePos, input, dt, skipCreatureId);
+    }
   }
   else
   {
@@ -622,6 +596,77 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
 
   SpaceWasPressed = input.jumpHeld;
   updateLocomotionState(input);
+}
+
+void UCreatureLocomotionController::UpdateFlight(const UWorld *world,
+                                                 glm::vec3 &eyePos,
+                                                 const CreatureInput &input)
+{
+  StanceBlend = 0.0f;
+  const PlayerCapsule cap = GetCapsule();
+  if (world->HasGroundSupport(eyePos, cap))
+  {
+    OnLandedFromFlight(world, eyePos, false);
+  }
+  if (!input.jumpHeld)
+  {
+    SuppressNextJump = false;
+  }
+  SpaceWasPressed = input.jumpHeld;
+  updateLocomotionState(input);
+}
+
+void UCreatureLocomotionController::UpdateSwimming(
+    const UWorld *world, glm::vec3 &eyePos, const CreatureInput &input,
+    float dt, const SampledFluidState &fluid, const PlayerCapsule &cap,
+    CreatureId skipCreatureId)
+{
+  // Buoyant swim / foliage climb: vertical velocity toward the surface with
+  // fluid drag, stance recovers faster than on land.
+  OnGround = false;
+  FeetAnchored = false;
+  const bool jumpEdge = input.jumpHeld && !SpaceWasPressed;
+  if (jumpEdge)
+  {
+    VerticalVelocity = std::max(VerticalVelocity, 6.5f);
+  }
+  if (input.jumpHeld)
+  {
+    VerticalVelocity += fluid.RiseSpeed * 5.0f * dt;
+  }
+  VerticalVelocity *= 1.0f - std::min(0.9f, fluid.DragHorizontal * dt * 6.0f);
+  if (!input.jumpHeld)
+  {
+    VerticalVelocity -= fluid.SinkSpeed * dt;
+  }
+  VerticalVelocity += kGravity * 0.15f * dt;
+  const glm::vec3 verticalDelta(0.0f, VerticalVelocity * dt, 0.0f);
+  eyePos = world->ResolveMovement(eyePos, verticalDelta, cap, skipCreatureId);
+  updateStanceBlend(world, eyePos, input, dt, skipCreatureId);
+  if (!input.crouchHeld && StanceBlend > 0.0f)
+  {
+    const float step = dt / kStanceTransitionDuration;
+    StanceBlend = std::max(0.0f, StanceBlend - step * 2.5f);
+  }
+  SpaceWasPressed = input.jumpHeld;
+  updateLocomotionState(input);
+}
+
+void UCreatureLocomotionController::SyncMountedPose(const UWorld *world,
+                                                    glm::vec3 &eyePos,
+                                                    const CreatureInput &input,
+                                                    float dt,
+                                                    CreatureId skipCreatureId)
+{
+  // Riding (runtime issue 5): the creature's back is the ground plane. The
+  // mount is excluded from the rider's collisions for this step, so no
+  // depenetration fight; other creatures still resolve normally.
+  updateStanceBlend(world, eyePos, input, dt, skipCreatureId);
+  OnGround = true;
+  VerticalVelocity = 0.0f;
+  FeetY = MountSupportBackY;
+  FeetAnchored = true;
+  syncEyeFromFeet(eyePos);
 }
 
 } // namespace cutum

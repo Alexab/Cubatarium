@@ -280,6 +280,20 @@ bool UCreature::TryIdleIntentFastPath(UWorld &world, float dt,
   {
     return false;
   }
+  // Revalidate the support the controller last saw: blocks under an idle
+  // body can be removed by the player, and the fast path skips the motor,
+  // so gravity would never re-engage (runtime issue 1). Falls through to
+  // the full motor (gravity) when the ground is gone.
+  {
+    const CollisionVolume supportVol =
+        CollisionVolumeFromBody(BodyOrigin, Bounds.profile.restSizeBlocks);
+    const float feetY = BoundsFeetY(BodyOrigin);
+    if (!world.HasGroundSupportVolume(supportVol, feetY))
+    {
+      Locomotion.BreakGroundSupport();
+      return false;
+    }
+  }
   if (Intent.clearOnApply)
   {
     ClearIntent();

@@ -28,6 +28,12 @@ public:
   std::vector<CreatureNeighborView>
   QueryNeighbors(const glm::vec3 &center, float radius,
                  CreatureId skip_id) const;
+  /// All entries whose AABB overlaps the volume (cell-gathered, AABB
+  /// tested) - unlike QueryNeighbors this sees big bodies whose origin lies
+  /// far outside the query radius (runtime issue 3: walk-through whales).
+  std::vector<CreatureNeighborView>
+  QueryNeighborsOverlappingVolume(const struct CollisionVolume &vol,
+                                  CreatureId skip_id) const;
   bool AnyCreatureVolumeOverlaps(const struct CollisionVolume &vol,
                                  CreatureId skip_id) const;
 

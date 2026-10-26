@@ -35,6 +35,21 @@ std::vector<CreatureId> UWorld::CreaturesInRadius(const glm::vec3 &center,
   return Environment.CreaturesInRadius(center, radius);
 }
 
+std::optional<std::pair<CreatureId, float>>
+UWorld::FindMountCreatureUnder(const glm::vec3 &feetPos,
+                               const glm::vec3 &halfExtents,
+                               CreatureId skipId) const
+{
+  return Environment.FindMountUnder(feetPos, halfExtents, skipId);
+}
+
+std::vector<CreatureNeighborView>
+UWorld::QueryCreatureNeighborsOverlappingVolume(const CollisionVolume &vol,
+                                                CreatureId skip_id) const
+{
+  return Environment.QueryCreatureNeighborsOverlappingVolume(vol, skip_id);
+}
+
 std::vector<CreatureNeighborView> UWorld::QueryCreatureNeighborsInRadius(
     const glm::vec3 &center, float radius, CreatureId skip_id) const
 {

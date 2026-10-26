@@ -57,6 +57,12 @@ public:
   bool IsCollisionDdaEnabled() const { return CollisionDdaEnabled; }
   void SetTelemetry(PhysicsTelemetry *telemetry) { Telemetry = telemetry; }
 
+  /// Rider mount exclusion (runtime issue 5): while the player rides a
+  /// creature its solid body must not push the rider off; set only for the
+  /// duration of the rider's movement step.
+  void SetRiderMountId(CreatureId id) { RiderMountId = id; }
+  CreatureId GetRiderMountId() const { return RiderMountId; }
+
   struct StepUpProbe
   {
     bool Valid{false};
@@ -158,6 +164,7 @@ private:
   UBlockRegistry *BlockRegistry{nullptr};
   PhysicsTelemetry *Telemetry{nullptr};
   bool EntityCollisionEnabled{true};
+  CreatureId RiderMountId{0};
   bool BroadphaseEnabled{false};
   bool CollisionDdaEnabled{false};
   static constexpr int SubchunkSize = 4;
