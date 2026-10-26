@@ -90,6 +90,25 @@ private:
   bool LoadOneChunkFile(UWorld &world, const std::filesystem::path &path);
   bool AdvanceGeneration(UWorld &world, int budget);
 
+  // Phase handlers (UX plan R1): one method per Tick switch case;
+  // switch-exit breaks became returns.
+  void HandlePhaseInit(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseLoadChunks(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseSpatialChunks(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseRelightChunks(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseRelightBulkChunks(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseRelightColumns(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseRelightEmissiveBlockLight(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseMeshWarmup(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhasePostLoadAnalysis(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseProceduralFill(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhasePrepareView(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseDrainAsyncIo(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseSaveChunks(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseGenerateColumns(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhasePostCreate(UWorld &world, IUProgressSink &sink, int budget);
+
+
   Phase CurrentPhase{Phase::Init};
   std::string TimedPhaseId;
   std::chrono::steady_clock::time_point OperationStartedAt{};

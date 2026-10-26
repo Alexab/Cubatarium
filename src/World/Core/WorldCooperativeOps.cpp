@@ -1270,6 +1270,213 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   {
   case Phase::Init:
   {
+    HandlePhaseInit(world, sink, budget);
+    break;
+  }
+  case Phase::Metadata:
+  {
+    world.LoadWorldData(FolderPath + "/world_data.json");
+    ProceduralSettings settings = world.GetProceduralSettings();
+    settings.AsyncChunkGeneration = RuntimeAsyncChunkGeneration;
+    settings.AsyncChunkIo = RuntimeAsyncChunkIo;
+    settings.MaxChunkCommitsPerFrame = RuntimeMaxChunkCommitsPerFrame;
+    world.SetProceduralSettings(settings, /*rebuildPipeline=*/false);
+    if (world.OnAfterWorldDataLoaded)
+    {
+      world.OnAfterWorldDataLoaded();
+    }
+    CurrentPhase = Phase::Entities;
+    Report(sink, "metadata", kPhaseWeightMetadata, "Loading world data...");
+    break;
+  }
+  case Phase::Entities:
+  {
+    world.ResetCreaturesBeforeEntityLoad();
+    world.LoadUsers(FolderPath + "/users.json");
+    world.LoadCreatures(FolderPath + "/creatures.json");
+    world.LinkUsersToPlayerCreatures();
+    world.RefreshBlockRegistry();
+    world.GetChunkStorage().ApplyStorageMarkerFromDisk(FolderPath);
+    SpatialStreamingLoad = world.IsStreamingEnabled() && world.HasPersistedSave;
+    SpatialRadius = world.RenderDistanceChunks + 1;
+    SpatialCenter = ResolveSpatialLoadCenter(world);
+    CurrentPhase = Phase::ScanChunks;
+    Report(sink, "entities", -1.f, "Loading entities...");
+    break;
+  }
+  case Phase::ScanChunks:
+  {
+    ScanChunkFiles(world);
+    CurrentPhase = Phase::LoadChunks;
+    Report(sink, "scan", -1.f, "Scanning chunk files...");
+    break;
+  }
+  case Phase::LoadChunks:
+  {
+    HandlePhaseLoadChunks(world, sink, budget);
+    break;
+  }
+  case Phase::SpatialChunks:
+  {
+    HandlePhaseSpatialChunks(world, sink, budget);
+    break;
+  }
+  case Phase::RelightChunks:
+  {
+    HandlePhaseRelightChunks(world, sink, budget);
+    break;
+  }
+  case Phase::RelightBulkChunks:
+  {
+    HandlePhaseRelightBulkChunks(world, sink, budget);
+    break;
+  }
+  case Phase::RelightColumns:
+  {
+    HandlePhaseRelightColumns(world, sink, budget);
+    break;
+  }
+  case Phase::RelightEmissiveBlockLight:
+  {
+    HandlePhaseRelightEmissiveBlockLight(world, sink, budget);
+    break;
+  }
+  case Phase::MeshWarmup:
+  {
+    HandlePhaseMeshWarmup(world, sink, budget);
+    break;
+  }
+  case Phase::PostLoadAnalysis:
+  {
+    HandlePhasePostLoadAnalysis(world, sink, budget);
+    break;
+  }
+  case Phase::ProceduralFill:
+  {
+    HandlePhaseProceduralFill(world, sink, budget);
+    break;
+  }
+  case Phase::FinalizeWorld:
+  {
+    world.InitStreamerCallbacks();
+    if (world.Streaming->HasStreamer() && world.LoadedFromChunkSave)
+    {
+      world.Streaming->MarkPersistedColumnsFromWorld();
+    }
+    if (world.MeshService->HasPendingDirty() ||
+        world.MeshService->HasPendingAsyncMeshWork())
+    {
+      MeshWarmupFinalizeOnly = true;
+      BeginMeshWarmup(world);
+      Report(sink, "mesh_warmup",
+             ProceduralFillLoadPath ? ProceduralFillProgressAfterGenerate()
+                                    : CooperativeLoadProgressBase(),
+             "Building terrain meshes...");
+      break;
+    }
+    BeginPrepareEnter();
+    break;
+  }
+  case Phase::PrepareEnter:
+  {
+    world.FinalizePlayerAfterWorldLoad();
+    if (auto user = world.GetCurrentUser())
+    {
+      world.ApplyUserToCamera(user);
+    }
+    else
+    {
+      world.ApplySpawnToCamera();
+    }
+    CurrentPhase = Phase::PrepareView;
+    const float prepare_base =
+        Kind == WorldCoopKind::Create
+            ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)
+            : (ProceduralFillLoadPath
+                   ? (ProceduralFillMeshProgressBase() +
+                      kProceduralFillWeightMeshWarmup)
+                   : CooperativeLoadProgressAfterMesh());
+    Report(sink, "prepare_enter", prepare_base, "Placing player...");
+    break;
+  }
+  case Phase::PrepareView:
+  {
+    HandlePhasePrepareView(world, sink, budget);
+    break;
+  }
+  case Phase::DrainAsyncIo:
+  {
+    HandlePhaseDrainAsyncIo(world, sink, budget);
+    break;
+  }
+  case Phase::ScanSaveChunks:
+  {
+    CubatariumLogInfo("Save", "scan_save_chunks begin");
+    ScanSaveChunkCoords(world);
+    CurrentPhase = Phase::SaveChunks;
+    Report(sink, "scan", 0.02f, "Collecting chunks...");
+    CubatariumLogInfo(
+        "Save",
+        std::string("scan_save_chunks end count=") +
+            std::to_string(SaveChunkCoords.size()));
+    break;
+  }
+  case Phase::SaveChunks:
+  {
+    HandlePhaseSaveChunks(world, sink, budget);
+    break;
+  }
+  case Phase::SaveMetadata:
+  {
+    CubatariumLogInfo("Save", "save_metadata begin");
+    world.GetChunkStorage().WriteStorageMarker(FolderPath);
+    world.SaveUsers(FolderPath + "/users.json");
+    world.SaveCreatures(FolderPath + "/creatures.json");
+    world.SaveWorldData(FolderPath + "/world_data.json");
+    world.SaveMovementDiagnostics(FolderPath + "/movement_diagnostics.json");
+    world.ModifiedChunks.clear();
+    if (ResumeStreamingAfterSave)
+    {
+      CubatariumLogInfo("Save", "save_metadata resume_streaming");
+      world.EnsureStreamingActiveAfterBackgroundQuiesce();
+    }
+    CurrentPhase = Phase::Done;
+    Active = false;
+    CubatariumLogInfo("Save", "save_metadata end");
+    Report(sink, "done", 1.f, "World saved.");
+    break;
+  }
+  case Phase::GenerateColumns:
+  {
+    HandlePhaseGenerateColumns(world, sink, budget);
+    break;
+  }
+  case Phase::PostCreate:
+  {
+    HandlePhasePostCreate(world, sink, budget);
+    break;
+  }
+  case Phase::Done:
+    Active = false;
+    return true;
+  }
+
+  if (CurrentPhase != LastDiagPhase)
+  {
+    LogWorldLoadDiag(PhaseId(), world);
+    LastDiagPhase = CurrentPhase;
+  }
+
+  RecordPhaseTiming(world);
+
+  return CurrentPhase == Phase::Done;
+}
+
+
+void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     if (Kind == WorldCoopKind::Load)
     {
       world.SetWorldFolderPath(FolderPath);
@@ -1375,48 +1582,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       InitGenerationGrid(world);
       Report(sink, "init", 0.f, "Generating terrain...");
     }
-    break;
-  }
-  case Phase::Metadata:
-  {
-    world.LoadWorldData(FolderPath + "/world_data.json");
-    ProceduralSettings settings = world.GetProceduralSettings();
-    settings.AsyncChunkGeneration = RuntimeAsyncChunkGeneration;
-    settings.AsyncChunkIo = RuntimeAsyncChunkIo;
-    settings.MaxChunkCommitsPerFrame = RuntimeMaxChunkCommitsPerFrame;
-    world.SetProceduralSettings(settings, /*rebuildPipeline=*/false);
-    if (world.OnAfterWorldDataLoaded)
-    {
-      world.OnAfterWorldDataLoaded();
-    }
-    CurrentPhase = Phase::Entities;
-    Report(sink, "metadata", kPhaseWeightMetadata, "Loading world data...");
-    break;
-  }
-  case Phase::Entities:
-  {
-    world.ResetCreaturesBeforeEntityLoad();
-    world.LoadUsers(FolderPath + "/users.json");
-    world.LoadCreatures(FolderPath + "/creatures.json");
-    world.LinkUsersToPlayerCreatures();
-    world.RefreshBlockRegistry();
-    world.GetChunkStorage().ApplyStorageMarkerFromDisk(FolderPath);
-    SpatialStreamingLoad = world.IsStreamingEnabled() && world.HasPersistedSave;
-    SpatialRadius = world.RenderDistanceChunks + 1;
-    SpatialCenter = ResolveSpatialLoadCenter(world);
-    CurrentPhase = Phase::ScanChunks;
-    Report(sink, "entities", -1.f, "Loading entities...");
-    break;
-  }
-  case Phase::ScanChunks:
-  {
-    ScanChunkFiles(world);
-    CurrentPhase = Phase::LoadChunks;
-    Report(sink, "scan", -1.f, "Scanning chunk files...");
-    break;
-  }
-  case Phase::LoadChunks:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseLoadChunks(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     int loaded = 0;
     while (ChunkFileIndex < ChunkFiles.size() && loaded < budget)
     {
@@ -1474,10 +1646,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         BeginMeshWarmup(world);
       }
     }
-    break;
-  }
-  case Phase::SpatialChunks:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseSpatialChunks(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     const int total = (2 * SpatialRadius + 1) * (2 * SpatialRadius + 1);
     int queued = 0;
     while (SpatialColumnQueueIndex < SpatialColumnQueue.size() &&
@@ -1589,10 +1764,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       BeginMeshWarmup(world);
     }
-    break;
-  }
-  case Phase::RelightChunks:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseRelightChunks(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     if (world.BlockRegistry)
     {
       const int relight_budget = std::max(budget * 4, 16);
@@ -1622,10 +1800,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       BeginColumnRelightQueue(world);
     }
-    break;
-  }
-  case Phase::RelightBulkChunks:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseRelightBulkChunks(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     const auto tick_t0 = std::chrono::steady_clock::now();
     if (world.BlockRegistry)
     {
@@ -1682,10 +1863,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                  std::to_string(relight_total),
              relight_done, relight_total);
     }
-    break;
-  }
-  case Phase::RelightColumns:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseRelightColumns(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     const int min_y = world.ProceduralTemplate.MinHeight;
     const int max_y = world.ProceduralTemplate.MaxHeight;
     const auto tick_t0 = std::chrono::steady_clock::now();
@@ -1803,10 +1987,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         ReportMeshWarmupStart(sink);
       }
     }
-    break;
-  }
-  case Phase::RelightEmissiveBlockLight:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseRelightEmissiveBlockLight(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     if (world.BlockRegistry)
     {
       const int relight_budget = std::max(budget * 4, 16);
@@ -1839,10 +2026,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       FinishEmissiveBlockLightRelight(world);
     }
-    break;
-  }
-  case Phase::MeshWarmup:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseMeshWarmup(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     const bool create_mesh_warmup = Kind == WorldCoopKind::Create;
     const bool force_sync_mesh = create_mesh_warmup;
     const UChunkEmergeCoordinator::FrameBudget mesh_budget =
@@ -2025,10 +2215,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         }
       }
     }
-    break;
-  }
-  case Phase::PostLoadAnalysis:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhasePostLoadAnalysis(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     const size_t blocksAfterSpatial = world.BlockWorld.CountNonAir();
     NeedsProceduralFill = false;
     if (blocksAfterSpatial == 0 && !world.LoadedFromChunkSave &&
@@ -2065,10 +2258,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       CurrentPhase = Phase::FinalizeWorld;
     }
-    break;
-  }
-  case Phase::ProceduralFill:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseProceduralFill(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     const bool use_parallel = UseParallelChunkGeneration(world);
     const bool generation_done =
         use_parallel ? AdvanceParallelGeneration(world, budget * CHUNK_SIZE)
@@ -2096,53 +2292,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
              static_cast<float>(std::max(1, GenTotalColumns)));
     Report(sink, "generate", genFrac, "Generating terrain...",
            GenDoneColumns, GenTotalColumns);
-    break;
-  }
-  case Phase::FinalizeWorld:
-  {
-    world.InitStreamerCallbacks();
-    if (world.Streaming->HasStreamer() && world.LoadedFromChunkSave)
-    {
-      world.Streaming->MarkPersistedColumnsFromWorld();
-    }
-    if (world.MeshService->HasPendingDirty() ||
-        world.MeshService->HasPendingAsyncMeshWork())
-    {
-      MeshWarmupFinalizeOnly = true;
-      BeginMeshWarmup(world);
-      Report(sink, "mesh_warmup",
-             ProceduralFillLoadPath ? ProceduralFillProgressAfterGenerate()
-                                    : CooperativeLoadProgressBase(),
-             "Building terrain meshes...");
-      break;
-    }
-    BeginPrepareEnter();
-    break;
-  }
-  case Phase::PrepareEnter:
-  {
-    world.FinalizePlayerAfterWorldLoad();
-    if (auto user = world.GetCurrentUser())
-    {
-      world.ApplyUserToCamera(user);
-    }
-    else
-    {
-      world.ApplySpawnToCamera();
-    }
-    CurrentPhase = Phase::PrepareView;
-    const float prepare_base =
-        Kind == WorldCoopKind::Create
-            ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)
-            : (ProceduralFillLoadPath
-                   ? (ProceduralFillMeshProgressBase() +
-                      kProceduralFillWeightMeshWarmup)
-                   : CooperativeLoadProgressAfterMesh());
-    Report(sink, "prepare_enter", prepare_base, "Placing player...");
-    break;
-  }
-  case Phase::PrepareView:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhasePrepareView(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     if (Kind == WorldCoopKind::Create)
     {
       if (StreamingWarmupTicks == 0)
@@ -2263,7 +2419,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             std::cerr << "[Era42] create lit still draining past warn wall ("
                       << elapsed_ms << "ms, lit=" << fov_debt << ")\n";
           }
-          break;
+          return;
         }
       }
       else if (ShouldSoftLeaveCreateSpawnWarmup(underfeet_lit, elapsed_ms))
@@ -2280,7 +2436,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else
       {
-        break;
+        return;
       }
     }
     else
@@ -2299,7 +2455,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                      : CooperativeLoadProgressAfterMesh(),
                  "Loading player terrain (" + std::to_string(focus.x) + "," +
                      std::to_string(focus.z) + ")...");
-          break;
+          return;
         }
         UEnterLitDiagnostics::BeginSession("cooperative_load_prepare");
         world.BeginEnterLitGate();
@@ -2611,7 +2767,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                status);
         if (!load_settled)
         {
-          break;
+          return;
         }
         UEnterLitDiagnostics::MaybeLogProfileSummary(lit_sample);
       }
@@ -2670,10 +2826,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
            "Preparing view...");
     Report(sink, "done", 1.f,
            Kind == WorldCoopKind::Create ? "World created." : "World loaded.");
-    break;
-  }
-  case Phase::DrainAsyncIo:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseDrainAsyncIo(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     // First frame: hard-cancel leftover gen + stale pending IO maps so drain
     // cannot wait forever on cancelled jobs.
     if (SaveDrainIoFrames == 0)
@@ -2716,26 +2875,17 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
               " drained=" + (drained ? "1" : "0"));
       CurrentPhase = Phase::ScanSaveChunks;
     }
-    break;
-  }
-  case Phase::ScanSaveChunks:
-  {
-    CubatariumLogInfo("Save", "scan_save_chunks begin");
-    ScanSaveChunkCoords(world);
-    CurrentPhase = Phase::SaveChunks;
-    Report(sink, "scan", 0.02f, "Collecting chunks...");
-    CubatariumLogInfo(
-        "Save",
-        std::string("scan_save_chunks end count=") +
-            std::to_string(SaveChunkCoords.size()));
-    break;
-  }
-  case Phase::SaveChunks:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     if (!world.BlockRegistry)
     {
       CurrentPhase = Phase::SaveMetadata;
-      break;
+      return;
     }
     const bool save_by_ground_column = SaveUsesTerrainColumns;
     int saved = 0;
@@ -2786,30 +2936,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       CurrentPhase = Phase::SaveMetadata;
     }
-    break;
-  }
-  case Phase::SaveMetadata:
-  {
-    CubatariumLogInfo("Save", "save_metadata begin");
-    world.GetChunkStorage().WriteStorageMarker(FolderPath);
-    world.SaveUsers(FolderPath + "/users.json");
-    world.SaveCreatures(FolderPath + "/creatures.json");
-    world.SaveWorldData(FolderPath + "/world_data.json");
-    world.SaveMovementDiagnostics(FolderPath + "/movement_diagnostics.json");
-    world.ModifiedChunks.clear();
-    if (ResumeStreamingAfterSave)
-    {
-      CubatariumLogInfo("Save", "save_metadata resume_streaming");
-      world.EnsureStreamingActiveAfterBackgroundQuiesce();
-    }
-    CurrentPhase = Phase::Done;
-    Active = false;
-    CubatariumLogInfo("Save", "save_metadata end");
-    Report(sink, "done", 1.f, "World saved.");
-    break;
-  }
-  case Phase::GenerateColumns:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhaseGenerateColumns(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     const bool use_parallel = UseParallelChunkGeneration(world);
     const bool generation_done =
         use_parallel ? AdvanceParallelGeneration(world, budget * CHUNK_SIZE)
@@ -2836,10 +2969,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             (static_cast<float>(GenDoneColumns) /
              static_cast<float>(std::max(1, GenTotalColumns)));
     Report(sink, "generate", frac, "Generating terrain...");
-    break;
-  }
-  case Phase::PostCreate:
-  {
+    return;
+}
+
+void UWorldCooperativeSession::HandlePhasePostCreate(UWorld &world,
+                                             IUProgressSink &sink,
+                                             int budget)
+{
     SealFluidInGenerationPatch(world);
     world.WorldName = TargetWorldName;
     world.WorldGenSetsData = BuildDefaultWorldGenSets();
@@ -2871,22 +3007,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       Report(sink, "mesh_warmup", CooperativeCreateMeshProgressBase(),
              "Building terrain meshes...");
     }
-    break;
-  }
-  case Phase::Done:
-    Active = false;
-    return true;
-  }
-
-  if (CurrentPhase != LastDiagPhase)
-  {
-    LogWorldLoadDiag(PhaseId(), world);
-    LastDiagPhase = CurrentPhase;
-  }
-
-  RecordPhaseTiming(world);
-
-  return CurrentPhase == Phase::Done;
+    return;
 }
 
 } // namespace cutum
