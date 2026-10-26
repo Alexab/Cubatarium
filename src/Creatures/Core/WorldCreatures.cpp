@@ -8,7 +8,6 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Core/World.h"
-#include "World/Core/WorldCreatureFacade.h"
 
 namespace cutum
 {
@@ -242,17 +241,17 @@ UWorld::GetResolvedAppearance(const UCreature &creature) const
 
 bool UWorld::SpawnCreatureByView(const std::string &speciesId)
 {
-  return UWorldCreatureFacade::SpawnCreatureByView(*this, speciesId);
+  return Environment.SpawnCreatureByView(speciesId);
 }
 
 bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
 {
-  return UWorldCreatureFacade::CanSpawnCreatureByView(*this, speciesId);
+  return Environment.CanSpawnCreatureByView(speciesId);
 }
 
 std::string UWorld::GetCreatureSpawnBlockedHint(const std::string &speciesId)
 {
-  return UWorldCreatureFacade::GetCreatureSpawnBlockedHint(*this, speciesId);
+  return Environment.GetCreatureSpawnBlockedHint(speciesId);
 }
 
 std::optional<CreatureId> UWorld::PickCreatureByView(const glm::vec3 &eye,

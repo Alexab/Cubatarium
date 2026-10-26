@@ -27,6 +27,49 @@ std::mt19937 &ApplierRng()
   return rng;
 }
 
+// Survival combat: wear a random equipped armor piece on a damaging hit.
+void ApplyArmorWearForHit(UWorld &world, UCreature &target,
+                          WorldGameMode mode, float amount)
+{
+  if (ModePolicy::AllowsCombatDamage(mode) &&
+      ModePolicy::AllowsToolWear(mode, world.GetDifficulty()))
+  {
+    auto &inv = target.GetInventory();
+    const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+    if (items)
+    {
+      std::vector<size_t> worn;
+      for (size_t slot = 0; slot < 6; ++slot)
+      {
+        const InventoryEntryRef &e = inv.GetEquippedArmor(slot);
+        if (!e.empty && !e.broken && e.kind == InventoryEntryKind::Item)
+        {
+          worn.push_back(slot);
+        }
+      }
+      if (!worn.empty())
+      {
+        const size_t pick =
+            worn[std::uniform_int_distribution<size_t>{
+                0, worn.size() - 1}(ApplierRng())];
+        InventoryEntryRef armor = inv.GetEquippedArmor(pick);
+        if (const ItemDefinition *def = items->Get(armor.Id))
+        {
+          const float armorWear = 0.01f * amount;
+          if (ApplyItemWear(armor, *def, armorWear, true))
+          {
+            inv.UnequipArmor(pick, *items);
+          }
+          else
+          {
+            inv.EquipArmor(pick, armor, *items);
+          }
+        }
+      }
+    }
+  }
+}
+
 void ApplyMeleeToolWear(UWorld &world, UCreature &source,
                         const InfluenceCapability &cap)
 {
@@ -234,44 +277,7 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
         continue;
       }
 
-      // Survival combat: wear a random equipped armor piece.
-      if (ModePolicy::AllowsCombatDamage(mode) && ModePolicy::AllowsToolWear(
-              mode, world.GetDifficulty()))
-      {
-        auto &inv = target->GetInventory();
-        const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
-        if (items)
-        {
-          std::vector<size_t> worn;
-          for (size_t slot = 0; slot < 6; ++slot)
-          {
-            const InventoryEntryRef &e = inv.GetEquippedArmor(slot);
-            if (!e.empty && !e.broken && e.kind == InventoryEntryKind::Item)
-            {
-              worn.push_back(slot);
-            }
-          }
-          if (!worn.empty())
-          {
-            const size_t pick =
-                worn[std::uniform_int_distribution<size_t>{
-                    0, worn.size() - 1}(ApplierRng())];
-            InventoryEntryRef armor = inv.GetEquippedArmor(pick);
-            if (const ItemDefinition *def = items->Get(armor.Id))
-            {
-              const float armorWear = 0.01f * amount;
-              if (ApplyItemWear(armor, *def, armorWear, true))
-              {
-                inv.UnequipArmor(pick, *items);
-              }
-              else
-              {
-                inv.EquipArmor(pick, armor, *items);
-              }
-            }
-          }
-        }
-      }
+      ApplyArmorWearForHit(world, *target, mode, amount);
     }
     // Active frontal block wears offhand even when damage mul zeroes the hit.
     if (delta.ShieldBlocked &&
