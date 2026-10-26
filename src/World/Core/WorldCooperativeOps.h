@@ -80,7 +80,8 @@ private:
   };
 
   void Report(IUProgressSink &sink, const std::string &phaseId, float fraction,
-              const std::string &message) const;
+              const std::string &message, int subDone = -1,
+              int subTotal = -1) const;
   void RecordPhaseTiming(const UWorld &world);
   void ScanChunkFiles(UWorld &world);
   void ScanSaveChunkCoords(UWorld &world);
@@ -124,6 +125,8 @@ private:
   std::chrono::steady_clock::time_point MeshWarmupStartedAt{};
   std::chrono::steady_clock::time_point RelightColumnsStartedAt{};
   size_t MeshWarmupStartPending{0};
+  /// Max pending seen this warmup - frozen-total display base (UX U1).
+  size_t MeshWarmupSeenTotal{0};
   bool MeshWarmupFinalizeOnly{false};
   bool ProceduralFillLoadPath{false};
   std::vector<glm::ivec3> RelightQueue;

@@ -302,10 +302,15 @@ public:
   }
 
   void Report(const std::string &phaseId, float fraction,
-              const std::string &message) override
+              const std::string &message, int subDone, int subTotal) override
   {
     std::cout << "load-world: " << phaseId << " " << fraction << " "
-              << message << std::endl;
+              << message;
+    if (subTotal > 0)
+    {
+      std::cout << " [" << subDone << "/" << subTotal << "]";
+    }
+    std::cout << std::endl;
   }
 
   void End(bool success, const std::string &errorMessage) override

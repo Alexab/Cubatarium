@@ -1000,13 +1000,18 @@ int main()
     using cutum::EnterLitSample;
     using cutum::FormatMeshWarmupProgress;
     using cutum::IsEnterGpuWarmupReady;
+    using cutum::MeshWarmupDisplayTotal;
     using cutum::MeshWarmupResolvedFraction;
     using cutum::NeedsCruiseStabilize;
-    Expect(FormatMeshWarmupProgress(465, 100) ==
-               std::string("Building meshes... 365/465 (100 pending)"),
-           "Era51: progress uses queue depth");
-    Expect(MeshWarmupResolvedFraction(465, 100) > 0.78f,
-           "Era51: resolved fraction from pending");
+    // UX U1: frozen-total display - pending grows mid-phase, the shown
+    // total only grows and the raw pending left the user-facing text.
+    Expect(FormatMeshWarmupProgress(100, 465) ==
+               std::string("Building meshes... 365/465"),
+           "Era51: progress uses queue depth (frozen total)");
+    Expect(MeshWarmupResolvedFraction(100, 465) > 0.78f,
+           "Era51: resolved fraction from pending (frozen total)");
+    Expect(MeshWarmupDisplayTotal(465, 512) == 512,
+           "display total grows to max seen pending");
     EnterLitSample sample{};
     Expect(!NeedsCruiseStabilize(sample, 0, false, 0),
            "Era51: cruise ready when clean");

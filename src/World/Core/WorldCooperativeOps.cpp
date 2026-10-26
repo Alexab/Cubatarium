@@ -546,6 +546,7 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
     {
       MeshWarmupStartedAt = std::chrono::steady_clock::now();
       MeshWarmupStartPending = std::max<size_t>(1, pending_now);
+      MeshWarmupSeenTotal = MeshWarmupStartPending;
       MeshWarmupCompletedTotal = 0;
       MeshWarmupProcessedMax = 0;
       std::cout << "[WorldLoad] MeshWarmup finalize: pending=" << pending_now
@@ -597,6 +598,7 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
   {
     MeshWarmupStartPending = 1;
   }
+  MeshWarmupSeenTotal = MeshWarmupStartPending;
   CurrentPhase = Phase::MeshWarmup;
 }
 
@@ -628,7 +630,8 @@ void UWorldCooperativeSession::ReportMeshWarmupStart(IUProgressSink &sink) const
                                     : CooperativeLoadMeshProgressBase());
   Report(sink, "mesh_warmup", mesh_base,
          "Building terrain meshes... 0/" +
-             std::to_string(MeshWarmupStartPending));
+             std::to_string(MeshWarmupStartPending),
+         0, static_cast<int>(MeshWarmupStartPending));
 }
 
 const char *UWorldCooperativeSession::PhaseId() const
@@ -687,9 +690,10 @@ const char *UWorldCooperativeSession::PhaseId() const
 
 void UWorldCooperativeSession::Report(IUProgressSink &sink,
                                       const std::string &phaseId, float fraction,
-                                      const std::string &message) const
+                                      const std::string &message, int subDone,
+                                      int subTotal) const
 {
-  sink.Report(phaseId, fraction, message);
+  sink.Report(phaseId, fraction, message, subDone, subTotal);
 }
 
 void UWorldCooperativeSession::RecordPhaseTiming(const UWorld &world)
@@ -1401,16 +1405,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     SpatialRadius = world.RenderDistanceChunks + 1;
     SpatialCenter = ResolveSpatialLoadCenter(world);
     CurrentPhase = Phase::ScanChunks;
-    Report(sink, "entities", kPhaseWeightMetadata + kPhaseWeightEntities,
-           "Loading entities...");
+    Report(sink, "entities", -1.f, "Loading entities...");
     break;
   }
   case Phase::ScanChunks:
   {
     ScanChunkFiles(world);
     CurrentPhase = Phase::LoadChunks;
-    Report(sink, "scan", kPhaseWeightMetadata + kPhaseWeightEntities,
-           "Scanning chunk files...");
+    Report(sink, "scan", -1.f, "Scanning chunk files...");
     break;
   }
   case Phase::LoadChunks:
@@ -1431,7 +1433,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                          static_cast<float>(ChunkFiles.size()));
       Report(sink, "chunks", frac,
              "Loading chunks (" + std::to_string(ChunkFileIndex) + "/" +
-                 std::to_string(ChunkFiles.size()) + ")...");
+                 std::to_string(ChunkFiles.size()) + ")...",
+             static_cast<int>(ChunkFileIndex),
+             static_cast<int>(ChunkFiles.size()));
     }
     if (ChunkFileIndex >= ChunkFiles.size())
     {
@@ -1578,7 +1582,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                          static_cast<float>(std::max(1, total)));
     Report(sink, "spatial", frac,
            "Loading nearby terrain (" + std::to_string(completed_columns) +
-               "/" + std::to_string(total) + ")...");
+               "/" + std::to_string(total) + ")...",
+           completed_columns, total);
     if (SpatialColumnQueueIndex >= SpatialColumnQueue.size() &&
         pending_columns == 0)
     {
@@ -1674,7 +1679,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       Report(sink, "relight", relight_frac,
              "Computing lighting... " + std::to_string(relight_done) + "/" +
-                 std::to_string(relight_total));
+                 std::to_string(relight_total),
+             relight_done, relight_total);
     }
     break;
   }
@@ -1925,8 +1931,17 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       MeshWarmupProcessedMax = MeshWarmupCompletedTotal;
     }
+    // Frozen-total substage display: pending can grow mid-phase (re-dirty,
+    // relight installs) - the shown total only grows, the fraction never
+    // regresses (progress UX U1).
+    if (pending_now > MeshWarmupSeenTotal)
+    {
+      MeshWarmupSeenTotal = pending_now;
+    }
+    const size_t display_total =
+        MeshWarmupDisplayTotal(MeshWarmupStartPending, MeshWarmupSeenTotal);
     const float completed_frac =
-        MeshWarmupResolvedFraction(MeshWarmupStartPending, pending_now);
+        MeshWarmupResolvedFraction(pending_now, display_total);
     const float mesh_base =
         Kind == WorldCoopKind::Create
             ? CooperativeCreateMeshProgressBase()
@@ -1941,8 +1956,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         mesh_base + mesh_weight * (mesh_done ? 1.0f : completed_frac);
     Report(sink, "mesh_warmup", mesh_frac,
            mesh_done ? "Terrain meshes ready."
-                     : FormatMeshWarmupProgress(MeshWarmupStartPending,
-                                                pending_now));
+                     : FormatMeshWarmupProgress(pending_now, display_total),
+           static_cast<int>(MeshWarmupResolved(pending_now, display_total)),
+           static_cast<int>(display_total));
     if (mesh_done)
     {
       world.SetLightingRelightDeferred(false);
@@ -2078,7 +2094,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         kProceduralFillWeightGenerate *
             (static_cast<float>(GenDoneColumns) /
              static_cast<float>(std::max(1, GenTotalColumns)));
-    Report(sink, "generate", genFrac, "Generating terrain...");
+    Report(sink, "generate", genFrac, "Generating terrain...",
+           GenDoneColumns, GenTotalColumns);
     break;
   }
   case Phase::FinalizeWorld:
@@ -2166,14 +2183,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         StreamingWarmupPeakDebt = debt;
       }
       // Era35 P3: monotonic display debt — only decreases, never jumps up.
-      if (StreamingWarmupTicks == 1)
-      {
-        StreamingWarmupDisplayDebt = debt;
-      }
-      else
-      {
-        StreamingWarmupDisplayDebt = std::min(StreamingWarmupDisplayDebt, debt);
-      }
+      StreamingWarmupDisplayDebt =
+          StreamingWarmupTicks == 1
+              ? debt
+              : MonotonicDisplayDebt(StreamingWarmupDisplayDebt, debt);
       StreamingWarmupLastRawDebt = debt;
       const bool spawn_settled = IsCreateSpawnWarmupSettled(world);
       const float prepare_view_base =
@@ -2373,15 +2386,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         {
           StreamingWarmupPeakDebt = combined_debt;
         }
-        if (StreamingWarmupTicks == 1)
-        {
-          StreamingWarmupDisplayDebt = combined_debt;
-        }
-        else
-        {
-          StreamingWarmupDisplayDebt =
-              std::min(StreamingWarmupDisplayDebt, combined_debt);
-        }
+        StreamingWarmupDisplayDebt =
+            StreamingWarmupTicks == 1
+                ? combined_debt
+                : MonotonicDisplayDebt(StreamingWarmupDisplayDebt,
+                                       combined_debt);
         StreamingWarmupLastRawDebt = combined_debt;
         const float prepare_view_base =
             ProceduralFillLoadPath
@@ -2770,7 +2779,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                static_cast<float>(SaveChunkCoords.size()));
     Report(sink, "chunks", frac,
            "Saving chunks (" + std::to_string(SaveChunkIndex) + "/" +
-               std::to_string(SaveChunkCoords.size()) + ")...");
+               std::to_string(SaveChunkCoords.size()) + ")...",
+           static_cast<int>(SaveChunkIndex),
+           static_cast<int>(SaveChunkCoords.size()));
     if (SaveChunkIndex >= SaveChunkCoords.size())
     {
       CurrentPhase = Phase::SaveMetadata;
