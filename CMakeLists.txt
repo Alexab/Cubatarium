@@ -1377,6 +1377,16 @@ add_test(NAME creature_appearance_test
     COMMAND $<TARGET_FILE:creature_appearance_test>)
 set_tests_properties(creature_appearance_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_influence_channels_test
+    SOURCES
+        src/Creatures/Influence/InfluenceHitMath.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Test/CreatureInfluenceChannelsTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME creature_influence_channels_test
+    COMMAND $<TARGET_FILE:creature_influence_channels_test>)
+set_tests_properties(creature_influence_channels_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME creature_spawn_planner_test
     SOURCES
         src/Creatures/Definition/CreatureDefinitionStorage.cpp
