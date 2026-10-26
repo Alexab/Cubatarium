@@ -477,6 +477,10 @@ void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
 
   if (world.BlockRegistry)
   {
+    // UX U2/S4: the cheap radius filter builds the candidate list here; the
+    // per-chunk 16^3 emissive scan moved into the phase tick (batched),
+    // where a focus-radius burst of 10-25M block reads used to run in one
+    // tick.
     world.BlockWorld.GetChunkManager().ForEachChunk(
         [&](const UChunk &chunk)
         {
@@ -490,27 +494,7 @@ void UWorldCooperativeSession::BeginEmissiveBlockLightQueue(UWorld &world)
               return;
             }
           }
-          bool has_emissive = false;
-          for (int ly = 0; ly < CHUNK_SIZE && !has_emissive; ++ly)
-          {
-            for (int lz = 0; lz < CHUNK_SIZE && !has_emissive; ++lz)
-            {
-              for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-              {
-                const BlockId id =
-                    chunk.GetBlockLocal(glm::ivec3(lx, ly, lz));
-                if (world.BlockRegistry->GetLightEmission(id) > 0)
-                {
-                  has_emissive = true;
-                  break;
-                }
-              }
-            }
-          }
-          if (has_emissive)
-          {
-            Relight.EmissiveChunkRelightQueue.push_back(chunk.GetCoord());
-          }
+          Relight.EmissiveChunkScanQueue.push_back(chunk.GetCoord());
         });
   }
 
@@ -676,10 +660,16 @@ const char *UWorldCooperativeSession::PhaseId() const
     return "drain_async_io";
   case Phase::SaveChunks:
     return "save_chunks";
-  case Phase::SaveMetadata:
+  case Phase::SaveMetadataMarker:
+  case Phase::SaveMetadataUsers:
+  case Phase::SaveMetadataCreatures:
+  case Phase::SaveMetadataWorldData:
+  case Phase::SaveMetadataDiag:
     return "save_metadata";
   case Phase::GenerateColumns:
     return "generate_columns";
+  case Phase::ResolveSpawn:
+    return "resolve_spawn";
   case Phase::PostCreate:
     return "post_create";
   case Phase::Done:
@@ -897,6 +887,35 @@ void UWorldCooperativeSession::BeginCreate(UWorld &world,
   (void)world;
 }
 
+bool UWorldCooperativeSession::ScanChunkFilesBatch(UWorld &world,
+                                                   double maxWallMs)
+{
+  (void)world;
+  if (!ScanChunksActive)
+  {
+    return true;
+  }
+  const auto batch_start = std::chrono::steady_clock::now();
+  for (const auto &entry : std::filesystem::directory_iterator(ScanChunksDir))
+  {
+    const auto ext = entry.path().extension();
+    if (ext != ".json" && ext != ".cchunk")
+    {
+      continue;
+    }
+    ScanChunksBatch.push_back(entry.path());
+    const double elapsed_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - batch_start)
+            .count();
+    if (elapsed_ms >= maxWallMs)
+    {
+      return false; // more batches remain
+    }
+  }
+  return true; // directory exhausted
+}
+
 void UWorldCooperativeSession::ScanChunkFiles(UWorld &world)
 {
   ChunkFiles.clear();
@@ -904,15 +923,19 @@ void UWorldCooperativeSession::ScanChunkFiles(UWorld &world)
   const std::string chunks_dir = FolderPath + "/chunks";
   if (!Spatial.SpatialStreamingLoad && std::filesystem::exists(chunks_dir))
   {
-    for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+    // S8: drain the directory in wall-budgeted batches; a huge worlds dir
+    // no longer sweeps in one tick (typical cost tens of ms per 10k files).
+    ScanChunksDir = chunks_dir;
+    ScanChunksBatch.clear();
+    ScanChunksActive = true;
+    bool done = false;
+    while (!done)
     {
-      const auto ext = entry.path().extension();
-      if (ext != ".json" && ext != ".cchunk")
-      {
-        continue;
-      }
-      ChunkFiles.push_back(entry.path());
+      done = ScanChunkFilesBatch(world, 16.0);
     }
+    ScanChunksActive = false;
+    ChunkFiles = std::move(ScanChunksBatch);
+    ScanChunksBatch.clear();
     std::sort(ChunkFiles.begin(), ChunkFiles.end());
   }
   (void)world;
@@ -1166,9 +1189,18 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
       ParallelGen->Completed.Empty();
   if (queue_empty)
   {
-    if (!ParallelGen->Pool.WaitIdleFor(std::chrono::milliseconds(2000)))
+    // UX U2/S3: workers may still be running their last jobs; drain over
+    // frames (short non-blocking wait per tick) instead of blocking the
+    // main thread up to 2 seconds.
+    if (ParallelGen->Pool.GetActiveJobCount() > 0)
     {
-      std::cerr << "CoopGeneration: WaitIdleFor timed out with pending workers"
+      (void)ParallelGen->Pool.WaitIdleFor(std::chrono::milliseconds(2));
+      return false; // keep the generation phase alive one more frame
+    }
+    if (ParallelGen->Pool.GetActiveJobCount() == 0 &&
+        ParallelGen->Pool.GetPendingJobCount() > 0)
+    {
+      std::cerr << "CoopGeneration: pending jobs with idle workers"
                 << std::endl;
       ParallelGen->Pool.CancelPendingJobs();
       (void)ParallelGen->Completed.DrainAll();
@@ -1223,6 +1255,10 @@ bool UWorldCooperativeSession::AdvanceGeneration(UWorld &world, int budget)
   {
     return true;
   }
+  // UX U2/S2: the sync fallback previously trusted a column-count budget;
+  // a heavy column (caves, water) made a single frame unbounded. Wall cap.
+  const auto tick_start = std::chrono::steady_clock::now();
+  constexpr double kMaxWallMs = 40.0;
   int processed = 0;
   while (processed < budget && Gen.GenColumnIndex < Gen.GenColumnQueue.size())
   {
@@ -1230,29 +1266,56 @@ bool UWorldCooperativeSession::AdvanceGeneration(UWorld &world, int budget)
     world.WorldGen->GenerateColumn(entry.X, entry.Z);
     ++Gen.GenDoneColumns;
     ++processed;
+    const double wall_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - tick_start)
+            .count();
+    if (wall_ms >= kMaxWallMs)
+    {
+      break;
+    }
   }
   return Gen.GenColumnIndex >= Gen.GenColumnQueue.size();
 }
 
-void UWorldCooperativeSession::SealFluidInGenerationPatch(UWorld &world)
+bool UWorldCooperativeSession::SealFluidInGenerationPatchRow(UWorld &world)
 {
   const ProceduralSettings &settings = world.GetProceduralSettings();
   if (!settings.FillWater || !world.BlockRegistry)
   {
-    return;
+    return true;
   }
   const int min_cx = FloorDiv(Gen.GenPatchMinX, CHUNK_SIZE);
   const int max_cx = FloorDiv(Gen.GenPatchMaxX, CHUNK_SIZE);
   const int min_cz = FloorDiv(Gen.GenPatchMinZ, CHUNK_SIZE);
   const int max_cz = FloorDiv(Gen.GenPatchMaxZ, CHUNK_SIZE);
-  for (int cx = min_cx; cx <= max_cx; ++cx)
+  if (Gen.FluidSealNextCx == INT_MIN)
   {
-    for (int cz = min_cz; cz <= max_cz; ++cz)
-    {
-      (void)SealFluidShoreOnChunkCommitted(
-          world.BlockWorld, *world.BlockRegistry, settings,
-          world.WorldgenOwnerPackId, glm::ivec3(cx, 0, cz));
-    }
+    Gen.FluidSealNextCx = min_cx;
+  }
+  if (Gen.FluidSealNextCx > max_cx)
+  {
+    Gen.FluidSealNextCx = INT_MIN;
+    return true;
+  }
+  for (int cz = min_cz; cz <= max_cz; ++cz)
+  {
+    (void)SealFluidShoreOnChunkCommitted(
+        world.BlockWorld, *world.BlockRegistry, settings,
+        world.WorldgenOwnerPackId,
+        glm::ivec3(Gen.FluidSealNextCx, 0, cz));
+  }
+  ++Gen.FluidSealNextCx;
+  return Gen.FluidSealNextCx > max_cx;
+}
+
+void UWorldCooperativeSession::SealFluidInGenerationPatch(UWorld &world)
+{
+  // UX U2/S5: kept for synchronous callers (headless); the coop create path
+  // uses SealFluidInGenerationPatchRow across frames.
+  Gen.FluidSealNextCx = INT_MIN;
+  while (!SealFluidInGenerationPatchRow(world))
+  {
   }
 }
 
@@ -1306,8 +1369,34 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::ScanChunks:
   {
-    ScanChunkFiles(world);
-    CurrentPhase = Phase::LoadChunks;
+    // UX U2/S8: one directory batch per tick under a wall budget; a large
+    // worlds dir no longer sweeps in a single tick.
+    if (!ScanChunksActive)
+    {
+      ChunkFiles.clear();
+      ChunkFileIndex = 0;
+      ScanChunksBatch.clear();
+      const std::string chunks_dir = FolderPath + "/chunks";
+      if (!Spatial.SpatialStreamingLoad && std::filesystem::exists(chunks_dir))
+      {
+        ScanChunksDir = chunks_dir;
+        ScanChunksActive = true;
+      }
+      else
+      {
+        CurrentPhase = Phase::LoadChunks;
+        Report(sink, "scan", -1.f, "Scanning chunk files...");
+        break;
+      }
+    }
+    if (ScanChunkFilesBatch(world, 8.0))
+    {
+      ScanChunksActive = false;
+      ChunkFiles = std::move(ScanChunksBatch);
+      ScanChunksBatch.clear();
+      std::sort(ChunkFiles.begin(), ChunkFiles.end());
+      CurrentPhase = Phase::LoadChunks;
+    }
     Report(sink, "scan", -1.f, "Scanning chunk files...");
     break;
   }
@@ -1354,6 +1443,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   case Phase::ProceduralFill:
   {
     HandlePhaseProceduralFill(world, sink, budget);
+    break;
+  }
+  case Phase::ResolveSpawn:
+  {
+    HandlePhaseResolveSpawn(world, sink, budget);
     break;
   }
   case Phase::FinalizeWorld:
@@ -1426,13 +1520,40 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     HandlePhaseSaveChunks(world, sink, budget);
     break;
   }
-  case Phase::SaveMetadata:
+  case Phase::SaveMetadataMarker:
   {
+    // UX U2/S7: the old single SaveMetadata tick wrote five files in one
+    // go (10-100s ms+ with inventories) - one file per tick now, each with
+    // an indeterminate marquee report.
     CubatariumLogInfo("Save", "save_metadata begin");
     world.GetChunkStorage().WriteStorageMarker(FolderPath);
+    CurrentPhase = Phase::SaveMetadataUsers;
+    Report(sink, "save_metadata", -1.f, "Saving world metadata...");
+    break;
+  }
+  case Phase::SaveMetadataUsers:
+  {
     world.SaveUsers(FolderPath + "/users.json");
+    CurrentPhase = Phase::SaveMetadataCreatures;
+    Report(sink, "save_metadata", -1.f, "Saving world metadata...");
+    break;
+  }
+  case Phase::SaveMetadataCreatures:
+  {
     world.SaveCreatures(FolderPath + "/creatures.json");
+    CurrentPhase = Phase::SaveMetadataWorldData;
+    Report(sink, "save_metadata", -1.f, "Saving world metadata...");
+    break;
+  }
+  case Phase::SaveMetadataWorldData:
+  {
     world.SaveWorldData(FolderPath + "/world_data.json");
+    CurrentPhase = Phase::SaveMetadataDiag;
+    Report(sink, "save_metadata", -1.f, "Saving world metadata...");
+    break;
+  }
+  case Phase::SaveMetadataDiag:
+  {
     world.SaveMovementDiagnostics(FolderPath + "/movement_diagnostics.json");
     world.ModifiedChunks.clear();
     if (ResumeStreamingAfterSave)
@@ -1611,9 +1732,11 @@ void UWorldCooperativeSession::HandlePhaseLoadChunks(UWorld &world,
     }
     if (ChunkFileIndex >= ChunkFiles.size())
     {
-      const size_t blocksInWorld = world.BlockWorld.CountNonAir();
+      // UX U2/S6: early-out existence check instead of a full-world scan
+      // in one tick (the codebase itself warned these "look like a hang").
+      const bool blocksInWorld = world.BlockWorld.HasAnyNonAir();
       world.LoadedFromChunkSave = world.HasPersistedSave || ChunkFilesRead > 0 ||
-                                  VoxelsFromChunkFiles > 0 || blocksInWorld > 0;
+                                  VoxelsFromChunkFiles > 0 || blocksInWorld;
       world.AllowProceduralFill = world.IsStreamingEnabled();
       if (Spatial.SpatialStreamingLoad && world.LoadedFromChunkSave)
       {
@@ -1994,6 +2117,54 @@ void UWorldCooperativeSession::HandlePhaseRelightEmissiveBlockLight(UWorld &worl
                                              IUProgressSink &sink,
                                              int budget)
 {
+    // UX U2/S4: drain the pending 16^3 emissive scans first, a few chunks
+    // per tick under a wall budget (the scan burst used to run inside
+    // BeginEmissiveBlockLightQueue in one tick).
+    if (!Relight.EmissiveChunkScanQueue.empty() && world.BlockRegistry)
+    {
+      const auto scan_start = std::chrono::steady_clock::now();
+      constexpr double kScanMaxWallMs = 12.0;
+      while (!Relight.EmissiveChunkScanQueue.empty())
+      {
+        const glm::ivec3 coord = Relight.EmissiveChunkScanQueue.back();
+        Relight.EmissiveChunkScanQueue.pop_back();
+        bool has_emissive = false;
+        if (const UChunk *chunk =
+                world.BlockWorld.GetChunkManager().GetChunk(coord))
+        {
+          for (int ly = 0; ly < CHUNK_SIZE && !has_emissive; ++ly)
+          {
+            for (int lz = 0; lz < CHUNK_SIZE && !has_emissive; ++lz)
+            {
+              for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+              {
+                const BlockId id =
+                    chunk->GetBlockLocal(glm::ivec3(lx, ly, lz));
+                if (world.BlockRegistry->GetLightEmission(id) > 0)
+                {
+                  has_emissive = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (has_emissive)
+        {
+          Relight.EmissiveChunkRelightQueue.push_back(coord);
+        }
+        const double scan_wall_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - scan_start)
+                .count();
+        if (scan_wall_ms >= kScanMaxWallMs)
+        {
+          break;
+        }
+      }
+      Report(sink, "relight", -1.f, "Computing block light...");
+      return; // scans still pending; keep this phase one more frame
+    }
     if (world.BlockRegistry)
     {
       const int relight_budget = std::max(budget * 4, 16);
@@ -2051,9 +2222,21 @@ void UWorldCooperativeSession::HandlePhaseMeshWarmup(UWorld &world,
       }
     }
     MeshRebuildTickStats tick_stats;
+    // UX U2/S11: the create path forces sync meshing (8 passes x up to
+    // budget*4 chunks); a wall cap keeps each frame bounded on heavy chunks.
+    const auto mesh_tick_start = std::chrono::steady_clock::now();
+    constexpr double kMeshTickMaxWallMs = 100.0;
     for (int pass = 0; pass < pass_limit; ++pass)
     {
       if (!world.BlockRegistry)
+      {
+        break;
+      }
+      const double mesh_wall_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - mesh_tick_start)
+              .count();
+      if (pass > 0 && mesh_wall_ms >= kMeshTickMaxWallMs)
       {
         break;
       }
@@ -2222,14 +2405,16 @@ void UWorldCooperativeSession::HandlePhasePostLoadAnalysis(UWorld &world,
                                              IUProgressSink &sink,
                                              int budget)
 {
-    const size_t blocksAfterSpatial = world.BlockWorld.CountNonAir();
+    // UX U2/S6: existence check - the decision is binary (empty world or
+    // not), the full count walked every loaded block in one tick.
+    const bool blocksAfterSpatial = world.BlockWorld.HasAnyNonAir();
     NeedsProceduralFill = false;
-    if (blocksAfterSpatial == 0 && !world.LoadedFromChunkSave &&
+    if (!blocksAfterSpatial && !world.LoadedFromChunkSave &&
         world.BlockRegistry)
     {
       NeedsProceduralFill = true;
     }
-    else if (blocksAfterSpatial == 0 && world.LoadedFromChunkSave)
+    else if (!blocksAfterSpatial && world.LoadedFromChunkSave)
     {
       if (ChunkFilesRead == 0 && VoxelsFromChunkFiles == 0)
       {
@@ -2273,17 +2458,15 @@ void UWorldCooperativeSession::HandlePhaseProceduralFill(UWorld &world,
     {
       if (!ProceduralFillLoadPath || world.Users.empty())
       {
-        if (world.WorldGen && world.BlockRegistry)
-        {
-          world.SpawnPoint = world.WorldGen->ResolvePlayerSpawnPosition(
-              world.BlockWorld, *world.BlockRegistry);
-        }
-        else if (world.WorldGen)
-        {
-          world.SpawnPoint = world.WorldGen->DefaultSpawnPosition(0, 0);
-        }
+        // UX U2/S1: spawn resolution moved to the ResolveSpawn phase - the
+        // historical one-shot scanned ~2.3k SurfaceYAt candidates in this
+        // single tick (multi-second main-thread stall with a frozen bar).
+        CurrentPhase = Phase::ResolveSpawn;
       }
-      CurrentPhase = Phase::FinalizeWorld;
+      else
+      {
+        CurrentPhase = Phase::FinalizeWorld;
+      }
     }
     const float genFrac =
         ProceduralFillProgressBase() +
@@ -2897,7 +3080,7 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
 {
     if (!world.BlockRegistry)
     {
-      CurrentPhase = Phase::SaveMetadata;
+      CurrentPhase = Phase::SaveMetadataMarker;
       return;
     }
     const bool save_by_ground_column = Save.SaveUsesTerrainColumns;
@@ -2947,7 +3130,7 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
            static_cast<int>(Save.SaveChunkCoords.size()));
     if (Save.SaveChunkIndex >= Save.SaveChunkCoords.size())
     {
-      CurrentPhase = Phase::SaveMetadata;
+      CurrentPhase = Phase::SaveMetadataMarker;
     }
     return;
 }
@@ -2962,19 +3145,8 @@ void UWorldCooperativeSession::HandlePhaseGenerateColumns(UWorld &world,
                      : AdvanceGeneration(world, budget * CHUNK_SIZE);
     if (generation_done)
     {
-      if (world.WorldGen)
-      {
-        if (world.BlockRegistry)
-        {
-          world.SpawnPoint = world.WorldGen->ResolvePlayerSpawnPosition(
-              world.BlockWorld, *world.BlockRegistry);
-        }
-        else
-        {
-          world.SpawnPoint = world.WorldGen->DefaultSpawnPosition(0, 0);
-        }
-      }
-      CurrentPhase = Phase::PostCreate;
+      // UX U2/S1: spawn resolution moved to the ResolveSpawn phase.
+      CurrentPhase = Phase::ResolveSpawn;
     }
     const float frac =
         kCreateWeightInit +
@@ -2985,11 +3157,48 @@ void UWorldCooperativeSession::HandlePhaseGenerateColumns(UWorld &world,
     return;
 }
 
+void UWorldCooperativeSession::HandlePhaseResolveSpawn(UWorld &world,
+                                                       IUProgressSink &sink,
+                                                       int budget)
+{
+  if (!world.WorldGen)
+  {
+    CurrentPhase = (Kind == WorldCoopKind::Create) ? Phase::PostCreate
+                                                   : Phase::FinalizeWorld;
+    return;
+  }
+  glm::vec3 resolved = world.SpawnPoint;
+  if (world.BlockRegistry)
+  {
+    // Nearest-first candidate probes; a multi-second one-tick scan is now
+    // spread over frames with live progress (UX U2/S1).
+    world.WorldGen->TickSpawnResolve(world.BlockWorld, *world.BlockRegistry,
+                                     0, 0, 64, resolved);
+  }
+  else
+  {
+    resolved = world.WorldGen->DefaultSpawnPosition(0, 0);
+  }
+  if (world.WorldGen->SpawnResolveFinished())
+  {
+    world.SpawnPoint = resolved;
+    CurrentPhase = (Kind == WorldCoopKind::Create) ? Phase::PostCreate
+                                                   : Phase::FinalizeWorld;
+  }
+  Report(sink, "spawn", -1.f, "Finding spawn point...");
+}
+
 void UWorldCooperativeSession::HandlePhasePostCreate(UWorld &world,
                                              IUProgressSink &sink,
                                              int budget)
 {
-    SealFluidInGenerationPatch(world);
+    // UX U2/S5: seal one chunk row per tick; the whole-patch sweep used to
+    // run in this single tick.
+    if (!SealFluidInGenerationPatchRow(world))
+    {
+      Report(sink, "post_create", -1.f, "Sealing shorelines...");
+      return;
+    }
     world.WorldName = TargetWorldName;
     world.WorldGenSetsData = BuildDefaultWorldGenSets();
     world.RebuildResolvedObjectFeatures();

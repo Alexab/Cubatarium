@@ -54,6 +54,9 @@ public:
   bool IsAir(glm::ivec3 pos) const;
   void Clear();
   size_t CountNonAir() const;
+  /// Early-out existence check (UX U2/S6): the coop load path only needs
+  /// "is the world empty" - a full scan used to walk every block.
+  bool HasAnyNonAir() const;
   void ForEachBlock(const std::function<void(glm::ivec3, BlockId)> &fn) const;
 
   UChunkManager &GetChunkManager() { return Chunks; }

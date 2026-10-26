@@ -73,8 +73,13 @@ private:
     ScanSaveChunks,
     DrainAsyncIo,
     SaveChunks,
-    SaveMetadata,
+    SaveMetadataMarker,
+    SaveMetadataUsers,
+    SaveMetadataCreatures,
+    SaveMetadataWorldData,
+    SaveMetadataDiag,
     GenerateColumns,
+    ResolveSpawn,
     PostCreate,
     Done
   };
@@ -83,10 +88,17 @@ private:
               const std::string &message, int subDone = -1,
               int subTotal = -1) const;
   void RecordPhaseTiming(const UWorld &world);
+  /// Incremental chunk-file scan (UX U2/S8): one directory batch per call
+  /// under a wall budget instead of a full-directory sweep in one tick.
+  /// Returns false while more batches remain.
+  bool ScanChunkFilesBatch(UWorld &world, double maxWallMs);
   void ScanChunkFiles(UWorld &world);
   void ScanSaveChunkCoords(UWorld &world);
   void InitGenerationGrid(UWorld &world, bool center_on_load_focus = false);
   void SealFluidInGenerationPatch(UWorld &world);
+  /// S5: seals one row of chunks per call; returns false while more rows
+  /// remain (multi-tick instead of a whole-patch sweep in one tick).
+  bool SealFluidInGenerationPatchRow(UWorld &world);
   bool LoadOneChunkFile(UWorld &world, const std::filesystem::path &path);
   bool AdvanceGeneration(UWorld &world, int budget);
 
@@ -102,6 +114,7 @@ private:
   void HandlePhaseMeshWarmup(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhasePostLoadAnalysis(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhaseProceduralFill(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseResolveSpawn(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhasePrepareView(UWorld &world, IUProgressSink &sink, int budget);
   // PrepareView splits by operation kind (create spawn warmup vs load
   // enter-lit warmup); the post-warmup tail stays in the dispatcher.
@@ -131,6 +144,10 @@ private:
 
   std::vector<std::filesystem::path> ChunkFiles;
   size_t ChunkFileIndex{0};
+  /// S8 incremental scan cursor.
+  std::filesystem::path ScanChunksDir;
+  bool ScanChunksActive{false};
+  std::vector<std::filesystem::path> ScanChunksBatch;
 
   std::string ChunksFileName;
 
@@ -221,6 +238,8 @@ private:
   size_t GenColumnIndex{0};
   int GenTotalColumns{0};
   int GenDoneColumns{0};
+  /// S5 fluid-seal cursor (next chunk row X to seal).
+  int FluidSealNextCx{INT_MIN};
   };
   FGenState Gen;
   struct FSaveState
@@ -243,6 +262,8 @@ private:
   size_t BulkRelightChunkScheduledIndex{0};
   size_t BulkRelightChunkAppliedCount{0};
   std::vector<glm::ivec3> EmissiveChunkRelightQueue;
+  /// S4: chunks still needing the 16^3 emissive scan (drained per tick).
+  std::vector<glm::ivec3> EmissiveChunkScanQueue;
   size_t EmissiveChunkRelightIndex{0};
   std::chrono::steady_clock::time_point RelightColumnsStartedAt{};
   };
