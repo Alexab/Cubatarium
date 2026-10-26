@@ -41,6 +41,29 @@ public:
   void SetMode(CreatureMovementMode mode);
 
   bool IsOnGround() const { return OnGround; }
+  /// Rider mount support (runtime issue 5): set by the world each frame
+  /// when the player stands on a rideable creature; the back Y acts as the
+  /// ground plane for anchoring.
+  void SetMountSupport(CreatureId mountId, float backY)
+  {
+    MountSupportId = mountId;
+    MountSupportBackY = backY;
+  }
+  void ClearMountSupport()
+  {
+    MountSupportId = 0;
+    MountSupportBackY = 0.f;
+  }
+  CreatureId GetMountSupportId() const { return MountSupportId; }
+  float GetMountSupportBackY() const { return MountSupportBackY; }
+  /// External ground-invalidation hook: the caller verified the support
+  /// vanished (e.g. blocks dug out under an idle body) — drop the grounded
+  /// state so the next motor step re-engages gravity.
+  void BreakGroundSupport()
+  {
+    OnGround = false;
+    FeetAnchored = false;
+  }
   float GetStanceBlend() const { return StanceBlend; }
   float GetVerticalVelocity() const { return VerticalVelocity; }
   void ClampVerticalVelocity(float minValue);
@@ -66,6 +89,9 @@ public:
   bool ConsumeClearShiftRequest();
 
 private:
+  CreatureId MountSupportId{0};
+  float MountSupportBackY{0.f};
+
   // UpdateLocomotion mode branches (audit 4.2 tail).
   void UpdateFlight(const UWorld *world, glm::vec3 &eyePos,
                     const CreatureInput &input);
@@ -74,6 +100,9 @@ private:
                       const struct SampledFluidState &fluid,
                       const PlayerCapsule &cap, CreatureId skipCreatureId);
   void updateLocomotionState(const CreatureInput &input);
+  void SyncMountedPose(const UWorld *world, glm::vec3 &eyePos,
+                       const CreatureInput &input, float dt,
+                       CreatureId skipCreatureId);
   bool anchorFeetFromStandingEye(const UWorld *world, const glm::vec3 &eyePos);
   void syncEyeFromFeet(glm::vec3 &eyePos) const;
   void landStanding(const UWorld *world, glm::vec3 &eyePos,

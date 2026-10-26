@@ -19,7 +19,10 @@ struct ModePolicy
 
   static bool AllowsCombatDamage(WorldGameMode mode)
   {
-    return mode == WorldGameMode::Survival;
+    // Runtime issue 4: creative players must be able to hit creatures
+    // (Minecraft parity). Creative immortality is enforced per-target in
+    // CreatureVitalsSystem::ApplyDamage, not by this gate.
+    return mode == WorldGameMode::Survival || mode == WorldGameMode::Creative;
   }
 
   static bool AllowsDigProgress(WorldGameMode mode, float hardness)

@@ -145,7 +145,13 @@ bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
                                        float amount, WorldGameMode mode,
                                        const char *reason)
 {
-  if (mode == WorldGameMode::Creative || amount <= 0.f)
+  if (amount <= 0.f)
+  {
+    return false;
+  }
+  // Runtime issue 4: Creative immortality belongs to player characters
+  // only - creatures stay damageable so player attacks land.
+  if (mode == WorldGameMode::Creative && target.IsPlayerCharacter())
   {
     return false;
   }
@@ -180,7 +186,9 @@ bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
 bool CreatureVitalsSystem::HandleLethal(UWorld &world, UCreature &target,
                                         WorldGameMode mode)
 {
-  if (mode == WorldGameMode::Creative)
+  // Runtime issue 4: creative resurrection protects player characters only;
+  // creatures die normally so player attacks can finish them.
+  if (mode == WorldGameMode::Creative && target.IsPlayerCharacter())
   {
     target.GetVitals().health = target.GetVitals().maxHealth;
     return false;

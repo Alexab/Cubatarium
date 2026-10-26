@@ -645,9 +645,14 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
   }
   if (habitat == CreatureHabitat::Aquatic)
   {
-    const EnvironmentSample env =
-        ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
-    return env.inWater;
+    // Runtime issue 2 (whales beaching): the full body volume counts water
+    // as soon as ANY cell is wet, so a big body could wade ashore while its
+    // tail still touched water. Require the body CORE (half size) to be
+    // submerged - wading stops where the center leaves the water.
+    const glm::vec3 coreSize = glm::max(sizeBlocks * 0.5f, glm::vec3(0.3f));
+    const EnvironmentSample core =
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, coreSize);
+    return core.inWater;
   }
   if (habitat == CreatureHabitat::Lava)
   {
@@ -662,7 +667,11 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
   }
   if (habitat == CreatureHabitat::Aerial)
   {
-    return !world.CheckBlockCollisionVolume(vol);
+    // Runtime issue 2 (owls half-submerged): block-clearance alone let
+    // flyers dip into water. Reject any fluid contact.
+    const EnvironmentSample env =
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
+    return !env.inFluid && !world.CheckBlockCollisionVolume(vol);
   }
   return HabitatAllowsAt(world, habitat, bodyOrigin, sizeBlocks);
 }

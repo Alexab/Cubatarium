@@ -40,7 +40,8 @@ int main()
   Expect(!ModePolicy::AllowsNeedsTick(creative), "creative no needs tick");
 
   Expect(ModePolicy::AllowsCombatDamage(survival), "survival combat");
-  Expect(!ModePolicy::AllowsCombatDamage(creative), "creative no combat");
+  Expect(ModePolicy::AllowsCombatDamage(creative),
+         "creative allows combat damage (creatures only)");
 
   Expect(ModePolicy::AllowsDigProgress(creative, 0.f), "creative dig hardness 0");
   Expect(!ModePolicy::AllowsDigProgress(survival, 0.f), "survival dig hardness 0");

@@ -676,6 +676,11 @@ bool UWorldCollision::CheckCreatureCollisionVolume(
   {
     return false;
   }
+  if (RiderMountId != 0 && RiderMountId != skipCreatureId)
+  {
+    return Environment->AnyCreatureVolumeOverlapsExcluding(vol, skipCreatureId,
+                                                           RiderMountId);
+  }
   return Environment->CheckCreatureCollisionVolume(vol, skipCreatureId);
 #endif
 }
@@ -772,15 +777,17 @@ bool UWorldCollision::DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
     return true;
   }
 
-  const float query_radius =
-      std::max(sizeBlocks.x, sizeBlocks.z) + 1.25f;
   const std::vector<CreatureNeighborView> neighbors =
-      Environment->QueryCreatureNeighborsInRadius(bodyOrigin, query_radius,
-                                                  skipCreatureId);
+      Environment->QueryCreatureNeighborsOverlappingVolume(self,
+                                                           skipCreatureId);
   glm::vec3 push_sum(0.0f);
   int hits = 0;
   for (const CreatureNeighborView &neighbor : neighbors)
   {
+    if (neighbor.Id == RiderMountId)
+    {
+      continue;
+    }
     const UCreature *other = Environment->GetCreature(neighbor.Id);
     if (!other || other->IsPlayerCharacter())
     {

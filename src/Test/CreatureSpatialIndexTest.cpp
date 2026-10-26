@@ -138,6 +138,28 @@ int main()
            "neighbor query reports a multi-cell creature once", failures);
   }
 
+  {
+    // Runtime issue 3 regression: depenetration picks neighbors by volume
+    // overlap, not origin distance - a big body whose origin is far outside
+    // a small query volume must still be returned.
+    UCreatureSpatialIndex index;
+    index.Upsert(30, glm::vec3(20.5f, 64.f, 0.5f), glm::vec3(2.5f, 0.6f, 4.f));
+    // Query volume overlaps the body edge (body x spans [18,23]) while its
+    // center stays 2 blocks from the body origin - origin-radius queries
+    // with r<2 would miss it.
+    const CollisionVolume atEdge{glm::vec3(18.4f, 64.f, 0.5f),
+                                 glm::vec3(0.3f, 0.9f, 0.3f)};
+    const auto overlapping =
+        index.QueryNeighborsOverlappingVolume(atEdge, 0);
+    Expect(overlapping.size() == 1 && overlapping[0].Id == 30,
+           "volume query returns a big body overlapping the query edge",
+           failures);
+    const CollisionVolume far{glm::vec3(10.5f, 64.f, 0.5f),
+                              glm::vec3(0.3f, 0.9f, 0.3f)};
+    Expect(index.QueryNeighborsOverlappingVolume(far, 0).empty(),
+           "volume query ignores non-overlapping bodies", failures);
+  }
+
   if (failures != 0)
   {
     return 1;

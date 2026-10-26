@@ -237,6 +237,42 @@ UCreatureSpatialIndex::QueryNeighbors(const glm::vec3 &center, float radius,
   return out;
 }
 
+std::vector<CreatureNeighborView>
+UCreatureSpatialIndex::QueryNeighborsOverlappingVolume(
+    const CollisionVolume &vol, CreatureId skip_id) const
+{
+  std::vector<CreatureNeighborView> out;
+  std::vector<CreatureId> seen;
+  std::vector<CellKey> keys;
+  GatherCellsForVolume(vol, keys);
+  for (const CellKey &key : keys)
+  {
+    const auto it = Cells.find(key);
+    if (it == Cells.end())
+    {
+      continue;
+    }
+    for (const Entry &entry : it->second)
+    {
+      if (entry.Id == skip_id ||
+          std::find(seen.begin(), seen.end(), entry.Id) != seen.end())
+      {
+        continue;
+      }
+      if (AabbOverlap(vol.center, vol.halfExtents, entry.bodyOrigin,
+                      entry.halfExtents))
+      {
+        CreatureNeighborView neighbor;
+        neighbor.Id = entry.Id;
+        neighbor.bodyOrigin = entry.bodyOrigin;
+        seen.push_back(entry.Id);
+        out.push_back(neighbor);
+      }
+    }
+  }
+  return out;
+}
+
 bool UCreatureSpatialIndex::AnyCreatureVolumeOverlaps(const CollisionVolume &vol,
                                                     CreatureId skip_id) const
 {

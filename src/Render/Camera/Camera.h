@@ -122,6 +122,10 @@ public:
   {
     return Locomotion;
   }
+  UCreatureLocomotionController &GetLocomotionController()
+  {
+    return Locomotion;
+  }
   bool IsStepUpAnimationActive() const { return StepUpAnim.Active; }
 
   CameraPerspective GetPerspective() const { return Perspective; }

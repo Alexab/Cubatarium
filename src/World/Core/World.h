@@ -693,6 +693,14 @@ public:
   std::vector<CreatureId> CreaturesInRadius(const glm::vec3 &center,
                                             float radius) const override;
   std::vector<CreatureNeighborView>
+  QueryCreatureNeighborsOverlappingVolume(const CollisionVolume &vol,
+                                           CreatureId skip_id) const;
+  /// Rider mount under the given feet position: (creature id, back Y).
+  std::optional<std::pair<CreatureId, float>>
+  FindMountCreatureUnder(const glm::vec3 &feetPos,
+                         const glm::vec3 &halfExtents,
+                         CreatureId skipId) const;
+  std::vector<CreatureNeighborView>
   QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
                                  CreatureId skip_id) const override;
   /// Entity AABB clear of other creatures (not blocks). Prefer this name over
@@ -832,7 +840,9 @@ public:
                                     bool hasFeetBlock);
   bool SyncControlledBodyFromCamera(UCreature *controlled,
                                     const std::shared_ptr<UCamera> &camera);
-  void TickNpcCreatureIntents(float dt, bool tick_world_ai);
+  void TickNpcCreatureIntents(float dt, bool tick_world_ai,
+                              CreatureId mountId = 0,
+                              const glm::vec3 &mountOriginBefore = glm::vec3(0.f));
   void ResolveControlledCreatureInfluence(float dt);
   void TickSurvivalSystems(float dt);
   void UpdateIntersection(const glm::vec3 &position, const glm::vec3 &front);
