@@ -153,21 +153,21 @@ GLuint UItemIconCache::GetIcon(const std::string &itemId)
   }
   // UX U3: queue for the per-frame drain instead of rendering synchronously
   // (glTF parse + FBO + glReadPixels + PNG write used to stall the frame).
-  if (Queued.insert(itemId).second)
-  {
-    WarmupQueue.push_back(itemId);
-  }
+  Warmup.Push(itemId);
   return 0;
 }
 
 void UItemIconCache::WarmupNext(size_t count)
 {
   size_t done = 0;
-  while (done < count && !WarmupQueue.empty())
+  while (done < count)
   {
-    const std::string itemId = WarmupQueue.front();
-    WarmupQueue.erase(WarmupQueue.begin());
-    Queued.erase(itemId);
+    const auto next = Warmup.PopFront();
+    if (!next)
+    {
+      break;
+    }
+    const std::string itemId = *next;
     if (Cache.find(itemId) != Cache.end())
     {
       continue;

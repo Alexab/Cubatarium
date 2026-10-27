@@ -74,8 +74,11 @@ bool UObjectIconCache::Initialize()
       glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  WarmupQueue = Objects->ListNames();
-  WarmupIndex = 0;
+  Warmup.Clear();
+  for (const std::string &name : Objects->ListNames())
+  {
+    Warmup.Push(name);
+  }
   return complete;
 }
 
@@ -318,23 +321,20 @@ GLuint UObjectIconCache::GetBlockIconTextureIfCached(
 
 void UObjectIconCache::QueueBlockIcon(const std::string &blockName)
 {
-  if (blockName.empty() || BlockQueued.count(blockName) > 0)
-  {
-    return;
-  }
-  BlockQueued.insert(blockName);
-  BlockWarmupQueue.push_back(blockName);
+  BlockWarmup.Push(blockName);
 }
 
 void UObjectIconCache::WarmupBlockIcons(size_t count)
 {
   size_t done = 0;
-  while (done < count && !BlockWarmupQueue.empty())
+  while (done < count)
   {
-    const std::string name = BlockWarmupQueue.front();
-    BlockWarmupQueue.erase(BlockWarmupQueue.begin());
-    BlockQueued.erase(name);
-    GetBlockIconTexture(name);
+    const auto next = BlockWarmup.PopFront();
+    if (!next)
+    {
+      break;
+    }
+    GetBlockIconTexture(*next);
     ++done;
   }
   if (done > 0 && IconService)
@@ -541,10 +541,14 @@ GLuint UObjectIconCache::GetIcon(const std::string &objectName)
 
 void UObjectIconCache::WarmupNext(size_t count)
 {
-  for (size_t n = 0; n < count && WarmupIndex < WarmupQueue.size();
-       ++n, ++WarmupIndex)
+  for (size_t n = 0; n < count; ++n)
   {
-    GetIcon(WarmupQueue[WarmupIndex]);
+    const auto next = Warmup.PopFront();
+    if (!next)
+    {
+      break;
+    }
+    GetIcon(*next);
   }
   if (IconService)
   {
