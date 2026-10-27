@@ -750,8 +750,11 @@ void UWorldCooperativeSession::RecordPhaseTiming(const UWorld &world)
               .count();
       total_ms > 250)
   {
-    std::cerr << "[WorldLoadPerf][slow-phase] phase=" << TimedPhaseId
-              << " total_ms=" << total_ms << std::endl;
+    const std::string slow_line =
+        std::string("phase=") + TimedPhaseId + " total_ms=" +
+        std::to_string(total_ms);
+    CubatariumLogInfo("WorldLoadPerf", "slow-phase " + slow_line);
+    std::cerr << "[WorldLoadPerf][slow-phase] " << slow_line << std::endl;
   }
 
   TimedPhaseId = current_phase;
