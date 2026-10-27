@@ -1,13 +1,12 @@
 #ifndef ITEM_ICON_CACHE_H
 #define ITEM_ICON_CACHE_H
 
-#include "Items/ItemDefinitionStorage.h"
+#include "Gui/Cache/IconWarmupQueue.h"
 #include "Gui/Cache/InventoryIconService.h"
+#include "Items/ItemDefinitionStorage.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
-#include <vector>
 
 typedef unsigned int GLuint;
 
@@ -32,7 +31,7 @@ public:
   /// rendered item queues it (returning a shared placeholder) instead of
   /// rendering synchronously; WarmupNext drains the queue.
   void WarmupNext(size_t count);
-  size_t PendingWarmupCount() const { return WarmupQueue.size(); }
+  size_t PendingWarmupCount() const { return Warmup.Size(); }
 
 private:
   static constexpr int kIconSize = 64;
@@ -46,8 +45,7 @@ private:
   std::shared_ptr<UInventoryIconService> IconService;
   std::shared_ptr<UItemPreviewRenderer> ItemPreview;
   std::unordered_map<std::string, GLuint> Cache;
-  std::vector<std::string> WarmupQueue;
-  std::unordered_set<std::string> Queued;
+  UGuiIconWarmupQueue Warmup;
   GLuint Fbo{0};
   GLuint ColorTex{0};
   GLuint DepthRbo{0};

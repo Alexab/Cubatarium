@@ -34,28 +34,31 @@ bool UCreatureIconCache::Initialize()
   }
   UCreatureDefinitionStorage *species = Preview->GetSpecies();
   USkinDefinitionStorage *skins = Preview->GetSkins();
-  if (species)
-  {
-    WarmupQueue = species->ListSpawnable();
-    for (const std::string &Id : species->ListAllIds())
+    Warmup.Clear();
+    if (species)
     {
-      if (const CreatureDefinition *def = species->Get(Id))
+      for (const std::string &Id : species->ListSpawnable())
       {
-        if (def->role == CreatureRole::ControlledDefault)
+        Warmup.Push(Id);
+      }
+      for (const std::string &Id : species->ListAllIds())
+      {
+        if (const CreatureDefinition *def = species->Get(Id))
         {
-          WarmupQueue.push_back(Id);
+          if (def->role == CreatureRole::ControlledDefault)
+          {
+            Warmup.Push(Id);
+          }
         }
       }
     }
-  }
-  if (skins)
-  {
-    for (const std::string &Id : skins->ListEquippable())
+    if (skins)
     {
-      WarmupQueue.push_back("skin:" + Id);
+      for (const std::string &Id : skins->ListEquippable())
+      {
+        Warmup.Push("skin:" + Id);
+      }
     }
-  }
-  WarmupIndex = 0;
   return true;
 }
 
@@ -87,34 +90,37 @@ void UCreatureIconCache::ClearRenderedIcons()
     IconService->InvalidateKind("creature");
     IconService->InvalidateKind("skin");
   }
-  WarmupIndex = 0;
   if (!Preview)
   {
     return;
   }
   UCreatureDefinitionStorage *species = Preview->GetSpecies();
   USkinDefinitionStorage *skins = Preview->GetSkins();
-  if (species)
-  {
-    WarmupQueue = species->ListSpawnable();
-    for (const std::string &Id : species->ListAllIds())
+    Warmup.Clear();
+    if (species)
     {
-      if (const CreatureDefinition *def = species->Get(Id))
+      for (const std::string &Id : species->ListSpawnable())
       {
-        if (def->role == CreatureRole::ControlledDefault)
+        Warmup.Push(Id);
+      }
+      for (const std::string &Id : species->ListAllIds())
+      {
+        if (const CreatureDefinition *def = species->Get(Id))
         {
-          WarmupQueue.push_back(Id);
+          if (def->role == CreatureRole::ControlledDefault)
+          {
+            Warmup.Push(Id);
+          }
         }
       }
     }
-  }
-  if (skins)
-  {
-    for (const std::string &Id : skins->ListEquippable())
+    if (skins)
     {
-      WarmupQueue.push_back("skin:" + Id);
+      for (const std::string &Id : skins->ListEquippable())
+      {
+        Warmup.Push("skin:" + Id);
+      }
     }
-  }
 }
 
 void UCreatureIconCache::Shutdown()
@@ -367,10 +373,14 @@ GLuint UCreatureIconCache::GetSkinIcon(const std::string &skinId)
 
 void UCreatureIconCache::WarmupNext(size_t count)
 {
-  for (size_t i = 0; i < count && WarmupIndex < WarmupQueue.size();
-       ++i, ++WarmupIndex)
+  for (size_t i = 0; i < count; ++i)
   {
-    const std::string &key = WarmupQueue[WarmupIndex];
+    const auto next = Warmup.PopFront();
+    if (!next)
+    {
+      break;
+    }
+    const std::string &key = *next;
     if (key.rfind("skin:", 0) == 0)
     {
       GetOrCreateSkinIcon(key.substr(5));
