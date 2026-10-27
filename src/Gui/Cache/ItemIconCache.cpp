@@ -138,13 +138,68 @@ GLuint UItemIconCache::GetIcon(const std::string &itemId)
   {
     return it->second;
   }
-  const GLuint tex = RenderItemIcon(itemId);
-  Cache[itemId] = tex;
   if (IconService)
   {
-    IconService->StoreIconTexture("item", itemId, "", itemId, 64, tex);
+    // Disk cache read: a previous session already rendered this icon.
+    GLuint cached = 0;
+    if (IconService->TryLoadIconTexture("item", itemId, "",
+                                        FingerprintFor(itemId), kIconSize,
+                                        cached) &&
+        cached != 0)
+    {
+      Cache[itemId] = cached;
+      return cached;
+    }
   }
-  return tex;
+  // UX U3: queue for the per-frame drain instead of rendering synchronously
+  // (glTF parse + FBO + glReadPixels + PNG write used to stall the frame).
+  if (Queued.insert(itemId).second)
+  {
+    WarmupQueue.push_back(itemId);
+  }
+  return 0;
+}
+
+void UItemIconCache::WarmupNext(size_t count)
+{
+  size_t done = 0;
+  while (done < count && !WarmupQueue.empty())
+  {
+    const std::string itemId = WarmupQueue.front();
+    WarmupQueue.erase(WarmupQueue.begin());
+    Queued.erase(itemId);
+    if (Cache.find(itemId) != Cache.end())
+    {
+      continue;
+    }
+    const GLuint tex = RenderItemIcon(itemId);
+    Cache[itemId] = tex;
+    if (IconService)
+    {
+      IconService->StoreIconTexture("item", itemId, "",
+                                    FingerprintFor(itemId), kIconSize, tex);
+    }
+    ++done;
+  }
+  if (done > 0 && IconService)
+  {
+    IconService->FlushManifest();
+  }
+}
+
+std::string UItemIconCache::FingerprintFor(const std::string &itemId) const
+{
+  // Item id + model preset version: stale disk icons re-render when the
+  // model art changes.
+  std::string fingerprint = itemId;
+  if (Items)
+  {
+    if (const ItemDefinition *def = Items->Get(itemId))
+    {
+      fingerprint += "|model=" + def->ModelPath;
+    }
+  }
+  return fingerprint;
 }
 
 void UItemIconCache::Invalidate()

@@ -380,6 +380,10 @@ void UCreatureIconCache::WarmupNext(size_t count)
       GetOrCreateSpeciesIcon(key);
     }
   }
+  if (IconService)
+  {
+    IconService->FlushManifest();
+  }
 }
 
 } // namespace cutum

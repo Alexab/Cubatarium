@@ -503,6 +503,10 @@ void UObjectIconCache::WarmupNext(size_t count)
   {
     GetIcon(WarmupQueue[WarmupIndex]);
   }
+  if (IconService)
+  {
+    IconService->FlushManifest();
+  }
 }
 
 std::string UObjectIconCache::BuildObjectFingerprint(

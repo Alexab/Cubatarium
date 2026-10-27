@@ -7,6 +7,7 @@
 #include "Gui/Layout/DockedOverlayLayout.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Widgets/GuiProgressBar.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
@@ -54,6 +55,11 @@ void USurvivalInventoryScreen::Build(UGuiContext &ctx)
   Tabs->SetOnTabChanged([this](int tab) { ApplyTab(tab); });
   Panel->AddChild(std::move(tabs));
 
+  auto iconProgress = std::make_unique<UGuiProgressBar>(&ctx.GetTheme());
+  iconProgress->SetVisible(false);
+  IconProgress = iconProgress.get();
+  Panel->AddChild(std::move(iconProgress));
+
   auto empty = std::make_unique<UGuiLabel>(
       Theme, "Empty — break blocks or craft to collect resources");
   empty->SetUseSecondaryColor(true);
@@ -92,7 +98,53 @@ void USurvivalInventoryScreen::SetVisible(bool visible)
 
 void USurvivalInventoryScreen::Toggle() { SetVisible(!Visible); }
 
-void USurvivalInventoryScreen::Update(double /*dt*/) {}
+void USurvivalInventoryScreen::Update(double /*dt*/)
+{
+  // UX U3: icons render a few per frame; refresh slots as they become
+  // available and drive the mini progress bar until done.
+  if (!Icons)
+  {
+    return;
+  }
+  const size_t pendingBefore = Icons->PendingItemIcons();
+  if (pendingBefore > 0)
+  {
+    Icons->WarmupItemIcons(4);
+    UpdateIconProgress();
+  }
+  else if (IconProgress && IconProgress->IsVisible())
+  {
+    UpdateIconProgress();
+  }
+}
+
+void USurvivalInventoryScreen::UpdateIconProgress()
+{
+  if (!IconProgress || !Icons)
+  {
+    return;
+  }
+  const size_t pending = Icons->PendingItemIcons();
+  if (pending == 0)
+  {
+    IconProgress->SetVisible(false);
+    IconProgressSeenMax = 0;
+    // All icons ready: rebuild once to attach real textures.
+    if (Built && !GridEntryIds.empty())
+    {
+      RebuildGrid();
+    }
+    return;
+  }
+  if (pending > IconProgressSeenMax)
+  {
+    IconProgressSeenMax = pending;
+  }
+  IconProgress->SetVisible(true);
+  IconProgress->SetIndeterminate(false);
+  IconProgress->SetValue(static_cast<float>(IconProgressSeenMax - pending) /
+                         static_cast<float>(IconProgressSeenMax));
+}
 
 void USurvivalInventoryScreen::ApplyTab(int tab)
 {

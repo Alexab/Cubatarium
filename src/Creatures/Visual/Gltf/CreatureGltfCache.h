@@ -3,6 +3,7 @@
 
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include <memory>
+#include <filesystem>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -19,6 +20,10 @@ public:
   std::string GetCreaturesRoot() const { return creaturesRoot; }
   void Clear();
 
+/// Absolute-path load for non-species assets (item icons, viewmodels):
+  /// same weak-ref cache keyed by the path (UX R2).
+  std::shared_ptr<CreatureGltfMeshAsset>
+  LoadFromPath(const std::filesystem::path &path);
   std::shared_ptr<CreatureGltfMeshAsset> Load(const std::string &speciesId,
                                               const std::string &modelFile);
 

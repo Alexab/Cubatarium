@@ -34,6 +34,9 @@ public:
   void ClearItemIconCache();
   void WarmupObjectIcons(size_t maxPerFrame);
   void WarmupCreatureIcons(size_t maxPerFrame);
+  /// UX U3: per-frame item icon drain + pending count for the mini bar.
+  void WarmupItemIcons(size_t maxPerFrame);
+  size_t PendingItemIcons() const;
 
 private:
   std::shared_ptr<UTextureCubeStorage> Textures;

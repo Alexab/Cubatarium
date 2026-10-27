@@ -44,6 +44,7 @@ private:
   UWorld *World{nullptr};
   IUGuiIconSource *Icons{nullptr};
   URecipeRegistry Recipes;
+  bool RecipesLoaded{false};
 
   UGuiPanel *Panel{nullptr};
   UGuiLabel *Title{nullptr};
