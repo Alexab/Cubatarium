@@ -639,6 +639,19 @@ void UCreativePaletteScreen::Update(double dt)
   RelayoutPanel();
   SyncHotbarStrip();
 
+  // UX U4: drain queued block icons; rebuild the grid when the queue
+  // empties so slots pick up their real textures.
+  if (Visible && Icons)
+  {
+    const bool hadQueue = Icons->PendingBlockIcons() > 0;
+    Icons->WarmupBlockIcons(4);
+    if (hadQueue && Icons->PendingBlockIcons() == 0 &&
+        Kind == ContentKind::Block)
+    {
+      RebuildGrid();
+    }
+  }
+
   if (PointerPressed && PointerX >= 0 && PointerY >= 0)
   {
     int slotUnderPointer = -1;
@@ -777,7 +790,13 @@ void UCreativePaletteScreen::RebuildGrid()
       GLuint tex = 0;
       if (Kind == ContentKind::Block)
       {
-        tex = Icons->GetBlockIconTexture(entryId);
+        // UX U4: up to 1754 block icons per tab - never render them in the
+        // rebuild pass; placeholders + per-frame drain with a warmup queue.
+        tex = Icons->GetBlockIconTextureIfCached(entryId);
+        if (tex == 0)
+        {
+          Icons->QueueBlockIcon(entryId);
+        }
       }
       else if (Kind == ContentKind::Object)
       {

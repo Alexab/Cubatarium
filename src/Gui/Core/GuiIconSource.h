@@ -37,6 +37,11 @@ public:
   /// UX U3: per-frame item icon drain + pending count for the mini bar.
   void WarmupItemIcons(size_t maxPerFrame);
   size_t PendingItemIcons() const;
+  /// UX U4: block-icon placeholder flow for the creative palette.
+  GLuint GetBlockIconTextureIfCached(const std::string &blockName) const;
+  void QueueBlockIcon(const std::string &blockName);
+  void WarmupBlockIcons(size_t maxPerFrame);
+  size_t PendingBlockIcons() const;
 
 private:
   std::shared_ptr<UTextureCubeStorage> Textures;

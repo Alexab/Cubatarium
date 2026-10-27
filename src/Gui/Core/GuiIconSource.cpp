@@ -102,6 +102,33 @@ size_t UGuiIconSource::PendingItemIcons() const
   return ItemCache ? ItemCache->PendingWarmupCount() : 0;
 }
 
+GLuint UGuiIconSource::GetBlockIconTextureIfCached(
+    const std::string &blockName) const
+{
+  return ObjectCache ? ObjectCache->GetBlockIconTextureIfCached(blockName) : 0;
+}
+
+void UGuiIconSource::QueueBlockIcon(const std::string &blockName)
+{
+  if (ObjectCache)
+  {
+    ObjectCache->QueueBlockIcon(blockName);
+  }
+}
+
+void UGuiIconSource::WarmupBlockIcons(size_t maxPerFrame)
+{
+  if (ObjectCache)
+  {
+    ObjectCache->WarmupBlockIcons(maxPerFrame);
+  }
+}
+
+size_t UGuiIconSource::PendingBlockIcons() const
+{
+  return ObjectCache ? ObjectCache->PendingBlockWarmupCount() : 0;
+}
+
 void UGuiIconSource::WarmupObjectIcons(size_t maxPerFrame)
 {
   if (ObjectCache)

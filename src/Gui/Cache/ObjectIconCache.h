@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 typedef unsigned int GLuint;
@@ -36,6 +37,11 @@ public:
   void WarmupNext(size_t count);
 
   GLuint GetBlockIconTexture(const std::string &blockName);
+  /// UX U4: cached-only lookup (0 when not ready) for placeholder grids.
+  GLuint GetBlockIconTextureIfCached(const std::string &blockName) const;
+  void QueueBlockIcon(const std::string &blockName);
+  void WarmupBlockIcons(size_t count);
+  size_t PendingBlockWarmupCount() const { return BlockWarmupQueue.size(); }
 
   void ClearBlockIconCache();
 
@@ -56,6 +62,8 @@ private:
 
   std::unordered_map<std::string, GLuint> Cache;
   std::unordered_map<BlockId, GLuint> BlockCache;
+  std::vector<std::string> BlockWarmupQueue;
+  std::unordered_set<std::string> BlockQueued;
   std::vector<std::string> WarmupQueue;
   size_t WarmupIndex{0};
 
