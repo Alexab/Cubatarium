@@ -395,6 +395,11 @@ public:
   void PrepareForShutdown();
   /// Flight-sim / harness: short joins so exit cannot hang experiments.
   void PrepareForShutdownFast();
+  /// UX U5: metadata-only session refresh (storage marker, users,
+  /// creatures, world data) without the full terrain-column dump or the
+  /// 2s quiesce join. Terrain is persisted by the streaming layer / coop
+  /// saves; call only when streaming+persisted (see WorldLifecycleFacade).
+  void SaveSessionSnapshotMetadataOnly(const std::string &world_folder_path);
   void QuiesceBackgroundWork(
       std::chrono::milliseconds async_timeout = std::chrono::milliseconds(2000));
   void BeginBackgroundQuiesce(UBackgroundQuiesceState &state);

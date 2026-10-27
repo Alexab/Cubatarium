@@ -456,7 +456,16 @@ void UAndroidPlatformWindow::Update()
           std::chrono::duration<double>(now - LastAutosave).count();
       if (elapsed >= 60.0)
       {
-        Core->SaveWorld(World->GetWorldName());
+        // UX U5: the Android in-game autosave ran the full synchronous
+        // snapshot (QuiesceBackgroundWork up to 2s + whole-world column
+        // dump) inside one frame. The 180s budgeted coop autosave already
+        // covers persistence; this 60s path now saves metadata only when
+        // the background quiesce is already finished, otherwise it defers
+        // to the coop path - no multi-second frozen frame on pause.
+        if (World->IsBackgroundQuiesceFinished())
+        {
+          Core->SaveWorld(World->GetWorldName());
+        }
         LastAutosave = now;
       }
     }

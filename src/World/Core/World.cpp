@@ -14040,6 +14040,24 @@ void UWorld::Save(const std::string &world_folder_path)
   }
 }
 
+void UWorld::SaveSessionSnapshotMetadataOnly(
+    const std::string &world_folder_path)
+{
+  if (world_folder_path.empty())
+  {
+    return;
+  }
+  std::filesystem::create_directories(world_folder_path);
+  std::filesystem::create_directories(world_folder_path + "/chunks");
+  SetWorldFolderPath(world_folder_path);
+  GetChunkStorage().WriteStorageMarker(world_folder_path);
+  SaveUsers(world_folder_path + "/users.json");
+  SaveCreatures(world_folder_path + "/creatures.json");
+  SaveWorldData(world_folder_path + "/world_data.json");
+  SaveMovementDiagnostics(world_folder_path + "/movement_diagnostics.json");
+  ModifiedChunks.clear();
+}
+
 void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
                                  const bool skip_quiesce)
 {

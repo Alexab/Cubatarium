@@ -374,7 +374,13 @@ void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name
         core.WorldInstance->IsStreamingEnabled() &&
         UWorld::HasPersistedTerrainOnDisk(core.ActiveWorldFolder.string()))
     {
-      core.WorldInstance->SaveSessionSnapshot(core.ActiveWorldFolder.string());
+      // UX U5: the streaming+persisted snapshot blocked the caller for the
+      // whole world dump (historically 8-12s on quit: 2s pool joins + every
+      // terrain column re-written synchronously). Terrain is already
+      // persisted by the streaming layer and budgeted coop saves, so a
+      // metadata-only refresh here is lossless for the session state.
+      core.WorldInstance->SaveSessionSnapshotMetadataOnly(
+          core.ActiveWorldFolder.string());
     }
     else
     {
