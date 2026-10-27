@@ -89,6 +89,19 @@ void UGuiIconSource::WarmupCreatureIcons(size_t maxPerFrame)
   }
 }
 
+void UGuiIconSource::WarmupItemIcons(size_t maxPerFrame)
+{
+  if (ItemCache)
+  {
+    ItemCache->WarmupNext(maxPerFrame);
+  }
+}
+
+size_t UGuiIconSource::PendingItemIcons() const
+{
+  return ItemCache ? ItemCache->PendingWarmupCount() : 0;
+}
+
 void UGuiIconSource::WarmupObjectIcons(size_t maxPerFrame)
 {
   if (ObjectCache)

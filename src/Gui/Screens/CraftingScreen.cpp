@@ -68,7 +68,13 @@ void UCraftingScreen::SetVisible(bool visible)
   }
   if (visible)
   {
-    Recipes.LoadFromDirectory("content/recipes");
+    // UX U3: the recipe directory (12 JSONs) used to be re-read and
+    // re-parsed on every open; load once per process.
+    if (!RecipesLoaded)
+    {
+      Recipes.LoadFromDirectory("content/recipes");
+      RecipesLoaded = true;
+    }
     RebuildList();
     Relayout();
   }

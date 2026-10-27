@@ -2400,6 +2400,9 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   {
     IconSource->WarmupObjectIcons(2);
     IconSource->WarmupCreatureIcons(2);
+    // UX U3: item icons join the budgeted prewarm so the first inventory
+    // open finds them ready.
+    IconSource->WarmupItemIcons(2);
   }
 
   if (HudScreen && HudScreen->GetRoot() && !MinimalOverlayForBench)

@@ -20,6 +20,9 @@ public:
   virtual GLuint GetCreatureIconTexture(const std::string &speciesId) = 0;
   virtual GLuint GetSkinIconTexture(const std::string &skinId) = 0;
   virtual GLuint GetItemIconTexture(const std::string &itemId) = 0;
+  /// UX U3: per-frame item icon drain + pending count for the mini bar.
+  virtual void WarmupItemIcons(size_t maxPerFrame) = 0;
+  virtual size_t PendingItemIcons() const = 0;
 };
 
 } // namespace cutum

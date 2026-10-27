@@ -4,6 +4,7 @@
 #include "Items/ItemGltfTextureCache.h"
 
 #include "App/Platform/IUPlatformPaths.h"
+#include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -408,7 +409,9 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
   }
 
   const std::filesystem::path absPath = paths->AssetRoot() / gltfRel;
-  auto asset = CreatureGltfLoader::LoadFromFile(absPath.string());
+  // UX R2: route through the shared glTF cache - re-parsing the model JSON
+  // + .bin from disk per icon render was the first-open stall driver.
+  auto asset = CreatureGltfCache::Instance().LoadFromPath(absPath);
   if (!asset || asset->primitives.empty())
   {
     if (gItemModelMissingLogged.insert(itemId + "|gltf").second)

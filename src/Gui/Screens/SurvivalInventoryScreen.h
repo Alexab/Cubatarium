@@ -41,6 +41,7 @@ private:
   void RebuildGrid();
   void LayoutGridInScroll();
   void ApplyTab(int tab);
+  void UpdateIconProgress();
 
   IUContentCatalog *Catalog{nullptr};
   UGameSession *Session{nullptr};
@@ -50,6 +51,8 @@ private:
   UGuiPanel *Panel{nullptr};
   UGuiLabel *Title{nullptr};
   UGuiLabel *EmptyHint{nullptr};
+  class UGuiProgressBar *IconProgress{nullptr};
+  size_t IconProgressSeenMax{0};
   UGuiTabBar *Tabs{nullptr};
   UGuiScrollView *Scroll{nullptr};
 

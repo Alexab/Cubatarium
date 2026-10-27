@@ -27,6 +27,31 @@ void CreatureGltfCache::Clear()
 }
 
 std::shared_ptr<CreatureGltfMeshAsset>
+CreatureGltfCache::LoadFromPath(const std::filesystem::path &path)
+{
+  const std::string key = path.string();
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (const auto it = entries.find(key); it != entries.end())
+    {
+      if (auto asset = it->second.lock())
+      {
+        return asset;
+      }
+      entries.erase(it);
+    }
+  }
+  auto asset = CreatureGltfLoader::LoadFromFile(path.string());
+  if (!asset)
+  {
+    return nullptr;
+  }
+  std::lock_guard<std::mutex> lock(mutex);
+  entries[key] = asset;
+  return asset;
+}
+
+std::shared_ptr<CreatureGltfMeshAsset>
 CreatureGltfCache::Load(const std::string &speciesId,
                         const std::string &modelFile)
 {
