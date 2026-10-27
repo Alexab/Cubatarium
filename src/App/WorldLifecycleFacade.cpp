@@ -337,7 +337,17 @@ void UWorldLifecycleFacade::LoadWorldList(UCore &core,
 void UWorldLifecycleFacade::RefreshWorldList(UCore &core)
 {
   std::filesystem::create_directories(core.WorldPath);
+  // UX U4: skip the rescan when the cached list is fresh - hundreds of
+  // world folders were stat-ed on every menu open.
+  const auto now = std::chrono::steady_clock::now();
+  if (WorldListCachedForPath == core.WorldPath.string() &&
+      now - WorldListScannedAt < WorldListTtl)
+  {
+    return;
+  }
   LoadWorldList(core, core.WorldPath.string());
+  WorldListScannedAt = now;
+  WorldListCachedForPath = core.WorldPath.string();
 }
 
 void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name)

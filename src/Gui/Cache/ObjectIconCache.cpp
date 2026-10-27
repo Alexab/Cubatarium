@@ -300,6 +300,49 @@ void UObjectIconCache::ClearBlockIconCache()
   }
 }
 
+GLuint UObjectIconCache::GetBlockIconTextureIfCached(
+    const std::string &blockName) const
+{
+  if (!BlockDefs || blockName.empty())
+  {
+    return 0;
+  }
+  const BlockDefinition *def = BlockDefs->GetByName(blockName);
+  if (!def)
+  {
+    return 0;
+  }
+  const auto it = BlockCache.find(def->Id);
+  return it != BlockCache.end() ? it->second : 0;
+}
+
+void UObjectIconCache::QueueBlockIcon(const std::string &blockName)
+{
+  if (blockName.empty() || BlockQueued.count(blockName) > 0)
+  {
+    return;
+  }
+  BlockQueued.insert(blockName);
+  BlockWarmupQueue.push_back(blockName);
+}
+
+void UObjectIconCache::WarmupBlockIcons(size_t count)
+{
+  size_t done = 0;
+  while (done < count && !BlockWarmupQueue.empty())
+  {
+    const std::string name = BlockWarmupQueue.front();
+    BlockWarmupQueue.erase(BlockWarmupQueue.begin());
+    BlockQueued.erase(name);
+    GetBlockIconTexture(name);
+    ++done;
+  }
+  if (done > 0 && IconService)
+  {
+    IconService->FlushManifest();
+  }
+}
+
 GLuint UObjectIconCache::GetBlockIconTexture(const std::string &blockName)
 {
   if (!BlockDefs || !Textures || !Shader || blockName.empty())

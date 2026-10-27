@@ -70,19 +70,10 @@ void UCharacterSheetScreen::SetVisible(bool visible)
   {
     Root->SetVisible(visible);
   }
-  if (!Visible && PreviewTexture != 0)
+  if (!Visible)
   {
-    glDeleteTextures(1, &PreviewTexture);
-    PreviewTexture = 0;
-    LastPreviewSize = 0;
-    LastPreviewYaw = 0.f;
-    LastPreviewPitch = 0.f;
-    LastCachedTypeId.clear();
-    LastCachedSkinId.clear();
-    if (PreviewViewport)
-    {
-      PreviewViewport->SetPreviewTexture(0);
-    }
+    // UX U4: keep the preview texture across opens - it was deleted and
+    // re-rendered (full creature visual construction) on every open.
   }
   else if (Visible && Built)
   {

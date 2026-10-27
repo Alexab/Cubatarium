@@ -741,6 +741,19 @@ void UWorldCooperativeSession::RecordPhaseTiming(const UWorld &world)
   CubatariumLogInfo("WorldLoadPerf", line);
   std::cerr << "[WorldLoadPerf] " << line << std::endl;
 
+  // UX U4 watchdog: a phase whose AVERAGE tick exceeded 250ms still means a
+  // frozen bar for its duration (the frame loop pumps between ticks, so the
+  // per-tick cost is what the user feels).
+  if (const long long total_ms =
+          std::chrono::duration_cast<std::chrono::milliseconds>(now -
+                                                                PhaseStartedAt)
+              .count();
+      total_ms > 250)
+  {
+    std::cerr << "[WorldLoadPerf][slow-phase] phase=" << TimedPhaseId
+              << " total_ms=" << total_ms << std::endl;
+  }
+
   TimedPhaseId = current_phase;
   PhaseStartedAt = now;
 }
