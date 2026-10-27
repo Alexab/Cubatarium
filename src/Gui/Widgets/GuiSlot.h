@@ -19,6 +19,7 @@ public:
   void SetSelected(bool selected) { Selected = selected; }
   void SetLabel(const std::string &label) { Label = label; }
   void SetIconTexture(unsigned int texture) { IconTexture = texture; }
+  unsigned int GetIconTexture() const { return IconTexture; }
   void SetWearProgress(float wear01) { WearProgress = wear01; }
   void SetBroken(bool broken) { Broken = broken; }
   void SetCornerHint(const std::string &hint) { CornerHint = hint; }
