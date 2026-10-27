@@ -639,8 +639,23 @@ void UCreativePaletteScreen::Update(double dt)
   RelayoutPanel();
   SyncHotbarStrip();
 
-  // UX U4: drain queued block icons; rebuild the grid when the queue
-  // empties so slots pick up their real textures.
+  // UX tail: append the next grid chunk while the tab materializes.
+  if (Visible && !GridPendingViews.empty() &&
+      GridBuiltCount < GridPendingViews.size())
+  {
+    AppendGridSlotsChunk();
+    if (GridBuiltCount >= GridPendingViews.size())
+    {
+      FinishGridBuild();
+    }
+    else
+    {
+      LayoutGridInScroll();
+    }
+  }
+
+  // UX U4: drain queued block icons; refresh textures in place when the
+  // queue empties (a full grid rebuild would re-create every widget).
   if (Visible && Icons)
   {
     const bool hadQueue = Icons->PendingBlockIcons() > 0;
@@ -648,7 +663,7 @@ void UCreativePaletteScreen::Update(double dt)
     if (hadQueue && Icons->PendingBlockIcons() == 0 &&
         Kind == ContentKind::Block)
     {
-      RebuildGrid();
+      RefreshGridIconTextures();
     }
   }
 
@@ -777,21 +792,43 @@ void UCreativePaletteScreen::RebuildGrid()
 
   const std::string groupId =
       ActiveTypeId.empty() ? "misc" : ActiveTypeId;
-  const auto views = Session->GetEntries(Kind, groupId);
-  const int slotSize = Theme->HotbarSlotSize;
-  for (size_t i = 0; i < views.size(); ++i)
+  GridPendingViews = Session->GetEntries(Kind, groupId);
+  GridBuiltCount = 0;
+
+  // UX tail: materialize the first chunk only; Update appends the rest per
+  // frame so the Blocks tab (1754 entries) does not construct every widget
+  // in one tick.
+  AppendGridSlotsChunk();
+  if (GridBuiltCount >= GridPendingViews.size())
   {
+    FinishGridBuild();
+  }
+}
+
+void UCreativePaletteScreen::AppendGridSlotsChunk()
+{
+  if (!Scroll || !Theme)
+  {
+    return;
+  }
+  constexpr size_t kSlotsPerFrame = 256;
+  const int slotSize = Theme->HotbarSlotSize;
+  const size_t target =
+      std::min(GridPendingViews.size(), GridBuiltCount + kSlotsPerFrame);
+  for (; GridBuiltCount < target; ++GridBuiltCount)
+  {
+    const InventoryEntryView &view = GridPendingViews[GridBuiltCount];
     auto slot = std::make_unique<UGuiSlot>(Theme);
     slot->SetBounds({0, 0, slotSize, slotSize});
-    const std::string entryId = views[i].ref.Id;
+    const std::string entryId = view.ref.Id;
     slot->SetSelected(entryId == SelectedEntryId);
     if (Icons)
     {
       GLuint tex = 0;
       if (Kind == ContentKind::Block)
       {
-        // UX U4: up to 1754 block icons per tab - never render them in the
-        // rebuild pass; placeholders + per-frame drain with a warmup queue.
+        // UX U4: never render icons in the build pass - placeholders +
+        // per-frame drain with a warmup queue.
         tex = Icons->GetBlockIconTextureIfCached(entryId);
         if (tex == 0)
         {
@@ -816,7 +853,7 @@ void UCreativePaletteScreen::RebuildGrid()
       }
       slot->SetIconTexture(tex);
     }
-    InventoryEntryRef entry = views[i].ref;
+    InventoryEntryRef entry = view.ref;
 
     SlotAddress address;
     address.surface = SlotSurface::PaletteGrid;
@@ -867,16 +904,35 @@ void UCreativePaletteScreen::RebuildGrid()
         static_cast<UGuiSlot *>(Scroll->Content().AddChild(std::move(slot)));
     GridSlots.push_back(ptr);
     GridEntryIds.push_back(entryId);
-    GridEntryLabels.push_back(views[i].label);
+    GridEntryLabels.push_back(view.label);
     GridSpawnHints.push_back(std::move(spawnHint));
   }
+}
 
+void UCreativePaletteScreen::FinishGridBuild()
+{
   Scroll->SetAfterScrollLayout([this](UGuiScrollView &)
                                { LayoutGridInScroll(); });
   Scroll->LayoutContent();
   LayoutGridInScroll();
   SyncPreviewDock();
   Built = true;
+}
+
+void UCreativePaletteScreen::RefreshGridIconTextures()
+{
+  if (!Icons || Kind != ContentKind::Block)
+  {
+    return;
+  }
+  for (size_t i = 0; i < GridSlots.size() && i < GridEntryIds.size(); ++i)
+  {
+    if (GridSlots[i] && GridSlots[i]->GetIconTexture() == 0)
+    {
+      GridSlots[i]->SetIconTexture(
+          Icons->GetBlockIconTextureIfCached(GridEntryIds[i]));
+    }
+  }
 }
 
 void UCreativePaletteScreen::LayoutGridInScroll()

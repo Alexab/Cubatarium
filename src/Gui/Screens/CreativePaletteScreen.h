@@ -4,6 +4,8 @@
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
+#include "Gui/Interfaces/IUInventoryViewModel.h"
+#include <vector>
 #include <memory>
 #include <string>
 
@@ -56,6 +58,9 @@ private:
   void ApplyMainTab(int tab);
   void UpdateTooltip();
   void RebuildGrid();
+  void AppendGridSlotsChunk();
+  void FinishGridBuild();
+  void RefreshGridIconTextures();
   void RelayoutPanel();
   void LayoutGridInScroll();
   void SyncPreviewDock();
@@ -82,6 +87,10 @@ private:
   UGuiPanel *HotbarStripDivider{nullptr};
   UGuiRenderer *Renderer{nullptr};
   std::vector<UGuiSlot *> GridSlots;
+  /// UX tail: the grid materializes in chunks per frame - opening the
+  /// Blocks tab (1754 entries) used to construct every widget in one tick.
+  std::vector<InventoryEntryView> GridPendingViews;
+  size_t GridBuiltCount{0};
   std::vector<UGuiSlot *> HotbarStripSlots;
   int PointerX{-1};
   int PointerY{-1};
