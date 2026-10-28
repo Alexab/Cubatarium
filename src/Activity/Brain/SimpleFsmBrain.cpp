@@ -122,23 +122,17 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     return;
   }
 
-  if (Mode == SimpleFsmMode::Melee)
+  const UWorld &brainWorld = sink.GetWorld();
+  if (Mode == SimpleFsmMode::Melee && brainWorld.IsPlayerDead())
   {
-    const UWorld &world = sink.GetWorld();
-    if (!ModePolicy::AllowsHostileAggro(world.GetGameMode(),
-                                        world.GetDifficulty()) ||
-        world.IsPlayerDead())
-    {
-      blackboard.state = CreatureFsmState::Idle;
-      blackboard.targetId = 0;
-      CreatureIntent idle;
-      idle.clearOnApply = false;
-      idle.suggestedAnim = LocomotionState::Idle;
-      sink.SetIntent(self_id, idle);
-      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, idle,
-                        "melee_disabled_by_world_policy");
-      return;
-    }
+    blackboard.state = CreatureFsmState::Idle;
+    blackboard.targetId = 0;
+    CreatureIntent idle;
+    idle.clearOnApply = false;
+    idle.suggestedAnim = LocomotionState::Idle;
+    sink.SetIntent(self_id, idle);
+    RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, idle,
+                      "melee_disabled_player_dead");
   }
 
   if (Mode == SimpleFsmMode::Flee)
@@ -253,6 +247,21 @@ void USimpleFsmBrain::TickMeleeFallback(UCreatureActivityBlackboard &blackboard,
                                        const CreatureActivityView &view,
                                        const CreatureBehaviorSnapshot &snapshot)
 {
+  // Mob-vs-mob hunting stays active in Creative (Minecraft parity: hostile
+  // mobs ignore the creative player but still fight other mobs); Peaceful
+  // suppresses it entirely.
+  if (!ModePolicy::AllowsHostileAggro(WorldGameMode::Survival,
+                                      sink.GetWorld().GetDifficulty()))
+  {
+    blackboard.state = CreatureFsmState::Idle;
+    CreatureIntent idle;
+    idle.clearOnApply = false;
+    idle.suggestedAnim = LocomotionState::Idle;
+    sink.SetIntent(self_id, idle);
+    RecordBrainIntent(self_id, view, snapshot, blackboard.state, idle,
+                      "melee_fallback_peaceful");
+    return;
+  }
   CreatureIntent intent;
   intent.clearOnApply = false;
   // Mob↔mob fallback: hunt prey inside aggro range. Target is sticky — it

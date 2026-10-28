@@ -21,8 +21,12 @@ bool PlayerInteractionRouter::TryRouteMeleeFromView(UWorld &world,
                                                    const glm::vec3 &eye,
                                                    const glm::vec3 &front)
 {
-  if (world.GetGameMode() != WorldGameMode::Survival)
+  if (world.GetGameMode() != WorldGameMode::Survival &&
+      world.GetGameMode() != WorldGameMode::Creative)
   {
+    // Creative players can attack creatures (damage applies to mobs; the
+    // player-facing immortality lives in CreatureVitalsSystem). Matches
+    // Minecraft parity.
     return false;
   }
   const auto target =
@@ -100,7 +104,8 @@ bool PlayerInteractionRouter::TryRouteRangedFromView(UWorld &world,
                                                      float rangeBlocks,
                                                      bool requireLos)
 {
-  if (world.GetGameMode() != WorldGameMode::Survival)
+  if (world.GetGameMode() != WorldGameMode::Survival &&
+      world.GetGameMode() != WorldGameMode::Creative)
   {
     return false;
   }
