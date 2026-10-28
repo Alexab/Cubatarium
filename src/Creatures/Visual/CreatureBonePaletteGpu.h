@@ -11,7 +11,9 @@ typedef unsigned int GLuint;
 namespace cutum
 {
 
-constexpr size_t kCreatureBonePaletteMaxBones = 64;
+/// 96: hermitcrab needs 67 joints; UBO 96*64B = 6KB, well under the
+/// 16KB min-spec uniform block limit.
+constexpr size_t kCreatureBonePaletteMaxBones = 96;
 constexpr GLuint kCreatureBonePaletteBindingPoint = 0;
 
 size_t ClampCreatureBonePaletteBoneCount(size_t boneCount);

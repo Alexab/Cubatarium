@@ -1377,6 +1377,35 @@ add_test(NAME creature_appearance_test
     COMMAND $<TARGET_FILE:creature_appearance_test>)
 set_tests_properties(creature_appearance_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME progress_snapshot_test
+    SOURCES
+        src/Core/Progress/LatestProgressSink.cpp
+        src/Test/ProgressSnapshotTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME progress_snapshot_test
+    COMMAND $<TARGET_FILE:progress_snapshot_test>)
+set_tests_properties(progress_snapshot_test PROPERTIES LABELS "unit;gui")
+
+cubatarium_add_test(NAME creature_model_integrity_test
+    SOURCES
+        src/Creatures/Stats/CreatureStatsDefaults.cpp
+        src/Creatures/Stats/CreatureStatsJson.cpp
+        src/Creatures/Locomotion/LocomotionTypes.cpp
+        src/Creatures/Core/CreatureCatalogTypes.cpp
+        src/Creatures/Definition/CreatureDefinitionStorage.cpp
+        src/Creatures/Visual/CreatureRigidModelLoader.cpp
+        src/Creatures/Visual/CreatureVisualBackendSelect.cpp
+        src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.cpp
+        src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
+        src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
+        src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
+        src/Test/CreatureModelIntegrityTest.cpp
+    DEFINITIONS CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME creature_model_integrity_test
+    COMMAND $<TARGET_FILE:creature_model_integrity_test>)
+set_tests_properties(creature_model_integrity_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME creature_influence_channels_test
     SOURCES
         src/Creatures/Influence/InfluenceHitMath.cpp
