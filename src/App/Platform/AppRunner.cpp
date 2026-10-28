@@ -1,4 +1,8 @@
 #include "World/Diagnostics/MeshAuditDiagnostics.h"
+#include "Render/Camera/CameraBasisLogic.h"
+#include <fstream>
+#include "Game/CreatureVisualQaSpawner.h"
+#include "Game/ModePolicy.h"
 #include "App/Platform/FlightSimHarness.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "App/Platform/SampleProfiler.h"
@@ -1236,6 +1240,149 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               ingame_started = now;
               excluded_before_ingame_sec = excluded_clock_gap_sec;
               ingame_clock_started = true;
+              // Model verification (V2): CUBA_FLIGHT_QA_GRID=1 spawns every
+              // species in a grid right after the world becomes playable,
+              // so flight captures can review all creature models. Daylight
+              // is forced and time frozen; wander is suppressed by clearing
+              // intents every frame while the flag is set.
+              if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world)
+              {
+                world->SetTimeOfDayNormalized(0.35f);
+                world->SetTimeFrozen(true);
+                if (ModePolicy::AllowsQaSpawner(world->GetGameMode()))
+                {
+                  UCreatureVisualQaSpawner spawner(*world);
+                  const CreatureVisualQaSpawnResult spawnResult =
+                      spawner.SpawnAllInGrid();
+                  std::cout << "flight-sim: QA grid spawn: "
+                            << spawnResult.Message << std::endl;
+                }
+              }
+            }
+              // QA grid: suppress wander drift so captured frames show the
+              // grid in place (agents re-set intents at tick rate; clearing
+              // every frame keeps the motor wish at zero).
+              if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world)
+              {
+                world->ForEachCreature(
+                    [](UCreature &creature) { creature.ClearIntent(); });
+              }
+              // One-shot relocation at frame 30: ground queries need
+              // collision-ready chunks, which the first InGame frame does
+              // not guarantee yet.
+              if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world &&
+                  ingame_frames_seen == 30)
+              {
+                  // Relocate every QA creature onto a flat, ground-snapped
+                  // grid in front of the camera: terrain slope used to
+                  // scatter the review set across hills and canopies.
+                  if (auto camera = world->GetCurrentUserCamera())
+                  {
+                    glm::vec3 forward(0.0f, 0.0f, -1.0f);
+                    glm::vec3 right(1.0f, 0.0f, 0.0f);
+                    glm::vec3 basisUp;
+                    ComputeFpsCameraBasis(camera->GetYaw(),
+                                          camera->GetPitch(), forward, right,
+                                          basisUp);
+                    forward.y = 0.0f;
+                    right.y = 0.0f;
+                    if (glm::length(forward) > 1e-5f)
+                    {
+                      forward = glm::normalize(forward);
+                    }
+                    if (glm::length(right) > 1e-5f)
+                    {
+                      right = glm::normalize(right);
+                    }
+                    const glm::vec3 base = camera->GetPosition();
+                    constexpr int kCols = 10;
+                    constexpr float kColSpacing = 2.0f;
+                    constexpr float kRowSpacing = 3.0f;
+                    size_t slot = 0;
+                    float gridGroundSum = 0.0f;
+                    int gridGroundSamples = 0;
+                    world->ForEachCreature(
+                        [&](UCreature &creature)
+                        {
+                          if (creature.IsPlayerCharacter() ||
+                              creature.GetSpawnSource() !=
+                                  CreatureSpawnSource::Qa)
+                          {
+                            return;
+                          }
+                          const int row = static_cast<int>(slot / kCols);
+                          const int col = static_cast<int>(slot % kCols);
+                          glm::vec3 pos =
+                              base + forward *
+                                         (4.0f +
+                                          static_cast<float>(row) *
+                                              kRowSpacing) +
+                              right * (static_cast<float>(col - kCols / 2) *
+                                       kColSpacing);
+                          if (const std::optional<float> ground =
+                                  world->QueryGroundFeetYUnder(
+                                      static_cast<int>(std::floor(pos.x)),
+                                      static_cast<int>(std::floor(pos.z)),
+                                      pos.y))
+                          {
+                            pos.y = *ground;
+                            gridGroundSum += *ground;
+                            ++gridGroundSamples;
+                          }
+                          creature.SetBodyOrigin(pos);
+                          ++slot;
+                        });
+                    // Vantage: 6 blocks behind the grid front row, above the
+                    // highest slot ground, level view down the rows.
+                    if (gridGroundSamples > 0)
+                    {
+                      // Average ground across the grid: the terrain slopes,
+                      // so max/min would aim the review camera at a hill.
+                      const float gridGroundY =
+                          gridGroundSum /
+                          static_cast<float>(gridGroundSamples);
+                      // Float the review camera: gravity would otherwise
+                      // drop it off the vantage into the grid.
+                      camera->SetFreeMove(true);
+                      const glm::vec3 vantage =
+                          base - forward * 4.0f +
+                          glm::vec3(0.0f, gridGroundY - base.y + 10.0f, 0.0f);
+                      camera->SetPosition(vantage);
+                      // Aim at the grid center (mid rows): the spawn-time
+                      // yaw is arbitrary when autopilot never armed.
+                      const glm::vec3 center =
+                          base + forward * 11.5f +
+                          glm::vec3(0.0f, gridGroundY - base.y + 0.5f, 0.0f);
+                      const glm::vec3 dir = center - vantage;
+                      const float horizontal =
+                          std::sqrt(dir.x * dir.x + dir.z * dir.z);
+                      const float yawDeg =
+                          glm::degrees(std::atan2(dir.z, dir.x));
+                      const float pitchDeg =
+                          glm::degrees(std::atan2(
+                              dir.y, std::max(0.5f, horizontal)));
+                      camera->SetOrientation(yawDeg, pitchDeg);
+                    }
+                  }
+                {
+                  std::ofstream dump("qa_relocation.txt");
+                  dump << "relocation done" << std::endl;
+                  world->ForEachCreature(
+                      [&](const UCreature &creature)
+                      {
+                        const glm::vec3 p = creature.GetBodyOrigin();
+                        dump << creature.GetTypeId() << " " << p.x << " "
+                             << p.y << " " << p.z << " src="
+                             << static_cast<int>(creature.GetSpawnSource())
+                             << std::endl;
+                      });
+                  if (auto cam = world->GetCurrentUserCamera())
+                  {
+                    const glm::vec3 cp = cam->GetPosition();
+                    dump << "camera " << cp.x << " " << cp.y << " " << cp.z
+                         << std::endl;
+                  }
+                }
             }
             const double ingame_sec = (std::max)(
                 0.0,
