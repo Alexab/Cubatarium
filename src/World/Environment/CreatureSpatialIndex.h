@@ -61,6 +61,10 @@ private:
     CreatureId Id{0};
     glm::vec3 bodyOrigin{0.0f};
     glm::vec3 halfExtents{0.3f, 0.9f, 0.3f};
+    /// True AABB center = bodyOrigin + halfExtents.y up (bodyOrigin is the
+    /// FEET position). Overlap tests and cell gathering use this; distance
+    /// queries keep bodyOrigin.
+    glm::vec3 volCenter{0.0f};
   };
 
   static CellKey CellForPosition(const glm::vec3 &origin);

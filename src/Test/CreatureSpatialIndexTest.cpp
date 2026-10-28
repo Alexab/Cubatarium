@@ -158,6 +158,22 @@ int main()
                               glm::vec3(0.3f, 0.9f, 0.3f)};
     Expect(index.QueryNeighborsOverlappingVolume(far, 0).empty(),
            "volume query ignores non-overlapping bodies", failures);
+
+    // Runtime regression: the index used to store the FEET position as the
+    // AABB center (half a body too low), so a player standing 1 block above
+    // a mob's feet walked through the mob's upper body.
+    UCreatureSpatialIndex stepIndex;
+    stepIndex.Upsert(40, glm::vec3(2.5f, 58.0f, 0.5f),
+                     glm::vec3(0.45f, 0.65f, 0.45f)); // sheep on lower ground
+    const CollisionVolume playerUp{glm::vec3(2.5f, 60.0f, 0.5f),
+                                   glm::vec3(0.3f, 0.9f, 0.3f)}; // +2 blocks
+    Expect(stepIndex.AnyCreatureVolumeOverlaps(playerUp, 0),
+           "collision matches a body 2 blocks above a mob's feet "
+           "(true AABB centers)", failures);
+    const CollisionVolume playerFarUp{glm::vec3(2.5f, 64.0f, 0.5f),
+                                      glm::vec3(0.3f, 0.9f, 0.3f)}; // +6
+    Expect(!stepIndex.AnyCreatureVolumeOverlaps(playerFarUp, 0),
+           "a body 6 blocks above a mob's feet does not collide", failures);
   }
 
   if (failures != 0)

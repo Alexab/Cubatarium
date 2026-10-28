@@ -1,4 +1,6 @@
 #include "World/Core/WorldViewBinding.h"
+#include <cstdlib>
+#include <fstream>
 
 #include "Activity/WorldCreatureActivitySink.h"
 #include "Creatures/Combat/CreatureCombat.h"
@@ -741,6 +743,33 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
                                     CreatureId mountId,
                                     const glm::vec3 &mountOriginBefore)
 {
+  // TEMP diag: dump per-creature tick state at frames 60 and 300.
+  if (const char *qaDump = std::getenv("CUBA_QA_TICKDUMP"))
+  {
+    static int dumpFrames[] = {60, 300};
+    static size_t dumpIdx = 0;
+    static int lastDumped = -1;
+    static int frameNo = 0;
+    ++frameNo;
+    if (dumpIdx < 2 && frameNo == dumpFrames[dumpIdx])
+    {
+      std::ofstream f(qaDump, std::ios::app);
+      f << "== frame " << frameNo << " tick_world_ai=" << tick_world_ai
+        << std::endl;
+      ForEachCreature([&](UCreature &creature)
+                      {
+                        const glm::vec3 p = creature.GetBodyOrigin();
+                        f << creature.GetId() << " " << creature.GetTypeId()
+                          << " y=" << p.y << " mode="
+                          << static_cast<int>(creature.GetMovementMode())
+                          << " onGround=" << creature.GetLocomotion().IsOnGround()
+                          << " possessed=" << creature.IsPossessed()
+                          << " intentSpeed=" << creature.GetIntent().moveSpeed
+                          << std::endl;
+                      });
+      ++dumpIdx;
+    }
+  }
   using clock_t = std::chrono::high_resolution_clock;
   int creatures_total = 0;
   int creatures_ai_ticked = 0;
@@ -764,7 +793,13 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         }
         if (!tick_world_ai)
         {
+          // Hitch gate freezes the BRAINS (TickActivity above), never the
+          // bodies: stored wander intents keep executing so mobs do not
+          // visibly freeze mid-stride on streaming frames (Minecraft
+          // parity - entity simulation is not gated on frame time).
           ++world_creatures_skipped;
+          creature.ExecuteIntent(*this, dt);
+          Environment.UpdateCreatureInSpatialIndex(creature);
           return;
         }
         ++creatures_ai_ticked;

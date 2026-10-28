@@ -51,7 +51,7 @@ void UCreatureSpatialIndex::GatherCellsForVolume(const CollisionVolume &vol,
 void UCreatureSpatialIndex::RemoveEntryFromCells(const Entry &entry)
 {
   CollisionVolume vol;
-  vol.center = entry.bodyOrigin;
+  vol.center = entry.volCenter;
   vol.halfExtents = entry.halfExtents;
   std::vector<CellKey> keys;
   GatherCellsForVolume(vol, keys);
@@ -80,7 +80,7 @@ void UCreatureSpatialIndex::InsertEntryIntoCells(const Entry &entry)
   // RemoveEntryFromCells: queries gather cells by query volume, so a
   // single-cell insert lets wide bodies slip past overlap checks.
   CollisionVolume vol;
-  vol.center = entry.bodyOrigin;
+  vol.center = entry.volCenter;
   vol.halfExtents = entry.halfExtents;
   std::vector<CellKey> keys;
   GatherCellsForVolume(vol, keys);
@@ -112,6 +112,9 @@ void UCreatureSpatialIndex::Upsert(CreatureId id, const glm::vec3 &origin,
   entry.Id = id;
   entry.bodyOrigin = origin;
   entry.halfExtents = half_extents;
+  // bodyOrigin is the FEET position; the collision AABB is centered at
+  // feet + half height (matches UCreature::GetCollisionVolume).
+  entry.volCenter = origin + glm::vec3(0.0f, half_extents.y, 0.0f);
   Tracked[id] = entry;
   InsertEntryIntoCells(entry);
 }
@@ -259,7 +262,7 @@ UCreatureSpatialIndex::QueryNeighborsOverlappingVolume(
       {
         continue;
       }
-      if (AabbOverlap(vol.center, vol.halfExtents, entry.bodyOrigin,
+      if (AabbOverlap(vol.center, vol.halfExtents, entry.volCenter,
                       entry.halfExtents))
       {
         CreatureNeighborView neighbor;
@@ -291,7 +294,7 @@ bool UCreatureSpatialIndex::AnyCreatureVolumeOverlaps(const CollisionVolume &vol
       {
         continue;
       }
-      if (AabbOverlap(vol.center, vol.halfExtents, entry.bodyOrigin,
+      if (AabbOverlap(vol.center, vol.halfExtents, entry.volCenter,
                       entry.halfExtents))
       {
         return true;
