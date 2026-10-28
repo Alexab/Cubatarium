@@ -402,6 +402,19 @@ void UCreature::EnforceHabitatAfterMove(UWorld &world, CreatureHabitat habitat,
     return;
   }
 
+  // A creature out of its element may still DESCEND: a mob falling from a
+  // high spawn (or an aquatic hovering above the sea) used to have every
+  // move - including the fall - reverted AND its feet re-anchored at the
+  // stuck position, pinning it mid-air forever. Accept strictly descending
+  // post-motor positions (gravity always carries a creature toward valid
+  // habitat); level and ascending moves stay gated.
+  if (BodyOrigin.y < bodyOriginBefore.y - 1.0e-4f)
+  {
+    Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
+    SyncBoundsFromStance();
+    return;
+  }
+
   const glm::vec3 attempted = BodyOrigin;
   const glm::vec2 xzTravel(attempted.x - bodyOriginBefore.x,
                            attempted.z - bodyOriginBefore.z);

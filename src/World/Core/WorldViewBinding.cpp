@@ -743,6 +743,77 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
                                     CreatureId mountId,
                                     const glm::vec3 &mountOriginBefore)
 {
+  // Diagnostics (env CUBA_QA_TICKDUMP_ID=<creatureId>): per-frame trace of
+  // one creature for the first 400 frames (position, locomotion, intent).
+  if (const char *qaTraceId = std::getenv("CUBA_QA_TICKDUMP_ID"))
+  {
+    static const CreatureId traceId = std::strtoull(qaTraceId, nullptr, 10);
+    static std::ofstream traceFile(std::string(qaTraceId) + "_trace.txt",
+                                   std::ios::trunc);
+    static int traceFrame = 0;
+    ++traceFrame;
+    if (traceFile && traceFrame <= 400)
+    {
+      ForEachCreature([&](UCreature &creature)
+                      {
+                        if (creature.GetId() != traceId)
+                        {
+                          return;
+                        }
+                        const glm::vec3 p = creature.GetBodyOrigin();
+                        const BlockId below = GetBlockWorld().GetBlock(
+                            glm::ivec3(static_cast<int>(std::floor(p.x)),
+                                       static_cast<int>(std::floor(p.y)) - 1,
+                                       static_cast<int>(std::floor(p.z))));
+                        const CollisionVolume bodyVol =
+                            CollisionVolumeFromBody(p, creature.GetBounds().currentSizeBlocks);
+                        const bool blockCol = CheckBlockCollisionVolume(bodyVol);
+                        const bool creatureCol =
+                            CheckCreatureCollisionVolume(bodyVol, traceId);
+                        const glm::ivec3 topChunk =
+                            UChunkManager::WorldToChunk(glm::ivec3(
+                                static_cast<int>(std::floor(p.x)),
+                                static_cast<int>(std::floor(p.y + bodyVol.halfExtents.y)),
+                                static_cast<int>(std::floor(p.z))));
+                        const glm::vec3 stepBody = p - glm::vec3(0.0f, 0.25f, 0.0f);
+                        const CollisionVolume stepVol =
+                            CollisionVolumeFromBody(stepBody, creature.GetBounds().currentSizeBlocks);
+                        const bool stepBlockCol = CheckBlockCollisionVolume(stepVol);
+                        const bool stepCreatureCol =
+                            CheckCreatureCollisionVolume(stepVol, traceId);
+                        const glm::ivec3 chunkCoord =
+                            UChunkManager::WorldToChunk(
+                                glm::ivec3(static_cast<int>(std::floor(p.x)),
+                                           static_cast<int>(std::floor(p.y)),
+                                           static_cast<int>(std::floor(p.z))));
+                        traceFile << traceFrame << " y=" << p.y
+                                  << " feetY=" << creature.GetLocomotion().GetFeetY()
+                                  << " anchored=" << creature.GetLocomotion().IsFeetAnchored()
+                                  << " vy=" << creature.GetLocomotion().GetVerticalVelocity()
+                                  << " onGround=" << creature.GetLocomotion().IsOnGround()
+                                  << " mode=" << static_cast<int>(creature.GetMovementMode())
+                                  << " speed=" << creature.GetIntent().moveSpeed
+                                  << " dirLen=" << glm::length(creature.GetIntent().moveDirWorld)
+                                  << " blockBelow=" << static_cast<int>(below)
+                                  << " chunk=(" << chunkCoord.x << ","
+                                  << chunkCoord.y << "," << chunkCoord.z << ")"
+                                  << " chunkLoaded="
+                                  << GetBlockWorld().GetChunkManager().HasChunk(chunkCoord)
+                                  << " blockCol=" << blockCol
+                                  << " creatureCol=" << creatureCol
+                                  << " topChunk=(" << topChunk.x << ","
+                                  << topChunk.y << "," << topChunk.z << ")"
+                                  << " topLoaded="
+                                  << GetBlockWorld().GetChunkManager().HasChunk(topChunk)
+                                  << " stepBlockCol=" << stepBlockCol
+                                  << " stepCreatureCol=" << stepCreatureCol
+                                  << " size=" << creature.GetBounds().currentSizeBlocks.x
+                                  << "," << creature.GetBounds().currentSizeBlocks.y
+                                  << "," << creature.GetBounds().currentSizeBlocks.z
+                                  << std::endl;
+                      });
+    }
+  }
   // TEMP diag: dump per-creature tick state at frames 60 and 300.
   if (const char *qaDump = std::getenv("CUBA_QA_TICKDUMP"))
   {
