@@ -265,19 +265,26 @@ UWorldEnvironment::FindMountUnder(const glm::vec3 &feetPos,
                                   const glm::vec3 &halfExtents,
                                   CreatureId skipId) const
 {
-  // Riding threshold (runtime issue 5): backs must be big enough to stand
-  // on - tiny flyers/swimmers (owl, fish) are excluded.
-  constexpr float kMinMountHeightBlocks = 1.0f;
-  constexpr float kMinMountWidthBlocks = 0.9f;
-  constexpr float kMountTopToleranceDown = 0.45f;
-  constexpr float kMountTopToleranceUp = 0.25f;
+  // Any collidable body can carry a rider (collision already makes it solid
+  // underfoot); only specks too small to stand on are excluded.
+  constexpr float kMinMountHeightBlocks = 0.3f;
+  constexpr float kMinMountWidthBlocks = 0.3f;
+  // The rider resting exactly on a back does not overlap it, and a fast fall
+  // can end a few tenths above/inside it: search the band around the feet.
+  constexpr float kMountTopToleranceDown = 0.6f;
+  constexpr float kMountTopToleranceUp = 0.5f;
 
   CollisionVolume riderVol;
   riderVol.center = feetPos + glm::vec3(0.f, halfExtents.y, 0.f);
   riderVol.halfExtents = halfExtents;
+  // Neighbor query volume: the rider body stretched down by the tolerance so
+  // a creature whose back is just below the feet still overlaps it.
+  CollisionVolume queryVol = riderVol;
+  queryVol.halfExtents.y += kMountTopToleranceDown * 0.5f;
+  queryVol.center.y -= kMountTopToleranceDown * 0.5f;
   std::optional<std::pair<CreatureId, float>> best;
   for (const CreatureNeighborView &neighbor :
-       QueryCreatureNeighborsOverlappingVolume(riderVol, skipId))
+       QueryCreatureNeighborsOverlappingVolume(queryVol, skipId))
   {
     const UCreature *candidate = GetCreature(neighbor.Id);
     if (!candidate || candidate->IsPlayerCharacter() ||

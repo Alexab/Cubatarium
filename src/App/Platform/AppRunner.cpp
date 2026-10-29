@@ -1429,6 +1429,84 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   }
                 }
               }
+              // Ride QA (CUBA_FLIGHT_QA_RIDE=1): drop the player onto the
+              // first QA creature from 8 blocks and log rider vs back height.
+              if (qaBehaviorSpawned &&
+                  std::getenv("CUBA_FLIGHT_QA_RIDE") != nullptr)
+              {
+                static CreatureId rideId = 0;
+                if (qaBehaviorFrame >= 60 && rideId == 0)
+                {
+                  world->ForEachCreature(
+                      [&](const UCreature &creature)
+                      {
+                        if (rideId == 0 && creature.GetSpawnSource() ==
+                                               CreatureSpawnSource::Qa)
+                        {
+                          rideId = creature.GetId();
+                        }
+                      });
+                }
+                if (qaBehaviorFrame == 90)
+                {
+                  if (UCreature *target = world->GetCreature(rideId))
+                  {
+                    if (auto camera = world->GetCurrentUserCamera())
+                    {
+                      const glm::vec3 p = target->GetBodyOrigin();
+                      const float top =
+                          p.y + target->GetBounds().currentSizeBlocks.y;
+                      camera->SetFreeMove(false);
+                      const char *dropEnv = std::getenv("CUBA_FLIGHT_QA_RIDE");
+                      const float drop = std::max(0.3f, std::strtof(dropEnv, nullptr));
+                      camera->SetPosition(glm::vec3(p.x, top + drop + 1.6f, p.z));
+                      camera->ResetVerticalPhysics();
+                    }
+                  }
+                }
+                // Hold the mount still while the rider lands (frames 60-170);
+                // afterwards it wanders so carrying can be observed.
+                if (rideId != 0 && qaBehaviorFrame >= 60 &&
+                    qaBehaviorFrame < 170)
+                {
+                  if (UCreature *target = world->GetCreature(rideId))
+                  {
+                    target->ClearIntent();
+                  }
+                }
+                if (rideId != 0 && qaBehaviorFrame >= 90 &&
+                    qaBehaviorFrame < 900)
+                {
+                  const UCreature *target = world->GetCreature(rideId);
+                  const UCreature *rider = world->GetControlledCreature();
+                  if (target && rider)
+                  {
+                    const glm::vec3 t = target->GetBodyOrigin();
+                    const glm::vec3 r = rider->GetBodyOrigin();
+                    qaBehaviorLog
+                        << "ride f=" << qaBehaviorFrame << " rider="
+                        << r.x << "," << r.y << "," << r.z << " mobTop="
+                        << t.y + target->GetBounds().currentSizeBlocks.y
+                        << " mob=" << t.x << "," << t.z << " dxz="
+                        << std::hypot(r.x - t.x, r.z - t.z);
+                    const CollisionVolume rv = rider->GetCollisionVolume();
+                    const auto mount = world->FindMountCreatureUnder(
+                        r, rv.halfExtents, rider->GetId());
+                    qaBehaviorLog << " mountFound=" << (mount ? 1 : 0);
+                    if (mount)
+                    {
+                      qaBehaviorLog << " backY=" << mount->second;
+                    }
+                    const CollisionVolume tv = target->GetCollisionVolume();
+                    qaBehaviorLog
+                        << " volTop=" << tv.center.y + tv.halfExtents.y
+                        << " vy="
+                        << rider->GetLocomotion().GetVerticalVelocity()
+                        << " onGround=" << rider->GetLocomotion().IsOnGround()
+                        << std::endl;
+                  }
+                }
+              }
               // Follow-cam on the first QA creature (CUBA_FLIGHT_QA_FOLLOW=1)
               // so captures show limb motion at readable size.
               if (qaBehaviorSpawned &&

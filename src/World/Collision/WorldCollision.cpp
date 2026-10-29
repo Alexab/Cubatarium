@@ -144,9 +144,13 @@ glm::vec3 ResolveMovementAxisDda(const UWorldCollision &collision,
       [&](glm::ivec3 /*cell*/)
       {
         traveled += 1.0f;
-        if (traveled > remaining)
+        // The last (fractional) segment must be tested too: stopping before
+        // it let fast falls tunnel through a creature/slab when every
+        // whole-block sample missed but the final target overlapped.
+        const bool lastSegment = traveled >= remaining;
+        if (lastSegment)
         {
-          return true;
+          traveled = remaining;
         }
         const glm::vec3 testBody = fromBody + axisUnit * traveled * sign;
         if (collision.CheckCollisionVolume(
@@ -181,7 +185,7 @@ glm::vec3 ResolveMovementAxisDda(const UWorldCollision &collision,
           return true;
         }
         body = testBody;
-        return false;
+        return lastSegment;
       });
 
   if (!blocked)

@@ -1,4 +1,5 @@
 #include "World/Core/WorldViewBinding.h"
+#include <iostream>
 #include <cstdlib>
 #include <fstream>
 
@@ -689,7 +690,11 @@ bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
   // sync body origin / facts from the camera controller (not UpdateControlled).
   const glm::vec3 eye = camera->GetPosition();
   float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
-  if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
+  // Standing on a creature: the feet are anchored to its back, not to the
+  // block column below - snapping to terrain here pulled the body (and the
+  // mount detection that reads it) down into the mount every other frame.
+  if (!camera->GetFreeMove() && camera->HasAnchoredFeet() &&
+      camera->GetLocomotionController().GetMountSupportId() == 0)
   {
     const int gx = WorldCoordToBlockIndex(eye.x);
     const int gz = WorldCoordToBlockIndex(eye.z);
@@ -856,6 +861,27 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
   int creatures_ai_ticked = 0;
   int world_creatures_skipped = 0;
   const auto t_npc = clock_t::now();
+  // Riding carry (runtime issue 5): the player standing on the mount moves
+  // with it this frame - on every tick path (hitch frames included).
+  const auto carryRider = [&](UCreature &creature)
+  {
+    if (mountId == 0 || creature.GetId() != mountId)
+    {
+      return;
+    }
+    if (auto riderCamera = GetCurrentUserCamera())
+    {
+      if (UCreature *rider = GetControlledCreature())
+      {
+        const glm::vec3 carry = creature.GetBodyOrigin() - mountOriginBefore;
+        if (glm::dot(carry, carry) > 1e-10f)
+        {
+          riderCamera->SetPosition(riderCamera->GetPosition() + carry);
+          rider->SetBodyOrigin(rider->GetBodyOrigin() + carry);
+        }
+      }
+    }
+  };
   ForEachCreature(
       [&](UCreature &creature)
       {
@@ -895,6 +921,7 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
           ++world_creatures_skipped;
           creature.ExecuteIntent(*this, dt);
           Environment.UpdateCreatureInSpatialIndex(creature);
+          carryRider(creature);
           return;
         }
         ++creatures_ai_ticked;
@@ -909,24 +936,7 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         // upserts replace the full per-activity-tick rebuild; Upsert no-ops
         // when position and extents are unchanged.
         Environment.UpdateCreatureInSpatialIndex(creature);
-        // Riding carry (runtime issue 5): the player standing on this
-        // creature moves with it this frame.
-        if (mountId != 0 && creature.GetId() == mountId)
-        {
-          if (auto riderCamera = GetCurrentUserCamera())
-          {
-            if (UCreature *rider = GetControlledCreature())
-            {
-              const glm::vec3 carry =
-                  creature.GetBodyOrigin() - mountOriginBefore;
-              if (glm::dot(carry, carry) > 1e-10f)
-              {
-                riderCamera->SetPosition(riderCamera->GetPosition() + carry);
-                rider->SetBodyOrigin(rider->GetBodyOrigin() + carry);
-              }
-            }
-          }
-        }
+        carryRider(creature);
       });
   PhysicsTelemetryData.NpcIntentExecuteMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_npc).count();
