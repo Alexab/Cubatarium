@@ -1503,7 +1503,17 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                         << " vy="
                         << rider->GetLocomotion().GetVerticalVelocity()
                         << " onGround=" << rider->GetLocomotion().IsOnGround()
-                        << std::endl;
+                        << " feetY=" << rider->GetLocomotion().GetFeetY()
+                        << " anch=" << rider->GetLocomotion().IsFeetAnchored();
+                    if (auto cam = world->GetCurrentUserCamera())
+                    {
+                      qaBehaviorLog << " camY=" << cam->GetPosition().y
+                                    << " stance=" << cam->GetStanceBlend()
+                                    << " mountId="
+                                    << cam->GetLocomotionController()
+                                           .GetMountSupportId();
+                    }
+                    qaBehaviorLog << std::endl;
                   }
                 }
               }

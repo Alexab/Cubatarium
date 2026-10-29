@@ -1,3 +1,4 @@
+#include "Creatures/Locomotion/RiderCarry.h"
 #include "World/Core/WorldViewBinding.h"
 #include <iostream>
 #include <cstdlib>
@@ -37,6 +38,13 @@
 
 #include <chrono>
 #include <optional>
+
+namespace
+{
+// Mount yaw at the start of the frame (set while resolving the rider mount,
+// read when the mount has moved) - carries the rider's turn.
+float gMountYawBefore = 0.0f;
+} // namespace
 
 namespace cutum
 {
@@ -489,13 +497,42 @@ void UWorld::RunLegacyPhysicsFrame()
   {
     const CollisionVolume riderVol = controlled->GetCollisionVolume();
     const glm::vec3 &feetPos = controlled->GetBodyOrigin();
-    if (const auto mount = FindMountCreatureUnder(
-            feetPos, riderVol.halfExtents, controlled->GetId()))
+    const CreatureId previousMountId =
+        camera->GetLocomotionController().GetMountSupportId();
+    std::optional<std::pair<CreatureId, float>> mount = FindMountCreatureUnder(
+        feetPos, riderVol.halfExtents, controlled->GetId());
+    if (!mount && previousMountId != 0)
+    {
+      // Sticky mount: a mount that steps down a block (or dips while its
+      // feet snap to the ground) leaves the back beyond the normal search
+      // band for a frame; keep the rider on it while it still overlaps the
+      // rider's footprint and its back is within one block + margin below.
+      if (const UCreature *prev = Environment.GetCreature(previousMountId))
+      {
+        const CollisionVolume body = prev->GetCollisionVolume();
+        const float backY = body.center.y + body.halfExtents.y;
+        const float overlapX = riderVol.halfExtents.x + body.halfExtents.x -
+                               std::abs(feetPos.x - body.center.x);
+        const float overlapZ = riderVol.halfExtents.z + body.halfExtents.z -
+                               std::abs(feetPos.z - body.center.z);
+        constexpr float kStickyDrop = 1.6f;
+        constexpr float kStickyRise = 0.5f;
+        if (overlapX > 0.05f && overlapZ > 0.05f &&
+            backY >= feetPos.y - kStickyDrop &&
+            backY <= feetPos.y + kStickyRise)
+        {
+          mount = std::make_pair(previousMountId, backY);
+        }
+      }
+    }
+    if (mount)
     {
       mountId = mount->first;
-      mountOriginBefore = Environment.GetCreature(mountId)
-                              ? Environment.GetCreature(mountId)->GetBodyOrigin()
-                              : glm::vec3(0.0f);
+      if (const UCreature *mountCreature = Environment.GetCreature(mountId))
+      {
+        mountOriginBefore = mountCreature->GetBodyOrigin();
+        gMountYawBefore = mountCreature->GetYaw();
+      }
       camera->GetLocomotionController().SetMountSupport(
           mountId, mount->second);
       Collision.SetRiderMountId(mountId);
@@ -878,6 +915,24 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         {
           riderCamera->SetPosition(riderCamera->GetPosition() + carry);
           rider->SetBodyOrigin(rider->GetBodyOrigin() + carry);
+        }
+        // Turn with the mount (optional, on by default): orbit the rider
+        // around the mount and rotate the view by the same angle.
+        if (RiderYawCarryEnabled)
+        {
+          const float yawDelta =
+              WrapYawDeltaDeg(creature.GetYaw() - gMountYawBefore);
+          if (std::abs(yawDelta) > 1e-3f)
+          {
+            const glm::vec3 pivot = creature.GetBodyOrigin();
+            riderCamera->SetPosition(RotateRiderAroundMount(
+                riderCamera->GetPosition(), pivot, yawDelta));
+            rider->SetBodyOrigin(RotateRiderAroundMount(
+                rider->GetBodyOrigin(), pivot, yawDelta));
+            riderCamera->SetOrientation(
+                riderCamera->GetYaw() + CameraYawDeltaForMountYaw(yawDelta),
+                riderCamera->GetPitch());
+          }
         }
       }
     }

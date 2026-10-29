@@ -308,6 +308,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
         StepUpEnabled = gameplay.value("step_up", true);
         FoliageClimbEnabled = gameplay.value("foliage_climb", true);
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
+        RideCarryYawEnabled = gameplay.value("ride_carry_yaw", true);
         ActivityTickHz = gameplay.value("activity_tick_hz", 20.0f);
         CreatureMovementDiagEnabled =
             gameplay.value("creature_movement_diag", false);
@@ -597,6 +598,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetStepUpEnabled(StepUpEnabled);
     WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
     WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
+    WorldInstance->SetRiderYawCarryEnabled(RideCarryYawEnabled);
     WorldInstance->SetActivityTickHz(ActivityTickHz);
     UCreatureMovementDiagnostics::SetEnabled(CreatureMovementDiagEnabled);
     WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
@@ -697,6 +699,7 @@ void UCore::SaveConfigFile()
   gameplay["step_up"] = StepUpEnabled;
   gameplay["foliage_climb"] = FoliageClimbEnabled;
   gameplay["entity_collision"] = EntityCollisionEnabled;
+  gameplay["ride_carry_yaw"] = RideCarryYawEnabled;
   gameplay["activity_tick_hz"] = ActivityTickHz;
   gameplay["creature_movement_diag"] = CreatureMovementDiagEnabled;
   system_data["gameplay"] = gameplay;
@@ -860,6 +863,7 @@ AppSettingsSnapshot UCore::GetAppSettings() const
   snapshot.StepUpEnabled = StepUpEnabled;
   snapshot.FoliageClimbEnabled = FoliageClimbEnabled;
   snapshot.EntityCollisionEnabled = EntityCollisionEnabled;
+  snapshot.RideCarryYawEnabled = RideCarryYawEnabled;
   snapshot.ActivityTickHz = ActivityTickHz;
   snapshot.Render = Render;
   snapshot.Ui = Ui;
@@ -877,6 +881,7 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   StepUpEnabled = settings.StepUpEnabled;
   FoliageClimbEnabled = settings.FoliageClimbEnabled;
   EntityCollisionEnabled = settings.EntityCollisionEnabled;
+  RideCarryYawEnabled = settings.RideCarryYawEnabled;
   ActivityTickHz = settings.ActivityTickHz;
   Render = settings.Render;
   Ui = settings.Ui;
@@ -896,6 +901,7 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   WorldInstance->SetStepUpEnabled(StepUpEnabled);
   WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
   WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
+  WorldInstance->SetRiderYawCarryEnabled(RideCarryYawEnabled);
   WorldInstance->SetActivityTickHz(ActivityTickHz);
   WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
   WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);

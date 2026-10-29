@@ -975,6 +975,13 @@ cubatarium_add_test(NAME creature_movement_diag_test
         src/Test/CreatureMovementDiagTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME rider_carry_test
+    SOURCES
+        src/Test/RiderCarryTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME rider_carry_test COMMAND $<TARGET_FILE:rider_carry_test>)
+set_tests_properties(rider_carry_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME wander_interval_test
     SOURCES
         src/Activity/Agents/WanderActivityAgent.cpp

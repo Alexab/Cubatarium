@@ -543,14 +543,15 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
     }
   }
 
-  if (swimmingFluid)
+  // Standing on a mount beats swimming: a rider whose mount wades into
+  // water used to start "swimming" and slowly sink through its back.
+  const bool mountSupported = MountSupportId != 0 &&
+                             MountSupportId != skipCreatureId && !supported;
+  if (swimmingFluid && !(mountSupported && VerticalVelocity <= 0.05f))
   {
     UpdateSwimming(world, eyePos, input, dt, fluid, cap, skipCreatureId);
     return;
   }
-
-  const bool mountSupported = MountSupportId != 0 &&
-                             MountSupportId != skipCreatureId && !supported;
   const bool groundedPose =
       VerticalVelocity <= 0.05f && (supported || mountSupported);
 

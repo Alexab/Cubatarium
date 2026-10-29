@@ -1534,6 +1534,10 @@ public:
   {
     Collision.SetEntityCollisionEnabled(enabled);
   }
+  /// Riding: turn the rider (position around the mount + view) with the mount.
+  void SetRiderYawCarryEnabled(bool enabled) { RiderYawCarryEnabled = enabled; }
+  bool IsRiderYawCarryEnabled() const { return RiderYawCarryEnabled; }
+  bool RiderYawCarryEnabled{true};
   bool IsEntityCollisionEnabled() const
   {
     return Collision.IsEntityCollisionEnabled();
