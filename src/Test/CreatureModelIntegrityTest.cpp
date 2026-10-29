@@ -8,8 +8,10 @@
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
+#include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -199,6 +201,70 @@ void CheckBoneSkeleton(const std::string &id, const fs::path &speciesDir,
   }
   const glm::vec3 size = aabbMax - aabbMin;
   outMaxY = size.y;
+
+  // Pose <-> rig: the locomotion cycle must move at least one bone that
+  // really exists in this geometry, otherwise the mob slides with a frozen
+  // body (the pose engine addresses bones by name and ignores unknown names).
+  {
+    cutum::CreatureLocomotionFacts facts;
+    facts.horizontalSpeed = std::max(def.locomotion.walkSpeed, 0.5f);
+    switch (def.locomotionArchetype)
+    {
+    case cutum::LocomotionArchetype::Aerial:
+      facts.state = cutum::LocomotionState::Fly;
+      break;
+    case cutum::LocomotionArchetype::Aquatic:
+      facts.state = cutum::LocomotionState::Swim;
+      break;
+    case cutum::LocomotionArchetype::Serpentine:
+      facts.state = cutum::LocomotionState::Slither;
+      break;
+    default:
+      facts.state = cutum::LocomotionState::Walk;
+      break;
+    }
+    float maxSwing = 0.f;
+    for (const float phase : {0.0f, 1.0f, 2.0f, 3.5f, 5.0f})
+    {
+      facts.animPhase = phase;
+      const cutum::BoneSkeletonPose posed =
+          cutum::BoneSkeletonPoseEngine::Compute(facts, def, 0.016f);
+      for (const auto &entry : posed.bones)
+      {
+        if (geometry.boneIndexByName.find(entry.first) ==
+            geometry.boneIndexByName.end())
+        {
+          continue;
+        }
+        // Rotation of a limb-like bone only: a body bob or head nod is not
+        // limb animation. Fish/snakes undulate, so body/tail count for them.
+        std::string lower = entry.first;
+        std::transform(lower.begin(), lower.end(), lower.begin(),
+                       [](unsigned char c) { return std::tolower(c); });
+        bool limb = false;
+        for (const char *key : {"leg", "foot", "haunch", "arm", "wing", "fin",
+                                "tentacle"})
+        {
+          limb = limb || lower.find(key) != std::string::npos;
+        }
+        const bool undulates =
+            def.locomotionArchetype == cutum::LocomotionArchetype::Aquatic ||
+            def.locomotionArchetype == cutum::LocomotionArchetype::Serpentine;
+        if (limb || undulates)
+        {
+          maxSwing = std::max(maxSwing, glm::length(entry.second.rotationDeg));
+        }
+      }
+    }
+    if (maxSwing < 5.0f)
+    {
+      F.Hard(id, "locomotion pose drives no bone of the rig (profile '" +
+                     (def.visual.boneSkeleton.animationProfile.empty()
+                          ? std::string("<archetype default>")
+                          : def.visual.boneSkeleton.animationProfile) +
+                     "' vs bones); mob would slide without limb animation");
+    }
+  }
 
   const glm::vec3 bounds = def.bounds.restSizeBlocks;
   const float modelMax = std::max({size.x, size.y, size.z});

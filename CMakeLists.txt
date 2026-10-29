@@ -1399,6 +1399,8 @@ cubatarium_add_test(NAME creature_model_integrity_test
         src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
         src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
         src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
+        src/Pose/BoneSkeleton/BoneSkeletonPoseEngine.cpp
+        src/Pose/BoneSkeleton/SkeletalAnimationProfiles.cpp
         src/Test/CreatureModelIntegrityTest.cpp
     DEFINITIONS CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)

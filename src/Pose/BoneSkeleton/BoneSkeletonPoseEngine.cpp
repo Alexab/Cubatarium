@@ -217,6 +217,39 @@ void ApplyChicken(BoneSkeletonPose &pose,
   }
 }
 
+void ApplyRabbit(BoneSkeletonPose &pose,
+                 const CreatureLocomotionFacts &facts,
+                 const CreatureDefinition &def)
+{
+  // Hop gait: both haunches/rear feet kick together, front legs counter.
+  const float swingScale = WalkSwingScale(facts, def);
+  const float legSwing = def.visual.Animation.legSwingDeg;
+  const float hop = std::sin(facts.animPhase);
+  const float rear = hop * legSwing * 1.6f * swingScale;
+  const float front = -hop * legSwing * 1.1f * swingScale;
+  for (const char *name : {"haunchLeft", "haunchRight", "rearFootLeft",
+                           "rearFootRight"})
+  {
+    BoneSkeletonBonePose bone;
+    bone.rotationDeg.x = rear;
+    pose.bones[name] = bone;
+  }
+  for (const char *name : {"frontLegLeft", "frontLegRight"})
+  {
+    BoneSkeletonBonePose bone;
+    bone.rotationDeg.x = front;
+    pose.bones[name] = bone;
+  }
+  BoneSkeletonBonePose body;
+  body.offsetBlocks.y = std::max(0.0f, hop) * 0.12f * swingScale;
+  body.rotationDeg.x = -hop * 6.f * swingScale;
+  pose.bones["body"] = body;
+  BoneSkeletonBonePose ear;
+  ear.rotationDeg.x = std::sin(facts.animPhase * 2.f) * 8.f * swingScale;
+  pose.bones["earLeft"] = ear;
+  pose.bones["earRight"] = ear;
+}
+
 void ApplyAerial(BoneSkeletonPose &pose,
                  const CreatureLocomotionFacts &facts,
                  const CreatureDefinition &def)
@@ -232,19 +265,30 @@ void ApplyAerial(BoneSkeletonPose &pose,
   BoneSkeletonBonePose wing1;
   wing1.rotationDeg.z = -flap;
   pose.bones["wing1"] = wing1;
+  // Bee-style rigs name the wing bones differently.
+  pose.bones["rightwing_bone"] = wing0;
+  pose.bones["leftwing_bone"] = wing1;
 }
 
 void ApplyAquatic(BoneSkeletonPose &pose,
                   const CreatureLocomotionFacts &facts,
                   const CreatureDefinition &def)
 {
-  const float swingScale = WalkSwingScale(facts, def);
+  // Fish keep a gentle sway even when drifting (Idle/Tread in water).
+  const float swingScale = std::max(WalkSwingScale(facts, def), 0.35f);
   BoneSkeletonBonePose body;
   body.rotationDeg.y = std::sin(facts.animPhase) * 8.f * swingScale;
   pose.bones["body"] = body;
   BoneSkeletonBonePose tail;
   tail.rotationDeg.y = std::sin(facts.animPhase + kPi * 0.5f) * 15.f * swingScale;
   pose.bones["tail"] = tail;
+  // Segmented fish (trout): rear half and tail fin trail the front.
+  pose.bones["body_back"] = tail;
+  BoneSkeletonBonePose tailFin;
+  tailFin.rotationDeg.y =
+      std::sin(facts.animPhase + kPi * 0.9f) * 22.f * swingScale;
+  pose.bones["tailfin"] = tailFin;
+  pose.bones["tail_fin"] = tailFin;
 }
 
 void ApplySerpentine(BoneSkeletonPose &pose,
@@ -255,6 +299,56 @@ void ApplySerpentine(BoneSkeletonPose &pose,
   BoneSkeletonBonePose body;
   body.rotationDeg.z = std::sin(facts.animPhase) * 6.f * swingScale;
   pose.bones["body"] = body;
+}
+
+// Pose for a locomotion cycle of the given profile (legs/wings/fins driven by
+// facts.animPhase).
+void ApplyProfileCycle(BoneSkeletonPose &pose, const std::string &profile,
+                       const CreatureLocomotionFacts &facts,
+                       const CreatureDefinition &def)
+{
+  if (profile == "fox")
+  {
+    ApplyFox(pose, facts, def);
+  }
+  else if (profile == "arachnid")
+  {
+    ApplyArachnid(pose, facts, def);
+  }
+  else if (profile == "humanoid")
+  {
+    ApplyHumanoid(pose, facts, def);
+  }
+  else if (profile == "chicken")
+  {
+    ApplyChicken(pose, facts, def);
+  }
+  else if (profile == "rabbit")
+  {
+    ApplyRabbit(pose, facts, def);
+  }
+  else if (profile == "aquatic")
+  {
+    ApplyAquatic(pose, facts, def);
+  }
+  else if (profile == "aerial")
+  {
+    ApplyAerial(pose, facts, def);
+  }
+  else if (profile == "serpentine")
+  {
+    ApplySerpentine(pose, facts, def);
+  }
+  else
+  {
+    ApplyQuadruped(pose, facts, def);
+  }
+}
+
+bool IsGroundProfile(const std::string &profile)
+{
+  return profile != "aerial" && profile != "aquatic" &&
+         profile != "serpentine";
 }
 
 } // namespace
@@ -270,55 +364,38 @@ BoneSkeletonPoseEngine::Compute(const CreatureLocomotionFacts &facts,
   {
   case LocomotionState::Walk:
   case LocomotionState::Run:
-    if (profile == "fox")
-    {
-      ApplyFox(pose, facts, def);
-    }
-    else if (profile == "arachnid")
-    {
-      ApplyArachnid(pose, facts, def);
-    }
-    else if (profile == "humanoid")
-    {
-      ApplyHumanoid(pose, facts, def);
-    }
-    else if (profile == "chicken")
-    {
-      ApplyChicken(pose, facts, def);
-    }
-    else if (profile == "aquatic")
-    {
-      ApplyAquatic(pose, facts, def);
-    }
-    else if (profile == "aerial")
-    {
-      ApplyAerial(pose, facts, def);
-    }
-    else if (profile == "serpentine")
-    {
-      ApplySerpentine(pose, facts, def);
-    }
-    else
-    {
-      ApplyQuadruped(pose, facts, def);
-    }
+  case LocomotionState::Swim:
+  case LocomotionState::Tread:
+  case LocomotionState::Slither:
+  case LocomotionState::Hover:
+  case LocomotionState::Glide:
+    ApplyProfileCycle(pose, profile, facts, def);
     break;
   case LocomotionState::Fly:
     ApplyAerial(pose, facts, def);
     break;
+  case LocomotionState::Jump:
+  case LocomotionState::Fall:
+  case LocomotionState::Crouch:
+  {
+    // Airborne/crouched ground mobs: hold a stride mid-cycle instead of the
+    // bind pose (legs splayed while falling, tucked while crouching).
+    if (IsGroundProfile(profile))
+    {
+      CreatureLocomotionFacts held = facts;
+      held.horizontalSpeed = std::max(def.locomotion.walkSpeed, 0.05f);
+      held.animPhase = facts.state == LocomotionState::Crouch ? 0.0f : 1.2f;
+      held.state = LocomotionState::Walk;
+      ApplyProfileCycle(pose, profile, held, def);
+    }
+    break;
+  }
   case LocomotionState::Idle:
   default:
-    if (profile == "fox")
+    if (profile == "fox" || profile == "arachnid" || profile == "chicken" ||
+        profile == "aquatic")
     {
-      ApplyFox(pose, facts, def);
-    }
-    else if (profile == "arachnid")
-    {
-      ApplyArachnid(pose, facts, def);
-    }
-    else if (profile == "chicken")
-    {
-      ApplyChicken(pose, facts, def);
+      ApplyProfileCycle(pose, profile, facts, def);
     }
     else if (profile == "humanoid")
     {
