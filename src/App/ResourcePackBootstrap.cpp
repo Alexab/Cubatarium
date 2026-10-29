@@ -1,7 +1,9 @@
+#include "Core/StallTimer.h"
 #include "App/ResourcePackBootstrap.h"
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <unordered_set>
 
@@ -27,6 +29,40 @@ namespace cutum
 
 namespace
 {
+
+std::string FileStamp(const std::filesystem::path &path)
+{
+  std::error_code ec;
+  const auto time = std::filesystem::last_write_time(path, ec);
+  return ec ? std::string("?") : std::to_string(time.time_since_epoch().count());
+}
+
+std::string JoinIds(const std::vector<std::string> &ids)
+{
+  std::string out;
+  for (const std::string &id : ids)
+  {
+    out += id;
+    out += ',';
+  }
+  return out;
+}
+
+/// Cheap identity of a pack set: selection plus every resolved pack's root and
+/// the timestamps of its folder and manifest. Not a content hash on purpose.
+std::string PackSetKey(const ResourcePackSelection &selection,
+                       const std::vector<ResourcePackManifest> &packs)
+{
+  std::string key = JoinIds(selection.Primary) + "|" +
+                    JoinIds(selection.Secondary) + "|" +
+                    selection.WorldgenOwner;
+  for (const ResourcePackManifest &pack : packs)
+  {
+    key += "|" + pack.Id + "@" + pack.Root.string() + "#" +
+           FileStamp(pack.Root) + "/" + FileStamp(pack.Root / "pack.json");
+  }
+  return key;
+}
 
 bool HasPlaceholderStem(const UBlockMergeRegistry &registry,
                         const std::string &name)
@@ -118,16 +154,20 @@ void UResourcePackBootstrap::RebuildBlockTexturesFromMergeRegistry(UCore &core)
     (void)core.WorldInstance->GetMeshService().WaitForAsyncMeshIdleFor(
         std::chrono::milliseconds(2000));
   }
+  StallStageMark("rebuildtex.begin(wait mesh idle)");
   core.BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
       *core.BlockDefinitionsInstance);
+  StallStageMark("rebuildtex.PopulateBlockDefinitionStorage");
   core.TextureBaseStorageInstance->Clear();
   core.BlockMergeRegistryInstance->PopulateTextureBaseStorage(
       *core.TextureBaseStorageInstance);
+  StallStageMark("rebuildtex.PopulateTextureBaseStorage");
   core.TextureCubeStorageInstance->Clear();
   core.TextureCubeStorageInstance->SetBlockDefinitions(
       core.BlockDefinitionsInstance);
   core.TextureCubeStorageInstance->BuildFromDescriptors(
       core.BlockMergeRegistryInstance->GetCubeDescriptors());
+  StallStageMark("rebuildtex.BuildFromDescriptors");
 }
 
 void UResourcePackBootstrap::PatchRuntimeBlockTextures(
@@ -281,8 +321,10 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
     return false;
   }
 
+  StallStageMark("packs.begin");
   UResourcePackResolver resolver;
   const auto packs = resolver.Resolve(selection, core.WorkDir, core.ExeDir);
+  StallStageMark("packs.Resolve");
   if (packs.empty())
   {
     CubatariumLogError(
@@ -294,6 +336,29 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
     return false;
   }
 
+  const std::string key = PackSetKey(selection, packs);
+  static const bool force_reapply = std::getenv("CUBA_PACK_REAPPLY") != nullptr;
+  if (!force_reapply && !LastAppliedKey.empty() && key == LastAppliedKey &&
+      !core.BlockMergeRegistryInstance->HasRuntimeOverlay() &&
+      !core.BlockMergeRegistryInstance->GetCubeDescriptors().empty())
+  {
+    // Same packs as the last full apply: catalog, textures, prefabs, items and
+    // creature overlays are already current. Only re-announce to the world.
+    core.ActivePackSelection = selection;
+    core.ActiveResourcePacksEnabled = selection.AllIds();
+    if (core.WorldInstance)
+    {
+      core.WorldInstance->SetBlockMergeRegistry(core.BlockMergeRegistryInstance);
+      core.WorldInstance->OnBlockRegistryChanged();
+      core.WorldInstance->SetCatalogFingerprint(LastAppliedFingerprint);
+    }
+    CubatariumLogInfo("Packs", "ApplyResourcePacks: unchanged pack set, reused");
+    StallStageMark("packs.reuse");
+    return true;
+  }
+
+  // A full apply is starting: until it finishes, nothing may be reused.
+  LastAppliedKey.clear();
   if (!core.PlaceholderCacheInstance)
   {
     InitPlaceholderCache(core);
@@ -305,6 +370,7 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
   core.BlockMergeRegistryInstance->Rebuild(
       packs, core.PlaceholderCacheInstance,
       core.ResourcePacks.PlaceholderTileSize);
+  StallStageMark("packs.MergeRegistry.Rebuild");
   core.ActivePackSelection = selection;
   core.ActiveResourcePacksEnabled = selection.AllIds();
 
@@ -342,6 +408,7 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
                           std::to_string(bark_via_registry));
   }
 
+  StallStageMark("packs.RegistryReload");
   if (core.ObjectLibraryInstance && core.WorldInstance)
   {
     core.ObjectLibraryInstance->LoadMerged(
@@ -357,11 +424,13 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
               std::to_string(core.ObjectLibraryInstance->ListNames().size()));
       std::cerr << "ApplyResourcePacks: decoration prefabs failed validation"
                 << std::endl;
+      LastAppliedKey.clear();
       return false;
     }
     core.WorldInstance->SetObjectLibrary(core.ObjectLibraryInstance.get());
   }
 
+  StallStageMark("packs.ObjectLibrary");
   if (core.ItemDefinitionsInstance)
   {
     const auto itemsPath = core.WorkDir / "content" / "items";
@@ -381,7 +450,9 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
     }
   }
 
+  StallStageMark("packs.Items");
   RebuildBlockTexturesFromMergeRegistry(core);
+  StallStageMark("packs.RebuildTextures#1");
 
   std::cout << "Resource packs: applied " << packs.size() << " pack(s)";
   for (const auto &p : packs)
@@ -394,22 +465,42 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
 
   if (core.WorldInstance)
   {
+    // The textures were just rebuilt from this very catalog. Rebuild them a
+    // second time only if the registry change actually replaced the block
+    // definitions (this used to run unconditionally and cost as much as the
+    // first pass).
+    const auto catalog_before =
+        core.BlockDefinitionsInstance->GetCatalogSnapshot();
     core.WorldInstance->OnBlockRegistryChanged();
-    RebuildBlockTexturesFromMergeRegistry(core);
+    StallStageMark("packs.OnBlockRegistryChanged");
+    if (core.BlockDefinitionsInstance->GetCatalogSnapshot() != catalog_before)
+    {
+      RebuildBlockTexturesFromMergeRegistry(core);
+      StallStageMark("packs.RebuildTextures#2");
+    }
   }
   ReloadCreatureCatalog(core, packs);
-  if (core.WorldInstance && core.BlockMergeRegistryInstance)
+  StallStageMark("packs.ReloadCreatureCatalog");
+  std::string fingerprint;
+  if (core.BlockMergeRegistryInstance)
   {
-    core.WorldInstance->SetCatalogFingerprint(
-        core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
+    fingerprint = core.BlockMergeRegistryInstance->ComputeCatalogFingerprint();
+    if (core.WorldInstance)
+    {
+      core.WorldInstance->SetCatalogFingerprint(fingerprint);
+    }
   }
 
   if (!ValidateMergedCatalog(*core.BlockMergeRegistryInstance, selection))
   {
     CubatariumLogError("Packs", "ApplyResourcePacks: ValidateMergedCatalog failed");
+    LastAppliedKey.clear();
     return false;
   }
+  LastAppliedKey = key;
+  LastAppliedFingerprint = fingerprint;
 
+  StallStageMark("packs.Validate");
   return true;
 }
 

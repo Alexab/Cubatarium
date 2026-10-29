@@ -1,3 +1,4 @@
+#include "Core/StallTimer.h"
 #include "App/WorldOperationRunner.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
@@ -56,6 +57,7 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
 {
   Request = std::move(request);
   Active = true;
+  AnnouncedStage = Stage::Idle;
   Success = false;
   Error.clear();
   PendingWorldName.clear();
@@ -549,6 +551,47 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
   }
 
   const int budget = chunkBudgetPerFrame > 0 ? chunkBudgetPerFrame : kChunkBudgetPerFrame;
+
+  // Stages that run one long synchronous call: show their label first, run on
+  // the next frame, so the UI never freezes on a stale screen.
+  const char *announce = nullptr;
+  switch (CurrentStage)
+  {
+  case Stage::PrepareCreate:
+    announce = "Preparing new world...";
+    break;
+  case Stage::PreReplaceTerrain:
+    announce = "Clearing previous world...";
+    break;
+  case Stage::PostLoadUsers:
+    announce = "Finishing world load...";
+    break;
+  case Stage::PostCreateUsers:
+    announce = "Setting up new world...";
+    break;
+  default:
+    break;
+  }
+  if (announce && AnnouncedStage != CurrentStage)
+  {
+    AnnouncedStage = CurrentStage;
+    sink.Report("prepare", 0.f, announce);
+    return false;
+  }
+  if (!announce)
+  {
+    AnnouncedStage = Stage::Idle;
+  }
+  static const char *const kStageNames[] = {
+      "Runner.Idle",         "Runner.PrepareCreate",   "Runner.PreReplaceTerrain",
+      "Runner.WorldOperation", "Runner.PostLoadUsers", "Runner.PostCreateUsers",
+      "Runner.PostCreateSave", "Runner.EnterGameList", "Runner.EnterGameCreate",
+      "Runner.EnterGameLoad",  "Runner.EnterGameFinalize",
+      "Runner.EnterGameGpuWarmup", "Runner.ShutdownQuiesce",
+      "Runner.ShutdownSave",   "Runner.ShutdownFinalize", "Runner.Done",
+      "Runner.Failed"};
+  ScopedStallTimer stage_timer(kStageNames[static_cast<int>(CurrentStage)],
+                               100.0);
 
   switch (CurrentStage)
   {

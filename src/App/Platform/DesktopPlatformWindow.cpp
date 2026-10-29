@@ -39,9 +39,15 @@ void UDesktopPlatformWindow::Run() { WindowManager.Run(); }
 
 void UDesktopPlatformWindow::Shutdown() { WindowManager.Shutdown(); }
 
-void UDesktopPlatformWindow::PollEvents() {}
+void UDesktopPlatformWindow::PollEvents() { glfwPollEvents(); }
 
-void UDesktopPlatformWindow::SwapBuffers() {}
+void UDesktopPlatformWindow::SwapBuffers()
+{
+  if (GLFWwindow *window = WindowManager.GetWindow())
+  {
+    glfwSwapBuffers(window);
+  }
+}
 
 glm::ivec2 UDesktopPlatformWindow::GetFramebufferSize() const
 {

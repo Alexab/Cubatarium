@@ -20,6 +20,7 @@
 #endif
 #include <windows.h>
 #endif
+#include "Core/StallTimer.h"
 #include "App/Core.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "App/LegacyConfigAdapter.h"
@@ -535,7 +536,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
     BlockMergeRegistryInstance = std::make_shared<UBlockMergeRegistry>();
     auto blockDefinitions = BlockDefinitionsInstance;
 
+    StallStageMark("LoadConfig.pre-placeholder");
     ResourcePackBootstrap.InitPlaceholderCache(*this);
+    StallStageMark("LoadConfig.InitPlaceholderCache");
 
     WorldInstance->SetBlockMergeRegistry(BlockMergeRegistryInstance);
     WorldInstance->SetOnAfterWorldDataLoaded(
@@ -553,10 +556,12 @@ void UCore::LoadConfig(const std::string &config_file_name)
     CreatureGltfCache::Instance().SetCreaturesRoot(
         (WorkDir / "models" / "creatures").string());
     WorldInstance->SetCreatureDefinitionStorage(creatureDefinitions);
+    StallStageMark("LoadConfig.creature-defs");
 
     auto skinDefinitions = std::make_shared<USkinDefinitionStorage>();
     skinDefinitions->Load((WorkDir / "models" / "skins").string());
     WorldInstance->SetSkinDefinitionStorage(skinDefinitions);
+    StallStageMark("LoadConfig.skin-defs");
 
     CreatureTextureStorageInstance =
         std::make_shared<UCreatureTextureStorage>();
@@ -564,6 +569,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
         (WorkDir / "models" / "creatures").string(),
         (WorkDir / "models" / "skins").string());
 
+    StallStageMark("LoadConfig.creature-textures");
     const ResourcePackSelection defaultPacks =
         GetDefaultResourcePackSelection();
     WorldInstance->SetResourcePackSelection(defaultPacks.Primary,
@@ -582,6 +588,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       WorldInstance->EnsurePlayerHotbarCount(
           user, static_cast<size_t>(Ui.HotbarCount));
     }
+    StallStageMark("LoadConfig.ApplyResourcePacks");
 
     std::cout << "Procedural: "
               << ProceduralGeneratorToString(ProceduralTemplate.Generator)

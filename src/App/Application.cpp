@@ -1,3 +1,4 @@
+#include "Core/StallTimer.h"
 #include "App/Application.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
@@ -212,9 +213,12 @@ void UApplication::PrepareForShutdown()
 void UApplication::Startup(const std::string &configPath)
 {
   StartupOk = false;
+  StallStageMark("before-Startup");
   if (Core)
   {
     Core->LoadConfig(configPath);
+    StallStageMark("Startup.LoadConfig");
+
     Ui = Core->GetUiSettings();
     if (auto defs = Core->GetBlockDefinitionStorage())
     {
@@ -250,6 +254,7 @@ void UApplication::Startup(const std::string &configPath)
     UpdateUiScale(fbW > 0 ? fbW : 1280, fbH > 0 ? fbH : 720, platform);
 #endif
   }
+  StallStageMark("Startup.GuiContext.Initialize");
   if (Core && BlockDefinitions)
   {
     const std::string typesPath = "content/types.json";
@@ -267,6 +272,7 @@ void UApplication::Startup(const std::string &configPath)
     }
     GameSession->InitializeCatalog(typesPath, *Core);
   }
+  StallStageMark("Startup.worldgen+catalog");
   GameSession->RegisterCommands();
 
   if (Core && BlockDefinitions && ShaderManager)
@@ -343,8 +349,10 @@ void UApplication::Startup(const std::string &configPath)
     }
   }
 
+  StallStageMark("Startup.renderers+icons");
   State = AppState::MainMenu;
   ShowMainMenu();
+  StallStageMark("Startup.ShowMainMenu");
   StartupOk = true;
 }
 

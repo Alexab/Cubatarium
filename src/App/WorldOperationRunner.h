@@ -108,6 +108,10 @@ private:
   UWorld &World;
   WorldRunnerRequest Request;
   Stage CurrentStage{Stage::Idle};
+  /// Stage whose "starting" status has already been shown for one frame.
+  /// Blocking stages first publish their label and yield, so the progress
+  /// screen is on screen *before* the main thread is occupied.
+  Stage AnnouncedStage{Stage::Idle};
   bool Active{false};
   bool Success{false};
   std::string Error;

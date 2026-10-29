@@ -1,3 +1,6 @@
+#include "Core/StallTimer.h"
+#include "Core/UiPump.h"
+#include "Render/GlIncludes.h"
 #include "World/Diagnostics/MeshAuditDiagnostics.h"
 #include "Render/Camera/CameraBasisLogic.h"
 #include <fstream>
@@ -74,6 +77,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     const glm::ivec2 fbSize = window.GetFramebufferSize();
     const int initW = fbSize.x > 0 ? fbSize.x : 1280;
     const int initH = fbSize.y > 0 ? fbSize.y : 720;
+    StallStageMark("pre-window");
     CubatariumLogInfo("App", "Initializing platform window...");
     if (!window.Initialize(initW, initH, "Cubatarium"))
     {
@@ -82,6 +86,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
       return -1;
     }
 
+    StallStageMark("window.Initialize");
     auto texture_base_instance = std::make_shared<UTextureBaseStorage>();
     auto texture_cube_instance =
         std::make_shared<UTextureCubeStorage>(texture_base_instance);
@@ -93,6 +98,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
 
+    StallStageMark("storages+UWorld ctor");
     CubatariumLogInfo("App", "Initializing text renderer...");
     if (!text_renderer->Initialize(16))
     {
@@ -103,6 +109,40 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
 
     text_renderer->SetWindowSize(initW, initH);
 
+    StallStageMark("text_renderer.Initialize");
+    // Startup does a lot of unavoidable main-thread work (pack merge, block
+    // texture build). Keep the window responsive and show what is going on
+    // instead of presenting a frozen blank window.
+    UBlockingWorkPump::Install(
+        [&window, text_renderer](const char *label, float fraction)
+        {
+          window.PollEvents();
+          const glm::ivec2 size = window.GetFramebufferSize();
+          if (size.x <= 0 || size.y <= 0)
+          {
+            return;
+          }
+          text_renderer->SetWindowSize(size.x, size.y);
+          glViewport(0, 0, size.x, size.y);
+          glClearColor(0.06f, 0.07f, 0.09f, 1.0f);
+          glClear(GL_COLOR_BUFFER_BIT);
+          const float h = static_cast<float>(size.y);
+          text_renderer->RenderTextCentered("Cubatarium", h * 0.58f, 1.6f);
+          std::string line = label ? label : "Loading";
+          if (fraction >= 0.0f)
+          {
+            line += "  " + std::to_string(static_cast<int>(fraction * 100.0f)) +
+                    "%";
+          }
+          text_renderer->RenderTextCentered(line, h * 0.46f, 0.8f,
+                                            glm::vec3(0.7f, 0.75f, 0.8f));
+          window.SwapBuffers();
+        });
+    struct PumpGuard
+    {
+      ~PumpGuard() { UBlockingWorkPump::Clear(); }
+    } pump_guard;
+    UBlockingWorkPump::Pump("Starting", -1.0f);
     auto geometry_engine = std::make_shared<UGeometryEngine>(
         world, texture_base_instance, texture_cube_instance, text_renderer);
     CubatariumLogInfo("App", "Initializing geometry engine...");
@@ -113,6 +153,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
       return -1;
     }
 
+    StallStageMark("geometry_engine.InitEngine");
     auto core = std::make_shared<UCore>(
         texture_base_instance, texture_cube_instance, object_library,
         item_definitions, world, geometry_engine, view_engine);
@@ -129,6 +170,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
         geometry_engine->GetShaderManager(), block_definitions);
     window.SetApplication(application);
 
+    StallStageMark("UCore+Application ctor");
     CubatariumLogInfo("App", "Starting application...");
     application->Startup(paths.ResolveWritable("config.json").string());
     if (!application->StartupSucceeded())
@@ -147,6 +189,8 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
       }
     }
 
+    StallStageMark("Startup.tail");
+    UBlockingWorkPump::Clear();
     window.Run();
 
     try
