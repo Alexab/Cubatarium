@@ -41,6 +41,11 @@ public:
   void SetMode(CreatureMovementMode mode);
 
   bool IsOnGround() const { return OnGround; }
+  /// NPC creatures stand on whatever their box rests on (HasBodySupport);
+  /// the player camera keeps the center-footprint rule (HasGroundSupport).
+  void SetBodySupportMode(bool enabled) { BodySupportMode = enabled; }
+  bool IsBodySupportMode() const { return BodySupportMode; }
+  bool HasSupportAt(const UWorld *world, const glm::vec3 &eyePos) const;
   /// Rider mount support (runtime issue 5): set by the world each frame
   /// when the player stands on a rideable creature; the back Y acts as the
   /// ground plane for anchoring.
@@ -89,6 +94,7 @@ public:
   bool ConsumeClearShiftRequest();
 
 private:
+  bool BodySupportMode{false};
   CreatureId MountSupportId{0};
   float MountSupportBackY{0.f};
 

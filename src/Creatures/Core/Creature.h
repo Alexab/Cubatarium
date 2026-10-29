@@ -194,10 +194,12 @@ public:
   void RunMotorStep(UWorld &world, glm::vec3 &eye,
                     const CreatureInput &verticalInput, const glm::vec3 &wish,
                     float speed, float dt);
-  void EnforceHabitatAfterMove(UWorld &world, CreatureHabitat habitat,
-                               const glm::vec3 &bodyOriginBefore,
-                               const glm::vec3 &diagIntentDir,
-                               float diagIntentSpeed, const glm::vec3 &wish);
+  void EnforceHabitatAfterMove(
+      UWorld &world, CreatureHabitat habitat,
+      const glm::vec3 &bodyOriginBefore,
+      const UCreatureLocomotionController &locomotionBefore,
+      const glm::vec3 &diagIntentDir, float diagIntentSpeed,
+      const glm::vec3 &wish);
   void ApplyIdleFluidSink(UWorld &world, CreatureHabitat habitat,
                           const glm::vec3 &wish, float dt,
                           const CreatureInput &verticalInput);

@@ -33,6 +33,7 @@ UCreatureFactory::Build(const CreatureDefinition &definition,
     creature->GetBoundsMutable().currentSizeBlocks = definition.bounds.restSizeBlocks;
   }
   creature->SetCapabilities(definition.locomotion);
+  creature->GetLocomotion().SetBodySupportMode(true);
   creature->SetSpawnSource(params.Source);
   creature->ApplyStatsFromDefinition(definition);
   if (params.SavedState &&
