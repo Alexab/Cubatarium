@@ -872,6 +872,20 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         {
           return;
         }
+        // A creature whose terrain chunk is not loaded (streaming moved on,
+        // chunk not ready yet) has no ground: simulating it makes it fall
+        // through the void forever. Freeze it until the chunk returns.
+        {
+          const CollisionVolume vol = creature.GetCollisionVolume();
+          const UChunkManager &chunkManager = GetBlockWorld().GetChunkManager();
+          if (!chunkManager.HasChunk(UChunkManager::WorldToChunk(
+                  WorldPosToBlock(vol.center))) ||
+              !chunkManager.HasChunk(UChunkManager::WorldToChunk(
+                  WorldPosToBlock(vol.center - glm::vec3(0.0f, vol.halfExtents.y + 0.5f, 0.0f)))))
+          {
+            return;
+          }
+        }
         if (!tick_world_ai)
         {
           // Hitch gate freezes the BRAINS (TickActivity above), never the
