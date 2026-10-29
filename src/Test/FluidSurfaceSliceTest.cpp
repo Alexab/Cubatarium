@@ -1,6 +1,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Math/GridMath.h"
@@ -68,6 +69,9 @@ static void FillFlatOcean(cutum::UBlockWorld &world, cutum::BlockId water_id,
 
 int main()
 {
+  // The CPU sync fallback is hitch-gated off at the default scan height; the
+  // runtime builds slices through the (stubbed) column scan, so test that.
+  cutum::SetPreferGpuFluidColumnScan(true);
   const auto definitions = MakeDefinitions();
   cutum::UBlockRegistry registry(nullptr, definitions);
   cutum::UBlockWorld world;

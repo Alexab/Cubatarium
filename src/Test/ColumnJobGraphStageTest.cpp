@@ -64,11 +64,12 @@ int main()
     return 1;
   }
 
-  // Monotonic advance: meshing cannot regress to absent when chunk exists.
+  // An in-flight remesh outranks an older upload still waiting for the GPU
+  // (same order as PendingStageFromTruth): the newest pipeline stage wins.
   const ColumnJobStage after_mesh =
       DeriveColumnJobStage(true, false, false, true, true, false);
-  if (!Expect(after_mesh == ColumnJobStage::GpuPending,
-              "meshing+gpu -> gpu pending"))
+  if (!Expect(after_mesh == ColumnJobStage::Meshing,
+              "meshing+gpu -> meshing"))
   {
     return 1;
   }

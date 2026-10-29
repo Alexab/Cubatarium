@@ -64,12 +64,14 @@ int main()
 
   if (!extended)
   {
+    // Refreshed: the original golden predates UFluidUpdateSet and the fluid
+    // cell-state rework, and both feed the replay state hash.
     static const uint64_t kExpectedHashes[] = {
-        0x93468bdf1f619622ULL, 0x182554fc9ff246b2ULL, 0xa8e3c1f15e441403ULL,
-        0x5a7f9b39cdb01df4ULL, 0x0ecf8f91796d2e91ULL, 0x905359e379fff4beULL,
-        0x994f87baa6cd20bfULL, 0x0ee203fbea9756beULL, 0xe2de56ffb96d6ac2ULL,
-        0x76b13c2d15cfc83cULL, 0xf60518a53e3efbc1ULL, 0xe401a6c1d9dcc97eULL,
-        0x02c8ccd8419cd712ULL,
+        0x4d05f59846c504e8ULL, 0x2332d21854f1b725ULL, 0x41dc9eecdb60ab5eULL,
+        0xcfa10b7639ff99f0ULL, 0x18c9d417fe746ba6ULL, 0x6870c02acc2db6f8ULL,
+        0x5128299cc6e2f3f9ULL, 0x2c92298c13f91a95ULL, 0xbf303e7a2c0ed95fULL,
+        0xd67559f2fe84a297ULL, 0x29beeeb0a7a30a6bULL, 0x46faad8c3ba59a92ULL,
+        0x2b7735bfe283d602ULL,
     };
     Expect(run_a.size() == sizeof(kExpectedHashes) / sizeof(kExpectedHashes[0]),
            "golden hash count mismatch");

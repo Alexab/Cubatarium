@@ -3,6 +3,7 @@
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 
 #include "World/Core/FluidColumnSurfaceQuery.h"
 
@@ -493,6 +494,8 @@ static void TestScrollStagingPreservesOverlap()
 
 int main()
 {
+  // See FluidSurfaceSliceTest: slices are built through the column scan.
+  cutum::SetPreferGpuFluidColumnScan(true);
   TestSentinelAndTuningDefaults();
   TestWindowMoveThreshold();
   TestColumnScanFindsSurface();

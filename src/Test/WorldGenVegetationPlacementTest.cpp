@@ -21,6 +21,7 @@ constexpr cutum::BlockId kWater = 9;
 constexpr cutum::BlockId kLog = 20;
 constexpr cutum::BlockId kLeaves = 21;
 constexpr cutum::BlockId kGrass = 22;
+constexpr cutum::BlockId kTallGrass = 23;
 constexpr int kSea = 48;
 
 static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
@@ -46,18 +47,26 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   cutum::BlockDefinition grass;
   grass.Name = "grass";
   grass.Physics = cutum::BlockPhysicsProfile::Solid();
+  cutum::BlockDefinition tall_grass;
+  tall_grass.Name = "tall_grass";
+  tall_grass.Physics = cutum::BlockPhysicsProfile::Solid();
+  tall_grass.Physics.Movement.Occupancy = 0.0f;
+  tall_grass.Render.Style = cutum::BlockRenderStyle::Cutout;
+  tall_grass.Render.Transparent = true;
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kWater] = water;
   by_id[kLog] = log;
   by_id[kLeaves] = leaves;
   by_id[kGrass] = grass;
+  by_id[kTallGrass] = tall_grass;
   std::unordered_map<std::string, cutum::BlockId> name_to_id;
   name_to_id["stone"] = kStone;
   name_to_id["water"] = kWater;
   name_to_id["tree_log"] = kLog;
   name_to_id["tree_leaves"] = kLeaves;
   name_to_id["grass"] = kGrass;
+  name_to_id["tall_grass"] = kTallGrass;
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return definitions;
 }
@@ -308,7 +317,7 @@ static void TestAcceptFallenLogOverTallGrass()
   for (int dx = -1; dx <= 1; ++dx)
   {
     FillCoastalColumnAt(world, dx, 0);
-    world.SetBlock(glm::ivec3(dx, 52, 0), kLeaves);
+    world.SetBlock(glm::ivec3(dx, 52, 0), kTallGrass);
   }
 
   const cutum::WorldObjectDefinition log = MakeFallenLog();

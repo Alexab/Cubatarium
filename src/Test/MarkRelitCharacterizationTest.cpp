@@ -150,11 +150,12 @@ int main()
     in.relit_chunks.clear();
     in.relit_chunks.push_back(ch);
     const auto plan_noop = PlanColumnInstall(in);
-    // G1/N04 T2: consume_mode bumps already-Dirty FullyDark even when revs match
-    // (193536/173946: skip_already_dirty with schedule=0 while PL erased).
-    Expect(!plan_noop.mark_dirty_priority.empty(),
-           "N04 T2: consume matching-rev FullyDark still bumps Dirty head");
-    Expect(plan_noop.schedule_n >= 1, "N04 T2: consume equal-rev schedules");
+    // A21 P4 supersedes G1/N04 T2: matching-rev FullyDark is observational
+    // dark, not a remesh demand, so consume_mode no longer bumps the Dirty head
+    // (see ShouldBumpDirtyHeadForVisualHole).
+    Expect(plan_noop.mark_dirty_priority.empty(),
+           "A21 P4: consume matching-rev FullyDark does not bump Dirty head");
+    Expect(plan_noop.schedule_n == 0, "A21 P4: consume equal-rev schedules nothing");
   }
 
   Expect(ShouldConsumeTicketedVbDebt(0, 81, 0), "consume VB debt");

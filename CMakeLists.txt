@@ -1820,7 +1820,7 @@ cubatarium_add_test(NAME fluid_surface_slice_test
         ${PHYSICS_MATERIAL_UNIT_SOURCES}
         src/World/Core/FluidColumnSurfaceQuery.cpp
         src/Render/Mesh/FluidSurfaceColumnSlice.cpp
-        src/Test/GpuFluidColumnScanHostStub.cpp
+        src/Test/GpuFluidColumnScanPreferStub.cpp
         src/Test/FluidSurfaceSliceTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
@@ -1841,7 +1841,7 @@ cubatarium_add_test(NAME fluid_surface_map_logic_test
         src/World/Core/FluidColumnSurfaceQuery.cpp
         src/World/Core/RuntimeTuning.cpp
         src/Render/Mesh/FluidSurfaceColumnSlice.cpp
-        src/Test/GpuFluidColumnScanHostStub.cpp
+        src/Test/GpuFluidColumnScanPreferStub.cpp
         src/Test/FluidSurfaceMapLogicTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)

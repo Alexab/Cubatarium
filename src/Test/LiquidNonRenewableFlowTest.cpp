@@ -62,34 +62,23 @@ int main()
   cutum::UFluidSpreadSystem liquid;
   liquid.ShadowMode = false;
 
-  glm::ivec3 last_pos(-1, -1, -1);
+  // The lava is free to flow over the rest of the pit; only the source cell
+  // itself must not flicker between lava and air or lose its source state.
+  const glm::ivec3 source_pos(1, 10, 1);
   int oscillations = 0;
   for (uint64_t tick = 0; tick < 40; ++tick)
   {
-    glm::ivec3 current_pos(-1, -1, -1);
     for (int x = 1; x <= 2; ++x)
     {
       for (int z = 1; z <= 2; ++z)
       {
-        const glm::ivec3 pos(x, 10, z);
-        if (world.GetBlock(pos) == kLava)
-        {
-          current_pos = pos;
-        }
-        liquid.TickBlock(world, *definitions, tick, pos);
+        liquid.TickBlock(world, *definitions, tick, glm::ivec3(x, 10, z));
       }
     }
-    if (current_pos.x >= 0 && last_pos.x >= 0 && current_pos == last_pos)
-    {
-      break;
-    }
-    if (current_pos.x >= 0 && last_pos.x >= 0 && current_pos != last_pos)
+    if (world.GetBlock(source_pos) != kLava ||
+        !world.GetFluidState(source_pos).IsSource())
     {
       ++oscillations;
-    }
-    if (current_pos.x >= 0)
-    {
-      last_pos = current_pos;
     }
   }
 

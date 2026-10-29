@@ -30,6 +30,24 @@ int main()
           ChunkInputStamp::Capture(neighbor, nullptr);
     }
   }
+  // Light-halo signatures of the 26 absent neighbors, in Capture's order.
+  size_t signature_index = 0;
+  for (int dy = -1; dy <= 1; ++dy)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        if (dx == 0 && dy == 0 && dz == 0)
+        {
+          continue;
+        }
+        snap.lightHaloSignatures[signature_index++] =
+            cutum::ChunkMeshLightHaloSignature(nullptr,
+                                               glm::ivec3(dx, dy, dz));
+      }
+    }
+  }
   snap.inputStampsValid = true;
   store.Commit(coord, rev, store.WorldEpoch(), snap);
   int budget = 0;
