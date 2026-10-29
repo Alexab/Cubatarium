@@ -1118,6 +1118,21 @@ bool UWorldCollision::CanPlaceClassic(glm::ivec3 place_pos,
     }
   }
 
+  // Creatures are solid: a block may touch one but not overlap its body. The
+  // controlled (player) creature is covered by the capsule rules above.
+  if (Environment)
+  {
+    constexpr float kTouchEpsilon = 0.02f;
+    CollisionVolume block_vol;
+    block_vol.center = BlockCenter(place_pos);
+    block_vol.halfExtents = glm::vec3(0.5f - kTouchEpsilon);
+    if (Environment->CheckCreatureCollisionVolume(
+            block_vol, Environment->GetControlledCreatureId()))
+    {
+      return false;
+    }
+  }
+
   return true;
 }
 

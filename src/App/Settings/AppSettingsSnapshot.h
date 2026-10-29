@@ -18,7 +18,7 @@ struct AppSettingsSnapshot
   bool StepUpEnabled{true};
   bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
-  bool RideCarryYawEnabled{true};
+  bool RideCarryYawEnabled{false};
   float ActivityTickHz{20.0f};
   RenderSettings Render;
   UiSettings Ui;

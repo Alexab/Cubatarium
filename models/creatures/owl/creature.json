@@ -16,22 +16,22 @@
   "role": "mob",
   "bounds": {
     "rest": [
-      0.55,
-      0.65,
-      0.55
+      0.54,
+      1.2,
+      0.54
     ],
     "max": [
-      0.55,
-      0.65,
-      0.55
+      0.54,
+      1.2,
+      0.54
     ],
     "min": [
-      0.55,
-      0.5,
-      0.55
+      0.54,
+      0.93,
+      0.54
     ]
   },
-  "eye_height": 0.5,
+  "eye_height": 0.93,
   "habitat": "aerial",
   "locomotion_archetype": "aerial",
   "locomotion": {

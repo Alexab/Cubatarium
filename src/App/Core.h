@@ -223,7 +223,7 @@ private:
   bool StepUpEnabled{true};
   bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
-  bool RideCarryYawEnabled{true};
+  bool RideCarryYawEnabled{false};
   float ActivityTickHz{20.0f};
   bool CreatureMovementDiagEnabled{false};
   float DefaultTimeOfDay{0.35f};

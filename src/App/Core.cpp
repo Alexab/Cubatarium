@@ -309,7 +309,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
         StepUpEnabled = gameplay.value("step_up", true);
         FoliageClimbEnabled = gameplay.value("foliage_climb", true);
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
-        RideCarryYawEnabled = gameplay.value("ride_carry_yaw", true);
+        RideCarryYawEnabled = gameplay.value("ride_carry_yaw", false);
         ActivityTickHz = gameplay.value("activity_tick_hz", 20.0f);
         CreatureMovementDiagEnabled =
             gameplay.value("creature_movement_diag", false);

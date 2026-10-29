@@ -16,22 +16,22 @@
   "role": "mob",
   "bounds": {
     "rest": [
-      0.35,
-      0.35,
-      0.55
+      0.33,
+      0.25,
+      0.87
     ],
     "max": [
-      0.35,
-      0.35,
-      0.55
+      0.33,
+      0.25,
+      0.87
     ],
     "min": [
-      0.35,
-      0.25,
-      0.55
+      0.33,
+      0.18,
+      0.87
     ]
   },
-  "eye_height": 0.25,
+  "eye_height": 0.18,
   "habitat": "terrestrial",
   "locomotion_archetype": "terrestrial_quadruped",
   "locomotion": {

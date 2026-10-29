@@ -1,6 +1,8 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
+#include "Test/WorldCollisionCreatureStubs.h"
+#include "World/Environment/WorldEnvironment.h"
 #include "World/Collision/WorldCollision.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
@@ -275,6 +277,43 @@ int main()
          "scatter-filled pit placement");
   Expect(*scatter_resolved.place_block_pos == scatter_pit_center,
          "scatter pit center target");
+
+  // T9: creatures are solid for placement. A block may touch a creature's body
+  // but not overlap it. The environment is a zeroed stand-in: the stubbed
+  // creature queries never read it (controlled creature id stays 0).
+  {
+    alignas(16) static unsigned char env_storage[8192] = {};
+    auto *fake_env = reinterpret_cast<cutum::UWorldEnvironment *>(env_storage);
+    cutum::UBlockWorld creature_world;
+    creature_world.SetFluidDefinitions(definitions.get());
+    cutum::UWorldCollision creature_collision(creature_world, fake_env);
+    creature_collision.SetBlockRegistry(&registry);
+    BuildWall(creature_world, 5, 0, 1, 4);
+    const auto free_resolve =
+        creature_collision.ResolveBlockPlacement(wall_eye, wall_front, cap, 8.0f);
+    Expect(free_resolve.place_block_pos.has_value(),
+           "creature test: placement allowed with no creature around");
+    const glm::vec3 target_center =
+        cutum::BlockCenter(*free_resolve.place_block_pos);
+    const glm::vec3 body_half(0.3f, 0.9f, 0.3f);
+
+    cutum::test::SetStubCreatureVolumes(
+        {cutum::CollisionVolume{target_center, body_half}});
+    const auto overlapped =
+        creature_collision.ResolveBlockPlacement(wall_eye, wall_front, cap, 8.0f);
+    Expect(!overlapped.place_block_pos.has_value(),
+           "block must not be placed inside a creature");
+    Expect(overlapped.break_hit.has_value(),
+           "breaking a block is unaffected by creatures");
+
+    cutum::test::SetStubCreatureVolumes({cutum::CollisionVolume{
+        target_center + glm::vec3(0.5f + body_half.x, 0.0f, 0.0f), body_half}});
+    const auto touching =
+        creature_collision.ResolveBlockPlacement(wall_eye, wall_front, cap, 8.0f);
+    Expect(touching.place_block_pos.has_value(),
+           "block may touch a creature without overlapping it");
+    cutum::test::SetStubCreatureVolumes({});
+  }
 
   std::cout << "block_placement_raycast_test: OK" << std::endl;
   return 0;

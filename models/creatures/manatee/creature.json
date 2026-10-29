@@ -16,22 +16,22 @@
   "role": "mob",
   "bounds": {
     "rest": [
-      0.7,
-      0.45,
-      1.35
+      1.05,
+      0.93,
+      3.83
     ],
     "max": [
-      0.7,
-      0.45,
-      1.35
+      1.05,
+      0.93,
+      3.83
     ],
     "min": [
-      0.7,
-      0.45,
-      1.35
+      1.05,
+      0.93,
+      3.83
     ]
   },
-  "eye_height": 0.45,
+  "eye_height": 0.93,
   "habitat": "aquatic",
   "locomotion_archetype": "aquatic",
   "locomotion": {

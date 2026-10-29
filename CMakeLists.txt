@@ -1415,6 +1415,15 @@ add_test(NAME creature_model_integrity_test
     COMMAND $<TARGET_FILE:creature_model_integrity_test>)
 set_tests_properties(creature_model_integrity_test PROPERTIES LABELS "unit;creatures")
 
+# Collision boxes must match the visible glTF model (see tools/creature_bounds_audit.py).
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+  add_test(NAME creature_bounds_audit_test
+      COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tools/creature_bounds_audit.py" --check
+      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+  set_tests_properties(creature_bounds_audit_test PROPERTIES LABELS "unit;creatures")
+endif()
+
 cubatarium_add_test(NAME creature_influence_channels_test
     SOURCES
         src/Creatures/Influence/InfluenceHitMath.cpp
