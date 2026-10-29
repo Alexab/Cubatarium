@@ -15031,6 +15031,11 @@ bool UWorld::HasGroundSupportVolume(const CollisionVolume &vol,
   return Collision.HasGroundSupportVolume(vol, feetY);
 }
 
+bool UWorld::HasBodySupport(const CollisionVolume &vol) const
+{
+  return Collision.HasBodySupport(vol);
+}
+
 bool UWorld::HasGroundSupport(const glm::vec3 &eyePos,
                               const PlayerCapsule &cap) const
 {

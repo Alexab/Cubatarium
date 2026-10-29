@@ -2,6 +2,7 @@
 #include "World/Core/WorldViewBinding.h"
 #include <iostream>
 #include <cstdlib>
+#include <algorithm>
 #include <fstream>
 
 #include "Activity/WorldCreatureActivitySink.h"
@@ -799,8 +800,12 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
     static std::ofstream traceFile(std::string(qaTraceId) + "_trace.txt",
                                    std::ios::trunc);
     static int traceFrame = 0;
+    static const int traceFrames = [] {
+      const char *frames = std::getenv("CUBA_QA_TICKDUMP_FRAMES");
+      return frames ? std::max(1, std::atoi(frames)) : 400;
+    }();
     ++traceFrame;
-    if (traceFile && traceFrame <= 400)
+    if (traceFile && traceFrame <= traceFrames)
     {
       ForEachCreature([&](UCreature &creature)
                       {
@@ -834,7 +839,12 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
                                 glm::ivec3(static_cast<int>(std::floor(p.x)),
                                            static_cast<int>(std::floor(p.y)),
                                            static_cast<int>(std::floor(p.z))));
-                        traceFile << traceFrame << " y=" << p.y
+                        traceFile << traceFrame << " x=" << p.x << " z=" << p.z
+                                  << " y=" << p.y
+                                  << " support="
+                                  << HasGroundSupportVolume(bodyVol, p.y)
+                                  << " bodySupport="
+                                  << HasBodySupport(bodyVol)
                                   << " feetY=" << creature.GetLocomotion().GetFeetY()
                                   << " anchored=" << creature.GetLocomotion().IsFeetAnchored()
                                   << " vy=" << creature.GetLocomotion().GetVerticalVelocity()
@@ -852,6 +862,8 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
                                   << static_cast<int>(creature.GetIntent().suggestedAnim)
                                   << " speed=" << creature.GetIntent().moveSpeed
                                   << " dirLen=" << glm::length(creature.GetIntent().moveDirWorld)
+                                  << " dir=" << creature.GetIntent().moveDirWorld.x
+                                  << "," << creature.GetIntent().moveDirWorld.z
                                   << " blockBelow=" << static_cast<int>(below)
                                   << " chunk=(" << chunkCoord.x << ","
                                   << chunkCoord.y << "," << chunkCoord.z << ")"

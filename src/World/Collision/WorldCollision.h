@@ -85,6 +85,10 @@ public:
   bool CheckCollisionVolume(const CollisionVolume &vol,
                             CreatureId skipCreatureId = 0) const;
   bool HasGroundSupportVolume(const CollisionVolume &vol, float feetY) const;
+  /// Creature support: a thin slab under the whole body box touches a
+  /// movement-blocking block, i.e. the body cannot move down. Same notion as
+  /// collision, for any width (rim-held bodies over a hole are supported).
+  bool HasBodySupport(const CollisionVolume &vol) const;
 
   /// Push body on XZ out of overlapping creature AABBs (blocks still respected).
   /// Needed because axis resolve cannot escape an already-overlapping start.

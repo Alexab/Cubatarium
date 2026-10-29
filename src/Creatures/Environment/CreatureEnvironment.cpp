@@ -294,8 +294,7 @@ EnvironmentSample ProbeEnvironmentAtEx(const UWorld &world,
   const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
   SampleHabitatFluidsInVolume(world, vol, env.inWater, env.inLava);
   env.inFluid = env.inWater || env.inLava;
-  env.onSolidGround =
-      world.HasGroundSupportVolume(vol, BoundsFeetY(bodyOrigin));
+  env.onSolidGround = world.HasBodySupport(vol);
   env.bodyBlocked = world.CheckCollisionVolume(vol, 0);
   const bool clearance = HasAerialClearance(world, vol, aerialClearance);
   env.inOpenAir = !env.inFluid && !env.onSolidGround && !env.bodyBlocked &&

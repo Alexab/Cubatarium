@@ -255,6 +255,23 @@ void UCreatureLocomotionController::SyncAfterStepLanding(glm::vec3 &eyePos,
   updateLocomotionState({});
 }
 
+bool UCreatureLocomotionController::HasSupportAt(const UWorld *world,
+                                                 const glm::vec3 &eyePos) const
+{
+  if (!world)
+  {
+    return false;
+  }
+  const CollisionVolume vol =
+      CollisionVolumeFromEye(eyePos, GetCollisionCapsule());
+  if (BodySupportMode)
+  {
+    return world->HasBodySupport(vol);
+  }
+  return world->HasGroundSupportVolume(vol,
+                                       vol.center.y - vol.halfExtents.y);
+}
+
 bool UCreatureLocomotionController::anchorFeetFromStandingEye(
     const UWorld *world, const glm::vec3 &eyePos)
 {
@@ -263,7 +280,11 @@ bool UCreatureLocomotionController::anchorFeetFromStandingEye(
     return false;
   }
   const PlayerCapsule cap = GetCapsule();
-  if (!world->HasGroundSupport(eyePos, cap))
+  const bool supported =
+      BodySupportMode
+          ? world->HasBodySupport(CollisionVolumeFromEye(eyePos, cap))
+          : world->HasGroundSupport(eyePos, cap);
+  if (!supported)
   {
     FeetAnchored = false;
     return false;
@@ -316,7 +337,10 @@ void UCreatureLocomotionController::landStanding(const UWorld *world,
     return;
   }
   const PlayerCapsule cap = GetCapsule();
-  if (!world->IsValidStandFootprint(eyePos, cap, FeetY))
+  // The center-footprint stand rule is the player's; a creature resting on
+  // blocks under any part of its box has landed (else it hung "falling"
+  // on a ledge it could not fall from, gravity growing every frame).
+  if (!BodySupportMode && !world->IsValidStandFootprint(eyePos, cap, FeetY))
   {
     OnGround = false;
     FeetAnchored = false;
@@ -489,9 +513,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
   const PlayerCapsule cap = GetCollisionCapsule();
   const SampledFluidState fluid = world->SampleFluidPhysics(eyePos, cap);
 
-  const CollisionVolume supportVol = CollisionVolumeFromEye(eyePos, cap);
-  const float feetY = supportVol.center.y - supportVol.halfExtents.y;
-  const bool supported = world->HasGroundSupportVolume(supportVol, feetY);
+  const bool supported = HasSupportAt(world, eyePos);
 
   const bool isFoliage =
       fluid.inFluid && world->IsFoliageFluidBlock(fluid.dominantFluid);

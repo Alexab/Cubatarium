@@ -103,11 +103,6 @@ bool CanCreatureStandAt(const UWorld &world, const glm::vec3 &body_origin,
                         const glm::vec3 &size_blocks,
                         float max_climb_drop_blocks)
 {
-  if (!CanCreatureStandAtNav(world, body_origin, size_blocks,
-                             max_climb_drop_blocks))
-  {
-    return false;
-  }
   const int gx = WorldCoordToBlockIndex(body_origin.x);
   const int gz = WorldCoordToBlockIndex(body_origin.z);
   const std::optional<float> feet_y =
@@ -116,9 +111,27 @@ bool CanCreatureStandAt(const UWorld &world, const glm::vec3 &body_origin,
   {
     return false;
   }
-  glm::vec3 feet_origin = body_origin;
-  feet_origin.y = *feet_y;
-  return !BodyColumnTouchesFluid(world, feet_origin, size_blocks.y);
+  if (CanCreatureStandAtNav(world, body_origin, size_blocks,
+                            max_climb_drop_blocks))
+  {
+    glm::vec3 feet_origin = body_origin;
+    feet_origin.y = *feet_y;
+    return !BodyColumnTouchesFluid(world, feet_origin, size_blocks.y);
+  }
+  // Resting on a rim: the center column steps down (a dip, or ground cover
+  // over lower ground) while blocks under the rest of the box hold the body
+  // where it is. Lowering the feet to the center column cut the box into the
+  // block it stands on, so every step over such a dip was reverted and the
+  // mob stood frozen for seconds. Drops deeper than a step stay rejected, so
+  // cliff avoidance is unchanged.
+  const float max_step = std::max(0.25f, max_climb_drop_blocks);
+  if (body_origin.y - *feet_y > max_step)
+  {
+    return false;
+  }
+  return AreBlocksClearAt(world, body_origin, size_blocks) &&
+         world.HasBodySupport(CollisionVolumeFromBody(body_origin, size_blocks)) &&
+         !BodyColumnTouchesFluid(world, body_origin, size_blocks.y);
 }
 
 bool CanCreatureStep(const UWorld &world, const glm::vec3 &from_body,

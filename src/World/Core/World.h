@@ -782,6 +782,7 @@ public:
   bool CheckCollisionVolume(const CollisionVolume &vol,
                             CreatureId skipCreatureId = 0) const;
   bool HasGroundSupportVolume(const CollisionVolume &vol, float feetY) const;
+  bool HasBodySupport(const CollisionVolume &vol) const;
   /// Moves from body origin along delta (Y, X, Z axis order).
   glm::vec3 ResolveMovementBody(const glm::vec3 &bodyOrigin,
                                 const glm::vec3 &delta,

@@ -760,6 +760,21 @@ bool UWorldCollision::HasGroundSupportVolume(const CollisionVolume &vol,
   return stats.centerSolid && stats.solidSamples >= minSamples;
 }
 
+bool UWorldCollision::HasBodySupport(const CollisionVolume &vol) const
+{
+  constexpr float kProbeDepth = 0.08f;
+  constexpr float kSideInset = 0.01f;
+  CollisionVolume probe;
+  probe.halfExtents =
+      glm::vec3(std::max(0.01f, vol.halfExtents.x - kSideInset),
+                kProbeDepth * 0.5f,
+                std::max(0.01f, vol.halfExtents.z - kSideInset));
+  const float feetY = vol.center.y - vol.halfExtents.y;
+  probe.center = glm::vec3(vol.center.x, feetY - kProbeDepth * 0.5f,
+                           vol.center.z);
+  return CheckBlockCollisionVolume(probe);
+}
+
 bool UWorldCollision::HasGroundSupport(const glm::vec3 &eyePos,
                                        const PlayerCapsule &cap) const
 {

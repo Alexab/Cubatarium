@@ -121,6 +121,58 @@ int main()
                             max_step),
          "adjacent air column: soft gate must reject (no ground)");
 
+  // Body support (creatures): the box rests on blocks under ANY part of it.
+  // 5x5 floor at y=53 with a 1x1 hole at the center column.
+  cutum::UBlockWorld holed;
+  for (int x = -2; x <= 2; ++x)
+  {
+    for (int z = -2; z <= 2; ++z)
+    {
+      if (x != 0 || z != 0)
+      {
+        holed.SetBlock(glm::ivec3(x, 53, z), kStone);
+      }
+    }
+  }
+  cutum::UWorldCollision holed_collision(holed);
+  holed_collision.SetBlockRegistry(&registry);
+  holed_collision.SetEntityCollisionEnabled(false);
+  const glm::vec3 cow_size(1.1f, 1.3f, 1.8f);
+  const cutum::CollisionVolume cow_over_hole = cutum::CollisionVolumeFromBody(
+      glm::vec3(0.0f, feet_y, 0.0f), cow_size);
+  Expect(holed_collision.HasBodySupport(cow_over_hole),
+         "wide body spanning a 1x1 hole rests on its rim");
+  Expect(!holed_collision.HasGroundSupportVolume(cow_over_hole, feet_y),
+         "center-footprint rule (player) calls the same body unsupported");
+
+  // Zombie center just past a ledge edge, box still overlapping the ledge
+  // top: it cannot fall, so it is supported (the stall that hung mobs in
+  // "Fall" with gravity growing every frame).
+  const cutum::CollisionVolume on_rim = cutum::CollisionVolumeFromBody(
+      glm::vec3(0.75f, ledge_feet, 0.0f), zombie_size);
+  Expect(ledge_collision.HasBodySupport(on_rim),
+         "body overlapping the ledge top by its edge is supported");
+  const cutum::CollisionVolume off_rim = cutum::CollisionVolumeFromBody(
+      glm::vec3(0.85f, ledge_feet, 0.0f), zombie_size);
+  Expect(!ledge_collision.HasBodySupport(off_rim),
+         "body past the ledge edge is not supported");
+  const cutum::CollisionVolume floating = cutum::CollisionVolumeFromBody(
+      glm::vec3(0.0f, ledge_feet + 0.2f, 0.0f), zombie_size);
+  Expect(!ledge_collision.HasBodySupport(floating),
+         "body 0.2 above the ground is not supported");
+
+  // A wall touching the side of the box is not ground.
+  cutum::UBlockWorld wall;
+  wall.SetBlock(glm::ivec3(1, 10, 0), kStone);
+  wall.SetBlock(glm::ivec3(1, 11, 0), kStone);
+  cutum::UWorldCollision wall_collision(wall);
+  wall_collision.SetBlockRegistry(&registry);
+  wall_collision.SetEntityCollisionEnabled(false);
+  const cutum::CollisionVolume beside_wall = cutum::CollisionVolumeFromBody(
+      glm::vec3(0.5f - 0.3f, cutum::BlockTopY(10), 0.0f), zombie_size);
+  Expect(!wall_collision.HasBodySupport(beside_wall),
+         "a wall beside the body does not count as support");
+
   std::cout << "creature_terrestrial_gate_test: OK" << std::endl;
   return 0;
 }

@@ -18,6 +18,41 @@
 namespace cutum
 {
 
+namespace
+{
+
+/// Highest ground under the body footprint (center, edges and corners) at or
+/// below referenceFeetY + 0.25. Matches HasBodySupport: a body wider than a
+/// hole rests on its rim, so the center column alone snapped it down into
+/// the hole and left it embedded in the rim.
+std::optional<float> QueryFootprintGroundFeetY(const UWorld &world,
+                                               const glm::vec3 &bodyOrigin,
+                                               const glm::vec3 &sizeBlocks,
+                                               float referenceFeetY)
+{
+  const float hx = std::max(0.0f, sizeBlocks.x * 0.5f - 0.05f);
+  const float hz = std::max(0.0f, sizeBlocks.z * 0.5f - 0.05f);
+  std::optional<float> best;
+  for (const float dx : {0.0f, -hx, hx})
+  {
+    for (const float dz : {0.0f, -hz, hz})
+    {
+      if (const std::optional<float> groundY = world.QueryGroundFeetYUnder(
+              WorldCoordToBlockIndex(bodyOrigin.x + dx),
+              WorldCoordToBlockIndex(bodyOrigin.z + dz), referenceFeetY))
+      {
+        if (!best || *groundY > *best)
+        {
+          best = groundY;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+} // namespace
+
 UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
                      glm::vec3 eyeOffset)
     : Id(Id), TypeId(std::move(typeId)), BodyOrigin(bodyOrigin),
@@ -94,12 +129,10 @@ void UCreature::SyncFeetFromLocomotion(const UWorld &world,
   if (walking)
   {
     const float refFeetY = FeetYFromEye(eyeAfterLocomotion, EyeOffset.y);
-    const int gx = WorldCoordToBlockIndex(BodyOrigin.x);
-    const int gz = WorldCoordToBlockIndex(BodyOrigin.z);
     const float maxSnap =
         std::max(0.25f, Locomotion.GetCapabilities().jumpHeightBlocks);
-    if (const std::optional<float> groundY =
-            world.QueryGroundFeetYUnder(gx, gz, refFeetY))
+    if (const std::optional<float> groundY = QueryFootprintGroundFeetY(
+            world, BodyOrigin, Bounds.profile.restSizeBlocks, refFeetY))
     {
       const float drop = refFeetY - *groundY;
       const float climb = *groundY - refFeetY;
@@ -249,10 +282,11 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
   verticalInput.jumpHeld = Intent.wantJump;
 
   glm::vec3 eye = GetLocomotionEye();
+  const UCreatureLocomotionController locomotionBefore = Locomotion;
   RunMotorStep(world, eye, verticalInput, wish, speed, dt);
 
-  EnforceHabitatAfterMove(world, habitat, bodyOriginBefore, diagIntentDir,
-                          diagIntentSpeed, wish);
+  EnforceHabitatAfterMove(world, habitat, bodyOriginBefore, locomotionBefore,
+                          diagIntentDir, diagIntentSpeed, wish);
 
   ApplyIdleFluidSink(world, habitat, wish, dt, verticalInput);
 
@@ -287,8 +321,7 @@ bool UCreature::TryIdleIntentFastPath(UWorld &world, float dt,
   {
     const CollisionVolume supportVol =
         CollisionVolumeFromBody(BodyOrigin, Bounds.profile.restSizeBlocks);
-    const float feetY = BoundsFeetY(BodyOrigin);
-    if (!world.HasGroundSupportVolume(supportVol, feetY))
+    if (!world.HasBodySupport(supportVol))
     {
       Locomotion.BreakGroundSupport();
       return false;
@@ -385,11 +418,11 @@ void UCreature::RunMotorStep(UWorld &world, glm::vec3 &eye,
   }
 }
 
-void UCreature::EnforceHabitatAfterMove(UWorld &world, CreatureHabitat habitat,
-                                        const glm::vec3 &bodyOriginBefore,
-                                        const glm::vec3 &diagIntentDir,
-                                        float diagIntentSpeed,
-                                        const glm::vec3 &wish)
+void UCreature::EnforceHabitatAfterMove(
+    UWorld &world, CreatureHabitat habitat, const glm::vec3 &bodyOriginBefore,
+    const UCreatureLocomotionController &locomotionBefore,
+    const glm::vec3 &diagIntentDir, float diagIntentSpeed,
+    const glm::vec3 &wish)
 {
   if (glm::length(wish) <= 1e-4f)
   {
@@ -476,6 +509,10 @@ void UCreature::EnforceHabitatAfterMove(UWorld &world, CreatureHabitat habitat,
       UCreatureMovementDiagnostics::Record(rec);
     }
     BodyOrigin = bodyOriginBefore;
+    // The move did not happen, so neither did the motor's view of it: the
+    // body stayed put while the controller kept "falling" off the rejected
+    // spot, and gravity grew to -50 over seconds of standing still.
+    Locomotion = locomotionBefore;
   }
   Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
   SyncBoundsFromStance();
