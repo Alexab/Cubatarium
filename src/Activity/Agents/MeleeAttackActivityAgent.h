@@ -1,6 +1,7 @@
 #ifndef MELEEATTACKACTIVITYAGENT_H
 #define MELEEATTACKACTIVITYAGENT_H
 
+#include "Activity/Agents/WanderActivityAgent.h"
 #include "Activity/Brain/CreatureActivityBlackboard.h"
 #include "Activity/Brain/SimpleFsmBrain.h"
 #include "Activity/IUCreatureActivityAgent.h"
@@ -27,6 +28,7 @@ private:
   std::unordered_set<CreatureId> Members;
   std::unordered_map<CreatureId, UCreatureActivityBlackboard> State;
   std::unique_ptr<IUAgentBrain> Brain;
+  UWanderActivityAgent Wander;
 };
 
 } // namespace cutum

@@ -11,8 +11,8 @@ UMeleeAttackActivityAgent::UMeleeAttackActivityAgent()
 void UMeleeAttackActivityAgent::OnCreatureAdded(
     CreatureId Id, const CreatureBehaviorParams &behavior)
 {
-  (void)behavior;
   Members.insert(Id);
+  Wander.OnCreatureAdded(Id, behavior);
   State[Id] = UCreatureActivityBlackboard{};
 }
 
@@ -20,6 +20,7 @@ void UMeleeAttackActivityAgent::OnCreatureRemoved(CreatureId Id)
 {
   Members.erase(Id);
   State.erase(Id);
+  Wander.OnCreatureRemoved(Id);
 }
 
 void UMeleeAttackActivityAgent::Tick(IUWorldPerception &perception,
@@ -36,7 +37,14 @@ void UMeleeAttackActivityAgent::Tick(IUWorldPerception &perception,
     {
       continue;
     }
-    Brain->Tick(State[Id], Id, perception, sink, dt);
+    UCreatureActivityBlackboard &blackboard = State[Id];
+    Brain->Tick(blackboard, Id, perception, sink, dt);
+    // Nothing to hunt (no target in aggro range, Creative/Peaceful, no prey):
+    // roam like a wanderer instead of standing at the spawn point forever.
+    if (blackboard.state == CreatureFsmState::Idle && blackboard.targetId == 0)
+    {
+      Wander.TickCreature(Id, perception, sink, dt);
+    }
   }
 }
 

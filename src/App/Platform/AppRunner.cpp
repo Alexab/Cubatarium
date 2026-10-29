@@ -1384,6 +1384,119 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   }
                 }
             }
+            // Behavior QA: CUBA_FLIGHT_QA_BEHAVIOR=wasp,sheep,... spawns the
+            // listed species in front of the camera and logs position and
+            // locomotion facts to bin/qa_behavior.txt twice a second
+            // (movement/animation regression check in the real frame loop).
+            if (const char *qaBehavior = std::getenv("CUBA_FLIGHT_QA_BEHAVIOR");
+                qaBehavior != nullptr && world)
+            {
+              static bool qaBehaviorSpawned = false;
+              static int qaBehaviorFrame = 0;
+              static std::ofstream qaBehaviorLog("qa_behavior.txt");
+              ++qaBehaviorFrame;
+              if (!qaBehaviorSpawned && ingame_frames_seen >= 60 &&
+                  ModePolicy::AllowsQaSpawner(world->GetGameMode()))
+              {
+                if (auto camera = world->GetCurrentUserCamera())
+                {
+                  qaBehaviorSpawned = true;
+                  // Face the spawn group (+X) so captures show the mobs.
+                  camera->SetOrientation(0.0f, -30.0f);
+                  std::string list(qaBehavior);
+                  size_t start = 0;
+                  int slot = 0;
+                  while (start <= list.size())
+                  {
+                    const size_t comma = list.find(',', start);
+                    const std::string species = list.substr(
+                        start, comma == std::string::npos ? std::string::npos
+                                                          : comma - start);
+                    start = comma == std::string::npos ? list.size() + 1
+                                                       : comma + 1;
+                    if (species.empty())
+                    {
+                      continue;
+                    }
+                    glm::vec3 pos = camera->GetPosition();
+                    pos.x += 4.0f + 1.5f * static_cast<float>(slot % 4);
+                    pos.z += 2.0f * static_cast<float>(slot / 4) - 1.0f;
+                    ++slot;
+                    const CreatureId id = world->SpawnCreature(
+                        species, pos, "", CreatureSpawnSource::Qa);
+                    qaBehaviorLog << "spawn " << species << " id=" << id
+                                  << std::endl;
+                  }
+                }
+              }
+              // Follow-cam on the first QA creature (CUBA_FLIGHT_QA_FOLLOW=1)
+              // so captures show limb motion at readable size.
+              if (qaBehaviorSpawned &&
+                  std::getenv("CUBA_FLIGHT_QA_FOLLOW") != nullptr)
+              {
+                if (auto camera = world->GetCurrentUserCamera())
+                {
+                  world->ForEachCreature(
+                      [&](const UCreature &creature)
+                      {
+                        static CreatureId followId = 0;
+                        if (creature.GetSpawnSource() !=
+                            CreatureSpawnSource::Qa)
+                        {
+                          return;
+                        }
+                        if (followId == 0)
+                        {
+                          followId = creature.GetId();
+                        }
+                        if (creature.GetId() != followId)
+                        {
+                          return;
+                        }
+                        const glm::vec3 p = creature.GetBodyOrigin();
+                        camera->SetFreeMove(true);
+                        camera->SetPosition(p + glm::vec3(-3.0f, 1.4f, 0.0f));
+                        camera->SetOrientation(0.0f, -8.0f);
+                      });
+                }
+              }
+              if (qaBehaviorSpawned && qaBehaviorFrame % 30 == 0)
+              {
+                world->ForEachCreature(
+                    [&](const UCreature &creature)
+                    {
+                      if (creature.GetSpawnSource() != CreatureSpawnSource::Qa)
+                      {
+                        return;
+                      }
+                      const glm::vec3 p = creature.GetBodyOrigin();
+                      const CreatureLocomotionFacts &f =
+                          creature.GetLocomotionFacts();
+                      qaBehaviorLog
+                          << "f=" << qaBehaviorFrame << " "
+                          << creature.GetTypeId() << "#" << creature.GetId()
+                          << " pos=" << p.x << "," << p.y << "," << p.z
+                          << " state=" << static_cast<int>(f.state)
+                          << " speed=" << f.horizontalSpeed
+                          << " phase=" << f.animPhase
+                          << " ground=" << f.onGround;
+                      if (auto cam = world->GetCurrentUserCamera())
+                      {
+                        const glm::vec3 cp = cam->GetPosition();
+                        qaBehaviorLog << " cam=" << cp.x << "," << cp.y << ","
+                                      << cp.z;
+                      }
+                      qaBehaviorLog << " blockBelow="
+                                    << static_cast<int>(
+                                           world->GetBlockWorld().GetBlock(
+                                               glm::ivec3(
+                                                   static_cast<int>(std::floor(p.x)),
+                                                   static_cast<int>(std::floor(p.y)) - 1,
+                                                   static_cast<int>(std::floor(p.z)))))
+                                    << std::endl;
+                    });
+              }
+            }
             const double ingame_sec = (std::max)(
                 0.0,
                 std::chrono::duration<double>(now - ingame_started).count() -

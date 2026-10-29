@@ -80,10 +80,28 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
 {
   for (const CreatureId Id : Members)
   {
+    TickCreature(Id, perception, sink, dt);
+  }
+}
+
+void UWanderActivityAgent::EnsureCreature(
+    CreatureId Id, const CreatureBehaviorParams &behavior)
+{
+  if (Members.find(Id) == Members.end())
+  {
+    OnCreatureAdded(Id, behavior);
+  }
+}
+
+void UWanderActivityAgent::TickCreature(CreatureId Id,
+                                        IUWorldPerception &perception,
+                                        IUCreatureActivitySink &sink, float dt)
+{
+  {
     const std::optional<CreatureActivityView> view = sink.GetCreatureView(Id);
     if (!view || view->possessed || view->isPlayerCharacter)
     {
-      continue;
+      return;
     }
     if (!perception.IsWithinActivityRange(view->bodyOrigin))
     {
@@ -99,13 +117,13 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
         rec.activityTick = true;
         UCreatureMovementDiagnostics::Record(rec);
       }
-      continue;
+      return;
     }
     const std::optional<CreatureBehaviorSnapshot> snapshot =
         sink.GetBehaviorSnapshot(Id);
     if (!snapshot)
     {
-      continue;
+      return;
     }
 
     WanderAgentState &st = State[Id];
@@ -266,7 +284,7 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
       intent.clearOnApply = false;
       sink.SetIntent(Id, intent);
       st.lastBodyOrigin = view->bodyOrigin;
-      continue;
+      return;
     }
     else
     {

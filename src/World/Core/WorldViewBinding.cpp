@@ -792,6 +792,16 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
                                   << " vy=" << creature.GetLocomotion().GetVerticalVelocity()
                                   << " onGround=" << creature.GetLocomotion().IsOnGround()
                                   << " mode=" << static_cast<int>(creature.GetMovementMode())
+                                  << " factsState="
+                                  << static_cast<int>(creature.GetLocomotionFacts().state)
+                                  << " factsSpeed="
+                                  << creature.GetLocomotionFacts().horizontalSpeed
+                                  << " factsPhase="
+                                  << creature.GetLocomotionFacts().animPhase
+                                  << " factsGround="
+                                  << creature.GetLocomotionFacts().onGround
+                                  << " suggestedAnim="
+                                  << static_cast<int>(creature.GetIntent().suggestedAnim)
                                   << " speed=" << creature.GetIntent().moveSpeed
                                   << " dirLen=" << glm::length(creature.GetIntent().moveDirWorld)
                                   << " blockBelow=" << static_cast<int>(below)
