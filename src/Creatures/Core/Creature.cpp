@@ -408,7 +408,20 @@ void UCreature::EnforceHabitatAfterMove(UWorld &world, CreatureHabitat habitat,
   // stuck position, pinning it mid-air forever. Accept strictly descending
   // post-motor positions (gravity always carries a creature toward valid
   // habitat); level and ascending moves stay gated.
-  if (BodyOrigin.y < bodyOriginBefore.y - 1.0e-4f)
+  // Flyers do not fall, so they get no descent pass: a wasp gliding down
+  // into water was accepted here and then pinned on the bottom, every move
+  // out being "level or ascending".
+  if (habitat != CreatureHabitat::Aerial &&
+      BodyOrigin.y < bodyOriginBefore.y - 1.0e-4f)
+  {
+    Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
+    SyncBoundsFromStance();
+    return;
+  }
+  // Already out of its element before this move: a move cannot make that
+  // worse, and rejecting it froze the creature where it was trapped.
+  if (!HabitatAllowsMovementAt(world, habitat, bodyOriginBefore, size,
+                               maxClimbDrop))
   {
     Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
     SyncBoundsFromStance();
@@ -481,7 +494,7 @@ void UCreature::ApplyIdleFluidSink(UWorld &world, CreatureHabitat habitat,
   if ((habitat == CreatureHabitat::Aquatic ||
        habitat == CreatureHabitat::Amphibious ||
        habitat == CreatureHabitat::Lava) &&
-      fluid.inFluid && glm::length(wish) < 1e-4f)
+      fluid.inFluid && glm::length(wish) < 1e-4f && dt > 1e-6f)
   {
     const float sink = fluid.SinkSpeed * dt * 0.2f;
     glm::vec3 sinkEye = GetLocomotionEye();
