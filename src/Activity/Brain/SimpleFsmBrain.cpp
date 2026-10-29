@@ -2,7 +2,9 @@
 #include "Activity/Helpers/CreatureActivityNavigation.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Activity/Helpers/CreatureHostility.h"
+#include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureIntent.h"
+#include "Creatures/Core/CreatureReach.h"
 #include "Creatures/Influence/InfluenceIntentUtil.h"
 #include "Game/ModePolicy.h"
 #include "Navigation/NavigationTypes.h"
@@ -98,6 +100,21 @@ glm::vec3 SteerWithFeelersAndSeparation(
   return BlendLocomotionDirection(move_dir, separation, sep_weight);
 }
 
+/// Melee distance to a target body: edge to edge for wide bodies (see
+/// MeleeDistanceXZ); falls back to the center distance when the target is gone.
+float MeleeDistanceToTarget(const UWorld &world,
+                            const CreatureActivityView &view,
+                            const CreatureBehaviorSnapshot &snapshot,
+                            CreatureId targetId, const glm::vec3 &targetBody)
+{
+  if (const UCreature *target = world.GetCreature(targetId))
+  {
+    return MeleeDistanceXZ(view.bodyOrigin, snapshot.boundsSize, targetBody,
+                           target->GetBounds().profile.restSizeBlocks);
+  }
+  return HorizontalDistanceXZ(view.bodyOrigin, targetBody);
+}
+
 float ResolveIntentMoveSpeed(const CreatureBehaviorSnapshot &snapshot)
 {
   float speed = snapshot.behavior.moveSpeed;
@@ -133,6 +150,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     sink.SetIntent(self_id, idle);
     RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, idle,
                       "melee_disabled_player_dead");
+    return;
   }
 
   if (Mode == SimpleFsmMode::Flee)
@@ -310,7 +328,9 @@ void USimpleFsmBrain::TickMeleeFallback(UCreatureActivityBlackboard &blackboard,
   blackboard.targetId = nearest_id;
   blackboard.lastSeenPos = nearest_body;
   const float dy = nearest_body.y - view.bodyOrigin.y;
-  if (nearest_dist <= snapshot.behavior.attackRange && std::abs(dy) <= 1.15f)
+  const float melee_dist =
+      MeleeDistanceToTarget(world, view, snapshot, nearest_id, nearest_body);
+  if (melee_dist <= snapshot.behavior.attackRange && std::abs(dy) <= 1.15f)
   {
     blackboard.state = CreatureFsmState::Attack;
     intent.moveDirWorld = glm::vec3(0.0f);
@@ -416,9 +436,14 @@ blackboard.targetId = controlled->Id;
 blackboard.lastSeenPos = controlled_body;
 
 const float dy = controlled_body.y - view.bodyOrigin.y;
+const float melee_xz = MeleeDistanceToTarget(sink.GetWorld(), view, snapshot,
+                                             controlled->Id, controlled_body);
+const float melee_dist =
+    aerial ? std::min(dist, std::sqrt(melee_xz * melee_xz + dy * dy))
+           : melee_xz;
 // Attack only when close in XZ AND within ~1 block vertically; otherwise keep
 // chasing so mobs climb out of pits / up stairs toward the player.
-if (dist <= snapshot.behavior.attackRange &&
+if (melee_dist <= snapshot.behavior.attackRange &&
     (aerial || std::abs(dy) <= 1.15f))
 {
   const UWorld &world = sink.GetWorld();

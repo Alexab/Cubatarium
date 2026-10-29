@@ -8,6 +8,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/UCreatureFactory.h"
 #include "Creatures/Core/CreaturePersistenceJson.h"
+#include "Creatures/Core/CreatureReach.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
@@ -28,6 +29,7 @@
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -724,45 +726,6 @@ UWorldEnvironment::GetResolvedAppearance(const UCreature &creature) const
   return resolved;
 }
 
-namespace
-{
-
-bool RayIntersectsAabb(const glm::vec3 &origin, const glm::vec3 &dir,
-                       const glm::vec3 &boxMin, const glm::vec3 &boxMax,
-                       float maxDistance, float &outT)
-{
-  float tmin = 0.0f;
-  float tmax = maxDistance;
-  for (int axis = 0; axis < 3; ++axis)
-  {
-    if (std::abs(dir[axis]) < 1e-6f)
-    {
-      if (origin[axis] < boxMin[axis] || origin[axis] > boxMax[axis])
-      {
-        return false;
-      }
-      continue;
-    }
-    const float inv = 1.0f / dir[axis];
-    float t1 = (boxMin[axis] - origin[axis]) * inv;
-    float t2 = (boxMax[axis] - origin[axis]) * inv;
-    if (t1 > t2)
-    {
-      std::swap(t1, t2);
-    }
-    tmin = std::max(tmin, t1);
-    tmax = std::min(tmax, t2);
-    if (tmin > tmax)
-    {
-      return false;
-    }
-  }
-  outT = tmin;
-  return tmin >= 0.0f && tmin <= maxDistance;
-}
-
-} // namespace
-
 glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world)
 {
   const float eyeHeight = ResolveViewerEyeHeight(world);
@@ -971,11 +934,26 @@ UWorldEnvironment::PickCreatureByView(const glm::vec3 &eye,
     return std::nullopt;
   }
   const glm::vec3 dir = glm::normalize(front);
+  // Creatures behind a wall are not in view: the first solid block bounds
+  // the pick (skins and melee used to land through terrain).
+  float reach = maxDistance;
+  if (const std::optional<BlockRayHit> blockHit = RaycastSolidBlocks(
+          Owner.GetBlockWorld(), Owner.GetBlockRegistry(), eye, dir,
+          maxDistance))
+  {
+    reach = std::min(reach, blockHit->distance);
+  }
   float bestT = std::numeric_limits<float>::max();
   CreatureId bestId = 0;
   ForEachCreature(
       [&](const UCreature &creature)
       {
+        // The viewer's own eye sits inside its body box (t = 0), so it won
+        // every pick and melee/skin-by-view never reached another creature.
+        if (creature.GetId() == ControlledCreatureId)
+        {
+          return;
+        }
         const glm::vec3 size = creature.GetBounds().profile.restSizeBlocks;
         const glm::vec3 center =
             BoundsCollisionCenter(creature.GetBodyOrigin(), size);
@@ -983,7 +961,7 @@ UWorldEnvironment::PickCreatureByView(const glm::vec3 &eye,
         const glm::vec3 boxMin = center - half;
         const glm::vec3 boxMax = center + half;
         float t = 0.0f;
-        if (!RayIntersectsAabb(eye, dir, boxMin, boxMax, maxDistance, t))
+        if (!RayIntersectsAabb(eye, dir, boxMin, boxMax, reach, t))
         {
           return;
         }

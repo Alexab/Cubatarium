@@ -982,6 +982,13 @@ cubatarium_add_test(NAME rider_carry_test
 add_test(NAME rider_carry_test COMMAND $<TARGET_FILE:rider_carry_test>)
 set_tests_properties(rider_carry_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_reach_test
+    SOURCES
+        src/Test/CreatureReachTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_reach_test COMMAND $<TARGET_FILE:creature_reach_test>)
+set_tests_properties(creature_reach_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME wander_interval_test
     SOURCES
         src/Activity/Agents/WanderActivityAgent.cpp

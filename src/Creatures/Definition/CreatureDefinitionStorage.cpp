@@ -339,6 +339,13 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           b.value("min", nlohmann::json::array()), def.bounds.minSizeBlocks);
     }
     def.eyeHeight = data.value("eye_height", def.eyeHeight);
+    // An eye above the collision box puts the possessed camera inside the
+    // blocks over a tunnel the body fits through.
+    if (def.bounds.restSizeBlocks.y > 0.0f &&
+        def.eyeHeight > def.bounds.restSizeBlocks.y)
+    {
+      def.eyeHeight = def.bounds.restSizeBlocks.y * 0.92f;
+    }
     def.locomotionArchetype = ParseLocomotionArchetype(
         data.value("locomotion_archetype", "terrestrial_biped"));
     def.habitat = ParseCreatureHabitat(data.value("habitat", "terrestrial"));

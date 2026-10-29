@@ -53,6 +53,10 @@ namespace
 {
 
 constexpr float kMinReasonablePlayerY = -32.0f;
+// Creature simulation step cap. The raw frame delta is unbounded (a save or
+// alt-tab stall reported seconds), and one huge step teleported mobs several
+// blocks, saturated gravity and burned wander timers in a single tick.
+constexpr float kMaxCreatureStepDt = 0.1f;
 
 } // namespace
 
@@ -456,6 +460,7 @@ void UWorld::RunLegacyPhysicsFrame()
   }
   const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
   const float dt = camera ? camera->GetDeltaTime() : 0.0f;
+  const float creatureDt = std::min(dt, kMaxCreatureStepDt);
   glm::ivec3 feetBlockForReadiness(0);
   bool hasFeetBlockForReadiness = false;
   if (camera && Streaming->HasStreamer() && IsStreamingEnabled())
@@ -597,7 +602,7 @@ void UWorld::RunLegacyPhysicsFrame()
     const bool stress_tick =
         streaming_red || GetWallFrameDelta() * 1000.0 > 28.0;
     UWorldCreatureActivitySink activitySink(*this);
-    Environment.TickActivity(*this, activitySink, dt, stress_tick);
+    Environment.TickActivity(*this, activitySink, creatureDt, stress_tick);
   }
   else
   {
@@ -607,7 +612,8 @@ void UWorld::RunLegacyPhysicsFrame()
   PhysicsTelemetryData.EnvironmentTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
 
-  TickNpcCreatureIntents(dt, tick_world_ai, mountId, mountOriginBefore);
+  TickNpcCreatureIntents(creatureDt, tick_world_ai, mountId,
+                         mountOriginBefore);
   if (mountId != 0 && camera)
   {
     // Riding counts as movement: user position/intersection follow the

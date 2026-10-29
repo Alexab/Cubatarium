@@ -1598,6 +1598,39 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       });
                 }
               }
+              // Pick QA (CUBA_FLIGHT_QA_PICK=1): aim at each QA creature from
+              // the player's eye and log what the view pick returns (it used
+              // to return the viewer itself).
+              if (qaBehaviorSpawned && qaBehaviorFrame % 30 == 15 &&
+                  std::getenv("CUBA_FLIGHT_QA_PICK") != nullptr)
+              {
+                if (auto cam = world->GetCurrentUserCamera())
+                {
+                  const glm::vec3 eye = cam->GetPosition();
+                  world->ForEachCreature(
+                      [&](const UCreature &creature)
+                      {
+                        if (creature.GetSpawnSource() != CreatureSpawnSource::Qa)
+                        {
+                          return;
+                        }
+                        const glm::vec3 size =
+                            creature.GetBounds().profile.restSizeBlocks;
+                        const glm::vec3 aim =
+                            creature.GetBodyOrigin() +
+                            glm::vec3(0.0f, size.y * 0.5f, 0.0f) - eye;
+                        const auto picked =
+                            world->PickCreatureByView(eye, aim, 64.0f);
+                        qaBehaviorLog << "pick f=" << qaBehaviorFrame
+                                      << " target=" << creature.GetTypeId()
+                                      << "#" << creature.GetId() << " got="
+                                      << (picked ? *picked : 0) << " self="
+                                      << world->GetControlledCreatureId()
+                                      << " dist=" << glm::length(aim)
+                                      << std::endl;
+                      });
+                }
+              }
               if (qaBehaviorSpawned && qaBehaviorFrame % 30 == 0)
               {
                 world->ForEachCreature(

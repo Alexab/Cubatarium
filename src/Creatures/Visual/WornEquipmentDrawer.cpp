@@ -23,6 +23,7 @@
 #include <array>
 #include <cctype>
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -549,6 +550,54 @@ void SubmitItemOnBones(UGeometryEngine *engine, UShaderProgram *shader,
   }
 }
 
+struct PartsMeshesFit
+{
+  std::vector<BoneSkeletonCubeMeshCpu> meshes;
+  glm::mat4 fit{1.f};
+};
+
+const PartsMeshesFit &CachedPartsMeshes(const std::string &itemId)
+{
+  static std::mutex mu;
+  static std::unordered_map<std::string, std::unique_ptr<PartsMeshesFit>>
+      cache;
+  std::lock_guard<std::mutex> lock(mu);
+  std::unique_ptr<PartsMeshesFit> &slot = cache[itemId];
+  if (slot)
+  {
+    return *slot;
+  }
+  slot = std::make_unique<PartsMeshesFit>();
+  slot->meshes = LoadPartsMeshes(itemId);
+  if (slot->meshes.empty())
+  {
+    slot->meshes.push_back(BuildBoxMesh(glm::vec3(0.f, 0.18f, 0.f),
+                                        glm::vec3(0.07f, 0.38f, 0.07f)));
+  }
+  glm::vec3 minV(1e9f), maxV(-1e9f);
+  for (const auto &mesh : slot->meshes)
+  {
+    for (size_t i = 0; i + 4 < mesh.interleavedPosUv.size(); i += 5)
+    {
+      const glm::vec3 p(mesh.interleavedPosUv[i], mesh.interleavedPosUv[i + 1],
+                        mesh.interleavedPosUv[i + 2]);
+      minV = glm::min(minV, p);
+      maxV = glm::max(maxV, p);
+    }
+  }
+  if (minV.x <= maxV.x)
+  {
+    const glm::vec3 center = (minV + maxV) * 0.5f;
+    const glm::vec3 ext = maxV - minV;
+    const float maxExtent =
+        std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
+    const float scale = 0.7f / maxExtent;
+    slot->fit = glm::scale(glm::mat4(1.f), glm::vec3(scale)) *
+                glm::translate(glm::mat4(1.f), -center);
+  }
+  return *slot;
+}
+
 void SubmitItemOnSingleBone(UGeometryEngine *engine, UShaderProgram *shader,
                             const std::string &itemId,
                             const std::string &boneName, float extraScale,
@@ -601,48 +650,13 @@ void SubmitItemOnSingleBone(UGeometryEngine *engine, UShaderProgram *shader,
     return;
   }
 
-  // parts_v1 / procedural rod when glTF missing.
-  std::vector<BoneSkeletonCubeMeshCpu> parts = LoadPartsMeshes(itemId);
-  if (parts.empty())
-  {
-    parts.push_back(BuildBoxMesh(glm::vec3(0.f, 0.18f, 0.f),
-                                 glm::vec3(0.07f, 0.38f, 0.07f)));
-  }
-  glm::vec3 minV(1e9f), maxV(-1e9f);
-  for (const auto &mesh : parts)
-  {
-    for (size_t i = 0; i + 4 < mesh.interleavedPosUv.size(); i += 5)
-    {
-      const glm::vec3 p(mesh.interleavedPosUv[i], mesh.interleavedPosUv[i + 1],
-                        mesh.interleavedPosUv[i + 2]);
-      minV = glm::min(minV, p);
-      maxV = glm::max(maxV, p);
-    }
-  }
-  glm::mat4 fit(1.f);
-  if (minV.x <= maxV.x)
-  {
-    const glm::vec3 center = (minV + maxV) * 0.5f;
-    const glm::vec3 ext = maxV - minV;
-    const float maxExtent =
-        std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
-    const float scale = 0.7f / maxExtent;
-    fit = glm::scale(glm::mat4(1.f), glm::vec3(scale)) *
-          glm::translate(glm::mat4(1.f), -center);
-  }
-  const glm::mat4 mvp = viewProj * bodyMat * boneMat * wearLocal * fit;
-  // Keep parts alive for queue path: static cache keyed by item.
-  static std::mutex partsMu;
-  static std::unordered_map<std::string, std::vector<BoneSkeletonCubeMeshCpu>>
-      partsCache;
-  std::vector<BoneSkeletonCubeMeshCpu> *owned = &parts;
-  if (!immediate && engine)
-  {
-    std::lock_guard<std::mutex> lock(partsMu);
-    partsCache[itemId] = std::move(parts);
-    owned = &partsCache[itemId];
-  }
-  for (const auto &mesh : *owned)
+  // parts_v1 / procedural rod when glTF missing. Built once per item and
+  // never replaced: queued draws keep pointers into these meshes until the
+  // frame's flush, and rebuilding per call (with a JSON read from disk every
+  // frame) left the queue of an earlier wielder of the same item dangling.
+  const PartsMeshesFit &partsFit = CachedPartsMeshes(itemId);
+  const glm::mat4 mvp = viewProj * bodyMat * boneMat * wearLocal * partsFit.fit;
+  for (const auto &mesh : partsFit.meshes)
   {
     DrawMeshImmediateOrQueue(engine, shader, mvp, fallbackTex, mesh, immediate);
   }

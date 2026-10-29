@@ -1,5 +1,6 @@
 #include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureReach.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Influence/BareHandToolInfluenceProvider.h"
 #include "Creatures/Influence/InfluenceHitMath.h"
@@ -26,13 +27,6 @@ uint64_t ResolveTargetId(const CreatureIntent &intent)
 InfluenceChannel ResolveChannel(const CreatureIntent &intent)
 {
   return intent.Influence.Channel;
-}
-
-float HorizontalDistance(const glm::vec3 &a, const glm::vec3 &b)
-{
-  const float dx = a.x - b.x;
-  const float dz = a.z - b.z;
-  return std::sqrt(dx * dx + dz * dz);
 }
 } // namespace
 
@@ -390,8 +384,9 @@ InfluencePrediction InfluenceResolver::Resolve(
     return pred;
   }
 
-  const float dist =
-      HorizontalDistance(source.GetBodyOrigin(), target->GetBodyOrigin());
+  const float dist = MeleeDistanceXZ(
+      source.GetBodyOrigin(), source.GetBounds().profile.restSizeBlocks,
+      target->GetBodyOrigin(), target->GetBounds().profile.restSizeBlocks);
   const float reach = cap.RangeBlocks + 0.35f;
   if (dist > reach)
   {
