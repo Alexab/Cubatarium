@@ -1,3 +1,4 @@
+#include "Render/Engine/EnvironmentLight.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Core/FrameDeadline.h"
@@ -1199,12 +1200,8 @@ void ConsiderGreedyVertexLightTriangle(const glm::vec3 &surface,
 
 float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
 {
-  float scale = env.WeatherSkyAttenuation;
-  if (env.PrecipitationIntensity > 0.05f)
-  {
-    scale *= 1.0f - std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f) * 0.12f;
-  }
-  return std::clamp(scale, 0.82f, 1.0f);
+  return SkyLightScaleFromWeather(env.WeatherSkyAttenuation,
+                                  env.PrecipitationIntensity);
 }
 
 /// Per-chunk eased exit from the provisional light preview. The preview shows

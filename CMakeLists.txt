@@ -1415,6 +1415,14 @@ add_test(NAME creature_model_integrity_test
     COMMAND $<TARGET_FILE:creature_model_integrity_test>)
 set_tests_properties(creature_model_integrity_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME environment_light_test
+    SOURCES
+        src/Test/EnvironmentLightTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME environment_light_test
+    COMMAND $<TARGET_FILE:environment_light_test>)
+set_tests_properties(environment_light_test PROPERTIES LABELS "unit;creatures")
+
 # Collision boxes must match the visible glTF model (see tools/creature_bounds_audit.py).
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)

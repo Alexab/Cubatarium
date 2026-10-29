@@ -17,12 +17,19 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
 #include "Render/Camera/Frustum.h"
+#include "Core/StallTimer.h"
+#include "Render/Engine/EnvironmentLight.h"
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Engine/TextRenderer.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Lighting/LightUtil.h"
 #include "Render/GlIncludes.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/World.h"
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 
 namespace cutum
@@ -304,6 +311,7 @@ void UCreatureDrawPass::DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
       "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
                          1.0f + ActiveHitFlash01, 1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
+  creatureShader->SetVec2("uCreatureLight", ActiveLight);
 
   glBindVertexArray(vao);
   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
@@ -346,9 +354,12 @@ void UCreatureDrawPass::DrawBillboard(const glm::mat4 &mvp, GLuint texture,
   creatureShader->SetInt("uAnimFrameCount", 1);
   creatureShader->SetVec4("uTint", tint);
   creatureShader->SetMat4("mvp_matrix", mvp);
+  // Glow/effect billboards are not lit by the world.
+  creatureShader->SetFloat("uCreatureLitEnabled", 0.0f);
   glBindVertexArray(creatureBillboardVAO);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
+  creatureShader->SetFloat("uCreatureLitEnabled", LightingActive ? 1.0f : 0.0f);
   creatureShader->Unuse();
   glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -389,6 +400,7 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(
       "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
                          1.0f + ActiveHitFlash01, 1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
+  creatureShader->SetVec2("uCreatureLight", ActiveLight);
 
   glBindVertexArray(vao);
   glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indices.size()),
@@ -431,6 +443,7 @@ void UCreatureDrawPass::DrawSkinnedMesh(
       "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
                          1.0f + ActiveHitFlash01, 1.0f));
   creatureSkinnedShader->SetMat4("mvp_matrix", mvp);
+  creatureSkinnedShader->SetVec2("uCreatureLight", ActiveLight);
   BindCreatureBonePaletteBlock(creatureSkinnedShader->GetProgramID(),
                                kCreatureBonePaletteBindingPoint);
   // All primitives of one creature share the palette pointer; upload it once
@@ -487,6 +500,21 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
       static_cast<float>(world.GetEffectiveRenderDistance()) *
       static_cast<float>(CHUNK_SIZE);
 
+  ++FrameCounter;
+  LightingActive = true;
+  ApplyCreatureLightUniforms(world, LightingActive);
+  // Env overrides for QA runs (CUBA_CREATURE_LABELS=1, CUBA_CREATURE_LOCAL_LIGHT=0).
+  static const bool envLabels = std::getenv("CUBA_CREATURE_LABELS") != nullptr;
+  static const char *envLocal = std::getenv("CUBA_CREATURE_LOCAL_LIGHT");
+  const bool localLight =
+      envLocal ? std::atoi(envLocal) != 0 : render.CreatureLocalLight;
+  const bool labels = envLabels || render.CreatureDebugLabels;
+  PendingLabels.clear();
+  static const bool lightBench =
+      std::getenv("CUBA_CREATURE_LIGHT_BENCH") != nullptr;
+  double lightSampleMs = 0.0;
+  int lightSamples = 0;
+
   world.ForEachCreature(
       [&](UCreature &creature)
       {
@@ -527,14 +555,233 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           fallback.Id = animType;
           def = &fallback;
         }
+        glm::vec2 light(1.0f, 0.0f);
+        {
+          const auto lightBegin =
+              lightBench ? std::chrono::steady_clock::now()
+                         : std::chrono::steady_clock::time_point{};
+          light = SampleCreatureLight(world, creature, dt, localLight);
+          if (lightBench)
+          {
+            lightSampleMs += std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() - lightBegin)
+                                 .count();
+            ++lightSamples;
+          }
+        }
+        const size_t firstRequest = Queue.Size();
         SubmitCreatureVisual(world, creature, *def, dt, drawContext, viewProj);
+        Queue.StampLight(firstRequest, light);
+
+        if (labels && !creature.IsPlayerCharacter())
+        {
+          const glm::vec3 size = creature.GetBounds().currentSizeBlocks;
+          const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
+          char text[160];
+          std::snprintf(text, sizeof(text),
+                        "%s #%llu %s v=%.1f box %.2fx%.2fx%.2f",
+                        creature.GetTypeId().c_str(),
+                        static_cast<unsigned long long>(creature.GetId()),
+                        ToString(facts.state), facts.horizontalSpeed, size.x,
+                        size.y, size.z);
+          PendingLabel label;
+          label.World = creature.GetBodyOrigin() +
+                        glm::vec3(0.0f, size.y + 0.6f, 0.0f);
+          label.Text = text;
+          PendingLabels.push_back(std::move(label));
+        }
 
         DrawCreatureHealthBar(creature, viewProj, engine);
 
         draw_debug_bounds();
       });
-  UEngineCreatureDrawSink sink(engine);
+  struct LitSink final : ICreatureDrawSink
+  {
+    LitSink(UCreatureDrawPass &pass, UGeometryEngine &engine)
+        : Pass(pass), Engine(engine)
+    {
+    }
+    void DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
+                          CreaturePartMesh mesh) override
+    {
+      Pass.DrawTexturedPart(mvp, texture, mesh);
+    }
+    void DrawBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
+                              const BoneSkeletonCubeMeshCpu &mesh) override
+    {
+      Pass.DrawBoneSkeletonMesh(mvp, texture, mesh);
+    }
+    void DrawSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
+                         const GltfPrimitiveCpu &mesh,
+                         const std::shared_ptr<const std::vector<glm::mat4>>
+                             &boneMatrices) override
+    {
+      Pass.DrawSkinnedMesh(mvp, texture, mesh, boneMatrices);
+    }
+    void DrawBoxWireframe(const glm::mat4 &mvp,
+                          const glm::vec4 &color) override
+    {
+      Engine.DrawBoxWireframe(mvp, color);
+    }
+    void DrawBillboard(const glm::mat4 &mvp, GLuint texture,
+                       const glm::vec4 &tint) override
+    {
+      Pass.DrawBillboard(mvp, texture, tint);
+    }
+    void SetCreatureLight(const glm::vec2 &skyBlock) override
+    {
+      Pass.SetActiveLight(skyBlock);
+    }
+    UCreatureDrawPass &Pass;
+    UGeometryEngine &Engine;
+  } sink(*this, engine);
   Queue.Flush(sink);
+
+  // Other users of the creature programs (GUI previews) draw unlit.
+  LightingActive = false;
+  ApplyCreatureLightUniforms(world, false);
+  ActiveLight = glm::vec2(1.0f, 0.0f);
+
+  if (lightBench && lightSamples > 0)
+  {
+    static int benchFrames = 0;
+    static double benchTotalMs = 0.0;
+    static int benchSamples = 0;
+    benchTotalMs += lightSampleMs;
+    benchSamples += lightSamples;
+    if (++benchFrames % 300 == 0)
+    {
+      char line[200];
+      std::snprintf(line, sizeof(line),
+                    "local=%d avg %.4f ms/frame, %.2f us/creature "
+                    "(%d creatures last frame)",
+                    localLight ? 1 : 0, benchTotalMs / 300.0,
+                    benchSamples > 0 ? benchTotalMs * 1000.0 / benchSamples
+                                     : 0.0,
+                    lightSamples);
+      StallLogLine("CreatureLightBench", line, 0.0);
+      benchTotalMs = 0.0;
+      benchSamples = 0;
+    }
+  }
+
+  if (labels)
+  {
+    DrawCreatureLabels(world, viewProj, engine);
+  }
+}
+
+void UCreatureDrawPass::ApplyCreatureLightUniforms(const UWorld &world,
+                                                   bool enabled)
+{
+  const UWorld::EnvironmentState &env = world.GetEnvironmentState();
+  const UWorld::LightingSettings &lighting = world.GetLightingSettings();
+  const float skyScale = SkyLightScaleFromWeather(env.WeatherSkyAttenuation,
+                                                  env.PrecipitationIntensity);
+  for (const std::shared_ptr<UShaderProgram> &shader :
+       {creatureShader, creatureSkinnedShader})
+  {
+    if (!shader || !shader->IsValid())
+    {
+      continue;
+    }
+    shader->Use();
+    shader->SetFloat("uCreatureLitEnabled", enabled ? 1.0f : 0.0f);
+    shader->SetFloat("uEnvMinAmbient", lighting.MinAmbient);
+    shader->SetFloat("uEnvDayFactor", env.DayNightFactor);
+    shader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
+    shader->SetFloat("uEnvSkyLightScale", skyScale);
+    shader->Unuse();
+  }
+}
+
+glm::vec2 UCreatureDrawPass::SampleCreatureLight(UWorld &world,
+                                                 const UCreature &creature,
+                                                 float dt, bool localLight)
+{
+  if (!localLight)
+  {
+    return glm::vec2(1.0f, 0.0f);
+  }
+  LightState &state = LightStates[creature.GetId()];
+  state.LastSeenFrame = FrameCounter;
+  const glm::vec3 size = creature.GetBounds().currentSizeBlocks;
+  const glm::vec3 center =
+      creature.GetBodyOrigin() + glm::vec3(0.0f, size.y * 0.5f, 0.0f);
+  const glm::ivec3 cell(static_cast<int>(std::floor(center.x)),
+                        static_cast<int>(std::floor(center.y)),
+                        static_cast<int>(std::floor(center.z)));
+  state.SecondsToResample -= dt;
+  if (cell != state.Cell || state.SecondsToResample <= 0.0f)
+  {
+    state.Cell = cell;
+    state.SecondsToResample = 0.25f;
+    const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(cell);
+    if (const UChunk *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(chunkCoord))
+    {
+      const glm::ivec3 local = cell - chunkCoord * CHUNK_SIZE;
+      const uint8_t packed = chunk->GetLightPackedLocal(local);
+      state.Target = glm::vec2(
+          static_cast<float>(UnpackSky(packed)) / kMaxLightLevel,
+          static_cast<float>(UnpackBlock(packed)) / kMaxLightLevel);
+    }
+    // Not loaded or not lit yet: keep the previous target.
+  }
+  // Ease toward the target (~0.15 s) so crossing cell borders never pops.
+  const float blend = std::clamp(dt * 7.0f, 0.0f, 1.0f);
+  state.Current += (state.Target - state.Current) * blend;
+
+  // Drop state of creatures not drawn for a while (cheap, amortized).
+  if ((FrameCounter & 255u) == 0)
+  {
+    for (auto it = LightStates.begin(); it != LightStates.end();)
+    {
+      it = (FrameCounter - it->second.LastSeenFrame > 600)
+               ? LightStates.erase(it)
+               : std::next(it);
+    }
+  }
+  return state.Current;
+}
+
+void UCreatureDrawPass::DrawCreatureLabels(UWorld &world,
+                                           const glm::mat4 &viewProj,
+                                           UGeometryEngine &engine)
+{
+  (void)world;
+  UTextRenderer *text = engine.GetTextRenderer();
+  if (!text || PendingLabels.empty())
+  {
+    return;
+  }
+  GLint viewport[4] = {0, 0, 1, 1};
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  const GLboolean depthWas = glIsEnabled(GL_DEPTH_TEST);
+  glDisable(GL_DEPTH_TEST);
+  for (const PendingLabel &label : PendingLabels)
+  {
+    const glm::vec4 clip = viewProj * glm::vec4(label.World, 1.0f);
+    if (clip.w <= 0.05f)
+    {
+      continue;
+    }
+    const glm::vec3 ndc = glm::vec3(clip) / clip.w;
+    if (std::abs(ndc.x) > 1.0f || std::abs(ndc.y) > 1.0f)
+    {
+      continue;
+    }
+    const float x = (ndc.x * 0.5f + 0.5f) * static_cast<float>(viewport[2]);
+    const float y = (ndc.y * 0.5f + 0.5f) * static_cast<float>(viewport[3]);
+    const float scale = 0.5f;
+    const glm::vec2 extent = text->GetTextSize(label.Text, scale);
+    text->RenderText(label.Text, x - extent.x * 0.5f, y, scale,
+                     glm::vec3(1.0f, 0.95f, 0.45f));
+  }
+  if (depthWas)
+  {
+    glEnable(GL_DEPTH_TEST);
+  }
 }
 
 void UCreatureDrawPass::SubmitCreatureVisual(

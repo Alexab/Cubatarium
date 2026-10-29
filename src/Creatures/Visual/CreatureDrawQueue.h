@@ -37,6 +37,14 @@ public:
   {
     Requests.push_back(std::move(request));
   }
+  /// Gives every request pushed since `first` the creature's local light.
+  void StampLight(size_t first, const glm::vec2 &light)
+  {
+    for (size_t i = first; i < Requests.size(); ++i)
+    {
+      Requests[i].Light = light;
+    }
+  }
   void Flush(ICreatureDrawSink &sink);
 
   size_t Size() const { return Requests.size(); }

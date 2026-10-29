@@ -34,6 +34,8 @@ struct CreatureDrawRequest
   std::shared_ptr<const std::vector<glm::mat4>> BoneMatrices;
   glm::vec4 WireColor{1.f};
   glm::vec4 Tint{1.f};
+  /// Local light of the owning creature: x = sky 0..1, y = block 0..1.
+  glm::vec2 Light{1.f, 0.f};
 };
 
 } // namespace cutum

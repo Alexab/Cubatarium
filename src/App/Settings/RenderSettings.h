@@ -35,6 +35,11 @@ struct RenderSettings
   /// Draw creature current/max collision AABB wireframes (in addition to mob
   /// visual).
   bool CreatureDebugBounds{false};
+  /// Name / id / state / collision-box text above every creature (debugging).
+  bool CreatureDebugLabels{false};
+  /// Creatures are lit by the light of the cell they stand in (sky + block).
+  /// When off they only follow the day/night curve.
+  bool CreatureLocalLight{true};
   /// Draw rigid_voxels as textured multi-part cubes (when false, wireframe
   /// fallback per part).
   bool CreatureTexturedParts{true};

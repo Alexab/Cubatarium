@@ -1484,8 +1484,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   world->ForEachCreature(
                       [&](const UCreature &creature)
                       {
+                        // CUBA_FLIGHT_QA_RIDE_SPECIES picks the mount by
+                        // species (default: first QA creature).
+                        const char *rideSpecies =
+                            std::getenv("CUBA_FLIGHT_QA_RIDE_SPECIES");
                         if (rideId == 0 && creature.GetSpawnSource() ==
-                                               CreatureSpawnSource::Qa)
+                                               CreatureSpawnSource::Qa &&
+                            (rideSpecies == nullptr ||
+                             creature.GetTypeId() == rideSpecies))
                         {
                           rideId = creature.GetId();
                         }

@@ -424,6 +424,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Render.BatchCache = r.value("batch_cache", Render.BatchCache);
         Render.CreatureDebugBounds =
             r.value("creature_debug_bounds", Render.CreatureDebugBounds);
+        Render.CreatureDebugLabels =
+            r.value("creature_debug_labels", Render.CreatureDebugLabels);
+        Render.CreatureLocalLight =
+            r.value("creature_local_light", Render.CreatureLocalLight);
         Render.CreatureTexturedParts =
             r.value("creature_textured_parts", Render.CreatureTexturedParts);
         Render.CreatureWireframeOverlay = r.value(
@@ -768,6 +772,8 @@ void UCore::SaveConfigFile()
   render_json["frustum_culling"] = Render.FrustumCulling;
   render_json["batch_cache"] = Render.BatchCache;
   render_json["creature_debug_bounds"] = Render.CreatureDebugBounds;
+  render_json["creature_debug_labels"] = Render.CreatureDebugLabels;
+  render_json["creature_local_light"] = Render.CreatureLocalLight;
   render_json["creature_textured_parts"] = Render.CreatureTexturedParts;
   render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
   render_json["distance_fog"] = Render.DistanceFog;
