@@ -1,6 +1,7 @@
 #ifndef CREATUREENVIRONMENT_H
 #define CREATUREENVIRONMENT_H
 
+#include <optional>
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "World/Math/CollisionVolume.h"
@@ -92,6 +93,12 @@ bool HabitatAllowsAtForSpawn(const UWorld &world, CreatureHabitat habitat,
 float ResolveViewerEyeHeight(const UWorld &world);
 
 glm::ivec2 ResolveSpawnProbeColumn(const UWorld &world);
+
+/// Ground feet Y for a terrestrial body: the highest support under any
+/// footprint sample (center + edge/corner samples), so a body straddling a
+/// one-block step stands on the higher block instead of sinking into it.
+std::optional<float> ResolveTerrestrialFootprintFeetY(
+    const UWorld &world, const glm::vec3 &origin, const glm::vec3 &sizeBlocks);
 
 glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
                                   const CreatureDefinition &def,

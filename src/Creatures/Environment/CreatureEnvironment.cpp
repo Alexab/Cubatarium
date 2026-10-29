@@ -406,6 +406,38 @@ std::optional<glm::ivec2> ResolveSpawnFluidColumn(const UWorld &world,
                                 kFluidColumnSearchRadius);
 }
 
+std::optional<float> ResolveTerrestrialFootprintFeetY(
+    const UWorld &world, const glm::vec3 &origin, const glm::vec3 &sizeBlocks)
+{
+  std::optional<float> best = ResolveTerrestrialGroundFeetY(
+      world, WorldCoordToBlockIndex(origin.x), WorldCoordToBlockIndex(origin.z),
+      origin.y);
+  // Edge samples use the bounded "under" query only: the column fallback
+  // would pick a hilltop or cave roof beside the body.
+  const float hx = std::max(0.0f, sizeBlocks.x * 0.5f - 0.05f);
+  const float hz = std::max(0.0f, sizeBlocks.z * 0.5f - 0.05f);
+  for (const float dx : {-hx, 0.0f, hx})
+  {
+    for (const float dz : {-hz, 0.0f, hz})
+    {
+      if (dx == 0.0f && dz == 0.0f)
+      {
+        continue;
+      }
+      if (const std::optional<float> feetY = world.QueryGroundFeetYUnder(
+              WorldCoordToBlockIndex(origin.x + dx),
+              WorldCoordToBlockIndex(origin.z + dz), origin.y))
+      {
+        if (!best || *feetY > *best)
+        {
+          best = feetY;
+        }
+      }
+    }
+  }
+  return best;
+}
+
 glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
                                   const CreatureDefinition &def,
                                   const glm::vec3 &viewProbe)
@@ -417,11 +449,13 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
   {
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
-    if (const std::optional<float> feetY =
-            ResolveTerrestrialGroundFeetY(world, probeGx, probeGz, viewProbe.y))
+    if (const std::optional<float> feetY = ResolveTerrestrialFootprintFeetY(
+            world, viewProbe, def.bounds.restSizeBlocks))
     {
       return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
+    (void)probeGx;
+    (void)probeGz;
     return viewProbe;
   }
 
@@ -868,8 +902,10 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
   {
     const int gx = WorldCoordToBlockIndex(probeOrigin.x);
     const int gz = WorldCoordToBlockIndex(probeOrigin.z);
-    if (const std::optional<float> feetY =
-            ResolveTerrestrialGroundFeetY(world, gx, gz, probeOrigin.y))
+    (void)gx;
+    (void)gz;
+    if (const std::optional<float> feetY = ResolveTerrestrialFootprintFeetY(
+            world, probeOrigin, def.bounds.restSizeBlocks))
     {
       return glm::vec3(probeOrigin.x, *feetY, probeOrigin.z);
     }

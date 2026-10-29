@@ -433,8 +433,8 @@ void UWorldEnvironment::SnapCreatureFeetToGround(UCreature &creature) const
   const glm::vec3 origin = creature.GetBodyOrigin();
   const int gx = WorldCoordToBlockIndex(origin.x);
   const int gz = WorldCoordToBlockIndex(origin.z);
-  if (const std::optional<float> feetY =
-          Owner.QueryGroundFeetYUnder(gx, gz, origin.y))
+  if (const std::optional<float> feetY = cutum::ResolveTerrestrialFootprintFeetY(
+          Owner, origin, creature.GetBounds().profile.restSizeBlocks))
   {
     creature.SetBodyOrigin(glm::vec3(origin.x, *feetY, origin.z));
   }

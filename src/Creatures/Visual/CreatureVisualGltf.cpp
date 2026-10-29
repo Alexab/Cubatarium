@@ -55,7 +55,9 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
   }
   if (MeshAsset)
   {
-    ModelFeetOffsetY -= MeshAsset->bindMinY;
+    // bindMinY is in unscaled model units; the offset is applied in world
+    // blocks, so scale it (kitten model_scale 0.35 used to sink/float).
+    ModelFeetOffsetY -= MeshAsset->bindMinY * ModelScale;
   }
 
   RootAnimMatrix = glm::mat4(1.f);
