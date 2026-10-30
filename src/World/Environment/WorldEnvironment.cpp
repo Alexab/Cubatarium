@@ -12,6 +12,7 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
+#include "Creatures/Environment/CreatureSpawnPlacement.h"
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Spawning/CreaturePopulationRules.h"
@@ -726,7 +727,7 @@ UWorldEnvironment::GetResolvedAppearance(const UCreature &creature) const
   return resolved;
 }
 
-glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world)
+glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world, float aheadBlocks)
 {
   const float eyeHeight = ResolveViewerEyeHeight(world);
   const glm::vec3 eyeOffset(0.0f, eyeHeight, 0.0f);
@@ -738,18 +739,18 @@ glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world)
     forward.y = 0.0f;
     if (glm::length(forward) > 0.01f)
     {
-      bodyOrigin =
-          camera->GetPosition() - eyeOffset + glm::normalize(forward) * 3.0f;
+      bodyOrigin = camera->GetPosition() - eyeOffset +
+                   glm::normalize(forward) * aheadBlocks;
     }
     else
     {
-      bodyOrigin =
-          camera->GetPosition() - eyeOffset + glm::vec3(3.0f, 0.0f, 0.0f);
+      bodyOrigin = camera->GetPosition() - eyeOffset +
+                   glm::vec3(aheadBlocks, 0.0f, 0.0f);
     }
   }
   else if (UCreature *player = world.GetPlayerCreature())
   {
-    bodyOrigin = player->GetBodyOrigin() + glm::vec3(3.0f, 0.0f, 0.0f);
+    bodyOrigin = player->GetBodyOrigin() + glm::vec3(aheadBlocks, 0.0f, 0.0f);
   }
   return bodyOrigin;
 }
@@ -757,39 +758,49 @@ glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world)
 namespace
 {
 
+/// Viewer body (feet origin + size) that spawn candidates must keep clear
+/// of. Taken from the camera when there is one: the view is what the spawn
+/// is placed against.
+void ResolveSpawnViewer(UWorld &world, glm::vec3 &origin, glm::vec3 &size)
+{
+  size = glm::vec3(0.6f, 1.8f, 0.6f);
+  const UCreature *player = world.GetPlayerCreature();
+  if (player)
+  {
+    size = player->GetBounds().profile.restSizeBlocks;
+    origin = player->GetBodyOrigin();
+  }
+  else
+  {
+    origin = world.GetSpawnPoint();
+  }
+  if (auto camera = world.GetCurrentUserCamera())
+  {
+    origin = camera->GetPosition() -
+             glm::vec3(0.0f, ResolveViewerEyeHeight(world), 0.0f);
+  }
+}
+
 glm::vec3 ComputeSpawnProbeOrigin(UWorld &world, const CreatureDefinition &def)
 {
-  const glm::vec3 viewProbe = ComputeSpawnBodyOriginAhead(world);
+  glm::vec3 viewerOrigin;
+  glm::vec3 viewerSize;
+  ResolveSpawnViewer(world, viewerOrigin, viewerSize);
+  const glm::vec3 viewProbe = ComputeSpawnBodyOriginAhead(
+      world, SpawnAheadDistance(0.5f * std::max(viewerSize.x, viewerSize.z),
+                                def.bounds.restSizeBlocks));
   return SnapSpawnProbeToHabitat(world, def, viewProbe);
 }
 
-std::vector<glm::vec3> BuildSpawnProbeCandidates(const glm::vec3 &baseOrigin)
+std::vector<glm::vec3> BuildSpawnProbeCandidates(UWorld &world,
+                                                 const CreatureDefinition &def,
+                                                 const glm::vec3 &baseOrigin)
 {
-  return {
-      baseOrigin,
-      baseOrigin + glm::vec3(1.0f, 0.0f, 0.0f),
-      baseOrigin + glm::vec3(-1.0f, 0.0f, 0.0f),
-      baseOrigin + glm::vec3(0.0f, 0.0f, 1.0f),
-      baseOrigin + glm::vec3(0.0f, 0.0f, -1.0f),
-      baseOrigin + glm::vec3(2.0f, 0.0f, 0.0f),
-      baseOrigin + glm::vec3(-2.0f, 0.0f, 0.0f),
-      baseOrigin + glm::vec3(0.0f, 0.0f, 2.0f),
-      baseOrigin + glm::vec3(0.0f, 0.0f, -2.0f),
-      baseOrigin + glm::vec3(3.0f, 0.0f, 0.0f),
-      baseOrigin + glm::vec3(-3.0f, 0.0f, 0.0f),
-      baseOrigin + glm::vec3(0.0f, 0.0f, 3.0f),
-      baseOrigin + glm::vec3(0.0f, 0.0f, -3.0f),
-      baseOrigin + glm::vec3(1.0f, 0.0f, 1.0f),
-      baseOrigin + glm::vec3(-1.0f, 0.0f, 1.0f),
-      baseOrigin + glm::vec3(1.0f, 0.0f, -1.0f),
-      baseOrigin + glm::vec3(-1.0f, 0.0f, -1.0f),
-      baseOrigin + glm::vec3(0.0f, 1.0f, 0.0f),
-      baseOrigin + glm::vec3(0.0f, 2.0f, 0.0f),
-      baseOrigin + glm::vec3(1.0f, 1.0f, 0.0f),
-      baseOrigin + glm::vec3(-1.0f, 1.0f, 0.0f),
-      baseOrigin + glm::vec3(0.0f, 1.0f, 1.0f),
-      baseOrigin + glm::vec3(0.0f, 1.0f, -1.0f),
-  };
+  glm::vec3 viewerOrigin;
+  glm::vec3 viewerSize;
+  ResolveSpawnViewer(world, viewerOrigin, viewerSize);
+  return BuildSizedSpawnCandidates(baseOrigin, def.bounds.restSizeBlocks,
+                                   viewerOrigin, viewerSize);
 }
 
 void RemapLegacySpeciesType(std::string &type)
@@ -844,7 +855,7 @@ bool UWorldEnvironment::SpawnCreatureByView(const std::string &speciesId)
     return false;
   }
   const glm::vec3 baseOrigin = ComputeSpawnProbeOrigin(Owner, *def);
-  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(baseOrigin))
+  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(Owner, *def, baseOrigin))
   {
     if (SpawnCreature(speciesId, probe, "",
                       CreatureSpawnSource::CreativeManual) != 0)
@@ -877,7 +888,7 @@ bool UWorldEnvironment::CanSpawnCreatureByView(const std::string &speciesId)
     return false;
   }
   const glm::vec3 baseOrigin = ComputeSpawnProbeOrigin(Owner, *def);
-  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(baseOrigin))
+  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(Owner, *def, baseOrigin))
   {
     if (CanSpawnCreatureAt(Owner, *def, probe))
     {
@@ -914,7 +925,7 @@ UWorldEnvironment::GetCreatureSpawnBlockedHint(const std::string &speciesId)
     return u8"Нельзя спавнить";
   }
   const glm::vec3 baseOrigin = ComputeSpawnProbeOrigin(Owner, *def);
-  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(baseOrigin))
+  for (const glm::vec3 &probe : BuildSpawnProbeCandidates(Owner, *def, baseOrigin))
   {
     if (CanSpawnCreatureAt(Owner, *def, probe))
     {

@@ -1441,6 +1441,74 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               static int qaBehaviorFrame = 0;
               static std::ofstream qaBehaviorLog("qa_behavior.txt");
               ++qaBehaviorFrame;
+              // View-spawn QA (CUBA_FLIGHT_QA_VIEWSPAWN=ogre,whale,...): try
+              // the creative "spawn by view" for each species facing four
+              // directions, log the outcome (or the blocked hint) and the
+              // distance from the player, then remove the spawned creature.
+              if (const char *qaViewSpawn =
+                      std::getenv("CUBA_FLIGHT_QA_VIEWSPAWN");
+                  qaViewSpawn != nullptr && qaBehaviorFrame == 90 &&
+                  ingame_frames_seen >= 60)
+              {
+                if (auto camera = world->GetCurrentUserCamera())
+                {
+                  std::string list(qaViewSpawn);
+                  size_t start = 0;
+                  while (start <= list.size())
+                  {
+                    const size_t comma = list.find(',', start);
+                    const std::string species = list.substr(
+                        start, comma == std::string::npos ? std::string::npos
+                                                          : comma - start);
+                    start = comma == std::string::npos ? list.size() + 1
+                                                       : comma + 1;
+                    if (species.empty())
+                    {
+                      continue;
+                    }
+                    for (const float yaw : {0.0f, 90.0f, 180.0f, 270.0f})
+                    {
+                      camera->SetOrientation(yaw, -30.0f);
+                      CreatureId maxId = 0;
+                      world->ForEachCreature(
+                          [&](const UCreature &c)
+                          { maxId = std::max(maxId, c.GetId()); });
+                      const bool ok = world->SpawnCreatureByView(species);
+                      qaBehaviorLog << "viewspawn " << species << " yaw=" << yaw
+                                    << " ok=" << ok;
+                      CreatureId newId = 0;
+                      world->ForEachCreature(
+                          [&](const UCreature &c)
+                          {
+                            if (c.GetId() > maxId)
+                            {
+                              newId = c.GetId();
+                            }
+                          });
+                      if (const UCreature *spawned = world->GetCreature(newId))
+                      {
+                        const glm::vec3 p = spawned->GetBodyOrigin();
+                        const glm::vec3 cp = camera->GetPosition();
+                        qaBehaviorLog
+                            << " pos=" << p.x << "," << p.y << "," << p.z
+                            << " distXZ="
+                            << std::hypot(p.x - cp.x, p.z - cp.z)
+                            << " inBlock="
+                            << world->CheckBlockCollisionVolume(
+                                   spawned->GetCollisionVolume());
+                        world->RemoveCreature(newId);
+                      }
+                      else
+                      {
+                        qaBehaviorLog
+                            << " hint="
+                            << world->GetCreatureSpawnBlockedHint(species);
+                      }
+                      qaBehaviorLog << std::endl;
+                    }
+                  }
+                }
+              }
               // Melee QA (CUBA_FLIGHT_QA_MELEE=1): log every attack event of
               // a QA creature with its outcome and whether the straight ray
               // from the attacker's eye to the target's center crosses blocks.

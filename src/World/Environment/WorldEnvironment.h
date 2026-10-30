@@ -192,9 +192,9 @@ private:
   mutable const USkinDefinitionStorage *AppearanceCacheSkinsPtr{nullptr};
 };
 
-/// Body origin ~3 blocks ahead of the viewer camera (falls back to the world
-/// spawn point / player body). Shared by palette spawn, QA and /spawn.
-glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world);
+/// Body origin `aheadBlocks` ahead of the viewer camera (falls back to the
+/// world spawn point / player body). Shared by palette spawn, QA and /spawn.
+glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world, float aheadBlocks = 3.0f);
 
 } // namespace cutum
 
