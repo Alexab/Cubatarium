@@ -787,7 +787,7 @@ void UCreatureDrawPass::SubmitCreatureVisual(
   {
     return;
   }
-  visual->SetAppearance(world.GetResolvedAppearance(creature));
+  visual->SetAppearanceShared(world.GetResolvedAppearanceShared(creature));
   const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
   CreaturePoseParams pose;
   // Procedural pose parameters are only consumed by the rigid backend;

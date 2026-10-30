@@ -62,7 +62,7 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
 
   RootAnimMatrix = glm::mat4(1.f);
   ActiveAnimation = nullptr;
-  BoneMatrices.reset();
+  HasBonePalette = false;
   if (MeshAsset)
   {
     const auto clipId =
@@ -116,11 +116,16 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
           ClipClock.GetFadeClip().empty()
               ? nullptr
               : findAnimation(ClipClock.GetFadeClip());
-      BoneMatrices = std::make_shared<const std::vector<glm::mat4>>(
-          ComputeGltfSkinMatricesBlended(
-              *MeshAsset, ActiveAnimation, ClipClock.GetTime(), fadeAnimation,
-              ClipClock.GetFadeTime(),
-              fadeAnimation ? ClipClock.GetFadeWeight() : 0.f));
+      if (!BoneMatrices || BoneMatrices.use_count() > 1)
+      {
+        BoneMatrices = std::make_shared<std::vector<glm::mat4>>();
+      }
+      ComputeGltfSkinMatricesInto(
+          *MeshAsset, ActiveAnimation, ClipClock.GetTime(), fadeAnimation,
+          ClipClock.GetFadeTime(),
+          fadeAnimation ? ClipClock.GetFadeWeight() : 0.f, SkinScratch,
+          *BoneMatrices);
+      HasBonePalette = true;
     }
     else if (ActiveAnimation)
     {
@@ -160,7 +165,8 @@ void UCreatureVisualGltf::SubmitDraw(const CreatureDrawContext &ctx,
     CreatureDrawRequest req;
     req.Mvp = mvp;
     req.Texture = tex;
-    if (prim.skinned && BoneMatrices && !BoneMatrices->empty())
+    if (prim.skinned && HasBonePalette && BoneMatrices &&
+        !BoneMatrices->empty())
     {
       req.Kind = CreatureDrawKind::SkinnedMesh;
       req.SkinnedPrimitive = &prim;

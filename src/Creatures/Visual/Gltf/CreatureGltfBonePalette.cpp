@@ -79,18 +79,6 @@ NodeTrs SampleNodeTrs(const GltfNodeCpu &rest, const GltfAnimationCpu *anim,
   return trs;
 }
 
-glm::mat4 GlobalNodeMatrix(const CreatureGltfMeshAsset &asset, int nodeIndex,
-                           const std::vector<glm::mat4> &locals)
-{
-  glm::mat4 global = locals[static_cast<size_t>(nodeIndex)];
-  const int parent = asset.nodes[static_cast<size_t>(nodeIndex)].parent;
-  if (parent >= 0)
-  {
-    global = GlobalNodeMatrix(asset, parent, locals) * global;
-  }
-  return global;
-}
-
 } // namespace
 
 float GltfAnimationDuration(const GltfAnimationCpu &anim)
@@ -123,9 +111,25 @@ std::vector<glm::mat4> ComputeGltfSkinMatricesBlended(
     float clipTimeSec, const GltfAnimationCpu *fadeAnimation,
     float fadeClipTimeSec, float fadeWeight)
 {
+  GltfSkinScratch scratch;
+  std::vector<glm::mat4> palette;
+  ComputeGltfSkinMatricesInto(asset, animation, clipTimeSec, fadeAnimation,
+                              fadeClipTimeSec, fadeWeight, scratch, palette);
+  return palette;
+}
+
+void ComputeGltfSkinMatricesInto(const CreatureGltfMeshAsset &asset,
+                                 const GltfAnimationCpu *animation,
+                                 float clipTimeSec,
+                                 const GltfAnimationCpu *fadeAnimation,
+                                 float fadeClipTimeSec, float fadeWeight,
+                                 GltfSkinScratch &scratch,
+                                 std::vector<glm::mat4> &palette)
+{
   const bool fading = fadeWeight > 1e-3f;
-  std::vector<glm::mat4> locals(asset.nodes.size(), glm::mat4(1.f));
-  for (size_t i = 0; i < asset.nodes.size(); ++i)
+  const size_t nodeCount = asset.nodes.size();
+  scratch.locals.resize(nodeCount);
+  for (size_t i = 0; i < nodeCount; ++i)
   {
     const int node = static_cast<int>(i);
     NodeTrs trs = SampleNodeTrs(asset.nodes[i], animation, node, clipTimeSec);
@@ -137,24 +141,35 @@ std::vector<glm::mat4> ComputeGltfSkinMatricesBlended(
       trs.scale = glm::mix(trs.scale, from.scale, fadeWeight);
       trs.rotation = glm::slerp(trs.rotation, from.rotation, fadeWeight);
     }
-    locals[i] = TrsMatrix(trs);
+    scratch.locals[i] = TrsMatrix(trs);
   }
 
-  std::vector<glm::mat4> palette(asset.skin.jointNodes.size(), glm::mat4(1.f));
+  // Globals memoized per node: each joint used to walk (and multiply) its
+  // whole parent chain again.
+  scratch.globals.resize(nodeCount);
+  scratch.globalReady.assign(nodeCount, 0);
+  const auto globalOf = [&](int nodeIndex, const auto &self) -> const glm::mat4 &
+  {
+    const size_t i = static_cast<size_t>(nodeIndex);
+    if (!scratch.globalReady[i])
+    {
+      const int parent = asset.nodes[i].parent;
+      scratch.globals[i] = parent >= 0
+                               ? self(parent, self) * scratch.locals[i]
+                               : scratch.locals[i];
+      scratch.globalReady[i] = 1;
+    }
+    return scratch.globals[i];
+  };
+
+  palette.resize(asset.skin.jointNodes.size());
   for (size_t j = 0; j < asset.skin.jointNodes.size(); ++j)
   {
-    const int nodeIndex = asset.skin.jointNodes[j];
-    const glm::mat4 global = GlobalNodeMatrix(asset, nodeIndex, locals);
-    if (j < asset.skin.inverseBindMatrices.size())
-    {
-      palette[j] = global * asset.skin.inverseBindMatrices[j];
-    }
-    else
-    {
-      palette[j] = global;
-    }
+    const glm::mat4 &global = globalOf(asset.skin.jointNodes[j], globalOf);
+    palette[j] = j < asset.skin.inverseBindMatrices.size()
+                     ? global * asset.skin.inverseBindMatrices[j]
+                     : global;
   }
-  return palette;
 }
 
 } // namespace cutum
