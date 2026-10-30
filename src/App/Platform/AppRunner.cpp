@@ -1695,7 +1695,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     {
                       const glm::vec3 p = target->GetBodyOrigin();
                       const float top =
-                          p.y + target->GetBounds().currentSizeBlocks.y;
+                          p.y + target->GetCollisionSize().y;
                       camera->SetFreeMove(false);
                       const char *dropEnv = std::getenv("CUBA_FLIGHT_QA_RIDE");
                       const float drop = std::max(0.3f, std::strtof(dropEnv, nullptr));
@@ -1726,7 +1726,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     qaBehaviorLog
                         << "ride f=" << qaBehaviorFrame << " rider="
                         << r.x << "," << r.y << "," << r.z << " mobTop="
-                        << t.y + target->GetBounds().currentSizeBlocks.y
+                        << t.y + target->GetCollisionSize().y
                         << " mob=" << t.x << "," << t.z << " dxz="
                         << std::hypot(r.x - t.x, r.z - t.z);
                     const CollisionVolume rv = rider->GetCollisionVolume();

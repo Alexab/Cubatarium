@@ -59,6 +59,13 @@ public:
   void SyncFeetFromLocomotion(const UWorld &world,
                               glm::vec3 &eyeAfterLocomotion);
 
+  /// The one size creature collision uses (rest size, turned with the body);
+  /// diagnostics and probes about collision must read this, not
+  /// Bounds.currentSizeBlocks (the stance-blended visual size).
+  const glm::vec3 &GetCollisionSize() const
+  {
+    return Bounds.profile.restSizeBlocks;
+  }
   CollisionVolume GetCollisionVolume() const;
   UCreatureLocomotionController &GetLocomotion() { return Locomotion; }
   const UCreatureLocomotionController &GetLocomotion() const

@@ -575,7 +575,8 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
 
         if (labels && !creature.IsPlayerCharacter())
         {
-          const glm::vec3 size = creature.GetBounds().currentSizeBlocks;
+          // The label reports the collision box.
+          const glm::vec3 size = creature.GetCollisionSize();
           const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
           char text[160];
           std::snprintf(text, sizeof(text),
@@ -863,7 +864,9 @@ void UCreatureDrawPass::DrawCreatureDebugBounds(const UCreature &creature,
     return;
   }
   const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
-  const glm::vec3 sizeBlocks = creature.GetBounds().currentSizeBlocks;
+  // Debug box = the box collision actually uses (the stance size differed
+  // from it for a crouching body).
+  const glm::vec3 sizeBlocks = creature.GetCollisionSize();
   const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, sizeBlocks);
   glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
   model = glm::scale(model, sizeBlocks);

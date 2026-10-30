@@ -37,6 +37,9 @@ struct CreatureBoundsProfile
 struct CreatureBoundsState
 {
   CreatureBoundsProfile profile;
+  /// Stance-blended size (crouch lowers it toward profile.minSizeBlocks) for
+  /// the visuals only. Creature collision, support and anything that reports
+  /// on them use the rest size (UCreature::GetCollisionSize).
   glm::vec3 currentSizeBlocks{0.6f, 1.8f, 0.6f};
   float stanceBlend01{0.0f};
 };

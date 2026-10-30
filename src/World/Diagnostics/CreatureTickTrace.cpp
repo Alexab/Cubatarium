@@ -43,7 +43,7 @@ void RecordCreatureTickTrace(UWorld &world, bool tickWorldAi)
                                        static_cast<int>(std::floor(p.y)) - 1,
                                        static_cast<int>(std::floor(p.z))));
                         const CollisionVolume bodyVol =
-                            CollisionVolumeFromBody(p, creature.GetBounds().currentSizeBlocks);
+                            CollisionVolumeFromBody(p, creature.GetCollisionSize());
                         const bool blockCol = world.CheckBlockCollisionVolume(bodyVol);
                         const bool creatureCol =
                             world.CheckCreatureCollisionVolume(bodyVol, traceId);
@@ -54,7 +54,7 @@ void RecordCreatureTickTrace(UWorld &world, bool tickWorldAi)
                                 static_cast<int>(std::floor(p.z))));
                         const glm::vec3 stepBody = p - glm::vec3(0.0f, 0.25f, 0.0f);
                         const CollisionVolume stepVol =
-                            CollisionVolumeFromBody(stepBody, creature.GetBounds().currentSizeBlocks);
+                            CollisionVolumeFromBody(stepBody, creature.GetCollisionSize());
                         const bool stepBlockCol = world.CheckBlockCollisionVolume(stepVol);
                         const bool stepCreatureCol =
                             world.CheckCreatureCollisionVolume(stepVol, traceId);
@@ -101,9 +101,9 @@ void RecordCreatureTickTrace(UWorld &world, bool tickWorldAi)
                                   << world.GetBlockWorld().GetChunkManager().HasChunk(topChunk)
                                   << " stepBlockCol=" << stepBlockCol
                                   << " stepCreatureCol=" << stepCreatureCol
-                                  << " size=" << creature.GetBounds().currentSizeBlocks.x
-                                  << "," << creature.GetBounds().currentSizeBlocks.y
-                                  << "," << creature.GetBounds().currentSizeBlocks.z
+                                  << " size=" << creature.GetCollisionSize().x
+                                  << "," << creature.GetCollisionSize().y
+                                  << "," << creature.GetCollisionSize().z
                                   << std::endl;
                       });
     }
