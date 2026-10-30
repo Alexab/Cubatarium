@@ -354,7 +354,9 @@ std::shared_ptr<CreatureGltfMeshAsset> LoadItemGltf(const std::string &itemId)
   static std::mutex mu;
   static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
       cache;
+  static uint64_t cacheRevision = 0;
   std::lock_guard<std::mutex> lock(mu);
+  SyncItemModelCache(cache, cacheRevision);
   const auto it = cache.find(itemId);
   if (it != cache.end())
   {
@@ -561,7 +563,11 @@ const PartsMeshesFit &CachedPartsMeshes(const std::string &itemId)
   static std::mutex mu;
   static std::unordered_map<std::string, std::unique_ptr<PartsMeshesFit>>
       cache;
+  static uint64_t cacheRevision = 0;
   std::lock_guard<std::mutex> lock(mu);
+  // Parts follow the item's model_path: a resource-pack apply reloads the
+  // definitions, so the cache must not keep the old pack's meshes.
+  SyncItemModelCache(cache, cacheRevision);
   std::unique_ptr<PartsMeshesFit> &slot = cache[itemId];
   if (slot)
   {

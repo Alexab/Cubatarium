@@ -1,4 +1,5 @@
 #include "Items/ItemDefinitionStorage.h"
+#include <atomic>
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -82,16 +83,35 @@ void UItemDefinitionStorage::EnsureHandDefinition()
   Definitions["hand"] = std::move(hand);
 }
 
+namespace
+{
+std::atomic<uint64_t> g_ItemContentRevision{1};
+} // namespace
+
+uint64_t UItemDefinitionStorage::ContentRevision()
+{
+  return g_ItemContentRevision.load(std::memory_order_acquire);
+}
+
+void UItemDefinitionStorage::BumpContentRevision()
+{
+  g_ItemContentRevision.fetch_add(1, std::memory_order_acq_rel);
+}
+
 void UItemDefinitionStorage::Clear()
 {
-  std::unique_lock lock(DefinitionsMutex);
-  Definitions.clear();
-  EnsureHandDefinition();
+  {
+    std::unique_lock lock(DefinitionsMutex);
+    Definitions.clear();
+    EnsureHandDefinition();
+  }
+  BumpContentRevision();
 }
 
 bool UItemDefinitionStorage::LoadVisualPresets(const std::string &path)
 {
   const bool ok = Presets.Load(path);
+  BumpContentRevision();
   if (ok)
   {
     std::cout << "UItemDefinitionStorage: loaded " << Presets.Count()
@@ -107,6 +127,7 @@ void UItemDefinitionStorage::Load(const std::string &folder)
     Definitions.clear();
     EnsureHandDefinition();
   }
+  BumpContentRevision();
   if (!std::filesystem::exists(folder))
   {
     std::cout << "UItemDefinitionStorage: folder missing " << folder
@@ -155,6 +176,7 @@ void UItemDefinitionStorage::LoadOverlay(const std::string &folder)
   }
   if (overlay_count > 0)
   {
+    BumpContentRevision();
     std::cout << "UItemDefinitionStorage: applied " << overlay_count
               << " item overlay(s)" << std::endl;
   }

@@ -1011,6 +1011,17 @@ cubatarium_add_test(NAME creature_light_cache_test
 add_test(NAME creature_light_cache_test COMMAND $<TARGET_FILE:creature_light_cache_test>)
 set_tests_properties(creature_light_cache_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME item_model_cache_revision_test
+    SOURCES
+        src/Creatures/Core/CreatureInventory.cpp
+        src/Items/ItemDefinitionStorage.cpp
+        src/Items/ItemVisualPresetLibrary.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Test/ItemModelCacheRevisionTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME item_model_cache_revision_test COMMAND $<TARGET_FILE:item_model_cache_revision_test>)
+set_tests_properties(item_model_cache_revision_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME wander_interval_test
     SOURCES
         src/Activity/Agents/WanderActivityAgent.cpp
