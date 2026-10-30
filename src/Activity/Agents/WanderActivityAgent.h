@@ -38,7 +38,7 @@ public:
   /// One wander step for a single creature (also driven by agents of other
   /// behaviors that fall back to roaming when they have nothing to do).
   void TickCreature(CreatureId Id, IUWorldPerception &perception,
-                    IUCreatureActivitySink &sink, float dt);
+                    IUCreatureActivitySink &sink, float dt) override;
   /// Registers the creature's wander state on first use.
   void EnsureCreature(CreatureId Id, const CreatureBehaviorParams &behavior);
 
