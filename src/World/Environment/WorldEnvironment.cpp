@@ -231,7 +231,7 @@ UWorldEnvironment::QueryCreatureNeighborsOverlappingVolume(
   std::vector<CreatureNeighborView> out;
   for (const auto &entry : Creatures)
   {
-    if (entry.first == skip_id)
+    if (entry.first == skip_id || CreatureRemovals.IsPending(entry.first))
     {
       continue;
     }
@@ -361,6 +361,7 @@ UWorldEnvironment::QueryCreatureNeighborsInRadius(const glm::vec3 &center,
 void UWorldEnvironment::ClearCreatures()
 {
   ActivityDirector.Clear();
+  CreatureRemovals.Clear();
   Creatures.clear();
   // Reseed so a world reloaded in one session does not replay the exact
   // same natural-population random stream.
@@ -379,12 +380,20 @@ void UWorldEnvironment::ResetBeforeEntityLoad() { ClearCreatures(); }
 
 UCreature *UWorldEnvironment::GetCreature(CreatureId id)
 {
+  if (CreatureRemovals.IsPending(id))
+  {
+    return nullptr;
+  }
   const auto it = Creatures.find(id);
   return it != Creatures.end() ? it->second.get() : nullptr;
 }
 
 const UCreature *UWorldEnvironment::GetCreature(CreatureId id) const
 {
+  if (CreatureRemovals.IsPending(id))
+  {
+    return nullptr;
+  }
   const auto it = Creatures.find(id);
   return it != Creatures.end() ? it->second.get() : nullptr;
 }
@@ -616,33 +625,65 @@ void UWorldEnvironment::RemoveCreature(CreatureId id)
   {
     PlayerCreatureId = 0;
   }
+  if (Creatures.find(id) == Creatures.end() || CreatureRemovals.IsPending(id))
+  {
+    return;
+  }
   ActivityDirector.OnCreatureRemoved(id);
   CreatureSpatialIndex.Remove(id);
+  if (CreatureRemovals.IsIterating())
+  {
+    // Killed inside a creature loop (melee in the NPC tick): erasing now
+    // would destroy a map entry mid-iteration.
+    CreatureRemovals.Defer(id);
+    return;
+  }
   Creatures.erase(id);
+}
+
+void UWorldEnvironment::FlushPendingCreatureRemovals()
+{
+  if (CreatureRemovals.IsIterating())
+  {
+    return;
+  }
+  for (const CreatureId id : CreatureRemovals.TakePending())
+  {
+    Creatures.erase(id);
+  }
 }
 
 void UWorldEnvironment::ForEachCreature(
     const std::function<void(UCreature &)> &fn)
 {
+  CreatureRemovals.BeginIteration();
   for (auto &entry : Creatures)
   {
-    if (entry.second)
+    if (entry.second && !CreatureRemovals.IsPending(entry.first))
     {
       fn(*entry.second);
     }
+  }
+  if (CreatureRemovals.EndIteration())
+  {
+    FlushPendingCreatureRemovals();
   }
 }
 
 void UWorldEnvironment::ForEachCreature(
     const std::function<void(const UCreature &)> &fn) const
 {
+  CreatureRemovals.BeginIteration();
   for (const auto &entry : Creatures)
   {
-    if (entry.second)
+    if (entry.second && !CreatureRemovals.IsPending(entry.first))
     {
       fn(*entry.second);
     }
   }
+  // A removal requested here waits for the next non-const iteration or an
+  // explicit FlushPendingCreatureRemovals.
+  CreatureRemovals.EndIteration();
 }
 
 std::string
@@ -1182,6 +1223,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
 
 void UWorldEnvironment::SaveCreatures(const std::string &file_name)
 {
+  FlushPendingCreatureRemovals();
   json root;
   root["format_version"] = kCreatureSaveFormatVersion;
   json arr = json::array();

@@ -1441,6 +1441,67 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               static int qaBehaviorFrame = 0;
               static std::ofstream qaBehaviorLog("qa_behavior.txt");
               ++qaBehaviorFrame;
+              // Kill QA (CUBA_FLIGHT_QA_KILL=1): at frame 300, inside a world
+              // creature loop, each visited QA creature removes the next QA
+              // creature and then itself (a kill plus a death in the same
+              // visit). Logs what lookups and the map report during and
+              // after the loop.
+              if (qaBehaviorFrame == 300 &&
+                  std::getenv("CUBA_FLIGHT_QA_KILL") != nullptr)
+              {
+                std::vector<CreatureId> qaIds;
+                world->ForEachCreature(
+                    [&](const UCreature &c)
+                    {
+                      if (c.GetSpawnSource() == CreatureSpawnSource::Qa)
+                      {
+                        qaIds.push_back(c.GetId());
+                      }
+                    });
+                int visited = 0;
+                int stillAliveInLoop = 0;
+                int lookupsHidden = 0;
+                world->ForEachCreature(
+                    [&](UCreature &c)
+                    {
+                      if (c.GetSpawnSource() != CreatureSpawnSource::Qa)
+                      {
+                        return;
+                      }
+                      ++visited;
+                      const auto it =
+                          std::find(qaIds.begin(), qaIds.end(), c.GetId());
+                      const CreatureId victim =
+                          qaIds[(static_cast<size_t>(it - qaIds.begin()) + 1) %
+                                qaIds.size()];
+                      world->RemoveCreature(victim);
+                      lookupsHidden += world->GetCreature(victim) == nullptr;
+                      world->RemoveCreature(c.GetId());
+                      // The visited body must still be intact here.
+                      stillAliveInLoop += c.GetId() != 0 &&
+                                          c.GetBounds().profile.restSizeBlocks.y > 0.0f;
+                    });
+                int remaining = 0;
+                world->ForEachCreature(
+                    [&](const UCreature &c)
+                    {
+                      remaining += c.GetSpawnSource() == CreatureSpawnSource::Qa;
+                    });
+                qaBehaviorLog << "kill qa=" << qaIds.size()
+                              << " visited=" << visited
+                              << " aliveInLoop=" << stillAliveInLoop
+                              << " lookupsHidden=" << lookupsHidden
+                              << " remainingAfter=" << remaining << std::endl;
+                if (auto camera = world->GetCurrentUserCamera())
+                {
+                  glm::vec3 pos = camera->GetPosition();
+                  pos.x += 4.0f;
+                  qaBehaviorLog << "respawn id="
+                                << world->SpawnCreature("pig", pos, "",
+                                                        CreatureSpawnSource::Qa)
+                                << std::endl;
+                }
+              }
               // View-spawn QA (CUBA_FLIGHT_QA_VIEWSPAWN=ogre,whale,...): try
               // the creative "spawn by view" for each species facing four
               // directions, log the outcome (or the blocked hint) and the
