@@ -995,6 +995,15 @@ cubatarium_add_test(NAME creature_removal_queue_test
 add_test(NAME creature_removal_queue_test COMMAND $<TARGET_FILE:creature_removal_queue_test>)
 set_tests_properties(creature_removal_queue_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_gltf_clip_test
+    SOURCES
+        src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp
+        src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp
+        src/Test/CreatureGltfClipTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_gltf_clip_test COMMAND $<TARGET_FILE:creature_gltf_clip_test>)
+set_tests_properties(creature_gltf_clip_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME wander_interval_test
     SOURCES
         src/Activity/Agents/WanderActivityAgent.cpp

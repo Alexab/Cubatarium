@@ -2,6 +2,7 @@
 #define CREATUREVISUALGLTF_H
 
 #include "Creatures/Visual/CreatureVisualBase.h"
+#include "Creatures/Visual/Gltf/CreatureGltfClipClock.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include <memory>
 #include <string>
@@ -28,8 +29,7 @@ private:
   float ModelScale{1.f};
   float ModelFeetOffsetY{0.f};
   std::string ModelFile;
-  float AnimTimeSec{0.f};
-  std::string ActiveClipName;
+  UGltfClipClock ClipClock;
   const GltfAnimationCpu *ActiveAnimation{nullptr};
   std::shared_ptr<const std::vector<glm::mat4>> BoneMatrices;
 };

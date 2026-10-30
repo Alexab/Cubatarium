@@ -76,11 +76,6 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
       speed = clipDefIt->second.speed;
       loop = clipDefIt->second.loop;
     }
-    if (animName != ActiveClipName)
-    {
-      ActiveClipName = animName;
-      AnimTimeSec = 0.f;
-    }
     float playback = speed;
     if (facts.state == LocomotionState::Walk ||
         facts.state == LocomotionState::Run ||
@@ -102,27 +97,35 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
       }
       playback *= travelScale;
     }
-    AnimTimeSec += dt * playback;
-    const auto animIt = MeshAsset->animationIndexByName.find(animName);
-    if (animIt != MeshAsset->animationIndexByName.end())
+    const auto findAnimation =
+        [&](const std::string &name) -> const GltfAnimationCpu *
     {
-      ActiveAnimation = &MeshAsset->animations[animIt->second];
-      if (MeshAsset->hasSkin)
-      {
-        BoneMatrices = std::make_shared<const std::vector<glm::mat4>>(
-            ComputeGltfSkinMatrices(*MeshAsset, ActiveAnimation, AnimTimeSec,
-                                    loop));
-      }
-      else
-      {
-        RootAnimMatrix =
-            SampleGltfRootTransform(*ActiveAnimation, AnimTimeSec, loop);
-      }
-    }
-    else if (MeshAsset->hasSkin)
+      const auto it = MeshAsset->animationIndexByName.find(name);
+      return it != MeshAsset->animationIndexByName.end()
+                 ? &MeshAsset->animations[it->second]
+                 : nullptr;
+    };
+    ActiveAnimation = findAnimation(animName);
+    ClipClock.Update(animName, dt, playback,
+                     ActiveAnimation ? GltfAnimationDuration(*ActiveAnimation)
+                                     : 0.f,
+                     loop);
+    if (MeshAsset->hasSkin)
     {
+      const GltfAnimationCpu *fadeAnimation =
+          ClipClock.GetFadeClip().empty()
+              ? nullptr
+              : findAnimation(ClipClock.GetFadeClip());
       BoneMatrices = std::make_shared<const std::vector<glm::mat4>>(
-          ComputeGltfSkinMatrices(*MeshAsset, nullptr, AnimTimeSec, loop));
+          ComputeGltfSkinMatricesBlended(
+              *MeshAsset, ActiveAnimation, ClipClock.GetTime(), fadeAnimation,
+              ClipClock.GetFadeTime(),
+              fadeAnimation ? ClipClock.GetFadeWeight() : 0.f));
+    }
+    else if (ActiveAnimation)
+    {
+      RootAnimMatrix =
+          SampleGltfRootTransform(*ActiveAnimation, ClipClock.GetTime(), loop);
     }
   }
 }
