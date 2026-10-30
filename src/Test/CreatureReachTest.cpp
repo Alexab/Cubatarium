@@ -1,9 +1,11 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureReach.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <vector>
 
 static void Expect(bool cond, const char *message)
 {
@@ -99,6 +101,53 @@ int main()
   const glm::vec3 turned = SwapFootprintXZ(whale);
   Expect(Near(turned.x, 11.0f) && Near(turned.y, 3.31f) && Near(turned.z, 5.0f),
          "swap exchanges X and Z, keeps height");
+
+  // Melee line of sight over a fake block grid (blocks centered on integers).
+  std::vector<glm::ivec3> solid;
+  const auto segmentClear = [&solid](const glm::vec3 &from, const glm::vec3 &to)
+  {
+    for (int i = 0; i <= 200; ++i)
+    {
+      const glm::vec3 p = from + (to - from) * (static_cast<float>(i) / 200.0f);
+      const glm::ivec3 cell(static_cast<int>(std::floor(p.x + 0.5f)),
+                            static_cast<int>(std::floor(p.y + 0.5f)),
+                            static_cast<int>(std::floor(p.z + 0.5f)));
+      if (std::find(solid.begin(), solid.end(), cell) != solid.end())
+      {
+        return false;
+      }
+    }
+    return true;
+  };
+  // Attacker feet on y = 0.5 (ground block row 0), eye 1.6 above.
+  const glm::vec3 eye(0.0f, 2.1f, 0.0f);
+  const glm::vec3 feet(1.2f, 0.5f, 0.0f);
+  Expect(HasMeleeLineOfSight(eye, feet, human, segmentClear),
+         "open ground: target in sight");
+  // Wall column at x = 1 between attacker and a target at x = 2.
+  const glm::vec3 behindWall(2.0f, 0.5f, 0.0f);
+  solid = {glm::ivec3(1, 1, 0), glm::ivec3(1, 2, 0), glm::ivec3(1, 3, 0)};
+  Expect(!HasMeleeLineOfSight(eye, behindWall, human, segmentClear),
+         "two-high wall hides the target behind it");
+  // One-block-high wall: the head is still visible over it.
+  solid = {glm::ivec3(1, 1, 0)};
+  Expect(HasMeleeLineOfSight(eye, behindWall, human, segmentClear),
+         "low wall: head above it is in sight");
+  // Diagonal: a pillar at (1, 1) hides a target at (2, 2) entirely.
+  const std::vector<glm::ivec3> pillar = {
+      glm::ivec3(1, 1, 1), glm::ivec3(1, 2, 1), glm::ivec3(1, 3, 1),
+      glm::ivec3(1, 4, 1)};
+  solid = pillar;
+  Expect(!HasMeleeLineOfSight(eye, glm::vec3(2.0f, 0.5f, 2.0f), human,
+                              segmentClear),
+         "target behind a pillar on the diagonal is hidden");
+  // Wide target: the same pillar hides its center, but its near edge is in
+  // the open.
+  Expect(HasMeleeLineOfSight(eye, glm::vec3(3.5f, 0.5f, 2.0f), ogre,
+                             segmentClear),
+         "wide target with its edge in the open is in sight");
+  Expect(!segmentClear(eye, glm::vec3(3.5f, 0.5f + 0.5f * ogre.y, 2.0f)),
+         "(the wide target's center line is blocked)");
 
   std::cout << "creature_reach_test: ok" << std::endl;
   return 0;

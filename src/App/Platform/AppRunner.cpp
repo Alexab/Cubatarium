@@ -43,6 +43,8 @@
 #include "Creatures/Player/User.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
+#include "World/Raycast/BlockRaycast.h"
+#include "Creatures/Influence/InfluenceEvent.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
@@ -1439,6 +1441,65 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               static int qaBehaviorFrame = 0;
               static std::ofstream qaBehaviorLog("qa_behavior.txt");
               ++qaBehaviorFrame;
+              // Melee QA (CUBA_FLIGHT_QA_MELEE=1): log every attack event of
+              // a QA creature with its outcome and whether the straight ray
+              // from the attacker's eye to the target's center crosses blocks.
+              if (qaBehaviorFrame == 1 &&
+                  std::getenv("CUBA_FLIGHT_QA_MELEE") != nullptr)
+              {
+                struct QaMeleeSink final : IUInfluenceEventSink
+                {
+                  UWorld *World{nullptr};
+                  std::ofstream *Log{nullptr};
+                  void OnInfluenceEvent(const InfluenceEvent &ev) override
+                  {
+                    if (ev.Channel != InfluenceChannel::Melee ||
+                        ev.Kind == InfluenceEventKind::DigProgress)
+                    {
+                      return;
+                    }
+                    const UCreature *src = World->GetCreature(ev.SourceId);
+                    if (!src ||
+                        src->GetSpawnSource() != CreatureSpawnSource::Qa)
+                    {
+                      return;
+                    }
+                    *Log << "melee src=" << src->GetTypeId() << "#"
+                         << ev.SourceId << " kind="
+                         << (ev.Kind == InfluenceEventKind::Applied
+                                 ? "applied"
+                                 : "cancelled")
+                         << " reason=" << ev.CancelReason;
+                    const CreatureId tid = ev.TargetIds.empty()
+                                               ? World->GetControlledCreatureId()
+                                               : ev.TargetIds.front();
+                    if (const UCreature *tgt = World->GetCreature(tid))
+                    {
+                      const glm::vec3 eye = src->GetEyePosition();
+                      const glm::vec3 center =
+                          tgt->GetBodyOrigin() +
+                          glm::vec3(0.0f,
+                                    0.5f * tgt->GetBounds()
+                                               .profile.restSizeBlocks.y,
+                                    0.0f);
+                      const glm::vec3 d = center - eye;
+                      const bool blocked =
+                          glm::length(d) > 1e-4f &&
+                          RaycastSolidBlocks(World->GetBlockWorld(),
+                                             World->GetBlockRegistry(), eye, d,
+                                             glm::length(d))
+                              .has_value();
+                      *Log << " tgt=" << tid << " centerRayBlocked="
+                           << blocked;
+                    }
+                    *Log << std::endl;
+                  }
+                };
+                static QaMeleeSink qaMeleeSink;
+                qaMeleeSink.World = world.get();
+                qaMeleeSink.Log = &qaBehaviorLog;
+                InfluenceEvents::AddSink(&qaMeleeSink);
+              }
               if (!qaBehaviorSpawned && ingame_frames_seen >= 60 &&
                   ModePolicy::AllowsQaSpawner(world->GetGameMode()))
               {
