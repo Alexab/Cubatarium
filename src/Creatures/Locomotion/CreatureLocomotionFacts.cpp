@@ -20,6 +20,16 @@ float AdvanceAnimPhase(float phase, float horizontalSpeed, float walkCycleHz,
   return phase + kTwoPi * walkCycleHz * speedRatio * dt;
 }
 
+void SettleFrozenLocomotionFacts(CreatureLocomotionFacts &facts)
+{
+  const bool airborne = facts.state == LocomotionState::Fly ||
+                        facts.state == LocomotionState::Hover ||
+                        facts.state == LocomotionState::Glide;
+  facts.state = airborne ? LocomotionState::Hover : LocomotionState::Idle;
+  facts.horizontalSpeed = 0.0f;
+  facts.verticalSpeed = 0.0f;
+}
+
 void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
                              const CreatureLocomotionRawInput &input,
                              LocomotionArchetype archetype, float bodyYaw,

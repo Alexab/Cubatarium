@@ -50,6 +50,26 @@ int main()
   Expect(raw.state == LocomotionState::Idle,
          "finalize at zero speed should Idle despite Run hint");
 
+  // Frozen creature (chunk unloaded): stands still instead of walking in place.
+  CreatureLocomotionFacts frozen;
+  frozen.state = LocomotionState::Walk;
+  frozen.horizontalSpeed = 2.1f;
+  frozen.verticalSpeed = -0.5f;
+  frozen.animPhase = 3.0f;
+  SettleFrozenLocomotionFacts(frozen);
+  Expect(frozen.state == LocomotionState::Idle && frozen.horizontalSpeed == 0.0f &&
+             frozen.verticalSpeed == 0.0f,
+         "frozen walker idles at zero speed");
+  Expect(frozen.animPhase == 3.0f, "freeze keeps the anim phase");
+  frozen.state = LocomotionState::Fly;
+  frozen.horizontalSpeed = 2.85f;
+  SettleFrozenLocomotionFacts(frozen);
+  Expect(frozen.state == LocomotionState::Hover && frozen.horizontalSpeed == 0.0f,
+         "frozen flyer hovers in place");
+  frozen.state = LocomotionState::Swim;
+  SettleFrozenLocomotionFacts(frozen);
+  Expect(frozen.state == LocomotionState::Idle, "frozen swimmer idles");
+
   std::cout << "locomotion_state_derive_test: OK" << std::endl;
   return 0;
 }
