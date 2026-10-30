@@ -989,6 +989,12 @@ cubatarium_add_test(NAME creature_reach_test
 add_test(NAME creature_reach_test COMMAND $<TARGET_FILE:creature_reach_test>)
 set_tests_properties(creature_reach_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_removal_queue_test
+    SOURCES
+        src/Test/CreatureRemovalQueueTest.cpp)
+add_test(NAME creature_removal_queue_test COMMAND $<TARGET_FILE:creature_removal_queue_test>)
+set_tests_properties(creature_removal_queue_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME wander_interval_test
     SOURCES
         src/Activity/Agents/WanderActivityAgent.cpp

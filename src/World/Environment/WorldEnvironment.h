@@ -4,6 +4,7 @@
 #include "Activity/CreatureActivityDirector.h"
 #include "Activity/CreatureActivityTypes.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureRemovalQueue.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
@@ -101,7 +102,12 @@ public:
   bool TryApplySkin(CreatureId target, const std::string &skinId,
                     std::string *outError = nullptr);
 
+  /// Inside ForEachCreature the removal is deferred to the end of the
+  /// outermost iteration; the creature is hidden from lookups at once.
   void RemoveCreature(CreatureId id);
+  /// Apply removals deferred during a const iteration (non-const iteration
+  /// flushes by itself).
+  void FlushPendingCreatureRemovals();
   void ForEachCreature(const std::function<void(UCreature &)> &fn);
   void ForEachCreature(
       const std::function<void(const UCreature &)> &fn) const;
@@ -167,6 +173,7 @@ private:
   UWorld &Owner;
 
   std::unordered_map<CreatureId, std::unique_ptr<UCreature>> Creatures;
+  mutable UCreatureRemovalQueue CreatureRemovals;
   CreatureId NextCreatureId{1};
   CreatureId PlayerCreatureId{0};
   CreatureId ControlledCreatureId{0};
