@@ -228,8 +228,12 @@
   `creature_reach_test`. Игра (8 видов вплотную, 50 с, по 2 прогона; база — та же сборка со старым
   правилом): доля замеров «смотрит против движения >90°» 12,2/9,4 % → 9,7/5,9 %, суммарный путь
   439/416 → 488/504 блока. Улучшение умеренное, разброс большой; замер раз в 0,5 с грубый.
-- Временная диагностика в `WorldViewBinding` (`CUBA_QA_TICKDUMP*`, «TEMP diag») вынести в модуль
-  диагностики.
+- **E. Диагностика тиков вынесена из `WorldViewBinding` — СДЕЛАНО** (ветка
+  `refactor/creature-tickdump-diagnostics`). Два блока (~120 строк, «TEMP diag») в
+  `TickNpcCreatureIntents` перенесены в `World/Diagnostics/CreatureTickTrace` (`RecordCreatureTickTrace`),
+  в тике остался один вызов. Поведение и формат вывода прежние: `CUBA_QA_TICKDUMP_ID` /
+  `CUBA_QA_TICKDUMP_FRAMES` — трасса одного существа в `<id>_trace.txt`, `CUBA_QA_TICKDUMP=<файл>` —
+  снимок всех на кадрах 60 и 300. Проверено в игре: формат строки трассы совпадает с прежним.
 - `GetCollisionVolume` берёт `rest`-размер, а `currentSizeBlocks` (стойка) используется только в
   отладке и трассах: свести к одному источнику.
 
