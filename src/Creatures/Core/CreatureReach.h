@@ -76,6 +76,43 @@ inline bool RayIntersectsAabb(const glm::vec3 &origin, const glm::vec3 &dir,
   return tmin >= 0.0f && tmin <= maxDistance;
 }
 
+/// Melee line of sight: true when at least one segment from the attacker's eye
+/// to the target body (feet origin + size) is free of blocks. Samples the point
+/// of the box nearest the eye (so the edge of a wide body peeking round a
+/// corner counts) and three heights on the box axis (so a low wall or a slab
+/// under the feet does not hide a target whose head is visible).
+/// `segmentClear(from, to)` reports whether no solid block lies between them.
+template <typename SegmentClear>
+bool HasMeleeLineOfSight(const glm::vec3 &eye, const glm::vec3 &targetOrigin,
+                         const glm::vec3 &targetSize,
+                         const SegmentClear &segmentClear)
+{
+  constexpr float kInset = 0.05f;
+  const glm::vec3 half(std::max(0.0f, 0.5f * targetSize.x - kInset), 0.0f,
+                       std::max(0.0f, 0.5f * targetSize.z - kInset));
+  const glm::vec3 boxMin(targetOrigin.x - half.x,
+                         targetOrigin.y + std::min(kInset, 0.5f * targetSize.y),
+                         targetOrigin.z - half.z);
+  const glm::vec3 boxMax(targetOrigin.x + half.x,
+                         targetOrigin.y +
+                             std::max(0.5f * targetSize.y,
+                                      targetSize.y - kInset),
+                         targetOrigin.z + half.z);
+  if (segmentClear(eye, glm::clamp(eye, boxMin, boxMax)))
+  {
+    return true;
+  }
+  constexpr float kHeights[] = {0.5f, 0.85f, 0.2f};
+  for (const float h : kHeights)
+  {
+    if (segmentClear(eye, targetOrigin + glm::vec3(0.0f, h * targetSize.y, 0.0f)))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace cutum
 
 #endif

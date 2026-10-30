@@ -10,6 +10,7 @@
 #include "Items/ItemUseRegistry.h"
 #include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
+#include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
 #include <cmath>
 #include <glm/glm.hpp>
@@ -27,6 +28,28 @@ uint64_t ResolveTargetId(const CreatureIntent &intent)
 InfluenceChannel ResolveChannel(const CreatureIntent &intent)
 {
   return intent.Influence.Channel;
+}
+
+/// No movement-blocking block between the source's eye and the target body:
+/// melee used to land through walls and round corners.
+bool SourceSeesTarget(const UWorld &world, const UCreature &source,
+                      const UCreature &target)
+{
+  const UBlockWorld &blocks = world.GetBlockWorld();
+  const UBlockRegistry &registry = world.GetBlockRegistry();
+  const auto segmentClear = [&](const glm::vec3 &from, const glm::vec3 &to)
+  {
+    const glm::vec3 delta = to - from;
+    const float len = glm::length(delta);
+    if (len < 1e-4f)
+    {
+      return true;
+    }
+    return !RaycastSolidBlocks(blocks, registry, from, delta, len).has_value();
+  };
+  return HasMeleeLineOfSight(source.GetEyePosition(), target.GetBodyOrigin(),
+                             target.GetBounds().profile.restSizeBlocks,
+                             segmentClear);
 }
 } // namespace
 
@@ -155,7 +178,7 @@ bool TryResolveRadiusTargets(UWorld &world, UCreature &source,
   for (const auto &n : neighbors)
   {
     UCreature *target = world.GetCreature(n.Id);
-    if (!target)
+    if (!target || !SourceSeesTarget(world, source, *target))
     {
       continue;
     }
@@ -391,6 +414,12 @@ InfluencePrediction InfluenceResolver::Resolve(
   if (dist > reach)
   {
     pred.CancelReason = "out_of_range";
+    pred.Cancelled = true;
+    return pred;
+  }
+  if (!SourceSeesTarget(world, source, *target))
+  {
+    pred.CancelReason = "no_line_of_sight";
     pred.Cancelled = true;
     return pred;
   }
