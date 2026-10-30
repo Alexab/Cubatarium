@@ -1542,7 +1542,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     const CollisionVolume rv = rider->GetCollisionVolume();
                     const auto mount = world->FindMountCreatureUnder(
                         r, rv.halfExtents, rider->GetId());
-                    qaBehaviorLog << " mountFound=" << (mount ? 1 : 0);
+                    qaBehaviorLog << " mountFound=" << (mount ? 1 : 0)
+                                  << " riderInBlock="
+                                  << world->CheckBlockCollisionVolume(rv);
                     if (mount)
                     {
                       qaBehaviorLog << " backY=" << mount->second;
