@@ -226,6 +226,11 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
 
 void UWorld::RemoveCreature(CreatureId id) { Environment.RemoveCreature(id); }
 
+uint64_t UWorld::GetCreatureGeneration() const
+{
+  return Environment.GetCreatureGeneration();
+}
+
 void UWorld::ForEachCreature(const std::function<void(UCreature &)> &fn)
 {
   Environment.ForEachCreature(fn);
