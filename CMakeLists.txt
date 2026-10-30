@@ -262,6 +262,7 @@ set(SOURCES
     src/World/Core/MarkRelitInstall.cpp
     src/World/Adapters/WorldRenderReadAdapter.cpp
     src/World/Core/WorldViewBinding.cpp
+    src/World/Diagnostics/CreatureTickTrace.cpp
     src/World/Core/RuntimeTuning.cpp
     src/World/Core/WorldFluidFacade.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
@@ -2592,6 +2593,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Raycast/BlockRaycast.cpp
     src/World/Core/World.cpp
     src/World/Core/WorldViewBinding.cpp
+    src/World/Diagnostics/CreatureTickTrace.cpp
     src/World/Environment/WorldEnvironment.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Streaming/WorldStreaming.cpp
