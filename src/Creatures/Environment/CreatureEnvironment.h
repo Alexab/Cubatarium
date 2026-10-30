@@ -1,6 +1,7 @@
 #ifndef CREATUREENVIRONMENT_H
 #define CREATUREENVIRONMENT_H
 
+#include <algorithm>
 #include <optional>
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
@@ -20,10 +21,11 @@ class UWorld;
 /// floored so the volume never collapses.
 inline CollisionVolume InsetCollisionVolumeForSpawn(CollisionVolume vol)
 {
+  // Vertical only: lets tall mobs fit under a low ceiling. A horizontal
+  // inset let wide bodies (cow 1.1) spawn poking into neighbouring columns.
   constexpr float kSpawnCollisionInset = 0.05f;
-  vol.halfExtents =
-      glm::max(vol.halfExtents - glm::vec3(kSpawnCollisionInset),
-               glm::vec3(kSpawnCollisionInset));
+  vol.halfExtents.y = std::max(vol.halfExtents.y - kSpawnCollisionInset,
+                               kSpawnCollisionInset);
   return vol;
 }
 

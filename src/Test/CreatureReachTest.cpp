@@ -1,5 +1,6 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureReach.h"
+#include "Creatures/Environment/CreatureSpawnPlacement.h"
 
 #include <algorithm>
 #include <cmath>
@@ -148,6 +149,56 @@ int main()
          "wide target with its edge in the open is in sight");
   Expect(!segmentClear(eye, glm::vec3(3.5f, 0.5f + 0.5f * ogre.y, 2.0f)),
          "(the wide target's center line is blocked)");
+
+  // Spawn placement: ahead distance clears the viewer for any body size.
+  Expect(Near(SpawnAheadDistance(0.3f, human), 3.0f),
+         "small body keeps the old 3-block spawn distance");
+  const float ogreAhead = SpawnAheadDistance(0.3f, ogre);
+  Expect(ogreAhead >= 0.3f + 0.5f * std::hypot(ogre.x, ogre.z),
+         "ogre spawns clear of the viewer at any yaw");
+  Expect(SpawnAheadDistance(0.3f, whale) > 6.0f, "whale spawns further out");
+
+  // Grid alignment: odd cell counts center on a block, even on a boundary.
+  Expect(Near(AlignSpawnAxis(33.3f, 0.9f), 33.0f), "1-cell body centers on a block");
+  Expect(Near(AlignSpawnAxis(33.3f, 1.1f), 33.5f), "2-cell body centers on a boundary");
+  Expect(Near(AlignSpawnAxis(-12.7f, 2.86f), -13.0f), "3-cell body centers on a block");
+  Expect(Near(AlignSpawnAxis(10.0f, 2.0f), 10.5f), "exactly 2 wide is 2 cells");
+  // An aligned cow stays inside its two columns (edges within 0.5 + 1).
+  const float cowX = AlignSpawnAxis(33.0f, 1.1f);
+  Expect(cowX - 0.55f >= 32.5f - 0.5f && cowX + 0.55f <= 34.5f,
+         "aligned 1.1-wide body spans whole cells");
+
+  // Candidates: never on the viewer, nearest first, step grows with size.
+  const glm::vec3 viewer(32.0f, 64.5f, -12.0f);
+  const glm::vec3 base(35.0f, 64.5f, -12.0f);
+  const auto ogreCandidates =
+      BuildSizedSpawnCandidates(base, ogre, viewer, human);
+  Expect(!ogreCandidates.empty(), "ogre has candidates");
+  for (const glm::vec3 &c : ogreCandidates)
+  {
+    Expect(HorizontalBodyGapXZ(c, ogre, viewer, human) > 0.2f,
+           "no ogre candidate overlaps the viewer");
+  }
+  Expect(Near(ogreCandidates.front().x, 35.0f) &&
+             Near(ogreCandidates.front().z, -12.0f) &&
+             Near(ogreCandidates.front().y, base.y),
+         "first candidate is the aligned base");
+  const auto pigCandidates = BuildSizedSpawnCandidates(
+      base, glm::vec3(0.9f, 0.9f, 0.9f), viewer, human);
+  const auto whaleCandidates =
+      BuildSizedSpawnCandidates(base, whale, viewer, human);
+  float pigReach = 0.0f;
+  float whaleReach = 0.0f;
+  for (const glm::vec3 &c : pigCandidates)
+  {
+    pigReach = std::max(pigReach, std::abs(c.z - base.z));
+  }
+  for (const glm::vec3 &c : whaleCandidates)
+  {
+    whaleReach = std::max(whaleReach, std::abs(c.z - base.z));
+  }
+  Expect(Near(pigReach, 3.0f), "small body searches +-3 blocks");
+  Expect(whaleReach >= 11.0f, "whale searches about its own length");
 
   std::cout << "creature_reach_test: ok" << std::endl;
   return 0;
