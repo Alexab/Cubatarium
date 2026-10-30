@@ -1,4 +1,5 @@
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Core/CreatureFacing.h"
 #include "Creatures/Core/CreatureReach.h"
 #include "Creatures/Environment/CreatureSpawnPlacement.h"
 
@@ -199,6 +200,22 @@ int main()
   }
   Expect(Near(pigReach, 3.0f), "small body searches +-3 blocks");
   Expect(whaleReach >= 11.0f, "whale searches about its own length");
+
+  // Facing: turn toward travel only when it agrees with the wish.
+  const glm::vec2 east(1.0f, 0.0f);
+  Expect(FacingDirectionFromMove(glm::vec2(0.1f, 0.0f), east).has_value(),
+         "moving where it wants: face the move");
+  Expect(FacingDirectionFromMove(glm::vec2(0.07f, 0.07f), east).has_value(),
+         "sliding 45 degrees along a wall still faces the slide");
+  Expect(!FacingDirectionFromMove(glm::vec2(-0.3f, 0.0f), east).has_value(),
+         "pushed back against the wish: keep the yaw");
+  Expect(!FacingDirectionFromMove(glm::vec2(0.0f, 0.3f), east).has_value(),
+         "pushed sideways: keep the yaw");
+  Expect(!FacingDirectionFromMove(glm::vec2(0.2f, 0.0f), glm::vec2(0.0f))
+              .has_value(),
+         "pushed while idle: keep the yaw");
+  Expect(!FacingDirectionFromMove(glm::vec2(0.0f), east).has_value(),
+         "no travel: keep the yaw (no spinning in place)");
 
   std::cout << "creature_reach_test: ok" << std::endl;
   return 0;
