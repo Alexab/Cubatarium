@@ -113,6 +113,10 @@ public:
       const std::function<void(const UCreature &)> &fn) const;
 
   void ClearCreatures();
+  /// Changes whenever this environment's creature set starts over (new
+  /// environment, ClearCreatures): creature ids restart then, so caches keyed
+  /// by id must be dropped. Unique across the process.
+  uint64_t GetCreatureGeneration() const { return CreatureGeneration; }
   void ResetBeforeEntityLoad();
 
   void LinkUsersToPlayerCreatures(
@@ -174,6 +178,7 @@ private:
 
   std::unordered_map<CreatureId, std::unique_ptr<UCreature>> Creatures;
   mutable UCreatureRemovalQueue CreatureRemovals;
+  uint64_t CreatureGeneration{0};
   CreatureId NextCreatureId{1};
   CreatureId PlayerCreatureId{0};
   CreatureId ControlledCreatureId{0};

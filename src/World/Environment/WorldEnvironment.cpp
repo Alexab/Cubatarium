@@ -32,6 +32,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -87,8 +88,20 @@ bool IsCreatureVolumeLoadedAt(const UWorld &world, const glm::vec3 &origin,
 
 } // namespace
 
+namespace
+{
+uint64_t NextCreatureGeneration()
+{
+  static std::atomic<uint64_t> counter{0};
+  return ++counter;
+}
+} // namespace
+
 UWorldEnvironment::UWorldEnvironment(UWorld &owner)
-    : Owner(owner), SpawnPlanner(NaturalPopulationRng) {}
+    : Owner(owner), SpawnPlanner(NaturalPopulationRng)
+{
+  CreatureGeneration = NextCreatureGeneration();
+}
 
 void UWorldEnvironment::Initialize()
 {
@@ -363,6 +376,7 @@ void UWorldEnvironment::ClearCreatures()
   ActivityDirector.Clear();
   CreatureRemovals.Clear();
   Creatures.clear();
+  CreatureGeneration = NextCreatureGeneration();
   // Reseed so a world reloaded in one session does not replay the exact
   // same natural-population random stream.
   NaturalPopulationRng.seed(Owner.GetWorldSeed());

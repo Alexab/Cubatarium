@@ -2,6 +2,7 @@
 #define CREATUREDRAWPASS_H
 
 #include "App/Settings/RenderSettings.h"
+#include "Render/Engine/CreatureLightCache.h"
 #include "Creatures/Visual/CreatureDrawContext.h"
 #include "Creatures/Visual/CreatureDrawQueue.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
@@ -72,14 +73,6 @@ private:
   void DrawCreatureLabels(UWorld &world, const glm::mat4 &viewProj,
                           UGeometryEngine &engine);
 
-  struct LightState
-  {
-    glm::vec2 Current{1.0f, 0.0f};
-    glm::vec2 Target{1.0f, 0.0f};
-    glm::ivec3 Cell{0x7fffffff};
-    float SecondsToResample{0.0f};
-    uint64_t LastSeenFrame{0};
-  };
   struct PendingLabel
   {
     glm::vec3 World;
@@ -115,7 +108,7 @@ private:
   glm::vec2 ActiveLight{1.0f, 0.0f};
   bool LightingActive{false};
   uint64_t FrameCounter{0};
-  std::unordered_map<uint64_t, LightState> LightStates;
+  UCreatureLightCache LightStates;
   std::vector<PendingLabel> PendingLabels;
   /// Palette uploaded for the current frame (pointer identity): skips the
   /// 4KB UBO re-upload for every primitive of the same creature.

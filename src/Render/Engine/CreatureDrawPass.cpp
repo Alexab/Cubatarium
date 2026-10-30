@@ -703,8 +703,8 @@ glm::vec2 UCreatureDrawPass::SampleCreatureLight(UWorld &world,
   {
     return glm::vec2(1.0f, 0.0f);
   }
-  LightState &state = LightStates[creature.GetId()];
-  state.LastSeenFrame = FrameCounter;
+  UCreatureLightCache::State &state = LightStates.Acquire(
+      creature.GetId(), world.GetCreatureGeneration(), FrameCounter);
   const glm::vec3 size = creature.GetBounds().currentSizeBlocks;
   const glm::vec3 center =
       creature.GetBodyOrigin() + glm::vec3(0.0f, size.y * 0.5f, 0.0f);
@@ -722,27 +722,21 @@ glm::vec2 UCreatureDrawPass::SampleCreatureLight(UWorld &world,
     {
       const glm::ivec3 local = cell - chunkCoord * CHUNK_SIZE;
       const uint8_t packed = chunk->GetLightPackedLocal(local);
-      state.Target = glm::vec2(
-          static_cast<float>(UnpackSky(packed)) / kMaxLightLevel,
-          static_cast<float>(UnpackBlock(packed)) / kMaxLightLevel);
+      UCreatureLightCache::SetTarget(
+          state, glm::vec2(static_cast<float>(UnpackSky(packed)) / kMaxLightLevel,
+                           static_cast<float>(UnpackBlock(packed)) /
+                               kMaxLightLevel));
     }
     // Not loaded or not lit yet: keep the previous target.
   }
-  // Ease toward the target (~0.15 s) so crossing cell borders never pops.
-  const float blend = std::clamp(dt * 7.0f, 0.0f, 1.0f);
-  state.Current += (state.Target - state.Current) * blend;
+  const glm::vec2 light = UCreatureLightCache::Ease(state, dt);
 
   // Drop state of creatures not drawn for a while (cheap, amortized).
   if ((FrameCounter & 255u) == 0)
   {
-    for (auto it = LightStates.begin(); it != LightStates.end();)
-    {
-      it = (FrameCounter - it->second.LastSeenFrame > 600)
-               ? LightStates.erase(it)
-               : std::next(it);
-    }
+    LightStates.Prune(FrameCounter, 600);
   }
-  return state.Current;
+  return light;
 }
 
 void UCreatureDrawPass::DrawCreatureLabels(UWorld &world,

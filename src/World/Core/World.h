@@ -757,6 +757,8 @@ public:
   bool TryApplySkin(CreatureId target, const std::string &skinId,
                     std::string *outError = nullptr);
   void RemoveCreature(CreatureId Id);
+  /// See UWorldEnvironment::GetCreatureGeneration.
+  uint64_t GetCreatureGeneration() const;
   void ForEachCreature(const std::function<void(UCreature &)> &fn);
   void ForEachCreature(const std::function<void(const UCreature &)> &fn) const;
   std::string ResolveAnimationTypeId(const UCreature &creature) const;

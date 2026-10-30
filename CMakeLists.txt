@@ -1004,6 +1004,13 @@ cubatarium_add_test(NAME creature_gltf_clip_test
 add_test(NAME creature_gltf_clip_test COMMAND $<TARGET_FILE:creature_gltf_clip_test>)
 set_tests_properties(creature_gltf_clip_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_light_cache_test
+    SOURCES
+        src/Test/CreatureLightCacheTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_light_cache_test COMMAND $<TARGET_FILE:creature_light_cache_test>)
+set_tests_properties(creature_light_cache_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME wander_interval_test
     SOURCES
         src/Activity/Agents/WanderActivityAgent.cpp
