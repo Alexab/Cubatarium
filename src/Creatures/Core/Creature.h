@@ -161,6 +161,8 @@ public:
     LocomotionArchetype = archetype;
   }
   void SetWalkCycleHz(float hz) { WalkCycleHz = hz; }
+  /// Not simulated this frame (terrain chunk unloaded): present standing.
+  void SettleFrozenLocomotion() { SettleFrozenLocomotionFacts(LocomotionFacts); }
   void RebuildLocomotionFacts(const CreatureLocomotionRawInput &input,
                               const CreatureLocomotionCapabilities &caps,
                               const UWorld *world = nullptr);

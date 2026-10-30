@@ -975,7 +975,9 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         }
         // A creature whose terrain chunk is not loaded (streaming moved on,
         // chunk not ready yet) has no ground: simulating it makes it fall
-        // through the void forever. Freeze it until the chunk returns.
+        // through the void forever. Freeze it until the chunk returns, and
+        // present it standing (it kept its last walk/fly facts and walked in
+        // place).
         {
           const CollisionVolume vol = creature.GetCollisionVolume();
           const UChunkManager &chunkManager = GetBlockWorld().GetChunkManager();
@@ -984,6 +986,7 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
               !chunkManager.HasChunk(UChunkManager::WorldToChunk(
                   WorldPosToBlock(vol.center - glm::vec3(0.0f, vol.halfExtents.y + 0.5f, 0.0f)))))
           {
+            creature.SettleFrozenLocomotion();
             return;
           }
         }
