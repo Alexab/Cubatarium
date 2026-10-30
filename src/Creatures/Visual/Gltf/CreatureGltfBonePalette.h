@@ -8,10 +8,22 @@
 namespace cutum
 {
 
+/// Clip length: the last key time over all channels.
+float GltfAnimationDuration(const GltfAnimationCpu &anim);
+
+/// Bone palette at `timeSec` (wrapped by the clip duration when `loop`).
 std::vector<glm::mat4>
 ComputeGltfSkinMatrices(const CreatureGltfMeshAsset &asset,
                         const GltfAnimationCpu *animation, float timeSec,
                         bool loop);
+
+/// Bone palette at clip-local times, with the pose of `fadeAnimation` mixed
+/// in by `fadeWeight` (0 = only `animation`, 1 = only the faded clip) per
+/// node translation/rotation/scale.
+std::vector<glm::mat4> ComputeGltfSkinMatricesBlended(
+    const CreatureGltfMeshAsset &asset, const GltfAnimationCpu *animation,
+    float clipTimeSec, const GltfAnimationCpu *fadeAnimation,
+    float fadeClipTimeSec, float fadeWeight);
 
 } // namespace cutum
 
