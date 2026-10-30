@@ -18,6 +18,8 @@ struct CreatureLocomotionRawInput
   LocomotionState suggestedAnim{LocomotionState::Idle};
   bool hasSuggestedAnim{false};
   float intentMoveSpeed{0.0f};
+  /// State derived on the previous frame (Run hysteresis).
+  LocomotionState previousState{LocomotionState::Idle};
 };
 
 struct CreatureLocomotionFacts

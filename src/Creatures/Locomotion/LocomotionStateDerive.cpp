@@ -65,10 +65,26 @@ LocomotionState DeriveTerrestrial(const CreatureLocomotionFacts &raw,
   {
     return LocomotionState::Crouch;
   }
+  const bool hinted = hintInput && hintInput->hasSuggestedAnim;
+  const bool walkHint =
+      hinted && hintInput->suggestedAnim == LocomotionState::Walk;
+  const bool runHint =
+      hinted && hintInput->suggestedAnim == LocomotionState::Run;
+  const bool moving =
+      raw.onGround && raw.horizontalSpeed > locomotion::kMoveSpeedEpsilon;
+  // Run hysteresis: an agent that chose Run keeps the Run clip while it is
+  // still moving (collision slow-downs used to drop it to Walk for a frame).
+  if (moving && runHint && hintInput->previousState == LocomotionState::Run)
+  {
+    return LocomotionState::Run;
+  }
   const float runThreshold =
       std::max(caps.walkSpeed * locomotion::kRunSpeedFactor,
                locomotion::kMoveSpeedEpsilon);
-  if (raw.onGround && raw.horizontalSpeed > runThreshold)
+  // An agent that chose Walk walks: single-frame displacement spikes (a
+  // step down, a push from a neighbour) read as 2-3x walk speed and flipped
+  // Walk -> Run -> Walk hundreds of times a minute.
+  if (raw.onGround && raw.horizontalSpeed > runThreshold && !walkHint)
   {
     return LocomotionState::Run;
   }
