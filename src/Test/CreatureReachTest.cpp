@@ -1,3 +1,4 @@
+#include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureReach.h"
 
 #include <cmath>
@@ -80,6 +81,24 @@ int main()
                             glm::vec3(2.f, -1.f, -1.f), glm::vec3(3.f, 1.f, 1.f),
                             1.5f, t),
          "box beyond the reach (or behind the first solid block) is not hit");
+
+  // Footprint turns with the body in 90-degree steps, with hysteresis.
+  Expect(!WantsSwappedFootprint(0.0f, false), "facing +Z keeps the box");
+  Expect(!WantsSwappedFootprint(180.0f, false), "facing -Z keeps the box");
+  Expect(WantsSwappedFootprint(90.0f, false), "facing +X swaps the box");
+  Expect(WantsSwappedFootprint(-90.0f, false), "facing -X swaps the box");
+  Expect(!WantsSwappedFootprint(50.0f, false),
+         "50 degrees: not swapped yet (hysteresis)");
+  Expect(WantsSwappedFootprint(50.0f, true),
+         "50 degrees: stays swapped (hysteresis)");
+  Expect(!WantsSwappedFootprint(30.0f, true), "30 degrees: swaps back");
+  Expect(WantsSwappedFootprint(-120.0f, false) &&
+             !WantsSwappedFootprint(-160.0f, true),
+         "negative yaws fold the same way");
+  const glm::vec3 whale(5.0f, 3.31f, 11.0f);
+  const glm::vec3 turned = SwapFootprintXZ(whale);
+  Expect(Near(turned.x, 11.0f) && Near(turned.y, 3.31f) && Near(turned.z, 5.0f),
+         "swap exchanges X and Z, keeps height");
 
   std::cout << "creature_reach_test: ok" << std::endl;
   return 0;

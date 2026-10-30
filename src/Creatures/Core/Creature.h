@@ -204,6 +204,10 @@ public:
                           const glm::vec3 &wish, float dt,
                           const CreatureInput &verticalInput);
   void FaceTravelDirection(const glm::vec3 &bodyOriginBefore);
+  /// Turn the collision box with the body in 90-degree steps (long bodies
+  /// only); the swap waits until the turned box fits where the body stands.
+  void UpdateFootprintOrientation(const UWorld &world);
+  bool IsFootprintSwapped() const { return FootprintSwapped; }
   void FinishIntentFrame(UWorld &world, float dt,
                          const glm::vec3 &bodyOriginBefore,
                          const glm::vec3 &diagIntentDir, float diagIntentSpeed);
@@ -227,6 +231,7 @@ protected:
   float Pitch{0.0f};
   float ModelYawOffsetDeg{0.0f};
   CreatureBoundsState Bounds;
+  bool FootprintSwapped{false};
   UCreatureLocomotionController Locomotion;
   UCreatureInventory Inventory;
   CreatureVitals Vitals{};

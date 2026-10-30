@@ -1150,6 +1150,9 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
       {
         SnapCreatureFeetToGround(*creature);
       }
+      // Saved yaw: turn the collision box with the body before the index
+      // sees it (a whale saved facing +X was restored 11 long along Z).
+      creature->UpdateFootprintOrientation(Owner);
       Creatures[id] = std::move(creature);
       ActivityDirector.OnCreatureAdded(id, def->behavior.Id, &def->behavior);
       NextCreatureId = std::max(NextCreatureId, id + 1);

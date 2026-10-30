@@ -1650,7 +1650,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                           << " state=" << static_cast<int>(f.state)
                           << " speed=" << f.horizontalSpeed
                           << " phase=" << f.animPhase
-                          << " ground=" << f.onGround;
+                          << " ground=" << f.onGround << " yaw="
+                          << creature.GetYaw() << " box="
+                          << creature.GetBounds().profile.restSizeBlocks.x
+                          << "x"
+                          << creature.GetBounds().profile.restSizeBlocks.z;
                       if (auto cam = world->GetCurrentUserCamera())
                       {
                         const glm::vec3 cp = cam->GetPosition();

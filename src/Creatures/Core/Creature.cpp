@@ -291,6 +291,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
   ApplyIdleFluidSink(world, habitat, wish, dt, verticalInput);
 
   FaceTravelDirection(bodyOriginBefore);
+  UpdateFootprintOrientation(world);
 
   if (Intent.clearOnApply)
   {
@@ -553,7 +554,9 @@ void UCreature::FaceTravelDirection(const glm::vec3 &bodyOriginBefore)
   const glm::vec2 faceDir(xzDelta.x, xzDelta.z);
   if (glm::length(faceDir) > 1e-4f)
   {
-    Yaw = ModelYawFromDirection(faceDir.x, faceDir.y) + ModelYawOffsetDeg;
+    // Pure facing: the visual adds the model yaw offset when drawing (adding
+    // it here too turned any species with a non-zero offset twice).
+    Yaw = ModelYawFromDirection(faceDir.x, faceDir.y);
     if (Yaw > 180.0f)
     {
       Yaw -= 360.0f;
@@ -564,6 +567,34 @@ void UCreature::FaceTravelDirection(const glm::vec3 &bodyOriginBefore)
     }
     Pitch = 0.0f;
   }
+}
+
+void UCreature::UpdateFootprintOrientation(const UWorld &world)
+{
+  if (PlayerCharacter || Possessed)
+  {
+    return;
+  }
+  const glm::vec3 rest = Bounds.profile.restSizeBlocks;
+  if (std::abs(rest.x - rest.z) < 0.05f ||
+      WantsSwappedFootprint(Yaw, FootprintSwapped) == FootprintSwapped)
+  {
+    return;
+  }
+  const glm::vec3 turned = SwapFootprintXZ(rest);
+  const CollisionVolume vol = CollisionVolumeFromBody(BodyOrigin, turned);
+  if (world.CheckBlockCollisionVolume(vol))
+  {
+    // No room to turn the box here (corridor, against a wall): keep the old
+    // orientation and try again on a later frame.
+    return;
+  }
+  Bounds.profile.restSizeBlocks = turned;
+  Bounds.profile.minSizeBlocks = SwapFootprintXZ(Bounds.profile.minSizeBlocks);
+  Bounds.profile.maxSizeBlocks = SwapFootprintXZ(Bounds.profile.maxSizeBlocks);
+  Bounds.currentSizeBlocks = SwapFootprintXZ(Bounds.currentSizeBlocks);
+  Locomotion.SetCollisionProfile(Bounds.profile.restSizeBlocks, EyeOffset.y);
+  FootprintSwapped = !FootprintSwapped;
 }
 
 void UCreature::FinishIntentFrame(UWorld &world, float dt,
