@@ -3,10 +3,29 @@
 
 #include "Creatures/Player/PlayerCapsule.h"
 #include "World/Math/CollisionVolume.h"
+#include <algorithm>
+#include <cmath>
 #include <glm/glm.hpp>
 
 namespace cutum
 {
+
+/// Boxes are authored facing +Z (yaw 0, length along Z). An axis-aligned box
+/// cannot turn with the body, so a long creature (whale 5x11, cow 1.1x1.8)
+/// turned toward +-X keeps its X/Z swapped. Hysteresis around the diagonal
+/// (swap past 55 degrees from Z, back below 35) stops diagonal walkers from
+/// flipping every frame.
+inline bool WantsSwappedFootprint(float yawDeg, bool currentlySwapped)
+{
+  float folded = std::fmod(std::abs(yawDeg), 180.0f); // 0..180
+  folded = std::min(folded, 180.0f - folded);         // 0 = along Z, 90 = X
+  return currentlySwapped ? folded > 35.0f : folded > 55.0f;
+}
+
+inline glm::vec3 SwapFootprintXZ(const glm::vec3 &sizeBlocks)
+{
+  return glm::vec3(sizeBlocks.z, sizeBlocks.y, sizeBlocks.x);
+}
 
 struct CreatureBoundsProfile
 {

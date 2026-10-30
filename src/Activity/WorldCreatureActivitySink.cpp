@@ -84,14 +84,17 @@ UWorldCreatureActivitySink::GetBehaviorSnapshot(CreatureId Id) const
       it->second.perception == perception &&
       it->second.defsRevision == revision)
   {
-    return it->second.snapshot;
+    // Live box, not the species box: it turns with the body (X/Z swap).
+    CreatureBehaviorSnapshot cached = it->second.snapshot;
+    cached.boundsSize = creature->GetBounds().profile.restSizeBlocks;
+    return cached;
   }
 
   CreatureBehaviorSnapshot snapshot;
   snapshot.behavior = def->behavior;
   snapshot.locomotion = def->locomotion;
   snapshot.habitat = def->habitat;
-  snapshot.boundsSize = def->bounds.restSizeBlocks;
+  snapshot.boundsSize = creature->GetBounds().profile.restSizeBlocks;
   const float perceptionMul =
       0.5f + static_cast<float>(perception) / 20.f;
   snapshot.behavior.aggroRadius *= perceptionMul;
