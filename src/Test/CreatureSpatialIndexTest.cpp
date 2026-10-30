@@ -176,6 +176,41 @@ int main()
            "a body 6 blocks above a mob's feet does not collide", failures);
   }
 
+  {
+    // Long body (whale, 5 x 11) at negative coordinates, Z-long: every corner
+    // just inside is found, every side just outside is not, and removal
+    // clears all its cells (direct cell-range gathering, per-axis radius).
+    UCreatureSpatialIndex index;
+    const glm::vec3 whaleCenter(-20.3f, 64.f, -35.7f);
+    const glm::vec3 whaleHalf(2.5f, 1.6f, 5.5f);
+    index.Upsert(30, whaleCenter, whaleHalf);
+    const glm::vec3 probeHalf(0.2f, 0.2f, 0.2f);
+    for (const float sx : {-1.f, 1.f})
+    {
+      for (const float sz : {-1.f, 1.f})
+      {
+        const glm::vec3 inside =
+            whaleCenter + glm::vec3(sx * (whaleHalf.x + 0.1f), 0.f,
+                                    sz * (whaleHalf.z + 0.1f));
+        Expect(index.AnyCreatureVolumeOverlaps(CollisionVolume{inside, probeHalf}, 0),
+               "whale corner (probe overlapping its edge) is found", failures);
+      }
+    }
+    const glm::vec3 outsides[] = {
+        whaleCenter + glm::vec3(whaleHalf.x + 0.5f, 0.f, 0.f),
+        whaleCenter - glm::vec3(whaleHalf.x + 0.5f, 0.f, 0.f),
+        whaleCenter + glm::vec3(0.f, 0.f, whaleHalf.z + 0.5f),
+        whaleCenter - glm::vec3(0.f, 0.f, whaleHalf.z + 0.5f)};
+    for (const glm::vec3 &outside : outsides)
+    {
+      Expect(!index.AnyCreatureVolumeOverlaps(CollisionVolume{outside, probeHalf}, 0),
+             "probe beside the whale does not overlap it", failures);
+    }
+    index.Remove(30);
+    Expect(!index.AnyCreatureVolumeOverlaps(CollisionVolume{whaleCenter, whaleHalf}, 0),
+           "removed whale leaves no ghost in any cell", failures);
+  }
+
   if (failures != 0)
   {
     return 1;
