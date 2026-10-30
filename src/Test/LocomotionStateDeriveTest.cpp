@@ -50,6 +50,48 @@ int main()
   Expect(raw.state == LocomotionState::Idle,
          "finalize at zero speed should Idle despite Run hint");
 
+  // Walk intent: a one-frame displacement spike (2.5x walk speed: step down,
+  // neighbour push) must not flip Walk -> Run.
+  {
+    CreatureLocomotionFacts spike;
+    spike.onGround = true;
+    spike.horizontalSpeed = caps.walkSpeed * 2.5f;
+    CreatureLocomotionRawInput walkHint;
+    walkHint.hasSuggestedAnim = true;
+    walkHint.suggestedAnim = LocomotionState::Walk;
+    walkHint.previousState = LocomotionState::Walk;
+    Expect(DeriveLocomotionState(LocomotionArchetype::TerrestrialQuadruped,
+                                 spike, caps, &walkHint) == LocomotionState::Walk,
+           "walk intent stays Walk through a speed spike");
+    // No intent hint: speed alone still decides (knockback, slides).
+    Expect(DeriveLocomotionState(LocomotionArchetype::TerrestrialQuadruped,
+                                 spike, caps, nullptr) == LocomotionState::Run,
+           "without a hint a fast body still reads as Run");
+  }
+  // Run intent: once running, a collision slow-down keeps Run (hysteresis);
+  // entering Run still needs speed above walk.
+  {
+    CreatureLocomotionFacts slow;
+    slow.onGround = true;
+    slow.horizontalSpeed = caps.walkSpeed * 0.5f;
+    CreatureLocomotionRawInput runHint;
+    runHint.hasSuggestedAnim = true;
+    runHint.suggestedAnim = LocomotionState::Run;
+    runHint.previousState = LocomotionState::Run;
+    Expect(DeriveLocomotionState(LocomotionArchetype::TerrestrialBiped, slow,
+                                 caps, &runHint) == LocomotionState::Run,
+           "running agent slowed by a wall keeps Run");
+    runHint.previousState = LocomotionState::Walk;
+    Expect(DeriveLocomotionState(LocomotionArchetype::TerrestrialBiped, slow,
+                                 caps, &runHint) == LocomotionState::Walk,
+           "slow agent does not enter Run from the hint alone");
+    slow.horizontalSpeed = 0.0f;
+    runHint.previousState = LocomotionState::Run;
+    Expect(DeriveLocomotionState(LocomotionArchetype::TerrestrialBiped, slow,
+                                 caps, &runHint) == LocomotionState::Idle,
+           "a stopped runner idles");
+  }
+
   // Frozen creature (chunk unloaded): stands still instead of walking in place.
   CreatureLocomotionFacts frozen;
   frozen.state = LocomotionState::Walk;

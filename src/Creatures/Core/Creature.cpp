@@ -198,8 +198,10 @@ void UCreature::RebuildLocomotionFacts(
       }
     }
   }
+  const LocomotionState previousState = LocomotionFacts.state;
   LocomotionFacts = raw;
   CreatureLocomotionRawInput deriveInput = input;
+  deriveInput.previousState = previousState;
   if (Intent.suggestedAnim != LocomotionState::Idle)
   {
     deriveInput.suggestedAnim = Intent.suggestedAnim;
@@ -583,10 +585,13 @@ void UCreature::UpdateFootprintOrientation(const UWorld &world)
   }
   const glm::vec3 turned = SwapFootprintXZ(rest);
   const CollisionVolume vol = CollisionVolumeFromBody(BodyOrigin, turned);
-  if (world.CheckBlockCollisionVolume(vol))
+  if (world.CheckBlockCollisionVolume(vol) ||
+      world.CheckCreatureCollisionVolume(vol, Id))
   {
-    // No room to turn the box here (corridor, against a wall): keep the old
-    // orientation and try again on a later frame.
+    // No room to turn the box here (corridor, against a wall, a neighbour
+    // alongside): keep the old orientation and try again on a later frame.
+    // Turning into a neighbour got the body pushed back, it then faced the
+    // push and turned back: a per-frame swap/push loop (Run/Walk flapping).
     return;
   }
   Bounds.profile.restSizeBlocks = turned;
