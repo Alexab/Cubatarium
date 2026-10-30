@@ -25,25 +25,30 @@ UCreatureSpatialIndex::CellForPosition(const glm::vec3 &origin)
 void UCreatureSpatialIndex::GatherCellsForVolume(const CollisionVolume &vol,
                                                   std::vector<CellKey> &out_cells)
 {
+  // Every cell (2x2 blocks) covering the body's block range plus one block
+  // of margin, per axis. Inserts and queries use the same rule, so two
+  // overlapping AABBs always share a cell. This used to sample
+  // (2r+1)^2 blocks with r from the larger half extent on both axes and
+  // dedupe each sample linearly (a whale: 225 samples x ~64 compares).
   out_cells.clear();
-  const int radius =
-      static_cast<int>(std::ceil(std::max(vol.halfExtents.x, vol.halfExtents.z))) +
-      1;
   const glm::ivec3 center = WorldPosToBlock(vol.center);
-  for (int dx = -radius; dx <= radius; ++dx)
+  const int radiusX = static_cast<int>(std::ceil(vol.halfExtents.x)) + 1;
+  const int radiusZ = static_cast<int>(std::ceil(vol.halfExtents.z)) + 1;
+  // Same mapping as CellForPosition (arithmetic shift floors negatives).
+  const int cellMinX = (center.x - radiusX) >> 1;
+  const int cellMaxX = (center.x + radiusX) >> 1;
+  const int cellMinZ = (center.z - radiusZ) >> 1;
+  const int cellMaxZ = (center.z + radiusZ) >> 1;
+  out_cells.reserve(static_cast<size_t>((cellMaxX - cellMinX + 1) *
+                                        (cellMaxZ - cellMinZ + 1)));
+  for (int x = cellMinX; x <= cellMaxX; ++x)
   {
-    for (int dz = -radius; dz <= radius; ++dz)
+    for (int z = cellMinZ; z <= cellMaxZ; ++z)
     {
-      const glm::vec3 sample(static_cast<float>(center.x + dx),
-                             vol.center.y,
-                             static_cast<float>(center.z + dz));
-      const CellKey key = CellForPosition(sample);
-      if (std::find_if(out_cells.begin(), out_cells.end(),
-                       [&](const CellKey &existing)
-                       { return existing == key; }) == out_cells.end())
-      {
-        out_cells.push_back(key);
-      }
+      CellKey key;
+      key.x = x;
+      key.z = z;
+      out_cells.push_back(key);
     }
   }
 }
