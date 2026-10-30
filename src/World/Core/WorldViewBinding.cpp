@@ -929,28 +929,30 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
       if (UCreature *rider = GetControlledCreature())
       {
         const glm::vec3 carry = creature.GetBodyOrigin() - mountOriginBefore;
-        if (glm::dot(carry, carry) > 1e-10f)
+        // Turn with the mount (optional): orbit the rider around the mount
+        // and rotate the view by the same angle.
+        const float yawDelta =
+            RiderYawCarryEnabled
+                ? WrapYawDeltaDeg(creature.GetYaw() - gMountYawBefore)
+                : 0.0f;
+        // Swept like the player's own move, the mount excluded: under an
+        // overhang the rider is scraped off rather than carried into blocks.
+        Collision.SetRiderMountId(mountId);
+        const PlayerCapsule cap = riderCamera->GetPlayerCapsule();
+        const CreatureId skipId = rider->GetId();
+        const RiderCarryResult carried = CarryRiderThroughCollision(
+            riderCamera->GetPosition(), rider->GetBodyOrigin(), carry,
+            creature.GetBodyOrigin(), yawDelta,
+            [&](const glm::vec3 &eye, const glm::vec3 &delta)
+            { return ResolveMovement(eye, delta, cap, skipId); });
+        Collision.SetRiderMountId(0);
+        riderCamera->SetPosition(carried.eye);
+        rider->SetBodyOrigin(carried.body);
+        if (std::abs(yawDelta) > 1e-3f)
         {
-          riderCamera->SetPosition(riderCamera->GetPosition() + carry);
-          rider->SetBodyOrigin(rider->GetBodyOrigin() + carry);
-        }
-        // Turn with the mount (optional, on by default): orbit the rider
-        // around the mount and rotate the view by the same angle.
-        if (RiderYawCarryEnabled)
-        {
-          const float yawDelta =
-              WrapYawDeltaDeg(creature.GetYaw() - gMountYawBefore);
-          if (std::abs(yawDelta) > 1e-3f)
-          {
-            const glm::vec3 pivot = creature.GetBodyOrigin();
-            riderCamera->SetPosition(RotateRiderAroundMount(
-                riderCamera->GetPosition(), pivot, yawDelta));
-            rider->SetBodyOrigin(RotateRiderAroundMount(
-                rider->GetBodyOrigin(), pivot, yawDelta));
-            riderCamera->SetOrientation(
-                riderCamera->GetYaw() + CameraYawDeltaForMountYaw(yawDelta),
-                riderCamera->GetPitch());
-          }
+          riderCamera->SetOrientation(
+              riderCamera->GetYaw() + CameraYawDeltaForMountYaw(yawDelta),
+              riderCamera->GetPitch());
         }
       }
     }
