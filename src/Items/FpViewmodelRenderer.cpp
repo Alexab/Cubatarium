@@ -905,9 +905,11 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
   static std::mutex cacheMu;
   static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
       cache;
+  static uint64_t cacheRevision = 0;
   std::shared_ptr<CreatureGltfMeshAsset> asset;
   {
     std::lock_guard<std::mutex> lock(cacheMu);
+    SyncItemModelCache(cache, cacheRevision);
     const auto it = cache.find(itemId);
     if (it != cache.end())
     {
