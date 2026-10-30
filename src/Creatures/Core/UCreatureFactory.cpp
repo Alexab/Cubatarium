@@ -47,7 +47,7 @@ UCreatureFactory::Build(const CreatureDefinition &definition,
   creature->SetModelYawOffsetDeg(definition.visual.modelYawOffsetDeg);
   creature->SetWalkCycleHz(definition.visual.Animation.walkCycleHz);
   creature->GetLocomotion().SetCollisionProfile(
-      creature->GetBounds().currentSizeBlocks, definition.eyeHeight);
+      creature->GetCollisionSize(), definition.eyeHeight);
   if (!params.SkinId.empty())
   {
     creature->SetSkinId(params.SkinId);

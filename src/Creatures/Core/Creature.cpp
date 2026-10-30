@@ -116,7 +116,7 @@ void UCreature::SyncBoundsFromStance()
 
 CollisionVolume UCreature::GetCollisionVolume() const
 {
-  return CollisionVolumeFromBody(BodyOrigin, Bounds.profile.restSizeBlocks);
+  return CollisionVolumeFromBody(BodyOrigin, GetCollisionSize());
 }
 
 void UCreature::SyncFeetFromLocomotion(const UWorld &world,
