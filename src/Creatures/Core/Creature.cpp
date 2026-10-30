@@ -1,5 +1,6 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Core/CreatureFacing.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
@@ -292,7 +293,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
 
   ApplyIdleFluidSink(world, habitat, wish, dt, verticalInput);
 
-  FaceTravelDirection(bodyOriginBefore);
+  FaceTravelDirection(bodyOriginBefore, wish);
   UpdateFootprintOrientation(world);
 
   if (Intent.clearOnApply)
@@ -545,17 +546,20 @@ void UCreature::ApplyIdleFluidSink(UWorld &world, CreatureHabitat habitat,
   }
 }
 
-void UCreature::FaceTravelDirection(const glm::vec3 &bodyOriginBefore)
+void UCreature::FaceTravelDirection(const glm::vec3 &bodyOriginBefore,
+                                    const glm::vec3 &wish)
 {
   if (Possessed)
   {
     return;
   }
-  // Face travel only — intent yaw with zero travel looks like spinning in place.
+  // Face travel only — intent yaw with zero travel looks like spinning in
+  // place — and only travel that agrees with the wish (not pushes).
   const glm::vec3 xzDelta = BodyOrigin - bodyOriginBefore;
-  const glm::vec2 faceDir(xzDelta.x, xzDelta.z);
-  if (glm::length(faceDir) > 1e-4f)
+  if (const std::optional<glm::vec2> face = FacingDirectionFromMove(
+          glm::vec2(xzDelta.x, xzDelta.z), glm::vec2(wish.x, wish.z)))
   {
+    const glm::vec2 faceDir = *face;
     // Pure facing: the visual adds the model yaw offset when drawing (adding
     // it here too turned any species with a non-zero offset twice).
     Yaw = ModelYawFromDirection(faceDir.x, faceDir.y);

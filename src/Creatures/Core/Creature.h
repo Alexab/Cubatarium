@@ -205,7 +205,8 @@ public:
   void ApplyIdleFluidSink(UWorld &world, CreatureHabitat habitat,
                           const glm::vec3 &wish, float dt,
                           const CreatureInput &verticalInput);
-  void FaceTravelDirection(const glm::vec3 &bodyOriginBefore);
+  void FaceTravelDirection(const glm::vec3 &bodyOriginBefore,
+                           const glm::vec3 &wish);
   /// Turn the collision box with the body in 90-degree steps (long bodies
   /// only); the swap waits until the turned box fits where the body stands.
   void UpdateFootprintOrientation(const UWorld &world);
