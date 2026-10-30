@@ -1022,6 +1022,12 @@ cubatarium_add_test(NAME item_model_cache_revision_test
 add_test(NAME item_model_cache_revision_test COMMAND $<TARGET_FILE:item_model_cache_revision_test>)
 set_tests_properties(item_model_cache_revision_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_tick_budget_test
+    SOURCES
+        src/Test/CreatureTickBudgetTest.cpp)
+add_test(NAME creature_tick_budget_test COMMAND $<TARGET_FILE:creature_tick_budget_test>)
+set_tests_properties(creature_tick_budget_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME wander_interval_test
     SOURCES
         src/Activity/Agents/WanderActivityAgent.cpp

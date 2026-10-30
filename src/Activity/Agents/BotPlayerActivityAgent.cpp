@@ -86,10 +86,11 @@ void UBotPlayerActivityAgent::OnCreatureRemoved(CreatureId Id)
   Behaviors.erase(Id);
 }
 
-void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
-                                   IUCreatureActivitySink &sink, float dt)
+template <typename Ids>
+void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &perception,
+                                      IUCreatureActivitySink &sink, float dt)
 {
-  for (const CreatureId Id : Members)
+  for (const CreatureId Id : ids)
   {
     const std::optional<CreatureActivityView> view = sink.GetCreatureView(Id);
     if (!view || view->possessed || view->isPlayerCharacter)
@@ -252,6 +253,22 @@ void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
     intent.moveSpeed = BotMoveSpeed(*snapshot) * 0.7f;
     intent.suggestedAnim = LocomotionState::Walk;
     sink.SetIntent(Id, intent);
+  }
+}
+
+void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
+                                   IUCreatureActivitySink &sink, float dt)
+{
+  TickIds(Members, perception, sink, dt);
+}
+
+void UBotPlayerActivityAgent::TickCreature(CreatureId Id, IUWorldPerception &perception,
+                                           IUCreatureActivitySink &sink, float dt)
+{
+  if (Members.count(Id) != 0)
+  {
+    const CreatureId one[] = {Id};
+    TickIds(one, perception, sink, dt);
   }
 }
 

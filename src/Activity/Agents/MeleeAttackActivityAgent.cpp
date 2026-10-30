@@ -23,10 +23,11 @@ void UMeleeAttackActivityAgent::OnCreatureRemoved(CreatureId Id)
   Wander.OnCreatureRemoved(Id);
 }
 
-void UMeleeAttackActivityAgent::Tick(IUWorldPerception &perception,
-                                     IUCreatureActivitySink &sink, float dt)
+template <typename Ids>
+void UMeleeAttackActivityAgent::TickIds(const Ids &ids, IUWorldPerception &perception,
+                                        IUCreatureActivitySink &sink, float dt)
 {
-  for (const CreatureId Id : Members)
+  for (const CreatureId Id : ids)
   {
     const std::optional<CreatureActivityView> view = sink.GetCreatureView(Id);
     if (!view || view->possessed || view->isPlayerCharacter)
@@ -45,6 +46,22 @@ void UMeleeAttackActivityAgent::Tick(IUWorldPerception &perception,
     {
       Wander.TickCreature(Id, perception, sink, dt);
     }
+  }
+}
+
+void UMeleeAttackActivityAgent::Tick(IUWorldPerception &perception,
+                                     IUCreatureActivitySink &sink, float dt)
+{
+  TickIds(Members, perception, sink, dt);
+}
+
+void UMeleeAttackActivityAgent::TickCreature(CreatureId Id, IUWorldPerception &perception,
+                                             IUCreatureActivitySink &sink, float dt)
+{
+  if (Members.count(Id) != 0)
+  {
+    const CreatureId one[] = {Id};
+    TickIds(one, perception, sink, dt);
   }
 }
 

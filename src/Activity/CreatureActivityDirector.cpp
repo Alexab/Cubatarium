@@ -62,6 +62,7 @@ void UCreatureActivityDirector::OnCreatureRemoved(CreatureId Id)
     it->second->OnCreatureRemoved(Id);
   }
   Membership.erase(it);
+  StressBudget.Remove(Id);
 }
 
 void UCreatureActivityDirector::TickAgents(IUWorldPerception &perception,
@@ -84,23 +85,34 @@ void UCreatureActivityDirector::TickAgents(IUWorldPerception &perception,
   {
     return;
   }
-  if (stress_tick && agent_count > 1)
+  if (stress_tick)
   {
-    const size_t max_per_tick = std::max(
-        size_t{1},
-        std::min(size_t{kStressAgentsPerTickCap}, agent_count / 4));
-    LastAgentsDeferred =
-        static_cast<int>(agent_count > max_per_tick ? agent_count - max_per_tick
-                                                    : 0);
-    for (size_t i = 0; i < max_per_tick; ++i)
+    // Budget creatures, not behavior types (see UCreatureTickBudget).
+    std::vector<CreatureId> ids;
+    ids.reserve(Membership.size());
+    for (const auto &entry : Membership)
     {
-      const size_t idx = (AgentRoundRobinCursor + i) % agent_count;
-      Agents[idx]->Tick(perception, sink, cognitive_dt);
-      ++LastAgentsTicked;
+      if (entry.second)
+      {
+        ids.push_back(entry.first);
+      }
     }
-    AgentRoundRobinCursor = (AgentRoundRobinCursor + max_per_tick) % agent_count;
+    std::sort(ids.begin(), ids.end());
+    const auto slice = StressBudget.Select(
+        ids, cognitive_dt, UCreatureTickBudget::BudgetFor(ids.size()));
+    for (const auto &[Id, creatureDt] : slice)
+    {
+      const auto it = Membership.find(Id);
+      if (it != Membership.end() && it->second)
+      {
+        it->second->TickCreature(Id, perception, sink, creatureDt);
+        ++LastAgentsTicked;
+      }
+    }
+    LastAgentsDeferred = static_cast<int>(ids.size() - slice.size());
     return;
   }
+  StressBudget.Reset();
   for (const auto &agent : Agents)
   {
     agent->Tick(perception, sink, cognitive_dt);

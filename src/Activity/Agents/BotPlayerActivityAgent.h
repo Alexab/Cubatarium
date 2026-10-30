@@ -19,8 +19,14 @@ public:
   void OnCreatureRemoved(CreatureId Id) override;
   void Tick(IUWorldPerception &perception, IUCreatureActivitySink &sink,
             float dt) override;
+  void TickCreature(CreatureId Id, IUWorldPerception &perception,
+                    IUCreatureActivitySink &sink, float dt) override;
 
 private:
+  template <typename Ids>
+  void TickIds(const Ids &ids, IUWorldPerception &perception,
+               IUCreatureActivitySink &sink, float dt);
+
   std::unordered_set<CreatureId> Members;
   std::unordered_map<CreatureId, UCreatureActivityBlackboard> State;
   std::unordered_map<CreatureId, CreatureBehaviorParams> Behaviors;
