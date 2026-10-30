@@ -25,6 +25,24 @@ std::vector<glm::mat4> ComputeGltfSkinMatricesBlended(
     float clipTimeSec, const GltfAnimationCpu *fadeAnimation,
     float fadeClipTimeSec, float fadeWeight);
 
+/// Reusable per-visual work arrays for ComputeGltfSkinMatricesInto.
+struct GltfSkinScratch
+{
+  std::vector<glm::mat4> locals;
+  std::vector<glm::mat4> globals;
+  std::vector<unsigned char> globalReady;
+};
+
+/// Same as ComputeGltfSkinMatricesBlended, writing into `palette` and using
+/// `scratch`: no allocation per frame once the arrays have grown.
+void ComputeGltfSkinMatricesInto(const CreatureGltfMeshAsset &asset,
+                                 const GltfAnimationCpu *animation,
+                                 float clipTimeSec,
+                                 const GltfAnimationCpu *fadeAnimation,
+                                 float fadeClipTimeSec, float fadeWeight,
+                                 GltfSkinScratch &scratch,
+                                 std::vector<glm::mat4> &palette);
+
 } // namespace cutum
 
 #endif

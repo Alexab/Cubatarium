@@ -157,6 +157,10 @@ public:
   const CreatureDefinition *GetCreatureDefinition(const std::string &typeId) const;
   ResolvedCreatureAppearance
   GetResolvedAppearance(const UCreature &creature) const;
+  /// Cached appearance shared with the visuals (no per-frame copy); the
+  /// pointer changes when the species/skin or the storages change.
+  std::shared_ptr<const ResolvedCreatureAppearance>
+  GetResolvedAppearanceShared(const UCreature &creature) const;
 
   UCreatureActivityDirector &GetActivityDirector() { return ActivityDirector; }
   const UCreatureActivityDirector &GetActivityDirector() const
@@ -196,8 +200,11 @@ private:
 
   // Resolved-appearance cache keyed "speciesskin"; validated against
   // storage revisions/pointers so any reload invalidates it (audit V6).
-  mutable std::unordered_map<std::string, ResolvedCreatureAppearance>
+  mutable std::unordered_map<std::string,
+                             std::shared_ptr<const ResolvedCreatureAppearance>>
       CreatureAppearanceCache;
+  /// Reused key buffer: the lookup runs per visible creature per frame.
+  mutable std::string AppearanceKeyScratch;
   mutable uint64_t AppearanceCacheDefsRevision{0};
   mutable uint64_t AppearanceCacheSkinsRevision{0};
   mutable const UCreatureDefinitionStorage *AppearanceCacheDefsPtr{nullptr};

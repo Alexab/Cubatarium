@@ -2,6 +2,7 @@
 #define CREATUREVISUALGLTF_H
 
 #include "Creatures/Visual/CreatureVisualBase.h"
+#include "Creatures/Visual/Gltf/CreatureGltfBonePalette.h"
 #include "Creatures/Visual/Gltf/CreatureGltfClipClock.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include <memory>
@@ -31,7 +32,12 @@ private:
   std::string ModelFile;
   UGltfClipClock ClipClock;
   const GltfAnimationCpu *ActiveAnimation{nullptr};
-  std::shared_ptr<const std::vector<glm::mat4>> BoneMatrices;
+  /// Bone palette owned by this visual and refilled in place every frame;
+  /// a new buffer is allocated only while last frame's draw requests still
+  /// hold the old one (the draw pass drops them at frame start).
+  std::shared_ptr<std::vector<glm::mat4>> BoneMatrices;
+  bool HasBonePalette{false};
+  GltfSkinScratch SkinScratch;
 };
 
 } // namespace cutum

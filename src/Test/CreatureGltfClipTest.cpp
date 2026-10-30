@@ -101,6 +101,41 @@ int main()
       ComputeGltfSkinMatricesBlended(asset, &walk, 0.5f, nullptr, 0.f, 0.f);
   Expect(Near(noFade[0][3].x, 0.5f), "zero weight is the active clip only");
 
+  // In-place palette with reused scratch matches the allocating path, also
+  // through a 3-level parent chain (memoized globals) and on reuse.
+  {
+    CreatureGltfMeshAsset chain;
+    chain.nodes.resize(3);
+    chain.nodes[1].parent = 0;
+    chain.nodes[2].parent = 1;
+    chain.nodes[0].translation = glm::vec3(1.0f, 0.0f, 0.0f);
+    chain.nodes[1].translation = glm::vec3(0.0f, 2.0f, 0.0f);
+    chain.nodes[2].translation = glm::vec3(0.0f, 0.0f, 3.0f);
+    chain.hasSkin = true;
+    chain.skin.jointNodes = {2, 0, 1};
+    GltfSkinScratch scratch;
+    std::vector<glm::mat4> palette;
+    for (int pass = 0; pass < 2; ++pass)
+    {
+      ComputeGltfSkinMatricesInto(chain, nullptr, 0.f, nullptr, 0.f, 0.f,
+                                  scratch, palette);
+      const auto reference =
+          ComputeGltfSkinMatricesBlended(chain, nullptr, 0.f, nullptr, 0.f, 0.f);
+      Expect(palette.size() == 3 && reference.size() == 3, "palette sizes");
+      for (size_t j = 0; j < 3; ++j)
+      {
+        Expect(palette[j] == reference[j], "in-place palette matches");
+      }
+      Expect(Near(palette[0][3].x, 1.0f) && Near(palette[0][3].y, 2.0f) &&
+                 Near(palette[0][3].z, 3.0f),
+             "leaf joint accumulates its whole parent chain");
+    }
+    ComputeGltfSkinMatricesInto(asset, &walk, 0.75f, nullptr, 0.f, 0.f,
+                                scratch, palette);
+    Expect(palette.size() == 2 && Near(palette[0][3].x, 0.75f),
+           "scratch reused for a different (smaller) skin");
+  }
+
   std::cout << "creature_gltf_clip_test: ok" << std::endl;
   return 0;
 }

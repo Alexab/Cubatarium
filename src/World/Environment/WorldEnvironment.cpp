@@ -730,9 +730,16 @@ UWorldEnvironment::GetCreatureDefinition(const std::string &typeId) const
 ResolvedCreatureAppearance
 UWorldEnvironment::GetResolvedAppearance(const UCreature &creature) const
 {
+  const auto shared = GetResolvedAppearanceShared(creature);
+  return shared ? *shared : ResolvedCreatureAppearance{};
+}
+
+std::shared_ptr<const ResolvedCreatureAppearance>
+UWorldEnvironment::GetResolvedAppearanceShared(const UCreature &creature) const
+{
   if (!CreatureDefinitions)
   {
-    return ResolvedCreatureAppearance{};
+    return nullptr;
   }
   const USkinDefinitionStorage *skins = SkinDefinitions.get();
   const uint64_t defsRevision =
@@ -750,35 +757,42 @@ UWorldEnvironment::GetResolvedAppearance(const UCreature &creature) const
     AppearanceCacheDefsPtr = CreatureDefinitions.get();
     AppearanceCacheSkinsPtr = skins;
   }
-  USkinDefinitionStorage empty;
-  const USkinDefinitionStorage &skinStorage = skins ? *skins : empty;
-  std::string skinId = creature.GetSkinId();
-  if (skinId.empty() && creature.IsPlayerCharacter())
+  std::string userSkinId;
+  const std::string *skinId = &creature.GetSkinId();
+  if (skinId->empty() && creature.IsPlayerCharacter())
   {
     if (auto user = Owner.GetCurrentUser())
     {
       if (!user->GetSelectedSkinId().empty())
       {
-        skinId = user->GetSelectedSkinId();
+        userSkinId = user->GetSelectedSkinId();
       }
       else if (!user->GetSelectedAppearanceTypeId().empty())
       {
-        skinId = user->GetSelectedAppearanceTypeId();
+        userSkinId = user->GetSelectedAppearanceTypeId();
       }
+      skinId = &userSkinId;
     }
   }
   // Resolving rebuilds part lists with storage lookups; cache per
   // (species, effective skin) — this used to run per creature per frame
-  // (audit V6).
-  const std::string cacheKey = creature.GetTypeId() + '\x1f' + skinId;
-  if (const auto it = CreatureAppearanceCache.find(cacheKey);
+  // (audit V6). The key is built in a reused buffer and the hit is shared,
+  // not copied: this used to allocate the key and copy the whole appearance
+  // (strings and part list) for every visible creature every frame.
+  AppearanceKeyScratch.assign(creature.GetTypeId());
+  AppearanceKeyScratch += '\x1f';
+  AppearanceKeyScratch += *skinId;
+  if (const auto it = CreatureAppearanceCache.find(AppearanceKeyScratch);
       it != CreatureAppearanceCache.end())
   {
     return it->second;
   }
-  ResolvedCreatureAppearance resolved = ResolveCreatureAppearance(
-      *CreatureDefinitions, skinStorage, creature.GetTypeId(), skinId);
-  CreatureAppearanceCache[cacheKey] = resolved;
+  static const USkinDefinitionStorage kNoSkins;
+  const USkinDefinitionStorage &skinStorage = skins ? *skins : kNoSkins;
+  auto resolved = std::make_shared<const ResolvedCreatureAppearance>(
+      ResolveCreatureAppearance(*CreatureDefinitions, skinStorage,
+                                creature.GetTypeId(), *skinId));
+  CreatureAppearanceCache[AppearanceKeyScratch] = resolved;
   return resolved;
 }
 
