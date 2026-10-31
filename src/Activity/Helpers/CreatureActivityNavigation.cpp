@@ -47,7 +47,8 @@ void AdvanceDirectShortcuts(CreatureNavigationState &state,
   {
     return;
   }
-  const glm::vec3 size(0.6f, query.body_height, 0.6f);
+  const glm::vec3 size(query.body_width, query.body_height,
+                        query.body_width);
   const float max_step = std::max(query.max_jump, 1.0f);
   while (state.waypoint_index + 1 <
          static_cast<int>(state.path.waypoints.size()))
@@ -176,7 +177,6 @@ CreatureNavigationSteerResult SteerCreatureAlongPath(
 
   if (!state.path.valid)
   {
-    result.path_finished = true;
     return result;
   }
 
@@ -187,7 +187,6 @@ CreatureNavigationSteerResult SteerCreatureAlongPath(
   const WaypointFollowResult follow = UWaypointFollower::Update(
       body_origin, state.path, arrive_radius, state.waypoint_index);
   result.move_dir = follow.move_dir;
-  result.path_finished = follow.path_finished;
   return result;
 }
 

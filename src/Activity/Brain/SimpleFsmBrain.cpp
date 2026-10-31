@@ -258,7 +258,7 @@ void USimpleFsmBrain::TickFlee(UCreatureActivityBlackboard &blackboard,
   NavigationQuery query;
   query.search_distance = 32;
   query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
-  query.body_width = std::max(0.6f, snapshot.boundsSize.x);
+  query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
   query.max_jump = snapshot.locomotion.jumpHeightBlocks;
   const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
       blackboard.navigation, sink.GetWorld(), view.bodyOrigin, flee_goal,
@@ -433,7 +433,7 @@ void USimpleFsmBrain::TickMeleeFallback(UCreatureActivityBlackboard &blackboard,
   NavigationQuery query;
   query.search_distance = 32;
   query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
-  query.body_width = std::max(0.6f, snapshot.boundsSize.x);
+  query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
   query.max_jump = snapshot.locomotion.jumpHeightBlocks;
   const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
       blackboard.navigation, sink.GetWorld(), view.bodyOrigin, chase_goal,
@@ -604,6 +604,7 @@ if (aerial)
 NavigationQuery query;
 query.search_distance = 32;
 query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
+query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
 query.max_jump = snapshot.locomotion.jumpHeightBlocks;
 const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
     blackboard.navigation, sink.GetWorld(), view.bodyOrigin, chase_goal,

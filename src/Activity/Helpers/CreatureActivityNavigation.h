@@ -29,7 +29,6 @@ struct CreatureNavigationSteerResult
 {
   glm::vec3 move_dir{0.0f};
   bool has_path{false};
-  bool path_finished{false};
   bool partial_path{false};
 };
 

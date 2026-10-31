@@ -149,7 +149,6 @@ bool TryResolveDig(UWorld &world, UCreature &source, WorldGameMode mode,
   }
   pred.Valid = true;
   return true;
-  return true;
 }
 
 bool TryResolveRadiusTargets(UWorld &world, UCreature &source,
@@ -191,7 +190,6 @@ bool TryResolveRadiusTargets(UWorld &world, UCreature &source,
   }
   pred.SourceFatigueDelta = cap.SourceFatigueCost;
   pred.Valid = true;
-  return true;
   return true;
 }
 

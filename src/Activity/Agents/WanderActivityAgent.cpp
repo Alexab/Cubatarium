@@ -35,11 +35,8 @@ void RepickWanderDirection(IUWorldPerception &perception,
                            WanderAgentState &st)
 {
   glm::vec3 next_dir = st.direction;
-  if (!PickLocomotionDirection(perception, view, snapshot.habitat,
-                               snapshot.boundsSize, next_dir))
-  {
-    next_dir = RandomLocomotionDirection(snapshot.habitat);
-  }
+  PickWanderDirectionPreferLand(perception, view, snapshot.habitat,
+                                snapshot.boundsSize, next_dir);
   st.direction = next_dir;
 }
 
@@ -84,14 +81,6 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
   }
 }
 
-void UWanderActivityAgent::EnsureCreature(
-    CreatureId Id, const CreatureBehaviorParams &behavior)
-{
-  if (Members.find(Id) == Members.end())
-  {
-    OnCreatureAdded(Id, behavior);
-  }
-}
 
 void UWanderActivityAgent::TickCreature(CreatureId Id,
                                         IUWorldPerception &perception,
