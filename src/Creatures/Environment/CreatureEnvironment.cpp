@@ -5,6 +5,7 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Environment/CreatureTraverseQueries.h"
+#include "Creatures/Environment/CreatureSpawnPlacement.h"
 #include "Navigation/NavigationTypes.h"
 #include "Navigation/WorldNavigationQueries.h"
 #include "Render/Camera/Camera.h"
@@ -220,16 +221,7 @@ std::optional<float> FindAquaticSpawnFeetY(const UWorld &world, int worldX,
   {
     return std::nullopt;
   }
-  const float depth =
-      static_cast<float>(column->maxY - column->minY + 1);
-  if (depth + 1e-3f < bodyHeight * 0.35f)
-  {
-    return std::nullopt;
-  }
-  const float minFeet = static_cast<float>(column->minY);
-  const float maxFeet =
-      static_cast<float>(column->maxY) - bodyHeight + 0.5f;
-  return std::clamp(minFeet, minFeet, std::max(minFeet, maxFeet));
+  return ComputeAquaticSpawnFeetY(column->minY, column->maxY, bodyHeight);
 }
 
 bool HasAerialClearance(const UWorld &world, const CollisionVolume &vol,

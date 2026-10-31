@@ -1470,6 +1470,15 @@ add_test(NAME creature_shader_parity_test
     COMMAND $<TARGET_FILE:creature_shader_parity_test>)
 set_tests_properties(creature_shader_parity_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_aquatic_spawn_test
+    SOURCES
+        src/Test/CreatureAquaticSpawnTest.cpp
+    DEFINITIONS CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    LIBRARIES glm::glm)
+add_test(NAME creature_aquatic_spawn_test
+    COMMAND $<TARGET_FILE:creature_aquatic_spawn_test>)
+set_tests_properties(creature_aquatic_spawn_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME environment_light_test
     SOURCES
         src/Test/EnvironmentLightTest.cpp
