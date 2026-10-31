@@ -335,10 +335,12 @@ void USimpleFsmBrain::TickMeleeFallback(UCreatureActivityBlackboard &blackboard,
     blackboard.state = CreatureFsmState::Attack;
     intent.moveDirWorld = glm::vec3(0.0f);
     intent.moveSpeed = 0.0f;
-    SetMeleeInfluenceIntent(intent, nearest_id);
-    intent.suggestedAnim = LocomotionState::Action;
+    // Strike only off cooldown; attackCooldown from the catalog paces melee
+    // mobs (the resolver still enforces its own bare-hand interval on top).
     if (blackboard.actionTimer <= 0.0f)
     {
+      SetMeleeInfluenceIntent(intent, nearest_id);
+      intent.suggestedAnim = LocomotionState::Action;
       blackboard.actionTimer = snapshot.behavior.attackCooldown;
     }
     sink.SetIntent(self_id, intent);
@@ -460,10 +462,12 @@ if (melee_dist <= snapshot.behavior.attackRange &&
   blackboard.state = CreatureFsmState::Attack;
   intent.moveDirWorld = glm::vec3(0.0f);
   intent.moveSpeed = 0.0f;
-  SetMeleeInfluenceIntent(intent, controlled->Id);
-  intent.suggestedAnim = LocomotionState::Action;
+  // Strike only off cooldown; attackCooldown from the catalog paces melee
+  // mobs (the resolver still enforces its own bare-hand interval on top).
   if (blackboard.actionTimer <= 0.0f)
   {
+    SetMeleeInfluenceIntent(intent, controlled->Id);
+    intent.suggestedAnim = LocomotionState::Action;
     blackboard.actionTimer = snapshot.behavior.attackCooldown;
   }
   sink.SetIntent(self_id, intent);

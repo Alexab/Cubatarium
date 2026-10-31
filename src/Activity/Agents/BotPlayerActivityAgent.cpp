@@ -116,7 +116,11 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
     bb.actionTimer -= dt;
 
     CreatureIntent intent{};
-    intent.clearOnApply = true;
+    // Like every other agent: the intent must survive between activity ticks
+    // (20 Hz) so the body keeps moving on every world frame; clearOnApply
+    // erased it after the first frame (jerky ~1/3 speed, frozen on hitch
+    // frames when brains are gated).
+    intent.clearOnApply = false;
 
     const UWorld &world = sink.GetWorld();
     const UCreature *self = world.GetCreature(Id);
@@ -125,24 +129,35 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
       continue;
     }
 
-    // Prefer nearest hostile within aggro.
+    // Prefer the sticky target while it stays a valid hostile in aggro
+    // range; otherwise take the nearest (same anti-flap rule as the mob↔mob
+    // fallback brain, audit M3).
     CreatureId hostileId = 0;
     float hostileDist = std::numeric_limits<float>::max();
+    bool stickyValid = false;
     const auto neighbors = perception.QueryCreatureNeighborsInRadius(
         view->bodyOrigin, behavior.aggroRadius, Id);
     for (const CreatureNeighborView &n : neighbors)
     {
-      if (!IsHostileTarget(world, *self, n.Id))
+      const float d = HorizontalDistanceXZ(view->bodyOrigin, n.bodyOrigin);
+      if (n.Id == bb.targetId)
       {
+        if (IsHostileTarget(world, *self, n.Id))
+        {
+          stickyValid = true;
+          hostileId = n.Id;
+          hostileDist = d;
+        }
         continue;
       }
-      const float d = HorizontalDistanceXZ(view->bodyOrigin, n.bodyOrigin);
-      if (d < hostileDist)
+      if (!stickyValid && d < hostileDist &&
+          IsHostileTarget(world, *self, n.Id))
       {
         hostileDist = d;
         hostileId = n.Id;
       }
     }
+    bb.targetId = hostileId;
 
     if (hostileId != 0)
     {
@@ -150,10 +165,13 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
       if (hostileDist <= attackRange)
       {
         bb.state = CreatureFsmState::Attack;
-        SetMeleeInfluenceIntent(intent, hostileId);
-        intent.suggestedAnim = LocomotionState::Action;
+        // Strike only off cooldown; attackCooldown from the catalog paces
+        // the attacks (the resolver still enforces its own bare-hand
+        // interval on top).
         if (bb.actionTimer <= 0.f)
         {
+          SetMeleeInfluenceIntent(intent, hostileId);
+          intent.suggestedAnim = LocomotionState::Action;
           bb.actionTimer = std::max(0.5f, behavior.attackCooldown);
         }
         sink.SetIntent(Id, intent);
