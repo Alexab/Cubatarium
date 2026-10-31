@@ -458,6 +458,39 @@ glm::mat4 FitGltfToBone(const CreatureGltfMeshAsset &asset, float targetSize)
          glm::translate(glm::mat4(1.f), -center);
 }
 
+struct WornItemLocal
+{
+  WearLocal wear;
+  glm::mat4 fit{1.f};
+};
+
+// wear.json parsing and the mesh-extent fit walk are per-item constants:
+// build them once per (item, slot), drop on item definition reloads like the
+// other item model caches (SyncItemModelCache).
+const WornItemLocal &CachedWornItemLocal(const std::string &itemId, size_t slot)
+{
+  static std::mutex mu;
+  static std::unordered_map<std::string, std::shared_ptr<WornItemLocal>>
+      cache;
+  static uint64_t cacheRevision = 0;
+  std::lock_guard<std::mutex> lock(mu);
+  SyncItemModelCache(cache, cacheRevision);
+  const std::string key = itemId + "|" + std::to_string(slot);
+  const auto it = cache.find(key);
+  if (it != cache.end())
+  {
+    return *it->second;
+  }
+  auto entry = std::make_shared<WornItemLocal>();
+  entry->wear = LoadWear(itemId, slot);
+  if (const auto asset = LoadItemGltf(itemId))
+  {
+    entry->fit = FitGltfToBone(*asset, slot == 0 ? 0.55f : 0.7f);
+  }
+  cache[key] = entry;
+  return *entry;
+}
+
 void SubmitItemOnBones(UGeometryEngine *engine, UShaderProgram *shader,
                        const std::string &itemId, size_t slot,
                        const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
@@ -472,13 +505,12 @@ void SubmitItemOnBones(UGeometryEngine *engine, UShaderProgram *shader,
   {
     return;
   }
-  const WearLocal wear = LoadWear(itemId, slot);
-  const glm::mat4 fit = FitGltfToBone(*asset, slot == 0 ? 0.55f : 0.7f);
-  const glm::mat4 local = WearLocalMatrix(wear) * fit;
+  const WornItemLocal &worn = CachedWornItemLocal(itemId, slot);
+  const glm::mat4 local = WearLocalMatrix(worn.wear) * worn.fit;
   const std::filesystem::path gltfAbs = ResolveGltfAbs(itemId);
   const GLuint fallbackTex = SolidColorTex(itemId);
 
-  for (const std::string &boneName : wear.bones)
+  for (const std::string &boneName : worn.wear.bones)
   {
     glm::mat4 boneMat(1.f);
     if (!bones(boneName, boneMat))
