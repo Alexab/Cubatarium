@@ -12,6 +12,48 @@
 namespace cutum
 {
 
+/// When the species may naturally spawn. Hostiles default to Night when the
+/// catalog leaves this at Any (Minecraft-style surface rule); underground
+/// spawn points bypass the window.
+enum class CreatureActiveTime : uint8_t
+{
+  Any,
+  Day,
+  Night
+};
+
+inline CreatureActiveTime ParseCreatureActiveTime(const std::string &value)
+{
+  if (value == "day")
+  {
+    return CreatureActiveTime::Day;
+  }
+  if (value == "night")
+  {
+    return CreatureActiveTime::Night;
+  }
+  return CreatureActiveTime::Any;
+}
+
+inline const char *CreatureActiveTimeToString(CreatureActiveTime value)
+{
+  switch (value)
+  {
+  case CreatureActiveTime::Day:
+    return "day";
+  case CreatureActiveTime::Night:
+    return "night";
+  case CreatureActiveTime::Any:
+  default:
+    return "any";
+  }
+}
+
+/// Effective natural-spawn window for a species: hostiles without explicit
+/// data spawn at night (or underground, see AllowsNaturalSpawnTime).
+inline CreatureActiveTime EffectiveNaturalActiveTime(
+    const std::vector<std::string> &tags, CreatureActiveTime activeTime);
+
 struct CreatureCatalogInfo
 {
   std::vector<std::string> tags;
@@ -21,7 +63,20 @@ struct CreatureCatalogInfo
   int spawnGroupMin{1};
   int spawnGroupMax{1};
   int sortOrder{0};
+  /// Biome ids (WorldGen registry names) the species naturally spawns in;
+  /// empty = any biome.
+  std::vector<std::string> spawnBiomes;
+  CreatureActiveTime activeTime{CreatureActiveTime::Any};
 };
+
+/// Biome gate for natural spawns: an empty list is "anywhere".
+inline bool SpeciesAllowedInBiome(const CreatureCatalogInfo &catalog,
+                                  const std::string &biomeId)
+{
+  return catalog.spawnBiomes.empty() ||
+         std::find(catalog.spawnBiomes.begin(), catalog.spawnBiomes.end(),
+                   biomeId) != catalog.spawnBiomes.end();
+}
 
 enum class CreatureRole
 {
@@ -81,6 +136,36 @@ inline bool HasCreatureTag(const std::vector<std::string> &tags,
                              const char *tag)
 {
   return std::find(tags.begin(), tags.end(), tag) != tags.end();
+}
+
+inline CreatureActiveTime EffectiveNaturalActiveTime(
+    const std::vector<std::string> &tags, CreatureActiveTime activeTime)
+{
+  if (activeTime == CreatureActiveTime::Any &&
+      HasCreatureTag(tags, "hostile"))
+  {
+    return CreatureActiveTime::Night;
+  }
+  return activeTime;
+}
+
+/// Natural-spawn window check. `underground` (the point sits below the
+/// surface) lets night species spawn in caves at any hour.
+inline bool AllowsNaturalSpawnTime(const std::vector<std::string> &tags,
+                                   CreatureActiveTime activeTime, bool isNight,
+                                   bool underground)
+{
+  const CreatureActiveTime window =
+      EffectiveNaturalActiveTime(tags, activeTime);
+  if (window == CreatureActiveTime::Any)
+  {
+    return true;
+  }
+  if (underground && window == CreatureActiveTime::Night)
+  {
+    return true;
+  }
+  return window == CreatureActiveTime::Night ? isNight : !isNight;
 }
 
 enum class CreatureVisualBackend : uint8_t

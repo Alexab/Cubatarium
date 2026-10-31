@@ -1479,6 +1479,17 @@ add_test(NAME creature_aquatic_spawn_test
     COMMAND $<TARGET_FILE:creature_aquatic_spawn_test>)
 set_tests_properties(creature_aquatic_spawn_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_spawn_zones_test
+    SOURCES
+        src/Creatures/Core/CreatureCatalogTypes.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/Test/CreatureSpawnZonesTest.cpp
+    DEFINITIONS CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME creature_spawn_zones_test
+    COMMAND $<TARGET_FILE:creature_spawn_zones_test>)
+set_tests_properties(creature_spawn_zones_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME environment_light_test
     SOURCES
         src/Test/EnvironmentLightTest.cpp

@@ -135,10 +135,15 @@ public:
 
   CreaturePopulationCounts CountNaturalPopulation(
       const glm::vec3 &playerOrigin);
-  void TryNaturalPopulationSpawn(
+  /// Spawns at most one natural group; returns 1 when a group appeared.
+  int TryNaturalPopulationSpawn(
       const glm::vec3 &playerOrigin, const CreaturePopulationCounts &counts,
       const std::vector<WeightedSpawnOption<const CreatureDefinition *>>
-          &eligible);
+          &eligible,
+      bool isNight);
+  /// Removes natural spawns that wandered far from every player so they do
+  /// not occupy the world population budget forever.
+  void DespawnDistantNaturalCreatures(const glm::vec3 &playerOrigin);
   void TickNaturalPopulation(float dt);
   void ValidateLoadedCreaturePositions();
   int GetLastActivityAgentsTicked() const
@@ -193,6 +198,12 @@ private:
   UCreatureSpatialIndex CreatureSpatialIndex;
   bool CreatureSpatialIndexReady{false};
   float NaturalPopulationTimer{0.f};
+  /// Initial-population burst left for a fresh world (no creatures.json was
+  /// loaded): the spawner runs at a short interval until this runs out.
+  int NaturalPopulationBurstRemaining{8};
+  /// True once creatures were loaded from a save file — disables the
+  /// initial burst for existing worlds.
+  bool LoadedFromPersistedCreatures{false};
   float LoadedCreaturePositionValidationTimer{0.f};
   bool LoadedCreaturePositionValidationPending{true};
   std::mt19937 NaturalPopulationRng{0xC0BA7AULL};

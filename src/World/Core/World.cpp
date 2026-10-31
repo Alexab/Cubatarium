@@ -46,6 +46,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
 #include "World/IO/ChunkStorageService.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
@@ -989,6 +990,18 @@ void UWorld::TickEnvironment(float dtSeconds)
     }
     LastChunkWeatherUpdateSec = weather_time;
   }
+}
+
+std::string UWorld::DominantBiomeIdAt(const glm::vec3 &position) const
+{
+  const BiomeEnvironmentSample sample = SampleBiomeEnvironmentAt(position);
+  return BiomeIdToString(DominantBiome(sample.BiomeWeights));
+}
+
+bool UWorld::IsNightTime() const
+{
+  // 1.0 = full day, 0.0 = deep night (EnvironmentStateData.DayNightFactor).
+  return EnvironmentStateData.DayNightFactor < 0.5f;
 }
 
 BiomeEnvironmentSample UWorld::SampleBiomeEnvironmentAt(
