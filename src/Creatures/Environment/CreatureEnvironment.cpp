@@ -851,10 +851,10 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
       const float feetYClamped = std::clamp(probeOrigin.y, minFeet, maxFeet);
       return glm::vec3(probeOrigin.x, feetYClamped, probeOrigin.z);
     }
-    if (def.habitat == CreatureHabitat::Amphibious)
-    {
-      return probeOrigin;
-    }
+    // Amphibious with no water here: stand on the ground like a land mob.
+    // This used to return the raw probe (eye height in the air), so the
+    // habitat check (ground or water) failed and amphibious creatures
+    // (penguin, seal) could not be spawned on land by view or by QA.
   }
   if (def.habitat == CreatureHabitat::Lava)
   {
@@ -897,7 +897,8 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
     }
     return base;
   }
-  if (def.habitat == CreatureHabitat::Terrestrial)
+  if (def.habitat == CreatureHabitat::Terrestrial ||
+      def.habitat == CreatureHabitat::Amphibious)
   {
     const int gx = WorldCoordToBlockIndex(probeOrigin.x);
     const int gz = WorldCoordToBlockIndex(probeOrigin.z);
