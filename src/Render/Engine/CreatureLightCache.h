@@ -2,6 +2,7 @@
 #define CREATURE_LIGHT_CACHE_H
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <iterator>
@@ -15,6 +16,27 @@ namespace cutum
 /// creatures are cleared: the cache is tied to the world's creature
 /// generation and dropped when it changes, so a new creature never inherits
 /// the light of an old one with the same id.
+/// Block cell whose light a creature takes: the cell holding the body centre
+/// (blocks are centred on integers, so floor(x + 0.5)), or the one above it
+/// when that cell is solid. The draw pass used floor(x): the centre of a low
+/// body (tortoise, centre ~0.2 above the ground) landed in the ground block,
+/// and horizontally in the neighbouring cell half the time; solid cells have
+/// light 0, so such creatures were drawn black, flipping as they walked past
+/// trunks and slopes.
+template <typename IsSolid>
+glm::ivec3 CreatureLightSampleCell(const glm::vec3 &bodyCenter,
+                                   const IsSolid &isSolid)
+{
+  const glm::ivec3 cell(static_cast<int>(std::floor(bodyCenter.x + 0.5f)),
+                        static_cast<int>(std::floor(bodyCenter.y + 0.5f)),
+                        static_cast<int>(std::floor(bodyCenter.z + 0.5f)));
+  if (isSolid(cell))
+  {
+    return cell + glm::ivec3(0, 1, 0);
+  }
+  return cell;
+}
+
 class UCreatureLightCache
 {
 public:
