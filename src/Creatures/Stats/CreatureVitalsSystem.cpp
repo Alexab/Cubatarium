@@ -143,7 +143,8 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
 
 bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
                                        float amount, WorldGameMode mode,
-                                       const char *reason)
+                                       const char *reason,
+                                       CreatureId attackerId)
 {
   if (amount <= 0.f)
   {
@@ -175,7 +176,7 @@ bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
     }
   }
   v.health = std::max(0.f, v.health - mitigated);
-  target.NotifyDamaged();
+  target.NotifyDamaged(attackerId);
   if (v.health <= 0.f)
   {
     return HandleLethal(world, target, mode);

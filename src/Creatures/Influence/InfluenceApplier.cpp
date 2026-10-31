@@ -369,7 +369,7 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
       const float amount = -delta.HealthDelta;
       total_damage += amount;
       if (CreatureVitalsSystem::ApplyDamage(world, *target, amount, mode,
-                                            "influence"))
+                                            "influence", pred.SourceId))
       {
         result.AnyTargetRemoved = true;
         world.RemoveCreature(delta.TargetId);

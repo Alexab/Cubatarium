@@ -9,6 +9,12 @@ namespace cutum
 
 class UWorld;
 
+/// No movement-blocking block between the attacker's eye and the target body
+/// (shared by the influence resolver and the AI: mobs must not stand in
+/// Attack when a wall eats every strike).
+bool CreatureMeleeLineOfSight(const UWorld &world, const UCreature &source,
+                              const UCreature &target);
+
 struct CreatureCombat
 {
   /// Resolve melee strike from attacker Influence intent.
