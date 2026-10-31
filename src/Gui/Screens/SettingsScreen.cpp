@@ -140,6 +140,10 @@ void USettingsScreen::OnSave()
   {
     app.Ui.ShowPerformance = ShowPerformanceBox->IsChecked();
   }
+  if (CreatureNamesBox)
+  {
+    app.Render.CreatureNameLabels = CreatureNamesBox->IsChecked();
+  }
   if (ConsoleKeyInput)
   {
     app.Ui.ConsoleKey = ConsoleKeyInput->GetText();
@@ -339,6 +343,11 @@ void USettingsScreen::Build(UGuiContext &ctx)
   ShowPerformanceBox = perf.get();
   perf->SetChecked(appSnap.Ui.ShowPerformance);
   app.AddChild(std::move(perf));
+  auto names =
+      std::make_unique<UGuiCheckbox>(&theme, "Show creature names");
+  CreatureNamesBox = names.get();
+  names->SetChecked(appSnap.Render.CreatureNameLabels);
+  app.AddChild(std::move(names));
   auto consoleLbl = std::make_unique<UGuiLabel>(&theme, "Console key:");
   ConsoleKeyLabel = consoleLbl.get();
   app.AddChild(std::move(consoleLbl));
@@ -623,6 +632,8 @@ USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
   items.push_back({LegacyHudBox, row, 0, 1, cols, checkH});
   ++row;
   items.push_back({ShowPerformanceBox, row, 0, 1, cols, checkH});
+  ++row;
+  items.push_back({CreatureNamesBox, row, 0, 1, cols, checkH});
   ++row;
   addLabeledField(ConsoleKeyLabel, ConsoleKeyInput);
   addLabeledField(PaletteKeyLabel, PaletteKeyInput);

@@ -90,6 +90,7 @@ private:
   UGuiCheckbox *BatchCacheBox{nullptr};
   UGuiCheckbox *LegacyHudBox{nullptr};
   UGuiCheckbox *ShowPerformanceBox{nullptr};
+  UGuiCheckbox *CreatureNamesBox{nullptr};
   UGuiTextInput *ConsoleKeyInput{nullptr};
   UGuiTextInput *PaletteKeyInput{nullptr};
   UGuiButton *HotbarMinusButton{nullptr};

@@ -508,7 +508,11 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   static const char *envLocal = std::getenv("CUBA_CREATURE_LOCAL_LIGHT");
   const bool localLight =
       envLocal ? std::atoi(envLocal) != 0 : render.CreatureLocalLight;
-  const bool labels = envLabels || render.CreatureDebugLabels;
+  const bool debugLabels = envLabels || render.CreatureDebugLabels;
+  const bool nameLabels = render.CreatureNameLabels;
+  const bool labels = debugLabels || nameLabels;
+  // Names only for creatures this close (keeps a crowd readable).
+  constexpr float kNameLabelMaxDistance = 32.0f;
   PendingLabels.clear();
   static const bool lightBench =
       std::getenv("CUBA_CREATURE_LIGHT_BENCH") != nullptr;
@@ -573,22 +577,33 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
         SubmitCreatureVisual(world, creature, *def, dt, drawContext, viewProj);
         Queue.StampLight(firstRequest, light);
 
-        if (labels && !creature.IsPlayerCharacter())
+        if (labels && !creature.IsPlayerCharacter() &&
+            (debugLabels ||
+             glm::distance(creature.GetBodyOrigin(), cameraPos) <=
+                 kNameLabelMaxDistance))
         {
-          // The label reports the collision box.
+          // The debug label reports the collision box.
           const glm::vec3 size = creature.GetCollisionSize();
-          const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
-          char text[160];
-          std::snprintf(text, sizeof(text),
-                        "%s #%llu %s v=%.1f box %.2fx%.2fx%.2f",
-                        creature.GetTypeId().c_str(),
-                        static_cast<unsigned long long>(creature.GetId()),
-                        ToString(facts.state), facts.horizontalSpeed, size.x,
-                        size.y, size.z);
           PendingLabel label;
           label.World = creature.GetBodyOrigin() +
                         glm::vec3(0.0f, size.y + 0.6f, 0.0f);
-          label.Text = text;
+          if (debugLabels)
+          {
+            const CreatureLocomotionFacts &facts =
+                creature.GetLocomotionFacts();
+            char text[160];
+            std::snprintf(text, sizeof(text),
+                          "%s #%llu %s v=%.1f box %.2fx%.2fx%.2f",
+                          creature.GetTypeId().c_str(),
+                          static_cast<unsigned long long>(creature.GetId()),
+                          ToString(facts.state), facts.horizontalSpeed, size.x,
+                          size.y, size.z);
+            label.Text = text;
+          }
+          else
+          {
+            label.Text = creature.GetTypeId();
+          }
           PendingLabels.push_back(std::move(label));
         }
 

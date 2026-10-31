@@ -426,6 +426,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r.value("creature_debug_bounds", Render.CreatureDebugBounds);
         Render.CreatureDebugLabels =
             r.value("creature_debug_labels", Render.CreatureDebugLabels);
+        Render.CreatureNameLabels =
+            r.value("creature_name_labels", Render.CreatureNameLabels);
         Render.CreatureLocalLight =
             r.value("creature_local_light", Render.CreatureLocalLight);
         Render.CreatureTexturedParts =
@@ -773,6 +775,7 @@ void UCore::SaveConfigFile()
   render_json["batch_cache"] = Render.BatchCache;
   render_json["creature_debug_bounds"] = Render.CreatureDebugBounds;
   render_json["creature_debug_labels"] = Render.CreatureDebugLabels;
+  render_json["creature_name_labels"] = Render.CreatureNameLabels;
   render_json["creature_local_light"] = Render.CreatureLocalLight;
   render_json["creature_textured_parts"] = Render.CreatureTexturedParts;
   render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
