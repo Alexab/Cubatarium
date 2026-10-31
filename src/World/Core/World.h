@@ -1091,6 +1091,10 @@ public:
   void TickEnvironment(float dtSeconds);
   BiomeEnvironmentSample SampleBiomeEnvironmentAt(
       const glm::vec3 &position) const;
+  /// Registry id (e.g. "forest") of the dominant biome at `position`.
+  std::string DominantBiomeIdAt(const glm::vec3 &position) const;
+  /// True between dusk and dawn (DayNightFactor below half).
+  bool IsNightTime() const;
   WeatherSample SampleWeatherAt(const glm::vec3 &position) const;
   double GetWeatherSimulationTimeSec() const;
   void UpdateChunkWeatherState(glm::ivec3 chunk_coord,

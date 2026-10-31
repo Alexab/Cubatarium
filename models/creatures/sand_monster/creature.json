@@ -9,9 +9,15 @@
     "spawnable": true,
     "sort_order": 32,
     "natural_spawnable": true,
-    "spawn_weight": 1.0,
+    "spawn_weight": 0.7,
     "spawn_group_min": 1,
-    "spawn_group_max": 2
+    "spawn_group_max": 2,
+    "spawn_biomes": [
+      "desert",
+      "savanna",
+      "scrubland",
+      "beach"
+    ]
   },
   "role": "mob",
   "bounds": {

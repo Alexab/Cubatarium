@@ -381,6 +381,8 @@ void UWorldEnvironment::ClearCreatures()
   // same natural-population random stream.
   NaturalPopulationRng.seed(Owner.GetWorldSeed());
   NaturalPopulationTimer = 0.f;
+  NaturalPopulationBurstRemaining = 8;
+  LoadedFromPersistedCreatures = false;
   LoadedCreaturePositionValidationTimer = 0.f;
   LoadedCreaturePositionValidationPending = true;
   CreatureSpatialIndex.Clear();
@@ -1125,6 +1127,9 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
   {
     return;
   }
+  // A persisted creature list means an established world: no initial burst.
+  LoadedFromPersistedCreatures = true;
+  NaturalPopulationBurstRemaining = 0;
   try
   {
     std::ifstream file(file_name);
@@ -1429,6 +1434,15 @@ void UWorldEnvironment::ValidateLoadedCreaturePositions()
 
 void UWorldEnvironment::TickNaturalPopulation(float dt)
 {
+  const char *spawnLogPath = std::getenv("CUBA_QA_SPAWNLOG");
+  const auto SpawnLog = [spawnLogPath](const std::string &line)
+  {
+    if (spawnLogPath)
+    {
+      std::ofstream log(spawnLogPath, std::ios::app);
+      log << line << "\n";
+    }
+  };
   if (Owner.IsPlayerDead() || !CreatureDefinitions)
   {
     NaturalPopulationTimer = 0.f;
@@ -1441,20 +1455,30 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
   }
 
   NaturalPopulationTimer += std::max(0.f, dt);
-  constexpr float kPopulationIntervalSec = 6.f;
-  if (NaturalPopulationTimer < kPopulationIntervalSec)
+  // Fresh worlds fill up fast (short interval while the initial burst has
+  // groups left and nothing was loaded from a save); steady state ticks the
+  // spawner every 6 seconds.
+  const bool initialBurst =
+      NaturalPopulationBurstRemaining > 0 && !LoadedFromPersistedCreatures;
+  const float populationIntervalSec = initialBurst ? 1.5f : 6.f;
+  if (NaturalPopulationTimer < populationIntervalSec)
   {
     return;
   }
   NaturalPopulationTimer = std::fmod(NaturalPopulationTimer,
-                                    kPopulationIntervalSec);
+                                    populationIntervalSec);
 
   const glm::vec3 playerOrigin = player->GetBodyOrigin();
+  DespawnDistantNaturalCreatures(playerOrigin);
   const CreaturePopulationCounts currentCounts =
       CountNaturalPopulation(playerOrigin);
+  SpawnLog("timer fired naturalWorld=" +
+           std::to_string(currentCounts.naturalWorld) + " local=" +
+           std::to_string(currentCounts.local));
   if (!CreaturePopulationRules::CanAddNaturalCreature(
           currentCounts, false, Owner.GetDifficulty(), Owner.GetGameMode()))
   {
+    SpawnLog("early: cannot add creature");
     return;
   }
   const WorldDifficultyProfile profile =
@@ -1471,15 +1495,74 @@ void UWorldEnvironment::TickNaturalPopulation(float dt)
       spawnable, hostileRoom, profile.HostileSpawnPressureMultiplier);
   if (eligible.empty() || TotalSpawnOptionWeight(eligible) <= 0.f)
   {
+    SpawnLog("early: eligible empty (spawnable=" +
+             std::to_string(spawnable.size()) + ")");
     return;
   }
-  TryNaturalPopulationSpawn(playerOrigin, currentCounts, eligible);
+  const int spawnedGroups = TryNaturalPopulationSpawn(
+      playerOrigin, currentCounts, eligible, Owner.IsNightTime());
+  if (initialBurst && spawnedGroups > 0)
+  {
+    NaturalPopulationBurstRemaining =
+        std::max(0, NaturalPopulationBurstRemaining - spawnedGroups);
+  }
+  if (const char *logPath = std::getenv("CUBA_QA_SPAWNLOG"))
+  {
+    std::ofstream log(logPath, std::ios::app);
+    log << "tick naturalWorld=" << currentCounts.naturalWorld
+        << " local=" << currentCounts.local
+        << " hostileRoom=" << hostileRoom
+        << " eligible=" << eligible.size()
+        << " night=" << Owner.IsNightTime()
+        << " burst=" << NaturalPopulationBurstRemaining
+        << " spawnedGroups=" << spawnedGroups << "\n";
+  }
 }
 
-void UWorldEnvironment::TryNaturalPopulationSpawn(
+void UWorldEnvironment::DespawnDistantNaturalCreatures(
+    const glm::vec3 &playerOrigin)
+{
+  // Natural spawns exist to keep the surroundings alive; far away they only
+  // occupy the (world-wide) population budget and the save file. Manual,
+  // command, QA and legacy-save creatures stay forever. A ridden mount is
+  // always at the player, so the distance check keeps it by construction.
+  // CUBA_QA_DESPAWN_RADIUS shrinks the radius for QA scenarios only.
+  float despawnRadiusBlocks = 96.f;
+  if (const char *qaRadius = std::getenv("CUBA_QA_DESPAWN_RADIUS"))
+  {
+    const float parsed = std::atof(qaRadius);
+    if (parsed > 0.f)
+    {
+      despawnRadiusBlocks = parsed;
+    }
+  }
+  std::vector<CreatureId> toRemove;
+  ForEachCreature(
+      [&](const UCreature &creature)
+      {
+        if (creature.IsPlayerCharacter() ||
+            creature.GetSpawnSource() != CreatureSpawnSource::NaturalPopulation)
+        {
+          return;
+        }
+        if (glm::distance(creature.GetBodyOrigin(), playerOrigin) <=
+            despawnRadiusBlocks)
+        {
+          return;
+        }
+        toRemove.push_back(creature.GetId());
+      });
+  for (const CreatureId id : toRemove)
+  {
+    RemoveCreature(id);
+  }
+}
+
+int UWorldEnvironment::TryNaturalPopulationSpawn(
     const glm::vec3 &playerOrigin, const CreaturePopulationCounts &counts,
     const std::vector<WeightedSpawnOption<const CreatureDefinition *>>
-        &eligible)
+        &eligible,
+    bool isNight)
 {
   struct SpawnPlacement
   {
@@ -1492,6 +1575,17 @@ void UWorldEnvironment::TryNaturalPopulationSpawn(
   {
     const glm::vec3 candidate =
         SpawnPlanner.NextCandidateOrigin(playerOrigin);
+    // Zone gating (per candidate, cheap after the biome-sample cache warms):
+    // species only spawn in their biomes; night hostiles only in the dark
+    // (below the surface counts as dark); flyers need open sky above.
+    const std::string dominantBiome = Owner.DominantBiomeIdAt(candidate);
+    const std::optional<int> surfaceY = Owner.FindHighestSolidY(
+        WorldCoordToBlockIndex(candidate.x), WorldCoordToBlockIndex(candidate.z));
+    const auto isUnderground = [&](const glm::vec3 &origin)
+    {
+      return surfaceY.has_value() &&
+             origin.y < static_cast<float>(*surfaceY) - 2.f;
+    };
     std::vector<WeightedSpawnOption<SpawnPlacement>> placements;
     placements.reserve(eligible.size());
     for (const WeightedSpawnOption<const CreatureDefinition *> &entry : eligible)
@@ -1510,6 +1604,21 @@ void UWorldEnvironment::TryNaturalPopulationSpawn(
         }
         origin.y = *ground;
       }
+      if (!SpeciesAllowedInBiome(definition->catalog, dominantBiome))
+      {
+        continue;
+      }
+      if (!AllowsNaturalSpawnTime(definition->catalog.tags,
+                                  definition->catalog.activeTime, isNight,
+                                  isUnderground(origin)))
+      {
+        continue;
+      }
+      if (definition->habitat == CreatureHabitat::Aerial && surfaceY &&
+          candidate.y < static_cast<float>(*surfaceY))
+      {
+        continue;
+      }
       placements.push_back({SpawnPlacement{definition, origin}, entry.weight});
     }
     const auto viable = FilterViableSpawnOptions(
@@ -1523,6 +1632,16 @@ void UWorldEnvironment::TryNaturalPopulationSpawn(
                      placement.definition->bounds.restSizeBlocks);
         });
     const float viableWeight = TotalSpawnOptionWeight(viable);
+    if (const char *logPath = std::getenv("CUBA_QA_SPAWNLOG"))
+    {
+      std::ofstream log(logPath, std::ios::app);
+      log << "cand " << candidateIndex << " pos=" << candidate.x << ","
+          << candidate.y << "," << candidate.z << " biome=" << dominantBiome
+          << " surfaceY=" << (surfaceY ? std::to_string(*surfaceY) : "none")
+          << " placements=" << placements.size()
+          << " viable=" << viable.size() << " viableWeight=" << viableWeight
+          << "\n";
+    }
     if (viableWeight <= 0.f)
     {
       continue;
@@ -1587,6 +1706,7 @@ void UWorldEnvironment::TryNaturalPopulationSpawn(
       }
     }
   }
+  return spawned > 0 ? 1 : 0;
 }
 
 bool UWorldEnvironment::CheckCreatureCollisionVolume(

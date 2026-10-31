@@ -5,6 +5,7 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Environment/CreatureSpawnPlacement.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Game/GameSession.h"
@@ -696,7 +697,18 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
             return CommandResult{false, "Skin is not compatible with species"};
           }
         }
-        const glm::vec3 bodyOrigin = ComputeSpawnBodyOriginAhead(*world);
+        // Size the search to the body like the view/palette spawn does: a
+        // fixed 3 blocks ahead put the whale's 11-block footprint on top of
+        // the player and the spawn then failed depenetration.
+        glm::vec3 viewerSize(0.6f, 1.8f, 0.6f);
+        if (const UCreature *viewer = world->GetPlayerCreature())
+        {
+          viewerSize = viewer->GetCollisionSize();
+        }
+        const glm::vec3 bodyOrigin = ComputeSpawnBodyOriginAhead(
+            *world,
+            SpawnAheadDistance(0.5f * std::max(viewerSize.x, viewerSize.z),
+                               def->bounds.restSizeBlocks));
         const CreatureId Id = world->SpawnCreature(
             species, bodyOrigin, skin, CreatureSpawnSource::DebugCommand);
         if (Id == 0)

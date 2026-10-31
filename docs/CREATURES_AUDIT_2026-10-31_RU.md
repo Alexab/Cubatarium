@@ -156,6 +156,41 @@ wander — локальный стиринг.
 По [[staged-branch-merge-workflow]]: этап = ветка от develop, merge --no-ff. Порядок — по критичности
 и зависимостям. Каждый пункт: минимальный диф + тест + проверка в Release через `tools/flight_sim_run.py`.
 
+### Статус выполнения (обновлено 31.10, вечером)
+
+**Этап 1 — критичные баги — СДЕЛАН** (4 ветки, ctest 186/186):
+- GLES UBO-палитра + лимит 96 + uTint-паритет + тест `creature_shader_parity_test`
+  (ветка `fix/creatures-gles-rendering`, merge `e37a32edc`). On-device проверка Android не выполнялась
+  (сборки GLES под рукой нет) — изменение зеркалит desktop-шейдер, тест держит паритет.
+- Кэш wear.json + fit-матрицы по (item, slot) с инвалидацией по ContentRevision
+  (`fix/creatures-worn-wear-cache`, merge `75a6b901a`).
+- Бот clearOnApply=false + sticky target + гейт атак по attackCooldown во всех 3 путях
+  (`fix/creatures-ai-critical`, merge `2a9489392`). Проверено в игре: бот преследует sand_monster
+  ~8 блоков с устойчивой скоростью 2.7, удары по таймеру, после убийства возвращается к игроку.
+- Водный спавн в толще (ComputeAquaticSpawnFeetY, тест `creature_aquatic_spawn_test`)
+  (`fix/creatures-aquatic-spawn-column`).
+
+**Этап 2 — зоны спавна — СДЕЛАН** (ветка `feature/creature-spawn-zones`):
+- Каталог: `catalog.spawn_biomes` (список id биомов реестра WorldGen; пусто = любой),
+  `catalog.active_time` (day/night/any; hostile-дефолт — ночь в коде, подземелье обходит окно),
+  веса редкости 1.5/1.2/1.0/0.7/0.4 (инструмент `tools/creature_spawn_zones.py`, данные — первый
+  проход, тюнить свободно). Тест `creature_spawn_zones_test` (правила + валидность данных каталога).
+- Фильтры в `TryNaturalPopulationSpawn`: биом кандидата (DominantBiomeIdAt поверх кэша
+  SampleBiomeEnvironmentAt), окно времени (ночь/день + подземелье через FindHighestSolidY −2),
+  аэриалам требуется открытое небо (кандидат ≥ поверхности).
+- Деспавн natural-существ дальше 96 блоков от игрока (ручные/командные/QA/legacy — навсегда;
+  QA-ручка CUBA_QA_DESPAWN_RADIUS).
+- Заселение нового мира: burst 8 групп с интервалом 1.5 с (пока не загружен creatures.json).
+- Мелочи: глубина для гигантов 0.35→0.75 высоты тела; `/spawn` размерозависимый SpawnAheadDistance.
+- Диагностика: `CUBA_QA_SPAWNLOG=<файл>` — тик популяции + кандидаты (биом/поверхность/viable).
+- Проверено в игре (QA_BEH, день): hostile не спавнятся днём, виды соответствуют биомам
+  (tortoise/fox на beach/plains), burst 0→15 существ за ~20 с; деспавн при радиусе 30 держит
+  популяцию 0–2 против монотонного роста при 96.
+- НЕ сделано из плана этапа 2: однократная валидация S9 (тройная проверка осталась), исключение
+  спавна в прямой видимости (S12) — мелкие, оставить на следующий проход.
+
+Этапы 3–6 (ИИ, визуал, движение, проектный долг) — не начаты.
+
 ### Этап 1 — критичные баги (fix/creatures-critical-…; 1–2 ветки)
 
 1. **GLES скелетная анимация** (V1): UBO-блок `BonePalette` в gles-шейдере (GLES 3.0 поддерживает

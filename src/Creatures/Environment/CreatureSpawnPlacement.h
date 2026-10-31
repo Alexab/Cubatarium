@@ -11,7 +11,8 @@ namespace cutum
 {
 
 /// Feet Y for a spawn in a fluid column (block indices, inclusive): the body
-/// must fit deep enough (at least 35% of its height in fluid), and the spot is
+/// must sit deep enough (at least 75% of its height in fluid — giants like
+/// the whale otherwise strand in ankle-deep water), and the spot is
 /// mid-column between the floor and the highest fully-submerged position —
 /// fish spawn in the water body, not glued to the lake floor. Shallow columns
 /// (the submerged band collapses) spawn at the floor as before.
@@ -21,7 +22,7 @@ inline std::optional<float> ComputeAquaticSpawnFeetY(int columnMinY,
 {
   const float depth =
       static_cast<float>(columnMaxY - columnMinY + 1);
-  if (depth + 1e-3f < bodyHeight * 0.35f)
+  if (depth + 1e-3f < bodyHeight * 0.75f)
   {
     return std::nullopt;
   }

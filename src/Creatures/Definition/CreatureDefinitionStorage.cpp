@@ -326,6 +326,18 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           def.catalog.spawnGroupMin,
           catalog.value("spawn_group_max", def.catalog.spawnGroupMin));
       def.catalog.sortOrder = catalog.value("sort_order", 0);
+      if (catalog.contains("spawn_biomes") && catalog["spawn_biomes"].is_array())
+      {
+        for (const auto &biome : catalog["spawn_biomes"])
+        {
+          if (biome.is_string())
+          {
+            def.catalog.spawnBiomes.push_back(biome.get<std::string>());
+          }
+        }
+      }
+      def.catalog.activeTime =
+          ParseCreatureActiveTime(catalog.value("active_time", "any"));
     }
     def.role = ParseCreatureRole(data.value("role", ""));
     if (data.contains("bounds"))

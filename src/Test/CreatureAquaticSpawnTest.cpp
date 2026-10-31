@@ -55,13 +55,16 @@ int main()
   RequireNear(ComputeAquaticSpawnFeetY(60, 61, 1.5f), 60.0f,
               "exact-fit band spawns at the floor");
 
-  // Too shallow for the body (depth 1 < 1.4 * 0.35): rejected.
+  // Too shallow for the body (depth 1 < 4 * 0.75): rejected — giants must not
+  // strand in ankle-deep water.
   Require(!ComputeAquaticSpawnFeetY(60, 60, 4.0f).has_value(),
           "column too shallow for the body is rejected");
+  Require(!ComputeAquaticSpawnFeetY(60, 61, 4.0f).has_value(),
+          "column under 75% body height is rejected");
 
-  // Deep enough by the 35% rule.
-  Require(ComputeAquaticSpawnFeetY(60, 61, 4.0f).has_value(),
-          "column at 35% body height is accepted");
+  // Deep enough by the 75% rule.
+  Require(ComputeAquaticSpawnFeetY(60, 63, 4.0f).has_value(),
+          "column at 75% body height is accepted");
 
   // Giant body (whale ~3.3 high) in a deep ocean column: still mid-water.
   // maxFeet = 70 - 3.3 + 0.5 = 67.2 -> mid = 63.6.

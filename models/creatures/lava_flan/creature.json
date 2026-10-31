@@ -9,9 +9,15 @@
     "spawnable": true,
     "sort_order": 48,
     "natural_spawnable": true,
-    "spawn_weight": 1.0,
+    "spawn_weight": 0.4,
     "spawn_group_min": 1,
-    "spawn_group_max": 2
+    "spawn_group_max": 2,
+    "spawn_biomes": [
+      "deep_dark",
+      "dripstone_caves",
+      "lush_caves",
+      "mountains"
+    ]
   },
   "role": "mob",
   "bounds": {
