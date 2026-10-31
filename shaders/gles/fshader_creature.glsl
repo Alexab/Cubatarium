@@ -5,6 +5,7 @@ in vec2 TexCoord;
 out vec4 FragColor;
 
 uniform sampler2D texture0;
+uniform vec4 uTint = vec4(1.0);
 uniform mediump int uAnimFrame;
 uniform mediump int uAnimFrameCount;
 
@@ -47,5 +48,5 @@ void main()
     vec4 tex = texture(texture0, uv);
     if (tex.a < 0.05)
         discard;
-    FragColor = vec4(tex.rgb * creatureLit(), 1.0);
+    FragColor = vec4(tex.rgb * uTint.rgb * creatureLit(), tex.a * uTint.a);
 }
