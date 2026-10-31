@@ -4,10 +4,32 @@
 #include <algorithm>
 #include <cmath>
 #include <glm/glm.hpp>
+#include <optional>
 #include <vector>
 
 namespace cutum
 {
+
+/// Feet Y for a spawn in a fluid column (block indices, inclusive): the body
+/// must fit deep enough (at least 35% of its height in fluid), and the spot is
+/// mid-column between the floor and the highest fully-submerged position —
+/// fish spawn in the water body, not glued to the lake floor. Shallow columns
+/// (the submerged band collapses) spawn at the floor as before.
+inline std::optional<float> ComputeAquaticSpawnFeetY(int columnMinY,
+                                                     int columnMaxY,
+                                                     float bodyHeight)
+{
+  const float depth =
+      static_cast<float>(columnMaxY - columnMinY + 1);
+  if (depth + 1e-3f < bodyHeight * 0.35f)
+  {
+    return std::nullopt;
+  }
+  const float minFeet = static_cast<float>(columnMinY);
+  const float maxFeet =
+      static_cast<float>(columnMaxY) - bodyHeight + 0.5f;
+  return minFeet + 0.5f * std::max(0.0f, maxFeet - minFeet);
+}
 
 /// Horizontal distance from the viewer to the "spawn by view" spot: far
 /// enough that the body (any yaw) clears the viewer, never closer than the
