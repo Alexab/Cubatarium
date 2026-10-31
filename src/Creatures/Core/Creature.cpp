@@ -282,7 +282,26 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
   float speed = Intent.moveSpeed;
   ShapeMovementWishAndSpeed(world, habitat, airMobility, wish, speed);
   CreatureInput verticalInput;
-  verticalInput.jumpHeld = Intent.wantJump;
+  // Amphibious creatures (penguin, seal) swim up while their head is under
+  // water or while they push into the bank, the way the player holds jump:
+  // walking mode only sinks in water, so they used to walk the lake floor
+  // and, unable to climb the bank from there, never come back out. The
+  // controller jumps (or boosts a swimmer out) only on a press, so on the
+  // bottom and at the bank the key is re-pressed every other frame.
+  bool amphibiousSwimUp = false;
+  if (habitat == CreatureHabitat::Amphibious)
+  {
+    const bool headUnder = world.IsCameraInsideFluid(GetLocomotionEye());
+    const bool bankBlocked = LocomotionFacts.inFluid && speed > 0.1f &&
+                             LocomotionFacts.horizontalSpeed < 0.3f * speed;
+    if (headUnder || bankBlocked)
+    {
+      const bool needPress = Locomotion.IsOnGround() || bankBlocked;
+      amphibiousSwimUp = needPress ? !SwimUpHeldLastFrame : true;
+    }
+  }
+  SwimUpHeldLastFrame = amphibiousSwimUp;
+  verticalInput.jumpHeld = Intent.wantJump || amphibiousSwimUp;
 
   glm::vec3 eye = GetLocomotionEye();
   const UCreatureLocomotionController locomotionBefore = Locomotion;
@@ -455,6 +474,19 @@ void UCreature::EnforceHabitatAfterMove(
     SyncBoundsFromStance();
     return;
   }
+  // An amphibious creature rising out of the water (swim-up, hop onto the
+  // bank) is briefly neither in water nor on ground. Reverting that rise
+  // restored the rising motor state too, so the same move was retried and
+  // rejected every frame: the creature froze at the surface. Gravity or the
+  // bank takes it from here.
+  if (habitat == CreatureHabitat::Amphibious &&
+      BodyOrigin.y > bodyOriginBefore.y + 1.0e-4f &&
+      ProbeEnvironmentAtMemoized(world, bodyOriginBefore, size).inWater)
+  {
+    Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
+    SyncBoundsFromStance();
+    return;
+  }
   // Already out of its element before this move: a move cannot make that
   // worse, and rejecting it froze the creature where it was trapped.
   if (!HabitatAllowsMovementAt(world, habitat, bodyOriginBefore, size,
@@ -532,8 +564,8 @@ void UCreature::ApplyIdleFluidSink(UWorld &world, CreatureHabitat habitat,
   }
   const CollisionVolume vol = GetCollisionVolume();
   const SampledFluidState fluid = world.SampleFluidPhysicsVolume(vol);
+  // Amphibious creatures float (they swim up, see ExecuteIntent).
   if ((habitat == CreatureHabitat::Aquatic ||
-       habitat == CreatureHabitat::Amphibious ||
        habitat == CreatureHabitat::Lava) &&
       fluid.inFluid && glm::length(wish) < 1e-4f && dt > 1e-6f)
   {

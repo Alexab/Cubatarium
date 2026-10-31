@@ -242,6 +242,9 @@ protected:
   float ModelYawOffsetDeg{0.0f};
   CreatureBoundsState Bounds;
   bool FootprintSwapped{false};
+  /// Swim-up "jump" sent last frame (amphibious): re-pressed every other
+  /// frame on the bottom / at the bank, where only a press makes a jump.
+  bool SwimUpHeldLastFrame{false};
   UCreatureLocomotionController Locomotion;
   UCreatureInventory Inventory;
   CreatureVitals Vitals{};
