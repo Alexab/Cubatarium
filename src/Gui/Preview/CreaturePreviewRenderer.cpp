@@ -86,20 +86,9 @@ void UploadPreviewSkinnedBones(class UShaderProgram &shader,
   {
     return;
   }
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  constexpr int kMaxSkinnedBoneUniforms = 48;
-  const int boneCount = static_cast<int>(
-      std::min<size_t>(bones.size(), kMaxSkinnedBoneUniforms));
-  for (int i = 0; i < boneCount; ++i)
-  {
-    shader.SetMat4("uBones[" + std::to_string(i) + "]",
-                   bones[static_cast<size_t>(i)]);
-  }
-#else
   BindCreatureBonePaletteBlock(shader.GetProgramID(),
                                kCreatureBonePaletteBindingPoint);
   UploadCreatureBonePaletteGpu(bones);
-#endif
 }
 
 } // namespace

@@ -1462,6 +1462,14 @@ add_test(NAME creature_model_integrity_test
     COMMAND $<TARGET_FILE:creature_model_integrity_test>)
 set_tests_properties(creature_model_integrity_test PROPERTIES LABELS "unit;creatures")
 
+cubatarium_add_test(NAME creature_shader_parity_test
+    SOURCES
+        src/Test/CreatureShaderParityTest.cpp
+    DEFINITIONS CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+add_test(NAME creature_shader_parity_test
+    COMMAND $<TARGET_FILE:creature_shader_parity_test>)
+set_tests_properties(creature_shader_parity_test PROPERTIES LABELS "unit;creatures")
+
 cubatarium_add_test(NAME environment_light_test
     SOURCES
         src/Test/EnvironmentLightTest.cpp
