@@ -12,10 +12,16 @@ struct PlayerCapsule
   float height{1.8f};
   float eyeHeight{1.62f};
   float halfWidth{0.3f};
+  /// Half size along Z; negative = same as halfWidth (square footprint: the
+  /// player). Creature boxes are rectangular (a badger is 0.7 x 1.2).
+  float halfDepth{-1.0f};
+
+  float halfX() const { return halfWidth; }
+  float halfZ() const { return halfDepth >= 0.0f ? halfDepth : halfWidth; }
 
   glm::vec3 halfExtents() const
   {
-    return glm::vec3(halfWidth, height * 0.5f, halfWidth);
+    return glm::vec3(halfX(), height * 0.5f, halfZ());
   }
 
   glm::vec3 centerFromEye(const glm::vec3 &eye) const
@@ -43,11 +49,19 @@ struct PlayerCapsule
   static PlayerCapsule FromCreatureBlocks(const glm::vec3 &sizeBlocks,
                                           float eyeHeight)
   {
-    // Slightly tighter than visual width so tall bipeds slide past block
-    // lips/corners instead of permanently scraping (MC-style feel).
-    const float halfW = std::max(0.15f, sizeBlocks.x * 0.5f * 0.92f);
+    // Slightly tighter than the body box so tall bipeds slide past block
+    // lips/corners instead of permanently scraping (MC-style feel): 4% per
+    // side, at most 0.025 (a 0.6 biped keeps the old 0.276). Both axes: the
+    // motor used to be a square from X only, so a long body (badger 1.2,
+    // whale 11 along Z) moved a box far shorter than itself and was then
+    // shoved out of the blocks its real box overlapped.
+    const auto tighten = [](float size)
+    {
+      const float half = size * 0.5f;
+      return std::max(0.15f, half - std::min(0.025f, half * 0.08f));
+    };
     const float height = std::max(0.5f, sizeBlocks.y);
-    return {height, eyeHeight, halfW};
+    return {height, eyeHeight, tighten(sizeBlocks.x), tighten(sizeBlocks.z)};
   }
 };
 

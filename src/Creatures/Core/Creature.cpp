@@ -1,6 +1,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureFacing.h"
+#include "Creatures/Core/CreatureFeetSnap.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
@@ -135,14 +136,13 @@ void UCreature::SyncFeetFromLocomotion(const UWorld &world,
     if (const std::optional<float> groundY = QueryFootprintGroundFeetY(
             world, BodyOrigin, Bounds.profile.restSizeBlocks, refFeetY))
     {
-      const float drop = refFeetY - *groundY;
-      const float climb = *groundY - refFeetY;
-      // Snap when grounded, or heal brief unsupported / float states within
-      // jumpHeight so habitat reject cannot trap a mob above air forever.
       const bool anchoredGround =
           Locomotion.IsFeetAnchored() && Locomotion.IsOnGround();
-      if (anchoredGround || (drop >= 0.0f && drop <= maxSnap) ||
-          (climb >= 0.0f && climb <= maxSnap))
+      const bool clearAtGround = !world.CheckBlockCollisionVolume(
+          CollisionVolumeFromBody(glm::vec3(BodyOrigin.x, *groundY, BodyOrigin.z),
+                                  Bounds.profile.restSizeBlocks));
+      if (ShouldSnapFeetToGround(refFeetY, *groundY, maxSnap, anchoredGround,
+                                 clearAtGround))
       {
         BodyOrigin.y = *groundY;
         eyeAfterLocomotion.y = BodyOrigin.y + Locomotion.GetViewEyeHeight();

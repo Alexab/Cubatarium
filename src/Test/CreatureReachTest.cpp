@@ -1,7 +1,9 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureFacing.h"
+#include "Creatures/Core/CreatureFeetSnap.h"
 #include "Creatures/Core/CreatureReach.h"
 #include "Creatures/Environment/CreatureSpawnPlacement.h"
+#include "Creatures/Player/PlayerCapsule.h"
 
 #include <algorithm>
 #include <cmath>
@@ -216,6 +218,36 @@ int main()
          "pushed while idle: keep the yaw");
   Expect(!FacingDirectionFromMove(glm::vec2(0.0f), east).has_value(),
          "no travel: keep the yaw (no spinning in place)");
+
+  // Feet snap: never into blocks (edge still over a ledge), otherwise as
+  // before (follow the ground when anchored, heal small gaps).
+  Expect(!ShouldSnapFeetToGround(65.5f, 64.5f, 1.0f, true, false),
+         "edge over the ledge: no drop into the ledge block");
+  Expect(ShouldSnapFeetToGround(65.5f, 64.5f, 1.0f, true, true),
+         "walked clear of the ledge: step down");
+  Expect(ShouldSnapFeetToGround(65.5f, 66.0f, 1.0f, false, true),
+         "small climb within the snap range");
+  Expect(!ShouldSnapFeetToGround(65.5f, 62.5f, 1.0f, false, true),
+         "unanchored body does not snap down a 3-block drop");
+  Expect(!ShouldSnapFeetToGround(65.5f, 66.0f, 1.0f, true, false),
+         "no snap up into a ceiling");
+
+  // Motor capsule from creature bounds: both axes, slightly tighter.
+  {
+    const PlayerCapsule biped = PlayerCapsule::FromCreatureBlocks(human, 1.6f);
+    Expect(Near(biped.halfX(), 0.276f) && Near(biped.halfZ(), 0.276f),
+           "0.6 biped keeps its 0.276 slide-past-lips half width");
+    const PlayerCapsule badger =
+        PlayerCapsule::FromCreatureBlocks(glm::vec3(0.7f, 0.8f, 1.2f), 0.6f);
+    Expect(Near(badger.halfZ(), 0.575f) && Near(badger.halfX(), 0.325f),
+           "long body: the motor box is long too (was 0.322 square)");
+    const PlayerCapsule whaleCap =
+        PlayerCapsule::FromCreatureBlocks(whale, 2.0f);
+    Expect(Near(whaleCap.halfZ(), 5.475f) && Near(whaleCap.halfExtents().z, 5.475f),
+           "big body loses at most 0.025 per side");
+    Expect(Near(PlayerCapsule::Standing().halfZ(), 0.3f),
+           "player capsule stays square");
+  }
 
   std::cout << "creature_reach_test: ok" << std::endl;
   return 0;

@@ -67,14 +67,14 @@ struct FootprintStandSampleStats
 FootprintStandSampleStats SampleFootprintAtFeet(
     const UWorldCollision &collision, const UBlockWorld &blockWorld,
     const UBlockRegistry &registry, float feetY, float centerX, float centerZ,
-    float halfWidth, const PlayerCapsule &cap, bool checkValidStand)
+    float halfX, float halfZ, const PlayerCapsule &cap, bool checkValidStand)
 {
   FootprintStandSampleStats stats{};
   const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
   const int centerGx = WorldCoordToBlockIndex(centerX);
   const int centerGz = WorldCoordToBlockIndex(centerZ);
-  const float sampleX[3] = {centerX - halfWidth, centerX, centerX + halfWidth};
-  const float sampleZ[3] = {centerZ - halfWidth, centerZ, centerZ + halfWidth};
+  const float sampleX[3] = {centerX - halfX, centerX, centerX + halfX};
+  const float sampleZ[3] = {centerZ - halfZ, centerZ, centerZ + halfZ};
   for (float sx : sampleX)
   {
     for (float sz : sampleZ)
@@ -368,7 +368,7 @@ float DistanceToStepRiser(const glm::vec3 &eyePos, const glm::ivec3 &stepCell,
   const glm::vec3 facePoint =
       blockCenter - glm::vec3(dir.x * 0.5f, 0.0f, dir.z * 0.5f);
   const glm::vec3 playerLead =
-      eyePos + glm::vec3(dir.x * cap.halfWidth, 0.0f, dir.z * cap.halfWidth);
+      eyePos + glm::vec3(dir.x * cap.halfX(), 0.0f, dir.z * cap.halfZ());
   return glm::dot(facePoint - playerLead, dir);
 }
 
@@ -465,7 +465,7 @@ bool UWorldCollision::IsValidStandFootprint(const glm::vec3 &eyePos,
   const CollisionVolume vol = CollisionVolumeFromEye(eyePos, cap);
   const FootprintStandSampleStats stats = SampleFootprintAtFeet(
       *this, BlockWorld, *BlockRegistry, feetY, vol.center.x, vol.center.z,
-      cap.halfWidth, cap, true);
+      cap.halfX(), cap.halfZ(), cap, true);
   return stats.centerValidStand &&
          stats.validStandSamples >= kFootprintMinSolidSamples;
 }
@@ -747,7 +747,7 @@ bool UWorldCollision::HasGroundSupportVolume(const CollisionVolume &vol,
   }
   const FootprintStandSampleStats stats = SampleFootprintAtFeet(
       *this, BlockWorld, *BlockRegistry, feetY, vol.center.x, vol.center.z,
-      vol.halfExtents.x, PlayerCapsule{}, false);
+      vol.halfExtents.x, vol.halfExtents.z, PlayerCapsule{}, false);
   int minSamples = kFootprintMinSolidSamples;
   if (vol.halfExtents.x < 0.30f)
   {
@@ -903,7 +903,9 @@ bool UWorldCollision::DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
   {
     return true;
   }
-  constexpr float kOffsets[] = {0.35f, 0.2f, 0.12f, 0.06f};
+  // Smallest push first: the largest (0.35) used to be tried first, so a
+  // body a couple of centimetres into a block jumped 0.35 in one frame.
+  constexpr float kOffsets[] = {0.02f, 0.04f, 0.08f, 0.12f, 0.2f, 0.35f};
   constexpr float kDirs[][2] = {{1.f, 0.f},  {-1.f, 0.f}, {0.f, 1.f},
                                 {0.f, -1.f}, {0.707f, 0.707f},
                                 {-0.707f, 0.707f}, {0.707f, -0.707f},

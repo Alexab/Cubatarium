@@ -49,8 +49,8 @@ bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
   const float px1 = eyePos.x + cap.halfWidth;
   const float py0 = feetY;
   const float py1 = feetY + cap.height;
-  const float pz0 = eyePos.z - cap.halfWidth;
-  const float pz1 = eyePos.z + cap.halfWidth;
+  const float pz0 = eyePos.z - cap.halfZ();
+  const float pz1 = eyePos.z + cap.halfZ();
 
   const float cx0 = static_cast<float>(chunkCoord.x * CHUNK_SIZE) - 0.5f;
   const float cx1 = static_cast<float>((chunkCoord.x + 1) * CHUNK_SIZE) - 0.5f;
