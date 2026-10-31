@@ -39,8 +39,6 @@ public:
   /// behaviors that fall back to roaming when they have nothing to do).
   void TickCreature(CreatureId Id, IUWorldPerception &perception,
                     IUCreatureActivitySink &sink, float dt) override;
-  /// Registers the creature's wander state on first use.
-  void EnsureCreature(CreatureId Id, const CreatureBehaviorParams &behavior);
 
 private:
   void ResetWanderState(CreatureId Id, float intervalMin, float intervalMax);

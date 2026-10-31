@@ -192,6 +192,33 @@ bool PickLocomotionDirection(IUWorldPerception &perception,
   return false;
 }
 
+bool PickWanderDirectionPreferLand(IUWorldPerception &perception,
+                                   const CreatureActivityView &view,
+                                   CreatureHabitat habitat,
+                                   const glm::vec3 &bounds_size,
+                                   glm::vec3 &out_direction)
+{
+  if (habitat == CreatureHabitat::Amphibious &&
+      PickLocomotionDirection(perception, view, CreatureHabitat::Terrestrial,
+                              bounds_size, out_direction))
+  {
+    return true;
+  }
+  if (PickLocomotionDirection(perception, view, habitat, bounds_size,
+                              out_direction))
+  {
+    return true;
+  }
+  out_direction = RandomLocomotionDirection(habitat);
+  return glm::length(out_direction) > 1e-4f;
+}
+
+float NavigationBodyWidthForBounds(const glm::vec3 &bounds_size_blocks)
+{
+  return std::max(0.6f,
+                  std::max(bounds_size_blocks.x, bounds_size_blocks.z));
+}
+
 glm::vec3 ComputeSeparationDirection(
     const glm::vec3 &self_origin, const glm::vec3 &bounds_size,
     const std::vector<CreatureNeighborView> &neighbors, float min_distance)

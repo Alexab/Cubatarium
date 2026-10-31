@@ -17,6 +17,7 @@ class UFeelerPerceptionMock : public cutum::IUWorldPerception
 {
 public:
   std::unordered_set<long long> BlockedCells;
+  std::unordered_set<long long> WaterCells;
 
   static long long Key(int x, int z)
   {
@@ -25,12 +26,20 @@ public:
   }
 
   void BlockCell(int x, int z) { BlockedCells.insert(Key(x, z)); }
+  /// Water cells: amphibious movement allowed, terrestrial refused.
+  void MarkWater(int x, int z) { WaterCells.insert(Key(x, z)); }
 
   bool CellClear(const glm::vec3 &origin) const
   {
     const int x = static_cast<int>(std::floor(origin.x + 0.5f));
     const int z = static_cast<int>(std::floor(origin.z + 0.5f));
     return BlockedCells.count(Key(x, z)) == 0;
+  }
+  bool CellWater(const glm::vec3 &origin) const
+  {
+    const int x = static_cast<int>(std::floor(origin.x + 0.5f));
+    const int z = static_cast<int>(std::floor(origin.z + 0.5f));
+    return WaterCells.count(Key(x, z)) != 0;
   }
 
   std::optional<cutum::ControlledCreatureInfo>
@@ -69,9 +78,13 @@ public:
   {
     return CellClear(body);
   }
-  bool HabitatAllowsMovementAt(cutum::CreatureHabitat, const glm::vec3 &body,
+  bool HabitatAllowsMovementAt(cutum::CreatureHabitat habitat, const glm::vec3 &body,
                                const glm::vec3 &) const override
   {
+    if (CellWater(body))
+    {
+      return habitat != cutum::CreatureHabitat::Terrestrial;
+    }
     return CellClear(body);
   }
   bool IsWithinActivityRange(const glm::vec3 &) const override { return true; }
@@ -124,6 +137,57 @@ int main()
          "nav clearance matches motor body height");
   Expect(std::abs(cutum::NavigationBodyHeightForBounds(0.5f) - 0.5f) < 1e-4f,
          "short mobs keep full nav height");
+  Expect(std::abs(cutum::NavigationBodyWidthForBounds(
+             glm::vec3(0.6f, 1.8f, 0.6f)) - 0.6f) < 1e-4f,
+         "humanoid nav width stays 0.6");
+  Expect(std::abs(cutum::NavigationBodyWidthForBounds(
+             glm::vec3(5.0f, 3.3f, 11.0f)) - 11.0f) < 1e-4f,
+         "long bodies use the wider axis (footprint swaps X/Z)");
+
+  // Amphibious wander prefers dry land: everything east of the shore is
+  // water, so the picked direction must stay on the land side.
+  {
+    UFeelerPerceptionMock shore;
+    for (int x = 1; x <= 6; ++x)
+    {
+      for (int z = -6; z <= 6; ++z)
+      {
+        shore.MarkWater(x, z);
+      }
+    }
+    cutum::CreatureActivityView view;
+    view.Id = 9;
+    view.bodyOrigin = glm::vec3(0.0f, 64.5f, 0.0f);
+    glm::vec3 dir(0.0f);
+    Expect(cutum::PickWanderDirectionPreferLand(
+               shore, view, cutum::CreatureHabitat::Amphibious,
+               glm::vec3(0.6f, 0.8f, 0.6f), dir),
+           "amphibious wander picks a direction");
+    const glm::vec3 probe = view.bodyOrigin + dir * 0.65f;
+    Expect(!shore.CellWater(probe),
+           "amphibious wander prefers the land side of the shore");
+  }
+  // Surrounded by water: no land direction exists, the amphibious fallback
+  // still moves (into the water).
+  {
+    UFeelerPerceptionMock lake;
+    for (int x = -6; x <= 6; ++x)
+    {
+      for (int z = -6; z <= 6; ++z)
+      {
+        lake.MarkWater(x, z);
+      }
+    }
+    cutum::CreatureActivityView view;
+    view.Id = 9;
+    view.bodyOrigin = glm::vec3(0.0f, 64.5f, 0.0f);
+    glm::vec3 dir(0.0f);
+    Expect(cutum::PickWanderDirectionPreferLand(
+               lake, view, cutum::CreatureHabitat::Amphibious,
+               glm::vec3(0.6f, 0.8f, 0.6f), dir),
+           "amphibious wander still picks a direction in open water");
+    Expect(glm::length(dir) > 1e-4f, "water fallback direction is valid");
+  }
 
   // Wall ahead (+X): feelers should bend off the blocked forward cell.
   UFeelerPerceptionMock perception;

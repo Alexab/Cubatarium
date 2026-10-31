@@ -3,6 +3,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Activity/Helpers/CreatureActivityNavigation.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
+#include "Activity/Helpers/CreatureHostility.h"
 #include "Activity/IUWorldPerception.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
@@ -28,45 +29,6 @@ float BotMoveSpeed(const CreatureBehaviorSnapshot &snapshot)
     speed = snapshot.locomotion.walkSpeed;
   }
   return speed;
-}
-
-bool IsHostileTarget(const UWorld &world, const UCreature &self,
-                     CreatureId candidateId)
-{
-  if (candidateId == 0 || candidateId == self.GetId())
-  {
-    return false;
-  }
-  const UCreature *other = world.GetCreature(candidateId);
-  if (!other || other->IsPlayerCharacter() || other->IsPossessed())
-  {
-    return false;
-  }
-  if (other->GetTypeId() == "bot" || other->GetTypeId() == self.GetTypeId())
-  {
-    return false;
-  }
-  const CreatureDefinition *def = world.GetCreatureDefinition(other->GetTypeId());
-  if (!def)
-  {
-    return false;
-  }
-  if (def->role == CreatureRole::Bot || def->role == CreatureRole::ControlledDefault)
-  {
-    return false;
-  }
-  if (def->behavior.Id == "melee_attack")
-  {
-    return true;
-  }
-  for (const auto &tag : def->catalog.tags)
-  {
-    if (tag == "hostile" || tag == "monster" || tag == "mobs_monster")
-    {
-      return true;
-    }
-  }
-  return false;
 }
 
 } // namespace
@@ -142,7 +104,7 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
       const float d = HorizontalDistanceXZ(view->bodyOrigin, n.bodyOrigin);
       if (n.Id == bb.targetId)
       {
-        if (IsHostileTarget(world, *self, n.Id))
+        if (IsHostileEngagementTarget(world, Id, n.Id))
         {
           stickyValid = true;
           hostileId = n.Id;
@@ -151,7 +113,7 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
         continue;
       }
       if (!stickyValid && d < hostileDist &&
-          IsHostileTarget(world, *self, n.Id))
+          IsHostileEngagementTarget(world, Id, n.Id))
       {
         hostileDist = d;
         hostileId = n.Id;
@@ -186,7 +148,7 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
       query.search_distance = 32;
       query.body_height =
           NavigationBodyHeightForBounds(snapshot->boundsSize.y);
-      query.body_width = std::max(0.6f, snapshot->boundsSize.x);
+      query.body_width = NavigationBodyWidthForBounds(snapshot->boundsSize);
       query.max_jump = snapshot->locomotion.jumpHeightBlocks;
       const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
           bb.navigation, world, view->bodyOrigin, goal, query, dt, 0.45f, Id,
@@ -222,7 +184,7 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
         query.search_distance = 32;
         query.body_height =
             NavigationBodyHeightForBounds(snapshot->boundsSize.y);
-        query.body_width = std::max(0.6f, snapshot->boundsSize.x);
+        query.body_width = NavigationBodyWidthForBounds(snapshot->boundsSize);
         query.max_jump = snapshot->locomotion.jumpHeightBlocks;
         const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
             bb.navigation, world, view->bodyOrigin, goal, query, dt, 0.45f, Id,
@@ -258,9 +220,9 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
       glm::vec3 dir = RandomLocomotionDirection(snapshot->habitat);
       PickLocomotionDirection(perception, *view, snapshot->habitat,
                               snapshot->boundsSize, dir);
-      bb.lastSeenPos = dir;
+      bb.wanderDir = dir;
     }
-    glm::vec3 move_dir = bb.lastSeenPos;
+    glm::vec3 move_dir = bb.wanderDir;
     if (glm::length(move_dir) < 1e-4f)
     {
       move_dir = RandomLocomotionDirection(snapshot->habitat);
