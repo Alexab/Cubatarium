@@ -25,6 +25,8 @@
 #include "World/Lighting/LightUtil.h"
 #include "Render/GlIncludes.h"
 #include "World/Chunks/Chunk.h"
+#include "Blocks/BlockRegistry.h"
+#include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include <algorithm>
 #include <chrono>
@@ -724,9 +726,11 @@ glm::vec2 UCreatureDrawPass::SampleCreatureLight(UWorld &world,
   const glm::vec3 size = creature.GetBounds().currentSizeBlocks;
   const glm::vec3 center =
       creature.GetBodyOrigin() + glm::vec3(0.0f, size.y * 0.5f, 0.0f);
-  const glm::ivec3 cell(static_cast<int>(std::floor(center.x)),
-                        static_cast<int>(std::floor(center.y)),
-                        static_cast<int>(std::floor(center.z)));
+  const UBlockWorld &blocks = world.GetBlockWorld();
+  const UBlockRegistry &registry = world.GetBlockRegistry();
+  const glm::ivec3 cell = CreatureLightSampleCell(
+      center, [&](const glm::ivec3 &c)
+      { return registry.BlocksMovement(blocks.GetBlock(c)); });
   state.SecondsToResample -= dt;
   if (cell != state.Cell || state.SecondsToResample <= 0.0f)
   {

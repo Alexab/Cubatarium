@@ -54,6 +54,19 @@ int main()
   cache.Prune(1000, 600);
   Expect(cache.Size() == 0, "all stale states dropped");
 
+  // Sample cell: blocks are centred on integers; ground block at y = 64
+  // (top at 64.5). A tortoise (height 0.4) standing on it has its centre at
+  // y = 64.7: that is cell 65 (air), not 64 (the ground, light 0).
+  const auto groundOnly = [](const glm::ivec3 &c) { return c.y <= 64; };
+  const glm::ivec3 tortoise =
+      CreatureLightSampleCell(glm::vec3(10.3f, 64.7f, -3.6f), groundOnly);
+  Expect(tortoise == glm::ivec3(10, 65, -4),
+         "low body samples the air cell it stands in, rounded per axis");
+  // A body centre inside a solid cell (clipping a slab) samples the cell above.
+  const glm::ivec3 clipped =
+      CreatureLightSampleCell(glm::vec3(0.0f, 64.2f, 0.0f), groundOnly);
+  Expect(clipped == glm::ivec3(0, 65, 0), "solid centre cell: sample above");
+
   std::cout << "creature_light_cache_test: ok" << std::endl;
   return 0;
 }
