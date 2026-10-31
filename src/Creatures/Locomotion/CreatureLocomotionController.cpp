@@ -183,7 +183,7 @@ PlayerCapsule UCreatureLocomotionController::GetCollisionCapsule() const
       stand.height * (refCrouch.height / refStand.height);
   const float lerpedEye = lerpEyeHeightForStance(t);
   return {stand.height + (crouchHeight - stand.height) * t, lerpedEye,
-          stand.halfWidth};
+          stand.halfWidth, stand.halfDepth};
 }
 
 float UCreatureLocomotionController::lerpEyeHeightForStance(

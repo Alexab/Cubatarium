@@ -1,5 +1,6 @@
 #include "Creatures/Locomotion/CreatureMotor.h"
 
+#include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "World/Core/World.h"
 #include "World/Math/FluidCellState.h"
@@ -89,6 +90,22 @@ CreatureMotorHorizontalResult ApplyCreatureMotorHorizontal(
         {
           if (instantStepUp)
           {
+            // Land just past the riser (front of the box 0.1 onto the
+            // step), not on the step cell's centre: the step is instant
+            // here, so the centre landing teleported creatures up to ~1.5
+            // blocks forward in one frame. The centre stays the fallback
+            // when that spot is blocked.
+            constexpr float kStepOverlap = 0.1f;
+            const float advance =
+                std::max(0.0f, probe.DistanceToLedge) + kStepOverlap;
+            const glm::vec3 nearLanding(newPos.x + intent.x * advance,
+                                        landing.y,
+                                        newPos.z + intent.z * advance);
+            if (!world.CheckBlockCollisionVolume(
+                    CollisionVolumeFromEye(nearLanding, cap)))
+            {
+              landing = nearLanding;
+            }
             newPos = landing;
             locomotion.SyncAfterStepLanding(newPos, &world);
             stepped = true;
