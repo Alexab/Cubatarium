@@ -1,4 +1,5 @@
 #include "Creatures/Influence/InfluenceResolver.h"
+#include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureReach.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
@@ -35,21 +36,7 @@ InfluenceChannel ResolveChannel(const CreatureIntent &intent)
 bool SourceSeesTarget(const UWorld &world, const UCreature &source,
                       const UCreature &target)
 {
-  const UBlockWorld &blocks = world.GetBlockWorld();
-  const UBlockRegistry &registry = world.GetBlockRegistry();
-  const auto segmentClear = [&](const glm::vec3 &from, const glm::vec3 &to)
-  {
-    const glm::vec3 delta = to - from;
-    const float len = glm::length(delta);
-    if (len < 1e-4f)
-    {
-      return true;
-    }
-    return !RaycastSolidBlocks(blocks, registry, from, delta, len).has_value();
-  };
-  return HasMeleeLineOfSight(source.GetEyePosition(), target.GetBodyOrigin(),
-                             target.GetBounds().profile.restSizeBlocks,
-                             segmentClear);
+  return CreatureMeleeLineOfSight(world, source, target);
 }
 } // namespace
 

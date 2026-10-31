@@ -136,12 +136,25 @@ public:
     HitFlash01 = std::max(0.f, HitFlash01 - dt * 4.f);
   }
 
-  void NotifyDamaged() { HealthBarVisibleSec = 2.f; }
+  void NotifyDamaged(CreatureId attacker = 0)
+  {
+    HealthBarVisibleSec = 2.f;
+    if (attacker != 0)
+    {
+      LastAttackerId = attacker;
+      DamageMemorySec = 8.f;
+    }
+  }
   void TickHealthBar(float dt)
   {
     HealthBarVisibleSec = std::max(0.f, HealthBarVisibleSec - std::max(0.f, dt));
+    DamageMemorySec = std::max(0.f, DamageMemorySec - std::max(0.f, dt));
   }
   float GetHealthBarVisibleSec() const { return HealthBarVisibleSec; }
+  /// Recent attacker for AI reactions (flee / aggro); valid while
+  /// GetDamageMemorySec() > 0.
+  CreatureId GetLastAttackerId() const { return LastAttackerId; }
+  float GetDamageMemorySec() const { return DamageMemorySec; }
 
   std::vector<StatusEffectInstance> &GetStatusEffects() { return StatusEffects; }
   const std::vector<StatusEffectInstance> &GetStatusEffects() const
@@ -255,6 +268,8 @@ protected:
   float TimeSinceLastInfluenceSec{1000.f};
   float HitFlash01{0.f};
   float HealthBarVisibleSec{0.f};
+  CreatureId LastAttackerId{0};
+  float DamageMemorySec{0.f};
   bool Blocking{false};
   std::vector<StatusEffectInstance> StatusEffects;
   bool NeedsTick{false};
