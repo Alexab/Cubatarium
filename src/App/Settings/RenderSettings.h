@@ -37,6 +37,8 @@ struct RenderSettings
   bool CreatureDebugBounds{false};
   /// Name / id / state / collision-box text above every creature (debugging).
   bool CreatureDebugLabels{false};
+  /// Species name above nearby creatures (Settings > "Show creature names").
+  bool CreatureNameLabels{true};
   /// Creatures are lit by the light of the cell they stand in (sky + block).
   /// When off they only follow the day/night curve.
   bool CreatureLocalLight{true};
