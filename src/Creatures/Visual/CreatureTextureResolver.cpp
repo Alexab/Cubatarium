@@ -22,6 +22,19 @@ GLuint ResolveCreatureSpeciesTexture(const UCreatureTextureStorage &textures,
                                      const std::string &defaultStem,
                                      const std::string &skinId)
 {
+  // A skin overrides the species base: with the base keys first the skin
+  // branch was dead — the storage always resolves the species' own texture.
+  if (!skinId.empty())
+  {
+    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/" + stem))
+    {
+      return tex;
+    }
+    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/diffuse"))
+    {
+      return tex;
+    }
+  }
   const std::string keys[] = {
       speciesId + "/" + stem,
       speciesId + "/diffuse",
@@ -36,17 +49,6 @@ GLuint ResolveCreatureSpeciesTexture(const UCreatureTextureStorage &textures,
       {
         return tex;
       }
-    }
-  }
-  if (!skinId.empty())
-  {
-    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/" + stem))
-    {
-      return tex;
-    }
-    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/diffuse"))
-    {
-      return tex;
     }
   }
   return 0;

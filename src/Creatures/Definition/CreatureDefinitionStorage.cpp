@@ -248,7 +248,7 @@ void ParseVisualSpec(const nlohmann::json &vis, CreatureDefinition &def,
     }
   }
   if (vis.contains("geometry") || vis.contains("geometry_file") ||
-      vis.contains("texture_size") || vis.contains("animation_profile"))
+      vis.contains("animation_profile"))
   {
     def.visual.boneSkeleton.geometryId = vis.value("geometry", "");
     def.visual.boneSkeleton.geometryFile =
@@ -257,14 +257,6 @@ void ParseVisualSpec(const nlohmann::json &vis, CreatureDefinition &def,
         vis.value("texture", def.visual.boneSkeleton.textureStem);
     def.visual.boneSkeleton.animationProfile =
         vis.value("animation_profile", "");
-    if (vis.contains("texture_size") && vis["texture_size"].is_array() &&
-        vis["texture_size"].size() >= 2)
-    {
-      def.visual.boneSkeleton.textureSize.x =
-          vis["texture_size"][0].get<int>();
-      def.visual.boneSkeleton.textureSize.y =
-          vis["texture_size"][1].get<int>();
-    }
   }
   if (parsedBackend == CreatureVisualBackend::GltfSkeleton &&
       def.visual.gltf.modelPath.empty())

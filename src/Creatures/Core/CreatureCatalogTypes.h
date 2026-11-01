@@ -227,7 +227,6 @@ struct CreatureBoneSkeletonSpec
   std::string geometryId;
   std::string geometryFile{"geometry.geo.json"};
   std::string textureStem{"diffuse"};
-  glm::ivec2 textureSize{64, 32};
   std::string animationProfile;
 };
 

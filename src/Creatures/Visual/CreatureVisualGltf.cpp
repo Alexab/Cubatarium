@@ -35,6 +35,7 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
   BodyOrigin = creature.GetFeetPosition();
   BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
   SpeciesId = animDef.Id;
+  SkinId = creature.GetSkinId();
   RefreshDefaultTextureKey(animDef);
   ModelFile = animDef.visual.gltf.modelPath.empty()
                   ? "model.gltf"
@@ -152,7 +153,8 @@ void UCreatureVisualGltf::SubmitDraw(const CreatureDrawContext &ctx,
   for (const GltfPrimitiveCpu &prim : MeshAsset->primitives)
   {
     const GLuint tex = ResolveCreatureSpeciesTexture(
-        creatureTextures, SpeciesId, prim.textureStem, DefaultTextureKey);
+        creatureTextures, SpeciesId, prim.textureStem, DefaultTextureKey,
+        SkinId);
     if (tex == 0)
     {
       const std::string key = SpeciesId + "|" + prim.textureStem;

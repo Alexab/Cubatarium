@@ -61,6 +61,14 @@ void IndexPngTextures(const std::filesystem::path &texturesDir,
     const GLuint tex = LoadPngFile(entry.path().string());
     if (tex != 0)
     {
+      // Pack merge over an existing key: release the replaced GL name
+      // instead of leaking it (LoadFromCreatureAndSkinRoots deletes the
+      // whole map, the merge paths do not).
+      const auto existing = out.find(key);
+      if (existing != out.end() && existing->second != 0)
+      {
+        glDeleteTextures(1, &existing->second);
+      }
       out[key] = tex;
     }
   }

@@ -33,8 +33,6 @@ private:
   std::vector<glm::mat4> CachedBoneMatrices;
   std::shared_ptr<const CreatureBoneSkeletonMeshAsset> MeshAsset;
   std::unique_ptr<BoneSkeletonHierarchy> Hierarchy;
-  /// Equipped armor item ids snapshot (empty = none), size 6.
-  std::array<std::string, 6> EquippedArmorIds{};
   const UCreature *PoseCreature{nullptr};
 };
 
