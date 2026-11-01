@@ -50,14 +50,10 @@ void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
   if (input.dt > 1e-6f)
   {
     const glm::vec3 delta = input.bodyOriginAfter - input.bodyOriginBefore;
-    if (archetype == LocomotionArchetype::Aerial)
-    {
-      out.horizontalSpeed = glm::length(delta) / input.dt;
-    }
-    else
-    {
-      out.horizontalSpeed = glm::length(glm::vec2(delta.x, delta.z)) / input.dt;
-    }
+    // XZ only, aerials included: vertical bob is not travel. A hovering
+    // wasp with a blocked horizontal wish derived Fly from the 3D speed and
+    // "stood in Fly" forever (its anim never returned to Hover).
+    out.horizontalSpeed = glm::length(glm::vec2(delta.x, delta.z)) / input.dt;
   }
   else
   {

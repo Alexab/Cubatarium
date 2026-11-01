@@ -630,8 +630,11 @@ void UCreatureLocomotionController::UpdateFlight(const UWorld *world,
                                                  const CreatureInput &input)
 {
   StanceBlend = 0.0f;
-  const PlayerCapsule cap = GetCapsule();
-  if (world->HasGroundSupport(eyePos, cap))
+  // Land on whatever the box rests on (creatures: body support — standing
+  // on another creature or an edge under the footprint counts); the old
+  // center-column HasGroundSupport left an aerial perched on a mob or a
+  // ledge stuck in Flying forever.
+  if (HasSupportAt(world, eyePos))
   {
     OnLandedFromFlight(world, eyePos, false);
   }
