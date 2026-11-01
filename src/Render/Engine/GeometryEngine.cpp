@@ -8854,33 +8854,6 @@ void UGeometryEngine::DestroyOutlineBuffers()
   }
 }
 
-void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
-                                               GLuint texture,
-                                               CreaturePartMesh mesh)
-{
-  CreatureDraw_.DrawTexturedPart(mvp, texture, mesh);
-}
-
-void UGeometryEngine::DrawCreatureBoneSkeletonMesh(
-    const glm::mat4 &mvp, GLuint texture, const BoneSkeletonCubeMeshCpu &mesh)
-{
-  CreatureDraw_.DrawBoneSkeletonMesh(mvp, texture, mesh);
-}
-
-void UGeometryEngine::DrawCreatureSkinnedMesh(
-    const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
-    const std::shared_ptr<const std::vector<glm::mat4>> &boneMatrices)
-{
-  CreatureDraw_.DrawSkinnedMesh(mvp, texture, mesh, boneMatrices);
-}
-
-void UGeometryEngine::DrawCreatureBillboard(const glm::mat4 &mvp,
-                                            GLuint texture,
-                                            const glm::vec4 &tint)
-{
-  CreatureDraw_.DrawBillboard(mvp, texture, tint);
-}
-
 void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
                                        const glm::vec4 &color)
 {
