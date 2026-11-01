@@ -77,15 +77,6 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
   }
 
   PoseCreature = &creature;
-  for (size_t i = 0; i < EquippedArmorIds.size(); ++i)
-  {
-    EquippedArmorIds[i].clear();
-    const InventoryEntryRef &e = creature.GetInventory().GetEquippedArmor(i);
-    if (!e.empty && !e.broken && e.kind == InventoryEntryKind::Item)
-    {
-      EquippedArmorIds[i] = e.Id;
-    }
-  }
 }
 
 void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,

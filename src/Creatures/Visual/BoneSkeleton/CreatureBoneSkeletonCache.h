@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -28,6 +29,9 @@ private:
   std::mutex mutex;
   std::unordered_map<std::string, std::weak_ptr<const CreatureBoneSkeletonMeshAsset>>
       cache;
+  /// Keys that failed to load (negative cache, mirrors CreatureGltfCache):
+  /// stops per-frame file reads and log spam for missing geometry.
+  std::unordered_set<std::string> failedKeys;
 };
 
 } // namespace cutum

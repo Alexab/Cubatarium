@@ -25,11 +25,10 @@ public:
 private:
   std::shared_ptr<CreatureGltfMeshAsset> MeshAsset;
   glm::mat4 RootAnimMatrix{1.f};
-  glm::vec3 BodyOrigin{0.f};
-  float BodyYaw{0.f};
   float ModelScale{1.f};
   float ModelFeetOffsetY{0.f};
   std::string ModelFile;
+  std::string SkinId;
   UGltfClipClock ClipClock;
   const GltfAnimationCpu *ActiveAnimation{nullptr};
   /// Bone palette owned by this visual and refilled in place every frame;
