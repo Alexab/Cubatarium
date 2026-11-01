@@ -3,6 +3,7 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 
 #include <filesystem>
@@ -19,6 +20,10 @@ void ApplyCreaturePackOverlays(UCreatureDefinitionStorage &defs,
 {
   defs.Load(baseCreaturesRoot.string());
   CreatureRigidModelCache::Instance().Clear();
+  // Pack overlays can replace models: their content hashes differ, but the
+  // replaced entries would stay cached until engine shutdown — clear the
+  // GPU mesh cache alongside the rigid cache (audit V8).
+  CreatureMeshGpuCache::Instance().DestroyAll();
   for (const auto &pack : packs)
   {
     const std::filesystem::path creaturesDir = pack.Root / "creatures";
