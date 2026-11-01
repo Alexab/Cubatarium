@@ -169,16 +169,15 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
           out = CachedBoneMatrices[it->second];
           return true;
         };
-    // Transitional: the worn-equipment drawer still submits through
-    // engine-level helpers shared with the GUI preview (audit V13 note).
-    if (ctx.Engine)
+    // Worn equipment submits through the same draw queue as the body; item
+    // definitions come with the context (scale falls back to category
+    // defaults via id when the storage is absent).
+    if (ctx.Queue)
     {
-      WornEquipmentDrawer::SubmitFromCreature(*ctx.Engine, *PoseCreature,
+      WornEquipmentDrawer::SubmitFromCreature(*ctx.Queue, *PoseCreature,
                                               viewProj, bodyMat, boneLookup);
-      const UItemDefinitionStorage *items = nullptr;
-      // Items storage is optional; scale falls back to category defaults via id.
       WornEquipmentDrawer::SubmitWieldedFromCreature(
-          *ctx.Engine, *PoseCreature, items, viewProj, bodyMat, boneLookup);
+          *ctx.Queue, *PoseCreature, ctx.Items, viewProj, bodyMat, boneLookup);
     }
   }
 }

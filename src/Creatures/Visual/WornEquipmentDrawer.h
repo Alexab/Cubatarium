@@ -9,7 +9,7 @@
 namespace cutum
 {
 
-class UGeometryEngine;
+class CreatureDrawQueue;
 class UCreature;
 class UItemDefinitionStorage;
 class UShaderProgram;
@@ -34,29 +34,24 @@ public:
   static void SetItemDefinitions(const UItemDefinitionStorage *items);
   static const UItemDefinitionStorage *ItemDefinitions();
 
-  /// World path: read armor from creature inventory.
-  static void SubmitFromCreature(UGeometryEngine &engine,
+  /// World path: read armor from creature inventory, submit into the
+  /// creature draw queue.
+  static void SubmitFromCreature(CreatureDrawQueue &queue,
                                  const UCreature &creature,
                                  const glm::mat4 &viewProj,
                                  const glm::mat4 &bodyMat,
                                  const BoneMatrixLookupFn &bones);
 
   /// Hotbar (rightItem) + offhand (leftItem) held meshes.
-  static void SubmitWieldedFromCreature(UGeometryEngine &engine,
+  static void SubmitWieldedFromCreature(CreatureDrawQueue &queue,
                                         const UCreature &creature,
                                         const UItemDefinitionStorage *items,
                                         const glm::mat4 &viewProj,
                                         const glm::mat4 &bodyMat,
                                         const BoneMatrixLookupFn &bones);
 
-  /// Sheet / preview path: explicit item ids per armor slot (0..5).
-  static void SubmitFromSlots(UGeometryEngine &engine,
-                              const std::array<WornArmorPreviewSlot, 6> &slots,
-                              const glm::mat4 &viewProj,
-                              const glm::mat4 &bodyMat,
-                              const BoneMatrixLookupFn &bones);
-
-  static void SubmitWieldedPreview(UGeometryEngine *engine,
+  /// Sheet / preview path: explicit item ids; `queue` null draws immediate.
+  static void SubmitWieldedPreview(CreatureDrawQueue *queue,
                                    UShaderProgram *shader,
                                    const std::string &mainItemId,
                                    const std::string &offhandItemId,

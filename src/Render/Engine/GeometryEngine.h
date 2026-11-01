@@ -144,16 +144,6 @@ public:
   {
     return CreatureTextureStorage;
   }
-  void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
-                                CreaturePartMesh mesh = CreaturePartMesh::Box);
-  void DrawCreatureBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
-                                    const BoneSkeletonCubeMeshCpu &mesh);
-  void DrawCreatureSkinnedMesh(
-      const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
-      const std::shared_ptr<const std::vector<glm::mat4>> &boneMatrices);
-  void DrawCreatureBillboard(const glm::mat4 &mvp, GLuint texture,
-                             const glm::vec4 &tint);
-
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
   UTextRenderer *GetTextRenderer() const { return textRenderer.get(); }

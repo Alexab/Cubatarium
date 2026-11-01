@@ -10,7 +10,6 @@
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureDrawContext.h"
-#include "Creatures/Visual/CreatureEngineDrawSink.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
 #include "Pose/IUCreaturePosePresenter.h"
@@ -488,15 +487,14 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   const Frustum frustum = Frustum::FromViewProjection(viewProj);
   const glm::vec3 cameraPos = camera->GetPosition();
 
-  // Narrow draw context for the visual backends: queue, textures, settings
-  // and camera position (audit V13/V9). The engine pointer is the
-  // transitional worn-equipment path.
+  // Narrow draw context for the visual backends: queue, textures, settings,
+  // camera position and item definitions (audit V13/V9).
   CreatureDrawContext drawContext;
   drawContext.Queue = &Queue;
   drawContext.Textures = engine.GetCreatureTextureStorage().get();
   drawContext.Settings = &engine.GetRenderSettings();
   drawContext.CameraPosition = cameraPos;
-  drawContext.Engine = &engine;
+  drawContext.Items = world.GetItemDefinitionStorage();
 
   const float maxDistBlocks =
       static_cast<float>(world.GetEffectiveRenderDistance()) *

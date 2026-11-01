@@ -12,7 +12,6 @@
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemGltfTextureCache.h"
 #include "Items/ItemVisualDefaults.h"
-#include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 
@@ -293,7 +292,7 @@ std::vector<BoneSkeletonCubeMeshCpu> LoadPartsMeshes(const std::string &itemId)
   return out;
 }
 
-void DrawMeshImmediateOrQueue(UGeometryEngine *engine, UShaderProgram *shader,
+void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
                               const glm::mat4 &mvp, GLuint tex,
                               const BoneSkeletonCubeMeshCpu &mesh,
                               bool immediate)
@@ -338,14 +337,14 @@ void DrawMeshImmediateOrQueue(UGeometryEngine *engine, UShaderProgram *shader,
     glBindVertexArray(0);
     return;
   }
-  if (engine)
+  if (queue)
   {
     CreatureDrawRequest req;
     req.Kind = CreatureDrawKind::SkeletalMesh;
     req.Mvp = mvp;
     req.Texture = tex;
     req.SkeletalMesh = &mesh;
-    engine->GetCreatureDrawQueue().Push(std::move(req));
+    queue->Push(std::move(req));
   }
 }
 
@@ -491,7 +490,7 @@ const WornItemLocal &CachedWornItemLocal(const std::string &itemId, size_t slot)
   return *entry;
 }
 
-void SubmitItemOnBones(UGeometryEngine *engine, UShaderProgram *shader,
+void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
                        const std::string &itemId, size_t slot,
                        const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
                        const BoneMatrixLookupFn &bones, bool immediate)
@@ -571,14 +570,14 @@ void SubmitItemOnBones(UGeometryEngine *engine, UShaderProgram *shader,
                        GL_UNSIGNED_INT, nullptr);
         glBindVertexArray(0);
       }
-      else if (engine)
+      else if (queue)
       {
         CreatureDrawRequest req;
         req.Kind = CreatureDrawKind::SkeletalMesh;
         req.Mvp = mvp;
         req.Texture = tex;
         req.SkeletalMesh = &prim.mesh;
-        engine->GetCreatureDrawQueue().Push(std::move(req));
+        queue->Push(std::move(req));
       }
     }
   }
@@ -636,7 +635,7 @@ const PartsMeshesFit &CachedPartsMeshes(const std::string &itemId)
   return *slot;
 }
 
-void SubmitItemOnSingleBone(UGeometryEngine *engine, UShaderProgram *shader,
+void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
                             const std::string &itemId,
                             const std::string &boneName, float extraScale,
                             const float offset[3], const float euler[3],
@@ -683,7 +682,7 @@ void SubmitItemOnSingleBone(UGeometryEngine *engine, UShaderProgram *shader,
       {
         tex = fallbackTex;
       }
-      DrawMeshImmediateOrQueue(engine, shader, mvp, tex, prim.mesh, immediate);
+      DrawMeshImmediateOrQueue(queue, shader, mvp, tex, prim.mesh, immediate);
     }
     return;
   }
@@ -696,7 +695,7 @@ void SubmitItemOnSingleBone(UGeometryEngine *engine, UShaderProgram *shader,
   const glm::mat4 mvp = viewProj * bodyMat * boneMat * wearLocal * partsFit.fit;
   for (const auto &mesh : partsFit.meshes)
   {
-    DrawMeshImmediateOrQueue(engine, shader, mvp, fallbackTex, mesh, immediate);
+    DrawMeshImmediateOrQueue(queue, shader, mvp, fallbackTex, mesh, immediate);
   }
 }
 
@@ -746,7 +745,7 @@ const UItemDefinitionStorage *WornEquipmentDrawer::ItemDefinitions()
   return g_ItemDefinitions;
 }
 
-void WornEquipmentDrawer::SubmitFromCreature(UGeometryEngine &engine,
+void WornEquipmentDrawer::SubmitFromCreature(CreatureDrawQueue &queue,
                                              const UCreature &creature,
                                              const glm::mat4 &viewProj,
                                              const glm::mat4 &bodyMat,
@@ -761,11 +760,15 @@ void WornEquipmentDrawer::SubmitFromCreature(UGeometryEngine &engine,
       slots[i].ItemId = e.Id;
     }
   }
-  SubmitFromSlots(engine, slots, viewProj, bodyMat, bones);
+  for (size_t i = 0; i < slots.size(); ++i)
+  {
+    SubmitItemOnBones(&queue, nullptr, slots[i].ItemId, i, viewProj, bodyMat,
+                      bones, false);
+  }
 }
 
 void WornEquipmentDrawer::SubmitWieldedFromCreature(
-    UGeometryEngine &engine, const UCreature &creature,
+    CreatureDrawQueue &queue, const UCreature &creature,
     const UItemDefinitionStorage *items, const glm::mat4 &viewProj,
     const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones)
 {
@@ -786,12 +789,12 @@ void WornEquipmentDrawer::SubmitWieldedFromCreature(
   {
     offId = off.Id;
   }
-  SubmitWieldedPreview(&engine, nullptr, mainId, offId, items, viewProj, bodyMat,
+  SubmitWieldedPreview(&queue, nullptr, mainId, offId, items, viewProj, bodyMat,
                        bones, false);
 }
 
 void WornEquipmentDrawer::SubmitWieldedPreview(
-    UGeometryEngine *engine, UShaderProgram *shader, const std::string &mainItemId,
+    CreatureDrawQueue *queue, UShaderProgram *shader, const std::string &mainItemId,
     const std::string &offhandItemId, const UItemDefinitionStorage *items,
     const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
     const BoneMatrixLookupFn &bones, bool immediate)
@@ -804,29 +807,18 @@ void WornEquipmentDrawer::SubmitWieldedPreview(
     ResolveWieldParams(items, mainItemId, scale, offset, euler);
     // Hands armor may also occupy *Item; nudge tool slightly outward.
     offset[1] += 0.05f;
-    SubmitItemOnSingleBone(engine, shader, mainItemId, "rightItem", scale,
+    SubmitItemOnSingleBone(queue, shader, mainItemId, "rightItem", scale,
                            offset, euler, viewProj, bodyMat, bones, immediate);
   }
   if (!offhandItemId.empty())
   {
     ResolveWieldParams(items, offhandItemId, scale, offset, euler);
     offset[1] += 0.05f;
-    SubmitItemOnSingleBone(engine, shader, offhandItemId, "leftItem", scale,
+    SubmitItemOnSingleBone(queue, shader, offhandItemId, "leftItem", scale,
                            offset, euler, viewProj, bodyMat, bones, immediate);
   }
 }
 
-void WornEquipmentDrawer::SubmitFromSlots(
-    UGeometryEngine &engine, const std::array<WornArmorPreviewSlot, 6> &slots,
-    const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
-    const BoneMatrixLookupFn &bones)
-{
-  for (size_t i = 0; i < slots.size(); ++i)
-  {
-    SubmitItemOnBones(&engine, nullptr, slots[i].ItemId, i, viewProj, bodyMat,
-                      bones, false);
-  }
-}
 
 void WornEquipmentDrawer::DrawImmediate(
     const std::array<WornArmorPreviewSlot, 6> &slots, const glm::mat4 &viewProj,
