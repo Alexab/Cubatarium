@@ -53,7 +53,7 @@ bool UWorldNavigationQueries::CanStepTerrestrial(
   {
     return false;
   }
-  if (!IsTerrestrialStandNode(to, body_height))
+  if (!IsTerrestrialStandNode(to, body_height, body_width))
   {
     return false;
   }

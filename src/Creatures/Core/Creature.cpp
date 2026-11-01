@@ -630,12 +630,31 @@ void UCreature::UpdateFootprintOrientation(const UWorld &world)
     // push and turned back: a per-frame swap/push loop (Run/Walk flapping).
     return;
   }
-  Bounds.profile.restSizeBlocks = turned;
+  SwapFootprintSizes();
+}
+
+void UCreature::SwapFootprintSizes()
+{
+  Bounds.profile.restSizeBlocks =
+      SwapFootprintXZ(Bounds.profile.restSizeBlocks);
   Bounds.profile.minSizeBlocks = SwapFootprintXZ(Bounds.profile.minSizeBlocks);
   Bounds.profile.maxSizeBlocks = SwapFootprintXZ(Bounds.profile.maxSizeBlocks);
   Bounds.currentSizeBlocks = SwapFootprintXZ(Bounds.currentSizeBlocks);
   Locomotion.SetCollisionProfile(Bounds.profile.restSizeBlocks, EyeOffset.y);
   FootprintSwapped = !FootprintSwapped;
+}
+
+void UCreature::ApplyFootprintSwapForLoad(bool swapped)
+{
+  // Restore the persisted orientation without the free-space check: at
+  // construction the creature is not in the spatial index yet and the box
+  // was swapped when it was saved; ValidateLoadedCreaturePositions mends
+  // any overlap the changed world introduced since.
+  const glm::vec3 rest = Bounds.profile.restSizeBlocks;
+  if (swapped != FootprintSwapped && std::abs(rest.x - rest.z) >= 0.05f)
+  {
+    SwapFootprintSizes();
+  }
 }
 
 void UCreature::FinishIntentFrame(UWorld &world, float dt,
