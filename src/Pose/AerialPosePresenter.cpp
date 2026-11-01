@@ -38,13 +38,7 @@ void ApplyGroundBirdWalk(CreaturePoseParams &pose,
   const float legSwing = def.visual.Animation.legSwingDeg;
   const float bodyBob = def.visual.Animation.bodyBobBlocks;
   const float wingIdle = def.visual.Animation.wingIdleSwingDeg;
-  const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
-  float swingScale = std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
-  if (facts.state == LocomotionState::Run &&
-      facts.horizontalSpeed > walkSpeed * 1.2f)
-  {
-    swingScale *= def.visual.Animation.runSpeedMultiplier;
-  }
+  const float swingScale = WalkSwingScale(facts, def, 0.5f);
 
   const float sinP = std::sin(phase);
   const float legTilt = sinP * legSwing * swingScale;

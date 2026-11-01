@@ -465,8 +465,6 @@ private:
     glBindTexture(GL_TEXTURE_2D, texture);
     shader.Use();
     shader.SetInt("texture0", 0);
-    shader.SetInt("uAnimFrame", 0);
-    shader.SetInt("uAnimFrameCount", 1);
     shader.SetVec4("uTint", tint);
     shader.SetMat4("mvp_matrix", mvp);
     glBindVertexArray(vao);
@@ -647,8 +645,6 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
-  Shader->SetInt("uAnimFrame", 0);
-  Shader->SetInt("uAnimFrameCount", 1);
   for (const ResolvedCreaturePart &part : appearance.Parts)
   {
     const GLuint tex = Textures->GetTexture(part.textureAssetKey);

@@ -306,8 +306,6 @@ void UCreatureDrawPass::DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
   glBindTexture(GL_TEXTURE_2D, texture);
   creatureShader->Use();
   creatureShader->SetInt("texture0", 0);
-  creatureShader->SetInt("uAnimFrame", 0);
-  creatureShader->SetInt("uAnimFrameCount", 1);
   creatureShader->SetVec4(
       "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
                          1.0f + ActiveHitFlash01, 1.0f));
@@ -351,8 +349,6 @@ void UCreatureDrawPass::DrawBillboard(const glm::mat4 &mvp, GLuint texture,
   glBindTexture(GL_TEXTURE_2D, texture);
   creatureShader->Use();
   creatureShader->SetInt("texture0", 0);
-  creatureShader->SetInt("uAnimFrame", 0);
-  creatureShader->SetInt("uAnimFrameCount", 1);
   creatureShader->SetVec4("uTint", tint);
   creatureShader->SetMat4("mvp_matrix", mvp);
   // Glow/effect billboards are not lit by the world.
@@ -395,8 +391,6 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(
   glBindTexture(GL_TEXTURE_2D, texture);
   creatureShader->Use();
   creatureShader->SetInt("texture0", 0);
-  creatureShader->SetInt("uAnimFrame", 0);
-  creatureShader->SetInt("uAnimFrameCount", 1);
   creatureShader->SetVec4(
       "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
                          1.0f + ActiveHitFlash01, 1.0f));

@@ -6,8 +6,6 @@ out vec4 FragColor;
 
 uniform sampler2D texture0;
 uniform vec4 uTint = vec4(1.0);
-uniform mediump int uAnimFrame;
-uniform mediump int uAnimFrameCount;
 
 // Same sky/block light curve as the block shaders (fshader_greedy.glsl).
 // uCreatureLitEnabled stays 0 for previews and effects: those draw unlit.
@@ -41,10 +39,6 @@ float creatureLit()
 void main()
 {
     vec2 uv = TexCoord;
-    if (uAnimFrameCount > 1) {
-        float frameH = 1.0 / float(uAnimFrameCount);
-        uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
-    }
     vec4 tex = texture(texture0, uv);
     if (tex.a < 0.05)
         discard;

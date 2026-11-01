@@ -314,8 +314,6 @@ void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
     glBindTexture(GL_TEXTURE_2D, tex);
     shader->Use();
     shader->SetInt("texture0", 0);
-    shader->SetInt("uAnimFrame", 0);
-    shader->SetInt("uAnimFrameCount", 1);
     shader->SetMat4("mvp_matrix", mvp);
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -545,8 +543,6 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
         glBindTexture(GL_TEXTURE_2D, tex);
         shader->Use();
         shader->SetInt("texture0", 0);
-        shader->SetInt("uAnimFrame", 0);
-        shader->SetInt("uAnimFrameCount", 1);
         shader->SetMat4("mvp_matrix", mvp);
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);

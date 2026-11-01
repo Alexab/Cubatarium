@@ -1,3 +1,4 @@
+#include "Pose/CreaturePoseParams.h"
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 
 #include "Pose/BoneSkeleton/SkeletalAnimationProfiles.h"
@@ -11,24 +12,6 @@ namespace
 {
 
 constexpr float kPi = 3.14159265f;
-
-float WalkSwingScale(const CreatureLocomotionFacts &facts,
-                     const CreatureDefinition &def)
-{
-  const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
-  if (facts.horizontalSpeed < 0.05f)
-  {
-    return 0.0f;
-  }
-  float swingScale =
-      std::clamp(facts.horizontalSpeed / walkSpeed, 0.35f, 1.5f);
-  if (facts.state == LocomotionState::Run &&
-      facts.horizontalSpeed > walkSpeed * 1.2f)
-  {
-    swingScale *= def.visual.Animation.runSpeedMultiplier;
-  }
-  return swingScale;
-}
 
 void ApplyQuadruped(BoneSkeletonPose &pose,
                     const CreatureLocomotionFacts &facts,
@@ -376,15 +359,35 @@ BoneSkeletonPoseEngine::Compute(const CreatureLocomotionFacts &facts,
     break;
   case LocomotionState::Jump:
   case LocomotionState::Fall:
+  {
+    // Airborne mobs hold a sensible pose instead of the bind one: ground
+    // profiles freeze mid-stride (legs tucked while falling), flyers keep
+    // their wing beat, swimmers keep the fin cycle, snakes keep slither.
+    CreatureLocomotionFacts held = facts;
+    if (profile == "aerial")
+    {
+      ApplyAerial(pose, held, def);
+      break;
+    }
+    if (profile == "serpentine")
+    {
+      ApplySerpentine(pose, held, def);
+      break;
+    }
+    held.horizontalSpeed = std::max(def.locomotion.walkSpeed, 0.05f);
+    held.animPhase = 1.2f;
+    held.state = LocomotionState::Walk;
+    ApplyProfileCycle(pose, profile, held, def);
+    break;
+  }
   case LocomotionState::Crouch:
   {
-    // Airborne/crouched ground mobs: hold a stride mid-cycle instead of the
-    // bind pose (legs splayed while falling, tucked while crouching).
+    // Crouched ground mobs: hold a stride at the cycle start.
     if (IsGroundProfile(profile))
     {
       CreatureLocomotionFacts held = facts;
       held.horizontalSpeed = std::max(def.locomotion.walkSpeed, 0.05f);
-      held.animPhase = facts.state == LocomotionState::Crouch ? 0.0f : 1.2f;
+      held.animPhase = 0.0f;
       held.state = LocomotionState::Walk;
       ApplyProfileCycle(pose, profile, held, def);
     }

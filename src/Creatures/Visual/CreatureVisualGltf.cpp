@@ -132,6 +132,21 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
     {
       RootAnimMatrix =
           SampleGltfRootTransform(*ActiveAnimation, ClipClock.GetTime(), loop);
+      // Root-only models switch clips with a hard transform snap (the fade
+      // below only covered skinned rigs). Blend the leaving clip's root the
+      // same 0.15 s the bone palette gets.
+      if (!ClipClock.GetFadeClip().empty())
+      {
+        const GltfAnimationCpu *fadeAnimation =
+            findAnimation(ClipClock.GetFadeClip());
+        if (fadeAnimation)
+        {
+          const glm::mat4 leaving = SampleGltfRootTransform(
+              *fadeAnimation, ClipClock.GetFadeTime(), loop);
+          const float w = ClipClock.GetFadeWeight();
+          RootAnimMatrix = leaving * (1.f - w) + RootAnimMatrix * w;
+        }
+      }
     }
   }
 }
