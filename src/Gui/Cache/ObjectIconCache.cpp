@@ -422,8 +422,6 @@ GLuint UObjectIconCache::RenderObjectIcon(const std::string &objectName)
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
-  Shader->SetInt("uAnimFrame", 0);
-  Shader->SetInt("uAnimFrameCount", 1);
   glBindVertexArray(CubeVao);
 
   for (const ObjectVoxel &voxel : object->voxels)
@@ -484,8 +482,6 @@ GLuint UObjectIconCache::RenderBlockIcon(BlockId blockId)
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
-  Shader->SetInt("uAnimFrame", 0);
-  Shader->SetInt("uAnimFrameCount", 1);
   glBindVertexArray(CubeVao);
 
   glActiveTexture(GL_TEXTURE0);
