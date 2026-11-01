@@ -230,7 +230,11 @@ public:
   /// Turn the collision box with the body in 90-degree steps (long bodies
   /// only); the swap waits until the turned box fits where the body stands.
   void UpdateFootprintOrientation(const UWorld &world);
+  void SwapFootprintSizes();
   bool IsFootprintSwapped() const { return FootprintSwapped; }
+  /// Restore the persisted footprint orientation at load (see
+  /// UpdateFootprintOrientation; the runtime path re-derives it from yaw).
+  void ApplyFootprintSwapForLoad(bool swapped);
   void FinishIntentFrame(UWorld &world, float dt,
                          const glm::vec3 &bodyOriginBefore,
                          const glm::vec3 &diagIntentDir, float diagIntentSpeed);

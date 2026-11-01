@@ -1278,6 +1278,10 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
     WriteCreatureBodyOrigin(item, creature.GetBodyOrigin());
     item["yaw"] = creature.GetYaw();
     item["pitch"] = creature.GetPitch();
+    if (creature.IsFootprintSwapped())
+    {
+      item["footprint_swapped"] = true;
+    }
     item["movement_mode"] = creature.GetMovementMode() == CreatureMovementMode::Flying
                                 ? "flying"
                                 : "walking";

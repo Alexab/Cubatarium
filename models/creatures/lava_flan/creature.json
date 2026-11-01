@@ -41,7 +41,7 @@
   "habitat": "lava",
   "locomotion_archetype": "terrestrial_biped",
   "locomotion": {
-    "can_fly": true,
+    "can_fly": false,
     "can_crouch": false,
     "can_jump": false,
     "jump_height": 1.0,

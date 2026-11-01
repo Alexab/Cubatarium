@@ -61,9 +61,14 @@ UCreatureFactory::Build(const CreatureDefinition &definition,
   const bool savedFlying =
       params.SavedState &&
       params.SavedState->value("movement_mode", "walking") == "flying";
-  if (definition.habitat != CreatureHabitat::Terrestrial || savedFlying)
+  if (savedFlying || definition.habitat == CreatureHabitat::Aerial)
   {
     creature->GetLocomotion().SetMode(CreatureMovementMode::Flying);
+  }
+  if (params.SavedState &&
+      params.SavedState->value("footprint_swapped", false))
+  {
+    creature->ApplyFootprintSwapForLoad(true);
   }
   if (params.SavedState)
   {
