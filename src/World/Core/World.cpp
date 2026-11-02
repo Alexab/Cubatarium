@@ -14811,11 +14811,15 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   }
   const std::vector<glm::ivec3> broken_above =
       BreakUnsupportedBlocksAbove(BlockWorld, *BlockRegistry, blockPos);
+  std::vector<glm::ivec3> broken_cluster = BreakUnsupportedVegetationCluster(
+      BlockWorld, *BlockRegistry, blockPos);
   std::vector<glm::ivec3> mesh_touch_blocks;
-  mesh_touch_blocks.reserve(1 + broken_above.size());
+  mesh_touch_blocks.reserve(1 + broken_above.size() + broken_cluster.size());
   mesh_touch_blocks.push_back(blockPos);
   mesh_touch_blocks.insert(mesh_touch_blocks.end(), broken_above.begin(),
                            broken_above.end());
+  mesh_touch_blocks.insert(mesh_touch_blocks.end(), broken_cluster.begin(),
+                           broken_cluster.end());
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight(mesh_touch_blocks);
@@ -14840,6 +14844,15 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
     }
     PublishBlockPhysicsEvent(above_pos);
     PublishNeighborPhysicsEvents(above_pos);
+  }
+  for (const glm::ivec3 &cluster_pos : broken_cluster)
+  {
+    if (CachedBlockCount > 0)
+    {
+      --CachedBlockCount;
+    }
+    PublishBlockPhysicsEvent(cluster_pos);
+    PublishNeighborPhysicsEvents(cluster_pos);
   }
   if (ViewBinding)
   {

@@ -97,4 +97,12 @@ std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
                                                       glm::ivec3 groundPos,
                                                       int maxY = 320);
 
+/// Clears the 26-connected cluster of non-solid, non-liquid blocks (leaves,
+/// plants, decor) around a freshly broken cell when nothing movement-blocking
+/// anchors it anymore. Returns the removed positions (empty when anchored or
+/// larger than maxClusterBlocks).
+std::vector<glm::ivec3> BreakUnsupportedVegetationCluster(
+    UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 origin,
+    int maxClusterBlocks = 4096);
+
 } // namespace cutum
