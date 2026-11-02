@@ -447,6 +447,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   if (composable)
   {
+    const auto seal_cancelled = [&]() -> bool
+    {
+      return request.shouldCancel && request.shouldCancel();
+    };
     const ComposableTerrainMode terrain_mode = composable->GetConfig().TerrainMode;
     if (terrain_mode != ComposableTerrainMode::Flat &&
         terrain_mode != ComposableTerrainMode::LegacyHash)
@@ -508,6 +512,21 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       }
       timing.carveMs = ElapsedMs(carve_start);
 
+      // Mudflow runs BEFORE the post-terrain stages: vegetation must root on
+      // the post-erosion surface, otherwise erosion undercuts freshly placed
+      // trunks and leaves them standing on air.
+      if (settings.Tuning.useMudflowErosion && !seal_cancelled())
+      {
+        const auto stage_start = audit_seal
+                                     ? std::chrono::steady_clock::now()
+                                     : std::chrono::steady_clock::time_point{};
+        ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
+        if (audit_seal)
+        {
+          mudflow_ms = ElapsedMs(stage_start);
+        }
+      }
+
       const uint32_t skip_chunk_stages =
           WorldGenStageSkipBit(WorldGenStageId::Valleys) |
           WorldGenStageSkipBit(WorldGenStageId::Ravines);
@@ -557,21 +576,6 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     }
 
     const auto seal_start = std::chrono::steady_clock::now();
-    auto seal_cancelled = [&]() -> bool
-    {
-      return request.shouldCancel && request.shouldCancel();
-    };
-    if (settings.Tuning.useMudflowErosion && !seal_cancelled())
-    {
-      const auto stage_start = audit_seal
-                                   ? std::chrono::steady_clock::now()
-                                   : std::chrono::steady_clock::time_point{};
-      ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
-      if (audit_seal)
-      {
-        mudflow_ms = ElapsedMs(stage_start);
-      }
-    }
     // Pocket seal on worker (with shouldCancel). Main only drains cheap ShoreAir.
     if (settings.FillWater && !seal_cancelled())
     {
