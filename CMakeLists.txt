@@ -2664,6 +2664,16 @@ cubatarium_add_test(NAME block_placement_raycast_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME block_raycast_target_test
+    SOURCES
+        ${PHYSICS_COLLISION_UNIT_SOURCES}
+        src/Test/BlockRaycastTargetTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME block_raycast_target_test
+    COMMAND $<TARGET_FILE:block_raycast_target_test>)
+set_tests_properties(block_raycast_target_test PROPERTIES LABELS "unit;blocks")
+
 cubatarium_add_test(NAME material_reaction_rules_test
     SOURCES
         ${PHYSICS_MATERIAL_UNIT_SOURCES}
