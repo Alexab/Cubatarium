@@ -43,7 +43,7 @@ int ChebyshevDistance3(const glm::ivec3 &a, const glm::ivec3 &b)
 
 } // namespace
 
-bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
+bool HasBlockSupportBelow(const UBlockWorld &world, const UBlockRegistry &registry,
                           glm::ivec3 pos)
 {
   const glm::ivec3 below(pos.x, pos.y - 1, pos.z);
@@ -99,7 +99,7 @@ bool CanPlaceObjectAt(const UBlockWorld &world,
   return !object.voxels.empty();
 }
 
-bool IsSolidPlantGround(const UBlockWorld &world, UBlockRegistry &registry,
+bool IsSolidPlantGround(const UBlockWorld &world, const UBlockRegistry &registry,
                         glm::ivec3 groundPos)
 {
   const BlockId id = world.GetBlock(groundPos);
@@ -145,7 +145,7 @@ bool CanOccupySurfacePlantLayerAt(const UBlockWorld &world,
   return id == BLOCK_AIR || !registry.BlocksMovement(id);
 }
 
-bool HasOpenSurfaceAbove(const UBlockWorld &world, UBlockRegistry &registry,
+bool HasOpenSurfaceAbove(const UBlockWorld &world, const UBlockRegistry &registry,
                          int x, int y, int z, int maxY)
 {
   const int limit =
@@ -166,7 +166,7 @@ bool HasOpenSurfaceAbove(const UBlockWorld &world, UBlockRegistry &registry,
   return true;
 }
 
-bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
+bool IsExposedLandSurface(const UBlockWorld &world, const UBlockRegistry &registry,
                           int x, int z, int surfaceY)
 {
   if (!IsSolidPlantGround(world, registry, glm::ivec3(x, surfaceY, z)))
@@ -178,7 +178,7 @@ bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
                                  WorldGenPlacementTuning::SurfacePlantClearance);
 }
 
-int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
+int FindTopSolidSurfaceY(const UBlockWorld &world, const UBlockRegistry &registry,
                          int x, int z, int maxY, int minY)
 {
   const std::optional<int> surface = FindTopSolidSurfaceYOptional(
@@ -187,7 +187,7 @@ int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
 }
 
 std::optional<int> FindTopSolidSurfaceYOptional(const UBlockWorld &world,
-                                                UBlockRegistry &registry,
+                                                const UBlockRegistry &registry,
                                                 int x, int z, int maxY,
                                                 int minY)
 {
@@ -935,7 +935,7 @@ std::vector<glm::ivec3> BreakUnsupportedVegetationCluster(
   return cluster;
 }
 
-int PruneFloatingPlantsInColumn(UBlockWorld &world, UBlockRegistry &registry,
+int PruneFloatingPlantsInColumn(UBlockWorld &world, const UBlockRegistry &registry,
                                 int x, int z, int maxY)
 {
   const int topSolid =
