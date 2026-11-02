@@ -836,6 +836,105 @@ std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
   return broken;
 }
 
+namespace
+{
+
+struct IVec3KeyHash
+{
+  size_t operator()(const glm::ivec3 &v) const
+  {
+    return std::hash<int64_t>{}(
+        (static_cast<int64_t>(static_cast<uint32_t>(v.x)) << 42) ^
+        (static_cast<int64_t>(static_cast<uint32_t>(v.y)) << 21) ^
+        static_cast<int64_t>(static_cast<uint32_t>(v.z)));
+  }
+};
+
+constexpr std::array<glm::ivec3, 26> kClusterNeighborOffsets = {
+    glm::ivec3(1, 0, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(0, 1, 0),
+    glm::ivec3(0, -1, 0), glm::ivec3(0, 0, 1),  glm::ivec3(0, 0, -1),
+    glm::ivec3(1, 1, 0),  glm::ivec3(1, -1, 0), glm::ivec3(-1, 1, 0),
+    glm::ivec3(-1, -1, 0), glm::ivec3(1, 0, 1), glm::ivec3(1, 0, -1),
+    glm::ivec3(-1, 0, 1), glm::ivec3(-1, 0, -1), glm::ivec3(0, 1, 1),
+    glm::ivec3(0, 1, -1), glm::ivec3(0, -1, 1), glm::ivec3(0, -1, -1),
+    glm::ivec3(1, 1, 1),  glm::ivec3(1, 1, -1), glm::ivec3(1, -1, 1),
+    glm::ivec3(1, -1, -1), glm::ivec3(-1, 1, 1), glm::ivec3(-1, 1, -1),
+    glm::ivec3(-1, -1, 1), glm::ivec3(-1, -1, -1)};
+
+} // namespace
+
+std::vector<glm::ivec3> BreakUnsupportedVegetationCluster(
+    UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 origin,
+    int maxClusterBlocks)
+{
+  // 26-connected cluster of non-solid, non-liquid blocks around the broken
+  // cell (leaves, plants, wall decor). A cluster that still touches any
+  // movement-blocking block — remaining trunk, terrain, wall — is anchored
+  // and stays; only fully detached clusters (chopped-through tree crowns,
+  // generation-time floaters) are cleared. Size-capped to bound cascades.
+  const auto is_removable = [&registry](BlockId id)
+  {
+    return id != BLOCK_AIR && !registry.BlocksMovement(id) &&
+           !registry.IsLiquid(id);
+  };
+
+  std::vector<glm::ivec3> cluster;
+  std::vector<glm::ivec3> queue;
+  std::unordered_set<glm::ivec3, IVec3KeyHash> visited;
+  bool anchored = false;
+
+  const auto try_enqueue = [&](const glm::ivec3 &pos)
+  {
+    if (visited.find(pos) != visited.end())
+    {
+      return;
+    }
+    if (is_removable(world.GetBlock(pos)))
+    {
+      visited.insert(pos);
+      queue.push_back(pos);
+    }
+  };
+
+  for (const glm::ivec3 &offset : kClusterNeighborOffsets)
+  {
+    try_enqueue(origin + offset);
+  }
+
+  while (!queue.empty() && !anchored)
+  {
+    const glm::ivec3 pos = queue.back();
+    queue.pop_back();
+    cluster.push_back(pos);
+    if (static_cast<int>(cluster.size()) > maxClusterBlocks)
+    {
+      return {};
+    }
+    for (const glm::ivec3 &offset : kClusterNeighborOffsets)
+    {
+      const glm::ivec3 neighbor = pos + offset;
+      const BlockId id = world.GetBlock(neighbor);
+      if (id != BLOCK_AIR && registry.BlocksMovement(id))
+      {
+        anchored = true;
+        break;
+      }
+      try_enqueue(neighbor);
+    }
+  }
+
+  if (anchored)
+  {
+    return {};
+  }
+  for (const glm::ivec3 &pos : cluster)
+  {
+    world.SetBlock(pos, BLOCK_AIR);
+    world.ClearFluidState(pos);
+  }
+  return cluster;
+}
+
 int PruneFloatingPlantsInColumn(UBlockWorld &world, UBlockRegistry &registry,
                                 int x, int z, int maxY)
 {

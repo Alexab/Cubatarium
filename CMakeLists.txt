@@ -2494,6 +2494,17 @@ cubatarium_add_test(NAME fluid_gameplay_fixes_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME leaf_break_cascade_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Objects/ObjectUtil.cpp
+        src/Test/LeafBreakCascadeTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME leaf_break_cascade_test
+    COMMAND $<TARGET_FILE:leaf_break_cascade_test>)
+set_tests_properties(leaf_break_cascade_test PROPERTIES LABELS "unit;blocks")
+
 set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Render/Mesh/ChunkMeshSnapshot.cpp
