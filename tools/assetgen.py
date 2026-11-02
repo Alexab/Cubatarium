@@ -53,6 +53,20 @@ MINECRAFT_REFERENCE = {
     "block_source": "https://gofedako.com/mc/java/26.3/",
     "texture_source": "https://mcasset.cloud/26.3/assets/minecraft/textures/block/",
 }
+# Worldgen tree/bush species read their foliage from the generated cutout
+# leaf library (exact seamless alpha coverage) instead of the Minetest
+# re-export tiles. Each species keeps its original average tone.
+WORLDGEN_LEAF_TEXTURE_VARIANTS = {
+    "tree_leaves": "dark",
+    "mtg_leaves": "fresh",
+    "mtg_aspen_leaves": "dark",
+    "mtg_acacia_leaves": "mature",
+    "leaves_spruce": "dense",
+    "mtg_bush_leaves": "spotted",
+    "mtg_acacia_bush_leaves": "sparse",
+    "mtg_blueberry_bush_leaves": "dense",
+    "mtg_pine_bush_needles": "dense",
+}
 WORLDGEN_RULES = {
     "vegetation": [
         ("asset_tree_birch", ["forest", "plains"], 28, 2),
@@ -5387,12 +5401,22 @@ def build_pack(
     included_block_sources: list[dict[str, Any]] = []
     for block in minetest_blocks:
         adapted = remap_block_textures(block, minetest_stems)
+        leaf_variant = WORLDGEN_LEAF_TEXTURE_VARIANTS.get(
+            str(adapted.get("name", "")).lower()
+        )
+        adaptation = "Cubatarium replacement texture stems"
+        if leaf_variant:
+            side = f"cu_organic_leaf_{leaf_variant}"
+            adapted["textures"] = [side, side, side, side, f"{side}_top", side]
+            adaptation += (
+                "; worldgen foliage uses the generated cutout leaf library"
+            )
         adapted["license"] = "CC0-1.0"
         adapted["provenance"] = {
             "source_pack": "minetest_default_16",
             "source_kind": "Cubatarium-authored block definition",
             "license": "CC0-1.0",
-            "adaptation": "Cubatarium replacement texture stems",
+            "adaptation": adaptation,
         }
         write_json(pack_dir / "blocks" / f"{adapted['name']}.json", adapted)
         included_block_sources.append({
@@ -6692,6 +6716,12 @@ def audit_pack(pack_dir: Path) -> tuple[list[str], dict[str, int]]:
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
+            expected_leaf_variant = WORLDGEN_LEAF_TEXTURE_VARIANTS.get(
+                str(source_block.get("name", "")).lower()
+            ) if source_pack == "minetest_default_16" else None
+            if expected_leaf_variant:
+                side = f"cu_organic_leaf_{expected_leaf_variant}"
+                expected_textures = [side, side, side, side, f"{side}_top", side]
             if included.get("textures") != expected_textures:
                 errors.append(f"{source_pack}/{source_block['name']}: standalone block definition does not use its replacement textures")
             if source_pack == "minetest_default_16" and included.get("id") != source_block.get("id"):
