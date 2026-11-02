@@ -13,12 +13,12 @@
     "building"
   ],
   "textures": [
-    "mt_mtg_bush_leaves_default_leaves_simple",
-    "mt_mtg_bush_leaves_default_leaves_simple",
-    "mt_mtg_bush_leaves_default_leaves_simple",
-    "mt_mtg_bush_leaves_default_leaves_simple",
-    "mt_mtg_bush_leaves_default_leaves_simple",
-    "mt_mtg_bush_leaves_default_leaves_simple"
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted",
+    "cu_organic_leaf_spotted_top",
+    "cu_organic_leaf_spotted"
   ],
   "render": {
     "style": "cutout",
@@ -35,6 +35,6 @@
     "source_pack": "minetest_default_16",
     "source_kind": "Cubatarium-authored block definition",
     "license": "CC0-1.0",
-    "adaptation": "Cubatarium replacement texture stems"
+    "adaptation": "Cubatarium replacement texture stems; worldgen foliage uses the generated cutout leaf library"
   }
 }

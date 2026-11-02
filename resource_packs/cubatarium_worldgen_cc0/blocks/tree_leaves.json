@@ -14,12 +14,12 @@
     "plants"
   ],
   "textures": [
-    "mt_leaves_opaque",
-    "mt_leaves_opaque",
-    "mt_leaves_opaque",
-    "mt_leaves_opaque",
-    "mt_leaves_opaque",
-    "mt_leaves_opaque"
+    "cu_organic_leaf_dark",
+    "cu_organic_leaf_dark",
+    "cu_organic_leaf_dark",
+    "cu_organic_leaf_dark",
+    "cu_organic_leaf_dark_top",
+    "cu_organic_leaf_dark"
   ],
   "displayName": "Leaves",
   "render": {
@@ -36,6 +36,6 @@
     "source_pack": "minetest_default_16",
     "source_kind": "Cubatarium-authored block definition",
     "license": "CC0-1.0",
-    "adaptation": "Cubatarium replacement texture stems"
+    "adaptation": "Cubatarium replacement texture stems; worldgen foliage uses the generated cutout leaf library"
   }
 }
