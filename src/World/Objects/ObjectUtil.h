@@ -28,20 +28,20 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  glm::ivec3 anchorWorldPos, int maxScanY,
                                  int seaLevel);
 
-bool HasOpenSurfaceAbove(const UBlockWorld &world, UBlockRegistry &registry,
+bool HasOpenSurfaceAbove(const UBlockWorld &world, const UBlockRegistry &registry,
                          int x, int y, int z, int maxY);
 
-bool IsSolidPlantGround(const UBlockWorld &world, UBlockRegistry &registry,
+bool IsSolidPlantGround(const UBlockWorld &world, const UBlockRegistry &registry,
                         glm::ivec3 groundPos);
 bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id);
 bool CanPlacePlantAt(const UBlockWorld &world, UBlockRegistry &registry,
                      glm::ivec3 worldPos);
-bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
+bool IsExposedLandSurface(const UBlockWorld &world, const UBlockRegistry &registry,
                           int x, int z, int surfaceY);
-int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
+int FindTopSolidSurfaceY(const UBlockWorld &world, const UBlockRegistry &registry,
                          int x, int z, int maxY, int minY = 0);
 std::optional<int> FindTopSolidSurfaceYOptional(const UBlockWorld &world,
-                                                UBlockRegistry &registry,
+                                                const UBlockRegistry &registry,
                                                 int x, int z, int maxY,
                                                 int minY = 0);
 
@@ -57,7 +57,7 @@ PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               int maxHeight, int seaLevel,
                                               int minHeight = 0);
 
-bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
+bool HasBlockSupportBelow(const UBlockWorld &world, const UBlockRegistry &registry,
                           glm::ivec3 pos);
 
 BlockId ResolveObjectVoxelPlacementId(const ObjectVoxel &voxel,
@@ -65,7 +65,7 @@ BlockId ResolveObjectVoxelPlacementId(const ObjectVoxel &voxel,
 
 bool IsRemovableFloatingPlantBlock(const UBlockRegistry &registry, BlockId id);
 
-int PruneFloatingPlantsInColumn(UBlockWorld &world, UBlockRegistry &registry,
+int PruneFloatingPlantsInColumn(UBlockWorld &world, const UBlockRegistry &registry,
                                 int x, int z, int maxY);
 
 struct ObjectPlacementStats
