@@ -41,11 +41,22 @@ struct FluidPlacementHit
   bool via_fluid_volume{false};
 };
 
+enum class BlockRaycastTargetMode
+{
+  /// Only movement-blocking blocks stop the ray (creature LoS, probes).
+  SolidOnly,
+  /// Movement-blocking blocks plus pointable non-solid nodes (cutout leaves,
+  /// cross plants) — Luanti-style dig/place targeting; fluids stay pass-through.
+  Pointable,
+};
+
 std::optional<BlockRayHit> RaycastSolidBlocks(const UBlockWorld &world,
                                               const UBlockRegistry &registry,
                                               glm::vec3 origin,
                                               glm::vec3 direction,
-                                              float maxDistance = 128.0f);
+                                              float maxDistance = 128.0f,
+                                              BlockRaycastTargetMode mode =
+                                                  BlockRaycastTargetMode::SolidOnly);
 
 /// Trace the first opaque cube using the renderer's voxel visibility rules.
 OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,

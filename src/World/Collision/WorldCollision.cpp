@@ -1172,8 +1172,20 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
 
   constexpr float kRaycastDistance = 128.0f;
 
+  // Break targeting sees pointable non-solid nodes (leaves, plants); the
+  // placement anchor keeps passing through them so aiming at grass still
+  // places against the ground below/behind.
+  const auto break_ray = RaycastSolidBlocks(BlockWorld, *BlockRegistry,
+                                            ray_origin, front, kRaycastDistance,
+                                            BlockRaycastTargetMode::Pointable);
   const auto hit = RaycastSolidBlocks(BlockWorld, *BlockRegistry, ray_origin,
                                       front, kRaycastDistance);
+  if (!hit && !break_ray)
+  {
+    return result;
+  }
+
+  result.break_hit = break_ray;
   if (!hit)
   {
     return result;
@@ -1193,7 +1205,6 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
     return result;
   }
 
-  result.break_hit = hit;
   if (CanPlaceClassic(place_pos, player_eye, front, cap, max_distance))
   {
     result.place_block_pos = place_pos;
@@ -1227,7 +1238,8 @@ bool UWorldCollision::CheckRayIntersection(
     return false;
   }
   const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
+      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front, 128.0f,
+                         BlockRaycastTargetMode::Pointable);
   if (!hit)
   {
     return false;

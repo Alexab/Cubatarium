@@ -14851,7 +14851,8 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
 bool UWorld::DelObjectByView(const glm::vec3 &position, const glm::vec3 &front)
 {
   const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
+      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front, 128.0f,
+                         BlockRaycastTargetMode::Pointable);
   if (!hit)
   {
     return false;

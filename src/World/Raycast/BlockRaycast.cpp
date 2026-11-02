@@ -35,7 +35,7 @@ float NextBoundaryT(const glm::vec3 &origin, const glm::vec3 &direction,
 }
 
 bool IsRaycastTarget(const UBlockWorld &world, const UBlockRegistry &registry,
-                     glm::ivec3 pos)
+                     glm::ivec3 pos, BlockRaycastTargetMode mode)
 {
   // Phase 4: Unloaded is not a place/break target (and not AIR).
   const BlockQueryResult q = world.QueryBlock(pos);
@@ -43,7 +43,22 @@ bool IsRaycastTarget(const UBlockWorld &world, const UBlockRegistry &registry,
   {
     return false;
   }
-  return registry.BlocksMovement(q.id);
+  if (registry.BlocksMovement(q.id))
+  {
+    return true;
+  }
+  if (mode == BlockRaycastTargetMode::SolidOnly)
+  {
+    return false;
+  }
+  // Pointable non-solid nodes: cutout leaves and cross plants are dig/place
+  // targets (Luanti parity); fluids never are.
+  if (registry.IsLiquid(q.id))
+  {
+    return false;
+  }
+  const BlockRenderStyle style = registry.GetRenderStyle(q.id);
+  return style == BlockRenderStyle::Cutout || style == BlockRenderStyle::Cross;
 }
 
 bool IsAirPocketCell(const UBlockWorld &world, const UBlockRegistry &registry,
@@ -58,7 +73,8 @@ bool IsAirPocketCell(const UBlockWorld &world, const UBlockRegistry &registry,
       glm::ivec3(0, -1, 0), glm::ivec3(0, 0, 1),  glm::ivec3(0, 0, -1)};
   for (const glm::ivec3 &offset : kNeighbors)
   {
-    if (IsRaycastTarget(world, registry, cell + offset))
+    if (IsRaycastTarget(world, registry, cell + offset,
+                        BlockRaycastTargetMode::SolidOnly))
     {
       return true;
     }
@@ -80,7 +96,8 @@ glm::ivec3 InferFaceNormal(const UBlockWorld &world,
       glm::ivec3(0, -1, 0), glm::ivec3(0, 0, 1),  glm::ivec3(0, 0, -1)};
   for (const glm::ivec3 &offset : kNeighbors)
   {
-    if (IsRaycastTarget(world, registry, air_cell + offset))
+    if (IsRaycastTarget(world, registry, air_cell + offset,
+                        BlockRaycastTargetMode::SolidOnly))
     {
       return -offset;
     }
@@ -92,7 +109,8 @@ glm::ivec3 InferFaceNormal(const UBlockWorld &world,
 
 std::optional<BlockRayHit>
 RaycastSolidBlocks(const UBlockWorld &world, const UBlockRegistry &registry,
-                   glm::vec3 origin, glm::vec3 direction, float maxDistance)
+                   glm::vec3 origin, glm::vec3 direction, float maxDistance,
+                   BlockRaycastTargetMode mode)
 {
   const float len = glm::length(direction);
   if (len < 1e-6f)
@@ -104,7 +122,7 @@ RaycastSolidBlocks(const UBlockWorld &world, const UBlockRegistry &registry,
   const float eps = 1e-4f;
   glm::ivec3 current = WorldPosToBlock(origin);
 
-  if (IsRaycastTarget(world, registry, current))
+  if (IsRaycastTarget(world, registry, current, mode))
   {
     BlockRayHit hit;
     hit.blockPos = current;
@@ -161,7 +179,7 @@ RaycastSolidBlocks(const UBlockWorld &world, const UBlockRegistry &registry,
       next.z += (direction.z > 0.0f) ? 1 : -1;
     }
 
-    if (IsRaycastTarget(world, registry, next))
+    if (IsRaycastTarget(world, registry, next, mode))
     {
       BlockRayHit hit;
       hit.blockPos = next;
