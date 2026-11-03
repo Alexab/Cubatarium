@@ -160,6 +160,27 @@ int FloraFeatureBlockRank(const std::string &blockName)
   return 1;
 }
 
+/// RAII: mirror gen-scratch SetBlock/SetFluid into the transfer ChunkBuffer.
+struct CaptureBufferScope
+{
+  UBlockWorld &World;
+  explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer,
+                              glm::ivec3 ownerChunk,
+                              const UBlockRegistry &registry,
+                              const std::vector<std::pair<BlockId, int>>
+                                  &treeBlockRanks)
+      : World(world)
+  {
+    buffer.SetWorldGenOwnerChunk(ownerChunk, registry, treeBlockRanks);
+    World.SetCaptureBuffer(&buffer);
+  }
+  ~CaptureBufferScope() { World.SetCaptureBuffer(nullptr); }
+  CaptureBufferScope(const CaptureBufferScope &) = delete;
+  CaptureBufferScope &operator=(const CaptureBufferScope &) = delete;
+};
+
+} // namespace
+
 /// Carry deterministic priorities for all flora voxels across chunk borders.
 std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
     UBlockRegistry &registry, UObjectLibrary *objects,
@@ -244,29 +265,13 @@ std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
   };
   collectPool(features->Vegetation);
   collectPool(features->GroundCover);
+  // Decoration (surface logs/ruins) and Structures write through the same
+  // capture buffer; without ranks their pack-specific voxels would be
+  // treated as terrain by cross-chunk conflict rules.
+  collectPool(features->Decoration);
+  collectPool(features->Structures);
   return ranks;
 }
-
-/// RAII: mirror gen-scratch SetBlock/SetFluid into the transfer ChunkBuffer.
-struct CaptureBufferScope
-{
-  UBlockWorld &World;
-  explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer,
-                              glm::ivec3 ownerChunk,
-                              const UBlockRegistry &registry,
-                              const std::vector<std::pair<BlockId, int>>
-                                  &treeBlockRanks)
-      : World(world)
-  {
-    buffer.SetWorldGenOwnerChunk(ownerChunk, registry, treeBlockRanks);
-    World.SetCaptureBuffer(&buffer);
-  }
-  ~CaptureBufferScope() { World.SetCaptureBuffer(nullptr); }
-  CaptureBufferScope(const CaptureBufferScope &) = delete;
-  CaptureBufferScope &operator=(const CaptureBufferScope &) = delete;
-};
-
-} // namespace
 
 void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing)
 {

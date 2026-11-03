@@ -7,6 +7,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
+#include <vector>
 
 namespace cutum
 {
@@ -14,6 +15,7 @@ namespace cutum
 class UBlockRegistry;
 class UObjectLibrary;
 class IUWorldGenPipeline;
+struct ObjectFeatureConfig;
 
 struct ChunkPopulateRequest
 {
@@ -76,5 +78,13 @@ private:
   UObjectLibrary *Objects;
   std::string WorldgenOwnerPackId;
 };
+
+/// Deterministic cross-chunk priorities for every worldgen feature voxel:
+/// procedural trees/shrubs/scatter plus object voxels from the vegetation,
+/// ground cover, decoration and structure pools. Blocks absent here fall
+/// back to rank 0 (terrain rules) in cross-chunk conflict resolution.
+std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
+    UBlockRegistry &registry, UObjectLibrary *objects,
+    const std::string &ownerPackId, const ObjectFeatureConfig *features);
 
 } // namespace cutum
