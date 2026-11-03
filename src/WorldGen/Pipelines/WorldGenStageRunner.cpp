@@ -12,6 +12,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
+#include <chrono>
 #include <unordered_map>
 
 namespace cutum
@@ -286,10 +287,10 @@ uint32_t WorldGenStageSkipBit(WorldGenStageId id)
   return 1u << static_cast<uint32_t>(id);
 }
 
-void RunPostTerrainStagesExcluding(UComposableWorldGenerator &generator,
-                                   const ColumnSampleContext &sample,
-                                   int world_x, int world_z,
-                                   uint32_t skip_stage_mask)
+void RunPostTerrainStagesExcluding(
+    UComposableWorldGenerator &generator, const ColumnSampleContext &sample,
+    int world_x, int world_z, uint32_t skip_stage_mask,
+    std::array<double, WorldGenStageIdCount> *out_stage_ms)
 {
   const WorldGenStageMask &mask = generator.GetStageMask();
   PostTerrainState state;
@@ -303,7 +304,19 @@ void RunPostTerrainStagesExcluding(UComposableWorldGenerator &generator,
     {
       continue;
     }
-    RunStage(generator, sample, world_x, world_z, state, stage_id);
+    if (out_stage_ms)
+    {
+      const auto start = std::chrono::steady_clock::now();
+      RunStage(generator, sample, world_x, world_z, state, stage_id);
+      (*out_stage_ms)[static_cast<size_t>(stage_id)] +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - start)
+              .count();
+    }
+    else
+    {
+      RunStage(generator, sample, world_x, world_z, state, stage_id);
+    }
   }
 }
 

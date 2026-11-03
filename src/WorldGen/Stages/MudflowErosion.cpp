@@ -29,8 +29,9 @@ int TopSolidY(WorldGenContext &ctx, int x, int z, int max_scan_y)
 } // namespace
 
 void ApplyMudflowToChunk(WorldGenContext &ctx, int base_x, int base_z,
-                         int iterations)
+                         int iterations, int *out_voxels_moved)
 {
+  int voxels_moved = 0;
   const int max_scan_y = ctx.Settings.MaxHeight;
   std::array<std::array<int, kChunkSize>, kChunkSize> heights{};
   for (int lz = 0; lz < kChunkSize; ++lz)
@@ -104,9 +105,14 @@ void ApplyMudflowToChunk(WorldGenContext &ctx, int base_x, int base_z,
                  [static_cast<size_t>(best_neighbor_lx)] = target_y;
           ctx.AccumulateDirtyColumn(std::min(height, target_y),
                                     std::max(height, target_y));
+          ++voxels_moved;
         }
       }
     }
+  }
+  if (out_voxels_moved)
+  {
+    *out_voxels_moved = voxels_moved;
   }
 }
 

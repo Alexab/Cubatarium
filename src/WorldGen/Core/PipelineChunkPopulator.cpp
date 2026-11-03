@@ -39,6 +39,69 @@ namespace
 std::mutex gPopulateDiagMutex;
 ChunkPopulateTiming gLastPopulateTiming;
 
+struct PopulateMetricSamples
+{
+  std::vector<double> total;
+  std::vector<double> sample;
+  std::vector<double> terrain;
+  std::vector<double> carve;
+  std::vector<double> post;
+  std::vector<double> seal;
+  std::vector<double> mudflow;
+  std::vector<double> pocketSeal;
+  std::vector<double> permeableSeal;
+  std::vector<double> pocketReseal;
+  std::vector<double> vegetationPrune;
+  std::array<std::vector<double>, WorldGenStageIdCount> postStages;
+};
+
+PopulateMetricSamples gPopulateSamples;
+ChunkPopulateSummary gPopulateSummary;
+
+void AppendPopulateMetric(std::vector<double> &samples, ChunkPopulateMetric &metric,
+                          double value)
+{
+  samples.push_back(value);
+  metric.totalMs += value;
+  metric.maxMs = std::max(metric.maxMs, value);
+}
+
+void FinalizePopulateMetric(std::vector<double> &samples, ChunkPopulateMetric &metric)
+{
+  metric.count = samples.size();
+  if (samples.empty())
+  {
+    return;
+  }
+  std::sort(samples.begin(), samples.end());
+  metric.medianMs = samples[(samples.size() - 1) / 2];
+  metric.p95Ms = samples[static_cast<size_t>(
+      std::ceil(static_cast<double>(samples.size()) * 0.95) - 1.0)];
+}
+
+void FinalizePopulateSummary()
+{
+  FinalizePopulateMetric(gPopulateSamples.total, gPopulateSummary.total);
+  FinalizePopulateMetric(gPopulateSamples.sample, gPopulateSummary.sample);
+  FinalizePopulateMetric(gPopulateSamples.terrain, gPopulateSummary.terrain);
+  FinalizePopulateMetric(gPopulateSamples.carve, gPopulateSummary.carve);
+  FinalizePopulateMetric(gPopulateSamples.post, gPopulateSummary.post);
+  FinalizePopulateMetric(gPopulateSamples.seal, gPopulateSummary.seal);
+  FinalizePopulateMetric(gPopulateSamples.mudflow, gPopulateSummary.mudflow);
+  FinalizePopulateMetric(gPopulateSamples.pocketSeal, gPopulateSummary.pocketSeal);
+  FinalizePopulateMetric(gPopulateSamples.permeableSeal,
+                         gPopulateSummary.permeableSeal);
+  FinalizePopulateMetric(gPopulateSamples.pocketReseal,
+                         gPopulateSummary.pocketReseal);
+  FinalizePopulateMetric(gPopulateSamples.vegetationPrune,
+                         gPopulateSummary.vegetationPrune);
+  for (size_t i = 0; i < gPopulateSamples.postStages.size(); ++i)
+  {
+    FinalizePopulateMetric(gPopulateSamples.postStages[i],
+                           gPopulateSummary.postStages[i]);
+  }
+}
+
 bool ChunkPassesCaveGate(int chunkWorldX, int chunkWorldZ, uint32_t seed,
                          const CaveParams &params)
 {
@@ -273,16 +336,66 @@ std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
   return ranks;
 }
 
-void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing)
+void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing,
+                                      bool discarded)
 {
   std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
   gLastPopulateTiming = timing;
+  if (discarded)
+  {
+    ++gPopulateSummary.discardedCount;
+    return;
+  }
+  ++gPopulateSummary.completedCount;
+  AppendPopulateMetric(gPopulateSamples.total, gPopulateSummary.total, timing.totalMs);
+  AppendPopulateMetric(gPopulateSamples.sample, gPopulateSummary.sample,
+                       timing.sampleMs);
+  AppendPopulateMetric(gPopulateSamples.terrain, gPopulateSummary.terrain,
+                       timing.terrainMs);
+  AppendPopulateMetric(gPopulateSamples.carve, gPopulateSummary.carve, timing.carveMs);
+  AppendPopulateMetric(gPopulateSamples.post, gPopulateSummary.post, timing.postMs);
+  AppendPopulateMetric(gPopulateSamples.seal, gPopulateSummary.seal, timing.sealMs);
+  if (timing.detailEnabled)
+  {
+    ++gPopulateSummary.detailCount;
+    AppendPopulateMetric(gPopulateSamples.mudflow, gPopulateSummary.mudflow,
+                         timing.mudflowMs);
+    AppendPopulateMetric(gPopulateSamples.pocketSeal, gPopulateSummary.pocketSeal,
+                         timing.pocketSealMs);
+    AppendPopulateMetric(gPopulateSamples.permeableSeal,
+                         gPopulateSummary.permeableSeal, timing.permeableSealMs);
+    AppendPopulateMetric(gPopulateSamples.pocketReseal,
+                         gPopulateSummary.pocketReseal, timing.pocketResealMs);
+    AppendPopulateMetric(gPopulateSamples.vegetationPrune,
+                         gPopulateSummary.vegetationPrune,
+                         timing.vegetationPruneMs);
+    for (size_t i = 0; i < timing.postStageMs.size(); ++i)
+    {
+      AppendPopulateMetric(gPopulateSamples.postStages[i],
+                           gPopulateSummary.postStages[i], timing.postStageMs[i]);
+    }
+  }
+  gPopulateSummary.mudflowColumns += timing.mudflowColumns;
+  gPopulateSummary.mudflowVoxelsMoved += timing.mudflowVoxelsMoved;
+  gPopulateSummary.pocketVoxelsFilled += timing.pocketVoxelsFilled;
+  gPopulateSummary.permeableColumns += timing.permeableColumns;
+  gPopulateSummary.permeableColumnsChanged += timing.permeableColumnsChanged;
+  gPopulateSummary.resealVoxelsFilled += timing.resealVoxelsFilled;
+  gPopulateSummary.pruneColumns += timing.pruneColumns;
+  gPopulateSummary.prunedVoxels += timing.prunedVoxels;
 }
 
 ChunkPopulateTiming ChunkPopulateDiagnostics::GetLast()
 {
   std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
   return gLastPopulateTiming;
+}
+
+ChunkPopulateSummary ChunkPopulateDiagnostics::GetSummary()
+{
+  std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
+  FinalizePopulateSummary();
+  return gPopulateSummary;
 }
 
 UPipelineChunkPopulator::UPipelineChunkPopulator(
@@ -305,11 +418,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   ChunkPopulateTiming timing{};
   const bool audit_seal =
       std::getenv("CUBATARIUM_WORLDGEN_SEAL_AUDIT") != nullptr;
-  double mudflow_ms = 0.0;
-  double pocket_seal_ms = 0.0;
-  double permeable_seal_ms = 0.0;
-  double pocket_reseal_ms = 0.0;
-  double vegetation_prune_ms = 0.0;
+  timing.detailEnabled = audit_seal;
 
   ChunkPopulateResult result;
   result.coord = request.chunkCoord;
@@ -446,7 +555,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     result.discarded = true;
     result.buffer.Clear();
     timing.totalMs = ElapsedMs(populate_start);
-    ChunkPopulateDiagnostics::Record(timing);
+    ChunkPopulateDiagnostics::Record(timing, result.discarded);
     return result;
   }
 
@@ -525,10 +634,13 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
         const auto stage_start = audit_seal
                                      ? std::chrono::steady_clock::now()
                                      : std::chrono::steady_clock::time_point{};
-        ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
+        int moved = 0;
+        ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2, &moved);
+        timing.mudflowColumns += CHUNK_SIZE * CHUNK_SIZE;
+        timing.mudflowVoxelsMoved += static_cast<uint64_t>(moved);
         if (audit_seal)
         {
-          mudflow_ms = ElapsedMs(stage_start);
+          timing.mudflowMs = ElapsedMs(stage_start);
         }
       }
 
@@ -561,7 +673,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
           UBlockWorldColumnWriter writer(genWorld, Registry);
           UColumnGenerationService::GenerateColumnPostTerrain(
               *composable, writer, world_x, world_z, skip_chunk_stages,
-              samples[lz][lx]);
+              samples[lz][lx], audit_seal ? &timing.postStageMs : nullptr);
         }
       }
       timing.postMs = ElapsedMs(post_start);
@@ -576,7 +688,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       result.discarded = true;
       result.buffer.Clear();
       timing.totalMs = ElapsedMs(populate_start);
-      ChunkPopulateDiagnostics::Record(timing);
+      ChunkPopulateDiagnostics::Record(timing, result.discarded);
       return result;
     }
 
@@ -587,29 +699,36 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       auto stage_start = audit_seal
                              ? std::chrono::steady_clock::now()
                              : std::chrono::steady_clock::time_point{};
-      SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+      int filled = 0;
+      SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z, &filled);
+      timing.pocketVoxelsFilled = static_cast<uint64_t>(filled);
       if (audit_seal)
       {
-        pocket_seal_ms = ElapsedMs(stage_start);
+        timing.pocketSealMs = ElapsedMs(stage_start);
       }
       if (!seal_cancelled())
       {
         stage_start = audit_seal ? std::chrono::steady_clock::now()
                                  : std::chrono::steady_clock::time_point{};
+        int columns_changed = 0;
         const bool permeable_changed = SealFluidPermeableDecorInChunk(
-            composable->GetContext(), base_x, base_z);
+            composable->GetContext(), base_x, base_z, &columns_changed);
+        timing.permeableColumns = CHUNK_SIZE * CHUNK_SIZE;
+        timing.permeableColumnsChanged = static_cast<uint64_t>(columns_changed);
         if (audit_seal)
         {
-          permeable_seal_ms = ElapsedMs(stage_start);
+          timing.permeableSealMs = ElapsedMs(stage_start);
         }
         if (permeable_changed && !seal_cancelled())
         {
           stage_start = audit_seal ? std::chrono::steady_clock::now()
                                    : std::chrono::steady_clock::time_point{};
-          SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+          filled = 0;
+          SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z, &filled);
+          timing.resealVoxelsFilled = static_cast<uint64_t>(filled);
           if (audit_seal)
           {
-            pocket_reseal_ms = ElapsedMs(stage_start);
+            timing.pocketResealMs = ElapsedMs(stage_start);
           }
         }
       }
@@ -625,16 +744,18 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       result.buffer.Clear();
       timing.sealMs = ElapsedMs(seal_start);
       timing.totalMs = ElapsedMs(populate_start);
-      ChunkPopulateDiagnostics::Record(timing);
+      ChunkPopulateDiagnostics::Record(timing, result.discarded);
       return result;
     }
     const auto prune_start = audit_seal
                                  ? std::chrono::steady_clock::now()
                                  : std::chrono::steady_clock::time_point{};
-    PruneFloatingVegetationInChunk(composable->GetContext(), base_x, base_z);
+    timing.prunedVoxels = static_cast<uint64_t>(PruneFloatingVegetationInChunk(
+        composable->GetContext(), base_x, base_z));
+    timing.pruneColumns = CHUNK_SIZE * CHUNK_SIZE;
     if (audit_seal)
     {
-      vegetation_prune_ms = ElapsedMs(prune_start);
+      timing.vegetationPruneMs = ElapsedMs(prune_start);
     }
     timing.sealMs = ElapsedMs(seal_start);
   }
@@ -646,7 +767,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   // result.buffer already mirrors genWorld via CaptureBufferScope (D1).
 
   timing.totalMs = ElapsedMs(populate_start);
-  ChunkPopulateDiagnostics::Record(timing);
+  ChunkPopulateDiagnostics::Record(timing, result.discarded);
 
   static thread_local double s_last_log_ms = 0.0;
   static thread_local auto s_last_log_tp = std::chrono::steady_clock::now();
@@ -667,12 +788,12 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             " post_ms=" + std::to_string(timing.postMs) +
             " seal_ms=" + std::to_string(timing.sealMs) +
             (audit_seal
-                 ? (" mudflow_ms=" + std::to_string(mudflow_ms) +
-                    " pocket_ms=" + std::to_string(pocket_seal_ms) +
+                 ? (" mudflow_ms=" + std::to_string(timing.mudflowMs) +
+                    " pocket_ms=" + std::to_string(timing.pocketSealMs) +
                     " permeable_ms=" +
-                        std::to_string(permeable_seal_ms) +
-                    " reseal_ms=" + std::to_string(pocket_reseal_ms) +
-                    " prune_ms=" + std::to_string(vegetation_prune_ms))
+                        std::to_string(timing.permeableSealMs) +
+                    " reseal_ms=" + std::to_string(timing.pocketResealMs) +
+                    " prune_ms=" + std::to_string(timing.vegetationPruneMs))
                  : std::string()));
     s_last_log_tp = now;
     s_last_log_ms = timing.totalMs;

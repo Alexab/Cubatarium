@@ -4,6 +4,9 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Core/WorldGenStageId.h"
+#include <array>
+#include <cstdint>
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -38,12 +41,64 @@ struct ChunkPopulateTiming
   double carveMs{0.0};
   double postMs{0.0};
   double sealMs{0.0};
+  double mudflowMs{0.0};
+  double pocketSealMs{0.0};
+  double permeableSealMs{0.0};
+  double pocketResealMs{0.0};
+  double vegetationPruneMs{0.0};
+  std::array<double, WorldGenStageIdCount> postStageMs{};
+  uint64_t mudflowColumns{0};
+  uint64_t mudflowVoxelsMoved{0};
+  uint64_t pocketVoxelsFilled{0};
+  uint64_t permeableColumns{0};
+  uint64_t permeableColumnsChanged{0};
+  uint64_t resealVoxelsFilled{0};
+  uint64_t pruneColumns{0};
+  uint64_t prunedVoxels{0};
+  bool detailEnabled{false};
+};
+
+struct ChunkPopulateMetric
+{
+  uint64_t count{0};
+  double totalMs{0.0};
+  double medianMs{0.0};
+  double p95Ms{0.0};
+  double maxMs{0.0};
+};
+
+struct ChunkPopulateSummary
+{
+  uint64_t completedCount{0};
+  uint64_t discardedCount{0};
+  uint64_t detailCount{0};
+  ChunkPopulateMetric total;
+  ChunkPopulateMetric sample;
+  ChunkPopulateMetric terrain;
+  ChunkPopulateMetric carve;
+  ChunkPopulateMetric post;
+  ChunkPopulateMetric seal;
+  ChunkPopulateMetric mudflow;
+  ChunkPopulateMetric pocketSeal;
+  ChunkPopulateMetric permeableSeal;
+  ChunkPopulateMetric pocketReseal;
+  ChunkPopulateMetric vegetationPrune;
+  std::array<ChunkPopulateMetric, WorldGenStageIdCount> postStages{};
+  uint64_t mudflowColumns{0};
+  uint64_t mudflowVoxelsMoved{0};
+  uint64_t pocketVoxelsFilled{0};
+  uint64_t permeableColumns{0};
+  uint64_t permeableColumnsChanged{0};
+  uint64_t resealVoxelsFilled{0};
+  uint64_t pruneColumns{0};
+  uint64_t prunedVoxels{0};
 };
 
 struct ChunkPopulateDiagnostics
 {
-  static void Record(const ChunkPopulateTiming &timing);
+  static void Record(const ChunkPopulateTiming &timing, bool discarded = false);
   static ChunkPopulateTiming GetLast();
+  static ChunkPopulateSummary GetSummary();
 };
 
 struct ChunkPopulateResult
