@@ -186,6 +186,22 @@ def read_perf_runtime_identity(perf_path: Path | None) -> dict:
     return {}
 
 
+def read_flight_report_resolution(app_report_path: Path) -> list[int] | None:
+    """Return the actual flight-sim viewport reported by the application."""
+    try:
+        data = json.loads(app_report_path.read_text(encoding="utf-8"))
+        value = data.get("resolution")
+        if not isinstance(value, (list, tuple)) or len(value) < 2:
+            return None
+        width = int(value[0])
+        height = int(value[1])
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return [width, height]
+
+
 def read_world_startup_identity(
     requested_world: str,
     app_report_path: Path,
@@ -3701,6 +3717,13 @@ def main() -> int:
                     if cold_warm not in ("warm", "cold"):
                         cold_warm = "unknown"
                     _perf_runtime_identity = read_perf_runtime_identity(perf)
+                    _flight_resolution = read_flight_report_resolution(
+                        flight_report_path
+                    )
+                    if _flight_resolution:
+                        os.environ["CUBA_RESOLUTION"] = (
+                            f"{_flight_resolution[0]}x{_flight_resolution[1]}"
+                        )
                     _ann["run_manifest"] = build_run_manifest(
                         exe=resolve_exe(),
                         world=(
