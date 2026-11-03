@@ -1565,6 +1565,45 @@ static void TestCrossChunkTreeConflictStable(cutum::UBlockRegistry &registry)
                     "cross-chunk procedural tree overlap resolves identically");
 }
 
+static void TestFloraRanksCoverDecorationAndStructures(
+    cutum::UBlockRegistry &registry)
+{
+  cutum::ObjectFeatureConfig config;
+  cutum::ObjectFeatureRule decor;
+  decor.Mode = cutum::ObjectFeatureRuleMode::ScatterBlocks;
+  decor.Scatter.BlockName = "log_jungle";
+  config.Decoration.push_back(decor);
+  cutum::ObjectFeatureRule structure;
+  structure.Mode = cutum::ObjectFeatureRuleMode::ScatterBlocks;
+  structure.Scatter.BlockName = "mtg_mossycobble";
+  config.Structures.push_back(structure);
+
+  const auto ranks = cutum::CollectFloraFeatureBlockRanks(
+      registry, nullptr, "minetest_default_16", &config);
+  const auto findRank = [&ranks](cutum::BlockId id) -> int
+  {
+    const auto it = std::find_if(
+        ranks.begin(), ranks.end(),
+        [id](const std::pair<cutum::BlockId, int> &entry)
+        { return entry.first == id; });
+    return it == ranks.end() ? 0 : it->second;
+  };
+
+  const cutum::BlockId decor_block =
+      cutum::ResolvePackScatterBlockId(registry, "minetest_default_16",
+                                       "log_jungle");
+  const cutum::BlockId structure_block =
+      cutum::ResolvePackScatterBlockId(registry, "minetest_default_16",
+                                       "mtg_mossycobble");
+  FluidTest::Expect(decor_block != cutum::BLOCK_AIR &&
+                        structure_block != cutum::BLOCK_AIR,
+                    kTestName, "decoration/structure blocks resolve");
+  FluidTest::Expect(findRank(decor_block) == 1, kTestName,
+                    "decoration scatter block carries a cross-chunk rank");
+  FluidTest::Expect(findRank(structure_block) == 1, kTestName,
+                    "structure scatter block carries a cross-chunk rank");
+}
+
 static void TestOceanFallbackSpawnStaysAboveSea(
     cutum::UBlockRegistry &registry)
 {
@@ -1732,6 +1771,7 @@ int main(int argc, char **argv)
       kTestName, "built-in feature placement strategies are registered");
   TestScatterSurfaceConstraint(registry);
   TestCrossChunkTreeConflictStable(registry);
+  TestFloraRanksCoverDecorationAndStructures(registry);
   TestCaveFeaturePlacementStrategies(registry);
   TestDataDefinedBiomeAffectsSampling();
   TestImageBiomeSourceStrategy();
