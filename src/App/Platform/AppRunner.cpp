@@ -2638,6 +2638,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             c = '/';
           }
         }
+        const glm::ivec2 report_resolution = window.GetFramebufferSize();
         report << "{\n"
                << "  \"exit_code\": " << exit_code << ",\n"
                << "  \"loading_seen\": " << (loading_seen ? "true" : "false")
@@ -2652,6 +2653,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << excluded_clock_gap_count
                << ",\n"
                << "  \"world\": \"" << json_escape(world_name) << "\",\n"
+               << "  \"resolution\": [" << report_resolution.x << ", "
+               << report_resolution.y << "],\n"
                << "  \"teleport_cruise\": "
                << (teleport_cruise ? "true" : "false") << ",\n"
                << "  \"manifest\": {\n"
