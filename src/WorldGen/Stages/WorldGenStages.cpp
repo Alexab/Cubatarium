@@ -1,4 +1,5 @@
 #include "WorldGen/Stages/WorldGenStages.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
@@ -12,7 +13,9 @@
 #include "WorldGen/Sampling/AquiferSampler.h"
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
 #include <optional>
 
@@ -923,6 +926,46 @@ bool SealFluidShoreAirOnChunkCommitted(
 int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z)
 {
   const int max_y = ctx.Settings.MaxHeight - 1;
+  // Diagnostics hook (CUBA_DEBUG_PRUNE=1): report how the worldgen thread
+  // actually sees flora physics, to compare against pack JSON and fixture
+  // registries. Limited to the first three populated chunks per process.
+  static const bool dbg_prune = std::getenv("CUBA_DEBUG_PRUNE") != nullptr;
+  static std::atomic<int> dbg_chunks_reported{0};
+  const int dbg_index = dbg_prune ? dbg_chunks_reported.fetch_add(1) : -1;
+  if (dbg_prune && dbg_index < 3)
+  {
+    const auto report = [&](const char *type_name)
+    {
+      const BlockId id = ctx.Registry.GetIdByTypeName(type_name);
+      if (id == BLOCK_AIR)
+      {
+        CubatariumLogInfo("PruneDbg",
+                          "chunk#" + std::to_string(dbg_index) + " (" +
+                              std::to_string(base_x) + ',' +
+                              std::to_string(base_z) + ") " + type_name +
+                              ": not resolved");
+        return;
+      }
+      CubatariumLogInfo(
+          "PruneDbg",
+          "chunk#" + std::to_string(dbg_index) + " (" +
+              std::to_string(base_x) + ',' + std::to_string(base_z) + ") " +
+              type_name + " id=" + std::to_string(id) + " occupancy=" +
+              std::to_string(ctx.Registry.Physics(id).Movement.Occupancy) +
+              " blocksMovement=" +
+              std::to_string(ctx.Registry.BlocksMovement(id) ? 1 : 0) +
+              " removable=" +
+              std::to_string(IsRemovableFloatingPlantBlock(ctx.Registry, id)
+                                 ? 1
+                                 : 0) +
+              " hasDefinitions=" +
+              std::to_string(ctx.Registry.GetDefinitions() != nullptr ? 1 : 0) +
+              " pack=" + ctx.WorldgenOwnerPackId);
+    };
+    report("tree_leaves");
+    report("mtg_leaves");
+    report("leaves_spruce");
+  }
   int removed = 0;
   for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {
@@ -931,6 +974,14 @@ int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z)
       removed += PruneFloatingPlantsInColumn(ctx.World, ctx.Registry, base_x + lx,
                                              base_z + lz, max_y);
     }
+  }
+  if (dbg_prune && dbg_index < 3)
+  {
+    CubatariumLogInfo("PruneDbg",
+                      "chunk#" + std::to_string(dbg_index) + " (" +
+                          std::to_string(base_x) + ',' +
+                          std::to_string(base_z) + ") pruned=" +
+                          std::to_string(removed));
   }
   if (removed > 0)
   {
