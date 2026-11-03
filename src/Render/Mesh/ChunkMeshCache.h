@@ -482,10 +482,11 @@ public:
   uint64_t GetReconcileRedirtyCount() const { return ReconcileRedirtyN; }
   /// World used by the redundant-repair guard (set once by UWorld).
   void SetRepairGuardWorld(const UBlockWorld *world) { RepairGuardWorld = world; }
-  /// True when the drawable published mesh was baked from exactly the current
+  /// True when the satisfying published mesh was baked from exactly the current
   /// geometry inputs and light (content/incarnation of center + 6 face
   /// neighbors, light revision, neighbor light halos): rebuilding it would
-  /// reproduce the same vertices.
+  /// reproduce the same vertices. An intentional zero-quad result counts when
+  /// no newer geometry, coverage, or executor obligation remains outstanding.
   bool IsPublishedMeshCurrentForInputs(glm::ivec3 chunk_coord,
                                        const UBlockWorld &world) const;
   uint64_t GetRedundantRepairSkipCount() const { return RedundantRepairSkipN; }

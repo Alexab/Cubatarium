@@ -203,4 +203,12 @@ inline bool ShouldMarkDirtyAfterDarkSoftDeferReject(bool remesh_after_apply,
   return true;
 }
 
+/// Generic visual mesh repair cannot make progress while the column-wide lit
+/// gate will reject its dark candidate. Keep durable debt queued, but leave
+/// admission to relight until the gate opens.
+inline bool ShouldAdmitVisualMeshRepairUnderLitGate(bool defer_until_lit)
+{
+  return !defer_until_lit;
+}
+
 } // namespace cutum

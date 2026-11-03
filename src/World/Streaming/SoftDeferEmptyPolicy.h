@@ -549,6 +549,14 @@ inline bool IsCpuPublishedOccludedEmptyReady(bool has_greedy, bool has_drawable,
   return true;
 }
 
+/// Repair passes may skip an unchanged published mesh only when it satisfies
+/// the column, including an intentional occluded zero-quad result. An empty
+/// placeholder with outstanding geometry/coverage/executor work is not enough.
+inline bool ShouldSkipRedundantRepairForPublishedMesh(bool has_satisfying_mesh)
+{
+  return has_satisfying_mesh;
+}
+
 /// EnterLitQuiesce + SoftDefer still active: one Dirty owner (not Held park).
 inline bool ShouldEnterSoftDeferEmptyTransferDirty(bool enter_lit_quiesce,
                                                    bool defer_until_lit)
