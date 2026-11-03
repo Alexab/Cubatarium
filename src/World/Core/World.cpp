@@ -85,6 +85,7 @@
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/MeshLightStalePolicy.h"
+#include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
@@ -4959,6 +4960,14 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
     // peer incarnation/coverage change is still handled by RepairFaceDebt; local
     // geometry or light changes fail the revision checks above and admit a real
     // rebuild.
+    return;
+  }
+  // Dark-mesh commit applies this same column-wide gate. Generic visual repair
+  // must not recreate Dirty immediately after that rejection: relight owns the
+  // executable successor until the gate opens.
+  if (!ShouldAdmitVisualMeshRepairUnderLitGate(
+          MeshService->GetCache().IsDeferMeshUntilLit(coord)))
+  {
     return;
   }
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();

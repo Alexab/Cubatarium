@@ -3108,7 +3108,8 @@ bool UChunkMeshCache::IsPublishedMeshCurrentForInputs(
   {
     return false;
   }
-  if (!HasDrawableGreedyMesh(chunk_coord))
+  if (!ShouldSkipRedundantRepairForPublishedMesh(
+          HasMeshSatisfyingColumnReady(chunk_coord)))
   {
     return false;
   }
@@ -4237,6 +4238,14 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     if (!demand->has_settled_light ||
         demand->settled_light_rev != field_light_rev ||
         demand->desired_light_rev > field_light_rev)
+    {
+      continue;
+    }
+    // CommitGpuMeshResult rejects a dark candidate while this column-wide gate
+    // is active. Retain the durable halo debt, but do not repeatedly build and
+    // upload a candidate that cannot be published until relight opens the gate.
+    if (!ShouldAdmitVisualMeshRepairUnderLitGate(
+            DeferMeshUntilLit && DeferMeshUntilLit(coord)))
     {
       continue;
     }

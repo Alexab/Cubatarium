@@ -121,6 +121,11 @@ int main()
          "Era32: SoftDefer reject FirstMesh → MarkDirty");
   Expect(!ShouldMarkDirtyAfterDarkSoftDeferReject(true, true),
          "ColPipe P5: RemeshAfterApply+had_mesh → no Dirty (MarkRelit owns)");
+  using cutum::ShouldAdmitVisualMeshRepairUnderLitGate;
+  Expect(!ShouldAdmitVisualMeshRepairUnderLitGate(/*defer_until_lit=*/true),
+         "PERF-0.2: deferred visual repair keeps debt without remesh");
+  Expect(ShouldAdmitVisualMeshRepairUnderLitGate(/*defer_until_lit=*/false),
+         "PERF-0.2: visual mesh repair admits after lit gate opens");
 
   // LitDrawable ring (default 4) waits for light, except for the single nearest
   // missing slice whose provisional preview prevents a leading visible hole.

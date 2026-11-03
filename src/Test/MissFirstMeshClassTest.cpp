@@ -3145,6 +3145,11 @@ int main()
            "SoftDeferHeld blocks cpu-published empty");
     Expect(!IsCpuPublishedOccludedEmptyReady(true, false, true, false, true),
            "defer_until_lit blocks cpu-published empty");
+    using cutum::ShouldSkipRedundantRepairForPublishedMesh;
+    Expect(ShouldSkipRedundantRepairForPublishedMesh(true),
+           "PERF-0.2: satisfying occluded empty skips identical repair");
+    Expect(!ShouldSkipRedundantRepairForPublishedMesh(false),
+           "PERF-0.2: outstanding empty mesh keeps repair demand");
     Expect(!ShouldPinIsolatedMissMarkDirty(true, true, false),
            "P0.2: already owned ⇒ no MarkDirty");
     Expect(ShouldPinIsolatedMissMarkDirty(true, false, false),
