@@ -132,7 +132,7 @@ LeafAlpha/ConnectedAlpha/FaceAware V24–V33) **не используются д
 |---|---------|-----|-------------|
 | O-1 | «Рентген»-дыры в мешинге не найдены | `docs/WORLDGEN_AUDIT_2026-10.md` §«Дыры» | Рендер/меш, расследование остановлено; нужен пиксельный witness (`CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS`) |
 | O-2 | `SurfaceYAt` — линейный 3D-скан, генерация радиуса 12 = 220–310 с | `DensityFieldSampler`/`BiomeSampler` | Пункт P1 старого аудита «бинарный поиск + кэш RouteAt 4×4» не сделан; тормозит любые итерации по worldgen |
-| O-3 | `density_refine_parity_test` не линкуется (`ResolvePackScatterBlockId` вне источников) | CMakeLists | Известный долг из аудита 2026-10 |
+| O-3 | ~~`density_refine_parity_test` не линкуется~~ **закрыт 2026-11-03: не воспроизводится** — `WorldGenBlockResolver.cpp` уже в источниках таргета, тест собирается, проходит и зарегистрирован в ctest (проверено `ctest -R density_refine_parity_test`: 100% passed). Находка аудита 2026-10 устарела | CMakeLists | Действий не требуется |
 | O-4 | Prefab-деревья (`tree_apple` и пр.) идут отдельным путём `ResolveObjectVoxelPlacementId` (`ObjectUtil.cpp:65-78`) с fallback на raw id из JSON | `objects/tree_*.json` | Риск id-drift для старых prefab-миров; в profile 3 шаблоны вытеснены процедурными видами, но не везде |
 | O-5 | Смешение шаблонных кустов и процедурных там, где у биома нет процедурного кустарника | `ObjectFeaturePlacer.cpp` | Остаток P2-2026; не критично |
 | O-6 | Репозиторий: `resource_packs/cubatarium_worldgen_cc0` = 4339 файлов в git, `bin/` 43 ГБ мусора | git | Из аудита 2026-10, Phase 0 не выполнялся |
@@ -161,7 +161,7 @@ LeafAlpha/ConnectedAlpha/FaceAware V24–V33) **не используются д
 
 **P3 — бэклог**
 6. O-1 рентген-дыры (рендер-бисект), O-2 SurfaceYAt (binsearch + кэш RouteAt),
-   O-3 фикс теста, O-4 prefab id-drift, builtin-ранги по паку, repo hygiene.
+   ~~O-3 фикс теста~~ (закрыт: не воспроизводится), O-4 prefab id-drift, builtin-ранги по паку, repo hygiene.
 
 Порядок 1→2→3→4→5; P0/P1 независимо друг от друга, P2 после P1 (кадры одни и те
 же). Старые сохранённые миры не мигрируют автоматически (prune/decay меняют
