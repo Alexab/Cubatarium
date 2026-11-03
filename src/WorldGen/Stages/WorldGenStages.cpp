@@ -384,7 +384,8 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
   ctx.AccumulateDirtyColumn(fillBase, sea);
 }
 
-bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
+bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
+                             int *out_voxels_filled)
 {
   if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
   {
@@ -413,6 +414,10 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z)
       glm::ivec3(base_x, ctx.Settings.MinHeight, base_z),
       glm::ivec3(base_x + CHUNK_SIZE - 1, sea, base_z + CHUNK_SIZE - 1),
       options);
+  if (out_voxels_filled)
+  {
+    *out_voxels_filled = filled;
+  }
   if (filled > 0)
   {
     ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, sea);
@@ -696,7 +701,8 @@ bool RestoreWaterColumnAt(WorldGenContext &ctx, int x, int z, int sea)
 
 } // namespace
 
-bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z)
+bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z,
+                                    int *out_columns_changed)
 {
   if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
   {
@@ -704,6 +710,7 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
   }
   const int sea = ctx.Settings.SeaLevel;
   bool any_filled = false;
+  int columns_changed = 0;
   for (int lz = 0; lz < CHUNK_SIZE; ++lz)
   {
     for (int lx = 0; lx < CHUNK_SIZE; ++lx)
@@ -711,8 +718,13 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
       if (RestoreWaterColumnAt(ctx, base_x + lx, base_z + lz, sea))
       {
         any_filled = true;
+        ++columns_changed;
       }
     }
+  }
+  if (out_columns_changed)
+  {
+    *out_columns_changed = columns_changed;
   }
   if (any_filled)
   {

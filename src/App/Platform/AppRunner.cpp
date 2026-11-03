@@ -15,6 +15,7 @@
 #include "App/Core.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #if !defined(__ANDROID__)
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/GlfwKeyCompat.h"
@@ -2743,6 +2744,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       }
     }
 
+    UMovementDiagnosticsRecorder::SaveToFile(
+        *world, (report_path.parent_path() / "movement_diagnostics.json").string());
     std::cout << "flight-sim: report written path=" << report_path.string()
               << " — shutting down (fast)" << std::endl;
     world->PrepareForShutdownFast();

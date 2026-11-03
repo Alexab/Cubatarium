@@ -31,8 +31,10 @@ bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
 bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const UAquiferSampler &sampler);
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY);
-bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z);
-bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z);
+bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
+                             int *out_voxels_filled = nullptr);
+bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z,
+                                    int *out_columns_changed = nullptr);
 bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,

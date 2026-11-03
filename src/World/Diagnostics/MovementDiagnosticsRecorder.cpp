@@ -12,6 +12,7 @@
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include <array>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -22,6 +23,63 @@ namespace cutum
 
 using json = nlohmann::json;
 
+namespace
+{
+
+json PopulateMetricToJson(const ChunkPopulateMetric &metric)
+{
+  return json{{"count", metric.count},
+              {"total_ms", metric.totalMs},
+              {"median_ms", metric.medianMs},
+              {"p95_ms", metric.p95Ms},
+              {"max_ms", metric.maxMs}};
+}
+
+const char *PopulateStageName(size_t index)
+{
+  static constexpr std::array<const char *, WorldGenStageIdCount> names = {
+      "terrain",      "ravines",   "valleys",      "lakes",
+      "caves",        "fluids",    "ores",         "vegetation",
+      "ground_cover", "decoration", "structures", "lava_pools",
+      "fire_patch",   "geology",   "aquifers",     "cave_features"};
+  return names[index];
+}
+
+json PopulateSummaryToJson(const ChunkPopulateSummary &summary)
+{
+  json root{{"schema", "chunk_populate_summary.v1"},
+            {"completed_count", summary.completedCount},
+            {"discarded_count", summary.discardedCount},
+            {"detail_count", summary.detailCount},
+            {"total", PopulateMetricToJson(summary.total)},
+            {"sample", PopulateMetricToJson(summary.sample)},
+            {"terrain", PopulateMetricToJson(summary.terrain)},
+            {"carve", PopulateMetricToJson(summary.carve)},
+            {"post", PopulateMetricToJson(summary.post)},
+            {"seal", PopulateMetricToJson(summary.seal)},
+            {"mudflow", PopulateMetricToJson(summary.mudflow)},
+            {"pocket_seal", PopulateMetricToJson(summary.pocketSeal)},
+            {"permeable_seal", PopulateMetricToJson(summary.permeableSeal)},
+            {"pocket_reseal", PopulateMetricToJson(summary.pocketReseal)},
+            {"vegetation_prune", PopulateMetricToJson(summary.vegetationPrune)},
+            {"work", {{"mudflow_columns", summary.mudflowColumns},
+                       {"mudflow_voxels_moved", summary.mudflowVoxelsMoved},
+                       {"pocket_voxels_filled", summary.pocketVoxelsFilled},
+                       {"permeable_columns", summary.permeableColumns},
+                       {"permeable_columns_changed", summary.permeableColumnsChanged},
+                       {"reseal_voxels_filled", summary.resealVoxelsFilled},
+                       {"prune_columns", summary.pruneColumns},
+                       {"pruned_voxels", summary.prunedVoxels}}}};
+  for (size_t i = 0; i < summary.postStages.size(); ++i)
+  {
+    root["post_stages"][PopulateStageName(i)] =
+        PopulateMetricToJson(summary.postStages[i]);
+  }
+  return root;
+}
+
+} // namespace
+
 void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
                                               const std::string &file_name)
 {
@@ -29,6 +87,8 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
   root["schema"] = "movement_diagnostics.v2";
   root["world_name"] = world.WorldName;
   root["sample_count"] = world.MovementDiagHistory.size();
+  root["populate_summary"] =
+      PopulateSummaryToJson(ChunkPopulateDiagnostics::GetSummary());
   std::vector<json> samples;
   samples.reserve(world.MovementDiagHistory.size());
   for (const UWorld::MovementDiagnostics &sample : world.MovementDiagHistory)
