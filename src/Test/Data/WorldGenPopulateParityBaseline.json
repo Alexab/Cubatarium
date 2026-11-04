@@ -1,0 +1,231 @@
+{
+  "cases": [
+    {
+      "block_hash": "0dc215ea5df81edb",
+      "chunk": [
+        192,
+        0,
+        -128
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 32385,
+      "nonempty_fluid": 0,
+      "profile": "mountain",
+      "seed": 777001,
+      "timing_ms": {
+        "carve": 15.9436,
+        "post": 4.2211,
+        "sample": 20.568900000000006,
+        "seal": 6.712,
+        "terrain": 30.915999999999993,
+        "total": 79.1471
+      },
+      "wall_ms": 86.824
+    },
+    {
+      "block_hash": "95f2f54eca58afd5",
+      "chunk": [
+        192,
+        0,
+        -128
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 33749,
+      "nonempty_fluid": 0,
+      "profile": "mountain",
+      "seed": 777002,
+      "timing_ms": {
+        "carve": 2.2312,
+        "post": 3.2582,
+        "sample": 20.312300000000008,
+        "seal": 4.874,
+        "terrain": 31.69329999999998,
+        "total": 63.0135
+      },
+      "wall_ms": 63.0969
+    },
+    {
+      "block_hash": "5e3f296f946e65bb",
+      "chunk": [
+        192,
+        0,
+        -128
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 30335,
+      "nonempty_fluid": 0,
+      "profile": "mountain",
+      "seed": 777003,
+      "timing_ms": {
+        "carve": 2.2663,
+        "post": 2.8406,
+        "sample": 19.52369999999999,
+        "seal": 5.8658,
+        "terrain": 25.115300000000012,
+        "total": 56.4492
+      },
+      "wall_ms": 56.5599
+    },
+    {
+      "block_hash": "410c5d13562d9207",
+      "chunk": [
+        -128,
+        0,
+        192
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 25651,
+      "nonempty_fluid": 0,
+      "profile": "coast",
+      "seed": 777001,
+      "timing_ms": {
+        "carve": 12.4431,
+        "post": 2.3724,
+        "sample": 17.694300000000005,
+        "seal": 5.6199,
+        "terrain": 23.0408,
+        "total": 61.7372
+      },
+      "wall_ms": 61.8303
+    },
+    {
+      "block_hash": "cc7431279573506f",
+      "chunk": [
+        -128,
+        0,
+        192
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 31979,
+      "nonempty_fluid": 0,
+      "profile": "coast",
+      "seed": 777002,
+      "timing_ms": {
+        "carve": 3.2393,
+        "post": 3.5829,
+        "sample": 22.04440000000001,
+        "seal": 5.7774,
+        "terrain": 30.648899999999994,
+        "total": 65.9477
+      },
+      "wall_ms": 66.0404
+    },
+    {
+      "block_hash": "8b145510c8af322d",
+      "chunk": [
+        -128,
+        0,
+        192
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 32071,
+      "nonempty_fluid": 0,
+      "profile": "coast",
+      "seed": 777003,
+      "timing_ms": {
+        "carve": 16.4501,
+        "post": 4.7533,
+        "sample": 25.648899999999983,
+        "seal": 6.4791,
+        "terrain": 35.28599999999999,
+        "total": 89.4235
+      },
+      "wall_ms": 89.5123
+    },
+    {
+      "block_hash": "45ceff4e6dc2c805",
+      "chunk": [
+        192,
+        0,
+        -128
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 29667,
+      "nonempty_fluid": 0,
+      "profile": "mountain_caves",
+      "seed": 777001,
+      "timing_ms": {
+        "carve": 17.7872,
+        "post": 5.4504,
+        "sample": 22.835499999999996,
+        "seal": 6.3326,
+        "terrain": 30.44670000000001,
+        "total": 83.3873
+      },
+      "wall_ms": 83.4855
+    },
+    {
+      "block_hash": "fd4281ffd31e21d0",
+      "chunk": [
+        192,
+        0,
+        -128
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 33240,
+      "nonempty_fluid": 0,
+      "profile": "mountain_caves",
+      "seed": 777002,
+      "timing_ms": {
+        "carve": 2.6814,
+        "post": 4.0704,
+        "sample": 25.512500000000014,
+        "seal": 8.9847,
+        "terrain": 43.7736,
+        "total": 86.1742
+      },
+      "wall_ms": 86.2796
+    },
+    {
+      "block_hash": "9ba3e1440890de7b",
+      "chunk": [
+        192,
+        0,
+        -128
+      ],
+      "fluid_hash": "06ea0f08002d0383",
+      "light_hash": "06ea0f08002d0383",
+      "max_y": 319,
+      "min_y": -64,
+      "nonempty_blocks": 30001,
+      "nonempty_fluid": 0,
+      "profile": "mountain_caves",
+      "seed": 777003,
+      "timing_ms": {
+        "carve": 2.6932,
+        "post": 3.4597,
+        "sample": 23.131600000000013,
+        "seal": 6.6364,
+        "terrain": 32.42059999999999,
+        "total": 69.3249
+      },
+      "wall_ms": 69.4074
+    }
+  ],
+  "schema": "worldgen_populate_parity_probe.v1",
+  "scope": "target XZ, full MinHeight..MaxHeight block/fluid/light"
+}

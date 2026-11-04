@@ -2601,6 +2601,16 @@ if(WIN32)
   target_link_libraries(fluid_worldgen_chunk_test dbghelp)
 endif()
 
+cubatarium_add_test(NAME worldgen_populate_parity_probe
+    SOURCES
+        ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
+        src/Test/WorldGenPopulateParityProbe.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog)
+if(WIN32)
+  target_link_libraries(worldgen_populate_parity_probe dbghelp)
+endif()
+
 cubatarium_add_test(NAME worldgen_vegetation_placement_integration_test
     SOURCES
         ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
