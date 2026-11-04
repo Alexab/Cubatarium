@@ -7,6 +7,7 @@
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 #include <cstdlib>
@@ -20,6 +21,31 @@ namespace
 {
 
 constexpr float kSurfaceWobbleScale = 0.35f;
+
+class ScopedDensityProfilePhase
+{
+public:
+  ScopedDensityProfilePhase(bool enabled, double &target)
+      : Target(target), Start(enabled ? std::chrono::steady_clock::now()
+                                     : std::chrono::steady_clock::time_point{}),
+        Enabled(enabled)
+  {
+  }
+  ~ScopedDensityProfilePhase()
+  {
+    if (Enabled)
+    {
+      Target += std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - Start)
+                    .count();
+    }
+  }
+
+private:
+  double &Target;
+  std::chrono::steady_clock::time_point Start;
+  bool Enabled;
+};
 
 float CombinedCaveDensityNoise(int x, int y, int z, uint32_t seed,
                                const CaveParams &params)
@@ -67,6 +93,11 @@ UDensityFieldSampler::UDensityFieldSampler(uint32_t seed, int seaLevel,
 
 DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
 {
+  ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.route_ms);
+  if (ProfilingEnabled)
+  {
+    ++Profile.route_calls;
+  }
   const bool v3 = Params.routerV3;
   float wx = static_cast<float>(x);
   float wz = static_cast<float>(z);
@@ -224,6 +255,11 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
 float UDensityFieldSampler::HorizontalWobbleAt(
     int x, int z, const DensityRouteParams &route) const
 {
+  ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.wobble_ms);
+  if (ProfilingEnabled)
+  {
+    ++Profile.wobble_calls;
+  }
   return HorizontalSurfaceWobble(
       x, z, Seed, Params.noiseScale, std::max(1, Params.octaves),
       Params.persistence, Params.lacunarity, route.noiseFactor,
@@ -234,6 +270,12 @@ float UDensityFieldSampler::SampleTerrainDensityAt(
     int x, int y, int z, int octaves, const DensityRouteParams &route,
     float horizontal_wobble) const
 {
+  ScopedDensityProfilePhase profile_phase(ProfilingEnabled,
+                                          Profile.terrain_density_ms);
+  if (ProfilingEnabled)
+  {
+    ++Profile.terrain_density_calls;
+  }
   const int effective_octaves =
       octaves > 0 ? octaves : std::max(1, Params.octaves);
   const float scale = Params.noiseScale;
@@ -251,6 +293,10 @@ float UDensityFieldSampler::ApplyCaveDensityOffset(int x, int y, int z,
                                                    int surface_y,
                                                    float density) const
 {
+  if (ProfilingEnabled)
+  {
+    ++Profile.cave_density_calls;
+  }
   if (!Params.cavesInDensity || surface_y < Caves.minY)
   {
     return density;
@@ -281,6 +327,10 @@ float UDensityFieldSampler::SampleDensity(int x, int y, int z,
 UDensityFieldSampler::Column UDensityFieldSampler::PrepareColumn(
     int x, int z, int target_surface_y, int raw_surface_y) const
 {
+  if (ProfilingEnabled)
+  {
+    ++Profile.prepare_column_calls;
+  }
   Column column;
   column.x = x;
   column.z = z;
@@ -308,6 +358,10 @@ int UDensityFieldSampler::DensityScanTop(const DensityRouteParams &route,
                                          float horizontal_wobble,
                                          int octaves) const
 {
+  if (ProfilingEnabled)
+  {
+    ++Profile.scan_top_calls;
+  }
   // density = base + noiseFactor * FBM3D * 0.55 + wobble - y, with
   // |FBM3D| <= sum(persistence^i) * max|Perlin3D|. Above the bound below the
   // density cannot be positive, so the downward surface scan may start there.
@@ -333,6 +387,11 @@ int UDensityFieldSampler::DensityScanTop(const DensityRouteParams &route,
 
 int UDensityFieldSampler::SurfaceYAt(int x, int z) const
 {
+  ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.surface_ms);
+  if (ProfilingEnabled)
+  {
+    ++Profile.surface_calls;
+  }
   const DensityRouteParams route = RouteAt(x, z);
   const float wobble = HorizontalWobbleAt(x, z, route);
   int terrain_surface = MinHeight;
@@ -365,6 +424,11 @@ int UDensityFieldSampler::SurfaceYAt(int x, int z) const
 
 int UDensityFieldSampler::CoarseSurfaceYAt(int x, int z) const
 {
+  ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.coarse_ms);
+  if (ProfilingEnabled)
+  {
+    ++Profile.coarse_calls;
+  }
   const DensityRouteParams route = RouteAt(x, z);
   const float wobble = HorizontalWobbleAt(x, z, route);
   const int coarse_octaves = std::max(1, Params.octaves - 2);

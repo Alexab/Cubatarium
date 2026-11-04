@@ -2197,6 +2197,29 @@ cubatarium_add_test(NAME density_refine_parity_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME worldgen_surface_perf_probe
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenBlockResolver.cpp
+        src/WorldGen/Core/WorldGenPack.cpp
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/ThirdParty/stb_image.cpp
+        src/WorldGen/Core/WorldGenContentPin.cpp
+        src/WorldGen/Core/WorldGenContentPinTls.cpp
+        src/WorldGen/Core/WorldGenStageMask.cpp
+        src/WorldGen/Core/Noise.cpp
+        src/WorldGen/Sampling/DensityRouter.cpp
+        src/WorldGen/Sampling/DensityFieldSampler.cpp
+        src/WorldGen/Sampling/ClimateSampler.cpp
+        src/WorldGen/Sampling/TerrainClimateMapper.cpp
+        src/WorldGen/Sampling/BiomeRegistry.cpp
+        src/WorldGen/Features/CaveDepthBand.cpp
+        src/WorldGen/Features/ObjectFeatureConfig.cpp
+        src/Test/WorldGenSurfacePerfProbe.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
 cubatarium_add_test(NAME noise_permutation_cache_test
     SOURCES
         src/WorldGen/Core/Noise.cpp

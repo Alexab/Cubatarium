@@ -50,6 +50,28 @@ public:
   int SurfaceYAt(int x, int z) const;
   int CoarseSurfaceYAt(int x, int z) const;
 
+  /// Opt-in single-threaded diagnostics for GEN-1.1. Disabled profiling adds
+  /// no timing or counter work to production density evaluation.
+  struct ProfileStats
+  {
+    uint64_t surface_calls{0};
+    uint64_t coarse_calls{0};
+    uint64_t route_calls{0};
+    uint64_t wobble_calls{0};
+    uint64_t prepare_column_calls{0};
+    uint64_t terrain_density_calls{0};
+    uint64_t cave_density_calls{0};
+    uint64_t scan_top_calls{0};
+    double surface_ms{0.0};
+    double coarse_ms{0.0};
+    double route_ms{0.0};
+    double wobble_ms{0.0};
+    double terrain_density_ms{0.0};
+  };
+  void SetProfilingEnabled(bool enabled) { ProfilingEnabled = enabled; }
+  void ResetProfileStats() { Profile = {}; }
+  const ProfileStats &GetProfileStats() const { return Profile; }
+
 private:
   float SampleTerrainDensityAt(int x, int y, int z, int octaves,
                                const DensityRouteParams &route,
@@ -69,6 +91,8 @@ private:
   float TerrainRoughness;
   DensityFieldParams Params;
   CaveParams Caves;
+  bool ProfilingEnabled{false};
+  mutable ProfileStats Profile;
 };
 
 } // namespace cutum
