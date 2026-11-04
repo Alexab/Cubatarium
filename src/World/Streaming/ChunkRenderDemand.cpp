@@ -330,7 +330,11 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
     // A successor must not inherit its predecessor's progress and thereby
     // evade Created-orphan cleanup or age immediately into the stall timeout.
     rec.last_progress_ms = 0.0;
-    rec.attempt_created_ms = now_ms > 0.0 ? now_ms : 0.0;
+    // Zero is not an expired timestamp: several legitimate demand producers
+    // do not carry a frame clock. Give their Created attempt the same monotonic
+    // time domain used by maintenance, so it receives the actual grace period
+    // instead of being cancelled on the first reconciliation pass.
+    rec.attempt_created_ms = DemandEventTimeMs(now_ms);
   }
   ++NewDemandN_;
   const bool target_changed =
@@ -928,7 +932,7 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
         rec.active_stage = JobStage::Cancelled;
         TraceDemandTransition(rec.coord, before, rec,
                               DemandTransitionKind::InstallCancelled,
-                              now_ms);
+                              now_ms, /*result=*/16);
       }
     }
     // A40 P3: stall > SLA → remint one Created attempt (keep desire). Not Kick.
@@ -1006,7 +1010,8 @@ int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n,
       rec.active_stage = JobStage::Cancelled;
       ++cancelled;
       TraceDemandTransition(kv.first, before, rec,
-                            DemandTransitionKind::InstallCancelled, now_ms);
+                            DemandTransitionKind::InstallCancelled, now_ms,
+                            /*result=*/16);
     }
   }
   return cancelled;

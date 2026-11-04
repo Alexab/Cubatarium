@@ -136,7 +136,18 @@ struct VisibilityLatencyState
   LatencyAccumulator meshCreatedToPublish;
   uint64_t attemptsCreated{0};
   uint64_t attemptsTerminalWithoutPublish{0};
+  uint64_t attemptsRetained{0};
+  uint64_t attemptsRejected{0};
+  uint64_t attemptsCancelled{0};
+  uint64_t attemptsOrphanCancelled{0};
+  uint64_t attemptsSupersededCancelled{0};
+  uint64_t attemptsReminted{0};
   uint64_t meshJobsTerminalWithoutPublish{0};
+  uint64_t relightSoftCapDeferred{0};
+  uint64_t relightVisibleReplacementDeferred{0};
+  uint64_t relightFarthestTrimDeferred{0};
+  uint64_t relightOtherDeferred{0};
+  std::unordered_set<VisualChunkKey, VisualChunkKeyHash> relightDeferredColumns;
 };
 
 VisibilityLatencyState &GetVisibilityLatencyState()
@@ -257,12 +268,42 @@ void NoteVisibilityDemand(const DemandTransitionSpan &span)
     }
     return;
   }
+  if (span.kind == DemandTransitionKind::AttemptReminted)
+  {
+    const uint64_t previous_attempt = span.previous_attempt_id;
+    if (previous_attempt != 0 && state.attempts.erase(previous_attempt) != 0)
+    {
+      ++state.attemptsTerminalWithoutPublish;
+      ++state.attemptsReminted;
+    }
+    return;
+  }
   if ((span.kind == DemandTransitionKind::InstallRetained ||
        span.kind == DemandTransitionKind::InstallRejected ||
        span.kind == DemandTransitionKind::InstallCancelled) &&
       attempt != 0 && state.attempts.erase(attempt) != 0)
   {
     ++state.attemptsTerminalWithoutPublish;
+    if (span.kind == DemandTransitionKind::InstallRetained)
+    {
+      ++state.attemptsRetained;
+    }
+    else if (span.kind == DemandTransitionKind::InstallRejected)
+    {
+      ++state.attemptsRejected;
+    }
+    else
+    {
+      ++state.attemptsCancelled;
+      if (span.result == 16)
+      {
+        ++state.attemptsOrphanCancelled;
+      }
+      else if (span.result == 3)
+      {
+        ++state.attemptsSupersededCancelled;
+      }
+    }
   }
 }
 
@@ -1229,6 +1270,33 @@ void UJobStageTrace::NoteBlockEdit(int32_t cx, int32_t cy, int32_t cz,
   BoundLatencyMap(state.edits, 1024);
 }
 
+void UJobStageTrace::NoteRelightDeferred(int32_t cx, int32_t cz,
+                                         RelightDeferralReason reason)
+{
+  if (!VisibilityLatencyEnabled())
+  {
+    return;
+  }
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  switch (reason)
+  {
+  case RelightDeferralReason::SoftCapOverflow:
+    ++state.relightSoftCapDeferred;
+    break;
+  case RelightDeferralReason::VisibleExactReplacement:
+    ++state.relightVisibleReplacementDeferred;
+    break;
+  case RelightDeferralReason::FarthestTrim:
+    ++state.relightFarthestTrimDeferred;
+    break;
+  case RelightDeferralReason::Other:
+    ++state.relightOtherDeferred;
+    break;
+  }
+  state.relightDeferredColumns.insert({cx, 0, cz});
+}
+
 VisibilityLatencySummary UJobStageTrace::GetVisibilityLatencySummary()
 {
   auto &state = GetVisibilityLatencyState();
@@ -1245,7 +1313,19 @@ VisibilityLatencySummary UJobStageTrace::GetVisibilityLatencySummary()
   result.meshCreatedToPublish = state.meshCreatedToPublish.Finalize();
   result.attemptsCreated = state.attemptsCreated;
   result.attemptsTerminalWithoutPublish = state.attemptsTerminalWithoutPublish;
+  result.attemptsRetained = state.attemptsRetained;
+  result.attemptsRejected = state.attemptsRejected;
+  result.attemptsCancelled = state.attemptsCancelled;
+  result.attemptsOrphanCancelled = state.attemptsOrphanCancelled;
+  result.attemptsSupersededCancelled = state.attemptsSupersededCancelled;
+  result.attemptsReminted = state.attemptsReminted;
   result.meshJobsTerminalWithoutPublish = state.meshJobsTerminalWithoutPublish;
+  result.relightSoftCapDeferred = state.relightSoftCapDeferred;
+  result.relightVisibleReplacementDeferred =
+      state.relightVisibleReplacementDeferred;
+  result.relightFarthestTrimDeferred = state.relightFarthestTrimDeferred;
+  result.relightOtherDeferred = state.relightOtherDeferred;
+  result.relightUniqueDeferredColumns = state.relightDeferredColumns.size();
   result.pendingAttempts = state.attempts.size();
   result.pendingEdits = state.edits.size();
   return result;
@@ -1258,6 +1338,7 @@ void UJobStageTrace::ResetVisibilityLatencySummary()
   state.attempts.clear();
   state.edits.clear();
   state.meshBuiltElapsed.clear();
+  state.relightDeferredColumns.clear();
   state.demandToPublish = {};
   state.demandToLightSettled = {};
   state.lightSettledToPublish = {};
@@ -1269,7 +1350,17 @@ void UJobStageTrace::ResetVisibilityLatencySummary()
   state.meshCreatedToPublish = {};
   state.attemptsCreated = 0;
   state.attemptsTerminalWithoutPublish = 0;
+  state.attemptsRetained = 0;
+  state.attemptsRejected = 0;
+  state.attemptsCancelled = 0;
+  state.attemptsOrphanCancelled = 0;
+  state.attemptsSupersededCancelled = 0;
+  state.attemptsReminted = 0;
   state.meshJobsTerminalWithoutPublish = 0;
+  state.relightSoftCapDeferred = 0;
+  state.relightVisibleReplacementDeferred = 0;
+  state.relightFarthestTrimDeferred = 0;
+  state.relightOtherDeferred = 0;
 }
 
 void UJobStageTrace::SetStreamingFrameEpoch(uint64_t frame_epoch)

@@ -62,6 +62,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -1598,6 +1599,21 @@ void UWorldPersistence::PreserveRelightFifoVictimAsDeferred(
   }
   const glm::ivec2 ground_xz(FloorDiv(world_block_key.x, CHUNK_SIZE),
                              FloorDiv(world_block_key.y, CHUNK_SIZE));
+  RelightDeferralReason deferral_reason = RelightDeferralReason::Other;
+  if (reason && std::string_view(reason) == "soft_cap_overflow")
+  {
+    deferral_reason = RelightDeferralReason::SoftCapOverflow;
+  }
+  else if (reason && std::string_view(reason) == "visible_exact_replacement")
+  {
+    deferral_reason = RelightDeferralReason::VisibleExactReplacement;
+  }
+  else if (reason && std::string_view(reason) == "farthest_trim")
+  {
+    deferral_reason = RelightDeferralReason::FarthestTrim;
+  }
+  UJobStageTrace::NoteRelightDeferred(ground_xz.x, ground_xz.y,
+                                      deferral_reason);
   DeferFarRelightColumn(ground_xz, min_y, max_y, priority, reason);
 }
 
