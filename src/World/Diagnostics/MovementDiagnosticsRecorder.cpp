@@ -12,6 +12,7 @@
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include <array>
 #include <chrono>
 #include <fstream>
@@ -78,6 +79,29 @@ json PopulateSummaryToJson(const ChunkPopulateSummary &summary)
   return root;
 }
 
+json ObjectFeatureSummaryToJson()
+{
+  json root{{"schema", "object_feature_rules.v1"},
+            {"rules", json::array()}};
+  for (const ObjectFeatureRuleProfile &profile :
+       ObjectFeatureDiagnostics::GetSummary())
+  {
+    root["rules"].push_back(
+        {{"pool", profile.pool},
+         {"rule_index", profile.ruleIndex},
+         {"feature_key", profile.featureKey},
+         {"evaluated", profile.evaluated},
+         {"candidates", profile.candidates},
+         {"placement_attempts", profile.placementAttempts},
+         {"placed", profile.placed},
+         {"evaluation_ms", profile.evaluationMs},
+         {"placement_ms", profile.placementMs},
+         {"prefab_voxel_visits", profile.prefabVoxelVisits},
+         {"prefab_surface_scans", profile.prefabSurfaceScans}});
+  }
+  return root;
+}
+
 } // namespace
 
 void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
@@ -89,6 +113,7 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
   root["sample_count"] = world.MovementDiagHistory.size();
   root["populate_summary"] =
       PopulateSummaryToJson(ChunkPopulateDiagnostics::GetSummary());
+  root["object_feature_summary"] = ObjectFeatureSummaryToJson();
   std::vector<json> samples;
   samples.reserve(world.MovementDiagHistory.size());
   for (const UWorld::MovementDiagnostics &sample : world.MovementDiagHistory)

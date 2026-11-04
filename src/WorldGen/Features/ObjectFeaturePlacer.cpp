@@ -16,10 +16,12 @@
 #include "WorldGen/Features/WorldGenFeatureSink.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include <array>
+#include <chrono>
 #include <climits>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -31,6 +33,64 @@ namespace
 {
 
 thread_local std::unordered_map<uint64_t, int> ScatterChunkCounts;
+
+std::mutex ObjectFeatureDiagnosticsMutex;
+std::map<std::string, ObjectFeatureRuleProfile> ObjectFeatureRuleTotals;
+thread_local std::map<std::string, ObjectFeatureRuleProfile>
+    ObjectFeatureChunkRules;
+thread_local std::unordered_map<std::string, std::string>
+    ObjectFeatureSelectedRules;
+thread_local bool ObjectFeatureDiagnosticsEnabled = false;
+
+std::string ObjectFeatureRuleKey(ObjectFeaturePool pool, size_t ruleIndex,
+                                 const std::string &featureKey)
+{
+  return std::to_string(static_cast<int>(pool)) + ":" +
+         std::to_string(ruleIndex) + ":" + featureKey;
+}
+
+ObjectFeatureRuleProfile *BeginObjectFeatureRuleEvaluation(
+    ObjectFeaturePool pool, size_t ruleIndex, const std::string &featureKey)
+{
+  if (!ObjectFeatureDiagnosticsEnabled ||
+      pool != ObjectFeaturePool::Decoration)
+  {
+    return nullptr;
+  }
+  ObjectFeatureRuleProfile &profile =
+      ObjectFeatureChunkRules[ObjectFeatureRuleKey(pool, ruleIndex, featureKey)];
+  profile.pool = "decoration";
+  profile.ruleIndex = ruleIndex;
+  profile.featureKey = featureKey;
+  return &profile;
+}
+
+struct ObjectFeatureEvaluationScope
+{
+  ObjectFeatureRuleProfile *Profile{nullptr};
+  std::chrono::steady_clock::time_point Start;
+
+  explicit ObjectFeatureEvaluationScope(ObjectFeatureRuleProfile *profile)
+      : Profile(profile)
+  {
+    if (Profile)
+    {
+      Start = std::chrono::steady_clock::now();
+    }
+  }
+  ~ObjectFeatureEvaluationScope()
+  {
+    if (!Profile)
+    {
+      return;
+    }
+    ++Profile->evaluated;
+    Profile->evaluationMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - Start)
+            .count();
+  }
+};
 
 uint64_t ChunkXZKey(int chunk_x, int chunk_z)
 {
@@ -1383,8 +1443,9 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
   }
 
-  for (const ObjectFeatureRule &rule : rules)
+  for (size_t ruleIndex = 0; ruleIndex < rules.size(); ++ruleIndex)
   {
+    const ObjectFeatureRule &rule = rules[ruleIndex];
     if (v3Flora && biomeHasProceduralTree &&
         rule.Mode == ObjectFeatureRuleMode::Object &&
         rule.ObjectName.rfind(v3Trees ? "tree_" : "bush_", 0) == 0)
@@ -1414,6 +1475,51 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     if (!SubBiomeMatches(subBiome, rule.SubBiomes))
     {
       continue;
+    }
+
+    const std::string &ruleFeatureKey =
+        rule.Mode == ObjectFeatureRuleMode::ScatterBlocks
+            ? rule.Scatter.BlockName
+            : rule.ObjectName;
+    ObjectFeatureRuleProfile *ruleProfile = BeginObjectFeatureRuleEvaluation(
+        pool, ruleIndex, ruleFeatureKey);
+    ObjectFeatureEvaluationScope evaluationScope(ruleProfile);
+
+    // These gates depend only on the rule, column and immutable generation
+    // settings. Reject sparse candidates before surface/ecology scans. This is
+    // a pure short-circuit reorder: accepted candidates and their weights keep
+    // exactly the same inputs and deterministic hashes.
+    const uint32_t h = FeatureHash(x, z, seed + rule.SeedOffset);
+    if (useChanceOnly)
+    {
+      const int chance =
+          EffectiveChance(rule.ChancePerColumn, densityMultiplier);
+      if (chance <= 0 || h % static_cast<uint32_t>(chance) != 0)
+      {
+        continue;
+      }
+    }
+    else
+    {
+      const bool floraPool = ctx.Settings.WorldGenProfileVersion >= 2 &&
+                             (pool == ObjectFeaturePool::Vegetation ||
+                              pool == ObjectFeaturePool::GroundCover);
+      const bool passes =
+          floraPool
+              ? PassesSpatialFloraCandidateGate(x, z, seed, rule.Spacing,
+                                                densityMultiplier,
+                                                rule.SeedOffset, pickSeedOffset,
+                                                v3Flora ? v3Distribution
+                                                : distribution
+                                                    ? *distribution
+                                                    : FeatureDistributionProfile{})
+              : PassesNoiseDensityGate(x, z, seed, rule.Spacing,
+                                       densityMultiplier, rule.SeedOffset,
+                                       pickSeedOffset);
+      if (!passes)
+      {
+        continue;
+      }
     }
 
     int ecologySurfaceY = surfaceY;
@@ -1488,38 +1594,6 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       }
       continue;
     }
-    const uint32_t h = FeatureHash(x, z, seed + rule.SeedOffset);
-    if (useChanceOnly)
-    {
-      const int chance =
-          EffectiveChance(rule.ChancePerColumn, densityMultiplier);
-      if (chance <= 0 || h % static_cast<uint32_t>(chance) != 0)
-      {
-        continue;
-      }
-    }
-    else
-    {
-      const bool floraPool = ctx.Settings.WorldGenProfileVersion >= 2 &&
-                             (pool == ObjectFeaturePool::Vegetation ||
-                              pool == ObjectFeaturePool::GroundCover);
-      const bool passes =
-          floraPool
-              ? PassesSpatialFloraCandidateGate(x, z, seed, rule.Spacing,
-                                                densityMultiplier,
-                                                rule.SeedOffset, pickSeedOffset,
-                                                v3Flora ? v3Distribution
-                                                : distribution
-                                                    ? *distribution
-                                                    : FeatureDistributionProfile{})
-              : PassesNoiseDensityGate(x, z, seed, rule.Spacing,
-                                       densityMultiplier, rule.SeedOffset,
-                                       pickSeedOffset);
-      if (!passes)
-      {
-        continue;
-      }
-    }
     const FeatureEcologyProfile &ecology = rule.Ecology;
     if (!ecology.AllowsElevation(ecologySurfaceY, ctx.Settings.SeaLevel))
     {
@@ -1544,12 +1618,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     {
       continue;
     }
-    const std::string &featureKey =
-        rule.Mode == ObjectFeatureRuleMode::ScatterBlocks
-            ? rule.Scatter.BlockName
-            : rule.ObjectName;
     const float packMul = UWorldGenPack::FeatureWeightMultiplier(
-        biomeKey.empty() ? BiomeIdToString(biome) : biomeKey, featureKey);
+        biomeKey.empty() ? BiomeIdToString(biome) : biomeKey, ruleFeatureKey);
     if (packMul <= 0.0f)
     {
       continue;
@@ -1558,6 +1628,10 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
         1, static_cast<int>(static_cast<float>(std::max(1, rule.Weight)) *
                             subMul * packMul));
     candidates.push_back({&rule, weight});
+    if (ruleProfile)
+    {
+      ++ruleProfile->candidates;
+    }
   }
 
   if (candidates.empty())
@@ -1614,7 +1688,32 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   EnsureBuiltinFeaturePlacementStrategies();
   const auto strategy =
       ObjectFeaturePlacementStrategyRegistry::Find(chosen->Mode);
-  return strategy && strategy->Place(ctx, x, z, strategySurfaceY, *chosen);
+  if (!ObjectFeatureDiagnosticsEnabled ||
+      pool != ObjectFeaturePool::Decoration)
+  {
+    return strategy && strategy->Place(ctx, x, z, strategySurfaceY, *chosen);
+  }
+  const size_t chosenIndex = static_cast<size_t>(chosen - rules.data());
+  const std::string &chosenKey =
+      chosen->Mode == ObjectFeatureRuleMode::ScatterBlocks
+          ? chosen->Scatter.BlockName
+          : chosen->ObjectName;
+  ObjectFeatureRuleProfile &profile = ObjectFeatureChunkRules[ObjectFeatureRuleKey(
+      pool, chosenIndex, chosenKey)];
+  ++profile.placementAttempts;
+  ObjectFeatureSelectedRules[chosenKey] =
+      ObjectFeatureRuleKey(pool, chosenIndex, chosenKey);
+  const auto placementStart = std::chrono::steady_clock::now();
+  const bool placed =
+      strategy && strategy->Place(ctx, x, z, strategySurfaceY, *chosen);
+  profile.placementMs += std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - placementStart)
+                             .count();
+  if (placed)
+  {
+    ++profile.placed;
+  }
+  return placed;
 }
 
 bool HasObjectFeatureRules(const ObjectFeatureConfig &cfg)
@@ -1639,6 +1738,70 @@ const ObjectFeatureConfig &GetObjectFeatures(const WorldGenContext &ctx)
 }
 
 } // namespace
+
+ObjectFeatureChunkDiagnosticsScope::ObjectFeatureChunkDiagnosticsScope(bool enabled)
+{
+  ObjectFeatureDiagnosticsEnabled = enabled;
+  ObjectFeatureChunkRules.clear();
+  ObjectFeatureSelectedRules.clear();
+}
+
+ObjectFeatureChunkDiagnosticsScope::~ObjectFeatureChunkDiagnosticsScope()
+{
+  if (ObjectFeatureDiagnosticsEnabled && !ObjectFeatureChunkRules.empty())
+  {
+    std::lock_guard<std::mutex> lock(ObjectFeatureDiagnosticsMutex);
+    for (const auto &entry : ObjectFeatureChunkRules)
+    {
+      ObjectFeatureRuleProfile &total = ObjectFeatureRuleTotals[entry.first];
+      const ObjectFeatureRuleProfile &chunk = entry.second;
+      total.pool = chunk.pool;
+      total.ruleIndex = chunk.ruleIndex;
+      total.featureKey = chunk.featureKey;
+      total.evaluated += chunk.evaluated;
+      total.candidates += chunk.candidates;
+      total.placementAttempts += chunk.placementAttempts;
+      total.placed += chunk.placed;
+      total.evaluationMs += chunk.evaluationMs;
+      total.placementMs += chunk.placementMs;
+      total.prefabVoxelVisits += chunk.prefabVoxelVisits;
+      total.prefabSurfaceScans += chunk.prefabSurfaceScans;
+    }
+  }
+  ObjectFeatureDiagnosticsEnabled = false;
+  ObjectFeatureChunkRules.clear();
+  ObjectFeatureSelectedRules.clear();
+}
+
+std::vector<ObjectFeatureRuleProfile> ObjectFeatureDiagnostics::GetSummary()
+{
+  std::lock_guard<std::mutex> lock(ObjectFeatureDiagnosticsMutex);
+  std::vector<ObjectFeatureRuleProfile> result;
+  result.reserve(ObjectFeatureRuleTotals.size());
+  for (const auto &entry : ObjectFeatureRuleTotals)
+  {
+    result.push_back(entry.second);
+  }
+  return result;
+}
+
+void RecordObjectFeaturePlacementCheck(const std::string &prefabName,
+                                       uint64_t voxelVisits,
+                                       uint64_t surfaceScans)
+{
+  if (!ObjectFeatureDiagnosticsEnabled)
+  {
+    return;
+  }
+  const auto selected = ObjectFeatureSelectedRules.find(prefabName);
+  if (selected == ObjectFeatureSelectedRules.end())
+  {
+    return;
+  }
+  ObjectFeatureRuleProfile &profile = ObjectFeatureChunkRules[selected->second];
+  profile.prefabVoxelVisits += voxelVisits;
+  profile.prefabSurfaceScans += surfaceScans;
+}
 
 void ResetScatterChunkCounts() { ScatterChunkCounts.clear(); }
 
@@ -1678,12 +1841,15 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
   }
   const int maxScanY =
       ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel, ctx.Settings.MaxHeight);
+  ObjectVoxelCheckStats checkStats;
   const bool canPlace =
       surfaceY >= 0
           ? CanPlaceObjectAtForWorldGen(ctx.World, ctx.Registry, *prefab,
                                         anchorWorldPos, maxScanY,
-                                        ctx.Settings.SeaLevel)
+                                        ctx.Settings.SeaLevel, &checkStats)
           : CanPlaceObjectAt(ctx.World, *prefab, anchorWorldPos);
+  RecordObjectFeaturePlacementCheck(prefabName, checkStats.voxelVisits,
+                                    checkStats.surfaceScans);
   if (!canPlace)
   {
     return false;
