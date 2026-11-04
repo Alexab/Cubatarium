@@ -27,7 +27,7 @@ Release-only проверки включали полную сборку `Cubata
 
 1. Качество `Calib12_880004`: shallow ocean, нулевой normalized tree count у spawn и flatness 73,96% остаются вне gate. Мир старый; A/B после mudflow этим не заменён.
 2. Визуальное отставание за исходным кольцом сохраняется. Профили локализуют publication/GPU output backpressure и attempt churn; FirstMesh cap вслепую не увеличен.
-3. Кратковременные дыры при break требуют frozen exposed-face/blank-pixel witness. Текущий witness доказывает публикации и тёмные surface samples, но не конкретную missing face.
+3. Кратковременные дыры при break остаются открытыми. Повторный одиночный centered-break 2026-11-05 показал корректные дно/стенки, 0 dark pixels и публикацию центра за 4,328 мс, но не является per-frame witness каждой exposed face; production fix не вносился. Подробности: `docs/MESH_BREAK_FROZEN_FRAME_REPORT_2026-11-05_RU.md`.
 4. Задержка готовности/публикации света сохраняется как часть общего visual pipeline; отдельный relight calculation не доказан как единственный bottleneck.
 5. Cutout internal-face optimization не внесена: необходимы полный CPU/GPU parity и alpha A/B, включая разные ID, boundaries, unknown/fluid и все GPU mask/extract пути.
 6. VEG-1 не получил новый отдельный multithread/reload и визуальный seam witness.
