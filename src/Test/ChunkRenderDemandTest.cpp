@@ -292,7 +292,11 @@ int main()
     ChunkRenderDemandRecord *orec = store.Find(orphan);
     Expect(orec && orec->has_active_attempt, "orphan has active");
     Expect(orec && orec->last_progress_ms <= 0.0, "orphan no progress");
-    const auto r2 = store.ReconcileMaintenance(16);
+    Expect(orec && orec->attempt_created_ms > 0.0,
+           "clockless producer receives a real creation timestamp");
+    orec->attempt_created_ms = 1000.0;
+    const auto r2 = store.ReconcileMaintenance(
+        16, 1000.0 + UChunkRenderDemandStore::kOrphanGraceMs);
     Expect(r2.orphan_active >= 1, "orphan counted");
     orec = store.Find(orphan);
     const uint64_t cancelled_attempt_id = orec ? orec->active_attempt_id : 0;
@@ -597,6 +601,64 @@ int main()
            "mesh queue, build and publication latencies recorded");
     Expect(latency.pendingAttempts == 0 && latency.attemptsCreated == 1,
            "published attempt leaves pending set");
+
+    const DemandTransitionKind terminal_kinds[] = {
+        DemandTransitionKind::InstallRetained,
+        DemandTransitionKind::InstallRejected,
+        DemandTransitionKind::InstallCancelled};
+    for (int i = 0; i < 3; ++i)
+    {
+      demand.attempt_id = 9100 + i;
+      demand.kind = DemandTransitionKind::AttemptCreated;
+      demand.event_ms = 1200.0 + i * 20;
+      UJobStageTrace::NoteDemandTransition(demand);
+      demand.kind = terminal_kinds[i];
+      demand.event_ms += 10.0;
+      UJobStageTrace::NoteDemandTransition(demand);
+    }
+    demand.attempt_id = 9200;
+    demand.kind = DemandTransitionKind::AttemptCreated;
+    demand.event_ms = 1300.0;
+    UJobStageTrace::NoteDemandTransition(demand);
+    demand.previous_attempt_id = 9200;
+    demand.attempt_id = 9201;
+    demand.kind = DemandTransitionKind::AttemptReminted;
+    demand.event_ms = 1400.0;
+    UJobStageTrace::NoteDemandTransition(demand);
+    demand.kind = DemandTransitionKind::AttemptCreated;
+    UJobStageTrace::NoteDemandTransition(demand);
+    demand.kind = DemandTransitionKind::InstallPublished;
+    demand.event_ms = 1500.0;
+    UJobStageTrace::NoteDemandTransition(demand);
+
+    using cutum::RelightDeferralReason;
+    UJobStageTrace::NoteRelightDeferred(30, 40,
+                                        RelightDeferralReason::SoftCapOverflow);
+    UJobStageTrace::NoteRelightDeferred(
+        30, 40, RelightDeferralReason::VisibleExactReplacement);
+    UJobStageTrace::NoteRelightDeferred(31, 40,
+                                        RelightDeferralReason::FarthestTrim);
+    UJobStageTrace::NoteRelightDeferred(32, 40,
+                                        RelightDeferralReason::Other);
+    const auto attributed = UJobStageTrace::GetVisibilityLatencySummary();
+    Expect(attributed.attemptsTerminalWithoutPublish == 4 &&
+               attributed.attemptsRetained == 1 &&
+               attributed.attemptsRejected == 1 &&
+               attributed.attemptsCancelled == 1 &&
+               attributed.attemptsReminted == 1,
+           "terminal attempt outcomes and remints attributed separately");
+    Expect(attributed.relightSoftCapDeferred == 1 &&
+               attributed.relightVisibleReplacementDeferred == 1 &&
+               attributed.relightFarthestTrimDeferred == 1 &&
+               attributed.relightOtherDeferred == 1 &&
+               attributed.relightUniqueDeferredColumns == 3,
+           "deferred relight reasons counted with unique ground columns");
+    UJobStageTrace::ResetVisibilityLatencySummary();
+    const auto reset = UJobStageTrace::GetVisibilityLatencySummary();
+    Expect(reset.attemptsCreated == 0 && reset.attemptsRetained == 0 &&
+               reset.relightUniqueDeferredColumns == 0 &&
+               reset.relightOtherDeferred == 0,
+           "visibility reset clears attempt and relight attribution");
   }
 
   if (gFails != 0)

@@ -957,9 +957,28 @@ struct VisibilityLatencySummary
   VisibilityLatencyMetric meshCreatedToPublish;
   uint64_t attemptsCreated{0};
   uint64_t attemptsTerminalWithoutPublish{0};
+  uint64_t attemptsRetained{0};
+  uint64_t attemptsRejected{0};
+  uint64_t attemptsCancelled{0};
+  uint64_t attemptsOrphanCancelled{0};
+  uint64_t attemptsSupersededCancelled{0};
+  uint64_t attemptsReminted{0};
   uint64_t meshJobsTerminalWithoutPublish{0};
+  uint64_t relightSoftCapDeferred{0};
+  uint64_t relightVisibleReplacementDeferred{0};
+  uint64_t relightFarthestTrimDeferred{0};
+  uint64_t relightOtherDeferred{0};
+  uint64_t relightUniqueDeferredColumns{0};
   uint64_t pendingAttempts{0};
   uint64_t pendingEdits{0};
+};
+
+enum class RelightDeferralReason : uint8_t
+{
+  SoftCapOverflow = 0,
+  VisibleExactReplacement,
+  FarthestTrim,
+  Other
 };
 
 class UJobStageTrace
@@ -1052,6 +1071,8 @@ public:
   static void NoteDemandTransition(const DemandTransitionSpan &span);
   static void NoteBlockEdit(int32_t cx, int32_t cy, int32_t cz,
                             double event_ms = 0.0);
+  static void NoteRelightDeferred(int32_t cx, int32_t cz,
+                                  RelightDeferralReason reason);
   static VisibilityLatencySummary GetVisibilityLatencySummary();
   static void ResetVisibilityLatencySummary();
   static void NoteMeshRevisionBump(DemandTransitionSpan span,
