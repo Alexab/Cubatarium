@@ -10,6 +10,14 @@
 namespace cutum
 {
 
+/// A current published empty mesh with unresolved peer coverage remains a
+/// FaceDebt obligation, but must not be reported as missing FirstMesh work.
+inline bool ShouldClassifyMissingMeshAsFaceDebt(bool face_debt,
+                                                bool stable_face_debt_only)
+{
+  return face_debt && stable_face_debt_only;
+}
+
 /// Pure SoT for sticky / stale-dark columns (TD-ARCH-026).
 /// Hide only when there is no mesh; ticket always accompanies sticky/stale.
 enum class ColumnSoTKind : uint8_t
