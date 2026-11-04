@@ -140,6 +140,41 @@ json RunCase(uint32_t seed, const ProfileCase &profile)
   };
 }
 
+void CheckFullScanReference()
+{
+  for (const ProfileCase &profile : kProfiles)
+  {
+    if (profile.caves_in_density)
+    {
+      continue;
+    }
+    for (uint32_t seed : kSeeds)
+    {
+      cutum::DensityFieldParams params;
+      params.routerV3 = true;
+      cutum::UDensityFieldSampler sampler(seed, 63, 319, 0.62f, params,
+                                          cutum::CaveParams{}, -64);
+      for (int z = profile.base_z; z < profile.base_z + kGridSize; ++z)
+      {
+        for (int x = profile.base_x; x < profile.base_x + kGridSize; ++x)
+        {
+          int reference = -64;
+          for (int y = 319; y >= -64; --y)
+          {
+            if (sampler.SampleTerrainDensity(x, y, z) > 0.0f)
+            {
+              reference = y;
+              break;
+            }
+          }
+          FluidTest::Expect(sampler.SurfaceYAt(x, z) == reference, kTestName,
+                            "DensityScanTop skipped a higher terrain surface");
+        }
+      }
+    }
+  }
+}
+
 void CheckParity(const json &actual, const json &expected)
 {
   for (const char *key : {"seed", "profile", "caves_in_density", "grid_size",
@@ -162,8 +197,9 @@ int main(int argc, char **argv)
   FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"), kTestName,
                     "worldgen pack load failed");
 
+  CheckFullScanReference();
   json report{{"schema", "worldgen_surface_perf_probe.v1"},
-              {"reference_scan", "SurfaceYAt full downward DensityScanTop"},
+              {"reference_scan", "independent MaxHeight downward SampleTerrainDensity; caves excluded"},
               {"cases", json::array()}};
   for (const ProfileCase &profile : kProfiles)
   {
