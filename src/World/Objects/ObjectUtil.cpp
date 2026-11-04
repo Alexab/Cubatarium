@@ -71,17 +71,9 @@ BlockId ResolveObjectVoxelPlacementId(const ObjectVoxel &voxel,
 {
   if (!voxel.Type.empty())
   {
-    const BlockId resolved = registry.GetPackBlockIdByTypeName(voxel.Type);
-    if (resolved != BLOCK_AIR)
-    {
-      return resolved;
-    }
+    return registry.GetPackBlockIdByTypeName(voxel.Type);
   }
-  if (voxel.Id != BLOCK_AIR && voxel.Id < kRuntimeBlockIdMin)
-  {
-    return voxel.Id;
-  }
-  return voxel.Id;
+  return !registry.GetTypeNameById(voxel.Id).empty() ? voxel.Id : BLOCK_AIR;
 }
 
 bool CanPlaceObjectAt(const UBlockWorld &world,
