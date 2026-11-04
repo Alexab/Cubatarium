@@ -2284,9 +2284,10 @@ cubatarium_add_test(NAME worldgen_vegetation_placement_test
         src/WorldGen/Features/ObjectFeatureConfig.cpp
         src/WorldGen/Features/ObjectPlacementConstraints.cpp
         src/WorldGen/Core/Noise.cpp
+        src/App/Platform/Log.cpp
         src/Test/WorldGenVegetationPlacementTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
-    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog)
 
 cubatarium_add_test(NAME worldgen_cave_depth_test
     SOURCES
