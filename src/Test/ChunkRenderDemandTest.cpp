@@ -3,6 +3,7 @@
 #include "Render/Mesh/SeamCoverageManifest.h"
 
 #include <cstdio>
+#include <cstdlib>
 
 namespace
 {
@@ -22,6 +23,11 @@ void Expect(bool cond, const char *msg)
 
 int main()
 {
+#ifdef _WIN32
+  _putenv("CUBATARIUM_VISIBILITY_AUDIT=1");
+#else
+  setenv("CUBATARIUM_VISIBILITY_AUDIT", "1", 1);
+#endif
   using cutum::ChunkDemandAllowsColumnFaceDebtClear;
   using cutum::ChunkDemandCutoverEnabled;
   using cutum::ChunkRenderDemandRecord;
@@ -527,6 +533,70 @@ int main()
            "reminted Created");
     Expect(srec && srec->desired_geom_rev == 5 && srec->desired_light_rev == 6,
            "desire kept");
+  }
+
+  // Visibility audit joins requests to real publication, independently of the
+  // watched visual-black rings. Explicit timestamps keep this deterministic.
+  {
+    using cutum::DemandTransitionKind;
+    using cutum::DemandTransitionSpan;
+    using cutum::JobStage;
+    using cutum::JobStageSpan;
+    using cutum::UJobStageTrace;
+    UJobStageTrace::ResetVisibilityLatencySummary();
+    UJobStageTrace::NoteBlockEdit(20, 1, 30, /*event_ms=*/900.0);
+
+    DemandTransitionSpan demand{};
+    demand.cx = 20;
+    demand.cy = 1;
+    demand.cz = 30;
+    demand.attempt_id = 9001;
+    demand.kind = DemandTransitionKind::AttemptCreated;
+    demand.event_ms = 1000.0;
+    UJobStageTrace::NoteDemandTransition(demand);
+    demand.kind = DemandTransitionKind::LightCalculationSettled;
+    demand.event_ms = 1040.0;
+    UJobStageTrace::NoteDemandTransition(demand);
+    demand.kind = DemandTransitionKind::InstallPublished;
+    demand.event_ms = 1100.0;
+    UJobStageTrace::NoteDemandTransition(demand);
+
+    JobStageSpan job{};
+    job.job_id = 77;
+    job.created_ms = 500.0;
+    job.stage = JobStage::Admitted;
+    job.elapsed_ms = 12.0;
+    UJobStageTrace::Note(job);
+    job.stage = JobStage::Started;
+    job.elapsed_ms = 20.0;
+    UJobStageTrace::Note(job);
+    job.stage = JobStage::Built;
+    job.elapsed_ms = 50.0;
+    job.stage_ms = 30.0;
+    UJobStageTrace::Note(job);
+    job.stage = JobStage::Published;
+    job.elapsed_ms = 110.0;
+    UJobStageTrace::Note(job);
+
+    const auto latency = UJobStageTrace::GetVisibilityLatencySummary();
+    Expect(latency.demandToPublish.count == 1 &&
+               latency.demandToPublish.maxMs == 100.0,
+           "demand latency ends at actual publication");
+    Expect(latency.demandToLightSettled.count == 1 &&
+               latency.demandToLightSettled.maxMs == 40.0 &&
+               latency.lightSettledToPublish.count == 1 &&
+               latency.lightSettledToPublish.maxMs == 60.0,
+           "light settlement and publication intervals recorded");
+    Expect(latency.editToPublish.count == 1 && latency.pendingEdits == 0,
+           "edit latency ends at actual publication");
+    Expect(latency.meshCreatedToAdmitted.maxMs == 12.0 &&
+               latency.meshCreatedToStarted.maxMs == 20.0 &&
+               latency.meshBuild.maxMs == 30.0 &&
+               latency.meshBuiltToPublish.maxMs == 60.0 &&
+               latency.meshCreatedToPublish.maxMs == 110.0,
+           "mesh queue, build and publication latencies recorded");
+    Expect(latency.pendingAttempts == 0 && latency.attemptsCreated == 1,
+           "published attempt leaves pending set");
   }
 
   if (gFails != 0)

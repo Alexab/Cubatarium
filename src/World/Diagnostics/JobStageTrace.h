@@ -933,6 +933,35 @@ struct VisualBlackTraceRecord
   uint32_t flags{0};
 };
 
+struct VisibilityLatencyMetric
+{
+  uint64_t count{0};
+  double totalMs{0.0};
+  double medianMs{0.0};
+  double p95Ms{0.0};
+  double maxMs{0.0};
+};
+
+/// Opt-in, process-local timing from a request to its actual publication.
+/// Unlike EditToFirstMeshMs, editToPublish includes asynchronous completion.
+struct VisibilityLatencySummary
+{
+  VisibilityLatencyMetric demandToPublish;
+  VisibilityLatencyMetric demandToLightSettled;
+  VisibilityLatencyMetric lightSettledToPublish;
+  VisibilityLatencyMetric editToPublish;
+  VisibilityLatencyMetric meshCreatedToAdmitted;
+  VisibilityLatencyMetric meshCreatedToStarted;
+  VisibilityLatencyMetric meshBuild;
+  VisibilityLatencyMetric meshBuiltToPublish;
+  VisibilityLatencyMetric meshCreatedToPublish;
+  uint64_t attemptsCreated{0};
+  uint64_t attemptsTerminalWithoutPublish{0};
+  uint64_t meshJobsTerminalWithoutPublish{0};
+  uint64_t pendingAttempts{0};
+  uint64_t pendingEdits{0};
+};
+
 class UJobStageTrace
 {
 public:
@@ -1021,6 +1050,10 @@ public:
   /// Read the current streaming frame for coordinate-scoped diagnostic events.
   static uint64_t GetStreamingFrameEpoch();
   static void NoteDemandTransition(const DemandTransitionSpan &span);
+  static void NoteBlockEdit(int32_t cx, int32_t cy, int32_t cz,
+                            double event_ms = 0.0);
+  static VisibilityLatencySummary GetVisibilityLatencySummary();
+  static void ResetVisibilityLatencySummary();
   static void NoteMeshRevisionBump(DemandTransitionSpan span,
                                    uint64_t revision_before,
                                    uint64_t revision_after,

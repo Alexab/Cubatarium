@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -109,6 +110,45 @@ json ObjectFeatureSummaryToJson()
   return root;
 }
 
+json VisibilityMetricToJson(const VisibilityLatencyMetric &metric)
+{
+  return json{{"count", metric.count},
+              {"total_ms", metric.totalMs},
+              {"median_ms", metric.medianMs},
+              {"p95_ms", metric.p95Ms},
+              {"max_ms", metric.maxMs}};
+}
+
+json VisibilityLatencySummaryToJson()
+{
+  const VisibilityLatencySummary summary =
+      UJobStageTrace::GetVisibilityLatencySummary();
+  return json{
+      {"schema", "visibility_latency.v1"},
+      {"demand_to_publish", VisibilityMetricToJson(summary.demandToPublish)},
+      {"demand_to_light_settled",
+       VisibilityMetricToJson(summary.demandToLightSettled)},
+      {"light_settled_to_publish",
+       VisibilityMetricToJson(summary.lightSettledToPublish)},
+      {"edit_to_publish", VisibilityMetricToJson(summary.editToPublish)},
+      {"mesh_created_to_admitted",
+       VisibilityMetricToJson(summary.meshCreatedToAdmitted)},
+      {"mesh_created_to_started",
+       VisibilityMetricToJson(summary.meshCreatedToStarted)},
+      {"mesh_build", VisibilityMetricToJson(summary.meshBuild)},
+      {"mesh_built_to_publish",
+       VisibilityMetricToJson(summary.meshBuiltToPublish)},
+      {"mesh_created_to_publish",
+       VisibilityMetricToJson(summary.meshCreatedToPublish)},
+      {"attempts_created", summary.attemptsCreated},
+      {"attempts_terminal_without_publish",
+       summary.attemptsTerminalWithoutPublish},
+      {"mesh_jobs_terminal_without_publish",
+       summary.meshJobsTerminalWithoutPublish},
+      {"pending_attempts", summary.pendingAttempts},
+      {"pending_edits", summary.pendingEdits}};
+}
+
 } // namespace
 
 void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
@@ -121,6 +161,7 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
   root["populate_summary"] =
       PopulateSummaryToJson(ChunkPopulateDiagnostics::GetSummary());
   root["object_feature_summary"] = ObjectFeatureSummaryToJson();
+  root["visibility_latency_summary"] = VisibilityLatencySummaryToJson();
   std::vector<json> samples;
   samples.reserve(world.MovementDiagHistory.size());
   for (const UWorld::MovementDiagnostics &sample : world.MovementDiagHistory)

@@ -1,6 +1,7 @@
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Streaming/VisibleBlackAttribution.h"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -61,6 +62,209 @@ struct VisualChunkKeyHash
     return h;
   }
 };
+
+bool VisibilityLatencyEnabled()
+{
+  static const bool enabled = []() {
+    const char *env = std::getenv("CUBATARIUM_VISIBILITY_AUDIT");
+    return env != nullptr && env[0] != '\0' && env[0] != '0';
+  }();
+  return enabled;
+}
+
+double VisibilityTraceNowMs()
+{
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
+struct LatencyAccumulator
+{
+  std::vector<double> samples;
+
+  void Add(double value)
+  {
+    if (value >= 0.0)
+    {
+      samples.push_back(value);
+    }
+  }
+
+  VisibilityLatencyMetric Finalize() const
+  {
+    VisibilityLatencyMetric result;
+    result.count = samples.size();
+    if (samples.empty())
+    {
+      return result;
+    }
+    std::vector<double> sorted = samples;
+    std::sort(sorted.begin(), sorted.end());
+    for (double value : sorted)
+    {
+      result.totalMs += value;
+    }
+    result.medianMs = sorted[sorted.size() / 2];
+    result.p95Ms = sorted[static_cast<size_t>(
+        std::ceil(sorted.size() * 0.95) - 1.0)];
+    result.maxMs = sorted.back();
+    return result;
+  }
+};
+
+struct DemandLatencyState
+{
+  double createdMs{0.0};
+  double lightSettledMs{0.0};
+};
+
+struct VisibilityLatencyState
+{
+  std::mutex mu;
+  std::unordered_map<uint64_t, DemandLatencyState> attempts;
+  std::unordered_map<VisualChunkKey, double, VisualChunkKeyHash> edits;
+  std::unordered_map<uint64_t, double> meshBuiltElapsed;
+  LatencyAccumulator demandToPublish;
+  LatencyAccumulator demandToLightSettled;
+  LatencyAccumulator lightSettledToPublish;
+  LatencyAccumulator editToPublish;
+  LatencyAccumulator meshCreatedToAdmitted;
+  LatencyAccumulator meshCreatedToStarted;
+  LatencyAccumulator meshBuild;
+  LatencyAccumulator meshBuiltToPublish;
+  LatencyAccumulator meshCreatedToPublish;
+  uint64_t attemptsCreated{0};
+  uint64_t attemptsTerminalWithoutPublish{0};
+  uint64_t meshJobsTerminalWithoutPublish{0};
+};
+
+VisibilityLatencyState &GetVisibilityLatencyState()
+{
+  static VisibilityLatencyState state;
+  return state;
+}
+
+template <typename Map>
+void BoundLatencyMap(Map &map, size_t capacity)
+{
+  while (map.size() > capacity)
+  {
+    map.erase(map.begin());
+  }
+}
+
+void NoteVisibilityJob(const JobStageSpan &span)
+{
+  if (!VisibilityLatencyEnabled())
+  {
+    return;
+  }
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  switch (span.stage)
+  {
+  case JobStage::Admitted:
+    state.meshCreatedToAdmitted.Add(span.elapsed_ms);
+    break;
+  case JobStage::Started:
+    state.meshCreatedToStarted.Add(span.elapsed_ms);
+    break;
+  case JobStage::Built:
+    state.meshBuild.Add(span.stage_ms);
+    if (span.job_id != 0)
+    {
+      state.meshBuiltElapsed[span.job_id] = span.elapsed_ms;
+      BoundLatencyMap(state.meshBuiltElapsed, 8192);
+    }
+    break;
+  case JobStage::Published:
+    state.meshCreatedToPublish.Add(span.elapsed_ms);
+    if (span.job_id != 0)
+    {
+      const auto built = state.meshBuiltElapsed.find(span.job_id);
+      if (built != state.meshBuiltElapsed.end())
+      {
+        state.meshBuiltToPublish.Add(span.elapsed_ms - built->second);
+        state.meshBuiltElapsed.erase(built);
+      }
+    }
+    break;
+  case JobStage::Retired:
+  case JobStage::Cancelled:
+    ++state.meshJobsTerminalWithoutPublish;
+    if (span.job_id != 0)
+    {
+      state.meshBuiltElapsed.erase(span.job_id);
+    }
+    break;
+  default:
+    break;
+  }
+}
+
+void NoteVisibilityDemand(const DemandTransitionSpan &span)
+{
+  if (!VisibilityLatencyEnabled())
+  {
+    return;
+  }
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  const uint64_t attempt = span.attempt_id;
+  if (span.kind == DemandTransitionKind::AttemptCreated && attempt != 0)
+  {
+    state.attempts[attempt] = DemandLatencyState{span.event_ms, 0.0};
+    BoundLatencyMap(state.attempts, 8192);
+    ++state.attemptsCreated;
+    return;
+  }
+  if (span.kind == DemandTransitionKind::LightCalculationSettled && attempt != 0)
+  {
+    const auto it = state.attempts.find(attempt);
+    if (it != state.attempts.end())
+    {
+      if (it->second.lightSettledMs <= 0.0)
+      {
+        state.demandToLightSettled.Add(span.event_ms - it->second.createdMs);
+      }
+      it->second.lightSettledMs = span.event_ms;
+    }
+    return;
+  }
+  if (span.kind == DemandTransitionKind::InstallPublished)
+  {
+    if (attempt != 0)
+    {
+      const auto it = state.attempts.find(attempt);
+      if (it != state.attempts.end())
+      {
+        state.demandToPublish.Add(span.event_ms - it->second.createdMs);
+        if (it->second.lightSettledMs > 0.0)
+        {
+          state.lightSettledToPublish.Add(span.event_ms -
+                                          it->second.lightSettledMs);
+        }
+        state.attempts.erase(it);
+      }
+    }
+    const VisualChunkKey key{span.cx, span.cy, span.cz};
+    const auto edit = state.edits.find(key);
+    if (edit != state.edits.end())
+    {
+      state.editToPublish.Add(span.event_ms - edit->second);
+      state.edits.erase(edit);
+    }
+    return;
+  }
+  if ((span.kind == DemandTransitionKind::InstallRetained ||
+       span.kind == DemandTransitionKind::InstallRejected ||
+       span.kind == DemandTransitionKind::InstallCancelled) &&
+      attempt != 0 && state.attempts.erase(attempt) != 0)
+  {
+    ++state.attemptsTerminalWithoutPublish;
+  }
+}
 
 struct VisualChunkWatches
 {
@@ -414,6 +618,7 @@ void DispatchCameraBandPeakFrameRecord(const VisualBlackTraceRecord &record,
 
 void UJobStageTrace::Note(const JobStageSpan &span)
 {
+  NoteVisibilityJob(span);
   JobStageSpan stamped_span = span;
   if (stamped_span.frame_epoch == 0)
   {
@@ -972,6 +1177,7 @@ void UJobStageTrace::ForEachOpenSkyLifecycleNewest(
 
 void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
 {
+  NoteVisibilityDemand(span);
   if (!VisualBlackTraceEnabled() ||
       !IsVisualChunkWatched(span.cx, span.cy, span.cz))
   {
@@ -1006,6 +1212,64 @@ void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
       ++open_sky.count;
     }
   }
+}
+
+void UJobStageTrace::NoteBlockEdit(int32_t cx, int32_t cy, int32_t cz,
+                                   double event_ms)
+{
+  if (!VisibilityLatencyEnabled())
+  {
+    return;
+  }
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  // A second edit before publication retargets the outstanding visible result.
+  state.edits[{cx, cy, cz}] =
+      event_ms > 0.0 ? event_ms : VisibilityTraceNowMs();
+  BoundLatencyMap(state.edits, 1024);
+}
+
+VisibilityLatencySummary UJobStageTrace::GetVisibilityLatencySummary()
+{
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  VisibilityLatencySummary result;
+  result.demandToPublish = state.demandToPublish.Finalize();
+  result.demandToLightSettled = state.demandToLightSettled.Finalize();
+  result.lightSettledToPublish = state.lightSettledToPublish.Finalize();
+  result.editToPublish = state.editToPublish.Finalize();
+  result.meshCreatedToAdmitted = state.meshCreatedToAdmitted.Finalize();
+  result.meshCreatedToStarted = state.meshCreatedToStarted.Finalize();
+  result.meshBuild = state.meshBuild.Finalize();
+  result.meshBuiltToPublish = state.meshBuiltToPublish.Finalize();
+  result.meshCreatedToPublish = state.meshCreatedToPublish.Finalize();
+  result.attemptsCreated = state.attemptsCreated;
+  result.attemptsTerminalWithoutPublish = state.attemptsTerminalWithoutPublish;
+  result.meshJobsTerminalWithoutPublish = state.meshJobsTerminalWithoutPublish;
+  result.pendingAttempts = state.attempts.size();
+  result.pendingEdits = state.edits.size();
+  return result;
+}
+
+void UJobStageTrace::ResetVisibilityLatencySummary()
+{
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  state.attempts.clear();
+  state.edits.clear();
+  state.meshBuiltElapsed.clear();
+  state.demandToPublish = {};
+  state.demandToLightSettled = {};
+  state.lightSettledToPublish = {};
+  state.editToPublish = {};
+  state.meshCreatedToAdmitted = {};
+  state.meshCreatedToStarted = {};
+  state.meshBuild = {};
+  state.meshBuiltToPublish = {};
+  state.meshCreatedToPublish = {};
+  state.attemptsCreated = 0;
+  state.attemptsTerminalWithoutPublish = 0;
+  state.meshJobsTerminalWithoutPublish = 0;
 }
 
 void UJobStageTrace::SetStreamingFrameEpoch(uint64_t frame_epoch)

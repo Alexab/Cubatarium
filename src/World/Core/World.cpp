@@ -14448,6 +14448,8 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   {
     return false;
   }
+  const glm::ivec3 edited_chunk = UChunkManager::WorldToChunk(blockPos);
+  UJobStageTrace::NoteBlockEdit(edited_chunk.x, edited_chunk.y, edited_chunk.z);
   ++CachedBlockCount;
   BlockWorldReady = true;
   ++PhysicsTelemetryData.PlaceCompleteN;
@@ -14814,6 +14816,8 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   PhysicsTelemetryData.EditLightEmission =
       std::max(PhysicsTelemetryData.EditLightEmission, removed_emission);
   BlockWorld.SetBlock(blockPos, BLOCK_AIR);
+  const glm::ivec3 edited_chunk = UChunkManager::WorldToChunk(blockPos);
+  UJobStageTrace::NoteBlockEdit(edited_chunk.x, edited_chunk.y, edited_chunk.z);
   if (CachedBlockCount > 0)
   {
     --CachedBlockCount;
