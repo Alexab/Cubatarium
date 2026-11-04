@@ -83,6 +83,9 @@ struct ColumnRenderableState
   bool draw_ok{false};
   BlockReason reason{BlockReason::None};
   bool has_repair_ticket{false};
+  /// Every unresolved solid slice already published its current empty mesh and
+  /// is waiting only for peer coverage; this is not executable FirstMesh debt.
+  bool stable_face_debt_only{false};
 };
 
 /// A drawable focus column held behind the render gate until its light is

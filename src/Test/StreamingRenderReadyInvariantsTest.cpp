@@ -126,6 +126,13 @@ int main()
          "PERF-0.2: deferred visual repair keeps debt without remesh");
   Expect(ShouldAdmitVisualMeshRepairUnderLitGate(/*defer_until_lit=*/false),
          "PERF-0.2: visual mesh repair admits after lit gate opens");
+  using cutum::ShouldClassifyMissingMeshAsFaceDebt;
+  Expect(ShouldClassifyMissingMeshAsFaceDebt(true, true),
+         "PERF-0.9: stable published coverage debt is not missing mesh");
+  Expect(!ShouldClassifyMissingMeshAsFaceDebt(true, false),
+         "PERF-0.9: any unstable solid slice keeps FirstMesh debt");
+  Expect(!ShouldClassifyMissingMeshAsFaceDebt(false, true),
+         "PERF-0.9: stable empty publication without debt stays ready");
 
   // LitDrawable ring (default 4) waits for light, except for the single nearest
   // missing slice whose provisional preview prevents a leading visible hole.

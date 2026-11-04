@@ -3789,6 +3789,10 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   bool saw_loaded_meshable = false;
   bool saw_gpu_inflight = false;
   bool saw_missing_solid = false;
+  bool saw_unstable_missing_solid = false;
+  const ColumnRecord *column_record = ColumnRecords.Find(ground_xz);
+  const bool column_has_face_debt =
+      column_record && ColumnHasFaceDebt(column_record->face_debt_mask);
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -3830,7 +3834,12 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     // P2: missing solid cy does not block drawing ready sibling slices
     // (JE-like section progressive reveal). HasMissing* telemetry unchanged.
     saw_missing_solid = true;
+    if (!column_has_face_debt || !HasStablePublishedFaceDebt(coord))
+    {
+      saw_unstable_missing_solid = true;
+    }
   }
+  out.stable_face_debt_only = saw_missing_solid && !saw_unstable_missing_solid;
   if (saw_loaded_meshable || out.stage == ColumnEmergeState::Empty)
   {
     out.draw_ok = true;
@@ -3908,10 +3917,14 @@ FocusColumnVisualClass ClassifyFocusColumnVisual(const UWorld &world,
       return FocusColumnVisualClass::StaleDark;
     break;
   case Reason::MissingMesh:
-    // Column draw readiness is intentionally progressive: one ready Y slice
-    // keeps its siblings visible. It does not satisfy the missing slice's
-    // FirstMesh obligation, so keep the column in the bounded repair demand
-    // until every resident solid slice in the presentable band is meshed.
+    // A current empty publication waiting only for peer coverage is FaceDebt,
+    // not missing FirstMesh work. Keep genuinely unresolved slices in the
+    // bounded repair demand until every resident solid slice is meshed.
+    if (ShouldClassifyMissingMeshAsFaceDebt(face_debt,
+                                            state.stable_face_debt_only))
+    {
+      return FocusColumnVisualClass::FaceDebt;
+    }
     return FocusColumnVisualClass::MissingMesh;
   case Reason::GpuInFlight:
     return FocusColumnVisualClass::GpuInFlight;
@@ -4262,7 +4275,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             }
             else if (!satisfying)
             {
-              if (!work_pending)
+              if (!work_pending && !HasStablePublishedFaceDebt(coord))
               {
                 ++census.band_solid_unowned_n;
                 if (in_camera_band)
