@@ -76,15 +76,10 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
       BiomeSource = std::make_unique<ProceduralClimateBiomeSource>(
           *BiomeSampler);
     }
-    if (HeightSampler)
+    if (HeightSampler || DensitySampler)
     {
       DirectCoarseHeightFn = [this](int hx, int hz)
-      { return HeightSampler->CoarseSurfaceYAt(hx, hz); };
-    }
-    else if (DensitySampler)
-    {
-      DirectCoarseHeightFn = [this](int hx, int hz)
-      { return DensitySampler->CoarseSurfaceYAt(hx, hz); };
+      { return ComputeCoarseSurfaceY(hx, hz); };
     }
     if (DirectCoarseHeightFn)
     {
@@ -105,7 +100,7 @@ void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
                                                       int pad)
 {
   LakeCenterSurfaceYCache.clear();
-  if (!BiomeSampler || !DirectCoarseHeightFn)
+  if (!DirectCoarseHeightFn)
   {
     return;
   }
@@ -114,10 +109,13 @@ void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
   const int size = CHUNK_SIZE + pad * 2;
   ChunkCoarseCache.emplace(origin_x, origin_z, size, size);
   UCoarseHeightCache *cache = &*ChunkCoarseCache;
-  CoarseHeightCallback direct = DirectCoarseHeightFn;
-  BiomeSampler->SetCoarseHeightCallback(
-      [cache, direct](int hx, int hz)
-      { return cache->GetOrCompute(hx, hz, direct); });
+  if (BiomeSampler)
+  {
+    CoarseHeightCallback direct = DirectCoarseHeightFn;
+    BiomeSampler->SetCoarseHeightCallback(
+        [cache, direct](int hx, int hz)
+        { return cache->GetOrCompute(hx, hz, direct); });
+  }
 }
 
 void UComposableWorldGenerator::PrimeChunkCoarseY(int x, int z, int y)
@@ -156,7 +154,7 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
     sample.MacroHeight01 =
         std::clamp(OverworldMacroHeight01(world_x, world_z, Ctx.Settings.Seed),
                    0.f, 1.f);
-    sample.PreliminarySurfaceY = DensitySampler->CoarseSurfaceYAt(world_x, world_z);
+    sample.PreliminarySurfaceY = SampleCoarseSurfaceY(world_x, world_z);
     sample.Biomes =
         BiomeSampler->WeightsAt(world_x, world_z, sample.PreliminarySurfaceY,
                                 Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
@@ -176,7 +174,7 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
                                                      Ctx.Settings);
     }
     const CoarseHeightCallback coarse_fn = [this](int hx, int hz)
-    { return DensitySampler->CoarseSurfaceYAt(hx, hz); };
+    { return SampleCoarseSurfaceY(hx, hz); };
     sample.SurfaceGradient =
         SampleCoarseHeightGradient(world_x, world_z, coarse_fn);
     sample.SurfaceBiome = PickSurfaceBiome(world_x, world_z, sample.Biomes);
@@ -270,6 +268,17 @@ int UComposableWorldGenerator::SampleSurfaceY(int world_x, int world_z) const
 
 int UComposableWorldGenerator::SampleCoarseSurfaceY(int world_x,
                                                     int world_z) const
+{
+  if (ChunkCoarseCache && DirectCoarseHeightFn)
+  {
+    return ChunkCoarseCache->GetOrCompute(world_x, world_z,
+                                          DirectCoarseHeightFn);
+  }
+  return ComputeCoarseSurfaceY(world_x, world_z);
+}
+
+int UComposableWorldGenerator::ComputeCoarseSurfaceY(int world_x,
+                                                     int world_z) const
 {
   if (Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap &&
       HeightSampler)

@@ -21,6 +21,7 @@ void UCoarseHeightCache::Reset(int origin_x, int origin_z, int size_x,
   const size_t n = static_cast<size_t>(SizeX) * static_cast<size_t>(SizeZ);
   Values.assign(n, 0);
   Valid.assign(n, 0);
+  Stats = {};
 }
 
 bool UCoarseHeightCache::Contains(int x, int z) const
@@ -35,6 +36,7 @@ int UCoarseHeightCache::GetOrCompute(
 {
   if (!Contains(x, z))
   {
+    ++Stats.OutOfRange;
     return compute(x, z);
   }
   const int lx = x - OriginX;
@@ -44,8 +46,10 @@ int UCoarseHeightCache::GetOrCompute(
       static_cast<size_t>(lx);
   if (Valid[idx])
   {
+    ++Stats.Hits;
     return Values[idx];
   }
+  ++Stats.Misses;
   const int y = compute(x, z);
   Values[idx] = y;
   Valid[idx] = 1;

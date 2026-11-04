@@ -3,6 +3,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/CoarseHeightCache.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 
@@ -90,6 +91,34 @@ static void TestDensityRefineParityMatchesHeightmap()
                     "density refine parity tracks heightmap surface within 3 blocks");
 }
 
+static void TestChunkCoarseCache()
+{
+  cutum::UCoarseHeightCache cache(16, 32, 48, 48);
+  int computations = 0;
+  const auto compute = [&computations](int x, int z)
+  {
+    ++computations;
+    return x * 3 + z;
+  };
+  FluidTest::Expect(cache.GetOrCompute(16, 32, compute) == 80, kTestName,
+                    "coarse cache initial value");
+  FluidTest::Expect(cache.GetOrCompute(16, 32, compute) == 80, kTestName,
+                    "coarse cache repeated value");
+  FluidTest::Expect(computations == 1, kTestName,
+                    "coarse cache avoids repeated computation");
+  FluidTest::Expect(cache.GetOrCompute(0, 0, compute) == 0, kTestName,
+                    "coarse cache out-of-range fallback");
+  FluidTest::Expect(computations == 2, kTestName,
+                    "out-of-range fallback computes directly");
+  FluidTest::Expect(cache.GetStats().Hits == 1 && cache.GetStats().Misses == 1 &&
+                        cache.GetStats().OutOfRange == 1,
+                    kTestName, "coarse cache request counters");
+  cache.Reset(0, 0, 4, 4);
+  FluidTest::Expect(cache.GetStats().Hits == 0 && cache.GetStats().Misses == 0 &&
+                        cache.GetStats().OutOfRange == 0,
+                    kTestName, "coarse cache scope resets counters");
+}
+
 } // namespace
 
 int main()
@@ -100,6 +129,7 @@ int main()
   cutum::UWorldGenPack::LoadPackId("default");
 
   TestDensityRefineParityMatchesHeightmap();
+  TestChunkCoarseCache();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

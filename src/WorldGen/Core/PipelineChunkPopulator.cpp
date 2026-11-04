@@ -438,6 +438,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   const auto populate_start = std::chrono::steady_clock::now();
   ChunkPopulateTiming timing{};
+  CoarseHeightCacheStats coarse_cache_stats{};
   const bool audit_seal =
       std::getenv("CUBATARIUM_WORLDGEN_SEAL_AUDIT") != nullptr;
   timing.detailEnabled = audit_seal;
@@ -794,6 +795,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   if (composable)
   {
+    if (const UCoarseHeightCache *cache = composable->GetChunkCoarseCache())
+    {
+      coarse_cache_stats = cache->GetStats();
+    }
     composable->EndChunkCoarseCache();
   }
   // result.buffer already mirrors genWorld via CaptureBufferScope (D1).
@@ -819,6 +824,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             " carve_ms=" + std::to_string(timing.carveMs) +
             " post_ms=" + std::to_string(timing.postMs) +
             " seal_ms=" + std::to_string(timing.sealMs) +
+            " coarse_hits=" + std::to_string(coarse_cache_stats.Hits) +
+            " coarse_misses=" + std::to_string(coarse_cache_stats.Misses) +
+            " coarse_out_of_range=" +
+            std::to_string(coarse_cache_stats.OutOfRange) +
             (audit_seal
                  ? (" mudflow_ms=" + std::to_string(timing.mudflowMs) +
                     " pocket_ms=" + std::to_string(timing.pocketSealMs) +
