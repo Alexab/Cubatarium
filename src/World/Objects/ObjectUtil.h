@@ -22,11 +22,20 @@ int ResolveWorldGenAnchorY(const WorldObjectDefinition &object,
                            UBlockRegistry &registry, int topSolid,
                            int yOffset);
 
+struct ObjectVoxelCheckStats
+{
+  // Visits in the three prefab-voxel validation passes. Early exits are included.
+  uint64_t voxelVisits{0};
+  // Explicit FindTopSolidSurfaceY calls in CanPlaceObjectAtForWorldGen.
+  uint64_t surfaceScans{0};
+};
+
 bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
                                  glm::ivec3 anchorWorldPos, int maxScanY,
-                                 int seaLevel);
+                                 int seaLevel,
+                                 ObjectVoxelCheckStats *checkStats = nullptr);
 
 bool HasOpenSurfaceAbove(const UBlockWorld &world, const UBlockRegistry &registry,
                          int x, int y, int z, int maxY);

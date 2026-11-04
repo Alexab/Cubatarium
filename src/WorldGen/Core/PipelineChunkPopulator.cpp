@@ -445,6 +445,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   ThreadLocalPipelineState &tls = GetThreadLocalPipeline();
   UBlockWorld &genWorld = tls.world;
   ResetScatterChunkCounts();
+  ObjectFeatureChunkDiagnosticsScope objectFeatureDiagnostics(audit_seal);
 
   // D1: write gen scratch + transfer buffer together (no final world→buffer scan).
   result.buffer.Clear();

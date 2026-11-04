@@ -542,8 +542,22 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
                                  glm::ivec3 anchorWorldPos, int maxScanY,
-                                 int seaLevel)
+                                 int seaLevel, ObjectVoxelCheckStats *checkStats)
 {
+  ObjectVoxelCheckStats localCheckStats;
+  struct CheckStatsScope
+  {
+    ObjectVoxelCheckStats &Local;
+    ObjectVoxelCheckStats *Output;
+    ~CheckStatsScope()
+    {
+      if (Output)
+      {
+        *Output = Local;
+      }
+    }
+  } checkStatsScope{localCheckStats, checkStats};
+
   if (object.voxels.empty())
   {
     return false;
@@ -551,6 +565,7 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
 
   const int anchorX = anchorWorldPos.x;
   const int anchorZ = anchorWorldPos.z;
+  ++localCheckStats.surfaceScans;
   const int anchorLocalSurface =
       FindTopSolidSurfaceY(world, registry, anchorX, anchorZ, maxScanY);
   if (anchorLocalSurface < 0)
@@ -581,6 +596,7 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
 
   for (const auto &voxel : object.voxels)
   {
+    ++localCheckStats.voxelVisits;
     const glm::ivec3 worldPos =
         followsLocalSurface
             ? ResolveSurfaceFollowingPlantVoxelWorldPos(
@@ -625,6 +641,8 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
     // requiring a solid prefab voxel below.
     for (const glm::ivec3 &plantPos : nonSolidWorldPositions)
     {
+      ++localCheckStats.voxelVisits;
+      ++localCheckStats.surfaceScans;
       const int localSurface = FindTopSolidSurfaceY(
           world, registry, plantPos.x, plantPos.z, maxScanY);
       if (localSurface < 0 || (seaLevel >= 0 && localSurface < seaLevel) ||
@@ -707,6 +725,8 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
 
   for (const glm::ivec3 &worldPos : solidWorldPositions)
   {
+    ++localCheckStats.voxelVisits;
+    ++localCheckStats.surfaceScans;
     const int columnLocalSurface =
         FindTopSolidSurfaceY(world, registry, worldPos.x, worldPos.z, maxScanY);
     if (!CanOccupySolidVoxelForWorldGen(world, registry, worldPos,
@@ -718,6 +738,7 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
 
   for (const glm::ivec3 &worldPos : nonSolidWorldPositions)
   {
+    ++localCheckStats.voxelVisits;
     if (!world.IsAir(worldPos))
     {
       return false;
