@@ -1,0 +1,267 @@
+{
+  "cases": [
+    {
+      "caves_in_density": false,
+      "chunk_surface_hash": "80781f80924b4fa9",
+      "coarse_hash": "47374a1333b6ff43",
+      "counters": {
+        "cave_density_calls": 0,
+        "coarse_calls": 256,
+        "prepare_column_calls": 0,
+        "route_calls": 512,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 1779,
+        "wobble_calls": 512
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.38830000000000015,
+        "other": 0.20130000000000178,
+        "route": 0.575800000000001,
+        "surface_total": 0.5795000000000019,
+        "terrain_density": 0.21729999999999697,
+        "wobble": 0.04750000000000032
+      },
+      "profile": "mountain",
+      "seed": 777001,
+      "surface_hash": "b1672194edad21e1",
+      "unique_columns": 256,
+      "wall_ms": 1.0419
+    },
+    {
+      "caves_in_density": false,
+      "chunk_surface_hash": "cd87ad35580f45f0",
+      "coarse_hash": "01d4701e251ac983",
+      "counters": {
+        "cave_density_calls": 0,
+        "coarse_calls": 256,
+        "prepare_column_calls": 0,
+        "route_calls": 512,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 1535,
+        "wobble_calls": 512
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.3890000000000001,
+        "other": 0.18580000000000213,
+        "route": 0.5751999999999986,
+        "surface_total": 0.5557000000000013,
+        "terrain_density": 0.19389999999999907,
+        "wobble": 0.04620000000000029
+      },
+      "profile": "mountain",
+      "seed": 777002,
+      "surface_hash": "dccd9daae1b992a4",
+      "unique_columns": 256,
+      "wall_ms": 1.0011
+    },
+    {
+      "caves_in_density": false,
+      "chunk_surface_hash": "a3ab9f3662903640",
+      "coarse_hash": "a64f207617dea145",
+      "counters": {
+        "cave_density_calls": 0,
+        "coarse_calls": 256,
+        "prepare_column_calls": 0,
+        "route_calls": 512,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 1280,
+        "wobble_calls": 512
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.3791000000000008,
+        "other": 0.16130000000000022,
+        "route": 0.5792999999999991,
+        "surface_total": 0.5187000000000018,
+        "terrain_density": 0.16900000000000032,
+        "wobble": 0.045400000000000273
+      },
+      "profile": "mountain",
+      "seed": 777003,
+      "surface_hash": "1dc8b72a47af6240",
+      "unique_columns": 256,
+      "wall_ms": 0.955
+    },
+    {
+      "caves_in_density": false,
+      "chunk_surface_hash": "22e9c60a44b868af",
+      "coarse_hash": "aac3a2184efdaefd",
+      "counters": {
+        "cave_density_calls": 0,
+        "coarse_calls": 256,
+        "prepare_column_calls": 0,
+        "route_calls": 512,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 1403,
+        "wobble_calls": 512
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.3879999999999998,
+        "other": 0.15100000000000208,
+        "route": 0.5439999999999979,
+        "surface_total": 0.493800000000001,
+        "terrain_density": 0.18739999999999968,
+        "wobble": 0.04450000000000025
+      },
+      "profile": "coast",
+      "seed": 777001,
+      "surface_hash": "0929644af0b4792f",
+      "unique_columns": 256,
+      "wall_ms": 0.9269
+    },
+    {
+      "caves_in_density": false,
+      "chunk_surface_hash": "f5d060cf4995dfb3",
+      "coarse_hash": "9f452a77a18fb383",
+      "counters": {
+        "cave_density_calls": 0,
+        "coarse_calls": 256,
+        "prepare_column_calls": 0,
+        "route_calls": 512,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 1672,
+        "wobble_calls": 512
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.3913999999999999,
+        "other": 0.16410000000000208,
+        "route": 0.5273999999999994,
+        "surface_total": 0.5066000000000006,
+        "terrain_density": 0.20719999999999816,
+        "wobble": 0.046100000000000294
+      },
+      "profile": "coast",
+      "seed": 777002,
+      "surface_hash": "7b4b0d1a1e1d9e43",
+      "unique_columns": 256,
+      "wall_ms": 0.9448
+    },
+    {
+      "caves_in_density": false,
+      "chunk_surface_hash": "3e63bcda8227b94a",
+      "coarse_hash": "a4bda6d30073b081",
+      "counters": {
+        "cave_density_calls": 0,
+        "coarse_calls": 256,
+        "prepare_column_calls": 0,
+        "route_calls": 512,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 1356,
+        "wobble_calls": 512
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.36800000000000144,
+        "other": 0.1491999999999995,
+        "route": 0.5242000000000003,
+        "surface_total": 0.4776000000000003,
+        "terrain_density": 0.17209999999999998,
+        "wobble": 0.045200000000000254
+      },
+      "profile": "coast",
+      "seed": 777003,
+      "surface_hash": "d99e4c4109a7f5e2",
+      "unique_columns": 256,
+      "wall_ms": 0.8907
+    },
+    {
+      "caves_in_density": true,
+      "chunk_surface_hash": "80781f80924b4fa9",
+      "coarse_hash": "47374a1333b6ff43",
+      "counters": {
+        "cave_density_calls": 256,
+        "coarse_calls": 256,
+        "prepare_column_calls": 256,
+        "route_calls": 768,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 2035,
+        "wobble_calls": 768
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.39370000000000016,
+        "other": 0.19870000000000132,
+        "route": 0.7776000000000013,
+        "surface_total": 0.8587999999999979,
+        "terrain_density": 0.2526999999999965,
+        "wobble": 0.06740000000000089
+      },
+      "profile": "mountain_caves",
+      "seed": 777001,
+      "surface_hash": "b1672194edad21e1",
+      "unique_columns": 256,
+      "wall_ms": 1.2964
+    },
+    {
+      "caves_in_density": true,
+      "chunk_surface_hash": "cd87ad35580f45f0",
+      "coarse_hash": "01d4701e251ac983",
+      "counters": {
+        "cave_density_calls": 256,
+        "coarse_calls": 256,
+        "prepare_column_calls": 256,
+        "route_calls": 768,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 1791,
+        "wobble_calls": 768
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.3831000000000006,
+        "other": 0.18860000000000246,
+        "route": 0.8009999999999987,
+        "surface_total": 0.863399999999998,
+        "terrain_density": 0.23419999999999794,
+        "wobble": 0.06680000000000089
+      },
+      "profile": "mountain_caves",
+      "seed": 777002,
+      "surface_hash": "dccd9daae1b992a4",
+      "unique_columns": 256,
+      "wall_ms": 1.2906
+    },
+    {
+      "caves_in_density": true,
+      "chunk_surface_hash": "a3ab9f3662903640",
+      "coarse_hash": "a64f207617dea145",
+      "counters": {
+        "cave_density_calls": 256,
+        "coarse_calls": 256,
+        "prepare_column_calls": 256,
+        "route_calls": 768,
+        "scan_top_calls": 512,
+        "surface_calls": 256,
+        "terrain_density_calls": 1536,
+        "wobble_calls": 768
+      },
+      "grid_size": 16,
+      "phase_ms": {
+        "coarse_total": 0.37090000000000095,
+        "other": 0.18100000000000002,
+        "route": 0.7857999999999993,
+        "surface_total": 0.825899999999998,
+        "terrain_density": 0.2077999999999998,
+        "wobble": 0.06590000000000085
+      },
+      "profile": "mountain_caves",
+      "seed": 777003,
+      "surface_hash": "1dc8b72a47af6240",
+      "unique_columns": 256,
+      "wall_ms": 1.2405
+    }
+  ],
+  "reference_scan": "SurfaceYAt full downward DensityScanTop",
+  "schema": "worldgen_surface_perf_probe.v1"
+}
