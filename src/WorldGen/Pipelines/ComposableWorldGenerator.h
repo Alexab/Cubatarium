@@ -90,6 +90,7 @@ public:
 private:
   int SampleSurfaceY(int worldX, int worldZ) const;
   int SampleCoarseSurfaceY(int worldX, int worldZ) const;
+  int ComputeCoarseSurfaceY(int worldX, int worldZ) const;
   BiomeId SampleBiome(int worldX, int worldZ, int coarseY) const;
   BiomeWeightSet SampleBiomeWeights(int worldX, int worldZ, int coarseY) const;
   ColumnLayerRule BuildTerrainRule(int worldX, int worldZ, int surfaceY,
@@ -104,7 +105,7 @@ private:
   std::optional<UBiomeSampler> BiomeSampler;
   std::unique_ptr<IWorldGenBiomeSource> BiomeSource;
   std::optional<UColumnSampleBuilder> SampleBuilder;
-  std::optional<UCoarseHeightCache> ChunkCoarseCache;
+  mutable std::optional<UCoarseHeightCache> ChunkCoarseCache;
   mutable std::unordered_map<uint64_t, int> LakeCenterSurfaceYCache;
   CoarseHeightCallback DirectCoarseHeightFn;
 };
