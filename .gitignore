@@ -162,7 +162,12 @@ tools/debug_uv_overlays/
 
 # Local editor plans and dated investigation notes, not project source docs.
 /.cursor/plans/
+/.zcode/
 /docs/streaming/A40_*.md
+
+# Local runtime/tool scratch at the repository root.
+/cache/
+/stall_log.txt
 
 # Stray files created by local tools in the repository root.
 /%s
