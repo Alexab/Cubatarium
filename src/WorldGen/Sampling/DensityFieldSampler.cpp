@@ -22,6 +22,12 @@ namespace
 
 constexpr float kSurfaceWobbleScale = 0.35f;
 
+uint64_t SamplingColumnKey(int x, int z)
+{
+  return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32U) |
+         static_cast<uint32_t>(z);
+}
+
 class ScopedDensityProfilePhase
 {
 public:
@@ -91,7 +97,52 @@ UDensityFieldSampler::UDensityFieldSampler(uint32_t seed, int seaLevel,
 {
 }
 
+void UDensityFieldSampler::BeginChunkSamplingCache(int base_x, int base_z,
+                                                   int pad)
+{
+  SamplingCacheOriginX = base_x - pad;
+  SamplingCacheOriginZ = base_z - pad;
+  SamplingCacheSize = 16 + pad * 2;
+  SamplingCacheEnabled = true;
+  RouteCache.clear();
+  WobbleCache.clear();
+  SamplingProfile = {};
+}
+
+void UDensityFieldSampler::EndChunkSamplingCache()
+{
+  SamplingCacheEnabled = false;
+  RouteCache.clear();
+  WobbleCache.clear();
+}
+
 DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
+{
+  if (SamplingCacheEnabled)
+  {
+    const int lx = x - SamplingCacheOriginX;
+    const int lz = z - SamplingCacheOriginZ;
+    if (lx < 0 || lz < 0 || lx >= SamplingCacheSize || lz >= SamplingCacheSize)
+    {
+      ++SamplingProfile.OutOfRange;
+      return ComputeRouteAt(x, z);
+    }
+    const uint64_t key = SamplingColumnKey(x, z);
+    const auto cached = RouteCache.find(key);
+    if (cached != RouteCache.end())
+    {
+      ++SamplingProfile.RouteHits;
+      return cached->second;
+    }
+    ++SamplingProfile.RouteMisses;
+    DensityRouteParams route = ComputeRouteAt(x, z);
+    RouteCache.emplace(key, route);
+    return route;
+  }
+  return ComputeRouteAt(x, z);
+}
+
+DensityRouteParams UDensityFieldSampler::ComputeRouteAt(int x, int z) const
 {
   ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.route_ms);
   if (ProfilingEnabled)
@@ -253,6 +304,33 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
 }
 
 float UDensityFieldSampler::HorizontalWobbleAt(
+    int x, int z, const DensityRouteParams &route) const
+{
+  if (SamplingCacheEnabled)
+  {
+    const int lx = x - SamplingCacheOriginX;
+    const int lz = z - SamplingCacheOriginZ;
+    if (lx < 0 || lz < 0 || lx >= SamplingCacheSize || lz >= SamplingCacheSize)
+    {
+      ++SamplingProfile.OutOfRange;
+      return ComputeHorizontalWobbleAt(x, z, route);
+    }
+    const uint64_t key = SamplingColumnKey(x, z);
+    const auto cached = WobbleCache.find(key);
+    if (cached != WobbleCache.end())
+    {
+      ++SamplingProfile.WobbleHits;
+      return cached->second;
+    }
+    ++SamplingProfile.WobbleMisses;
+    const float wobble = ComputeHorizontalWobbleAt(x, z, route);
+    WobbleCache.emplace(key, wobble);
+    return wobble;
+  }
+  return ComputeHorizontalWobbleAt(x, z, route);
+}
+
+float UDensityFieldSampler::ComputeHorizontalWobbleAt(
     int x, int z, const DensityRouteParams &route) const
 {
   ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.wobble_ms);

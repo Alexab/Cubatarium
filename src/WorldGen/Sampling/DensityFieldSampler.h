@@ -3,6 +3,7 @@
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/DensityRouter.h"
 #include <cstdint>
+#include <unordered_map>
 
 namespace cutum
 {
@@ -50,6 +51,21 @@ public:
   int SurfaceYAt(int x, int z) const;
   int CoarseSurfaceYAt(int x, int z) const;
 
+  struct SamplingCacheStats
+  {
+    uint64_t RouteHits{0};
+    uint64_t RouteMisses{0};
+    uint64_t WobbleHits{0};
+    uint64_t WobbleMisses{0};
+    uint64_t OutOfRange{0};
+  };
+  void BeginChunkSamplingCache(int base_x, int base_z, int pad);
+  void EndChunkSamplingCache();
+  const SamplingCacheStats &GetSamplingCacheStats() const
+  {
+    return SamplingProfile;
+  }
+
   /// Opt-in single-threaded diagnostics for GEN-1.1. Disabled profiling adds
   /// no timing or counter work to production density evaluation.
   struct ProfileStats
@@ -79,10 +95,13 @@ private:
   float ApplyCaveDensityOffset(int x, int y, int z, int surface_y,
                                float density) const;
   DensityRouteParams RouteAt(int x, int z) const;
+  DensityRouteParams ComputeRouteAt(int x, int z) const;
   int DensityScanTop(const DensityRouteParams &route, float horizontal_wobble,
                      int octaves) const;
   float HorizontalWobbleAt(int x, int z,
                            const DensityRouteParams &route) const;
+  float ComputeHorizontalWobbleAt(int x, int z,
+                                  const DensityRouteParams &route) const;
 
   uint32_t Seed;
   int SeaLevel;
@@ -93,6 +112,13 @@ private:
   CaveParams Caves;
   bool ProfilingEnabled{false};
   mutable ProfileStats Profile;
+  bool SamplingCacheEnabled{false};
+  int SamplingCacheOriginX{0};
+  int SamplingCacheOriginZ{0};
+  int SamplingCacheSize{0};
+  mutable std::unordered_map<uint64_t, DensityRouteParams> RouteCache;
+  mutable std::unordered_map<uint64_t, float> WobbleCache;
+  mutable SamplingCacheStats SamplingProfile;
 };
 
 } // namespace cutum

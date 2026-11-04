@@ -9,6 +9,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -119,6 +120,47 @@ static void TestChunkCoarseCache()
                     kTestName, "coarse cache scope resets counters");
 }
 
+static void TestChunkRouteWobbleParity()
+{
+  const cutum::ProceduralSettings settings = MakeSettings();
+  cutum::DensityFieldParams params;
+  params.routerV3 = true;
+  cutum::UDensityFieldSampler sampler(
+      settings.Seed, settings.SeaLevel, settings.MaxHeight,
+      settings.Tuning.terrainRoughness, params, settings.Caves);
+  std::vector<int> direct;
+  for (int z = -8; z < 8; ++z)
+  {
+    for (int x = -8; x < 8; ++x)
+    {
+      direct.push_back(sampler.SurfaceYAt(x, z));
+      direct.push_back(sampler.CoarseSurfaceYAt(x, z));
+    }
+  }
+  sampler.BeginChunkSamplingCache(-8, -8, 8);
+  size_t index = 0;
+  for (int z = -8; z < 8; ++z)
+  {
+    for (int x = -8; x < 8; ++x)
+    {
+      FluidTest::Expect(sampler.SurfaceYAt(x, z) == direct[index++], kTestName,
+                        "scoped route/wobble exact surface parity");
+      FluidTest::Expect(sampler.CoarseSurfaceYAt(x, z) == direct[index++],
+                        kTestName, "scoped route/wobble coarse surface parity");
+    }
+  }
+  const auto &stats = sampler.GetSamplingCacheStats();
+  FluidTest::Expect(stats.RouteHits == 256 && stats.RouteMisses == 256,
+                    kTestName, "route cache shares exact and coarse lookups");
+  FluidTest::Expect(stats.WobbleHits == 256 && stats.WobbleMisses == 256,
+                    kTestName, "wobble cache shares exact and coarse lookups");
+  FluidTest::Expect(stats.OutOfRange == 0, kTestName,
+                    "route/wobble cache covers requested halo");
+  sampler.EndChunkSamplingCache();
+  FluidTest::Expect(sampler.SurfaceYAt(-8, -8) == direct[0], kTestName,
+                    "route/wobble direct result after scope cleanup");
+}
+
 } // namespace
 
 int main()
@@ -130,6 +172,7 @@ int main()
 
   TestDensityRefineParityMatchesHeightmap();
   TestChunkCoarseCache();
+  TestChunkRouteWobbleParity();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

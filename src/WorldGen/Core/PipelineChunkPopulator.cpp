@@ -439,6 +439,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   const auto populate_start = std::chrono::steady_clock::now();
   ChunkPopulateTiming timing{};
   CoarseHeightCacheStats coarse_cache_stats{};
+  UDensityFieldSampler::SamplingCacheStats sampling_cache_stats{};
   const bool audit_seal =
       std::getenv("CUBATARIUM_WORLDGEN_SEAL_AUDIT") != nullptr;
   timing.detailEnabled = audit_seal;
@@ -799,6 +800,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     {
       coarse_cache_stats = cache->GetStats();
     }
+    if (const UDensityFieldSampler *sampler = composable->GetDensitySampler())
+    {
+      sampling_cache_stats = sampler->GetSamplingCacheStats();
+    }
     composable->EndChunkCoarseCache();
   }
   // result.buffer already mirrors genWorld via CaptureBufferScope (D1).
@@ -828,6 +833,12 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             " coarse_misses=" + std::to_string(coarse_cache_stats.Misses) +
             " coarse_out_of_range=" +
             std::to_string(coarse_cache_stats.OutOfRange) +
+            " route_hits=" + std::to_string(sampling_cache_stats.RouteHits) +
+            " route_misses=" + std::to_string(sampling_cache_stats.RouteMisses) +
+            " wobble_hits=" + std::to_string(sampling_cache_stats.WobbleHits) +
+            " wobble_misses=" + std::to_string(sampling_cache_stats.WobbleMisses) +
+            " sampling_out_of_range=" +
+            std::to_string(sampling_cache_stats.OutOfRange) +
             (audit_seal
                  ? (" mudflow_ms=" + std::to_string(timing.mudflowMs) +
                     " pocket_ms=" + std::to_string(timing.pocketSealMs) +
