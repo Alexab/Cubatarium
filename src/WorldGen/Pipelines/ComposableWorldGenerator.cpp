@@ -100,6 +100,10 @@ void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
                                                       int pad)
 {
   LakeCenterSurfaceYCache.clear();
+  if (DensitySampler)
+  {
+    DensitySampler->BeginChunkSamplingCache(base_x, base_z, pad);
+  }
   if (!DirectCoarseHeightFn)
   {
     return;
@@ -128,6 +132,10 @@ void UComposableWorldGenerator::PrimeChunkCoarseY(int x, int z, int y)
 
 void UComposableWorldGenerator::EndChunkCoarseCache()
 {
+  if (DensitySampler)
+  {
+    DensitySampler->EndChunkSamplingCache();
+  }
   if (!BiomeSampler)
   {
     ChunkCoarseCache.reset();
