@@ -2476,10 +2476,13 @@ cubatarium_add_test(NAME fluid_kind_preset_test
 cubatarium_add_test(NAME object_placement_mode_test
     SOURCES
         ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/App/Platform/Log.cpp
+        src/ResourcePacks/BlockNameUtil.cpp
+        src/World/Objects/ObjectLibrary.cpp
         src/World/Objects/ObjectUtil.cpp
         src/Test/ObjectPlacementModeTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
-    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog)
 
 cubatarium_add_test(NAME fluid_permeable_decor_test
     SOURCES
