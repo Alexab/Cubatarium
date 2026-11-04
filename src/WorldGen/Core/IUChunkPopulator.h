@@ -44,6 +44,9 @@ struct ChunkPopulateTiming
   double mudflowMs{0.0};
   double pocketSealMs{0.0};
   double permeableSealMs{0.0};
+  double permeableFloorScanMs{0.0};
+  double permeableRestoreMs{0.0};
+  double permeableWaterlogMs{0.0};
   double pocketResealMs{0.0};
   double vegetationPruneMs{0.0};
   std::array<double, WorldGenStageIdCount> postStageMs{};
@@ -52,6 +55,10 @@ struct ChunkPopulateTiming
   uint64_t pocketVoxelsFilled{0};
   uint64_t permeableColumns{0};
   uint64_t permeableColumnsChanged{0};
+  uint64_t permeableFloorGroundChecks{0};
+  uint64_t permeableFloorSlotChecks{0};
+  uint64_t permeableRestoreCells{0};
+  uint64_t permeableWaterlogCells{0};
   uint64_t resealVoxelsFilled{0};
   uint64_t pruneColumns{0};
   uint64_t prunedVoxels{0};
@@ -81,6 +88,9 @@ struct ChunkPopulateSummary
   ChunkPopulateMetric mudflow;
   ChunkPopulateMetric pocketSeal;
   ChunkPopulateMetric permeableSeal;
+  ChunkPopulateMetric permeableFloorScan;
+  ChunkPopulateMetric permeableRestore;
+  ChunkPopulateMetric permeableWaterlog;
   ChunkPopulateMetric pocketReseal;
   ChunkPopulateMetric vegetationPrune;
   std::array<ChunkPopulateMetric, WorldGenStageIdCount> postStages{};
@@ -89,6 +99,10 @@ struct ChunkPopulateSummary
   uint64_t pocketVoxelsFilled{0};
   uint64_t permeableColumns{0};
   uint64_t permeableColumnsChanged{0};
+  uint64_t permeableFloorGroundChecks{0};
+  uint64_t permeableFloorSlotChecks{0};
+  uint64_t permeableRestoreCells{0};
+  uint64_t permeableWaterlogCells{0};
   uint64_t resealVoxelsFilled{0};
   uint64_t pruneColumns{0};
   uint64_t prunedVoxels{0};

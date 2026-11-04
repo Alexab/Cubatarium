@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -556,32 +557,41 @@ bool IsWaterColumnSlotBlock(const WorldGenContext &ctx, UBlockRegistry &registry
   return false;
 }
 
-int FindWaterColumnFloorY(const WorldGenContext &ctx, int x, int z, int sea)
+int FindWaterColumnFloorY(const WorldGenContext &ctx, int x, int z, int sea,
+                          FluidPermeableSealStats *stats)
 {
-  int floor_y = ctx.Settings.MinHeight - 1;
-  for (int y = ctx.Settings.MinHeight; y < sea; ++y)
+  // The former bottom-up scan retained the highest valid ground. Returning the
+  // first valid ground from the top selects exactly the same floor and avoids
+  // rescanning every lower candidate. Neither predicate changes the world.
+  for (int y = sea - 1; y >= ctx.Settings.MinHeight; --y)
   {
+    if (stats)
+    {
+      ++stats->floorGroundChecks;
+    }
     const glm::ivec3 ground(x, y, z);
     if (!IsSolidPlantGround(ctx.World, ctx.Registry, ground))
     {
       continue;
     }
-    bool column_above = true;
     for (int wy = y + 1; wy <= sea; ++wy)
     {
+      if (stats)
+      {
+        ++stats->floorSlotChecks;
+      }
       const BlockId above_id = ctx.World.GetBlock(glm::ivec3(x, wy, z));
       if (!IsWaterColumnSlotBlock(ctx, ctx.Registry, above_id, wy, y))
       {
-        column_above = false;
-        break;
+        // Here wy > y. The same cell also fails for every lower floor: the
+        // dirt exception remains true and every other accepted type does not
+        // depend on floor_y. Therefore no lower candidate can become valid.
+        return ctx.Settings.MinHeight - 1;
       }
     }
-    if (column_above)
-    {
-      floor_y = y;
-    }
+    return y;
   }
-  return floor_y;
+  return ctx.Settings.MinHeight - 1;
 }
 
 bool RestoreWaterColumnCell(WorldGenContext &ctx, glm::ivec3 pos, int floor_y,
@@ -640,7 +650,8 @@ bool RestoreWaterColumnCell(WorldGenContext &ctx, glm::ivec3 pos, int floor_y,
 }
 
 bool WaterlogCoastalPermeableStack(WorldGenContext &ctx, int x, int z,
-                                   int floor_y, int sea)
+                                   int floor_y, int sea,
+                                   FluidPermeableSealStats *stats)
 {
   if (floor_y < ctx.Settings.MinHeight || floor_y >= sea)
   {
@@ -653,6 +664,10 @@ bool WaterlogCoastalPermeableStack(WorldGenContext &ctx, int x, int z,
   bool changed = false;
   for (int y = floor_y + 1; y <= max_y; ++y)
   {
+    if (stats)
+    {
+      ++stats->waterlogCells;
+    }
     const glm::ivec3 pos(x, y, z);
     const BlockId id = ctx.World.GetBlock(pos);
     if (id == BLOCK_AIR)
@@ -677,24 +692,50 @@ bool WaterlogCoastalPermeableStack(WorldGenContext &ctx, int x, int z,
   return changed;
 }
 
-bool RestoreWaterColumnAt(WorldGenContext &ctx, int x, int z, int sea)
+bool RestoreWaterColumnAt(WorldGenContext &ctx, int x, int z, int sea,
+                          FluidPermeableSealStats *stats)
 {
-  const int floor_y = FindWaterColumnFloorY(ctx, x, z, sea);
+  const auto floorStart = std::chrono::steady_clock::now();
+  const int floor_y = FindWaterColumnFloorY(ctx, x, z, sea, stats);
+  if (stats)
+  {
+    stats->floorScanMs += std::chrono::duration<double, std::milli>(
+                              std::chrono::steady_clock::now() - floorStart)
+                              .count();
+  }
   if (floor_y < ctx.Settings.MinHeight || floor_y >= sea)
   {
     return false;
   }
+  const auto restoreStart = std::chrono::steady_clock::now();
   bool changed = false;
   for (int y = floor_y + 1; y <= sea; ++y)
   {
+    if (stats)
+    {
+      ++stats->restoreCells;
+    }
     if (RestoreWaterColumnCell(ctx, glm::ivec3(x, y, z), floor_y, sea))
     {
       changed = true;
     }
   }
-  if (WaterlogCoastalPermeableStack(ctx, x, z, floor_y, sea))
+  if (stats)
+  {
+    stats->restoreMs += std::chrono::duration<double, std::milli>(
+                            std::chrono::steady_clock::now() - restoreStart)
+                            .count();
+  }
+  const auto waterlogStart = std::chrono::steady_clock::now();
+  if (WaterlogCoastalPermeableStack(ctx, x, z, floor_y, sea, stats))
   {
     changed = true;
+  }
+  if (stats)
+  {
+    stats->waterlogMs += std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - waterlogStart)
+                             .count();
   }
   return changed;
 }
@@ -702,12 +743,14 @@ bool RestoreWaterColumnAt(WorldGenContext &ctx, int x, int z, int sea)
 } // namespace
 
 bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z,
-                                    int *out_columns_changed)
+                                    int *out_columns_changed,
+                                    FluidPermeableSealStats *out_stats)
 {
   if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
   {
     return false;
   }
+  FluidPermeableSealStats stats;
   const int sea = ctx.Settings.SeaLevel;
   bool any_filled = false;
   int columns_changed = 0;
@@ -715,12 +758,17 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
   {
     for (int lx = 0; lx < CHUNK_SIZE; ++lx)
     {
-      if (RestoreWaterColumnAt(ctx, base_x + lx, base_z + lz, sea))
+      if (RestoreWaterColumnAt(ctx, base_x + lx, base_z + lz, sea,
+                               out_stats ? &stats : nullptr))
       {
         any_filled = true;
         ++columns_changed;
       }
     }
+  }
+  if (out_stats)
+  {
+    *out_stats = stats;
   }
   if (out_columns_changed)
   {

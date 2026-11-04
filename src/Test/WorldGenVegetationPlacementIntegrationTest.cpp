@@ -16,6 +16,7 @@
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/BiomeSource.h"
+#include "WorldGen/Stages/WorldGenStages.h"
 
 #include <algorithm>
 #include <array>
@@ -500,6 +501,56 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
   }
   FluidTest::Expect(tree_blocks > 0, kTestName,
                     "chunk populator placed blocks from a tree species");
+}
+
+static void TestWaterColumnFloorEarlyExit(cutum::UBlockRegistry &registry)
+{
+  const auto makeContext = [&](cutum::UBlockWorld &world)
+  {
+    cutum::ProceduralSettings settings = MakeVegetationSettings();
+    settings.SeaLevel = 8;
+    settings.MinHeight = 0;
+    settings.MaxHeight = 64;
+    cutum::WorldGenContext ctx(world, registry, settings);
+    ctx.WorldgenOwnerPackId = "minetest_default_16";
+    ctx.ResolveBlockIds();
+    FluidTest::Expect(ctx.Blocks.Stone != cutum::BLOCK_AIR &&
+                          ctx.Blocks.Water != cutum::BLOCK_AIR,
+                      kTestName, "water-column test resolves stone and water");
+    return ctx;
+  };
+
+  // Two possible floors: the legacy bottom-up scan retained the upper one.
+  cutum::UBlockWorld highestWorld;
+  auto highestCtx = makeContext(highestWorld);
+  for (int y = 0; y <= 2; ++y)
+  {
+    highestWorld.SetBlock(glm::ivec3(0, y, 0), highestCtx.Blocks.Stone);
+  }
+  highestWorld.SetBlock(glm::ivec3(0, 4, 0), highestCtx.Blocks.Stone);
+  cutum::SealFluidPermeableDecorInChunk(highestCtx, 0, 0);
+  FluidTest::Expect(highestWorld.IsAir(glm::ivec3(0, 3, 0)) &&
+                        highestWorld.GetBlock(glm::ivec3(0, 5, 0)) ==
+                            highestCtx.Blocks.Water,
+                    kTestName, "water-column seal retains the highest valid floor");
+
+  // Stone at sea level makes every lower floor invalid. It must not be
+  // removed, and the air below it must not turn into water.
+  cutum::UBlockWorld blockedWorld;
+  auto blockedCtx = makeContext(blockedWorld);
+  for (int y = 0; y <= 4; ++y)
+  {
+    blockedWorld.SetBlock(glm::ivec3(0, y, 0), blockedCtx.Blocks.Stone);
+  }
+  blockedWorld.SetBlock(glm::ivec3(0, 8, 0), blockedCtx.Blocks.Stone);
+  cutum::FluidPermeableSealStats stats;
+  cutum::SealFluidPermeableDecorInChunk(blockedCtx, 0, 0, nullptr, &stats);
+  FluidTest::Expect(blockedWorld.IsAir(glm::ivec3(0, 5, 0)) &&
+                        blockedWorld.GetBlock(glm::ivec3(0, 8, 0)) ==
+                            blockedCtx.Blocks.Stone,
+                    kTestName, "permanent water-column obstruction rejects lower floors");
+  FluidTest::Expect(stats.floorGroundChecks < 256 * 8,
+                    kTestName, "permanent obstruction avoids full lower-column scans");
 }
 
 static void TestSpatialFloraCandidateDensity(cutum::UBlockRegistry &registry)
@@ -1757,6 +1808,7 @@ int main(int argc, char **argv)
     std::cout << kTestName << ": chunk order check complete" << std::endl;
     return 0;
   }
+  TestWaterColumnFloorEarlyExit(registry);
   TestSpatialFloraCandidateDensity(registry);
   TestRegionalFloraDensityClustering(registry);
   TestChunkPopulatorPlacesTrees(populator, registry, objects);

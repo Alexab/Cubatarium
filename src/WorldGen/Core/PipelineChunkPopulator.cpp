@@ -50,6 +50,9 @@ struct PopulateMetricSamples
   std::vector<double> mudflow;
   std::vector<double> pocketSeal;
   std::vector<double> permeableSeal;
+  std::vector<double> permeableFloorScan;
+  std::vector<double> permeableRestore;
+  std::vector<double> permeableWaterlog;
   std::vector<double> pocketReseal;
   std::vector<double> vegetationPrune;
   std::array<std::vector<double>, WorldGenStageIdCount> postStages;
@@ -91,6 +94,12 @@ void FinalizePopulateSummary()
   FinalizePopulateMetric(gPopulateSamples.pocketSeal, gPopulateSummary.pocketSeal);
   FinalizePopulateMetric(gPopulateSamples.permeableSeal,
                          gPopulateSummary.permeableSeal);
+  FinalizePopulateMetric(gPopulateSamples.permeableFloorScan,
+                         gPopulateSummary.permeableFloorScan);
+  FinalizePopulateMetric(gPopulateSamples.permeableRestore,
+                         gPopulateSummary.permeableRestore);
+  FinalizePopulateMetric(gPopulateSamples.permeableWaterlog,
+                         gPopulateSummary.permeableWaterlog);
   FinalizePopulateMetric(gPopulateSamples.pocketReseal,
                          gPopulateSummary.pocketReseal);
   FinalizePopulateMetric(gPopulateSamples.vegetationPrune,
@@ -364,6 +373,15 @@ void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing,
                          timing.pocketSealMs);
     AppendPopulateMetric(gPopulateSamples.permeableSeal,
                          gPopulateSummary.permeableSeal, timing.permeableSealMs);
+    AppendPopulateMetric(gPopulateSamples.permeableFloorScan,
+                         gPopulateSummary.permeableFloorScan,
+                         timing.permeableFloorScanMs);
+    AppendPopulateMetric(gPopulateSamples.permeableRestore,
+                         gPopulateSummary.permeableRestore,
+                         timing.permeableRestoreMs);
+    AppendPopulateMetric(gPopulateSamples.permeableWaterlog,
+                         gPopulateSummary.permeableWaterlog,
+                         timing.permeableWaterlogMs);
     AppendPopulateMetric(gPopulateSamples.pocketReseal,
                          gPopulateSummary.pocketReseal, timing.pocketResealMs);
     AppendPopulateMetric(gPopulateSamples.vegetationPrune,
@@ -380,6 +398,10 @@ void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing,
   gPopulateSummary.pocketVoxelsFilled += timing.pocketVoxelsFilled;
   gPopulateSummary.permeableColumns += timing.permeableColumns;
   gPopulateSummary.permeableColumnsChanged += timing.permeableColumnsChanged;
+  gPopulateSummary.permeableFloorGroundChecks += timing.permeableFloorGroundChecks;
+  gPopulateSummary.permeableFloorSlotChecks += timing.permeableFloorSlotChecks;
+  gPopulateSummary.permeableRestoreCells += timing.permeableRestoreCells;
+  gPopulateSummary.permeableWaterlogCells += timing.permeableWaterlogCells;
   gPopulateSummary.resealVoxelsFilled += timing.resealVoxelsFilled;
   gPopulateSummary.pruneColumns += timing.pruneColumns;
   gPopulateSummary.prunedVoxels += timing.prunedVoxels;
@@ -712,10 +734,19 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
         stage_start = audit_seal ? std::chrono::steady_clock::now()
                                  : std::chrono::steady_clock::time_point{};
         int columns_changed = 0;
+        FluidPermeableSealStats permeableStats;
         const bool permeable_changed = SealFluidPermeableDecorInChunk(
-            composable->GetContext(), base_x, base_z, &columns_changed);
+            composable->GetContext(), base_x, base_z, &columns_changed,
+            audit_seal ? &permeableStats : nullptr);
         timing.permeableColumns = CHUNK_SIZE * CHUNK_SIZE;
         timing.permeableColumnsChanged = static_cast<uint64_t>(columns_changed);
+        timing.permeableFloorScanMs = permeableStats.floorScanMs;
+        timing.permeableRestoreMs = permeableStats.restoreMs;
+        timing.permeableWaterlogMs = permeableStats.waterlogMs;
+        timing.permeableFloorGroundChecks = permeableStats.floorGroundChecks;
+        timing.permeableFloorSlotChecks = permeableStats.floorSlotChecks;
+        timing.permeableRestoreCells = permeableStats.restoreCells;
+        timing.permeableWaterlogCells = permeableStats.waterlogCells;
         if (audit_seal)
         {
           timing.permeableSealMs = ElapsedMs(stage_start);

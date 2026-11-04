@@ -33,8 +33,20 @@ bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY);
 bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
                              int *out_voxels_filled = nullptr);
+struct FluidPermeableSealStats
+{
+  double floorScanMs{0.0};
+  double restoreMs{0.0};
+  double waterlogMs{0.0};
+  uint64_t floorGroundChecks{0};
+  uint64_t floorSlotChecks{0};
+  uint64_t restoreCells{0};
+  uint64_t waterlogCells{0};
+};
+
 bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z,
-                                    int *out_columns_changed = nullptr);
+                                    int *out_columns_changed = nullptr,
+                                    FluidPermeableSealStats *out_stats = nullptr);
 bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,
