@@ -593,6 +593,12 @@ GetFirstMeshFrontierTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<256> &GetTerrainIncompleteTraceRing()
+{
+  static VisualBlackTraceRing<256> r;
+  return r;
+}
+
 VisualBlackTraceRing<
     UJobStageTrace::kCameraBandPeakScheduleTraceRingCapacity> &
 GetCameraBandPeakScheduleTraceRing()
@@ -1102,6 +1108,10 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetFluidDrawWitnessTraceRing(), record);
   }
+  else if (record.sample_kind == 20)
+  {
+    PushVisualTrace(GetTerrainIncompleteTraceRing(), record);
+  }
   else if (record.sample_kind == 18)
   {
     NoteCameraBandPeakSchedule(record);
@@ -1173,6 +1183,7 @@ void UJobStageTrace::ForEachVisualBlackNewest(
                            ctx);
   ForEachVisualTraceNewest(GetGpuDrawStateTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetFluidDrawWitnessTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetTerrainIncompleteTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);
