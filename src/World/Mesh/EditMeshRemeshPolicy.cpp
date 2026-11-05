@@ -40,6 +40,34 @@ CollectEditRemeshChunkCoords(const std::vector<glm::ivec3> &block_positions,
   return chunk_coords;
 }
 
+std::unordered_set<glm::ivec3, detail::EditIVec3Hash>
+CollectEditBoundaryNeighborChunks(
+    const std::vector<glm::ivec3> &block_positions)
+{
+  std::unordered_set<glm::ivec3, detail::EditIVec3Hash> out;
+  for (const glm::ivec3 &block_pos : block_positions)
+  {
+    const glm::ivec3 center = detail::EditWorldToChunk(block_pos);
+    const glm::ivec3 local = block_pos - center * CHUNK_SIZE;
+    for (int axis = 0; axis < 3; ++axis)
+    {
+      if (local[axis] == 0)
+      {
+        glm::ivec3 offset(0);
+        offset[axis] = -1;
+        out.insert(center + offset);
+      }
+      else if (local[axis] == CHUNK_SIZE - 1)
+      {
+        glm::ivec3 offset(0);
+        offset[axis] = 1;
+        out.insert(center + offset);
+      }
+    }
+  }
+  return out;
+}
+
 EditMeshRemeshDecision
 EvaluateEditMeshRemesh(const EditMeshRemeshInput &input)
 {
@@ -89,6 +117,8 @@ EvaluateEditMeshRemesh(const EditMeshRemeshInput &input)
 
   const glm::ivec3 focus =
       detail::EditWorldToChunk(input.BlockPositions.front());
+  const auto boundary_neighbors =
+      CollectEditBoundaryNeighborChunks(input.BlockPositions);
   std::vector<glm::ivec3> ordered(chunk_coords.begin(), chunk_coords.end());
   std::sort(ordered.begin(), ordered.end(),
             [&](const glm::ivec3 &a, const glm::ivec3 &b)
@@ -105,7 +135,19 @@ EvaluateEditMeshRemesh(const EditMeshRemeshInput &input)
               }
               const bool ac = center_chunks.count(a) != 0;
               const bool bc = center_chunks.count(b) != 0;
-              return ac && !bc;
+              if (ac != bc)
+              {
+                return ac;
+              }
+              const bool as = boundary_neighbors.count(a) != 0;
+              const bool bs = boundary_neighbors.count(b) != 0;
+              if (as != bs)
+              {
+                return as;
+              }
+              if (a.x != b.x) return a.x < b.x;
+              if (a.y != b.y) return a.y < b.y;
+              return a.z < b.z;
             });
 
   int immediate_n = 0;
