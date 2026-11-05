@@ -1855,9 +1855,11 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         if (missing_mesh)
         {
           SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, remesh_min, remesh_max, /*include_horizontal_neighbors=*/
-              !underfeet, MeshRevisionBumpReason::PriorityWorldCoreCommit);
+          // Focus repair must use the ownership-aware path, including the
+          // underfeet column. Blindly re-dirtying every slice on each census
+          // invalidated live FirstMesh revisions and starved publication.
+          MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground,
+                                                      remesh_min, remesh_max);
           ++repaired;
           continue;
         }
