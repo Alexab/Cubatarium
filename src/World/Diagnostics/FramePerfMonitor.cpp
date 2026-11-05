@@ -5152,6 +5152,12 @@ void UFramePerfMonitor::Shutdown()
         case 20:
           trace_kind = "focus_terrain_incomplete_trace";
           break;
+        case 21:
+          trace_kind = "first_mesh_ingress_trace";
+          break;
+        case 22:
+          trace_kind = "first_mesh_completion_trace";
+          break;
         default:
           break;
         }
@@ -5464,6 +5470,8 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
                  << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"terrain_age_frames\":"
+                 << r.mesh_dirty_queue_age_frames
                  << ",\"terrain_emerge_stage\":"
                  << static_cast<int>(r.column_emerge_stage)
                  << ",\"terrain_desired_stage\":" << r.desired_geom_rev
@@ -5471,6 +5479,24 @@ void UFramePerfMonitor::Shutdown()
                  << static_cast<int>(r.active_stage)
                  << ",\"terrain_pending_token\":" << r.attempt_id
                  << ",\"terrain_record_flags\":" << r.flags << "}\n";
+          return;
+        }
+        if (r.sample_kind == 21 || r.sample_kind == 22)
+        {
+          (*out) << "{\"kind\":\"" << trace_kind << "\""
+                 << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
+                 << ",\"cz\":" << r.cz
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"horiz_distance_chunks\":"
+                 << r.frontier_horiz_distance_chunks
+                 << ",\"vertical_distance_chunks\":"
+                 << r.frontier_vertical_distance_chunks
+                 << ",\"queue_age_frames\":" << r.mesh_dirty_queue_age_frames
+                 << ",\"source_geom_rev\":" << r.desired_geom_rev
+                 << ",\"job_id\":" << r.attempt_id
+                 << ",\"latency_ms\":" << r.demand_attempt_age_ms << "}\n";
           return;
         }
         if (r.sample_kind == 14)

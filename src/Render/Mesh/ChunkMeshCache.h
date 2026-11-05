@@ -1597,6 +1597,8 @@ private:
                                           float maxCullDistance);
   int SyncRebuildVisibleMissing(UBlockWorld &world, UBlockRegistry &registry,
                                 int max_sync, double max_ms = 0.0);
+  void NoteFirstMeshCompletionTrace(glm::ivec3 coord, uint64_t job_id,
+                                    double created_ms);
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   uint64_t MeshFocusFrameEpoch{0};
