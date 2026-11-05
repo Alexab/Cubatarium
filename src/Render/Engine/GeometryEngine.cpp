@@ -114,13 +114,40 @@ bool DebugTransparentFragmentMarkerEnabled(
   return enabled && FluidRenderDiagnosticWindowContains(camera_position);
 }
 
-constexpr int kPixelProbeColumns = 20;
+constexpr int kPixelProbeGridColumns = 20;
 constexpr int kPixelProbeDefaultRows = 4;
 constexpr int kPixelProbeDenseRows = 8;
 constexpr int kScreenRayAlignedPixelRows = 5;
 constexpr size_t kPixelProbeSampleCount =
-    static_cast<size_t>(kPixelProbeColumns * kPixelProbeDenseRows);
+    static_cast<size_t>(kPixelProbeGridColumns * kPixelProbeDenseRows);
 constexpr float kOpaqueVertexLightMatchDistance = 0.25f;
+
+bool PixelProbeCenterEveryFrameEnabled()
+{
+  static const bool enabled = []() {
+    const char *value =
+        std::getenv("CUBA_VISUAL_BLACK_TRACE_CENTER_EVERY_FRAME");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+int PixelProbeColumns()
+{
+  return PixelProbeCenterEveryFrameEnabled() ? 1 : kPixelProbeGridColumns;
+}
+
+int PixelProbeSampleX(int column, int width)
+{
+  if (PixelProbeCenterEveryFrameEnabled())
+  {
+    return std::clamp(width / 2, 0, width - 1);
+  }
+  const int columns = PixelProbeColumns();
+  const int x0 = column * width / columns;
+  const int x1 = (column + 1) * width / columns;
+  return std::clamp((x0 + x1) / 2, 0, width - 1);
+}
 
 float ReadPixelProbeEnvFloat(const char *name, float fallback)
 {
@@ -140,6 +167,10 @@ float ReadPixelProbeEnvFloat(const char *name, float fallback)
 
 int PixelProbeRows()
 {
+  if (PixelProbeCenterEveryFrameEnabled())
+  {
+    return 1;
+  }
   static const int rows = []() {
     const char *value = std::getenv("CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS");
     return value != nullptr && value[0] != '\0' && value[0] != '0'
@@ -279,11 +310,10 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
   size_t sample = 0;
   for (int row = 0; row < rows; ++row)
   {
-    for (int column = 0; column < kPixelProbeColumns; ++column)
+    const int columns = PixelProbeColumns();
+    for (int column = 0; column < columns; ++column)
     {
-      const int x0 = column * width / kPixelProbeColumns;
-      const int x1 = (column + 1) * width / kPixelProbeColumns;
-      const int local_x = std::clamp((x0 + x1) / 2, 0, width - 1);
+      const int local_x = PixelProbeSampleX(column, width);
       const size_t pixel_offset =
           (static_cast<size_t>(row) * static_cast<size_t>(width) +
            static_cast<size_t>(local_x)) *
@@ -1691,11 +1721,10 @@ void CaptureTransparentPixelProbe(
   {
     const int local_y =
         PixelProbeSampleY(row, height, rows, screen_ray_aligned_rows);
-    for (int column = 0; column < kPixelProbeColumns; ++column)
+    const int columns = PixelProbeColumns();
+    for (int column = 0; column < columns; ++column)
     {
-      const int x0 = column * width / kPixelProbeColumns;
-      const int x1 = (column + 1) * width / kPixelProbeColumns;
-      const int local_x = std::clamp((x0 + x1) / 2, 0, width - 1);
+      const int local_x = PixelProbeSampleX(column, width);
       const size_t pixel_offset =
           (static_cast<size_t>(row) * static_cast<size_t>(width) +
            static_cast<size_t>(local_x)) *
@@ -1722,8 +1751,8 @@ void CaptureTransparentPixelProbe(
       record.renderer_pixel_y = viewport[1] + local_y;
       record.renderer_pixel_rgba = (red << 24u) | (green << 16u) |
                                    (blue << 8u) | alpha;
-      const size_t sample = static_cast<size_t>(row * kPixelProbeColumns +
-                                                column);
+      const size_t sample =
+          static_cast<size_t>(row * columns + column);
       record.renderer_pixel_pretransparent_rgba =
           opaque_capture.rgba[sample];
       record.renderer_pixel_pretransparent_depth =
@@ -1742,6 +1771,12 @@ void CaptureTransparentPixelProbe(
       uint32_t tile_pixel_count = 0;
       const size_t scanline_offset =
           static_cast<size_t>(row) * static_cast<size_t>(width) * 4u;
+      const int x0 = PixelProbeCenterEveryFrameEnabled()
+                         ? local_x
+                         : column * width / columns;
+      const int x1 = PixelProbeCenterEveryFrameEnabled()
+                         ? local_x + 1
+                         : (column + 1) * width / columns;
       for (int px = x0; px < x1; ++px)
       {
         const size_t offset = scanline_offset + static_cast<size_t>(px) * 4u;
@@ -4788,7 +4823,9 @@ void UGeometryEngine::DrawCubeGeometry()
       const uint32_t probe_stride =
           PixelProbePeriodicStride(probe_camera_x);
       const bool periodic_pixel_probe =
-          pixel_probe_in_x_range && render_probe_count % probe_stride == 0u;
+          pixel_probe_in_x_range &&
+          (PixelProbeCenterEveryFrameEnabled() ||
+           render_probe_count % probe_stride == 0u);
       const bool focus_change_pixel_probe = pixel_probe_in_x_range &&
                                             probe_on_focus_change &&
                                             focus_changed;
