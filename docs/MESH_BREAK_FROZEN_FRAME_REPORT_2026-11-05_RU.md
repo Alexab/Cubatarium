@@ -1,10 +1,10 @@
 # MESH: проверка кратковременной дыры при одиночном break
 
-Дата: 2026-11-05. Ветка: `feature/mesh-break-frozen-frame-witness`.
+Дата: 2026-11-05. Ветки: `feature/mesh-break-frozen-frame-witness`, `feature/mesh-break-per-frame-witness`.
 
 ## Результат
 
-**Дефект не подтверждён; production-код не изменён.** Это отрицательная итерация witness, а не доказательство того, что исходная проблема устранена.
+**Дефект не подтверждён; production scheduling/mesher не изменены.** Добавлена только opt-in диагностика. Это отрицательный witness, а не доказательство того, что исходная проблема устранена во всех условиях.
 
 ## Два прогона
 
@@ -35,6 +35,21 @@
 
 Гипотеза о задержке Dirty/DigSeam neighbors остаётся возможной, но наблюдаемая задержка публикаций не связана с конкретным blank pixel. Менять Immediate cap, mesher или seam scheduling по этой итерации было бы исправлением вслепую.
 
+## Покадровый центральный witness
+
+Ветка `feature/mesh-break-per-frame-witness` добавляет opt-in `CUBA_VISUAL_BLACK_TRACE_CENTER_EVERY_FRAME=1`: один центральный RGB/depth/stencil/voxel-ray sample на каждом render frame. Обычная grid/cadence без этого флага не меняется. Полная Release-сборка и static EXE check прошли.
+
+Прогон `--pitch -65`, артефакты `bin/suite_reports/mesh_break_per_frame_65/`:
+
+- Выполнен ровно один break в frame epoch 205; `break_inflight_race=0`, `break_dark_face=0`.
+- До break центральный луч попадал в блок ID 549 `(323,66,168)`, top face 4; opaque surface и depth были валидны.
+- Уже на break-кадре луч попадает в exposed блок ID 378 `(323,65,168)`, top face 4. То есть в центре видна донная поверхность выемки, а не удалённый блок и не пустой пиксель.
+- Центральный slice `(20,4,10)` drawable и draw-ready; mesh revision 4, published geom revision 579, visible MDI index count 1656; `voxel_mesh_ray_gap=0`.
+- `edit_to_publish=2,591 мс`; во всех 556 покадровых central samples voxel ray имеет hit, `dark_pixel_count=0`.
+- Скриншоты до/после подтверждают непрерывные дно и стенки; частицы разрушения не классифицируются как дыра.
+
+Это отрицательный witness для центральной exposed top face в данном сценарии. Он не доказывает отсутствие дефекта на боковых гранях, chunk boundaries или при другой загрузке pipeline. Production scheduling/mesher не изменялись. Сам режим диагностики добавляет GPU readback каждый кадр и поэтому не пригоден как performance baseline.
+
 ## Оставшиеся ограничения
 
-Скриншоты идут с интервалом 0,1 с, а подробные pixel probes — не каждый кадр. Точная координата удалённого блока не записана отдельным diagnostic event. Поэтому дефект остаётся открытым: следующий repro должен в момент `CompleteBreakSession` фиксировать target block, его шесть exposed neighbor faces и per-frame центральный pixel/depth join до первой публикации каждого затронутого slice. Нужен именно положительный witness, после которого можно писать regression test и точечный fix.
+Для исходной пользовательской проблемы всё ещё нужен положительный witness на конкретной боковой/boundary face. Текущий сценарий не даёт основания менять Immediate cap, Dirty/DigSeam или свет. Общие readiness/visual gates остаются независимым открытым направлением.
