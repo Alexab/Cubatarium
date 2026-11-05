@@ -865,6 +865,66 @@ if(WIN32 AND EXISTS "${CUBATARIUM_WIN_RC}")
     list(APPEND CUBATARIUM_DESKTOP_SOURCES "${CUBATARIUM_WIN_RC}")
 endif()
 
+# Visual Studio/MSBuild tracks incremental state per project. Keeping hundreds
+# of translation units in one project makes an interrupted build discard the
+# results of every unfinished compiler batch. Use small OBJECT libraries so
+# each subsystem has its own project, object directory and MSBuild tlog files.
+# Other generators retain the original single-target build (Ninja already
+# schedules and tracks translation units independently).
+if(MSVC AND CMAKE_GENERATOR MATCHES "^Visual Studio")
+    add_library(CubatariumCompileConfig INTERFACE)
+    target_include_directories(CubatariumCompileConfig INTERFACE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CUBATARIUM_GENERATED_DIR}
+    )
+    target_link_libraries(CubatariumCompileConfig INTERFACE
+        OpenGL::GL
+        glfw
+        glm::glm
+        GLEW::GLEW
+        Freetype::Freetype
+        nlohmann_json::nlohmann_json
+        glog::glog
+    )
+    target_compile_options(CubatariumCompileConfig INTERFACE /MP)
+    target_compile_definitions(CubatariumCompileConfig INTERFACE
+        $<$<CONFIG:Debug>:CUBATARIUM_DEBUG>
+    )
+    if(WIN32)
+        target_compile_definitions(CubatariumCompileConfig INTERFACE WIN32 GLEW_STATIC)
+    endif()
+    if(CUBATARIUM_ENABLE_TRACY)
+        target_link_libraries(CubatariumCompileConfig INTERFACE TracyClient)
+        target_compile_definitions(CubatariumCompileConfig INTERFACE CUBATARIUM_ENABLE_TRACY)
+    endif()
+
+    foreach(_source IN LISTS SOURCES)
+        if(_source MATCHES "^src/([^/]+/[^/]+)/")
+            set(_group "${CMAKE_MATCH_1}")
+        else()
+            get_filename_component(_group "${_source}" DIRECTORY)
+        endif()
+        string(TOLOWER "${_group}" _group)
+        string(REGEX REPLACE "[^a-z0-9_]" "_" _group "${_group}")
+        list(APPEND CUBATARIUM_OBJECT_SOURCES_${_group} "${_source}")
+        list(APPEND CUBATARIUM_OBJECT_GROUPS "${_group}")
+    endforeach()
+    list(REMOVE_DUPLICATES CUBATARIUM_OBJECT_GROUPS)
+
+    set(CUBATARIUM_DESKTOP_SOURCES ${HEADERS})
+    foreach(_group IN LISTS CUBATARIUM_OBJECT_GROUPS)
+        set(_object_target "CubatariumObjects_${_group}")
+        add_library(${_object_target} OBJECT ${CUBATARIUM_OBJECT_SOURCES_${_group}})
+        target_link_libraries(${_object_target} PRIVATE CubatariumCompileConfig)
+        set_property(TARGET ${_object_target} PROPERTY
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        list(APPEND CUBATARIUM_DESKTOP_SOURCES $<TARGET_OBJECTS:${_object_target}>)
+    endforeach()
+    if(WIN32 AND EXISTS "${CUBATARIUM_WIN_RC}")
+        list(APPEND CUBATARIUM_DESKTOP_SOURCES "${CUBATARIUM_WIN_RC}")
+    endif()
+endif()
+
 add_executable(${PROJECT_NAME} ${CUBATARIUM_DESKTOP_SOURCES})
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /MP)
@@ -3123,7 +3183,7 @@ target_include_directories(platform_worker_job_kind_test_support PRIVATE
 
 get_property(_cutum_directory_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(_test_target IN LISTS _cutum_directory_targets)
-  if(_test_target STREQUAL PROJECT_NAME)
+  if(_test_target STREQUAL PROJECT_NAME OR _test_target MATCHES "^CubatariumObjects_")
     continue()
   endif()
   get_target_property(_test_sources ${_test_target} SOURCES)
