@@ -1783,7 +1783,12 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   const RenderSettings &render = Cache.GetRenderSettings();
   policy_in.AsyncMeshing = render.AsyncMeshing;
   policy_in.GreedyMeshing = render.GreedyMeshing;
-  policy_in.ImmediateChunkCap = 2;
+  const auto boundary_neighbors =
+      CollectEditBoundaryNeighborChunks(block_positions);
+  const bool atomic_boundary_edit =
+      block_positions.size() == 1 && !boundary_neighbors.empty();
+  policy_in.ImmediateChunkCap =
+      atomic_boundary_edit ? 1 + static_cast<int>(boundary_neighbors.size()) : 2;
   policy_in.PreferGpuStorePatch = PreferGpuStorePatch;
 
   const EditMeshRemeshDecision decision = EvaluateEditMeshRemesh(policy_in);
@@ -1824,10 +1829,11 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     }
   };
 
-  // C1/P2: hard time-cap Immediate remesh — fluid/edit with cap=9 burned
-  // physics_block ~0.8–1.4s (manual 162944). Dig bursts (edit_immediate_n=7,
-  // manual 191432 spikes 700–860ms) must not chain more than one Immediate
-  // on the hot frame; defer remainder to Dirty/async + DigSeam for face X-ray.
+  // C1/P2: keep one Immediate for ordinary edits and bursts. A single block
+  // on a chunk boundary is the exception: removing the center before its real
+  // seam neighbors publishes exposes a one-frame hole (mesh_break_boundary_v16).
+  // The exception is bounded to center + 1..3 boundary neighbors; multi-block
+  // bursts retain the original cap and time budget.
   std::unordered_set<glm::ivec3, IVec3Hash> center_chunks;
   for (const glm::ivec3 &block_pos : block_positions)
   {
@@ -1850,7 +1856,8 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
 
   const auto imm_budget_t0 = std::chrono::high_resolution_clock::now();
   constexpr double kEditImmediateBudgetMs = 8.0;
-  constexpr int kEditImmediateMaxHot = 1;
+  const int immediate_max_hot =
+      atomic_boundary_edit ? policy_in.ImmediateChunkCap : 1;
   int immediate_done = 0;
   for (const glm::ivec3 &chunk_coord : decision.ImmediateChunks)
   {
@@ -1858,8 +1865,9 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - imm_budget_t0)
             .count();
-    if (immediate_done >= kEditImmediateMaxHot ||
-        (immediate_done > 0 && spent_ms > kEditImmediateBudgetMs))
+    if (immediate_done >= immediate_max_hot ||
+        (!atomic_boundary_edit && immediate_done > 0 &&
+         spent_ms > kEditImmediateBudgetMs))
     {
       MarkDirtyPriority(chunk_coord);
       // Face Immediate demoted by P2 → DigSeam (manual 215711 side X-ray).

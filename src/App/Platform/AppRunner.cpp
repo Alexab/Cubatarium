@@ -2084,8 +2084,23 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     window.SetAutopilotKey(KeyCode::Key_D, false);
                   }
                 }
-                const float pitch =
+                float pitch =
                     in_dive ? options.DivePitchDeg : options.FacePitchDeg;
+                if (options.BreakStandMode)
+                {
+                  if (const char *eye_spec =
+                          std::getenv("CUBA_FLIGHT_BREAK_EYE"))
+                  {
+                    float eye_x = 0.0f;
+                    float eye_y = 0.0f;
+                    float eye_z = 0.0f;
+                    std::istringstream eye_stream(eye_spec);
+                    if (eye_stream >> eye_x >> eye_y >> eye_z >> yaw >> pitch)
+                    {
+                      camera->SetOrientation(yaw, pitch);
+                    }
+                  }
+                }
                 if (autopilot_flying && !fly_stop_released &&
                     !intentional_course_turn &&
                     camera->GetLastMoveAttemptSubsteps() > 0)
@@ -2431,6 +2446,28 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       options.BreakIntervalSec)
                   {
                     last_break_request_sec = ingame_sec;
+                    // Optional boundary-face witness: "x y z yaw pitch" places
+                    // the eye only for this synthetic break request. The normal
+                    // break-stand camera and all non-diagnostic runs are intact.
+                    if (const char *eye_spec =
+                            std::getenv("CUBA_FLIGHT_BREAK_EYE"))
+                    {
+                      float x = 0.0f;
+                      float y = 0.0f;
+                      float z = 0.0f;
+                      float yaw = options.FaceYawDeg;
+                      float pitch = options.FacePitchDeg;
+                      std::istringstream eye_stream(eye_spec);
+                      if (eye_stream >> x >> y >> z >> yaw >> pitch)
+                      {
+                        camera->SetOrientation(yaw, pitch);
+                        if (auto user = world->GetCurrentUser())
+                        {
+                          user->SetPosition(glm::vec3(x, y, z));
+                        }
+                        camera->SetPosition(glm::vec3(x, y, z));
+                      }
+                    }
                     world->RequestFlightSimBreak();
                     ++break_requests;
                     if (break_requests == 1 || (break_requests % 5) == 0)

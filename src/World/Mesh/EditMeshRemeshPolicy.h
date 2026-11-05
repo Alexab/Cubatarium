@@ -61,4 +61,9 @@ std::unordered_set<glm::ivec3, detail::EditIVec3Hash>
 CollectEditRemeshChunkCoords(const std::vector<glm::ivec3> &block_positions,
                              bool sync_neighbor_chunks, bool sync_light_ring);
 
+/// Face neighbors whose exposed geometry changes at an edited chunk boundary.
+std::unordered_set<glm::ivec3, detail::EditIVec3Hash>
+CollectEditBoundaryNeighborChunks(
+    const std::vector<glm::ivec3> &block_positions);
+
 } // namespace cutum

@@ -1251,6 +1251,23 @@ void UWindowManager::Update()
       glm::ivec3 target = World->GetBreakBlockPos();
       bool have_target = World->GetIsBlockIntersectionExists() &&
                          World->GetBlockWorld().GetBlock(target) != BLOCK_AIR;
+      // An explicit target keeps a synthetic boundary witness independent of
+      // physics camera correction and creature interaction range. This opt-in
+      // does not affect ordinary block input.
+      bool direct_break_target = false;
+      if (const char *block_spec = std::getenv("CUBA_FLIGHT_BREAK_BLOCK"))
+      {
+        int x = 0;
+        int y = 0;
+        int z = 0;
+        std::istringstream block_stream(block_spec);
+        if (block_stream >> x >> y >> z)
+        {
+          target = glm::ivec3(x, y, z);
+          direct_break_target = true;
+          have_target = World->GetBlockWorld().GetBlock(target) != BLOCK_AIR;
+        }
+      }
       if (!have_target)
       {
         // Standing ocean save may look at empty air/water; break underfeet
@@ -1280,7 +1297,8 @@ void UWindowManager::Update()
       }
       if (have_target)
       {
-        if (UCreature *controlled = World->GetControlledCreature())
+        UCreature *controlled = World->GetControlledCreature();
+        if (controlled && !direct_break_target)
         {
           CreatureIntent intent = controlled->GetIntent();
           intent.Influence = InfluenceIntent{};
@@ -1299,7 +1317,40 @@ void UWindowManager::Update()
         else
         {
           World->StartBreakSession(target);
-          World->CompleteBreakSession();
+          const bool completed = World->CompleteBreakSession();
+          if (direct_break_target)
+          {
+            std::cout << "flight-sim: explicit break target=(" << target.x
+                      << "," << target.y << "," << target.z
+                      << ") completed=" << completed << " after="
+                      << World->GetBlockWorld().GetBlock(target) << std::endl;
+          }
+        }
+      }
+      else if (direct_break_target)
+      {
+        std::cout << "flight-sim: explicit break target is not solid"
+                  << std::endl;
+      }
+    }
+    // Opt-in synthetic boundary witness: physics may snap the player back to
+    // the ground after AppRunner selects the break target. Restore only the
+    // diagnostic render eye after simulation so the centre ray and the broken
+    // boundary block remain coincident. Ordinary runs never enter this branch.
+    if (const char *eye_spec = std::getenv("CUBA_FLIGHT_BREAK_EYE"))
+    {
+      float x = 0.0f;
+      float y = 0.0f;
+      float z = 0.0f;
+      float yaw = 0.0f;
+      float pitch = 0.0f;
+      std::istringstream eye_stream(eye_spec);
+      if ((eye_stream >> x >> y >> z >> yaw >> pitch))
+      {
+        if (auto camera = World->GetCurrentUserCamera())
+        {
+          camera->SetPosition(glm::vec3(x, y, z));
+          camera->SetOrientation(yaw, pitch);
         }
       }
     }
