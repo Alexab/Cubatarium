@@ -265,16 +265,34 @@ void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
         continue;
       }
 
-      if (!target_has_mesh || !chunks.HasChunk(peer) ||
-          !mesh.HasMeshSatisfyingColumnReady(peer))
+      if (!target_has_mesh || !chunks.HasChunk(peer))
+      {
+        continue;
+      }
+      const bool stable_published_peer = world.HasStablePublishedFaceDebt(peer);
+      if (!mesh.HasMeshSatisfyingColumnReady(peer) && !stable_published_peer)
       {
         continue;
       }
 
       const ChunkRenderDemandRecord *peer_record = demand.Find(peer);
-      const uint64_t peer_coverage_gen =
+      uint64_t peer_coverage_gen =
           peer_record ? peer_record->published_coverage_gen : 0;
       const uint64_t waiting = record->waiting_peer_gen[face];
+      // Two fully published, intentionally occluded meshes can both have zero
+      // coverage solely because each waits for the other's coverage. Their
+      // geometry/light revisions are already current and no local overlay is
+      // outstanding, so requiring HasMeshSatisfyingColumnReady above creates a
+      // cycle with no executable owner. Publish one side of this stable pair;
+      // its non-zero coverage then lets the peer clear normally.
+      if (peer_coverage_gen == 0 && peer_record &&
+          (peer_record->overlay_face_debt_mask &
+           static_cast<uint8_t>(1u << (face ^ 1))) == 0 &&
+          world.HasStablePublishedFaceDebt(coord) && stable_published_peer)
+      {
+        peer_coverage_gen =
+            std::max<uint64_t>({1ull, waiting, peer_record->desired_coverage_gen});
+      }
       if (peer_coverage_gen == 0 ||
           (waiting != 0 && peer_coverage_gen < waiting))
       {
