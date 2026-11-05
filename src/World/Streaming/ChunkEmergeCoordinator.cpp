@@ -3623,8 +3623,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                !mesh_service.HasInflightMeshBuild(hole) &&
                !world.HasStablePublishedFaceDebt(hole))
       {
-        mesh_service.MarkDirtyPriority(
-            hole, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
+        // A repeated missing-mesh census must preserve its outstanding
+        // revision; otherwise every retry invalidates the next publication.
+        mesh_service.MarkMissingSlicesDirtyPriority(
+            world.GetBlockWorld(), hole, hole.y * CHUNK_SIZE,
+            hole.y * CHUNK_SIZE + CHUNK_SIZE - 1);
         GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
                                         ColumnWorkKind::FirstMesh, 110);
       }
@@ -3780,8 +3783,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // ColPipe P4: no underfeet Immediate — DirtyPriority + FirstMesh.
             GetColumnFlowExecutor().Enqueue(
                 glm::ivec2(coord.x, coord.z), ColumnWorkKind::FirstMesh, 110);
-            mesh_service.MarkDirtyPriority(
-                coord, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
+            mesh_service.MarkMissingSlicesDirtyPriority(
+                world.GetBlockWorld(), coord, coord.y * CHUNK_SIZE,
+                coord.y * CHUNK_SIZE + CHUNK_SIZE - 1);
             ++immediate;
             continue;
           }
@@ -4270,8 +4274,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         return false;
       }
-      mesh_service.MarkDirtyPriority(
-          hole, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
+      mesh_service.MarkMissingSlicesDirtyPriority(
+          world.GetBlockWorld(), hole, hole.y * CHUNK_SIZE,
+          hole.y * CHUNK_SIZE + CHUNK_SIZE - 1);
       GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
                                       ColumnWorkKind::FirstMesh, 100);
       note_column_flow_drain(1, 1);
