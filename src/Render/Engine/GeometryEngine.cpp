@@ -4744,7 +4744,11 @@ void UGeometryEngine::DrawCubeGeometry()
     OpaquePixelProbeCapture pixel_probe_capture{};
     const uint64_t pixel_probe_frame_epoch =
         WorldInstance->GetStreamingFrameEpoch();
-    if (UJobStageTrace::VisualBlackTraceEnabled())
+    static const bool visual_trace_cpu_only = []() {
+      const char *value = std::getenv("CUBA_VISUAL_BLACK_TRACE_CPU_ONLY");
+      return value != nullptr && value[0] != '\0' && value[0] != '0';
+    }();
+    if (UJobStageTrace::VisualBlackTraceEnabled() && !visual_trace_cpu_only)
     {
       // Take the pre-transparent color/depth on the same render frames as the
       // post-transparent probe, so each sample is a direct before/after pair.

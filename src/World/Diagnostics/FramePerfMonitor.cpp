@@ -5149,6 +5149,9 @@ void UFramePerfMonitor::Shutdown()
         case 18:
           trace_kind = "camera_band_peak_scheduler_trace";
           break;
+        case 20:
+          trace_kind = "focus_terrain_incomplete_trace";
+          break;
         default:
           break;
         }
@@ -5452,6 +5455,22 @@ void UFramePerfMonitor::Shutdown()
                  << r.frontier_snapshot_store_commit_defers
                  << ",\"renderer_target_resident\":"
                  << static_cast<int>(r.renderer_target_resident) << "}\n";
+          return;
+        }
+        if (r.sample_kind == 20)
+        {
+          (*out) << "{\"kind\":\"focus_terrain_incomplete_trace\""
+                 << ",\"cx\":" << r.cx << ",\"cz\":" << r.cz
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"terrain_emerge_stage\":"
+                 << static_cast<int>(r.column_emerge_stage)
+                 << ",\"terrain_desired_stage\":" << r.desired_geom_rev
+                 << ",\"terrain_pending_stage\":"
+                 << static_cast<int>(r.active_stage)
+                 << ",\"terrain_pending_token\":" << r.attempt_id
+                 << ",\"terrain_record_flags\":" << r.flags << "}\n";
           return;
         }
         if (r.sample_kind == 14)

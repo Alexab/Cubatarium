@@ -4759,6 +4759,55 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         UJobStageTrace::NoteVisualBlack(peak_trace);
       }
     }
+    // Missing-solid slice samples do not cover columns whose only debt is
+    // unfinished terrain. Emit a compact, bounded witness for those columns
+    // instead of enabling framebuffer probes or watching the whole ring.
+    std::vector<glm::ivec2> terrain_incomplete_columns;
+    for (const auto &[key, visual_class] : cache.readiness_by_column)
+    {
+      if (visual_class == FocusColumnVisualClass::TerrainIncomplete)
+      {
+        terrain_incomplete_columns.emplace_back(
+            static_cast<int>(static_cast<uint32_t>(key >> 32)),
+            static_cast<int>(static_cast<uint32_t>(key)));
+      }
+    }
+    std::sort(terrain_incomplete_columns.begin(), terrain_incomplete_columns.end(),
+              [&](glm::ivec2 a, glm::ivec2 b) {
+                const int da = std::max(std::abs(a.x - focus_ground_chunk.x),
+                                        std::abs(a.y - focus_ground_chunk.z));
+                const int db = std::max(std::abs(b.x - focus_ground_chunk.x),
+                                        std::abs(b.y - focus_ground_chunk.z));
+                return da != db ? da < db : (a.x != b.x ? a.x < b.x : a.y < b.y);
+              });
+    constexpr size_t kTerrainIncompleteTraceLimit = 12;
+    for (size_t i = 0;
+         i < std::min(kTerrainIncompleteTraceLimit,
+                      terrain_incomplete_columns.size());
+         ++i)
+    {
+      const glm::ivec2 col = terrain_incomplete_columns[i];
+      VisualBlackTraceRecord trace{};
+      trace.sample_kind = 20;
+      trace.cx = col.x;
+      trace.cz = col.y;
+      trace.focus_cx = focus_ground_chunk.x;
+      trace.focus_cz = focus_ground_chunk.z;
+      trace.frame_epoch = StreamingFrameEpoch;
+      trace.focus_column_visual_class =
+          static_cast<uint8_t>(FocusColumnVisualClass::TerrainIncomplete);
+      if (const ColumnRecord *record = ColumnRecords.Find(col))
+      {
+        trace.column_emerge_stage = static_cast<uint8_t>(record->emerge);
+        trace.desired_geom_rev = static_cast<uint64_t>(record->desired);
+        trace.active_stage = static_cast<uint8_t>(record->pending.stage);
+        trace.attempt_id = record->pending.token;
+        trace.flags = 1u | (record->resident ? 1u << 1 : 0u) |
+                      (record->pending_light ? 1u << 2 : 0u) |
+                      (record->inflight_job != 0 ? 1u << 3 : 0u);
+      }
+      UJobStageTrace::NoteVisualBlack(trace);
+    }
   };
   if (cache.valid && cache.focus == focus_ground_chunk &&
       cache.radius == radius_chunks && cache.dirty_cols.empty())
