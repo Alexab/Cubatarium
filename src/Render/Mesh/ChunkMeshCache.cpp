@@ -348,6 +348,33 @@ void UChunkMeshCache::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
   MeshFocusValid = true;
 }
 
+void UChunkMeshCache::NoteFirstMeshCompletionTrace(glm::ivec3 coord,
+                                                   uint64_t job_id,
+                                                   double created_ms)
+{
+  if (!MeshFocusValid || !UJobStageTrace::VisualBlackTraceEnabled())
+  {
+    return;
+  }
+  VisualBlackTraceRecord trace{};
+  trace.sample_kind = 22;
+  trace.cx = coord.x;
+  trace.cy = coord.y;
+  trace.cz = coord.z;
+  trace.focus_cx = MeshFocusGroundChunk.x;
+  trace.focus_cz = MeshFocusGroundChunk.z;
+  trace.frame_epoch = MeshFocusFrameEpoch;
+  trace.frontier_horiz_distance_chunks =
+      std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+               std::abs(coord.z - MeshFocusGroundChunk.z));
+  trace.frontier_vertical_distance_chunks =
+      std::abs(coord.y - MeshFocusGroundChunk.y);
+  trace.attempt_id = job_id;
+  trace.demand_attempt_age_ms =
+      created_ms > 0.0 ? MeshJobTraceNowMs() - created_ms : 0.0;
+  UJobStageTrace::NoteVisualBlack(trace);
+}
+
 int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
                                                UBlockRegistry &registry,
                                                int max_sync, double max_ms)
@@ -6063,6 +6090,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
   // R06: first drawable coverage clears neighbor overlay — remesh seam peers.
+  if (!had_mesh && HasDrawableGreedyMesh(coord))
+  {
+    NoteFirstMeshCompletionTrace(coord, job_trace.job_id, job_trace.created_ms);
+  }
   if (!had_mesh && OnFirstDrawableCoverage)
   {
     OnFirstDrawableCoverage(coord);
@@ -8568,6 +8599,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
   apply_profile.Enter(MeshApplyProfileRecorder::Phase::FirstCoverageCallback);
+  if (!had_mesh && HasDrawableGreedyMesh(result.coord))
+  {
+    NoteFirstMeshCompletionTrace(result.coord, result.jobId,
+                                 result.stageTrace.created_ms);
+  }
   if (!had_mesh && OnFirstDrawableCoverage)
   {
     OnFirstDrawableCoverage(result.coord);
@@ -11050,6 +11086,25 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         NoteFmDirtyGpuScheduled(*it);
         ++LastMeshDirtyScheduleOkFmN;
+        if (MeshFocusValid && UJobStageTrace::VisualBlackTraceEnabled())
+        {
+          VisualBlackTraceRecord trace{};
+          trace.sample_kind = 21;
+          trace.cx = it->x;
+          trace.cy = it->y;
+          trace.cz = it->z;
+          trace.focus_cx = MeshFocusGroundChunk.x;
+          trace.focus_cz = MeshFocusGroundChunk.z;
+          trace.frame_epoch = MeshFocusFrameEpoch;
+          trace.frontier_horiz_distance_chunks = std::max(
+              std::abs(it->x - MeshFocusGroundChunk.x),
+              std::abs(it->z - MeshFocusGroundChunk.z));
+          trace.frontier_vertical_distance_chunks =
+              std::abs(it->y - MeshFocusGroundChunk.y);
+          trace.mesh_dirty_queue_age_frames = Dirty.GetEnqueueAgeFrames(*it);
+          trace.desired_geom_rev = submitted_revision;
+          UJobStageTrace::NoteVisualBlack(trace);
+        }
       }
       it = Dirty.RemoveAt(it);
       ++scheduled;

@@ -1024,6 +1024,7 @@ public:
   static constexpr size_t kCameraBandPeakTraceRingCapacity = 256;
   /// Retain enough opt-in frontier samples to cover a complete M335 route.
   static constexpr size_t kFirstMeshFrontierTraceRingCapacity = 4096;
+  static constexpr size_t kFirstMeshFlowTraceRingCapacity = 8192;
   /// Targeted scheduler history for active camera-band high-water slices.
   static constexpr size_t kCameraBandPeakScheduleTraceRingCapacity = 4096;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
@@ -1037,7 +1038,7 @@ public:
       kPriorityRemeshTraceRingCapacity +
       kWatchedMeshScheduleTraceRingCapacity + kVisualPixelTraceRingCapacity +
       kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity +
-      kFirstMeshFrontierTraceRingCapacity +
+      kFirstMeshFrontierTraceRingCapacity + kFirstMeshFlowTraceRingCapacity +
       kCameraBandPeakScheduleTraceRingCapacity +
       kGpuDrawStateTraceRingCapacity + kFluidDrawWitnessTraceRingCapacity;
 

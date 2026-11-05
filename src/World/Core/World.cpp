@@ -4780,6 +4780,29 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                         std::abs(b.y - focus_ground_chunk.z));
                 return da != db ? da < db : (a.x != b.x ? a.x < b.x : a.y < b.y);
               });
+    static std::unordered_map<const UWorld *,
+                              std::unordered_map<uint64_t, uint64_t>>
+        first_frame_by_world;
+    auto &first_frame = first_frame_by_world[this];
+    std::unordered_set<uint64_t> active_terrain_incomplete;
+    active_terrain_incomplete.reserve(terrain_incomplete_columns.size());
+    for (const glm::ivec2 col : terrain_incomplete_columns)
+    {
+      const uint64_t key = PackColumnKey(col);
+      active_terrain_incomplete.insert(key);
+      first_frame.try_emplace(key, StreamingFrameEpoch);
+    }
+    for (auto it = first_frame.begin(); it != first_frame.end();)
+    {
+      if (active_terrain_incomplete.count(it->first) == 0)
+      {
+        it = first_frame.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
     constexpr size_t kTerrainIncompleteTraceLimit = 12;
     for (size_t i = 0;
          i < std::min(kTerrainIncompleteTraceLimit,
@@ -4796,6 +4819,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       trace.frame_epoch = StreamingFrameEpoch;
       trace.focus_column_visual_class =
           static_cast<uint8_t>(FocusColumnVisualClass::TerrainIncomplete);
+      trace.mesh_dirty_queue_age_frames =
+          StreamingFrameEpoch - first_frame.at(PackColumnKey(col)) + 1;
       if (const ColumnRecord *record = ColumnRecords.Find(col))
       {
         trace.column_emerge_stage = static_cast<uint8_t>(record->emerge);
