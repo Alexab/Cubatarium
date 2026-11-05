@@ -1722,8 +1722,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           continue;
         }
-        mesh_service.MarkDirtyPriority(
-            owned, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
+        // The ownership ticket may have temporarily yielded Dirty while its
+        // revision is still being captured. Requeue that target instead of
+        // invalidating it again on every underfeet cooldown.
+        mesh_service.MarkMissingSlicesDirtyPriority(
+            world.GetBlockWorld(), owned, owned.y * CHUNK_SIZE,
+            owned.y * CHUNK_SIZE + CHUNK_SIZE - 1);
         SoftDeferUnderfeetMarkEpoch[owned] = epoch;
         ColumnWorkItem pin{};
         pin.column = uf_col;
