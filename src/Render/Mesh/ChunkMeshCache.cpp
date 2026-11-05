@@ -3169,7 +3169,8 @@ bool IsRedundantRepairReason(MeshRevisionBumpReason reason)
   return reason == MeshRevisionBumpReason::PriorityWorldStreamingRepair ||
          reason == MeshRevisionBumpReason::PriorityChunkEmergeRepair ||
          reason == MeshRevisionBumpReason::PriorityWorldCoreRepair ||
-         reason == MeshRevisionBumpReason::PriorityLightDependencyRepair;
+         reason == MeshRevisionBumpReason::PriorityLightDependencyRepair ||
+         reason == MeshRevisionBumpReason::MissingHoleSeamNeighbor;
 }
 } // namespace
 
