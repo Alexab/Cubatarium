@@ -279,6 +279,33 @@ int main()
     Expect(store.StopConverged(), "stop after face clear + publish");
   }
 
+  // PERF-0.30: a face debt parked against an unloaded peer with every
+  // revision published must not hold the stop unconverged forever.
+  {
+    store.Clear();
+    const glm::ivec3 parked{7, 0, 7};
+    Expect(store.NoteDemand(parked, 2, 2, /*desired_coverage_gen=*/0) ==
+               DemandResult::NewDemand,
+           "parked debt baseline demand");
+    const uint64_t parked_attempt =
+        store.Find(parked) ? store.Find(parked)->active_attempt_id : 0;
+    Expect(store.NoteInstallResult(parked, InstallResult::Published, 2, 2,
+                                   parked_attempt,
+                                   /*published_coverage_gen=*/0),
+           "parked debt full publication");
+    store.NoteFaceDebt(parked, 0x1u, /*peer_gen=*/5);
+    Expect(store.Find(parked) && store.Find(parked)->face_debt_mask != 0,
+           "parked debt set");
+    Expect(store.StopConverged(),
+           "parked face debt with published demand converges");
+    // The same debt with an unpublished coverage demand still blocks.
+    Expect(store.NoteDemand(parked, 2, 2, /*desired_coverage_gen=*/3) ==
+               DemandResult::NewDemand,
+           "unpublished coverage desire re-raised");
+    Expect(!store.StopConverged(),
+           "face debt with unpublished coverage blocks stop");
+  }
+
   const auto recon = store.ReconcileMaintenance(8);
   Expect(recon.checked >= 1, "reconcile scanned");
 
