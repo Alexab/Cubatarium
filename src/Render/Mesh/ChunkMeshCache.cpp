@@ -3923,7 +3923,10 @@ void UChunkMeshCache::QueueMeshDependencyInvalidation(
 void UChunkMeshCache::QueueMeshDependencyInvalidation(
     glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason)
 {
-  if (!HasDrawableGreedyMesh(dependent_chunk))
+  if (!ShouldQueueMeshDependencyInvalidation(
+          HasGreedyMesh(dependent_chunk),
+          HasDrawableGreedyMesh(dependent_chunk),
+          HasActiveBoundaryOverlay(dependent_chunk)))
   {
     return;
   }
@@ -4073,7 +4076,9 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
       break;
     }
     if (!world.GetChunkManager().HasChunk(coord) ||
-        !HasDrawableGreedyMesh(coord))
+        !ShouldQueueMeshDependencyInvalidation(
+            HasGreedyMesh(coord), HasDrawableGreedyMesh(coord),
+            HasActiveBoundaryOverlay(coord)))
     {
       trace_dependency("drop_not_drawable", coord);
       PendingMeshDependencyInvalidations_.erase(coord);

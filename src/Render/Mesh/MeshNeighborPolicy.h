@@ -46,6 +46,17 @@ inline bool ShouldCoalesceNeighborBecameKnownSeam(
   return self_has_overlay_face_toward || self_has_face_debt_toward;
 }
 
+/// An intentionally occluded zero-quad mesh still owns its published overlay
+/// and coverage. Its repair must remain queueable even though there is no
+/// drawable image; otherwise the one-shot overlay attempt is consumed by a
+/// no-op and two loaded neighbors can retain opposite Missing faces forever.
+inline bool ShouldQueueMeshDependencyInvalidation(bool has_greedy_mesh,
+                                                  bool drawable,
+                                                  bool active_overlay)
+{
+  return has_greedy_mesh && (drawable || active_overlay);
+}
+
 /// Sysreset v5/v6 / Ownership SeamDebt: FaceDebt holder may remesh when peer
 /// is drawable∧!SoftDefer (BecameKnown will not fire). Call sites that Dirty
 /// from FaceDebt mask are removed — policy kept for BecameKnown coalesce.

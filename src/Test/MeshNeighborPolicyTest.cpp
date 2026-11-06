@@ -39,6 +39,18 @@ int main()
   {
     return Fail("BecameKnown already coalesced");
   }
+  if (!cutum::ShouldQueueMeshDependencyInvalidation(true, false, true))
+  {
+    return Fail("occluded published overlay retains dependency repair");
+  }
+  if (cutum::ShouldQueueMeshDependencyInvalidation(true, false, false))
+  {
+    return Fail("hidden mesh without overlay needs no dependency repair");
+  }
+  if (cutum::ShouldQueueMeshDependencyInvalidation(false, false, true))
+  {
+    return Fail("overlay without published mesh cannot queue repair");
+  }
   if (cutum::ShouldSkipFaceForNeighbor(cutum::NeighborLoadState::Air))
   {
     return Fail("Air must not skip face");
