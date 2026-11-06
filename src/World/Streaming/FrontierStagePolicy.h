@@ -74,6 +74,20 @@ inline int FrontierNearLoadRadius(bool frontier_pressure, bool moving,
   return clamped_radius < focus_radius ? focus_radius : clamped_radius;
 }
 
+/// A stopped underfeet repair normally scans only r=2. If the latched visual
+/// witness is on the rim, that clamp also starves the absent face peer needed
+/// to close its overlay debt. Keep underfeet priority, but scan the whole focus
+/// band until that rim witness has a resident mesh.
+inline int StoppedUnderfeetNearLoadRadius(bool focus_missing_mesh,
+                                          int miss_horiz, int focus_radius)
+{
+  if (focus_missing_mesh && miss_horiz > 2)
+  {
+    return std::max(2, focus_radius);
+  }
+  return 2;
+}
+
 /// Rim ahead converge P2: healthy cruise NearLoad ceiling — avoid NearLoad=-1
 /// full VisualRD² scan (manual 103803 mid wall). Keep +2 beyond focus/lit so
 /// Update can still discover load-ahead ring (Prefetch is not the sole feeder).

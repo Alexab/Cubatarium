@@ -3657,7 +3657,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       else if (underfeet_pressure)
       {
-        Streamer->SetNearLoadRadius(2);
+        Streamer->SetNearLoadRadius(StoppedUnderfeetNearLoadRadius(
+            world.PhysicsTelemetryData.FocusMissingMesh > 0,
+            world.PhysicsTelemetryData.MissHoriz, focus_radius));
       }
       else if (near_focus_holes || pressure.focus_pressure_mode)
       {
@@ -7147,7 +7149,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       }
       else if (underfeet_need)
       {
-        Streamer->SetNearLoadRadius(2);
+        Streamer->SetNearLoadRadius(StoppedUnderfeetNearLoadRadius(
+            world.PhysicsTelemetryData.FocusMissingMesh > 0,
+            world.PhysicsTelemetryData.MissHoriz, focus_radius));
         Streamer->SetMaxLoadOpsPerFrame(ApplyPressureCap(
             world.MaxLoadOpsPerFrame, pressure.max_load_ops_cap));
       }
