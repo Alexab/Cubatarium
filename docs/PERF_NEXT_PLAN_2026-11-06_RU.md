@@ -55,6 +55,19 @@ Witness1 (`bin/suite_reports/perf_0_30/witness1`, `CUBATARIUM_RELIGHT_WATCHDOG=1
 
 Оставшийся слой (следующий шаг этапа): 26 колонок census MissingMesh при `pending_light_n=0` и полностью опустошённых очередях релайта; 93 dirty чанка revisited (`dirty_revisit_same_n=39`) с ~1 schedule/кадр без завершений; demand store: `demand_unsat_coverage=370`, `demand_unsat_face=375`, `demand_unsat_geom=91`, `demand_unsat_light=9`. Гипотеза: mesh-build для rim-срезов отклоняется гейтом settled-light/литости при остановке, а demand records накапливают coverage/face долги без повторных попыток. Инструмент: `focus_slice_trace` на финальном witness + watchdog.
 
+### Результат продолжения (2026-11-06, ветка `feature/perf-0-30-convergence-mesh-gate`)
+
+Trace-witness идентифицировал класс: missing-срезы — **интроерные полностью заполненные чанки** (`non_air_blocks=4096`), published intentional 0-quad mesh (`mesh_rev=2`, GPU-resident, 0 quads), `has_settled_light=1`, `desired==published` по geom и coverage, но `face_debt_mask=1` против **незагруженного peer'а** за границей кольца. Два потребителя читали паркованный долг как «missing»/«не сошлось»:
+
+1. `HasMeshSatisfyingColumnReady` включал `face_debt_mask != 0` в coverage-проверку → срез вечно unsatisfied → census MissingMesh.
+2. `StopConverged` отвергал любую запись с `face_debt_mask != 0`.
+
+Фикс: face debt блокирует удовлетворённость/сходимость только при непубликованном demand (`desired geom/coverage > published`); паркованный долг обслуживается при загрузке peer'а. Регресс-тест обоих случаев в `chunk_render_demand_test` (паркованный — сходится; непубликованный — блокирует).
+
+Приёмка `acceptance2`: критерий «без роста» выполнен (`face_debt=0`, `miss_end=0`, stop dirty=0, missing 26–27 в пределах разбега прогонов); FPS 22.0→26.0, wall fly median 45.5→38.5 мс. `demand_stop_converged` остался false — см. следующий слой.
+
+**Следующий слой этапа (зафиксирован для продолжения):** `demand_unsat_face≈378` — это **живые** (не паркованные) записи интерьерных чанков границы кольца с `desired_coverage_gen > published_coverage_gen`: coverage-требование поднято, peer не загружен — публикации не будет до его загрузки. ~24 колоночки × 16 чанков ≈ 378 — сходится. Требуется решение этапа: либо сервис/ретирмент coverage-требований к отсутствующим peer'ам при остановке, либо скоупинг `StopConverged` на кольцо вовлечённости. По правилам плана — отдельный witness-цикл (`focus_slice_trace` с полями `desired/published_coverage_gen` по всем записям, не только census-класса) перед изменением.
+
 ## PERF-0.31 — визуальное отставание за пределами кольца
 
 Цель: сократить задержку появления мира после быстрого перелёта и загрузки.
