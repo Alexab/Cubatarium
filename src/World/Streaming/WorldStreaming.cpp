@@ -3461,7 +3461,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       // here would leave PendingLightFocus without a consumer even while the
       // focus mesh is drawable. Service at most one queued capture; the
       // relight drain still applies its own hot-frame and wall-time limits.
-      if (pt.PendingLightFocus > 0 || pt.UnderfeetPendingLight != 0)
+      // FocusVisualMissingMeshN covers visual-ring rim columns whose
+      // pending relight sits outside the focus/underfeet probes (PERF-0.29
+      // manual 20261106: 27 census MissingMesh columns with PendingLightFocus=0
+      // lost their only capture consumer to this early return).
+      if (pt.PendingLightFocus > 0 || pt.UnderfeetPendingLight != 0 ||
+          pt.FocusVisualMissingMeshN > 0)
       {
         world.DrainRelightQueuesBudget(/*max_player_jobs=*/0,
                                        /*max_bg_columns=*/1);
