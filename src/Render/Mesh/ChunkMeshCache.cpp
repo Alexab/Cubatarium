@@ -1154,14 +1154,19 @@ bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
   // geometry is intentionally occluded. Keep the slice unsatisfied so the
   // FirstMesh recovery path can reclaim that orphaned obligation. A drawable
   // prior image takes the retain-old-image path at the start of this method.
+  // A retained face debt with every revision published is different: the
+  // zero-quad publication IS the current truth (nothing to draw on this
+  // side), and the debt parks until the peer loads — it must not pin the
+  // slice as missing (PERF-0.30 trace witness: fully-solid interior slices,
+  // des==published geom + coverage, face_debt_mask=1 against an unloaded
+  // peer, census stuck at MissingMesh for the whole stop).
   if (const ChunkRenderDemandRecord *demand =
           UChunkRenderDemandStore::Get().Find(chunk_coord))
   {
     const bool geometry_unpublished =
         demand->desired_geom_rev > it->second.PublishRevs.geom_rev;
     const bool coverage_unpublished =
-        demand->desired_coverage_gen > demand->published_coverage_gen ||
-        demand->face_debt_mask != 0;
+        demand->desired_coverage_gen > demand->published_coverage_gen;
     if (geometry_unpublished || coverage_unpublished ||
         demand->retained_awaiting_successor)
     {

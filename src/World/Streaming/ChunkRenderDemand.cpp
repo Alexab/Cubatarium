@@ -1058,7 +1058,16 @@ bool UChunkRenderDemandStore::StopConverged(double now_ms) const
     {
       continue;
     }
-    if (rec.face_debt_mask != 0)
+    // A face debt blocks stop only while it represents an unpublished
+    // demand. A debt parked against an unloaded peer with every revision
+    // published cannot be serviced during the stop (the peer must load
+    // first) and must not hold demand_stop_converged false forever
+    // (PERF-0.30 witness: interior zero-quad slices, face_debt_mask=1,
+    // des==published geom and coverage, peer outside the loaded ring).
+    // The parked debt still drives its repair when the peer publishes.
+    if (rec.face_debt_mask != 0 &&
+        (rec.desired_geom_rev > rec.published_geom_rev ||
+         rec.desired_coverage_gen > rec.published_coverage_gen))
     {
       return false;
     }
