@@ -51,6 +51,18 @@ int main()
   {
     return Fail("overlay without published mesh cannot queue repair");
   }
+  if (!cutum::ShouldNotifyFirstDrawableCoverage(false, true))
+  {
+    return Fail("first real drawable coverage notifies seam peers");
+  }
+  if (cutum::ShouldNotifyFirstDrawableCoverage(false, false))
+  {
+    return Fail("intentional zero-quad publication is not drawable coverage");
+  }
+  if (cutum::ShouldNotifyFirstDrawableCoverage(true, true))
+  {
+    return Fail("repeat drawable publication is not a first-coverage edge");
+  }
   if (cutum::ShouldSkipFaceForNeighbor(cutum::NeighborLoadState::Air))
   {
     return Fail("Air must not skip face");

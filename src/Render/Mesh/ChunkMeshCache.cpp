@@ -6101,7 +6101,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     NoteFirstMeshCompletionTrace(coord, job_trace.job_id, job_trace.created_ms);
   }
-  if (!had_mesh && OnFirstDrawableCoverage)
+  if (ShouldNotifyFirstDrawableCoverage(had_mesh,
+                                        HasDrawableGreedyMesh(coord)) &&
+      OnFirstDrawableCoverage)
   {
     OnFirstDrawableCoverage(coord);
   }
@@ -8611,7 +8613,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     NoteFirstMeshCompletionTrace(result.coord, result.jobId,
                                  result.stageTrace.created_ms);
   }
-  if (!had_mesh && OnFirstDrawableCoverage)
+  if (ShouldNotifyFirstDrawableCoverage(had_mesh,
+                                        HasDrawableGreedyMesh(result.coord)) &&
+      OnFirstDrawableCoverage)
   {
     OnFirstDrawableCoverage(result.coord);
   }

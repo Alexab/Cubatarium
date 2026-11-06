@@ -57,6 +57,16 @@ inline bool ShouldQueueMeshDependencyInvalidation(bool has_greedy_mesh,
   return has_greedy_mesh && (drawable || active_overlay);
 }
 
+/// FirstDrawableCoverage is an edge, not a per-publication notification.
+/// Intentional zero-quad meshes satisfy residency but never become drawable;
+/// notifying for them makes every repair publication look like a new peer and
+/// recursively creates FaceDebtCallback repairs in neighboring empty slices.
+inline bool ShouldNotifyFirstDrawableCoverage(bool had_drawable_mesh,
+                                              bool has_drawable_mesh)
+{
+  return !had_drawable_mesh && has_drawable_mesh;
+}
+
 /// Sysreset v5/v6 / Ownership SeamDebt: FaceDebt holder may remesh when peer
 /// is drawable∧!SoftDefer (BecameKnown will not fire). Call sites that Dirty
 /// from FaceDebt mask are removed — policy kept for BecameKnown coalesce.
