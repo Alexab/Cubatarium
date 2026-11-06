@@ -221,12 +221,14 @@ void SeedSkylightHorizontalQueue(UChunkRelightSnapshot &grid,
   }
 }
 
-void PropagateSkylightHorizontal(UChunkRelightSnapshot &grid,
-                                 const UBlockRegistry &registry,
-                                 glm::ivec3 chunk_coord)
+// One max-plus BFS over pre-seeded positions. Skylight propagation is
+// monotone (values only rise), so one flood over the union of per-chunk
+// seeds reaches the same fixed point as repeated per-chunk floods — the
+// batch path uses this to avoid O(chunks × grid) re-walks on tall bands.
+void FloodSkylightSeeds(UChunkRelightSnapshot &grid,
+                        const UBlockRegistry &registry,
+                        std::deque<glm::ivec3> &queue)
 {
-  std::deque<glm::ivec3> queue;
-  SeedSkylightHorizontalQueue(grid, registry, chunk_coord, queue);
   while (!queue.empty())
   {
     const glm::ivec3 pos = queue.front();
@@ -266,11 +268,12 @@ void PropagateSkylightHorizontal(UChunkRelightSnapshot &grid,
   }
 }
 
-void PropagateBlocklight(UChunkRelightSnapshot &grid,
-                         const UBlockRegistry &registry,
-                         glm::ivec3 chunk_coord)
+// Seeds emission sources of one chunk plus the captured light of its
+// out-of-grid face neighbors (same seed set as the former per-chunk call).
+void SeedBlocklightQueue(UChunkRelightSnapshot &grid,
+                         const UBlockRegistry &registry, glm::ivec3 chunk_coord,
+                         std::deque<std::pair<glm::ivec3, int>> &queue)
 {
-  std::deque<std::pair<glm::ivec3, int>> queue;
   const auto seed_chunk = [&](glm::ivec3 seed_coord)
   {
     if (!grid.HasChunk(seed_coord))
@@ -343,6 +346,14 @@ void PropagateBlocklight(UChunkRelightSnapshot &grid,
       }
     }
   }
+}
+
+// Same max-plus convergence argument as FloodSkylightSeeds: one BFS over the
+// union of per-chunk seeds replaces the repeated per-chunk floods.
+void FloodBlocklightSeeds(UChunkRelightSnapshot &grid,
+                          const UBlockRegistry &registry,
+                          std::deque<std::pair<glm::ivec3, int>> &queue)
+{
   while (!queue.empty())
   {
     const auto [pos, light] = queue.front();
@@ -438,19 +449,25 @@ void RelightChunkCoordsOnGrid(UChunkRelightSnapshot &grid,
         }
       }
     }
+    // One union flood instead of one flood per chunk: each per-chunk flood
+    // re-walks the whole grid snapshot, so tall bands paid O(chunks × grid).
+    std::deque<glm::ivec3> sky_queue;
     for (const glm::ivec3 &coord : coords)
     {
-      PropagateSkylightHorizontal(grid, registry, coord);
+      SeedSkylightHorizontalQueue(grid, registry, coord, sky_queue);
     }
+    FloodSkylightSeeds(grid, registry, sky_queue);
   }
   if (!include_block_light)
   {
     return;
   }
+  std::deque<std::pair<glm::ivec3, int>> block_queue;
   for (const glm::ivec3 &coord : coords)
   {
-    PropagateBlocklight(grid, registry, coord);
+    SeedBlocklightQueue(grid, registry, coord, block_queue);
   }
+  FloodBlocklightSeeds(grid, registry, block_queue);
 }
 
 bool FaceHasLitTransparentVoxel(UChunkRelightSnapshot &grid,

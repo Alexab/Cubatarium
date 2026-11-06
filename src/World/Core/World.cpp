@@ -9291,6 +9291,47 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         " running=" + std::to_string(AsyncRelight->GetRunningJobCount()) +
         " completed=" + std::to_string(AsyncRelight->GetCompletedSize()));
   }
+  // Opt-in convergence watchdog (CUBATARIUM_RELIGHT_WATCHDOG=1). Unlike the
+  // per-drain audit it emits nothing while the pipeline makes progress, so it
+  // does not perturb the timing of the state it reports: once per interval it
+  // logs the raw pool counters so a frozen apply/depth state can be told
+  // apart from slow compute, starved workers, or undrained completed work.
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_WATCHDOG"))
+  {
+    static double s_last_report_ms = 0.0;
+    const double now_ms = std::chrono::duration<double, std::milli>(
+                              std::chrono::steady_clock::now().time_since_epoch())
+                              .count();
+    if (now_ms - s_last_report_ms >= 5000.0)
+    {
+      s_last_report_ms = now_ms;
+      CubatariumLogInfo(
+          "RelightStall",
+          "watchdog inflight=" +
+              std::to_string(AsyncRelight->GetInFlightCount()) +
+              " oldest_inflight_ms=" +
+              std::to_string(AsyncRelight->GetOldestInFlightAgeMs()) +
+              " completed=" + std::to_string(AsyncRelight->GetCompletedSize()) +
+              " queued=" + std::to_string(AsyncRelight->GetQueuedJobCount()) +
+              " running=" + std::to_string(AsyncRelight->GetRunningJobCount()) +
+              " workers=" + std::to_string(AsyncRelight->GetWorkerCount()) +
+              " fifo=" + std::to_string(PhysicsTelemetryData.RelightFifoN) +
+              " apply_prev=" +
+              std::to_string(PhysicsTelemetryData.RelightApplyNPrev) +
+              " pending_cols=" +
+              std::to_string(Persistence
+                                 ? Persistence->GetPendingTerrainColumnRelightCount()
+                                 : -1) +
+              " capture_stop=" +
+              std::to_string(
+                  PhysicsTelemetryData.RelightCaptureStopReason) +
+              " inflight_scan=" +
+              std::to_string(
+                  PhysicsTelemetryData.RelightCaptureInflightScanN) +
+              " world_inflight_set=" +
+              std::to_string(AsyncRelightColumnsInFlight.size()));
+    }
+  }
   const auto t0 = std::chrono::high_resolution_clock::now();
   int applied = 0;
   if (Persistence)
