@@ -27,6 +27,17 @@ PERF-0.28 исправляет ложное событие `FirstDrawableCoverag
 - Исправить только конкретный неверный переход состояния или владельца; не маскировать счётчик.
 - Критерий: `miss_end=0` либо доказанное корректное обоснование оставшегося сигнала без роста реальных дыр.
 
+### Результат (2026-11-06, ветка `feature/perf-0-29-missing-mesh-classification`)
+
+Классификация witness-колонки `(-568,4,108)` (horiz=2): resident solid slice (17 блоков), `mesh_revision=0` — реальные незамешированные срезы FirstMesh, не misclassification/zero-quad/stale census. Блокировка: `pending_light` (mesh ждёт света), relight-тикет в persistence priority FIFO. Цепочка дефектов найдена и исправлена двумя фиксами:
+
+1. `RelightChunkCoordsOnGrid` заливал свет отдельно на каждый чанк снапшота (O(chunks×grid) на задачу; full-height band −64:319 = до 24 фладов по grid). Заменено на один union-флад (тот же max-plus fixed point); регресс-тест точного затухания через два шва — `chunk_lighting_propagation_test` кейс E.
+2. Ранний frame-budget `return` streaming tick обслуживал capture-дрен только при `PendingLightFocus>0 || UnderfeetPendingLight!=0`; rim-колонки визуального кольца вне радиусов этих проб (27 census MissingMesh при PendingLightFocus=0) теряли единственного потребителя захвата на весь stop. Добавлен сервис capture при `FocusVisualMissingMeshN>0` (1 колонка/кадр, bounded).
+
+Диагностика: opt-in `CUBATARIUM_RELIGHT_WATCHDOG=1` (счётчики конвейера раз в 5 с, не возмущает тайминги).
+
+Эталон после фиксов (`acceptance_run2`): `face_debt=0`, `missing_mesh=27` (без роста; ready 63→64, fifo 30→дренаж, stop=8), `miss_end=0`, stop dirty=0, `demand_stop_converged=false` (перенесено в PERF-0.30). Побочно: wall fly median 115→46 мс, stop wall median 98→28 мс, effective FPS fly 8.7→21.7. Остаточный хвост: 20 чанков с orphaned pending-light маркерами при пустых очередях релайта (поверхностный clamp Y-band против pending-light band) — вход в PERF-0.30.
+
 ## PERF-0.30 — добиться сходимости после остановки
 
 Цель: `demand_stop_converged=true` без постоянного фонового churn.
