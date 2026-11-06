@@ -53,7 +53,8 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
   snapshot.SetSubmitContext(work_token, snapshot.GetDependencyStamp());
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
-    InFlight[job_id] = job_id;
+    InFlight[job_id] = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
@@ -162,7 +163,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
 
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
-    InFlight[job_id] = job_id;
+    InFlight[job_id] = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
@@ -300,6 +302,23 @@ int UAsyncRelightBuilder::GetInFlightCount() const
 {
   std::lock_guard<std::mutex> lock(InFlightMutex);
   return static_cast<int>(InFlight.size());
+}
+
+double UAsyncRelightBuilder::GetOldestInFlightAgeMs() const
+{
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  if (InFlight.empty())
+  {
+    return 0.0;
+  }
+  const int64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count();
+  int64_t oldest = now_ms;
+  for (const auto &entry : InFlight)
+  {
+    oldest = std::min(oldest, entry.second);
+  }
+  return static_cast<double>(now_ms - oldest);
 }
 
 void UAsyncRelightBuilder::WaitIdle() { Pool.WaitIdle(); }

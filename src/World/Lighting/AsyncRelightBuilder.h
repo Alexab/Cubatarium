@@ -36,6 +36,9 @@ public:
   std::vector<RelightComputeResult> DrainCompleted(int max_per_frame);
   bool HasPendingWork() const;
   int GetInFlightCount() const;
+  /// Diagnostic watchdog input: age of the oldest in-flight submission
+  /// (steady ms), 0 when nothing is in flight.
+  double GetOldestInFlightAgeMs() const;
   std::size_t GetQueuedJobCount() const { return Pool.GetPendingJobCount(); }
   std::size_t GetRunningJobCount() const { return Pool.GetActiveJobCount(); }
   int GetWorkerCount() const { return WorkerCount; }
@@ -85,7 +88,8 @@ private:
   // Completed must outlive Pool (destroy order = reverse declaration).
   UCompletedJobQueue<RelightComputeResult> Completed;
   mutable std::mutex InFlightMutex;
-  std::unordered_map<uint64_t, uint64_t> InFlight;
+  /// job_id -> steady ms at submit (value doubles as the watchdog age source).
+  std::unordered_map<uint64_t, int64_t> InFlight;
   std::atomic<uint64_t> NextJobId{1};
   std::atomic<uint64_t> Epoch{1};
   std::atomic<uint64_t> DiscardedLate{0};
