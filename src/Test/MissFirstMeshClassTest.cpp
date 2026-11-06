@@ -314,6 +314,13 @@ int main()
          "Era25 I-F5: frontier NearLoad radius ≥ focus");
   Expect(FrontierNearLoadRadius(false, true, 2, 4) == 2,
          "Era25 I-F5: !frontier keeps NearLoad radius clamp");
+  using cutum::StoppedUnderfeetNearLoadRadius;
+  Expect(StoppedUnderfeetNearLoadRadius(true, 1, 4) == 2,
+         "stopped near miss keeps underfeet-only load scan");
+  Expect(StoppedUnderfeetNearLoadRadius(true, 4, 4) == 4,
+         "stopped rim miss scans enough to reload its absent face peer");
+  Expect(StoppedUnderfeetNearLoadRadius(false, 4, 4) == 2,
+         "stale rim coordinate without focus miss keeps underfeet clamp");
 
   // --- Era26 Ocean Dual-Debt ---
   using cutum::CollectFullyDarkSkipsOnlyRelightOwnership;
