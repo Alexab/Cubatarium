@@ -485,6 +485,11 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       return true;
     }
     ClearTerrainColumnChunks(World, chunkCoord, MaxHeight, MinHeight);
+    // Clearing a partial committed/disk column removes every terrain slice.
+    // Drop the completion marker too: Update uses it as its cheap candidate
+    // filter, so retaining it would make the now-absent column permanently
+    // invisible to reload and leave its neighbors with unresolvable face debt.
+    ProcedurallyGenerated.erase(chunkCoord);
     InvalidateTerrainCompleteCache(chunkCoord);
     if (OnRequestAsyncChunk)
     {
@@ -546,6 +551,11 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       !IsTerrainChunkCompleteCached(chunkCoord))
   {
     ClearTerrainColumnChunks(World, chunkCoord, MaxHeight, MinHeight);
+    // Clearing a partial committed/disk column removes every terrain slice.
+    // Drop the completion marker too: Update uses it as its cheap candidate
+    // filter, so retaining it would make the now-absent column permanently
+    // invisible to reload and leave its neighbors with unresolvable face debt.
+    ProcedurallyGenerated.erase(chunkCoord);
     InvalidateTerrainCompleteCache(chunkCoord);
     ColumnGenStates.erase(chunkCoord);
     OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
