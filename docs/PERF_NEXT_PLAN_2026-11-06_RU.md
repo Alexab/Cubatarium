@@ -47,6 +47,14 @@ PERF-0.28 исправляет ложное событие `FirstDrawableCoverag
 - Расширять дедупликацию по доказанному input identity: incarnation, content/light revisions, coverage generation. Не связывать coverage с geometry revision.
 - Критерий: очереди и desired/published revisions стабилизируются, dirty и missing не растут.
 
+### Результат (2026-11-06, ветка `feature/perf-0-30-stop-convergence`, в работе)
+
+Witness1 (`bin/suite_reports/perf_0_30/witness1`, `CUBATARIUM_RELIGHT_WATCHDOG=1`): persistence FIFO дренирован (`pcols=0`), но телеметрия `RelightFifoN` замерла на 19 — ранний frame-budget return не обновляет post-emerge sample. `ShouldEnqueueLatchSideRelight` читает устаревшее 19 → backpressure(≥16) → `OnLitPendingNeeded` не энкуит `RelightThenMesh` → 20 чанков с orphaned pending-light маркерами, 27 census MissingMesh.
+
+Фикс: обновление `RelightFifoN`/`PendingLightN` на пути раннего выхода (`WorldStreaming.cpp`). Приёмка `acceptance1`: `pending_light_n` 20→0, missing 27→26, `face_debt=0`, `miss_end=0`, stop dirty=0 (критерий «без роста» выполнен), FPS без регрессии (21.7→22.0).
+
+Оставшийся слой (следующий шаг этапа): 26 колонок census MissingMesh при `pending_light_n=0` и полностью опустошённых очередях релайта; 93 dirty чанка revisited (`dirty_revisit_same_n=39`) с ~1 schedule/кадр без завершений; demand store: `demand_unsat_coverage=370`, `demand_unsat_face=375`, `demand_unsat_geom=91`, `demand_unsat_light=9`. Гипотеза: mesh-build для rim-срезов отклоняется гейтом settled-light/литости при остановке, а demand records накапливают coverage/face долги без повторных попыток. Инструмент: `focus_slice_trace` на финальном witness + watchdog.
+
 ## PERF-0.31 — визуальное отставание за пределами кольца
 
 Цель: сократить задержку появления мира после быстрого перелёта и загрузки.
