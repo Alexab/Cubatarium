@@ -3471,6 +3471,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.DrainRelightQueuesBudget(/*max_player_jobs=*/0,
                                        /*max_bg_columns=*/1);
       }
+      // The early return skips the post-emerge telemetry sample, so policies
+      // reading RelightFifoN/PendingLightN (ShouldEnqueueLatchSideRelight
+      // backpressure, pending-light recovery gates) would act on a value
+      // frozen at the last full-tick frame while the real persistence FIFO
+      // already drained to 0 (PERF-0.30 witness1: RelightFifoN=19 stale,
+      // pcols=0 — latch-side RelightThenMesh never enqueued, 20 chunks kept
+      // orphaned pending-light markers for the whole stop).
+      world.PhysicsTelemetryData.RelightFifoN =
+          world.Persistence
+              ? world.Persistence->GetPendingTerrainColumnRelightCount()
+              : 0;
+      world.PhysicsTelemetryData.PendingLightN =
+          static_cast<int>(world.GetPendingLightBeforeMeshCount());
       world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs = elapsed_main_ms();
       int bounded_commits = 0;
       if (ChunkScheduler && ready_before > 0)
