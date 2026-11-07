@@ -14,6 +14,7 @@ uniform sampler2D texture0;
 uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
+uniform float uFluidAlpha;
 uniform float uTextureVariation;
 uniform int uMaterialSeed;
 uniform float uMaterialTimePhase;
@@ -552,6 +553,9 @@ void main()
         }
         return;
     }
+    // Water surfaces render through the transparent pass with a tuned
+    // alpha (see desktop fshader_greedy.glsl).
+    FragColor.a *= uFluidAlpha;
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;
     }

@@ -50,6 +50,7 @@ uniform float uEnvSkyLightScale;
 uniform float uEnvLightDebug;
 uniform float uEnvLightDebugMode;
 uniform float uLightPreviewOverride;
+uniform float uFluidAlpha;
 uniform float uLightPreviewFade;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
@@ -584,6 +585,10 @@ void main()
         }
         return;
     }
+    // Water surfaces render through the transparent pass with a tuned
+    // alpha: an opaque fluid texture turns the surface (seen from below)
+    // and level-step planes into solid navy walls.
+    FragColor.a *= uFluidAlpha;
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;
     }

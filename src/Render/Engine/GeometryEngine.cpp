@@ -5901,12 +5901,16 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       }
       SetBlockAnimUniforms(greedyShader, head.blockId, textures);
       set_alpha_cutout_for_batch(head.AlphaCutout);
+      const bool head_is_fluid =
+          WorldInstance->GetBlockRegistry().GetRenderStyle(head.blockId) ==
+          BlockRenderStyle::Fluid;
       greedyShader->SetFloat(
           "uDebugFluidFragmentMarker",
-          fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
-                              head.blockId) == BlockRenderStyle::Fluid
-              ? 1.0f
-              : 0.0f);
+          fluid_marker && head_is_fluid ? 1.0f : 0.0f);
+      // Water surfaces render semi-transparent: an opaque fluid texture
+      // turns the surface seen from below and level-step planes into solid
+      // navy walls (PERF holes: World_245 user report).
+      greedyShader->SetFloat("uFluidAlpha", head_is_fluid ? 0.75f : 1.0f);
       greedyShader->SetFloat("uLightPreviewOverride",
                              light_preview.override_value);
       greedyShader->SetFloat("uLightPreviewFade", light_preview.fade);
