@@ -32,6 +32,9 @@ struct PhysicsTelemetry
   double ColumnEmergeDemandBreakdownMs{0.0};
   double ColumnEmergeDemandStopMs{0.0};
   double ChunkDemandMaintenanceMs{0.0};
+  /// PERF-0.30: chunks re-dirtied after a cancelled/reminted demand attempt
+  /// lost its admission owner (reclaim path from MaintainChunkRenderDemandStore).
+  int ChunkDemandReclaimDirtyN{0};
   int ColumnEmergeStageSampleCount{0};
   double ColumnEmergeStageSampleAgeMs{0.0};
   double BlockStepMs{0.0};

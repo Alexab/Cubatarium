@@ -2998,8 +2998,57 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
   const auto maintenance_t0 = std::chrono::high_resolution_clock::now();
   // ReconcileMaintenance visits at most 128 records and performs the orphan
   // cancellation while it walks them. Avoid a second full-map orphan scan.
-  (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
-                                                            now_ms);
+  const auto maintenance =
+      UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
+                                                          now_ms);
+  // A cancelled/reminted attempt leaves a live desire without an admission
+  // owner: its Dirty entry was lost, so no producer reaches NoteDemand and
+  // the record freezes (PERF-0.30 witness: des_g climbing, pub_g stuck,
+  // queues empty). Hand the coord back to the mesh pipeline; the normal
+  // admission re-mints the demand while enqueueing real work. Cooldown per
+  // coord: a build that cannot complete (deferred/stale-input) must not
+  // turn the reclaim into an orphan-cancel dirty loop (stop dirty churn).
+  if (MeshService && !maintenance.reclaim_coords.empty())
+  {
+    static std::unordered_map<glm::ivec2, double, GroundColumnHash>
+        s_last_reclaim_ms;
+    if (s_last_reclaim_ms.size() > 256)
+    {
+      s_last_reclaim_ms.clear();
+    }
+    for (const glm::ivec3 &coord : maintenance.reclaim_coords)
+    {
+      const glm::ivec2 col(coord.x, coord.z);
+      const double last = s_last_reclaim_ms.count(col) != 0
+                              ? s_last_reclaim_ms[col]
+                              : -1e9;
+      if (now_ms - last < 2000.0)
+      {
+        continue;
+      }
+      // Do not fight an intentional deferral: re-dirtying a withheld chunk
+      // recreates the orphan the reconcile just cancelled (stop dirty churn).
+      if (!MayMeshColumn(glm::ivec3(coord.x, 0, coord.z),
+                         /*underfeet_preview=*/false))
+      {
+        continue;
+      }
+      s_last_reclaim_ms[col] = now_ms;
+      const bool needs_first_mesh = !MeshService->HasDrawableGreedyMesh(coord);
+      const bool fully_dark_drawable =
+          !needs_first_mesh &&
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+      if (needs_first_mesh || fully_dark_drawable)
+      {
+        MeshService->GetCache().MarkDirtyPriority(coord);
+      }
+      else
+      {
+        MeshService->GetCache().MarkDirty(coord);
+      }
+      ++PhysicsTelemetryData.ChunkDemandReclaimDirtyN;
+    }
+  }
   PhysicsTelemetryData.ChunkDemandMaintenanceMs +=
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - maintenance_t0)
@@ -3084,8 +3133,31 @@ void UWorld::SampleColumnEmergeStageTelemetry()
             std::chrono::high_resolution_clock::now() - stage_t0)
             .count();
     stage_t0 = std::chrono::high_resolution_clock::now();
-    PhysicsTelemetryData.DemandStopConverged =
-        UChunkRenderDemandStore::Get().StopConverged(now_ms) ? 1 : 0;
+    // The scoped StopConverged consults world state (chunk lookup, column
+    // mesh admissibility) per open record — throttle the recompute to 4 Hz
+    // and cache the indicator between samples (PERF-0.30: per-frame lambda
+    // calls over ~400 open records cost visible main-thread time).
+    static double s_last_scoped_converge_ms = 0.0;
+    static int s_cached_scoped_converged = 0;
+    if (s_last_scoped_converge_ms <= 0.0 ||
+        now_ms - s_last_scoped_converge_ms >= 250.0)
+    {
+      s_last_scoped_converge_ms = now_ms;
+      s_cached_scoped_converged =
+          UChunkRenderDemandStore::Get().StopConverged(
+              now_ms,
+              [this](const glm::ivec3 &peer_coord)
+              {
+                return BlockWorld.GetChunkManager().GetChunk(peer_coord) !=
+                       nullptr;
+              },
+              [this](const glm::ivec3 &coord)
+              {
+                return !MayMeshColumn(glm::ivec3(coord.x, 0, coord.z),
+                                      /*underfeet_preview=*/false);
+              }) ? 1 : 0;
+    }
+    PhysicsTelemetryData.DemandStopConverged = s_cached_scoped_converged;
     PhysicsTelemetryData.ColumnEmergeDemandStopMs +=
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - stage_t0)
@@ -9330,6 +9402,35 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                   PhysicsTelemetryData.RelightCaptureInflightScanN) +
               " world_inflight_set=" +
               std::to_string(AsyncRelightColumnsInFlight.size()));
+      // PERF-0.30 convergence census: sample open demand records so a frozen
+      // stop state can be attributed (which class blocks, which domain is
+      // behind, retained/orphan flags).
+      {
+        std::vector<UChunkRenderDemandStore::UnsatisfiedSample> samples;
+        UChunkRenderDemandStore::Get().SampleUnsatisfiedRecords(6, samples);
+        for (const auto &s : samples)
+        {
+          CubatariumLogInfo(
+              "RelightStall",
+              "demand_sample coord=(" + std::to_string(s.coord.x) + "," +
+                  std::to_string(s.coord.y) + "," +
+                  std::to_string(s.coord.z) + ") des_g=" +
+                  std::to_string(s.desired_geom) + " pub_g=" +
+                  std::to_string(s.published_geom) + " des_l=" +
+                  std::to_string(s.desired_light) + " pub_l=" +
+                  std::to_string(s.published_light) + " des_c=" +
+                  std::to_string(s.desired_coverage) + " pub_c=" +
+                  std::to_string(s.published_coverage) + " debt=0x" +
+                  [&s]()
+                  {
+                    char buf[8];
+                    snprintf(buf, sizeof(buf), "%02x", s.face_debt_mask);
+                    return std::string(buf);
+                  }() +
+                  " retained=" + std::to_string(s.retained ? 1 : 0) +
+                  " orphan=" + std::to_string(s.orphan ? 1 : 0));
+        }
+      }
     }
   }
   const auto t0 = std::chrono::high_resolution_clock::now();

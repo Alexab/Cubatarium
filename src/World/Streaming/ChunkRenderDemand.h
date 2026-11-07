@@ -5,8 +5,10 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <glm/glm.hpp>
 #include <unordered_map>
+#include <vector>
 
 namespace cutum
 {
@@ -182,6 +184,25 @@ public:
   /// Counts open obligations by class (a record may increment several).
   UnsatisfiedBreakdown CountUnsatisfiedBreakdown() const;
 
+  /// PERF-0.30 diagnostic: fill up to max_samples open records with the
+  /// fields that attribute a frozen stop state (which class blocks and
+  /// whether the blocking domain is published). Diagnostic-only.
+  struct UnsatisfiedSample
+  {
+    glm::ivec3 coord{0};
+    uint64_t desired_geom{0};
+    uint64_t published_geom{0};
+    uint64_t desired_light{0};
+    uint64_t published_light{0};
+    uint64_t desired_coverage{0};
+    uint64_t published_coverage{0};
+    uint8_t face_debt_mask{0};
+    bool retained{false};
+    bool orphan{false};
+  };
+  void SampleUnsatisfiedRecords(int max_samples,
+                                std::vector<UnsatisfiedSample> &out) const;
+
   /// A26 N1: sole path to refresh published_* without InstallResult (shadow sync).
   /// Does not clear active/retain flags — use NoteInstallResult for lifecycle.
   void NotePublishedRevs(glm::ivec3 coord, uint64_t published_geom_rev,
@@ -242,6 +263,11 @@ public:
     int retained_awaiting{0};
     /// A40: stalled in-flight reminted to Created (one attempt, no Kick).
     int stalled_reschedule{0};
+    /// PERF-0.30: coords whose attempt was cancelled/reminted while the
+    /// desired revisions stay ahead of published — the admission owner was
+    /// lost, so the caller must re-dirty the chunk into the mesh pipeline.
+    /// Bounded; diagnostic and recovery aid, not a work queue.
+    std::vector<glm::ivec3> reclaim_coords;
   };
   /// Level check desired vs published; bounded scan for maintenance.
   /// Orphan Created only after grace (attempt_created_ms / last_progress).
@@ -256,7 +282,20 @@ public:
 
   /// After stop: published meets desired (geom/light/coverage), no face debt,
   /// Retain has live successor attempt, no orphan, no stall without progress.
-  bool StopConverged(double now_ms = 0.0) const;
+  /// PERF-0.30: optional world-informed loadedness predicate. A coverage
+  /// demand blocked only by face debts whose peers are all unloaded cannot
+  /// be serviced until a peer loads — with the predicate the caller scopes
+  /// such records out of stop convergence; without it the store keeps the
+  /// conservative behavior (every open record blocks).
+  using PeerLoadedFn = std::function<bool(const glm::ivec3 &peer_coord)>;
+  /// PERF-0.30: optional world-informed deferral predicate. A geometry
+  /// desire the world currently withholds meshing for (soft-defer empty
+  /// placeholder, stand diet) parks instead of blocking stop convergence;
+  /// the frontier re-mints it when the deferral lifts.
+  using MeshWithheldFn = std::function<bool(const glm::ivec3 &coord)>;
+  bool StopConverged(double now_ms = 0.0,
+                     const PeerLoadedFn &peer_loaded = {},
+                     const MeshWithheldFn &mesh_withheld = {}) const;
 
   uint64_t AlreadySatisfiedSkipN() const { return AlreadySatisfiedSkipN_; }
   uint64_t CoalesceN() const { return CoalesceN_; }
