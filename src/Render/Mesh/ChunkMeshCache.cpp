@@ -58,7 +58,12 @@ namespace cutum
 namespace
 {
 
-constexpr int kRemeshDeferredRingMax = 64;
+// PERF-0.30: the ring must hold the whole deferred population. Requeue
+// pops from the front and the diet pass re-defers to the back, so every
+// tick rotates the oldest entries out; with cap < population each rotation
+// permanently loses coords whose demand records stay open (no_attempt
+// blockers, witness acceptance10: no_attempt=45 with a thrashing ring).
+constexpr int kRemeshDeferredRingMax = 256;
 
 void LogSlowMeshCaptureStage(
     const char *stage, glm::ivec3 coord,
