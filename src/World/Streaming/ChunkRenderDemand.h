@@ -207,6 +207,15 @@ public:
   /// Does not clear active/retain flags — use NoteInstallResult for lifecycle.
   void NotePublishedRevs(glm::ivec3 coord, uint64_t published_geom_rev,
                          uint64_t published_light_rev);
+  /// PERF-0.30 reclaim cycle breaker: after repeated re-dirty attempts
+  /// produced no publication, the geometry/light desire target has climbed
+  /// only through queue-operation revision bumps (mark_dirty_enqueued) with
+  /// no content change and no build. Rebase the desired revs to the
+  /// published truth so the record stops blocking stop convergence; the
+  /// stale-light / halo scans re-raise a real demand when the mesh is
+  /// genuinely stale, and the next content change re-mints via NoteDemand.
+  /// Cancels a live attempt (it has no admission owner by definition here).
+  void RebaseDesiredToPublished(glm::ivec3 coord);
   /// Start or refresh this slice's one repair obligation for an OpenSky event.
   void NoteOpenSkyRepairRequired(glm::ivec3 coord, uint64_t event_id,
                                  uint64_t target_light_rev);

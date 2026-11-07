@@ -416,6 +416,29 @@ bool UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
   return true;
 }
 
+void UChunkRenderDemandStore::RebaseDesiredToPublished(glm::ivec3 coord)
+{
+  ChunkRenderDemandRecord *rec = Find(coord);
+  if (!rec)
+  {
+    return;
+  }
+  if (rec->published_geom_rev == 0 && rec->published_light_rev == 0)
+  {
+    return; // nothing published to rebase to — a first-mesh desire stays.
+  }
+  const DemandSnapshot before = SnapshotDemand(*rec);
+  rec->desired_geom_rev = rec->published_geom_rev;
+  rec->desired_light_rev = rec->published_light_rev;
+  if (rec->has_active_attempt)
+  {
+    rec->has_active_attempt = false;
+    rec->active_stage = JobStage::Cancelled;
+  }
+  TraceDemandTransition(coord, before, *rec,
+                        DemandTransitionKind::TargetAdvanced, 0.0);
+}
+
 void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
                                                 uint64_t published_geom_rev,
                                                 uint64_t published_light_rev)
