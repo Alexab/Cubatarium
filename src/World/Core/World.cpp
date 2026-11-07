@@ -3010,19 +3010,22 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
   // turn the reclaim into an orphan-cancel dirty loop (stop dirty churn).
   if (MeshService && !maintenance.reclaim_coords.empty())
   {
-    static std::unordered_map<glm::ivec2, double, GroundColumnHash>
-        s_last_reclaim_ms;
-    if (s_last_reclaim_ms.size() > 256)
+    struct ReclaimState
     {
-      s_last_reclaim_ms.clear();
+      double last_ms{-1e9};
+      int fruitless{0};
+    };
+    static std::unordered_map<glm::ivec2, ReclaimState, GroundColumnHash>
+        s_reclaim_state;
+    if (s_reclaim_state.size() > 256)
+    {
+      s_reclaim_state.clear();
     }
     for (const glm::ivec3 &coord : maintenance.reclaim_coords)
     {
       const glm::ivec2 col(coord.x, coord.z);
-      const double last = s_last_reclaim_ms.count(col) != 0
-                              ? s_last_reclaim_ms[col]
-                              : -1e9;
-      if (now_ms - last < 2000.0)
+      ReclaimState &state = s_reclaim_state[col];
+      if (now_ms - state.last_ms < 2000.0)
       {
         continue;
       }
@@ -3033,7 +3036,41 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
       {
         continue;
       }
-      s_last_reclaim_ms[col] = now_ms;
+      // Break the reclaim cycle: if consecutive reclaims produced no
+      // publication (the scheduler declines the chunk — rim diet, face-debt
+      // repair ownership), stop re-dirtying it. Every reclaim-dirty bumps
+      // the mesh revision and advances the demand target with no build, so
+      // the cycle des_g→orphan→cancel→reclaim was pure churn (PERF-0.30
+      // cycle_trace: des_g 12→18, pub_g=3, no attempts between bumps). The
+      // counter resets once the demand publishes.
+      if (const ChunkRenderDemandRecord *rec =
+              UChunkRenderDemandStore::Get().Find(coord))
+      {
+        if (rec->published_geom_rev >= rec->desired_geom_rev &&
+            rec->published_light_rev >= rec->desired_light_rev)
+        {
+          state.fruitless = 0;
+        }
+      }
+      if (state.fruitless >= 2)
+      {
+        state.last_ms = now_ms;
+        // Break the cycle honestly: the desire target climbed only through
+        // queue-operation bumps with no build and no content change. Rebase
+        // it to the published truth; the stale-light/halo scans re-raise a
+        // real demand when the mesh is genuinely stale.
+        UChunkRenderDemandStore::Get().RebaseDesiredToPublished(coord);
+        continue;
+      }
+      state.last_ms = now_ms;
+      const bool published_before =
+          [&coord]()
+          {
+            const ChunkRenderDemandRecord *rec =
+                UChunkRenderDemandStore::Get().Find(coord);
+            return rec && rec->published_geom_rev >= rec->desired_geom_rev &&
+                   rec->published_light_rev >= rec->desired_light_rev;
+          }();
       const bool needs_first_mesh = !MeshService->HasDrawableGreedyMesh(coord);
       const bool fully_dark_drawable =
           !needs_first_mesh &&
@@ -3045,6 +3082,10 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
       else
       {
         MeshService->GetCache().MarkDirty(coord);
+      }
+      if (!published_before)
+      {
+        ++state.fruitless;
       }
       ++PhysicsTelemetryData.ChunkDemandReclaimDirtyN;
     }
