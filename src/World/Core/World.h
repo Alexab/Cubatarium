@@ -55,6 +55,7 @@
 #include <optional>
 #include <string>
 #include <tuple>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -1614,6 +1615,14 @@ private:
   void RebuildBlockMesh();
   void InitStreamerCallbacks();
   void TickAsyncChunkSystems();
+  /// PERF holes A2: chunks populated while neighbor meshes were already
+  /// built (streaming arrival) must invalidate those neighbor meshes — the
+  /// mesher culled/kept faces against the then-absent chunk. The population
+  /// signal arrives from IO/generation threads; drain on the main tick.
+  void SubscribeChunkPopulationInvalidation();
+  void DrainChunkPopulationInvalidations();
+  std::mutex ChunkPopulationMutex_;
+  std::vector<glm::ivec3> ChunkPopulationPending_;
   void DrainAsyncRelightResults();
   void TickMeshEmerge();
   void ApplyUserToCamera(const std::shared_ptr<UUser> &user);

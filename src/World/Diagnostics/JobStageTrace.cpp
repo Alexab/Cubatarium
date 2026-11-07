@@ -1609,6 +1609,8 @@ const char *UJobStageTrace::MeshRevisionBumpReasonName(
     return "streamer_commit_sea_seam";
   case MeshRevisionBumpReason::PendingLightColumnRecovery:
     return "pending_light_column_recovery";
+  case MeshRevisionBumpReason::NeighborBecamePopulated:
+    return "neighbor_became_populated";
   case MeshRevisionBumpReason::PriorityWorldStreamingRepair:
     return "priority_world_streaming_repair";
   case MeshRevisionBumpReason::PriorityChunkEmergeRepair:

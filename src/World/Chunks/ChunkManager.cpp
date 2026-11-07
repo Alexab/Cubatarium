@@ -50,8 +50,14 @@ FluidCellState UChunkManager::GetFluidState(glm::ivec3 worldPos) const
 
 void UChunkManager::SetBlock(glm::ivec3 worldPos, BlockId Id)
 {
-  UChunk &chunk = GetOrCreateChunk(WorldToChunk(worldPos));
+  const glm::ivec3 chunkCoord = WorldToChunk(worldPos);
+  UChunk &chunk = GetOrCreateChunk(chunkCoord);
+  const bool was_air_only = chunk.IsAirOnly();
   chunk.SetBlockLocal(WorldToLocal(worldPos), Id);
+  if (was_air_only && !chunk.IsAirOnly() && OnChunkBecameNonAir)
+  {
+    OnChunkBecameNonAir(chunkCoord);
+  }
 }
 
 void UChunkManager::SetFluidState(glm::ivec3 worldPos, FluidCellState state)

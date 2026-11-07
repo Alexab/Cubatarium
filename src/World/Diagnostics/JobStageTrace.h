@@ -144,6 +144,7 @@ enum class MeshRevisionBumpReason : uint8_t
   PersistenceTerrainLoad,
   StreamerCommitSeaSeam,
   PendingLightColumnRecovery,
+  NeighborBecamePopulated,
   PriorityWorldStreamingRepair,
   PriorityChunkEmergeRepair,
   PriorityWorldCoreRepair,

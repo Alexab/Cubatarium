@@ -41,6 +41,10 @@ public:
   const UChunk *GetChunk(glm::ivec3 chunk_coord) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
   void EnsureChunk(glm::ivec3 chunk_coord);
+  /// Fired when a chunk transitions to non-air (its first populated block
+  /// arrives via SetBlock). Subscriber handles cross-thread sync; set once
+  /// before async IO starts.
+  std::function<void(glm::ivec3)> OnChunkBecameNonAir;
   void RemoveChunk(glm::ivec3 chunk_coord);
   void ForEachChunk(const std::function<void(const UChunk &)> &fn) const;
   /// Iterate each resident horizontal column once (coordinate Y is always 0).

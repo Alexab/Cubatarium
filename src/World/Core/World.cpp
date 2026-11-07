@@ -325,6 +325,7 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
     Collision.SetBlockRegistry(BlockRegistry.get());
   }
   MeshService->GetCache().SetRepairGuardWorld(&BlockWorld);
+  SubscribeChunkPopulationInvalidation();
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
   Environment.Initialize();
@@ -10913,8 +10914,50 @@ void UWorld::InitStreamerCallbacks()
   Streaming->InitStreamerCallbacks(*this);
 }
 
+void UWorld::SubscribeChunkPopulationInvalidation()
+{
+  BlockWorld.GetChunkManager().OnChunkBecameNonAir =
+      [this](glm::ivec3 coord)
+  {
+    std::lock_guard<std::mutex> lock(ChunkPopulationMutex_);
+    ChunkPopulationPending_.push_back(coord);
+  };
+}
+
+void UWorld::DrainChunkPopulationInvalidations()
+{
+  if (ChunkPopulationPending_.empty() || !MeshService)
+  {
+    return;
+  }
+  std::vector<glm::ivec3> became;
+  {
+    std::lock_guard<std::mutex> lock(ChunkPopulationMutex_);
+    became.swap(ChunkPopulationPending_);
+  }
+  if (became.size() > 512)
+  {
+    became.resize(512);
+  }
+  for (const glm::ivec3 &coord : became)
+  {
+    for (const glm::ivec3 &delta : {glm::ivec3(1, 0, 0), glm::ivec3(-1, 0, 0),
+                                    glm::ivec3(0, 1, 0), glm::ivec3(0, -1, 0),
+                                    glm::ivec3(0, 0, 1), glm::ivec3(0, 0, -1)})
+    {
+      const glm::ivec3 neighbor = coord + delta;
+      if (BlockWorld.GetChunkManager().HasChunk(neighbor))
+      {
+        MeshService->QueueMeshDependencyInvalidation(
+            neighbor, MeshRevisionBumpReason::NeighborBecamePopulated);
+      }
+    }
+  }
+}
+
 void UWorld::TickAsyncChunkSystems()
 {
+  DrainChunkPopulationInvalidations();
   if (CoopSession && CoopSession->Active && CoopSession->BlocksStreamingTick())
   {
     return;
