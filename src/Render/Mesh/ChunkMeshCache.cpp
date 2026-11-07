@@ -10666,7 +10666,24 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
         const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
         const int horiz = std::max(dx, dz);
-        if (horiz > MeshFocusRadiusChunks || HasDrawableGreedyMesh(*it))
+        // A drawable mesh with an unpublished geometry desire is still owed a
+        // rebuild: pass-1's unconditional HasDrawableGreedyMesh skip left
+        // such entries unscheduled forever (the demand attempt churned
+        // created->cancelled while the published stale mesh showed holes —
+        // World_245 void witness: (10,4,19) des_g=6 pub_g=5, voxel march
+        // hits solid leaves with water drawn behind the missing faces).
+        bool drawable_with_geom_debt = false;
+        if (HasDrawableGreedyMesh(*it))
+        {
+          if (const ChunkRenderDemandRecord *rec =
+                  UChunkRenderDemandStore::Get().Find(*it))
+          {
+            drawable_with_geom_debt =
+                rec->desired_geom_rev > rec->published_geom_rev;
+          }
+        }
+        if (horiz > MeshFocusRadiusChunks ||
+            (HasDrawableGreedyMesh(*it) && !drawable_with_geom_debt))
         {
           ++LastMeshDirtyScheduleSkipOutsideFocusFmN;
           ++it;
