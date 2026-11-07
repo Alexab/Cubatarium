@@ -383,6 +383,7 @@ public:
   const UBlockWorld &GetBlockWorld() const { return BlockWorld; }
   UBlockWorld &GetBlockWorld() { return BlockWorld; }
   UBlockRegistry &GetBlockRegistry() { return *BlockRegistry; }
+  bool HasBlockRegistry() const { return BlockRegistry != nullptr; }
   const UBlockRegistry &GetBlockRegistry() const { return *BlockRegistry; }
 
   UWorldMeshService &GetMeshService();

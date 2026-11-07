@@ -98,3 +98,13 @@
 ### Счётчики свидетеля (финал)
 
 `stale_geom_accepted=206`, `stale_light_accepted=813`, `relight_apply_n=0`, `pending_light_n=3`, missing=12, ready=109, `visual_holes=0` (детектор по-прежнему не видит неверные меши).
+
+## 8. Результаты фикса B и уточнённый корень (2026-11-07, `feature/perf-0-30-deferred-eviction`)
+
+Введена сверка после загрузки (`FinalizeCooperativeLoadForEnterGame`): не-air чанки с `LightFieldRevision<=1` получают синхронный `RelightChunk` + settle. Census (world245_fix2): `relit=920, rev0=0, rev1=817, rev2p=164` — reconcile отработал, **но чёрные пробы остались (72), field_lr чёрных чанков остался 1**.
+
+**Уточнённый корень класса B: `kRelightFrontierIterationsColumn = 0`** (`ChunkLighting.h:17`). Колоночные relight'ы (load-фаза и runtime async) считают свет только своей колонки без frontier-перелива: тёмный регион колонок взаимно согласован (граничные условия соседей тоже тёмные), и ни один существующий путь, кроме edit-relight (у которого frontier-итерации есть), не может в него просветить. Отсюда и все наблюдения: чернота постоянна между сессиями, «лечится» установкой блока, stale/halo-сканы проходят.
+
+**Фикс (следующий цикл, требует witness + perf-приёмку):** включить cross-column распространение — захват 3×3 колоночного окружения в async column relight (сейчас `column_center_only=true`, соседи — только face-шеллы) + 1–2 frontier-итерации в `UChunkRelightSnapshot::Compute` для колонкового пути. Стоимость: ~9× чанков на задачу (после union-флада — приемлемо), глубина конвейера уже капится. Альтернатива дешевле: frontier только для колонок, чьи соседи имеют более высокий свет (targeted).
+
+Класс A (пустота) — ждёт повторный witness в точке дыр (позиция пользователя).

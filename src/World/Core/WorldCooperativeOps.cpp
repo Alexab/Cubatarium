@@ -303,6 +303,58 @@ void MarkSpawnAreaPreparedAfterCooperativeLoad(UWorld &world,
 
 void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
 {
+  // PERF holes H-1/H-2 (World_245 witness): the load skylight bulk queue is
+  // built from the chunks loaded at that moment; columns generated later are
+  // missed by the bulk pass and receive only the single column-phase bump
+  // (LightFieldRevision==1). The self-consistent low field passes meshed-vs-
+  // field and halo checks (neighbors share rev 1), so dark faces persist
+  // until an edit forces a real relight. Reconcile once at load completion:
+  // any non-air chunk still at the initial revision gets a synchronous real
+  // relight with all neighbors present.
+  if (world.HasBlockRegistry())
+  {
+    int reconciled = 0;
+    world.GetBlockWorld().GetChunkManager().ForEachChunk(
+        [&](const UChunk &chunk)
+        {
+          if (chunk.IsAirOnly() || chunk.GetLightFieldRevision() > 1)
+          {
+            return;
+          }
+          world.GetLightingPipeline().RelightChunk(
+              world.GetBlockWorld(), world.GetBlockRegistry(),
+              chunk.GetCoord(), false, true);
+          world.NoteChunkSliceLightCalculationSettled(chunk.GetCoord());
+          ++reconciled;
+        });
+    uint64_t rev0 = 0, rev1 = 0, rev2p = 0;
+    world.GetBlockWorld().GetChunkManager().ForEachChunk(
+        [&](const UChunk &chunk)
+        {
+          if (chunk.IsAirOnly())
+          {
+            return;
+          }
+          const uint64_t rev = chunk.GetLightFieldRevision();
+          if (rev == 0)
+          {
+            ++rev0;
+          }
+          else if (rev == 1)
+          {
+            ++rev1;
+          }
+          else
+          {
+            ++rev2p;
+          }
+        });
+    CubatariumLogInfo("WorldLoad",
+                      "SkylightReconcile relit=" + std::to_string(reconciled) +
+                          " rev0=" + std::to_string(rev0) +
+                          " rev1=" + std::to_string(rev1) +
+                          " rev2p=" + std::to_string(rev2p));
+  }
   if (kind == WorldCoopKind::Load)
   {
     MarkSpawnAreaPreparedAfterCooperativeLoad(world, kind);
