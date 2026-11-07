@@ -647,8 +647,19 @@ void main()
 
     if (uFogEnabled > 0.5) {
         float dist = length(vWorldPos - uCameraPos);
+        float fog_start = uFogStart;
+        float fog_end = uFogEnd;
+        // Provisional (unsettled-light) first meshes dissolve into the
+        // horizon early: their ambient-floor color at distance read as dark
+        // navy silhouettes of the terrain shape between the lit near field
+        // and the full-fog horizon. Real light eases in on approach.
+        if ((vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
+            uEnvLightDebugMode <= 0.5) {
+            fog_start = min(fog_start, uFogEnd * 0.35);
+            fog_end = min(fog_end, uFogEnd * 0.85);
+        }
         float fog_factor = computeDistanceFogFactor(
-            dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
+            dist, fog_start, fog_end, uFogMinBlend, uFogDensity);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog_factor);
     } else if (uAirFogEnabled > 0.5 && !frag_underwater) {
         float dist;
