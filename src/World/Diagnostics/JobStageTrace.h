@@ -421,6 +421,13 @@ struct VisualBlackTraceRecord
   float renderer_pixel_fluid_block_light{-1.0f};
   float renderer_pixel_fluid_light_preview{-1.0f};
   float renderer_pixel_fluid_wetness{-1.0f};
+  /// PERF holes: CPU recomputation of the shader's underwater fog inputs at
+  /// the voxel hit position (attribution of the underwater fog inversion).
+  int renderer_pixel_fog_submerged{-1};
+  int renderer_pixel_fog_sy_valid{-1};
+  float renderer_pixel_fog_sy{-1.0f};
+  int renderer_pixel_fog_fragment_below{-1};
+  float renderer_pixel_fog_factor{-1.0f};
   /// sample_kind=9 distinguishes CPU fluid geometry in the raw mesh snapshot
   /// from the ready transparent refs and resident/visible transparent MDI
   /// command for the exact sea-plane surface chunk.

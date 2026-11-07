@@ -5785,6 +5785,16 @@ void UFramePerfMonitor::Shutdown()
                  << static_cast<int>(r.renderer_pixel_underwater_fog_enabled)
                  << ",\"renderer_pixel_underwater_fog_submerged\":"
                  << static_cast<int>(r.renderer_pixel_underwater_fog_submerged)
+                 << ",\"renderer_pixel_fog_submerged\":"
+                 << r.renderer_pixel_fog_submerged
+                 << ",\"renderer_pixel_fog_sy_valid\":"
+                 << r.renderer_pixel_fog_sy_valid
+                 << ",\"renderer_pixel_fog_sy\":"
+                 << r.renderer_pixel_fog_sy
+                 << ",\"renderer_pixel_fog_fragment_below\":"
+                 << r.renderer_pixel_fog_fragment_below
+                 << ",\"renderer_pixel_fog_factor\":"
+                 << r.renderer_pixel_fog_factor
                  << ",\"renderer_pixel_camera_pos_x\":"
                  << r.renderer_pixel_camera_pos_x
                  << ",\"renderer_pixel_camera_pos_y\":"
@@ -6471,6 +6481,16 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_fluid_light_preview
                << ",\"renderer_pixel_fluid_wetness\":"
                << r.renderer_pixel_fluid_wetness
+               << ",\"renderer_pixel_fog_submerged\":"
+               << r.renderer_pixel_fog_submerged
+               << ",\"renderer_pixel_fog_sy_valid\":"
+               << r.renderer_pixel_fog_sy_valid
+               << ",\"renderer_pixel_fog_sy\":"
+               << r.renderer_pixel_fog_sy
+               << ",\"renderer_pixel_fog_fragment_below\":"
+               << r.renderer_pixel_fog_fragment_below
+               << ",\"renderer_pixel_fog_factor\":"
+               << r.renderer_pixel_fog_factor
                << ",\"renderer_pixel_probe_id\":"
                << r.renderer_pixel_probe_id
                << ",\"renderer_pixel_sample_time_ms\":"

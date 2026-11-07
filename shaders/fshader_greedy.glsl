@@ -624,7 +624,10 @@ void main()
         int bottom_block_index_y = int(round(bottom_block_y));
         bool in_fluid_span = false;
         if (uUnderwaterFogSubmerged > 0.5) {
-            in_fluid_span = true;
+            // Camera submerged: the tint still must not reach fragments above
+            // their local water surface (the far shore rises out of the water
+            // and was fogged like the underwater middle ground).
+            in_fluid_span = vWorldPos.y <= sy + 0.01;
         } else if (bottom_block_index_y < 500 &&
                    block_index_y <= surface_block_y) {
             if (block_index_y + 1 >= bottom_block_index_y) {

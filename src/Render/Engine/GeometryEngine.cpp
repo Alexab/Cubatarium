@@ -98,6 +98,9 @@ namespace cutum
 
 namespace
 {
+// PERF holes: the fluid surface map reference for the probe diagnostics.
+// Set once per frame by the engine before the probe capture walks.
+const UFluidSurfaceMap *g_probe_fluid_map = nullptr;
 
 constexpr int kPackedNearHoriz = 4;
 
@@ -881,6 +884,7 @@ void CaptureGpuRangeWitness(
       record.renderer_pixel_voxel_hit_x == -2701 &&
       record.renderer_pixel_voxel_hit_y == 52 &&
       record.renderer_pixel_voxel_hit_z == 75;
+
   const GpuOpaqueDrawStateWitness &draw_state =
       g_gpu_opaque_draw_state_witness;
   if (exact_m483_gap && draw_state.valid &&
@@ -1633,7 +1637,7 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
 
 void CaptureTransparentPixelProbe(
     UWorld &world, const UUnderwaterFogPass &fog_pass,
-    const UChunkMeshCache &cache,
+    const UFluidSurfaceMap &fluid_map, const UChunkMeshCache &cache,
     const std::vector<GreedyBatchRef> &opaque_refs,
     const std::vector<GreedyBatchRef> &transparent_refs,
     const std::vector<GreedyBatchRef> &ready_transparent_refs,
@@ -1828,6 +1832,7 @@ void CaptureTransparentPixelProbe(
           fog_pass.GetUnderwaterFogEnabled() > 0.5f ? 1u : 0u;
       record.renderer_pixel_underwater_fog_submerged =
           fog_pass.GetUnderwaterFogSubmerged() > 0.5f ? 1u : 0u;
+
       record.renderer_pixel_camera_pos_x = camera_position.x;
       record.renderer_pixel_camera_pos_y = camera_position.y;
       record.renderer_pixel_camera_pos_z = camera_position.z;
@@ -2176,6 +2181,7 @@ void CaptureTransparentPixelProbe(
           record.renderer_pixel_voxel_hit_x = voxel_witness.block.x;
           record.renderer_pixel_voxel_hit_y = voxel_witness.block.y;
           record.renderer_pixel_voxel_hit_z = voxel_witness.block.z;
+
           record.renderer_pixel_voxel_hit_block_id =
               static_cast<int32_t>(voxel_witness.block_id);
           record.renderer_pixel_voxel_previous_block_id =
@@ -2183,6 +2189,53 @@ void CaptureTransparentPixelProbe(
           record.renderer_pixel_voxel_entry_face =
               voxel_witness.entry_face;
           record.renderer_pixel_voxel_hit_distance = voxel_witness.distance;
+      // PERF holes: CPU recomputation of the shader's underwater fog inputs
+      // at the voxel hit position — attribution of the fog inversion.
+      if (const glm::vec3 hit_pos =
+              glm::vec3(record.renderer_pixel_voxel_hit_x,
+                        record.renderer_pixel_voxel_hit_y,
+                        record.renderer_pixel_voxel_hit_z);
+          record.renderer_pixel_voxel_hit_block_id > 0 &&
+          std::isfinite(hit_pos.x))
+      {
+        const float uw_start = fog_pass.GetUnderwaterFogStart();
+        const float uw_end = fog_pass.GetUnderwaterFogEnd();
+        const float uw_min_blend = fog_pass.GetUnderwaterFogMinBlend();
+        const bool submerged =
+            fog_pass.GetUnderwaterFogSubmerged() > 0.5f;
+        record.renderer_pixel_fog_submerged = submerged ? 1 : 0;
+        const auto &fluid_surface = *g_probe_fluid_map;
+        const int sx = static_cast<int>(std::floor(hit_pos.x));
+        const int sz = static_cast<int>(std::floor(hit_pos.z));
+        float sy = 1e9f;
+        bool sy_valid = false;
+        if (fluid_surface.SampleSurfaceWorld(
+                glm::ivec2(sx, sz), sy))
+        {
+          sy_valid = sy < 1e8f;
+        }
+        record.renderer_pixel_fog_sy_valid = sy_valid ? 1 : 0;
+        record.renderer_pixel_fog_sy = sy_valid ? sy : -1.0f;
+        const bool below = sy_valid && hit_pos.y < sy;
+        record.renderer_pixel_fog_fragment_below = below ? 1 : 0;
+        float factor = 0.0f;
+        if (below || submerged)
+        {
+          const float dist = submerged
+                                 ? glm::length(hit_pos - camera_position)
+                                 : (sy - hit_pos.y) /
+                                       std::max(
+                                           std::abs(glm::normalize(
+                                               hit_pos - camera_position)
+                                                        .y),
+                                           0.001f);
+          factor = glm::clamp(
+              (dist - uw_start) / std::max(uw_end - uw_start, 0.001f),
+              0.0f, 1.0f);
+          factor = std::max(factor, uw_min_blend);
+        }
+        record.renderer_pixel_fog_factor = factor;
+      }
           const glm::ivec3 voxel_chunk =
               UChunkManager::WorldToChunk(voxel_witness.block);
           if (voxel_witness.entry_face < 6u)
@@ -3305,7 +3358,8 @@ void NoteFrustumCoverageGaps(
     mdi_store->SyncCompactVisToCpu(mdi_cutout_pass);
     mdi_store->SyncCompactVisToCpu(mdi_transparent_pass);
   }
-  CaptureTransparentPixelProbe(world, fog_pass, cache, opaque_refs,
+  CaptureTransparentPixelProbe(world, fog_pass, *g_probe_fluid_map, cache,
+                                 opaque_refs,
                                transparent_refs, ready_transparent_refs,
                                mdi_opaque_pass, mdi_cutout_pass,
                                mdi_transparent_pass, textures,
@@ -5327,6 +5381,7 @@ void UGeometryEngine::PrepareFrameRendering()
     camera_weather =
         WorldInstance->SampleWeatherAt(weather_camera->GetPosition());
   }
+  g_probe_fluid_map = &FluidMap();
   UnderwaterFogPass_.Update(*WorldInstance, Render, FluidMap(), BaseSkyColor,
                             inv_view_rot, &camera_weather);
   skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);

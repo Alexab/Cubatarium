@@ -54,6 +54,29 @@ public:
   glm::vec2 GetOriginBlockXZ() const { return OriginBlockXZ; }
   glm::vec2 GetInvSizeBlocks() const { return InvSizeBlocks; }
   int GetSizeBlocks() const { return SizeBlocks; }
+  /// PERF holes diagnostic: surface height at one world block column.
+  /// False when the texel is outside the window or the sentinel.
+  bool SampleSurfaceWorld(glm::ivec2 world_block_xz, float &surface_y) const
+  {
+    if (SizeBlocks <= 0 || SurfaceStaging.empty())
+    {
+      return false;
+    }
+    const int lx = world_block_xz.x - WindowOriginBlock.x;
+    const int lz = world_block_xz.y - WindowOriginBlock.y;
+    if (lx < 0 || lz < 0 || lx >= SizeBlocks || lz >= SizeBlocks)
+    {
+      return false;
+    }
+    const float value = SurfaceStaging[static_cast<size_t>(
+        lz * SizeBlocks + lx)];
+    if (value <= URenderFogSettings::NoSurfaceSentinel + 1.0f)
+    {
+      return false;
+    }
+    surface_y = value;
+    return true;
+  }
   const FluidSurfaceMapFrameStats &GetLastFrameStats() const
   {
     return LastFrameStats;
