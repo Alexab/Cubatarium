@@ -3195,15 +3195,16 @@ void UWorld::SampleColumnEmergeStageTelemetry()
               },
             [this](const glm::ivec3 &coord)
             {
-              // Withheld by column policy OR parked in the schedule diet's
-              // deferred ring: re-dirtying either recreates the demand
-              // orphan the reconcile just cancelled (PERF-0.30 census:
-              // orphan=198, mesh_dirty_schedule_skip_outside_focus_n=55 —
-              // the diet removed the queue entry while the demand stayed
-              // open). RequeueDeferredRemesh re-enters deferred work.
+              // Withheld by column policy, parked in the schedule diet's
+              // deferred ring, or simply outside the diet's focus radius:
+              // the requeue/defer rotation moves coords in and out of the
+              // ring every tick, so only the focus-radius rule is stable.
+              // Demand records for such chunks park instead of blocking
+              // stop convergence; motion re-enters them via the frontier.
               return !MayMeshColumn(glm::ivec3(coord.x, 0, coord.z),
                                     /*underfeet_preview=*/false) ||
-                     MeshService->GetCache().IsRemeshDeferred(coord);
+                     MeshService->GetCache().IsRemeshDeferred(coord) ||
+                     MeshService->GetCache().IsOutsideScheduleFocus(coord);
             }) ? 1 : 0;
     }
     PhysicsTelemetryData.DemandStopConverged = s_cached_scoped_converged;
@@ -9450,7 +9451,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
               std::to_string(
                   PhysicsTelemetryData.RelightCaptureInflightScanN) +
               " world_inflight_set=" +
-              std::to_string(AsyncRelightColumnsInFlight.size()));
+              std::to_string(AsyncRelightColumnsInFlight.size()) +
+              " deferred_ring=" +
+              std::to_string(MeshService
+                                 ? MeshService->GetCache().GetRemeshDeferredCount()
+                                 : -1));
       // PERF-0.30 convergence census: sample open demand records so a frozen
       // stop state can be attributed (which class blocks, which domain is
       // behind, retained/orphan flags).

@@ -119,6 +119,26 @@ public:
   {
     return RemeshDeferredSet_.count(chunk_coord) != 0;
   }
+  /// PERF-0.30 diagnostic: current deferred-ring population.
+  int GetRemeshDeferredCount() const
+  {
+    return static_cast<int>(RemeshDeferredSet_.size());
+  }
+  /// PERF-0.30: the stop-phase schedule diet territory — chunks outside the
+  /// focus radius are deferred regardless of the transient deferred-ring
+  /// membership (the requeue/dief rotation moves coords in and out every
+  /// tick, so ring membership alone flaps). Demand records for such chunks
+  /// park instead of blocking stop convergence.
+  bool IsOutsideScheduleFocus(glm::ivec3 chunk_coord) const
+  {
+    if (!MeshFocusValid)
+    {
+      return false;
+    }
+    const int dx = std::abs(chunk_coord.x - MeshFocusGroundChunk.x);
+    const int dz = std::abs(chunk_coord.z - MeshFocusGroundChunk.z);
+    return std::max(dx, dz) > MeshFocusRadiusChunks;
+  }
   int GetStaleLightRemeshBacklogN() const
   {
     return static_cast<int>(PendingStaleLightRemeshes_.size());
