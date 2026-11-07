@@ -306,6 +306,33 @@ public:
                      const PeerLoadedFn &peer_loaded = {},
                      const MeshWithheldFn &mesh_withheld = {}) const;
 
+  /// PERF-0.30 diagnostic: classify the exact rules that hold stop
+  /// convergence back, with sample coords per class. Same classifier as
+  /// StopConverged; counts[index] maps to StopBlockerCensus::kNames[index].
+  struct StopBlockerCensus
+  {
+    static constexpr const char *kNames[] = {
+        "orphan",       "face_revs_behind", "coverage_unscoped",
+        "coverage_serviceable", "coverage_behind", "retain_loop",
+        "retain_no_attempt", "no_attempt", "stall"};
+    int counts[9]{};
+    std::vector<glm::ivec3> samples[9];
+  };
+  void CountStopBlockers(double now_ms, const PeerLoadedFn &peer_loaded,
+                         const MeshWithheldFn &mesh_withheld,
+                         StopBlockerCensus &out) const;
+
+private:
+  /// Detailed StopBlocker ids for the census (definition in the .cpp):
+  /// 1=orphan 2=face_revs_behind 3=coverage_unscoped 4=coverage_serviceable
+  /// 5=coverage_behind 6=retain_loop 7=retain_no_attempt 8=no_attempt
+  /// 9=stall. 0 = converged/skipped.
+  int ClassifyStopBlocker(const ChunkRenderDemandRecord &rec, double now_ms,
+                          const PeerLoadedFn &peer_loaded,
+                          const MeshWithheldFn &mesh_withheld) const;
+
+public:
+
   uint64_t AlreadySatisfiedSkipN() const { return AlreadySatisfiedSkipN_; }
   uint64_t CoalesceN() const { return CoalesceN_; }
   uint64_t NewDemandN() const { return NewDemandN_; }

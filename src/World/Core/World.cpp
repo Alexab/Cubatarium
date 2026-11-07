@@ -3032,7 +3032,8 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
       // Do not fight an intentional deferral: re-dirtying a withheld chunk
       // recreates the orphan the reconcile just cancelled (stop dirty churn).
       if (!MayMeshColumn(glm::ivec3(coord.x, 0, coord.z),
-                         /*underfeet_preview=*/false))
+                         /*underfeet_preview=*/false) ||
+          MeshService->GetCache().IsRemeshDeferred(coord))
       {
         continue;
       }
@@ -3192,11 +3193,18 @@ void UWorld::SampleColumnEmergeStageTelemetry()
                 return BlockWorld.GetChunkManager().GetChunk(peer_coord) !=
                        nullptr;
               },
-              [this](const glm::ivec3 &coord)
-              {
-                return !MayMeshColumn(glm::ivec3(coord.x, 0, coord.z),
-                                      /*underfeet_preview=*/false);
-              }) ? 1 : 0;
+            [this](const glm::ivec3 &coord)
+            {
+              // Withheld by column policy OR parked in the schedule diet's
+              // deferred ring: re-dirtying either recreates the demand
+              // orphan the reconcile just cancelled (PERF-0.30 census:
+              // orphan=198, mesh_dirty_schedule_skip_outside_focus_n=55 —
+              // the diet removed the queue entry while the demand stayed
+              // open). RequeueDeferredRemesh re-enters deferred work.
+              return !MayMeshColumn(glm::ivec3(coord.x, 0, coord.z),
+                                    /*underfeet_preview=*/false) ||
+                     MeshService->GetCache().IsRemeshDeferred(coord);
+            }) ? 1 : 0;
     }
     PhysicsTelemetryData.DemandStopConverged = s_cached_scoped_converged;
     PhysicsTelemetryData.ColumnEmergeDemandStopMs +=
@@ -9446,6 +9454,44 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       // PERF-0.30 convergence census: sample open demand records so a frozen
       // stop state can be attributed (which class blocks, which domain is
       // behind, retained/orphan flags).
+      // PERF-0.30 convergence census: classify the exact rules that hold
+      // stop convergence back, with sample coords per class.
+      {
+        UChunkRenderDemandStore::StopBlockerCensus census;
+        UChunkRenderDemandStore::Get().CountStopBlockers(
+            now_ms,
+            [this](const glm::ivec3 &peer_coord)
+            {
+              return BlockWorld.GetChunkManager().GetChunk(peer_coord) !=
+                     nullptr;
+            },
+            [this](const glm::ivec3 &coord)
+            {
+              return !MayMeshColumn(glm::ivec3(coord.x, 0, coord.z),
+                                    /*underfeet_preview=*/false);
+            },
+            census);
+        for (int i = 0; i < 9; ++i)
+        {
+          if (census.counts[i] <= 0)
+          {
+            continue;
+          }
+          std::string samples;
+          for (const glm::ivec3 &c : census.samples[i])
+          {
+            samples += " (" + std::to_string(c.x) + "," +
+                       std::to_string(c.y) + "," + std::to_string(c.z) + ")";
+          }
+          CubatariumLogInfo("RelightStall",
+                            "blocker_census " +
+                                std::string(
+                                    UChunkRenderDemandStore::
+                                        StopBlockerCensus::kNames[i]) +
+                                " n=" + std::to_string(census.counts[i]) +
+                                samples);
+        }
+      }
       {
         std::vector<UChunkRenderDemandStore::UnsatisfiedSample> samples;
         UChunkRenderDemandStore::Get().SampleUnsatisfiedRecords(6, samples);

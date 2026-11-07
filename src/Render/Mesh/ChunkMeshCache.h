@@ -111,6 +111,14 @@ public:
   {
     return PendingStaleLightRemeshes_.count(chunk_coord) != 0;
   }
+  /// PERF-0.30: the coord was intentionally deferred by the stop-phase
+  /// schedule diet (DeferRemeshCoord) and sits in the bounded deferred ring.
+  /// Demand records for such chunks park instead of blocking stop
+  /// convergence; RequeueDeferredRemesh re-enters them when the focus moves.
+  bool IsRemeshDeferred(glm::ivec3 chunk_coord) const
+  {
+    return RemeshDeferredSet_.count(chunk_coord) != 0;
+  }
   int GetStaleLightRemeshBacklogN() const
   {
     return static_cast<int>(PendingStaleLightRemeshes_.size());
