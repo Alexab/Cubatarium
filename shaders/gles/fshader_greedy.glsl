@@ -141,14 +141,16 @@ void fluidSurfaceContextAt(vec2 worldXZ, out float surface_y, out uint fluid_ind
             continue;
         }
         if (fluid_index == 0u) {
-            surface_y = sy_nb;
-            fluid_index = fi_nb;
-            bottom_block_y = fluidBottomBlockYAt(neighbor);
-        } else if (sy_nb > surface_y) {
+            // Own texel missing: fall back to the neighbor so the waterline
+            // has no gaps at map seams.
             surface_y = sy_nb;
             fluid_index = fi_nb;
             bottom_block_y = fluidBottomBlockYAt(neighbor);
         }
+        // A valid own texel wins even when a neighbor's surface is higher:
+        // taking the max classified fragments above their own water as
+        // "deep underwater" at every level difference (waterlines covering
+        // trunks, water-under-water planes, non-monotonic fog).
     }
 }
 
