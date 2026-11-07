@@ -336,7 +336,13 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   if (face_style == BlockRenderStyle::Fluid &&
       CellHasRenderableFluid(reader, registry, catalog, neighbor_pos))
   {
-    return MeshIsLiquid(registry, catalog, neighbor) && neighbor == face_id;
+    // The neighbor cell presents the water surface itself (a liquid twin or
+    // a waterlogged permeable block). Hiding only the liquid twin left the
+    // water face drawn against every waterlogged leaf cell — the floating
+    // water rectangles inside flooded crowns (World_245 witness: CPU voxel
+    // march hits leaves 560, GPU draws water). The permeable cell renders
+    // its own top surface; the separating plane is redundant.
+    return true;
   }
 
   const bool face_transparent =
