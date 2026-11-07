@@ -633,12 +633,7 @@ void main()
                 in_fluid_span = true;
             }
         }
-        // PERF holes: strict "< sy" excluded the water surface faces themselves
-        // (they sit AT sy) — the surface skipped the underwater tint at any
-        // distance and glowed with the raw texture while the terrain below
-        // fogged out: the bright far planes and the non-monotonic fog.
-        if (in_fluid_span && fi > 0u && sy < 1e8 &&
-            vWorldPos.y <= sy + 0.01) {
+        if (in_fluid_span && fi > 0u && sy < 1e8 && vWorldPos.y < sy) {
             frag_underwater = true;
             underwater_fog_color = uUnderwaterFogColors[int(fi)];
             float dist = length(vWorldPos - uCameraPos);
