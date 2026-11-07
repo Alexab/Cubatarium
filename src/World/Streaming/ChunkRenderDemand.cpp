@@ -1,5 +1,7 @@
 #include "World/Streaming/ChunkRenderDemand.h"
 
+#include "Render/Mesh/ChunkMeshFace.h"
+
 #include <algorithm>
 #include <chrono>
 #include <iterator>
@@ -933,6 +935,18 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
         TraceDemandTransition(rec.coord, before, rec,
                               DemandTransitionKind::InstallCancelled,
                               now_ms, /*result=*/16);
+        // The cancelled desire still leads publication (des > pub); without a
+        // Dirty entry no producer ever reaches NoteDemand again and the record
+        // freezes (PERF-0.30 witness: des_g climbing while pub_g stuck, queues
+        // empty). Report the coord so the caller can re-dirty the chunk.
+        if (rec.desired_geom_rev > rec.published_geom_rev ||
+            rec.desired_light_rev > rec.published_light_rev)
+        {
+          if (stats.reclaim_coords.size() < 16)
+          {
+            stats.reclaim_coords.push_back(rec.coord);
+          }
+        }
       }
     }
     // A40 P3: stall > SLA → remint one Created attempt (keep desire). Not Kick.
@@ -961,6 +975,16 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
                                 ? DemandTransitionKind::AttemptReminted
                                 : DemandTransitionKind::InstallCancelled,
                             now_ms);
+      // A reminted attempt has no queue entry either (A40 P3: "Not Kick");
+      // report it for re-dirty like an orphan cancel.
+      if (rec.desired_geom_rev > rec.published_geom_rev ||
+          rec.desired_light_rev > rec.published_light_rev)
+      {
+        if (stats.reclaim_coords.size() < 16)
+        {
+          stats.reclaim_coords.push_back(rec.coord);
+        }
+      }
     }
     if (rec.retained_awaiting_successor)
     {
@@ -1042,21 +1066,117 @@ UChunkRenderDemandStore::CountUnsatisfiedBreakdown() const
   return CachedUnsatisfiedBreakdown_;
 }
 
-bool UChunkRenderDemandStore::StopConverged(double now_ms) const
+void UChunkRenderDemandStore::SampleUnsatisfiedRecords(
+    int max_samples, std::vector<UnsatisfiedSample> &out) const
+{
+  out.clear();
+  if (max_samples <= 0)
+  {
+    return;
+  }
+  out.reserve(static_cast<size_t>(max_samples));
+  for (const auto &kv : Records_)
+  {
+    const ChunkRenderDemandRecord &rec = kv.second;
+    const bool open = rec.desired_geom_rev != 0 ||
+                      rec.desired_light_rev != 0 ||
+                      rec.desired_coverage_gen != 0 ||
+                      rec.face_debt_mask != 0;
+    if (!open)
+    {
+      continue;
+    }
+    UnsatisfiedSample sample;
+    sample.coord = kv.first;
+    sample.desired_geom = rec.desired_geom_rev;
+    sample.published_geom = rec.published_geom_rev;
+    sample.desired_light = rec.desired_light_rev;
+    sample.published_light = rec.published_light_rev;
+    sample.desired_coverage = rec.desired_coverage_gen;
+    sample.published_coverage = rec.published_coverage_gen;
+    sample.face_debt_mask = rec.face_debt_mask;
+    sample.retained = rec.retained_awaiting_successor;
+    sample.orphan = rec.has_active_attempt &&
+                    rec.active_stage == JobStage::Created &&
+                    rec.last_progress_ms <= 0.0;
+    out.push_back(sample);
+    if (static_cast<int>(out.size()) >= max_samples)
+    {
+      break;
+    }
+  }
+}
+
+bool UChunkRenderDemandStore::StopConverged(
+    double now_ms, const PeerLoadedFn &peer_loaded,
+    const MeshWithheldFn &mesh_withheld) const
 {
   for (const auto &kv : Records_)
   {
     const ChunkRenderDemandRecord &rec = kv.second;
+    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0 &&
+        rec.desired_coverage_gen == 0 && rec.face_debt_mask == 0)
+    {
+      continue;
+    }
+    // Parked-before-orphan: a record whose only open domain is coverage
+    // behind face debts against unloaded peers cannot be serviced until a
+    // peer loads. Its orphan/retain lifecycle must not hold the stop — the
+    // parked coverage desire is re-raised when a peer publishes.
+    // PERF-0.30 witness: coverage-only orphan records at the ring edge
+    // blocked StopConverged ahead of the face-debt scoping below.
+    bool record_parked = false;
+    if (rec.face_debt_mask != 0)
+    {
+      const bool parked_revs_behind =
+          rec.desired_geom_rev > rec.published_geom_rev ||
+          rec.desired_light_rev > rec.published_light_rev;
+      const bool parked_coverage_behind =
+          rec.desired_coverage_gen > rec.published_coverage_gen;
+      if (!parked_revs_behind)
+      {
+        if (!parked_coverage_behind)
+        {
+          record_parked = true;
+        }
+        else if (peer_loaded)
+        {
+          bool any_debt_peer_loaded = false;
+          for (int f = 0; f < 6; ++f)
+          {
+            if ((rec.face_debt_mask & static_cast<uint8_t>(1u << f)) == 0)
+            {
+              continue;
+            }
+            if (peer_loaded(rec.coord + ChunkMeshFaceNeighborDelta(f)))
+            {
+              any_debt_peer_loaded = true;
+              break;
+            }
+          }
+          record_parked = !any_debt_peer_loaded;
+        }
+      }
+    }
+    if (record_parked)
+    {
+      continue;
+    }
+    // Parked-before-orphan, geometry side: a first-mesh desire the world
+    // currently withholds meshing for (soft-defer empty placeholder at the
+    // ring edge, stand diet) must not recreate an orphan every admission
+    // attempt and then hold the stop (PERF-0.30 witness: des_g=1 pub_g=0
+    // orphan cycling while the deferral policy holds the chunk). The
+    // frontier re-mints the demand when the deferral lifts.
+    if (mesh_withheld && mesh_withheld(rec.coord))
+    {
+      continue;
+    }
     if (rec.has_active_attempt &&
         rec.active_stage == JobStage::Created &&
         rec.last_progress_ms <= 0.0)
     {
       return false; // orphan
-    }
-    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0 &&
-        rec.desired_coverage_gen == 0 && rec.face_debt_mask == 0)
-    {
-      continue;
     }
     // A face debt blocks stop only while it represents an unpublished
     // demand. A debt parked against an unloaded peer with every revision
@@ -1065,11 +1185,47 @@ bool UChunkRenderDemandStore::StopConverged(double now_ms) const
     // (PERF-0.30 witness: interior zero-quad slices, face_debt_mask=1,
     // des==published geom and coverage, peer outside the loaded ring).
     // The parked debt still drives its repair when the peer publishes.
-    if (rec.face_debt_mask != 0 &&
-        (rec.desired_geom_rev > rec.published_geom_rev ||
-         rec.desired_coverage_gen > rec.published_coverage_gen))
+    if (rec.face_debt_mask != 0)
     {
-      return false;
+      const bool revs_behind =
+          rec.desired_geom_rev > rec.published_geom_rev ||
+          rec.desired_light_rev > rec.published_light_rev;
+      const bool coverage_behind =
+          rec.desired_coverage_gen > rec.published_coverage_gen;
+      if (revs_behind)
+      {
+        return false;
+      }
+      if (coverage_behind)
+      {
+        // Coverage publication needs every debt cleared; a debt whose peer
+        // is not loaded cannot clear until the peer loads and publishes.
+        // With a loadedness predicate, scope all-unloaded-peer debts out of
+        // stop convergence (they park, not block); without one, stay
+        // conservative and block (PERF-0.30 witness: des_c=1 pub_c=0,
+        // debt faces outside the loaded ring).
+        if (!peer_loaded)
+        {
+          return false;
+        }
+        bool any_debt_peer_loaded = false;
+        for (int f = 0; f < 6; ++f)
+        {
+          if ((rec.face_debt_mask & static_cast<uint8_t>(1u << f)) == 0)
+          {
+            continue;
+          }
+          if (peer_loaded(rec.coord + ChunkMeshFaceNeighborDelta(f)))
+          {
+            any_debt_peer_loaded = true;
+            break;
+          }
+        }
+        if (any_debt_peer_loaded)
+        {
+          return false;
+        }
+      }
     }
     if (!CoverageSatisfied(rec, 0))
     {

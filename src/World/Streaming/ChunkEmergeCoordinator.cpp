@@ -7103,8 +7103,27 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
           {
             // Geometry and publication use the same mesh-revision domain;
             // coverage can remain independently unsatisfied.
+            // Coverage publication needs face_debt_mask==0, and a debt
+            // against an unknown peer cannot clear until that peer loads.
+            // Desire coverage only when every face peer is loaded; an
+            // all-known-peers debt is a live repair, an unknown-peer debt
+            // parks (waiting_peer_gen=0) until the peer publishes. Raising
+            // coverage for unknown peers held demand_stop_converged false
+            // for the whole stop (PERF-0.30: ~378 interior ring-edge
+            // records, desired=1 published=0, peers outside the ring).
+            bool all_face_peers_loaded = true;
+            for (int f = 0; f < 6; ++f)
+            {
+              if (!world_ref.GetBlockWorld().GetChunkManager().GetChunk(
+                      chunk_coord + ChunkMeshFaceNeighborDelta(f)))
+              {
+                all_face_peers_loaded = false;
+                break;
+              }
+            }
             (void)demand.NoteDemand(chunk_coord, g, l,
-                                    /*desired_coverage_gen=*/1,
+                                    /*desired_coverage_gen=*/
+                                    all_face_peers_loaded ? 1 : 0,
                                     /*now_ms=*/0.0, world_epoch,
                                     incarnation);
           }
@@ -7200,8 +7219,27 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
           }
           if (geom != 0 || light != 0)
           {
+            // Same unknown-peer coverage park as SetOnFaceDebtFn: a mask
+            // face whose peer is not loaded cannot clear until the peer
+            // publishes, so desiring coverage here would only pin the
+            // record unsatisfied for the whole stop (PERF-0.30).
+            bool all_mask_peers_loaded = true;
+            for (int f = 0; f < 6; ++f)
+            {
+              if ((mask & static_cast<uint8_t>(1u << f)) == 0)
+              {
+                continue;
+              }
+              if (!world_ref.GetBlockWorld().GetChunkManager().GetChunk(
+                      chunk_coord + ChunkMeshFaceNeighborDelta(f)))
+              {
+                all_mask_peers_loaded = false;
+                break;
+              }
+            }
             (void)demand.NoteDemand(chunk_coord, geom, light,
-                                    /*desired_coverage_gen=*/1,
+                                    /*desired_coverage_gen=*/
+                                    all_mask_peers_loaded ? 1 : 0,
                                     /*now_ms=*/0.0, world_epoch,
                                     incarnation);
           }
