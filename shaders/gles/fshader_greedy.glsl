@@ -609,6 +609,12 @@ void main()
             float fog_factor = computeDistanceFogFactor(
                 dist, uUnderwaterFogStart, uUnderwaterFogEnd,
                 min_blend, 1.0);
+            // Grazing rays inflate the computed thickness (see desktop
+            // shader): the tint yields to the sky fog with real distance.
+            float real_sky_fog = computeDistanceFogFactor(
+                length(vWorldPos - uCameraPos), uFogStart, uFogEnd,
+                uFogMinBlend, uFogDensity);
+            fog_factor *= 1.0 - real_sky_fog;
             FragColor.rgb = mix(FragColor.rgb, underwater_fog_color, fog_factor);
         }
     }

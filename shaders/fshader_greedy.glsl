@@ -641,25 +641,23 @@ void main()
             float fog_factor = computeDistanceFogFactor(
                 dist, uUnderwaterFogStart, uUnderwaterFogEnd,
                 min_blend, 1.0);
+            // Grazing view rays (distant water) inflate the computed
+            // thickness and pinned whole horizon water bodies to the full
+            // dark tint. The tint yields to the sky fog with real camera
+            // distance: near water keeps its depth color, distant water is
+            // washed by the normal distance fog like every other surface.
+            float real_sky_fog = computeDistanceFogFactor(
+                length(vWorldPos - uCameraPos), uFogStart, uFogEnd,
+                uFogMinBlend, uFogDensity);
+            fog_factor *= 1.0 - real_sky_fog;
             FragColor.rgb = mix(FragColor.rgb, underwater_fog_color, fog_factor);
         }
     }
 
     if (uFogEnabled > 0.5) {
         float dist = length(vWorldPos - uCameraPos);
-        float fog_start = uFogStart;
-        float fog_end = uFogEnd;
-        // Provisional (unsettled-light) first meshes dissolve into the
-        // horizon early: their ambient-floor color at distance read as dark
-        // navy silhouettes of the terrain shape between the lit near field
-        // and the full-fog horizon. Real light eases in on approach.
-        if ((vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
-            uEnvLightDebugMode <= 0.5) {
-            fog_start = min(fog_start, uFogEnd * 0.35);
-            fog_end = min(fog_end, uFogEnd * 0.85);
-        }
         float fog_factor = computeDistanceFogFactor(
-            dist, fog_start, fog_end, uFogMinBlend, uFogDensity);
+            dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog_factor);
     } else if (uAirFogEnabled > 0.5 && !frag_underwater) {
         float dist;
