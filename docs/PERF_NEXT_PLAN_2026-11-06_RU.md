@@ -92,6 +92,16 @@ Trace `demand_transition_trace` по churn-чанку (-67,4,3) установи
 
 **Следующий слой (зафиксирован):** face debt с ЗАГРУЖЕННЫМ peer'ом, ремонт которого не публикуется (census `face_debt_end=1` в части прогонов; demand-сэмплы: des_c=1 pub_c=0 debt=0x01 при загруженном -X peer'е). Требуется trace `EnqueueFaceDebtRepair`/публикаций peer'а на этой паре: почему ремонт не выполняется или его результат не очищает долг (waiting_peer_gen vs публикация).
 
+### Результат продолжения 4 — финал серии (2026-11-07, ветка `feature/perf-0-30-convergence-final`)
+
+**BlockerCensus**: классификатор StopConverged выделен в member-функцию с 9 классами блокеров; watchdog раз в 5 с логирует census с сэмплами координат. Первая атрибуция (census_run2): `orphan=198, stall=28, no_attempt=12, face_revs_behind=6` при замороженной `dirty_n=90` и `mesh_dirty_schedule_skip_outside_focus_n=55/период`.
+
+**Найден главный цикл**: stop-diet удаляет outside-focus drawable remesh из очереди (`DeferRemeshCoord`), demand остаётся открытым → сироты recreated через reclaim. Фикс: `IsRemeshDeferred` экспонирует deferred-ring диета; `mesh_withheld`-предикат сходимости и reclaim-скип считают такие координаты паркованными — demand-магазин и scheduler согласованы.
+
+Итог (acceptance10): missing 27→**23**, ready→**80**, **FPS 49.2, wall fly median 20.3 мс**, `face_debt=0`, `miss_end=0`, stop dirty=0, `dirty_n` стабильна, desired/published стабилизировались.
+
+**Критерий этапа 0.30 из базового плана выполнен** («очереди и desired/published revisions стабилизируются, dirty и missing не растут»). Булевый `demand_stop_converged` остаётся false на хвосте: `orphan=65, no_attempt=45, stall=28` — вытеснения из ограниченного deferred-ring диета теряют работу при открытых записях. Следующий шаг зафиксирован: пере-поставка вытесненных из ring координат (bounded) либо расширение семантики паркинга на eviction; после этого флаг ожидаемо закрывается.
+
 ## PERF-0.31 — визуальное отставание за пределами кольца
 
 Цель: сократить задержку появления мира после быстрого перелёта и загрузки.
