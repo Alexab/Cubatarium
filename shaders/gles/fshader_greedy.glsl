@@ -602,8 +602,14 @@ void main()
             if (uUnderwaterFogSubmerged < 0.5) {
                 // Camera above the surface: the tint comes from the water
                 // thickness along the view ray, not from camera distance.
+                // (sy - y)/|view_dir.y| is the exact flat-surface water path;
+                // the former 0.25 clamp capped it at 4x depth, leaving far
+                // underwater fragments under-fogged (fog strengthened with
+                // distance, then weakened — non-monotonic). Keep only the
+                // divide-by-zero guard: a horizontal underwater ray has a
+                // effectively infinite water path and fogs fully.
                 vec3 view_dir = (vWorldPos - uCameraPos) / max(dist, 0.001);
-                dist = (sy - vWorldPos.y) / max(abs(view_dir.y), 0.25);
+                dist = (sy - vWorldPos.y) / max(abs(view_dir.y), 0.001);
                 min_blend = 0.0;
             }
             float fog_factor = computeDistanceFogFactor(
