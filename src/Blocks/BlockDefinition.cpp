@@ -234,9 +234,13 @@ static FluidViewProfile FluidViewFromPreset(const std::string &preset)
   {
     v.FogColor = glm::vec3(0.05f, 0.15f, 0.35f);
     v.FogStart = 0.0f;
-    v.FogEnd = 9.0f;
-    v.FogMinBlend = 0.5f;
-    v.BelowSurfaceFogMin = 0.52f;
+    // PERF holes: FogEnd=9 + MinBlend=0.5 saturated the underwater tint at
+    // 9 blocks with a 50% floor — near trunks read as murky walls, level
+    // steps as opaque planes covering the terrain behind them, and the
+    // waterline seam snapped from clear air to half-tinted water.
+    v.FogEnd = 20.0f;
+    v.FogMinBlend = 0.18f;
+    v.BelowSurfaceFogMin = 0.30f;
     v.BelowSurfaceFogScale = 0.35f;
   }
   else if (preset == "lava")

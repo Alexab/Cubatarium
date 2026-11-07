@@ -2,6 +2,7 @@
 #include "Render/Pipeline/RenderTextureUnits.h"
 #include <cstdlib>
 
+#include "App/Platform/Log.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
@@ -75,6 +76,32 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
 
   const bool partial_submerge =
       column.valid && cutum::IsPartialSubmerge(eye.y, column.surfaceY);
+
+  // PERF holes: underwater-fog inversion diagnostics (throttled 1 Hz).
+  // The per-fragment tint classifies via the fluid surface map; a far
+  // sentinel region reads as "no water" and skips the tint entirely —
+  // log the actual coverage and the camera state to attribute it.
+  {
+    static std::chrono::steady_clock::time_point last_diag{};
+    const auto now_diag = std::chrono::steady_clock::now();
+    if (last_diag.time_since_epoch().count() == 0 ||
+        now_diag - last_diag >= std::chrono::seconds(1))
+    {
+      last_diag = now_diag;
+      const auto &stats = surface_map.GetLastFrameStats();
+      CubatariumLogInfo(
+          "WaterFog",
+          std::string("diag submerged=") +
+              (camera_submerged ? "1" : "0") +
+              " partial=" + (partial_submerge ? "1" : "0") +
+              " map_valid=" + (map_ready ? "1" : "0") +
+              " size_blocks=" + std::to_string(surface_map.GetSizeBlocks()) +
+              " dirty_processed=" + std::to_string(stats.DirtyChunksProcessed) +
+              " dirty_pending=" + std::to_string(stats.DirtyChunksPending) +
+              " full_rebuild=" + (stats.FullRebuild ? "1" : "0") +
+              " near_fluid=" + (nearby_fluid ? "1" : "0"));
+    }
+  }
   const bool column_underwater_fog = cutum::ShouldApplyUnderwaterFogToColumn(
       camera_submerged, partial_submerge, column.surfaceBlockY,
       column.bottomBlockY);

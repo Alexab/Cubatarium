@@ -53,6 +53,7 @@ public:
   bool IsValid() const { return Valid; }
   glm::vec2 GetOriginBlockXZ() const { return OriginBlockXZ; }
   glm::vec2 GetInvSizeBlocks() const { return InvSizeBlocks; }
+  int GetSizeBlocks() const { return SizeBlocks; }
   const FluidSurfaceMapFrameStats &GetLastFrameStats() const
   {
     return LastFrameStats;
