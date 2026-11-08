@@ -1,5 +1,13 @@
 # Аудит водной среды: генерация, рендер, растения, туман — план исправлений
 
+> **Статус исполнения (2026-11-08, вечер):** волны W0–W3 реализованы и смержены в `develop` (`--no-ff`):
+> - W0.1 `8518f798f` — uFluidAlpha=1.0 по умолчанию; растительность возвращена (runtime-верификация: 0 спрайтов → спрайты на той же камере).
+> - W1 `40d9ae67a` — монотонный туман (air-fog для frag_underwater), подводный fog для water-прохода при погружении, sentinel-фоллбек только под водой, развязка с погодным множителем.
+> - W2.1 `af299caf4` — skylight seed гасит свет в воде (−1/блок, паритет с VerticalSkylightStepCost); новый тест `gpu_skylight_seed_fluid_test`.
+> - W3 `191988fa0` — coral placement оживлён (seabed-градиент для underwater-правил), полоса [-48,-1], подводный tint cross-квадов при погружении.
+> Тесты зелёные: fluid/fog/lighting/placement suite. Осталась визуальная приёмка пользователем: кораллы на дне нового мира, монотонность тумана под водой (witness world245_water), затемнение с глубиной.
+> Не реализовано (следующие циклы): W3.3 контент seagrass/kelp, W4 террасы (ждёт дизайн-решения §16), W5.x seal-швы/above-sea, W6.x симуляция/геймплей, W7 полировка.
+
 Дата: 2026-11-08. База: `develop` @ `cc543e4c` (код — до `d8cbcaf31`, exe от 15:22 включает все кодовые коммиты серии).
 
 Связанные: [FLUID_ARCHITECTURE.md](FLUID_ARCHITECTURE.md), [TECH_DEBT_FLUIDS.md](TECH_DEBT_FLUIDS.md), [UNDERWATER_FOG_TRANSITION.md](UNDERWATER_FOG_TRANSITION.md), [HOLE_CLASSES_DIAGNOSIS_PLAN_2026-11-07_RU.md](HOLE_CLASSES_DIAGNOSIS_PLAN_2026-11-07_RU.md), [TECH_DEBT_WORLDGEN.md](TECH_DEBT_WORLDGEN.md).
