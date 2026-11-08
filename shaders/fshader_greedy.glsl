@@ -50,7 +50,12 @@ uniform float uEnvSkyLightScale;
 uniform float uEnvLightDebug;
 uniform float uEnvLightDebugMode;
 uniform float uLightPreviewOverride;
-uniform float uFluidAlpha;
+// Default 1.0: the alpha multiplier is a per-batch fluid tuning knob, but this
+// fragment shader is shared by three programs (greedy, packed_greedy,
+// cross_instanced) and only the greedy path sets the uniform explicitly.
+// A declaration without an initializer leaves the GL default 0.0 on the other
+// programs, zeroing every fragment alpha and discarding all cross plants.
+uniform float uFluidAlpha = 1.0;
 uniform float uLightPreviewFade;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
