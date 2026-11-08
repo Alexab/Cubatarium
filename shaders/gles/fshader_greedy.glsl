@@ -69,17 +69,29 @@ uniform float uDebugFluidFragmentMarker;
 
 const int kCrossFaceIndex = 127;
 
+// Underwater absorption must not depend on weather: the air fog multiplier
+// thins rain fog on purpose, but water depth physics does not change with
+// weather. Raw linear factor with the same min-blend floor (desktop parity).
+float computeUnderwaterFogFactor(float dist, float fogStart, float fogEnd,
+                                 float minBlend) {
+    float fogRange = max(fogEnd - fogStart, 0.001);
+    float fogFactor = clamp((dist - fogStart) / fogRange, 0.0, 1.0);
+    return max(fogFactor, minBlend);
+}
+
 float surfaceYAt(vec2 worldXZ) {
     vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
-        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnSurfaceY < 1e8) {
+        if (uUnderwaterFogEnabled > 0.5 && uUnderwaterFogSubmerged > 0.5 &&
+            uCameraColumnSurfaceY < 1e8) {
             return uCameraColumnSurfaceY;
         }
         return 1e9;
     }
     float h = texture(uFluidSurfaceYMap, uv).r;
     if (h < -500.0) {
-        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnSurfaceY < 1e8) {
+        if (uUnderwaterFogEnabled > 0.5 && uUnderwaterFogSubmerged > 0.5 &&
+            uCameraColumnSurfaceY < 1e8) {
             return uCameraColumnSurfaceY;
         }
         return 1e9;
@@ -108,14 +120,16 @@ uint fluidIndexAt(vec2 worldXZ) {
 float fluidBottomBlockYAt(vec2 worldXZ) {
     vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
-        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnBottomBlockY < 1e8) {
+        if (uUnderwaterFogEnabled > 0.5 && uUnderwaterFogSubmerged > 0.5 &&
+            uCameraColumnBottomBlockY < 1e8) {
             return uCameraColumnBottomBlockY;
         }
         return 1e9;
     }
     float h = texture(uFluidBottomBlockMap, uv).r;
     if (h < -500.0) {
-        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnBottomBlockY < 1e8) {
+        if (uUnderwaterFogEnabled > 0.5 && uUnderwaterFogSubmerged > 0.5 &&
+            uCameraColumnBottomBlockY < 1e8) {
             return uCameraColumnBottomBlockY;
         }
         return 1e9;
@@ -580,6 +594,7 @@ void main()
         return;
     }
     bool frag_underwater = false;
+    float underwater_sky_fog = 0.0;
     vec3 underwater_fog_color = uFogColor;
 
     if (uUnderwaterFogEnabled > 0.5 && uFluidSurfaceInvSize.x > 0.0 &&
@@ -596,10 +611,7 @@ void main()
             // Camera submerged: the tint still must not reach fragments above
             // their local water surface (the far shore rises out of the water
             // and was fogged like the underwater middle ground).
-            // One-block tolerance: the map's per-column surface varies by a block at
-        // level steps, and a strict epsilon left far surface planes unfogged
-        // (brighter than the fogged middle ground).
-        in_fluid_span = vWorldPos.y <= sy + 1.01;
+            in_fluid_span = vWorldPos.y <= sy + 1.01;
         } else if (bottom_block_index_y < 500 &&
                    block_index_y <= surface_block_y) {
             if (block_index_y + 1 >= bottom_block_index_y) {
@@ -608,7 +620,13 @@ void main()
                 in_fluid_span = true;
             }
         }
-        if (in_fluid_span && fi > 0u && sy < 1e8 && vWorldPos.y < sy) {
+        // Submerged camera: fluid surface faces sit exactly at sy (BlockTopY)
+        // and need the same tolerance, otherwise the water plane itself stays
+        // unfogged while the floor below is fogged (desktop parity).
+        bool under_local_surface =
+            vWorldPos.y < sy ||
+            (uUnderwaterFogSubmerged > 0.5 && vWorldPos.y <= sy + 0.01);
+        if (in_fluid_span && fi > 0u && sy < 1e8 && under_local_surface) {
             frag_underwater = true;
             underwater_fog_color = uUnderwaterFogColors[int(fi)];
             float dist = length(vWorldPos - uCameraPos);
@@ -626,15 +644,15 @@ void main()
                 dist = (sy - vWorldPos.y) / max(abs(view_dir.y), 0.001);
                 min_blend = 0.0;
             }
-            float fog_factor = computeDistanceFogFactor(
-                dist, uUnderwaterFogStart, uUnderwaterFogEnd,
-                min_blend, 1.0);
+            float fog_factor = computeUnderwaterFogFactor(
+                dist, uUnderwaterFogStart, uUnderwaterFogEnd, min_blend);
             // Grazing rays inflate the computed thickness (see desktop
             // shader): the tint yields to the sky fog with real distance.
             float real_sky_fog = computeDistanceFogFactor(
                 length(vWorldPos - uCameraPos), uFogStart, uFogEnd,
                 uFogMinBlend, uFogDensity);
             fog_factor *= 1.0 - real_sky_fog;
+            underwater_sky_fog = real_sky_fog;
             FragColor.rgb = mix(FragColor.rgb, underwater_fog_color, fog_factor);
         }
     }
@@ -644,7 +662,7 @@ void main()
         float fog_factor = computeDistanceFogFactor(
             dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog_factor);
-    } else if (uAirFogEnabled > 0.5 && !frag_underwater) {
+    } else if (uAirFogEnabled > 0.5) {
         float dist;
         if (uFogHorizontal > 0.5) {
             vec2 delta_xz = vWorldPos.xz - uCameraPos.xz;
@@ -652,8 +670,13 @@ void main()
         } else {
             dist = length(vWorldPos - uCameraPos);
         }
-        float fog_factor = computeDistanceFogFactor(
-            dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
+        // Underwater fragments yielded to the air fog by (1 - real_sky_fog)
+        // above; the air fog washes them with the SAME factor so fog never
+        // falls to zero at distance (desktop parity).
+        float fog_factor = frag_underwater
+            ? underwater_sky_fog
+            : computeDistanceFogFactor(
+                  dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog_factor);
     }
 }
