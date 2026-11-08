@@ -1761,6 +1761,15 @@ cubatarium_add_test(NAME relight_result_install_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME gpu_skylight_seed_fluid_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/World/Lighting/LightUtil.cpp
+        src/Test/GpuSkylightSeedFluidTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
 cubatarium_add_test(NAME mark_relit_integration_test
     SOURCES
         src/Test/MarkRelitIntegrationTest.cpp
