@@ -5962,10 +5962,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       greedyShader->SetFloat(
           "uDebugFluidFragmentMarker",
           fluid_marker && head_is_fluid ? 1.0f : 0.0f);
-      // Water surfaces render semi-transparent: an opaque fluid texture
-      // turns the surface seen from below and level-step planes into solid
-      // navy walls (PERF holes: World_245 user report).
-      greedyShader->SetFloat("uFluidAlpha", head_is_fluid ? 0.75f : 1.0f);
+      // The active water texture (mt_water, id 575) already carries its own
+      // alpha (0.42) — the earlier 0.75 multiplier stacked on it and made
+      // the water nearly invisible. Keep fluid batches at native alpha.
+      greedyShader->SetFloat("uFluidAlpha", 1.0f);
       greedyShader->SetFloat("uLightPreviewOverride",
                              light_preview.override_value);
       greedyShader->SetFloat("uLightPreviewFade", light_preview.fade);
