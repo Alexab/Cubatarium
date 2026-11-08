@@ -627,7 +627,10 @@ void main()
             // Camera submerged: the tint still must not reach fragments above
             // their local water surface (the far shore rises out of the water
             // and was fogged like the underwater middle ground).
-            in_fluid_span = vWorldPos.y <= sy + 0.01;
+            // One-block tolerance: the map's per-column surface varies by a block at
+        // level steps, and a strict epsilon left far surface planes unfogged
+        // (brighter than the fogged middle ground).
+        in_fluid_span = vWorldPos.y <= sy + 1.01;
         } else if (bottom_block_index_y < 500 &&
                    block_index_y <= surface_block_y) {
             if (block_index_y + 1 >= bottom_block_index_y) {
