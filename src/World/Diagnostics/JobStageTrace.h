@@ -428,6 +428,10 @@ struct VisualBlackTraceRecord
   float renderer_pixel_fog_sy{-1.0f};
   int renderer_pixel_fog_fragment_below{-1};
   float renderer_pixel_fog_factor{-1.0f};
+  /// PERF holes: the cell a fluid face is drawn against (the disagreement
+  /// between the mesher's fluid resolution and the voxel world).
+  int renderer_pixel_fluid_face_neighbor_block{-1};
+  int renderer_pixel_fluid_face_fluid_packed{-1};
   /// sample_kind=9 distinguishes CPU fluid geometry in the raw mesh snapshot
   /// from the ready transparent refs and resident/visible transparent MDI
   /// command for the exact sea-plane surface chunk.

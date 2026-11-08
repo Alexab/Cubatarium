@@ -35,6 +35,7 @@
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/IUFluidSurfaceProvider.h"
+#include "Render/Mesh/ChunkMeshFace.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
@@ -2913,7 +2914,7 @@ void CaptureTransparentPixelProbe(
                 ConsiderGreedyVertexLightTriangle(
                     surface_point, *source, source->vertices[ia],
                     source->vertices[ib], source->vertices[ic],
-                    fluid_vertex_light, /*required_face_index=*/4);
+                    fluid_vertex_light, /*required_face_index=*/-1);
                 if (fluid_vertex_light.distance < prior_triangle_distance)
                 {
                   record.renderer_pixel_fluid_source_batch_index =
@@ -3002,6 +3003,35 @@ void CaptureTransparentPixelProbe(
                   fluid_vertex_light.preview;
               record.renderer_pixel_fluid_wetness =
                   fluid_vertex_light.wetness;
+              // PERF holes: record the cell the fluid face is drawn against
+              // (one step out of the water along the face normal) — the
+              // mesher-vs-voxel-world resolution disagreement attribution.
+              if (fluid_vertex_light.face_index >= 0 &&
+                  fluid_vertex_light.face_index < 6)
+              {
+                const glm::vec3 face_normal =
+                    glm::vec3(ChunkMeshFaceNeighborDelta(
+                        fluid_vertex_light.face_index));
+                const glm::vec3 neighbor_pos =
+                    fluid_vertex_light.surface + face_normal * 0.5f;
+                const glm::ivec3 neighbor_cell =
+                    UChunkManager::WorldToChunk(
+                        glm::ivec3(glm::floor(neighbor_pos)));
+                if (const UChunk *neighbor_chunk =
+                        world.GetBlockWorld().GetChunkManager().GetChunk(
+                            neighbor_cell))
+                {
+                  const glm::ivec3 neighbor_local =
+                      UChunkManager::WorldToLocal(
+                          glm::ivec3(glm::floor(neighbor_pos)));
+                  record.renderer_pixel_fluid_face_neighbor_block =
+                      static_cast<int32_t>(
+                          neighbor_chunk->GetBlockLocal(neighbor_local));
+                  record.renderer_pixel_fluid_face_fluid_packed =
+                      static_cast<int32_t>(PackFluidCellState(
+                          neighbor_chunk->GetFluidLocal(neighbor_local)));
+                }
+              }
             }
 
             const uint32_t pretransparent_rgba =
