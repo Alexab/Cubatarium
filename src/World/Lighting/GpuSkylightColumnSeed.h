@@ -12,7 +12,12 @@ namespace cutum
 class UBlockRegistry;
 
 /// CPU reference: per-column skylight seed from opaque occupancy.
-/// From +Y: sky=15 until first opaque, then 0 below (no horizontal flood).
+/// From +Y: sky=15 through air, attenuated 1 per fluid block (parity with
+/// VerticalSkylightStepCost), 0 below the first opaque cell (no horizontal
+/// flood). Occupancy encoding: 0 = light-transparent, 1 = opaque, 2 = fluid.
+/// Without fluid attenuation the seed writes 15 through any water depth and
+/// the desktop pipeline (which skips the vertical column after the seed)
+/// lights the seafloor like dry land — water audit W2.1 (D-3).
 inline void SeedSkylightColumnsCpu(const std::array<uint8_t, CHUNK_VOLUME> &occ,
                                    std::array<uint8_t, CHUNK_VOLUME> &sky_out)
 {
@@ -26,7 +31,8 @@ inline void SeedSkylightColumnsCpu(const std::array<uint8_t, CHUNK_VOLUME> &occ,
       for (int y = n - 1; y >= 0; --y)
       {
         const int li = (y * n + z) * n + x;
-        if (occ[static_cast<size_t>(li)])
+        const uint8_t cell = occ[static_cast<size_t>(li)];
+        if (cell == 1u)
         {
           sky_out[static_cast<size_t>(li)] = 0;
           level = 0;
@@ -34,6 +40,10 @@ inline void SeedSkylightColumnsCpu(const std::array<uint8_t, CHUNK_VOLUME> &occ,
         else
         {
           sky_out[static_cast<size_t>(li)] = level;
+          if (cell == 2u)
+          {
+            level = static_cast<uint8_t>(level > 0 ? level - 1 : 0);
+          }
         }
       }
     }

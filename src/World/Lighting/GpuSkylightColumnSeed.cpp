@@ -38,11 +38,15 @@ void main() {
   uint level = 15u;
   for (int y = int(side) - 1; y >= 0; --y) {
     uint i = uint((y * int(side) + z) * int(side) + x);
-    if (occAt(x, y, z) != 0u) {
+    uint occCell = occAt(x, y, z);
+    if (occCell == 1u) {
       sky[i] = 0u;
       level = 0u;
     } else {
       sky[i] = level;
+      if (occCell == 2u) {
+        level = level > 0u ? level - 1u : 0u;
+      }
     }
   }
 }
@@ -164,7 +168,7 @@ bool ApplyGpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry)
         occ[static_cast<size_t>(li)] =
             (id != 0 && !registry.IsTransparent(id) && registry.IsSolid(id))
                 ? 1u
-                : 0u;
+                : (registry.IsLiquid(id) ? 2u : 0u);
       }
     }
   }
