@@ -598,7 +598,7 @@ void main()
     vec3 underwater_fog_color = uFogColor;
 
     if (uUnderwaterFogEnabled > 0.5 && uFluidSurfaceInvSize.x > 0.0 &&
-        vFaceIndex != kCrossFaceIndex) {
+        (vFaceIndex != kCrossFaceIndex || uUnderwaterFogSubmerged > 0.5)) {
         float sy;
         float bottom_block_y;
         uint fi;

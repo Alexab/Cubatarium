@@ -6597,7 +6597,12 @@ void UGeometryEngine::DrawCrossInstancedBatches(
                       GreedyShaderMode::TransparentColor, 0.0f);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    ApplyFogUniforms(crossInstancedShader, camera->GetPosition(), false);
+    // Submerged camera: underwater plants fog with the scene (W3.2) — the
+  // shader still excludes cross quads while the camera is above water.
+  ApplyFogUniforms(crossInstancedShader, camera->GetPosition(),
+                   cutum::ShouldApplyBelowSurfaceFogToPass(
+                       /*transparent_pass=*/false, /*alpha_cutout=*/false,
+                       UnderwaterFogPass_.GetUnderwaterFogSubmerged() > 0.5f));
   }
   ApplyGreedyEnvironmentUniforms(crossInstancedShader);
   glActiveTexture(GL_TEXTURE0);

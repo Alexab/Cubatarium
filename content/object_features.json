@@ -697,7 +697,7 @@
       "surface_constraint": "underwater_floor",
       "ecology": {
         "temperature": [0.62, 1.0],
-        "elevation": {"above_sea_level": [-48, -4]},
+        "elevation": {"above_sea_level": [-48, -1]},
         "max_slope": 12.0
       }
     },
@@ -715,7 +715,7 @@
       "surface_constraint": "underwater_floor",
       "ecology": {
         "temperature": [0.0, 0.65],
-        "elevation": {"above_sea_level": [-48, -4]},
+        "elevation": {"above_sea_level": [-48, -1]},
         "max_slope": 12.0
       }
     },
@@ -733,7 +733,7 @@
       "surface_constraint": "underwater_floor",
       "ecology": {
         "temperature": [0.68, 1.0],
-        "elevation": {"above_sea_level": [-48, -4]},
+        "elevation": {"above_sea_level": [-48, -1]},
         "max_slope": 10.0
       }
     },
