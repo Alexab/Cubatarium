@@ -89,6 +89,93 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     {
       last_diag = now_diag;
       const auto &stats = surface_map.GetLastFrameStats();
+      // PERF holes: every 2 s, a bounded cube scan around the camera
+      // classifies every water face as surface (at the column's mapped
+      // surface) or internal (below it — the "water under water" planes).
+      {
+        static std::chrono::steady_clock::time_point last_scan{};
+        if (last_scan.time_since_epoch().count() == 0 ||
+            now_diag - last_scan >= std::chrono::seconds(2))
+        {
+          last_scan = now_diag;
+          constexpr int kScanR = 12;
+          const glm::ivec3 cam_block(WorldCoordToBlockIndex(eye.x),
+                                     WorldCoordToBlockIndex(eye.y),
+                                     WorldCoordToBlockIndex(eye.z));
+          const BlockId water = registry.GetIdByTypeName("water");
+          int surface_faces = 0, internal_faces = 0;
+          std::string internal_samples;
+          auto &chunks = world.GetBlockWorld().GetChunkManager();
+          for (int dx = -kScanR; dx <= kScanR; ++dx)
+          {
+            for (int dy = -kScanR; dy <= kScanR; ++dy)
+            {
+              for (int dz = -kScanR; dz <= kScanR; ++dz)
+              {
+                const glm::ivec3 pos = cam_block + glm::ivec3(dx, dy, dz);
+                if (world.GetBlockWorld().GetBlock(pos) != water)
+                {
+                  continue;
+                }
+                static constexpr glm::ivec3 kDirs[6] = {
+                    {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+                    {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+                bool face_vs_air = false;
+                bool face_vs_other_transparent = false;
+                for (const glm::ivec3 &d : kDirs)
+                {
+                  const glm::ivec3 n = pos + d;
+                  const BlockId nid = world.GetBlockWorld().GetBlock(n);
+                  if (nid == water)
+                  {
+                    continue;
+                  }
+                  if (nid == BLOCK_AIR)
+                  {
+                    face_vs_air = true;
+                  }
+                  else if (registry.IsTransparent(nid) &&
+                           registry.GetRenderStyle(nid) !=
+                               BlockRenderStyle::Fluid)
+                  {
+                    face_vs_other_transparent = true;
+                  }
+                }
+                if (!face_vs_air && !face_vs_other_transparent)
+                {
+                  continue;
+                }
+                float sy = 0.0f;
+                const bool sy_ok =
+                    surface_map.SampleSurfaceWorld(glm::ivec2(pos.x, pos.z),
+                                                   sy);
+                const bool surface =
+                    !sy_ok || pos.y >= static_cast<int>(sy) - 1;
+                if (surface)
+                {
+                  ++surface_faces;
+                }
+                else
+                {
+                  ++internal_faces;
+                  if (internal_samples.size() < 60)
+                  {
+                    internal_samples += " (" + std::to_string(pos.x) + "," +
+                                        std::to_string(pos.y) + "," +
+                                        std::to_string(pos.z) + ")";
+                  }
+                }
+              }
+            }
+          }
+          CubatariumLogInfo(
+              "WaterFog",
+              std::string("face_scan surface=") +
+                  std::to_string(surface_faces) + " internal=" +
+                  std::to_string(internal_faces) +
+                  " internal_samples=" + internal_samples);
+        }
+      }
       CubatariumLogInfo(
           "WaterFog",
           std::string("diag submerged=") +
