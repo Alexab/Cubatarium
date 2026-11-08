@@ -14,7 +14,9 @@ uniform sampler2D texture0;
 uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
-uniform float uFluidAlpha;
+// Default 1.0 — see the desktop shader note: shared by programs that do not
+// set this uniform explicitly; the GL default 0.0 discards all fragments.
+uniform float uFluidAlpha = 1.0;
 uniform float uTextureVariation;
 uniform int uMaterialSeed;
 uniform float uMaterialTimePhase;
