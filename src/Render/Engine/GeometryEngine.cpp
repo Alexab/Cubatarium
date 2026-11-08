@@ -5765,10 +5765,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     camera_position = camera->GetPosition();
     // alphaCutout here is shader discard mode (GPF5 merges solid+cutout), not
     // a dedicated cutout-only pass — still apply underwater fog to opaque.
+    // Submerged camera: the transparent (fluid) pass needs the underwater fog
+    // uniforms as well, or the water plane stays raw above a fogged floor.
     ApplyFogUniforms(
         greedyShader, camera_position,
-        cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass,
-                                                /*alpha_cutout=*/false));
+        cutum::ShouldApplyBelowSurfaceFogToPass(
+            transparentPass, /*alpha_cutout=*/false,
+            UnderwaterFogPass_.GetUnderwaterFogSubmerged() > 0.5f));
   }
   ApplyGreedyEnvironmentUniforms(greedyShader);
   glActiveTexture(GL_TEXTURE0);
@@ -7280,7 +7283,9 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       camera_position = camera->GetPosition();
       ApplyFogUniforms(
           packedGreedyShader, camera_position,
-          cutum::ShouldApplyBelowSurfaceFogToPass(transparent_pass, false));
+          cutum::ShouldApplyBelowSurfaceFogToPass(
+              transparent_pass, false,
+              UnderwaterFogPass_.GetUnderwaterFogSubmerged() > 0.5f));
     }
     ApplyGreedyEnvironmentUniforms(packedGreedyShader);
   }
