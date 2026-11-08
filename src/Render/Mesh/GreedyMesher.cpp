@@ -336,13 +336,21 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   if (face_style == BlockRenderStyle::Fluid &&
       CellHasRenderableFluid(reader, registry, catalog, neighbor_pos))
   {
-    // The neighbor cell presents the water surface itself (a liquid twin or
-    // a waterlogged permeable block). Hiding only the liquid twin left the
-    // water face drawn against every waterlogged leaf cell — the floating
-    // water rectangles inside flooded crowns (World_245 witness: CPU voxel
-    // march hits leaves 560, GPU draws water). The permeable cell renders
-    // its own top surface; the separating plane is redundant.
-    return true;
+    // The neighbor cell presents the water surface itself. Hide the face
+    // against a real waterlogged permeable block (leaves/plants in water):
+    // the separating plane was the floating water rectangle inside flooded
+    // crowns. But an overlay-hidden liquid (GetBlock=AIR, raw=liquid, R06)
+    // must KEEP its surface face — the surface renders through that cell.
+    if (MeshIsLiquid(registry, catalog, neighbor) && neighbor == face_id)
+    {
+      return true;
+    }
+    if (neighbor != BLOCK_AIR &&
+        MeshIsFluidPermeable(registry, catalog, neighbor))
+    {
+      return true;
+    }
+    return false;
   }
 
   const bool face_transparent =
