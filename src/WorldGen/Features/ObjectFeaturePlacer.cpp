@@ -1612,11 +1612,25 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
         continue;
       }
     }
-    if (ecology.MaxSlope > 0.0f &&
-        SampleLandSurfaceGradient(ctx, x, z, ecologySurfaceY) >
-            ecology.MaxSlope)
+    if (ecology.MaxSlope > 0.0f)
     {
-      continue;
+      // Land gradient rejects submerged columns outright (999 on a column
+      // whose surface is below sea), which made every underwater_floor rule
+      // with a slope gate unplaceable (water audit W3.1 / C-1: the mtg_coral
+      // scatter rules never fired). Underwater rules measure the seabed via
+      // the structure (non-land) gradient instead.
+      const SurfaceConstraintKind surface_kind = rule.Surface.Kind;
+      const bool underwater_rule =
+          surface_kind == SurfaceConstraintKind::UnderwaterFloor ||
+          surface_kind == SurfaceConstraintKind::WaterSurface;
+      const float gradient =
+          underwater_rule
+              ? SampleStructureSurfaceGradient(ctx, x, z, ecologySurfaceY)
+              : SampleLandSurfaceGradient(ctx, x, z, ecologySurfaceY);
+      if (gradient > ecology.MaxSlope)
+      {
+        continue;
+      }
     }
     const float packMul = UWorldGenPack::FeatureWeightMultiplier(
         biomeKey.empty() ? BiomeIdToString(biome) : biomeKey, ruleFeatureKey);
