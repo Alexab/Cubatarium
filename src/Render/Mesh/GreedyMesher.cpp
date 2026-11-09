@@ -704,6 +704,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
   uint8_t fluid_mask[CHUNK_SIZE][CHUNK_SIZE];
   uint8_t light_mask[CHUNK_SIZE][CHUNK_SIZE];
+  uint8_t fluid_surface_mask[CHUNK_SIZE][CHUNK_SIZE];
 
   for (int axis = 0; axis < 3; ++axis)
 
@@ -732,6 +733,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
         std::memset(fluid_mask, 0, sizeof(fluid_mask));
         std::memset(light_mask, 0, sizeof(light_mask));
+        std::memset(fluid_surface_mask, 0, sizeof(fluid_surface_mask));
 
         for (int v = 0; v < CHUNK_SIZE; ++v)
 
@@ -790,10 +792,28 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             mask[v][u] = id;
             light_mask[v][u] = FaceLightPacked(reader, world_pos, neighbor_offset);
 
-            fluid_mask[v][u] =
-                MeshIsLiquid(registry, catalog, id)
-                    ? static_cast<uint8_t>(1)
-                    : PackFluidCellState(reader.GetFluid(world_pos));
+            // Liquid quads carry the real packed fluid state (level bits feed
+            // the W4 surface height); legacy sources that pack to 0 keep the
+            // old nonzero marker so shell/fluid passes still see them.
+            const uint8_t packed_fluid =
+                PackFluidCellState(reader.GetFluid(world_pos));
+            if (MeshIsLiquid(registry, catalog, id))
+            {
+              fluid_mask[v][u] =
+                  packed_fluid != 0 ? packed_fluid : static_cast<uint8_t>(1);
+              // W4: liquid cells with no renderable fluid above carry the
+              // fluid surface; their quads are truncated to FluidCellHeight.
+              fluid_surface_mask[v][u] =
+                  CellHasRenderableFluid(reader, registry, catalog,
+                                         world_pos + glm::ivec3(0, 1, 0))
+                      ? static_cast<uint8_t>(0)
+                      : (packed_fluid != 0 ? static_cast<uint8_t>(1)
+                                           : static_cast<uint8_t>(2));
+            }
+            else
+            {
+              fluid_mask[v][u] = packed_fluid;
+            }
           }
         }
 
@@ -819,7 +839,9 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             while (u + width < CHUNK_SIZE && mask[v][u + width] == id &&
                    light_mask[v][u + width] == light_mask[v][u] &&
 
-                   fluid_mask[v][u + width] == fluid_mask[v][u])
+                   fluid_mask[v][u + width] == fluid_mask[v][u] &&
+                   fluid_surface_mask[v][u + width] ==
+                       fluid_surface_mask[v][u])
 
             {
 
@@ -841,7 +863,9 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
                 if (mask[v + height][u + k] != id ||
                     light_mask[v + height][u + k] != light_mask[v][u] ||
 
-                    fluid_mask[v + height][u + k] != fluid_mask[v][u])
+                    fluid_mask[v + height][u + k] != fluid_mask[v][u] ||
+                    fluid_surface_mask[v + height][u + k] !=
+                        fluid_surface_mask[v][u])
 
                 {
 
@@ -880,6 +904,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             quad.LightPacked = light_mask[v][u];
 
             quad.FluidPacked = fluid_mask[v][u];
+            quad.FluidSurface = fluid_surface_mask[v][u];
 
             quads.push_back(quad);
 

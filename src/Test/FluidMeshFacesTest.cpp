@@ -323,6 +323,74 @@ int main()
   Expect(shore_faces_toward_air >= 1,
          "water at shore keeps vertical face toward dug air");
 
+  // W4: Minecraft-style truncated fluid surface. A source cell with air
+  // above is a surface cell (FluidSurface=1): its top face and the top edge
+  // of its side faces emit 1/8 below the block top (10.5 -> 10.375). A cell
+  // with water above keeps the full cube.
+  {
+    cutum::UBlockWorld surface_world;
+    surface_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 surface_water(6, 10, 6);
+    const glm::ivec3 submerged_water(6, 9, 6);
+    surface_world.SetBlock(surface_water, kWater);
+    surface_world.SetFluidState(surface_water,
+                                cutum::FluidCellState::Source());
+    surface_world.SetBlock(submerged_water, kWater);
+    surface_world.SetFluidState(submerged_water,
+                                cutum::FluidCellState::Source());
+    const std::vector<cutum::GreedyQuad> surface_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(surface_world,
+                                             glm::ivec3(0, 0, 0), registry);
+    bool top_marked_surface = false;
+    bool top_at_seven_eighths = false;
+    bool surface_side_lowered = false;
+    bool submerged_side_full = false;
+    for (const cutum::GreedyQuad &quad : surface_quads)
+    {
+      if (quad.Id != kWater)
+      {
+        continue;
+      }
+      std::vector<cutum::GreedyMeshVertex> verts;
+      std::vector<uint32_t> idx;
+      cutum::AppendGreedyQuad(quad, glm::ivec3(0, 0, 0), verts, idx);
+      float max_py = -1e9f;
+      for (const cutum::GreedyMeshVertex &v : verts)
+      {
+        max_py = std::max(max_py, v.py);
+      }
+      if (quad.axis == 1 && quad.faceSign > 0)
+      {
+        top_marked_surface = top_marked_surface || quad.FluidSurface != 0;
+        top_at_seven_eighths =
+            top_at_seven_eighths || std::abs(max_py - 10.375f) < 1e-4f;
+      }
+      else if (quad.axis != 1)
+      {
+        if (quad.FluidSurface != 0)
+        {
+          // Surface side face of the y=10 cell: top edge at 10.375.
+          if (std::abs(max_py - 10.375f) < 1e-4f)
+          {
+            surface_side_lowered = true;
+          }
+        }
+        else if (std::abs(max_py - 9.5f) < 1e-4f)
+        {
+          // Submerged y=9 cell side face keeps the full cube.
+          submerged_side_full = true;
+        }
+      }
+    }
+    Expect(top_marked_surface, "fluid top face marked as surface cell");
+    Expect(top_at_seven_eighths,
+           "source top face emits at 7/8 height (10.375)");
+    Expect(surface_side_lowered,
+           "surface side face lowers its top edge to 10.375");
+    Expect(submerged_side_full,
+           "submerged side face keeps full cube height");
+  }
+
   const auto decor_definitions = FluidTest::MakeTestFluidDecorDefinitions();
   cutum::UBlockRegistry decor_registry(nullptr, decor_definitions);
   constexpr cutum::BlockId kTallGrass = 10;
