@@ -8258,6 +8258,29 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   OverlaySection world{"World:", {}};
   world.Lines.push_back("Weather: " + WorldInstance->GetWeatherName());
   {
+    // Camera block + chunk coordinates on the debug overlay: user bug
+    // reports reference screen positions, so the position must be visible
+    // in every captured frame (water audit follow-up request).
+    const glm::vec3 camera_pos = [&]()
+    {
+      if (auto camera = WorldInstance->GetCurrentUserCamera())
+      {
+        return camera->GetPosition();
+      }
+      return glm::vec3(0.0f);
+    }();
+    const glm::ivec3 eye_block(WorldCoordToBlockIndex(camera_pos.x),
+                               WorldCoordToBlockIndex(camera_pos.y),
+                               WorldCoordToBlockIndex(camera_pos.z));
+    const glm::ivec3 eye_chunk = UChunkManager::WorldToChunk(eye_block);
+    world.Lines.push_back("Pos: (" + std::to_string(eye_block.x) + "," +
+                          std::to_string(eye_block.y) + "," +
+                          std::to_string(eye_block.z) + ") chunk (" +
+                          std::to_string(eye_chunk.x) + "," +
+                          std::to_string(eye_chunk.y) + "," +
+                          std::to_string(eye_chunk.z) + ")");
+  }
+  {
     float temperature = 0.0f;
     float moisture = 0.0f;
     const ProceduralSettings settings = WorldInstance->GetProceduralSettings();
