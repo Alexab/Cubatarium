@@ -213,7 +213,12 @@ void main()
 
     float below_waterline = 0.0;
     if (uScreenWaterlineNdc > -1.5) {
-        below_waterline = step(TexCoord.y, uScreenWaterlineNdc);
+        // W7.1 (water audit D-6): smooth waterline transition instead of a
+        // hard step — a ~1.2% screen-height band blends sky and underwater
+        // colors; celestial/cloud suppression fades with the same factor.
+        below_waterline = 1.0 - smoothstep(uScreenWaterlineNdc - 0.012,
+                                           uScreenWaterlineNdc + 0.012,
+                                           TexCoord.y);
     }
 
     vec3 dir_star = normalize(uStarCelestialInv * view_dir);
@@ -289,9 +294,7 @@ void main()
                    celestial_color) * (1.0 - below_waterline);
     finalColor = cloud_radiance + finalColor * cloud_transmittance;
 
-    if (below_waterline > 0.5) {
-        finalColor = uUnderwaterFogColor;
-    }
+    finalColor = mix(finalColor, uUnderwaterFogColor, below_waterline);
 
     if (uFogHorizonBlend > 0.001) {
         float elev = clamp(view_dir.y, 0.0, 1.0);
