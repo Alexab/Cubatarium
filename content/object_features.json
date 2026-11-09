@@ -738,6 +738,60 @@
       }
     },
     {
+      "mode": "scatter_blocks",
+      "block": "cu_organic_kelp_young",
+      "attempts": 4,
+      "radius": 3,
+      "biomes": [
+        "ocean"
+      ],
+      "weight": 2,
+      "seed_offset": 4360,
+      "spacing": 18,
+      "surface_constraint": "underwater_floor",
+      "ecology": {
+        "temperature": [0.0, 1.0],
+        "elevation": {"above_sea_level": [-24, -1]},
+        "max_slope": 10.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "cu_organic_kelp_fresh",
+      "attempts": 4,
+      "radius": 3,
+      "biomes": [
+        "ocean"
+      ],
+      "weight": 2,
+      "seed_offset": 4361,
+      "spacing": 26,
+      "surface_constraint": "underwater_floor",
+      "ecology": {
+        "temperature": [0.0, 1.0],
+        "elevation": {"above_sea_level": [-48, -6]},
+        "max_slope": 10.0
+      }
+    },
+    {
+      "mode": "scatter_blocks",
+      "block": "cu_organic_kelp_mature",
+      "attempts": 4,
+      "radius": 3,
+      "biomes": [
+        "ocean"
+      ],
+      "weight": 1,
+      "seed_offset": 4362,
+      "spacing": 34,
+      "surface_constraint": "underwater_floor",
+      "ecology": {
+        "temperature": [0.0, 1.0],
+        "elevation": {"above_sea_level": [-64, -24]},
+        "max_slope": 12.0
+      }
+    },
+    {
       "biomes": [
         "forest"
       ],
