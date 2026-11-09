@@ -14,6 +14,10 @@ struct URuntimeTuning
   int WaterDropBoost{4};
   int FloodMaxPasses{8};
   int CoastalBandAboveSea{8};
+  /// W6.5: when true, non-source (flowing) water with no incoming neighbor
+  /// dries out like lava (MC/Luanti decay). Default false — the historical
+  /// stable-puddle behavior; also needs a design sign-off before defaulting.
+  bool WaterFlowingDries{false};
   /// Extra keep ring beyond visual RD (voxels without mandatory mesh).
   int KeepPrefetchMargin{2};
   /// Max keep-shell async gen requests per frame when backpressure allows.
