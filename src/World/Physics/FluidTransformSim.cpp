@@ -1,5 +1,6 @@
 #include "World/Physics/FluidTransformSim.h"
 
+
 #include "Blocks/BlockDefinitionStorage.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
@@ -117,6 +118,24 @@ int MinSurviveLevel(const UBlockDefinitionStorage &definitions, BlockId id)
     return 1;
   }
   return std::max(0, min_level);
+}
+
+/// W6.5 (water audit E-1): flag-gated flowing-water decay. With
+/// `physics.fluid_tuning.water_flowing_dries`, non-source water needs at
+/// least one incoming neighbor level to survive — an isolated flowing cell
+/// dries (transform_dry) instead of persisting forever. Default off keeps
+/// the historical stable-puddle behavior; worldgen water is all sources and
+/// is unaffected either way.
+int EffectiveMinSurviveLevel(const UBlockDefinitionStorage &definitions,
+                             BlockId id)
+{
+  const int min_survive = MinSurviveLevel(definitions, id);
+  if (URuntimeTuning::Get().WaterFlowingDries &&
+      IsWaterFluidDefinition(definitions.GetById(id)))
+  {
+    return std::max(1, min_survive);
+  }
+  return min_survive;
 }
 
 FluidCellState EffectiveFluidState(const UBlockWorld &blockWorld,
@@ -367,7 +386,7 @@ bool TransformWouldChange(const UBlockWorld &blockWorld,
   }
 
   const int max_level = GetFluidMaxLevel(definitions, fluid_id);
-  const int min_survive = MinSurviveLevel(definitions, fluid_id);
+  const int min_survive = EffectiveMinSurviveLevel(definitions, fluid_id);
   const int viscosity = GetLiquidViscosity(definitions, fluid_id);
   const bool renewable = IsLiquidRenewable(definitions, fluid_id);
 
@@ -595,7 +614,7 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
 
   const int spread_period = GetSpreadPeriod(definitions, fluid_id);
   const int max_level = GetFluidMaxLevel(definitions, fluid_id);
-  const int min_survive = MinSurviveLevel(definitions, fluid_id);
+  const int min_survive = EffectiveMinSurviveLevel(definitions, fluid_id);
   const int viscosity = GetLiquidViscosity(definitions, fluid_id);
   const bool renewable = IsLiquidRenewable(definitions, fluid_id);
 
