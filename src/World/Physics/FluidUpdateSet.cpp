@@ -75,9 +75,14 @@ std::vector<glm::ivec3> UFluidUpdateSet::PopBudgeted()
     ++Stats.Processed;
   }
   // W6.3: once the pressure is gone, give the dropped cells another turn.
-  const size_t half_limit =
-      static_cast<size_t>(std::max(1, Budgets.LiquidQueueHardLimit)) / 2;
-  if (!DroppedRetry.empty() && Keys.size() < half_limit)
+  // The retry threshold is the parsed-but-previously-unused
+  // LiquidQueueSoftLimit (water audit W6.7): drops re-enter when the queue
+  // drains below the soft limit.
+  const size_t retry_threshold =
+      Budgets.LiquidQueueSoftLimit > 0
+          ? static_cast<size_t>(Budgets.LiquidQueueSoftLimit)
+          : static_cast<size_t>(std::max(1, Budgets.LiquidQueueHardLimit)) / 2;
+  if (!DroppedRetry.empty() && Keys.size() < retry_threshold)
   {
     size_t retried = 0;
     while (!DroppedRetry.empty() && retried < kRetryBatchMax)
