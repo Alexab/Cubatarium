@@ -384,13 +384,20 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           {
             DeferredIntraChunkSealNeeded.insert(coord);
           }
-          DeferredShoreSealQueue.push_back(coord);
+          if (DeferredShoreSealQueued.insert(ground).second)
+          {
+            DeferredShoreSealQueue.push_back(coord);
+          }
           // W5.1 (water audit A-1): worker sealing runs in a per-chunk
           // scratch world, so a border pocket could not see this chunk's
           // water and stayed unfilled; the neighbor's own one-shot seal
           // drained before this chunk existed. Re-run the neighbors' shore
-          // seal now that both sides are committed (budgeted drain; the
-          // seal itself is idempotent).
+          // seal now that both sides are committed — but ONLY neighbors
+          // whose own commit-time seal already drained (>= LitReady): a
+          // still-Lighting neighbor has its own seal queued and will run it
+          // with this chunk present. During bulk world load every neighbor
+          // is freshly committed, so this keeps the queue at ~1 entry per
+          // commit instead of ~5 (load-bar oscillation, user report).
           for (int axis = 0; axis < 2; ++axis)
           {
             for (int sign = -1; sign <= 1; sign += 2)
@@ -399,7 +406,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               nb[axis == 0 ? 0 : 2] += sign;
               const glm::ivec3 nb_ground(nb.x, 0, nb.z);
               if (world.GetColumnEmergeState(nb_ground) >=
-                  ColumnEmergeState::Lighting)
+                  ColumnEmergeState::LitReady &&
+                  DeferredShoreSealQueued.insert(nb_ground).second)
               {
                 DeferredShoreSealQueue.push_back(nb);
               }
@@ -4194,6 +4202,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       const glm::ivec3 coord = *it;
       it = DeferredShoreSealQueue.erase(it);
+      DeferredShoreSealQueued.erase(glm::ivec3(coord.x, 0, coord.z));
       seal_one(coord, true);
       ++near_done;
     }
@@ -4208,6 +4217,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       const glm::ivec3 coord = *it;
       it = DeferredShoreSealQueue.erase(it);
+      DeferredShoreSealQueued.erase(glm::ivec3(coord.x, 0, coord.z));
       seal_one(coord, false);
       ++far_done;
     }
@@ -5488,6 +5498,7 @@ void UWorldStreaming::QuiesceBackgroundWork(
   }
   DeferredPhysicsSeedQueue.clear();
   DeferredShoreSealQueue.clear();
+  DeferredShoreSealQueued.clear();
   DeferredIntraChunkSealNeeded.clear();
   PauseChunkGeneration(async_io_timeout);
   if (world.Persistence)
