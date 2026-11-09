@@ -255,19 +255,20 @@ static void TestSealChain9()
   FillStoneColumn(world, 0, 0, 58);
   world.SetBlock(glm::ivec3(0, 61, 0), kWater);
   world.SetFluidState(glm::ivec3(0, 61, 0), cutum::FluidCellState::Source());
-  for (int x = 1; x <= 9; ++x)
+  // W5.4 raised the seal flood from 8 to 16 passes. A 15-cell chain (the
+  // box is one chunk, x 0..15) now seals fully — previously the 9th cell
+  // stayed open.
+  for (int x = 1; x <= 15; ++x)
   {
     world.SetBlock(glm::ivec3(x, 61, 0), cutum::BLOCK_AIR);
   }
 
   cutum::SealFluidPocketsInChunk(ctx, 0, 0);
-  for (int x = 1; x <= 8; ++x)
+  for (int x = 1; x <= 15; ++x)
   {
     FluidTest::Expect(world.GetBlock(glm::ivec3(x, 61, 0)) == kWater,
-                      kTestName, "8-cell air chain seals within pass limit");
+                      kTestName, "15-cell air chain seals within 16 passes");
   }
-  FluidTest::Expect(world.GetBlock(glm::ivec3(9, 61, 0)) == cutum::BLOCK_AIR,
-                    kTestName, "9th air cell remains after 8-pass limit");
 }
 
 static void TestSealChunkBoundarySameWorld()

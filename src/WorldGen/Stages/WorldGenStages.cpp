@@ -54,6 +54,32 @@ bool AllowsAquiferWater(const UAquiferSampler *sampler, glm::ivec3 pos,
   return sampler->SampleAt(pos.x, pos.y, pos.z).Fluid == AquiferFluid::Water;
 }
 
+/// Highest liquid block in the chunk within the above-sea band. Valleys
+/// (rivers) may carry water up to sea+24 and lakes sit above sea too — the
+/// seal passes historically stopped at sea and left those bodies unprotected
+/// (water audit A-3). Bounded scan window keeps this cheap.
+int HighestFluidTopInChunk(const WorldGenContext &ctx, int base_x, int base_z)
+{
+  constexpr int kMaxAboveSea = 25; // valleys max_water_elevation_above_sea=24
+  const int sea = ctx.Settings.SeaLevel;
+  const int top = std::min(ctx.Settings.MaxHeight - 1, sea + kMaxAboveSea);
+  for (int y = top; y > sea; --y)
+  {
+    for (int z = base_z; z < base_z + CHUNK_SIZE; ++z)
+    {
+      for (int x = base_x; x < base_x + CHUNK_SIZE; ++x)
+      {
+        const BlockId id = ctx.World.GetBlock(glm::ivec3(x, y, z));
+        if (id != BLOCK_AIR && ctx.Registry.IsLiquid(id))
+        {
+          return y;
+        }
+      }
+    }
+  }
+  return sea;
+}
+
 BlockId ResolveGeologyBlock(WorldGenContext &ctx, const char *name)
 {
   const BlockId resolved = ResolvePackScatterBlockId(
@@ -402,7 +428,10 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
   FluidFloodOptions options;
   options.fluid_id = ctx.Blocks.Water;
   options.source_for_air = true;
-  options.max_passes = 8;
+  // W5.4 (water audit A-2): deeper pass count — air chains longer than 8
+  // cells from any water stayed unfilled (TestSealChain9). The seal runs
+  // off the hot path (worker scratch once + budgeted deferred drains).
+  options.max_passes = 16;
   const std::optional<UAquiferSampler> aquifer_sampler =
       MakeAquiferSealSampler(ctx);
   if (aquifer_sampler)
@@ -410,10 +439,15 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
     options.allow_air_fill = [&aquifer_sampler, sea](glm::ivec3 pos)
     { return AllowsAquiferWater(&*aquifer_sampler, pos, sea); };
   }
+  // W5.2 (water audit A-3): rivers (up to sea+24) and lakes sit above sea
+  // with no seal at all — a cave piercing their floor left hanging water
+  // over air. Extend the flood ceiling to the chunk's highest fluid.
+  const int seal_top =
+      std::max(sea, HighestFluidTopInChunk(ctx, base_x, base_z));
   const int filled = UFluidSpreadSystem::FloodWetPocketsInBox(
       ctx.World, *definitions,
       glm::ivec3(base_x, ctx.Settings.MinHeight, base_z),
-      glm::ivec3(base_x + CHUNK_SIZE - 1, sea, base_z + CHUNK_SIZE - 1),
+      glm::ivec3(base_x + CHUNK_SIZE - 1, seal_top, base_z + CHUNK_SIZE - 1),
       options);
   if (out_voxels_filled)
   {
@@ -421,7 +455,7 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
   }
   if (filled > 0)
   {
-    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, sea);
+    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, seal_top);
   }
   return filled > 0;
 }
@@ -473,13 +507,17 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
   const BlockId water = ctx.Blocks.Water;
   const std::optional<UAquiferSampler> aquifer_sampler =
       MakeAquiferSealSampler(ctx);
+  // W5.2 (A-3): shore air sealing extends to above-sea rivers/lakes, not
+  // just the ocean band.
+  const int seal_top =
+      std::max(sea, HighestFluidTopInChunk(ctx, base_x, base_z));
   bool any = false;
   // 8 full-volume passes were 200–470ms on main (CB hole spikes). Two passes
   // close the common shore strip; remaining edges catch up on later frames.
   for (int pass = 0; pass < 2; ++pass)
   {
     bool changed = false;
-    for (int y = ctx.Settings.MinHeight; y <= sea; ++y)
+    for (int y = ctx.Settings.MinHeight; y <= seal_top; ++y)
     {
       for (int x = min_x; x <= max_x; ++x)
       {
@@ -525,7 +563,7 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
   }
   if (any)
   {
-    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, sea);
+    ctx.AccumulateDirtyColumn(ctx.Settings.MinHeight, seal_top);
   }
   return any;
 }
