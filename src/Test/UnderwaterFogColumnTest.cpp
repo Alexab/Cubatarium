@@ -68,6 +68,7 @@ int main()
 
   constexpr cutum::BlockId kWater = 9;
   constexpr cutum::BlockId kLava = 11;
+  constexpr cutum::BlockId kStone = 8;
   constexpr int kSeaY = 63;
   const int bx = 4;
   const int bz = 7;
@@ -101,6 +102,37 @@ int main()
          "eye above surface is not inside fluid");
   Expect(!CameraInsideFluidRule(empty, 32.0f),
          "empty column never counts as inside fluid");
+
+  // Deep underwater cave: the ocean FLOOR is 40 blocks above the cave eyes —
+  // beyond the default slice-builder window (ScanUp=32), so no water is
+  // visible in it at all. The EYE query uses the deep window and must still
+  // classify the camera as submerged (underwater caves otherwise lose all
+  // fog: water audit follow-up).
+  constexpr int kCaveEyeY = 20;
+  constexpr int kOceanFloorY = 60;
+  for (int y = 22; y <= kOceanFloorY; ++y) // cave ceiling + floor mass
+  {
+    world.SetBlock(glm::ivec3(bx, y, bz), kStone);
+  }
+  for (int y = kOceanFloorY + 1; y <= kSeaY; ++y) // thin ocean above
+  {
+    world.SetBlock(glm::ivec3(bx, y, bz), kWater);
+  }
+
+  const cutum::FluidColumnSurface cave_default =
+      cutum::FindFluidColumnSurfaceAt(world, registry, bx, bz, kCaveEyeY);
+  Expect(!cave_default.valid,
+         "default (slice-builder) window misses water 40 blocks up");
+
+  const cutum::FluidColumnSurface cave_eye = cutum::FindFluidColumnSurfaceAt(
+      world, registry, bx, bz, kCaveEyeY,
+      cutum::FluidSurfaceScanTuning::EyeScanUp,
+      cutum::FluidSurfaceScanTuning::EyeScanDown);
+  Expect(cave_eye.valid, "eye deep scan finds the ocean surface above cave");
+  Expect(cave_eye.fluidId == kWater && cave_eye.surfaceBlockY == kSeaY,
+         "eye deep scan returns the ocean water surface");
+  Expect(CameraInsideFluidRule(cave_eye, kCaveEyeY + 0.5f),
+         "camera in a deep underwater cave is submerged");
 
   std::cout << "underwater_fog_column_test: ok" << std::endl;
   return 0;
