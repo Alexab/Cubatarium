@@ -474,6 +474,7 @@ int main()
                                              dual_registry);
     int canon_quads = 0;
     int ocean_quads_count = 0;
+    int kelp_cell_quads = 0;
     for (const cutum::GreedyQuad &quad : ocean_quads)
     {
       if (quad.Id == kWaterCanon)
@@ -484,12 +485,31 @@ int main()
       {
         ++ocean_quads_count;
       }
+      // Owning cell from (axis, slice, u, v): block i spans i-0.5..i+0.5.
+      glm::ivec3 cell(0, 0, 0);
+      cell[quad.axis] = quad.slice;
+      cell[(quad.axis + 1) % 3] = quad.u;
+      cell[(quad.axis + 2) % 3] = quad.v;
+      if (cell == kelp_pos && quad.Id != kKelp)
+      {
+        ++kelp_cell_quads;
+        std::cerr << "DBG kelp-quad axis=" << quad.axis
+                  << " sign=" << quad.faceSign << " slice=" << quad.slice
+                  << " u=" << quad.u << " v=" << quad.v
+                  << " id=" << static_cast<int>(quad.Id)
+                  << " packed=" << static_cast<int>(quad.FluidPacked)
+                  << " surf=" << static_cast<int>(quad.FluidSurface)
+                  << std::endl;
+      }
     }
     Expect(canon_quads == 0,
            "no quads resolve to the canonical water id inside an ocean of "
            "another water id");
     Expect(ocean_quads_count >= 5,
            "ocean water keeps its own surface faces");
+    Expect(kelp_cell_quads == 0,
+           "waterlogged kelp cell emits no fluid faces toward water "
+           "neighbors (cross neighbors must cull fluid-fluid)");
   }
 
   cutum::UBlockWorld stacked_water_world;
