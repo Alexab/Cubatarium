@@ -14,6 +14,7 @@
 #include "World/Core/World.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
+#include "World/Physics/FluidKindPresetUtil.h"
 #include <chrono>
 #include <unordered_map>
 #include "World/Raycast/BlockRaycast.h"
@@ -71,15 +72,32 @@ FluidKind ClassifyFluidBlock(const UBlockRegistry &registry, BlockId id)
   FluidKind kind = FluidKind::None;
   if (IsPassableBlock(registry, id))
   {
-    const std::string &name = registry.GetTypeNameById(id);
-    if (name.find("lava") != std::string::npos)
+    // W6.6 (water audit E-6): physics-preset first (the sim's own classifier,
+    // FluidKindFromDefinition) — the name-substring heuristic stays only as
+    // a fallback for definition-less ids.
+    const BlockDefinition *def =
+        registry.GetDefinitions() ? registry.GetDefinitions()->GetById(id)
+                                  : nullptr;
+    if (def && def->Physics.IsLiquid)
     {
-      kind = FluidKind::Lava;
+      // Map the sim's preset kind onto the local habitat enum (same values,
+      // distinct types).
+      const cutum::FluidKind preset = FluidKindFromDefinition(def);
+      kind = preset == cutum::FluidKind::Lava ? FluidKind::Lava
+                                              : FluidKind::Water;
     }
-    else if (registry.GetRenderStyle(id) == BlockRenderStyle::Fluid ||
-             name.find("water") != std::string::npos)
+    else
     {
-      kind = FluidKind::Water;
+      const std::string &name = registry.GetTypeNameById(id);
+      if (name.find("lava") != std::string::npos)
+      {
+        kind = FluidKind::Lava;
+      }
+      else if (registry.GetRenderStyle(id) == BlockRenderStyle::Fluid ||
+               name.find("water") != std::string::npos)
+      {
+        kind = FluidKind::Water;
+      }
     }
   }
   perRegistry[id] = kind;
@@ -286,6 +304,15 @@ EnvironmentSample ProbeEnvironmentAtEx(const UWorld &world,
   const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
   SampleHabitatFluidsInVolume(world, vol, env.inWater, env.inLava);
   env.inFluid = env.inWater || env.inLava;
+  // W6.1 (water audit E-4): head-level fluid probe — breath must drain only
+  // when the eyes are submerged; body contact (wading) must not drown.
+  const glm::vec3 headOrigin = bodyOrigin +
+                               glm::vec3(0.0f, sizeBlocks.y * 0.72f, 0.0f);
+  const glm::vec3 headSize(0.5f, 0.25f, 0.5f);
+  const CollisionVolume headVol =
+      CollisionVolumeFromBody(headOrigin, headSize);
+  SampleHabitatFluidsInVolume(world, headVol, env.headInWater,
+                              env.headInLava);
   env.onSolidGround = world.HasBodySupport(vol);
   env.bodyBlocked = world.CheckCollisionVolume(vol, 0);
   const bool clearance = HasAerialClearance(world, vol, aerialClearance);

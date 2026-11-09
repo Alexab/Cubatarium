@@ -34,6 +34,10 @@ struct EnvironmentSample
   bool inFluid{false};
   bool inWater{false};
   bool inLava{false};
+  /// Head/eye-level fluid contact (W6.1): breath drains on head submersion,
+  /// not on body contact — wading must not drown.
+  bool headInWater{false};
+  bool headInLava{false};
   bool onSolidGround{false};
   bool inOpenAir{false};
   bool bodyBlocked{false};

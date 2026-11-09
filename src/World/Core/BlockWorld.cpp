@@ -3,6 +3,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidKindPresetUtil.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
 
 namespace cutum
 {
@@ -44,6 +45,14 @@ void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
         const FluidKind kind = FluidKindFromDefinition(def);
         Chunks.SetFluidState(pos, FluidCellState::Source().WithKind(kind));
       }
+      else if (!IsFluidPermeableFromDefinition(Id, def,
+                                               /*is_liquid=*/false))
+      {
+        // W6.2 (water audit E-3): a solid placed into water annihilates the
+        // water — the stale fluid byte under the solid must not persist to
+        // disk and resurrect when the block is later replaced by decor.
+        Chunks.ClearFluidState(pos);
+      }
     }
   }
   if (CaptureBuffer)
@@ -76,6 +85,12 @@ void UBlockWorld::SetBlockInChunk(UChunk &chunk, glm::ivec3 pos, BlockId Id)
       {
         const FluidKind kind = FluidKindFromDefinition(def);
         chunk.SetFluidLocal(local, FluidCellState::Source().WithKind(kind));
+      }
+      else if (!IsFluidPermeableFromDefinition(Id, def,
+                                               /*is_liquid=*/false))
+      {
+        // W6.2: clear the stale fluid byte under solids (see SetBlock).
+        chunk.ClearFluidLocal(local);
       }
     }
   }
