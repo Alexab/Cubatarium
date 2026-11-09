@@ -408,6 +408,90 @@ int main()
   Expect(CountFluidFaces(wl_quads, kWater, true) >= 1,
          "water keeps top face under waterlogged decor");
 
+  // Waterlogged decor inside an ocean whose water id differs from the
+  // canonical first-water id: the decor's fluid must resolve to the actual
+  // neighbor water id, or the same-id face cull fails and the plant renders
+  // as a water block inside the ocean (user report: "водоросли в блоках
+  // воды под водой").
+  {
+    auto dual_definitions = std::make_shared<cutum::UBlockDefinitionStorage>();
+    constexpr cutum::BlockId kStone = 8;
+    constexpr cutum::BlockId kWaterCanon = 9;  // first-water: canonical
+    constexpr cutum::BlockId kWaterOcean = 20; // worldgen-pack ocean water
+    constexpr cutum::BlockId kKelp = 21;
+    cutum::BlockDefinition stone;
+    stone.Name = "stone";
+    stone.Physics = cutum::BlockPhysicsProfile::Solid();
+    cutum::BlockDefinition water_canon;
+    water_canon.Name = "water";
+    water_canon.Id = kWaterCanon;
+    water_canon.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+    water_canon.Render.Transparent = true;
+    water_canon.Render.Style = cutum::BlockRenderStyle::Fluid;
+    cutum::BlockDefinition water_ocean;
+    water_ocean.Name = "ocean_water";
+    water_ocean.Id = kWaterOcean;
+    water_ocean.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+    water_ocean.Render.Transparent = true;
+    water_ocean.Render.Style = cutum::BlockRenderStyle::Fluid;
+    cutum::BlockDefinition kelp;
+    kelp.Name = "kelp";
+    kelp.Physics = cutum::BlockPhysicsProfile::Solid();
+    kelp.Physics.Movement.Occupancy = 0.0f;
+    kelp.Render.Style = cutum::BlockRenderStyle::Cross;
+    kelp.Render.Transparent = true;
+    std::unordered_map<cutum::BlockId, cutum::BlockDefinition> dual_by_id;
+    dual_by_id[kStone] = stone;
+    dual_by_id[kWaterCanon] = water_canon;
+    dual_by_id[kWaterOcean] = water_ocean;
+    dual_by_id[kKelp] = kelp;
+    std::unordered_map<std::string, cutum::BlockId> dual_names;
+    dual_names["stone"] = kStone;
+    dual_names["water"] = kWaterCanon;
+    dual_names["ocean_water"] = kWaterOcean;
+    dual_names["kelp"] = kKelp;
+    dual_definitions->ReplaceAll(std::move(dual_by_id), std::move(dual_names));
+    cutum::UBlockRegistry dual_registry(nullptr, dual_definitions);
+
+    cutum::UBlockWorld ocean_world;
+    ocean_world.SetFluidDefinitions(dual_definitions.get());
+    const glm::ivec3 kelp_pos(6, 10, 6);
+    ocean_world.SetBlock(kelp_pos + glm::ivec3(0, -1, 0), kStone);
+    for (const glm::ivec3 &offset :
+         {glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0), glm::ivec3(0, 0, -1),
+          glm::ivec3(0, 0, 1), glm::ivec3(0, 1, 0)})
+    {
+      const glm::ivec3 p = kelp_pos + offset;
+      ocean_world.SetBlock(p, kWaterOcean);
+      ocean_world.SetFluidState(p, cutum::FluidCellState::Source());
+    }
+    ocean_world.SetBlock(kelp_pos, kKelp);
+    ocean_world.SetFluidState(kelp_pos,
+                              cutum::FluidCellState::Source().WithKind(
+                                  cutum::FluidKind::Water));
+    const std::vector<cutum::GreedyQuad> ocean_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(ocean_world, glm::ivec3(0, 0, 0),
+                                             dual_registry);
+    int canon_quads = 0;
+    int ocean_quads_count = 0;
+    for (const cutum::GreedyQuad &quad : ocean_quads)
+    {
+      if (quad.Id == kWaterCanon)
+      {
+        ++canon_quads;
+      }
+      if (quad.Id == kWaterOcean)
+      {
+        ++ocean_quads_count;
+      }
+    }
+    Expect(canon_quads == 0,
+           "no quads resolve to the canonical water id inside an ocean of "
+           "another water id");
+    Expect(ocean_quads_count >= 5,
+           "ocean water keeps its own surface faces");
+  }
+
   cutum::UBlockWorld stacked_water_world;
   stacked_water_world.SetFluidDefinitions(decor_definitions.get());
   const glm::ivec3 stack_lower(16, 10, 8);
