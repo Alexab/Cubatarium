@@ -285,9 +285,18 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
   // Cross plants are separate card geometry. Their movement occupancy (which
   // may be explicitly solid for unusual content) must never hide the cube
-  // face beneath or beside the sprite.
+  // face beneath or beside the sprite. Exception: a FLUID face toward a
+  // waterlogged cross plant (kelp inside the ocean) is fluid-fluid — it must
+  // cull, or every plant renders as a water box/shell (user report:
+  // "водоросли в блоках воды"; the Cross early-return used to shadow the
+  // fluid-waterlogged hide rules below).
   if (neighbor_style == BlockRenderStyle::Cross)
   {
+    if (face_style == BlockRenderStyle::Fluid &&
+        CellHasRenderableFluid(reader, registry, catalog, neighbor_pos))
+    {
+      return true;
+    }
     return false;
   }
 
@@ -453,11 +462,12 @@ bool WaterloggedNeighborHidesFace(IUChunkMeshReader &reader,
                                   BlockId fluid_id, glm::ivec3 block_pos,
                                   glm::ivec3 neighbor_offset)
 {
-  const glm::ivec3 neighbor_pos = block_pos + neighbor_offset;
-  if (!CellHasRenderableFluid(reader, registry, catalog, neighbor_pos))
-  {
-    return false;
-  }
+  // A waterlogged cell's fluid faces follow the SAME visibility rules as
+  // fluid blocks: toward fluid-bearing neighbors (same-id cull, permeable
+  // hide) AND toward opaque/air (fluid→opaque hides, fluid→air draws). The
+  // old fluid-neighbor-only gate returned "not hidden" for every other
+  // neighbor, drawing water planes into seabed walls and floors around
+  // submerged plants (user report: "блоки воды" на глубине).
   return NeighborHidesFace(reader, registry, catalog, fluid_id, block_pos,
                            neighbor_offset);
 }
