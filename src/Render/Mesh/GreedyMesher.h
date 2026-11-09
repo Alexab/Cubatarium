@@ -25,6 +25,11 @@ struct GreedyQuad
   int faceSign;
   uint8_t LightPacked{0};
   uint8_t FluidPacked{0};
+  /// 0 = not a fluid surface cell. 1 = surface cell with a real packed
+  /// fluid state (height from FluidCellHeight). 2 = surface cell whose
+  /// fluid state packs to 0 (legacy source without a Kind) — assume the
+  /// source 7/8 height. Minecraft-style truncated surface (W4/TD-FL-012).
+  uint8_t FluidSurface{0};
 };
 
 class UGreedyMesher
