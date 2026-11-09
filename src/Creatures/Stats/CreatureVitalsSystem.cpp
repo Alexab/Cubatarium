@@ -91,21 +91,31 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
         if (env.inWater)
         {
           fatigueGain += kFatigueSwimPerSec;
-          if (scale.BreathDrain > 0.f)
+          // W6.1 (water audit E-4): breath drains only when the head is
+          // submerged — wading in waist-deep water must not drown.
+          if (env.headInWater)
           {
-            v.breath = std::max(
-                0.f, v.breath - kBreathDrainPerSec * scale.BreathDrain * dt);
-            if (v.breath <= 0.f && scale.DrownDamage)
+            if (scale.BreathDrain > 0.f)
             {
-              if (ApplyDamage(world, creature, kStarveDamagePerSec * dt, mode))
+              v.breath = std::max(
+                  0.f, v.breath - kBreathDrainPerSec * scale.BreathDrain * dt);
+              if (v.breath <= 0.f && scale.DrownDamage)
               {
-                toRemove.push_back(creature.GetId());
+                if (ApplyDamage(world, creature, kStarveDamagePerSec * dt, mode))
+                {
+                  toRemove.push_back(creature.GetId());
+                }
               }
+            }
+            else
+            {
+              v.breath = v.maxBreath;
             }
           }
           else
           {
-            v.breath = v.maxBreath;
+            v.breath =
+                std::min(v.maxBreath, v.breath + kBreathRecoverPerSec * dt);
           }
         }
         else

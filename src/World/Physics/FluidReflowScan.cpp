@@ -67,7 +67,18 @@ void TryEnqueueCell(UWorld &world, glm::ivec3 pos)
   if (ShouldEnqueueFluidCell(world.GetBlockWorld(), registry, pos,
                              world.GetProceduralSettings().MinHeight))
   {
-    world.TryEnqueueFluidAt(pos);
+    // W6.4 (water audit E-5): frontier scans are one-shot (chunk commit /
+    // removal wake); an off-phase liquid cell must not be lost here — the
+    // spread-period phase belongs to the transform tick, not to discovery.
+    // The tick re-schedules throttled cells itself.
+    if (registry.IsLiquid(world.GetBlockWorld().GetBlock(pos)))
+    {
+      world.ForceEnqueueFluidAt(pos);
+    }
+    else
+    {
+      world.TryEnqueueFluidAt(pos);
+    }
   }
 }
 
