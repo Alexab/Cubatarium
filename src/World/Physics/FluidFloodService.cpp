@@ -139,6 +139,13 @@ int FloodBreakSiteFromWetNeighborsImpl(
   int filled = 0;
   const auto try_fill = [&](glm::ivec3 pos)
   {
+    // W6.7 (water audit E-8): the documented "~30 cells" break-site budget is
+    // now an enforced cap (FluidTuning::BreakSiteSpillCellBudget) instead of
+    // a dead constant.
+    if (filled >= FluidTuning::BreakSiteSpillCellBudget)
+    {
+      return;
+    }
     if (!UFluidSpreadSystem::CanReceiveFluid(blockWorld, definitions, pos))
     {
       return;
@@ -207,7 +214,7 @@ int FloodBreakSiteFromWetNeighborsImpl(
   {
     for (int dx = -1; dx <= 1; ++dx)
     {
-      for (int dy = 0; dy <= 6; ++dy)
+      for (int dy = 0; dy <= FluidTuning::BreakSiteDecorScanDyMax; ++dy)
       {
         for (int dz = -1; dz <= 1; ++dz)
         {
