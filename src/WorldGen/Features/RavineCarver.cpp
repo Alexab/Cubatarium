@@ -130,6 +130,10 @@ void MaterializeRavineColumn(WorldGenContext &ctx, int wx, int wz,
       if (ctx.World.IsAir(pos))
       {
         ctx.World.SetBlock(pos, ctx.Blocks.Water);
+        // W5.3 (water audit A-4): every other filler writes the fluid state;
+        // a bare block id left kindless sources the mesher had to guess.
+        ctx.World.SetFluidState(
+            pos, FluidCellState::Source().WithKind(FluidKind::Water));
       }
     }
   }

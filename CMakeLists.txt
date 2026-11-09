@@ -2170,6 +2170,7 @@ cubatarium_add_test(NAME fluid_worldgen_seal_test
         src/WorldGen/Core/WorldGenContentPinTls.cpp
         src/WorldGen/Features/ObjectFeatureConfig.cpp
         src/WorldGen/Core/Noise.cpp
+        src/Test/ChunkLightingTestStubs.cpp
         src/Test/FluidWorldGenSealTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
@@ -2398,6 +2399,7 @@ set(WORLDGEN_PIPELINE_TEST_SOURCES
 cubatarium_add_test(NAME worldgen_fluid_vegetation_pipeline_test
     SOURCES
         ${WORLDGEN_PIPELINE_TEST_SOURCES}
+        src/Test/ChunkLightingTestStubs.cpp
         src/Test/WorldGenFluidVegetationPipelineTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)

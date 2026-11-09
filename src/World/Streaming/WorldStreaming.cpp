@@ -385,6 +385,26 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
             DeferredIntraChunkSealNeeded.insert(coord);
           }
           DeferredShoreSealQueue.push_back(coord);
+          // W5.1 (water audit A-1): worker sealing runs in a per-chunk
+          // scratch world, so a border pocket could not see this chunk's
+          // water and stayed unfilled; the neighbor's own one-shot seal
+          // drained before this chunk existed. Re-run the neighbors' shore
+          // seal now that both sides are committed (budgeted drain; the
+          // seal itself is idempotent).
+          for (int axis = 0; axis < 2; ++axis)
+          {
+            for (int sign = -1; sign <= 1; sign += 2)
+            {
+              glm::ivec3 nb = coord;
+              nb[axis == 0 ? 0 : 2] += sign;
+              const glm::ivec3 nb_ground(nb.x, 0, nb.z);
+              if (world.GetColumnEmergeState(nb_ground) >=
+                  ColumnEmergeState::Lighting)
+              {
+                DeferredShoreSealQueue.push_back(nb);
+              }
+            }
+          }
         }
         world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
         // Mesh gate band = occupied ∪ sea (not 0..MaxHeight — that flooded Dirty
