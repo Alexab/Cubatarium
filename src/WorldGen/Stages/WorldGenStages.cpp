@@ -412,7 +412,7 @@ void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY)
 }
 
 bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
-                             int *out_voxels_filled)
+                             int *out_voxels_filled, int max_passes)
 {
   if (!ctx.Settings.FillWater || ctx.Blocks.Water == BLOCK_AIR)
   {
@@ -429,9 +429,10 @@ bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
   options.fluid_id = ctx.Blocks.Water;
   options.source_for_air = true;
   // W5.4 (water audit A-2): deeper pass count — air chains longer than 8
-  // cells from any water stayed unfilled (TestSealChain9). The seal runs
-  // off the hot path (worker scratch once + budgeted deferred drains).
-  options.max_passes = 16;
+  // cells from any water stayed unfilled (TestSealChain9). Worker populate
+  // uses 16 passes; main-thread committed drains pass 8 — each seal runs to
+  // completion on the frame budget (load-bar oscillation, user report).
+  options.max_passes = max_passes > 0 ? max_passes : 16;
   const std::optional<UAquiferSampler> aquifer_sampler =
       MakeAquiferSealSampler(ctx);
   if (aquifer_sampler)
@@ -985,10 +986,11 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
   }
   const int base_x = chunk_coord.x * CHUNK_SIZE;
   const int base_z = chunk_coord.z * CHUNK_SIZE;
-  const bool sealed = SealFluidPocketsInChunk(ctx, base_x, base_z);
+  const bool sealed = SealFluidPocketsInChunk(ctx, base_x, base_z, nullptr, 8);
   const bool permeable = SealFluidPermeableDecorInChunk(ctx, base_x, base_z);
   const bool sealed_after_permeable =
-      permeable ? SealFluidPocketsInChunk(ctx, base_x, base_z) : false;
+      permeable ? SealFluidPocketsInChunk(ctx, base_x, base_z, nullptr, 8)
+                : false;
   bool shore_air = false;
   if (include_shore_air)
   {

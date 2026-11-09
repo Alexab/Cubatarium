@@ -31,8 +31,13 @@ bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
 bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const UAquiferSampler &sampler);
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY);
+/// `max_passes`: 16 on worker populate threads (deep pocket chains, W5.4);
+/// main-thread committed drains pass 8 — each seal runs to completion on
+/// the frame budget and 16 doubled the main-thread stall (load-bar
+/// oscillation, user report).
 bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
-                             int *out_voxels_filled = nullptr);
+                             int *out_voxels_filled = nullptr,
+                             int max_passes = 16);
 struct FluidPermeableSealStats
 {
   double floorScanMs{0.0};

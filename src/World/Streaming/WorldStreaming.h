@@ -126,6 +126,11 @@ private:
   double FrameStreamingIoMs{0.0};
   std::deque<glm::ivec3> DeferredPhysicsSeedQueue;
   std::deque<glm::ivec3> DeferredShoreSealQueue;
+  /// Dedupe for DeferredShoreSealQueue: without it, every commit's neighbor
+  /// re-seal (W5.1) multiplies the queue by ~5 during bulk world load and
+  /// each seal mutation re-dirties already-counted meshes — the load
+  /// progress bar oscillates and stalls (user report).
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredShoreSealQueued;
   /// Columns that still need IntraChunk seal (never sync on commit — CB hitch).
   std::unordered_set<glm::ivec3, IVec3Hash> DeferredIntraChunkSealNeeded;
   /// Sync GenerateColumn path: one CoarseHeightCache per ground chunk.
