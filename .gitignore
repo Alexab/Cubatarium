@@ -141,6 +141,15 @@ tools/debug_uv_overlays/
 # intentionally promoted reports/captures can be added with `git add -f`.
 /bin/flight_captures/
 /bin/suite_reports/
+
+# QA capture / artifact sweep dirs and comparison images next to the exe
+/bin/*_Captures/
+/bin/*_Artifacts/
+/bin/*_captures/
+/bin/*_artifacts/
+/bin/*.png
+/bin/*_Compare/
+/bin/*_compare*.png
 /bin/research_*/
 /bin/worldgen_surface_diag_*/
 /bin/Release/
