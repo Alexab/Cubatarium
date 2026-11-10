@@ -1,0 +1,48 @@
+id: zombie
+backend: bone_skeleton
+family: peat
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: peat
+pattern: bands
+template: humanoid
+body:
+- 9
+- 11
+- 5
+head:
+- 7
+- 7
+- 7
+limb:
+- 4
+- 11
+extras:
+- jaw
+- long_arm
+- belly
+muzzle: null
+bind_body: null
+direction: 'Торфяник: сутулый клин и тяжёлая рука'
+wave: W1
+selected_concept: peat_hunch
+concepts:
+- id: peat_hunch
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: сутулый клин
+- id: wide_jaw
+  body_scale:
+  - 1.12
+  - 0.78
+  - 0.92
+  note: широкая челюсть
+- id: tall_reach
+  body_scale:
+  - 0.84
+  - 1.2
+  - 1.16
+  note: длинная рука
+seed: 7042109869257794097

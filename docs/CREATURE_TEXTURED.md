@@ -1,6 +1,6 @@
 # Textured creature parts (rigid voxels)
 
-Multi-part textured cubes for `visual.backend: rigid_voxels`. Replaces the default single wireframe AABB with several diffuse-textured boxes defined in JSON.
+Multi-part textured cubes for `visual.backend: rigid_voxels`. The live rigid set is the three demo mobs. `fire_spirit` stays on this backend id but is drawn by the billboard path. Bone and glTF species ignore legacy `visual.parts`.
 
 ## Overview
 

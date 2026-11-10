@@ -1,0 +1,45 @@
+id: stingray
+backend: gltf_skeleton
+family: river
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: river
+pattern: spots
+template: ray
+body:
+- 20
+- 2
+- 16
+head:
+- 5
+- 2
+- 4
+limb:
+- 2
+- 1
+extras: []
+muzzle: null
+bind_body: null
+direction: Парусник дна
+wave: W3
+selected_concept: diamond
+concepts:
+- id: diamond
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: ромб
+- id: wide
+  body_scale:
+  - 1.12
+  - 0.78
+  - 0.92
+  note: широкие лопасти
+- id: long_tail
+  body_scale:
+  - 0.84
+  - 1.2
+  - 1.16
+  note: длинный хвост
+seed: 10616241458676895383

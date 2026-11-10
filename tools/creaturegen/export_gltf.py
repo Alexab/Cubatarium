@@ -1,0 +1,217 @@
+"""Write a skinned glTF 2.0 + external bin the runtime loader accepts."""
+
+from __future__ import annotations
+
+import math
+import struct
+
+from creaturegen.anatomy import Model
+
+
+def _pad(blob: bytearray, alignment: int = 4) -> None:
+    while len(blob) % alignment:
+        blob.append(0)
+
+
+def _quat_x(degrees: float) -> tuple[float, float, float, float]:
+    half = math.radians(degrees) * 0.5
+    return (math.sin(half), 0.0, 0.0, math.cos(half))
+
+
+def _material_for(role: str) -> str:
+    if role in ("face", "muzzle", "eye"):
+        return "face"
+    if role in ("limb",):
+        return "leg"
+    if role in ("wing",):
+        return "wing"
+    return "body"
+
+
+def export_gltf(model: Model, clip_names: list[str]) -> tuple[dict, bytes]:
+    """Vertices are in blocks. Joint index 0 is the bone that owns the cube."""
+    names = [bone.name for bone in model.bones]
+    by_material: dict[str, list] = {}
+    for bone_index, bone in enumerate(model.bones):
+        px, py, pz = (component / 16.0 for component in bone.pivot)
+        for cube in bone.cubes:
+            material = _material_for(cube.role)
+            ox, oy, oz = (component / 16.0 for component in cube.origin)
+            sx, sy, sz = (component / 16.0 for component in cube.size)
+            # One box, 6 faces, model space. UVs cover the whole stem texture.
+            corners = [
+                (ox, oy, oz + sz),
+                (ox + sx, oy, oz + sz),
+                (ox, oy + sy, oz + sz),
+                (ox + sx, oy + sy, oz + sz),
+                (ox + sx, oy, oz),
+                (ox, oy, oz),
+                (ox + sx, oy + sy, oz),
+                (ox, oy + sy, oz),
+                (ox, oy, oz),
+                (ox, oy, oz + sz),
+                (ox, oy + sy, oz),
+                (ox, oy + sy, oz + sz),
+                (ox + sx, oy, oz + sz),
+                (ox + sx, oy, oz),
+                (ox + sx, oy + sy, oz + sz),
+                (ox + sx, oy + sy, oz),
+                (ox, oy + sy, oz),
+                (ox + sx, oy + sy, oz),
+                (ox, oy + sy, oz + sz),
+                (ox + sx, oy + sy, oz + sz),
+                (ox, oy, oz + sz),
+                (ox + sx, oy, oz + sz),
+                (ox, oy, oz),
+                (ox + sx, oy, oz),
+            ]
+            uvs = [(0, 0), (1, 0), (0, 1), (1, 1)] * 6
+            by_material.setdefault(material, []).append((corners, uvs, bone_index, (px, py, pz)))
+
+    blob = bytearray()
+    buffer_views = []
+    accessors = []
+
+    def add_bytes(data: bytes, target: int | None = None) -> int:
+        _pad(blob)
+        start = len(blob)
+        blob.extend(data)
+        view = {"buffer": 0, "byteOffset": start, "byteLength": len(data)}
+        if target:
+            view["target"] = target
+        buffer_views.append(view)
+        return len(buffer_views) - 1
+
+    def add_accessor(view: int, count: int, component: int, type_name: str, mins=None, maxs=None) -> int:
+        entry = {
+            "bufferView": view,
+            "byteOffset": 0,
+            "componentType": component,
+            "count": count,
+            "type": type_name,
+        }
+        if mins is not None:
+            entry["min"] = mins
+            entry["max"] = maxs
+        accessors.append(entry)
+        return len(accessors) - 1
+
+    primitives = []
+    for material, chunks in by_material.items():
+        positions = []
+        uvs = []
+        joints = []
+        weights = []
+        for corners, corner_uvs, bone_index, _pivot in chunks:
+            positions.extend(corners)
+            uvs.extend(corner_uvs)
+            for _ in corners:
+                joints.append((bone_index, 0, 0, 0))
+                weights.append((1.0, 0.0, 0.0, 0.0))
+        indices = []
+        for face in range(len(positions) // 4):
+            base = face * 4
+            indices.extend((base, base + 1, base + 2, base + 2, base + 1, base + 3))
+        pos_data = b"".join(struct.pack("<3f", *p) for p in positions)
+        uv_data = b"".join(struct.pack("<2f", *uv) for uv in uvs)
+        joint_data = b"".join(struct.pack("<4B", *j) for j in joints)
+        weight_data = b"".join(struct.pack("<4f", *w) for w in weights)
+        index_data = b"".join(struct.pack("<H", i) for i in indices)
+        xs = [p[0] for p in positions]
+        ys = [p[1] for p in positions]
+        zs = [p[2] for p in positions]
+        primitives.append({
+            "attributes": {
+                "POSITION": add_accessor(add_bytes(pos_data, 34962), len(positions), 5126, "VEC3",
+                                         [min(xs), min(ys), min(zs)], [max(xs), max(ys), max(zs)]),
+                "TEXCOORD_0": add_accessor(add_bytes(uv_data, 34962), len(uvs), 5126, "VEC2"),
+                "JOINTS_0": add_accessor(add_bytes(joint_data, 34962), len(joints), 5121, "VEC4"),
+                "WEIGHTS_0": add_accessor(add_bytes(weight_data, 34962), len(weights), 5126, "VEC4"),
+            },
+            "indices": add_accessor(add_bytes(index_data, 34963), len(indices), 5123, "SCALAR"),
+            "material": material,
+        })
+
+    nodes = []
+    joint_nodes = []
+    for bone in model.bones:
+        nodes.append({
+            "name": bone.name,
+            "translation": [component / 16.0 for component in bone.pivot],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [1.0, 1.0, 1.0],
+        })
+        joint_nodes.append(len(nodes) - 1)
+    nodes.append({"name": "mesh", "mesh": 0, "skin": 0})
+    scene_nodes = joint_nodes + [len(nodes) - 1]
+
+    ibm = b""
+    for bone in model.bones:
+        px, py, pz = (component / 16.0 for component in bone.pivot)
+        # Column-major inverse translation.
+        matrix = [
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            -px, -py, -pz, 1,
+        ]
+        ibm += struct.pack("<16f", *matrix)
+    ibm_accessor = add_accessor(add_bytes(ibm), len(model.bones), 5126, "MAT4")
+
+    materials = []
+    material_index = {}
+    for primitive in primitives:
+        name = primitive["material"]
+        if name not in material_index:
+            material_index[name] = len(materials)
+            materials.append({
+                "name": name,
+                "pbrMetallicRoughness": {"baseColorFactor": [1, 1, 1, 1]},
+            })
+        primitive["material"] = material_index[name]
+
+    animations = []
+    clip_list = list(dict.fromkeys(clip_names or ["idle", "walk"]))
+    if "idle" not in clip_list:
+        clip_list.insert(0, "idle")
+    leg_nodes = [index for index, bone in enumerate(model.bones) if bone.name.startswith("leg") or bone.name in ("rightLeg", "leftLeg", "rightArm", "leftArm", "wing0", "wing1", "tail")]
+    head_nodes = [index for index, bone in enumerate(model.bones) if bone.name == "head"]
+    for clip in clip_list:
+        channels = []
+        samplers = []
+        targets = head_nodes if clip == "idle" else (leg_nodes or head_nodes)
+        angle = 8.0 if clip == "idle" else (28.0 if clip in ("run", "fly", "punch") else 18.0)
+        for offset, node_index in enumerate(targets[:8]):
+            sign = -1.0 if offset % 2 else 1.0
+            times = struct.pack("<3f", 0.0, 0.5, 1.0)
+            keys = struct.pack("<12f", *_quat_x(0), *_quat_x(sign * angle), *_quat_x(0))
+            time_acc = add_accessor(add_bytes(times), 3, 5126, "SCALAR", [0.0], [1.0])
+            rot_acc = add_accessor(add_bytes(keys), 3, 5126, "VEC4")
+            samplers.append({"input": time_acc, "output": rot_acc, "interpolation": "LINEAR"})
+            channels.append({"sampler": len(samplers) - 1, "target": {"node": node_index, "path": "rotation"}})
+        if not channels:
+            times = struct.pack("<2f", 0.0, 1.0)
+            keys = struct.pack("<8f", *_quat_x(0), *_quat_x(4))
+            time_acc = add_accessor(add_bytes(times), 2, 5126, "SCALAR", [0.0], [1.0])
+            rot_acc = add_accessor(add_bytes(keys), 2, 5126, "VEC4")
+            samplers.append({"input": time_acc, "output": rot_acc, "interpolation": "LINEAR"})
+            channels.append({"sampler": 0, "target": {"node": 0, "path": "rotation"}})
+        animations.append({"name": clip, "samplers": samplers, "channels": channels})
+
+    gltf = {
+        "asset": {"version": "2.0", "generator": "cubatarium-creaturegen"},
+        "scene": 0,
+        "scenes": [{"nodes": scene_nodes}],
+        "nodes": nodes,
+        "skins": [{
+            "joints": joint_nodes,
+            "inverseBindMatrices": ibm_accessor,
+        }],
+        "meshes": [{"primitives": primitives}],
+        "materials": materials,
+        "animations": animations,
+        "buffers": [{"uri": "model.bin", "byteLength": len(blob)}],
+        "bufferViews": buffer_views,
+        "accessors": accessors,
+    }
+    return gltf, bytes(blob)

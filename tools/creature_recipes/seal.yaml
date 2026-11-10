@@ -1,0 +1,46 @@
+id: seal
+backend: gltf_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: meadow
+pattern: spots
+template: aquatic
+body:
+- 8
+- 6
+- 14
+head:
+- 5
+- 4
+- 5
+limb:
+- 3
+- 3
+extras:
+- fins
+muzzle: null
+bind_body: null
+direction: Мшистая нерпа
+wave: W3
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Мшистая нерпа
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 3782134111738581296

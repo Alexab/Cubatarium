@@ -1,0 +1,45 @@
+id: owl
+backend: gltf_skeleton
+family: forest
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: forest
+pattern: mask
+template: chicken
+body:
+- 8
+- 8
+- 8
+head:
+- 7
+- 7
+- 6
+limb:
+- 2
+- 4
+extras: []
+muzzle: null
+bind_body: null
+direction: 'Лунная сова: лицевой диск'
+wave: W2
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Лунная сова: лицевой диск'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 17008174497378954233

@@ -1,0 +1,47 @@
+id: bot
+backend: bone_skeleton
+family: mineral
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: mineral
+pattern: plates
+template: humanoid
+body:
+- 8
+- 12
+- 5
+head:
+- 7
+- 7
+- 7
+limb:
+- 4
+- 12
+extras:
+- pauldron
+- crest
+muzzle: null
+bind_body: null
+direction: 'Проводник: ворот и головной убор на той же анатомии'
+wave: W1
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Проводник: ворот и головной убор на той же анатомии'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 16036143852759747167

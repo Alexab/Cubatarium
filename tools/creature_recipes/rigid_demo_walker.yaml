@@ -1,0 +1,49 @@
+id: rigid_demo_walker
+backend: rigid_voxels
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: meadow
+pattern: mask
+template: quadruped
+body:
+- 10
+- 6
+- 14
+head:
+- 6
+- 5
+- 5
+limb:
+- 4
+- 7
+extras:
+- muzzle
+muzzle:
+- 4
+- 3
+- 3
+bind_body: null
+direction: Клубнелап
+wave: D
+selected_concept: tuber
+concepts:
+- id: tuber
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: низкий корпус
+- id: low
+  body_scale:
+  - 1.12
+  - 0.78
+  - 0.92
+  note: ещё ниже
+- id: tall_legs
+  body_scale:
+  - 0.84
+  - 1.2
+  - 1.16
+  note: высокие лапы
+seed: 541321891911766015

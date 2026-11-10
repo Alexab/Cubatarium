@@ -1,0 +1,51 @@
+id: warthog
+backend: gltf_skeleton
+family: mineral
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: mineral
+pattern: stripes
+template: quadruped
+body:
+- 10
+- 8
+- 14
+head:
+- 7
+- 6
+- 7
+limb:
+- 4
+- 8
+extras:
+- tusks
+- shoulders
+- muzzle
+muzzle:
+- 6
+- 4
+- 4
+bind_body: null
+direction: Кремневый вепрь
+wave: W2
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Кремневый вепрь
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 10895694798485081264

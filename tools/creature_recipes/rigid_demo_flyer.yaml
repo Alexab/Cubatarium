@@ -1,0 +1,46 @@
+id: rigid_demo_flyer
+backend: rigid_voxels
+family: river
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: river
+pattern: bands
+template: aerial
+body:
+- 6
+- 4
+- 10
+head:
+- 4
+- 3
+- 4
+limb:
+- 2
+- 3
+extras:
+- broad_wings
+muzzle: null
+bind_body: null
+direction: Парусокрыл
+wave: D
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Парусокрыл
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 9389161245861376362

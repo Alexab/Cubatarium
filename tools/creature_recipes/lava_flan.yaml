@@ -1,0 +1,45 @@
+id: lava_flan
+backend: gltf_skeleton
+family: flame
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: flame
+pattern: spots
+template: blob
+body:
+- 12
+- 6
+- 12
+head:
+- 5
+- 4
+- 4
+limb:
+- 3
+- 3
+extras: []
+muzzle: null
+bind_body: null
+direction: Шлаковый сгусток
+wave: W4
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Шлаковый сгусток
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 17215102021008076886

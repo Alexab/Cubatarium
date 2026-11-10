@@ -1,6 +1,6 @@
 # Creature catalog and skins
 
-Ship set: **51 species** (1 player + 50 mobs) and **5 skins**, Luanti-style rigid voxels, data-driven spawn with **habitat** gating, palette tabs, and appearance resolution.
+Ship set: **56 species** and **5 skins**. Visuals are authored by CreatureGen. IDs, habitat, and spawn flags are unchanged. `human` is the only non-spawnable id; 51 species are naturally spawnable.
 
 ## Ship set (original 9)
 

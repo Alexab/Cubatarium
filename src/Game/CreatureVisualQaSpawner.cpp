@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <sstream>
 
 namespace cutum
@@ -24,7 +25,15 @@ void UCreatureVisualQaSpawner::RefreshQueue()
   const auto storage = World.GetCreatureDefinitionStorage();
   if (storage)
   {
-    Queue = storage->ListSpawnable();
+    const char *allIds = std::getenv("CUBA_FLIGHT_QA_ALL");
+    if (allIds != nullptr && allIds[0] != '\0' && allIds[0] != '0')
+    {
+      Queue = storage->ListAllIds();
+    }
+    else
+    {
+      Queue = storage->ListSpawnable();
+    }
   }
   if (Index >= Queue.size())
   {

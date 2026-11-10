@@ -1,0 +1,46 @@
+id: puffin
+backend: gltf_skeleton
+family: river
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: river
+pattern: bands
+template: chicken
+body:
+- 7
+- 7
+- 8
+head:
+- 5
+- 5
+- 5
+limb:
+- 2
+- 4
+extras:
+- beak
+muzzle: null
+bind_body: null
+direction: Янтарный тупик
+wave: W2
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Янтарный тупик
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 10992855799940269828

@@ -1,0 +1,46 @@
+id: bunny
+backend: bone_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: meadow
+pattern: spots
+template: rabbit
+body:
+- 8
+- 7
+- 12
+head:
+- 5
+- 5
+- 5
+limb:
+- 2
+- 5
+extras:
+- ears
+muzzle: null
+bind_body: null
+direction: 'Листоух: разные уши и прыжковые бёдра'
+wave: W1
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Листоух: разные уши и прыжковые бёдра'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 11364480138913454690

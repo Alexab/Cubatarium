@@ -1317,8 +1317,22 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               // every frame keeps the motor wish at zero).
               if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world)
               {
+                const char *yawSweep = std::getenv("CUBA_FLIGHT_QA_YAW_SWEEP");
+                const bool sweep = yawSweep != nullptr && yawSweep[0] != '\0' &&
+                                   yawSweep[0] != '0';
+                const float yaw = sweep
+                                      ? std::fmod(static_cast<float>(elapsed_sec) * 45.0f, 360.0f)
+                                      : 0.0f;
                 world->ForEachCreature(
-                    [](UCreature &creature) { creature.ClearIntent(); });
+                    [&](UCreature &creature)
+                    {
+                      creature.ClearIntent();
+                      if (sweep &&
+                          creature.GetSpawnSource() == CreatureSpawnSource::Qa)
+                      {
+                        creature.SetOrientation(yaw, 0.0f);
+                      }
+                    });
               }
               // One-shot relocation at frame 30: ground queries need
               // collision-ready chunks, which the first InGame frame does

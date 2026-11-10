@@ -1,0 +1,45 @@
+id: lobster
+backend: gltf_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: meadow
+pattern: bands
+template: crab
+body:
+- 8
+- 4
+- 16
+head:
+- 4
+- 3
+- 4
+limb:
+- 2
+- 4
+extras: []
+muzzle: null
+bind_body: null
+direction: Медный омар
+wave: W3
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Медный омар
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 15002564318647503342

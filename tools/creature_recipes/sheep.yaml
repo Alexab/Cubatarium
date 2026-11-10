@@ -1,0 +1,50 @@
+id: sheep
+backend: bone_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: meadow
+pattern: spots
+template: quadruped
+body:
+- 12
+- 10
+- 14
+head:
+- 6
+- 6
+- 6
+limb:
+- 4
+- 8
+extras:
+- wool
+- muzzle
+muzzle:
+- 4
+- 3
+- 3
+bind_body: null
+direction: 'Облачная овца: слоистая шерсть и узкая морда'
+wave: W1
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Облачная овца: слоистая шерсть и узкая морда'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 11487820473030359180

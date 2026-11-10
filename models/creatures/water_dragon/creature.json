@@ -67,10 +67,9 @@
       "model": "model.gltf",
       "textures": [
         "body",
-        "face",
-        "leg"
+        "face"
       ],
-      "model_scale": 1.0,
+      "model_scale": 1.8753,
       "model_yaw_offset_deg": 0
     },
     "animation": {

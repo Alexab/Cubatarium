@@ -1,0 +1,50 @@
+id: shark
+backend: gltf_skeleton
+family: mineral
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: mineral
+pattern: bands
+template: aquatic
+body:
+- 8
+- 7
+- 22
+head:
+- 7
+- 6
+- 8
+limb:
+- 2
+- 4
+extras:
+- fins
+- muzzle
+muzzle:
+- 4
+- 3
+- 5
+bind_body: null
+direction: Кремнеплав
+wave: W3
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Кремнеплав
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 8796306678622844883

@@ -71,7 +71,7 @@
         "face",
         "leg"
       ],
-      "model_scale": 1.0,
+      "model_scale": 0.768,
       "model_yaw_offset_deg": 0
     },
     "animation": {

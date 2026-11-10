@@ -1,0 +1,46 @@
+id: golem
+backend: gltf_skeleton
+family: mineral
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: mineral
+pattern: plates
+template: humanoid
+body:
+- 12
+- 16
+- 8
+head:
+- 6
+- 6
+- 6
+limb:
+- 6
+- 10
+extras:
+- pauldron
+muzzle: null
+bind_body: null
+direction: Ступенчатый страж
+wave: W4
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Ступенчатый страж
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 11423407484334201354

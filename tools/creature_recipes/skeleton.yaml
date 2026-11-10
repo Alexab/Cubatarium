@@ -1,0 +1,46 @@
+id: skeleton
+backend: bone_skeleton
+family: mineral
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: mineral
+pattern: stripes
+template: humanoid
+body:
+- 6
+- 13
+- 3
+head:
+- 6
+- 7
+- 6
+limb:
+- 2
+- 12
+extras:
+- crest
+muzzle: null
+bind_body: null
+direction: 'Пустокост: вытянутый череп и сухие конечности'
+wave: W1
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Пустокост: вытянутый череп и сухие конечности'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 8138358707974832285

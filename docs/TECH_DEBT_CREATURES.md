@@ -10,8 +10,8 @@
 | TD-CRE-006 | 1 | `AerialPosePresenter` — full b3d clip playback for flying birds | Ground chicken walk+peck done; fly IK deferred | backlog |
 | TD-CRE-010 | 3 | FP viewmodel arms (`fp_parts[]`) | Not a blocker | backlog |
 | TD-CRE-017 | audit | Wave bake coverage (~42 Luanti mobs) | `creature_luanti_sources.yaml` + `bake_rigid_creature_textures.py`; partial until all research textures present | 3 |
-| TD-CRE-026 | gltf | Parts-only glTF without b3d — per-bone upgrade vs root bob | Policy in `CREATURE_BACKENDS.md`; 2 species remain parts-only (`fire_spirit`, `octopus`) | backlog |
-| TD-CRE-028 | gltf | Sprite visuals (`fire_spirit` glow billboard) | Luanti `visual=sprite`; procedural texture placeholder | backlog |
+| TD-CRE-026 | gltf | Historical parts-only note | `fire_spirit` is a billboard on the rigid definition; `octopus` is skinned glTF from CreatureGen | closed 2026-11-10 |
+| TD-CRE-028 | gltf | Sprite visuals (`fire_spirit` glow billboard) | Factory already selects `UCreatureVisualSprite` when `sprite.billboard` is set | closed 2026-11-10 |
 | TD-CRE-035 | 2026-07 | Manatee torso gap in world model (head/limbs/rear detached) | bounds + skin-weight fix insufficient; b3d source layout | accepted backlog |
 
 ### TD-CRE-034 / TD-CRE-035 remediation policy

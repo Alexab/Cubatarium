@@ -1,0 +1,46 @@
+id: butterfly
+backend: gltf_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: meadow
+pattern: spots
+template: aerial
+body:
+- 4
+- 3
+- 8
+head:
+- 3
+- 3
+- 3
+limb:
+- 1
+- 2
+extras:
+- broad_wings
+muzzle: null
+bind_body: null
+direction: 'Витражница: две пары крыльев'
+wave: W2
+selected_concept: stained
+concepts:
+- id: stained
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: широкие поля
+- id: narrow_wings
+  body_scale:
+  - 1.12
+  - 0.78
+  - 0.92
+  note: узкие крылья
+- id: round_wings
+  body_scale:
+  - 0.84
+  - 1.2
+  - 1.16
+  note: круглые крылья
+seed: 5118048403986014160

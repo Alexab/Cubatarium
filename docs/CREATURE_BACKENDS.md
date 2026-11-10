@@ -5,9 +5,9 @@ Cubatarium supports three equal visual backends selected by `visual.backend` in
 
 | Backend | JSON key | Runtime class | Purpose |
 |---------|----------|---------------|---------|
-| Rigid voxels | `rigid_voxels` | `UCreatureVisualRigid` | Lightweight box parts; **3 canonical demo mobs** + future custom content |
-| Bone skeleton | `bone_skeleton` | `UCreatureVisualBoneSkeleton` | Tier A/B box-UV geometry (16 species) |
-| glTF skeleton | `gltf_skeleton` | `UCreatureVisualGltf` | Skinned/static glTF mesh; **former rigid catalog (36 species)** |
+| Rigid voxels | `rigid_voxels` | `UCreatureVisualRigid` | Box parts. Three demo mobs plus `fire_spirit`, which is drawn as a billboard before this backend |
+| Bone skeleton | `bone_skeleton` | `UCreatureVisualBoneSkeleton` | Box-UV geometry, 17 species including `bot` |
+| glTF skeleton | `gltf_skeleton` | `UCreatureVisualGltf` | Skinned or static glTF, 35 species |
 
 Factory entry point: `CreateCreatureVisual()` in
 `src/Creatures/Visual/CreatureVisualFactory.cpp`.
@@ -20,10 +20,11 @@ All production mobs that previously used `rigid_voxels` are migrated to
 
 After migration:
 
-- **3** species on `rigid_voxels`: `rigid_demo_walker`, `rigid_demo_flyer`,
-  `rigid_demo_swimmer`
-- **16** species on `bone_skeleton` (unchanged)
-- **36** former rigid species on `gltf_skeleton`
+- **4** species on `rigid_voxels`: `rigid_demo_walker`, `rigid_demo_flyer`,
+  `rigid_demo_swimmer`, and `fire_spirit` (billboard sprite, not a fourth backend)
+- **17** species on `bone_skeleton`, including `bot`
+- **35** species on `gltf_skeleton`
+- Authoring source is CreatureGen (`tools/creaturegen.py`), not Bedrock or Luanti imports
 
 See [CREATURE_MIGRATION_GLTF.md](CREATURE_MIGRATION_GLTF.md) for per-species
 status and wave order.

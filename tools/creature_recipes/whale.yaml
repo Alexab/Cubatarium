@@ -1,0 +1,46 @@
+id: whale
+backend: gltf_skeleton
+family: river
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: river
+pattern: spots
+template: aquatic
+body:
+- 14
+- 10
+- 28
+head:
+- 8
+- 7
+- 10
+limb:
+- 4
+- 4
+extras:
+- fins
+muzzle: null
+bind_body: null
+direction: Синий горбач Cubatarium
+wave: W3
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Синий горбач Cubatarium
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 7211858408703091576

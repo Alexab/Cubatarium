@@ -1,0 +1,46 @@
+id: squid
+backend: bone_skeleton
+family: river
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: river
+pattern: spots
+template: aquatic
+body:
+- 7
+- 10
+- 8
+head:
+- 6
+- 6
+- 5
+limb:
+- 2
+- 6
+extras:
+- tentacles
+muzzle: null
+bind_body: null
+direction: 'Ленточный кальмар: мантия и разная длина рук'
+wave: W1
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Ленточный кальмар: мантия и разная длина рук'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 17670796232981614565

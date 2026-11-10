@@ -1,0 +1,51 @@
+id: cow
+backend: bone_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: meadow
+pattern: saddle
+template: quadruped
+body:
+- 16
+- 11
+- 20
+head:
+- 9
+- 8
+- 8
+limb:
+- 5
+- 12
+extras:
+- horns
+- shoulders
+- muzzle
+muzzle:
+- 7
+- 4
+- 4
+bind_body: null
+direction: 'Луговая пеструха: широкие плечи и клиновидная морда'
+wave: W1
+selected_concept: wedge_muzzle
+concepts:
+- id: wedge_muzzle
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: клиновидная морда
+- id: barrel
+  body_scale:
+  - 1.12
+  - 0.78
+  - 0.92
+  note: бочка
+- id: tall_shoulders
+  body_scale:
+  - 0.84
+  - 1.2
+  - 1.16
+  note: высокие плечи
+seed: 16365557913204065067

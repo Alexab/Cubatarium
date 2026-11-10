@@ -1,0 +1,52 @@
+id: pig
+backend: bone_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: meadow
+pattern: bands
+template: quadruped
+body:
+- 12
+- 8
+- 16
+head:
+- 7
+- 6
+- 6
+limb:
+- 4
+- 8
+extras:
+- muzzle
+muzzle:
+- 6
+- 4
+- 5
+bind_body:
+- 90
+- 0
+- 0
+direction: 'Корнеискатель: рыло и короткие ноги'
+wave: W1
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Корнеискатель: рыло и короткие ноги'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 18177446258666941085

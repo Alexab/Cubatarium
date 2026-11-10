@@ -70,11 +70,11 @@
     "gltf": {
       "model": "model.gltf",
       "textures": [
+        "leg",
         "body",
-        "face",
-        "leg"
+        "face"
       ],
-      "model_scale": 1.0,
+      "model_scale": 0.5112,
       "model_yaw_offset_deg": 0
     },
     "animation": {

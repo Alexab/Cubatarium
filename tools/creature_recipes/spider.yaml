@@ -1,0 +1,45 @@
+id: spider
+backend: bone_skeleton
+family: forest
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: forest
+pattern: spots
+template: arachnid
+body:
+- 10
+- 5
+- 12
+head:
+- 6
+- 4
+- 5
+limb:
+- 2
+- 8
+extras: []
+muzzle: null
+bind_body: null
+direction: 'Корнепряд: два объёма и коленчатые ноги'
+wave: W1
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Корнепряд: два объёма и коленчатые ноги'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 5495570558161134742

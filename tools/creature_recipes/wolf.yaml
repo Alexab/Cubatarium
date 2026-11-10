@@ -1,0 +1,50 @@
+id: wolf
+backend: bone_skeleton
+family: forest
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: forest
+pattern: mask
+template: quadruped
+body:
+- 8
+- 8
+- 16
+head:
+- 6
+- 6
+- 7
+limb:
+- 3
+- 12
+extras:
+- ears
+- muzzle
+muzzle:
+- 3
+- 3
+- 4
+bind_body: null
+direction: 'Хвойный волк: холка и низкий хвост'
+wave: W1
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Хвойный волк: холка и низкий хвост'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 1946724309853133107

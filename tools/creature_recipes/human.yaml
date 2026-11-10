@@ -1,0 +1,46 @@
+id: human
+backend: bone_skeleton
+family: traveler
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: traveler
+pattern: bands
+template: humanoid
+body:
+- 8
+- 12
+- 4
+head:
+- 8
+- 8
+- 8
+limb:
+- 4
+- 12
+extras:
+- pauldron
+muzzle: null
+bind_body: null
+direction: 'Путник: свои плечи, одежда и лицо'
+wave: W1
+selected_concept: traveler
+concepts:
+- id: traveler
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: одежда путника
+- id: broad_shoulders
+  body_scale:
+  - 1.12
+  - 0.78
+  - 0.92
+  note: широкие плечи
+- id: narrow
+  body_scale:
+  - 0.84
+  - 1.2
+  - 1.16
+  note: узкий силуэт
+seed: 5975750159848231375

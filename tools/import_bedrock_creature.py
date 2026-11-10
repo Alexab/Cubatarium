@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import urllib.request
@@ -76,7 +77,17 @@ def patch_creature_json(path: Path, entry: dict, defaults: dict) -> None:
 
 
 def import_species(species_id: str, entry: dict, defaults: dict) -> None:
-    species_dir = ROOT / "models" / "creatures" / species_id
+    live_dir = ROOT / "models" / "creatures" / species_id
+    if os.environ.get("CREATUREGEN_ALLOW_RESEARCH_IMPORT") == "overwrite":
+        print(f"WARN research import overwriting authored {species_id}")
+        species_dir = live_dir
+    else:
+        species_dir = ROOT / "assetgen_output" / "research_import" / species_id
+        species_dir.mkdir(parents=True, exist_ok=True)
+        live_json = live_dir / "creature.json"
+        if live_json.is_file() and not (species_dir / "creature.json").is_file():
+            shutil.copy2(live_json, species_dir / "creature.json")
+        print(f"research-only destination {species_dir}")
     creature_json = species_dir / "creature.json"
     if not creature_json.is_file():
         raise SystemExit(f"Missing {creature_json}")

@@ -1,0 +1,50 @@
+id: kitten
+backend: gltf_skeleton
+family: forest
+authoring_source: cubatarium-recipe
+recipe_version: 1
+palette_id: forest
+pattern: spots
+template: quadruped
+body:
+- 6
+- 6
+- 12
+head:
+- 5
+- 5
+- 5
+limb:
+- 2
+- 8
+extras:
+- ears
+- muzzle
+muzzle:
+- 2
+- 2
+- 2
+bind_body: null
+direction: Пятнистый лесной кот
+wave: W2
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Пятнистый лесной кот
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 3889769358600386418
