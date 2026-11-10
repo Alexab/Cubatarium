@@ -92,13 +92,14 @@ def _compare(species_id: str) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build original Cubatarium creatures")
     parser.add_argument("command", choices=[
-        "inventory", "emit", "build", "validate", "compare", "publish", "audit", "silhouettes", "frames",
+        "inventory", "emit", "build", "validate", "compare", "publish", "audit", "silhouettes", "frames", "previews",
     ])
     parser.add_argument("--species", default="")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--staging", action="store_true")
     parser.add_argument("--effective", action="store_true")
     parser.add_argument("--dir", default="")
+    parser.add_argument("--textured", action="store_true", help="sample atlas texels onto each face")
     args = parser.parse_args(argv)
     selected = [part for part in args.species.split(",") if part] if args.species else []
     if args.all or not selected:
@@ -118,6 +119,17 @@ def main(argv: list[str] | None = None) -> int:
             with Image.open(path) as image:
                 image.load()
             print("OK", path.name, raw[:8])
+        return 0
+    if args.command == "previews":
+        from creaturegen.preview import OUT, OUT_TEXTURED, render_all, render_species, write_index
+        out = OUT_TEXTURED if args.textured else OUT
+        ids = selected or None
+        if ids:
+            paths = [render_species(species_id, out, args.textured) for species_id in ids]
+            write_index(paths, out, args.textured)
+        else:
+            paths = render_all(out, args.textured)
+        print(f"wrote {len(paths)} sheets in {out}")
         return 0
     if args.command == "inventory":
         print(json.dumps({"species": len(creature_ids()), "ids": creature_ids()}, indent=2))
