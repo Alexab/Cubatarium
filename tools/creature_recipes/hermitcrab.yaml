@@ -19,6 +19,7 @@ limb:
 - 4
 extras:
 - shell
+- uneven_claws
 muzzle: null
 bind_body: null
 direction: Домовик прилива

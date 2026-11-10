@@ -9,7 +9,7 @@ template: humanoid
 body:
 - 8
 - 12
-- 5
+- 6
 head:
 - 7
 - 7

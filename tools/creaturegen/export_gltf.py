@@ -18,13 +18,33 @@ def _quat_x(degrees: float) -> tuple[float, float, float, float]:
     return (math.sin(half), 0.0, 0.0, math.cos(half))
 
 
+def _box_uvs(cube, texture_size: tuple[int, int]) -> list[tuple[float, float]]:
+    """Four UVs per face, same order as the position corners. V grows down, matching the PNG."""
+    tw, th = texture_size
+    w, h, d = [max(int(component), 1) for component in cube.size]
+    u, v = [int(component) for component in cube.uv]
+    rects = (
+        (u + d + w + d, v + d, u + d + w + d + w, v + d + h),  # +Z back
+        (u + d, v + d, u + d + w, v + d + h),  # -Z front, eyes live here
+        (u + d + w, v + d, u + d + w + d, v + d + h),  # +X
+        (u, v + d, u + d, v + d + h),  # -X
+        (u + d, v, u + d + w, v + d),  # +Y
+        (u + d + w, v, u + d + w + w, v + d),  # -Y
+    )
+    uvs = []
+    for u0, v0, u1, v1 in rects:
+        u0 = (u0 + 0.5) / tw
+        v0 = (v0 + 0.5) / th
+        u1 = (u1 - 0.5) / tw
+        v1 = (v1 - 0.5) / th
+        # Vertex order on each face is bottom-left, bottom-right, top-left, top-right.
+        uvs.extend(((u0, v1), (u1, v1), (u0, v0), (u1, v0)))
+    return uvs
+
+
 def _material_for(role: str) -> str:
-    if role in ("face", "muzzle", "eye"):
-        return "face"
-    if role in ("limb",):
-        return "leg"
-    if role in ("wing",):
-        return "wing"
+    # One atlas. Per-face UVs already select the painted island, including eyes.
+    del role
     return "body"
 
 
@@ -38,7 +58,7 @@ def export_gltf(model: Model, clip_names: list[str]) -> tuple[dict, bytes]:
             material = _material_for(cube.role)
             ox, oy, oz = (component / 16.0 for component in cube.origin)
             sx, sy, sz = (component / 16.0 for component in cube.size)
-            # One box, 6 faces, model space. UVs cover the whole stem texture.
+            # One box, 6 faces, model space. UVs land inside the painted atlas island.
             corners = [
                 (ox, oy, oz + sz),
                 (ox + sx, oy, oz + sz),
@@ -65,7 +85,7 @@ def export_gltf(model: Model, clip_names: list[str]) -> tuple[dict, bytes]:
                 (ox, oy, oz),
                 (ox + sx, oy, oz),
             ]
-            uvs = [(0, 0), (1, 0), (0, 1), (1, 1)] * 6
+            uvs = _box_uvs(cube, model.texture_size)
             by_material.setdefault(material, []).append((corners, uvs, bone_index, (px, py, pz)))
 
     blob = bytearray()

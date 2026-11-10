@@ -75,10 +75,17 @@ def _paint_box(draw: ImageDraw.ImageDraw, cube: Cube, palette: dict, pattern: st
             draw.rectangle((x, y, x + rw - 1, y + max(1, rh // 3)), fill=mark + (255,))
     north = regions["north"]
     if cube.role in ("face", "muzzle") and north[2] >= 3 and north[3] >= 3:
-        ex = north[0] + max(1, north[2] // 5)
-        ey = north[1] + max(1, north[3] // 5)
-        draw.rectangle((ex, ey, ex + 1, ey + 1), fill=eye + (255,))
-        draw.rectangle((north[0] + north[2] - 3, ey, north[0] + north[2] - 2, ey + 1), fill=eye + (255,))
+        eye_size = max(1, north[2] // 5)
+        gap = max(1, north[2] // 6)
+        ey = north[1] + north[3] // 3
+        left = north[0] + gap
+        right = north[0] + north[2] - gap - eye_size
+        if right > left + eye_size:
+            draw.rectangle((left, ey, left + eye_size, ey + eye_size), fill=eye + (255,))
+            draw.rectangle((right, ey, right + eye_size, ey + eye_size), fill=eye + (255,))
+            mouth_y = ey + eye_size + max(1, north[3] // 5)
+            if mouth_y < north[1] + north[3] - 1:
+                draw.line((left, mouth_y, right + eye_size, mouth_y), fill=eye + (255,))
 
 
 def bake_atlas(model: Model, palette: dict, pattern: str, species: str, version: int) -> Image.Image:

@@ -125,13 +125,14 @@ def _box(origin, size, pivot, bind, atlas, uv, textured: bool = False):
                 corners.append((ox + sx * ix, oy + sy * iy, oz + sz * iz))
     corners = _rot_around(corners, tuple(component / 16.0 for component in pivot), bind or (0, 0, 0))
     # Corner order: x + 2y + 4z.
+    # index = ix + 2*iy + 4*iz. Order is bottom-left, bottom-right, top-right, top-left.
     quads = {
-        "+z": [1, 3, 7, 5],
-        "-z": [4, 6, 2, 0],
-        "+x": [5, 7, 6, 4],
-        "-x": [0, 2, 3, 1],
-        "+y": [2, 6, 7, 3],
-        "-y": [0, 1, 5, 4],
+        "+z": [4, 5, 7, 6],
+        "-z": [1, 0, 2, 3],
+        "+x": [5, 1, 3, 7],
+        "-x": [0, 4, 6, 2],
+        "+y": [2, 3, 7, 6],
+        "-y": [4, 5, 1, 0],
     }
     regions = {
         "+z": (u + d + w + d, v + d, u + d + w + d + w, v + d + h),
@@ -147,7 +148,13 @@ def _box(origin, size, pivot, bind, atlas, uv, textured: bool = False):
         u0, v0, u1, v1 = regions[name]
         points = [corners[index] for index in indices]
         if textured and sampler is not None:
-            faces.append((points, sampler, ((u0, v0), (u1, v0), (u1, v1), (u0, v1))))
+            # Stay half a texel inside the painted island so the gutter is not a hole.
+            faces.append((points, sampler, (
+                (u0 + 0.5, v1 - 0.5),
+                (u1 - 0.5, v1 - 0.5),
+                (u1 - 0.5, v0 + 0.5),
+                (u0 + 0.5, v0 + 0.5),
+            )))
         else:
             faces.append((points, _face_color(atlas if not isinstance(atlas, Sampler) else None, u0, v0, u1, v1)))
     return faces
