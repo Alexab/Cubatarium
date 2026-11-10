@@ -26,6 +26,8 @@ muzzle:
 bind_body: null
 direction: Клубнелап
 wave: D
+silhouette: {}
+marks: []
 selected_concept: tuber
 concepts:
 - id: tuber

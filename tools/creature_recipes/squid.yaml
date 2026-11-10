@@ -7,8 +7,8 @@ palette_id: river
 pattern: spots
 template: aquatic
 body:
-- 7
 - 10
+- 14
 - 8
 head:
 - 6
@@ -21,8 +21,12 @@ extras:
 - tentacles
 muzzle: null
 bind_body: null
-direction: 'Ленточный кальмар: мантия и разная длина рук'
+direction: 'Ленточный кальмар: мантия и парные щупальца'
 wave: W1
+silhouette:
+  snout: 0.3
+marks:
+- spots
 selected_concept: primary
 concepts:
 - id: primary
@@ -30,7 +34,7 @@ concepts:
   - 1
   - 1
   - 1
-  note: 'Ленточный кальмар: мантия и разная длина рук'
+  note: 'Ленточный кальмар: мантия и парные щупальца'
 - id: tall
   body_scale:
   - 0.86

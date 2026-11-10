@@ -35,13 +35,20 @@
         1.0,
         1.0,
         1.0
+      ],
+      "children": [
+        1,
+        2,
+        3,
+        4,
+        5
       ]
     },
     {
       "name": "head",
       "translation": [
         0.0,
-        0.6875,
+        0.25,
         -0.25
       ],
       "rotation": [
@@ -60,7 +67,7 @@
       "name": "leg0",
       "translation": [
         -0.1875,
-        0.25,
+        -0.1875,
         0.0
       ],
       "rotation": [
@@ -79,7 +86,7 @@
       "name": "leg1",
       "translation": [
         0.1875,
-        0.25,
+        -0.1875,
         0.0
       ],
       "rotation": [
@@ -98,7 +105,7 @@
       "name": "wing0",
       "translation": [
         -0.25,
-        0.4375,
+        0.0,
         0.0
       ],
       "rotation": [
@@ -117,7 +124,7 @@
       "name": "wing1",
       "translation": [
         0.25,
-        0.4375,
+        0.0,
         0.0
       ],
       "rotation": [
@@ -259,93 +266,93 @@
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 9972
+      "byteLength": 8940
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
       "byteOffset": 0,
-      "byteLength": 2592,
+      "byteLength": 2304,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 2592,
-      "byteLength": 1728,
+      "byteOffset": 2304,
+      "byteLength": 1536,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 4320,
-      "byteLength": 864,
+      "byteOffset": 3840,
+      "byteLength": 768,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 5184,
-      "byteLength": 3456,
+      "byteOffset": 4608,
+      "byteLength": 3072,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 8640,
-      "byteLength": 648,
+      "byteOffset": 7680,
+      "byteLength": 576,
       "target": 34963
     },
     {
       "buffer": 0,
-      "byteOffset": 9288,
+      "byteOffset": 8256,
       "byteLength": 384
     },
     {
       "buffer": 0,
-      "byteOffset": 9672,
+      "byteOffset": 8640,
       "byteLength": 12
     },
     {
       "buffer": 0,
-      "byteOffset": 9684,
+      "byteOffset": 8652,
       "byteLength": 48
     },
     {
       "buffer": 0,
-      "byteOffset": 9732,
+      "byteOffset": 8700,
       "byteLength": 12
     },
     {
       "buffer": 0,
-      "byteOffset": 9744,
+      "byteOffset": 8712,
       "byteLength": 48
     },
     {
       "buffer": 0,
-      "byteOffset": 9792,
+      "byteOffset": 8760,
       "byteLength": 12
     },
     {
       "buffer": 0,
-      "byteOffset": 9804,
+      "byteOffset": 8772,
       "byteLength": 48
     },
     {
       "buffer": 0,
-      "byteOffset": 9852,
+      "byteOffset": 8820,
       "byteLength": 12
     },
     {
       "buffer": 0,
-      "byteOffset": 9864,
+      "byteOffset": 8832,
       "byteLength": 48
     },
     {
       "buffer": 0,
-      "byteOffset": 9912,
+      "byteOffset": 8880,
       "byteLength": 12
     },
     {
       "buffer": 0,
-      "byteOffset": 9924,
+      "byteOffset": 8892,
       "byteLength": 48
     }
   ],
@@ -354,15 +361,15 @@
       "bufferView": 0,
       "byteOffset": 0,
       "componentType": 5126,
-      "count": 216,
+      "count": 192,
       "type": "VEC3",
       "min": [
-        -0.25,
+        -0.3125,
         0.0,
-        -0.75
+        -0.6875
       ],
       "max": [
-        0.25,
+        0.3125,
         0.9375,
         0.25
       ]
@@ -371,28 +378,28 @@
       "bufferView": 1,
       "byteOffset": 0,
       "componentType": 5126,
-      "count": 216,
+      "count": 192,
       "type": "VEC2"
     },
     {
       "bufferView": 2,
       "byteOffset": 0,
       "componentType": 5121,
-      "count": 216,
+      "count": 192,
       "type": "VEC4"
     },
     {
       "bufferView": 3,
       "byteOffset": 0,
       "componentType": 5126,
-      "count": 216,
+      "count": 192,
       "type": "VEC4"
     },
     {
       "bufferView": 4,
       "byteOffset": 0,
       "componentType": 5123,
-      "count": 324,
+      "count": 288,
       "type": "SCALAR"
     },
     {

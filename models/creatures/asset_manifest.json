@@ -12,7 +12,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "829e97b1c626c5cc1de0ea3a123315b18786d571f8f0da001c82edbb376ad803",
+          "sha256": "84d47abe318798c6f6b1537b3109e1970a440786c7a3c9f0395842f8e1679b8d",
           "recipe_version": 1,
           "seed": 5235560816057146016,
           "authoring_source": "cubatarium-recipe"
@@ -28,11 +28,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "e1d6e3890c55bf1da975ac22023ff1bb80b8f9af3571c9fda2a1e9ecd102075c",
+          "sha256": "c7e7a5775321169888c1f9a98a37ef283776d2678f66aac447fd29acacc11083",
           "recipe_version": 1,
           "seed": 5235560816057146016,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "72e444748d1f92278602191230d63772be6f168758ccafe4216031912ac56f54",
+          "pixel_sha256": "ba1e1cc17e60442610d068f08e351cc6ae751f318af4f3b0204c8293b1140574",
           "size": [
             32,
             32
@@ -41,11 +41,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "4a8dbe287b9db82efce88e093c1212ac33261bf7717bde9b6d7baf787efe97c0",
+          "sha256": "b7fb85c18cb1e7effede02194aaa683d659a0804d83c26f7f6e25f439a6953f2",
           "recipe_version": 1,
           "seed": 5235560816057146016,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "24a4aa39082baf4d181a53e0a55a0fa9b91cb0b10163b6dad48bc9419d89d5bd",
+          "pixel_sha256": "bd52658e2b2c5e1d3cd5d15525518e608e936572763dc99e74e9ed3b6abdaec5",
           "size": [
             64,
             64
@@ -57,12 +57,12 @@
       "id": "bee",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.36,
+      "model_scale": 0.495,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "b6a68035dea734a6da849db307428ae6b85361e8c0912e40fa787af9e240cafa",
+          "sha256": "350c67abfb7e0da9801a6c4b8e7b26abd8143b5dd2b40cb82428e6ad1f0e7647",
           "recipe_version": 1,
           "seed": 18092780886813212396,
           "authoring_source": "cubatarium-recipe"
@@ -70,11 +70,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "ff1e8ed22e941fd3916a8935a63b812a14a0b146e981868ce5920cfe62da21bd",
+          "sha256": "ab3d13ab8fa9c0ae785191b7b243ed00fd8d70cb95b8ce7c36ccaede9054059d",
           "recipe_version": 1,
           "seed": 18092780886813212396,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "1a20396739d1dc28a7779aeb6e7a60281c742de496a6868494fb0292eaf1b5b4",
+          "pixel_sha256": "ca11d6dc33e90d194374ce6f3be3e56c308ab0a5e83b18f947b12c6a6afb2f7d",
           "size": [
             64,
             64
@@ -83,11 +83,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "9cf3e7e8d305fe17bc59b14b2eae48093d1bfacf7d35f1400def56296b9d2586",
+          "sha256": "7023fa2c703fe31feeaeb66e08e05d94c3e0dc54cce2d1a95f9712a8a66273f7",
           "recipe_version": 1,
           "seed": 18092780886813212396,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "af28bb2481907d87d6e01daeb4ad4f2a679c3c5805fb56e78b35f0c2063535e2",
+          "pixel_sha256": "4b7bb6cc790821eef84ae31eb77e22f9bede5c7792949159207d5c1dc0e4f61e",
           "size": [
             32,
             32
@@ -99,12 +99,12 @@
       "id": "bot",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.7855,
+      "model_scale": 0.7406,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "7e8f772cf4e430472d38331f209da9d3ce7f761949158a8e0c9ca93b5628ea5a",
+          "sha256": "71d9e33f4758b18e5bbb57c419754297252cd7623fc9f979a6760fd716bdfa52",
           "recipe_version": 1,
           "seed": 16036143852759747167,
           "authoring_source": "cubatarium-recipe"
@@ -112,11 +112,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "f02b89493ab0e0beb7cc8943ab6afdb88575e36bfc64b000cd4f43fe65c013fa",
+          "sha256": "849bfa20c39bc40c52e34e3644e75302693b22bbae50e679053bf831b3490ace",
           "recipe_version": 1,
           "seed": 16036143852759747167,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "5b0324a7f269eec2d881a87585bb1799df06d0ed31f42709ca8f28333dda10a3",
+          "pixel_sha256": "07c89e80b93ecf86941b85980522a0ae75287a4878c667be6347e05da4564547",
           "size": [
             128,
             128
@@ -125,11 +125,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "20c2736e7d70dbb56002a7c65b5d7a687eeee33727dba106ee58addd6e588387",
+          "sha256": "62fdf320631515e2caf02b52607926d860984442fd62072d151f36a824eb7e3f",
           "recipe_version": 1,
           "seed": 16036143852759747167,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "8d8610cc832f0988c8b8b7f861cc3e2f708101fd2366343b25ecdaa06b405d97",
+          "pixel_sha256": "dc355eff025fa317f98112dad8531f4876d82f58eee4e0374ce8eddc85c092bb",
           "size": [
             32,
             32
@@ -141,12 +141,12 @@
       "id": "bunny",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.72,
+      "model_scale": 0.7513,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "bbfb89e543d5bc525fa1d594793cbe224c06b183cd062a8b4d6f12c0da1455d3",
+          "sha256": "304e00927500b0ad840a6409a776933c6683ed0f6ff03363e150dd88dc7f0807",
           "recipe_version": 1,
           "seed": 11364480138913454690,
           "authoring_source": "cubatarium-recipe"
@@ -154,11 +154,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "c7a012b1f8552e129e1fbfe6cf231dbec3f46378edc468b7d3ff6152ee0152b1",
+          "sha256": "8d28681becf105ad349f4c5f145dd1c6213e63989f4dde36c831aa029794d068",
           "recipe_version": 1,
           "seed": 11364480138913454690,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "20dbb2c6add5abe38c43e87f589c993ad03508d933e4de6038a7dbc8bd526d59",
+          "pixel_sha256": "0dba79805a3a3cc424a35e7fd2cdcfca6f34e46412d8d413060d6ebba66e2cb1",
           "size": [
             128,
             128
@@ -167,11 +167,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "61209f217bb2d5fbd54fa6bc8f7a5fb3442b1ba6622a6f6bdea31123c99baad8",
+          "sha256": "b5616ac442a51ec8d59f7a6ca8161c1b7035aff83811206e16f40d3c37e4cf96",
           "recipe_version": 1,
           "seed": 11364480138913454690,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "b23411cadfce4b31214779d8ce3702952dd956f8e75e36192b0706f781d39aef",
+          "pixel_sha256": "64c9f81f292c1da99c6241394035fe763705da3d697e03f1a6653e0889b4074e",
           "size": [
             32,
             32
@@ -183,12 +183,12 @@
       "id": "butterfly",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 0.216,
+      "model_scale": 0.27,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "5740e77c84655f74a22a81f679c76598314249fa3c398a50e8caacf2fff5272e",
+          "sha256": "35cdd9cada3359ffecda38a2f9a8d1b014b39eebe1a82b3029e45c43a175411a",
           "recipe_version": 1,
           "seed": 5118048403986014160,
           "authoring_source": "cubatarium-recipe"
@@ -196,7 +196,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "ee3c053a4c0e6cc333bf32e71cfd0a5152777f20664fbf2cead9ae53c41e200e",
+          "sha256": "1907b21dd3148894453e03b728b8c8d58321240e71cd5677ba5f3b25bb373197",
           "recipe_version": 1,
           "seed": 5118048403986014160,
           "authoring_source": "cubatarium-recipe"
@@ -204,11 +204,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "bd1264b4aa3a060bc588f4bcdad55c8122d9a1a5d356d64a580811a93e32ad89",
+          "sha256": "27fad428c3ea8d29ed02557dbcdcafa40d256803aedac2f617404dc6c45ed20a",
           "recipe_version": 1,
           "seed": 5118048403986014160,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "644823dbe0a3970b41f90bac8d4ef5c5516bd1b5ff7f04285826f184dce20837",
+          "pixel_sha256": "2b8a028faf5654880aca2864468c72191aed745af11cb7efc2d293ec9c95d77c",
           "size": [
             32,
             32
@@ -217,11 +217,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "dc74d4ca38c59796b11a9f23bf048a64e54255fb63b78b7b09f77be932fc0257",
+          "sha256": "4461f7193f1bf9fbfb5ca3bcbb2072d23f7acf1867e358ed1a7d0fefc0952ad5",
           "recipe_version": 1,
           "seed": 5118048403986014160,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "52e322a3797c40fdab4a294a3772c35bde5ee206722b526ac48d9233d576ae10",
+          "pixel_sha256": "a42c1357692f7c7984f5944b7c69a3dd5d790f3cfcdf88cdc94df92fb4b59210",
           "size": [
             64,
             64
@@ -233,12 +233,12 @@
       "id": "chicken",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.5305,
+      "model_scale": 0.63,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "ea79e9c0044a488555fa3d4db8884553a442d1c436b7fdd3068127b2cd2d3351",
+          "sha256": "ec2a7a645546107a1e1f2fbf8188a0c46344c7cc671e78c3709dee95beaf408b",
           "recipe_version": 1,
           "seed": 16024079672956182123,
           "authoring_source": "cubatarium-recipe"
@@ -246,11 +246,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "33940b7838a6dce37b6ed69006b33ca2309e269b05f88743248f19e1466683dc",
+          "sha256": "158c3b513a82c41edd026ef104401a94999bdc87cfcc2cdc1f755bad8f2d535b",
           "recipe_version": 1,
           "seed": 16024079672956182123,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "af4c58f9ad89af7e9d558b8ba9985513976af186070a408caa5f24b6cd9742fd",
+          "pixel_sha256": "38d331b254a1619c1348c83ef714271ce182a4f37229341d5afe8c08c74a8ff3",
           "size": [
             64,
             64
@@ -259,11 +259,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "c08f14ef556360530a4af0c9791d2d529c6cca23cd2970cd7244537a8b02b8c6",
+          "sha256": "1f790581574639fb12162fb6198baed37e7c8fe6e7860f0154006f3d5008c365",
           "recipe_version": 1,
           "seed": 16024079672956182123,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "dc1299238c85a165d4c51c168305fd2c97a3e9a25632b0f7726f0a6c201a83d1",
+          "pixel_sha256": "56be083a1b1589a8f9292fefdae781566d033457b0cf9191d270b4304cbf9f41",
           "size": [
             32,
             32
@@ -275,12 +275,12 @@
       "id": "cow",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.6821,
+      "model_scale": 0.81,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "bd7911ffdde6d9b41023ea53be8edc26250be99a099fc8ba185ae3617c0fd58a",
+          "sha256": "634b4e2b824a81ec4772120c815e993c7bb8be1543b2ffdfce30f5f0889ecc56",
           "recipe_version": 1,
           "seed": 16365557913204065067,
           "authoring_source": "cubatarium-recipe"
@@ -288,11 +288,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "9b5f1462d7f362a52107e39937e54cfd280785d807577bcf8b6fb463236840cc",
+          "sha256": "e73c3d6d934ac9fdcee51b1424ed22c939068b515e93c7874f9b96e9002c47ad",
           "recipe_version": 1,
           "seed": 16365557913204065067,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "bb16d656c9ac69ecb55a005545c5553b6ca4ccbf416f6aa563f65adade77322b",
+          "pixel_sha256": "be7cb99888773942d2d77868712232342109675b2406b066e3f2a518ef2ca0f5",
           "size": [
             128,
             128
@@ -301,11 +301,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "89895cc6789ec54c2d8b718326485edb056c43ae064021f43c29661e6555e534",
+          "sha256": "b59a6a76a777cd1cc86c53171d7f785915b4aa64f79d459d5d7185b4f0cc4278",
           "recipe_version": 1,
           "seed": 16365557913204065067,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "bd68e262edabfb5be92721f445cb117dc04e68a6c16813a280b41c902bae8e1d",
+          "pixel_sha256": "10e2e807ad63b80ac4b7aa0b1a2419136d1d7c08a53cdf4b6e9e6d415a6685cb",
           "size": [
             32,
             32
@@ -322,7 +322,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "5ee36884b91953de6508c89d721d49153eb2754329106acac298abaf5a90aac8",
+          "sha256": "f889d2793ea567a67ff7c0e09cdacbf44bc8042723fb8beb97c26cb75034ae02",
           "recipe_version": 1,
           "seed": 17171482349923720248,
           "authoring_source": "cubatarium-recipe"
@@ -338,11 +338,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "a73f8b745076d8acbd10955dfde6c318b36ca0f5500dc7ee3b2dc25763c5f4ce",
+          "sha256": "fe3f658535771fc5d4fbea1d001d052f51cf8e11414bbb95bc624056bb5a9687",
           "recipe_version": 1,
           "seed": 17171482349923720248,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "2341fc2dac153fd3a7361e8b5e52f01492cfbb9ea9ccbf59bcfa5196971b2ffc",
+          "pixel_sha256": "73c50ab5d188214117a22dc4e2e683fb67e2fdbafe5f3aaf0bb6aedbca902f9f",
           "size": [
             32,
             32
@@ -351,11 +351,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "79b04e6143220bcf468dd5c86ae510714f4c80b8bda62516f85cf27d1ea26227",
+          "sha256": "a1d45a80ee7590f2496d96cca92e6ea48e0f1f718d6f15d182dcbb45fc634e33",
           "recipe_version": 1,
           "seed": 17171482349923720248,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "f5f513a2c99bf7f0e5b14de3b0c7a2fbd27f3f17ae6a1639266b9e0da9f21dce",
+          "pixel_sha256": "e4a195d4f348a8280a52fbaef76a3b77eca4c21aa1c3088be3b8c1a475e49441",
           "size": [
             64,
             64
@@ -367,12 +367,12 @@
       "id": "dirt_monster",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 0.8846,
+      "model_scale": 0.9173,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "a20814e0c11ba5a681994ff15aad0daca482f3c6784c65a826b1086166e91365",
+          "sha256": "2a53210aebde3f1758c680a638c51fd7c9d200331461f1e1cbf989bbed803a5c",
           "recipe_version": 1,
           "seed": 1878739061616249309,
           "authoring_source": "cubatarium-recipe"
@@ -380,7 +380,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "77c54007c1b31e2ef93d19105d83b156b8803194aab32e4cf07e0031627d1eef",
+          "sha256": "8b4c15afe7dc3ee0bdc02a72929b437f5517e88fb64a36daa14fa2efe5fd0e44",
           "recipe_version": 1,
           "seed": 1878739061616249309,
           "authoring_source": "cubatarium-recipe"
@@ -388,11 +388,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "c20f67b5212062a62effb3970dd9cee8e8a60318ff0d05b99124780e88f4fdf9",
+          "sha256": "9bcd36f7ad77b9be04cec1fff5acfe7fd89c17385ea37400a8667dcc58e5c655",
           "recipe_version": 1,
           "seed": 1878739061616249309,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "40cb74529d0aa4ee0d3dffab19971aa6cdf4301e69aa19dbf597a3cde7b257ba",
+          "pixel_sha256": "98e14a251372ec85a61636619c1f7d050c85f4874a0f6f154c65ffed63277cf6",
           "size": [
             32,
             32
@@ -401,11 +401,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "90a922606785003f79403b959728e0a8a6782ecf9c426c1809909e6b0beb84d2",
+          "sha256": "0682796e7d6a7527a2843bc78ed980d881b8655fd06e67dbc246e44cf9e56af3",
           "recipe_version": 1,
           "seed": 1878739061616249309,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "9a0490628039b12bda18d14af2b9ffeacdafc766b316e7c24c88962bd0699e87",
+          "pixel_sha256": "b7438048f0d0a939eb62a762ca29e80228c7bd81b6679d6b216e5f2f4d71734d",
           "size": [
             128,
             128
@@ -417,12 +417,12 @@
       "id": "dolphin",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.81,
+      "model_scale": 0.8938,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "9c0048bcb8a57da986986ba59128af41352711347fb03c7b1cbcaa646dc496a8",
+          "sha256": "6db196c9b7ccf76c515139e44a41157cbb1bc54005209f11c72c8c3a2f17fc9e",
           "recipe_version": 1,
           "seed": 15118113155213526615,
           "authoring_source": "cubatarium-recipe"
@@ -430,24 +430,24 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "b61f355d08e9d310c75984f7647bdfefa1ce5091f8454229b88a5eec1b035e17",
+          "sha256": "cdfa905a270bcc8a9195060ded39c3da2938239964f6a789b3561086735613ee",
           "recipe_version": 1,
           "seed": 15118113155213526615,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "832b7a73a0b9e527ec12f107091f37aecc3bbaaf1f492b0c9bc0eba9a3253eec",
+          "pixel_sha256": "02cd6dbbbad93417348f1e1a0c9c2363f8a3ca6595edce81a4053b6fa9c125aa",
           "size": [
-            64,
-            64
+            128,
+            128
           ]
         },
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "abbb338231abc4cbd361c8805a4afd0f68c3b0bd439fd411589866a31e90b534",
+          "sha256": "5d38f481bae7f23db7169160f6616170255305bcb7f7bc600c6b2d14944b196d",
           "recipe_version": 1,
           "seed": 15118113155213526615,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "b224095551377215b8a842fe5f76c18d76075bb07882c9e98519c37c38733fba",
+          "pixel_sha256": "560580459b11621e126d315f3a024f4afb0fe019bebdd11e326f2f5d04f7a57e",
           "size": [
             32,
             32
@@ -459,12 +459,12 @@
       "id": "dungeon_master",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 1.1651,
+      "model_scale": 1.2015,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "98e8246f1d13dde4f699b56ed9ac44745c3fdaf60f6d46a8f90300ff50bc26d9",
+          "sha256": "bd6a6aec80ecc45075b620bf48ee66fbbc9db0f05e13103d2fd18fb70c88fd33",
           "recipe_version": 1,
           "seed": 9204176809903155052,
           "authoring_source": "cubatarium-recipe"
@@ -472,7 +472,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "153847ae00a0a86dcbfd7d611760b2b212f656efdadf372b97ed808b9132b00b",
+          "sha256": "c6771b0c60c17434ac66d64052a272a02a0cfc10fbd3ecd7078405ac8d825a73",
           "recipe_version": 1,
           "seed": 9204176809903155052,
           "authoring_source": "cubatarium-recipe"
@@ -480,11 +480,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "cbb02dd396132ea8c90ba4f0663e543f1e47ccc371aad0d8718ab551662011cf",
+          "sha256": "3634771e57b2e9d4f91f00a8e755fbe1deea8c9ba6dd863d994d52c2173f2d47",
           "recipe_version": 1,
           "seed": 9204176809903155052,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "78e157afcba1b74d43b8e644038a1eb1c113819eb7aed4f5dec8d49f48fc4585",
+          "pixel_sha256": "6da49378020a8f76309c51bad7a021f55670ab817100eccb8b7b35cc25024edc",
           "size": [
             32,
             32
@@ -493,11 +493,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "03df0ff94184de6dea2e38a34cc63cb238f71020eca5454ff3d3b835bedebebe",
+          "sha256": "9e33fee44a04bf4f9104fca73da0cc6453d74c9b2d5d946dfb12ed4f6bbbacfc",
           "recipe_version": 1,
           "seed": 9204176809903155052,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "0b5a92e9be1e8efa7917c69150dd45509e5e5cf3205da2c32f50efc5f8608459",
+          "pixel_sha256": "222d1148856e36716a448f528541137485487c3cfa62aeccce3f313e0ea16ea1",
           "size": [
             128,
             128
@@ -514,11 +514,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "14b33801d4ada2174a4fa89c5d8cc6db2b93eceacbd5e23ba848b243c0dc621c",
+          "sha256": "f53ff0aa7f400f3781d45505d9e0e87e64e61ee87adbe7987c951216aca26666",
           "recipe_version": 1,
           "seed": 4056795265870684153,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "7dcbd5b133a70b4f180740a635c465d918a00c8c796c29ca7fcb0e2e6c6ad58c",
+          "pixel_sha256": "19e3b0ba38b36638a41d8c2d88f2a130aac1b54bbf0eea088ec680226cc39d66",
           "size": [
             32,
             32
@@ -530,12 +530,12 @@
       "id": "fox",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.6171,
+      "model_scale": 0.4937,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "0ab252e69e69706c0781a15c5705bed936ee01b808799b0f0e821e3073070124",
+          "sha256": "f06d1e189a1b4ab6eb7401c416b9dcd4d6e2bdb53347cb5110fd7048faeb866a",
           "recipe_version": 1,
           "seed": 9666332598632909460,
           "authoring_source": "cubatarium-recipe"
@@ -543,24 +543,24 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "fcda2884d740cc153f4c4ebd143df5b7fb725762ee9f3b446e618c0722b23243",
+          "sha256": "f10facb0682e92a84e606447b6f95ec1d33982a367d95c30e1589e031d4ab14e",
           "recipe_version": 1,
           "seed": 9666332598632909460,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "a4c001c4e6ad4451c25c57384ab2c817cce8b4258664266b545fbf1368fc3667",
+          "pixel_sha256": "739428a4924a24f5594d250825d429d541cd0c5e23af9f102d0f5b02dfe65396",
           "size": [
-            128,
-            128
+            64,
+            65
           ]
         },
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "6cc71139bb5522dfc21679c6ef0c221b3059e5dd6f89324c69eb73f680093d9a",
+          "sha256": "66367d12a1b3d56bfe7d2f6d3afa8388a1e51d58995ac823db52bc578515155d",
           "recipe_version": 1,
           "seed": 9666332598632909460,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "54c4051dcf8acb4ed9577db154a722a046829689bea963d5d713f948abf61b6f",
+          "pixel_sha256": "1e7a59f9719ae9953bd6cd4b22fce6bb9cba0c655461bc463c130931dfddf85a",
           "size": [
             32,
             32
@@ -572,12 +572,12 @@
       "id": "golem",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 1.0691,
+      "model_scale": 1.1025,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "f3148ba45e1e494c633ee3ff0a9e76a7ce8617f9c1a5c93677497b571980268d",
+          "sha256": "b333b44b278b51dbe320af3bd786a5d059efe1cfab7e88fc6b6f51540048c935",
           "recipe_version": 1,
           "seed": 11423407484334201354,
           "authoring_source": "cubatarium-recipe"
@@ -585,7 +585,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "0f1db616637162d72b29ec2af8fe3a2bddc795e2795d3edee30149e8af760f64",
+          "sha256": "4673b6a5fd7c6428c5c70ba557fa0e0400b2a057fe3068085dde0d78f17604e1",
           "recipe_version": 1,
           "seed": 11423407484334201354,
           "authoring_source": "cubatarium-recipe"
@@ -593,11 +593,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "0230aaf172dae23729a800f14ae00293602fd8260dc3e9aff81f89bf1f0f1ffe",
+          "sha256": "d72d4809ae143aa84b78ee044a006315be4fed6586d70bfe620af71af8ea541c",
           "recipe_version": 1,
           "seed": 11423407484334201354,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "892dfeab3132b9094a44038e7634571f7d85b86eeaee1020ba9206f421d0a06b",
+          "pixel_sha256": "48cf5ca5eb450a9cc03f83915121a8a96375e439acb9ed17f248fc50bdd85774",
           "size": [
             32,
             32
@@ -606,11 +606,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "531bcbfc78d7e88bbcc5c7f5b2ffaa64c28200edbae8f8703f8ddd78aacef8c5",
+          "sha256": "9ba3c50fbf79909cbe772af4a5777a1f874eff17ce3067d0c6ccd8b1e089a683",
           "recipe_version": 1,
           "seed": 11423407484334201354,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "bf2441c3a14ff820740fd0128f28385c6131c9c9f726f444b23aaddfbecf053f",
+          "pixel_sha256": "be2ee5ff0beb7cd82530e1004c5b2337b80b2a44b8aada1a801d2272f730a134",
           "size": [
             128,
             128
@@ -627,7 +627,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "ea0bb9c85dc6ccf10c495ad537566f30712555358dd79c1d7bfbfbc95fe4d62d",
+          "sha256": "dd6865dcbce4f09648353b464aa27afd568f88197f95f10ad871fca257e3fa09",
           "recipe_version": 1,
           "seed": 17033525332484520236,
           "authoring_source": "cubatarium-recipe"
@@ -643,11 +643,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "1bbd0ab2556352310005b273855912c3ba79647cd2439ad9bd94137793b28731",
+          "sha256": "5879aa229c27c2a1d4db77f57071f6ccbba8da6408dc885e54b6a569a349b4ce",
           "recipe_version": 1,
           "seed": 17033525332484520236,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "5afc654df5b25c789bca09cf435dd4ddf5f60b5303738a6d251edfdeac2ec979",
+          "pixel_sha256": "731846417000cdaf003887d97a3bfda6defdcc30784e6bae18914a9711e7eba3",
           "size": [
             32,
             32
@@ -656,11 +656,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "fe48ce4187fd4e3e2557e936c84e2e35b78a6be6495fa28c90ed1aa219cc93bc",
+          "sha256": "5eb903460e60bb4a2c1a51bcb5fb565ed7d8f78a5e64489e603082067e006ef9",
           "recipe_version": 1,
           "seed": 17033525332484520236,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "5bead2a12cb08e165413e092659e7972bb5ca4be49fcd6709ffeefec64385c03",
+          "pixel_sha256": "0420e6a014afcf1c4e3174b295d1ca85ff03de6cf8e415387b86ecebf80a9d62",
           "size": [
             64,
             64
@@ -677,7 +677,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "d5296d52a1db9fc2050d50c5c7020c870006141a7ef195e8e2b37dc297b5fc5a",
+          "sha256": "9b54d83dbd0d30c3a8718248cffebe4377e139cc3a5f08d0bbca20a558e76a58",
           "recipe_version": 1,
           "seed": 6408206303180382286,
           "authoring_source": "cubatarium-recipe"
@@ -693,11 +693,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "6f618787ea1cd80ae540549d4ca189bd6b080896375bfdfdc131fd08d43c67b0",
+          "sha256": "5db13c539f5c0f28c190afdc75c3de36536088fa52fec0e0dcc1559e33cef881",
           "recipe_version": 1,
           "seed": 6408206303180382286,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "2c315fe769b760fdfa56d41baf477727211662b3a4e2b8bec85149535585b148",
+          "pixel_sha256": "8019ae86aea92a484fc2731eab6dad04f4e3102b5262d7d2d47f9fa7ac31df8e",
           "size": [
             32,
             32
@@ -706,11 +706,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "351688ae7da9ce5a0547c015f9dd47ebcca5f8efd2f2d1d805db426eb7537839",
+          "sha256": "f60a6380c67c45e1949b5c215bcb2f416228be265b87aa0c6f106079120cf407",
           "recipe_version": 1,
           "seed": 6408206303180382286,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "1269de8ca3a8b7f2cafeb52e577945ec3932e876a790814e210317740699aa81",
+          "pixel_sha256": "fe6e6b4bb17bbb7bd1a15b29849d249934b61a7bc38595b6b24bfdd4c299dc08",
           "size": [
             64,
             64
@@ -722,12 +722,12 @@
       "id": "human",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.7855,
+      "model_scale": 0.81,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "530e72a07275b6372e579a97ca40077af1d343601b658474f349ce27cca7b3c3",
+          "sha256": "1c7f6432afc67702110500da5bd9da9b2fcd0ff3b912801b2a9c2431bdefa1c1",
           "recipe_version": 1,
           "seed": 5975750159848231375,
           "authoring_source": "cubatarium-recipe"
@@ -735,11 +735,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "ef6f2d5a6f716f3a6b931f3f94db2b89b93fd0bb488cb3ed258ef0bdaed591ef",
+          "sha256": "0376b5cbc899adf80cfadf7fcc06a6d110c21df5c5a7b3e604d6c20e892f8482",
           "recipe_version": 1,
           "seed": 5975750159848231375,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "b0b9e345ee089aef70b3351707fd88a22684e063e65c135e5bb54156ea6f1b27",
+          "pixel_sha256": "53b5af1e3750f0c9c71aafb75157c7a71abe1601843e98ad2657eb2768be1d80",
           "size": [
             128,
             128
@@ -748,11 +748,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "1b90f2948a470e481f81882f35062df9a168145bd86a2d68e86fe25a1e83c660",
+          "sha256": "83bc90d96db6b0927a65530fd51e96330cbe5c286d13387e44f8fbf5f0f7b6c3",
           "recipe_version": 1,
           "seed": 5975750159848231375,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "0b0383a1ab25afa5a78c38eec5b6ff1cfe655ef41962d50243fca0d44b8c306b",
+          "pixel_sha256": "a8a0289777d29219ea48f52fbfa562201ca5d84783393ad8b1e97fe6940cbad9",
           "size": [
             32,
             32
@@ -769,7 +769,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "0783c668ca5ef7967a20edfc59b2aa30da6d37a3c8f2924c5eea02d6d10fb26f",
+          "sha256": "45039ee9f46536b315710cb221ff9e6f601534007a3d4d95f6e254ad31a2a7a1",
           "recipe_version": 1,
           "seed": 3889769358600386418,
           "authoring_source": "cubatarium-recipe"
@@ -777,7 +777,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "41757f23dbf306a55674c89b4c53246e08f9b2fa39081aa7aec68caaa3238a66",
+          "sha256": "fcd45d138de0022daf5c336f6770a1159d2b7ef6f26cb740faba2b8d192b1218",
           "recipe_version": 1,
           "seed": 3889769358600386418,
           "authoring_source": "cubatarium-recipe"
@@ -785,11 +785,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "2ab426633e644ef8e14500442e23a26a3b8ab5a428e6b3fe6a4ef7c20b610129",
+          "sha256": "577bb50b3f9eb7529fe4cab938e466d1a8438db06774b690fe8676fdef1f3f9c",
           "recipe_version": 1,
           "seed": 3889769358600386418,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "2797e14e9e03ede06af48038ac391f267580da68d6e2d18b32499160f68c1367",
+          "pixel_sha256": "19211ed3effe4e6b6f314c2b306560eb77cb26c603ec2b6d97b4786fd176617f",
           "size": [
             32,
             32
@@ -798,11 +798,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "dbd8df40e115f32c4387f353c7bfa6c9fd7143b54e021ed95f6d904bcc1d3d56",
+          "sha256": "0696a96a7765947fbb2e35c9381d4dc72901da0a260b6616eca278377adada69",
           "recipe_version": 1,
           "seed": 3889769358600386418,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "8dd16441ce95fe1a47eb53b7c7618bb20a7d483d1afb4ea781927fb824604cff",
+          "pixel_sha256": "0251a6041182b5a08972747c3bfdc9d1eba076b998b5e010015aa47e32eb9b98",
           "size": [
             64,
             64
@@ -814,12 +814,12 @@
       "id": "land_guard",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 1.2015,
+      "model_scale": 1.2403,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "4ec261454281a66b3e1bbfd449ec0cc3338b7dcac3b7750207f102c18ad080da",
+          "sha256": "5307723bad955103cc0c03fc8e6632893bd15dacd1193aa367928498054bd074",
           "recipe_version": 1,
           "seed": 1181247382133654866,
           "authoring_source": "cubatarium-recipe"
@@ -827,7 +827,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "1369b1f4df116ebae6fb4397b8f0c19628d1477a85934c33c4e05781bc207fc8",
+          "sha256": "60156a40f423b67cd4514200bcf96eebeb7d0ae82f35745aae16aab05b4914fc",
           "recipe_version": 1,
           "seed": 1181247382133654866,
           "authoring_source": "cubatarium-recipe"
@@ -835,11 +835,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "9ea033ba9af1d3e9072736a5c479903c06b89d6712dcf7996ddc753616a233f1",
+          "sha256": "19e83145a4681f6bc7c9566681f511a550a79b54c2f74ccf594505ed13465c77",
           "recipe_version": 1,
           "seed": 1181247382133654866,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "cb3cd11234fd7d95206b03768cd64193fb6c844565d601ed1bf4edeef4be4a67",
+          "pixel_sha256": "20275808a4f800fb8bd9c28daea234edb1b2f989d0c0872a2b5ea26587dade2a",
           "size": [
             32,
             32
@@ -848,11 +848,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "972c20b91889dce1db23a39da054c048fffecd4556926196279bd05cd9a45db2",
+          "sha256": "cc56c4aacbeaef7d51b595e6975e55890999e3c8f1fe641355b39f273c33384c",
           "recipe_version": 1,
           "seed": 1181247382133654866,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "b9012e13a16471708d71d7f59bf01eb346c0afca7fb4fe27878797c140ac6601",
+          "pixel_sha256": "69d3f323fd70e47c5b56fb3cd326ceae04d1712849ff42eb29c84db9279592d5",
           "size": [
             128,
             128
@@ -869,7 +869,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "a3aaf8eafa3eec5578dd7646f66a663b7bb40264d3749cda29d0d6829b6c6295",
+          "sha256": "f858c40be7ee29c9462d350d72b060491274845eae2c1580421b9228d811970f",
           "recipe_version": 1,
           "seed": 17215102021008076886,
           "authoring_source": "cubatarium-recipe"
@@ -885,11 +885,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "bf9a089d282bd84ede8e8ed90b33d84666edd2f72edb599d724e5bc7167ef2c7",
+          "sha256": "21a377c7b566b71ac528fcd745beb1e832c6845fd3f61ebefa248e68a8a2d895",
           "recipe_version": 1,
           "seed": 17215102021008076886,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "96c658668fcbec56f1e433d4e0665316b5d56e32237f09799a1be41b3efef07d",
+          "pixel_sha256": "258f3f3d0e4d7f20ff71949a9e070334df2799889c2a7e82f40bde002b2033d4",
           "size": [
             32,
             32
@@ -898,11 +898,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "e10812fa881379025720667c67f89d584bace5221bccbf7ff59285b32cb3bf66",
+          "sha256": "d5aa31a20e278ce26287a0494f4d6ab6aef9a9fb02b0c1bc9d0ad5cafa070bbd",
           "recipe_version": 1,
           "seed": 17215102021008076886,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "19c200e82e733fd075bc8e755e96d264b5de424bdddfb843a8f5c047a2b851fd",
+          "pixel_sha256": "178eba6ff740e56bd9ffc1fcb6b9f8ae0b8e7d2eb9691de2b5861ba00a175110",
           "size": [
             64,
             64
@@ -919,7 +919,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "ca5c64eb4a1789010f4f1a8d2aa812e499eb23501bc828413b57e65b27a33295",
+          "sha256": "21f4b83ef88baafb3d86ecf48b4eb8d35334923c35b1e9b8be46c7b9f57ffc7f",
           "recipe_version": 1,
           "seed": 15002564318647503342,
           "authoring_source": "cubatarium-recipe"
@@ -935,11 +935,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "7ef4da3bd9bde212601b28a76ed87b32464342f1d651934b99b5b79a7a654581",
+          "sha256": "8ddc81af5bb920820e9159f0a3682d8a2ff7173140db311a74b1f5461e3b36ce",
           "recipe_version": 1,
           "seed": 15002564318647503342,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "2202b1007b905fb2848e137a65d4c6e60f032b02294e2b373c8240f65b27be80",
+          "pixel_sha256": "04c3d2d00f95a5384ba98b31143808414f66632652e75c796a19383bd1e5566b",
           "size": [
             32,
             32
@@ -948,11 +948,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "5dc43fcee2a5de1ae5c7762da1642a2be46a0ac961c90807daf7c16c28cb4351",
+          "sha256": "66845aec8540fa8db3d72869b150b2c8d7d06c7a9474b64aabf0ae27d37aced7",
           "recipe_version": 1,
           "seed": 15002564318647503342,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "8fcd257d7fa59baadf59d0c249aefe84deee5f5fac168e2996c4b6ec44a6954f",
+          "pixel_sha256": "f6be38451eb14c7fdc702ae1638e9b6c90424b97b0b597a07829340dcd8eb9b5",
           "size": [
             64,
             64
@@ -964,12 +964,12 @@
       "id": "manatee",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 1.8384,
+      "model_scale": 2.0427,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "4e5ba0d9b0d718d16d6ca52048bac6d0e968f0098c324d1b6b9b1d4038ceda56",
+          "sha256": "a655c9414c6e3f269dc57232a5c9f6ab0a343797eb0ef99d042488eae4eb1156",
           "recipe_version": 1,
           "seed": 15358344467300563275,
           "authoring_source": "cubatarium-recipe"
@@ -977,7 +977,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "f49cf5cf26752c155409906c356ef2914d39710ea53c7e10955b463d5c3125b8",
+          "sha256": "edc250419c8eccc3eb728d71b344ee69f9669e5d9c2cfcf47b239fdf3123d7d5",
           "recipe_version": 1,
           "seed": 15358344467300563275,
           "authoring_source": "cubatarium-recipe"
@@ -985,11 +985,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "b1efdcacac4e3437903d1241dc78f4f0caae7b325fdcf89fb39f64081bb3da42",
+          "sha256": "3c9bda89f491036ba9412c3796e4c6c468a632925886b0ce97a1bf94bea750db",
           "recipe_version": 1,
           "seed": 15358344467300563275,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "19612f85d8771259cdf4b9fe3fcc28e99e412598cb6153359e09d70a8575e6b6",
+          "pixel_sha256": "c581b337081629e9a54088e394beceabfead54fe8a674d4f8679f63ca5622eed",
           "size": [
             32,
             32
@@ -998,11 +998,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "ff878ea97e99d861758260afdbefce95eea1d719b61434cf6cf5e340ad348a4d",
+          "sha256": "8956664e6b1ca65eff1c27d7861dbf934634de7f6abeb002d06fa6027f0dcd95",
           "recipe_version": 1,
           "seed": 15358344467300563275,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "bf714b604ec139dd2b90d8d36f177ff9a53f4d495b302ac279b9f156f4e9888b",
+          "pixel_sha256": "481118deb7b015d7956629912bd73b7d96ab8301c7fbb9154bae8805825be407",
           "size": [
             64,
             64
@@ -1019,7 +1019,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "23b60b7691befc1a08b094ea18c9a9d7ae53c2b50ce15e5f7769f6bda82a955a",
+          "sha256": "f6774d223ece7a9ec01438ba04a052f8678d0de8e52ccfe72d7fd3088d8fcd2b",
           "recipe_version": 1,
           "seed": 13852201673238871760,
           "authoring_source": "cubatarium-recipe"
@@ -1027,7 +1027,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "69c36062354e53c2703c377e452d62e62111831613364187f1cddf965b759855",
+          "sha256": "87cea403ddfb50ed01846abaaac42b6557bb928a7440eb80a54efc60aeb19dee",
           "recipe_version": 1,
           "seed": 13852201673238871760,
           "authoring_source": "cubatarium-recipe"
@@ -1035,11 +1035,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "5bd13d43f77cef24be1e99bc02efe29dbfcae38be0f3cdc549eba6ad8ac014b5",
+          "sha256": "4bf268aab7e59abe4f4b2820e34dc810e27c61d4bc8173f12da3aeff2bb413fd",
           "recipe_version": 1,
           "seed": 13852201673238871760,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "d6c6c706d64a75db76a606a7bd9ffca5c9214908d5c7590aae800a0dc9af0e13",
+          "pixel_sha256": "00a9b3e2cd5053c9c999bd006037fe11630647cde3a40e33c514e0704861e72a",
           "size": [
             32,
             32
@@ -1048,14 +1048,14 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "a96781adb02fe843f45a3873944d33f97e89f67ee11ae135e1c9d7adfd34d443",
+          "sha256": "3c95f91b1e58989f11ef780ca728ceebb276cab93715cb4ec2f1aaad03ac96ec",
           "recipe_version": 1,
           "seed": 13852201673238871760,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "c30db1b30407074b3398317db099def38419b2b2ea0b56289c89d42754b9fbe0",
+          "pixel_sha256": "4f46d2a23c72f5afe7ab207da7877a17ddfcee3065b6772b1c912558bc50a994",
           "size": [
-            128,
-            128
+            64,
+            64
           ]
         }
       ]
@@ -1064,12 +1064,12 @@
       "id": "octopus",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 0.3189,
+      "model_scale": 0.3571,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "53527737f3b1b9e534c3ad38bc80845335acba6a95e4f94d73aa4ee360af0102",
+          "sha256": "08ee6d6a569a278501e3d12a254744d79b8101e4f998bb51a149889c72a32352",
           "recipe_version": 1,
           "seed": 18407452330097617944,
           "authoring_source": "cubatarium-recipe"
@@ -1077,7 +1077,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "7a42e2d37eb95694ee606b5f178212eaf18647013e3757246c69d0f5bf9caa1f",
+          "sha256": "ed320556bcaaaa0a87fb916f5c9c71036005beaca965e57c6266ee27929ed480",
           "recipe_version": 1,
           "seed": 18407452330097617944,
           "authoring_source": "cubatarium-recipe"
@@ -1085,11 +1085,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "3ae9fdc595a5e737c537c52971191837f64cf752a3975bef6faa7501bd0648b2",
+          "sha256": "521e2fe7227c23cc00543da5a4f941316ebaf669861173edfbccf217197edd0a",
           "recipe_version": 1,
           "seed": 18407452330097617944,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "ee10ed3763926cc340ff2d9c6f41521238a93b977f55a4aa94da028fb0b573d1",
+          "pixel_sha256": "3862cc9f9b1a2b8e0e5d20d0341904c6d9ea6620b80380e0dabbc938536de2b7",
           "size": [
             32,
             32
@@ -1098,11 +1098,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "1d058056c16501bf05f603c75152ae62e95af0a173749aa19180673655db5d24",
+          "sha256": "693f7ffd72a63ccb9fb8e7fcb89c6e6b9c16fdc39d550f008e323e55a775bceb",
           "recipe_version": 1,
           "seed": 18407452330097617944,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "18ce9a479209f8727dc64e8356fa84907fe4716f43270a3071a14ce61318e818",
+          "pixel_sha256": "d3a6d7537ebea837119c075317b707765e6f38c2277cf618c0902e260c6e5cd2",
           "size": [
             128,
             128
@@ -1114,12 +1114,12 @@
       "id": "oerkki",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 0.855,
+      "model_scale": 0.8826,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "06c13130fb4be85b61f1ca9c6fed3fe57afe62839455a0c2abf40d1bd9c479e7",
+          "sha256": "1ffd602120ca780f7a8f8f2769ba448e50022b02ddc8afcd5b9fcbd5fc7da483",
           "recipe_version": 1,
           "seed": 7343716716636128294,
           "authoring_source": "cubatarium-recipe"
@@ -1127,7 +1127,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "573af91bde4e99349fafd0e2800b231ab1e50844e4e2f038978594e0e6e689a6",
+          "sha256": "3634267feb3447de7579b0af390f2169d96eeff2e5cb12301fb35350b95a2ef4",
           "recipe_version": 1,
           "seed": 7343716716636128294,
           "authoring_source": "cubatarium-recipe"
@@ -1135,11 +1135,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "01cbbeb163ac5b727b8010b090286118e2c3b2477693a6bc8a31ed234fdbb4e1",
+          "sha256": "b7c24704b8bf37cd04e1c8190f8ab608281c71e3fff4a85d110ca732e4874a14",
           "recipe_version": 1,
           "seed": 7343716716636128294,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "2f48b70a109942515c3d3efa76e7c84acbbf8405cbad0437f2d8cebff1729196",
+          "pixel_sha256": "93a1f562151c67ed3faf9b7607e03da08a4ec5cbb0a23feec0c6f52f0fc7cec3",
           "size": [
             32,
             32
@@ -1148,14 +1148,14 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "a20df0d13501c182db009325d7d1576e4e1a4bfabf78c25a94fc4128349c3905",
+          "sha256": "e2e033af6b276b516fcc1099cb9d3c662aebcfea6c46ddadd0667e10bb315a07",
           "recipe_version": 1,
           "seed": 7343716716636128294,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "35b05ad60b0781894d1710e884edcfa96706e55e58ce87ff1f85c71c4cdc0dab",
+          "pixel_sha256": "50166eb159286b6eafbf848418fc85d685ab6d9fce2e237ad9296792c1880669",
           "size": [
-            128,
-            128
+            64,
+            64
           ]
         }
       ]
@@ -1164,12 +1164,12 @@
       "id": "ogre",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 1.8086,
+      "model_scale": 1.884,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "6c33762274a7f29c7c46ae06da6e9d4d4f330c9bea76c072ded9b31b99abda20",
+          "sha256": "e776ba8620dc31904f5862837bec11b3b8fc71daa5b3e47c2d131b9d865540b0",
           "recipe_version": 1,
           "seed": 11821788981619339585,
           "authoring_source": "cubatarium-recipe"
@@ -1177,7 +1177,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "cfbd21b294e11d061882e9e1bc7802c82798944eb5c92eaa3147d804328ae5e4",
+          "sha256": "c130fb06db644d0c515946df4bd1f32454de41f99dbaedcc1cc59896f1196109",
           "recipe_version": 1,
           "seed": 11821788981619339585,
           "authoring_source": "cubatarium-recipe"
@@ -1185,11 +1185,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "ca0680b2b3294390d20e6261e539e26244c39fab84501aa42a267668024f01d9",
+          "sha256": "c657e87413f79507c522a26366ed0c8c90e446c253683ff0598564f84c2f2779",
           "recipe_version": 1,
           "seed": 11821788981619339585,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "752d05636661cdbb6611b219a41dc2506583f845de23a49456440d4b93d0293a",
+          "pixel_sha256": "afa53e22cb96f3e6c12e0c3c90902877bf2c65627985326270435347beecd2fd",
           "size": [
             32,
             32
@@ -1198,11 +1198,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "61a7bc11df5cb0654b4c55da33dd693cab98cddbddc01a23209145a1c442beba",
+          "sha256": "ac75b77a24d293ccd1b6ffc5a5bf2abc21478be2488794d4c577b0f77c9f4cb0",
           "recipe_version": 1,
           "seed": 11821788981619339585,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "e9600526f33235fc4e07c926d926421c901e20b4dddb7f9c20436887a43ceb8d",
+          "pixel_sha256": "83bd71b643e8d167e049eee25484589c3325b2af7b18fef452452930af14ebc8",
           "size": [
             128,
             128
@@ -1214,12 +1214,12 @@
       "id": "orc",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 1.2918,
+      "model_scale": 1.3309,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "748edc5fa19378aa313040cd619d5fa786671f4e43f12f4d4f34bc9dc2c79ab3",
+          "sha256": "5237f9dedecaf0275df218c41f67a4af5181a831d66a59e5311469fd084494e9",
           "recipe_version": 1,
           "seed": 15262007801261934184,
           "authoring_source": "cubatarium-recipe"
@@ -1227,7 +1227,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "d7afcb5201729f58a8a16d1e399fb1057eaf899a6ad045678d1b6e9ba9325cba",
+          "sha256": "54fe8993cc2209dea80076f5c6c883f8c622b4c2ce92e0bb185f9b4fa073319b",
           "recipe_version": 1,
           "seed": 15262007801261934184,
           "authoring_source": "cubatarium-recipe"
@@ -1235,11 +1235,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "e06a738ca7953277fe7c01f6e8ffec3c5e38d045188cceea57915bf80d625ec2",
+          "sha256": "a4311bdf4c782cb3668de73ef9af6d488607f03a84f4929966fe4f220c003cb9",
           "recipe_version": 1,
           "seed": 15262007801261934184,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "ea2614c464c6cd42c2eeb763899d9a2eff8e00fd61936dd67a8c3c66573643e1",
+          "pixel_sha256": "4e0438c710198f49aafe01fa8dba12217c99ebcff009ca91fe58d29b7a1307dd",
           "size": [
             32,
             32
@@ -1248,14 +1248,14 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "150d35485b3865265f7fe4ae9ef45a5029eff351f3ac3b0b9975cd680a9c345b",
+          "sha256": "f60c39f36209590e5c638ec3abcaea12bbe1c41e3c9bbc934a6c92a711d6b540",
           "recipe_version": 1,
           "seed": 15262007801261934184,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "76fb1131242a92aaad28ffe03d4a1e0eb3c4348e8497c188959b7210f4d26cb4",
+          "pixel_sha256": "5475d5198b35575057c5c221383bc8cb3862f1e77216a60fcf7f614f83baeb0e",
           "size": [
-            128,
-            128
+            64,
+            64
           ]
         }
       ]
@@ -1269,7 +1269,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "7e81c4739b12dc9ae184778db249cb4b0482ed0775e28564b771705d8c11c2d3",
+          "sha256": "7391c18a1505bd725d7887691a366ed8ceceefc497fbd4518db8659237740256",
           "recipe_version": 1,
           "seed": 17008174497378954233,
           "authoring_source": "cubatarium-recipe"
@@ -1277,7 +1277,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "fbeef207a043506e6591dd492a80afdee165a40ee1e82ebcd27b9abd0e9ea142",
+          "sha256": "c6ebad96e5cbdcddaeea4a3a7c85659470ce09fe276ede21304471e45daf0555",
           "recipe_version": 1,
           "seed": 17008174497378954233,
           "authoring_source": "cubatarium-recipe"
@@ -1285,11 +1285,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "98a524093faedb67487f26878f8129676445234b75f46e3f1a2e3178a6c70b17",
+          "sha256": "53a975492bb1b8d08bc53ab353d78455c40273442bba9965a042f8b9f811cc18",
           "recipe_version": 1,
           "seed": 17008174497378954233,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "f236151448bf82b3c09a0c4ed118251ff297c5cf383dda9edce8b49c5b7e3b3b",
+          "pixel_sha256": "a0b3c1d1b3b7d8b90ad991f30693b90830eeb8e02047d8e2f33417cad9429a12",
           "size": [
             32,
             32
@@ -1298,11 +1298,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "34249f6f3eba534e0b969245c0f6633f2dffbe4af30cbf80df2ce335d7c7fe23",
+          "sha256": "cf8bc1dd519a55c6137cd0a6f59c74324e009d4741c5a762aad435ce22a26010",
           "recipe_version": 1,
           "seed": 17008174497378954233,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "d622befe05c76b78b2abab16e6d28651ad05d054d5e12034dd7fc68e9067be57",
+          "pixel_sha256": "67f5ee31fc36f0249aea69a3e66d5020eac4768ab257b85dbc463f1814af5402",
           "size": [
             64,
             64
@@ -1319,7 +1319,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "2ea0d804722b03a230d43115ac69828be648b9ebf8486f720214ce69f6609287",
+          "sha256": "70f9ea440fcae08ec5b115a05612b833024ae6a70518aff3a41131f7e152eb35",
           "recipe_version": 1,
           "seed": 8636613267116561720,
           "authoring_source": "cubatarium-recipe"
@@ -1327,7 +1327,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "4962b9dc23cada99bfa87ea7b7538d8124b295657ccede1dd0c5b2293ea634b9",
+          "sha256": "7d8d80ebc445109676010c50be33f59e61582a610028a5a0365b132d6a055457",
           "recipe_version": 1,
           "seed": 8636613267116561720,
           "authoring_source": "cubatarium-recipe"
@@ -1335,11 +1335,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "eafe53deb3421ea5903bd7f101564428da44666d03f3ff1c8b6907ccf2f48889",
+          "sha256": "c2f5ee6bafb6ab6f2c78e55a21d81600f23a985c6c1c46569afa6f27b920d3eb",
           "recipe_version": 1,
           "seed": 8636613267116561720,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "6c52d63855c697d87828d5f4d8f81d2f64aa01029824b1d88d7b237d4db6fb63",
+          "pixel_sha256": "efe365af5cf0f1e767a7bc545f902fde7a44ff2e40d353926ce388519a075235",
           "size": [
             32,
             32
@@ -1348,11 +1348,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "df86c8ed5e3a6b32a4aa653ce70ed967b1beb14da237459e650ff1bdd6f015b8",
+          "sha256": "c15a4f871206223c1fbded4c9b406a62027253a4a4d01bcfa092fbf9158b2809",
           "recipe_version": 1,
           "seed": 8636613267116561720,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "3d942132470fe6bab1e0c6e8f6518eeb610390e41f9353187ebd487bb48f8b47",
+          "pixel_sha256": "68760aa980a63b5a84e03889f1cee41bf7ca082b9d7fbd32c63662dd84b2e3f1",
           "size": [
             128,
             128
@@ -1364,12 +1364,12 @@
       "id": "penguin",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 0.5112,
+      "model_scale": 0.5381,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "ec6c3297763fe081e2aa7ff212cecd3587d95ac8a8a382dcb2ef0f2adef60622",
+          "sha256": "9231e04d18a2a538343b652bc539a628406e0b4169b7141d2a51c612f481e48b",
           "recipe_version": 1,
           "seed": 8991714829875612778,
           "authoring_source": "cubatarium-recipe"
@@ -1377,7 +1377,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "8b63850b0f2d0bab6d45e41c49afc8ad8fd182711754fb5e4e7b34bcf71c2c97",
+          "sha256": "604b6cc3f6d5d12d33dc3ef959a7b7346cbc701e45ced897984d2282a1c68658",
           "recipe_version": 1,
           "seed": 8991714829875612778,
           "authoring_source": "cubatarium-recipe"
@@ -1385,11 +1385,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "3eba27c8c2f4703a111af1a02dbfdc6b56a6922aca0a25f0c2e8368f3071b1c5",
+          "sha256": "1f546a95f3e8c51a2fc73b63493fc7825895cbdf836c999d24b1671d2ce50c99",
           "recipe_version": 1,
           "seed": 8991714829875612778,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "01907e60e326e8b766c71ca70f71ecf5fcfd26161fc68dff3f2869bfd58b9d87",
+          "pixel_sha256": "49d1f056d5f04f6f87ce71a8e241a007a17e1934d9375821847c95db9085a877",
           "size": [
             32,
             32
@@ -1398,11 +1398,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "f91c285b8786c1bf16b4cef958db297625b8f68bcf6c52b89c83619bd9b4d0e7",
+          "sha256": "190380099d95d9a1e650db136e9ffa0b7059a491d26fb06a4db1a148321a00f9",
           "recipe_version": 1,
           "seed": 8991714829875612778,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "9f3f285871d2b1c370baee295bddbf1726137cd12708156198e2dfaa5a78bef5",
+          "pixel_sha256": "2cb194786ca765c12509de780d77242258302ca55090ab5f8405967226607e1c",
           "size": [
             64,
             64
@@ -1414,12 +1414,12 @@
       "id": "pig",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.675,
+      "model_scale": 0.9,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "4274bb48019f3e9e3cdd86faa7d7cd19a81fea8065da63fce2ea8ad166f1e4ff",
+          "sha256": "2f4beaa896e39998984e8172eb820cd47e06cbd95af4bdcd6694dfea713cf83e",
           "recipe_version": 1,
           "seed": 18177446258666941085,
           "authoring_source": "cubatarium-recipe"
@@ -1427,24 +1427,24 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "44ac5dbc9bacad5bbc4d5db655b0c7430a4067d108c95b7a17160447dad90789",
+          "sha256": "3e0d9796509bcdc422119eb36239b00a45b4fa5a470e5a00fb1359f2e13a626a",
           "recipe_version": 1,
           "seed": 18177446258666941085,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "9a2806e0f741673f7dae59a25ddb37021aa7bb7686fc6d542a73969301d3dba4",
+          "pixel_sha256": "cde02b640942e19a1c7ed7c6c6868396e996e450a39fb7a8ab7c2831bd69110b",
           "size": [
-            128,
-            128
+            64,
+            64
           ]
         },
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "9fe3354bd38f8d63642f6c2af922256648125fdb087b779cd59e4f528a08931f",
+          "sha256": "ae25c248980d741429b46f8019694aa9d23a3fff66164ccf23e99ff7fab1e376",
           "recipe_version": 1,
           "seed": 18177446258666941085,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "baaee8306a831b039621c5393dcdd5efc427490d446def2b2eaa6eb808f6899b",
+          "pixel_sha256": "272bface2e01605d50071489e700c90f18df7610d98a5673510f4ea09e766e07",
           "size": [
             32,
             32
@@ -1461,7 +1461,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "4c3f3f6106ff37699c115110dc4e5c588ea5d3cdeb3a0c2e348360419e27a3c6",
+          "sha256": "ad9676538e16ae147fd60f2c3fcc5892264ab07872290470f8bbd1b758bd1f9d",
           "recipe_version": 1,
           "seed": 10992855799940269828,
           "authoring_source": "cubatarium-recipe"
@@ -1469,7 +1469,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "13f1661e353b18ffdbffd7d7984ef03c7dfb8ad998657fb6bf4a73261ec0c2db",
+          "sha256": "8ec39946a624265772042ea236fddbd38ab636bd83dd9d762077b28d8f4cd295",
           "recipe_version": 1,
           "seed": 10992855799940269828,
           "authoring_source": "cubatarium-recipe"
@@ -1477,11 +1477,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "bbe6ab791a46c020adbe618d1dd9796f4dc2edf9e0ecbe05aa0c1f51546940b0",
+          "sha256": "cd611ab0000e66db5b3eb26bddd01880c9c3fe783f0a6462b9bcdd149005b638",
           "recipe_version": 1,
           "seed": 10992855799940269828,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "b25fec771d24dc2d8bd4a0b0a4cf704626d27b06009abe4ace1879b93a39f4e4",
+          "pixel_sha256": "c8490dc8e553fcf3c902a0731b3fbee8d9a960b80ee69b66542cc861a921cce8",
           "size": [
             32,
             32
@@ -1490,11 +1490,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "7d673d3fb7c086d722a4dd16f2e4ea89d1d21e9af698e16989d773f606415ce0",
+          "sha256": "1c540229e16f31534eb140169b8c64a65cf38c5163d1e1cb64d8128fe358f822",
           "recipe_version": 1,
           "seed": 10992855799940269828,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "d0c1ed4b8bebbb707c9fb320154c1a3adc4d78c1396ff61dc5e77508fe3bb6c8",
+          "pixel_sha256": "7ba892d634f071bac7d972219067776df6e418ddc07df47620fe925877144797",
           "size": [
             64,
             64
@@ -1511,7 +1511,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "7a197c4d596f9487c8623613e226abfb32b5a457ce824206a06eb65227cac595",
+          "sha256": "1279850c6a583a26fbc77410da5af5d7f06e3b583c453514c397a7d41cdd5e03",
           "recipe_version": 1,
           "seed": 3187428464600470271,
           "authoring_source": "cubatarium-recipe"
@@ -1527,11 +1527,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "813f8c93beaaa298cedf63f3d1ce7488f3d4cd0821f2ff61d7416b048713244f",
+          "sha256": "a6dc3403187949e0d618f014007595d6a9cc61bc7221a6a45cf16fd0cda345e7",
           "recipe_version": 1,
           "seed": 3187428464600470271,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "9fcdf0ce0927f8a72315fa01a8f82552a4c673dddc04f81f55bedec452c4bff0",
+          "pixel_sha256": "10e5aa94f50e310e02de8bcdbc853246ec34d4ac282ea80f9e0b1f81050b3c1d",
           "size": [
             32,
             32
@@ -1540,11 +1540,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "2e365022d9dc0b0e9e8b229e5da5f4d9171632776e6bc4a9bb100531adb96327",
+          "sha256": "783bb143fbb9d0765a0ae4d5f4b35dbed7cbdbbd19a229f28d70477d2d0d9dcf",
           "recipe_version": 1,
           "seed": 3187428464600470271,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "cefbbaa0ba36b004fb23b8aac8524bc46edb2e0b7e9d7443a1d2f7725642543a",
+          "pixel_sha256": "8e953436a06d9912e819bb17bac6fcc6fd89685e49b744cb8c9bbb12eb815cc0",
           "size": [
             64,
             64
@@ -1556,29 +1556,29 @@
       "id": "rigid_demo_flyer",
       "backend": "rigid_voxels",
       "state": "accepted",
-      "model_scale": 0.6022,
+      "model_scale": 0.828,
       "files": [
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "9dc064e175cfa9f1b6c821b3257da743f8fb41bc441a247c703c03e059a68621",
+          "sha256": "fd2cd5f6867fd0ac5b91519e12d391a53efa78f42b1c4de1adff816a0743ff4d",
           "recipe_version": 1,
           "seed": 9389161245861376362,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "15a62fead393cc132b31e48925b3bbf4bd33154950ebe282eff5f0ce4f6a4e2b",
+          "pixel_sha256": "8fc7c11b00d17bcdf4e979b1fdaab736f44f09bc27e52d79474240cefb5d8bff",
           "size": [
-            64,
-            64
+            32,
+            32
           ]
         },
         {
           "path": "textures/face.png",
           "role": ".png",
-          "sha256": "b707369672dbe200f9ed70a34b0ab0585909b8c7767497d751c521559e0139cf",
+          "sha256": "f194527e4f29ccf519917f14bab42e75fafaf44f6867b8d825e67a62196fb4b3",
           "recipe_version": 1,
           "seed": 9389161245861376362,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "cb090d31f9a385d4d1a8fbaba7183af8f08f76aff0379150881e3ef1ea1978c0",
+          "pixel_sha256": "d20c4c2d083b0dc32ebf09d404c0cc2e5c8293eb0c1538187e5fe4420fdf75bb",
           "size": [
             32,
             32
@@ -1587,7 +1587,7 @@
         {
           "path": "rigid_model.json",
           "role": ".json",
-          "sha256": "8eb84532113c1d975939f7a9b685041e4cdfe5d54eb8d46d20c8b25b1698a825",
+          "sha256": "160439173dbff03307236931ff619c31d5ab6ddc24d9d1a0c41fac9c632253ad",
           "recipe_version": 1,
           "seed": 9389161245861376362,
           "authoring_source": "cubatarium-recipe"
@@ -1595,11 +1595,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "ab6c835c9f9155bc63681b766946c5af0d9a3519679a7e1617d8cc98108d26c7",
+          "sha256": "fd2cd5f6867fd0ac5b91519e12d391a53efa78f42b1c4de1adff816a0743ff4d",
           "recipe_version": 1,
           "seed": 9389161245861376362,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "563ec7d3faa2dc8b06ae04b91fc0417e93eccc55a7df9ba39a003b70350adf9b",
+          "pixel_sha256": "8fc7c11b00d17bcdf4e979b1fdaab736f44f09bc27e52d79474240cefb5d8bff",
           "size": [
             32,
             32
@@ -1616,24 +1616,24 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "bb348315c661c4ee81b4e9050eb0ab0c9590dfd31d7fd042853f29d800be23df",
+          "sha256": "fd2cd5f6867fd0ac5b91519e12d391a53efa78f42b1c4de1adff816a0743ff4d",
           "recipe_version": 1,
           "seed": 12087417304998721942,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "aacf14237eaad6507bb812ec9e35f661ab18bfebf53ea1080f7bb900cd61f398",
+          "pixel_sha256": "8fc7c11b00d17bcdf4e979b1fdaab736f44f09bc27e52d79474240cefb5d8bff",
           "size": [
-            64,
-            64
+            32,
+            32
           ]
         },
         {
           "path": "textures/face.png",
           "role": ".png",
-          "sha256": "b707369672dbe200f9ed70a34b0ab0585909b8c7767497d751c521559e0139cf",
+          "sha256": "f194527e4f29ccf519917f14bab42e75fafaf44f6867b8d825e67a62196fb4b3",
           "recipe_version": 1,
           "seed": 12087417304998721942,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "cb090d31f9a385d4d1a8fbaba7183af8f08f76aff0379150881e3ef1ea1978c0",
+          "pixel_sha256": "d20c4c2d083b0dc32ebf09d404c0cc2e5c8293eb0c1538187e5fe4420fdf75bb",
           "size": [
             32,
             32
@@ -1642,7 +1642,7 @@
         {
           "path": "rigid_model.json",
           "role": ".json",
-          "sha256": "9be33235029180cc8a8ff0f17f6eda180058aa9fb4cce8545867613e00068dbc",
+          "sha256": "b8f876857bf0430a261742b0cc5e3f0f0e1c8c07db7e6b12a52730ba4a7fe59c",
           "recipe_version": 1,
           "seed": 12087417304998721942,
           "authoring_source": "cubatarium-recipe"
@@ -1650,11 +1650,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "5b3c7f1b4168236a0a0e093a0b3905d232586b2467e4dcf79c3253f390587f15",
+          "sha256": "fd2cd5f6867fd0ac5b91519e12d391a53efa78f42b1c4de1adff816a0743ff4d",
           "recipe_version": 1,
           "seed": 12087417304998721942,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "639af3e8458a9b573bac4637bcdc2e0f318702af4c6e777d9cfb5f36cf9a3cb0",
+          "pixel_sha256": "8fc7c11b00d17bcdf4e979b1fdaab736f44f09bc27e52d79474240cefb5d8bff",
           "size": [
             32,
             32
@@ -1671,24 +1671,24 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "f9ebf27370c446b28ec026be6608cb9862de993bc93c4c070a4c7df6fc0c4c6d",
+          "sha256": "c8ea28911ac2a2f3e2a79f8e7cd224e13b6c86d911c6a70ba6d20f74b203f69c",
           "recipe_version": 1,
           "seed": 541321891911766015,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "0916f8a036aa37231a608f1509aecb39928680dc972c740c36fa7f4361567c96",
+          "pixel_sha256": "4e72b28ffdb9c3fea759264a4dcb87762a43b0bc048d8c40600a10b4c084dfce",
           "size": [
-            64,
-            64
+            32,
+            32
           ]
         },
         {
           "path": "textures/face.png",
           "role": ".png",
-          "sha256": "ce0ff21347c3f9538e521c951c724177b944d7657322c3c458644d86784c5132",
+          "sha256": "903c897c21536ae441b1aa029484e23c673efb1183e770d6b6ebe8076c76a1a5",
           "recipe_version": 1,
           "seed": 541321891911766015,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "77ae65c543e08800933b3b0975a550c42f2af5be63d5be97922f0118e9a974cb",
+          "pixel_sha256": "327dd0b2aabe9cacf144878be7f3d1edcb3243f9cbc1a1b2ec55e298cd4fd4cf",
           "size": [
             32,
             32
@@ -1697,11 +1697,11 @@
         {
           "path": "textures/leg.png",
           "role": ".png",
-          "sha256": "5beedf961bd0224d392023ccb73e0d8a0899b5f16b7da3134f1f68619b4b5958",
+          "sha256": "f8f38c36fe78a8582ffbe8ba50268b2834302190b3098e97135a323ec323f5b3",
           "recipe_version": 1,
           "seed": 541321891911766015,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "89ee9b4d04a4af6d25993a3e8139b449a3b06e8fce14a9dcf2b28167acdbc888",
+          "pixel_sha256": "7f8b49b595d788ba7dcbb2e315a6e6266eaae78084440348ff812f3619d3d805",
           "size": [
             32,
             32
@@ -1718,11 +1718,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "344bed1911511c297e97082c103d5487337029e0619b8614686b1e060773a46d",
+          "sha256": "c8ea28911ac2a2f3e2a79f8e7cd224e13b6c86d911c6a70ba6d20f74b203f69c",
           "recipe_version": 1,
           "seed": 541321891911766015,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "16abb8be9de953542f0c34c20ee36d2f1aa6c02a00e8d3c08962a1d211b3fb07",
+          "pixel_sha256": "4e72b28ffdb9c3fea759264a4dcb87762a43b0bc048d8c40600a10b4c084dfce",
           "size": [
             32,
             32
@@ -1739,7 +1739,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "1f15cb6c795a26d371218b25f0710234bde2efea7d55caf4d8c179d219809aed",
+          "sha256": "4a00b2838260253cdd0564f1b62660aeeccaffa3e3ceadb901f2532dd8ab2a9a",
           "recipe_version": 1,
           "seed": 5947944939729785508,
           "authoring_source": "cubatarium-recipe"
@@ -1747,7 +1747,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "4443938dc32f7a243e2b8dd28ca6bcac3504b8f6e19d2a304ba11ea261c2068e",
+          "sha256": "f36f6d34d5b42579c84157251b40ee87a009bb93f9d48e31fa22b0639ba88901",
           "recipe_version": 1,
           "seed": 5947944939729785508,
           "authoring_source": "cubatarium-recipe"
@@ -1755,11 +1755,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "04b22cd3655b881cb29eb1faf666c22bd4d8fcb62e9d1ce9cd1fd276a8794680",
+          "sha256": "dcfc520ccf252906817b3f4c336a5d29812490fc303a01e84b491575deb14f2e",
           "recipe_version": 1,
           "seed": 5947944939729785508,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "41216108c332d06b118785b7fa26b5121a138a17e7ba225da0c797dfbb316bf6",
+          "pixel_sha256": "281b2998bc78ea168d4d54d613958747eb64dfcd91331a501511891d4b77155a",
           "size": [
             32,
             32
@@ -1768,14 +1768,14 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "945f6c3b565400b61dcc261ef12a5a908dff0aacde0dcf5aac28b7ac579db4ac",
+          "sha256": "346a0599df165e517bc580cf743aaf5a584e63e083e16022a87534cd9a1ef174",
           "recipe_version": 1,
           "seed": 5947944939729785508,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "969d61dd367a9afddbe131999bf9c6f31ebe60c6c38fef07d43b2ca2d5035acb",
+          "pixel_sha256": "b7c190d31ca74914ff6ee7a89fac80fefae9f90a77d6b5465fa8eff979daa3f3",
           "size": [
-            128,
-            128
+            64,
+            64
           ]
         }
       ]
@@ -1789,7 +1789,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "c4dd75bc8e07b08ddb6c583aa8fe06c2e13952e8d240779048c17bc71e9a5089",
+          "sha256": "fe518ee5e205a7d436991a1c3c71dbd4bfe34b9a73885ec9880b907cf84e6a93",
           "recipe_version": 1,
           "seed": 5894625490015328878,
           "authoring_source": "cubatarium-recipe"
@@ -1805,11 +1805,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "fd72417d5107cfb6520883b9ab55f703ab0d851f53207525e2b80f594eaabf9e",
+          "sha256": "9ebe2901696b981c17f192a8cce2e928e967d570bd1040273f4802128b0f13e6",
           "recipe_version": 1,
           "seed": 5894625490015328878,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "8bb510451d9d5edf4d744af903a4636a3fea559618ce25a0807162f0c6a283c2",
+          "pixel_sha256": "8f9aea24dc98ebe8ecda22fe9e3c2a244cc133849a0c97427c44377dd27000a2",
           "size": [
             32,
             32
@@ -1818,11 +1818,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "1ce41d11f512406286c583b4650c4aebec40d93b4384cf322f91351063bbd891",
+          "sha256": "60cba0d54ab41434c32c6d6cef8f23f1503653b5563a544f8f0e06642419f7bf",
           "recipe_version": 1,
           "seed": 5894625490015328878,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "2310c95435058e669b2261b42eb9f6286dccdc7fb88dae013c7486d767ed4cc5",
+          "pixel_sha256": "aa3443a321f7ab3f98eea6c219973eb5a18b446ed5164ca05c5136f3e031b0f4",
           "size": [
             64,
             64
@@ -1839,7 +1839,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "080cf28fee195f7e17c841c35ed3c7a1f679f5aae2ee632a17773c89c3dff106",
+          "sha256": "815e7eff7675974e7d7782dac424d07e1e70627a8cabdda6a6ec6d33666e8eca",
           "recipe_version": 1,
           "seed": 3782134111738581296,
           "authoring_source": "cubatarium-recipe"
@@ -1847,7 +1847,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "d66125a37784b28c785cb75ee0a8d1fbf43e8c6d4a4250157a0472efadf27c2c",
+          "sha256": "0afd48acd678dce02eb2605be04f03115c66983909f08fb70743d59228c7e929",
           "recipe_version": 1,
           "seed": 3782134111738581296,
           "authoring_source": "cubatarium-recipe"
@@ -1855,11 +1855,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "b7eb667023e26afbb72d50ae5d4e0123a7dad252e9f2ead8a4e5fbbc047de82e",
+          "sha256": "468d966f65c75d9f2063835a3e0f239e1b05aeaaaef866e028ae8f94197a3e7a",
           "recipe_version": 1,
           "seed": 3782134111738581296,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "878da676a8e05df9b2013db98dee2082360ba0d0e2bb6399906e6129d5df14ca",
+          "pixel_sha256": "0ce821d080d9d6d0e2f45702c4fc992ffdced6ebbf626abaa5da566c492058c5",
           "size": [
             32,
             32
@@ -1868,11 +1868,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "6b86865039fbeec0fdae77336d7ba05f692d0f1af5b60d4df9ab5e87f2a0a45e",
+          "sha256": "1c9c02dd4777a605421780f2f065358fe4dc5114e054969a2498837789bcd1d3",
           "recipe_version": 1,
           "seed": 3782134111738581296,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "3aaf97e441ffe3c40fd01819150d0f59e4edd6d01266755570402cd3c69981ab",
+          "pixel_sha256": "9da0d6b5628c3c713f43b017e98570e5e35f604909a562f8e3ab097d2d69a623",
           "size": [
             64,
             64
@@ -1889,7 +1889,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "decad86037d6f0f9068499cee9322c56fb1abf3e2668646f4d58d6937691eb26",
+          "sha256": "eabb456acf481d2a88db56af6044a548fd90519c78d690abf80160c75e35d9c5",
           "recipe_version": 1,
           "seed": 8796306678622844883,
           "authoring_source": "cubatarium-recipe"
@@ -1897,7 +1897,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "331732c74a997d92c4bd7568bfbee624af25a812425d9b55e6a8057ee573bfb7",
+          "sha256": "4e9012ea8c402395424feacee4ccf6fba1503ad3b402690ae88d7cb9ed398793",
           "recipe_version": 1,
           "seed": 8796306678622844883,
           "authoring_source": "cubatarium-recipe"
@@ -1905,11 +1905,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "f60b81ba8e73f90042b8ce765d1e789a235c9c5cd81547a969abfd33d00e07cf",
+          "sha256": "9bae4b231b7b0c9db8463eff73a883b8b660a9ef302cf8c90d933720411c7c53",
           "recipe_version": 1,
           "seed": 8796306678622844883,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "423a7e0fc78856c7e5459617fb77c2d46d432f76ab384566a8d5d8b9ab51164a",
+          "pixel_sha256": "f7f04197d205238cf3e01d568d8ca7bb80f6fc78dd10fc6c265b40daa7a52aee",
           "size": [
             32,
             32
@@ -1918,11 +1918,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "4d196791bdca0f55ab8a62ad88c10dda84a086e042d733e5481159dc60589503",
+          "sha256": "d39620d44510ae4c28193fa59eb4ccbd416d8f167340ffa6912374bef6fb60e1",
           "recipe_version": 1,
           "seed": 8796306678622844883,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "ab3edf8956f19f6fbf31d17e8c4b6dcd44d471ecefeac3ebc8a415c34c40b501",
+          "pixel_sha256": "de46769962fef8cea412666a3b59aefcf4892a6e252053891104112c9ffb224e",
           "size": [
             128,
             128
@@ -1934,12 +1934,12 @@
       "id": "sheep",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.7467,
+      "model_scale": 1.008,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "c292c4bcfb199ff4b8657a05bdf6e9f0843fc4b20a3e9f5ccb4378f347ad09d3",
+          "sha256": "6ecd1946360cb66d005db6ad23f7362308af8a05ed483d394814b65fd1360b77",
           "recipe_version": 1,
           "seed": 11487820473030359180,
           "authoring_source": "cubatarium-recipe"
@@ -1947,11 +1947,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "490ed6f30abd42f10ca18f0e4a12e496d3453a4961b40ef0bd526bc0e725934b",
+          "sha256": "cc706636f1d77bb2d26c8bf016fa3514541cb2a057c99f38f60316d84cc3d3d1",
           "recipe_version": 1,
           "seed": 11487820473030359180,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "e745cba16acf454a2826d6e5ad667dcd40838cfd71cf2ce79b0be65fcef7abb3",
+          "pixel_sha256": "5ba0c7441ca4449913c1ecceff81cf72616efdcf16cb5c98fca782423fba6493",
           "size": [
             128,
             128
@@ -1960,11 +1960,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "c24d637361c2dc9fe130a1a67957925893c2491381378f34115c5584c9b209a1",
+          "sha256": "ea1126b8c98f383b901db7989cc9b222c2e7eebf9c14448eb227ceccc2f69565",
           "recipe_version": 1,
           "seed": 11487820473030359180,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "6bd5a420fa5288f6ea129e882bae52ed0d0c0c9c24bfc3aab8d3a230201254c8",
+          "pixel_sha256": "c3299d9f23a6011f29b2c7f55c00677b80f903fff8033a58abc414acb6e19e0f",
           "size": [
             32,
             32
@@ -1976,12 +1976,12 @@
       "id": "skeleton",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.7835,
+      "model_scale": 0.8325,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "0308858e638ad583c648da005d7349542f695327eb2bc885bff3968d2b01500c",
+          "sha256": "03961c14fd436480c54ca871abc79a18eb1f6e549bde8bafc6777ff4a4a25413",
           "recipe_version": 1,
           "seed": 8138358707974832285,
           "authoring_source": "cubatarium-recipe"
@@ -1989,11 +1989,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "61956a7cf2146830547bbfa6f0d5bdb4d0046901191713480111b7f650e17876",
+          "sha256": "9099ca8036999cb54b4ff1cb5dbbf44dbf1f5c03cdaa8565c1e3e8f674fad6ba",
           "recipe_version": 1,
           "seed": 8138358707974832285,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "ed3b849f38daf6211f5b1a66a762743bd7b0a12c954605dea1afe290204b5f47",
+          "pixel_sha256": "dc7587bfb543247b3fd1a1222ee1d8d51b82828ad1ad6fea7be7aff459a56638",
           "size": [
             128,
             128
@@ -2002,11 +2002,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "7aecff4de1fbcce254805ddd53dcda810a111a3906d6ebc5da93347a6df44f04",
+          "sha256": "56e0c2cc5fd64394d56d8d1cdfb6da8f7b4a56537b76f49a1590f0e66a4dba4d",
           "recipe_version": 1,
           "seed": 8138358707974832285,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "a75f9afc82551f7380273a6b04b332e630e33ee8405e545630b52f2ddfbd7fe9",
+          "pixel_sha256": "a584163e4ee3613e06725e4ec24656674bfe25c3d86c8c688eed1cfb33c4f31f",
           "size": [
             32,
             32
@@ -2018,12 +2018,12 @@
       "id": "spider",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.81,
+      "model_scale": 0.4985,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "0bb1b4c862804a8a274f4988da5c0e4407635e503bcc39fb5219da694b555cc7",
+          "sha256": "ca1c198fad3334becaa23a860620e5581bed1485f12898dd2098f32a7ce0b405",
           "recipe_version": 1,
           "seed": 5495570558161134742,
           "authoring_source": "cubatarium-recipe"
@@ -2031,11 +2031,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "b9af1770cfab7d68b89b29fcaed25ffd1e47c51baf190e890c2c3bfc26a6bcb0",
+          "sha256": "28ada6dabbbf6e6564b9881fd28bd16a881f48e23b8a066b6e7595448a9b9040",
           "recipe_version": 1,
           "seed": 5495570558161134742,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "774fabb3d6446fa27b49047fe555e09b1b84de7bce1f091354940e30c2f650dd",
+          "pixel_sha256": "a01a9119064baccf935d694556f6c541b5bd26f172debc7cd44463251d67f770",
           "size": [
             64,
             64
@@ -2044,11 +2044,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "4ee953415ff95e4e7d2a746600f2d3692b4782a5b0114ffc2452718cd694c13b",
+          "sha256": "b54cfa2870c671dfdd3cb3219f4bd50f661f5c70b2e5e4af28b40c3e5ecb4fbb",
           "recipe_version": 1,
           "seed": 5495570558161134742,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "72e14635ea37d404484e326ef3988a470a280b533cbace8965fd78730a8e3737",
+          "pixel_sha256": "0dfa280006dc52b224d2c9348fb34132f449465030993e2415a056b2f3e2f419",
           "size": [
             32,
             32
@@ -2060,12 +2060,12 @@
       "id": "squid",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 1.008,
+      "model_scale": 1.1859,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "bbe340e430e24bf7ed5e3175b63a1927734ef189a0a0eff31049fb58957c7dd2",
+          "sha256": "4d4313ada84cf5f249a5577a4ac8ddafbfe9cb7f8c779663d2985a6c4353b6e1",
           "recipe_version": 1,
           "seed": 17670796232981614565,
           "authoring_source": "cubatarium-recipe"
@@ -2073,24 +2073,24 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "5e2442018eeff1bfaf94c3be4e7473097cf5babecadff63b0785eebfb0bacf9e",
+          "sha256": "ef7fc30adf02a9114c47319789c2ca0c9334b87a0ca355009b1c049a796b4a2a",
           "recipe_version": 1,
           "seed": 17670796232981614565,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "1e9967d4ff527ce406f2b841368004982e08bc1eeb7ffaa03da13e6679254eda",
+          "pixel_sha256": "4da5bdff7cb93d96f210d3051321ab303fbd6f095779ac486d78f68c4e774038",
           "size": [
-            64,
-            64
+            128,
+            128
           ]
         },
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "cc9cb1a5b93fe70343235549203d5bd360e03607b9aca893fa1cd45318413460",
+          "sha256": "b2187b119bfa5fb0ac133d4c060781b806d5a54ac3c2aee34e30bfb443200075",
           "recipe_version": 1,
           "seed": 17670796232981614565,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "d9c6085e5e05e2ebca1c4a1a66f9fca7358fa1ee95796d1e40d46bf3a0de2bfd",
+          "pixel_sha256": "0c0cd64ddf0fd9b788272b77cb524fe325c8e1bc71626edd18a3df380ca4577e",
           "size": [
             32,
             32
@@ -2107,7 +2107,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "af1d58852fba1d62a19196fb4f95bb14dbdfa9b515598da781b240bb0d155ba9",
+          "sha256": "dacc323bd3cc67f1746a12a3a63f36909edb86d0b28c81f14b496f2f05a47a1b",
           "recipe_version": 1,
           "seed": 10616241458676895383,
           "authoring_source": "cubatarium-recipe"
@@ -2123,11 +2123,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "817fc2197a64008c85ff2262d5a3b567efc2fb6f8d4610e5cd5a3160a9da1740",
+          "sha256": "32d000a7ffa57e87e90acb4e01cc794490eeee687ff11cb37ce70e0680f13b93",
           "recipe_version": 1,
           "seed": 10616241458676895383,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "7c7f53c618673dcb3fb82a4d843f15c0eb6f327567fc75c85b7486201eedc23f",
+          "pixel_sha256": "609d571d213025802a8e5f4d1a56aa0c68eb6db0fc73e08f6e093d86b63e68ac",
           "size": [
             32,
             32
@@ -2136,11 +2136,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "44125b860d4a07451e1cd7207fee73c96d0282a9ad311a9b2ccfeeef9345684d",
+          "sha256": "97cc6080115e9e18baaf3609c47a2bd2cc0e0dba54cd9790187c334f23fe9949",
           "recipe_version": 1,
           "seed": 10616241458676895383,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "5a7f9a824aea12d6ef13febe1ffe4b4db30b83961ca9bbefdf9220aeb65c1fe2",
+          "pixel_sha256": "9323d9de01379a43bf660e467edcb13107a7d31fa423a4ac1b726fcdd91469a8",
           "size": [
             64,
             64
@@ -2157,7 +2157,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "6498da5386a98b7fad7cfe0018afb57047fcaa69b10342c1701ff1eb8b30a214",
+          "sha256": "78d8eace98bb74b12668b8f77513c532935da39fad6526ddee5e7820ffeab62e",
           "recipe_version": 1,
           "seed": 5495932095790785927,
           "authoring_source": "cubatarium-recipe"
@@ -2165,7 +2165,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "be31277a36d1e20bfc36adc22e465cc5cedf29dea61f4ec0200a1dc5123d5f1c",
+          "sha256": "8fd0ad129a5120cdf05353a349fac3af02995769fee9efe86889925158b793ce",
           "recipe_version": 1,
           "seed": 5495932095790785927,
           "authoring_source": "cubatarium-recipe"
@@ -2173,11 +2173,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "64829b4dd77f874abe510b433bb0ae1790ec3377e880ea30bb3eb9e984459933",
+          "sha256": "742a314462690e1d230c48572379830413787a04f3a15dbbc25f5daebef07a48",
           "recipe_version": 1,
           "seed": 5495932095790785927,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "3c1a09c6e18ce0136e30d7338d63cfe332624d1df50d0e5c94851f3bdbd5d7de",
+          "pixel_sha256": "33beac139ed60cee972116d701fd47bfa7f9956056fee12f21f50aed3ed46666",
           "size": [
             32,
             32
@@ -2186,11 +2186,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "c9d3a4dc6bbe78249987fc6a88edbc14d63e92e11ee1ee886308ea041a6e12f8",
+          "sha256": "ddcf9612dbaf5aeb1d33d10035d0ce916167f752dacada54170c5529976d10a6",
           "recipe_version": 1,
           "seed": 5495932095790785927,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "d0ff430ce8cbacf44cd0e7bbaf9e3252174f9709a69d4e1a036f43e9649a36ff",
+          "pixel_sha256": "e90408d6fab6be68148f3fcc689d9a27fc4c6126fe9a32f53ddc2aa26e633516",
           "size": [
             128,
             128
@@ -2202,12 +2202,12 @@
       "id": "tortoise",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.5635,
+      "model_scale": 0.6171,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "12685994615e8026fa3e2e5ce68ce29311271a6438ef30f37bbe7936748823ee",
+          "sha256": "62e3650fdb11f689cd52f975e2140c682ed76ee9f761847df5c23a81d55cf92a",
           "recipe_version": 1,
           "seed": 9235987668870858419,
           "authoring_source": "cubatarium-recipe"
@@ -2215,11 +2215,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "2dbf62d1c168c31b15954faa32bdd55b3f5563fe15e807a6515557030e25555d",
+          "sha256": "fc6b8845411689297ba3411525cc2bd8816b8b42a6f9de80259871e5ed4bc890",
           "recipe_version": 1,
           "seed": 9235987668870858419,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "f1a53e74b5cf71db1086d0fbb1abe5782e549be9a90e8cdf727244ff786db5a7",
+          "pixel_sha256": "aaa3ec15200c30cdfdd7ff995b4942b640c9c595d95218afd4644ff90b5806fa",
           "size": [
             128,
             128
@@ -2228,11 +2228,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "8c920668070df6088c9d6e5e8c56eaa9f5d16761c0fd5c2af5c5fa60207ec274",
+          "sha256": "3c2bf2611b731e78fdfb924c453a6f58f2d0f579549686c6ca0220c083352099",
           "recipe_version": 1,
           "seed": 9235987668870858419,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "63f544d84961948484edf655cd6274b21d174a22ef6ba5945206582625b79277",
+          "pixel_sha256": "4b86a5e8c311e52a47bdedfc05bf930689d46e78513db92d7030a213ca91827f",
           "size": [
             32,
             32
@@ -2244,12 +2244,12 @@
       "id": "tree_monster",
       "backend": "gltf_skeleton",
       "state": "accepted",
-      "model_scale": 1.4963,
+      "model_scale": 1.5644,
       "files": [
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "c06ecd5148039d12b0c2c4e8b14a15d7d5f8191d8c467afda459820d25ea2502",
+          "sha256": "1c46eae995a9a45c3396a5163e18bdfc2d84b5c9e92bb400b5fef032e8c513d6",
           "recipe_version": 1,
           "seed": 18215728376264979939,
           "authoring_source": "cubatarium-recipe"
@@ -2257,7 +2257,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "50ef9ead3b5075106f77b8f5ef3d4ebeafa96b26e504ff3dbb1386a2478d9fd9",
+          "sha256": "7d9d40356901e0c7efbe2e7f8be490c964dc4327cee9f7953906aa6fb6046f90",
           "recipe_version": 1,
           "seed": 18215728376264979939,
           "authoring_source": "cubatarium-recipe"
@@ -2265,11 +2265,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "b44d617e77233df4584d16dd2d3333bb92a0d237eb605ce0247fe9de3596e11f",
+          "sha256": "00db5b4fe4c51a84f728fad203a8e856a43ebfbc3f0fd74a83b9a5959b3591ee",
           "recipe_version": 1,
           "seed": 18215728376264979939,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "6ccccfd3b06f4e68181d8d185f119d54f6247fc233b375f4db48bc653bf53256",
+          "pixel_sha256": "1ccb9f4a7cf8df8be9b89ab1de53e9472572b94261abd54766cdb43c20d1e4a9",
           "size": [
             32,
             32
@@ -2278,14 +2278,14 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "3fee0341ba7d6a6891f00c14d2808c66673828816b0ed639326ed943b941c5c7",
+          "sha256": "311c249f7a324b7b60a61a87b61ea6d80c62fb0dcb4eecde19198155858b1057",
           "recipe_version": 1,
           "seed": 18215728376264979939,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "f1c88fcfa59d6893121a8dad4a887dacc4432572568bd09dd0f504e1dc0a5f2a",
+          "pixel_sha256": "58ee646df52b53ad8ce3cd87d339c7c0240fa9bfee7aee70772a94e6934898fa",
           "size": [
-            128,
-            128
+            64,
+            64
           ]
         }
       ]
@@ -2299,7 +2299,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "f47fe101cbfdfcdcd34b30ba2891b60769b320d8c47c224a251ef82bb6bc5a67",
+          "sha256": "218e6a0770c521e24077ce792a8fe216dfdbc13c9aefcf9e98753b2bf6f7b0c1",
           "recipe_version": 1,
           "seed": 11062259931522622596,
           "authoring_source": "cubatarium-recipe"
@@ -2307,7 +2307,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "f6fe0f9b621217621a557cab82281b9d2ca5bbe306782613b1f8c1d2ca7720d7",
+          "sha256": "53c843b09d07bdf315fe07a14b1ab78df6e40d2a999f4a92a3f53c3c00c80fc5",
           "recipe_version": 1,
           "seed": 11062259931522622596,
           "authoring_source": "cubatarium-recipe"
@@ -2315,11 +2315,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "9db3cce08b453741e2e8750eeeb0b5a99dce774804d510f0d49c70c1bb2ad731",
+          "sha256": "b688026d0a2e1b3f5a44e6bc4743476933d7b064f4e3b54c9fa7d2a767e826d4",
           "recipe_version": 1,
           "seed": 11062259931522622596,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "489003da943365ab75fbe20b829e0c04a9e32b7be910da81c0e5aabdd0cb6fff",
+          "pixel_sha256": "a6d3549866f8ffa075fc7f119a3f568ea38daebe52903cb8ac086a9022351978",
           "size": [
             32,
             32
@@ -2328,11 +2328,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "42aa174f7a7b5373e98df6af1fcc1229e21a82d5713b11f7153e343684420954",
+          "sha256": "ae1fa8c6941a1a948b84e879084d1b0575eba54971911a234f7c8c8975c20c61",
           "recipe_version": 1,
           "seed": 11062259931522622596,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "55dcb531cdf4c60e07f34a23c1cc01262f17245543287e62af0536935a4986ef",
+          "pixel_sha256": "ef39f7995d2b3c73841e3e5bd3761be8818561c77c4359bd54c01152c336e769",
           "size": [
             128,
             128
@@ -2349,7 +2349,7 @@
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "8226180cb5dceb9e911566fa2c49e5d8a2006150dd4a27f8f691e12d9e95b430",
+          "sha256": "a539ddb93ecf11980f35ecdc16693d2b26ee47f9d62d18b58c94879095edb063",
           "recipe_version": 1,
           "seed": 13006691179069935489,
           "authoring_source": "cubatarium-recipe"
@@ -2357,11 +2357,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "0712039087983aa4ccc6f6dfcccd1f1ea12b01930928cc0db087ffb7af541886",
+          "sha256": "6b0cd5ce934a0235d2e095509f4d7164fcf54670ddd0d1398fd0d0406d30b15e",
           "recipe_version": 1,
           "seed": 13006691179069935489,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "822d37387d5c2e3f112a5c8dfc682d3ea9f02cf4d09a60baa0862b2a3cb85e57",
+          "pixel_sha256": "0524fbc07708ad0eb7769ef0fdc846f4d5850810235e13f27a8beb0daead0908",
           "size": [
             64,
             64
@@ -2370,11 +2370,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "df6b92a78ce5eed087a907139dc9a81d9bce10404de8ea76bb747ab98fe5c0d1",
+          "sha256": "08947de6e19aa162a318bcf0ce7e2ec5fe04a9138ef86c259b2a76360f8923c0",
           "recipe_version": 1,
           "seed": 13006691179069935489,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "f8d2ea3e4e6d0c1191639a22e1155cd002c24c8ec41a7205c707ded3e903ce86",
+          "pixel_sha256": "00f29b1107836a860eaf9733f5aeb1248bdbee86f4a83b505a32579413c60bdb",
           "size": [
             32,
             32
@@ -2391,7 +2391,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "b9233a32f25a8c2dfbaba915089595ff5f4f05f1b6f064d0d1583598997a8eff",
+          "sha256": "1d00f1abd0adf5d7ed823102f2af6a9236e4bbcbc7dd046404bd8cb19366b506",
           "recipe_version": 1,
           "seed": 10895694798485081264,
           "authoring_source": "cubatarium-recipe"
@@ -2407,11 +2407,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "31dceef9a147393d6257c4d380164403b69073d7cca2aeb0c32a251049fd6814",
+          "sha256": "69790cd6e13c0a8189676d70600276c11777a7d91764f464e67570832c2d7bae",
           "recipe_version": 1,
           "seed": 10895694798485081264,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "634a56f69feb880d2707afe11f238c3631cbe13cee08562e13392a0b9732b63d",
+          "pixel_sha256": "81218dccbe4dd7ad7c11eddbb2b3dd86f66c97ea96d0b05572a5b7a513ce28b2",
           "size": [
             32,
             32
@@ -2420,11 +2420,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "da5e36f0e954fd44d89662c0f6a296aa08fae361e0c70750fc0498968e315db2",
+          "sha256": "0fbfe9007c109358b886416c0fa71ef99639ce228dc37b5f8ac9a74bfb7a1ac5",
           "recipe_version": 1,
           "seed": 10895694798485081264,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "fbc6c6006baafc7b5f1316e53c0e894e87c7e538ff18eabd9fd810358befb9b1",
+          "pixel_sha256": "59d2dbe81d1ec4d320327b37491f94e97355a1d52dabce7248d6b93f336b9cfa",
           "size": [
             128,
             128
@@ -2441,7 +2441,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "018e10edb34e79e205c3002a0d59ecae59976789e04fc4e05361f0439f9feb3c",
+          "sha256": "0c965841d6d00e9c4744716cdbfb9fac84885880b1609965a41171d3264c563a",
           "recipe_version": 1,
           "seed": 12839796049534835347,
           "authoring_source": "cubatarium-recipe"
@@ -2449,7 +2449,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "8dba031ef1b6cb93c8cfc18999f603aac0e4ce2f4cf8d08fa8b85033806323dd",
+          "sha256": "28c4f8e5aaa2a8dc2a788b0c8d442b59908758cbe21ebcdd4ba3d52ba798b7d7",
           "recipe_version": 1,
           "seed": 12839796049534835347,
           "authoring_source": "cubatarium-recipe"
@@ -2457,11 +2457,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "15a36de9d1e6d2222a41cf0040404fd37a3f604e669f1a99e7f136b996a71385",
+          "sha256": "da8763c557aded2784ce20c7a6ae94211bd2155a8fcfa2dbb4bb956f7dd09b9d",
           "recipe_version": 1,
           "seed": 12839796049534835347,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "854b85026589c1bb07d35211f7aea475ea61788917b5e0d17ebbbf85a107311d",
+          "pixel_sha256": "cd1c5c7f7aa8371fc96749ece45a89eebe5ec1f90d017a58d8c6a20f90687506",
           "size": [
             32,
             32
@@ -2470,11 +2470,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "8417eb31f7a388cbc8c64f30ef4b32dabf884e113079ae2ee3082063f28fb15e",
+          "sha256": "c6ea51ac453ed28a3a65c7d9c5c6955b3eb7f30782dbf9ab68c94317d49ca586",
           "recipe_version": 1,
           "seed": 12839796049534835347,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "a14cfeaa0726ffb69cac342787065d1edc3707443d1ac4f6f1fcb3358d43ffd2",
+          "pixel_sha256": "4882b9ec501a4ef1b77c2900bccd0db67280831ee5a43dd75ed3f4d4b7b37450",
           "size": [
             64,
             64
@@ -2491,7 +2491,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "35d4400efde564a0862bb47f8334bff0e1b08fdaaa81ff435379c5a182c674fd",
+          "sha256": "1171723b8617a1ae4363b5d845c538e3582671f983ccce3c5d35af358eed07a2",
           "recipe_version": 1,
           "seed": 6343709062514415537,
           "authoring_source": "cubatarium-recipe"
@@ -2507,11 +2507,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "2b77c855c04f9cc4d1273e6cc0089305b93726e69cc9ae84f716fefb7cfaaf71",
+          "sha256": "3110492abeeb380491980b6dd2b9d5942cb8b2041a4c25345e209700109bc850",
           "recipe_version": 1,
           "seed": 6343709062514415537,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "a692f59cb559be63c2a14955210d870521ca6ea019ae09ef0f21a560e698ce05",
+          "pixel_sha256": "53cad1e0f601ea0b0e2cd280e3ea01f7151358d4cf61cf6f3f35deecd8b2bac2",
           "size": [
             32,
             32
@@ -2520,11 +2520,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "8fc098bc6dc7ca6217c70475c79b0fa7f5a49a66b9e66b716ca1524a9697ca5c",
+          "sha256": "1095587c9c7221975e74ea379ed116e8982f74c013c125888e00091495a01297",
           "recipe_version": 1,
           "seed": 6343709062514415537,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "b0c07ee1dd025f5257e15e2fa6f9b5389db7ca64e3768028d6635dffb00787a6",
+          "pixel_sha256": "c224a2aa1f6a4387b04da40478a81d0f9080038fa38e13ab8d56961b78d16f17",
           "size": [
             64,
             64
@@ -2541,7 +2541,7 @@
         {
           "path": "model.gltf",
           "role": ".gltf",
-          "sha256": "0ec53561ee8671eeeecd6e584648725f3220df6cca13e48fc1166bd37fd38b37",
+          "sha256": "f292f3a0cef694b05f56cb2e9cd48e906901274ce25a20a21617c3da23ecaa62",
           "recipe_version": 1,
           "seed": 7211858408703091576,
           "authoring_source": "cubatarium-recipe"
@@ -2549,7 +2549,7 @@
         {
           "path": "model.bin",
           "role": ".bin",
-          "sha256": "701f64b9602054d4721d44e20ae377affd5f4b1d7b3e53cab956ce02f02761b4",
+          "sha256": "2e013d4b9e53770935d58768ec272ac5951ec8b315f5f9d4c0075eb558926c66",
           "recipe_version": 1,
           "seed": 7211858408703091576,
           "authoring_source": "cubatarium-recipe"
@@ -2557,11 +2557,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "f6c08fbb838d8ac39132c879d5f27d4ddf7562b93138d21e6e658d1285ed4e41",
+          "sha256": "738245a5e43a0f22e30b53d5ce88d2418ef3c45ce19a8c5a1f6ea69b532e8ff8",
           "recipe_version": 1,
           "seed": 7211858408703091576,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "9f30c3ec3c20c3fe258bccefbec50e871cea51c34b5e5655c51d2f3fa92b26b8",
+          "pixel_sha256": "393169185b4e3fbb704278b17e134a3698023cb78d964ba831c0890995a5afe7",
           "size": [
             32,
             32
@@ -2570,11 +2570,11 @@
         {
           "path": "textures/body.png",
           "role": ".png",
-          "sha256": "2031e62ca0161dbab50a03794979d4d247b40a81e9728fe6a677ce814a24ff72",
+          "sha256": "f821bbd7d5318983e8499a7cb149e2932973db22ec5696359324c275d208e3dd",
           "recipe_version": 1,
           "seed": 7211858408703091576,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "f6e01970876d9cd41068a20f101209b710fd1e46e6e21d8fab68a1a35efb06ea",
+          "pixel_sha256": "7294914bc4fbc838bdfc93594a9efdd52ca61c48cce6bd4e729224b11f04f13a",
           "size": [
             128,
             128
@@ -2586,12 +2586,12 @@
       "id": "wolf",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.675,
+      "model_scale": 0.6353,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "b4f3947da6d76be84e10a0d1e7aa2b055658c3853f3dee0d6d7dcaf089be5d01",
+          "sha256": "2a475828b2aa51a4401fede5533f85a51facd8a72b4c676014f59c097b0097ce",
           "recipe_version": 1,
           "seed": 1946724309853133107,
           "authoring_source": "cubatarium-recipe"
@@ -2599,11 +2599,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "4cb8ec876a1d6e38d30e8a1c5de82e9f8be3f5c5a89e2d76edcff05fa026bfe1",
+          "sha256": "c9472b099c9b409b6c4e905e5153a409871fd687e523894b53bcd17530244e9b",
           "recipe_version": 1,
           "seed": 1946724309853133107,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "075c991d5a84c4354384763ae074f549ba91cd1856b78c69ccacb4be28e95b18",
+          "pixel_sha256": "a37e9e51371d530f77f75502b709fcf7eec3101442765ae2c6ad276c10a067fa",
           "size": [
             128,
             128
@@ -2612,11 +2612,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "201c17f74287b0adc1dc12c87a103cc63687518337bd19a81a034551284c831d",
+          "sha256": "2fc260e4c6f00f99947f65b171d6ce0f73bd437a8f33b0d9f689e54e2c056401",
           "recipe_version": 1,
           "seed": 1946724309853133107,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "2b556ae44b8179447b96513edf76f42d1004683d2149ae994c2c8bbfadffc367",
+          "pixel_sha256": "c5e81c364a9af71f4daea4131411ce366e7b72da37767643ef6255aa347b0116",
           "size": [
             32,
             32
@@ -2628,12 +2628,12 @@
       "id": "zombie",
       "backend": "bone_skeleton",
       "state": "accepted",
-      "model_scale": 0.888,
+      "model_scale": 0.8325,
       "files": [
         {
           "path": "geometry.geo.json",
           "role": ".json",
-          "sha256": "392ccbb691c271f35d74159e34e400212156ad4dbc5fda10446d3cc193a2df6d",
+          "sha256": "d9c2876682e01410d40d503ecc075ed3a2f53d2541a4133e04f438e063303a0f",
           "recipe_version": 1,
           "seed": 7042109869257794097,
           "authoring_source": "cubatarium-recipe"
@@ -2641,11 +2641,11 @@
         {
           "path": "textures/diffuse.png",
           "role": ".png",
-          "sha256": "c0455f50d3e4dba33b266c04acb0007bba808191b6efb4378f3291f4ba536fb3",
+          "sha256": "0efd1bd381dc8d189f7cf599738f0a3a81ba6d67630005e39f112bfb34d4b494",
           "recipe_version": 1,
           "seed": 7042109869257794097,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "4abbe40f617e0441fd384759c8574499f2d49801e62efeb72c4e20c2ccd1f035",
+          "pixel_sha256": "33c7ad479c5424504480b15403ac638eeb19b81bdd5435fd5de208b940eed263",
           "size": [
             128,
             128
@@ -2654,11 +2654,11 @@
         {
           "path": "textures/icon.png",
           "role": ".png",
-          "sha256": "d089f27f41fb74208e08b5c5246ec3263605886c59f7c6c715e5815e11d27368",
+          "sha256": "a44bf24c70a7eed14bebc9d4171312a1952862375b83300a9f01240d65a363c1",
           "recipe_version": 1,
           "seed": 7042109869257794097,
           "authoring_source": "cubatarium-recipe",
-          "pixel_sha256": "fcfca40c64846b59db259b0dbfdc210e018992708f6218f016a4921f4ae64cb1",
+          "pixel_sha256": "2f70ea74eaf78680e2e3ec3ab55e1a0b04c4393278ad3e1f7cf57aa76c7aeec6",
           "size": [
             32,
             32

@@ -7,27 +7,37 @@ palette_id: meadow
 pattern: saddle
 template: quadruped
 body:
-- 16
-- 11
-- 20
+- 14
+- 10
+- 18
 head:
-- 9
 - 8
 - 8
+- 6
 limb:
-- 5
+- 4
 - 12
 extras:
 - horns
 - shoulders
 - muzzle
 muzzle:
-- 7
-- 4
+- 8
+- 3
 - 4
 bind_body: null
 direction: 'Луговая пеструха: широкие плечи и клиновидная морда'
 wave: W1
+silhouette:
+  snout: 0.7
+  snout_width: 1.0
+  horns: 0.75
+  tail: 0.25
+  tail_drop: 0.15
+marks:
+- brow
+- flank
+- muzzle
 selected_concept: wedge_muzzle
 concepts:
 - id: wedge_muzzle

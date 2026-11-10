@@ -7,22 +7,26 @@ palette_id: meadow
 pattern: bands
 template: aerial
 body:
-- 7
 - 6
-- 11
+- 6
+- 12
 head:
-- 5
+- 4
 - 4
 - 4
 limb:
 - 2
 - 4
-extras:
-- broad_wings
+extras: []
 muzzle: null
 bind_body: null
-direction: 'Пыльценос: три секции и отдельные крылья'
+direction: 'Пыльценос: три сегмента и короткие крылья сверху'
 wave: W1
+silhouette:
+  segments: 3
+  wing: 0.65
+marks:
+- stripes
 selected_concept: primary
 concepts:
 - id: primary
@@ -30,7 +34,7 @@ concepts:
   - 1
   - 1
   - 1
-  note: 'Пыльценос: три секции и отдельные крылья'
+  note: 'Пыльценос: три сегмента и короткие крылья сверху'
 - id: tall
   body_scale:
   - 0.86

@@ -22,6 +22,8 @@ muzzle: null
 bind_body: null
 direction: 'Углёк: силуэт пламени и тёмная сердцевина'
 wave: D
+silhouette: {}
+marks: []
 selected_concept: ember
 concepts:
 - id: ember

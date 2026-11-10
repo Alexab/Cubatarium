@@ -34,13 +34,19 @@
         1.0,
         1.0,
         1.0
+      ],
+      "children": [
+        1,
+        2,
+        3,
+        4
       ]
     },
     {
       "name": "head",
       "translation": [
         0.0,
-        0.125,
+        0.0,
         -0.5
       ],
       "rotation": [
@@ -59,7 +65,7 @@
       "name": "wing0",
       "translation": [
         -0.3125,
-        0.125,
+        0.0,
         0.0
       ],
       "rotation": [
@@ -78,7 +84,7 @@
       "name": "wing1",
       "translation": [
         0.3125,
-        0.125,
+        0.0,
         0.0
       ],
       "rotation": [
@@ -97,7 +103,7 @@
       "name": "tail",
       "translation": [
         0.0,
-        0.125,
+        0.0,
         0.5
       ],
       "rotation": [

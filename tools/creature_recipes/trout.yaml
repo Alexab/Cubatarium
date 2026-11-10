@@ -7,7 +7,7 @@ palette_id: meadow
 pattern: spots
 template: aquatic
 body:
-- 5
+- 6
 - 6
 - 16
 head:
@@ -23,6 +23,11 @@ muzzle: null
 bind_body: null
 direction: 'Янтарная форель: высокий корпус и пятна'
 wave: W1
+silhouette:
+  tail: 0.3
+marks:
+- spots
+- back
 selected_concept: primary
 concepts:
 - id: primary

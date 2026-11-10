@@ -8,8 +8,8 @@ pattern: spots
 template: arachnid
 body:
 - 10
-- 5
-- 12
+- 4
+- 10
 head:
 - 6
 - 4
@@ -20,8 +20,12 @@ limb:
 extras: []
 muzzle: null
 bind_body: null
-direction: 'Корнепряд: два объёма и коленчатые ноги'
+direction: 'Корнепряд: плоское тело и ноги в стороны'
 wave: W1
+silhouette:
+  leg_splay: 1.1
+marks:
+- flank
 selected_concept: primary
 concepts:
 - id: primary
@@ -29,7 +33,7 @@ concepts:
   - 1
   - 1
   - 1
-  note: 'Корнепряд: два объёма и коленчатые ноги'
+  note: 'Корнепряд: плоское тело и ноги в стороны'
 - id: tall
   body_scale:
   - 0.86

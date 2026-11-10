@@ -92,7 +92,7 @@ def _compare(species_id: str) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build original Cubatarium creatures")
     parser.add_argument("command", choices=[
-        "inventory", "emit", "build", "validate", "compare", "publish", "audit", "silhouettes", "frames", "previews",
+        "inventory", "emit", "build", "validate", "compare", "publish", "audit", "silhouettes", "frames", "previews", "measure-familiar",
     ])
     parser.add_argument("--species", default="")
     parser.add_argument("--all", action="store_true")
@@ -125,11 +125,17 @@ def main(argv: list[str] | None = None) -> int:
         out = OUT_TEXTURED if args.textured else OUT
         ids = selected or None
         if ids:
-            paths = [render_species(species_id, out, args.textured) for species_id in ids]
+            for species_id in ids:
+                render_species(species_id, out, args.textured)
+            paths = sorted(out.glob("*.png"))
             write_index(paths, out, args.textured)
         else:
             paths = render_all(out, args.textured)
         print(f"wrote {len(paths)} sheets in {out}")
+        return 0
+    if args.command == "measure-familiar":
+        from creaturegen.measure_familiar import main as measure_main
+        measure_main()
         return 0
     if args.command == "inventory":
         print(json.dumps({"species": len(creature_ids()), "ids": creature_ids()}, indent=2))

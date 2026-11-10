@@ -7,21 +7,29 @@ palette_id: forest
 pattern: mask
 template: chicken
 body:
-- 8
-- 8
-- 8
-head:
-- 7
 - 7
 - 6
+- 8
+head:
+- 8
+- 8
+- 7
 limb:
 - 2
-- 4
+- 3
 extras: []
 muzzle: null
 bind_body: null
-direction: 'Лунная сова: лицевой диск'
+direction: 'Лунная сова: лицевой диск, кисточки и короткий клюв'
 wave: W2
+silhouette:
+  disc: 1.25
+  tufts: 0.55
+  beak: 0.35
+marks:
+- disc
+- eyes
+- beak
 selected_concept: primary
 concepts:
 - id: primary
@@ -29,7 +37,7 @@ concepts:
   - 1
   - 1
   - 1
-  note: 'Лунная сова: лицевой диск'
+  note: 'Лунная сова: лицевой диск, кисточки и короткий клюв'
 - id: tall
   body_scale:
   - 0.86

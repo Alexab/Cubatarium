@@ -77,6 +77,10 @@ def _bone(name, parent, pivot, cubes, mirror=False, bind=None) -> Bone:
     return Bone(name, parent, [int(round(v)) for v in pivot], list(cubes), mirror, bind)
 
 
+def _sil(recipe: dict) -> dict:
+    return recipe.get("silhouette") or {}
+
+
 def _tokens(recipe: dict) -> list[str]:
     extras = recipe.get("extras") or []
     if isinstance(extras, str):
@@ -114,7 +118,14 @@ def _quadruped(recipe: dict, names: dict[str, str] | None = None) -> Model:
     hw, hh, hd = _triple(recipe.get("head"), (7, 7, 7))
     lw, lh = _triple(recipe.get("limb"), (4, 10, 4))[:2]
     tokens = _tokens(recipe)
+    sil = _sil(recipe)
     muzzle = _triple(recipe.get("muzzle"), (max(3, hw - 2), max(2, hh // 3), max(2, hd // 2)))
+    if sil.get("snout"):
+        muzzle = (
+            max(muzzle[0], int(hw * float(sil.get("snout_width") or 0.85))),
+            muzzle[1],
+            max(2, int(hd * float(sil["snout"]))),
+        )
     body_bottom = max(lh - 2, 4)
     bind = recipe.get("bind_body")
     bones: list[Bone] = []
@@ -130,8 +141,13 @@ def _quadruped(recipe: dict, names: dict[str, str] | None = None) -> Model:
         body_cubes.append(_cube((-bw // 4, body_bottom + bh - 1, -bd // 5), (bw // 2, max(3, bh // 3), bd // 3), "accent"))
     if "spines" in tokens:
         body_cubes.append(_cube((-bw // 3, body_bottom + bh, -bd // 3), (max(2, bw // 2), max(3, bh // 2), max(2, bd // 2)), "horn"))
-    if "shell" in tokens:
-        body_cubes.append(_cube((-bw // 2 - 1, body_bottom + bh // 2, -bd // 2), (bw + 2, max(3, bh // 2), bd), "shell"))
+    if "shell" in tokens or sil.get("shell"):
+        shell = float(sil.get("shell") or 1.15)
+        pad = max(1, int(min(bw, bd) * (shell - 1)))
+        body_cubes.append(_cube((-bw // 2 - pad, body_bottom + bh // 3, -bd // 2 - pad), (bw + 2 * pad, max(4, int(bh * 0.7)), bd + 2 * pad), "shell"))
+    if sil.get("wool"):
+        pad = max(1, int(min(bw, bh) * (float(sil["wool"]) - 1)))
+        body_cubes.append(_cube((-bw // 2 - pad, body_bottom - 1, -bd // 2 - pad), (bw + 2 * pad, bh + pad + 2, bd + 2 * pad), "wool"))
     bones.append(_bone(body_n, None, pivot, body_cubes, bind=list(bind) if bind else None))
     shoulder_y = body_bottom + bh - 1
     head_pivot = [0, shoulder_y, -bd // 2]
@@ -139,13 +155,17 @@ def _quadruped(recipe: dict, names: dict[str, str] | None = None) -> Model:
     head_cubes = [_cube(head_origin, (hw, hh, hd), "face")]
     if "muzzle" in tokens or recipe.get("muzzle"):
         head_cubes.append(_cube((-muzzle[0] // 2, head_origin[1] + hh // 5, head_origin[2] - muzzle[2]), muzzle, "muzzle"))
-    if "horns" in tokens:
-        horn_h = max(2, hh // 2)
-        head_cubes.append(_cube((-hw // 2, head_origin[1] + hh - 1, head_origin[2] + hd // 3), (2, horn_h, 2), "horn"))
-        head_cubes.append(_cube((hw // 2 - 2, head_origin[1] + hh - 1, head_origin[2] + hd // 3), (2, horn_h, 2), "horn"))
-    if "ears" in tokens:
-        head_cubes.append(_cube((-hw // 2 - 1, head_origin[1] + hh // 2, head_origin[2] + 1), (2, max(3, hh // 2), 2), "face"))
-        head_cubes.append(_cube((hw // 2 - 1, head_origin[1] + hh // 2, head_origin[2] + 1), (2, max(4, hh // 2 + 1), 2), "face"))
+    if "horns" in tokens or sil.get("horns"):
+        horn_h = max(3, int(hh * float(sil.get("horns") or 0.7)))
+        horn_w = max(3, hw // 3)
+        for sx in (-1, 1):
+            ox = _mirror_x(sx, hw // 2, horn_w)
+            head_cubes.append(_cube((ox, head_origin[1] + hh - 2, head_origin[2] + hd // 3), (horn_w, horn_h, 2), "horn"))
+    if "ears" in tokens or sil.get("ears"):
+        ear_h = max(3, int(hh * float(sil.get("ears") or 0.6)))
+        for sx in (-1, 1):
+            ox = _mirror_x(sx, max(0, hw // 2 - 1), 2)
+            head_cubes.append(_cube((ox, head_origin[1] + hh - 2, head_origin[2] + 1), (2, ear_h, 2), "face"))
     if "tusks" in tokens:
         head_cubes.append(_cube((-2, head_origin[1], head_origin[2] - 2), (1, 3, 1), "horn"))
         head_cubes.append(_cube((1, head_origin[1], head_origin[2] - 2), (1, 3, 1), "horn"))
@@ -161,10 +181,12 @@ def _quadruped(recipe: dict, names: dict[str, str] | None = None) -> Model:
         oz = _mirror_x(sz, gap_z, lw)
         pivot = [ox + lw / 2, lh, oz + lw / 2]
         bones.append(_bone(leg_names[index], body_n, pivot, [_cube((ox, 0, oz), (lw, lh, lw), "limb")], mirror=sx > 0))
-    tail_len = max(3, bd // 3)
-    tail_pivot = [0, body_bottom + bh // 2, bd // 2]
+    tail_len = max(3, int(bd * float(sil["tail"]))) if sil.get("tail") else max(3, bd // 3)
+    drop = int(bh * float(sil.get("tail_drop") or 0))
+    tail_pivot = [0, body_bottom + bh // 2 - drop, bd // 2]
+    thick = 4 if float(sil.get("tail") or 0) >= 0.6 else 2
     bones.append(_bone(names.get("tail", "tail"), body_n, tail_pivot, [
-        _cube((-1, tail_pivot[1] - 1, tail_pivot[2]), (2, 2, tail_len), "accent")
+        _cube((-thick // 2, tail_pivot[1] - thick // 2, tail_pivot[2]), (thick, thick, tail_len), "accent")
     ]))
     return Model(bones)
 
@@ -175,17 +197,32 @@ def _chicken(recipe: dict) -> Model:
     hw, hh, hd = _triple(recipe.get("head"), (5, 6, 5))
     lw, lh = _triple(recipe.get("limb"), (2, 6, 2))[:2]
     body_bottom = lh
+    sil = _sil(recipe)
+    tokens = _tokens(recipe)
     pivot = [0, body_bottom + bh // 2, 0]
+    head_y = body_bottom + bh - 1
+    face_z = -bd // 2 - hd
+    head_cubes = [_cube((-hw // 2, head_y, face_z), (hw, hh, hd), "face")]
+    if sil.get("comb"):
+        comb_h = max(2, int(hh * float(sil["comb"])))
+        head_cubes.append(_cube((-2, head_y + hh - 1, face_z), (4, comb_h, 2), "accent"))
+    if sil.get("beak") or "beak" in tokens:
+        beak_d = max(2, int(hd * float(sil.get("beak") or 0.4)))
+        head_cubes.append(_cube((-1, head_y + hh // 3, face_z - beak_d), (2, 2, beak_d), "horn"))
+    if sil.get("disc"):
+        pad = max(1, int(min(hw, hh) * max(0.1, float(sil["disc"]) - 1)))
+        head_cubes.append(_cube((-hw // 2 - pad, head_y, face_z - 1), (hw + 2 * pad, hh, 1), "face"))
+    if sil.get("tufts"):
+        tuft_h = max(3, int(hh * float(sil["tufts"])))
+        for sx in (-1, 1):
+            ox = _mirror_x(sx, max(0, hw // 2 - 1), 2)
+            head_cubes.append(_cube((ox, head_y + hh - 2, face_z + 1), (2, tuft_h, 2), "accent"))
     bones = [
         _bone("body", None, pivot, [
             _cube((-bw // 2, body_bottom, -bd // 2), (bw, bh, bd), "body"),
-            _cube((-bw // 4, body_bottom + bh - 2, bd // 5), (bw // 2, 3, max(3, bd // 3)), "accent"),
+            _cube((-bw // 4, body_bottom + bh - 2, bd // 5), (bw // 2, 3, max(3, bd // 3)), "body"),
         ]),
-        _bone("head", "body", [0, body_bottom + bh, -bd // 2], [
-            _cube((-hw // 2, body_bottom + bh - 1, -bd // 2 - hd), (hw, hh, hd), "face"),
-            _cube((-2, body_bottom + bh + hh - 3, -bd // 2 - hd - 1), (4, 2, 2), "accent"),
-            _cube((-1, body_bottom + bh, -bd // 2 - hd - 3), (2, 2, 3), "horn"),
-        ]),
+        _bone("head", "body", [0, body_bottom + bh, -bd // 2], head_cubes),
     ]
     for index, sx in ((0, -1), (1, 1)):
         gap_x = max(1, bw // 2 - lw)
@@ -195,9 +232,10 @@ def _chicken(recipe: dict) -> Model:
             _cube((ox, 0, oz), (lw, lh, lw), "limb")
         ]))
     for index, sx in ((0, -1), (1, 1)):
-        pivot_w = [sx * (bw // 2), body_bottom + bh // 2, 0]
+        ox = _mirror_x(sx, bw // 2, 1)
+        pivot_w = [ox + 0.5, body_bottom + bh // 2, 0]
         bones.append(_bone(f"wing{index}", "body", pivot_w, [
-            _cube([pivot_w[0] + (0 if sx < 0 else -1), pivot_w[1] - 1, -bd // 4], (1, max(3, bh // 2), bd // 2), "wing")
+            _cube((ox, pivot_w[1] - 1, -bd // 4), (1, max(3, bh // 2), max(2, bd // 3)), "wing")
         ]))
     return Model(bones)
 
@@ -216,13 +254,14 @@ def _rabbit(recipe: dict) -> Model:
             _cube((-hw // 2, body_bottom + bh - 1, -bd // 3 - hd), (hw, hh, hd), "face"),
         ]),
     ]
-    ear_h = max(6, hh + 2)
-    bones.append(_bone("earLeft", "head", [-2, body_bottom + bh + hh - 2, -bd // 3 - 1], [
-        _cube((-3, body_bottom + bh + hh - 2, -bd // 3 - 1), (2, ear_h, 1), "accent")
-    ]))
-    bones.append(_bone("earRight", "head", [2, body_bottom + bh + hh - 2, -bd // 3 - 1], [
-        _cube((1, body_bottom + bh + hh - 2, -bd // 3 - 1), (2, ear_h + 1, 1), "face")
-    ]))
+    ear_h = max(6, int(hh * float(_sil(recipe).get("ears") or 1.4)))
+    ear_y = body_bottom + bh + hh - 2
+    ear_z = -bd // 3 - 1
+    for name, sx in (("earLeft", -1), ("earRight", 1)):
+        ox = _mirror_x(sx, 1, 2)
+        bones.append(_bone(name, "head", [ox + 1, ear_y, ear_z], [
+            _cube((ox, ear_y, ear_z), (2, ear_h, 1), "accent")
+        ]))
     leg_w = 4
     gap_x = max(1, bw // 2 - leg_w)
     rear_z = bd // 5
@@ -235,7 +274,7 @@ def _rabbit(recipe: dict) -> Model:
     for name, sx in (("rearFootLeft", -1), ("rearFootRight", 1)):
         ox = _mirror_x(sx, gap_x, leg_w)
         bones.append(_bone(name, "body", [ox + leg_w / 2, 2, rear_z], [
-            _cube((ox + 1, 0, rear_z), (leg_w - 2, 2, 4), "limb")
+            _cube((ox, 0, rear_z), (leg_w, 2, 4), "limb")
         ]))
     for name, sx in (("frontLegLeft", -1), ("frontLegRight", 1)):
         ox = _mirror_x(sx, gap_x, leg_w)
@@ -266,10 +305,18 @@ def _arachnid(recipe: dict) -> Model:
     for index in range(8):
         side = -1 if index % 2 == 0 else 1
         along = -bd // 3 + (index // 2) * (bd // 4)
-        ox = _mirror_x(side, max(0, bw // 2 - lw), lw)
-        bones.append(_bone(f"leg{index}", "body0", [ox + lw / 2, body_y + 1, along], [
-            _cube((ox, 0, along - lw // 2), (lw, lh, lw), "limb")
-        ], mirror=side > 0))
+        splay = float(_sil(recipe).get("leg_splay") or 0)
+        if splay:
+            reach = max(lw, int(lh * splay))
+            ox = _mirror_x(side, bw // 2, reach)
+            bones.append(_bone(f"leg{index}", "body0", [ox + reach / 2, body_y, along], [
+                _cube((ox, body_y - 1, along - lw // 2), (reach, 2, lw), "limb")
+            ], mirror=side > 0))
+        else:
+            ox = _mirror_x(side, max(0, bw // 2 - lw), lw)
+            bones.append(_bone(f"leg{index}", "body0", [ox + lw / 2, body_y + 1, along], [
+                _cube((ox, 0, along - lw // 2), (lw, lh, lw), "limb")
+            ], mirror=side > 0))
     return Model(bones)
 
 
@@ -297,12 +344,15 @@ def _humanoid(recipe: dict) -> Model:
     head_cubes = [_cube((-hw // 2, head_y, -hd // 2), (hw, hh, hd), "face")]
     if "crest" in tokens:
         head_cubes.append(_cube((-1, head_y + hh - 1, -1), (2, max(3, hh // 2), 2), "accent"))
-    if "hat" in tokens or True:
+    show_hat = "hat" in tokens or "hat" in (recipe.get("marks") or [])
+    if show_hat:
         head_cubes.append(_cube((-hw // 2 - 1, head_y + hh - 2, -hd // 2 - 1), (hw + 2, 2, hd + 2), "horn"))
     bones.append(_bone("head", "waist", [0, head_y, 0], head_cubes))
-    bones.append(_bone("hat", "head", [0, head_y + hh - 1, 0], [
-        _cube((-hw // 2, head_y + hh - 1, -hd // 2), (hw, 2, hd), "accent")
-    ]))
+    if show_hat:
+        hat_cube = _cube((-hw // 2, head_y + hh - 1, -hd // 2), (hw, 2, hd), "accent")
+    else:
+        hat_cube = _cube((0, head_y + hh // 2, 0), (1, 1, 1), "face")
+    bones.append(_bone("hat", "head", [0, head_y + hh - 1, 0], [hat_cube]))
     for name, sx in (("rightArm", -1), ("leftArm", 1)):
         ox = _mirror_x(sx, bw // 2, lw)
         pivot = [ox + lw / 2, hip + bh - 2, 0]
@@ -326,32 +376,69 @@ def _humanoid(recipe: dict) -> Model:
     return Model(bones)
 
 
+def _bee_segments(bw: int, bh: int, bd: int, sil: dict) -> list:
+    count = max(3, int(sil.get("segments") or 3))
+    span = max(count, bd // count)
+    cubes = []
+    for index in range(count):
+        role = "body" if index % 2 == 0 else "accent"
+        z = -bd // 2 + index * (span - 1)
+        cubes.append(_cube((-bw // 2, 6, z), (bw if index == 1 else max(3, bw - 1), bh - (0 if index == 1 else 1), span), role))
+    return cubes
+
+
 def _aerial(recipe: dict) -> Model:
     bw, bh, bd = _triple(recipe.get("body"), (7, 6, 10))
     hw, hh, hd = _triple(recipe.get("head"), (5, 4, 4))
     tokens = _tokens(recipe)
     bones = [
-        _bone("body", None, [0, 8, 0], [
+        _bone("body", None, [0, 8, 0], _bee_segments(bw, bh, bd, _sil(recipe)) if int(_sil(recipe).get("segments") or 1) >= 3 else [
             _cube((-bw // 2, 6, -bd // 2), (bw, bh, bd), "body"),
         ]),
         _bone("head", "body", [0, 9, -bd // 3], [
             _cube((-hw // 2, 8, -bd // 3 - hd), (hw, hh, hd), "face"),
         ]),
     ]
-    wing_w = 8 if "broad_wings" in tokens else 5
+    wing_scale = _sil(recipe).get("wing")
+    wing_w = max(3, int(bw * float(wing_scale if wing_scale is not None else (0.9 if "broad_wings" in tokens else 0.6))))
+    wing_d = 4 if wing_scale is not None else 7
+    wing_y = 6 + bh - 1 if int(_sil(recipe).get("segments") or 1) >= 3 else 8
     # wing0/wing1 are the visible slabs. The alternate bone names exist for the
     # aerial pose and stay inside the body so they do not draw a second wing.
     for name, sx, visible in (
         ("wing0", -1, True), ("wing1", 1, True),
         ("rightwing_bone", -1, False), ("leftwing_bone", 1, False),
     ):
-        pivot = [sx * (bw // 2), 9, 0]
+        pivot = [sx * (bw // 2), wing_y, 0]
         if visible:
-            cube = _cube((pivot[0] - (wing_w if sx < 0 else 0), 8, -3), (wing_w, 2, 7), "wing")
+            cube = _cube((pivot[0] - (wing_w if sx < 0 else 0), wing_y, -wing_d // 2), (wing_w, 1, wing_d), "wing")
         else:
             cube = _cube((-1, 7, -1), (2, 2, 2), "body")
         bones.append(_bone(name, "body", pivot, [cube]))
     return Model(bones)
+
+
+def _dorsal_pair(bw: int, bh: int, bd: int) -> list:
+    height = max(2, bh // 2)
+    cubes = []
+    for sx in (-1, 1):
+        ox = _mirror_x(sx, 0, 1)
+        cubes.append(_cube((ox, 2 + bh, -bd // 6), (1, height, max(3, bd // 4)), "wing"))
+    return cubes
+
+
+def _tail_flukes(bh: int, bd: int, tucked: bool = False) -> list:
+    fluke = 2 if tucked else 4
+    bones = []
+    z = 1 if tucked else bd // 2 + 3
+    y = bh // 2
+    depth = 2 if tucked else 4
+    for name, sx in (("tailfin", -1), ("tail_fin", 1)):
+        ox = _mirror_x(sx, 0, fluke)
+        bones.append(_bone(name, "tail", [ox + fluke / 2, y + 2, z], [
+            _cube((ox, y, z), (fluke, 1, depth), "wing")
+        ]))
+    return bones
 
 
 def _aquatic(recipe: dict) -> Model:
@@ -364,6 +451,7 @@ def _aquatic(recipe: dict) -> Model:
         _bone("body", None, [0, bh, 0], [
             _cube((-bw // 2, 2, -bd // 2), (bw, bh, bd), "body"),
             _cube((-bw // 2 + 1, 2, -bd // 4), (bw - 2, max(2, bh // 3), bd // 2), "belly"),
+            *(_dorsal_pair(bw, bh, bd) if "fins" in tokens else []),
         ]),
         _bone("head", "body", [0, bh, -nose], [
             _cube((-hw // 2, bh - hh // 2, -nose - hd), (hw, hh, hd), "face"),
@@ -374,12 +462,7 @@ def _aquatic(recipe: dict) -> Model:
         _bone("tail", "body_back", [0, bh // 2 + 2, bd // 2], [
             _cube((-2, bh // 2, bd // 2), (4, 3, max(4, bd // 4)), "accent"),
         ]),
-        _bone("tailfin", "tail", [0, bh // 2 + 2, bd // 2 + 3], [
-            _cube((-4, bh // 2, bd // 2 + 3), (8, 1, 4), "wing"),
-        ]),
-        _bone("tail_fin", "tail", [0, bh // 2 + 3, bd // 2 + 3], [
-            _cube((-3, bh // 2 + 2, bd // 2 + 2), (6, 2, 3), "wing"),
-        ]),
+        *_tail_flukes(bh, bd, tucked="fins" not in tokens),
     ]
     if "fins" in tokens:
         for sx, name in ((-1, "fin_l"), (1, "fin_r")):

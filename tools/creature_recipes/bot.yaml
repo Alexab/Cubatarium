@@ -9,11 +9,11 @@ template: humanoid
 body:
 - 8
 - 12
-- 6
+- 4
 head:
-- 7
-- 7
-- 7
+- 8
+- 8
+- 8
 limb:
 - 4
 - 12
@@ -22,8 +22,15 @@ extras:
 - crest
 muzzle: null
 bind_body: null
-direction: 'Проводник: ворот и головной убор на той же анатомии'
+direction: 'Проводник: тот же силуэт, другой ворот и шапка'
 wave: W1
+silhouette:
+  chest: 2.0
+  legs: 0.5
+marks:
+- collar
+- hat
+- shirt
 selected_concept: primary
 concepts:
 - id: primary
@@ -31,7 +38,7 @@ concepts:
   - 1
   - 1
   - 1
-  note: 'Проводник: ворот и головной убор на той же анатомии'
+  note: 'Проводник: тот же силуэт, другой ворот и шапка'
 - id: tall
   body_scale:
   - 0.86

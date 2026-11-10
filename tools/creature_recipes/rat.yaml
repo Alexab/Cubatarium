@@ -26,6 +26,8 @@ muzzle:
 bind_body: null
 direction: Зерновой бегунок
 wave: W2
+silhouette: {}
+marks: []
 selected_concept: primary
 concepts:
 - id: primary

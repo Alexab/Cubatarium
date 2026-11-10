@@ -7,15 +7,15 @@ palette_id: forest
 pattern: mask
 template: quadruped
 body:
-- 8
+- 6
 - 8
 - 16
 head:
-- 6
-- 6
+- 5
+- 5
 - 7
 limb:
-- 3
+- 2
 - 12
 extras:
 - ears
@@ -27,6 +27,15 @@ muzzle:
 bind_body: null
 direction: 'Хвойный волк: холка и низкий хвост'
 wave: W1
+silhouette:
+  ears: 0.7
+  snout: 0.55
+  tail: 0.55
+  tail_drop: 0.75
+  legs: 0.33
+marks:
+- chest
+- tail_tip
 selected_concept: primary
 concepts:
 - id: primary

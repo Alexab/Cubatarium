@@ -23,6 +23,8 @@ muzzle: null
 bind_body: null
 direction: Парусокрыл
 wave: D
+silhouette: {}
+marks: []
 selected_concept: primary
 concepts:
 - id: primary

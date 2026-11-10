@@ -154,14 +154,31 @@ def export_gltf(model: Model, clip_names: list[str]) -> tuple[dict, bytes]:
 
     nodes = []
     joint_nodes = []
-    for bone in model.bones:
-        nodes.append({
+    index_by_name = {bone.name: index for index, bone in enumerate(model.bones)}
+    child_lists: list[list[int]] = [[] for _ in model.bones]
+    for index, bone in enumerate(model.bones):
+        absolute = [component / 16.0 for component in bone.pivot]
+        parent = index_by_name.get(bone.parent) if bone.parent else None
+        if parent is None:
+            translation = absolute
+        else:
+            parent_pivot = [component / 16.0 for component in model.bones[parent].pivot]
+            translation = [absolute[axis] - parent_pivot[axis] for axis in range(3)]
+            child_lists[parent].append(index)
+        node = {
             "name": bone.name,
-            "translation": [component / 16.0 for component in bone.pivot],
+            "translation": translation,
             "rotation": [0.0, 0.0, 0.0, 1.0],
             "scale": [1.0, 1.0, 1.0],
-        })
-        joint_nodes.append(len(nodes) - 1)
+        }
+        if child_lists[index]:
+            node["children"] = child_lists[index]
+        nodes.append(node)
+        joint_nodes.append(index)
+    # Children are recorded while later siblings are still unknown, so write them once more.
+    for index, kids in enumerate(child_lists):
+        if kids:
+            nodes[index]["children"] = kids
     nodes.append({"name": "mesh", "mesh": 0, "skin": 0})
     scene_nodes = joint_nodes + [len(nodes) - 1]
 

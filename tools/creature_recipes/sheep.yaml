@@ -7,15 +7,15 @@ palette_id: meadow
 pattern: spots
 template: quadruped
 body:
-- 12
+- 8
+- 8
 - 10
-- 14
 head:
+- 5
 - 6
-- 6
-- 6
+- 5
 limb:
-- 4
+- 3
 - 8
 extras:
 - wool
@@ -27,6 +27,13 @@ muzzle:
 bind_body: null
 direction: 'Облачная овца: слоистая шерсть и узкая морда'
 wave: W1
+silhouette:
+  wool: 1.35
+  snout: 0.4
+  tail: 0.15
+marks:
+- wool
+- face_dark
 selected_concept: primary
 concepts:
 - id: primary

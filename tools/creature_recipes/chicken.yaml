@@ -7,22 +7,30 @@ palette_id: meadow
 pattern: spots
 template: chicken
 body:
-- 8
-- 8
-- 10
-head:
-- 5
 - 6
+- 6
+- 8
+head:
+- 4
 - 5
+- 4
 limb:
 - 2
-- 6
+- 5
 extras:
 - beak
 muzzle: null
 bind_body: null
 direction: 'Медная несушка: каплевидный корпус и гребень'
 wave: W1
+silhouette:
+  comb: 0.45
+  beak: 0.55
+  tail: 0.2
+marks:
+- comb
+- beak
+- back
 selected_concept: primary
 concepts:
 - id: primary

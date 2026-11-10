@@ -18,7 +18,7 @@ from creaturegen.export_gltf import export_gltf
 from creaturegen.export_rigid import export_rigid
 from creaturegen.hashutil import file_hash, pixel_hash, stable_seed, write_json
 from creaturegen.species_data import SPECIES
-from creaturegen.texturegen import bake_atlas, bake_flat, bake_icon, bake_sprite
+from creaturegen.texturegen import bake_atlas, bake_flat, bake_icon, bake_part_tile, bake_sprite
 
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = ROOT / "models" / "creatures"
@@ -74,6 +74,8 @@ def emit_recipes() -> None:
             "bind_body": base["bind_body"],
             "direction": base["direction"],
             "wave": base["wave"],
+            "silhouette": base.get("silhouette") or {},
+            "marks": base.get("marks") or [],
             "selected_concept": base["selected_concept"],
             "concepts": base["concepts"],
             "seed": stable_seed(species_id, base["recipe_version"]),
@@ -145,7 +147,7 @@ def build_species(species_id: str, staging: Path | None = None, concept_scale=No
         geo = export_geometry(model, _geometry_id(definition, species_id))
         geo_path = out / "geometry.geo.json"
         write_json(geo_path, geo)
-        atlas = bake_atlas(model, palette, recipe["pattern"], species_id, recipe["recipe_version"])
+        atlas = bake_atlas(model, palette, recipe["pattern"], species_id, recipe["recipe_version"], tuple(recipe.get("marks") or ()))
         diffuse = out / "textures" / "diffuse.png"
         atlas.save(diffuse)
         icon = out / "textures" / "icon.png"
@@ -157,7 +159,7 @@ def build_species(species_id: str, staging: Path | None = None, concept_scale=No
         bin_path = out / "model.bin"
         write_json(gltf_path, gltf)
         bin_path.write_bytes(blob)
-        atlas = bake_atlas(model, palette, recipe["pattern"], species_id, recipe["recipe_version"])
+        atlas = bake_atlas(model, palette, recipe["pattern"], species_id, recipe["recipe_version"], tuple(recipe.get("marks") or ()))
         stems = [material["name"] for material in gltf["materials"]]
         written = []
         for stem in stems:
@@ -174,17 +176,17 @@ def build_species(species_id: str, staging: Path | None = None, concept_scale=No
         rigid = export_rigid(model)
         rigid_path = out / "rigid_model.json"
         write_json(rigid_path, rigid)
-        atlas = bake_atlas(model, palette, recipe["pattern"], species_id, recipe["recipe_version"])
         stems = sorted({part["texture"] for part in rigid["parts"]})
+        body_tile = None
         for stem in stems:
             png = out / "textures" / f"{stem}.png"
+            tile = bake_part_tile(palette, stem, species_id)
+            tile.save(png)
             if stem == "body":
-                atlas.save(png)
-            else:
-                bake_flat(palette, stem, recipe["pattern"], species_id, (32, 32)).save(png)
+                body_tile = tile
             manifest_files.append(png)
         icon = out / "textures" / "icon.png"
-        bake_icon(atlas).save(icon)
+        bake_icon(body_tile or bake_part_tile(palette, "body", species_id)).save(icon)
         manifest_files.extend((rigid_path, icon))
     files = []
     for path in manifest_files:
@@ -304,6 +306,16 @@ def _retarget_gltf_textures(species_id: str, staging: Path) -> None:
     write_json(creature_path, definition)
 
 
+def _drop_stale_textures(staging: Path, dest: Path) -> None:
+    staged = {path.name for path in (staging / "textures").glob("*") if path.is_file()}
+    textures = dest / "textures"
+    if not textures.is_dir():
+        return
+    for path in textures.iterdir():
+        if path.is_file() and path.name not in staged:
+            path.unlink()
+
+
 def publish_species(species_id: str) -> None:
     staging = STAGING / species_id
     build_species(species_id, staging)
@@ -311,8 +323,12 @@ def publish_species(species_id: str) -> None:
     if errors:
         raise RuntimeError(f"{species_id}: " + "; ".join(errors))
     _merge_tree(staging, MODELS / species_id)
+    _drop_stale_textures(staging, MODELS / species_id)
     _retarget_gltf_textures(species_id, staging)
     _sync_bin(species_id)
+    bin_dest = ROOT / "bin" / "models" / "creatures" / species_id
+    if bin_dest.is_dir():
+        _drop_stale_textures(staging, bin_dest)
 
 
 def _sync_bin(species_id: str) -> None:
@@ -323,31 +339,51 @@ def _sync_bin(species_id: str) -> None:
     _merge_tree(source, dest)
 
 
+def _skin_palette(palette: dict, kind: str) -> dict:
+    shifted = {name: list(color) for name, color in palette.items()}
+    if kind == "black":
+        shifted.update(wool=[28, 26, 24], body=[36, 32, 30], belly=[48, 44, 40], limb=[42, 38, 34], face=[64, 52, 44], mark=[18, 16, 14])
+    elif kind == "gold":
+        shifted.update(wool=[228, 184, 72], body=[210, 164, 64], belly=[240, 210, 120], face=[92, 64, 40], limb=[72, 52, 36], mark=[120, 78, 32])
+    elif kind == "snow":
+        shifted.update(body=[236, 240, 242], belly=[250, 250, 248], wool=[230, 234, 236], limb=[210, 214, 218], face=[90, 78, 68], mark=[70, 62, 56])
+    return shifted
+
+
+def _skin_marks(recipe: dict, kind: str) -> tuple[str, ...]:
+    if kind == "black" or kind == "gold":
+        return ("face_dark",)
+    if kind == "snow":
+        return ("ears",)
+    return tuple(recipe.get("marks") or ())
+
+
 def publish_skins() -> None:
     palettes = _load_palettes()
     plans = {
-        "human_adventurer": ("traveler", "bands"),
-        "human_guard": ("mineral", "plates"),
-        "sheep_wool_black": ("forest", "spots"),
-        "sheep_wool_golden": ("meadow", "saddle"),
-        "wolf_snow": ("river", "mask"),
+        "human_adventurer": ("human", "traveler", ""),
+        "human_guard": ("human", "mineral", ""),
+        "sheep_wool_black": ("sheep", "forest", "black"),
+        "sheep_wool_golden": ("sheep", "meadow", "gold"),
+        "wolf_snow": ("wolf", "river", "snow"),
     }
-    for skin_id, (palette_id, pattern) in plans.items():
-        skin_dir = SKINS / skin_id
-        textures = skin_dir / "textures"
+    for skin_id, (species_id, palette_id, kind) in plans.items():
+        recipe = load_recipe(species_id)
+        model = build_model(recipe)
+        palette = _skin_palette(palettes[palette_id], kind)
+        atlas = bake_atlas(model, palette, recipe["pattern"], skin_id, recipe["recipe_version"], _skin_marks(recipe, kind))
+        textures = SKINS / skin_id / "textures"
         textures.mkdir(parents=True, exist_ok=True)
-        palette = palettes[palette_id]
-        existing = list(textures.glob("*.png"))
-        stems = {path.stem for path in existing}
+        stems = {path.stem for path in textures.glob("*.png")}
         stems.add("diffuse")
         for stem in stems:
-            image = bake_flat(palette, stem if stem != "icon" else "accent", pattern, skin_id, (64, 64))
+            image = atlas
             if stem == "icon":
-                image = image.resize((32, 32), Image.Resampling.NEAREST)
+                image = bake_icon(atlas)
             image.save(textures / f"{stem}.png")
         bin_skin = ROOT / "bin" / "models" / "skins" / skin_id
         if bin_skin.parent.is_dir():
-            _merge_tree(skin_dir, bin_skin)
+            _merge_tree(SKINS / skin_id, bin_skin)
 
 
 def write_asset_manifest() -> None:

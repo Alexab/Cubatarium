@@ -160,6 +160,14 @@ def _box(origin, size, pivot, bind, atlas, uv, textured: bool = False):
     return faces
 
 
+def _limb_swing(name: str) -> bool:
+    """Bones the walk preview actually swings. Held items follow their arm."""
+    if name in ("rightItem", "leftItem", "hat"):
+        return False
+    return name.startswith(("leg", "wing", "haunch", "front", "rear")) or name in (
+        "rightArm", "leftArm", "rightLeg", "leftLeg")
+
+
 def _bone_faces(species_dir: Path, texture_name: str = "diffuse", pose: str = "rest", textured: bool = False) -> list:
     creature = _read_json(species_dir / "creature.json")
     visual = creature.get("visual", {})
@@ -179,22 +187,42 @@ def _bone_faces(species_dir: Path, texture_name: str = "diffuse", pose: str = "r
         atlas_path = species_dir / "textures" / "body.png"
     image = Image.open(atlas_path).convert("RGBA") if atlas_path.is_file() else None
     atlas = Sampler(image) if textured and image is not None else image
-    faces = []
+    bones = block.get("bones", [])
+    by_name = {bone.get("name", ""): bone for bone in bones}
+    signs = {}
     sign = 1
-    for bone in block.get("bones", []):
+    for bone in bones:
+        name = bone.get("name", "")
+        if pose == "walk" and _limb_swing(name):
+            signs[name] = sign
+            sign *= -1
+    faces = []
+    for bone in bones:
         pivot = bone.get("pivot", [0, 0, 0])
         bind = bone.get("bind_pose_rotation")
-        swing = (0, 0, 0)
-        if pose == "walk" and bone.get("name", "").startswith(("leg", "wing", "haunch", "front", "rear", "right", "left")):
-            swing = (28 * sign, 0, 0)
-            sign *= -1
-        extra = swing
-        if bind and extra != (0, 0, 0):
-            bind = [bind[0] + extra[0], bind[1] + extra[1], bind[2] + extra[2]]
-        elif extra != (0, 0, 0):
-            bind = list(extra)
         for cube in bone.get("cubes", []):
-            faces.extend(_box(cube["origin"], cube["size"], pivot, bind, atlas, cube.get("uv", [0, 0]), textured))
+            painted = _box(cube["origin"], cube["size"], pivot, bind, atlas, cube.get("uv", [0, 0]), textured)
+            if pose == "walk":
+                ancestors = []
+                current = bone
+                seen = set()
+                while current and current.get("name", "") not in seen:
+                    seen.add(current.get("name", ""))
+                    ancestors.append(current)
+                    parent_name = current.get("parent")
+                    current = by_name.get(parent_name) if parent_name else None
+                swung = []
+                for part in painted:
+                    points = part[0]
+                    for ancestor in ancestors:
+                        ancestor_name = ancestor.get("name", "")
+                        if ancestor_name not in signs:
+                            continue
+                        ancestor_pivot = tuple(component / 16.0 for component in ancestor.get("pivot", [0, 0, 0]))
+                        points = _rot_around(points, ancestor_pivot, (28 * signs[ancestor_name], 0, 0))
+                    swung.append((points, *part[1:]))
+                painted = swung
+            faces.extend(painted)
     if image is not None:
         image.close()
     return faces
@@ -240,17 +268,44 @@ def _gltf_faces(species_dir: Path, pose: str = "rest", textured: bool = False) -
             uvs = _accessor(gltf, blob, attrs["TEXCOORD_0"]) if textured and "TEXCOORD_0" in attrs else None
             color = None if sampler else _face_color(image, 0, 0, image.width if image else 1, image.height if image else 1)
             nodes = gltf.get("nodes", [])
+            parents = [-1] * len(nodes)
+            for node_index, node in enumerate(nodes):
+                for child in node.get("children") or []:
+                    if 0 <= int(child) < len(parents):
+                        parents[int(child)] = node_index
+            world = {}
+
+            def rest_world(node_index: int) -> tuple[float, float, float]:
+                if node_index in world:
+                    return world[node_index]
+                translation = nodes[node_index].get("translation", [0, 0, 0])
+                parent = parents[node_index]
+                if parent < 0:
+                    found = (translation[0], translation[1], translation[2])
+                else:
+                    base = rest_world(parent)
+                    found = (base[0] + translation[0], base[1] + translation[1], base[2] + translation[2])
+                world[node_index] = found
+                return found
+
+            signs = {}
+            sign = 1
+            for node_index, node in enumerate(nodes):
+                if _limb_swing(node.get("name", "")):
+                    signs[node_index] = sign
+                    sign *= -1
             posed = []
             for vertex, position in enumerate(positions):
                 point = (position[0] * scale, position[1] * scale, position[2] * scale)
                 if pose == "walk" and joints:
                     joint = int(joints[vertex][0])
-                    if 0 <= joint < len(nodes):
-                        name = nodes[joint].get("name", "")
-                        pivot = nodes[joint].get("translation", [0, 0, 0])
-                        pivot = (pivot[0] * scale, pivot[1] * scale, pivot[2] * scale)
-                        if name.startswith(("leg", "wing", "claw", "tentacle", "right", "left", "arm")):
-                            point = _rot_around([point], pivot, (24 if joint % 2 == 0 else -24, 0, 0))[0]
+                    seen = set()
+                    while 0 <= joint < len(nodes) and joint not in seen:
+                        seen.add(joint)
+                        if joint in signs:
+                            pivot = rest_world(joint)
+                            point = _rot_around([point], (pivot[0] * scale, pivot[1] * scale, pivot[2] * scale), (24 * signs[joint], 0, 0))[0]
+                        joint = parents[joint]
                 posed.append(point)
             for i in range(0, len(indices), 3):
                 tri = [posed[int(indices[i + k][0])] for k in range(3)]
@@ -426,7 +481,7 @@ def _sheet(species_id: str, faces_rest, faces_walk, sprite: Path | None, subtitl
     views = [(yaw, -18, False, faces_rest) for yaw in YAWS]
     views.append((0, -90, False, faces_rest))
     views.append((0, 90, False, faces_rest))
-    views.append((45, -18, True, faces_rest))
+    views.append((90, 0, True, faces_rest))
     views.append((45, -18, False, faces_walk or faces_rest))
     for index, (yaw, pitch, silhouette, faces) in enumerate(views):
         x = 12 + index * (panel + 8)

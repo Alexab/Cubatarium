@@ -7,28 +7,36 @@ palette_id: meadow
 pattern: bands
 template: quadruped
 body:
-- 12
+- 10
 - 8
-- 16
+- 12
 head:
-- 7
+- 8
 - 6
-- 6
+- 5
 limb:
 - 4
-- 8
+- 6
 extras:
 - muzzle
 muzzle:
-- 6
+- 8
 - 4
-- 5
+- 3
 bind_body:
 - 12
 - 0
 - 0
 direction: 'Корнеискатель: рыло и короткие ноги'
 wave: W1
+silhouette:
+  snout: 0.9
+  snout_width: 1.2
+  tail: 0.2
+  tail_drop: 0.1
+marks:
+- snout
+- belly
 selected_concept: primary
 concepts:
 - id: primary

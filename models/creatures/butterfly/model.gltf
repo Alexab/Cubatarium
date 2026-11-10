@@ -35,13 +35,20 @@
         1.0,
         1.0,
         1.0
+      ],
+      "children": [
+        1,
+        2,
+        3,
+        4,
+        5
       ]
     },
     {
       "name": "head",
       "translation": [
         0.0,
-        0.5625,
+        0.0625,
         -0.1875
       ],
       "rotation": [
@@ -60,7 +67,7 @@
       "name": "wing0",
       "translation": [
         -0.125,
-        0.5625,
+        0.0,
         0.0
       ],
       "rotation": [
@@ -79,7 +86,7 @@
       "name": "wing1",
       "translation": [
         0.125,
-        0.5625,
+        0.0,
         0.0
       ],
       "rotation": [
@@ -98,7 +105,7 @@
       "name": "rightwing_bone",
       "translation": [
         -0.125,
-        0.5625,
+        0.0,
         0.0
       ],
       "rotation": [
@@ -117,7 +124,7 @@
       "name": "leftwing_bone",
       "translation": [
         0.125,
-        0.5625,
+        0.0,
         0.0
       ],
       "rotation": [
@@ -364,12 +371,12 @@
       "count": 144,
       "type": "VEC3",
       "min": [
-        -0.625,
+        -0.3125,
         0.375,
         -0.375
       ],
       "max": [
-        0.625,
+        0.3125,
         0.6875,
         0.25
       ]

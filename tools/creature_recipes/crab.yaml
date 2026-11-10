@@ -22,6 +22,8 @@ muzzle: null
 bind_body: null
 direction: Плитчатый краб
 wave: W3
+silhouette: {}
+marks: []
 selected_concept: primary
 concepts:
 - id: primary

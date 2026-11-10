@@ -7,22 +7,27 @@ palette_id: mineral
 pattern: stripes
 template: humanoid
 body:
-- 6
-- 13
-- 5
-head:
-- 6
-- 7
-- 6
-limb:
-- 2
+- 8
 - 12
-extras:
-- crest
+- 4
+head:
+- 8
+- 8
+- 8
+limb:
+- 4
+- 12
+extras: []
 muzzle: null
 bind_body: null
-direction: 'Пустокост: вытянутый череп и сухие конечности'
+direction: 'Пустокост: череп и рёбра, без одежды'
 wave: W1
+silhouette:
+  chest: 2.0
+  legs: 0.5
+marks:
+- ribs
+- skull
 selected_concept: primary
 concepts:
 - id: primary
@@ -30,7 +35,7 @@ concepts:
   - 1
   - 1
   - 1
-  note: 'Пустокост: вытянутый череп и сухие конечности'
+  note: 'Пустокост: череп и рёбра, без одежды'
 - id: tall
   body_scale:
   - 0.86

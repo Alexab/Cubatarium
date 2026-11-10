@@ -9,7 +9,7 @@ template: humanoid
 body:
 - 8
 - 12
-- 6
+- 4
 head:
 - 8
 - 8
@@ -21,8 +21,15 @@ extras:
 - pauldron
 muzzle: null
 bind_body: null
-direction: 'Путник: свои плечи, одежда и лицо'
+direction: 'Путник: лицо отдельно от рубашки и штанов'
 wave: W1
+silhouette:
+  chest: 2.0
+  legs: 0.5
+marks:
+- face
+- shirt
+- pants
 selected_concept: traveler
 concepts:
 - id: traveler

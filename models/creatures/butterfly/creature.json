@@ -72,7 +72,7 @@
       "textures": [
         "body"
       ],
-      "model_scale": 0.216,
+      "model_scale": 0.27,
       "model_yaw_offset_deg": 0
     },
     "animation": {

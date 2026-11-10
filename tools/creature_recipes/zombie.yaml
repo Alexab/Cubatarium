@@ -7,16 +7,16 @@ palette_id: peat
 pattern: bands
 template: humanoid
 body:
-- 9
-- 11
-- 5
+- 8
+- 12
+- 4
 head:
-- 7
-- 7
-- 7
+- 8
+- 8
+- 8
 limb:
 - 4
-- 11
+- 12
 extras:
 - jaw
 - long_arm
@@ -25,6 +25,11 @@ muzzle: null
 bind_body: null
 direction: 'Торфяник: сутулый клин и тяжёлая рука'
 wave: W1
+silhouette:
+  chest: 2.0
+marks:
+- shirt
+- jaw
 selected_concept: peat_hunch
 concepts:
 - id: peat_hunch

@@ -7,13 +7,13 @@ palette_id: river
 pattern: bands
 template: aquatic
 body:
+- 8
 - 7
-- 7
-- 18
+- 16
 head:
+- 6
 - 5
-- 5
-- 7
+- 6
 limb:
 - 2
 - 4
@@ -21,12 +21,18 @@ extras:
 - fins
 - muzzle
 muzzle:
-- 3
-- 2
 - 4
+- 3
+- 5
 bind_body: null
-direction: 'Речной свистун: лоб и боковой плавник'
+direction: 'Речной свистун: лоб и парные плавники'
 wave: W1
+silhouette:
+  snout: 0.7
+  tail: 0.35
+marks:
+- back
+- belly
 selected_concept: primary
 concepts:
 - id: primary
@@ -34,7 +40,7 @@ concepts:
   - 1
   - 1
   - 1
-  note: 'Речной свистун: лоб и боковой плавник'
+  note: 'Речной свистун: лоб и парные плавники'
 - id: tall
   body_scale:
   - 0.86

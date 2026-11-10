@@ -8,21 +8,27 @@ pattern: spots
 template: rabbit
 body:
 - 8
-- 7
+- 6
 - 12
 head:
 - 5
 - 5
 - 5
 limb:
-- 2
-- 5
+- 3
+- 4
 extras:
 - ears
 muzzle: null
 bind_body: null
-direction: 'Листоух: разные уши и прыжковые бёдра'
+direction: 'Листоух: длинные уши и крупные бёдра'
 wave: W1
+silhouette:
+  ears: 1.6
+  tail: 0.15
+marks:
+- ears
+- chest
 selected_concept: primary
 concepts:
 - id: primary
@@ -30,7 +36,7 @@ concepts:
   - 1
   - 1
   - 1
-  note: 'Листоух: разные уши и прыжковые бёдра'
+  note: 'Листоух: длинные уши и крупные бёдра'
 - id: tall
   body_scale:
   - 0.86
