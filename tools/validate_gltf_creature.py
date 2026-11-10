@@ -100,8 +100,29 @@ def validate_species(species: str) -> list[str]:
     _validate_skin(gltf, errors)
     if gltf.get("skins"):
         _validate_animations(gltf, errors)
+    _validate_material_stems(gltf, species_dir, errors)
 
     return errors
+
+
+def _validate_material_stems(gltf: dict, species_dir: Path, errors: list[str]) -> None:
+    """Runtime texture stem is materials[].name, not images[].uri."""
+    materials = gltf.get("materials") or []
+    stems: set[str] = set()
+    for mesh in gltf.get("meshes", []):
+        for primitive in mesh.get("primitives", []):
+            index = primitive.get("material", -1)
+            if isinstance(index, int) and 0 <= index < len(materials):
+                stem = materials[index].get("name") or "body"
+            else:
+                stem = "body"
+            stems.add(stem)
+    if not stems:
+        stems.add("body")
+    for stem in sorted(stems):
+        png = species_dir / "textures" / f"{stem}.png"
+        if not png.is_file():
+            errors.append(f"material stem {stem!r} missing textures/{stem}.png")
 
 
 def all_gltf_species() -> list[str]:

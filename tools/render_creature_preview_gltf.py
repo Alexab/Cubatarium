@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Validate glTF species assets and emit 4-yaw preview markers (CI smoke)."""
+"""Wiring smoke only.
+
+Writes yaw_*.bmp files whose contents are the three bytes b"BMP". A zero exit
+code does not decode an image and is not visual acceptance. Real frames come
+from the Release gallery.
+"""
 
 from __future__ import annotations
 
@@ -46,8 +51,8 @@ def main() -> int:
             marker = OUT / species / f"yaw_{yaw}.bmp"
             marker.parent.mkdir(parents=True, exist_ok=True)
             if not marker.is_file():
-                marker.write_bytes(b"BMP")
-        print(f"OK render_creature_preview_gltf: {species}")
+                marker.write_bytes(b"BMP")  # wiring smoke, not an image
+        print(f"OK render_creature_preview_gltf wiring-smoke: {species}")
     return err
 
 
