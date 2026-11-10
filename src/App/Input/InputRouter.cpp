@@ -3,6 +3,8 @@
 #include "App/Application.h"
 #include "App/Settings/AppState.h"
 #include "Game/GameSession.h"
+#include "Game/ModePolicy.h"
+#include "Game/WorldGameMode.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
@@ -11,10 +13,10 @@
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Render/Camera/Camera.h"
-#include "Render/Camera/CameraPerspective.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
 #ifndef __ANDROID__
+#include "App/Platform/CursorCapture.h"
 #include "App/Platform/WindowManager.h"
 #include <GLFW/glfw3.h>
 #else
@@ -75,6 +77,21 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
 
   GuiKeyEvent event = MakeGuiKeyEvent(key, action, mods);
 
+  if (app.World && app.World->IsHardcoreDead() && !app.DeathScreenOpen)
+  {
+    if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
+    {
+      app.SaveIfNeededAndProceed([&app]() { app.ReturnToMainMenu(); });
+      return true;
+    }
+    const bool spectatorCameraKey =
+        key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S ||
+        key == GLFW_KEY_D || key == GLFW_KEY_SPACE ||
+        key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_LEFT_SHIFT ||
+        key == GLFW_KEY_RIGHT_SHIFT;
+    return !spectatorCameraKey;
+  }
+
   if (action == GLFW_PRESS && app.State == AppState::InGame)
   {
     if (key == GLFW_KEY_ESCAPE)
@@ -102,6 +119,50 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         app.ScreenNav.CloseWorldGenOverlay();
         return true;
       }
+      if (app.CharacterSheetOpen)
+      {
+        app.CharacterSheetOpen = false;
+        if (app.CharacterSheetScreen)
+        {
+          app.CharacterSheetScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
+      if (app.SurvivalInventoryOpen)
+      {
+        app.SurvivalInventoryOpen = false;
+        if (app.SurvivalInventoryScreen)
+        {
+          app.SurvivalInventoryScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
+      if (app.CraftingOpen)
+      {
+        app.CraftingOpen = false;
+        if (app.CraftingScreen)
+        {
+          app.CraftingScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
+      if (app.AnvilOpen)
+      {
+        app.AnvilOpen = false;
+        if (app.AnvilScreen)
+        {
+          app.AnvilScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
       app.ReturnToMainMenu();
       return true;
     }
@@ -120,9 +181,12 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
           double x = 0.0;
           double y = 0.0;
           glfwGetCursorPos(app.Window, &x, &y);
+          double fb_x = x;
+          double fb_y = y;
+          CursorWindowToFramebuffer(app.Window, x, y, fb_x, fb_y);
           if (auto camera = app.World->GetCurrentUserCamera())
           {
-            camera->ResetMouseMove(x, y);
+            camera->ResetMouseMove(fb_x, fb_y);
           }
         }
       }
@@ -168,13 +232,35 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         if (app.Geometry)
         {
           app.Geometry->ShowTransientMessage(
-              CameraPerspectiveLabel(cam->GetPerspective()), 1.5);
+              cam->GetViewController().ViewLabel(*cam), 1.5);
         }
       }
       return true;
     }
+    if (!app.ConsoleOpen && app.World &&
+        (key == GLFW_KEY_Q || key == GLFW_KEY_E))
+    {
+      if (auto cam = app.World->GetCurrentUserCamera())
+      {
+        if (cam->IsIsometricProjection())
+        {
+          cam->SnapIsoCameraYaw(key == GLFW_KEY_Q ? -1 : 1);
+          return true;
+        }
+      }
+    }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.PaletteKey, key))
     {
+      if (!app.World ||
+          !ModePolicy::AllowsCreativePalette(app.World->GetGameMode()))
+      {
+        if (app.Geometry)
+        {
+          app.Geometry->ShowTransientMessage(
+              "Creative palette is not available in Survival mode", 2.5);
+        }
+        return true;
+      }
       const bool sameTabOpen = app.PaletteOpen && app.PaletteScreen &&
                                app.PaletteScreen->GetActiveMainTab() == 0;
       if (sameTabOpen)
@@ -210,6 +296,45 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.InventoryKey, key))
     {
+      const bool allowCreativePalette = app.World &&
+                                         ModePolicy::AllowsCreativePalette(
+                                             app.World->GetGameMode());
+
+      // Survival mode: InventoryKey toggles backpack UI.
+      if (!allowCreativePalette)
+      {
+        if (app.SurvivalInventoryOpen)
+        {
+          app.SurvivalInventoryOpen = false;
+          if (app.SurvivalInventoryScreen)
+          {
+            app.SurvivalInventoryScreen->SetVisible(false);
+          }
+          app.GuiContext->ClearInputState();
+        }
+        else
+        {
+          app.SurvivalInventoryOpen = true;
+          app.PaletteOpen = false;
+          app.WorldGenOpen = false;
+          if (app.PaletteScreen)
+          {
+            app.PaletteScreen->SetVisible(false);
+          }
+          if (app.WorldGenScreen)
+          {
+            app.WorldGenScreen->SetVisible(false);
+          }
+          if (app.SurvivalInventoryScreen)
+          {
+            app.SurvivalInventoryScreen->SetVisible(true);
+          }
+        }
+        app.SyncCursorVisibility();
+        return true;
+      }
+
+      // Creative mode: InventoryKey toggles the creative palette.
       if (app.PaletteOpen)
       {
         app.PaletteOpen = false;
@@ -248,9 +373,14 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       if (app.WorldGenOpen)
       {
         app.PaletteOpen = false;
+        app.CharacterSheetOpen = false;
         if (app.PaletteScreen)
         {
           app.PaletteScreen->SetVisible(false);
+        }
+        if (app.CharacterSheetScreen)
+        {
+          app.CharacterSheetScreen->SetVisible(false);
         }
       }
       else
@@ -260,6 +390,33 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       if (app.WorldGenScreen)
       {
         app.WorldGenScreen->SetVisible(app.WorldGenOpen);
+      }
+      app.SyncCursorVisibility();
+      return true;
+    }
+    if (!app.ConsoleOpen && KeyNameIs(app.Ui.CharacterKey, key))
+    {
+      app.CharacterSheetOpen = !app.CharacterSheetOpen;
+      if (app.CharacterSheetOpen)
+      {
+        app.PaletteOpen = false;
+        app.WorldGenOpen = false;
+        if (app.PaletteScreen)
+        {
+          app.PaletteScreen->SetVisible(false);
+        }
+        if (app.WorldGenScreen)
+        {
+          app.WorldGenScreen->SetVisible(false);
+        }
+      }
+      else
+      {
+        app.GuiContext->ClearInputState();
+      }
+      if (app.CharacterSheetScreen)
+      {
+        app.CharacterSheetScreen->SetVisible(app.CharacterSheetOpen);
       }
       app.SyncCursorVisibility();
       return true;
@@ -370,27 +527,14 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
   {
     app.DragCursorX = x;
     app.DragCursorY = y;
-    if (event.Button == GuiMouseButton::Left && !pressed && app.GameSession &&
-        app.GameSession->IsDragging())
+    if (event.Button == GuiMouseButton::Left && !pressed)
     {
-      SlotAddress target;
-      const bool hasTarget = app.ResolveSlotAt(x, y, target);
-      if (hasTarget)
+      if ((app.GameSession && app.GameSession->IsDragging()) ||
+          app.OverlayPressedWidget || app.HasAnyOverlayCapture())
       {
-        if (!app.GameSession->DropOnSlot(target))
-        {
-          app.GameSession->CancelDrag();
-        }
+        app.FinishInventoryPointerGesture(event);
+        return true;
       }
-      else
-      {
-        app.GameSession->CancelDrag();
-      }
-      if (app.HasAnyOverlayCapture())
-      {
-        app.TryRouteInGameOverlay(event, false);
-      }
-      return true;
     }
     if ((app.OverlayPopup && app.OverlayPopup->IsOpen()) || app.ConsoleOpen)
     {
@@ -443,6 +587,13 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
   {
     app.DragCursorX = x;
     app.DragCursorY = y;
+    // Deliver move to the pressed overlay leaf so GuiSlot can BeginDrag.
+    if (app.OverlayPressedWidget &&
+        !(app.GameSession && app.GameSession->IsDragging()))
+    {
+      app.OverlayPressedWidget->OnMouseMove(event);
+      return true;
+    }
     if (app.GameSession && app.GameSession->IsDragging())
     {
       return true;
@@ -475,6 +626,34 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
         break;
       case UApplication::OverlayPointerCapture::Hud:
         if (routeCapturedMove(app.HudScreen ? app.HudScreen->GetRoot() : nullptr))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::CharacterSheet:
+        if (app.CharacterSheetOpen && app.CharacterSheetScreen &&
+            routeCapturedMove(app.CharacterSheetScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::SurvivalInventory:
+        if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen &&
+            routeCapturedMove(app.SurvivalInventoryScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::Crafting:
+        if (app.CraftingOpen && app.CraftingScreen &&
+            routeCapturedMove(app.CraftingScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::Anvil:
+        if (app.AnvilOpen && app.AnvilScreen &&
+            routeCapturedMove(app.AnvilScreen->GetRoot()))
         {
           return true;
         }
@@ -512,6 +691,22 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
     {
       handled |= routeMove(app.WorldGenScreen->GetRoot());
     }
+    if (app.CharacterSheetOpen && app.CharacterSheetScreen)
+    {
+      handled |= routeMove(app.CharacterSheetScreen->GetRoot());
+    }
+    if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen)
+    {
+      handled |= routeMove(app.SurvivalInventoryScreen->GetRoot());
+    }
+    if (app.CraftingOpen && app.CraftingScreen)
+    {
+      handled |= routeMove(app.CraftingScreen->GetRoot());
+    }
+    if (app.AnvilOpen && app.AnvilScreen)
+    {
+      handled |= routeMove(app.AnvilScreen->GetRoot());
+    }
     handled |= routeMove(app.HudScreen ? app.HudScreen->GetRoot() : nullptr);
     return handled;
   }
@@ -545,6 +740,25 @@ bool UInputRouter::RouteScroll(UApplication &app, double xoffset, double yoffset
     if (routeScroll(app.HudScreen ? app.HudScreen->GetRoot() : nullptr))
     {
       return true;
+    }
+    // Perspective: Minecraft-style hotbar cycle. Isometric keeps camera zoom.
+    if (app.GameSession && app.World)
+    {
+      if (auto camera = app.World->GetCurrentUserCamera())
+      {
+        if (!camera->IsIsometricProjection() && yoffset != 0.0)
+        {
+          constexpr size_t kSlots = 10;
+          const size_t current = app.GameSession->GetSelectedSlot(0);
+          const int delta = yoffset > 0.0 ? -1 : 1;
+          const size_t next =
+              static_cast<size_t>((static_cast<int>(current) + delta +
+                                   static_cast<int>(kSlots)) %
+                                  static_cast<int>(kSlots));
+          app.GameSession->SelectSlot(0, next);
+          return true;
+        }
+      }
     }
     return false;
   }

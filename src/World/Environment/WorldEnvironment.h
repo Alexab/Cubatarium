@@ -4,14 +4,18 @@
 #include "Activity/CreatureActivityDirector.h"
 #include "Activity/CreatureActivityTypes.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureRemovalQueue.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
+#include "Creatures/Spawning/CreaturePopulationRules.h"
+#include "Creatures/Spawning/UCreatureSpawnPlanner.h"
 #include "World/Environment/CreatureSpatialIndex.h"
 #include <functional>
 #include <map>
 #include <memory>
 #include <optional>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -69,10 +73,26 @@ public:
   std::vector<CreatureNeighborView>
   QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
                                  CreatureId skip_id) const;
+  /// Neighbors whose AABB overlaps the volume (sees big bodies whose origin
+  /// is far from the volume - used by depenetration and mounts).
+  std::vector<CreatureNeighborView> QueryCreatureNeighborsOverlappingVolume(
+      const CollisionVolume &vol, CreatureId skip_id) const;
+  bool AnyCreatureVolumeOverlapsExcluding(const CollisionVolume &vol,
+                                          CreatureId skipA,
+                                          CreatureId skipB) const;
+
+  /// Rider mount discovery (runtime issue 5): the creature whose back the
+  /// given body stands on, if it is large enough to ride. Returns its id
+  /// and the world-space Y of its back.
+  std::optional<std::pair<CreatureId, float>>
+  FindMountUnder(const glm::vec3 &feetPos, const glm::vec3 &halfExtents,
+                 CreatureId skipId) const;
 
   CreatureId SpawnCreature(const std::string &speciesId,
                            const glm::vec3 &bodyOrigin,
-                           const std::string &skinId = "");
+                           const std::string &skinId = "",
+                           CreatureSpawnSource source =
+                               CreatureSpawnSource::CreativeManual);
   bool SpawnCreatureByView(const std::string &speciesId);
   bool CanSpawnCreatureByView(const std::string &speciesId);
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId);
@@ -82,12 +102,21 @@ public:
   bool TryApplySkin(CreatureId target, const std::string &skinId,
                     std::string *outError = nullptr);
 
+  /// Inside ForEachCreature the removal is deferred to the end of the
+  /// outermost iteration; the creature is hidden from lookups at once.
   void RemoveCreature(CreatureId id);
+  /// Apply removals deferred during a const iteration (non-const iteration
+  /// flushes by itself).
+  void FlushPendingCreatureRemovals();
   void ForEachCreature(const std::function<void(UCreature &)> &fn);
   void ForEachCreature(
       const std::function<void(const UCreature &)> &fn) const;
 
   void ClearCreatures();
+  /// Changes whenever this environment's creature set starts over (new
+  /// environment, ClearCreatures): creature ids restart then, so caches keyed
+  /// by id must be dropped. Unique across the process.
+  uint64_t GetCreatureGeneration() const { return CreatureGeneration; }
   void ResetBeforeEntityLoad();
 
   void LinkUsersToPlayerCreatures(
@@ -98,7 +127,33 @@ public:
   void ReloadAllCreatureVisuals();
 
   void TickActivity(class IUWorldPerception &perception,
-                    class UWorldCreatureActivitySink &sink, float dt);
+                    class UWorldCreatureActivitySink &sink, float dt,
+                    bool stress_tick = false);
+  void SyncCreatureSpatialIndex();
+  /// Per-move spatial index maintenance (skips player characters).
+  void UpdateCreatureInSpatialIndex(const UCreature &creature);
+
+  CreaturePopulationCounts CountNaturalPopulation(
+      const glm::vec3 &playerOrigin);
+  /// Spawns at most one natural group; returns 1 when a group appeared.
+  int TryNaturalPopulationSpawn(
+      const glm::vec3 &playerOrigin, const CreaturePopulationCounts &counts,
+      const std::vector<WeightedSpawnOption<const CreatureDefinition *>>
+          &eligible,
+      bool isNight);
+  /// Removes natural spawns that wandered far from every player so they do
+  /// not occupy the world population budget forever.
+  void DespawnDistantNaturalCreatures(const glm::vec3 &playerOrigin);
+  void TickNaturalPopulation(float dt);
+  void ValidateLoadedCreaturePositions();
+  int GetLastActivityAgentsTicked() const
+  {
+    return ActivityDirector.GetLastAgentsTicked();
+  }
+  int GetLastActivityAgentsDeferred() const
+  {
+    return ActivityDirector.GetLastAgentsDeferred();
+  }
 
   bool CheckCreatureCollisionVolume(const CollisionVolume &vol,
                                     CreatureId skipCreatureId) const;
@@ -107,6 +162,10 @@ public:
   const CreatureDefinition *GetCreatureDefinition(const std::string &typeId) const;
   ResolvedCreatureAppearance
   GetResolvedAppearance(const UCreature &creature) const;
+  /// Cached appearance shared with the visuals (no per-frame copy); the
+  /// pointer changes when the species/skin or the storages change.
+  std::shared_ptr<const ResolvedCreatureAppearance>
+  GetResolvedAppearanceShared(const UCreature &creature) const;
 
   UCreatureActivityDirector &GetActivityDirector() { return ActivityDirector; }
   const UCreatureActivityDirector &GetActivityDirector() const
@@ -123,11 +182,12 @@ public:
   }
 
 private:
-  void SyncCreatureSpatialIndex();
 
   UWorld &Owner;
 
   std::unordered_map<CreatureId, std::unique_ptr<UCreature>> Creatures;
+  mutable UCreatureRemovalQueue CreatureRemovals;
+  uint64_t CreatureGeneration{0};
   CreatureId NextCreatureId{1};
   CreatureId PlayerCreatureId{0};
   CreatureId ControlledCreatureId{0};
@@ -137,7 +197,34 @@ private:
   UCreaturePosePresenterRegistry PosePresenterRegistry;
   UCreatureSpatialIndex CreatureSpatialIndex;
   bool CreatureSpatialIndexReady{false};
+  float NaturalPopulationTimer{0.f};
+  /// Initial-population burst left for a fresh world (no creatures.json was
+  /// loaded): the spawner runs at a short interval until this runs out.
+  int NaturalPopulationBurstRemaining{8};
+  /// True once creatures were loaded from a save file — disables the
+  /// initial burst for existing worlds.
+  bool LoadedFromPersistedCreatures{false};
+  float LoadedCreaturePositionValidationTimer{0.f};
+  bool LoadedCreaturePositionValidationPending{true};
+  std::mt19937 NaturalPopulationRng{0xC0BA7AULL};
+  UCreatureSpawnPlanner SpawnPlanner;
+
+  // Resolved-appearance cache keyed "speciesskin"; validated against
+  // storage revisions/pointers so any reload invalidates it (audit V6).
+  mutable std::unordered_map<std::string,
+                             std::shared_ptr<const ResolvedCreatureAppearance>>
+      CreatureAppearanceCache;
+  /// Reused key buffer: the lookup runs per visible creature per frame.
+  mutable std::string AppearanceKeyScratch;
+  mutable uint64_t AppearanceCacheDefsRevision{0};
+  mutable uint64_t AppearanceCacheSkinsRevision{0};
+  mutable const UCreatureDefinitionStorage *AppearanceCacheDefsPtr{nullptr};
+  mutable const USkinDefinitionStorage *AppearanceCacheSkinsPtr{nullptr};
 };
+
+/// Body origin `aheadBlocks` ahead of the viewer camera (falls back to the
+/// world spawn point / player body). Shared by palette spawn, QA and /spawn.
+glm::vec3 ComputeSpawnBodyOriginAhead(UWorld &world, float aheadBlocks = 3.0f);
 
 } // namespace cutum
 

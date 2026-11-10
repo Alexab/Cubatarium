@@ -1,5 +1,6 @@
 #version 300 es
-precision mediump float;
+precision highp float;
+precision highp int;
 
 in vec2 TexCoord;
 out vec4 FragColor;
@@ -11,6 +12,9 @@ uniform int uWeatherKind;
 uniform float uQuality;
 uniform float uDayFactor;
 uniform float uWind;
+uniform vec2 uWindDirection;
+uniform vec3 uCameraRight;
+uniform vec3 uCameraUp;
 uniform sampler2D uSceneDepth;
 uniform float uDepthGuard;
 uniform vec2 uDepthScreenSize;
@@ -21,6 +25,27 @@ float hash12(vec2 p)
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
   p3 += dot(p3, p3.yzx + 33.33);
   return fract((p3.x + p3.y) * p3.z);
+}
+
+float rainLayer(vec2 uv, float scale, float speed, float width,
+                float length, float seed_offset, vec2 wind)
+{
+  vec2 p = uv * vec2(scale * uResolution.x / max(uResolution.y, 1.0), scale);
+  p.x += p.y * wind.x * 0.08;
+  p += wind * 0.035 * uTimeSec;
+  p.y += uTimeSec * speed;
+
+  vec2 cell = floor(p);
+  vec2 local = fract(p);
+  float seed = hash12(cell + vec2(seed_offset, seed_offset * 1.73));
+  float density = smoothstep(0.34, 0.9, hash12(cell + vec2(17.1, 31.7)));
+  float streak_x = mix(0.12, 0.88, hash12(cell + vec2(4.7, 9.2)));
+  float streak_phase = fract(local.y + seed * 1.7);
+  float width_mask = 1.0 - smoothstep(width * 0.55, width, abs(local.x - streak_x));
+  float head = smoothstep(0.0, 0.12, streak_phase);
+  float tail = 1.0 - smoothstep(length * 0.72, length, streak_phase);
+  float noise = 0.78 + 0.22 * hash12(cell + floor(uTimeSec * 3.0));
+  return width_mask * head * tail * density * noise;
 }
 
 void main()
@@ -57,22 +82,27 @@ void main()
   vec3 color = vec3(0.72, 0.8, 0.9);
   float day = clamp(uDayFactor, 0.0, 1.0);
   float t = uTimeSec;
-  float wind_bias = clamp(uWind, 0.0, 1.0) * 0.08;
+  float wind_strength = clamp(uWind, 0.0, 1.0);
+  vec3 wind_world = vec3(uWindDirection.x, 0.0, uWindDirection.y);
+  vec2 wind = vec2(dot(wind_world, uCameraRight),
+                   dot(wind_world, uCameraUp));
+  if (length(wind) > 1.0e-4)
+  {
+    wind = normalize(wind) * wind_strength;
+  }
 
   if (uWeatherKind == 1)
   {
-    vec2 p = vec2(uv.x + uv.y * (0.025 + wind_bias), uv.y);
-    float lane_seed = hash12(vec2(floor((p.x + t * 0.07) * 220.0), floor(uv.y * 10.0)));
-    float lane = smoothstep(0.62, 0.96, lane_seed);
-    float run = fract((1.0 - p.y) * 52.0 + t * (5.8 + wind_bias * 3.0) + lane_seed * 11.0);
-    float streak = smoothstep(0.93, 1.0, run);
-    float turbulence = 0.7 + 0.3 * hash12(vec2(p.x * 120.0, t * 0.5));
-    alpha = streak * lane * turbulence * intensity * 0.26 * sky_mask;
+    float fine = rainLayer(uv, 150.0, 6.2, 0.075, 0.55, 13.7, wind);
+    float medium = rainLayer(uv, 82.0, 4.4, 0.12, 0.72, 41.3, wind);
+    float broad = rainLayer(uv, 38.0, 3.0, 0.17, 0.88, 77.9, wind);
+    float streaks = clamp(fine * 0.64 + medium * 0.48 + broad * 0.28, 0.0, 1.0);
+    alpha = streaks * intensity * mix(0.36, 0.52, clamp(uQuality, 0.0, 1.0)) * sky_mask;
     color = mix(vec3(0.5, 0.58, 0.68), vec3(0.72, 0.8, 0.9), day);
   }
   else if (uWeatherKind == 2)
   {
-    vec2 drift = vec2(t * (0.06 + wind_bias * 0.25), -t * 0.12);
+    vec2 drift = vec2(wind.x * t * 0.1, -t * 0.12 + wind.y * t * 0.1);
     vec2 cell = floor((uv + drift) * vec2(70.0, 52.0));
     vec2 f = fract((uv + drift) * vec2(70.0, 52.0)) - 0.5;
     float seed = hash12(cell);

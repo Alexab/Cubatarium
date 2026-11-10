@@ -2,6 +2,7 @@
 
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Sampling/ColumnSample.h"
+#include <array>
 
 namespace cutum
 {
@@ -26,10 +27,10 @@ public:
                             IUColumnWriter &writer, int world_x, int world_z,
                             double *out_sample_ms = nullptr,
                             double *out_fill_ms = nullptr);
-  static void GenerateColumnPostTerrain(UComposableWorldGenerator &generator,
-                                        IUColumnWriter &writer, int world_x,
-                                        int world_z, uint32_t skip_stage_mask,
-                                        const ColumnSampleContext &sample);
+  static void GenerateColumnPostTerrain(
+      UComposableWorldGenerator &generator, IUColumnWriter &writer, int world_x,
+      int world_z, uint32_t skip_stage_mask, const ColumnSampleContext &sample,
+      std::array<double, WorldGenStageIdCount> *out_stage_ms = nullptr);
 };
 
 } // namespace cutum

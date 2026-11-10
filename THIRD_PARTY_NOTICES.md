@@ -221,10 +221,26 @@ Luanti schematic files in `third_party/schematics/` (also used from `prefabs/` /
 | [minetest-game/default](https://github.com/minetest-game/default) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) | `mtg/*.mts` (trees, bushes, …) |
 | [X-DE1/ruined_structures](https://github.com/X-DE1/ruined_structures) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | `ruined_structures/*.mts` |
 
+## Item / armor models
+
+Curated and imported item/armor assets under [`models/items/`](models/items/) (`parts_v1` JSON + folder-per-id `model.gltf`). Import via [`tools/import_item_models.py`](tools/import_item_models.py); stand-in glTF via [`tools/parts_to_gltf.py`](tools/parts_to_gltf.py). Manifest: [`tools/item_model_manifest.json`](tools/item_model_manifest.json).
+
+| Source | License | Notes |
+|--------|---------|-------|
+| Cubatarium authored `parts[]` / stand-in glTF | CC0-1.0 | Shipped defaults and educational box glTF |
+| [Kenney Survival Kit](https://www.kenney.nl/assets/survival-kit) | CC0-1.0 | Imported tools (axe/pickaxe/shovel/hammer/hoe); GLB converted to glTF |
+| [KayKit RPG Tools Bits](https://kaylousberg.itch.io/rpg-tools-bits) | CC0-1.0 | Optional; place free tier under `third_party/asset_cache/kaykit_rpg_tools/` |
+| [KayKit Fantasy Weapons Bits](https://kaylousberg.itch.io/fantasy-weapons-bits) | CC0-1.0 | Optional; place free tier under `third_party/asset_cache/kaykit_fantasy_weapons/` |
+| [Quaternius](https://quaternius.com/) Fantasy Props / Ultimate RPG Items | CC0-1.0 | Optional armor/weapon props |
+
+Imported item ids (Kenney + catalog): see `tools/item_model_manifest.json` and per-folder `ATTRIBUTION.json`. Do not commit raw pack zips (`third_party/asset_cache/` is gitignored).
+
+Details: [`docs/ITEM_ASSETS.md`](docs/ITEM_ASSETS.md).
+
 ## Removed from repository
 
 Minecraft-derived block textures and JSON under `textures/blocks/` and `models/blocks/` were removed from version control as part of the resource-pack migration. They may be regenerated locally for personal use only via `tools/migrate_to_resource_pack.ps1` into `resource_packs/minecraft_legacy_16/` (gitignored). **Do not redistribute** Minecraft-derived assets.
 
 ---
 
-*Last updated: 2026-06-23. For privacy practices see [`packaging/android/store-assets/PRIVACY_POLICY.md`](packaging/android/store-assets/PRIVACY_POLICY.md).*
+*Last updated: 2026-08-04. For privacy practices see [`packaging/android/store-assets/PRIVACY_POLICY.md`](packaging/android/store-assets/PRIVACY_POLICY.md).*

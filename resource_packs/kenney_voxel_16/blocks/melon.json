@@ -1,6 +1,13 @@
 {
   "name": "melon",
   "id": 129,
+  "hardness": 1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural",
     "plants"

@@ -1,0 +1,281 @@
+{
+  "name": "asset_woodland_shrine",
+  "version": 2,
+  "displayName": "Woodland Shrine",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 7730268203083277880,
+    "license": "CC0-1.0",
+    "material_parameter": "woodland shrine"
+  },
+  "tags": [
+    "decoration",
+    "structure",
+    "ruin"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_masonry_limestone_weathered"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": -2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": -2,
+      "dy": 3,
+      "dz": -2,
+      "type": "cu_organic_moss_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": -2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": 2,
+      "dy": 3,
+      "dz": -2,
+      "type": "cu_organic_moss_mature"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": 2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": -2,
+      "dy": 3,
+      "dz": 2,
+      "type": "cu_organic_moss_mature"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": 2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": 2,
+      "dy": 3,
+      "dz": 2,
+      "type": "cu_organic_moss_mature"
+    },
+    {
+      "dx": -1,
+      "dy": 3,
+      "dz": -2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": -1,
+      "dy": 3,
+      "dz": 2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": -2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": 2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": 1,
+      "dy": 3,
+      "dz": -2,
+      "type": "cu_wood_willow_carved"
+    },
+    {
+      "dx": 1,
+      "dy": 3,
+      "dz": 2,
+      "type": "cu_wood_willow_carved"
+    }
+  ]
+}

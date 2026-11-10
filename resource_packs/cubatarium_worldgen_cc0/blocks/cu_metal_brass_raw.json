@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_brass_raw",
+  "id": 1945,
+  "displayName": "Metal Brass Raw",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_brass_raw",
+    "cu_metal_brass_raw",
+    "cu_metal_brass_raw",
+    "cu_metal_brass_raw",
+    "cu_metal_brass_raw",
+    "cu_metal_brass_raw"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "brass",
+    "variant": "raw"
+  }
+}

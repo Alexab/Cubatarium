@@ -18,9 +18,31 @@ WORLDGEN_REFS = REPO / "content" / "worldgen_refs.json"
 CONFIG_EXAMPLE = REPO / "config.json.example"
 
 MERGE_SCENARIOS = [
+    {"primary": ["cubatarium_worldgen_cc0"], "secondary": []},
     {"primary": ["kenney_voxel_16"], "secondary": ["cubatarium_cc0_base"]},
     {"primary": ["minetest_default_16"], "secondary": []},
+    {
+        "primary": ["minetest_default_16"],
+        "secondary": ["cubatarium_geology_cc0"],
+    },
+    {
+        "primary": ["minetest_default_16"],
+        "secondary": ["cubatarium_geology_cc0", "cubatarium_worldgen_cc0"],
+    },
 ]
+
+GEOLOGY_BLOCKS = {
+    "granite",
+    "diorite",
+    "andesite",
+    "deepslate",
+    "tuff",
+    "calcite",
+    "smooth_basalt",
+    "amethyst_block",
+    "moss_block",
+    "rooted_dirt",
+}
 
 
 def run(cmd: list[str]) -> None:
@@ -43,6 +65,59 @@ def check_worldgen_refs_drift() -> None:
 
 def check_primary_audit() -> None:
     run([sys.executable, "tools/audit_resource_packs.py", "--primary-only"])
+
+
+def check_geology_pack() -> None:
+    pack_dir = PACKS / "cubatarium_geology_cc0"
+    manifest = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8"))
+    if manifest.get("license") != "CC0-1.0":
+        raise SystemExit("geology pack must declare CC0-1.0")
+    if manifest.get("worldgen_role") != "secondary":
+        raise SystemExit("geology pack must remain a secondary pack")
+    notice = (pack_dir / "LICENSE.txt").read_text(encoding="utf-8")
+    if "kenney.nl/assets/voxel-pack" not in notice or "CC0" not in notice:
+        raise SystemExit("geology pack LICENSE.txt is missing source/license notice")
+    blocks = load_blocks("cubatarium_geology_cc0")
+    if set(blocks) != GEOLOGY_BLOCKS:
+        raise SystemExit(
+            "geology pack block set mismatch: "
+            f"missing={sorted(GEOLOGY_BLOCKS - set(blocks))}, "
+            f"extra={sorted(set(blocks) - GEOLOGY_BLOCKS)}"
+        )
+    for block_name, block in blocks.items():
+        stems = block.get("textures") or []
+        if len(stems) < 6:
+            raise SystemExit(f"geology block {block_name!r} has fewer than 6 faces")
+        for stem in stems[:6]:
+            if not texture_exists("cubatarium_geology_cc0", stem):
+                raise SystemExit(
+                    f"geology texture missing for {block_name!r}: {stem!r}"
+                )
+    print(f"geology pack OK ({len(blocks)} CC0 blocks, source notice present)")
+
+
+def check_worldgen_asset_pack() -> None:
+    pack_dir = PACKS / "cubatarium_worldgen_cc0"
+    manifest = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8-sig"))
+    if manifest.get("license") != "CC0-1.0" or manifest.get("worldgen_role") != "primary":
+        raise SystemExit("worldgen asset pack must be CC0-1.0 and primary")
+    config = json.loads(CONFIG_EXAMPLE.read_text(encoding="utf-8-sig"))
+    defaults = config.get("resource_packs", {})
+    if defaults.get("default_primary") != ["cubatarium_worldgen_cc0"]:
+        raise SystemExit("config.json.example must make cubatarium_worldgen_cc0 the only default primary pack")
+    if defaults.get("default_secondary") != []:
+        raise SystemExit("config.json.example must not enable secondary packs by default")
+    if "minetest_default_16" in defaults.get("default_enabled", []):
+        raise SystemExit("config.json.example must not enable minetest_default_16 by default")
+    worldgen_blocks = set(load_blocks("cubatarium_worldgen_cc0"))
+    missing_minetest = sorted(set(load_blocks("minetest_default_16")) - worldgen_blocks)
+    missing_geology = sorted(GEOLOGY_BLOCKS - worldgen_blocks)
+    if missing_minetest or missing_geology:
+        raise SystemExit(
+            "worldgen pack does not contain all source definitions: "
+            f"minetest={missing_minetest[:8]}, geology={missing_geology}"
+        )
+    run([sys.executable, "tools/assetgen.py", "validate", "--pack", str(pack_dir.relative_to(REPO))])
 
 
 def check_validate_primary() -> None:
@@ -92,9 +167,22 @@ def merge_smoke() -> None:
                 f"merge smoke failed for {scenario}: missing tier_a {missing}"
             )
         for slot, spec in refs.items():
+            scenario_pack_ids = scenario["primary"] + scenario["secondary"]
+            if slot in GEOLOGY_BLOCKS and not any(
+                pack_id in scenario_pack_ids
+                for pack_id in ("cubatarium_geology_cc0", "cubatarium_worldgen_cc0")
+            ):
+                continue
             names = spec.get("block_names", [slot])
             if not any(n in merged for n in names):
                 raise SystemExit(f"merge smoke: worldgen slot {slot!r} unresolved")
+        if "cubatarium_geology_cc0" in scenario["secondary"] or "cubatarium_worldgen_cc0" in scenario["primary"]:
+            missing_geology = sorted(GEOLOGY_BLOCKS - set(merged))
+            if missing_geology:
+                raise SystemExit(
+                    "geology merge smoke failed: missing "
+                    + ", ".join(missing_geology)
+                )
         print(f"merge smoke OK: {scenario}")
 
 
@@ -182,15 +270,22 @@ def check_objects() -> None:
     run([sys.executable, "tools/validate_worldgen_smoothness.py"])
 
 
+def check_content_completeness() -> None:
+    run([sys.executable, "tools/validate_content_completeness.py"])
+
+
 def main() -> int:
     print("=== resource pack smoke ===")
     check_worldgen_refs_drift()
+    check_geology_pack()
+    check_worldgen_asset_pack()
     check_texture_overrides_sync()
     merge_smoke()
     check_object_prefab_blocks()
     check_primary_audit()
     check_validate_primary()
     check_objects()
+    check_content_completeness()
     print("=== all smoke checks passed ===")
     return 0
 

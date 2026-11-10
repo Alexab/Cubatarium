@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_leaf_sparse",
+  "id": 2304,
+  "displayName": "Organic Leaf Sparse",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_leaf_sparse",
+    "cu_organic_leaf_sparse",
+    "cu_organic_leaf_sparse",
+    "cu_organic_leaf_sparse",
+    "cu_organic_leaf_sparse_top",
+    "cu_organic_leaf_sparse"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "leaf",
+    "variant": "sparse"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

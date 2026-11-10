@@ -1,0 +1,71 @@
+license: CC0-1.0
+license_text: |
+  Cubatarium Geology CC0 uses textures from Kenney's Voxel Pack.
+  Source: https://kenney.nl/assets/voxel-pack
+  The Voxel Pack is released under Creative Commons CC0.
+  Tile mapping: granite=stone_browniron, diorite=greystone_sand,
+  andesite=stone_dirt, deepslate=greystone, tuff=greystone_sand,
+  calcite=greystone_ruby_alt, smooth_basalt=stone,
+  amethyst_block=greystone_ruby, moss_block sides/bottom=greystone and top=grass_top,
+  rooted_dirt=dirt_grass.
+blocks:
+  granite:
+    faces: [stone_browniron, stone_browniron, stone_browniron, stone_browniron, stone_browniron, stone_browniron]
+    types: [natural, building]
+    hardness: 1.5
+    dig: {level: 0, groups: {cracky: 2}}
+    displayName: Granite
+  diorite:
+    faces: [greystone_sand, greystone_sand, greystone_sand, greystone_sand, greystone_sand, greystone_sand]
+    types: [natural, building]
+    hardness: 1.5
+    dig: {level: 0, groups: {cracky: 2}}
+    displayName: Diorite
+  andesite:
+    faces: [stone_dirt, stone_dirt, stone_dirt, stone_dirt, stone_dirt, stone_dirt]
+    types: [natural, building]
+    hardness: 1.5
+    dig: {level: 0, groups: {cracky: 2}}
+    displayName: Andesite
+  deepslate:
+    faces: [greystone, greystone, greystone, greystone, greystone, greystone]
+    types: [natural, building]
+    hardness: 2.5
+    dig: {level: 1, groups: {cracky: 2}}
+    displayName: Deepslate
+  tuff:
+    faces: [greystone_sand, greystone_sand, greystone_sand, greystone_sand, greystone_sand, greystone_sand]
+    types: [natural, building]
+    hardness: 1.5
+    dig: {level: 0, groups: {cracky: 2}}
+    displayName: Tuff
+  calcite:
+    faces: [greystone_ruby_alt, greystone_ruby_alt, greystone_ruby_alt, greystone_ruby_alt, greystone_ruby_alt, greystone_ruby_alt]
+    types: [natural, building]
+    hardness: 0.75
+    dig: {level: 0, groups: {cracky: 3}}
+    displayName: Calcite
+  smooth_basalt:
+    faces: [stone, stone, stone, stone, stone, stone]
+    types: [natural, building]
+    hardness: 1.25
+    dig: {level: 0, groups: {cracky: 2}}
+    displayName: Smooth Basalt
+  amethyst_block:
+    faces: [greystone_ruby, greystone_ruby, greystone_ruby, greystone_ruby, greystone_ruby, greystone_ruby]
+    types: [natural, building]
+    hardness: 1.5
+    dig: {level: 0, groups: {cracky: 2}}
+    displayName: Amethyst Block
+  moss_block:
+    faces: [greystone, greystone, greystone, greystone, grass_top, greystone]
+    types: [natural, building]
+    hardness: 0.6
+    dig: {level: 0, groups: {crumbly: 1}}
+    displayName: Moss Block
+  rooted_dirt:
+    faces: [dirt_grass, dirt_grass, dirt_grass, dirt_grass, dirt_grass, dirt_grass]
+    types: [natural, building]
+    hardness: 0.5
+    dig: {level: 0, groups: {crumbly: 1}}
+    displayName: Rooted Dirt

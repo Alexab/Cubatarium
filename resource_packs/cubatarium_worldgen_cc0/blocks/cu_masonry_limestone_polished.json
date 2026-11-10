@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_limestone_polished",
+  "id": 1521,
+  "displayName": "Masonry Limestone Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_limestone_polished",
+    "cu_masonry_limestone_polished",
+    "cu_masonry_limestone_polished",
+    "cu_masonry_limestone_polished",
+    "cu_masonry_limestone_polished",
+    "cu_masonry_limestone_polished"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "limestone",
+    "variant": "polished"
+  }
+}

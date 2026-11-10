@@ -1,0 +1,33 @@
+{
+  "name": "mtg_desert_sandstone",
+  "id": 435,
+  "hardness": 0.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2,
+      "oddly_breakable_by_hand": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_desert_sandstone_default_desert_sandstone",
+    "mt_mtg_desert_sandstone_default_desert_sandstone",
+    "mt_mtg_desert_sandstone_default_desert_sandstone",
+    "mt_mtg_desert_sandstone_default_desert_sandstone",
+    "mt_mtg_desert_sandstone_default_desert_sandstone",
+    "mt_mtg_desert_sandstone_default_desert_sandstone"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

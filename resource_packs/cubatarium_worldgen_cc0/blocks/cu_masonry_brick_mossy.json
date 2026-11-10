@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_brick_mossy",
+  "id": 1574,
+  "displayName": "Masonry Brick Mossy",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_brick_mossy",
+    "cu_masonry_brick_mossy",
+    "cu_masonry_brick_mossy",
+    "cu_masonry_brick_mossy",
+    "cu_masonry_brick_mossy",
+    "cu_masonry_brick_mossy"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "brick",
+    "variant": "mossy"
+  }
+}

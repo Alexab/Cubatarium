@@ -1,10 +1,12 @@
 #ifndef OBJECT_ICON_CACHE_H
 #define OBJECT_ICON_CACHE_H
 
+#include "Gui/Cache/IconWarmupQueue.h"
 #include "World/Math/BlockTypes.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 typedef unsigned int GLuint;
@@ -36,6 +38,11 @@ public:
   void WarmupNext(size_t count);
 
   GLuint GetBlockIconTexture(const std::string &blockName);
+  /// UX U4: cached-only lookup (0 when not ready) for placeholder grids.
+  GLuint GetBlockIconTextureIfCached(const std::string &blockName) const;
+  void QueueBlockIcon(const std::string &blockName);
+  void WarmupBlockIcons(size_t count);
+  size_t PendingBlockWarmupCount() const { return BlockWarmup.Size(); }
 
   void ClearBlockIconCache();
 
@@ -56,8 +63,8 @@ private:
 
   std::unordered_map<std::string, GLuint> Cache;
   std::unordered_map<BlockId, GLuint> BlockCache;
-  std::vector<std::string> WarmupQueue;
-  size_t WarmupIndex{0};
+  UGuiIconWarmupQueue BlockWarmup;
+  UGuiIconWarmupQueue Warmup;
 
   GLuint CubeVao{0};
   GLuint CubeVbo{0};

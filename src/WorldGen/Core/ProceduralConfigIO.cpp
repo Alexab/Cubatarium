@@ -16,22 +16,42 @@ namespace
 
 void ApplyLegacyVerticalMode(ProceduralSettings &settings,
                              const std::string &verticalMode, bool hasSeaLevel,
-                             bool hasMaxHeight)
+                             bool hasMaxHeight, bool hasMinHeight,
+                             bool compactGenerator)
 {
+  const int defaultSeaLevel = compactGenerator ? 5 : 63;
+  const int defaultMinHeight = compactGenerator ? 0 : -64;
+  const int defaultMaxHeight = compactGenerator ? 15 : 319;
+
+  if (!hasMinHeight)
+  {
+    settings.MinHeight = defaultMinHeight;
+  }
+
   if (hasSeaLevel || hasMaxHeight)
   {
+    if (!hasSeaLevel)
+    {
+      settings.SeaLevel = defaultSeaLevel;
+    }
+    if (!hasMaxHeight)
+    {
+      settings.MaxHeight = defaultMaxHeight;
+    }
     return;
   }
   if (verticalMode == "compact")
   {
+    settings.MinHeight = 0;
     settings.SeaLevel = 5;
     settings.MaxHeight = 15;
     return;
   }
   if (verticalMode == "extended")
   {
-    settings.SeaLevel = 48;
-    settings.MaxHeight = 128;
+    settings.MinHeight = -64;
+    settings.SeaLevel = 63;
+    settings.MaxHeight = 319;
     return;
   }
   if (!verticalMode.empty())
@@ -39,6 +59,8 @@ void ApplyLegacyVerticalMode(ProceduralSettings &settings,
     std::cerr << "WARN: unknown procedural.vertical '" << verticalMode
               << "', ignoring legacy field" << std::endl;
   }
+  settings.SeaLevel = defaultSeaLevel;
+  settings.MaxHeight = defaultMaxHeight;
 }
 
 void ApplyLegacyOverworldProfile(const std::string &legacyGenerator,
@@ -334,6 +356,7 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
     std::string legacyVerticalMode;
     bool hasSeaLevel = false;
     bool hasMaxHeight = false;
+    bool hasMinHeight = false;
     bool hasCaves = false;
     bool hasTrees = false;
     bool hasDecoration = false;
@@ -356,6 +379,14 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       settings.SeedText = savedSeedText;
       settings.SeedKind = savedSeedKind;
     }
+    // World saves created before the 3D terrain backend was introduced must
+    // keep their original heightmap generation contract when they are read.
+    if (!p.contains("terrain_backend"))
+    {
+      settings.TerrainBackendMode = TerrainBackend::Heightmap;
+    }
+    settings.WorldGenProfileVersion = std::clamp(
+        p.value("worldgen_profile_version", 1), 1, 3);
     if (p.contains("vertical") && p["vertical"].is_string())
     {
       legacyVerticalMode = p["vertical"].get<std::string>();
@@ -370,9 +401,21 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       settings.MaxHeight = p["max_height"].get<int>();
       hasMaxHeight = true;
     }
+    if (p.contains("min_height"))
+    {
+      settings.MinHeight = p["min_height"].get<int>();
+      hasMinHeight = true;
+    }
     if (p.contains("bedrock_top_y"))
     {
       settings.BedrockTopY = p["bedrock_top_y"].get<int>();
+      // Legacy world configs used Y=0 as the bedrock floor. New worlds put
+      // the bedrock floor at the bottom of the expanded vertical range.
+      if (!hasMinHeight && settings.Generator != ProceduralGenerator::Flat &&
+          settings.Generator != ProceduralGenerator::Heightmap)
+      {
+        settings.BedrockTopY = -64;
+      }
     }
     if (p.contains("worldgen_pack_id") && p["worldgen_pack_id"].is_string())
     {
@@ -542,8 +585,11 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
       ParseTuning(p["tuning"], settings.Tuning);
     }
     ParseProceduralStreamingOptions(p, settings);
+    const bool compactGenerator =
+        settings.Generator == ProceduralGenerator::Flat ||
+        settings.Generator == ProceduralGenerator::Heightmap;
     ApplyLegacyVerticalMode(settings, legacyVerticalMode, hasSeaLevel,
-                            hasMaxHeight);
+                            hasMaxHeight, hasMinHeight, compactGenerator);
     ApplyLegacyOverworldProfile(legacyGeneratorId, settings, hasCaves, hasTrees,
                                 hasOres, hasFillWater, hasFillLava,
                                 hasFillFire);
@@ -566,7 +612,23 @@ ProceduralSettings ParseProceduralSettings(const nlohmann::json &root)
 
 ProceduralSettings ParseProceduralTemplateFromConfig(const nlohmann::json &root)
 {
-  return ParseProceduralSettings(root);
+  ProceduralSettings settings = ParseProceduralSettings(root);
+  const nlohmann::json *procedural =
+      (root.contains("procedural") && root["procedural"].is_object())
+          ? &root["procedural"]
+          : nullptr;
+  if (settings.Generator == ProceduralGenerator::Overworld &&
+      (!procedural || !procedural->contains("terrain_backend")))
+  {
+    // A stored app template controls future worlds, so legacy templates inherit
+    // the current new-world default. Per-world saves remain on heightmap above.
+    settings.TerrainBackendMode = TerrainBackend::Density3D;
+  }
+  if (!procedural || !procedural->contains("worldgen_profile_version"))
+  {
+    settings.WorldGenProfileVersion = 3;
+  }
+  return settings;
 }
 
 void WriteProceduralSettings(nlohmann::json &root,
@@ -575,9 +637,11 @@ void WriteProceduralSettings(nlohmann::json &root,
   nlohmann::json procedural;
   procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
   procedural["sea_level"] = settings.SeaLevel;
+  procedural["min_height"] = settings.MinHeight;
   procedural["max_height"] = settings.MaxHeight;
   procedural["bedrock_top_y"] = settings.BedrockTopY;
   procedural["worldgen_pack_id"] = settings.WorldGenPackId;
+  procedural["worldgen_profile_version"] = settings.WorldGenProfileVersion;
   procedural["preset"] = settings.WorldGenPresetId;
   procedural["terrain_backend"] =
       TerrainBackendToString(settings.TerrainBackendMode);
@@ -632,6 +696,8 @@ void WriteProceduralTemplateConfig(nlohmann::json &root,
   nlohmann::json procedural;
   procedural["generator"] = ProceduralGeneratorToString(settings.Generator);
   procedural["preset"] = settings.WorldGenPresetId;
+  procedural["terrain_backend"] =
+      TerrainBackendToString(settings.TerrainBackendMode);
   procedural["trees"] = settings.EnableTrees;
   procedural["ground_cover"] = settings.EnableGroundCover;
   procedural["decoration"] = settings.EnableDecoration;

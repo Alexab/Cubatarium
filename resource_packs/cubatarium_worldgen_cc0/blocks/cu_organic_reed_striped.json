@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_reed_striped",
+  "id": 2256,
+  "displayName": "Organic Reed Striped",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_reed_striped",
+    "cu_organic_reed_striped",
+    "cu_organic_reed_striped",
+    "cu_organic_reed_striped",
+    "cu_organic_reed_striped",
+    "cu_organic_reed_striped"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "reed",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "reed",
+    "variant": "striped"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

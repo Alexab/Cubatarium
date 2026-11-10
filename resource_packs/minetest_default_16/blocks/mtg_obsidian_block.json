@@ -1,6 +1,13 @@
 {
   "name": "mtg_obsidian_block",
   "id": 475,
+  "hardness": 50,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

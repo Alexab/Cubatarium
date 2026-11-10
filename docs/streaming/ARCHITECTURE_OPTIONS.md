@@ -160,17 +160,78 @@ bounded idle drain owner. Refresh/Admit×N не являются primary.
 они распределяют ownership одной и той же колонки между несколькими
 механизмами.
 
-## Ownership Map (после iter 1–3 roadmap, 2026-07-22)
+## Ownership Map (после main-thread mesh offload, 2026-08-01)
+
+| Concern | Owner | Entry point | Notes |
+|---------|-------|-------------|-------|
+| Relight budget / FIFO drain | `WorldStreaming` | `DrainRelightQueues` + `bg_budget` | SoftDefer no longer inflates Capture floor into `bg_budget` |
+| Focus ingress promote | `ColumnFlowExecutor` only | `RequestPromoteRelight` / SoftDefer→`FirstMesh`\|`RelightThenMesh` | Streaming/Emerge must not call `Promote*` directly |
+| SoftDefer mesh gate | `MeshLitGate` + SoT | `AllowUnlitFirstMesh` → `allow_unlit_first_mesh` | remesh while pending still deferred; UnlitFirstMesh is explicit contract |
+| Immutable Capture | `UMeshCaptureStore` | MarkRelit prefetch → schedule `TakeOrRefresh` | TD-ARCH-015; live Capture only on store miss |
+| GPU mesh apply | `ChunkMeshCache` + `UGpuMeshPipeline` | Kick→fence→Finish→`CommitGpuMeshResult` | PBO readback; staging SoT unchanged |
+| FocusPressure vs UnfinishedVisual | `WorldStreaming` telemetry | `FocusNotRenderReady`=SoT UV; `FocusPressure`=pending+dirty | floors/fog/ARCH holes use UV\|missing only |
+| Sync hole fill | Emerge / ColumnFlow | `Enqueue(FirstMesh)` + `MarkDirtyPriority` | spike guard: cold async → underfeet only |
+| Mesh drain/schedule | `ChunkEmergeCoordinator` | `TickMeshEmerge` | drain-first when `pending_gpu` backlog |
+| Pending clear after mesh | `UWorld` | `DrainFocusVisualWork` | promote + clear; no Recover/Admit |
+| Idle lit-but-dirty | Emerge | `idle_remesh_debt` (nr>15 / fd>24) | keep threshold; landing one-shot boost |
+
+**Primary lifecycle:** MarkRelit → CaptureStore → Dirty → Async → Kick/Finish → Commit.
+
+**Не смешивать:** P0 relight floor и F2 heavy_dirty caps — разные budget axes.
+
+## Ownership Map (legacy, после iter 1–3 roadmap, 2026-07-22)
 
 | Concern | Owner | Entry point | Notes |
 |---------|-------|-------------|-------|
 | Relight budget / FIFO drain | `WorldStreaming` | `DrainRelightQueues` + `bg_budget` | P0 floor via `FocusIngressPolicy` |
-| Focus ingress promote (cruise) | `WorldStreaming` (pre-drain) | `PromotePendingLightRelightsNear` before `DrainRelightQueues` | Emerge `PromoteFrontierHoleIngress` no-ops when `promote_once` |
-| SoftDefer mesh gate | `MeshLitGate` | `SetDeferMeshUntilLitFn` | underfeet never defer |
+| Focus ingress promote | `ColumnFlowExecutor` only | `RequestPromoteRelight` → `Dispatch(PromoteRelight)` | Streaming/Emerge must not call `Promote*` directly |
+| SoftDefer mesh gate | `MeshLitGate` + SoT | `AllowUnlitFirstMesh` → `allow_unlit_first_mesh` | remesh while pending still deferred; UnlitFirstMesh is explicit contract |
+| FocusPressure vs UnfinishedVisual | `WorldStreaming` telemetry | `FocusNotRenderReady`=SoT UV; `FocusPressure`=pending+dirty | floors/fog/ARCH holes use UV\|missing only |
 | Sync hole fill | Emerge force_hole | `RebuildChunkImmediate` | spike guard: cold async → underfeet only |
 | Mesh drain/schedule | `ChunkEmergeCoordinator` | `TickMeshEmerge` | F2: heavy_dirty caps; moving no-hole: drain↑ schedule↓ |
 | Pending clear after mesh | `UWorld` | `DrainFocusVisualWork` | promote + clear; no Recover/Admit |
 | Idle lit-but-dirty | Emerge | `idle_remesh_debt` (nr>15 / fd>24) | keep threshold; landing one-shot boost |
 
 **Не смешивать:** P0 relight floor и F2 heavy_dirty caps — разные budget axes.
+
+## Era 13 — Root Cause 2026-07-29 (manual_1752)
+
+См. [`ROOT_CAUSE_2026-07.md`](ROOT_CAUSE_2026-07.md).
+
+### Branch topology
+
+| Branch | Role |
+|--------|------|
+| `develop` | Pre-GPU baseline (SoftDefer/FSM/MemoryBudget) |
+| `opt_3d` | GPU dual-stack draw/store/cull; hybrid mesher |
+| `arch/streaming-v2-v4` | V2–V5 + packed GPU; current work branch |
+
+### Failed tactical patterns (do not repeat)
+
+| Pattern | Outcome | Replacement |
+|---------|---------|-------------|
+| Hide sticky/stale-dark without remesh ticket | Cruise holes↑ (TD-ARCH-025) | **Hide⇒RepairTicket** via ColumnFlow |
+| `mesh_schedule = min(..., 6)` on holes | `mesh_async≈2` while Dirty 300+ | **Async throughput floor** |
+| Fog pull-in / draw-hide as throughput fix | Masks unfinished | Cosmetics only |
+| Expect GPU packed to close SoftDefer holes | Cost path only | Stage SLA + Capture floor |
+| Calm-wall Imm as primary FirstMesh (`last_frame_ms≤40`) | `stand_rim_imm_n=0` (151212) | Dirty+async FirstMesh floor; Imm=edit only |
+| Stand vs cruise sticky Imm fork | Heal zoo / thrash | Single DesiredStage path |
+| Wall≤50 on stale-wave **enqueue** | `stale_repair_wave_n=0` under miss | Enqueue without wall; throttle cost only |
+| Stream/mesh nested in `DoMovement` | phys~170 with `physics_block≈0` | `TickWorldStreamingPhase` outside locomotion |
+
+### V4 status (Era14)
+
+V2/V3 contracts locked (RenderReady, seed-at-commit hook, ColumnFlow). **V4 is
+now primary execution** — not “after stabilization”: gap is frame contract +
+DesiredStage collapse of post-Era13 heal knobs. See
+[`ERA14_POSTMORTEM.md`](ERA14_POSTMORTEM.md), TD-ARCH-040..048.
+
+### Target decisions (locked)
+
+1. **Hide⇒Ticket** — any `IsColumnRenderReady=false` for loaded voxels enqueues `RemeshSeam` / `RelightThenMesh` on `ColumnFlowExecutor`; `has_repair_ticket` = live `Contains` (sticky until TickDerived enqueue).
+2. **Throughput floor** — when `unfinished_fov>0` / visual holes, raise async schedule floor; cap only Immediate/sync.
+3. **ColumnRenderable SoT** — single draw truth; telemetry derived from it; **AllowUnlitFirstMesh** is an explicit SoftDefer contract (not a pending-mask bypass).
+4. **FirstMesh vs Remesh** dirty classes — FirstMesh never starves behind remesh thrash.
+5. **No Admit/Recover/hide/promote** outside ColumnFlow (anti-zoo).
+6. **Frontier Stage SLA** — FocusIngress active on missing / SoT unfinished / stale-dark; promote + Capture + FirstMesh admit; `cold_relight_holes_sec≤3`.
 

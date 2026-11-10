@@ -1,12 +1,14 @@
 #pragma once
 
 #include "WorldGen/Core/WorldGenContext.h"
+#include <cstdint>
 #include <glm/glm.hpp>
 
 namespace cutum
 {
 
 class UDensityFieldSampler;
+class UAquiferSampler;
 
 struct ColumnLayerRule
 {
@@ -20,11 +22,36 @@ struct ColumnLayerRule
 void FillTerrainColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
                        const ColumnLayerRule &rule);
 void FillTerrainColumnFromDensity(WorldGenContext &ctx, int x, int z,
-                                  int surfaceY, const ColumnLayerRule &rule,
-                                  const UDensityFieldSampler &sampler);
+                                  int surfaceY, int rawSurfaceY,
+                                  const ColumnLayerRule &rule,
+                                  const UDensityFieldSampler &sampler,
+                                  const UAquiferSampler *aquiferSampler = nullptr);
+bool ApplyGeologyColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
+                        uint32_t seed);
+bool FillAquiferColumn(WorldGenContext &ctx, int x, int z, int surfaceY,
+                       const UAquiferSampler &sampler);
 void FillFluidColumn(WorldGenContext &ctx, int x, int z, int surfaceY);
-bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z);
-bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z);
+/// `max_passes`: 16 on worker populate threads (deep pocket chains, W5.4);
+/// main-thread committed drains pass 8 — each seal runs to completion on
+/// the frame budget and 16 doubled the main-thread stall (load-bar
+/// oscillation, user report).
+bool SealFluidPocketsInChunk(WorldGenContext &ctx, int base_x, int base_z,
+                             int *out_voxels_filled = nullptr,
+                             int max_passes = 16);
+struct FluidPermeableSealStats
+{
+  double floorScanMs{0.0};
+  double restoreMs{0.0};
+  double waterlogMs{0.0};
+  uint64_t floorGroundChecks{0};
+  uint64_t floorSlotChecks{0};
+  uint64_t restoreCells{0};
+  uint64_t waterlogCells{0};
+};
+
+bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z,
+                                    int *out_columns_changed = nullptr,
+                                    FluidPermeableSealStats *out_stats = nullptr);
 bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,

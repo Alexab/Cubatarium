@@ -14,6 +14,8 @@ struct ControlledCreatureInfo
 {
   CreatureId Id{0};
   glm::vec3 eyePosition{0.0f};
+  /// Feet / body origin for navigation stand-nodes (not eye).
+  glm::vec3 bodyOrigin{0.0f};
 };
 
 struct CreatureActivityView

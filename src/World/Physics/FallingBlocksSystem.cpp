@@ -16,7 +16,8 @@ FallingBlocksStats UFallingBlocksSystem::Tick(UWorld &world,
     return stats;
   }
   if (UFallingBlockRules::TryApplyFall(world.GetBlockRegistry(), world.GetBlockWorld(),
-                                       event.BlockPos))
+                                       event.BlockPos,
+                                       world.GetProceduralSettings().MinHeight))
   {
     ++stats.Applied;
   }

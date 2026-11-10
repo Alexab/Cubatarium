@@ -18,6 +18,12 @@ enum class AppCursorPolicy
 
 void ApplyCursorPolicy(GLFWwindow *window, AppCursorPolicy policy);
 void ReleasePlatformCursorClip();
+/// GLFW window coords → framebuffer pixels (DPI / content scale).
+void CursorWindowToFramebuffer(GLFWwindow *window, double window_x,
+                               double window_y, double &out_fb_x,
+                               double &out_fb_y);
+/// Place OS cursor at window center (after leaving DISABLED capture).
+void CenterWindowCursor(GLFWwindow *window);
 
 } // namespace cutum
 

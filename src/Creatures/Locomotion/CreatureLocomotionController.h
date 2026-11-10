@@ -14,6 +14,12 @@ using CreatureId = uint64_t;
 
 class UWorld;
 
+/// Global move-speed multiplier for external harnesses (flight-sim far
+/// distance stress). Production default 1; the App layer wires its harness
+/// env var into this at startup — locomotion itself must not include
+/// App/Platform (audit M7).
+float &CreatureMoveSpeedScaleOverride();
+
 class UCreatureLocomotionController
 {
 public:
@@ -35,6 +41,34 @@ public:
   void SetMode(CreatureMovementMode mode);
 
   bool IsOnGround() const { return OnGround; }
+  /// NPC creatures stand on whatever their box rests on (HasBodySupport);
+  /// the player camera keeps the center-footprint rule (HasGroundSupport).
+  void SetBodySupportMode(bool enabled) { BodySupportMode = enabled; }
+  bool IsBodySupportMode() const { return BodySupportMode; }
+  bool HasSupportAt(const UWorld *world, const glm::vec3 &eyePos) const;
+  /// Rider mount support (runtime issue 5): set by the world each frame
+  /// when the player stands on a rideable creature; the back Y acts as the
+  /// ground plane for anchoring.
+  void SetMountSupport(CreatureId mountId, float backY)
+  {
+    MountSupportId = mountId;
+    MountSupportBackY = backY;
+  }
+  void ClearMountSupport()
+  {
+    MountSupportId = 0;
+    MountSupportBackY = 0.f;
+  }
+  CreatureId GetMountSupportId() const { return MountSupportId; }
+  float GetMountSupportBackY() const { return MountSupportBackY; }
+  /// External ground-invalidation hook: the caller verified the support
+  /// vanished (e.g. blocks dug out under an idle body) — drop the grounded
+  /// state so the next motor step re-engages gravity.
+  void BreakGroundSupport()
+  {
+    OnGround = false;
+    FeetAnchored = false;
+  }
   float GetStanceBlend() const { return StanceBlend; }
   float GetVerticalVelocity() const { return VerticalVelocity; }
   void ClampVerticalVelocity(float minValue);
@@ -60,7 +94,21 @@ public:
   bool ConsumeClearShiftRequest();
 
 private:
+  bool BodySupportMode{false};
+  CreatureId MountSupportId{0};
+  float MountSupportBackY{0.f};
+
+  // UpdateLocomotion mode branches (audit 4.2 tail).
+  void UpdateFlight(const UWorld *world, glm::vec3 &eyePos,
+                    const CreatureInput &input);
+  void UpdateSwimming(const UWorld *world, glm::vec3 &eyePos,
+                      const CreatureInput &input, float dt,
+                      const struct SampledFluidState &fluid,
+                      const PlayerCapsule &cap, CreatureId skipCreatureId);
   void updateLocomotionState(const CreatureInput &input);
+  void SyncMountedPose(const UWorld *world, glm::vec3 &eyePos,
+                       const CreatureInput &input, float dt,
+                       CreatureId skipCreatureId);
   bool anchorFeetFromStandingEye(const UWorld *world, const glm::vec3 &eyePos);
   void syncEyeFromFeet(glm::vec3 &eyePos) const;
   void landStanding(const UWorld *world, glm::vec3 &eyePos,

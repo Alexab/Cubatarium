@@ -24,8 +24,9 @@ float UWeatherParticleSystem::Random01()
 }
 
 void UWeatherParticleSystem::SpawnParticle(const glm::vec3 &camera_pos,
-                                           int kind, float wind,
-                                           float intensity)
+                                           int kind,
+                                           const glm::vec2 &wind_direction,
+                                           float wind, float intensity)
 {
   for (Particle &particle : Pool)
   {
@@ -33,19 +34,22 @@ void UWeatherParticleSystem::SpawnParticle(const glm::vec3 &camera_pos,
     {
       continue;
     }
-    const float radius = 3.0f + Random01() * 7.0f;
-    const float angle = Random01() * 6.2831853f;
-    const float height = (Random01() - 0.1f) * 8.0f;
-    particle.Pos = camera_pos + glm::vec3(std::cos(angle) * radius, height,
-                                          std::sin(angle) * radius);
+    // Recycle particles in a camera-centred 32x24x32 block volume. The wider
+    // footprint avoids a short, sparse ring that disappears during movement.
+    const float offset_x = (Random01() - 0.5f) * 32.0f;
+    const float offset_z = (Random01() - 0.5f) * 32.0f;
+    const float height = -4.0f + Random01() * 24.0f;
+    particle.Pos = camera_pos + glm::vec3(offset_x, height, offset_z);
     const float fall =
         kind == 2 ? 0.45f + Random01() * 0.35f : 7.0f + Random01() * 7.0f;
-    particle.Vel =
-        glm::vec3(wind * (0.4f + Random01() * 0.8f), -fall, wind * 0.2f);
+    const float gust = 0.5f + Random01() * 1.0f;
+    const glm::vec2 horizontal =
+        glm::normalize(wind_direction + glm::vec2(1.0e-4f)) * wind * gust;
+    particle.Vel = glm::vec3(horizontal.x, -fall, horizontal.y);
     particle.Life =
         kind == 2 ? (2.2f + Random01() * 2.4f) : (1.0f + Random01() * 1.0f);
     particle.Size =
-        kind == 2 ? 0.05f + Random01() * 0.05f : 0.04f + Random01() * 0.06f;
+        kind == 2 ? 0.16f + Random01() * 0.14f : 0.14f + Random01() * 0.12f;
     particle.Size *= 0.75f + intensity * 0.5f;
     particle.Kind = kind;
     particle.Alive = true;
@@ -55,6 +59,7 @@ void UWeatherParticleSystem::SpawnParticle(const glm::vec3 &camera_pos,
 
 void UWeatherParticleSystem::Update(const UWorld &world,
                                     const glm::vec3 &camera_pos,
+                                    const WeatherSample &weather,
                                     float dt_seconds, int budget)
 {
   if (budget <= 0 || dt_seconds <= 0.0f)
@@ -69,8 +74,8 @@ void UWeatherParticleSystem::Update(const UWorld &world,
     Pool.resize(kMaxParticles);
   }
 
-  const UWorld::EnvironmentState &env = world.GetEnvironmentState();
-  const float intensity = std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f);
+  const float intensity =
+      std::clamp(weather.PrecipitationIntensity, 0.0f, 1.0f);
   if (!CanReceiveOutdoorPrecipitation(world, camera_pos))
   {
     for (Particle &particle : Pool)
@@ -81,13 +86,7 @@ void UWeatherParticleSystem::Update(const UWorld &world,
     ActiveCount = 0;
     return;
   }
-  const bool raining = env.Weather == UWorld::WeatherType::Rain ||
-                       env.TargetWeather == UWorld::WeatherType::Rain ||
-                       env.Weather == UWorld::WeatherType::Storm ||
-                       env.TargetWeather == UWorld::WeatherType::Storm;
-  const bool snowing = env.Weather == UWorld::WeatherType::Snow ||
-                       env.TargetWeather == UWorld::WeatherType::Snow;
-  if (intensity <= 0.05f || (!raining && !snowing))
+  if (intensity <= 0.05f)
   {
     for (Particle &particle : Pool)
     {
@@ -98,12 +97,17 @@ void UWeatherParticleSystem::Update(const UWorld &world,
     return;
   }
 
-  const int kind = snowing && !raining ? 2 : 1;
-  const float wind = std::clamp(env.WindStrength, 0.0f, 1.0f);
+  const float snow_fraction = std::clamp(weather.SnowFraction, 0.0f, 1.0f);
+  const float rain_fraction = 1.0f - snow_fraction;
+  const float wind = std::clamp(weather.WindStrength, 0.0f, 1.0f);
   const int spawn_target =
       std::min(budget, static_cast<int>(budget * intensity * 0.98f) + 28);
+  const int rain_target =
+      static_cast<int>(std::round(spawn_target * rain_fraction));
+  const int snow_target = spawn_target - rain_target;
 
-  int alive_count = 0;
+  int alive_rain = 0;
+  int alive_snow = 0;
   for (Particle &particle : Pool)
   {
     if (!particle.Alive)
@@ -113,19 +117,32 @@ void UWeatherParticleSystem::Update(const UWorld &world,
     particle.Pos += particle.Vel * dt_seconds;
     particle.Life -= dt_seconds;
     const glm::vec3 delta = particle.Pos - camera_pos;
-    if (particle.Life <= 0.0f || glm::length(delta) > 14.0f ||
-        particle.Pos.y < camera_pos.y - 10.0f)
+    if (particle.Life <= 0.0f || glm::length(delta) > 28.0f ||
+        particle.Pos.y < camera_pos.y - 8.0f ||
+        particle.Pos.y > camera_pos.y + 26.0f)
     {
       particle.Alive = false;
       continue;
     }
-    ++alive_count;
+    if (particle.Kind == 2)
+    {
+      ++alive_snow;
+    }
+    else
+    {
+      ++alive_rain;
+    }
   }
 
-  const int spawn_needed = std::max(0, spawn_target - alive_count);
-  for (int i = 0; i < spawn_needed; ++i)
+  const int rain_spawn_needed = std::max(0, rain_target - alive_rain);
+  for (int i = 0; i < rain_spawn_needed; ++i)
   {
-    SpawnParticle(camera_pos, kind, wind, intensity);
+    SpawnParticle(camera_pos, 1, weather.WindDirection, wind, intensity);
+  }
+  const int snow_spawn_needed = std::max(0, snow_target - alive_snow);
+  for (int i = 0; i < snow_spawn_needed; ++i)
+  {
+    SpawnParticle(camera_pos, 2, weather.WindDirection, wind, intensity);
   }
 
   Instances.clear();

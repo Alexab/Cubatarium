@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_limestone_chiseled",
+  "id": 1519,
+  "displayName": "Masonry Limestone Chiseled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_limestone_chiseled",
+    "cu_masonry_limestone_chiseled",
+    "cu_masonry_limestone_chiseled",
+    "cu_masonry_limestone_chiseled",
+    "cu_masonry_limestone_chiseled",
+    "cu_masonry_limestone_chiseled"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "limestone",
+    "variant": "chiseled"
+  }
+}

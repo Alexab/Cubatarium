@@ -1,7 +1,16 @@
 #include "Activity/Agents/WanderActivityAgent.h"
 
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
+
+namespace cutum
+{
+std::filesystem::path GetExecutableDirectory()
+{
+  return std::filesystem::temp_directory_path();
+}
+} // namespace cutum
 
 static void Expect(bool cond, const char *message)
 {

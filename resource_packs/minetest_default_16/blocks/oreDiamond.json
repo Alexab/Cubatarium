@@ -1,6 +1,13 @@
 {
   "name": "oreDiamond",
   "id": 523,
+  "hardness": 3,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

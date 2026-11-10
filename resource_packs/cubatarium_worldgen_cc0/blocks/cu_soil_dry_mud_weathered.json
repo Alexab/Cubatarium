@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_dry_mud_weathered",
+  "id": 1324,
+  "displayName": "Soil Dry Mud Weathered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_dry_mud_weathered",
+    "cu_soil_dry_mud_weathered",
+    "cu_soil_dry_mud_weathered",
+    "cu_soil_dry_mud_weathered",
+    "cu_soil_dry_mud_weathered_top",
+    "cu_soil_dry_mud_weathered_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "dry_mud",
+    "variant": "weathered"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_tan_quilted",
+  "id": 1807,
+  "displayName": "Fabric Tan Quilted",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_tan_quilted",
+    "cu_fabric_tan_quilted",
+    "cu_fabric_tan_quilted",
+    "cu_fabric_tan_quilted",
+    "cu_fabric_tan_quilted",
+    "cu_fabric_tan_quilted"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "tan",
+    "variant": "quilted"
+  }
+}

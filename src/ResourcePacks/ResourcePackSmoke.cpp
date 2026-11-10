@@ -5,6 +5,7 @@
 #include "ResourcePacks/PlaceholderTextureCache.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "ResourcePacks/TextureOverrides.h"
+#include "Gui/Widgets/ResourcePackPickerForm.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
@@ -19,6 +20,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
 namespace cutum
 {
@@ -164,11 +166,136 @@ bool SmokeSelection(const ResourcePackSelection &selection,
 bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
                     std::shared_ptr<UPlaceholderTextureCache> placeholders)
 {
+  const auto upgradedDefaults = UResourcePackResolver::ParseFromJson(
+      nlohmann::json{{"resource_packs",
+                      {{"default_primary", {"minetest_default_16"}},
+                       {"default_secondary", {"cubatarium_geology_cc0",
+                                               "cubatarium_worldgen_cc0"}},
+                       {"default_enabled", {"minetest_default_16",
+                                             "cubatarium_geology_cc0",
+                                             "cubatarium_worldgen_cc0"}}}}});
+  if (upgradedDefaults.DefaultPrimary !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"} ||
+      !upgradedDefaults.DefaultSecondary.empty() ||
+      upgradedDefaults.DefaultEnabled !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"})
+  {
+    std::cerr << "ResourcePackSmoke: legacy secondary defaults did not migrate "
+                 "to the Worldgen-only defaults"
+              << std::endl;
+    return false;
+  }
+  const auto upgradedFlatDefaults = UResourcePackResolver::ParseFromJson(
+      nlohmann::json{{"resource_packs",
+                      {{"default_primary", {"minetest_default_16"}},
+                       {"default_enabled", {"minetest_default_16",
+                                             "cubatarium_geology_cc0",
+                                             "cubatarium_worldgen_cc0"}}}}});
+  if (upgradedFlatDefaults.DefaultPrimary !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"} ||
+      !upgradedFlatDefaults.DefaultSecondary.empty() ||
+      upgradedFlatDefaults.DefaultEnabled !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"})
+  {
+    std::cerr << "ResourcePackSmoke: legacy flattened defaults did not migrate "
+                 "to the Worldgen-only defaults"
+              << std::endl;
+    return false;
+  }
+  const auto explicitVersionedDefaults = UResourcePackResolver::ParseFromJson(
+      nlohmann::json{{"resource_packs",
+                      {{"default_selection_version", 2},
+                       {"default_primary", {"minetest_default_16"}},
+                       {"default_secondary", nlohmann::json::array()}}}});
+  if (explicitVersionedDefaults.DefaultPrimary !=
+          std::vector<std::string>{"minetest_default_16"} ||
+      !explicitVersionedDefaults.DefaultSecondary.empty())
+  {
+    std::cerr << "ResourcePackSmoke: versioned explicit pack selection was "
+                 "unexpectedly migrated"
+              << std::endl;
+    return false;
+  }
+  const auto oldMinetestOnlyDefaults = UResourcePackResolver::ParseFromJson(
+      nlohmann::json{{"resource_packs",
+                      {{"default_primary", {"minetest_default_16"}},
+                       {"default_secondary", nlohmann::json::array()},
+                       {"default_enabled", {"minetest_default_16"}}}}});
+  if (oldMinetestOnlyDefaults.DefaultPrimary !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"} ||
+      !oldMinetestOnlyDefaults.DefaultSecondary.empty() ||
+      oldMinetestOnlyDefaults.DefaultEnabled !=
+          std::vector<std::string>{"cubatarium_worldgen_cc0"})
+  {
+    std::cerr << "ResourcePackSmoke: legacy Minetest-only defaults did not "
+                 "migrate to the Cubatarium pack"
+              << std::endl;
+    return false;
+  }
+
+  UResourcePackPickerForm picker(nullptr);
+  ResourcePackSelection staleOwnerSelection;
+  staleOwnerSelection.Primary = {"cubatarium_worldgen_cc0"};
+  staleOwnerSelection.WorldgenOwner = "minetest_default_16";
+  picker.SetSelection(staleOwnerSelection);
+  if (picker.ReadSelection().WorldgenOwner != "cubatarium_worldgen_cc0")
+  {
+    std::cerr << "ResourcePackSmoke: picker kept a worldgen owner that was "
+                 "unchecked"
+              << std::endl;
+    return false;
+  }
+
+  ResourcePackSelection conflictingSelection;
+  conflictingSelection.Primary = {"cubatarium_worldgen_cc0",
+                                  "minetest_default_16"};
+  conflictingSelection.WorldgenOwner = "cubatarium_worldgen_cc0";
+  UResourcePackResolver conflictResolver;
+  if (!conflictResolver.Resolve(conflictingSelection, assetRoot, writableRoot)
+           .empty())
+  {
+    std::cerr << "ResourcePackSmoke: conflicting Cubatarium and Minetest "
+                 "packs were accepted"
+              << std::endl;
+    return false;
+  }
   auto registry = std::make_shared<UBlockMergeRegistry>();
   const ResourcePackSelection defaults = DefaultResourcePackSelection();
+  if (defaults.WorldgenOwner != "cubatarium_worldgen_cc0" ||
+      defaults.Primary != std::vector<std::string>{"cubatarium_worldgen_cc0"} ||
+      !defaults.Secondary.empty())
+  {
+    std::cerr << "ResourcePackSmoke: default selection must use only the "
+                 "Cubatarium Worldgen pack"
+              << std::endl;
+    return false;
+  }
   if (!SmokeSelection(defaults, assetRoot, writableRoot, *registry,
                       placeholders))
   {
+    return false;
+  }
+  for (const char *name : {"granite", "diorite", "andesite", "deepslate",
+                           "tuff", "calcite", "smooth_basalt",
+                           "amethyst_block", "moss_block", "rooted_dirt"})
+  {
+    if (!registry->HasBlock(name))
+    {
+      std::cerr << "ResourcePackSmoke: default selection is missing geology block '"
+                << name << "'" << std::endl;
+      return false;
+    }
+  }
+  const auto granite = std::find_if(
+      registry->GetCubeDescriptors().begin(),
+      registry->GetCubeDescriptors().end(),
+      [](const MergedCubeDesc &descriptor) { return descriptor.Name == "granite"; });
+  if (granite == registry->GetCubeDescriptors().end() ||
+      granite->Stems[0].rfind("cubatarium_worldgen_cc0/", 0) != 0)
+  {
+    std::cerr << "ResourcePackSmoke: default Cubatarium textures did not win "
+                 "the geology override"
+              << std::endl;
     return false;
   }
 
@@ -179,6 +306,13 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
 
   UObjectLibrary objects;
   objects.LoadMerged(assetRoot / "objects", packs, blockRegistry);
+  if (!registry->HasBlock("cu_rock_basalt_natural") ||
+      !objects.Get("cubatarium_worldgen_cc0::asset_tree_birch"))
+  {
+    std::cerr << "ResourcePackSmoke: default Cubatarium assets were not loaded"
+              << std::endl;
+    return false;
+  }
 
   // Simulate worldgen slot resolution creating synthetic blocks (e.g. ore_coal).
   (void)blockRegistry.GetIdByTypeName("ore_coal");
@@ -313,6 +447,54 @@ bool SmokeStartupInit(const fs::path &assetRoot, const fs::path &writableRoot,
   return true;
 }
 
+bool SmokePlaceholderVisualMarker(
+    const std::shared_ptr<UPlaceholderTextureCache> &placeholders)
+{
+  if (!placeholders)
+  {
+    std::cerr << "ResourcePackSmoke: placeholder cache is unavailable"
+              << std::endl;
+    return false;
+  }
+
+  const std::string stem =
+      placeholders->GetOrCreateStem("missing_marker_smoke", 0, 16);
+  UTextureBaseStorage textures;
+  placeholders->RegisterAll(textures);
+  const auto it = textures.GetBaseTextures().find(stem);
+  const TexturePixelData *pixels =
+      it == textures.GetBaseTextures().end() ? nullptr : it->second.GetPixelData();
+  if (!pixels || pixels->Width != 16 || pixels->Height != 16)
+  {
+    std::cerr << "ResourcePackSmoke: missing placeholder marker pixels"
+              << std::endl;
+    return false;
+  }
+
+  bool has_warning_magenta = false;
+  bool has_dark_stripe = false;
+  bool has_question_mark = false;
+  bool has_yellow_frame = false;
+  for (size_t i = 0; i + 3 < pixels->Rgba.size(); i += 4)
+  {
+    const uint8_t r = pixels->Rgba[i];
+    const uint8_t g = pixels->Rgba[i + 1];
+    const uint8_t b = pixels->Rgba[i + 2];
+    has_warning_magenta |= r > 200 && b > 200 && g < 50;
+    has_dark_stripe |= r < 30 && g < 30 && b < 30;
+    has_question_mark |= r > 240 && g > 240 && b > 240;
+    has_yellow_frame |= r > 240 && g > 180 && g < 240 && b < 80;
+  }
+  if (!has_warning_magenta || !has_dark_stripe || !has_question_mark ||
+      !has_yellow_frame)
+  {
+    std::cerr << "ResourcePackSmoke: placeholder texture is not visibly marked"
+              << std::endl;
+    return false;
+  }
+  return true;
+}
+
 } // namespace
 
 int RunResourcePackSmoke(IUPlatformPaths &paths)
@@ -339,6 +521,7 @@ int RunResourcePackSmoke(IUPlatformPaths &paths)
 
   ResourcePackSelection minetest;
   minetest.Primary = {"minetest_default_16"};
+  minetest.Secondary = {"cubatarium_geology_cc0"};
   minetest.WorldgenOwner = "minetest_default_16";
   if (!SmokeSelection(minetest, assetRoot, writableRoot, registry, placeholders))
   {
@@ -357,6 +540,13 @@ int RunResourcePackSmoke(IUPlatformPaths &paths)
               << std::endl;
     return 1;
   }
+  const auto &grassOverride = ogaOverrides.at("grass");
+  if (grassOverride.empty() || grassOverride.front().Faces != std::vector<int>{4})
+  {
+    std::cerr << "ResourcePackSmoke: top texture override must map to face 4"
+              << std::endl;
+    return 1;
+  }
   if (!SmokeSelection(oga, assetRoot, writableRoot, registry, placeholders))
   {
     return 1;
@@ -364,6 +554,33 @@ int RunResourcePackSmoke(IUPlatformPaths &paths)
 
   if (!SmokeStartupInit(assetRoot, writableRoot, placeholders))
   {
+    return 1;
+  }
+  if (!SmokePlaceholderVisualMarker(placeholders))
+  {
+    return 1;
+  }
+
+  ResourcePackSelection photo64;
+  photo64.Primary = {"cubatarium_worldgen_cc0"};
+  photo64.Secondary = {"cubatarium_worldgen_photo64_cc0"};
+  photo64.WorldgenOwner = "cubatarium_worldgen_cc0";
+  if (!SmokeSelection(photo64, assetRoot, writableRoot, registry, placeholders))
+  {
+    return 1;
+  }
+  const auto photo64Granite = std::find_if(
+      registry.GetCubeDescriptors().begin(), registry.GetCubeDescriptors().end(),
+      [](const MergedCubeDesc &descriptor) { return descriptor.Name == "granite"; });
+  if (photo64Granite == registry.GetCubeDescriptors().end() ||
+      photo64Granite->Stems[0].rfind(
+          "cubatarium_worldgen_photo64_cc0/p64_", 0) != 0 ||
+      photo64Granite->Stems[4].rfind(
+          "cubatarium_worldgen_photo64_cc0/p64_", 0) != 0)
+  {
+    std::cerr << "ResourcePackSmoke: selected 64px overlay did not override "
+                 "block faces"
+              << std::endl;
     return 1;
   }
 

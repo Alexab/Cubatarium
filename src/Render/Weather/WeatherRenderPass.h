@@ -4,6 +4,7 @@
 #include "App/Settings/RenderSettings.h"
 #include "Render/Pipeline/WeatherDepthCapture.h"
 #include "Render/Weather/WeatherParticleSystem.h"
+#include "World/Environment/WeatherField.h"
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -44,14 +45,14 @@ public:
   int GetActiveParticleCount() const { return ParticleSystem.GetActiveCount(); }
 
 private:
-  bool PrecipActive(const UWorld &world) const;
-  int WeatherKind(const UWorld &world) const;
+  bool PrecipActive(const WeatherSample &weather) const;
   float QualityForPreset(PerformancePreset preset) const;
   int ParticleBudget(PerformancePreset preset, int weather_kind) const;
 
-  void RenderStreaksPass(const WeatherRenderContext &ctx, const UWorld &world);
-  void RenderParticlesPass(const WeatherRenderContext &ctx,
-                           const UWorld &world);
+  void RenderStreaksPass(const WeatherRenderContext &ctx, const UWorld &world,
+                         const WeatherSample &weather);
+  void RenderParticlesPass(const WeatherRenderContext &ctx, const UWorld &world,
+                           const WeatherSample &weather);
   bool EnsureParticleBuffers();
 
   std::shared_ptr<UShaderProgram> StreaksShader;

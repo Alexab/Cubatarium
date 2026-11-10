@@ -1,5 +1,6 @@
 #include "Gui/Screens/SettingsScreen.h"
 #include "App/Settings/AppSettingsSnapshot.h"
+#include "App/Settings/GraphicsQualityProfile.h"
 #include "App/Settings/UiSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "Gui/Core/GuiContext.h"
@@ -61,6 +62,11 @@ void USettingsScreen::OnSave()
   {
     return;
   }
+  if (PackForm && !PackForm->HasValidSelection())
+  {
+    ShowTab(2);
+    return;
+  }
   AppSettingsSnapshot app = Host->LoadAppSettingsSnapshot();
   if (DefaultUserInput)
   {
@@ -103,6 +109,29 @@ void USettingsScreen::OnSave()
   {
     app.Render.BatchCache = BatchCacheBox->IsChecked();
   }
+  // Reseed fog/sky from quality preset, then re-apply meshing / lighting toggles.
+  {
+    const bool greedy = app.Render.GreedyMeshing;
+    const bool face = app.Render.FaceQuads;
+    const bool frustum = app.Render.FrustumCulling;
+    const bool batch = app.Render.BatchCache;
+    const bool android_gpu = SelectedAndroidGpuEnabled;
+    const bool async_mesh =
+        AsyncMeshingBox ? AsyncMeshingBox->IsChecked() : app.Render.AsyncMeshing;
+    app.Render = RenderSettings::FromPreset(SelectedGraphicsQuality);
+    app.Render.GreedyMeshing = greedy;
+    app.Render.FaceQuads = face;
+    app.Render.FrustumCulling = frustum;
+    app.Render.BatchCache = batch;
+    app.Render.AndroidGpuEnabled = android_gpu;
+    app.Render.AsyncMeshing = async_mesh;
+    app.Render.Lighting = SelectedLightingMode;
+    app.Render.LightingModeExplicit = true;
+  }
+  if (AndroidGpuBox)
+  {
+    app.Render.AndroidGpuEnabled = AndroidGpuBox->IsChecked();
+  }
   if (LegacyHudBox)
   {
     app.Ui.LegacyHud = LegacyHudBox->IsChecked();
@@ -110,6 +139,10 @@ void USettingsScreen::OnSave()
   if (ShowPerformanceBox)
   {
     app.Ui.ShowPerformance = ShowPerformanceBox->IsChecked();
+  }
+  if (CreatureNamesBox)
+  {
+    app.Render.CreatureNameLabels = CreatureNamesBox->IsChecked();
   }
   if (ConsoleKeyInput)
   {
@@ -138,11 +171,22 @@ void USettingsScreen::OnSave()
   }
 
   ProceduralSettings proc =
-      WorldForm ? WorldForm->ReadSettings() : Host->LoadProceduralTemplate();
-  ProceduralSettings templateOnly;
-  templateOnly.Generator = proc.Generator;
-  templateOnly.Seed = proc.Seed;
-  Host->SaveAppAndTemplateSettings(app, templateOnly);
+      Host ? Host->LoadProceduralTemplate() : ProceduralSettings{};
+  if (WorldForm)
+  {
+    const ProceduralSettings from_form = WorldForm->ReadSettings();
+    proc.Generator = from_form.Generator;
+    proc.Seed = from_form.Seed;
+  }
+  if (SelectedLightingMode == LightingMode::Flat)
+  {
+    proc.AsyncRelight = false;
+  }
+  else if (AsyncRelightBox)
+  {
+    proc.AsyncRelight = AsyncRelightBox->IsChecked();
+  }
+  Host->SaveAppAndTemplateSettings(app, proc);
   Host->ReturnToMainMenu();
 }
 
@@ -173,13 +217,18 @@ void USettingsScreen::Build(UGuiContext &ctx)
   UiScaleUser =
       std::clamp(appSnap.Ui.UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   SelectedControlScheme = appSnap.Ui.ControlScheme;
+  SelectedGraphicsQuality = appSnap.Render.Preset;
+  SelectedLightingMode =
+      GraphicsQualityProfile::ResolveLightingMode(appSnap.Render);
+  SelectedAndroidGpuEnabled = appSnap.Render.AndroidGpuEnabled;
 
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
   backdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
   const int winW =
       std::min(theme.DialogDefaultWidth, ViewportW - theme.DialogMargin);
-  const int winH = std::min(Scaled(540), ViewportH - theme.DialogMargin);
+  const int winH =
+      std::min(theme.DialogDefaultHeight, ViewportH - theme.DialogMargin);
   auto window = std::make_unique<UGuiWindow>(&theme, "Settings");
   Window = window.get();
   window->SetBounds(
@@ -294,6 +343,11 @@ void USettingsScreen::Build(UGuiContext &ctx)
   ShowPerformanceBox = perf.get();
   perf->SetChecked(appSnap.Ui.ShowPerformance);
   app.AddChild(std::move(perf));
+  auto names =
+      std::make_unique<UGuiCheckbox>(&theme, "Show creature names");
+  CreatureNamesBox = names.get();
+  names->SetChecked(appSnap.Render.CreatureNameLabels);
+  app.AddChild(std::move(names));
   auto consoleLbl = std::make_unique<UGuiLabel>(&theme, "Console key:");
   ConsoleKeyLabel = consoleLbl.get();
   app.AddChild(std::move(consoleLbl));
@@ -364,6 +418,77 @@ void USettingsScreen::Build(UGuiContext &ctx)
   ControlSchemeButton = profileBtn.get();
   app.AddChild(std::move(profileBtn));
 
+  auto graphicsQualityLbl =
+      std::make_unique<UGuiLabel>(&theme, "Graphics quality:");
+  GraphicsQualityLabel = graphicsQualityLbl.get();
+  app.AddChild(std::move(graphicsQualityLbl));
+  auto graphicsQualityBtn = std::make_unique<UGuiButton>(
+      &theme, GraphicsQualityProfile::DisplayName(SelectedGraphicsQuality));
+  graphicsQualityBtn->SetOnClick(
+      [this]()
+      {
+        SelectedGraphicsQuality =
+            GraphicsQualityProfile::NextPreset(SelectedGraphicsQuality);
+        if (GraphicsQualityButton)
+        {
+          GraphicsQualityButton->SetLabel(
+              GraphicsQualityProfile::DisplayName(SelectedGraphicsQuality));
+        }
+      });
+  GraphicsQualityButton = graphicsQualityBtn.get();
+  app.AddChild(std::move(graphicsQualityBtn));
+
+  auto lightingLbl = std::make_unique<UGuiLabel>(&theme, "Lighting:");
+  LightingModeLabel = lightingLbl.get();
+  app.AddChild(std::move(lightingLbl));
+  auto lightingBtn = std::make_unique<UGuiButton>(
+      &theme, GraphicsQualityProfile::LightingDisplayName(SelectedLightingMode));
+  lightingBtn->SetOnClick(
+      [this]()
+      {
+        SelectedLightingMode =
+            GraphicsQualityProfile::NextLightingMode(SelectedLightingMode);
+        if (LightingModeButton)
+        {
+          LightingModeButton->SetLabel(
+              GraphicsQualityProfile::LightingDisplayName(SelectedLightingMode));
+        }
+        if (AsyncRelightBox)
+        {
+          AsyncRelightBox->SetEnabled(SelectedLightingMode ==
+                                      LightingMode::Full);
+          if (SelectedLightingMode == LightingMode::Flat)
+          {
+            AsyncRelightBox->SetChecked(false);
+          }
+        }
+      });
+  LightingModeButton = lightingBtn.get();
+  app.AddChild(std::move(lightingBtn));
+
+  auto asyncMesh = std::make_unique<UGuiCheckbox>(&theme, "Async meshing");
+  asyncMesh->SetChecked(appSnap.Render.AsyncMeshing);
+  AsyncMeshingBox = asyncMesh.get();
+  app.AddChild(std::move(asyncMesh));
+
+  auto asyncRelight =
+      std::make_unique<UGuiCheckbox>(&theme, "Async relight (Full only)");
+  asyncRelight->SetChecked(procSnap.AsyncRelight &&
+                           SelectedLightingMode == LightingMode::Full);
+  asyncRelight->SetEnabled(SelectedLightingMode == LightingMode::Full);
+  AsyncRelightBox = asyncRelight.get();
+  app.AddChild(std::move(asyncRelight));
+
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  auto androidGpuBox = std::make_unique<UGuiCheckbox>(
+      &theme, "GPU render (restart world)");
+  androidGpuBox->SetChecked(SelectedAndroidGpuEnabled);
+  androidGpuBox->SetOnChanged(
+      [this](bool checked) { SelectedAndroidGpuEnabled = checked; });
+  AndroidGpuBox = androidGpuBox.get();
+  app.AddChild(std::move(androidGpuBox));
+#endif
+
   UGuiPanel &world = frame->AddScrollPage();
   WorldPanel = &world;
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
@@ -432,7 +557,8 @@ void USettingsScreen::Relayout()
   }
   const int winW =
       std::min(theme->DialogDefaultWidth, ViewportW - theme->DialogMargin);
-  const int winH = std::min(Scaled(540), ViewportH - theme->DialogMargin);
+  const int winH =
+      std::min(theme->DialogDefaultHeight, ViewportH - theme->DialogMargin);
   Window->SetBounds(
       {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
   DialogFrame->SetBounds(Window->GetClientArea());
@@ -442,44 +568,98 @@ void USettingsScreen::Relayout()
 std::vector<GuiGridItem>
 USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
 {
-  const int hotbarValueRow = spec.columns > 1 ? 13 : 15;
-  const int hotbarValueCol = spec.columns > 1 ? 1 : 0;
-  const int controlSchemeRow = spec.columns > 1 ? 14 : 18;
-  const int uiScaleSliderRow = spec.columns > 1 ? 1 : 2;
-  const int uiScaleValueRow = spec.columns > 1 ? 0 : 1;
-  const int uiScaleValueCol = spec.columns > 1 ? 1 : 0;
+  const int cols = std::max(1, spec.columns);
   const int labelH = Scaled(28);
   const int fieldH = Scaled(32);
   const int checkH = Scaled(30);
   const int sliderH = Scaled(28);
-  return {
-      {UiScaleLabel, 0, 0, 1, 1, labelH},
-      {UiScaleValueLabel, uiScaleValueRow, uiScaleValueCol, 1, 1, fieldH},
-      {UiScaleSlider, uiScaleSliderRow, 0, 1, spec.columns, sliderH},
-      {DefaultUserLabel, 2, 0, 1, 1, labelH},
-      {DefaultUserInput, 2, 1, 1, 1, fieldH},
-      {DefaultWorldLabel, 3, 0, 1, 1, labelH},
-      {DefaultWorldInput, 3, 1, 1, 1, fieldH},
-      {RenderDistLabel, 4, 0, 1, 1, labelH},
-      {RenderDistInput, 4, 1, 1, 1, fieldH},
-      {StreamingBox, 5, 0, 1, 1, checkH},
-      {StepUpBox, 5, 1, 1, 1, checkH},
-      {FoliageClimbBox, 6, 0, 1, 2, checkH},
-      {GreedyBox, 7, 0, 1, 1, checkH},
-      {FaceQuadsBox, 7, 1, 1, 1, checkH},
-      {FrustumBox, 8, 0, 1, 1, checkH},
-      {BatchCacheBox, 8, 1, 1, 1, checkH},
-      {LegacyHudBox, 9, 0, 1, 2, checkH},
-      {ShowPerformanceBox, 10, 0, 1, 2, checkH},
-      {ConsoleKeyLabel, 11, 0, 1, 1, labelH},
-      {ConsoleKeyInput, 11, 1, 1, 1, fieldH},
-      {PaletteKeyLabel, 12, 0, 1, 1, labelH},
-      {PaletteKeyInput, 12, 1, 1, 1, fieldH},
-      {HotbarCountLabel, 13, 0, 1, 1, labelH},
-      {HotbarCountValueLabel, hotbarValueRow, hotbarValueCol, 1, 1, fieldH},
-      {ControlSchemeLabel, controlSchemeRow, 0, 1, 1, labelH},
-      {ControlSchemeButton, controlSchemeRow, 1, 1, 1, fieldH},
+  std::vector<GuiGridItem> items;
+  int row = 0;
+
+  auto addLabeledField = [&](UGuiWidget *label, UGuiWidget *field)
+  {
+    if (cols > 1)
+    {
+      items.push_back({label, row, 0, 1, 1, labelH});
+      items.push_back({field, row, 1, 1, 1, fieldH});
+      ++row;
+      return;
+    }
+    items.push_back({label, row, 0, 1, 1, labelH});
+    ++row;
+    items.push_back({field, row, 0, 1, 1, fieldH});
+    ++row;
   };
+
+  auto addCheckPair = [&](UGuiWidget *left, UGuiWidget *right)
+  {
+    if (cols > 1)
+    {
+      items.push_back({left, row, 0, 1, 1, checkH});
+      items.push_back({right, row, 1, 1, 1, checkH});
+      ++row;
+      return;
+    }
+    items.push_back({left, row++, 0, 1, 1, checkH});
+    items.push_back({right, row++, 0, 1, 1, checkH});
+  };
+
+  items.push_back({UiScaleLabel, row, 0, 1, 1, labelH});
+  if (cols > 1)
+  {
+    items.push_back({UiScaleValueLabel, row, 1, 1, 1, fieldH});
+    ++row;
+    items.push_back({UiScaleSlider, row, 0, 1, cols, sliderH});
+    ++row;
+  }
+  else
+  {
+    ++row;
+    items.push_back({UiScaleValueLabel, row, 0, 1, 1, fieldH});
+    ++row;
+    items.push_back({UiScaleSlider, row, 0, 1, 1, sliderH});
+    ++row;
+  }
+
+  addLabeledField(DefaultUserLabel, DefaultUserInput);
+  addLabeledField(DefaultWorldLabel, DefaultWorldInput);
+  addLabeledField(RenderDistLabel, RenderDistInput);
+  addCheckPair(StreamingBox, StepUpBox);
+  items.push_back({FoliageClimbBox, row, 0, 1, cols, checkH});
+  ++row;
+  addCheckPair(GreedyBox, FaceQuadsBox);
+  addCheckPair(FrustumBox, BatchCacheBox);
+  items.push_back({LegacyHudBox, row, 0, 1, cols, checkH});
+  ++row;
+  items.push_back({ShowPerformanceBox, row, 0, 1, cols, checkH});
+  ++row;
+  items.push_back({CreatureNamesBox, row, 0, 1, cols, checkH});
+  ++row;
+  addLabeledField(ConsoleKeyLabel, ConsoleKeyInput);
+  addLabeledField(PaletteKeyLabel, PaletteKeyInput);
+
+  items.push_back({HotbarCountLabel, row, 0, 1, 1, labelH});
+  if (cols > 1)
+  {
+    items.push_back({HotbarCountValueLabel, row, 1, 1, 1, fieldH});
+    ++row;
+  }
+  else
+  {
+    ++row;
+    items.push_back({HotbarCountValueLabel, row, 0, 1, 1, fieldH});
+    ++row;
+  }
+  addLabeledField(ControlSchemeLabel, ControlSchemeButton);
+  addLabeledField(GraphicsQualityLabel, GraphicsQualityButton);
+  addLabeledField(LightingModeLabel, LightingModeButton);
+  addCheckPair(AsyncMeshingBox, AsyncRelightBox);
+  if (AndroidGpuBox)
+  {
+    items.push_back({AndroidGpuBox, row, 0, 1, cols, checkH});
+    ++row;
+  }
+  return items;
 }
 
 void USettingsScreen::LayoutHotbarCountControls(const GuiGridSpec &spec) const

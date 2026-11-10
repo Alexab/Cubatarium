@@ -1,0 +1,5 @@
+  chunks_traveled=10 ge 6.0 -> OK
+  wall_ms_fly_med=105.9876 le 200.0 -> OK
+  mesh_sync_fly_med=0.0 le 5.0 -> OK
+  physics_block_ms_p95=0.0109 le 5.0 -> OK
+GO phase=FLY_CLEAN

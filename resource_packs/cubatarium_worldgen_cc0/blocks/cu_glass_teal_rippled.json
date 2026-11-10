@@ -1,0 +1,33 @@
+{
+  "name": "cu_glass_teal_rippled",
+  "id": 2097,
+  "displayName": "Glass Teal Rippled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_teal_rippled",
+    "cu_glass_teal_rippled",
+    "cu_glass_teal_rippled",
+    "cu_glass_teal_rippled",
+    "cu_glass_teal_rippled",
+    "cu_glass_teal_rippled"
+  ],
+  "render": {
+    "texture_variation": 0.48,
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "teal",
+    "variant": "rippled"
+  }
+}

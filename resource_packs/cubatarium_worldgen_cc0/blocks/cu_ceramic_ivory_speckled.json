@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_ivory_speckled",
+  "id": 1667,
+  "displayName": "Ceramic Ivory Speckled",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_ivory_speckled",
+    "cu_ceramic_ivory_speckled",
+    "cu_ceramic_ivory_speckled",
+    "cu_ceramic_ivory_speckled",
+    "cu_ceramic_ivory_speckled",
+    "cu_ceramic_ivory_speckled"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "ivory",
+    "variant": "speckled"
+  }
+}

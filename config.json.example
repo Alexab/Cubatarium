@@ -57,7 +57,8 @@
         "fluid_tuning": {
             "water_drop_boost": 4,
             "flood_max_passes": 8,
-            "coastal_band_above_sea": 8
+            "coastal_band_above_sea": 8,
+            "water_flowing_dries": false
         },
         "liquid_queue_soft_limit": 2048,
         "liquid_queue_hard_limit": 8192,
@@ -73,6 +74,7 @@
         "falling_scan_radius_chunks": 2
     },
     "render": {
+        "performance_preset": "balanced",
         "greedy_meshing": true,
         "async_meshing": true,
         "face_quads": true,
@@ -106,9 +108,10 @@
         "palette_key": "b"
     },
     "resource_packs": {
-        "default_primary": ["minetest_default_16"],
+        "default_selection_version": 2,
+        "default_primary": ["cubatarium_worldgen_cc0"],
         "default_secondary": [],
-        "default_enabled": ["minetest_default_16"],
+        "default_enabled": ["cubatarium_worldgen_cc0"],
         "placeholder": { "tile_size": 16, "background": "#6b4a9e", "max_entries": 256 }
     },
     "environment": {

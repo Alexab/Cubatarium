@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_quartz_banded",
+  "id": 2140,
+  "displayName": "Crystal Quartz Banded",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_quartz_banded",
+    "cu_crystal_quartz_banded",
+    "cu_crystal_quartz_banded",
+    "cu_crystal_quartz_banded",
+    "cu_crystal_quartz_banded",
+    "cu_crystal_quartz_banded"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "quartz",
+    "variant": "banded"
+  }
+}

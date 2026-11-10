@@ -398,10 +398,7 @@ BlockId UFluidBlockResolver::ResolveFluidBlockIdForMesh(
     return block_id;
   }
   const FluidCellState fluid = reader.GetFluid(block_pos);
-  if (fluid.HasExplicitKind())
-  {
-    return BlockIdFromFluidKindImpl(defs, fluid.GetKind());
-  }
+  const bool has_explicit_kind = fluid.HasExplicitKind();
   static constexpr std::array<glm::ivec3, 6> kDirs = {
       glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
       glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
@@ -423,11 +420,26 @@ BlockId UFluidBlockResolver::ResolveFluidBlockIdForMesh(
     ConsiderWaterloggedNeighborMesh(reader, defs, neighbor_pos, water_liquid,
                                     other_liquid);
   }
-  if (water_liquid != BLOCK_AIR)
+  // Prefer an actual liquid-neighbor id over the canonical kind id: with
+  // multiple water blocks in the registry (base pack vs worldgen pack), the
+  // canonical first-water id differs from the surrounding ocean's id, and
+  // the same-id face cull then fails — waterlogged plants render as water
+  // planes inside the ocean (user report: "водоросли в блоках воды").
+  if (water_liquid != BLOCK_AIR &&
+      (!has_explicit_kind || fluid.GetKind() == FluidKind::Water))
   {
     return water_liquid;
   }
-  return other_liquid;
+  if (other_liquid != BLOCK_AIR &&
+      (!has_explicit_kind || fluid.GetKind() != FluidKind::Water))
+  {
+    return other_liquid;
+  }
+  if (has_explicit_kind)
+  {
+    return BlockIdFromFluidKindImpl(defs, fluid.GetKind());
+  }
+  return water_liquid != BLOCK_AIR ? water_liquid : other_liquid;
 }
 
 BlockId UFluidBlockResolver::ResolveFluidBlockId(const UBlockWorld &block_world,

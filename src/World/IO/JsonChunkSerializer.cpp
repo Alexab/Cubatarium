@@ -2,6 +2,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Math/FluidCellState.h"
+#include <algorithm>
 #include <nlohmann/json.hpp>
 #include <string>
 
@@ -42,7 +43,7 @@ SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
   out.format = ChunkDiskFormat::Json;
 
   json data;
-  data["format_version"] = 3;
+  data["format_version"] = 4;
   data["cx"] = chunkCoord.x;
   data["cy"] = chunkCoord.y;
   data["cz"] = chunkCoord.z;
@@ -71,6 +72,9 @@ SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
     }
   }
   data["voxels"] = voxels;
+  data["weather_state"] = {
+      {"surface_wetness", std::clamp(chunk.GetSurfaceWetness(), 0.0f, 1.0f)},
+      {"last_update_sec", std::max(0.0, chunk.GetWeatherLastUpdateSec())}};
   const std::string text = data.dump();
   out.bytes.assign(text.begin(), text.end());
   return out;
@@ -90,6 +94,13 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
   {
     const std::string text(bytes.begin(), bytes.end());
     const json data = json::parse(text);
+    if (data.contains("weather_state") && data["weather_state"].is_object())
+    {
+      const json &weather = data["weather_state"];
+      buffer.SetChunkWeatherState(chunkCoord,
+                                  weather.value("surface_wetness", 0.0f),
+                                  weather.value("last_update_sec", 0.0));
+    }
     for (const auto &voxel : data.at("voxels"))
     {
       const int lx = voxel.at("lx").get<int>();
@@ -106,12 +117,13 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
       buffer.SetBlock(worldPos, id);
       if (voxel.contains("fluid"))
       {
-        buffer.SetFluidPacked(worldPos,
-                              static_cast<uint8_t>(voxel.at("fluid").get<int>()));
+        buffer.SetFluidPacked(
+            worldPos, static_cast<uint8_t>(voxel.at("fluid").get<int>()));
       }
       else if (registry.IsLiquid(id))
       {
-        buffer.SetFluidPacked(worldPos, PackFluidCellState(FluidCellState::Source()));
+        buffer.SetFluidPacked(worldPos,
+                              PackFluidCellState(FluidCellState::Source()));
       }
     }
   }

@@ -43,6 +43,7 @@ def main() -> int:
         str(args.build_dir),
         "--process-timeout",
         "180",
+        "--metrics",
         *build_args,
     ]
     print("=== cruise ===", flush=True)
@@ -64,6 +65,7 @@ def main() -> int:
             str(args.build_dir),
             "--process-timeout",
             "300",
+            "--metrics",
         ]
         print("=== fly-stop ===", flush=True)
         rc = subprocess.call(stop_cmd)

@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_humus_layered",
+  "id": 1293,
+  "displayName": "Soil Humus Layered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_humus_layered",
+    "cu_soil_humus_layered",
+    "cu_soil_humus_layered",
+    "cu_soil_humus_layered",
+    "cu_soil_humus_layered_top",
+    "cu_soil_humus_layered_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "humus",
+    "variant": "layered"
+  }
+}

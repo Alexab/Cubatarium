@@ -401,6 +401,12 @@ inline void RunPhysicsFluidQueueTicks(
     {
       const cutum::FluidSpreadStats stats =
           fluid.TickBlock(world, definitions, tick, pos);
+      if (stats.NeedsReschedule)
+      {
+        // Same as WorldBlockPhysicsService: a cell waiting for its viscosity
+        // phase goes back to the queue instead of silently dropping out.
+        queue.Enqueue(pos);
+      }
       for (const cutum::FluidSpreadChange &change : stats.Changes)
       {
         WakeFromFluidChange(queue, world, definitions, change, tick);
@@ -431,6 +437,18 @@ inline void EnqueueFluidFrontier(cutum::UFluidUpdateSet &queue,
   }
 }
 
+/// Mirrors UWorldFluidFacade::TryAddFluidObject: a placed fluid enqueues itself
+/// and its face neighbors, because the source tick alone never pushes sideways
+/// (spread is driven by the receiving air cell pulling from the source).
+inline void EnqueuePlacedFluid(cutum::UFluidUpdateSet &queue, glm::ivec3 pos)
+{
+  queue.Enqueue(pos);
+  for (const glm::ivec3 &offset : cutum::NEIGHBOR_OFFSETS)
+  {
+    queue.Enqueue(pos + offset);
+  }
+}
+
 inline void RunQueueTicks(cutum::UBlockWorld &world,
                           const cutum::UBlockDefinitionStorage &definitions,
                           cutum::UFluidUpdateSet &queue,
@@ -452,6 +470,12 @@ inline void RunQueueTicks(cutum::UBlockWorld &world,
     {
       const cutum::FluidSpreadStats stats =
           fluid.TickBlock(world, definitions, tick, pos);
+      if (stats.NeedsReschedule)
+      {
+        // Same as WorldBlockPhysicsService: a cell waiting for its viscosity
+        // phase goes back to the queue instead of silently dropping out.
+        queue.Enqueue(pos);
+      }
       for (const cutum::FluidSpreadChange &change : stats.Changes)
       {
         WakeFromFluidChange(queue, world, definitions, change, tick);

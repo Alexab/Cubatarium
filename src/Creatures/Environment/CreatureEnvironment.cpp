@@ -4,6 +4,8 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Environment/CreatureTraverseQueries.h"
+#include "Creatures/Environment/CreatureSpawnPlacement.h"
 #include "Navigation/NavigationTypes.h"
 #include "Navigation/WorldNavigationQueries.h"
 #include "Render/Camera/Camera.h"
@@ -11,7 +13,12 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include "World/Math/CollisionVolume.h"
+#include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
+#include "World/Physics/FluidKindPresetUtil.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
+#include <chrono>
+#include <unordered_map>
 #include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
 #include <cmath>
@@ -43,28 +50,106 @@ bool IsPassableBlock(const UBlockRegistry &registry, BlockId id)
   return id != BLOCK_AIR && !registry.BlocksMovement(id);
 }
 
+enum class FluidKind : uint8_t
+{
+  None,
+  Water,
+  Lava,
+};
+
+FluidKind ClassifyFluidBlock(const UBlockRegistry &registry, BlockId id)
+{
+  // Fluid identity by name/render style, memoized per block id: the raw
+  // string find used to run inside every probe of every scanned block
+  // (audit S9). World sim is single-threaded; a benign recompute race
+  // yields the same value.
+  static std::unordered_map<const void *,
+                            std::unordered_map<BlockId, FluidKind>>
+      cache;
+  auto &perRegistry = cache[&registry];
+  if (const auto it = perRegistry.find(id); it != perRegistry.end())
+  {
+    return it->second;
+  }
+  FluidKind kind = FluidKind::None;
+  if (IsPassableBlock(registry, id))
+  {
+    // W6.6 (water audit E-6): physics-preset first (the sim's own classifier,
+    // FluidKindFromDefinition) — the name-substring heuristic stays only as
+    // a fallback for definition-less ids.
+    const BlockDefinition *def =
+        registry.GetDefinitions() ? registry.GetDefinitions()->GetById(id)
+                                  : nullptr;
+    if (def && def->Physics.IsLiquid)
+    {
+      // Map the sim's preset kind onto the local habitat enum (same values,
+      // distinct types).
+      const cutum::FluidKind preset = FluidKindFromDefinition(def);
+      kind = preset == cutum::FluidKind::Lava ? FluidKind::Lava
+                                              : FluidKind::Water;
+    }
+    else
+    {
+      const std::string &name = registry.GetTypeNameById(id);
+      if (name.find("lava") != std::string::npos)
+      {
+        kind = FluidKind::Lava;
+      }
+      else if (registry.GetRenderStyle(id) == BlockRenderStyle::Fluid ||
+               name.find("water") != std::string::npos)
+      {
+        kind = FluidKind::Water;
+      }
+    }
+  }
+  perRegistry[id] = kind;
+  return kind;
+}
+
 bool IsLavaBlock(const UBlockRegistry &registry, BlockId id)
 {
-  if (!IsPassableBlock(registry, id))
-  {
-    return false;
-  }
-  const std::string &name = registry.GetTypeNameById(id);
-  return name.find("lava") != std::string::npos;
+  return ClassifyFluidBlock(registry, id) == FluidKind::Lava;
 }
 
 bool IsWaterBlock(const UBlockRegistry &registry, BlockId id)
 {
-  if (!IsPassableBlock(registry, id) || IsLavaBlock(registry, id))
+  return ClassifyFluidBlock(registry, id) == FluidKind::Water;
+}
+
+/// Cell-level fluid identity: liquid blocks by id, plus water stored inside
+/// fluid-permeable decor (kelp, seagrass) as a FluidCellState. Worldgen fills
+/// ocean cells around permeable plants without placing liquid blocks, so an
+/// id-only classifier saw dry seabed under a kelp forest and let terrestrial
+/// mobs pass the habitat check underwater.
+FluidKind ClassifyFluidCell(const UWorld &world, const glm::ivec3 &pos,
+                            BlockId id)
+{
+  const UBlockRegistry &registry = world.GetBlockRegistry();
+  const FluidKind byId = ClassifyFluidBlock(registry, id);
+  if (byId != FluidKind::None)
   {
-    return false;
+    return byId;
   }
-  if (registry.GetRenderStyle(id) == BlockRenderStyle::Fluid)
+  const BlockDefinition *def =
+      registry.GetDefinitions() ? registry.GetDefinitions()->GetById(id)
+                                : nullptr;
+  if (!IsFluidPermeableFromDefinition(id, def, def && def->Physics.IsLiquid))
   {
-    return true;
+    return FluidKind::None;
   }
-  const std::string &name = registry.GetTypeNameById(id);
-  return name.find("water") != std::string::npos;
+  const FluidCellState state = world.GetBlockWorld().GetFluidState(pos);
+  if (!FluidCellHasActiveFluid(PackFluidCellState(state)))
+  {
+    return FluidKind::None;
+  }
+  if (state.HasExplicitKind())
+  {
+    return state.GetKind() == cutum::FluidKind::Lava ? FluidKind::Lava
+                                                     : FluidKind::Water;
+  }
+  // Permeable cell filled without an explicit kind: the natural fill is the
+  // ocean's water (lava-permeable decor does not occur in worldgen).
+  return FluidKind::Water;
 }
 
 void SampleHabitatFluidsInVolume(const UWorld &world, const CollisionVolume &vol,
@@ -105,6 +190,19 @@ void SampleHabitatFluidsInVolume(const UWorld &world, const CollisionVolume &vol
         {
           outWater = true;
         }
+        else
+        {
+          // Permeable decor (kelp, seagrass) with a filled fluid cell.
+          const FluidKind kind = ClassifyFluidCell(world, blockPos, id);
+          if (kind == FluidKind::Lava)
+          {
+            outLava = true;
+          }
+          else if (kind == FluidKind::Water)
+          {
+            outWater = true;
+          }
+        }
       }
     }
   }
@@ -119,15 +217,18 @@ struct FluidColumn
 std::optional<FluidColumn> ScanFluidColumn(const UWorld &world, int worldX,
                                            int worldZ, bool wantLava)
 {
-  const UBlockRegistry &registry = world.GetBlockRegistry();
   const UBlockWorld &blockWorld = world.GetBlockWorld();
   FluidColumn column;
   for (int y = 0; y <= 255; ++y)
   {
-    const BlockId id =
-        blockWorld.GetBlock(glm::ivec3(worldX, y, worldZ));
-    const bool lava = IsLavaBlock(registry, id);
-    const bool water = IsWaterBlock(registry, id);
+    const glm::ivec3 cellPos(worldX, y, worldZ);
+    const BlockId id = blockWorld.GetBlock(cellPos);
+    // Cell-level classification: id-level fluids plus water held inside
+    // fluid-permeable decor (kelp columns) — a kelp-only ocean column is
+    // still water for aquatic spawn queries.
+    const FluidKind kind = ClassifyFluidCell(world, cellPos, id);
+    const bool lava = kind == FluidKind::Lava;
+    const bool water = kind == FluidKind::Water;
     if (wantLava ? !lava : !water)
     {
       continue;
@@ -192,16 +293,7 @@ std::optional<float> FindAquaticSpawnFeetY(const UWorld &world, int worldX,
   {
     return std::nullopt;
   }
-  const float depth =
-      static_cast<float>(column->maxY - column->minY + 1);
-  if (depth + 1e-3f < bodyHeight * 0.35f)
-  {
-    return std::nullopt;
-  }
-  const float minFeet = static_cast<float>(column->minY);
-  const float maxFeet =
-      static_cast<float>(column->maxY) - bodyHeight + 0.5f;
-  return std::clamp(minFeet, minFeet, std::max(minFeet, maxFeet));
+  return ComputeAquaticSpawnFeetY(column->minY, column->maxY, bodyHeight);
 }
 
 bool HasAerialClearance(const UWorld &world, const CollisionVolume &vol,
@@ -214,6 +306,49 @@ bool HasAerialClearance(const UWorld &world, const CollisionVolume &vol,
   return !registry.BlocksMovement(world.GetBlockWorld().GetBlock(cell));
 }
 
+// Position-quantized memo for the environment probe (audit M2): the
+// O(r^3) volume scan used to run per creature per physics frame from
+// vitals, movement habitat gates and locomotion facts. Entries expire
+// after kProbeTtlSec, so block and fluid changes surface within that
+// bound; spawn-time decisions keep reading fresh (ForSpawn uses its own
+// clearance, aerial delegates here with at most one TTL of staleness).
+struct ProbeMemoKey
+{
+  int32_t x{0}, y{0}, z{0};
+  int32_t sx{0}, sy{0}, sz{0};
+  bool operator==(const ProbeMemoKey &o) const
+  {
+    return x == o.x && y == o.y && z == o.z && sx == o.sx && sy == o.sy &&
+           sz == o.sz;
+  }
+};
+
+struct ProbeMemoKeyHash
+{
+  size_t operator()(const ProbeMemoKey &k) const
+  {
+    size_t h = 1469598103934665603ull;
+    for (int32_t v : {k.x, k.y, k.z, k.sx, k.sy, k.sz})
+    {
+      h ^= static_cast<uint32_t>(v);
+      h *= 1099511628211ull;
+    }
+    return h;
+  }
+};
+
+constexpr float kProbeTtlSec = 0.2f;
+constexpr size_t kProbeMemoMaxEntries = 8192;
+std::unordered_map<ProbeMemoKey, std::pair<EnvironmentSample,
+                                           std::chrono::steady_clock::time_point>,
+                   ProbeMemoKeyHash>
+    gProbeMemo;
+
+int32_t QuantizeProbeCoord(float v)
+{
+  return static_cast<int32_t>(std::floor(v * 4.0f));
+}
+
 EnvironmentSample ProbeEnvironmentAtEx(const UWorld &world,
                                        const glm::vec3 &bodyOrigin,
                                        const glm::vec3 &sizeBlocks,
@@ -223,8 +358,16 @@ EnvironmentSample ProbeEnvironmentAtEx(const UWorld &world,
   const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
   SampleHabitatFluidsInVolume(world, vol, env.inWater, env.inLava);
   env.inFluid = env.inWater || env.inLava;
-  env.onSolidGround =
-      world.HasGroundSupportVolume(vol, BoundsFeetY(bodyOrigin));
+  // W6.1 (water audit E-4): head-level fluid probe — breath must drain only
+  // when the eyes are submerged; body contact (wading) must not drown.
+  const glm::vec3 headOrigin = bodyOrigin +
+                               glm::vec3(0.0f, sizeBlocks.y * 0.72f, 0.0f);
+  const glm::vec3 headSize(0.5f, 0.25f, 0.5f);
+  const CollisionVolume headVol =
+      CollisionVolumeFromBody(headOrigin, headSize);
+  SampleHabitatFluidsInVolume(world, headVol, env.headInWater,
+                              env.headInLava);
+  env.onSolidGround = world.HasBodySupport(vol);
   env.bodyBlocked = world.CheckCollisionVolume(vol, 0);
   const bool clearance = HasAerialClearance(world, vol, aerialClearance);
   env.inOpenAir = !env.inFluid && !env.onSolidGround && !env.bodyBlocked &&
@@ -241,22 +384,33 @@ EnvironmentSample ProbeEnvironmentAt(const UWorld &world,
   return ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 1.0f);
 }
 
-bool HabitatMatches(CreatureHabitat habitat, const EnvironmentSample &env)
+EnvironmentSample ProbeEnvironmentAtMemoized(const UWorld &world,
+                                             const glm::vec3 &bodyOrigin,
+                                             const glm::vec3 &sizeBlocks)
 {
-  switch (habitat)
+  const ProbeMemoKey key{QuantizeProbeCoord(bodyOrigin.x),
+                         QuantizeProbeCoord(bodyOrigin.y),
+                         QuantizeProbeCoord(bodyOrigin.z),
+                         QuantizeProbeCoord(sizeBlocks.x),
+                         QuantizeProbeCoord(sizeBlocks.y),
+                         QuantizeProbeCoord(sizeBlocks.z)};
+  const auto now = std::chrono::steady_clock::now();
+  if (const auto it = gProbeMemo.find(key); it != gProbeMemo.end())
   {
-  case CreatureHabitat::Terrestrial:
-    return env.onSolidGround && !env.inFluid;
-  case CreatureHabitat::Aquatic:
-    return env.inWater;
-  case CreatureHabitat::Aerial:
-    return env.inOpenAir && !env.inFluid;
-  case CreatureHabitat::Amphibious:
-    return (env.onSolidGround && !env.inFluid) || env.inWater;
-  case CreatureHabitat::Lava:
-    return env.inLava;
+    if (std::chrono::duration<float>(now - it->second.second).count() <
+        kProbeTtlSec)
+    {
+      return it->second.first;
+    }
   }
-  return false;
+  const EnvironmentSample sample =
+      ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 1.0f);
+  if (gProbeMemo.size() >= kProbeMemoMaxEntries)
+  {
+    gProbeMemo.clear();
+  }
+  gProbeMemo[key] = {sample, now};
+  return sample;
 }
 
 float ResolveViewerEyeHeight(const UWorld &world)
@@ -302,24 +456,78 @@ glm::ivec2 ResolveSpawnProbeColumn(const UWorld &world)
                     WorldCoordToBlockIndex(spawn.z));
 }
 
+/// Resolve the fluid column for a spawn probe: the probe's own column when
+/// it holds the wanted fluid, else the nearest such column around the
+/// probe, else around the view-ray ground column (audit 4.2 — this
+/// sequence was copy-pasted across the aquatic/lava/amphibious branches).
+std::optional<glm::ivec2> ResolveSpawnFluidColumn(const UWorld &world,
+                                                  const glm::ivec2 &rayColumn,
+                                                  int probeGx, int probeGz,
+                                                  bool wantLava)
+{
+  if (FindAquaticFeetY(world, probeGx, probeGz, wantLava))
+  {
+    return glm::ivec2(probeGx, probeGz);
+  }
+  if (const std::optional<glm::ivec2> nearCol = FindNearestFluidColumn(
+          world, probeGx, probeGz, wantLava, kFluidColumnSearchRadius))
+  {
+    return nearCol;
+  }
+  return FindNearestFluidColumn(world, rayColumn.x, rayColumn.y, wantLava,
+                                kFluidColumnSearchRadius);
+}
+
+std::optional<float> ResolveTerrestrialFootprintFeetY(
+    const UWorld &world, const glm::vec3 &origin, const glm::vec3 &sizeBlocks)
+{
+  std::optional<float> best = ResolveTerrestrialGroundFeetY(
+      world, WorldCoordToBlockIndex(origin.x), WorldCoordToBlockIndex(origin.z),
+      origin.y);
+  // Edge samples use the bounded "under" query only: the column fallback
+  // would pick a hilltop or cave roof beside the body.
+  const float hx = std::max(0.0f, sizeBlocks.x * 0.5f - 0.05f);
+  const float hz = std::max(0.0f, sizeBlocks.z * 0.5f - 0.05f);
+  for (const float dx : {-hx, 0.0f, hx})
+  {
+    for (const float dz : {-hz, 0.0f, hz})
+    {
+      if (dx == 0.0f && dz == 0.0f)
+      {
+        continue;
+      }
+      if (const std::optional<float> feetY = world.QueryGroundFeetYUnder(
+              WorldCoordToBlockIndex(origin.x + dx),
+              WorldCoordToBlockIndex(origin.z + dz), origin.y))
+      {
+        if (!best || *feetY > *best)
+        {
+          best = feetY;
+        }
+      }
+    }
+  }
+  return best;
+}
+
 glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
                                   const CreatureDefinition &def,
                                   const glm::vec3 &viewProbe)
 {
   const glm::ivec2 column = ResolveSpawnProbeColumn(world);
-  const int gx = column.x;
-  const int gz = column.y;
   const float bodyHeight = def.bounds.restSizeBlocks.y;
 
   if (def.habitat == CreatureHabitat::Terrestrial)
   {
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
-    if (const std::optional<float> feetY =
-            ResolveTerrestrialGroundFeetY(world, probeGx, probeGz, viewProbe.y))
+    if (const std::optional<float> feetY = ResolveTerrestrialFootprintFeetY(
+            world, viewProbe, def.bounds.restSizeBlocks))
     {
       return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
+    (void)probeGx;
+    (void)probeGz;
     return viewProbe;
   }
 
@@ -327,31 +535,20 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
   {
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
-    glm::ivec2 fluidCol(probeGx, probeGz);
-    if (!FindAquaticFeetY(world, probeGx, probeGz, false))
+    const auto fluidCol =
+        ResolveSpawnFluidColumn(world, column, probeGx, probeGz, false);
+    if (fluidCol)
     {
-      if (const std::optional<glm::ivec2> nearCol =
-              FindNearestFluidColumn(world, probeGx, probeGz, false,
-                                     kFluidColumnSearchRadius))
+      if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
+              world, fluidCol->x, fluidCol->y, false, bodyHeight))
       {
-        fluidCol = *nearCol;
+        return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
-      else if (const std::optional<glm::ivec2> rayCol =
-                   FindNearestFluidColumn(world, gx, gz, false,
-                                          kFluidColumnSearchRadius))
+      if (const std::optional<float> feetY =
+              FindAquaticFeetY(world, fluidCol->x, fluidCol->y, false))
       {
-        fluidCol = *rayCol;
+        return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
-    }
-    if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
-            world, fluidCol.x, fluidCol.y, false, bodyHeight))
-    {
-      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
-    }
-    if (const std::optional<float> feetY =
-            FindAquaticFeetY(world, fluidCol.x, fluidCol.y, false))
-    {
-      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
     return viewProbe;
   }
@@ -360,26 +557,15 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
   {
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
-    glm::ivec2 fluidCol(probeGx, probeGz);
-    if (!FindAquaticFeetY(world, probeGx, probeGz, true))
+    const auto fluidCol =
+        ResolveSpawnFluidColumn(world, column, probeGx, probeGz, true);
+    if (fluidCol)
     {
-      if (const std::optional<glm::ivec2> nearCol =
-              FindNearestFluidColumn(world, probeGx, probeGz, true,
-                                     kFluidColumnSearchRadius))
+      if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
+              world, fluidCol->x, fluidCol->y, true, bodyHeight))
       {
-        fluidCol = *nearCol;
+        return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
-      else if (const std::optional<glm::ivec2> rayCol =
-                   FindNearestFluidColumn(world, gx, gz, true,
-                                          kFluidColumnSearchRadius))
-      {
-        fluidCol = *rayCol;
-      }
-    }
-    if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
-            world, fluidCol.x, fluidCol.y, true, bodyHeight))
-    {
-      return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
     }
     return viewProbe;
   }
@@ -388,29 +574,12 @@ glm::vec3 SnapSpawnProbeToHabitat(const UWorld &world,
   {
     const int probeGx = WorldCoordToBlockIndex(viewProbe.x);
     const int probeGz = WorldCoordToBlockIndex(viewProbe.z);
-    glm::ivec2 fluidCol(probeGx, probeGz);
-    bool hasWater = static_cast<bool>(FindAquaticFeetY(world, probeGx, probeGz, false));
-    if (!hasWater)
-    {
-      if (const std::optional<glm::ivec2> nearCol =
-              FindNearestFluidColumn(world, probeGx, probeGz, false,
-                                     kFluidColumnSearchRadius))
-      {
-        fluidCol = *nearCol;
-        hasWater = true;
-      }
-      else if (const std::optional<glm::ivec2> rayCol =
-                   FindNearestFluidColumn(world, gx, gz, false,
-                                          kFluidColumnSearchRadius))
-      {
-        fluidCol = *rayCol;
-        hasWater = true;
-      }
-    }
-    if (hasWater)
+    const auto fluidCol =
+        ResolveSpawnFluidColumn(world, column, probeGx, probeGz, false);
+    if (fluidCol)
     {
       if (const std::optional<float> feetY = FindAquaticSpawnFeetY(
-              world, fluidCol.x, fluidCol.y, false, bodyHeight))
+              world, fluidCol->x, fluidCol->y, false, bodyHeight))
       {
         return glm::vec3(viewProbe.x, *feetY, viewProbe.z);
       }
@@ -444,7 +613,7 @@ bool CanCreatureOccupyAt(const UWorld &world, CreatureHabitat habitat,
                          const glm::vec3 &sizeBlocks)
 {
   const EnvironmentSample env =
-      ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+      ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
   if (!HabitatMatches(habitat, env))
   {
     return false;
@@ -556,45 +725,24 @@ bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
                      const glm::vec3 &sizeBlocks)
 {
   const EnvironmentSample env =
-      ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+      ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
   return HabitatMatches(habitat, env);
 }
 
 bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &bodyOrigin,
-                             const glm::vec3 &sizeBlocks)
+                             const glm::vec3 &sizeBlocks,
+                             float maxClimbDropBlocks)
 {
   if (habitat == CreatureHabitat::Terrestrial)
   {
-    glm::vec3 feet_origin = bodyOrigin;
-    const int gx = WorldCoordToBlockIndex(bodyOrigin.x);
-    const int gz = WorldCoordToBlockIndex(bodyOrigin.z);
-    if (const std::optional<float> feet_y =
-            ResolveTerrestrialGroundFeetY(world, gx, gz, bodyOrigin.y))
-    {
-      const float climb = *feet_y - bodyOrigin.y;
-      const float drop = bodyOrigin.y - *feet_y;
-      if (climb > 1.25f || drop > 1.25f)
-      {
-        return false;
-      }
-      feet_origin.y = *feet_y;
-    }
-    const UWorldNavigationQueries navigation(world);
-    const NavigationStandNode node =
-        NavigationStandNodeFromBody(feet_origin);
-    if (!navigation.IsTerrestrialStandNode(node, sizeBlocks.y))
-    {
-      return false;
-    }
-    const EnvironmentSample env =
-        ProbeEnvironmentAt(world, feet_origin, sizeBlocks);
-    return env.onSolidGround && !env.inFluid;
+    // Shared stand predicate with A* node / probes (actual body, not footprint).
+    return CanCreatureStandAt(world, bodyOrigin, sizeBlocks, maxClimbDropBlocks);
   }
   if (habitat == CreatureHabitat::Amphibious)
   {
     const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
     if (env.inWater)
     {
       return true;
@@ -603,14 +751,19 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
   }
   if (habitat == CreatureHabitat::Aquatic)
   {
-    const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
-    return env.inWater;
+    // Runtime issue 2 (whales beaching): the full body volume counts water
+    // as soon as ANY cell is wet, so a big body could wade ashore while its
+    // tail still touched water. Require the body CORE (half size) to be
+    // submerged - wading stops where the center leaves the water.
+    const glm::vec3 coreSize = glm::max(sizeBlocks * 0.5f, glm::vec3(0.3f));
+    const EnvironmentSample core =
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, coreSize);
+    return core.inWater;
   }
   if (habitat == CreatureHabitat::Lava)
   {
     const EnvironmentSample env =
-        ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
     return env.inLava;
   }
   const CollisionVolume vol = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
@@ -620,7 +773,11 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
   }
   if (habitat == CreatureHabitat::Aerial)
   {
-    return !world.CheckBlockCollisionVolume(vol);
+    // Runtime issue 2 (owls half-submerged): block-clearance alone let
+    // flyers dip into water. Reject any fluid contact.
+    const EnvironmentSample env =
+        ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
+    return !env.inFluid && !world.CheckBlockCollisionVolume(vol);
   }
   return HabitatAllowsAt(world, habitat, bodyOrigin, sizeBlocks);
 }
@@ -631,7 +788,7 @@ bool HabitatAllowsAtForSpawn(const UWorld &world, CreatureHabitat habitat,
 {
   if (habitat == CreatureHabitat::Aerial)
   {
-    return HabitatAllowsMovementAt(world, habitat, bodyOrigin, sizeBlocks);
+    return HabitatAllowsAt(world, habitat, bodyOrigin, sizeBlocks);
   }
   const EnvironmentSample env =
       ProbeEnvironmentAtEx(world, bodyOrigin, sizeBlocks, 0.5f);
@@ -648,11 +805,9 @@ bool CanSpawnCreatureAt(const UWorld &world, const CreatureDefinition &def,
   {
     return false;
   }
-  CollisionVolume vol = CollisionVolumeFromBody(adjusted, size);
   // Slightly shrink spawn AABB so tall mobs (zombie) fit under low ceilings.
-  constexpr float kSpawnCollisionInset = 0.05f;
-  vol.halfExtents -= glm::vec3(kSpawnCollisionInset);
-  vol.halfExtents = glm::max(vol.halfExtents, glm::vec3(0.05f));
+  const CollisionVolume vol =
+      InsetCollisionVolumeForSpawn(CollisionVolumeFromBody(adjusted, size));
   if (world.CheckCreatureCollisionVolume(vol, 0))
   {
     return false;
@@ -769,10 +924,10 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
       const float feetYClamped = std::clamp(probeOrigin.y, minFeet, maxFeet);
       return glm::vec3(probeOrigin.x, feetYClamped, probeOrigin.z);
     }
-    if (def.habitat == CreatureHabitat::Amphibious)
-    {
-      return probeOrigin;
-    }
+    // Amphibious with no water here: stand on the ground like a land mob.
+    // This used to return the raw probe (eye height in the air), so the
+    // habitat check (ground or water) failed and amphibious creatures
+    // (penguin, seal) could not be spawned on land by view or by QA.
   }
   if (def.habitat == CreatureHabitat::Lava)
   {
@@ -815,12 +970,15 @@ glm::vec3 AdjustSpawnBodyOrigin(const UWorld &world,
     }
     return base;
   }
-  if (def.habitat == CreatureHabitat::Terrestrial)
+  if (def.habitat == CreatureHabitat::Terrestrial ||
+      def.habitat == CreatureHabitat::Amphibious)
   {
     const int gx = WorldCoordToBlockIndex(probeOrigin.x);
     const int gz = WorldCoordToBlockIndex(probeOrigin.z);
-    if (const std::optional<float> feetY =
-            ResolveTerrestrialGroundFeetY(world, gx, gz, probeOrigin.y))
+    (void)gx;
+    (void)gz;
+    if (const std::optional<float> feetY = ResolveTerrestrialFootprintFeetY(
+            world, probeOrigin, def.bounds.restSizeBlocks))
     {
       return glm::vec3(probeOrigin.x, *feetY, probeOrigin.z);
     }
@@ -870,7 +1028,7 @@ void ApplyEnvironmentLocomotionFacts(const UWorld &world,
                                      CreatureLocomotionFacts &facts)
 {
   const EnvironmentSample env =
-      ProbeEnvironmentAt(world, bodyOrigin, sizeBlocks);
+      ProbeEnvironmentAtMemoized(world, bodyOrigin, sizeBlocks);
   facts.inFluid = env.inWater || env.inLava;
   facts.onFluidBottom = env.inFluid && env.onSolidGround;
 }

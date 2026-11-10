@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""Run flight_sim_run.py under the established clear-day diagnostic profile.
+
+This temporarily applies the selected world's environment values, defaulting
+to frozen clear noon (time_of_day=0.25 for the current primary-sun orbit). It
+also pins the running engine through CUBA_FIXED_TIME so startup or cached world
+state cannot replace the requested time. The exact original world_data.json
+bytes are restored in a finally block, even when the runner exits nonzero or
+raises. Camera, route, and movement settings are passed through unchanged.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def atomic_write(path: Path, payload: bytes, tag: str) -> None:
+    descriptor, temp_name = tempfile.mkstemp(
+        prefix=path.name + tag, dir=path.parent
+    )
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(payload)
+        os.replace(temp, path)
+    finally:
+        if temp.exists():
+            temp.unlink()
+
+
+def fixed_day_payload(original: bytes, time_of_day: float) -> bytes:
+    document = json.loads(original.decode("utf-8"))
+    environment = document.setdefault("environment", {})
+    environment["time_frozen"] = True
+    environment["time_of_day"] = time_of_day
+    environment["weather"] = "clear"
+    environment["weather_target"] = "clear"
+    environment["cloud_coverage"] = 0.0
+    environment["cloud_coverage_override"] = 0.0
+    weather_auto = environment.setdefault("weather_auto", {})
+    weather_auto["auto_enabled"] = False
+    weather_auto["auto_change"] = False
+    return (json.dumps(document, ensure_ascii=False, indent=4) + "\n").encode(
+        "utf-8"
+    )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--world", required=True)
+    parser.add_argument(
+        "--time-of-day",
+        type=float,
+        default=0.25,
+        help="normalized day phase in [0, 1); 0.25 is near solar noon in the default world",
+    )
+    parser.add_argument(
+        "runner_args",
+        nargs=argparse.REMAINDER,
+        help="arguments for tools/flight_sim_run.py after --",
+    )
+    args = parser.parse_args()
+    if not 0.0 <= args.time_of_day < 1.0:
+        parser.error("--time-of-day must be in [0, 1)")
+    runner_args = list(args.runner_args)
+    if runner_args and runner_args[0] == "--":
+        runner_args.pop(0)
+    if not runner_args:
+        parser.error("pass flight_sim_run.py arguments after --")
+
+    world_arg = None
+    for index, value in enumerate(runner_args[:-1]):
+        if value == "--world":
+            world_arg = runner_args[index + 1]
+            break
+    if world_arg is not None and world_arg != args.world:
+        parser.error("--world must match the wrapper's --world value")
+    if world_arg is None:
+        runner_args.extend(("--world", args.world))
+
+    world_data = ROOT / "bin" / "worlds" / args.world / "world_data.json"
+    if not world_data.is_file():
+        parser.error(f"world metadata not found: {world_data}")
+    backup = world_data.with_name(world_data.name + ".fixed-day-backup")
+    if backup.exists():
+        stale_original = backup.read_bytes()
+        try:
+            stale_expected = fixed_day_payload(stale_original, args.time_of_day)
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            parser.error(f"cannot inspect stale fixed-day backup {backup}: {exc}")
+        if world_data.read_bytes() != stale_expected:
+            parser.error(
+                f"stale backup exists at {backup}, but world_data.json no longer "
+                "matches the fixed-day payload; preserve both files and inspect "
+                "them before another flight"
+            )
+        atomic_write(world_data, stale_original, ".recover.tmp")
+        restored = world_data.read_bytes()
+        if sha256(restored) != sha256(stale_original):
+            raise RuntimeError(
+                f"stale fixed-day backup recovery failed; backup retained at {backup}"
+            )
+        backup.unlink()
+        print(
+            "INFO: recovered world_data.json from an interrupted fixed-day run; "
+            f"sha256={sha256(restored)}",
+            flush=True,
+        )
+
+    original = world_data.read_bytes()
+    try:
+        overridden = fixed_day_payload(original, args.time_of_day)
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        parser.error(f"cannot prepare world metadata: {exc}")
+
+    with backup.open("xb") as stream:
+        stream.write(original)
+    result_code = 1
+    try:
+        atomic_write(world_data, overridden, ".fixed-day.tmp")
+        print(
+            "fixed-day profile: "
+            f"time_of_day={args.time_of_day} (default-world noon=0.25) "
+            "weather=clear clouds=0; "
+            f"original_sha256={sha256(original)}",
+            flush=True,
+        )
+        child_env = os.environ.copy()
+        child_env["CUBA_FIXED_TIME"] = str(args.time_of_day)
+        command = [
+            sys.executable,
+            str(ROOT / "tools" / "flight_sim_run.py"),
+            *runner_args,
+        ]
+        result_code = subprocess.run(
+            command, cwd=ROOT, env=child_env, check=False
+        ).returncode
+        return result_code
+    finally:
+        atomic_write(world_data, original, ".restore.tmp")
+        restored = world_data.read_bytes()
+        if sha256(restored) != sha256(original):
+            raise RuntimeError(
+                f"world_data.json restoration failed; backup retained at {backup}"
+            )
+        backup.unlink()
+        print(
+            f"restored world_data.json byte-for-byte sha256={sha256(restored)}",
+            flush=True,
+        )
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

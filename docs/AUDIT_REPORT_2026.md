@@ -120,10 +120,10 @@ Closed: **19** | Rejected (false positive): **1**.
   - Module: Creatures; Files: src/Pose/AerialPosePresenter.cpp
   - Action: defer
   - Evidence: Ground chicken walk+peck done; fly IK and clip playback backlog per TECH_DEBT_CREATURES.md.
-- **AUDIT-CRE-005** [architecture] FleeActivityAgent / MeleeAttackActivityAgent not implemented (TD-CRE-008)
-  - Module: Creatures; Files: docs/TECH_DEBT_CREATURES.md
-  - Action: defer to AI phase
-  - Evidence: Visual scope complete; AI activity agents deferred.
+- **AUDIT-CRE-005** [architecture] FleeActivityAgent / MeleeAttackActivityAgent — **superseded / closed** (TD-CRE-008 closed in TECH_DEBT_CREATURES; see CREATURE_AGENTS.md)
+  - Module: Creatures; Files: src/Activity/Agents/*
+  - Action: none (implemented)
+  - Evidence: Flee/Melee + USimpleFsmBrain shipped; stale defer note kept for historical audit trail.
 - **AUDIT-CRE-006** [architecture] FP viewmodel arms (fp_parts[]) not implemented (TD-CRE-010)
   - Module: Creatures; Files: docs/TECH_DEBT_CREATURES.md
   - Action: defer

@@ -1,0 +1,32 @@
+{
+  "name": "mtg_ladder_wood",
+  "id": 466,
+  "hardness": 0.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_ladder_wood_default_ladder_wood",
+    "mt_mtg_ladder_wood_default_ladder_wood",
+    "mt_mtg_ladder_wood_default_ladder_wood",
+    "mt_mtg_ladder_wood_default_ladder_wood",
+    "mt_mtg_ladder_wood_default_ladder_wood",
+    "mt_mtg_ladder_wood_default_ladder_wood"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

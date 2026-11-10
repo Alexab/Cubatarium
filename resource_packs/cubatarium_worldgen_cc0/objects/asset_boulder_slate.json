@@ -1,0 +1,154 @@
+{
+  "name": "asset_boulder_slate",
+  "version": 2,
+  "displayName": "Boulder Slate",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 8875372117344367226,
+    "license": "CC0-1.0",
+    "material_parameter": "slate"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": -2,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": -1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 2,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_slate_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_slate_natural"
+    }
+  ]
+}

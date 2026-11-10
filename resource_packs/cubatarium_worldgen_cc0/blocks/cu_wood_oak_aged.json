@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_oak_aged",
+  "id": 1359,
+  "displayName": "Wood Oak Aged",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_oak_aged",
+    "cu_wood_oak_aged",
+    "cu_wood_oak_aged",
+    "cu_wood_oak_aged",
+    "cu_wood_oak_aged_top",
+    "cu_wood_oak_aged_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "oak",
+    "variant": "aged"
+  }
+}

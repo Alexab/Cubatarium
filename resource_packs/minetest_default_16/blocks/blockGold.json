@@ -1,6 +1,13 @@
 {
   "name": "blockGold",
   "id": 345,
+  "hardness": 3,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],

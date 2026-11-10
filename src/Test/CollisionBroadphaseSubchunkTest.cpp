@@ -55,6 +55,17 @@ int main()
   Expect(!collision.CheckBlockCollisionVolume(far_vol),
          "far subchunk volume should miss via broadphase");
 
+  cutum::UBlockWorld signed_world;
+  signed_world.SetVerticalProfile(cutum::WorldVerticalProfile{});
+  signed_world.SetBlock(glm::ivec3(3, -64, 4), kStone);
+  signed_world.SetBlock(glm::ivec3(3, 319, 4), kStone);
+  cutum::UWorldCollision signed_collision(signed_world);
+  signed_collision.SetBlockRegistry(&registry);
+  Expect(signed_collision.FindHighestSolidY(3, 4) == 319,
+         "ground search includes configured upper world bound");
+  Expect(signed_collision.QueryGroundFeetYUnder(3, 4, -62.0f) == -63.5f,
+         "ground query scans down through negative slices to world floor");
+
   std::cout << "collision_broadphase_subchunk_test: OK" << std::endl;
   return 0;
 }

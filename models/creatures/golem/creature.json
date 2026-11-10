@@ -7,27 +7,37 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 56
+    "sort_order": 56,
+    "natural_spawnable": true,
+    "spawn_weight": 0.4,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "mountains",
+      "hills",
+      "jagged_peaks",
+      "plains"
+    ]
   },
   "role": "mob",
   "bounds": {
     "rest": [
-      0.65,
-      1.75,
-      0.65
+      1.49,
+      2.45,
+      1.08
     ],
     "max": [
-      0.65,
-      1.75,
-      0.65
+      1.49,
+      2.45,
+      1.08
     ],
     "min": [
-      0.65,
-      1.3,
-      0.65
+      1.49,
+      1.82,
+      1.08
     ]
   },
-  "eye_height": 1.75,
+  "eye_height": 2.45,
   "habitat": "terrestrial",
   "locomotion_archetype": "terrestrial_biped",
   "locomotion": {

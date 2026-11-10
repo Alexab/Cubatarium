@@ -1,0 +1,36 @@
+{
+  "id": "iron_head",
+  "format": "parts_v1",
+  "license": "CC0-1.0",
+  "attribution": "Cubatarium authored low-poly (educational). Visual language inspired by Kenney Survival Kit / KayKit RPG Tools Bits / Quaternius Fantasy Props (all CC0).",
+  "parts": [
+    {
+      "texture": "iron",
+      "offset": [
+        0,
+        0.15,
+        0
+      ],
+      "size": [
+        0.34,
+        0.22,
+        0.34
+      ]
+    },
+    {
+      "texture": "iron",
+      "offset": [
+        0,
+        0.0,
+        0.12
+      ],
+      "size": [
+        0.3,
+        0.12,
+        0.12
+      ]
+    }
+  ],
+  "slot": "head",
+  "set": "iron"
+}

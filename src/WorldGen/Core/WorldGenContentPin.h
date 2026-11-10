@@ -3,6 +3,7 @@
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenContentPinTls.h"
+#include "WorldGen/Sampling/BiomeDefinitionRegistry.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <memory>
 
@@ -15,6 +16,7 @@ namespace cutum
 struct WorldGenContentSnapshot
 {
   std::shared_ptr<const WorldGenPack> Pack;
+  std::shared_ptr<const BiomeDefinitionRegistry> Biomes;
   std::shared_ptr<const ObjectFeatureConfig> Features;
   std::shared_ptr<const WorldGenRefsCatalog> Refs;
 };

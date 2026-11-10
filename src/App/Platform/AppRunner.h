@@ -14,6 +14,26 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths);
 /// Hidden-window GUI smoke: Enter Game with default_world, exit after N in-game frames.
 int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames = 5);
 
+struct AutoloadLastWorldOptions
+{
+  std::string WorldName;
+  bool VisibleWindow{false};
+  double TimeoutSec{600.0};
+  int InGameFrames{5};
+  /// QA-only: keep the world AI scheduling gate on a 60 Hz wall-time value
+  /// while a hidden renderer is slower than the normal hitch threshold.
+  bool ForceCreatureAiTicks{false};
+  /// QA-only: move the player to this eye-height after entering the world and
+  /// let normal non-flight locomotion fall onto the terrain.
+  float DropPlayerAtY{-1.0f};
+  /// QA-only: apply a final lethal hit in a live Hardcore Survival world.
+  bool ForceHardcoreDeath{false};
+};
+
+/// Era43f: visible/hidden GUI autoload of config default_world (or --world).
+int RunAutoloadLastWorld(IUPlatformPaths &paths,
+                         const AutoloadLastWorldOptions &options);
+
 /// Agent flight simulation: load world, fly forward, quit, write JSON report.
 /// Manual World_164 ocean pass (perf_20260720-024756): idle ~50s at focus
 /// (-35,6), then fly west (−X) ~11 chunks with holes/wall spikes. Autopilot
@@ -31,8 +51,15 @@ struct FlightSimOptions
   float FacePitchDeg{-2.0f};
   /// Eye height above sea when too low (ocean cruise).
   float MinAltitudeAboveSea{28.0f};
+  /// Absolute eye Y for land cruise. When > 0, overrides sea+MinAltitude clamp
+  /// (inland hills sit above sea+28; manual land corridor ~y=96).
+  float CruiseEyeY{0.0f};
   /// Hold Space while flying to maintain altitude (manual FreeMove climb).
   bool HoldSpace{false};
+  /// Keep the autopilot's forward vector horizontal while the camera looks up/down.
+  bool LevelForward{false};
+  /// Flight-sim-only predictive obstacle bypass. Production locomotion is unchanged.
+  bool AvoidObstacles{true};
   bool Sprint{false};
   /// Reset to a fixed ocean cruise start each run (matches World_164 manual).
   bool TeleportToCruiseStart{false};
@@ -46,13 +73,29 @@ struct FlightSimOptions
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};
   double StopPhaseSec{35.0};
+  /// Reverse the autopilot heading after this many seconds of forward flight.
+  /// Zero disables the turn; useful for no-teleport disk-reload round trips.
+  double ReverseCourseAfterSec{0.0};
+  /// Optional diagnostic guard: stop after sustained blocked/ground-contact
+  /// movement during the active fly phase. Zero keeps the full requested run.
+  double StopAfterBlockedSec{0.0};
+  /// After fly, before stop: pitch down / no altitude clamp (underwater hang).
+  double DivePhaseSec{0.0};
+  float DivePitchDeg{-30.0f};
   /// Standing break scenario: idle then break solid under look every ~1s.
   bool BreakStandMode{false};
   double BreakPhaseSec{20.0};
   double BreakIntervalSec{1.0};
+  /// Standing yaw sweep: cycle 0/90/180/270 every YawSweepSec (visual blue repro).
+  bool YawSweepMode{false};
+  double YawSweepSec{3.0};
   /// Show GLFW window (default hidden). Hidden still has a GL context; lighting
   /// runs the same path — use visible only for human eyeballing.
   bool VisibleWindow{false};
+  /// Render every block in a generated visual QA gallery and capture one page
+  /// per interval. The input is tools/assetgen.py's gallery manifest.
+  std::string AssetGalleryManifest;
+  double AssetGalleryPageSeconds{6.0};
 };
 
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options);

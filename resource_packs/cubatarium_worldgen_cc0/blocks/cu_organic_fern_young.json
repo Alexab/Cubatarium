@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_fern_young",
+  "id": 2249,
+  "displayName": "Organic Fern Young",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_fern_young",
+    "cu_organic_fern_young",
+    "cu_organic_fern_young",
+    "cu_organic_fern_young",
+    "cu_organic_fern_young_top",
+    "cu_organic_fern_young"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "tuft",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "fern",
+    "variant": "young"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

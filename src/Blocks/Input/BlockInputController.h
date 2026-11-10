@@ -54,6 +54,7 @@ private:
 
   std::chrono::steady_clock::time_point LeftDownTime{};
   bool LeftHeld{false};
+  bool DigStartedForHold{false};
   glm::vec2 RightDownPos{0.0f};
   bool RightPressed{false};
   bool RightLookActive{false};

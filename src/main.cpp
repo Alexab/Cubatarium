@@ -18,13 +18,32 @@
 
 #include <cstring>
 #include <cstdlib>
+#include "App/Platform/SampleProfiler.h"
 int main(int argc, char *argv[])
 {
 #ifdef _WIN32
   cutum::CubatariumInstallWindowsDiagnostics();
+  cutum::StartSampleProfilerIfRequested();
 #endif
-  const bool also_stderr =
-      argc > 1; // CLI / console modes also get ERROR+ on stderr via wrappers
+  bool flight_sim_mode = false;
+  bool explicit_console = false;
+  bool explicit_log_stderr = false;
+  for (int i = 1; i < argc; ++i)
+  {
+    flight_sim_mode = flight_sim_mode ||
+                      std::strcmp(argv[i], "--flight-sim") == 0;
+    explicit_console = explicit_console ||
+                       std::strcmp(argv[i], "--console") == 0;
+    explicit_log_stderr = explicit_log_stderr ||
+                          std::strcmp(argv[i], "--log-stderr") == 0;
+  }
+  // flight-sim writes periodic INFO diagnostics to the app log already.
+  // Mirroring every INFO line to a captured stderr pipe can block the main
+  // thread during verbose column/save traces. Keep stderr mirroring opt-in for
+  // flight-sim while preserving it for the other CLI modes.
+  const bool also_stderr = argc > 1 &&
+                           (!flight_sim_mode || explicit_console ||
+                            explicit_log_stderr);
   cutum::CubatariumInitLogging(argc > 0 ? argv[0] : "Cubatarium", also_stderr);
 
   for (int i = 1; i < argc; ++i)
@@ -67,6 +86,52 @@ int main(int argc, char *argv[])
         in_game_frames = std::atoi(argv[i + 1]);
       }
       return cutum::RunEnterGameSmoke(*paths, in_game_frames);
+    }
+    if (std::strcmp(argv[i], "--autoload-last-world") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      cutum::AutoloadLastWorldOptions opt;
+      for (int j = i + 1; j < argc; ++j)
+      {
+        if (std::strcmp(argv[j], "--visible") == 0)
+        {
+          opt.VisibleWindow = true;
+        }
+        else if (std::strcmp(argv[j], "--world") == 0 && j + 1 < argc)
+        {
+          opt.WorldName = argv[++j];
+        }
+        else if (std::strcmp(argv[j], "--timeout-sec") == 0 && j + 1 < argc)
+        {
+          opt.TimeoutSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--ingame-frames") == 0 && j + 1 < argc)
+        {
+          opt.InGameFrames = std::atoi(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--force-creature-ai-ticks") == 0)
+        {
+          opt.ForceCreatureAiTicks = true;
+        }
+        else if (std::strcmp(argv[j], "--drop-player-at-y") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.DropPlayerAtY = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--force-hardcore-death") == 0)
+        {
+          opt.ForceHardcoreDeath = true;
+        }
+        else if (argv[j][0] == '-')
+        {
+          break;
+        }
+      }
+      return cutum::RunAutoloadLastWorld(*paths, opt);
     }
     if (std::strcmp(argv[i], "--flight-sim") == 0)
     {
@@ -123,6 +188,10 @@ int main(int argc, char *argv[])
         {
           opt.HoldSpace = true;
         }
+        else if (std::strcmp(argv[j], "--level-forward") == 0)
+        {
+          opt.LevelForward = true;
+        }
         else if (std::strcmp(argv[j], "--teleport-cruise") == 0)
         {
           opt.TeleportToCruiseStart = true;
@@ -130,6 +199,23 @@ int main(int argc, char *argv[])
         else if (std::strcmp(argv[j], "--no-teleport-cruise") == 0)
         {
           opt.TeleportToCruiseStart = false;
+        }
+        else if (std::strcmp(argv[j], "--cruise-cx") == 0 && j + 1 < argc)
+        {
+          opt.CruiseStartChunkX = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--cruise-cz") == 0 && j + 1 < argc)
+        {
+          opt.CruiseStartChunkZ = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--min-alt-above-sea") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.MinAltitudeAboveSea = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--cruise-eye-y") == 0 && j + 1 < argc)
+        {
+          opt.CruiseEyeY = static_cast<float>(std::atof(argv[++j]));
         }
         else if (std::strcmp(argv[j], "--perf-out") == 0 && j + 1 < argc)
         {
@@ -139,6 +225,19 @@ int main(int argc, char *argv[])
         {
           opt.ReportPath = argv[++j];
         }
+        else if (std::strcmp(argv[j], "--asset-gallery-manifest") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.AssetGalleryManifest = argv[++j];
+          opt.Fly = false;
+          opt.HoldForward = false;
+          opt.HoldSpace = false;
+        }
+        else if (std::strcmp(argv[j], "--asset-gallery-page-sec") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.AssetGalleryPageSeconds = std::atof(argv[++j]);
+        }
         else if (std::strcmp(argv[j], "--fly-stop") == 0)
         {
           opt.FlyStopMode = true;
@@ -147,9 +246,27 @@ int main(int argc, char *argv[])
         {
           opt.FlyPhaseSec = std::atof(argv[++j]);
         }
+        else if (std::strcmp(argv[j], "--reverse-course-after") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.ReverseCourseAfterSec = std::atof(argv[++j]);
+        }
         else if (std::strcmp(argv[j], "--stop-phase") == 0 && j + 1 < argc)
         {
           opt.StopPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--stop-after-blocked") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.StopAfterBlockedSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--dive-phase") == 0 && j + 1 < argc)
+        {
+          opt.DivePhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--dive-pitch") == 0 && j + 1 < argc)
+        {
+          opt.DivePitchDeg = static_cast<float>(std::atof(argv[++j]));
         }
         else if (std::strcmp(argv[j], "--visible") == 0)
         {
@@ -172,6 +289,24 @@ int main(int argc, char *argv[])
           {
             opt.BreakPhaseSec = 20.0;
           }
+        }
+        else if (std::strcmp(argv[j], "--yaw-sweep") == 0)
+        {
+          opt.YawSweepMode = true;
+          opt.Fly = false;
+          opt.HoldForward = false;
+          opt.HoldSpace = false;
+          opt.BreakStandMode = false;
+          opt.FlyStopMode = false;
+          opt.MinAltitudeAboveSea = 0.0f;
+          if (opt.IdleBeforeFlySec < 5.0)
+          {
+            opt.IdleBeforeFlySec = 5.0;
+          }
+        }
+        else if (std::strcmp(argv[j], "--yaw-sweep-sec") == 0 && j + 1 < argc)
+        {
+          opt.YawSweepSec = std::atof(argv[++j]);
         }
         else if (std::strcmp(argv[j], "--break-phase") == 0 && j + 1 < argc)
         {

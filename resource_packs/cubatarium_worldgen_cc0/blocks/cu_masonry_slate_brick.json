@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_slate_brick",
+  "id": 1526,
+  "displayName": "Masonry Slate Brick",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_slate_brick",
+    "cu_masonry_slate_brick",
+    "cu_masonry_slate_brick",
+    "cu_masonry_slate_brick",
+    "cu_masonry_slate_brick_top",
+    "cu_masonry_slate_brick_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "slate",
+    "variant": "brick"
+  }
+}

@@ -13,6 +13,7 @@
 #include <GLFW/glfw3.h>
 
 #include "App/Core.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Engine/ViewEngine.h"
@@ -95,11 +96,12 @@ int RunValidateLoad()
       std::make_shared<UTextureCubeStorage>(texture_base_instance);
   auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
   auto object_library = std::make_shared<UObjectLibrary>();
+  auto item_definitions = std::make_shared<UItemDefinitionStorage>();
   auto view_engine = std::make_shared<UViewEngine>();
   auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
   auto core = std::make_shared<UCore>(
-      texture_base_instance, texture_cube_instance, object_library, world,
-      nullptr, view_engine);
+      texture_base_instance, texture_cube_instance, object_library,
+      item_definitions, world, nullptr, view_engine);
 
   block_definitions->Load("models/blocks");
   texture_cube_instance->SetBlockDefinitions(block_definitions);
@@ -191,11 +193,12 @@ HeadlessCoreSetup MakeHeadlessCore()
       std::make_shared<UTextureCubeStorage>(texture_base_instance);
   auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
   auto object_library = std::make_shared<UObjectLibrary>();
+  auto item_definitions = std::make_shared<UItemDefinitionStorage>();
   auto view_engine = std::make_shared<UViewEngine>();
   auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
   auto core = std::make_shared<UCore>(
-      texture_base_instance, texture_cube_instance, object_library, world,
-      nullptr, view_engine);
+      texture_base_instance, texture_cube_instance, object_library,
+      item_definitions, world, nullptr, view_engine);
 
   block_definitions->Load("models/blocks");
   texture_cube_instance->SetBlockDefinitions(block_definitions);
@@ -299,10 +302,15 @@ public:
   }
 
   void Report(const std::string &phaseId, float fraction,
-              const std::string &message) override
+              const std::string &message, int subDone, int subTotal) override
   {
     std::cout << "load-world: " << phaseId << " " << fraction << " "
-              << message << std::endl;
+              << message;
+    if (subTotal > 0)
+    {
+      std::cout << " [" << subDone << "/" << subTotal << "]";
+    }
+    std::cout << std::endl;
   }
 
   void End(bool success, const std::string &errorMessage) override

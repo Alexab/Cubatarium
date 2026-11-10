@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_travertine_darkened",
+  "id": 1164,
+  "displayName": "Rock Travertine Darkened",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_travertine_darkened",
+    "cu_rock_travertine_darkened",
+    "cu_rock_travertine_darkened",
+    "cu_rock_travertine_darkened",
+    "cu_rock_travertine_darkened",
+    "cu_rock_travertine_darkened"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "travertine",
+    "variant": "darkened"
+  }
+}

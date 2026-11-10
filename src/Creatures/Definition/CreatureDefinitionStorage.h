@@ -2,6 +2,7 @@
 #define CREATUREDEFINITIONSTORAGE_H
 
 #include "Creatures/Definition/CreatureDefinition.h"
+#include <atomic>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -15,6 +16,8 @@ class UCreatureDefinitionStorage
 public:
   void Load(const std::string &folder);
   void LoadOverlay(const std::string &folder);
+  /// Load a single creature.json (also used by unit tests).
+  bool LoadFile(const std::string &path);
   const CreatureDefinition *Get(const std::string &Id) const;
   size_t Count() const;
 
@@ -22,9 +25,11 @@ public:
   std::vector<std::string> ListSpawnable() const;
   std::string GetControlledDefaultSpeciesId() const;
 
-private:
-  bool LoadFile(const std::string &path);
+  /// Bumped on every Load/LoadOverlay/LoadFile; consumers cache resolved
+  /// data keyed on it (creature appearance cache, audit V6).
+  std::atomic<uint64_t> Revision{1};
 
+private:
   std::unordered_map<std::string, CreatureDefinition> Definitions;
   mutable std::shared_mutex DefinitionsMutex;
 };

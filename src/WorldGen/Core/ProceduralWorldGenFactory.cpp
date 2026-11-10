@@ -30,12 +30,16 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
   {
     UWorldGenPack::LoadPackId("default");
   }
-  if (UWorldGenPack::Get().BiomeBlendRadius >= 0.0f)
+  // Worldgen profile >= 3: the values from the New World form are
+  // authoritative. Older profiles keep the historical behaviour where the pack
+  // overwrote blend radius, cave depth and ravine settings.
+  const bool userOwned = ctx.Settings.WorldGenProfileVersion >= 3;
+  if (!userOwned && UWorldGenPack::Get().BiomeBlendRadius >= 0.0f)
   {
     ctx.Settings.Tuning.biomeBlendRadius = UWorldGenPack::Get().BiomeBlendRadius;
   }
-  UWorldGenPack::ApplyPackCaveDefaults(ctx.Settings);
-  UWorldGenPack::ApplyPackRavineDefaults(ctx.Settings);
+  UWorldGenPack::ApplyPackCaveDefaults(ctx.Settings, userOwned);
+  UWorldGenPack::ApplyPackRavineDefaults(ctx.Settings, userOwned);
 
   auto pipeline = UWorldGeneratorRegistry::Create(ctx);
   std::cout << "WorldGen: created pipeline "

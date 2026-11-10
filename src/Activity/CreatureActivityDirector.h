@@ -2,6 +2,7 @@
 #define CREATUREACTIVITYDIRECTOR_H
 
 #include "Activity/CreatureActivityTypes.h"
+#include "Activity/CreatureTickBudget.h"
 #include "Activity/IUCreatureActivityAgent.h"
 #include "Activity/IUCreatureActivitySink.h"
 #include "Activity/IUWorldPerception.h"
@@ -16,15 +17,20 @@ namespace cutum
 class UCreatureActivityDirector
 {
 public:
+  static constexpr float kMaxCognitiveDt = 0.1f;
+
   void RegisterAgent(std::unique_ptr<IUCreatureActivityAgent> agent);
   void Clear();
   void OnCreatureAdded(CreatureId Id, const std::string &behaviorId,
                        const CreatureBehaviorParams *behavior = nullptr);
   void OnCreatureRemoved(CreatureId Id);
   void TickAgents(IUWorldPerception &perception, IUCreatureActivitySink &sink,
-                  float dt);
+                  float dt, bool stress_tick = false);
   void SetActivityTickInterval(float seconds);
   float GetActivityTickInterval() const { return ActivityTickInterval; }
+  /// Normal tick: agents ticked. Stress tick: creatures ticked / deferred.
+  int GetLastAgentsTicked() const { return LastAgentsTicked; }
+  int GetLastAgentsDeferred() const { return LastAgentsDeferred; }
 
 private:
   IUCreatureActivityAgent *FindAgent(const std::string &behaviorId) const;
@@ -34,6 +40,9 @@ private:
   std::unordered_map<CreatureId, IUCreatureActivityAgent *> Membership;
   float ActivityTickInterval{0.05f};
   float AccumulatedTickDt{0.0f};
+  UCreatureTickBudget StressBudget;
+  int LastAgentsTicked{0};
+  int LastAgentsDeferred{0};
 };
 
 } // namespace cutum

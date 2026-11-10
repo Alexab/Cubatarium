@@ -1,6 +1,13 @@
 {
   "name": "mtg_stone",
   "id": 503,
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],

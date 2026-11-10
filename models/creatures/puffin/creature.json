@@ -7,27 +7,38 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 84
+    "sort_order": 84,
+    "natural_spawnable": true,
+    "spawn_weight": 1.0,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "beach",
+      "tundra",
+      "snowy_slopes",
+      "cold_steppe",
+      "ocean"
+    ]
   },
   "role": "mob",
   "bounds": {
     "rest": [
-      0.45,
       0.5,
-      0.45
+      0.74,
+      0.95
     ],
     "max": [
-      0.45,
       0.5,
-      0.45
+      0.74,
+      0.95
     ],
     "min": [
-      0.45,
-      0.35,
-      0.45
+      0.5,
+      0.52,
+      0.95
     ]
   },
-  "eye_height": 0.35,
+  "eye_height": 0.52,
   "habitat": "aerial",
   "locomotion_archetype": "aerial",
   "locomotion": {
@@ -91,14 +102,14 @@
       },
       "state_map": {
         "Idle": "idle",
-        "Walk": "walk",
-        "Run": "walk",
-        "Jump": "walk",
+        "Walk": "fly",
+        "Run": "fly",
+        "Jump": "fly",
         "Fall": "idle",
         "Crouch": "idle",
-        "Slither": "walk",
+        "Slither": "fly",
         "Coil": "idle",
-        "Action": "walk",
+        "Action": "idle",
         "Hover": "fly",
         "Glide": "fly",
         "Swim": "fly",

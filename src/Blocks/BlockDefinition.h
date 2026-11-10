@@ -56,6 +56,18 @@ enum class BlockRenderStyle
   Cutout,
 };
 
+enum class BlockDecorShape
+{
+  Cross,
+  Tuft,
+  Cluster,
+  Reed,
+  Flame,
+  Pad,
+  Mushroom,
+  Torch,
+};
+
 struct FluidViewProfile
 {
   glm::vec3 FogColor{0.02f, 0.12f, 0.22f};
@@ -73,6 +85,8 @@ struct BlockRenderProfile
   bool Transparent{false};
   bool DoubleSided{false};
   BlockRenderStyle Style{BlockRenderStyle::UCube};
+  BlockDecorShape DecorShape{BlockDecorShape::Cross};
+  float TextureVariation{0.0f};
   FluidViewProfile FluidView;
 };
 
@@ -86,6 +100,12 @@ struct BlockDefinition
   std::string Name;
   std::string DisplayName;
   BlockId Id{BLOCK_AIR};
+  /// Dig hardness. 0 = unbreakable in Survival (Creative still breaks instantly).
+  float Hardness{1.0f};
+  /// Optional dig groups (cracky/crumbly/choppy/snappy/…). Empty → tools infer from Types/Name.
+  std::unordered_map<std::string, int> DigGroups;
+  /// Node level for tool maxlevel gate (Luanti-style).
+  int DigLevel{0};
   BlockAnimationSpec Animation;
   BlockPhysicsProfile Physics;
   BlockRenderProfile Render;

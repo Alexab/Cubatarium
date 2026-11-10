@@ -73,6 +73,8 @@ struct CreatureInput
   bool crouchHeld{false};
   /// Desktop: hold Ctrl; Android: sprint toggle button state.
   bool sprintHeld{false};
+  /// Cleared when fatigue is too high (survival).
+  bool allowSprint{true};
 };
 
 struct CreatureLocomotionCapabilities

@@ -13,6 +13,7 @@
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfModelSpace.h"
 #include "Render/Engine/GeometryEngine.h"
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <memory>
@@ -32,15 +33,10 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
                                      float dt)
 {
   BodyOrigin = creature.GetFeetPosition();
-  BodyYaw = creature.GetYaw() + animDef.visual.modelYawOffsetDeg;
+  BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
   SpeciesId = animDef.Id;
-  DefaultTextureKey = animDef.visual.defaultTextureKey.empty()
-                          ? Appearance.defaultTextureKey
-                          : animDef.visual.defaultTextureKey;
-  if (DefaultTextureKey.empty())
-  {
-    DefaultTextureKey = "body";
-  }
+  SkinId = creature.GetSkinId();
+  RefreshDefaultTextureKey(animDef);
   ModelFile = animDef.visual.gltf.modelPath.empty()
                   ? "model.gltf"
                   : animDef.visual.gltf.modelPath;
@@ -60,12 +56,14 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
   }
   if (MeshAsset)
   {
-    ModelFeetOffsetY -= MeshAsset->bindMinY;
+    // bindMinY is in unscaled model units; the offset is applied in world
+    // blocks, so scale it (kitten model_scale 0.35 used to sink/float).
+    ModelFeetOffsetY -= MeshAsset->bindMinY * ModelScale;
   }
 
   RootAnimMatrix = glm::mat4(1.f);
   ActiveAnimation = nullptr;
-  BoneMatrices.clear();
+  HasBonePalette = false;
   if (MeshAsset)
   {
     const auto clipId =
@@ -79,59 +77,99 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
       speed = clipDefIt->second.speed;
       loop = clipDefIt->second.loop;
     }
-    if (animName != ActiveClipName)
+    float playback = speed;
+    if (facts.state == LocomotionState::Walk ||
+        facts.state == LocomotionState::Run ||
+        facts.state == LocomotionState::Slither ||
+        facts.state == LocomotionState::Swim)
     {
-      ActiveClipName = animName;
-      AnimTimeSec = 0.f;
-    }
-    AnimTimeSec += dt * speed;
-    const auto animIt = MeshAsset->animationIndexByName.find(animName);
-    if (animIt != MeshAsset->animationIndexByName.end())
-    {
-      ActiveAnimation = &MeshAsset->animations[animIt->second];
-      if (MeshAsset->hasSkin)
+      // Full-rate walk while scraping looks like L/R rocking around the body
+      // (treeman/dmobs). Gate clip speed by actual travel vs walk_speed.
+      const float walkRef = std::max(animDef.locomotion.walkSpeed, 0.05f);
+      float travelScale =
+          std::clamp(facts.horizontalSpeed / walkRef, 0.0f, 1.5f);
+      if (travelScale < 0.04f)
       {
-        BoneMatrices = ComputeGltfSkinMatrices(*MeshAsset, ActiveAnimation,
-                                               AnimTimeSec, loop);
+        travelScale = 0.0f;
       }
       else
       {
-        RootAnimMatrix =
-            SampleGltfRootTransform(*ActiveAnimation, AnimTimeSec, loop);
+        travelScale = std::max(0.22f, travelScale);
       }
+      playback *= travelScale;
     }
-    else if (MeshAsset->hasSkin)
+    const auto findAnimation =
+        [&](const std::string &name) -> const GltfAnimationCpu *
     {
-      BoneMatrices =
-          ComputeGltfSkinMatrices(*MeshAsset, nullptr, AnimTimeSec, loop);
+      const auto it = MeshAsset->animationIndexByName.find(name);
+      return it != MeshAsset->animationIndexByName.end()
+                 ? &MeshAsset->animations[it->second]
+                 : nullptr;
+    };
+    ActiveAnimation = findAnimation(animName);
+    ClipClock.Update(animName, dt, playback,
+                     ActiveAnimation ? GltfAnimationDuration(*ActiveAnimation)
+                                     : 0.f,
+                     loop);
+    if (MeshAsset->hasSkin)
+    {
+      const GltfAnimationCpu *fadeAnimation =
+          ClipClock.GetFadeClip().empty()
+              ? nullptr
+              : findAnimation(ClipClock.GetFadeClip());
+      if (!BoneMatrices || BoneMatrices.use_count() > 1)
+      {
+        BoneMatrices = std::make_shared<std::vector<glm::mat4>>();
+      }
+      ComputeGltfSkinMatricesInto(
+          *MeshAsset, ActiveAnimation, ClipClock.GetTime(), fadeAnimation,
+          ClipClock.GetFadeTime(),
+          fadeAnimation ? ClipClock.GetFadeWeight() : 0.f, SkinScratch,
+          *BoneMatrices);
+      HasBonePalette = true;
+    }
+    else if (ActiveAnimation)
+    {
+      RootAnimMatrix =
+          SampleGltfRootTransform(*ActiveAnimation, ClipClock.GetTime(), loop);
+      // Root-only models switch clips with a hard transform snap (the fade
+      // below only covered skinned rigs). Blend the leaving clip's root the
+      // same 0.15 s the bone palette gets.
+      if (!ClipClock.GetFadeClip().empty())
+      {
+        const GltfAnimationCpu *fadeAnimation =
+            findAnimation(ClipClock.GetFadeClip());
+        if (fadeAnimation)
+        {
+          const glm::mat4 leaving = SampleGltfRootTransform(
+              *fadeAnimation, ClipClock.GetFadeTime(), loop);
+          const float w = ClipClock.GetFadeWeight();
+          RootAnimMatrix = leaving * (1.f - w) + RootAnimMatrix * w;
+        }
+      }
     }
   }
 }
 
-void UCreatureVisualGltf::SubmitDraw(UGeometryEngine &engine,
+void UCreatureVisualGltf::SubmitDraw(const CreatureDrawContext &ctx,
                                      const glm::mat4 &viewProj)
 {
-  if (!MeshAsset)
+  if (!MeshAsset || !DrawEnabled(ctx))
   {
     return;
   }
-
-  const RenderSettings &settings = engine.GetRenderSettings();
-  auto creatureTextures = engine.GetCreatureTextureStorage();
-  if (!creatureTextures || !settings.CreatureTexturedParts)
-  {
-    return;
-  }
+  const UCreatureTextureStorage &creatureTextures = *ctx.Textures;
 
   const glm::mat4 bodyMat = BuildCreatureRootMatrix(
-      BodyOrigin, BodyYaw, ModelFeetOffsetY, []()
+      BodyOrigin, BodyYawDeg, ModelFeetOffsetY, []()
       { return GltfEntityConventionMatrix(); }, ModelScale, RootAnimMatrix);
 
-  CreatureDrawQueue &queue = engine.GetCreatureDrawQueue();
+  CreatureDrawQueue &queue = *ctx.Queue;
   for (const GltfPrimitiveCpu &prim : MeshAsset->primitives)
   {
     const GLuint tex = ResolveCreatureSpeciesTexture(
-        *creatureTextures, SpeciesId, prim.textureStem, DefaultTextureKey);
+        creatureTextures, SpeciesId, prim.textureStem, DefaultTextureKey,
+        SkinId);
     if (tex == 0)
     {
       const std::string key = SpeciesId + "|" + prim.textureStem;
@@ -144,7 +182,8 @@ void UCreatureVisualGltf::SubmitDraw(UGeometryEngine &engine,
     CreatureDrawRequest req;
     req.Mvp = mvp;
     req.Texture = tex;
-    if (prim.skinned && !BoneMatrices.empty())
+    if (prim.skinned && HasBonePalette && BoneMatrices &&
+        !BoneMatrices->empty())
     {
       req.Kind = CreatureDrawKind::SkinnedMesh;
       req.SkinnedPrimitive = &prim;

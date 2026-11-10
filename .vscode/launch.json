@@ -5,7 +5,7 @@
             "name": "Debug Cubatarium",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/Cubatarium.exe",
+            "program": "${workspaceFolder}/build/desktop-msvc/Debug/Cubatarium.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/bin",

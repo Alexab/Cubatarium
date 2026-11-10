@@ -1,4 +1,5 @@
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
+#include "Core/Json/JsonVec.h"
 
 #include <fstream>
 #include <glm/glm.hpp>
@@ -12,15 +13,6 @@ namespace cutum
 namespace
 {
 
-glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
-{
-  if (!arr.is_array() || arr.size() < 3)
-  {
-    return fallback;
-  }
-  return glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
-                   arr[2].get<float>());
-}
 
 } // namespace
 
@@ -30,18 +22,24 @@ CreatureRigidModelCache &CreatureRigidModelCache::Instance()
   return cache;
 }
 
+void CreatureRigidModelCache::Clear()
+{
+  const std::lock_guard<std::mutex> lock(CacheMutex);
+  Cache.clear();
+}
+
 bool CreatureRigidModelCache::LoadParts(
     const std::string &speciesDir, const std::string &relativePath,
     std::vector<CreatureVisualPartDef> &outParts)
 {
-  static std::unordered_map<std::string, std::vector<CreatureVisualPartDef>>
-      cache;
-
   const std::string cacheKey = speciesDir + "|" + relativePath;
-  if (const auto it = cache.find(cacheKey); it != cache.end())
   {
-    outParts = it->second;
-    return !outParts.empty();
+    const std::lock_guard<std::mutex> lock(CacheMutex);
+    if (const auto it = Cache.find(cacheKey); it != Cache.end())
+    {
+      outParts = it->second;
+      return !outParts.empty();
+    }
   }
 
   const std::string path = speciesDir + "/" + relativePath;
@@ -92,7 +90,10 @@ bool CreatureRigidModelCache::LoadParts(
     parts.push_back(part);
   }
 
-  cache[cacheKey] = parts;
+  {
+    const std::lock_guard<std::mutex> lock(CacheMutex);
+    Cache[cacheKey] = parts;
+  }
   outParts = parts;
   return !outParts.empty();
 }

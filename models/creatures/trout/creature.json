@@ -7,7 +7,15 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 70
+    "sort_order": 70,
+    "natural_spawnable": true,
+    "spawn_weight": 1.5,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "ocean",
+      "beach"
+    ]
   },
   "role": "mob",
   "bounds": {
@@ -31,7 +39,7 @@
   "habitat": "aquatic",
   "locomotion_archetype": "aquatic",
   "locomotion": {
-    "can_fly": true,
+    "can_fly": false,
     "can_crouch": false,
     "can_jump": false,
     "jump_height": 1.0,

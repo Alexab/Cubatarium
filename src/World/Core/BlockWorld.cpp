@@ -3,6 +3,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidKindPresetUtil.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
 
 namespace cutum
 {
@@ -10,6 +11,11 @@ namespace cutum
 BlockId UBlockWorld::GetBlock(glm::ivec3 pos) const
 {
   return Chunks.GetBlock(pos);
+}
+
+BlockQueryResult UBlockWorld::QueryBlock(glm::ivec3 pos) const
+{
+  return Chunks.QueryBlock(pos);
 }
 
 FluidCellState UBlockWorld::GetFluidState(glm::ivec3 pos) const
@@ -32,12 +38,20 @@ void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
   Chunks.SetBlock(pos, Id);
   if (FluidDefinitions != nullptr)
   {
-    if (const BlockDefinition *def = FluidDefinitions->GetById(Id))
+    if (const BlockDefinition *def = FluidDefinitions->GetByIdFast(Id))
     {
       if (def->Physics.IsLiquid)
       {
         const FluidKind kind = FluidKindFromDefinition(def);
         Chunks.SetFluidState(pos, FluidCellState::Source().WithKind(kind));
+      }
+      else if (!IsFluidPermeableFromDefinition(Id, def,
+                                               /*is_liquid=*/false))
+      {
+        // W6.2 (water audit E-3): a solid placed into water annihilates the
+        // water — the stale fluid byte under the solid must not persist to
+        // disk and resurrect when the block is later replaced by decor.
+        Chunks.ClearFluidState(pos);
       }
     }
   }
@@ -49,9 +63,59 @@ void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
   }
 }
 
+void UBlockWorld::SetBlockInChunk(UChunk &chunk, glm::ivec3 pos, BlockId Id)
+{
+  const glm::ivec3 local = UChunkManager::WorldToLocal(pos);
+  if (Id == BLOCK_AIR)
+  {
+    chunk.SetBlockLocal(local, BLOCK_AIR);
+    chunk.ClearFluidLocal(local);
+    if (CaptureBuffer)
+    {
+      CaptureBuffer->SetBlock(pos, BLOCK_AIR);
+    }
+    return;
+  }
+  chunk.SetBlockLocal(local, Id);
+  if (FluidDefinitions != nullptr)
+  {
+    if (const BlockDefinition *def = FluidDefinitions->GetByIdFast(Id))
+    {
+      if (def->Physics.IsLiquid)
+      {
+        const FluidKind kind = FluidKindFromDefinition(def);
+        chunk.SetFluidLocal(local, FluidCellState::Source().WithKind(kind));
+      }
+      else if (!IsFluidPermeableFromDefinition(Id, def,
+                                               /*is_liquid=*/false))
+      {
+        // W6.2: clear the stale fluid byte under solids (see SetBlock).
+        chunk.ClearFluidLocal(local);
+      }
+    }
+  }
+  if (CaptureBuffer)
+  {
+    CaptureBuffer->SetBlock(pos, Id);
+    CaptureBuffer->SetFluidPacked(
+        pos, PackFluidCellState(chunk.GetFluidLocal(local)));
+  }
+}
+
 void UBlockWorld::SetFluidState(glm::ivec3 pos, FluidCellState state)
 {
   Chunks.SetFluidState(pos, state);
+  if (CaptureBuffer)
+  {
+    CaptureBuffer->SetFluidPacked(pos, PackFluidCellState(state));
+  }
+}
+
+void UBlockWorld::SetFluidStateInChunk(UChunk &chunk, glm::ivec3 pos,
+                                       FluidCellState state)
+{
+  const glm::ivec3 local = UChunkManager::WorldToLocal(pos);
+  chunk.SetFluidLocal(local, state);
   if (CaptureBuffer)
   {
     CaptureBuffer->SetFluidPacked(pos, PackFluidCellState(state));
@@ -79,6 +143,19 @@ size_t UBlockWorld::CountNonAir() const
   size_t count = 0;
   ForEachBlock([&count](glm::ivec3, BlockId) { ++count; });
   return count;
+}
+
+bool UBlockWorld::HasAnyNonAir() const
+{
+  bool found = false;
+  ForEachBlock([&found](glm::ivec3, BlockId id)
+               {
+                 if (id != BLOCK_AIR)
+                 {
+                   found = true;
+                 }
+               });
+  return found;
 }
 
 void UBlockWorld::ForEachBlock(

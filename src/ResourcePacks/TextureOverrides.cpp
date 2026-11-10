@@ -11,37 +11,37 @@ namespace cutum
 namespace
 {
 
-int FaceIndexFromName(const std::string &face)
+std::vector<int> FaceIndicesFromName(const std::string &face)
 {
+  if (face == "front")
+  {
+    return {0};
+  }
+  if (face == "right" || face == "east")
+  {
+    return {1};
+  }
+  if (face == "back" || face == "north")
+  {
+    return {2};
+  }
+  if (face == "left" || face == "west")
+  {
+    return {3};
+  }
   if (face == "top")
   {
-    return 0;
+    return {4};
   }
   if (face == "bottom")
   {
-    return 1;
+    return {5};
   }
   if (face == "sides" || face == "side")
   {
-    return 2;
+    return {0, 1, 2, 3};
   }
-  if (face == "north")
-  {
-    return 2;
-  }
-  if (face == "south")
-  {
-    return 3;
-  }
-  if (face == "west")
-  {
-    return 4;
-  }
-  if (face == "east")
-  {
-    return 5;
-  }
-  return -1;
+  return {};
 }
 
 std::string Trim(const std::string &s)
@@ -89,8 +89,8 @@ void ParseFacesBracketList(const std::string &value,
   while (std::getline(ss, token, ','))
   {
     token = Trim(token);
-    const int idx = FaceIndexFromName(token);
-    if (idx >= 0)
+    const auto indices = FaceIndicesFromName(token);
+    for (const int idx : indices)
     {
       entry.Faces.push_back(idx);
     }
@@ -117,8 +117,8 @@ void ParseOverrideEntry(const nlohmann::json &entry,
       {
         continue;
       }
-      const int idx = FaceIndexFromName(f.get<std::string>());
-      if (idx >= 0)
+      const auto indices = FaceIndicesFromName(f.get<std::string>());
+      for (const int idx : indices)
       {
         ov.Faces.push_back(idx);
       }

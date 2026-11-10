@@ -194,11 +194,13 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
       const BlockId Id = registry.GetPackBlockIdByTypeName(type);
       if (Id == BLOCK_AIR)
       {
-        const std::string logKey = path + '\x1f' + type;
+        const std::string logKey = object.Name + '\x1f' + type + '\x1f' +
+                                   sourcePackId;
         if (LoggedUnknownTypes.insert(logKey).second)
         {
-          std::cerr << "UObjectLibrary: unknown type '" << type << "' in "
-                    << path << std::endl;
+          std::cerr << "UObjectLibrary: unknown type (object=" << object.Name
+                    << ",type=" << type << ",pack=" << sourcePackId
+                    << ",path=" << path << ")" << std::endl;
         }
         continue;
       }
@@ -251,9 +253,18 @@ void UObjectLibrary::RebindBlockIds(UBlockRegistry &registry)
         continue;
       }
       const BlockId id = registry.GetPackBlockIdByTypeName(voxel.Type);
-      if (id != BLOCK_AIR)
+      voxel.Id = id;
+      if (id == BLOCK_AIR)
       {
-        voxel.Id = id;
+        const WorldObjectDefinition &object = *pair.second;
+        const std::string logKey = object.Name + '\x1f' + voxel.Type + '\x1f' +
+                                   object.SourcePackId;
+        if (LoggedUnknownTypes.insert(logKey).second)
+        {
+          std::cerr << "UObjectLibrary: rebind failed (object=" << object.Name
+                    << ",type=" << voxel.Type << ",pack=" << object.SourcePackId
+                    << "); voxel reset to AIR" << std::endl;
+        }
       }
     }
   }

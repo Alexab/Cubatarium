@@ -42,6 +42,13 @@ private:
   std::unordered_map<size_t, SkeletalMeshGpuBuffers> SkeletalCache;
   std::unordered_map<size_t, GltfSkinnedMeshGpuBuffers> GltfSkinnedCache;
   std::mutex CacheMutex;
+
+  /// Called with CacheMutex held: GL object creation stays under the lock so
+  /// two threads cannot build (and leak) the same VAO.
+  void CreateSkeletalBuffersLocked(const BoneSkeletonCubeMeshCpu &mesh,
+                                   SkeletalMeshGpuBuffers &outBuffers);
+  void CreateGltfSkinnedBuffersLocked(const GltfPrimitiveCpu &mesh,
+                                      GltfSkinnedMeshGpuBuffers &outBuffers);
 };
 
 } // namespace cutum

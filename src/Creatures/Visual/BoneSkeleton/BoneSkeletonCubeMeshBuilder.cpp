@@ -1,6 +1,7 @@
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
+#include "Creatures/Visual/CreatureMeshGpuHash.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -236,6 +237,7 @@ BoneSkeletonCubeMeshBuilder::BuildCubeMesh(const BoneSkeletonCubeDef &cube,
   }
   mesh.restLocalMatrix =
       BuildCubeRestMatrix(cubeForMatrix, bonePivotBlocks, logicalSize, renderSize);
+  mesh.GpuHash = SkeletalMeshGpuHash(mesh);
 
   return mesh;
 }

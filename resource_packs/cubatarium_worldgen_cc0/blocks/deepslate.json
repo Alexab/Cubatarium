@@ -1,0 +1,30 @@
+{
+  "name": "deepslate",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "geo_greystone",
+    "geo_greystone",
+    "geo_greystone",
+    "geo_greystone",
+    "geo_greystone",
+    "geo_greystone"
+  ],
+  "hardness": 2.5,
+  "dig": {
+    "level": 1,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "displayName": "Deepslate",
+  "render": {},
+  "id": 2444,
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "cubatarium_geology_cc0",
+    "license": "CC0-1.0"
+  }
+}

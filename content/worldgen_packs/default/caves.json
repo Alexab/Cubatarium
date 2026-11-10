@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "max_depth_below_surface": 48,
-  "min_depth_below_surface": 2,
+  "min_depth_below_surface": 6,
   "chunk_gate_threshold": 0.25,
   "use_density_field": true,
-  "density_cave_amplitude": 0.15,
+  "density_cave_amplitude": 0.30,
   "layers": {
     "cheese": { "scale": 0.015, "weight": 1.0 },
     "spaghetti": { "scale": 0.045, "weight": 0.55 },

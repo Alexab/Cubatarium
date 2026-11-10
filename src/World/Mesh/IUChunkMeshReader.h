@@ -3,6 +3,7 @@
 
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
+#include "Render/Mesh/MeshNeighborPolicy.h"
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -17,6 +18,11 @@ public:
   virtual glm::ivec3 ChunkCoord() const = 0;
   virtual BlockId GetBlockLocal(glm::ivec3 local) const = 0;
   virtual BlockId GetBlock(glm::ivec3 world_pos) const = 0;
+  /// Shell/voxel truth ignoring boundary overlay AIR force (R06 fluid hide).
+  virtual BlockId GetBlockIgnoringOverlay(glm::ivec3 world_pos) const
+  {
+    return GetBlock(world_pos);
+  }
   virtual uint8_t GetLightPackedLocal(glm::ivec3 local) const
   {
     (void)local;
@@ -36,6 +42,11 @@ public:
   {
     (void)world_pos;
     return {};
+  }
+  virtual NeighborLoadState GetNeighborLoadState(glm::ivec3 world_pos) const
+  {
+    (void)world_pos;
+    return NeighborLoadState::Loaded;
   }
 };
 

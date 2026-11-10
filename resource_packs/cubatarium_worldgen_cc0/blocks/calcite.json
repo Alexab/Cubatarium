@@ -1,0 +1,30 @@
+{
+  "name": "calcite",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "geo_greystone_ruby_alt",
+    "geo_greystone_ruby_alt",
+    "geo_greystone_ruby_alt",
+    "geo_greystone_ruby_alt",
+    "geo_greystone_ruby_alt",
+    "geo_greystone_ruby_alt"
+  ],
+  "hardness": 0.75,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
+  "displayName": "Calcite",
+  "render": {},
+  "id": 2443,
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "cubatarium_geology_cc0",
+    "license": "CC0-1.0"
+  }
+}

@@ -1,6 +1,13 @@
 {
   "name": "crafting_table",
   "id": 749,
+  "hardness": 2.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

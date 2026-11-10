@@ -137,50 +137,99 @@ UPlaceholderTextureCache::Rasterize(const std::string &blockName, int faceIndex,
                                     int tileSize) const
 {
   TexturePixelData out;
-  out.Width = tileSize;
-  out.Height = tileSize;
-  out.Rgba.resize(static_cast<size_t>(tileSize * tileSize * 4));
+  const int size = std::max(1, tileSize);
+  out.Width = size;
+  out.Height = size;
+  out.Rgba.resize(static_cast<size_t>(size * size * 4));
+
+  // Keep placeholders unmistakable in-world: high-contrast warning stripes,
+  // a yellow frame, and a large question mark. The configured background still
+  // tints the warning color, so existing placeholder settings retain an effect.
   const uint8_t br = static_cast<uint8_t>(Background.r * 255.0f);
   const uint8_t bg = static_cast<uint8_t>(Background.g * 255.0f);
   const uint8_t bb = static_cast<uint8_t>(Background.b * 255.0f);
-  for (size_t i = 0; i < out.Rgba.size(); i += 4)
+  const auto set_pixel = [&](int x, int y, uint8_t r, uint8_t g, uint8_t b)
   {
-    out.Rgba[i] = br;
-    out.Rgba[i + 1] = bg;
-    out.Rgba[i + 2] = bb;
-    out.Rgba[i + 3] = 255;
-  }
-
-  std::string label = blockName;
-  if (label.size() > 8)
-  {
-    label = label.substr(0, 8);
-  }
-  if (faceIndex >= 0)
-  {
-    label.push_back(static_cast<char>('0' + (faceIndex % 10)));
-  }
-
-  const int glyphW = std::max(1, tileSize / static_cast<int>(label.size() + 1));
-  for (size_t ci = 0; ci < label.size(); ++ci)
-  {
-    const unsigned char ch = static_cast<unsigned char>(label[ci]);
-    const int col = static_cast<int>(ci) * (glyphW + 1) + 1;
-    for (int y = 2; y < tileSize - 2; ++y)
+    if (x < 0 || y < 0 || x >= size || y >= size)
     {
-      for (int x = col; x < col + glyphW && x < tileSize - 1; ++x)
+      return;
+    }
+    const size_t index = static_cast<size_t>((y * size + x) * 4);
+    out.Rgba[index] = r;
+    out.Rgba[index + 1] = g;
+    out.Rgba[index + 2] = b;
+    out.Rgba[index + 3] = 255;
+  };
+  const auto set_scaled_pixel = [&](int x, int y, int scale, uint8_t r,
+                                    uint8_t g, uint8_t b)
+  {
+    for (int sy = 0; sy < scale; ++sy)
+    {
+      for (int sx = 0; sx < scale; ++sx)
       {
-        const int bit = (ch + y + x) & 3;
-        if (bit == 0)
-        {
-          const size_t idx = static_cast<size_t>((y * tileSize + x) * 4);
-          out.Rgba[idx] = 255;
-          out.Rgba[idx + 1] = 255;
-          out.Rgba[idx + 2] = 255;
-        }
+        set_pixel(x + sx, y + sy, r, g, b);
       }
     }
+  };
+
+  const uint8_t warning_r = static_cast<uint8_t>(
+      std::clamp(0.75f * 255.0f + 0.25f * br, 0.0f, 255.0f));
+  const uint8_t warning_g = static_cast<uint8_t>(
+      std::clamp(0.25f * bg, 0.0f, 255.0f));
+  const uint8_t warning_b = static_cast<uint8_t>(
+      std::clamp(0.75f * 255.0f + 0.25f * bb, 0.0f, 255.0f));
+  for (int y = 0; y < size; ++y)
+  {
+    for (int x = 0; x < size; ++x)
+    {
+      const bool stripe = ((x + y) / std::max(1, size / 5)) % 2 == 0;
+      set_pixel(x, y, stripe ? warning_r : 18, stripe ? warning_g : 18,
+                stripe ? warning_b : 18);
+    }
   }
+
+  // The border survives small texture filtering and makes the tile read as a
+  // diagnostic marker even when the question mark is viewed from a distance.
+  for (int i = 0; i < size; ++i)
+  {
+    set_pixel(i, 0, 255, 220, 32);
+    set_pixel(i, size - 1, 255, 220, 32);
+    set_pixel(0, i, 255, 220, 32);
+    set_pixel(size - 1, i, 255, 220, 32);
+  }
+
+  static constexpr const char *kQuestionMark[] = {
+      "11110", "00001", "00010", "00100", "00100", "00000", "00100"};
+  const int scale = std::max(1, size / 8);
+  const int glyph_width = 5 * scale;
+  const int glyph_height = 7 * scale;
+  const int origin_x = (size - glyph_width) / 2;
+  const int origin_y = (size - glyph_height) / 2;
+  for (int gy = 0; gy < 7; ++gy)
+  {
+    for (int gx = 0; gx < 5; ++gx)
+    {
+      if (kQuestionMark[gy][gx] != '1')
+      {
+        continue;
+      }
+      const int x = origin_x + gx * scale;
+      const int y = origin_y + gy * scale;
+      // Black outline keeps the mark legible against both stripe colors.
+      for (int oy = -1; oy <= scale; ++oy)
+      {
+        for (int ox = -1; ox <= scale; ++ox)
+        {
+          set_pixel(x + ox, y + oy, 0, 0, 0);
+        }
+      }
+      set_scaled_pixel(x, y, scale, 255, 255, 255);
+    }
+  }
+
+  // These arguments remain part of the cache key for per-block/face identity.
+  (void)blockName;
+  (void)faceIndex;
   return out;
 }
 

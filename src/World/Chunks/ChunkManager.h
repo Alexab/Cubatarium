@@ -2,6 +2,7 @@
 #define CHUNKMANAGER_H
 
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/BlockQuery.h"
 #include "World/Math/BlockTypes.h"
 #include <functional>
 #include <glm/glm.hpp>
@@ -27,6 +28,8 @@ class UChunkManager
 {
 public:
   BlockId GetBlock(glm::ivec3 worldPos) const;
+  /// Phase 4: Unloaded ≠ AIR for raycast/place contracts.
+  BlockQueryResult QueryBlock(glm::ivec3 worldPos) const;
   FluidCellState GetFluidState(glm::ivec3 worldPos) const;
   void SetBlock(glm::ivec3 worldPos, BlockId Id);
   void SetFluidState(glm::ivec3 worldPos, FluidCellState state);
@@ -38,8 +41,22 @@ public:
   const UChunk *GetChunk(glm::ivec3 chunk_coord) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
   void EnsureChunk(glm::ivec3 chunk_coord);
+  /// Fired when a chunk transitions to non-air (its first populated block
+  /// arrives via SetBlock). Subscriber handles cross-thread sync; set once
+  /// before async IO starts.
+  std::function<void(glm::ivec3)> OnChunkBecameNonAir;
   void RemoveChunk(glm::ivec3 chunk_coord);
   void ForEachChunk(const std::function<void(const UChunk &)> &fn) const;
+  /// Iterate each resident horizontal column once (coordinate Y is always 0).
+  void ForEachColumn(
+      const std::function<void(const glm::ivec3 &)> &fn) const;
+  /// O(1) resident chunk count (loaded map size, not free-list).
+  size_t GetResidentChunkCount() const { return Chunks.size(); }
+  /// O(1) count of unique horizontal columns with one or more resident slices.
+  size_t GetResidentColumnCount() const
+  {
+    return ResidentColumnChunkCounts.size();
+  }
   /// Cap recycled chunks retained after unload (0 = destroy immediately).
   void SetMaxFreeListChunks(size_t cap) { MaxFreeListChunks = cap; }
   size_t GetFreeListSize() const { return FreeList.size(); }
@@ -51,6 +68,7 @@ private:
   UChunk &GetOrCreateChunk(glm::ivec3 chunk_coord);
 
   std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
+  std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;
   size_t MaxFreeListChunks{256};
 };

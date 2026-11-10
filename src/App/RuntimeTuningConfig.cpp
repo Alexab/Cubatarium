@@ -40,6 +40,7 @@ void ApplyRuntimeTuningFromConfig(const nlohmann::json *physics,
         fluid.value("flood_max_passes", FluidTuning::FloodMaxPassesDefault);
     tuning.CoastalBandAboveSea = fluid.value(
         "coastal_band_above_sea", FluidTuning::CoastalPermeableBandAboveSea);
+    tuning.WaterFlowingDries = fluid.value("water_flowing_dries", false);
   }
 
   if (render && render->contains("underwater_fog") &&

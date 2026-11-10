@@ -1,7 +1,9 @@
 #include "World/Chunks/Chunk.h"
 
 #include "World/Lighting/LightUtil.h"
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 
 namespace cutum
 {
@@ -11,6 +13,8 @@ UChunk::UChunk(glm::ivec3 chunkCoord) : Coord(chunkCoord)
   Data.fill(BLOCK_AIR);
   FluidData.fill(0);
   LightData.fill(0);
+  SurfaceWetness = 0.0f;
+  WeatherLastUpdateSec = 0.0;
 }
 
 void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
@@ -19,7 +23,30 @@ void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
   Data.fill(BLOCK_AIR);
   FluidData.fill(0);
   LightData.fill(0);
+  SurfaceWetness = 0.0f;
+  WeatherLastUpdateSec = 0.0;
+  LightFieldRevision = 0;
+  ContentRevision = 0;
+  Incarnation = NextIncarnation.fetch_add(1, std::memory_order_relaxed);
   Dirty = true;
+  NonAirCount = 0;
+}
+
+void UChunk::SetWeatherState(float wetness, double last_update_sec)
+{
+  const float next_wetness =
+      std::clamp(std::isfinite(wetness) ? wetness : 0.0f, 0.0f, 1.0f);
+  const double next_time =
+      std::isfinite(last_update_sec) ? std::max(0.0, last_update_sec) : 0.0;
+  const bool wetness_changed = std::abs(next_wetness - SurfaceWetness) >= 0.01f;
+  const bool save_interval_elapsed =
+      std::floor(next_time / 30.0) != std::floor(WeatherLastUpdateSec / 30.0);
+  SurfaceWetness = next_wetness;
+  WeatherLastUpdateSec = next_time;
+  if (wetness_changed || save_interval_elapsed)
+  {
+    Dirty = true;
+  }
 }
 
 int UChunk::LocalIndex(glm::ivec3 local)
@@ -44,7 +71,26 @@ void UChunk::SetBlockLocal(glm::ivec3 local, BlockId Id)
   {
     return;
   }
-  Data[static_cast<size_t>(LocalIndex(local))] = Id;
+  const size_t idx = static_cast<size_t>(LocalIndex(local));
+  const BlockId prev = Data[idx];
+  if (prev == Id)
+  {
+    return;
+  }
+  Data[idx] = Id;
+  ++ContentRevision;
+  if (prev == BLOCK_AIR && Id != BLOCK_AIR)
+  {
+    ++NonAirCount;
+  }
+  else if (prev != BLOCK_AIR && Id == BLOCK_AIR)
+  {
+    --NonAirCount;
+    if (NonAirCount < 0)
+    {
+      NonAirCount = 0;
+    }
+  }
   if (Id == BLOCK_AIR)
   {
     ClearFluidLocal(local);
@@ -73,7 +119,13 @@ void UChunk::SetFluidLocal(glm::ivec3 local, FluidCellState state)
 #ifndef NDEBUG
   assert(GetBlockLocal(local) != BLOCK_AIR);
 #endif
-  FluidData[static_cast<size_t>(LocalIndex(local))] = PackFluidCellState(state);
+  auto &packed = FluidData[static_cast<size_t>(LocalIndex(local))];
+  const auto next = PackFluidCellState(state);
+  if (packed != next)
+  {
+    packed = next;
+    ++ContentRevision;
+  }
   Dirty = true;
 }
 
@@ -84,7 +136,12 @@ void UChunk::ClearFluidLocal(glm::ivec3 local)
   {
     return;
   }
-  FluidData[static_cast<size_t>(LocalIndex(local))] = 0;
+  auto &packed = FluidData[static_cast<size_t>(LocalIndex(local))];
+  if (packed != 0)
+  {
+    packed = 0;
+    ++ContentRevision;
+  }
   Dirty = true;
 }
 
@@ -115,8 +172,13 @@ void UChunk::SetLightLocal(glm::ivec3 local, int sky_level, int block_level)
   {
     return;
   }
-  LightData[static_cast<size_t>(LocalIndex(local))] =
-      PackLight(sky_level, block_level);
+  auto &packed = LightData[static_cast<size_t>(LocalIndex(local))];
+  const auto next = PackLight(sky_level, block_level);
+  if (packed != next)
+  {
+    packed = next;
+    ++LightFieldRevision;
+  }
 }
 
 void UChunk::ClearLightLocal(glm::ivec3 local)
@@ -126,7 +188,12 @@ void UChunk::ClearLightLocal(glm::ivec3 local)
   {
     return;
   }
-  LightData[static_cast<size_t>(LocalIndex(local))] = 0;
+  auto &packed = LightData[static_cast<size_t>(LocalIndex(local))];
+  if (packed != 0)
+  {
+    packed = 0;
+    ++LightFieldRevision;
+  }
 }
 
 } // namespace cutum

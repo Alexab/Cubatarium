@@ -1,0 +1,30 @@
+{
+  "name": "amethyst_block",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "geo_greystone_ruby",
+    "geo_greystone_ruby",
+    "geo_greystone_ruby",
+    "geo_greystone_ruby",
+    "geo_greystone_ruby",
+    "geo_greystone_ruby"
+  ],
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "displayName": "Amethyst Block",
+  "render": {},
+  "id": 2441,
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "cubatarium_geology_cc0",
+    "license": "CC0-1.0"
+  }
+}

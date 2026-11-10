@@ -234,9 +234,13 @@ static FluidViewProfile FluidViewFromPreset(const std::string &preset)
   {
     v.FogColor = glm::vec3(0.05f, 0.15f, 0.35f);
     v.FogStart = 0.0f;
-    v.FogEnd = 9.0f;
-    v.FogMinBlend = 0.5f;
-    v.BelowSurfaceFogMin = 0.52f;
+    // PERF holes: FogEnd=9 + MinBlend=0.5 saturated the underwater tint at
+    // 9 blocks with a 50% floor — near trunks read as murky walls, level
+    // steps as opaque planes covering the terrain behind them, and the
+    // waterline seam snapped from clear air to half-tinted water.
+    v.FogEnd = 20.0f;
+    v.FogMinBlend = 0.18f;
+    v.BelowSurfaceFogMin = 0.30f;
     v.BelowSurfaceFogScale = 0.35f;
   }
   else if (preset == "lava")
@@ -265,6 +269,11 @@ BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j)
   }
   r.Transparent = j.value("transparent", false);
   r.DoubleSided = j.value("double_sided", false);
+  if (j.contains("texture_variation") && j["texture_variation"].is_number())
+  {
+    r.TextureVariation = std::clamp(j["texture_variation"].get<float>(),
+                                    0.0f, 1.0f);
+  }
   if (j.contains("style") && j["style"].is_string())
   {
     const std::string style = j["style"].get<std::string>();
@@ -280,6 +289,38 @@ BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j)
     {
       r.Style = BlockRenderStyle::Cutout;
       r.Transparent = false;
+    }
+  }
+  if (j.contains("shape") && j["shape"].is_string())
+  {
+    const std::string shape = j["shape"].get<std::string>();
+    if (shape == "tuft")
+    {
+      r.DecorShape = BlockDecorShape::Tuft;
+    }
+    else if (shape == "cluster")
+    {
+      r.DecorShape = BlockDecorShape::Cluster;
+    }
+    else if (shape == "reed")
+    {
+      r.DecorShape = BlockDecorShape::Reed;
+    }
+    else if (shape == "flame")
+    {
+      r.DecorShape = BlockDecorShape::Flame;
+    }
+    else if (shape == "pad")
+    {
+      r.DecorShape = BlockDecorShape::Pad;
+    }
+    else if (shape == "mushroom")
+    {
+      r.DecorShape = BlockDecorShape::Mushroom;
+    }
+    else if (shape == "torch")
+    {
+      r.DecorShape = BlockDecorShape::Torch;
     }
   }
   if (j.contains("fog_color") && j["fog_color"].is_array() &&
@@ -365,6 +406,7 @@ void ApplyRenderPresetDefaults(BlockRenderProfile &Render,
     if (Render.Style == BlockRenderStyle::UCube)
     {
       Render.Style = BlockRenderStyle::Cross;
+      Render.DecorShape = BlockDecorShape::Flame;
     }
     if (Render.FluidView.OverlayAlpha <= 0.0f)
     {
@@ -441,6 +483,32 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
   {
     out.Definition.Lighting = ParseLightingFromJson(j["lighting"]);
   }
+  if (j.contains("hardness"))
+  {
+    if (j["hardness"].is_number())
+    {
+      const float hardness = j["hardness"].get<float>();
+      out.Definition.Hardness = (hardness < 0.0f) ? 0.0f : hardness;
+    }
+  }
+  if (j.contains("dig") && j["dig"].is_object())
+  {
+    const auto &dig = j["dig"];
+    if (dig.contains("level") && dig["level"].is_number_integer())
+    {
+      out.Definition.DigLevel = dig["level"].get<int>();
+    }
+    if (dig.contains("groups") && dig["groups"].is_object())
+    {
+      for (auto it = dig["groups"].begin(); it != dig["groups"].end(); ++it)
+      {
+        if (it.value().is_number_integer())
+        {
+          out.Definition.DigGroups[it.key()] = it.value().get<int>();
+        }
+      }
+    }
+  }
   if (j.contains("types") && j["types"].is_array())
   {
     for (const auto &t : j["types"])
@@ -456,6 +524,19 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
   {
     ApplyRenderPresetDefaults(out.Definition.Render,
                               j["physics"]["preset"].get<std::string>());
+  }
+  // Cross geometry is rendered as thin cards outside the cube mesh. Unless a
+  // pack explicitly supplies collision occupancy, the plant must be passable.
+  // This also preserves older pack definitions that predate physics fields.
+  const bool explicit_occupancy =
+      j.contains("physics") && j["physics"].is_object() &&
+      j["physics"].contains("movement") &&
+      j["physics"]["movement"].is_object() &&
+      j["physics"]["movement"].contains("occupancy");
+  if (out.Definition.Render.Style == BlockRenderStyle::Cross &&
+      !explicit_occupancy)
+  {
+    out.Definition.Physics.Movement.Occupancy = 0.0f;
   }
   const auto textures = j.value("textures", nlohmann::json::array());
   if (!textures.is_array() || textures.size() < 6)

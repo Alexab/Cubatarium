@@ -4,6 +4,7 @@
 // #include <QJsonValue>
 // #include <QJsonArray>
 // #include <QFile>
+#include "Core/UiPump.h"
 #include "Render/Textures/TextureCube.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/GlIncludes.h"
@@ -14,7 +15,9 @@
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <memory>
 #include <sstream>
+#include <unordered_map>
 
 using json = nlohmann::json;
 
@@ -160,6 +163,85 @@ void UTextureCubeStorage::Clear()
   TexturesNames.clear();
 }
 
+namespace
+{
+
+/// Read-only pixel span; keeps the source alive through `Owner` when decoded.
+struct PixelView
+{
+  const unsigned char *Ptr{nullptr};
+  size_t Count{0};
+  const unsigned char *data() const { return Ptr; }
+  size_t size() const { return Count; }
+  bool empty() const { return Count == 0; }
+  unsigned char operator[](size_t i) const { return Ptr[i]; }
+};
+
+struct LoadedStem
+{
+  int Width{0};
+  int Height{0};
+  PixelView Rgba;
+  std::shared_ptr<const std::vector<unsigned char>> Owner;
+  bool Ok{false};
+};
+
+/// While a batch (PatchDescriptors) is running, decoded stem files are shared
+/// between cubes instead of being re-read and re-decoded for every use.
+std::unordered_map<std::string, LoadedStem> *gStemBatchCache = nullptr;
+
+LoadedStem LoadStemRgba(const UTextureBase &base)
+{
+  LoadedStem out;
+  if (base.HasPixelData())
+  {
+    if (const TexturePixelData *px = base.GetPixelData())
+    {
+      out.Width = px->Width;
+      out.Height = px->Height;
+      out.Rgba = PixelView{px->Rgba.data(), px->Rgba.size()};
+      out.Ok = !px->Rgba.empty();
+      return out;
+    }
+  }
+  if (base.GetFileName().empty())
+  {
+    return out;
+  }
+  if (gStemBatchCache)
+  {
+    const auto hit = gStemBatchCache->find(base.GetFileName());
+    if (hit != gStemBatchCache->end())
+    {
+      return hit->second;
+    }
+  }
+  int channels = 0;
+  unsigned char *data = stbi_load(base.GetFileName().c_str(), &out.Width,
+                                  &out.Height, &channels, 4);
+  if (!data)
+  {
+    if (gStemBatchCache)
+    {
+      (*gStemBatchCache)[base.GetFileName()] = out; // remember the failure
+    }
+    return out;
+  }
+  auto owner = std::make_shared<std::vector<unsigned char>>(
+      data, data + static_cast<size_t>(out.Width) * out.Height * 4);
+  stbi_image_free(data);
+  out.Owner = owner;
+  out.Rgba = PixelView{owner->data(), owner->size()};
+  out.Ok = true;
+  if (gStemBatchCache)
+  {
+    (*gStemBatchCache)[base.GetFileName()] = out;
+  }
+  return out;
+}
+
+} // namespace
+
 void UTextureCubeStorage::BuildFromDescriptors(
     const std::vector<MergedCubeDesc> &descriptors)
 {
@@ -170,8 +252,24 @@ void UTextureCubeStorage::BuildFromDescriptors(
 void UTextureCubeStorage::PatchDescriptors(
     const std::vector<MergedCubeDesc> &descriptors)
 {
+  std::unordered_map<std::string, LoadedStem> batch_cache;
+  struct BatchScope
+  {
+    explicit BatchScope(std::unordered_map<std::string, LoadedStem> *cache)
+        : Previous(gStemBatchCache)
+    {
+      gStemBatchCache = cache;
+    }
+    ~BatchScope() { gStemBatchCache = Previous; }
+    std::unordered_map<std::string, LoadedStem> *Previous;
+  } batch_scope(&batch_cache);
+
+  size_t processed = 0;
   for (const MergedCubeDesc &desc : descriptors)
   {
+    UBlockingWorkPump::Pump("Building block textures",
+                            static_cast<float>(processed++) /
+                                static_cast<float>(descriptors.size()));
     const size_t typeId = static_cast<size_t>(desc.Id);
     std::vector<std::string> stems(desc.Stems.begin(), desc.Stems.end());
     int stripFrames = 0;
@@ -190,6 +288,20 @@ void UTextureCubeStorage::PatchDescriptors(
       stripFrames = desc.AnimFrames;
     }
 
+    const auto existing = Textures.find(typeId);
+    if (existing == Textures.end())
+    {
+      // Fresh cube: build it once. (An atlas used to be composed here only to
+      // test for emptiness and then composed again inside CreateCubeTexture.)
+      UTextureCube cube =
+          CreateCubeTexture(desc.Name, typeId, stems, stripFrames);
+      if (cube.GetTexture() != 0)
+      {
+        Textures[cube.GetTypeId()] = cube;
+      }
+      continue;
+    }
+
     const CubeAtlasPixels atlas =
         BuildCubeAtlasPixels(desc.Name, stems, stripFrames);
     if (atlas.Rgba.empty() || atlas.Width <= 0 || atlas.Height <= 0)
@@ -197,7 +309,6 @@ void UTextureCubeStorage::PatchDescriptors(
       continue;
     }
 
-    if (const auto existing = Textures.find(typeId); existing != Textures.end())
     {
       GLuint tex = existing->second.GetTexture();
       if (tex != 0)
@@ -234,7 +345,10 @@ void UTextureCubeStorage::PatchDescriptors(
 
     UTextureCube cube =
         CreateCubeTexture(desc.Name, typeId, stems, stripFrames);
-    Textures[cube.GetTypeId()] = cube;
+    if (cube.GetTexture() != 0)
+    {
+      Textures[cube.GetTypeId()] = cube;
+    }
   }
 }
 
@@ -261,45 +375,6 @@ void UTextureCubeStorage::RemoveCubeDescriptors(
 
 namespace
 {
-
-struct LoadedStem
-{
-  int Width{0};
-  int Height{0};
-  std::vector<unsigned char> Rgba;
-  bool Ok{false};
-};
-
-LoadedStem LoadStemRgba(const UTextureBase &base)
-{
-  LoadedStem out;
-  if (base.HasPixelData())
-  {
-    if (const TexturePixelData *px = base.GetPixelData())
-    {
-      out.Width = px->Width;
-      out.Height = px->Height;
-      out.Rgba = px->Rgba;
-      out.Ok = !out.Rgba.empty();
-      return out;
-    }
-  }
-  if (base.GetFileName().empty())
-  {
-    return out;
-  }
-  int channels = 0;
-  unsigned char *data = stbi_load(base.GetFileName().c_str(), &out.Width,
-                                  &out.Height, &channels, 4);
-  if (!data)
-  {
-    return out;
-  }
-  out.Rgba.assign(data, data + static_cast<size_t>(out.Width * out.Height * 4));
-  stbi_image_free(data);
-  out.Ok = true;
-  return out;
-}
 
 void CopyRegion(unsigned char *dst, int dstX, int dstY, int dstStride,
                 int dstTotalW, const unsigned char *src, int srcX, int srcY,
@@ -456,11 +531,6 @@ UTextureCube UTextureCubeStorage::CreateCubeTexture(
     result.SetNumTextureFrames(static_cast<size_t>(num_texture_frames));
   }
 
-  // Create OpenGL texture
-  GLuint textureId;
-  glGenTextures(1, &textureId);
-  glBindTexture(GL_TEXTURE_2D, textureId);
-
   // Load first texture to get dimensions
   const auto firstTexIt = base_texture_descriptions.find(texture_names[0]);
   if (firstTexIt == base_texture_descriptions.end())
@@ -498,7 +568,8 @@ UTextureCube UTextureCubeStorage::CreateCubeTexture(
 
   int total_width = width * 6;
   int total_height = height * num_texture_frames;
-  std::vector<unsigned char> combined_data(total_width * total_height * 4);
+  std::vector<unsigned char> combined_data(
+      static_cast<size_t>(total_width) * total_height * 4);
 
   if (useVerticalStrip)
   {
@@ -571,7 +642,10 @@ UTextureCube UTextureCubeStorage::CreateCubeTexture(
     }
   }
 
-  // Load combined texture into OpenGL
+  // Create OpenGL texture and load the combined pixels
+  GLuint textureId;
+  glGenTextures(1, &textureId);
+  glBindTexture(GL_TEXTURE_2D, textureId);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, total_width, total_height, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, combined_data.data());
 

@@ -1,0 +1,10 @@
+# Optional local ML generation. Install after requirements-assetgen.txt.
+# PyTorch's CPU and CUDA wheels are distributed separately; choose a wheel
+# matching the target machine from https://pytorch.org/get-started/locally/.
+diffusers>=0.37.1,<0.38
+transformers>=4.45,<5
+accelerate>=1.0,<2
+safetensors>=0.4.5
+huggingface_hub>=0.34,<1
+trimesh>=4.5
+scipy>=1.13

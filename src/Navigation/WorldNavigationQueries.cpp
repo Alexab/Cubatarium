@@ -2,9 +2,9 @@
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Environment/CreatureTraverseQueries.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
-#include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 
 namespace cutum
@@ -25,7 +25,8 @@ UWorldNavigationQueries::UWorldNavigationQueries(const UWorld &world)
 }
 
 bool UWorldNavigationQueries::IsTerrestrialStandNode(
-    const NavigationStandNode &node, float body_height) const
+    const NavigationStandNode &node, float body_height, float body_width,
+    bool reject_fluid_nodes) const
 {
   const UBlockRegistry &registry = World.GetBlockRegistry();
   const glm::ivec3 ground(node.x, node.ground_y, node.z);
@@ -35,16 +36,29 @@ bool UWorldNavigationQueries::IsTerrestrialStandNode(
     return false;
   }
   const float feet_y = BlockTopY(node.ground_y);
-  const glm::vec3 size_blocks(0.6f, body_height, 0.6f);
-  const CollisionVolume vol = CollisionVolumeAtFeet(
-      feet_y, static_cast<float>(node.x), static_cast<float>(node.z),
-      size_blocks);
-  return !World.CheckBlockCollisionVolume(vol);
+  const glm::vec3 size_blocks(body_width, body_height, body_width);
+  const glm::vec3 body_origin(static_cast<float>(node.x), feet_y,
+                              static_cast<float>(node.z));
+  // Nav-hot path: ground + block clearance only (no fluid volume probe).
+  if (!CanCreatureStandAtNav(World, body_origin, size_blocks, 1.25f))
+  {
+    return false;
+  }
+  // Terrestrial A* runs with reject_fluid_nodes: a stand whose body column
+  // touches water (liquid blocks or waterlogged kelp/seagrass) is not a
+  // walkable node — chase/flee paths must not route across lakes.
+  if (reject_fluid_nodes && CreatureColumnTouchesFluid(World, body_origin,
+                                                       body_height))
+  {
+    return false;
+  }
+  return true;
 }
 
 bool UWorldNavigationQueries::CanStepTerrestrial(
     const NavigationStandNode &from, const NavigationStandNode &to,
-    float max_jump, float max_drop, float body_height) const
+    float max_jump, float max_drop, float body_height,
+    float body_width, bool reject_fluid_nodes) const
 {
   const int dx = std::abs(to.x - from.x);
   const int dz = std::abs(to.z - from.z);
@@ -52,7 +66,7 @@ bool UWorldNavigationQueries::CanStepTerrestrial(
   {
     return false;
   }
-  if (!IsTerrestrialStandNode(to, body_height))
+  if (!IsTerrestrialStandNode(to, body_height, body_width, reject_fluid_nodes))
   {
     return false;
   }
@@ -61,13 +75,19 @@ bool UWorldNavigationQueries::CanStepTerrestrial(
   {
     return false;
   }
+  // Climb-through cells only (not the landing solid at to.ground_y).
+  // Old check used from.ground_y+1 at destination — for dy==1 that IS the
+  // landing block, so every 1-block step-up was rejected (pits/stairs).
   if (dy > 0.01f)
   {
-    const glm::ivec3 head_cell(to.x, from.ground_y + 1, to.z);
-    if (World.GetBlockRegistry().BlocksMovement(
-            World.GetBlockWorld().GetBlock(head_cell)))
+    for (int y = from.ground_y + 1; y < to.ground_y; ++y)
     {
-      return false;
+      const glm::ivec3 climb_cell(to.x, y, to.z);
+      if (World.GetBlockRegistry().BlocksMovement(
+              World.GetBlockWorld().GetBlock(climb_cell)))
+      {
+        return false;
+      }
     }
   }
   return true;

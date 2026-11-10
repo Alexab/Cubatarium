@@ -2,6 +2,9 @@
 #define IU_GUI_MENU_HOST_H
 
 #include "ResourcePacks/ResourcePackResolver.h"
+#include "World/View/WorldViewSettings.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -35,6 +38,21 @@ public:
   virtual void
   CreateNewWorldWithSettings(const ProceduralSettings &settings,
                              const ResourcePackSelection &selection) = 0;
+  virtual void
+  CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                             const ResourcePackSelection &selection,
+                             const WorldViewSettings &view) = 0;
+  virtual void
+  CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                             const ResourcePackSelection &selection,
+                             const WorldViewSettings &view,
+                             WorldGameMode gameMode) = 0;
+  virtual void
+  CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                             const ResourcePackSelection &selection,
+                             const WorldViewSettings &view,
+                             WorldGameMode gameMode,
+                             WorldDifficulty difficulty) = 0;
   virtual void LoadSelectedWorld(const std::string &worldName) = 0;
   virtual void RefreshWorldList() = 0;
   virtual const std::vector<std::string> &GetWorldNames() const = 0;
@@ -46,6 +64,12 @@ public:
   virtual ResourcePackSelection GetCurrentWorldResourcePackSelection() const = 0;
   virtual bool
   ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection) = 0;
+  virtual WorldViewSettings GetCurrentWorldViewSettings() const = 0;
+  virtual bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view) = 0;
+  /// Apply packs + view in memory and persist world_data.json only.
+  virtual bool
+  ApplyWorldSettings(const ResourcePackSelection &selection,
+                     const WorldViewSettings &view) = 0;
   virtual void ApplyLiveUiScale(float user_scale) = 0;
 };
 

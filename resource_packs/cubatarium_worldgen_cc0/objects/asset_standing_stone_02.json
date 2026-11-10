@@ -1,0 +1,46 @@
+{
+  "name": "asset_standing_stone_02",
+  "version": 2,
+  "displayName": "Standing Stone 02",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 6211555733994066502,
+    "license": "CC0-1.0",
+    "material_parameter": "granite"
+  },
+  "tags": [
+    "decoration",
+    "structure"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    }
+  ]
+}

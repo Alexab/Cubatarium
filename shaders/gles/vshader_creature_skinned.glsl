@@ -6,7 +6,10 @@ layout(location = 2) in ivec4 aJoints;
 layout(location = 3) in vec4 aWeights;
 
 uniform mat4 mvp_matrix;
-uniform mat4 uBones[48];
+layout(std140) uniform BonePalette
+{
+  mat4 uBones[96];
+};
 
 out vec2 uv;
 

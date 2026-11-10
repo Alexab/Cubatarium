@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_coral_dense",
+  "id": 2273,
+  "displayName": "Organic Coral Dense",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_coral_dense",
+    "cu_organic_coral_dense",
+    "cu_organic_coral_dense",
+    "cu_organic_coral_dense",
+    "cu_organic_coral_dense",
+    "cu_organic_coral_dense"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "cluster",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "coral",
+    "variant": "dense"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

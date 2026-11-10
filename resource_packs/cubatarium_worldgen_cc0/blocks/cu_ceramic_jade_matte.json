@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_jade_matte",
+  "id": 1755,
+  "displayName": "Ceramic Jade Matte",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_jade_matte",
+    "cu_ceramic_jade_matte",
+    "cu_ceramic_jade_matte",
+    "cu_ceramic_jade_matte",
+    "cu_ceramic_jade_matte",
+    "cu_ceramic_jade_matte"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "jade",
+    "variant": "matte"
+  }
+}

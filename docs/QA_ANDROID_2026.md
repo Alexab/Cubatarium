@@ -63,6 +63,18 @@ Manual + automated QA matrix for Android UX blockers (`TD-AUD-028..031`).
 | AND-14 | Load existing world | [X] | [ ] | First interactive frame < 5s on profile D |
 | AND-15 | Create new world | [X] | [ ] | No freeze dialog near generation end |
 
+## Manual QA — isometric controls
+
+| ID | Scenario | PASS | FAIL | Notes |
+|----|----------|------|------|-------|
+| AND-ISO-01 | Load isometric world | [ ] | [ ] | Elevated camera; body visible |
+| AND-ISO-02 | Joystick moves camera-relative | [ ] | [ ] | W/A/S/D screen XZ |
+| AND-ISO-03 | Look pad aims character | [ ] | [ ] | Camera yaw fixed; body turns |
+| AND-ISO-04 | Q/E snap buttons | [ ] | [ ] | Camera rotates 90° |
+| AND-ISO-05 | +/- zoom ortho | [ ] | [ ] | Ortho size changes |
+| AND-ISO-06 | Cam cycles Close/Standard/Far | [ ] | [ ] | Boom distance presets |
+| AND-ISO-07 | Perspective world unchanged | [ ] | [ ] | FPS look + F5 1st/3rd |
+
 ## Sign-off gate
 
 Close `TD-AUD-028..031` only when:

@@ -1,6 +1,7 @@
 #ifndef CROSSINSTANCECOLLECTOR_H
 #define CROSSINSTANCECOLLECTOR_H
 
+#include "Blocks/BlockCatalogQueries.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
@@ -50,6 +51,7 @@ inline void CollectCrossInstancesFromChunk(
 
 inline void CollectCrossInstancesFromSnapshot(
     const ChunkMeshSnapshot &snapshot, const UBlockRegistry &registry,
+    const BlockDefinitionCatalog *catalog,
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> &out)
 {
   for (int ly = 0; ly < CHUNK_SIZE; ++ly)
@@ -60,8 +62,10 @@ inline void CollectCrossInstancesFromSnapshot(
       {
         const glm::ivec3 local(lx, ly, lz);
         const BlockId id = snapshot.GetBlockLocal(local);
-        if (id == BLOCK_AIR ||
-            registry.GetRenderStyle(id) != BlockRenderStyle::Cross)
+        const BlockRenderStyle style =
+            catalog ? CatalogGetRenderStyle(catalog, id)
+                    : registry.GetRenderStyle(id);
+        if (id == BLOCK_AIR || style != BlockRenderStyle::Cross)
         {
           continue;
         }
@@ -78,6 +82,13 @@ inline void CollectCrossInstancesFromSnapshot(
       }
     }
   }
+}
+
+inline void CollectCrossInstancesFromSnapshot(
+    const ChunkMeshSnapshot &snapshot, const UBlockRegistry &registry,
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> &out)
+{
+  CollectCrossInstancesFromSnapshot(snapshot, registry, nullptr, out);
 }
 
 } // namespace cutum

@@ -21,8 +21,11 @@ struct UCreatureActivityBlackboard
   CreatureFsmState state{CreatureFsmState::Idle};
   CreatureId targetId{0};
   glm::vec3 lastSeenPos{0.0f};
-  float alertLevel{0.0f};
+  /// Chase seconds left toward lastSeenPos after the target was lost.
+  float lastSeenChaseSec{0.0f};
   float actionTimer{0.0f};
+  /// Bot-only: current wander direction between repicks.
+  glm::vec3 wanderDir{0.0f};
   CreatureNavigationState navigation;
 };
 

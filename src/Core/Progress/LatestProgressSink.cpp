@@ -10,14 +10,29 @@ void ULatestProgressSink::Begin(WorldOperationKind kind)
   Snapshot.active = true;
   Snapshot.succeeded = true;
   Snapshot.fraction = -1.f;
+  MaxFractionSeen = -1.f;
 }
 
 void ULatestProgressSink::Report(const std::string &phaseId, float fraction,
-                                 const std::string &message)
+                                 const std::string &message, int subDone,
+                                 int subTotal)
 {
   Snapshot.phaseId = phaseId;
   Snapshot.message = message;
-  Snapshot.fraction = fraction;
+  Snapshot.subDone = subDone;
+  Snapshot.subTotal = subTotal;
+  if (fraction >= 0.f)
+  {
+    if (fraction > MaxFractionSeen)
+    {
+      MaxFractionSeen = fraction;
+    }
+    Snapshot.fraction = MaxFractionSeen;
+  }
+  else
+  {
+    Snapshot.fraction = fraction;
+  }
   Snapshot.active = true;
 }
 

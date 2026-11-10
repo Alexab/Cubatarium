@@ -4,19 +4,27 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureIntent.h"
 #include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Core/CreatureSpawnSource.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Influence/InfluenceTypes.h"
+#include "Creatures/Influence/StatusEffectTypes.h"
+#include "Creatures/Stats/CreatureAttributes.h"
+#include "Creatures/Stats/CreatureVitals.h"
+#include <algorithm>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace cutum
 {
 
 class UWorld;
 class IUCreatureVisual;
+struct CreatureDefinition;
 
 class UCreature
 {
@@ -27,6 +35,8 @@ public:
 
   CreatureId GetId() const { return Id; }
   const std::string &GetTypeId() const { return TypeId; }
+  CreatureSpawnSource GetSpawnSource() const { return SpawnSource; }
+  void SetSpawnSource(CreatureSpawnSource source) { SpawnSource = source; }
   const std::string &GetSkinId() const { return SkinId; }
   void SetSkinId(const std::string &Id) { SkinId = Id; }
   glm::vec3 GetBodyOrigin() const { return BodyOrigin; }
@@ -49,6 +59,13 @@ public:
   void SyncFeetFromLocomotion(const UWorld &world,
                               glm::vec3 &eyeAfterLocomotion);
 
+  /// The one size creature collision uses (rest size, turned with the body);
+  /// diagnostics and probes about collision must read this, not
+  /// Bounds.currentSizeBlocks (the stance-blended visual size).
+  const glm::vec3 &GetCollisionSize() const
+  {
+    return Bounds.profile.restSizeBlocks;
+  }
   CollisionVolume GetCollisionVolume() const;
   UCreatureLocomotionController &GetLocomotion() { return Locomotion; }
   const UCreatureLocomotionController &GetLocomotion() const
@@ -57,6 +74,93 @@ public:
   }
   UCreatureInventory &GetInventory() { return Inventory; }
   const UCreatureInventory &GetInventory() const { return Inventory; }
+
+  CreatureVitals &GetVitals() { return Vitals; }
+  const CreatureVitals &GetVitals() const { return Vitals; }
+  CreatureAttributes &GetAttributes() { return Attributes; }
+  const CreatureAttributes &GetAttributes() const { return Attributes; }
+  void ApplyStatsFromDefinition(const CreatureDefinition &def);
+  bool NeedsNeedsTick() const { return NeedsTick; }
+  void SetNeedsNeedsTick(bool v) { NeedsTick = v; }
+
+  ArmorGroups &GetArmorGroups() { return Armor; }
+  /// Total includes equipped armor contributions (pre-aggregated in
+  /// CreatureInventory) plus offhand shield armor_groups. By value: the old
+  /// const overload aggregated into a mutable cache member (audit 5.3).
+  ArmorGroups GetArmorGroups() const
+  {
+    ArmorGroups total = Armor;
+    const ArmorGroups &eq = Inventory.GetEquippedArmorGroups();
+    for (const auto &pair : eq.Ratings)
+    {
+      total.Ratings[pair.first] += pair.second;
+    }
+    const InventoryEntryRef &off = Inventory.GetEquippedOffhand();
+    if (!off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
+    {
+      // Offhand groups resolved lazily via optional storage pointer is not
+      // available here; Inventory exposes cached offhand groups when set.
+      const ArmorGroups &offGroups = Inventory.GetOffhandArmorGroups();
+      for (const auto &pair : offGroups.Ratings)
+      {
+        total.Ratings[pair.first] += pair.second;
+      }
+    }
+    return total;
+  }
+  void SetArmorGroups(const ArmorGroups &g) { Armor = g; }
+  /// -1 = use strength formula for bare-hand fleshy damage.
+  int GetBareHandFleshyOverride() const { return BareHandFleshyOverride; }
+  float GetBareHandIntervalOverride() const { return BareHandIntervalOverride; }
+
+  float GetTimeSinceLastInfluenceSec() const
+  {
+    return TimeSinceLastInfluenceSec;
+  }
+  void AdvanceInfluenceCooldown(float dt)
+  {
+    TimeSinceLastInfluenceSec += std::max(0.f, dt);
+  }
+  void ResetInfluenceCooldown() { TimeSinceLastInfluenceSec = 0.f; }
+
+  bool IsBlocking() const { return Blocking; }
+  void SetBlocking(bool v) { Blocking = v; }
+
+  void AddHitFlash(float strength)
+  {
+    HitFlash01 = std::min(1.f, HitFlash01 + std::max(0.f, strength));
+  }
+  float GetHitFlash01() const { return HitFlash01; }
+  void TickHitFlash(float dt)
+  {
+    HitFlash01 = std::max(0.f, HitFlash01 - dt * 4.f);
+  }
+
+  void NotifyDamaged(CreatureId attacker = 0)
+  {
+    HealthBarVisibleSec = 2.f;
+    if (attacker != 0)
+    {
+      LastAttackerId = attacker;
+      DamageMemorySec = 8.f;
+    }
+  }
+  void TickHealthBar(float dt)
+  {
+    HealthBarVisibleSec = std::max(0.f, HealthBarVisibleSec - std::max(0.f, dt));
+    DamageMemorySec = std::max(0.f, DamageMemorySec - std::max(0.f, dt));
+  }
+  float GetHealthBarVisibleSec() const { return HealthBarVisibleSec; }
+  /// Recent attacker for AI reactions (flee / aggro); valid while
+  /// GetDamageMemorySec() > 0.
+  CreatureId GetLastAttackerId() const { return LastAttackerId; }
+  float GetDamageMemorySec() const { return DamageMemorySec; }
+
+  std::vector<StatusEffectInstance> &GetStatusEffects() { return StatusEffects; }
+  const std::vector<StatusEffectInstance> &GetStatusEffects() const
+  {
+    return StatusEffects;
+  }
 
   CreatureIntent GetIntent() const { return Intent; }
   void SetIntent(const CreatureIntent &intent) { Intent = intent; }
@@ -77,6 +181,8 @@ public:
     LocomotionArchetype = archetype;
   }
   void SetWalkCycleHz(float hz) { WalkCycleHz = hz; }
+  /// Not simulated this frame (terrain chunk unloaded): present standing.
+  void SettleFrozenLocomotion() { SettleFrozenLocomotionFacts(LocomotionFacts); }
   void RebuildLocomotionFacts(const CreatureLocomotionRawInput &input,
                               const CreatureLocomotionCapabilities &caps,
                               const UWorld *world = nullptr);
@@ -86,15 +192,52 @@ public:
       float horizontalSpeedOverride = -1.0f,
       const UWorld *world = nullptr);
 
+  /// Role flags (audit 5.2: the ICreatureRoleHandler strategy layer stored
+  /// nothing but copies of these two bits and is gone).
   bool IsPlayerCharacter() const { return PlayerCharacter; }
-  void SetPlayerCharacter(bool v) { PlayerCharacter = v; }
+  void SetPlayerCharacter(bool v);
   bool IsPossessed() const { return Possessed; }
-  void SetPossessed(bool v) { Possessed = v; }
+  void SetPossessed(bool v);
 
-  virtual bool IsPlayer() const { return false; }
+  virtual bool IsPlayer() const { return PlayerCharacter; }
+
   virtual void ExecuteIntent(UWorld &world, float dt);
-  virtual void UpdateControlled(UWorld &world, const CreatureInput &input,
-                                float dt);
+
+  // ExecuteIntent stages (audit 4.2): idle fast path, mode switch, wish
+  // shaping, motor step, post-move habitat gate with recovery, idle fluid
+  // sink, travel-facing yaw, facts/diagnostics finish.
+  bool TryIdleIntentFastPath(UWorld &world, float dt,
+                             const glm::vec3 &bodyOriginBefore,
+                             CreatureHabitat habitat, bool airMobility);
+  void UpdateMovementModeForHabitat(CreatureHabitat habitat, bool airMobility);
+  void ShapeMovementWishAndSpeed(const UWorld &world, CreatureHabitat habitat,
+                                 bool airMobility, glm::vec3 &wish,
+                                 float &speed);
+  void RunMotorStep(UWorld &world, glm::vec3 &eye,
+                    const CreatureInput &verticalInput, const glm::vec3 &wish,
+                    float speed, float dt);
+  void EnforceHabitatAfterMove(
+      UWorld &world, CreatureHabitat habitat,
+      const glm::vec3 &bodyOriginBefore,
+      const UCreatureLocomotionController &locomotionBefore,
+      const glm::vec3 &diagIntentDir, float diagIntentSpeed,
+      const glm::vec3 &wish);
+  void ApplyIdleFluidSink(UWorld &world, CreatureHabitat habitat,
+                          const glm::vec3 &wish, float dt,
+                          const CreatureInput &verticalInput);
+  void FaceTravelDirection(const glm::vec3 &bodyOriginBefore,
+                           const glm::vec3 &wish);
+  /// Turn the collision box with the body in 90-degree steps (long bodies
+  /// only); the swap waits until the turned box fits where the body stands.
+  void UpdateFootprintOrientation(const UWorld &world);
+  void SwapFootprintSizes();
+  bool IsFootprintSwapped() const { return FootprintSwapped; }
+  /// Restore the persisted footprint orientation at load (see
+  /// UpdateFootprintOrientation; the runtime path re-derives it from yaw).
+  void ApplyFootprintSwapForLoad(bool swapped);
+  void FinishIntentFrame(UWorld &world, float dt,
+                         const glm::vec3 &bodyOriginBefore,
+                         const glm::vec3 &diagIntentDir, float diagIntentSpeed);
 
   IUCreatureVisual *GetVisual() { return Visual.get(); }
   void SetVisual(std::unique_ptr<IUCreatureVisual> visual);
@@ -107,6 +250,7 @@ public:
 protected:
   CreatureId Id;
   std::string TypeId;
+  CreatureSpawnSource SpawnSource{CreatureSpawnSource::CreativeManual};
   std::string SkinId;
   glm::vec3 BodyOrigin;
   glm::vec3 EyeOffset;
@@ -114,8 +258,25 @@ protected:
   float Pitch{0.0f};
   float ModelYawOffsetDeg{0.0f};
   CreatureBoundsState Bounds;
+  bool FootprintSwapped{false};
+  /// Swim-up "jump" sent last frame (amphibious): re-pressed every other
+  /// frame on the bottom / at the bank, where only a press makes a jump.
+  bool SwimUpHeldLastFrame{false};
   UCreatureLocomotionController Locomotion;
   UCreatureInventory Inventory;
+  CreatureVitals Vitals{};
+  CreatureAttributes Attributes{};
+  ArmorGroups Armor{ArmorGroups::DefaultFleshy()};
+  int BareHandFleshyOverride{-1};
+  float BareHandIntervalOverride{-1.f};
+  float TimeSinceLastInfluenceSec{1000.f};
+  float HitFlash01{0.f};
+  float HealthBarVisibleSec{0.f};
+  CreatureId LastAttackerId{0};
+  float DamageMemorySec{0.f};
+  bool Blocking{false};
+  std::vector<StatusEffectInstance> StatusEffects;
+  bool NeedsTick{false};
   CreatureIntent Intent{};
   bool PlayerCharacter{false};
   bool Possessed{false};

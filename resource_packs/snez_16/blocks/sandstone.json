@@ -1,6 +1,13 @@
 {
   "name": "sandstone",
   "id": 937,
+  "hardness": 0.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural",
     "building"

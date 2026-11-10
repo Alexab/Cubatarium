@@ -9,20 +9,45 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from quick_terrain_metrics import build_surface, load_columns
-from worldgen_metrics_lib import analyze_world, compare_to_thresholds, terrain_shape_stats
+from quick_terrain_metrics import (
+    build_surface,
+    load_columns,
+    non_terrain_ids_for_world,
+    water_ids_for_world,
+)
+from worldgen_metrics_lib import (
+    analyze_world,
+    compare_to_thresholds,
+    spawn_center_from_meta,
+    terrain_shape_stats,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 
 
 def land_shape_metrics(world_dir: Path, spawn_radius: int) -> dict:
-    columns = load_columns(world_dir, 0, 0, spawn_radius)
-    surface = build_surface(columns, land_only=True)
+    meta_path = world_dir / "world_data.json"
+    meta = (
+        json.loads(meta_path.read_text(encoding="utf-8"))
+        if meta_path.is_file()
+        else {}
+    )
+    center_x, center_z = spawn_center_from_meta(meta)
+    columns = load_columns(world_dir, center_x, center_z, spawn_radius)
+    water_ids = water_ids_for_world(world_dir, columns, REPO)
+    ignored_ids = non_terrain_ids_for_world(world_dir, REPO)
+    surface = build_surface(
+        columns,
+        land_only=True,
+        water_ids=water_ids,
+        ignored_ids=ignored_ids,
+    )
     if not surface:
         return {}
     ys = [y for y, _ in surface.values()]
     shape = terrain_shape_stats(surface)
     return {
+        "spawn_center": [center_x, center_z],
         "land_columns": len(surface),
         "height_min": min(ys),
         "height_mean": sum(ys) / len(ys),
@@ -54,7 +79,7 @@ def main() -> int:
     spawn_radius = baseline.get("spawn_radius", 48)
     refs = REPO / "content" / "worldgen_refs.json"
     thresholds = dict(baseline.get("thresholds", {}))
-    thresholds["max_height"] = baseline.get("max_height", 128)
+    thresholds["max_height"] = baseline.get("max_height", 319)
 
     reports: list[dict] = []
     missing: list[int] = []
@@ -70,7 +95,7 @@ def main() -> int:
             refs,
             repo_root=REPO,
             spawn_radius=spawn_radius,
-            max_height=baseline.get("max_height", 128),
+            max_height=baseline.get("max_height", 319),
         )
         land = land_shape_metrics(world_dir, spawn_radius)
         gate_failures = compare_to_thresholds(metrics, thresholds)

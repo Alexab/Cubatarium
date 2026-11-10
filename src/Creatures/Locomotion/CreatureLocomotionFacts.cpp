@@ -20,6 +20,16 @@ float AdvanceAnimPhase(float phase, float horizontalSpeed, float walkCycleHz,
   return phase + kTwoPi * walkCycleHz * speedRatio * dt;
 }
 
+void SettleFrozenLocomotionFacts(CreatureLocomotionFacts &facts)
+{
+  const bool airborne = facts.state == LocomotionState::Fly ||
+                        facts.state == LocomotionState::Hover ||
+                        facts.state == LocomotionState::Glide;
+  facts.state = airborne ? LocomotionState::Hover : LocomotionState::Idle;
+  facts.horizontalSpeed = 0.0f;
+  facts.verticalSpeed = 0.0f;
+}
+
 void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
                              const CreatureLocomotionRawInput &input,
                              LocomotionArchetype archetype, float bodyYaw,
@@ -40,14 +50,10 @@ void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
   if (input.dt > 1e-6f)
   {
     const glm::vec3 delta = input.bodyOriginAfter - input.bodyOriginBefore;
-    if (archetype == LocomotionArchetype::Aerial)
-    {
-      out.horizontalSpeed = glm::length(delta) / input.dt;
-    }
-    else
-    {
-      out.horizontalSpeed = glm::length(glm::vec2(delta.x, delta.z)) / input.dt;
-    }
+    // XZ only, aerials included: vertical bob is not travel. A hovering
+    // wasp with a blocked horizontal wish derived Fly from the 3D speed and
+    // "stood in Fly" forever (its anim never returned to Hover).
+    out.horizontalSpeed = glm::length(glm::vec2(delta.x, delta.z)) / input.dt;
   }
   else
   {
@@ -62,21 +68,11 @@ void FinalizeLocomotionFacts(CreatureLocomotionFacts &facts,
 {
   facts.state = DeriveLocomotionState(facts.archetype, facts, caps, &input);
   constexpr float kTwoPi = 6.283185307f;
-  const bool agent_walk_hint =
-      input.hasSuggestedAnim &&
-      (input.suggestedAnim == LocomotionState::Walk ||
-       input.suggestedAnim == LocomotionState::Run);
+  // Phase follows actual travel only — do not fake walk while scraped/stuck.
   if (facts.horizontalSpeed < 0.05f && dt > 0.0f)
   {
-    if (agent_walk_hint)
-    {
-      facts.animPhase = AdvanceAnimPhase(facts.animPhase, caps.walkSpeed * 0.5f,
-                                         walkCycleHz, caps.walkSpeed, dt);
-    }
-    else
-    {
-      facts.animPhase += kTwoPi * 0.35f * dt;
-    }
+    // Idle/blocked: slow phase drift only — do not fake walk from agent hints.
+    facts.animPhase += kTwoPi * 0.35f * dt;
   }
   else
   {

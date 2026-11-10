@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_conglomerate_fractured",
+  "id": 1198,
+  "displayName": "Rock Conglomerate Fractured",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_conglomerate_fractured",
+    "cu_rock_conglomerate_fractured",
+    "cu_rock_conglomerate_fractured",
+    "cu_rock_conglomerate_fractured",
+    "cu_rock_conglomerate_fractured",
+    "cu_rock_conglomerate_fractured"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "conglomerate",
+    "variant": "fractured"
+  }
+}

@@ -577,6 +577,78 @@
       "dy": 7,
       "dz": 0,
       "type": "tree_leaves"
+    },
+    {
+      "dx": 0,
+      "dy": 4,
+      "dz": -1,
+      "type": "tree_log"
+    },
+    {
+      "dx": 0,
+      "dy": 4,
+      "dz": 1,
+      "type": "tree_log"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 1,
+      "type": "tree_log"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": -1,
+      "type": "tree_log"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": -2,
+      "type": "tree_log"
+    },
+    {
+      "dx": -1,
+      "dy": 5,
+      "dz": -1,
+      "type": "tree_log"
+    },
+    {
+      "dx": -1,
+      "dy": 6,
+      "dz": 2,
+      "type": "tree_log"
+    },
+    {
+      "dx": -1,
+      "dy": 6,
+      "dz": 1,
+      "type": "tree_log"
+    },
+    {
+      "dx": 1,
+      "dy": 5,
+      "dz": 2,
+      "type": "tree_log"
+    },
+    {
+      "dx": 0,
+      "dy": 5,
+      "dz": 2,
+      "type": "tree_log"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
+      "dz": -2,
+      "type": "tree_log"
+    },
+    {
+      "dx": 1,
+      "dy": 6,
+      "dz": -1,
+      "type": "tree_log"
     }
   ],
   "source": {

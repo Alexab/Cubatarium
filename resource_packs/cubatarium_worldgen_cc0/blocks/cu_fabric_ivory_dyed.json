@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_ivory_dyed",
+  "id": 1792,
+  "displayName": "Fabric Ivory Dyed",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_ivory_dyed",
+    "cu_fabric_ivory_dyed",
+    "cu_fabric_ivory_dyed",
+    "cu_fabric_ivory_dyed",
+    "cu_fabric_ivory_dyed",
+    "cu_fabric_ivory_dyed"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "ivory",
+    "variant": "dyed"
+  }
+}

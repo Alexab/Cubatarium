@@ -6,6 +6,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace cutum
@@ -17,7 +18,13 @@ class UGuiLabel;
 class UGuiTextInput;
 class UGuiCheckbox;
 class UGuiListView;
+class UGuiTabBar;
+class UGuiSliderField;
 
+/// World generation settings form with two tabs: "Basic" (generator, preset,
+/// seed and the handful of options most players change) and "Advanced"
+/// (everything else). Ranged values use a slider + numeric box + Reset button;
+/// Reset restores the default of the current generator and preset.
 class UWorldGenSettingsForm
 {
 public:
@@ -27,6 +34,10 @@ public:
   void SetHintText(const std::string &text);
   void SetForNewWorldDefaults();
   void SetOnLayoutChanged(std::function<void()> handler);
+  /// The host window owns the Basic/Advanced tab bar: the form creates none
+  /// (call before BuildInto) and follows SetActiveTab().
+  void UseExternalTabs() { ExternalTabs = true; }
+  void SetActiveTab(int tab);
   ProceduralSettings ReadSettings() const;
 
   void BuildInto(UGuiPanel &panel);
@@ -36,18 +47,32 @@ public:
 private:
   void AddWidgetsTo(UGuiPanel &panel);
   void OnGeneratorSelected(int index);
+  void OnPresetSelected(int index);
   void OnTerrainBackendSelected(int index);
   void OnWorldGenPackSelected(int index);
+  void OnTabChanged(int tab);
   void RefreshGeneratorDescription();
   void RefreshWorldGenPackDescription();
   void UpdateFieldVisibility();
+  void ConfigureRangesAndDefaults();
+
+  UGuiLabel *AddLabel(UGuiPanel &panel, const std::string &text);
+  UGuiSliderField *AddSlider(UGuiPanel &panel, const std::string &label,
+                             UGuiLabel *&labelOut, float min, float max,
+                             float step, int decimals);
+  UGuiCheckbox *AddCheckbox(UGuiPanel &panel, const std::string &label,
+                            std::function<void(bool)> onChanged);
 
   const GuiTheme *Theme;
   ProceduralSettings FormSettings;
   bool Built{false};
   bool ForNewWorldScreen{false};
+  bool SeedBlank{false};
+  bool ExternalTabs{false};
+  int ActiveTab{0};
   std::function<void()> OnLayoutChanged;
 
+  UGuiTabBar *TabBar{nullptr};
   UGuiLabel *HintLabel{nullptr};
   UGuiLabel *GeneratorCaption{nullptr};
   UGuiLabel *GeneratorDescLabel{nullptr};
@@ -59,15 +84,21 @@ private:
   UGuiListView *WorldGenPackList{nullptr};
   std::vector<WorldGenPackInfo> PackInfos;
   UGuiLabel *SeedLabel{nullptr};
+  UGuiTextInput *SeedInput{nullptr};
+  UGuiLabel *TerrainBackendLabel{nullptr};
+  UGuiListView *TerrainBackendList{nullptr};
+  UGuiLabel *CaveStyleLabel{nullptr};
+  UGuiListView *CaveStyleList{nullptr};
+
+  // Ranged values (slider + box + reset).
   UGuiLabel *SeaLevelLabel{nullptr};
   UGuiLabel *MaxHeightLabel{nullptr};
+  UGuiLabel *BedrockTopYLabel{nullptr};
   UGuiLabel *FlatYLabel{nullptr};
   UGuiLabel *VegetationDensityLabel{nullptr};
   UGuiLabel *DecorationDensityLabel{nullptr};
   UGuiLabel *StructureDensityLabel{nullptr};
   UGuiLabel *TerrainRoughnessLabel{nullptr};
-  UGuiLabel *TerrainBackendLabel{nullptr};
-  UGuiListView *TerrainBackendList{nullptr};
   UGuiLabel *BiomeForestLabel{nullptr};
   UGuiLabel *BiomeDesertLabel{nullptr};
   UGuiLabel *BiomePlainsLabel{nullptr};
@@ -80,34 +111,31 @@ private:
   UGuiLabel *CaveMinYLabel{nullptr};
   UGuiLabel *CaveScaleLabel{nullptr};
   UGuiLabel *CaveMaxDepthLabel{nullptr};
-  UGuiLabel *CaveStyleLabel{nullptr};
   UGuiLabel *RavineRarityLabel{nullptr};
   UGuiLabel *RavineAquaticMaxDepthLabel{nullptr};
-  UGuiLabel *BedrockTopYLabel{nullptr};
-  UGuiTextInput *SeedInput{nullptr};
-  UGuiTextInput *SeaLevelInput{nullptr};
-  UGuiTextInput *MaxHeightInput{nullptr};
-  UGuiTextInput *BedrockTopYInput{nullptr};
-  UGuiTextInput *FlatYInput{nullptr};
-  UGuiTextInput *VegetationDensityInput{nullptr};
-  UGuiTextInput *DecorationDensityInput{nullptr};
-  UGuiTextInput *StructureDensityInput{nullptr};
-  UGuiTextInput *TerrainRoughnessInput{nullptr};
-  UGuiTextInput *BiomeForestInput{nullptr};
-  UGuiTextInput *BiomeDesertInput{nullptr};
-  UGuiTextInput *BiomePlainsInput{nullptr};
-  UGuiTextInput *BiomeHillsInput{nullptr};
-  UGuiTextInput *BiomeTundraInput{nullptr};
-  UGuiTextInput *BiomeBlendInput{nullptr};
-  UGuiTextInput *OreDensityInput{nullptr};
-  UGuiTextInput *TerrainErosionInput{nullptr};
-  UGuiTextInput *CaveThresholdInput{nullptr};
-  UGuiTextInput *CaveMinYInput{nullptr};
-  UGuiTextInput *CaveScaleInput{nullptr};
-  UGuiTextInput *CaveMaxDepthInput{nullptr};
-  UGuiTextInput *CaveStyleInput{nullptr};
-  UGuiTextInput *RavineRarityInput{nullptr};
-  UGuiTextInput *RavineAquaticMaxDepthInput{nullptr};
+  UGuiSliderField *SeaLevelField{nullptr};
+  UGuiSliderField *MaxHeightField{nullptr};
+  UGuiSliderField *BedrockTopYField{nullptr};
+  UGuiSliderField *FlatYField{nullptr};
+  UGuiSliderField *VegetationDensityField{nullptr};
+  UGuiSliderField *DecorationDensityField{nullptr};
+  UGuiSliderField *StructureDensityField{nullptr};
+  UGuiSliderField *TerrainRoughnessField{nullptr};
+  UGuiSliderField *BiomeForestField{nullptr};
+  UGuiSliderField *BiomeDesertField{nullptr};
+  UGuiSliderField *BiomePlainsField{nullptr};
+  UGuiSliderField *BiomeHillsField{nullptr};
+  UGuiSliderField *BiomeTundraField{nullptr};
+  UGuiSliderField *BiomeBlendField{nullptr};
+  UGuiSliderField *OreDensityField{nullptr};
+  UGuiSliderField *TerrainErosionField{nullptr};
+  UGuiSliderField *CaveThresholdField{nullptr};
+  UGuiSliderField *CaveMinYField{nullptr};
+  UGuiSliderField *CaveScaleField{nullptr};
+  UGuiSliderField *CaveMaxDepthField{nullptr};
+  UGuiSliderField *RavineRarityField{nullptr};
+  UGuiSliderField *RavineAquaticMaxDepthField{nullptr};
+
   UGuiCheckbox *CavesBox{nullptr};
   UGuiCheckbox *RavinesBox{nullptr};
   UGuiCheckbox *RavineFillWaterBox{nullptr};

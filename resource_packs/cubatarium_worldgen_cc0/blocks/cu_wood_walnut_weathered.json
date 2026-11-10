@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_walnut_weathered",
+  "id": 1424,
+  "displayName": "Wood Walnut Weathered",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_walnut_weathered",
+    "cu_wood_walnut_weathered",
+    "cu_wood_walnut_weathered",
+    "cu_wood_walnut_weathered",
+    "cu_wood_walnut_weathered_top",
+    "cu_wood_walnut_weathered_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "walnut",
+    "variant": "weathered"
+  }
+}

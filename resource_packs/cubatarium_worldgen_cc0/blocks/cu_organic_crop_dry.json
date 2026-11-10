@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_crop_dry",
+  "id": 2452,
+  "displayName": "Organic Crop Dry",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_crop_dry",
+    "cu_organic_crop_dry",
+    "cu_organic_crop_dry",
+    "cu_organic_crop_dry",
+    "cu_organic_crop_dry",
+    "cu_organic_crop_dry"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "crop",
+    "variant": "dry"
+  }
+}

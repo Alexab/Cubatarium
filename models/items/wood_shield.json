@@ -1,0 +1,21 @@
+{
+  "id": "wood_shield",
+  "format": "parts_v1",
+  "license": "CC0-1.0",
+  "attribution": "Cubatarium educational",
+  "parts": [
+    {
+      "texture": "white",
+      "offset": [
+        0,
+        0.1,
+        0
+      ],
+      "size": [
+        0.28,
+        0.35,
+        0.06
+      ]
+    }
+  ]
+}

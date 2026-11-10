@@ -9,8 +9,10 @@ class UBinaryChunkSerializer : public IUChunkSerializer
 {
 public:
   static constexpr char kMagic[4] = {'C', 'C', 'H', 'K'};
-  /// v3: blocks + fluid + light. v2: blocks + fluid. v1: blocks (+ liquid heuristic).
-  static constexpr uint8_t kVersion = 3;
+  /// v4: blocks + fluid + light + weather state. v3: adds light.
+  /// v2: blocks + fluid. v1: blocks (+ liquid heuristic).
+  static constexpr uint8_t kVersion = 4;
+  static constexpr uint8_t kVersionLight = 3;
   static constexpr uint8_t kVersionFluid = 2;
   static constexpr uint8_t kVersionLegacy = 1;
 

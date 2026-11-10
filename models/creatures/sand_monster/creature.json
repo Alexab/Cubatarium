@@ -7,27 +7,37 @@
       "hostile"
     ],
     "spawnable": true,
-    "sort_order": 32
+    "sort_order": 32,
+    "natural_spawnable": true,
+    "spawn_weight": 0.7,
+    "spawn_group_min": 1,
+    "spawn_group_max": 2,
+    "spawn_biomes": [
+      "desert",
+      "savanna",
+      "scrubland",
+      "beach"
+    ]
   },
   "role": "mob",
   "bounds": {
     "rest": [
-      0.75,
-      1.9,
-      0.75
+      0.59,
+      1.86,
+      0.39
     ],
     "max": [
-      0.75,
-      1.9,
-      0.75
+      0.59,
+      1.86,
+      0.39
     ],
     "min": [
-      0.75,
-      1.4,
-      0.75
+      0.59,
+      1.37,
+      0.39
     ]
   },
-  "eye_height": 1.65,
+  "eye_height": 1.62,
   "habitat": "terrestrial",
   "locomotion_archetype": "terrestrial_biped",
   "locomotion": {
@@ -35,13 +45,16 @@
     "can_crouch": false,
     "can_jump": true,
     "jump_height": 1.0,
-    "walk_speed": 2.2
+    "walk_speed": 1.5
   },
-  "behavior": "wander",
+  "behavior": "melee_attack",
   "behavior_params": {
-    "move_speed": 2.2,
+    "move_speed": 1.5,
     "wander_interval_min": 2.0,
-    "wander_interval_max": 4.0
+    "wander_interval_max": 4.0,
+    "aggro_radius": 12.0,
+    "attack_range": 1.4,
+    "attack_cooldown": 1.5
   },
   "visual": {
     "backend": "gltf_skeleton",
@@ -112,5 +125,23 @@
         "Fly": "idle"
       }
     }
+  },
+  "vitals": {
+    "max_health": 60,
+    "max_satiety": 100,
+    "max_thirst": 100,
+    "max_fatigue": 100,
+    "max_breath": 100,
+    "max_fatal_wounds": 1,
+    "armor": 2
+  },
+  "attributes": {
+    "strength": 12,
+    "agility": 8,
+    "endurance": 11,
+    "accuracy": 8,
+    "intelligence": 4,
+    "luck": 5,
+    "perception": 10
   }
 }

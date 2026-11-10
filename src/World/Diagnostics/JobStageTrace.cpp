@@ -1,0 +1,1688 @@
+#include "World/Diagnostics/JobStageTrace.h"
+#include "World/Streaming/VisibleBlackAttribution.h"
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cstdlib>
+#include <deque>
+#include <mutex>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+namespace cutum
+{
+namespace
+{
+
+std::atomic<uint64_t> LatestCameraBandPeakFrameEpoch{0};
+std::atomic<uint64_t> LatestScreenRayTraceFrameEpoch{0};
+std::atomic<uint64_t> LatestVisualHoleEventFrameEpoch{0};
+std::atomic<uint64_t> LatestStalledVisualBlackFrameEpoch{0};
+std::atomic<uint64_t> LatestStreamingFrameEpoch{0};
+
+struct Ring
+{
+  std::array<JobStageSpan, UJobStageTrace::kRingCapacity> slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+Ring &GetRing()
+{
+  static Ring r;
+  return r;
+}
+
+struct VisualChunkKey
+{
+  int32_t cx{0};
+  int32_t cy{0};
+  int32_t cz{0};
+
+  bool operator==(const VisualChunkKey &other) const
+  {
+    return cx == other.cx && cy == other.cy && cz == other.cz;
+  }
+};
+
+struct VisualChunkKeyHash
+{
+  size_t operator()(const VisualChunkKey &key) const
+  {
+    size_t h = static_cast<uint32_t>(key.cx);
+    h ^= static_cast<size_t>(static_cast<uint32_t>(key.cy)) +
+         0x9e3779b9u + (h << 6) + (h >> 2);
+    h ^= static_cast<size_t>(static_cast<uint32_t>(key.cz)) +
+         0x9e3779b9u + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+
+bool VisibilityLatencyEnabled()
+{
+  static const bool enabled = []() {
+    const char *env = std::getenv("CUBATARIUM_VISIBILITY_AUDIT");
+    return env != nullptr && env[0] != '\0' && env[0] != '0';
+  }();
+  return enabled;
+}
+
+double VisibilityTraceNowMs()
+{
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
+struct LatencyAccumulator
+{
+  std::vector<double> samples;
+
+  void Add(double value)
+  {
+    if (value >= 0.0)
+    {
+      samples.push_back(value);
+    }
+  }
+
+  VisibilityLatencyMetric Finalize() const
+  {
+    VisibilityLatencyMetric result;
+    result.count = samples.size();
+    if (samples.empty())
+    {
+      return result;
+    }
+    std::vector<double> sorted = samples;
+    std::sort(sorted.begin(), sorted.end());
+    for (double value : sorted)
+    {
+      result.totalMs += value;
+    }
+    result.medianMs = sorted[sorted.size() / 2];
+    result.p95Ms = sorted[static_cast<size_t>(
+        std::ceil(sorted.size() * 0.95) - 1.0)];
+    result.maxMs = sorted.back();
+    return result;
+  }
+};
+
+struct DemandLatencyState
+{
+  double createdMs{0.0};
+  double lightSettledMs{0.0};
+};
+
+struct VisibilityLatencyState
+{
+  std::mutex mu;
+  std::unordered_map<uint64_t, DemandLatencyState> attempts;
+  std::unordered_map<VisualChunkKey, double, VisualChunkKeyHash> edits;
+  std::unordered_map<uint64_t, double> meshBuiltElapsed;
+  LatencyAccumulator demandToPublish;
+  LatencyAccumulator demandToLightSettled;
+  LatencyAccumulator lightSettledToPublish;
+  LatencyAccumulator editToPublish;
+  LatencyAccumulator meshCreatedToAdmitted;
+  LatencyAccumulator meshCreatedToStarted;
+  LatencyAccumulator meshBuild;
+  LatencyAccumulator meshBuiltToPublish;
+  LatencyAccumulator meshCreatedToPublish;
+  uint64_t attemptsCreated{0};
+  uint64_t attemptsTerminalWithoutPublish{0};
+  uint64_t attemptsRetained{0};
+  uint64_t attemptsRejected{0};
+  uint64_t attemptsCancelled{0};
+  uint64_t attemptsOrphanCancelled{0};
+  uint64_t attemptsSupersededCancelled{0};
+  uint64_t attemptsReminted{0};
+  uint64_t meshJobsTerminalWithoutPublish{0};
+  uint64_t relightSoftCapDeferred{0};
+  uint64_t relightVisibleReplacementDeferred{0};
+  uint64_t relightFarthestTrimDeferred{0};
+  uint64_t relightOtherDeferred{0};
+  std::unordered_set<VisualChunkKey, VisualChunkKeyHash> relightDeferredColumns;
+};
+
+VisibilityLatencyState &GetVisibilityLatencyState()
+{
+  static VisibilityLatencyState state;
+  return state;
+}
+
+template <typename Map>
+void BoundLatencyMap(Map &map, size_t capacity)
+{
+  while (map.size() > capacity)
+  {
+    map.erase(map.begin());
+  }
+}
+
+void NoteVisibilityJob(const JobStageSpan &span)
+{
+  if (!VisibilityLatencyEnabled())
+  {
+    return;
+  }
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  switch (span.stage)
+  {
+  case JobStage::Admitted:
+    state.meshCreatedToAdmitted.Add(span.elapsed_ms);
+    break;
+  case JobStage::Started:
+    state.meshCreatedToStarted.Add(span.elapsed_ms);
+    break;
+  case JobStage::Built:
+    state.meshBuild.Add(span.stage_ms);
+    if (span.job_id != 0)
+    {
+      state.meshBuiltElapsed[span.job_id] = span.elapsed_ms;
+      BoundLatencyMap(state.meshBuiltElapsed, 8192);
+    }
+    break;
+  case JobStage::Published:
+    state.meshCreatedToPublish.Add(span.elapsed_ms);
+    if (span.job_id != 0)
+    {
+      const auto built = state.meshBuiltElapsed.find(span.job_id);
+      if (built != state.meshBuiltElapsed.end())
+      {
+        state.meshBuiltToPublish.Add(span.elapsed_ms - built->second);
+        state.meshBuiltElapsed.erase(built);
+      }
+    }
+    break;
+  case JobStage::Retired:
+  case JobStage::Cancelled:
+    ++state.meshJobsTerminalWithoutPublish;
+    if (span.job_id != 0)
+    {
+      state.meshBuiltElapsed.erase(span.job_id);
+    }
+    break;
+  default:
+    break;
+  }
+}
+
+void NoteVisibilityDemand(const DemandTransitionSpan &span)
+{
+  if (!VisibilityLatencyEnabled())
+  {
+    return;
+  }
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  const uint64_t attempt = span.attempt_id;
+  if (span.kind == DemandTransitionKind::AttemptCreated && attempt != 0)
+  {
+    state.attempts[attempt] = DemandLatencyState{span.event_ms, 0.0};
+    BoundLatencyMap(state.attempts, 8192);
+    ++state.attemptsCreated;
+    return;
+  }
+  if (span.kind == DemandTransitionKind::LightCalculationSettled && attempt != 0)
+  {
+    const auto it = state.attempts.find(attempt);
+    if (it != state.attempts.end())
+    {
+      if (it->second.lightSettledMs <= 0.0)
+      {
+        state.demandToLightSettled.Add(span.event_ms - it->second.createdMs);
+      }
+      it->second.lightSettledMs = span.event_ms;
+    }
+    return;
+  }
+  if (span.kind == DemandTransitionKind::InstallPublished)
+  {
+    if (attempt != 0)
+    {
+      const auto it = state.attempts.find(attempt);
+      if (it != state.attempts.end())
+      {
+        state.demandToPublish.Add(span.event_ms - it->second.createdMs);
+        if (it->second.lightSettledMs > 0.0)
+        {
+          state.lightSettledToPublish.Add(span.event_ms -
+                                          it->second.lightSettledMs);
+        }
+        state.attempts.erase(it);
+      }
+    }
+    const VisualChunkKey key{span.cx, span.cy, span.cz};
+    const auto edit = state.edits.find(key);
+    if (edit != state.edits.end())
+    {
+      state.editToPublish.Add(span.event_ms - edit->second);
+      state.edits.erase(edit);
+    }
+    return;
+  }
+  if (span.kind == DemandTransitionKind::AttemptReminted)
+  {
+    const uint64_t previous_attempt = span.previous_attempt_id;
+    if (previous_attempt != 0 && state.attempts.erase(previous_attempt) != 0)
+    {
+      ++state.attemptsTerminalWithoutPublish;
+      ++state.attemptsReminted;
+    }
+    return;
+  }
+  if ((span.kind == DemandTransitionKind::InstallRetained ||
+       span.kind == DemandTransitionKind::InstallRejected ||
+       span.kind == DemandTransitionKind::InstallCancelled) &&
+      attempt != 0 && state.attempts.erase(attempt) != 0)
+  {
+    ++state.attemptsTerminalWithoutPublish;
+    if (span.kind == DemandTransitionKind::InstallRetained)
+    {
+      ++state.attemptsRetained;
+    }
+    else if (span.kind == DemandTransitionKind::InstallRejected)
+    {
+      ++state.attemptsRejected;
+    }
+    else
+    {
+      ++state.attemptsCancelled;
+      if (span.result == 16)
+      {
+        ++state.attemptsOrphanCancelled;
+      }
+      else if (span.result == 3)
+      {
+        ++state.attemptsSupersededCancelled;
+      }
+    }
+  }
+}
+
+struct VisualChunkWatches
+{
+  static constexpr size_t kCapacity = 1024;
+  std::unordered_set<VisualChunkKey, VisualChunkKeyHash> chunks;
+  std::deque<VisualChunkKey> order;
+  std::mutex mu;
+};
+
+VisualChunkWatches &GetVisualChunkWatches()
+{
+  static VisualChunkWatches watches;
+  return watches;
+}
+
+struct OpenSkyLifecycleWatches
+{
+  // Retain the first startup targets in this session even after the regular
+  // visible-chunk watch set rolls forward during a long flight.
+  static constexpr size_t kCapacity = 4096;
+  std::unordered_set<VisualChunkKey, VisualChunkKeyHash> chunks;
+  std::mutex mu;
+};
+
+OpenSkyLifecycleWatches &GetOpenSkyLifecycleWatches()
+{
+  static OpenSkyLifecycleWatches watches;
+  return watches;
+}
+
+bool IsOpenSkyLifecycleChunkWatched(int32_t cx, int32_t cy, int32_t cz)
+{
+  auto &watches = GetOpenSkyLifecycleWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  return watches.chunks.count({cx, cy, cz}) != 0;
+}
+
+struct CameraBandPeakWatch
+{
+  uint64_t expires_after_frame{0};
+  uint8_t peak_kind{0};
+};
+
+struct CameraBandPeakWatches
+{
+  std::unordered_map<VisualChunkKey, CameraBandPeakWatch,
+                     VisualChunkKeyHash>
+      chunks;
+  std::mutex mu;
+};
+
+CameraBandPeakWatches &GetCameraBandPeakWatches()
+{
+  static CameraBandPeakWatches watches;
+  return watches;
+}
+
+bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz)
+{
+  auto &watches = GetVisualChunkWatches();
+  {
+    std::lock_guard<std::mutex> lock(watches.mu);
+    if (watches.chunks.count({cx, cy, cz}) != 0)
+    {
+      return true;
+    }
+  }
+  return IsOpenSkyLifecycleChunkWatched(cx, cy, cz);
+}
+
+struct WatchedJobRing
+{
+  std::array<JobStageSpan, UJobStageTrace::kVisualLifecycleRingCapacity> slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+struct OpenSkyLifecycleRing
+{
+  std::array<JobStageSpan, UJobStageTrace::kOpenSkyLifecycleRingCapacity>
+      slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+struct DemandTransitionRing
+{
+  std::array<DemandTransitionSpan,
+             UJobStageTrace::kDemandTransitionRingCapacity>
+      slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+DemandTransitionRing &GetDemandTransitionRing()
+{
+  static DemandTransitionRing r;
+  return r;
+}
+
+WatchedJobRing &GetWatchedJobRing()
+{
+  static WatchedJobRing r;
+  return r;
+}
+
+OpenSkyLifecycleRing &GetOpenSkyLifecycleRing()
+{
+  static OpenSkyLifecycleRing r;
+  return r;
+}
+
+struct OpenSkyDemandTransitionRing
+{
+  std::array<DemandTransitionSpan,
+             UJobStageTrace::kOpenSkyDemandTransitionRingCapacity>
+      slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+OpenSkyDemandTransitionRing &GetOpenSkyDemandTransitionRing()
+{
+  static OpenSkyDemandTransitionRing r;
+  return r;
+}
+
+struct CullDecisionRing
+{
+  std::array<JobStageSpan, UJobStageTrace::kCullDecisionRingCapacity> slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+CullDecisionRing &GetCullDecisionRing()
+{
+  static CullDecisionRing r;
+  return r;
+}
+
+template <size_t Capacity> struct VisualBlackTraceRing
+{
+  std::vector<VisualBlackTraceRecord> slots;
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+
+  VisualBlackTraceRing() { slots.reserve(Capacity); }
+};
+
+VisualBlackTraceRing<UJobStageTrace::kVisualBlackTraceRingCapacity> &
+GetVisualBlackTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kVisualBlackTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kVisualPixelTraceRingCapacity> &
+GetVisualPixelTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kVisualPixelTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kGpuDrawStateTraceRingCapacity> &
+GetGpuDrawStateTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kGpuDrawStateTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<
+    UJobStageTrace::kFluidDrawWitnessTraceRingCapacity> &
+GetFluidDrawWitnessTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFluidDrawWitnessTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kScreenRayTraceRingCapacity> &
+GetScreenRayTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kScreenRayTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kRendererGateTraceRingCapacity> &
+GetRendererGateTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kRendererGateTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kFrustumCoverageTraceRingCapacity> &
+GetFrustumCoverageTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFrustumCoverageTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kFrustumProbeSummaryTraceRingCapacity> &
+GetFrustumProbeSummaryTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFrustumProbeSummaryTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<
+    UJobStageTrace::kCameraBandPeakRenderProbeTraceRingCapacity> &
+GetCameraBandPeakRenderProbeTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakRenderProbeTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kVisualBlackAttributionTraceRingCapacity> &
+GetVisualBlackAttributionTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kVisualBlackAttributionTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kVisualRepairTraceRingCapacity> &
+GetVisualRepairTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kVisualRepairTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kMeshScheduleTraceRingCapacity> &
+GetMeshScheduleTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kMeshScheduleTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kPriorityRemeshTraceRingCapacity> &
+GetPriorityRemeshTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kPriorityRemeshTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kWatchedMeshScheduleTraceRingCapacity> &
+GetWatchedMeshScheduleTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kWatchedMeshScheduleTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kCameraBandPeakTraceRingCapacity> &
+GetCameraBandNoDrawablePeakTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kCameraBandPeakTraceRingCapacity> &
+GetCameraBandUnownedPeakTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kFirstMeshFrontierTraceRingCapacity> &
+GetFirstMeshFrontierTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFirstMeshFrontierTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<256> &GetTerrainIncompleteTraceRing()
+{
+  static VisualBlackTraceRing<256> r;
+  return r;
+}
+
+VisualBlackTraceRing<8192> &GetFirstMeshFlowTraceRing()
+{
+  static VisualBlackTraceRing<8192> r;
+  return r;
+}
+
+VisualBlackTraceRing<
+    UJobStageTrace::kCameraBandPeakScheduleTraceRingCapacity> &
+GetCameraBandPeakScheduleTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakScheduleTraceRingCapacity>
+      r;
+  return r;
+}
+
+template <size_t Capacity>
+void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
+                     const VisualBlackTraceRecord &record)
+{
+  std::lock_guard<std::mutex> lock(ring.mu);
+  if (ring.slots.size() < Capacity)
+  {
+    ring.slots.push_back(record);
+  }
+  else
+  {
+    ring.slots[ring.write % Capacity] = record;
+  }
+  ++ring.write;
+  if (ring.count < Capacity)
+  {
+    ++ring.count;
+  }
+}
+
+template <size_t Capacity>
+void ForEachVisualTraceNewest(
+    VisualBlackTraceRing<Capacity> &ring, size_t max_n,
+    void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
+{
+  std::lock_guard<std::mutex> lock(ring.mu);
+  const size_t n = (max_n < ring.count) ? max_n : ring.count;
+  const size_t capacity = ring.slots.size();
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs = (ring.write + capacity - 1 - i) % capacity;
+    fn(ring.slots[abs], ctx);
+  }
+}
+
+struct CameraBandPeakFrameDispatch
+{
+  uint64_t frame_epoch{0};
+  void (*fn)(const VisualBlackTraceRecord &, void *){nullptr};
+  void *ctx{nullptr};
+};
+
+void DispatchCameraBandPeakFrameRecord(const VisualBlackTraceRecord &record,
+                                       void *opaque)
+{
+  auto *dispatch = static_cast<CameraBandPeakFrameDispatch *>(opaque);
+  if (dispatch && dispatch->fn && record.frame_epoch == dispatch->frame_epoch)
+  {
+    dispatch->fn(record, dispatch->ctx);
+  }
+}
+
+} // namespace
+
+void UJobStageTrace::Note(const JobStageSpan &span)
+{
+  NoteVisibilityJob(span);
+  JobStageSpan stamped_span = span;
+  if (stamped_span.frame_epoch == 0)
+  {
+    stamped_span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+  }
+  auto &r = GetRing();
+  {
+    std::lock_guard<std::mutex> lock(r.mu);
+    r.slots[r.write % kRingCapacity] = stamped_span;
+    ++r.write;
+    if (r.count < kRingCapacity)
+    {
+      ++r.count;
+    }
+  }
+  if (!VisualBlackTraceEnabled() ||
+      !IsVisualChunkWatched(stamped_span.cx, stamped_span.cy,
+                            stamped_span.cz))
+  {
+    return;
+  }
+
+  {
+    auto &watched = GetWatchedJobRing();
+    std::lock_guard<std::mutex> lock(watched.mu);
+    watched.slots[watched.write % kVisualLifecycleRingCapacity] =
+        stamped_span;
+    ++watched.write;
+    if (watched.count < kVisualLifecycleRingCapacity)
+    {
+      ++watched.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(stamped_span.cx, stamped_span.cy,
+                                     stamped_span.cz))
+  {
+    auto &open_sky = GetOpenSkyLifecycleRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyLifecycleRingCapacity] =
+        stamped_span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyLifecycleRingCapacity)
+    {
+      ++open_sky.count;
+    }
+  }
+}
+
+void UJobStageTrace::NoteTerminal(JobStageSpan span,
+                                  JobStage terminal_stage,
+                                  JobTerminalReason reason)
+{
+  span.stage = terminal_stage;
+  span.terminal_reason = reason;
+  span.stage_ms = 0.0;
+  if (span.created_ms > 0.0)
+  {
+    const double now_ms = std::chrono::duration<double, std::milli>(
+                              std::chrono::steady_clock::now()
+                                  .time_since_epoch())
+                              .count();
+    span.elapsed_ms = now_ms - span.created_ms;
+  }
+  Note(span);
+}
+
+void UJobStageTrace::WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz)
+{
+  if (!VisualBlackTraceEnabled())
+  {
+    return;
+  }
+  auto &watches = GetVisualChunkWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  const VisualChunkKey key{cx, cy, cz};
+  if (!watches.chunks.insert(key).second)
+  {
+    return;
+  }
+  watches.order.push_back(key);
+  if (watches.order.size() > VisualChunkWatches::kCapacity)
+  {
+    watches.chunks.erase(watches.order.front());
+    watches.order.pop_front();
+  }
+}
+
+void UJobStageTrace::WatchOpenSkyLifecycleChunk(int32_t cx, int32_t cy,
+                                                int32_t cz)
+{
+  if (!VisualBlackTraceEnabled())
+  {
+    return;
+  }
+  WatchVisualChunk(cx, cy, cz);
+  auto &watches = GetOpenSkyLifecycleWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  if (watches.chunks.size() < OpenSkyLifecycleWatches::kCapacity)
+  {
+    watches.chunks.insert({cx, cy, cz});
+  }
+}
+
+void UJobStageTrace::WatchCameraBandPeakChunk(int32_t cx, int32_t cy,
+                                              int32_t cz,
+                                              uint64_t frame_epoch,
+                                              uint8_t peak_kind)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0)
+  {
+    return;
+  }
+  WatchVisualChunk(cx, cy, cz);
+  constexpr uint64_t kWatchWindowFrames = 64;
+  auto &watches = GetCameraBandPeakWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  CameraBandPeakWatch &watch = watches.chunks[{cx, cy, cz}];
+  watch.expires_after_frame =
+      std::max(watch.expires_after_frame, frame_epoch + kWatchWindowFrames);
+  watch.peak_kind = peak_kind;
+}
+
+bool UJobStageTrace::IsCameraBandPeakChunkWatched(
+    int32_t cx, int32_t cy, int32_t cz, uint64_t frame_epoch,
+    uint8_t *peak_kind)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0)
+  {
+    return false;
+  }
+  auto &watches = GetCameraBandPeakWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  const auto it = watches.chunks.find({cx, cy, cz});
+  if (it == watches.chunks.end())
+  {
+    return false;
+  }
+  if (frame_epoch > it->second.expires_after_frame)
+  {
+    watches.chunks.erase(it);
+    return false;
+  }
+  if (peak_kind)
+  {
+    *peak_kind = it->second.peak_kind;
+  }
+  return true;
+}
+
+void UJobStageTrace::ForEachCameraBandPeakChunkWatched(
+    uint64_t frame_epoch,
+    void (*fn)(int32_t, int32_t, int32_t, uint8_t, void *), void *ctx)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0 || !fn)
+  {
+    return;
+  }
+  std::vector<std::pair<VisualChunkKey, CameraBandPeakWatch>> active;
+  auto &watches = GetCameraBandPeakWatches();
+  {
+    std::lock_guard<std::mutex> lock(watches.mu);
+    for (auto it = watches.chunks.begin(); it != watches.chunks.end();)
+    {
+      if (frame_epoch > it->second.expires_after_frame)
+      {
+        it = watches.chunks.erase(it);
+        continue;
+      }
+      active.emplace_back(it->first, it->second);
+      ++it;
+    }
+  }
+  for (const auto &entry : active)
+  {
+    fn(entry.first.cx, entry.first.cy, entry.first.cz,
+       entry.second.peak_kind, ctx);
+  }
+}
+
+bool UJobStageTrace::IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz)
+{
+  return ::cutum::IsVisualChunkWatched(cx, cy, cz);
+}
+
+void UJobStageTrace::NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,
+                                      uint8_t cull_decision,
+                                      uint64_t attempt_id,
+                                      uint64_t published_rev)
+{
+  JobStageSpan span{};
+  span.cx = cx;
+  span.cy = cy;
+  span.cz = cz;
+  span.cull_decision = cull_decision;
+  span.attempt_id = attempt_id;
+  span.published_rev = published_rev;
+  span.stage = JobStage::Published;
+  span.outcome = cull_decision != 0 ? 1 : 0;
+  auto &r = GetCullDecisionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.slots[r.write % kCullDecisionRingCapacity] = span;
+  ++r.write;
+  if (r.count < kCullDecisionRingCapacity)
+  {
+    ++r.count;
+  }
+}
+
+size_t UJobStageTrace::Size()
+{
+  auto &r = GetRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  return r.count;
+}
+
+bool UJobStageTrace::Get(size_t newest_index, JobStageSpan &out)
+{
+  auto &r = GetRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  if (newest_index >= r.count)
+  {
+    return false;
+  }
+  // newest_index 0 = most recent
+  const size_t abs =
+      (r.write + kRingCapacity - 1 - newest_index) % kRingCapacity;
+  out = r.slots[abs];
+  return true;
+}
+
+void UJobStageTrace::ForEachNewest(size_t max_n,
+                                   void (*fn)(const JobStageSpan &, void *),
+                                   void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs = (r.write + kRingCapacity - 1 - i) % kRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+void UJobStageTrace::ForEachCullDecisionNewest(
+    size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetCullDecisionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs = (r.write + kCullDecisionRingCapacity - 1 - i) %
+                       kCullDecisionRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+bool UJobStageTrace::VisualBlackTraceEnabled()
+{
+  static const bool enabled = []() {
+    const char *env = std::getenv("CUBA_VISUAL_BLACK_TRACE");
+    return env != nullptr && env[0] != '\0' && env[0] != '0';
+  }();
+  return enabled;
+}
+
+bool UJobStageTrace::HasCameraBandPeakTraceForFrame(uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestCameraBandPeakFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
+bool UJobStageTrace::HasScreenRayTraceForFrame(uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestScreenRayTraceFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
+void UJobStageTrace::MarkVisualHoleEventForFrame(uint64_t frame_epoch)
+{
+  if (frame_epoch != 0)
+  {
+    LatestVisualHoleEventFrameEpoch.store(
+        frame_epoch, std::memory_order_release);
+  }
+}
+
+uint64_t UJobStageTrace::GetLatestVisualHoleEventFrameEpoch()
+{
+  return LatestVisualHoleEventFrameEpoch.load(std::memory_order_acquire);
+}
+
+bool UJobStageTrace::HasStalledVisualBlackTraceForFrame(
+    uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestStalledVisualBlackFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
+void UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
+    uint64_t frame_epoch,
+    void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
+{
+  if (frame_epoch == 0 || !fn)
+  {
+    return;
+  }
+  CameraBandPeakFrameDispatch dispatch{frame_epoch, fn, ctx};
+  ForEachVisualTraceNewest(GetCameraBandNoDrawablePeakTraceRing(),
+                           kCameraBandPeakTraceRingCapacity,
+                           DispatchCameraBandPeakFrameRecord, &dispatch);
+  ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(),
+                           kCameraBandPeakTraceRingCapacity,
+                           DispatchCameraBandPeakFrameRecord, &dispatch);
+}
+
+void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
+{
+  // Renderer/focus samples are emitted at frame rate. Keep renderer candidates,
+  // repair admission, repair scans, general mesh scheduling, and priority
+  // remesh scheduling in separate rings so one workload cannot overwrite
+  // another class of evidence.
+  if (record.sample_kind == 1 && record.focus_state == 1)
+  {
+    // These focus slices have neither a satisfying mesh nor a concrete work
+    // owner. Watch their subsequent lifecycle transitions so a bounded
+    // focus-state sample can be joined to any later demand cancellation,
+    // re-admission, mesh schedule, or worker/GPU handoff.
+    WatchVisualChunk(record.cx, record.cy, record.cz);
+  }
+  if (record.sample_kind == 9 &&
+      record.renderer_pixel_opaque_surface_valid != 0 &&
+      (record.renderer_pixel_opaque_preview_shader_override != 0 ||
+       record.renderer_pixel_opaque_vertex_light_preview > 0.0f))
+  {
+    // Pixel probe coordinates identify the opaque depth-hit chunk. The
+    // generic cx/cy/cz may instead identify the sea-plane intersection, so
+    // watch the explicit opaque coordinates for subsequent lifecycle events.
+    WatchVisualChunk(record.renderer_pixel_opaque_chunk_x,
+                     record.renderer_pixel_opaque_chunk_y,
+                     record.renderer_pixel_opaque_chunk_z);
+  }
+  if ((record.sample_kind == 12 || record.sample_kind == 13) &&
+      record.frame_epoch != 0)
+  {
+    LatestCameraBandPeakFrameEpoch.store(record.frame_epoch,
+                                          std::memory_order_release);
+    WatchCameraBandPeakChunk(record.cx, record.cy, record.cz,
+                             record.frame_epoch, record.sample_kind);
+  }
+  if (record.sample_kind == 10 && record.frame_epoch != 0)
+  {
+    LatestScreenRayTraceFrameEpoch.store(record.frame_epoch,
+                                         std::memory_order_release);
+  }
+  if (record.sample_kind == 0 && record.frame_epoch != 0 &&
+      record.cause == static_cast<uint8_t>(
+                          VisibleBlackCause::FullyDarkStalledTicket))
+  {
+    LatestStalledVisualBlackFrameEpoch.store(record.frame_epoch,
+                                             std::memory_order_release);
+    // Census samples are selected before the downstream renderer/scheduler
+    // traces are drained. Keep their exact slices watched so later demand and
+    // worker/GPU transitions can explain whether this was a persistent owner
+    // gap or a short handoff within the same rendered frame.
+    WatchVisualChunk(record.cx, record.cy, record.cz);
+  }
+  if (record.sample_kind == 0)
+  {
+    // Per-column census attribution is the evidence behind the aggregate VB
+    // counter. Give it its own ring so renderer/focus samples cannot evict it.
+    PushVisualTrace(GetVisualBlackAttributionTraceRing(), record);
+  }
+  else if (record.sample_kind == 2)
+  {
+    PushVisualTrace(GetRendererGateTraceRing(), record);
+  }
+  else if (record.sample_kind == 8)
+  {
+    PushVisualTrace(GetFrustumCoverageTraceRing(), record);
+  }
+  else if (record.sample_kind == 9)
+  {
+    PushVisualTrace(GetVisualPixelTraceRing(), record);
+  }
+  else if (record.sample_kind == 10)
+  {
+    PushVisualTrace(GetScreenRayTraceRing(), record);
+  }
+  else if (record.sample_kind == 3 || record.sample_kind == 5)
+  {
+    PushVisualTrace(GetVisualRepairTraceRing(), record);
+  }
+  else if (record.sample_kind == 7)
+  {
+    PushVisualTrace(GetPriorityRemeshTraceRing(), record);
+  }
+  else if (record.sample_kind == 11)
+  {
+    PushVisualTrace(GetWatchedMeshScheduleTraceRing(), record);
+  }
+  else if (record.sample_kind == 12)
+  {
+    PushVisualTrace(GetCameraBandNoDrawablePeakTraceRing(), record);
+  }
+  else if (record.sample_kind == 13)
+  {
+    PushVisualTrace(GetCameraBandUnownedPeakTraceRing(), record);
+  }
+  else if (record.sample_kind == 14)
+  {
+    PushVisualTrace(GetFirstMeshFrontierTraceRing(), record);
+  }
+  else if (record.sample_kind == 15)
+  {
+    PushVisualTrace(GetFrustumProbeSummaryTraceRing(), record);
+  }
+  else if (record.sample_kind == 16)
+  {
+    PushVisualTrace(GetCameraBandPeakRenderProbeTraceRing(), record);
+  }
+  else if (record.sample_kind == 17)
+  {
+    PushVisualTrace(GetGpuDrawStateTraceRing(), record);
+  }
+  else if (record.sample_kind == 19)
+  {
+    PushVisualTrace(GetFluidDrawWitnessTraceRing(), record);
+  }
+  else if (record.sample_kind == 20)
+  {
+    PushVisualTrace(GetTerrainIncompleteTraceRing(), record);
+  }
+  else if (record.sample_kind == 21 || record.sample_kind == 22)
+  {
+    PushVisualTrace(GetFirstMeshFlowTraceRing(), record);
+  }
+  else if (record.sample_kind == 18)
+  {
+    NoteCameraBandPeakSchedule(record);
+  }
+  else if (record.sample_kind == 4 || record.sample_kind == 6)
+  {
+    PushVisualTrace(GetMeshScheduleTraceRing(), record);
+  }
+  else
+  {
+    PushVisualTrace(GetVisualBlackTraceRing(), record);
+  }
+}
+
+void UJobStageTrace::NoteCameraBandPeakSchedule(
+    const VisualBlackTraceRecord &record)
+{
+  if (!VisualBlackTraceEnabled() || record.frame_epoch == 0)
+  {
+    return;
+  }
+  PushVisualTrace(GetCameraBandPeakScheduleTraceRing(), record);
+}
+
+void UJobStageTrace::ResetCameraBandPeakTrace(uint8_t sample_kind)
+{
+  auto reset = [](auto &ring) {
+    std::lock_guard<std::mutex> lock(ring.mu);
+    ring.slots.clear();
+    ring.write = 0;
+    ring.count = 0;
+  };
+  if (sample_kind == 12)
+  {
+    reset(GetCameraBandNoDrawablePeakTraceRing());
+  }
+  else if (sample_kind == 13)
+  {
+    reset(GetCameraBandUnownedPeakTraceRing());
+  }
+}
+
+void UJobStageTrace::ForEachVisualBlackNewest(
+    size_t max_n, void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  // Class groups are emitted separately; use frame_epoch to join their
+  // records because their bounded rings have independent write sequences.
+  ForEachVisualTraceNewest(GetVisualBlackAttributionTraceRing(), max_n, fn,
+                           ctx);
+  ForEachVisualTraceNewest(GetRendererGateTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetFrustumCoverageTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetFrustumProbeSummaryTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetCameraBandPeakRenderProbeTraceRing(), max_n, fn,
+                           ctx);
+  ForEachVisualTraceNewest(GetVisualRepairTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetWatchedMeshScheduleTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetCameraBandNoDrawablePeakTraceRing(), max_n, fn,
+                           ctx);
+  ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(), max_n, fn,
+                           ctx);
+  ForEachVisualTraceNewest(GetFirstMeshFrontierTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetCameraBandPeakScheduleTraceRing(), max_n, fn,
+                           ctx);
+  ForEachVisualTraceNewest(GetGpuDrawStateTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetFluidDrawWitnessTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetTerrainIncompleteTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetFirstMeshFlowTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);
+}
+
+void UJobStageTrace::ForEachWatchedNewest(
+    size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetWatchedJobRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kVisualLifecycleRingCapacity - 1 - i) %
+        kVisualLifecycleRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+void UJobStageTrace::ForEachOpenSkyLifecycleNewest(
+    size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetOpenSkyLifecycleRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kOpenSkyLifecycleRingCapacity - 1 - i) %
+        kOpenSkyLifecycleRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
+{
+  NoteVisibilityDemand(span);
+  if (!VisualBlackTraceEnabled() ||
+      !IsVisualChunkWatched(span.cx, span.cy, span.cz))
+  {
+    return;
+  }
+  DemandTransitionSpan stamped_span = span;
+  if (stamped_span.frame_epoch == 0)
+  {
+    stamped_span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+  }
+  {
+    auto &r = GetDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(r.mu);
+    r.slots[r.write % kDemandTransitionRingCapacity] = stamped_span;
+    ++r.write;
+    if (r.count < kDemandTransitionRingCapacity)
+    {
+      ++r.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(stamped_span.cx, stamped_span.cy,
+                                     stamped_span.cz))
+  {
+    auto &open_sky = GetOpenSkyDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyDemandTransitionRingCapacity] =
+        stamped_span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyDemandTransitionRingCapacity)
+    {
+      ++open_sky.count;
+    }
+  }
+}
+
+void UJobStageTrace::NoteBlockEdit(int32_t cx, int32_t cy, int32_t cz,
+                                   double event_ms)
+{
+  if (!VisibilityLatencyEnabled())
+  {
+    return;
+  }
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  // A second edit before publication retargets the outstanding visible result.
+  state.edits[{cx, cy, cz}] =
+      event_ms > 0.0 ? event_ms : VisibilityTraceNowMs();
+  BoundLatencyMap(state.edits, 1024);
+}
+
+void UJobStageTrace::NoteRelightDeferred(int32_t cx, int32_t cz,
+                                         RelightDeferralReason reason)
+{
+  if (!VisibilityLatencyEnabled())
+  {
+    return;
+  }
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  switch (reason)
+  {
+  case RelightDeferralReason::SoftCapOverflow:
+    ++state.relightSoftCapDeferred;
+    break;
+  case RelightDeferralReason::VisibleExactReplacement:
+    ++state.relightVisibleReplacementDeferred;
+    break;
+  case RelightDeferralReason::FarthestTrim:
+    ++state.relightFarthestTrimDeferred;
+    break;
+  case RelightDeferralReason::Other:
+    ++state.relightOtherDeferred;
+    break;
+  }
+  state.relightDeferredColumns.insert({cx, 0, cz});
+}
+
+VisibilityLatencySummary UJobStageTrace::GetVisibilityLatencySummary()
+{
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  VisibilityLatencySummary result;
+  result.demandToPublish = state.demandToPublish.Finalize();
+  result.demandToLightSettled = state.demandToLightSettled.Finalize();
+  result.lightSettledToPublish = state.lightSettledToPublish.Finalize();
+  result.editToPublish = state.editToPublish.Finalize();
+  result.meshCreatedToAdmitted = state.meshCreatedToAdmitted.Finalize();
+  result.meshCreatedToStarted = state.meshCreatedToStarted.Finalize();
+  result.meshBuild = state.meshBuild.Finalize();
+  result.meshBuiltToPublish = state.meshBuiltToPublish.Finalize();
+  result.meshCreatedToPublish = state.meshCreatedToPublish.Finalize();
+  result.attemptsCreated = state.attemptsCreated;
+  result.attemptsTerminalWithoutPublish = state.attemptsTerminalWithoutPublish;
+  result.attemptsRetained = state.attemptsRetained;
+  result.attemptsRejected = state.attemptsRejected;
+  result.attemptsCancelled = state.attemptsCancelled;
+  result.attemptsOrphanCancelled = state.attemptsOrphanCancelled;
+  result.attemptsSupersededCancelled = state.attemptsSupersededCancelled;
+  result.attemptsReminted = state.attemptsReminted;
+  result.meshJobsTerminalWithoutPublish = state.meshJobsTerminalWithoutPublish;
+  result.relightSoftCapDeferred = state.relightSoftCapDeferred;
+  result.relightVisibleReplacementDeferred =
+      state.relightVisibleReplacementDeferred;
+  result.relightFarthestTrimDeferred = state.relightFarthestTrimDeferred;
+  result.relightOtherDeferred = state.relightOtherDeferred;
+  result.relightUniqueDeferredColumns = state.relightDeferredColumns.size();
+  result.pendingAttempts = state.attempts.size();
+  result.pendingEdits = state.edits.size();
+  return result;
+}
+
+void UJobStageTrace::ResetVisibilityLatencySummary()
+{
+  auto &state = GetVisibilityLatencyState();
+  std::lock_guard<std::mutex> lock(state.mu);
+  state.attempts.clear();
+  state.edits.clear();
+  state.meshBuiltElapsed.clear();
+  state.relightDeferredColumns.clear();
+  state.demandToPublish = {};
+  state.demandToLightSettled = {};
+  state.lightSettledToPublish = {};
+  state.editToPublish = {};
+  state.meshCreatedToAdmitted = {};
+  state.meshCreatedToStarted = {};
+  state.meshBuild = {};
+  state.meshBuiltToPublish = {};
+  state.meshCreatedToPublish = {};
+  state.attemptsCreated = 0;
+  state.attemptsTerminalWithoutPublish = 0;
+  state.attemptsRetained = 0;
+  state.attemptsRejected = 0;
+  state.attemptsCancelled = 0;
+  state.attemptsOrphanCancelled = 0;
+  state.attemptsSupersededCancelled = 0;
+  state.attemptsReminted = 0;
+  state.meshJobsTerminalWithoutPublish = 0;
+  state.relightSoftCapDeferred = 0;
+  state.relightVisibleReplacementDeferred = 0;
+  state.relightFarthestTrimDeferred = 0;
+  state.relightOtherDeferred = 0;
+}
+
+void UJobStageTrace::SetStreamingFrameEpoch(uint64_t frame_epoch)
+{
+  LatestStreamingFrameEpoch.store(frame_epoch, std::memory_order_relaxed);
+}
+
+uint64_t UJobStageTrace::GetStreamingFrameEpoch()
+{
+  return LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+}
+
+void UJobStageTrace::NoteMeshRevisionBump(
+    DemandTransitionSpan span, uint64_t revision_before,
+    uint64_t revision_after, MeshRevisionBumpReason reason,
+    uint32_t owner_flags)
+{
+  if (!VisualBlackTraceEnabled() ||
+      !IsVisualChunkWatched(span.cx, span.cy, span.cz))
+  {
+    return;
+  }
+  span.kind = DemandTransitionKind::MeshRevisionBumped;
+  span.mesh_revision_before = revision_before;
+  span.mesh_revision_after = revision_after;
+  span.mesh_revision_bump_reason = reason;
+  span.mesh_owner_flags = owner_flags;
+  if (span.frame_epoch == 0)
+  {
+    span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+  }
+  span.event_ms = std::chrono::duration<double, std::milli>(
+                      std::chrono::steady_clock::now().time_since_epoch())
+                      .count();
+  {
+    auto &r = GetDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(r.mu);
+    r.slots[r.write % kDemandTransitionRingCapacity] = span;
+    ++r.write;
+    if (r.count < kDemandTransitionRingCapacity)
+    {
+      ++r.count;
+    }
+  }
+  if (IsOpenSkyLifecycleChunkWatched(span.cx, span.cy, span.cz))
+  {
+    auto &open_sky = GetOpenSkyDemandTransitionRing();
+    std::lock_guard<std::mutex> lock(open_sky.mu);
+    open_sky.slots[open_sky.write % kOpenSkyDemandTransitionRingCapacity] =
+        span;
+    ++open_sky.write;
+    if (open_sky.count < kOpenSkyDemandTransitionRingCapacity)
+    {
+      ++open_sky.count;
+    }
+  }
+}
+
+void UJobStageTrace::ForEachDemandTransitionNewest(
+    size_t max_n, void (*fn)(const DemandTransitionSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetDemandTransitionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs = (r.write + kDemandTransitionRingCapacity - 1 - i) %
+                       kDemandTransitionRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+void UJobStageTrace::ForEachOpenSkyDemandTransitionNewest(
+    size_t max_n, void (*fn)(const DemandTransitionSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetOpenSkyDemandTransitionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kOpenSkyDemandTransitionRingCapacity - 1 - i) %
+        kOpenSkyDemandTransitionRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+const char *UJobStageTrace::StageName(JobStage s)
+{
+  switch (s)
+  {
+  case JobStage::Created:
+    return "created";
+  case JobStage::Admitted:
+    return "admitted";
+  case JobStage::Started:
+    return "started";
+  case JobStage::Built:
+    return "built";
+  case JobStage::Uploaded:
+    return "uploaded";
+  case JobStage::Published:
+    return "published";
+  case JobStage::Retired:
+    return "retired";
+  case JobStage::Cancelled:
+    return "cancelled";
+  case JobStage::GpuQueued:
+    return "gpu_queued";
+  case JobStage::GpuKicked:
+    return "gpu_kicked";
+  case JobStage::GpuCountersReady:
+    return "gpu_counters_ready";
+  case JobStage::GpuReady:
+    return "gpu_ready";
+  default:
+    return "unknown";
+  }
+}
+
+const char *UJobStageTrace::DemandTransitionName(DemandTransitionKind kind)
+{
+  switch (kind)
+  {
+  case DemandTransitionKind::AttemptCreated:
+    return "attempt_created";
+  case DemandTransitionKind::TargetAdvanced:
+    return "target_advanced";
+  case DemandTransitionKind::StageAdvanced:
+    return "stage_advanced";
+  case DemandTransitionKind::InstallPublished:
+    return "install_published";
+  case DemandTransitionKind::InstallRetained:
+    return "install_retained";
+  case DemandTransitionKind::InstallRejected:
+    return "install_rejected";
+  case DemandTransitionKind::InstallCancelled:
+    return "install_cancelled";
+  case DemandTransitionKind::StaleInstallIgnored:
+    return "stale_install_ignored";
+  case DemandTransitionKind::PublishedRevisionAdvanced:
+    return "published_revision_advanced";
+  case DemandTransitionKind::AttemptReminted:
+    return "attempt_reminted";
+  case DemandTransitionKind::MeshRevisionBumped:
+    return "mesh_revision_bumped";
+  case DemandTransitionKind::IdentityReset:
+    return "identity_reset";
+  case DemandTransitionKind::LightCalculationSettled:
+    return "light_calculation_settled";
+  case DemandTransitionKind::StaleLightRemeshQueued:
+    return "stale_light_remesh_queued";
+  case DemandTransitionKind::StaleLightRemeshDirtyAdmitted:
+    return "stale_light_remesh_dirty_admitted";
+  case DemandTransitionKind::OpenSkyRepairPublished:
+    return "open_sky_repair_published";
+  }
+  return "unknown";
+}
+
+const char *UJobStageTrace::MeshRevisionBumpReasonName(
+    MeshRevisionBumpReason reason)
+{
+  switch (reason)
+  {
+  case MeshRevisionBumpReason::Unknown:
+    return "unknown";
+  case MeshRevisionBumpReason::MarkDirtyEnqueued:
+    return "mark_dirty_enqueued";
+  case MeshRevisionBumpReason::PriorityEnterSoftDefer:
+    return "priority_enter_soft_defer";
+  case MeshRevisionBumpReason::PriorityEnterFirstMesh:
+    return "priority_enter_first_mesh";
+  case MeshRevisionBumpReason::PriorityFullyDarkRemesh:
+    return "priority_fully_dark_remesh";
+  case MeshRevisionBumpReason::PriorityDirtyEnqueued:
+    return "priority_dirty_enqueued";
+  case MeshRevisionBumpReason::InvalidatedInFlight:
+    return "invalidated_inflight";
+  case MeshRevisionBumpReason::MissingHoleSeamNeighbor:
+    return "missing_hole_seam_neighbor";
+  case MeshRevisionBumpReason::MarkRelitInstall:
+    return "mark_relit_install";
+  case MeshRevisionBumpReason::FaceDebtCallback:
+    return "face_debt_callback";
+  case MeshRevisionBumpReason::SoftDeferVisibilitySeam:
+    return "soft_defer_visibility_seam";
+  case MeshRevisionBumpReason::SettledDrawGateRepair:
+    return "settled_draw_gate_repair";
+  case MeshRevisionBumpReason::VisualRebuildQueue:
+    return "visual_rebuild_queue";
+  case MeshRevisionBumpReason::FluidWorldGeometry:
+    return "fluid_world_geometry";
+  case MeshRevisionBumpReason::TerrainColumnInvalidation:
+    return "terrain_column_invalidation";
+  case MeshRevisionBumpReason::TerrainChunkEmergence:
+    return "terrain_chunk_emergence";
+  case MeshRevisionBumpReason::BlockRegistryInvalidation:
+    return "block_registry_invalidation";
+  case MeshRevisionBumpReason::PostLightMeshFinalize:
+    return "post_light_mesh_finalize";
+  case MeshRevisionBumpReason::WorldStreamingColumnCommit:
+    return "world_streaming_column_commit";
+  case MeshRevisionBumpReason::WorldStreamingLitFinalize:
+    return "world_streaming_lit_finalize";
+  case MeshRevisionBumpReason::RelitOrphanGround:
+    return "relit_orphan_ground";
+  case MeshRevisionBumpReason::FirstDrawableSeaSeam:
+    return "first_drawable_sea_seam";
+  case MeshRevisionBumpReason::SurfaceDarkRepairSeam:
+    return "surface_dark_repair_seam";
+  case MeshRevisionBumpReason::PersistenceTerrainLoad:
+    return "persistence_terrain_load";
+  case MeshRevisionBumpReason::StreamerCommitSeaSeam:
+    return "streamer_commit_sea_seam";
+  case MeshRevisionBumpReason::PendingLightColumnRecovery:
+    return "pending_light_column_recovery";
+  case MeshRevisionBumpReason::NeighborBecamePopulated:
+    return "neighbor_became_populated";
+  case MeshRevisionBumpReason::PriorityWorldStreamingRepair:
+    return "priority_world_streaming_repair";
+  case MeshRevisionBumpReason::PriorityChunkEmergeRepair:
+    return "priority_chunk_emerge_repair";
+  case MeshRevisionBumpReason::PriorityWorldCoreRepair:
+    return "priority_world_core_repair";
+  case MeshRevisionBumpReason::PriorityRelitInstallRepair:
+    return "priority_relit_install_repair";
+  case MeshRevisionBumpReason::PriorityWorldStreamingCommit:
+    return "priority_world_streaming_commit";
+  case MeshRevisionBumpReason::PriorityWorldCoreCommit:
+    return "priority_world_core_commit";
+  case MeshRevisionBumpReason::FaceDebtMaterialRetry:
+    return "face_debt_material_retry";
+  case MeshRevisionBumpReason::PriorityLightDependencyRepair:
+    return "priority_light_dependency_repair";
+  }
+  return "unknown";
+}
+
+const char *UJobStageTrace::TerminalReasonName(JobTerminalReason reason)
+{
+  switch (reason)
+  {
+  case JobTerminalReason::None:
+    return "none";
+  case JobTerminalReason::StaleInputStamp:
+    return "stale_input_stamp";
+  case JobTerminalReason::StaleCatalog:
+    return "stale_catalog";
+  case JobTerminalReason::StaleGeometryInput:
+    return "stale_geometry_input";
+  case JobTerminalReason::StaleLightInput:
+    return "stale_light_input";
+  case JobTerminalReason::ChunkNotResident:
+    return "chunk_not_resident";
+  case JobTerminalReason::NoActiveOwner:
+    return "no_active_owner";
+  case JobTerminalReason::SupersededByNewerRevision:
+    return "superseded_by_newer_revision";
+  case JobTerminalReason::CurrentRevisionAdvanced:
+    return "current_revision_advanced";
+  case JobTerminalReason::DarkMeshRejected:
+    return "dark_mesh_rejected";
+  case JobTerminalReason::GpuAdmissionDeferred:
+    return "gpu_admission_deferred";
+  case JobTerminalReason::PublicationRejected:
+    return "publication_rejected";
+  case JobTerminalReason::SoftDeferPriorGpuRetained:
+    return "softdefer_prior_gpu_retained";
+  case JobTerminalReason::SoftDeferPriorMeshRetained:
+    return "softdefer_prior_mesh_retained";
+  case JobTerminalReason::SoftDeferRetryRequired:
+    return "softdefer_retry_required";
+  case JobTerminalReason::SoftDeferFirstMeshHeld:
+    return "softdefer_first_mesh_held";
+  case JobTerminalReason::ResultMemoryBudgetRejected:
+    return "result_memory_budget_rejected";
+  case JobTerminalReason::CompletedQueueOverflow:
+    return "completed_queue_overflow";
+  case JobTerminalReason::CompletedQueueCapacityReduced:
+    return "completed_queue_capacity_reduced";
+  case JobTerminalReason::SubmissionEpochChanged:
+    return "submission_epoch_changed";
+  case JobTerminalReason::JobIdentityReplaced:
+    return "job_identity_replaced";
+  case JobTerminalReason::WorkerPoolRejected:
+    return "worker_pool_rejected";
+  case JobTerminalReason::GpuPipelineFailed:
+    return "gpu_pipeline_failed";
+  }
+  return "unknown";
+}
+
+} // namespace cutum

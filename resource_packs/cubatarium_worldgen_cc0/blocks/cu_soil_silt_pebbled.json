@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_silt_pebbled",
+  "id": 1301,
+  "displayName": "Soil Silt Pebbled",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_silt_pebbled",
+    "cu_soil_silt_pebbled",
+    "cu_soil_silt_pebbled",
+    "cu_soil_silt_pebbled",
+    "cu_soil_silt_pebbled_top",
+    "cu_soil_silt_pebbled_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "silt",
+    "variant": "pebbled"
+  }
+}

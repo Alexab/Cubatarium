@@ -1,13 +1,20 @@
 #include "World/Chunks/ChunkStreamer.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/FrameDeadline.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/CollisionReadiness.h"
+#include "World/Streaming/StreamerAmortizePolicy.h"
+#include "World/Streaming/WorldColumnRequestId.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <cstdlib>
 
 namespace cutum
 {
@@ -15,8 +22,24 @@ namespace cutum
 namespace
 {
 
-constexpr int kCollisionSyncSubColumnsPerFrame = 32;
+constexpr int kCollisionSyncSubColumnsPerFrame = kStreamerEnsureSyncSubColumns;
 constexpr int kTerrainSubColumnsPerChunk = CHUNK_SIZE * CHUNK_SIZE;
+
+bool IsStreamerUnloadTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_STREAMER_UNLOAD_TRACE");
+  return value && value[0] == '1';
+}
+
+void LogStreamerUnloadPhase(const char *phase, glm::ivec3 ground,
+                            const std::string &details)
+{
+  const std::string message =
+      std::string("phase=") + phase + " coord=(" +
+      std::to_string(ground.x) + ",0," + std::to_string(ground.z) + ") " +
+      details;
+  CubatariumLogInfo("StreamerUnloadPhase", message);
+}
 
 bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
                                const PlayerCapsule &cap)
@@ -26,8 +49,8 @@ bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
   const float px1 = eyePos.x + cap.halfWidth;
   const float py0 = feetY;
   const float py1 = feetY + cap.height;
-  const float pz0 = eyePos.z - cap.halfWidth;
-  const float pz1 = eyePos.z + cap.halfWidth;
+  const float pz0 = eyePos.z - cap.halfZ();
+  const float pz1 = eyePos.z + cap.halfZ();
 
   const float cx0 = static_cast<float>(chunkCoord.x * CHUNK_SIZE) - 0.5f;
   const float cx1 = static_cast<float>((chunkCoord.x + 1) * CHUNK_SIZE) - 0.5f;
@@ -41,28 +64,37 @@ bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
 }
 
 bool TerrainColumnNeedsGeneration(const UBlockWorld &world, int worldX,
-                                  int worldZ, int maxWorldY)
+                                  int worldZ, int maxWorldY, int minWorldY)
 {
-  return TerrainColumnNeedsFill(world, worldX, worldZ, maxWorldY);
+  return TerrainColumnNeedsFill(world, worldX, worldZ, maxWorldY, minWorldY);
 }
 
 void MarkTerrainColumnMeshDirty(const UChunkStreamer::MarkDirtyFn &markDirtyFn,
-                                glm::ivec3 groundCoord)
+                                glm::ivec3 groundCoord,
+                                std::unordered_set<glm::ivec3, IVec3Hash>
+                                    &seam_remesh_notified)
 {
   if (!markDirtyFn)
   {
     return;
   }
   groundCoord.y = 0;
+  // A ready column is revisited by collision/load checks every frame. Seam
+  // invalidation is needed when terrain changes, not for every readiness hit.
+  if (!seam_remesh_notified.insert(groundCoord).second)
+  {
+    return;
+  }
   markDirtyFn(groundCoord);
 }
 
 } // namespace
 
 UChunkStreamer::UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry,
-                               uint32_t Seed, int baseY, int MaxHeight)
+                               uint32_t Seed, int baseY, int MaxHeight,
+                               int MinHeight)
     : World(world), Registry(registry), Seed(Seed), BaseY(baseY),
-      MaxHeight(MaxHeight)
+      MinHeight(MinHeight), MaxHeight(MaxHeight)
 {
 }
 
@@ -122,7 +154,7 @@ void UChunkStreamer::NotifyChunkCommitted(glm::ivec3 chunkCoord)
   }
 }
 
-bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord)
+bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord) const
 {
   if (groundCoord.y != 0)
   {
@@ -133,8 +165,17 @@ bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord)
   {
     return cached->second;
   }
+  // R4.5.1: procedurally sealed columns skip O(256×H) NeedsFill scan.
+  if (ProcedurallyGenerated.count(groundCoord) &&
+      AreTerrainColumnSlicesLoaded(World, groundCoord, MaxHeight,
+                                   kNoTerrainChunkSlice, MinHeight))
+  {
+    TerrainCompleteCache.emplace(groundCoord, true);
+    return true;
+  }
   const bool complete =
-      IsTerrainChunkComplete(World, groundCoord, MaxHeight);
+      IsTerrainChunkComplete(World, groundCoord, MaxHeight,
+                             kNoTerrainChunkSlice, MinHeight);
   TerrainCompleteCache.emplace(groundCoord, complete);
   return complete;
 }
@@ -147,6 +188,7 @@ void UChunkStreamer::InvalidateTerrainCompleteCache(glm::ivec3 groundCoord)
   }
   TerrainCompleteCache.erase(groundCoord);
   ColumnGenStates.erase(groundCoord);
+  TerrainSeamRemeshNotified.erase(groundCoord);
 }
 
 int UChunkStreamer::ChunkHorizontalDistance(glm::ivec3 groundCoord) const
@@ -156,8 +198,15 @@ int UChunkStreamer::ChunkHorizontalDistance(glm::ivec3 groundCoord) const
 
 int UChunkStreamer::ChunkLoadPriorityFor(glm::ivec3 groundCoord) const
 {
+  ChunkLoadPriorityParams params = PriorityParams;
+  if (FrontierLoadAhead)
+  {
+    // UE-style forward bias under frontier ingress (not hitch Capture).
+    params.ViewBiasWeight = std::max(params.ViewBiasWeight, 40);
+    params.ViewAheadBonus = std::max(params.ViewAheadBonus, 800);
+  }
   int priority = ComputeChunkLoadPriority(groundCoord, LoadPriorityCenter, ViewForwardXz,
-                                          PriorityParams);
+                                          params);
   if (CollisionUrgent)
   {
     // Horizontal only: load candidates are ground (y=0); comparing feet cy
@@ -187,6 +236,12 @@ bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord,
   {
     return true;
   }
+  // NearLoad / hole fill: never call IsTerrainChunkCompleteCached here —
+  // neighbor complete misses dominated streamer_update (CB ~130ms).
+  if (NearLoadRadius >= 0)
+  {
+    return true;
+  }
   // Only the inward Chebyshev step(s) toward LoadPriorityCenter.
   // Requiring every shorter-ring neighbor in the 8-neighborhood blocked the
   // forward corridor whenever a lateral inner column lagged ("empty roads").
@@ -200,9 +255,11 @@ bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord,
     // Do NOT gate on PendingLight / !LitReady. That created idle empty
     // pockets: pending_light stuck ~30, ring_blocked==candidates,
     // stream_loads=0 while wall~14ms. Light is a mesh concern; ring only
-    // orders terrain gen/load.
-    if (ProcedurallyGenerated.count(neighbor) &&
-        IsTerrainChunkCompleteCached(neighbor))
+    // orders terrain gen/load. Visual SLA uses OnIsColumnPendingLight via
+    // WorldStreaming FocusIngressBudget / MemoryBudget (not this gate).
+    // Trust ProcedurallyGenerated alone — IsTerrainChunkCompleteCached after
+    // invalidate re-scanned whole columns (CB streamer≈130ms).
+    if (ProcedurallyGenerated.count(neighbor))
     {
       return true;
     }
@@ -282,7 +339,8 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
     const int worldX = chunkCoord.x * CHUNK_SIZE + lx;
     const int worldZ = chunkCoord.z * CHUNK_SIZE + lz;
     if (state.onlyEmptyColumns &&
-        !TerrainColumnNeedsGeneration(World, worldX, worldZ, MaxHeight))
+        !TerrainColumnNeedsGeneration(World, worldX, worldZ, MaxHeight,
+                                      MinHeight))
     {
       continue;
     }
@@ -299,6 +357,10 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
   if (!generated && state.cursor >= kTerrainSubColumnsPerChunk)
   {
     ColumnGenStates.erase(chunkCoord);
+    // Synchronous world generation writes blocks directly and does not pass
+    // through NotifyChunkCommitted. Any earlier false result may therefore be
+    // stale once the cursor has examined the full column.
+    TerrainCompleteCache.erase(chunkCoord);
     const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
     if (existing != nullptr && IsTerrainChunkCompleteCached(chunkCoord))
     {
@@ -312,6 +374,16 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
     return IsTerrainChunkCompleteCached(chunkCoord);
   }
 
+  // Keep the intermediate 32-subcolumn slices cheap. Terrain completeness is
+  // only authoritative after the cursor has visited the whole column; before
+  // then a previously cached false must not prevent the completion scan.
+  if (state.cursor < kTerrainSubColumnsPerChunk)
+  {
+    ProcedurallyGenerated.erase(chunkCoord);
+    return false;
+  }
+
+  TerrainCompleteCache.erase(chunkCoord);
   const bool complete = IsTerrainChunkCompleteCached(chunkCoord);
   if (complete)
   {
@@ -320,7 +392,8 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
     {
       OnRelightTerrainColumn(chunkCoord);
     }
-    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
+                               TerrainSeamRemeshNotified);
     ProcedurallyGenerated.insert(chunkCoord);
   }
   else
@@ -333,6 +406,7 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
 bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
                                        bool *out_async_queued)
 {
+  const uint64_t demand_id = NewWorldColumnRequestIdForTrace();
   if (out_async_queued)
   {
     *out_async_queued = false;
@@ -352,8 +426,41 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     return false;
   }
 
+  // Hole / NearLoad path: skip IsTerrainChunkComplete column scans — one miss
+  // was 80ms+ and blew the load budget (CB spike streamer≈83). Async enqueue
+  // only outside underfeet; underfeet keeps full Ensure for F2 cold mesh.
+  if (!forceSync && AsyncGeneration && OnRequestAsyncChunk && NearLoadRadius >= 0)
+  {
+    const int dist = std::max(std::abs(chunkCoord.x - LoadPriorityCenter.x),
+                              std::abs(chunkCoord.z - LoadPriorityCenter.z));
+    if (dist > 1)
+    {
+      if (ProcedurallyGenerated.count(chunkCoord))
+      {
+        return true;
+      }
+      if (OnIsColumnPending && OnIsColumnPending(chunkCoord))
+      {
+        // The pending callback also refreshes a procedural request's priority
+        // as the focus moves. Persistence I/O and saves ignore this request.
+        OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                            demand_id);
+        return false;
+      }
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
+      note_queued();
+      return false;
+    }
+  }
+
   if (OnIsColumnPending && OnIsColumnPending(chunkCoord))
   {
+    if (!forceSync && AsyncGeneration && OnRequestAsyncChunk)
+    {
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
+    }
     return IsTerrainChunkCompleteCached(chunkCoord);
   }
 
@@ -363,7 +470,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       IsTerrainChunkCompleteCached(chunkCoord))
   {
     ProcedurallyGenerated.insert(chunkCoord);
-    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
+                               TerrainSeamRemeshNotified);
     return true;
   }
   if (existing != nullptr && !forceSync && AsyncGeneration &&
@@ -372,14 +480,21 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     if (IsTerrainChunkCompleteCached(chunkCoord))
     {
       ProcedurallyGenerated.insert(chunkCoord);
-      MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+      MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
+                                 TerrainSeamRemeshNotified);
       return true;
     }
-    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight, MinHeight);
+    // Clearing a partial committed/disk column removes every terrain slice.
+    // Drop the completion marker too: Update uses it as its cheap candidate
+    // filter, so retaining it would make the now-absent column permanently
+    // invisible to reload and leave its neighbors with unresolvable face debt.
+    ProcedurallyGenerated.erase(chunkCoord);
     InvalidateTerrainCompleteCache(chunkCoord);
     if (OnRequestAsyncChunk)
     {
-      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
       note_queued();
     }
     return false;
@@ -391,22 +506,24 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
 
   if (existing == nullptr)
   {
-    if (OnLoadChunk && OnLoadChunk(chunkCoord))
+    if (OnLoadChunk && OnLoadChunk(chunkCoord, demand_id))
     {
       if (IsTerrainChunkCompleteCached(chunkCoord))
       {
         ProcedurallyGenerated.insert(chunkCoord);
-        MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+        MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
+                                   TerrainSeamRemeshNotified);
+        ++LastFrameStats.diskCompleteThisFrame;
         return true;
       }
-      ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+      ClearTerrainColumnChunks(World, chunkCoord, MaxHeight, MinHeight);
       InvalidateTerrainCompleteCache(chunkCoord);
       clearedPartialDiskLoad = true;
     }
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
       const int priority = ChunkLoadPriorityFor(chunkCoord);
-      OnRequestAsyncChunk(chunkCoord, priority);
+      OnRequestAsyncChunk(chunkCoord, priority, demand_id);
       note_queued();
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
              IsTerrainChunkCompleteCached(chunkCoord);
@@ -420,7 +537,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
   {
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
-      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
       note_queued();
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
              IsTerrainChunkCompleteCached(chunkCoord);
@@ -432,18 +550,32 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       AsyncGeneration && OnRequestAsyncChunk &&
       !IsTerrainChunkCompleteCached(chunkCoord))
   {
-    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
+    ClearTerrainColumnChunks(World, chunkCoord, MaxHeight, MinHeight);
+    // Clearing a partial committed/disk column removes every terrain slice.
+    // Drop the completion marker too: Update uses it as its cheap candidate
+    // filter, so retaining it would make the now-absent column permanently
+    // invisible to reload and leave its neighbors with unresolvable face debt.
+    ProcedurallyGenerated.erase(chunkCoord);
     InvalidateTerrainCompleteCache(chunkCoord);
     ColumnGenStates.erase(chunkCoord);
-    OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+    OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                        demand_id);
     note_queued();
     return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
            IsTerrainChunkCompleteCached(chunkCoord);
   }
 
+  // H1 SoT 185830 (narrowed after regress): never sync-advance full 256 on
+  // Update. Keep budgeted slice — do NOT force async-only here (that left
+  // empty/flicker columns while gen lagged). FrameDeadline still preempts
+  // the load loop before the next Ensure.
+  if (!forceSync && UFrameDeadline::Get().Exhausted())
+  {
+    return false;
+  }
+
   const bool onlyEmptyColumns = existing != nullptr && !clearedPartialDiskLoad;
-  const int sub_column_budget =
-      forceSync ? kCollisionSyncSubColumnsPerFrame : kTerrainSubColumnsPerChunk;
+  const int sub_column_budget = kCollisionSyncSubColumnsPerFrame;
   return AdvanceTerrainColumnGeneration(chunkCoord, sub_column_budget,
                                         onlyEmptyColumns);
 }
@@ -542,41 +674,86 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
                                          const glm::vec3 &eyePos,
                                          const PlayerCapsule &cap)
 {
+  // ForEachChunk over resident set is O(chunks) — skip entirely when budget is 0
+  // (was still scanning then breaking; CB wall_no_holes streamer≈100ms+).
+  if (EffectiveUnloadOpsPerFrame <= 0)
+  {
+    return;
+  }
+  const int mode = URuntimeTuning::Get().UnloadAmortizeMode;
+  if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+  {
+    return;
+  }
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = KeepRenderDistance + UnloadMargin;
-  const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const int minCy = FloorDiv(MinHeight, CHUNK_SIZE);
+  const int maxCy = FloorDiv(MaxHeight, CHUNK_SIZE);
   const int player_cy_min =
       UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(cap.feetY(eyePos)), 0))
           .y;
   const int player_cy_max =
       UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(eyePos.y), 0)).y;
-  const int keep_cy_min = std::max(0, player_cy_min - 1);
+  const int keep_cy_min = std::max(minCy, player_cy_min - 1);
   const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
 
-  std::unordered_set<glm::ivec3, IVec3Hash> columnsInMemory;
-  columnsInMemory.reserve(256);
-  World.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
-      {
-        const glm::ivec3 coord = chunk.GetCoord();
-        columnsInMemory.insert(glm::ivec3(coord.x, 0, coord.z));
-      });
+  const bool use_cursor = UnloadModeUsesScanCursor(mode);
+  const bool trace_unload = IsStreamerUnloadTraceEnabled();
+  if (!use_cursor || UnloadColumnSnapshot.empty() ||
+      UnloadScanCursor >= UnloadColumnSnapshot.size())
+  {
+    const auto snapshot_started = std::chrono::steady_clock::now();
+    const UChunkManager &chunk_manager = World.GetChunkManager();
+    UnloadColumnSnapshot.clear();
+    UnloadColumnSnapshot.reserve(chunk_manager.GetResidentColumnCount());
+    chunk_manager.ForEachColumn([&](const glm::ivec3 &ground)
+                                { UnloadColumnSnapshot.push_back(ground); });
+    std::sort(UnloadColumnSnapshot.begin(), UnloadColumnSnapshot.end(),
+              [](const glm::ivec3 &a, const glm::ivec3 &b)
+              {
+                if (a.x != b.x)
+                {
+                  return a.x < b.x;
+                }
+                return a.z < b.z;
+              });
+    UnloadScanCursor = 0;
+    if (trace_unload)
+    {
+      LogStreamerUnloadPhase(
+          "snapshot_rebuild", glm::ivec3(0),
+          "duration_ms=" +
+              std::to_string(std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() -
+                                 snapshot_started)
+                                 .count()) +
+              " resident_chunks=" +
+              std::to_string(chunk_manager.GetResidentChunkCount()) +
+              " resident_columns=" +
+              std::to_string(UnloadColumnSnapshot.size()));
+    }
+  }
 
   int unloadOps = 0;
   const int unload_limit = EffectiveUnloadOpsPerFrame;
+  const size_t scan_budget =
+      use_cursor ? static_cast<size_t>(kUnloadScanBudgetPerFrame)
+                 : UnloadColumnSnapshot.size();
+  size_t scanned = 0;
   std::unordered_set<glm::ivec3, IVec3Hash> savedColumns;
-  for (const glm::ivec3 &ground : columnsInMemory)
-  {
-    if (unloadOps >= unload_limit)
-    {
-      break;
-    }
 
+  auto try_unload_column = [&](const glm::ivec3 &ground) -> bool
+  {
+    const auto candidate_started = std::chrono::steady_clock::now();
+    if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+    {
+      return false;
+    }
     const int dx = std::abs(ground.x - feetChunk.x);
     const int dz = std::abs(ground.z - feetChunk.z);
     if (std::max(dx, dz) <= limit)
     {
-      continue;
+      return true; // scanned ok, not a candidate
     }
 
     bool keepColumn = false;
@@ -595,21 +772,216 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     }
     if (keepColumn)
     {
-      continue;
+      return true;
     }
+    ++LastFrameStats.unloadCandidatesThisFrame;
 
-    if (OnSaveChunk && savedColumns.insert(ground).second)
+    if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
     {
-      OnSaveChunk(ground);
-      ++LastFrameStats.savesThisFrame;
+      if (UnloadModeDefersSave(mode) &&
+          DeferredUnloadSaveSet.insert(ground).second)
+      {
+        DeferredUnloadSaves.push_back(ground);
+      }
+      return false;
     }
 
     if (OnUnloadColumn)
     {
-      OnUnloadColumn(ground, maxCy);
+      const auto unload_callback_started = std::chrono::steady_clock::now();
+      const bool unload_allowed = OnUnloadColumn(ground, maxCy);
+      const double unload_callback_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - unload_callback_started)
+              .count();
+      if (trace_unload)
+      {
+        LogStreamerUnloadPhase(
+            unload_allowed ? "column_callback" : "column_callback_veto",
+            ground, "duration_ms=" + std::to_string(unload_callback_ms) +
+                        " candidate_preflight_ms=" +
+                        std::to_string(std::chrono::duration<double,
+                                                             std::milli>(
+                                           unload_callback_started -
+                                           candidate_started)
+                                           .count()));
+      }
+      if (!unload_allowed)
+      {
+        ++LastFrameStats.unloadVetoesThisFrame;
+        // Count a veto as the frame's bounded unload attempt. Otherwise the
+        // scan keeps saving every active column without evicting any of them.
+        ++unloadOps;
+        return true;
+      }
     }
 
-    for (int cy = 0; cy <= maxCy; ++cy)
+    if (OnSaveChunk && savedColumns.insert(ground).second)
+    {
+      const auto save_callback_started = std::chrono::steady_clock::now();
+      OnSaveChunk(ground);
+      if (trace_unload)
+      {
+        LogStreamerUnloadPhase(
+            "save_callback", ground,
+            "duration_ms=" +
+                std::to_string(std::chrono::duration<double, std::milli>(
+                                   std::chrono::steady_clock::now() -
+                                   save_callback_started)
+                                   .count()));
+      }
+      ++LastFrameStats.savesThisFrame;
+    }
+
+    const auto remove_chunks_started = std::chrono::steady_clock::now();
+    int removed_slices = 0;
+    for (int cy = minCy; cy <= maxCy; ++cy)
+    {
+      const glm::ivec3 slice(ground.x, cy, ground.z);
+      if (!World.GetChunkManager().HasChunk(slice))
+      {
+        continue;
+      }
+      World.GetChunkManager().RemoveChunk(slice);
+      if (OnUnloadChunk && !OnUnloadColumn)
+      {
+        OnUnloadChunk(slice);
+      }
+      LastFrameStats.unloadedCoords.push_back(slice);
+      ++LastFrameStats.unloadsThisFrame;
+      ++removed_slices;
+    }
+    if (trace_unload)
+    {
+      LogStreamerUnloadPhase(
+          "chunk_remove", ground,
+          "duration_ms=" +
+              std::to_string(std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() -
+                                 remove_chunks_started)
+                                 .count()) +
+              " removed_slices=" + std::to_string(removed_slices) +
+              " max_cy=" + std::to_string(maxCy));
+    }
+    ProcedurallyGenerated.erase(ground);
+    InvalidateTerrainCompleteCache(ground);
+    DeferredUnloadSaveSet.erase(ground);
+    ++unloadOps;
+    return true;
+  };
+
+  while (unloadOps < unload_limit && scanned < scan_budget &&
+         UnloadScanCursor < UnloadColumnSnapshot.size())
+  {
+    if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+    {
+      break;
+    }
+    const glm::ivec3 ground = UnloadColumnSnapshot[UnloadScanCursor++];
+    ++scanned;
+    if (!try_unload_column(ground))
+    {
+      break;
+    }
+  }
+}
+
+void UChunkStreamer::UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
+                                const PlayerCapsule &cap)
+{
+  if (!Enabled)
+  {
+    return;
+  }
+  const glm::ivec3 feetBlockPos =
+      WorldPosToBlock(glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
+  const glm::ivec3 loadCenter =
+      glm::ivec3(UChunkManager::WorldToChunk(feetBlockPos).x, 0,
+                 UChunkManager::WorldToChunk(feetBlockPos).z);
+  (void)cameraBlockPos;
+  const int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
+  if ((MaxLoadOpsPerFrame > 2 || unload_mode >= kUnloadAmortizeUD) &&
+      EffectiveUnloadOpsPerFrame > 0)
+  {
+    UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
+  }
+}
+
+void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
+                                               const glm::vec3 &eyePos,
+                                               const PlayerCapsule &cap,
+                                               int max_ops)
+{
+  if (max_ops <= 0 || DeferredUnloadSaves.empty())
+  {
+    return;
+  }
+  if (UFrameDeadline::Get().Exhausted())
+  {
+    return;
+  }
+  const int minCy = FloorDiv(MinHeight, CHUNK_SIZE);
+  const int maxCy = FloorDiv(MaxHeight, CHUNK_SIZE);
+  const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
+  const int limit = KeepRenderDistance + UnloadMargin;
+  const int player_cy_min = UChunkManager::WorldToChunk(
+                                glm::ivec3(0, static_cast<int>(cap.feetY(eyePos)), 0))
+                                .y;
+  const int player_cy_max =
+      UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(eyePos.y), 0))
+          .y;
+  const int keep_cy_min = std::max(minCy, player_cy_min - 1);
+  const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
+  int ops = 0;
+  while (ops < max_ops && !DeferredUnloadSaves.empty())
+  {
+    if (UFrameDeadline::Get().Exhausted())
+    {
+      break;
+    }
+    const glm::ivec3 ground = DeferredUnloadSaves.front();
+    DeferredUnloadSaves.pop_front();
+    DeferredUnloadSaveSet.erase(ground);
+    ++LastFrameStats.unloadCandidatesThisFrame;
+
+    if (std::max(std::abs(ground.x - feetChunk.x),
+                 std::abs(ground.z - feetChunk.z)) <= limit)
+    {
+      ++ops;
+      continue;
+    }
+    bool keepColumn = false;
+    for (int cy = keep_cy_min; cy <= keep_cy_max; ++cy)
+    {
+      const glm::ivec3 slice(ground.x, cy, ground.z);
+      if (World.GetChunkManager().HasChunk(slice) &&
+          ShouldKeepChunkLoaded(slice, feetBlockPos, eyePos, cap))
+      {
+        keepColumn = true;
+        break;
+      }
+    }
+    if (keepColumn)
+    {
+      ++ops;
+      continue;
+    }
+
+    if (OnUnloadColumn)
+    {
+      if (!OnUnloadColumn(ground, maxCy))
+      {
+        ++LastFrameStats.unloadVetoesThisFrame;
+        ++ops;
+        continue;
+      }
+    }
+    if (OnSaveChunk)
+    {
+      OnSaveChunk(ground);
+      ++LastFrameStats.savesThisFrame;
+    }
+    for (int cy = minCy; cy <= maxCy; ++cy)
     {
       const glm::ivec3 slice(ground.x, cy, ground.z);
       if (!World.GetChunkManager().HasChunk(slice))
@@ -626,7 +998,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     }
     ProcedurallyGenerated.erase(ground);
     InvalidateTerrainCompleteCache(ground);
-    ++unloadOps;
+    ++ops;
   }
 }
 
@@ -638,7 +1010,11 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     return;
   }
 
-  LastFrameStats.Reset();
+  if (!FrameStatsPrimed)
+  {
+    LastFrameStats.Reset();
+  }
+  FrameStatsPrimed = false;
 
   const glm::ivec3 centerChunk = UChunkManager::WorldToChunk(cameraBlockPos);
   const glm::ivec3 feetBlockPos =
@@ -648,17 +1024,26 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   const glm::ivec3 loadCenter = LoadPriorityCenter;
 
   std::vector<glm::ivec3> toLoad;
-  toLoad.reserve(static_cast<size_t>((2 * VisualRenderDistance + 1) *
-                                     (2 * VisualRenderDistance + 1)));
-  for (int cx = loadCenter.x - VisualRenderDistance;
-       cx <= loadCenter.x + VisualRenderDistance; ++cx)
+  // When NearLoadRadius is set (holes / underfeet), only scan that ring —
+  // building+sorting full VisualRD² still cost ~150ms on hole frames (CB).
+  const int scan_radius =
+      NearLoadRadius >= 0
+          ? std::min(VisualRenderDistance, NearLoadRadius)
+          : (MaxLoadOpsPerFrame <= 2
+                 ? std::min(VisualRenderDistance, 4)
+                 : VisualRenderDistance);
+  toLoad.reserve(static_cast<size_t>((2 * scan_radius + 1) *
+                                     (2 * scan_radius + 1)));
+  for (int cx = loadCenter.x - scan_radius; cx <= loadCenter.x + scan_radius;
+       ++cx)
   {
-    for (int cz = loadCenter.z - VisualRenderDistance;
-         cz <= loadCenter.z + VisualRenderDistance; ++cz)
+    for (int cz = loadCenter.z - scan_radius; cz <= loadCenter.z + scan_radius;
+         ++cz)
     {
       const glm::ivec3 coord(cx, 0, cz);
-      if (ProcedurallyGenerated.count(coord) &&
-          IsTerrainChunkCompleteCached(coord))
+      // Trust ProcedurallyGenerated — IsTerrainChunkCompleteCached here caused
+      // full-column scans on cache misses across the whole RD (CB streamer spikes).
+      if (ProcedurallyGenerated.count(coord))
       {
         continue;
       }
@@ -671,11 +1056,24 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b);
             });
 
+  const auto update_t0 = std::chrono::steady_clock::now();
+  // Soft stop after any completed op; hard stop at 2× even with loadOps==0 so a
+  // single EnsureChunkLoaded cannot stack forever (CB streamer≈83 on holes).
+  // Allow one cold attempt between soft and hard when still loadOps==0.
+  // H1 SoT 185830: also honor FrameDeadline (UpdateStreaming BeginFrame budget).
+  const double load_budget_ms = MaxLoadOpsPerFrame <= 2 ? 4.0 : 8.0;
+  const double load_hard_ms = load_budget_ms * 2.0;
   int loadOps = 0;
   for (const glm::ivec3 &coord : toLoad)
   {
     ++LastFrameStats.loadCandidates;
-    if (loadOps >= MaxLoadOpsPerFrame)
+    const double elapsed_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - update_t0)
+            .count();
+    if (StreamerLoadLoopShouldBreak(UFrameDeadline::Get().Exhausted(), loadOps,
+                                    MaxLoadOpsPerFrame, elapsed_ms,
+                                    load_budget_ms, load_hard_ms))
     {
       break;
     }
@@ -689,7 +1087,7 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
         continue;
       }
     }
-    if (!RingPrerequisitesMet(coord))
+    if (NearLoadRadius < 0 && !RingPrerequisitesMet(coord))
     {
       ++LastFrameStats.ringGateBlocked;
       continue;
@@ -711,7 +1109,7 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     }
   }
 
-  UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
+  // Unload moved to UnloadPass (timed separately under FrameDeadline).
 }
 
 void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
@@ -759,6 +1157,11 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
   {
     max_steps = 4;
   }
+  // Era25 I-F5: under frontier_pressure, deepen forward corridor (UE load-ahead).
+  if (FrontierLoadAhead)
+  {
+    max_steps = std::max(max_steps, 6);
+  }
   max_steps = std::min(max_steps, std::max(2, VisualRenderDistance));
 
   const glm::vec3 right(-forward.z, 0.0f, forward.x);
@@ -771,7 +1174,8 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
     {
       return;
     }
-    if (NearLoadRadius >= 0 && dist > NearLoadRadius)
+    // Frontier load-ahead may queue beyond NearLoad hole clamp (budgeted ops).
+    if (NearLoadRadius >= 0 && dist > NearLoadRadius && !FrontierLoadAhead)
     {
       return;
     }
@@ -794,7 +1198,8 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
     {
       return;
     }
-    OnRequestAsyncChunk(coord, ChunkLoadPriorityFor(coord));
+    OnRequestAsyncChunk(coord, ChunkLoadPriorityFor(coord),
+                        NewWorldColumnRequestIdForTrace());
     ++queued;
   };
 
@@ -810,7 +1215,7 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
     const int cz = feet_ground.z +
                    static_cast<int>(std::round(az / static_cast<float>(CHUNK_SIZE)));
     try_queue(cx, cz);
-    if (step >= 2 && glm::length(right) > 0.01f)
+    if (step >= 2 && glm::length(right) > 0.01f && !ShedPrefetchLateral)
     {
       const float side = static_cast<float>(CHUNK_SIZE);
       const int cx_l =
@@ -851,64 +1256,118 @@ void UChunkStreamer::PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
     }
     return;
   }
+  const int mode = URuntimeTuning::Get().KeepShellAmortizeMode;
+  if (KeepModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+  {
+    if (out_ops)
+    {
+      *out_ops = 0;
+    }
+    return;
+  }
 
   const glm::ivec3 feet_ground(feet_chunk.x, 0, feet_chunk.z);
   LoadPriorityCenter = feet_ground;
 
-  std::vector<glm::ivec3> candidates;
-  candidates.reserve(static_cast<size_t>(
-      std::max(0, (2 * KeepRenderDistance + 1) * (2 * KeepRenderDistance + 1) -
-                      (2 * VisualRenderDistance + 1) *
-                          (2 * VisualRenderDistance + 1))));
-  for (int cx = feet_ground.x - KeepRenderDistance;
-       cx <= feet_ground.x + KeepRenderDistance; ++cx)
+  const int keep_rd = KeepRenderDistance;
+  const int vis_rd = VisualRenderDistance;
+  const int side = 2 * keep_rd + 1;
+  const int total_cells = side * side;
+  const bool use_cursor = KeepModeUsesScanCursor(mode);
+  const bool cheap = KeepModeUsesCheapFilter(mode);
+  const int scan_budget =
+      use_cursor ? kKeepShellScanBudgetPerFrame : total_cells;
+
+  std::vector<glm::ivec3> shortlist;
+  shortlist.reserve(static_cast<size_t>(max_ops * 4));
+
+  int scanned = 0;
+  int idx = KeepShellScanIndex;
+  while (scanned < scan_budget &&
+         (cheap ? static_cast<int>(shortlist.size()) < max_ops * 3
+                : queued < max_ops))
   {
-    for (int cz = feet_ground.z - KeepRenderDistance;
-         cz <= feet_ground.z + KeepRenderDistance; ++cz)
+    if (KeepModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
     {
-      const int dist = std::max(std::abs(cx - feet_ground.x),
-                                std::abs(cz - feet_ground.z));
-      if (dist <= VisualRenderDistance || dist > KeepRenderDistance)
-      {
-        continue;
-      }
-      const glm::ivec3 coord(cx, 0, cz);
+      break;
+    }
+    const int local = idx % total_cells;
+    ++idx;
+    ++scanned;
+    const int lx = (local % side) - keep_rd;
+    const int lz = (local / side) - keep_rd;
+    const int dist = std::max(std::abs(lx), std::abs(lz));
+    if (dist <= vis_rd || dist > keep_rd)
+    {
+      continue;
+    }
+    const glm::ivec3 coord(feet_ground.x + lx, 0, feet_ground.z + lz);
+    if (OnIsChunkCommitted && OnIsChunkCommitted(coord))
+    {
+      continue;
+    }
+    if (OnIsColumnPending && OnIsColumnPending(coord))
+    {
+      continue;
+    }
+    // V5 visual SLA: do not expand keep shell onto unfinished FOV columns
+    // (OnIsColumnPendingLight = !IsColumnVisualReadyForRing).
+    if (OnIsColumnPendingLight && OnIsColumnPendingLight(coord))
+    {
+      continue;
+    }
+    if (!cheap)
+    {
       if (ProcedurallyGenerated.count(coord) &&
           IsTerrainChunkCompleteCached(coord))
       {
         continue;
       }
-      if (OnIsChunkCommitted && OnIsChunkCommitted(coord))
+      if (!RingPrerequisitesMet(coord))
       {
         continue;
       }
-      if (OnIsColumnPending && OnIsColumnPending(coord))
-      {
-        continue;
-      }
-      candidates.push_back(coord);
-    }
-  }
-
-  std::sort(candidates.begin(), candidates.end(),
-            [this](const glm::ivec3 &a, const glm::ivec3 &b)
-            { return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b); });
-
-  for (const glm::ivec3 &coord : candidates)
-  {
-    if (queued >= max_ops)
-    {
-      break;
-    }
-    if (!RingPrerequisitesMet(coord))
-    {
+      const int prio =
+          ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
+      OnRequestAsyncChunk(coord, prio, NewWorldColumnRequestIdForTrace());
+      ++queued;
       continue;
     }
-    const int prio =
-        ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
-    OnRequestAsyncChunk(coord, prio);
-    ++queued;
+    shortlist.push_back(coord);
   }
+  KeepShellScanIndex = idx % std::max(1, total_cells);
+
+  if (cheap)
+  {
+    std::sort(shortlist.begin(), shortlist.end(),
+              [this](const glm::ivec3 &a, const glm::ivec3 &b)
+              { return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b); });
+    for (const glm::ivec3 &coord : shortlist)
+    {
+      if (queued >= max_ops)
+      {
+        break;
+      }
+      if (KeepModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+      {
+        break;
+      }
+      if (ProcedurallyGenerated.count(coord) &&
+          IsTerrainChunkCompleteCached(coord))
+      {
+        continue;
+      }
+      if (!RingPrerequisitesMet(coord))
+      {
+        continue;
+      }
+      const int prio =
+          ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
+      OnRequestAsyncChunk(coord, prio, NewWorldColumnRequestIdForTrace());
+      ++queued;
+    }
+  }
+
   if (out_ops)
   {
     *out_ops = queued;

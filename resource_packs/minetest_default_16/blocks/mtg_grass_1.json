@@ -1,6 +1,14 @@
 {
   "name": "mtg_grass_1",
   "id": 457,
+  "hardness": 0.05,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3,
+      "snappy": 3
+    }
+  },
   "types": [
     "building"
   ],
@@ -12,5 +20,13 @@
     "mtg_grass_1_default_grass_1",
     "mtg_grass_1_default_grass_1"
   ],
-  "render": {}
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }

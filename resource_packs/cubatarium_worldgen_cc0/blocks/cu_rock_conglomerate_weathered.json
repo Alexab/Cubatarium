@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_conglomerate_weathered",
+  "id": 1199,
+  "displayName": "Rock Conglomerate Weathered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_conglomerate_weathered",
+    "cu_rock_conglomerate_weathered",
+    "cu_rock_conglomerate_weathered",
+    "cu_rock_conglomerate_weathered",
+    "cu_rock_conglomerate_weathered",
+    "cu_rock_conglomerate_weathered"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "conglomerate",
+    "variant": "weathered"
+  }
+}

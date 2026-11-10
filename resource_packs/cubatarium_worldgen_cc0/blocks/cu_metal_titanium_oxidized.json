@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_titanium_oxidized",
+  "id": 2006,
+  "displayName": "Metal Titanium Oxidized",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_titanium_oxidized",
+    "cu_metal_titanium_oxidized",
+    "cu_metal_titanium_oxidized",
+    "cu_metal_titanium_oxidized",
+    "cu_metal_titanium_oxidized",
+    "cu_metal_titanium_oxidized"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "titanium",
+    "variant": "oxidized"
+  }
+}

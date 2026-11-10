@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_mushroom_stem_fresh",
+  "id": 2431,
+  "displayName": "Organic Mushroom Stem Fresh",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_stem_fresh",
+    "cu_organic_mushroom_stem_fresh",
+    "cu_organic_mushroom_stem_fresh",
+    "cu_organic_mushroom_stem_fresh",
+    "cu_organic_mushroom_stem_fresh",
+    "cu_organic_mushroom_stem_fresh"
+  ],
+  "render": {
+    "texture_variation": 0.48,
+    "style": "cross",
+    "shape": "mushroom",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom_stem",
+    "variant": "fresh"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

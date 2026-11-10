@@ -19,20 +19,6 @@ void ApplyHeadFamilyPose(CreaturePoseParams &pose, const CreaturePartPose &headP
   pose.SetPart("beak", headPose);
 }
 
-float WalkSwingScale(const CreatureLocomotionFacts &facts,
-                     const CreatureDefinition &def)
-{
-  const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
-  float swingScale =
-      std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
-  if (facts.state == LocomotionState::Run &&
-      facts.horizontalSpeed > walkSpeed * 1.2f)
-  {
-    swingScale *= def.visual.Animation.runSpeedMultiplier;
-  }
-  return swingScale;
-}
-
 } // namespace
 
 LocomotionArchetype UTerrestrialQuadrupedPosePresenter::GetArchetype() const

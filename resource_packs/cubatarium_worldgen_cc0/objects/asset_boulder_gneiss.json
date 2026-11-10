@@ -1,0 +1,286 @@
+{
+  "name": "asset_boulder_gneiss",
+  "version": 2,
+  "displayName": "Boulder Gneiss",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 2816726123407409503,
+    "license": "CC0-1.0",
+    "material_parameter": "gneiss"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -2,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 2,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": -2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 2,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_gneiss_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_gneiss_natural"
+    }
+  ]
+}

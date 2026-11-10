@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_violet_patterned",
+  "id": 1732,
+  "displayName": "Ceramic Violet Patterned",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_violet_patterned",
+    "cu_ceramic_violet_patterned",
+    "cu_ceramic_violet_patterned",
+    "cu_ceramic_violet_patterned",
+    "cu_ceramic_violet_patterned",
+    "cu_ceramic_violet_patterned"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "violet",
+    "variant": "patterned"
+  }
+}

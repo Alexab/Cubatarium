@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_tuff_layered",
+  "id": 1227,
+  "displayName": "Rock Tuff Layered",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_tuff_layered",
+    "cu_rock_tuff_layered",
+    "cu_rock_tuff_layered",
+    "cu_rock_tuff_layered",
+    "cu_rock_tuff_layered",
+    "cu_rock_tuff_layered"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "tuff",
+    "variant": "layered"
+  }
+}

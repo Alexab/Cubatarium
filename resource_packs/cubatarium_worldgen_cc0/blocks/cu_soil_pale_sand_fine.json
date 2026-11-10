@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_pale_sand_fine",
+  "id": 1340,
+  "displayName": "Soil Pale Sand Fine",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_pale_sand_fine",
+    "cu_soil_pale_sand_fine",
+    "cu_soil_pale_sand_fine",
+    "cu_soil_pale_sand_fine",
+    "cu_soil_pale_sand_fine_top",
+    "cu_soil_pale_sand_fine_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "pale_sand",
+    "variant": "fine"
+  }
+}

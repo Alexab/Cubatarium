@@ -7,7 +7,18 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 50
+    "sort_order": 50,
+    "natural_spawnable": true,
+    "spawn_weight": 1.0,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "forest",
+      "tundra",
+      "cold_steppe",
+      "foothills",
+      "plains"
+    ]
   },
   "role": "mob",
   "bounds": {

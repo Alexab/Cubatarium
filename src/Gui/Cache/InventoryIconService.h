@@ -42,6 +42,10 @@ public:
                         const std::string &variantId,
                         const std::string &fingerprint, int size,
                         GLuint texture);
+  /// UX R2: manifest writes are batched - StoreIconTexture marks the
+  /// manifest dirty; FlushManifest() serializes once per batch/frame
+  /// instead of a full rewrite per icon.
+  void FlushManifest();
   void InvalidateAll();
   void InvalidateKind(const std::string &kind);
 
@@ -64,6 +68,7 @@ private:
 
   bool LoadManifest();
   bool SaveManifest() const;
+  mutable bool ManifestDirty{false};
   bool ReadPngRgba(const std::filesystem::path &path, int expectedSize,
                    std::vector<unsigned char> &pixels, int &outSize) const;
   bool WritePngRgba(const std::filesystem::path &path, int size,

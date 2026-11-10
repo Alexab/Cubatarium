@@ -1,0 +1,215 @@
+{
+  "perf_jsonl": "bin\\logs\\perf_20260806-154456_22908.jsonl",
+  "stop_periods": 30,
+  "stop_wall": {
+    "n": 30,
+    "wall_med": 37.8446,
+    "wall_p95": 210.829,
+    "emerge_med": 12.374500000000001,
+    "stream_med": 12.9245,
+    "phys_med": 28.8072,
+    "relight_med": 0.00955,
+    "mesh_immediate_med": 0.0,
+    "mesh_dirty_tick_med": 2.77125,
+    "mesh_prep_med": 6.8225999999999996,
+    "physics_block_p95": 0.0131
+  },
+  "debt": {
+    "pending_light_focus_end": 0.0,
+    "unfinished_visual_end": 0.0,
+    "holes_end": 0.0,
+    "dirty_end": 0.0,
+    "mesh_async_end": 2.0,
+    "focus_end": [
+      -483,
+      48
+    ]
+  },
+  "calm_stop": {
+    "n": 28,
+    "wall": {
+      "n": 28,
+      "wall_med": 34.75320000000001,
+      "wall_p95": 64.7214,
+      "emerge_med": 12.03265,
+      "stream_med": 11.05225,
+      "phys_med": 26.227249999999998,
+      "relight_med": 0.0089,
+      "mesh_immediate_med": 0.0,
+      "mesh_dirty_tick_med": 1.5052999999999999,
+      "mesh_prep_med": 6.8225999999999996,
+      "physics_block_p95": 0.0131
+    },
+    "emerge_split": {
+      "n": 28,
+      "emerge_med": 12.03265,
+      "emerge_p95": 19.0991,
+      "accounted_med": 8.337399999999999,
+      "accounted_p95": 26.7896,
+      "parts": [
+        {
+          "key": "mesh_emerge_prep_ms",
+          "label": "prep",
+          "med": 6.8225999999999996,
+          "p95": 8.8949,
+          "pct_of_emerge": 56.700726772572956
+        },
+        {
+          "key": "relight_drain_ms",
+          "label": "relight",
+          "med": 0.0089,
+          "p95": 3.3393,
+          "pct_of_emerge": 0.07396541908889563
+        },
+        {
+          "key": "mesh_immediate_ms",
+          "label": "immediate",
+          "med": 0.0,
+          "p95": 0.0,
+          "pct_of_emerge": 0.0
+        },
+        {
+          "key": "mesh_dirty_tick_ms",
+          "label": "dirty_tick",
+          "med": 1.5052999999999999,
+          "p95": 14.554,
+          "pct_of_emerge": 12.51012869151849
+        },
+        {
+          "key": "mesh_sync_ms",
+          "label": "sync",
+          "med": 0.0006,
+          "p95": 0.0014,
+          "pct_of_emerge": 0.004986432747565997
+        },
+        {
+          "key": "residual",
+          "label": "residual",
+          "med": 3.4737500000000003,
+          "p95": 11.6888,
+          "pct_of_emerge": 28.869367928095645
+        }
+      ]
+    }
+  },
+  "recovery_stop": {
+    "n": 2,
+    "wall": {
+      "n": 2,
+      "wall_med": 234.966,
+      "wall_p95": 259.103,
+      "emerge_med": 159.49900000000002,
+      "stream_med": 51.38065,
+      "phys_med": 227.6245,
+      "relight_med": 11.15485,
+      "mesh_immediate_med": 30.90545,
+      "mesh_dirty_tick_med": 97.1773,
+      "mesh_prep_med": 35.466,
+      "physics_block_p95": 0.0119
+    },
+    "emerge_split": {
+      "n": 2,
+      "emerge_med": 159.49900000000002,
+      "emerge_p95": 171.418,
+      "accounted_med": 265.36485,
+      "accounted_p95": 368.1299,
+      "parts": [
+        {
+          "key": "mesh_emerge_prep_ms",
+          "label": "prep",
+          "med": 35.466,
+          "p95": 69.8022,
+          "pct_of_emerge": 22.235876086997408
+        },
+        {
+          "key": "relight_drain_ms",
+          "label": "relight",
+          "med": 11.15485,
+          "p95": 11.9968,
+          "pct_of_emerge": 6.993680211161196
+        },
+        {
+          "key": "mesh_immediate_ms",
+          "label": "immediate",
+          "med": 30.90545,
+          "p95": 61.8109,
+          "pct_of_emerge": 19.37657916350572
+        },
+        {
+          "key": "mesh_dirty_tick_ms",
+          "label": "dirty_tick",
+          "med": 97.1773,
+          "p95": 116.18,
+          "pct_of_emerge": 60.92658888143498
+        },
+        {
+          "key": "mesh_sync_ms",
+          "label": "sync",
+          "med": 90.66125,
+          "p95": 108.34,
+          "pct_of_emerge": 56.84126546247938
+        },
+        {
+          "key": "residual",
+          "label": "residual",
+          "med": 0.0,
+          "p95": 0.0,
+          "pct_of_emerge": 0.0
+        }
+      ]
+    }
+  },
+  "all_stop": {
+    "emerge_split": {
+      "n": 30,
+      "emerge_med": 12.374500000000001,
+      "emerge_p95": 147.58,
+      "accounted_med": 9.604000000000001,
+      "accounted_p95": 174.92270000000002,
+      "parts": [
+        {
+          "key": "mesh_emerge_prep_ms",
+          "label": "prep",
+          "med": 6.8225999999999996,
+          "p95": 11.7688,
+          "pct_of_emerge": 55.1343488625803
+        },
+        {
+          "key": "relight_drain_ms",
+          "label": "relight",
+          "med": 0.00955,
+          "p95": 11.9968,
+          "pct_of_emerge": 0.07717483534688269
+        },
+        {
+          "key": "mesh_immediate_ms",
+          "label": "immediate",
+          "med": 0.0,
+          "p95": 0.0,
+          "pct_of_emerge": 0.0
+        },
+        {
+          "key": "mesh_dirty_tick_ms",
+          "label": "dirty_tick",
+          "med": 2.77125,
+          "p95": 78.1746,
+          "pct_of_emerge": 22.39484423613075
+        },
+        {
+          "key": "mesh_sync_ms",
+          "label": "sync",
+          "med": 0.0006,
+          "p95": 72.9825,
+          "pct_of_emerge": 0.00484868075477797
+        },
+        {
+          "key": "residual",
+          "label": "residual",
+          "med": 2.5249500000000005,
+          "p95": 11.6888,
+          "pct_of_emerge": 20.4044607862944
+        }
+      ]
+    }
+  }
+}

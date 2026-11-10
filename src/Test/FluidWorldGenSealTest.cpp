@@ -5,6 +5,8 @@
 #include "World/Math/FluidCellState.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Sampling/AquiferSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
 #include <iostream>
@@ -19,11 +21,17 @@ constexpr cutum::BlockId kWater = 9;
 
 static cutum::WorldGenContext MakeSealContext(cutum::UBlockWorld &world,
                                               cutum::UBlockRegistry &registry,
-                                              int sea_level = 63)
+                                              int sea_level = 63,
+                                              bool density_caves = false)
 {
   cutum::ProceduralSettings settings;
   settings.FillWater = true;
   settings.SeaLevel = sea_level;
+  if (density_caves)
+  {
+    settings.TerrainBackendMode = cutum::TerrainBackend::Density3D;
+    settings.EnableCaves = true;
+  }
   cutum::WorldGenContext ctx(world, registry, settings);
   ctx.Blocks.Stone = kStone;
   ctx.Blocks.Water = kWater;
@@ -106,6 +114,118 @@ static void TestSealSinglePocket()
                     "single air pocket seals to water");
 }
 
+static glm::ivec3 FindAquiferPosition(
+    const cutum::UAquiferSampler &sampler, cutum::AquiferFluid fluid,
+    int sea_level, int max_height)
+{
+  for (int y = 4; y < sea_level - 1; ++y)
+  {
+    for (int x = 1; x < cutum::CHUNK_SIZE - 1; ++x)
+    {
+      for (int z = 1; z < cutum::CHUNK_SIZE - 1; ++z)
+      {
+        if (sampler.SampleAt(x, y, z).Fluid == fluid)
+        {
+          return glm::ivec3(x, y, z);
+        }
+      }
+    }
+  }
+  return glm::ivec3(-1, max_height, -1);
+}
+
+static void TestAquiferAwarePocketSeal()
+{
+  constexpr int sea_level = 63;
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+  auto ctx = MakeSealContext(world, registry, sea_level, true);
+  const cutum::UAquiferSampler sampler(
+      ctx.Settings.Seed, ctx.Settings.SeaLevel, ctx.Settings.MaxHeight,
+      cutum::UWorldGenPack::AquifersConfig());
+
+  const glm::ivec3 dry = FindAquiferPosition(
+      sampler, cutum::AquiferFluid::Dry, sea_level, ctx.Settings.MaxHeight);
+  FluidTest::Expect(dry.x >= 0, kTestName,
+                    "find dry underground aquifer cell for seal test");
+  const glm::ivec3 dry_source = dry + glm::ivec3(1, 0, 0);
+  world.SetBlock(dry_source, kWater);
+  world.SetFluidState(dry_source,
+                      cutum::FluidCellState::Source().WithKind(
+                          cutum::FluidKind::Water));
+  cutum::SealFluidPocketsInChunk(ctx, 0, 0);
+  FluidTest::Expect(world.GetBlock(dry) == cutum::BLOCK_AIR, kTestName,
+                    "pocket sealing leaves dry aquifer cavities empty");
+
+  cutum::UBlockWorld wet_world;
+  cutum::UBlockRegistry wet_registry(
+      nullptr, FluidTest::MakeTestFluidDefinitions());
+  auto wet_ctx = MakeSealContext(wet_world, wet_registry, sea_level, true);
+  const cutum::UAquiferSampler wet_sampler(
+      wet_ctx.Settings.Seed, wet_ctx.Settings.SeaLevel,
+      wet_ctx.Settings.MaxHeight, cutum::UWorldGenPack::AquifersConfig());
+  const glm::ivec3 wet = FindAquiferPosition(
+      wet_sampler, cutum::AquiferFluid::Water, sea_level,
+      wet_ctx.Settings.MaxHeight);
+  FluidTest::Expect(wet.x >= 0, kTestName,
+                    "find wet underground aquifer cell for seal test");
+  const glm::ivec3 wet_source = wet - glm::ivec3(1, 0, 0);
+  wet_world.SetBlock(wet_source, kWater);
+  wet_world.SetFluidState(wet_source,
+                          cutum::FluidCellState::Source().WithKind(
+                              cutum::FluidKind::Water));
+  cutum::SealFluidPocketsInChunk(wet_ctx, 0, 0);
+  FluidTest::Expect(wet_world.GetBlock(wet) == kWater, kTestName,
+                    "pocket sealing still fills water-classified aquifers");
+}
+
+static void TestAquiferColumnRespectsLocalFluid()
+{
+  constexpr int sea_level = 63;
+  constexpr cutum::BlockId kLava = 10;
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+  auto ctx = MakeSealContext(world, registry, sea_level);
+  ctx.Settings.FillLava = true;
+  ctx.Blocks.Lava = kLava;
+  cutum::AquiferParams aquifer_params =
+      cutum::UWorldGenPack::AquifersConfig();
+  aquifer_params.DryCellChance = 0.30f;
+  aquifer_params.BarrierBand = 8.0f;
+  aquifer_params.BarrierNoiseThreshold = -1.0f;
+  aquifer_params.PressureDifferenceThreshold = 0;
+  aquifer_params.LavaMaxY = 16;
+  aquifer_params.LavaCellChance = 0.75f;
+  const cutum::UAquiferSampler sampler(
+      ctx.Settings.Seed, ctx.Settings.SeaLevel, ctx.Settings.MaxHeight,
+      aquifer_params);
+
+  const glm::ivec3 dry = FindAquiferPosition(
+      sampler, cutum::AquiferFluid::Dry, sea_level, ctx.Settings.MaxHeight);
+  const glm::ivec3 wet = FindAquiferPosition(
+      sampler, cutum::AquiferFluid::Water, sea_level, ctx.Settings.MaxHeight);
+  const glm::ivec3 lava = FindAquiferPosition(
+      sampler, cutum::AquiferFluid::Lava, sea_level, ctx.Settings.MaxHeight);
+  const glm::ivec3 barrier = FindAquiferPosition(
+      sampler, cutum::AquiferFluid::Barrier, sea_level, ctx.Settings.MaxHeight);
+  FluidTest::Expect(dry.x >= 0 && wet.x >= 0 && lava.x >= 0 && barrier.x >= 0,
+                    kTestName, "find each aquifer class for column fill test");
+
+  cutum::FillAquiferColumn(ctx, dry.x, dry.z, sea_level + 1, sampler);
+  cutum::FillAquiferColumn(ctx, wet.x, wet.z, sea_level + 1, sampler);
+  cutum::FillAquiferColumn(ctx, lava.x, lava.z, sea_level + 1, sampler);
+  cutum::FillAquiferColumn(ctx, barrier.x, barrier.z, sea_level + 1, sampler);
+
+  FluidTest::Expect(world.GetBlock(dry) == cutum::BLOCK_AIR, kTestName,
+                    "dry aquifer cell remains air instead of receiving water");
+  FluidTest::Expect(world.GetBlock(wet) == kWater, kTestName,
+                    "water aquifer cell receives water");
+  FluidTest::Expect(world.GetBlock(lava) == kLava, kTestName,
+                    "deep lava aquifer cell receives lava");
+  FluidTest::Expect(world.GetBlock(barrier) == kStone, kTestName,
+                    "aquifer barrier cell is closed with stone");
+}
+
 static void TestSealChain8()
 {
   cutum::UBlockWorld world;
@@ -135,19 +255,20 @@ static void TestSealChain9()
   FillStoneColumn(world, 0, 0, 58);
   world.SetBlock(glm::ivec3(0, 61, 0), kWater);
   world.SetFluidState(glm::ivec3(0, 61, 0), cutum::FluidCellState::Source());
-  for (int x = 1; x <= 9; ++x)
+  // W5.4 raised the seal flood from 8 to 16 passes. A 15-cell chain (the
+  // box is one chunk, x 0..15) now seals fully — previously the 9th cell
+  // stayed open.
+  for (int x = 1; x <= 15; ++x)
   {
     world.SetBlock(glm::ivec3(x, 61, 0), cutum::BLOCK_AIR);
   }
 
   cutum::SealFluidPocketsInChunk(ctx, 0, 0);
-  for (int x = 1; x <= 8; ++x)
+  for (int x = 1; x <= 15; ++x)
   {
     FluidTest::Expect(world.GetBlock(glm::ivec3(x, 61, 0)) == kWater,
-                      kTestName, "8-cell air chain seals within pass limit");
+                      kTestName, "15-cell air chain seals within 16 passes");
   }
-  FluidTest::Expect(world.GetBlock(glm::ivec3(9, 61, 0)) == cutum::BLOCK_AIR,
-                    kTestName, "9th air cell remains after 8-pass limit");
 }
 
 static void TestSealChunkBoundarySameWorld()
@@ -241,9 +362,11 @@ static void TestRestoreWaterColumnReplacesPrefabDirt()
                     "shore sand floor preserved");
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 64, 0)) == kTallGrass,
                     kTestName, "reeds above sea preserved");
+  // Decor above the sea surface must not be waterlogged: the flooded cell
+  // would render as a water cube standing on the surface with the plant inside.
   FluidTest::Expect(
-      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 64, 0))) != 0,
-      kTestName, "reeds above sea waterlogged");
+      cutum::PackFluidCellState(world.GetFluidState(glm::ivec3(0, 64, 0))) == 0,
+      kTestName, "reeds above sea not waterlogged");
 }
 
 static void TestSealAirAboveWaterloggedDecor()
@@ -313,6 +436,8 @@ int main()
   TestFillColumnAboveSea();
   TestFillColumnAfterRavineCarve();
   TestSealSinglePocket();
+  TestAquiferAwarePocketSeal();
+  TestAquiferColumnRespectsLocalFluid();
   TestSealChain8();
   TestSealChain9();
   TestSealChunkBoundarySameWorld();

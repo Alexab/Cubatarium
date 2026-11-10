@@ -135,7 +135,8 @@ CreatureVisualQaSpawnResult UCreatureVisualQaSpawner::SpawnAllInGrid()
   {
     const std::string &species = Queue[i];
     const glm::vec3 origin = GridOriginForIndex(i, Queue.size());
-    if (World.SpawnCreature(species, origin) != 0)
+    if (World.SpawnCreature(species, origin, "", CreatureSpawnSource::Qa) !=
+        0)
     {
       ++spawned;
     }

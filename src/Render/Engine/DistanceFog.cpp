@@ -30,17 +30,25 @@ float FogHorizonBlocks(int render_distance_chunks, int end_margin_blocks)
 DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
                                      glm::vec3 sky_color, float start_ratio,
                                      float effective_fog_start_ratio,
-                                     float fog_density, int end_margin_blocks)
+                                     float fog_density, int end_margin_blocks,
+                                     float effective_horizon_blocks,
+                                     float effective_start_blocks)
 {
   const float ratio = effective_fog_start_ratio >= 0.0f
                           ? effective_fog_start_ratio
                           : start_ratio;
-  const float fog_blocks =
-      FogHorizonBlocks(render_distance_chunks, end_margin_blocks);
+  const float fog_blocks = effective_horizon_blocks >= 0.0f
+                               ? std::max(kMinHorizonBlocks,
+                                          effective_horizon_blocks)
+                               : FogHorizonBlocks(render_distance_chunks,
+                                                  end_margin_blocks);
   const float clamped_ratio = std::clamp(ratio, 0.0f, 1.0f);
   DistanceFogParams params;
   params.End = fog_blocks;
-  params.Start = std::max(fog_blocks * clamped_ratio, kMinFogStartBlocks);
+  params.Start = effective_start_blocks >= 0.0f
+                     ? std::max(effective_start_blocks, kMinFogStartBlocks)
+                     : std::max(fog_blocks * clamped_ratio,
+                                kMinFogStartBlocks);
   if (params.Start >= params.End)
   {
     params.Start = params.End * 0.85f;

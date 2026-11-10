@@ -13,11 +13,15 @@
     "vegetation": {
       "tree_apple": 0.7,
       "tree_aspen": 0.65,
-      "tree_acacia": 0.55
+      "tree_acacia": 0.55,
+      "tree_procedural_oak": 1.0,
+      "tree_procedural_aspen": 0.85
     },
     "ground_cover": {
       "bush_common": 0.85,
-      "bush_blueberry": 0.6
+      "bush_blueberry": 0.6,
+      "shrub_procedural_common": 1.0,
+      "shrub_procedural_blueberry": 0.8
     },
     "decoration": {
       "deco_log_apple": 0.15,

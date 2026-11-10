@@ -1,0 +1,449 @@
+#include "Creatures/Influence/InfluenceResolver.h"
+#include "Creatures/Combat/CreatureCombat.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureReach.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Influence/BareHandToolInfluenceProvider.h"
+#include "Creatures/Influence/InfluenceHitMath.h"
+#include "Game/Inventory/InventoryTypes.h"
+#include "Game/ModePolicy.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemUseRegistry.h"
+#include "Items/ToolCapabilities.h"
+#include "World/Core/World.h"
+#include "World/Raycast/BlockRaycast.h"
+#include <algorithm>
+#include <cmath>
+#include <glm/glm.hpp>
+
+namespace cutum
+{
+
+namespace
+{
+uint64_t ResolveTargetId(const CreatureIntent &intent)
+{
+  return intent.Influence.TargetId;
+}
+
+InfluenceChannel ResolveChannel(const CreatureIntent &intent)
+{
+  return intent.Influence.Channel;
+}
+
+/// No movement-blocking block between the source's eye and the target body:
+/// melee used to land through walls and round corners.
+bool SourceSeesTarget(const UWorld &world, const UCreature &source,
+                      const UCreature &target)
+{
+  return CreatureMeleeLineOfSight(world, source, target);
+}
+} // namespace
+
+namespace
+{
+
+// Per-channel resolvers (audit 5.1): Resolve used to inline Use, Dig and
+// the shared attack tail in one 355-line function.
+
+bool TryResolveUse(UWorld &world, UCreature &source, InfluencePrediction &pred)
+{
+  pred.Capability.Channel = InfluenceChannel::Use;
+  const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+  const InventoryEntryRef *active = source.GetInventory().GetActiveEntryRef();
+  if (!active || active->empty || active->kind != InventoryEntryKind::Item ||
+      active->Id.empty() || !items)
+  {
+    pred.CancelReason = "no_use_item";
+    pred.Cancelled = true;
+    return true;
+  }
+  const ItemDefinition *def = items->Get(active->Id);
+  if (!def)
+  {
+    pred.CancelReason = "unknown_item";
+    pred.Cancelled = true;
+    return true;
+  }
+  const ItemUseParams use = ItemUseRegistry::FromDefinition(*def);
+  if (use.Action != ItemUseAction::Eat && use.Action != ItemUseAction::Drink)
+  {
+    pred.CancelReason = "no_use_action";
+    pred.Cancelled = true;
+    return true;
+  }
+  if (source.GetTimeSinceLastInfluenceSec() < 0.35f)
+  {
+    pred.CancelReason = "cooldown";
+    pred.Cancelled = true;
+    return true;
+  }
+  pred.UseSelf = true;
+  pred.UseItemId = active->Id;
+  pred.UseSatietyDelta = use.SatietyDelta;
+  pred.UseThirstDelta = use.ThirstDelta;
+  pred.UseHealthDelta = use.HealthDelta;
+  pred.Capability.Id = active->Id;
+  pred.Capability.FullIntervalSec = 0.35f;
+  InfluenceTargetDelta self;
+  self.TargetId = source.GetId();
+  self.TargetPos = source.GetBodyOrigin();
+  self.HealthDelta = use.HealthDelta;
+  pred.Targets.push_back(self);
+  pred.Valid = true;
+  return true;
+}
+
+bool TryResolveDig(UWorld &world, UCreature &source, WorldGameMode mode,
+                   const CreatureIntent &intent, InfluencePrediction &pred)
+{
+  pred.Capability.Channel = InfluenceChannel::Dig;
+  if (!intent.Influence.HasTargetBlock)
+  {
+    pred.CancelReason = "no_block_target";
+    pred.Cancelled = true;
+    return true;
+  }
+
+  pred.DigBlockPos = intent.Influence.TargetBlockPos;
+  const BlockId block_id =
+      world.GetBlockWorld().GetBlock(pred.DigBlockPos);
+  const UBlockDefinitionStorage *blocks =
+      world.GetBlockRegistry().GetDefinitions();
+  const BlockDefinition *block = blocks ? blocks->GetById(block_id) : nullptr;
+  if (!block)
+  {
+    pred.CancelReason = "missing_block";
+    pred.Cancelled = true;
+    return true;
+  }
+
+  const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+  const ItemDefinition *tool = nullptr;
+  if (const InventoryEntryRef *active =
+          source.GetInventory().GetActiveEntryRef())
+  {
+    if (!active->empty && active->kind == InventoryEntryKind::Item &&
+        !active->broken && items)
+    {
+      tool = items->Get(active->Id);
+    }
+  }
+  if (!tool && items)
+  {
+    tool = items->GetHandDefinition();
+  }
+
+  const DigParams dig =
+      ResolveDigParams(tool, *block, source.GetAttributes(), mode);
+  pred.Capability.Id = tool ? tool->Id : "bare_hand";
+  pred.DigDurationSec = dig.DurationSec;
+  pred.DigWearDelta = dig.WearDelta;
+  pred.DigEffective = dig.Effective;
+  pred.DigToolId = tool ? tool->Id : std::string{};
+  if (!dig.Effective)
+  {
+    pred.CancelReason = "ineffective_dig";
+    pred.Cancelled = true;
+    return true;
+  }
+  pred.Valid = true;
+  return true;
+}
+
+bool TryResolveRadiusTargets(UWorld &world, UCreature &source,
+                             const InfluenceCapability &cap,
+                             InfluencePrediction &pred)
+{
+  if (cap.Targeting != InfluenceTargeting::Radius || cap.RadiusBlocks <= 0.f)
+  {
+    return false;
+  }
+  const auto neighbors = world.QueryCreatureNeighborsInRadius(
+      source.GetBodyOrigin(), cap.RadiusBlocks, source.GetId());
+  for (const auto &n : neighbors)
+  {
+    UCreature *target = world.GetCreature(n.Id);
+    if (!target || !SourceSeesTarget(world, source, *target))
+    {
+      continue;
+    }
+    const InfluenceHitParams hit = InfluenceHitMath::Compute(
+        target->GetArmorGroups(), cap, source.GetAttributes(),
+        source.GetTimeSinceLastInfluenceSec());
+    if (hit.Missed || !hit.DidHit || hit.Damage <= 0.f)
+    {
+      continue;
+    }
+    InfluenceTargetDelta delta;
+    delta.TargetId = n.Id;
+    delta.TargetPos = target->GetBodyOrigin();
+    delta.HealthDelta = -hit.Damage;
+    pred.Targets.push_back(delta);
+    pred.IntervalMul = hit.IntervalMul;
+  }
+  if (pred.Targets.empty())
+  {
+    pred.CancelReason = "no_radius_targets";
+    pred.Cancelled = true;
+    return true;
+  }
+  pred.SourceFatigueDelta = cap.SourceFatigueCost;
+  pred.Valid = true;
+  return true;
+}
+
+/// Hostile-to-player damage multiplier and offhand shield blocking.
+float ApplyAttackDamageModifiers(UWorld &world, UCreature &source,
+                                 UCreature &target, float baseDamage,
+                                 InfluenceTargetDelta &delta)
+{
+  float damage = baseDamage;
+if (target.IsPlayerCharacter())
+{
+  const auto definitions = world.GetCreatureDefinitionStorage();
+  const CreatureDefinition *sourceDefinition =
+      definitions ? definitions->Get(source.GetTypeId()) : nullptr;
+  if (sourceDefinition &&
+      std::find(sourceDefinition->catalog.tags.begin(),
+                sourceDefinition->catalog.tags.end(), "hostile") !=
+          sourceDefinition->catalog.tags.end())
+  {
+    damage *= ModePolicy::HostileDamageMultiplier(world.GetDifficulty());
+  }
+}
+{
+  const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+  const InventoryEntryRef &off = target.GetInventory().GetEquippedOffhand();
+  if (items && !off.empty && !off.broken &&
+      off.kind == InventoryEntryKind::Item)
+  {
+    if (const ItemDefinition *shield = items->Get(off.Id))
+    {
+      if (shield->Block.Enabled)
+      {
+        bool frontal = true;
+        const glm::vec3 toAtk =
+            glm::normalize(source.GetBodyOrigin() - target.GetBodyOrigin());
+        const float yawRad = glm::radians(target.GetYaw());
+        const glm::vec3 forward{std::sin(yawRad), 0.f, std::cos(yawRad)};
+        const float cosAng = glm::dot(forward, toAtk);
+        const float halfAng =
+            glm::radians(std::max(1.f, shield->Block.AngleDeg) * 0.5f);
+        frontal = cosAng >= std::cos(halfAng);
+        if (target.IsBlocking() && frontal)
+        {
+          damage *= std::clamp(shield->Block.DamageMul, 0.f, 1.f);
+          delta.ShieldBlocked = true;
+        }
+        else
+        {
+          damage *= std::clamp(shield->Block.PassiveDamageMul, 0.f, 1.f);
+        }
+      }
+    }
+  }
+}
+  return damage;
+}
+
+} // namespace
+
+InfluencePrediction InfluenceResolver::Resolve(
+    UWorld &world, UCreature &source, WorldGameMode mode,
+    const IUToolInfluenceProvider *tools)
+{
+  InfluencePrediction pred;
+  pred.SourceId = source.GetId();
+  pred.SourcePos = source.GetBodyOrigin();
+
+  const CreatureIntent &intent = source.GetIntent();
+  const InfluenceChannel channel = ResolveChannel(intent);
+  if (channel == InfluenceChannel::None)
+  {
+    return pred;
+  }
+
+  if (channel == InfluenceChannel::Use)
+  {
+    TryResolveUse(world, source, pred);
+    return pred;
+  }
+
+  if (channel != InfluenceChannel::Dig &&
+      !ModePolicy::AllowsCombatDamage(mode))
+  {
+    pred.CancelReason = "creative";
+    pred.Cancelled = true;
+    return pred;
+  }
+
+  if (channel != InfluenceChannel::Dig &&
+      !ModePolicy::AllowsHostileAggro(mode, world.GetDifficulty()))
+  {
+    // Safety net: hostile melee vs player cancelled on Peaceful.
+    const uint64_t early_target = ResolveTargetId(intent);
+    if (early_target != 0)
+    {
+      if (const UCreature *t = world.GetCreature(early_target))
+      {
+        if (t->IsPlayerCharacter() && !source.IsPlayerCharacter())
+        {
+          pred.CancelReason = "peaceful";
+          pred.Cancelled = true;
+          return pred;
+        }
+      }
+    }
+  }
+
+  if (channel == InfluenceChannel::Dig)
+  {
+    TryResolveDig(world, source, mode, intent, pred);
+    return pred;
+  }
+
+  // Shared attack path (melee / ranged): capability, ammo, cooldown,
+  // radius or single target.
+  InfluenceCapability cap;
+  const UBareHandToolInfluenceProvider bare;
+  const IUToolInfluenceProvider *provider = tools ? tools : &bare;
+  if (!provider->TryGetCapability(source, channel, cap))
+  {
+    if (channel == InfluenceChannel::Ranged ||
+        !bare.TryGetCapability(source, InfluenceChannel::Melee, cap))
+    {
+      pred.CancelReason = "no_capability";
+      pred.Cancelled = true;
+      return pred;
+    }
+  }
+  pred.Capability = cap;
+
+  if (channel == InfluenceChannel::Ranged)
+  {
+    const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+    if (items)
+    {
+      if (const ItemDefinition *bow = items->Get(cap.Id))
+      {
+        if (!bow->Ranged.AmmoId.empty())
+        {
+          const auto &storage = source.GetInventory().GetStorage();
+          const auto it = storage.find(bow->Ranged.AmmoId);
+          bool haveAmmo = it != storage.end() && it->second != 0;
+          if (!haveAmmo)
+          {
+            for (const auto &bar : source.GetInventory().GetHotbars())
+            {
+              for (const auto &slot : bar.slots)
+              {
+                if (!slot.entry.empty &&
+                    slot.entry.kind == InventoryEntryKind::Item &&
+                    slot.entry.Id == bow->Ranged.AmmoId &&
+                    slot.entry.count != 0)
+                {
+                  haveAmmo = true;
+                  break;
+                }
+              }
+              if (haveAmmo)
+              {
+                break;
+              }
+            }
+          }
+          if (!haveAmmo)
+          {
+            pred.CancelReason = "no_ammo";
+            pred.Cancelled = true;
+            return pred;
+          }
+        }
+      }
+    }
+  }
+
+  if (source.GetTimeSinceLastInfluenceSec() < cap.FullIntervalSec)
+  {
+    pred.CancelReason = "cooldown";
+    pred.Cancelled = true;
+    return pred;
+  }
+
+  if (TryResolveRadiusTargets(world, source, cap, pred))
+  {
+    return pred;
+  }
+
+  const uint64_t target_id = ResolveTargetId(intent);
+  if (target_id == 0 || target_id == source.GetId())
+  {
+    pred.CancelReason = "no_target";
+    pred.Cancelled = true;
+    return pred;
+  }
+
+  UCreature *target = world.GetCreature(target_id);
+  if (!target)
+  {
+    pred.CancelReason = "missing_target";
+    pred.Cancelled = true;
+    return pred;
+  }
+
+  const float dist = MeleeDistanceXZ(
+      source.GetBodyOrigin(), source.GetBounds().profile.restSizeBlocks,
+      target->GetBodyOrigin(), target->GetBounds().profile.restSizeBlocks);
+  const float reach = cap.RangeBlocks + 0.35f;
+  if (dist > reach)
+  {
+    pred.CancelReason = "out_of_range";
+    pred.Cancelled = true;
+    return pred;
+  }
+  if (!SourceSeesTarget(world, source, *target))
+  {
+    pred.CancelReason = "no_line_of_sight";
+    pred.Cancelled = true;
+    return pred;
+  }
+
+  const InfluenceHitParams hit = InfluenceHitMath::Compute(
+      target->GetArmorGroups(), cap, source.GetAttributes(),
+      source.GetTimeSinceLastInfluenceSec());
+  if (hit.Missed)
+  {
+    pred.CancelReason = "miss";
+    pred.Cancelled = true;
+    return pred;
+  }
+  if (!hit.DidHit || hit.Damage <= 0.f)
+  {
+    pred.CancelReason = hit.DidHit ? "zero_damage" : "no_hit";
+    pred.Cancelled = true;
+    return pred;
+  }
+
+  InfluenceTargetDelta delta;
+  delta.TargetId = target_id;
+  delta.TargetPos = target->GetBodyOrigin();
+  const float damage =
+      ApplyAttackDamageModifiers(world, source, *target, hit.Damage, delta);
+  delta.HealthDelta = -damage;
+  pred.Targets.push_back(delta);
+  // Status from capability / catalog (not hardcoded bleed).
+  for (const std::string &status_id : cap.OnHitStatusIds)
+  {
+    if (!status_id.empty())
+    {
+      pred.Targets.back().StatusIdsToAdd.push_back(status_id);
+    }
+  }
+  pred.SourceFatigueDelta = cap.SourceFatigueCost;
+  pred.IntervalMul = hit.IntervalMul;
+  pred.Valid = true;
+  return pred;
+}
+
+} // namespace cutum

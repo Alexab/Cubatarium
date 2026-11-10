@@ -5,6 +5,7 @@
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include <glm/glm.hpp>
+#include <functional>
 #include <vector>
 
 namespace cutum
@@ -20,6 +21,9 @@ struct FluidFloodOptions
   bool source_for_air{false};
   int max_passes{FluidTuning::FloodMaxPassesDefault};
   int sea_level{-1};
+  // Optional generation-specific guard for AIR cells. Permeable blocks keep
+  // their existing fluid simulation behavior.
+  std::function<bool(glm::ivec3)> allow_air_fill;
 };
 
 class UFluidFloodService

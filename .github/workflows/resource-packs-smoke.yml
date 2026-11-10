@@ -9,7 +9,10 @@ on:
       - "content/**"
       - "prefabs/**"
       - "docs/RESOURCE_PACKS.md"
+      - "docs/ASSETGEN.md"
       - "docs/PREFAB_CATALOG.md"
+      - "requirements-assetgen.txt"
+      - "requirements-assetgen-ml.txt"
   pull_request:
     branches: [main, master, resource_packs]
     paths:
@@ -18,7 +21,10 @@ on:
       - "content/**"
       - "prefabs/**"
       - "docs/RESOURCE_PACKS.md"
+      - "docs/ASSETGEN.md"
       - "docs/PREFAB_CATALOG.md"
+      - "requirements-assetgen.txt"
+      - "requirements-assetgen-ml.txt"
   workflow_dispatch:
 
 jobs:
@@ -33,7 +39,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python deps
-        run: pip install pyyaml
+        run: pip install -r requirements-assetgen.txt
 
       - name: Block id assignment check
         shell: pwsh

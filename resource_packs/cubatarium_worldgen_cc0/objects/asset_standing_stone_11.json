@@ -1,0 +1,58 @@
+{
+  "name": "asset_standing_stone_11",
+  "version": 2,
+  "displayName": "Standing Stone 11",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 1939466392951254161,
+    "license": "CC0-1.0",
+    "material_parameter": "pumice"
+  },
+  "tags": [
+    "decoration",
+    "structure"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_pumice_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_pumice_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_pumice_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 3,
+      "dz": 0,
+      "type": "cu_rock_pumice_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_pumice_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_pumice_natural"
+    }
+  ]
+}

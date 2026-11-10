@@ -173,11 +173,11 @@ FindPartPose(const std::unordered_map<std::string, CreaturePartPose> &poses,
 void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
                                       const CreatureLocomotionFacts & /*facts*/,
                                       const CreaturePoseParams &pose,
-                                      const CreatureDefinition & /*animDef*/,
+                                      const CreatureDefinition &animDef,
                                       float /*dt*/)
 {
   BodyOrigin = creature.GetFeetPosition();
-  BodyYaw = creature.GetYaw() + creature.GetModelYawOffsetDeg();
+  BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
   const float blend = pose.crouchUpperDrop > 0.0f
                           ? pose.crouchUpperDrop
                           : creature.GetLocomotion().GetStanceBlend();
@@ -186,15 +186,20 @@ void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
   PartPoses = pose.Parts;
 }
 
-void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
+void UCreatureVisualRigid::SubmitDraw(const CreatureDrawContext &ctx,
                                       const glm::mat4 &viewProj)
 {
-  const RenderSettings &settings = engine.GetRenderSettings();
+  if (!ctx.Settings)
+  {
+    return;
+  }
+  const RenderSettings &settings = *ctx.Settings;
   const bool drawTextured =
       settings.CreatureTexturedParts && !Appearance.Parts.empty();
-  auto creatureTextures = engine.GetCreatureTextureStorage();
+  const UCreatureTextureStorage *creatureTextures =
+      DrawEnabled(ctx) ? ctx.Textures : nullptr;
   const std::optional<float> torsoBottomY = TorsoBottomY(Appearance.Parts);
-  CreatureDrawQueue &queue = engine.GetCreatureDrawQueue();
+  CreatureDrawQueue &queue = *ctx.Queue;
 
   auto drawPart = [&](const ResolvedCreaturePart &part)
   {
@@ -206,22 +211,22 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
     const CreaturePartPose *partPose = FindPartPose(PartPoses, part);
     if (part.HasPivot)
     {
-      return BuildLimbPartModel(BodyOrigin, BodyYaw, part.PivotBlocks,
+      return BuildLimbPartModel(BodyOrigin, BodyYawDeg, part.PivotBlocks,
                                 part.offsetBlocks, part.sizeBlocks, partPose);
     }
     if (IsLegLimb(part) && torsoBottomY)
     {
       const glm::vec3 pivot = DefaultLegPivot(part, *torsoBottomY);
-      return BuildLimbPartModel(BodyOrigin, BodyYaw, pivot, part.offsetBlocks,
+      return BuildLimbPartModel(BodyOrigin, BodyYawDeg, pivot, part.offsetBlocks,
                                 part.sizeBlocks, partPose);
     }
     if (IsArmLimb(part))
     {
       const glm::vec3 pivot = DefaultArmPivot(part);
-      return BuildLimbPartModel(BodyOrigin, BodyYaw, pivot, part.offsetBlocks,
+      return BuildLimbPartModel(BodyOrigin, BodyYawDeg, pivot, part.offsetBlocks,
                                 part.sizeBlocks, partPose);
     }
-    return BuildRigidPartModel(BodyOrigin, BodyYaw, offset, part.sizeBlocks,
+    return BuildRigidPartModel(BodyOrigin, BodyYawDeg, offset, part.sizeBlocks,
                                partPose);
   };
 
@@ -257,7 +262,7 @@ void UCreatureVisualRigid::SubmitDraw(UGeometryEngine &engine,
   {
     const glm::vec3 localCenter(0.0f, SizeBlocks.y * 0.5f, 0.0f);
     const glm::mat4 model = BuildRigidPartModel(
-        BodyOrigin, BodyYaw, localCenter, SizeBlocks, nullptr);
+        BodyOrigin, BodyYawDeg, localCenter, SizeBlocks, nullptr);
     CreatureDrawRequest req;
     req.Kind = CreatureDrawKind::WireframeBox;
     req.Mvp = viewProj * model;

@@ -2,6 +2,7 @@
 #define WEATHER_DEPTH_CAPTURE_H
 
 #include "Render/GlIncludes.h"
+#include "Render/Pipeline/RenderTextureUnits.h"
 
 #include <memory>
 
@@ -13,7 +14,8 @@ class UShaderProgram;
 class UWeatherDepthCapture
 {
 public:
-  static constexpr GLenum kTextureUnit = GL_TEXTURE4;
+  static constexpr GLenum kTextureUnit =
+      RenderTextureUnitEnum(RenderTextureUnit::WeatherDepth);
 
   void DestroyGpuResources();
   void CaptureFromDefaultFramebuffer();

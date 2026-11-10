@@ -1,0 +1,33 @@
+{
+  "name": "hellrock",
+  "id": 379,
+  "hardness": 0.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_hellrock",
+    "mt_hellrock",
+    "mt_hellrock",
+    "mt_hellrock",
+    "mt_hellrock",
+    "mt_hellrock"
+  ],
+  "displayName": "Hellrock",
+  "render": {
+    "texture_variation": 0.48
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

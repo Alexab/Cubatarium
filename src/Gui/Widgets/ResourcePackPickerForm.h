@@ -25,6 +25,7 @@ public:
   void SetSelection(const std::vector<std::string> &selectedIds);
   ResourcePackSelection ReadSelection() const;
   bool HasValidPrimarySelection() const;
+  bool HasValidSelection() const;
   void SetOnLayoutChanged(std::function<void()> handler);
 
   void BuildInto(UGuiPanel &panel);

@@ -16,13 +16,17 @@ World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per ch
 | `face_quads` | `true` (default). **Requires `greedy_meshing: true`** (auto-enabled if missing). Greedy mesh as world-space triangles with baked UV. |
 | `frustum_culling` | `true` (default): skip chunks outside view frustum. Chunk AABB expanded by 2 blocks. |
 | `batch_cache` | `true` (default): reuse prepared draw batches when mesh revision unchanged (legacy instanced path). |
-| `performance_preset` | `fast` / `balanced` (default) / `quality` — seeds `async_meshing`, `distance_fog`, `gradient_sky`; individual `render.*` keys override the preset. |
+| `performance_preset` | `performance` / `fast` / `balanced` (default) / `quality` — seeds fog/sky/async and selects CPU lighting backend (`Flat` for `performance`, `Full` otherwise). `fast` enables boundary `distance_fog` but disables fog pull-in / water-unfinished near fog. Individual `render.*` keys override the preset. Selectable in Settings as **Graphics quality**. |
 | `async_meshing` | Background mesh rebuild; see `RenderSettings.AsyncMeshing`. |
 | `distance_fog` | Distance fog using `FogHorizonBlocks` / `RenderHorizonBlocks`. |
 
 **Shaders:** legacy blocks use `vshader_instanced.glsl`. Greedy mesh uses `vshader.glsl` with vertices in world space and atlas UV baked on the CPU (`BlockAtlasUV.h`, same layout as `CubeGL`).
 
 Bisect: start with all `false`, enable one flag at a time, restart game. Console prints `Render: greedy=...` on startup.
+
+## Camera projection
+
+World mesh is always 3D (world-space vertices + MVP). **Perspective vs orthographic isometric** is a per-world camera lens in `world_data.json` → `view` (New World / World settings). See [CAMERA_PROJECTION.md](CAMERA_PROJECTION.md). Do not confuse with F5 `CameraPerspective` (1st/3rd person).
 
 ## Runtime paths (next to executable)
 
@@ -100,7 +104,7 @@ Generators implement `IUWorldGenPipeline` and are registered in `UWorldGenerator
 
 `UComposableWorldGenerator` composes column stages via `UColumnGenerationService` and `WorldGenStageMask` (pack pipeline × generator × procedural settings). Stage order comes from `pipeline.json` `stages[]`. Builtin lava/fire features run through `IUBuiltinWorldGenFeature`. Block slots resolve through `WorldGenBlockResolver` on `WorldGenContext`. **Worldgen places blocks and prefabs only** — creatures spawn separately via `World::SpawnCreature` / `AddUser`.
 
-Defaults: `sea_level` 48, `max_height` 128, `generator` `overworld`. Compact presets for `flat`/`heightmap` use low-height defaults (`sea_level` ~5, `max_height` ~15). Legacy `indev_retro` loads as `heightmap`.
+Defaults: `sea_level` 63, `max_height` 319, `generator` `overworld`. The supported vertical range is Y=0..319; negative Y is not supported by chunk streaming yet. Compact presets for `flat`/`heightmap` use low-height defaults (`sea_level` ~5, `max_height` ~15). Legacy `indev_retro` loads as `heightmap`.
 
 Settings persist in `config.json` (template: **generator + seed only**) and per-world `world_data.json` under full `procedural` + `procedural.tuning`. Sea level, height, and tuning are reset from generator defaults on each app start; per-world overrides live only in `world_data.json`.
 
@@ -302,9 +306,13 @@ Console is toggled via `ui.console_key` (default grave). Chat log lines are appe
 
 **Hotbar UI:** slots show block/prefab textures when available; tooltips show the active or hovered item name (block label above the block row, prefab label below the prefab row). Selected slots use a stronger border/fill from `GuiTheme`.
 
+**Character sheet (`C`):** paper-doll layout — framed 3D creature preview (`UCreaturePreviewRenderer`) + 6 armor slots + 2 tool mirrors (Main/Offhand); vitals/attributes in a separate stats column. Armor drag/drop uses `SlotSurface::CharacterArmor` → `CreatureInventory::EquipArmor`. Preview draws worn armor and active/offhand wield meshes on `rightItem`/`leftItem`. Item icons go through `UItemPreviewRenderer` (parts[] / optional glTF). See [`ITEM_ASSETS.md`](ITEM_ASSETS.md).
+
+**FP viewmodel:** Hybrid Luanti + Minecraft. After `Geometry::Paint`, `UFpViewmodelRenderer::DrawWorldOverlay` clears depth and draws mesh FP arms (`TryDrawSkinnedArms` atlas UV boxes) + held Item/Block at FOV **72°** (working area). Gated by `ShouldDrawFpViewmodel` (`ShowFpWield` + Perspective only — **hidden in isometric**). Offhand via character sheet. Dig/place/use swing from item visual presets. Not body-in-FP; full weighted skinning remains optional follow-up.
+
 **Main menu:** `Load Last World` (or `Resume` after Esc), `Load World`, `New World`, `Settings`, `Quit`.
 
-**Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, `render.*`, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
+**Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, **Graphics quality** (`render.performance_preset`), meshing `render.*` toggles, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
 
 **Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`, opens Blocks), `inventory_key` (default `e`, toggles palette on last main tab; default Blocks), `ui_scale` (interface scale multiplier, default `1.0`). Saved from Settings together with other app keys.
 

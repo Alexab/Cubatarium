@@ -83,7 +83,7 @@ bool UGuiPreviewViewport::OnMouseMove(const GuiMouseEvent &event)
   {
     return true;
   }
-  Yaw += static_cast<float>(dx) * 0.5f;
+  Yaw -= static_cast<float>(dx) * 0.5f;
   Pitch = std::clamp(Pitch - static_cast<float>(dy) * 0.4f, -80.0f, 80.0f);
   if (OnRotationChanged)
   {

@@ -2,8 +2,11 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Math/FluidCellState.h"
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 
@@ -25,6 +28,14 @@ void AppendU32(std::vector<uint8_t> &out, uint32_t value)
   out.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
   out.push_back(static_cast<uint8_t>((value >> 16) & 0xFF));
   out.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
+}
+
+void AppendU64(std::vector<uint8_t> &out, uint64_t value)
+{
+  for (int shift = 0; shift < 64; shift += 8)
+  {
+    out.push_back(static_cast<uint8_t>((value >> shift) & 0xFF));
+  }
 }
 
 void AppendI32(std::vector<uint8_t> &out, int32_t value)
@@ -55,6 +66,20 @@ bool ReadU32(const std::vector<uint8_t> &bytes, size_t &offset, uint32_t &value)
           (static_cast<uint32_t>(bytes[offset + 2]) << 16) |
           (static_cast<uint32_t>(bytes[offset + 3]) << 24);
   offset += 4;
+  return true;
+}
+
+bool ReadU64(const std::vector<uint8_t> &bytes, size_t &offset, uint64_t &value)
+{
+  if (offset + 8 > bytes.size())
+  {
+    return false;
+  }
+  value = 0;
+  for (int shift = 0; shift < 64; shift += 8)
+  {
+    value |= static_cast<uint64_t>(bytes[offset++]) << shift;
+  }
   return true;
 }
 
@@ -159,6 +184,17 @@ UBinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
   AppendU32(bytes, static_cast<uint32_t>(CHUNK_VOLUME));
   bytes.insert(bytes.end(), chunk.GetLightData().begin(),
                chunk.GetLightData().end());
+  const float wetness = std::clamp(chunk.GetSurfaceWetness(), 0.0f, 1.0f);
+  AppendU16(bytes, static_cast<uint16_t>(std::lround(wetness * 65535.0f)));
+  const double last_update_sec = std::max(0.0, chunk.GetWeatherLastUpdateSec());
+  const double milliseconds = last_update_sec * 1000.0;
+  const uint64_t last_update_ms =
+      !std::isfinite(milliseconds) ||
+              milliseconds >=
+                  static_cast<double>(std::numeric_limits<uint64_t>::max())
+          ? std::numeric_limits<uint64_t>::max()
+          : static_cast<uint64_t>(milliseconds + 0.5);
+  AppendU64(bytes, last_update_ms);
   return out;
 }
 
@@ -180,8 +216,8 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
 
   size_t offset = 4;
   const uint8_t version = bytes[offset++];
-  if (version != kVersion && version != kVersionFluid &&
-      version != kVersionLegacy)
+  if (version != kVersion && version != kVersionLight &&
+      version != kVersionFluid && version != kVersionLegacy)
   {
     return buffer;
   }
@@ -271,7 +307,8 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
         buffer.SetBlock(worldPos, id);
         if (version == kVersionLegacy && registry.IsLiquid(id))
         {
-          buffer.SetFluidPacked(worldPos, PackFluidCellState(FluidCellState::Source()));
+          buffer.SetFluidPacked(worldPos,
+                                PackFluidCellState(FluidCellState::Source()));
         }
       }
       advanceLocal();
@@ -328,7 +365,7 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
     }
   }
 
-  if (version >= kVersion)
+  if (version >= kVersionLight)
   {
     uint32_t light_byte_count = 0;
     if (!ReadU32(bytes, offset, light_byte_count))
@@ -348,6 +385,21 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
       offset += CHUNK_VOLUME;
       buffer.SetChunkLightData(chunkCoord, light);
     }
+  }
+
+  if (version >= kVersion)
+  {
+    uint16_t wetness_packed = 0;
+    uint64_t last_update_ms = 0;
+    if (!ReadU16(bytes, offset, wetness_packed) ||
+        !ReadU64(bytes, offset, last_update_ms))
+    {
+      buffer.Clear();
+      return buffer;
+    }
+    buffer.SetChunkWeatherState(chunkCoord,
+                                static_cast<float>(wetness_packed) / 65535.0f,
+                                static_cast<double>(last_update_ms) / 1000.0);
   }
 
   return buffer;

@@ -7,7 +7,19 @@
       "hostile"
     ],
     "spawnable": true,
-    "sort_order": 32
+    "sort_order": 32,
+    "natural_spawnable": true,
+    "spawn_weight": 0.7,
+    "spawn_group_min": 1,
+    "spawn_group_max": 2,
+    "spawn_biomes": [
+      "plains",
+      "forest",
+      "savanna",
+      "scrubland",
+      "hills",
+      "foothills"
+    ]
   },
   "role": "mob",
   "bounds": {
@@ -41,7 +53,7 @@
   "behavior_params": {
     "move_speed": 2.2,
     "aggro_radius": 12.0,
-    "attack_range": 2.0,
+    "attack_range": 1.25,
     "attack_cooldown": 1.5
   },
   "visual": {
@@ -72,5 +84,26 @@
       32
     ],
     "animation_profile": "humanoid"
+  },
+  "vitals": {
+    "max_health": 50,
+    "max_satiety": 100,
+    "max_thirst": 100,
+    "max_fatigue": 100,
+    "max_breath": 100,
+    "max_fatal_wounds": 1,
+    "armor": 2
+  },
+  "armor_groups": {
+    "fleshy": 80
+  },
+  "attributes": {
+    "strength": 12,
+    "agility": 8,
+    "endurance": 11,
+    "accuracy": 8,
+    "intelligence": 4,
+    "luck": 5,
+    "perception": 10
   }
 }

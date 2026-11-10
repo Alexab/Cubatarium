@@ -1,0 +1,60 @@
+{
+  "id": "wood_bow",
+  "format": "parts_v1",
+  "license": "CC0-1.0",
+  "attribution": "Cubatarium authored low-poly (educational). Visual language inspired by Kenney Survival Kit / KayKit RPG Tools Bits / Quaternius Fantasy Props (all CC0).",
+  "parts": [
+    {
+      "texture": "wood",
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        0.04,
+        0.7,
+        0.04
+      ]
+    },
+    {
+      "texture": "wood",
+      "offset": [
+        0.08,
+        0.25,
+        0
+      ],
+      "size": [
+        0.14,
+        0.04,
+        0.04
+      ]
+    },
+    {
+      "texture": "wood",
+      "offset": [
+        0.08,
+        -0.25,
+        0
+      ],
+      "size": [
+        0.14,
+        0.04,
+        0.04
+      ]
+    },
+    {
+      "texture": "string",
+      "offset": [
+        0.14,
+        0,
+        0
+      ],
+      "size": [
+        0.02,
+        0.5,
+        0.02
+      ]
+    }
+  ]
+}

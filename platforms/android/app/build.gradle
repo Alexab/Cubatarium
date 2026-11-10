@@ -119,6 +119,7 @@ tasks.register("syncAssets", Copy) {
     }
     from("${repoRoot}/shaders/gles") { into "shaders/gles" }
     from("${repoRoot}/fonts") { into "fonts" }
+    from("${repoRoot}/assets/config") { into "config" }
     from("${repoRoot}/config.json.example") { into "." }
     into("${projectDir}/src/main/assets")
 }

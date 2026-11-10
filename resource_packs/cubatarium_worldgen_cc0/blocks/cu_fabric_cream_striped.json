@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_cream_striped",
+  "id": 1796,
+  "displayName": "Fabric Cream Striped",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_cream_striped",
+    "cu_fabric_cream_striped",
+    "cu_fabric_cream_striped",
+    "cu_fabric_cream_striped",
+    "cu_fabric_cream_striped",
+    "cu_fabric_cream_striped"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "cream",
+    "variant": "striped"
+  }
+}

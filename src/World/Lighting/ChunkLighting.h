@@ -13,6 +13,8 @@ class UBlockWorld;
 constexpr int kRelightFrontierIterationsFull = 4;
 constexpr int kRelightFrontierIterationsEdit = 2;
 constexpr int kRelightFrontierIterationsBulk = 1;
+/// Terrain column async job: light the center column only (Starlight edge).
+constexpr int kRelightFrontierIterationsColumn = 0;
 
 struct RelightFrontierOutcome
 {
@@ -50,7 +52,24 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
                                int world_x, int world_z, int min_y, int max_y,
                                bool include_block_light, bool include_skylight,
                                std::vector<glm::ivec3> *out_relit_chunks);
+/// Era51 enter-only: inject max skylight on faces toward missing neighbors,
+/// then horizontal sky propagate. Does not invent block-light.
+void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
+                               int world_x, int world_z, int min_y, int max_y,
+                               std::vector<glm::ivec3> *out_changed_chunks =
+                                   nullptr,
+                               const char *audit_source = nullptr);
 void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry);
+
+/// After ApplyGpuSkylightSeedToChunk: clear was done by caller; run horizontal
+/// sky BFS + optional blocklight without re-running PropagateSkylightColumn.
+void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
+                                 glm::ivec3 chunk_coord,
+                                 bool include_block_light);
+
+/// BFS blocklight from emissive voxels in chunk + face neighbors.
+void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
+                         glm::ivec3 chunk_coord);
 
 } // namespace cutum
 

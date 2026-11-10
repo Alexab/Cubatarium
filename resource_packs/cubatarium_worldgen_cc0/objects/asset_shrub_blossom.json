@@ -1,0 +1,68 @@
+{
+  "name": "asset_shrub_blossom",
+  "version": 2,
+  "displayName": "Shrub Blossom",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 5023396295054904282,
+    "license": "CC0-1.0",
+    "material_parameter": "blossom"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "vegetation"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_blossom_mature"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_leaf_fresh"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_blossom_mature"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_leaf_fresh"
+    }
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
+}

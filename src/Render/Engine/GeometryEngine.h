@@ -14,10 +14,17 @@ typedef float GLfloat;
 typedef int GLint;
 
 #include "App/Settings/RenderSettings.h"
+#include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Blocks/BlockBreakFxPass.h"
+#include "Render/Blocks/BlockCrackOverlayPass.h"
+#include "Render/Effects/InfluenceFxPass.h"
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Camera/CullInputKey.h"
 #include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/IUFluidSurfaceProvider.h"
+#include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/SkyGradientPass.h"
 #include "Render/Engine/TextRenderer.h"
@@ -60,6 +67,30 @@ struct RenderBatch
   std::vector<glm::vec2> quadSizes;
 };
 
+/// Per-chunk evidence for the last opaque packed fallback submission. The
+/// pixel probe uses this to distinguish packed residency from actual draw
+/// calls for a ray-mapped chunk.
+struct PackedOpaqueDrawTrace
+{
+  glm::ivec3 coord{0};
+  uint8_t selected{0};
+  uint8_t draw_path_ready{0};
+  uint8_t slot_present{0};
+  uint8_t slice_ready{0};
+  uint16_t opaque_range_count{0};
+  uint16_t texture_ready_range_count{0};
+  uint16_t draw_call_count{0};
+  uint16_t missing_texture_entry_count{0};
+  uint16_t zero_texture_id_range_count{0};
+  int32_t first_opaque_range_block_id{-1};
+  int32_t first_missing_texture_block_id{-1};
+  int32_t first_zero_texture_id_block_id{-1};
+  uint32_t slot_quad_count{0};
+  uint32_t opaque_range_quad_count{0};
+  uint32_t drawn_quad_count{0};
+  uint32_t drawn_index_count{0};
+};
+
 class UGeometryEngine : public IUGreedyTransparentBackend
 {
 public:
@@ -71,6 +102,13 @@ public:
 
   bool InitEngine();
   bool InitShaders();
+
+  /// Distance-fog pass state (smoothed fog color etc.); the creature pass
+  /// reads it so mobs fade into the same horizon color as the terrain.
+  const UUnderwaterFogPass &GetUnderwaterFogPass() const
+  {
+    return UnderwaterFogPass_;
+  }
 
   void Paint(int width_size, int height_size, double view_duration);
 
@@ -113,20 +151,9 @@ public:
   {
     return CreatureTextureStorage;
   }
-  void DrawCreatureTexturedPart(const glm::mat4 &mvp, GLuint texture,
-                                CreaturePartMesh mesh = CreaturePartMesh::Box);
-  void DrawCreatureBoneSkeletonMesh(const glm::mat4 &mvp, GLuint texture,
-                                    const BoneSkeletonCubeMeshCpu &mesh);
-  void DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
-                            const BoneSkeletonCubeMeshCpu &mesh);
-  void DrawCreatureSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
-                               const GltfPrimitiveCpu &mesh,
-                               const std::vector<glm::mat4> &boneMatrices);
-  void DrawCreatureBillboard(const glm::mat4 &mvp, GLuint texture,
-                             const glm::vec4 &tint);
-
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
+  UTextRenderer *GetTextRenderer() const { return textRenderer.get(); }
   const std::shared_ptr<UWorld> &GetWorld() const { return WorldInstance; }
   void InvalidateBlockBatchCache() { BlockBatchesValid = false; }
   const CreatureRenderStats &GetCreatureRenderStats() const
@@ -168,6 +195,9 @@ private:
                         bool applyBelowSurfaceFog = true);
   void ApplyGreedyEnvironmentUniforms(
       const std::shared_ptr<UShaderProgram> &shader);
+  void ApplyGreedyChunkWeatherUniforms(
+      const std::shared_ptr<UShaderProgram> &shader,
+      glm::ivec3 chunk_coord);
   void RenderFluidOverlay(int width, int height);
   void RenderWeatherOverlay(int width, int height);
   bool InitOverlayBuffers();
@@ -241,6 +271,8 @@ private:
   std::shared_ptr<UShaderProgram>
       greedyShader; // Greedy world mesh (UV in fragment shader)
   std::shared_ptr<UShaderProgram>
+      packedGreedyShader; // GPU packed-quad vertex pulling path
+  std::shared_ptr<UShaderProgram>
       crossInstancedShader; // Instanced cross vegetation sprites
   std::shared_ptr<UShaderProgram> overlayShader;
   std::shared_ptr<UShaderProgram>
@@ -265,11 +297,26 @@ private:
   // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
   glm::vec3 BaseSkyColor{0.5f, 0.7f, 1.0f};
-  UFluidSurfaceMap FluidSurfaceMap;
+  std::unique_ptr<IUFluidSurfaceProvider> FluidSurfaceProvider;
+  UFluidSurfaceMap &FluidMap()
+  {
+    if (!FluidSurfaceProvider)
+    {
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+      FluidSurfaceProvider = std::make_unique<UCpuFluidSurfaceMap>();
+#else
+      FluidSurfaceProvider = std::make_unique<UGpuFluidSurfaceMap>();
+#endif
+    }
+    return FluidSurfaceProvider->Map();
+  }
   UUnderwaterFogPass UnderwaterFogPass_;
   USkyGradientPass SkyGradientPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;
   UWeatherRenderPass WeatherPass;
+  UBlockCrackOverlayPass BlockCrackPass;
+  UBlockBreakFxPass BlockBreakFx;
+  UInfluenceFxPass InfluenceFx;
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};
@@ -296,20 +343,58 @@ private:
   UAnimationClock AnimationClock;
 
   UCreatureDrawPass CreatureDraw_;
-  UGreedyGpuBackend GreedyGpuBackend;
+  URenderBackendBundle RenderBackends;
   UCrossGpuBackend CrossGpuBackend;
   GreedyGpuPassCache GreedyGpuOpaque;
   GreedyGpuPassCache GreedyGpuCutout;
   GreedyGpuPassCache GreedyGpuTransparent;
+  std::vector<PackedOpaqueDrawTrace> LastOpaquePackedDrawTrace;
   CrossGpuPassCache CrossGpuPass;
+  std::vector<GreedyBatchRef> CachedTransparentSortedRefs;
+  uint64_t CachedTransparentSortRevision{0};
+  uint64_t CachedTransparentMeshRevision{0};
+  uint64_t CachedTransparentRefFingerprint{0};
+  /// Phase 5.1 T4: skip opaque by_block_id sort when draw set unchanged.
+  std::vector<GreedyBatchRef> CachedOpaqueSortedRefs;
+  uint64_t CachedOpaqueDrawFingerprint{0};
+  /// Phase 5.3.4 / audit M06: skip ApplyGpuCompactCull when CullInputKey stable.
+  CullInputKey CachedOpaqueCullInputKey{};
+  glm::ivec2 CachedOpaqueCullFocusXZ{0};
+  bool CachedOpaqueCullFocusValid{false};
+  uint32_t OpaqueCullFrameParity{0};
+  uint64_t CachedOpaqueCmdOn{0};
+  uint64_t CachedOpaqueCmdOnPrev{0};
+  bool CachedOpaqueCmdOnValid{false};
+  /// Phase 5.7R4: prior-frame VB for cull vb_edge transition (not plateau).
+  int CachedOpaqueCullVbFocusN{0};
+  int CachedOpaqueCullVbStalledN{0};
+  bool CachedOpaqueCullVbValid{false};
+  int CachedOpaqueCullVbDeltaStreak{0};
+  /// Phase 5.7R7.2 / audit M06: transparent compact-cull reuse caches.
+  CullInputKey CachedTransparentCullInputKey{};
+  glm::ivec2 CachedTransparentCullFocusXZ{0};
+  bool CachedTransparentCullFocusValid{false};
+  uint32_t TransparentCullFrameParity{0};
+  uint64_t CachedTransparentCmdOn{0};
+  uint64_t CachedTransparentCmdOnPrev{0};
+  bool CachedTransparentCmdOnValid{false};
+  /// Sysreset v4 hitch C: prior-frame transparent_cmd_reorder_n for resort skip.
+  int CachedTransparentPrevCmdReorderN{0};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
+  IUMeshGpuStore &MeshStore();
+  void EnsureRenderBackendsBound();
+  bool PackedRepresentationSwitchBound_{false};
+  std::unordered_map<glm::ivec3, WeatherSample, IVec3Hash>
+      ChunkWeatherSamplesForFrame;
+  uint64_t CachedChunkWeatherFrame{0};
+  bool ChunkWeatherFrameValid{false};
   void DrawGreedyOpaqueBatches(
       const UChunkMeshCache &cache,
-      const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
-      const glm::mat4 &vp,
-                               const std::map<size_t, UTextureCube> &textures,
-                               uint64_t meshRevision, uint64_t cullRevision);
+      const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,
+      const glm::vec3 &cameraPos,
+      const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
+      uint64_t cullRevision);
   void DrawCrossInstancedBatches(const std::vector<CrossInstanceBatch> &batches,
                                  const glm::mat4 &vp,
                                  const std::map<size_t, UTextureCube> &textures,
@@ -317,11 +402,19 @@ private:
   void SetGreedyShaderMode(const std::shared_ptr<UShaderProgram> &shader,
                            bool alphaCutout, bool transparentPass,
                            GreedyShaderMode mode, float shellAlphaThreshold);
-  void DrawGreedyGpuBatches(const GreedyGpuPassCache &cache,
+  void DrawGreedyGpuBatches(GreedyGpuPassCache &cache,
                             const glm::mat4 &vp,
                             const std::map<size_t, UTextureCube> &textures,
                             bool alphaCutout, bool transparentPass,
                             GreedyShaderMode mode, float shellAlphaThreshold);
+  size_t DrawPackedGpuMeshes(const UChunkMeshCache &cache,
+                             const std::vector<GpuPackedChunkRef> &chunk_refs,
+                             const glm::mat4 &vp,
+                             const std::map<size_t, UTextureCube> &textures,
+                             bool transparent_pass, GreedyShaderMode mode,
+                             float shell_alpha);
+
+  const UChunkMeshCache *PreparedTransparentCache{nullptr};
 
   std::string TransientMessage;
   double TransientMessageUntil{0.0};

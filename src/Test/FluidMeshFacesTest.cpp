@@ -1,5 +1,6 @@
 #include "Test/FluidTestHelpers.h"
 
+#include "App/Platform/Log.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
@@ -9,9 +10,16 @@
 #include "World/Math/FluidCellState.h"
 
 #include <cstdlib>
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+
+namespace cutum
+{
+void CubatariumLogInfo(const char *, const std::string &) {}
+} // namespace cutum
 
 static void Expect(bool cond, const char *message)
 {
@@ -315,6 +323,74 @@ int main()
   Expect(shore_faces_toward_air >= 1,
          "water at shore keeps vertical face toward dug air");
 
+  // W4: Minecraft-style truncated fluid surface. A source cell with air
+  // above is a surface cell (FluidSurface=1): its top face and the top edge
+  // of its side faces emit 1/8 below the block top (10.5 -> 10.375). A cell
+  // with water above keeps the full cube.
+  {
+    cutum::UBlockWorld surface_world;
+    surface_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 surface_water(6, 10, 6);
+    const glm::ivec3 submerged_water(6, 9, 6);
+    surface_world.SetBlock(surface_water, kWater);
+    surface_world.SetFluidState(surface_water,
+                                cutum::FluidCellState::Source());
+    surface_world.SetBlock(submerged_water, kWater);
+    surface_world.SetFluidState(submerged_water,
+                                cutum::FluidCellState::Source());
+    const std::vector<cutum::GreedyQuad> surface_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(surface_world,
+                                             glm::ivec3(0, 0, 0), registry);
+    bool top_marked_surface = false;
+    bool top_at_seven_eighths = false;
+    bool surface_side_lowered = false;
+    bool submerged_side_full = false;
+    for (const cutum::GreedyQuad &quad : surface_quads)
+    {
+      if (quad.Id != kWater)
+      {
+        continue;
+      }
+      std::vector<cutum::GreedyMeshVertex> verts;
+      std::vector<uint32_t> idx;
+      cutum::AppendGreedyQuad(quad, glm::ivec3(0, 0, 0), verts, idx);
+      float max_py = -1e9f;
+      for (const cutum::GreedyMeshVertex &v : verts)
+      {
+        max_py = std::max(max_py, v.py);
+      }
+      if (quad.axis == 1 && quad.faceSign > 0)
+      {
+        top_marked_surface = top_marked_surface || quad.FluidSurface != 0;
+        top_at_seven_eighths =
+            top_at_seven_eighths || std::abs(max_py - 10.375f) < 1e-4f;
+      }
+      else if (quad.axis != 1)
+      {
+        if (quad.FluidSurface != 0)
+        {
+          // Surface side face of the y=10 cell: top edge at 10.375.
+          if (std::abs(max_py - 10.375f) < 1e-4f)
+          {
+            surface_side_lowered = true;
+          }
+        }
+        else if (std::abs(max_py - 9.5f) < 1e-4f)
+        {
+          // Submerged y=9 cell side face keeps the full cube.
+          submerged_side_full = true;
+        }
+      }
+    }
+    Expect(top_marked_surface, "fluid top face marked as surface cell");
+    Expect(top_at_seven_eighths,
+           "source top face emits at 7/8 height (10.375)");
+    Expect(surface_side_lowered,
+           "surface side face lowers its top edge to 10.375");
+    Expect(submerged_side_full,
+           "submerged side face keeps full cube height");
+  }
+
   const auto decor_definitions = FluidTest::MakeTestFluidDecorDefinitions();
   cutum::UBlockRegistry decor_registry(nullptr, decor_definitions);
   constexpr cutum::BlockId kTallGrass = 10;
@@ -331,6 +407,110 @@ int main()
                                            glm::ivec3(0, 0, 0), decor_registry);
   Expect(CountFluidFaces(wl_quads, kWater, true) >= 1,
          "water keeps top face under waterlogged decor");
+
+  // Waterlogged decor inside an ocean whose water id differs from the
+  // canonical first-water id: the decor's fluid must resolve to the actual
+  // neighbor water id, or the same-id face cull fails and the plant renders
+  // as a water block inside the ocean (user report: "водоросли в блоках
+  // воды под водой").
+  {
+    auto dual_definitions = std::make_shared<cutum::UBlockDefinitionStorage>();
+    constexpr cutum::BlockId kStone = 8;
+    constexpr cutum::BlockId kWaterCanon = 9;  // first-water: canonical
+    constexpr cutum::BlockId kWaterOcean = 20; // worldgen-pack ocean water
+    constexpr cutum::BlockId kKelp = 21;
+    cutum::BlockDefinition stone;
+    stone.Name = "stone";
+    stone.Physics = cutum::BlockPhysicsProfile::Solid();
+    cutum::BlockDefinition water_canon;
+    water_canon.Name = "water";
+    water_canon.Id = kWaterCanon;
+    water_canon.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+    water_canon.Render.Transparent = true;
+    water_canon.Render.Style = cutum::BlockRenderStyle::Fluid;
+    cutum::BlockDefinition water_ocean;
+    water_ocean.Name = "ocean_water";
+    water_ocean.Id = kWaterOcean;
+    water_ocean.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+    water_ocean.Render.Transparent = true;
+    water_ocean.Render.Style = cutum::BlockRenderStyle::Fluid;
+    cutum::BlockDefinition kelp;
+    kelp.Name = "kelp";
+    kelp.Physics = cutum::BlockPhysicsProfile::Solid();
+    kelp.Physics.Movement.Occupancy = 0.0f;
+    kelp.Render.Style = cutum::BlockRenderStyle::Cross;
+    kelp.Render.Transparent = true;
+    std::unordered_map<cutum::BlockId, cutum::BlockDefinition> dual_by_id;
+    dual_by_id[kStone] = stone;
+    dual_by_id[kWaterCanon] = water_canon;
+    dual_by_id[kWaterOcean] = water_ocean;
+    dual_by_id[kKelp] = kelp;
+    std::unordered_map<std::string, cutum::BlockId> dual_names;
+    dual_names["stone"] = kStone;
+    dual_names["water"] = kWaterCanon;
+    dual_names["ocean_water"] = kWaterOcean;
+    dual_names["kelp"] = kKelp;
+    dual_definitions->ReplaceAll(std::move(dual_by_id), std::move(dual_names));
+    cutum::UBlockRegistry dual_registry(nullptr, dual_definitions);
+
+    cutum::UBlockWorld ocean_world;
+    ocean_world.SetFluidDefinitions(dual_definitions.get());
+    const glm::ivec3 kelp_pos(6, 10, 6);
+    ocean_world.SetBlock(kelp_pos + glm::ivec3(0, -1, 0), kStone);
+    for (const glm::ivec3 &offset :
+         {glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0), glm::ivec3(0, 0, -1),
+          glm::ivec3(0, 0, 1), glm::ivec3(0, 1, 0)})
+    {
+      const glm::ivec3 p = kelp_pos + offset;
+      ocean_world.SetBlock(p, kWaterOcean);
+      ocean_world.SetFluidState(p, cutum::FluidCellState::Source());
+    }
+    ocean_world.SetBlock(kelp_pos, kKelp);
+    ocean_world.SetFluidState(kelp_pos,
+                              cutum::FluidCellState::Source().WithKind(
+                                  cutum::FluidKind::Water));
+    const std::vector<cutum::GreedyQuad> ocean_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(ocean_world, glm::ivec3(0, 0, 0),
+                                             dual_registry);
+    int canon_quads = 0;
+    int ocean_quads_count = 0;
+    int kelp_cell_quads = 0;
+    for (const cutum::GreedyQuad &quad : ocean_quads)
+    {
+      if (quad.Id == kWaterCanon)
+      {
+        ++canon_quads;
+      }
+      if (quad.Id == kWaterOcean)
+      {
+        ++ocean_quads_count;
+      }
+      // Owning cell from (axis, slice, u, v): block i spans i-0.5..i+0.5.
+      glm::ivec3 cell(0, 0, 0);
+      cell[quad.axis] = quad.slice;
+      cell[(quad.axis + 1) % 3] = quad.u;
+      cell[(quad.axis + 2) % 3] = quad.v;
+      if (cell == kelp_pos && quad.Id != kKelp)
+      {
+        ++kelp_cell_quads;
+        std::cerr << "DBG kelp-quad axis=" << quad.axis
+                  << " sign=" << quad.faceSign << " slice=" << quad.slice
+                  << " u=" << quad.u << " v=" << quad.v
+                  << " id=" << static_cast<int>(quad.Id)
+                  << " packed=" << static_cast<int>(quad.FluidPacked)
+                  << " surf=" << static_cast<int>(quad.FluidSurface)
+                  << std::endl;
+      }
+    }
+    Expect(canon_quads == 0,
+           "no quads resolve to the canonical water id inside an ocean of "
+           "another water id");
+    Expect(ocean_quads_count >= 5,
+           "ocean water keeps its own surface faces");
+    Expect(kelp_cell_quads == 0,
+           "waterlogged kelp cell emits no fluid faces toward water "
+           "neighbors (cross neighbors must cull fluid-fluid)");
+  }
 
   cutum::UBlockWorld stacked_water_world;
   stacked_water_world.SetFluidDefinitions(decor_definitions.get());
@@ -355,6 +535,244 @@ int main()
   }
   Expect(stack_internal_top == 0,
          "stacked water hides internal horizontal face");
+
+  // R06 overlay: water|water across chunk seam with !drawable neighbor must not
+  // emit vertical walls (GetBlock=AIR but shellFluid remains).
+  {
+    cutum::UBlockWorld seam_world;
+    seam_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    seam_world.GetChunkManager().EnsureChunk(left_chunk);
+    seam_world.GetChunkManager().EnsureChunk(right_chunk);
+    // Edge cells on the shared X face (local x=15 left, x=0 right).
+    for (int y = 4; y < 8; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        const glm::ivec3 left_pos(15, y, z);
+        const glm::ivec3 right_pos(16, y, z);
+        seam_world.SetBlock(left_pos, kWater);
+        seam_world.SetFluidState(left_pos, cutum::FluidCellState::Source());
+        seam_world.SetBlock(right_pos, kWater);
+        seam_world.SetFluidState(right_pos, cutum::FluidCellState::Source());
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot overlay_snap = cutum::ChunkMeshSnapshot::Capture(
+        seam_world, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
+    Expect(overlay_snap.boundaryOverlay.active,
+           "overlay active when neighbors not drawable");
+    const std::vector<cutum::GreedyQuad> overlay_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(overlay_snap, registry);
+    int wall_faces = 0;
+    for (const cutum::GreedyQuad &quad : overlay_quads)
+    {
+      if (quad.Id == kWater && quad.axis == 0 && quad.faceSign > 0 &&
+          quad.slice == 15)
+      {
+        ++wall_faces;
+      }
+    }
+    Expect(wall_faces == 0,
+           "water|water + !drawable overlay hides vertical seam walls");
+  }
+
+  // R06 residual: deep seam + Source packs fluid=0 (Level/Kind unset).
+  {
+    cutum::UBlockWorld deep_world;
+    deep_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    deep_world.GetChunkManager().EnsureChunk(left_chunk);
+    deep_world.GetChunkManager().EnsureChunk(right_chunk);
+    for (int y = 1; y < 4; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        const glm::ivec3 left_pos(15, y, z);
+        const glm::ivec3 right_pos(16, y, z);
+        deep_world.SetBlock(left_pos, kWater);
+        deep_world.SetFluidState(left_pos, cutum::FluidCellState::Source());
+        deep_world.SetBlock(right_pos, kWater);
+        deep_world.SetFluidState(right_pos, cutum::FluidCellState::Source());
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot deep_snap = cutum::ChunkMeshSnapshot::Capture(
+        deep_world, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
+    Expect(deep_snap.boundaryOverlay.active,
+           "deep seam overlay active when neighbors not drawable");
+    const std::vector<cutum::GreedyQuad> deep_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(deep_snap, registry);
+    int deep_walls = 0;
+    for (const cutum::GreedyQuad &quad : deep_quads)
+    {
+      if (quad.Id == kWater && quad.axis == 0 && quad.faceSign > 0 &&
+          quad.slice == 15)
+      {
+        ++deep_walls;
+      }
+    }
+    Expect(deep_walls == 0,
+           "deep water|water fluid=0 + !drawable hides vertical walls");
+  }
+
+  // R06 residual: water | waterlogged permeable under overlay AIR.
+  {
+    cutum::UBlockWorld wl_seam_world;
+    wl_seam_world.SetFluidDefinitions(decor_definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    wl_seam_world.GetChunkManager().EnsureChunk(left_chunk);
+    wl_seam_world.GetChunkManager().EnsureChunk(right_chunk);
+    for (int y = 4; y < 8; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        const glm::ivec3 left_pos(15, y, z);
+        const glm::ivec3 right_pos(16, y, z);
+        wl_seam_world.SetBlock(left_pos, kWater);
+        wl_seam_world.SetFluidState(left_pos,
+                                    cutum::FluidCellState::Source());
+        wl_seam_world.SetBlock(right_pos, kTallGrass);
+        wl_seam_world.SetFluidState(right_pos,
+                                    cutum::FluidCellState::Flowing(2));
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot wl_snap = cutum::ChunkMeshSnapshot::Capture(
+        wl_seam_world, left_chunk, /*sourceRevision=*/1, drawable_false,
+        nullptr);
+    // SoftDefer peer: no overlay Missing (SeamVisibility); Unlit shell.
+    Expect(wl_snap.GetNeighborLoadState(glm::ivec3(16, 5, 5)) !=
+               cutum::NeighborLoadState::Unknown,
+           "waterlogged SoftDefer seam not Unknown");
+    const std::vector<cutum::GreedyQuad> wl_seam_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(wl_snap, decor_registry);
+    (void)wl_seam_quads;
+  }
+
+  // SoftDefer neighbor: solid emits toward Unlit (not Unknown hide).
+  {
+    cutum::UBlockWorld solid_seam;
+    solid_seam.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    solid_seam.GetChunkManager().EnsureChunk(left_chunk);
+    solid_seam.GetChunkManager().EnsureChunk(right_chunk);
+    const cutum::BlockId kStone = 8;
+    for (int y = 4; y < 8; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        solid_seam.SetBlock(glm::ivec3(15, y, z), kStone);
+        solid_seam.SetBlock(glm::ivec3(16, y, z), kWater);
+        solid_seam.SetFluidState(glm::ivec3(16, y, z),
+                                 cutum::FluidCellState::Source());
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot solid_snap = cutum::ChunkMeshSnapshot::Capture(
+        solid_seam, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
+    Expect(!solid_snap.boundaryOverlay.active ||
+               (solid_snap.boundaryOverlay.missingNeighborFaces &
+                static_cast<uint8_t>(1u << 1)) == 0,
+           "SoftDefer +X peer does not set overlay Missing");
+    Expect(solid_snap.GetNeighborLoadState(glm::ivec3(16, 5, 5)) !=
+               cutum::NeighborLoadState::Unknown,
+           "SoftDefer solid seam load-state not Unknown");
+    const std::vector<cutum::GreedyQuad> solid_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(solid_snap, registry);
+    (void)solid_quads;
+  }
+
+  {
+    constexpr int kWorldTopY = 319;
+    cutum::UBlockWorld tall_world;
+    tall_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 top_chunk(0, 19, 0);
+    tall_world.GetChunkManager().EnsureChunk(top_chunk);
+    tall_world.SetBlock(glm::ivec3(8, kWorldTopY, 8), 8);
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    const cutum::ChunkMeshSnapshot top_snapshot =
+        cutum::ChunkMeshSnapshot::Capture(tall_world, top_chunk,
+                                          /*sourceRevision=*/1,
+                                          drawable_false, nullptr);
+    const std::vector<cutum::GreedyQuad> top_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(top_snapshot, registry);
+    bool top_face_at_world_limit = false;
+    for (const cutum::GreedyQuad &quad : top_quads)
+    {
+      if (quad.Id != 8 || quad.axis != 1 || quad.faceSign <= 0)
+      {
+        continue;
+      }
+      std::vector<cutum::GreedyMeshVertex> vertices;
+      std::vector<uint32_t> indices;
+      cutum::AppendGreedyQuad(quad, top_chunk, vertices, indices);
+      top_face_at_world_limit = std::any_of(
+          vertices.begin(), vertices.end(),
+          [](const cutum::GreedyMeshVertex &vertex)
+          { return vertex.py == 319.5f; });
+      if (top_face_at_world_limit)
+      {
+        break;
+      }
+    }
+    Expect(top_face_at_world_limit,
+           "mesher places the top block face at world y=319");
+  }
+
+  {
+    constexpr int kWorldBottomY = -64;
+    cutum::UBlockWorld deep_world;
+    deep_world.SetVerticalProfile(
+        cutum::WorldVerticalProfile(kWorldBottomY, 319, 63, kWorldBottomY));
+    deep_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 bottom_chunk(0, -4, 0);
+    deep_world.GetChunkManager().EnsureChunk(bottom_chunk);
+    deep_world.SetBlock(glm::ivec3(8, kWorldBottomY, 8), 8);
+    const cutum::ChunkMeshSnapshot bottom_snapshot =
+        cutum::ChunkMeshSnapshot::Capture(deep_world, bottom_chunk,
+                                          /*sourceRevision=*/1);
+    const std::vector<cutum::GreedyQuad> bottom_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(bottom_snapshot, registry);
+    bool bottom_face_at_world_limit = false;
+    for (const cutum::GreedyQuad &quad : bottom_quads)
+    {
+      if (quad.Id != 8 || quad.axis != 1 || quad.faceSign >= 0)
+      {
+        continue;
+      }
+      std::vector<cutum::GreedyMeshVertex> vertices;
+      std::vector<uint32_t> indices;
+      cutum::AppendGreedyQuad(quad, bottom_chunk, vertices, indices);
+      bottom_face_at_world_limit = std::any_of(
+          vertices.begin(), vertices.end(),
+          [](const cutum::GreedyMeshVertex &vertex)
+          { return vertex.py == -64.5f; });
+      if (bottom_face_at_world_limit)
+      {
+        break;
+      }
+    }
+    Expect(bottom_face_at_world_limit,
+           "mesher places the bottom block face at world y=-64");
+
+    cutum::UBlockWorld interior_negative_world;
+    interior_negative_world.SetVerticalProfile(
+        cutum::WorldVerticalProfile(kWorldBottomY, 319, 63, kWorldBottomY));
+    const glm::ivec3 interior_negative_chunk(0, -3, 0);
+    interior_negative_world.GetChunkManager().EnsureChunk(interior_negative_chunk);
+    const cutum::ChunkMeshSnapshot interior_snapshot =
+        cutum::ChunkMeshSnapshot::Capture(interior_negative_world,
+                                          interior_negative_chunk, 2);
+    Expect(interior_snapshot.GetNeighborLoadState(
+               interior_snapshot.ChunkOrigin() + glm::ivec3(0, -1, 0)) ==
+               cutum::NeighborLoadState::Unknown,
+           "unloaded negative slice above world floor remains unknown");
+  }
 
   std::cout << "fluid_mesh_faces_test: OK" << std::endl;
   return 0;

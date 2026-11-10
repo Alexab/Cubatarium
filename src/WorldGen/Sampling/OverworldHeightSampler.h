@@ -54,7 +54,8 @@ class UOverworldHeightSampler
 {
 public:
   UOverworldHeightSampler(uint32_t Seed, int SeaLevel, int MaxHeight,
-                          HeightPreset preset, float terrainRoughness = 1.0f);
+                          HeightPreset preset, float terrainRoughness = 1.0f,
+                          int minHeight = 0);
 
   int SurfaceYAt(int x, int z) const;
   int CoarseSurfaceYAt(int x, int z) const;
@@ -67,6 +68,7 @@ private:
   uint32_t Seed;
   int SeaLevel;
   int MaxHeight;
+  int MinHeight;
   HeightSampleParams Params;
   HeightPreset Preset;
   float TerrainRoughness{1.0f};

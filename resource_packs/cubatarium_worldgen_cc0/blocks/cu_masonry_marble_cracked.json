@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_marble_cracked",
+  "id": 1563,
+  "displayName": "Masonry Marble Cracked",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_marble_cracked",
+    "cu_masonry_marble_cracked",
+    "cu_masonry_marble_cracked",
+    "cu_masonry_marble_cracked",
+    "cu_masonry_marble_cracked",
+    "cu_masonry_marble_cracked"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "marble",
+    "variant": "cracked"
+  }
+}

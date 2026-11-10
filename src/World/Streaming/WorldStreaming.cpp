@@ -1,14 +1,52 @@
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Diagnostics/JobStageTrace.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnJobGraph.h"
+#include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/FocusIngressPolicy.h"
+#include "World/Streaming/UnderfeetTelemetryPolicy.h"
+#include "World/Streaming/FrameStreamingBudget.h"
+#include "World/Streaming/InputFirstPolicy.h"
+#include "World/Streaming/IdleRecoveryPolicy.h"
+#include "World/Streaming/SeedDecisionPolicy.h"
 #include "World/Streaming/MemoryBudgetController.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Math/GridMath.h"
+#include "World/Raycast/BlockRaycast.h"
+#include "World/View/ViewRayMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
+#include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Diagnostics/DrawOracle.h"
+#include "World/Diagnostics/Profile.h"
+#include "World/Diagnostics/ScopedPhase.h"
+#include "World/Core/RuntimeTuning.h"
+#include "World/Streaming/StreamerAmortizePolicy.h"
+#include "Core/FrameDeadline.h"
+#include "Core/FrameStageWatchdog.h"
+#include "Core/Jobs/PipelineAdmission.h"
+#include "World/Lighting/LightingSeedBackendFactory.h"
+#include "Render/Backend/RenderBackendCaps.h"
+#include "Render/Engine/DistanceFog.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/FogPullInPolicy.h"
+#include "World/Streaming/FrontierStagePolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Streaming/OceanFrontierPolicy.h"
+#include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/StreamIngressPolicy.h"
+#include "World/Streaming/MeshWorkAdmission.h"
+#include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/RingReadinessBudget.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Render/Camera/Camera.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
@@ -24,10 +62,17 @@
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "World/Core/RuntimeTuning.h"
+#include "App/Platform/Log.h"
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <climits>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
+#include <limits>
+#include <string>
+#include <vector>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -52,6 +97,71 @@ constexpr int kRelightBacklogStuckWindowMs = 1500;
 constexpr int kRelightBgClampCooldownMs = 400;
 constexpr int kAdaptiveRdMin = 3;
 constexpr double kAdaptiveRdHysteresisSec = 2.5;
+// M587 still showed a 3<->4 fog-RD oscillation after the 0.9 s grace: the
+// facing-miss samples on this route commonly clear briefly, then recur. Hold
+// the pulled horizon until readiness has stayed clear long enough to avoid
+// exposing those short gaps as a moving fog boundary.
+constexpr double kFogDebtClearGraceSec = 4.0;
+
+bool IsWorldColumnSourceTraceEnabled()
+{
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+    return value && value[0] == '1';
+  }();
+  return enabled;
+}
+
+bool IsStreamerUnloadTraceEnabled()
+{
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_STREAMER_UNLOAD_TRACE");
+    return value && value[0] == '1';
+  }();
+  return enabled;
+}
+
+void LogWorldColumnSource(const char *source, const char *outcome,
+                          glm::ivec3 ground, const std::string &details)
+{
+  if (!IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      std::string("source=") + source + " outcome=" + outcome +
+      " coord=(" + std::to_string(ground.x) + ",0," +
+      std::to_string(ground.z) + ") " + details;
+  CubatariumLogInfo("WorldColumnSource", message);
+}
+
+void LogWorldColumnUnload(const char *outcome, glm::ivec3 ground,
+                          const std::string &details)
+{
+  if (!IsStreamerUnloadTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      std::string("source=unload_column outcome=") + outcome +
+      " coord=(" + std::to_string(ground.x) + ",0," +
+      std::to_string(ground.z) + ") " + details;
+  CubatariumLogInfo("WorldColumnSource", message);
+}
+
+/// SoftDefer / rim FirstMesh repair anchor: nearest miss witness when present.
+/// Manual 191432 exit stuck miss_horiz=2–3 while tickets stayed on focus_xz.
+inline glm::ivec2 RepairColumnFromMissWitness(const PhysicsTelemetry &phys,
+                                              glm::ivec2 focus_xz)
+{
+  if (phys.FocusMissingMesh != 0 && phys.MissHoriz > 0)
+  {
+    return glm::ivec2(phys.MissCx, phys.MissCz);
+  }
+  return focus_xz;
+}
 
 struct KeepPrewarmGate
 {
@@ -100,8 +210,9 @@ float QueryTerrainSurfaceWorldY(UWorld &world, const glm::vec3 &eye)
   const glm::ivec3 block = WorldPosToBlock(eye);
   const int surface_block_y = FindTopSolidSurfaceY(
       world.GetBlockWorld(), registry, block.x, block.z,
-      world.GetProceduralSettings().MaxHeight);
-  if (surface_block_y < 0)
+      world.GetProceduralSettings().MaxHeight,
+      world.GetProceduralSettings().MinHeight);
+  if (surface_block_y < world.GetProceduralSettings().MinHeight)
   {
     return 0.0f;
   }
@@ -123,8 +234,9 @@ void UWorldStreaming::EnsureStreamer(UBlockWorld &blockWorld,
 {
   if (!Streamer)
   {
-    Streamer = std::make_unique<UChunkStreamer>(blockWorld, registry, seed, 0,
-                                                settings.MaxHeight);
+    Streamer = std::make_unique<UChunkStreamer>(
+        blockWorld, registry, seed, settings.MinHeight, settings.MaxHeight,
+        settings.MinHeight);
     Streamer->SetRingGateEnabled(settings.RingGateEnabled);
   }
 }
@@ -152,6 +264,19 @@ void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
     return;
   }
 
+  // The candidate tracker is diagnostic session state, not scheduler state.
+  RefreshProbe.near_focus_tracked_witness_valid = false;
+  RefreshProbe.near_focus_tracked_witness_coord = glm::ivec3(-1);
+  RefreshProbe.near_focus_tracked_witness_age_frames = 0;
+  RefreshProbe.near_focus_tracked_witness_sample_cd = 0;
+  RefreshProbe.near_focus_tracked_witness_entered_fog = false;
+  RefreshProbe.near_focus_tracked_witness_last_distance = -1.0f;
+  RefreshProbe.near_focus_tracked_witness_resolved_before_fog_total = 0;
+  RefreshProbe.near_focus_tracked_witness_entered_fog_unready_total = 0;
+  RefreshProbe.near_focus_tracked_witness_resolved_after_fog_total = 0;
+  RefreshProbe.near_focus_tracked_witness_exited_fog_unready_total = 0;
+  RefreshProbe.near_focus_tracked_witness_terminal_coords.clear();
+
   if (auto user = world.GetCurrentUser())
   {
     world.ApplyUserToCamera(user);
@@ -161,6 +286,24 @@ void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
     world.ApplySpawnToCamera();
   }
   world.ConsumeSpawnAreaPreparedByCooperativeLoad();
+  // Era20: thinner enter gate (r≤2) — longer burst so SpawnRingCatchUp paints
+  // the rest of RD without a multi-second enter hitch.
+  world.BeginEnterGameMeshBurst(18);
+  // Era29 P3: pin Capture witness at spawn so first InGame frames don't retarget
+  // SoftDefer empty thrash (manual 091332 ENTER retarget_d=15).
+  {
+    const glm::ivec3 focus =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    SoftDeferCapturePinValid = true;
+    SoftDeferCapturePinCx = focus.x;
+    SoftDeferCapturePinCz = focus.z;
+    SoftDeferCapturePinCy = focus.y;
+    SoftDeferCapturePinHoriz = 0;
+    SoftDeferCapturePinAge = 0;
+    SoftDeferCapturePinDrawableRun = 0;
+    SoftDeferCaptureLastAgedKickAge = -1;
+    SoftDeferCapturePinMaxAge = EnterSpawnCapturePinFrames();
+  }
 }
 
 void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
@@ -178,12 +321,27 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
     ChunkPopulator.reset();
     return;
   }
-  // Cancel/join old pool before replacing the populator it references.
+  // Cancel old pool before replacing the populator it references. Never join
+  // forever: in-flight populate/seal can outlive a short idle wait and used to
+  // hang SaveMetadata ("Saving world...") via EnsureStreamingActiveAfter…
   if (ChunkScheduler)
   {
-    ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0));
-    (void)ChunkScheduler->WaitForWorkersIdle(std::chrono::milliseconds(500));
-    ChunkScheduler.reset();
+    ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0),
+                                     "scheduler_reinitialized");
+    if (ChunkScheduler->WaitForWorkersIdle(std::chrono::milliseconds(500)))
+    {
+      ChunkScheduler.reset();
+      ChunkPopulator.reset();
+    }
+    else
+    {
+      CubatariumLogInfo(
+          "Streaming",
+          "InitChunkScheduler: workers busy after cancel — abandon old pool");
+      ChunkScheduler->ShutdownForProcessExit(std::chrono::milliseconds(0));
+      (void)ChunkScheduler.release();
+      (void)ChunkPopulator.release();
+    }
   }
   ChunkPopulator = std::make_unique<UPipelineChunkPopulator>(
       *world.BlockRegistry, world.ObjectLibrary, world.WorldgenOwnerPackId);
@@ -193,6 +351,18 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
       [this, &world](glm::ivec3 coord, int min_y, int max_y, bool fluid_sealed)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
+        // A newly committed chunk changes the padded block/light inputs of
+        // already drawable meshes across all 26 neighboring slices. The
+        // terrain dirty band below only covers a horizontal column band and
+        // can intentionally skip far commits; preserve an explicit bounded
+        // dependency debt for every committed input chunk.
+        if (world.MeshService)
+        {
+          const std::vector<glm::ivec3> changed_input_chunks{coord};
+          world.MeshService->QueueMeshDependencyInvalidations(
+              world.BlockWorld, changed_input_chunks,
+              "procedural_chunk_commit");
+        }
         if (Streamer)
         {
           Streamer->NotifyChunkCommitted(coord);
@@ -207,31 +377,54 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         DeferredPhysicsSeedQueue.push_back(coord);
         if (settings.FillWater)
         {
-          // V_fluid: IntraChunkSeal once (populate XOR commit); LiveShoreAir
-          // deferred (open ocean comes from FillFluidColumn, not ShoreAir —
-          // sync ShoreAir here only burned commit_seal_ms without fixing strips).
+          // V_fluid: IntraChunkSeal once (populate XOR deferred drain). Never
+          // sync IntraChunk on commit — single seal was 100–780ms of
+          // commit_seal_ms and dominated hole-frame stream spikes (CB).
           if (!fluid_sealed)
           {
-            const auto seal_t0 = std::chrono::high_resolution_clock::now();
-            SealFluidShoreOnChunkCommitted(
-                world.BlockWorld, *world.BlockRegistry, settings,
-                world.WorldgenOwnerPackId, coord, /*include_shore_air=*/false);
-            world.PhysicsTelemetryData.CommitSealMs +=
-                std::chrono::duration<double, std::milli>(
-                    std::chrono::high_resolution_clock::now() - seal_t0)
-                    .count();
+            DeferredIntraChunkSealNeeded.insert(coord);
           }
-          DeferredShoreSealQueue.push_back(coord);
+          if (DeferredShoreSealQueued.insert(ground).second)
+          {
+            DeferredShoreSealQueue.push_back(coord);
+          }
+          // W5.1 (water audit A-1): worker sealing runs in a per-chunk
+          // scratch world, so a border pocket could not see this chunk's
+          // water and stayed unfilled; the neighbor's own one-shot seal
+          // drained before this chunk existed. Re-run the neighbors' shore
+          // seal now that both sides are committed — but ONLY neighbors
+          // whose own commit-time seal already drained (>= LitReady): a
+          // still-Lighting neighbor has its own seal queued and will run it
+          // with this chunk present. During bulk world load every neighbor
+          // is freshly committed, so this keeps the queue at ~1 entry per
+          // commit instead of ~5 (load-bar oscillation, user report).
+          for (int axis = 0; axis < 2; ++axis)
+          {
+            for (int sign = -1; sign <= 1; sign += 2)
+            {
+              glm::ivec3 nb = coord;
+              nb[axis == 0 ? 0 : 2] += sign;
+              const glm::ivec3 nb_ground(nb.x, 0, nb.z);
+              if (world.GetColumnEmergeState(nb_ground) >=
+                  ColumnEmergeState::LitReady &&
+                  DeferredShoreSealQueued.insert(nb_ground).second)
+              {
+                DeferredShoreSealQueue.push_back(nb);
+              }
+            }
+          }
         }
         world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
         // Mesh gate band = occupied ∪ sea (not 0..MaxHeight — that flooded Dirty
         // and remeshed unlit slices). MarkRelit remeshes lit ∪ pending ∪ sea.
-        int dirty_min = std::max(0, min_y);
+        int dirty_min = std::max(settings.MinHeight, min_y);
         int dirty_max = std::min(settings.MaxHeight, max_y);
         if (settings.FillWater)
         {
           dirty_min =
-              std::min(dirty_min, std::max(0, settings.SeaLevel - CHUNK_SIZE));
+              std::min(dirty_min,
+                       std::max(settings.MinHeight,
+                                settings.SeaLevel - CHUNK_SIZE));
           dirty_max = std::max(
               dirty_max,
               std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
@@ -240,16 +433,20 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         {
           const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
           dirty_min =
-              std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
+              std::min(dirty_min,
+                       std::max(settings.MinHeight,
+                                focus_block.y - CHUNK_SIZE));
           dirty_max = std::max(
               dirty_max,
               std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
         }
         if (dirty_max < dirty_min)
         {
-          dirty_min = 0;
+          dirty_min = settings.MinHeight;
           dirty_max = settings.MaxHeight;
         }
+        // Spawn r=4 stays voxels-only until first relight; MeshWarmup hinterland
+        // still drains via MarkAllDirtyFromWorld.
         if (!world.IsLightingRelightDeferred())
         {
           // Relight Y: sea∪occupied∪player up to sky (not 0..floor). Full
@@ -259,8 +456,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           // relight time and starved focus throughput.
           const int relight_min =
               settings.FillWater
-                  ? std::max(0, std::min(dirty_min,
-                                         settings.SeaLevel - CHUNK_SIZE * 2))
+                  ? std::max(settings.MinHeight,
+                             std::min(dirty_min,
+                                      settings.SeaLevel - CHUNK_SIZE * 2))
                   : dirty_min;
           // Near focus: mesh gate band + one slice pad for skylight ingress.
           const int relight_max =
@@ -273,68 +471,226 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               std::max(std::abs(coord.x - focus_ground.x),
                        std::abs(coord.z - focus_ground.z));
           const bool underfeet = horiz <= 1;
-          // Sync seed only underfeet (near_focus sync spiked autofly wall).
-          // V3: neighborhood-ready near_focus columns get priority FIFO seed
-          // (DrainRelightQueues → async). Direct EnqueueAsync+FIFO duplicated
-          // jobs and left pending plateaus with relight_drain≈0.
-          const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
-          const bool seed_skylight_now = underfeet && neighborhood_ok;
-          const bool relight_priority =
-              (near_focus && LastPendingLightFocus <= 20) ||
-              (near_focus && neighborhood_ok);
-          if (seed_skylight_now)
-          {
-            world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
-                                       ground.z * CHUNK_SIZE, relight_min,
-                                       relight_max,
-                                       /*priority_mesh=*/true,
-                                       /*include_skylight=*/true,
-                                       /*include_block_light=*/false);
-          }
-          else
-          {
-            world.Persistence->EnqueueTerrainColumnRelight(
-                ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
-                relight_min, relight_max);
-            world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
-          }
+          // LitRing B3: commit-time seed admits LitDrawable ring (not only
+          // streamer focus radius) so cold enter avoids full async backlog.
+          const bool lit_ring = horiz <= kVisualStageLitDrawableHoriz;
           const bool admit_far_dirty =
               LastPressureCaps.level == StreamingPressureLevel::Green;
-          if (seed_skylight_now)
+          // Flat / no lit-gate: mesh immediately (no PendingLight contract).
+          if (!world.RequiresLightingLitGate())
           {
             world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-            world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, dirty_min, dirty_max,
-                /*include_horizontal_neighbors=*/true);
-          }
-          else if (near_focus)
-          {
-            // V2a: do not MarkDirty preview while async relight is pending —
-            // holes until LitReady/MarkRelit (RenderReady contract).
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
-          }
-          else if (admit_far_dirty)
-          {
-            world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-                ground, dirty_min, dirty_max, false);
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+            if (near_focus)
+            {
+              world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                  ground, dirty_min, dirty_max,
+                  /*include_horizontal_neighbors=*/true,
+                  MeshRevisionBumpReason::PriorityWorldStreamingCommit);
+              auto &exec = GetColumnFlowExecutor();
+              ColumnWorkItem fm{};
+              fm.column = glm::ivec2(ground.x, ground.z);
+              fm.kind = ColumnWorkKind::FirstMesh;
+              fm.priority = 105;
+              fm.cy = FloorDiv(world.GetPreferredLoadFocusBlock().y, CHUNK_SIZE);
+              exec.Enqueue(fm);
+            }
+            else if (admit_far_dirty)
+            {
+              world.MeshService->MarkTerrainChunkMeshDirtySeamed(
+                  ground, dirty_min, dirty_max, false,
+                  MeshRevisionBumpReason::WorldStreamingColumnCommit);
+            }
           }
           else
           {
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+            // Full lighting: SeedDecision (V3) — cruise near-focus may try
+            // budgeted sync seed; fail → PendingLight (never silent LitReady).
+            const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
+            const double commit_frame_ms = world.GetLastMovementFrameMs();
+            const bool moving_cruise =
+                world.LastMovementSpeed >=
+                settings.MovementPrefetchThreshold;
+            const SeedDecision seed_decision =
+                EvaluateSeedDecision(SeedDecisionInput{
+                    underfeet, near_focus || lit_ring, neighborhood_ok,
+                    moving_cruise, commit_frame_ms,
+                    world.PhysicsTelemetryData.VisualHoles,
+                    LastPendingLightFocus});
+            const bool relight_priority = seed_decision.priority_fifo;
+            auto enqueue_pending_light = [&]() {
+              const int fifo_n =
+                  world.Persistence
+                      ? world.Persistence->GetPendingTerrainColumnRelightCount()
+                      : 0;
+              const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+              const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
+              // PendingLightBeforeMesh gate must match the async relight range.
+              // If relight_min/max is wider than dirty_min/max, SoftDefer can
+              // keep finalize_pending_gate=false for too long → pending stuck.
+              const int enqueue_relight_min =
+                  std::max(settings.MinHeight,
+                           dirty_min - 1 /* air-neighbor pad */);
+              const int enqueue_relight_max =
+                  std::min(settings.MaxHeight, dirty_max + 1 /* air-neighbor pad */);
+              if (world.Persistence &&
+                  ShouldDeferFarRelightEnqueueOnFifoPressure(
+                      horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap,
+                      fifo_frac))
+              {
+                world.Persistence->DeferFarRelightColumn(
+                    glm::ivec2(ground.x, ground.z), enqueue_relight_min,
+                    enqueue_relight_max, relight_priority,
+                    "stream_load_fifo_pressure");
+                world.TryNotePendingLightBeforeMesh(
+                    ground, enqueue_relight_min, enqueue_relight_max,
+                    __FUNCTION__);
+                ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+                return;
+              }
+              world.Persistence->EnqueueTerrainColumnRelight(
+                  ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
+                  enqueue_relight_min, enqueue_relight_max,
+                  "stream_column_commit", &world);
+              world.TryNotePendingLightBeforeMesh(
+                  ground, enqueue_relight_min, enqueue_relight_max,
+                  __FUNCTION__);
+              if (near_focus)
+              {
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+              }
+              else if (admit_far_dirty)
+              {
+                world.MeshService->MarkTerrainChunkMeshDirtySeamed(
+                    ground, dirty_min, dirty_max, false,
+                    MeshRevisionBumpReason::WorldStreamingColumnCommit);
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+              }
+              else
+              {
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+              }
+            };
+            auto enqueue_frontier_stage_tickets =
+                [&](bool lit_ready_now, bool pending_light_now)
+            {
+              if (!near_focus)
+              {
+                return;
+              }
+              auto &exec = GetColumnFlowExecutor();
+              const glm::ivec2 col(ground.x, ground.z);
+              const bool any_drawable = [&]()
+              {
+                const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
+                const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
+                for (int cy = cy0; cy <= cy1; ++cy)
+                {
+                  if (world.MeshService->HasDrawableGreedyMesh(
+                          glm::ivec3(ground.x, cy, ground.z)))
+                  {
+                    return true;
+                  }
+                }
+                return false;
+              }();
+              // SOTA: one ticket per column. Light debt → Relight; else FirstMesh.
+              if (FrontierColumnNeedsLightTicket(near_focus, pending_light_now,
+                                                 any_drawable,
+                                                 /*fully_dark=*/!any_drawable))
+              {
+                ColumnWorkItem relight{};
+                relight.column = col;
+                relight.kind = ColumnWorkKind::RelightThenMesh;
+                relight.priority = 95;
+                relight.scan_full_focus = false;
+                relight.cy = kColumnWorkWholeRemeshBandCy;
+                exec.Enqueue(relight);
+                if (world.PhysicsTelemetryData.DarkFaceVoidNearN > 200 ||
+                    world.PhysicsTelemetryData.FocusMissingMesh != 0)
+                {
+                  world.EnqueueVoidDarkColumnRelightNote(col);
+                }
+                return;
+              }
+              if (FrontierColumnNeedsFirstMeshAfterLit(
+                      near_focus, lit_ready_now || pending_light_now,
+                      any_drawable, /*solid=*/true))
+              {
+                const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
+                const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
+                const int focus_cy =
+                    FloorDiv(world.GetPreferredLoadFocusBlock().y, CHUNK_SIZE);
+                const int pin_cy =
+                    std::clamp(focus_cy, std::min(cy0, cy1), std::max(cy0, cy1));
+                ColumnWorkItem fm{};
+                fm.column = col;
+                fm.kind = ColumnWorkKind::FirstMesh;
+                fm.priority = 105;
+                fm.scan_full_focus = world.PhysicsTelemetryData.FocusMissingMesh != 0;
+                fm.cy = pin_cy;
+                exec.Enqueue(fm);
+              }
+            };
+            if (seed_decision.try_sync_seed)
+            {
+              const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
+              auto backend = SelectLightingSeedBackend(world, relight_min,
+                                                       relight_max, caps);
+              LightingSeedResult seed =
+                  backend->TrySeedColumnAtCommit(ground,
+                                                 seed_decision.budget_ms);
+              if (seed.applied)
+              {
+                ++world.PhysicsTelemetryData.SeedAtCommitN;
+                world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+                world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                    ground, dirty_min, dirty_max,
+                    /*include_horizontal_neighbors=*/true,
+                    MeshRevisionBumpReason::PriorityWorldStreamingCommit);
+                enqueue_frontier_stage_tickets(/*lit_ready_now=*/true,
+                                              /*pending_light_now=*/false);
+              }
+              else
+              {
+                enqueue_pending_light();
+                enqueue_frontier_stage_tickets(/*lit_ready_now=*/false,
+                                              /*pending_light_now=*/true);
+              }
+            }
+            else
+            {
+              enqueue_pending_light();
+              enqueue_frontier_stage_tickets(/*lit_ready_now=*/false,
+                                            /*pending_light_now=*/true);
+            }
           }
         }
         else if (near_focus)
         {
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, dirty_min, dirty_max, true);
+              ground, dirty_min, dirty_max, true,
+              MeshRevisionBumpReason::PriorityWorldStreamingCommit);
+          // Flat/no-relight-deferred path: still pin FirstMesh for near commit.
+          {
+            auto &exec = GetColumnFlowExecutor();
+            const int focus_cy =
+                FloorDiv(world.GetPreferredLoadFocusBlock().y, CHUNK_SIZE);
+            ColumnWorkItem fm{};
+            fm.column = glm::ivec2(ground.x, ground.z);
+            fm.kind = ColumnWorkKind::FirstMesh;
+            fm.priority = 105;
+            fm.cy = focus_cy;
+            exec.Enqueue(fm);
+          }
         }
         else if (LastPressureCaps.level == StreamingPressureLevel::Green)
         {
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-              ground, dirty_min, dirty_max, false);
+              ground, dirty_min, dirty_max, false,
+              MeshRevisionBumpReason::WorldStreamingLitFinalize);
         }
         else
         {
@@ -344,54 +700,2399 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
   world.Persistence->EnsureChunkIoInitialized();
 }
 
-void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
+namespace
 {
+bool ColumnBandHasPresentableMesh(const UWorld &world, glm::ivec2 under_xz,
+                                  int band_min_y, int band_max_y)
+{
+  const UWorldMeshService &mesh = world.GetMeshService();
+  const auto &settings = world.GetProceduralSettings();
+  const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+  const int max_cy = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+  const int cy0 = std::max(min_cy, FloorDiv(band_min_y, CHUNK_SIZE));
+  const int cy1 = std::min(max_cy, FloorDiv(band_max_y, CHUNK_SIZE));
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(under_xz.x, cy, under_xz.y);
+    if (mesh.HasMeshSatisfyingColumnReady(coord) ||
+        mesh.HasDrawableGreedyMesh(coord) ||
+        mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord) ||
+        mesh.HasInflightMeshBuild(coord))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+} // namespace
+
+void UWorldStreaming::RefreshStreamingPressure(
+    UWorld &world, std::chrono::high_resolution_clock::time_point stream_t0,
+    double stream_budget_ms)
+{
+  CUBA_ZONE("RefreshStreamingPressure");
+  const auto refresh_t0 = std::chrono::high_resolution_clock::now();
+  auto lap_ms = [&](const std::chrono::high_resolution_clock::time_point &t0)
+  {
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - t0)
+        .count();
+  };
+  auto &pt = world.GetPhysicsTelemetryMutable();
+  pt.PrepRefreshMissMs = 0.0;
+  pt.PrepRefreshMissRadiusQueryMs = 0.0;
+  pt.PrepRefreshScreenRayProbeMs = 0.0;
+  pt.PrepRefreshFindNearestMs = 0.0;
+  pt.PrepRefreshMissOtherMs = 0.0;
+  pt.PrepRefreshPendingMs = 0.0;
+  pt.PrepRefreshStickyMs = 0.0;
+  pt.PrepRefreshUnfinishedMs = 0.0;
+  pt.PrepRefreshVbMs = 0.0;
+  pt.PrepRefreshDarkfaceMs = 0.0;
+  pt.PrepRefreshFacingMs = 0.0;
+  pt.PrepRefreshUnderfeetMs = 0.0;
+  pt.PrepRefreshDirtyMs = 0.0;
+  pt.PrepRefreshPressureEvalMs = 0.0;
+  pt.PrepRefreshUnderfeetProbeMs = 0.0;
+  pt.PrepRefreshRingResyncMs = 0.0;
+  pt.PrepRefreshVbRawMs = 0.0;
+  pt.PrepRefreshGapMs = 0.0;
+  pt.PrepRefreshSelfMs = 0.0;
+  pt.PrepRefreshCameraCompleteMs = 0.0;
+  pt.PrepRefreshBodyMs = 0.0;
+  pt.PrepRefreshSetupMs = 0.0;
+  pt.PrepRefreshSetupFocusMs = 0.0;
+  pt.PrepRefreshSetupRingMs = 0.0;
+  pt.PrepRefreshSetupCaptureMs = 0.0;
+  pt.PrepRefreshSetupProbeMs = 0.0;
+  pt.PrepRefreshInputFillMs = 0.0;
+  pt.PrepRefreshDietFlagsMs = 0.0;
+  // PrepRefreshHasMissingMs latched in UpdateStreaming (before Refresh).
+  pt.RimWitnessLatched = 0;
+  pt.FocusDirtyReconcileDelta = 0;
+  pt.PrepRefreshDeadlineHit = 0;
+
+  // Phase5: micro-time setup getters — PrepRefreshSetupMs≈64 with ~35 LOC was
+  // absurd; isolate which call (or clock/preempt) owns the wall.
+  // Cheap locals first; setup_t0 only wraps the suspicious getters.
+  const bool stream_simple = URuntimeTuning::Get().StreamSimple;
+  auto &rp = RefreshProbe;
+
+  const auto setup_t0 = std::chrono::high_resolution_clock::now();
+  auto setup_lap = setup_t0;
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+  pt.PrepRefreshSetupFocusMs = lap_ms(setup_lap);
+  setup_lap = std::chrono::high_resolution_clock::now();
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
-  const bool missing_near =
-      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, focus_radius);
+  const UWorld::FocusRingVisualSample &ring_sample_prev =
+      world.GetFocusRingVisualSample();
+  pt.PrepRefreshSetupRingMs = lap_ms(setup_lap);
+  setup_lap = std::chrono::high_resolution_clock::now();
+  const int last_unfinished_hint =
+      ring_sample_prev.valid ? ring_sample_prev.unfinished : 0;
+  const float movement_speed = world.GetLastMovementSpeed();
+  const int pending_capture_n = world.GetMeshService().GetPendingCaptureCount();
+  pt.PrepRefreshSetupCaptureMs = lap_ms(setup_lap);
+  setup_lap = std::chrono::high_resolution_clock::now();
+  const bool capture_backlog = pending_capture_n >= 8;
+  const bool capture_calm = pending_capture_n < 4;
+  const bool moving_for_telemetry =
+      movement_speed >
+      world.GetProceduralSettings().MovementPrefetchThreshold;
+  // Phase5 S2: compute enter/spawn probes once — each Needs* was a full ring walk.
+  const bool enter_lit = world.IsEnterLitGateActive();
+  const bool enter_mesh_warmup = world.NeedsEnterGameMeshWarmup();
+  const bool spawn_catch_up = world.NeedsSpawnRingCatchUp();
+  const bool enter_miss_probe =
+      ShouldUseEnterSpawnMissProbe(enter_lit, enter_mesh_warmup, spawn_catch_up,
+                                   moving_for_telemetry);
+  const int pending_pl_radius =
+      (enter_lit || enter_mesh_warmup || spawn_catch_up)
+          ? EnterVisualWorkRadiusChunks()
+          : focus_radius;
+  const int miss_probe_radius =
+      enter_miss_probe ? EnterVisualWorkRadiusChunks() : focus_radius;
+  // I9-B2: throttle miss probe on cruise — hold positive 8 frames.
+  // Perf-root P3: state on RefreshProbe (was static); StreamSimple forces dense.
+  if (stream_simple)
+  {
+    rp.miss_probe_cd = 0;
+  }
+  pt.PrepRefreshSetupProbeMs = lap_ms(setup_lap);
+  pt.PrepRefreshSetupMs = lap_ms(setup_t0);
+  const auto miss_t0 = std::chrono::high_resolution_clock::now();
+  const bool pending_underfeet_early = world.IsPendingLightBeforeMesh(
+      glm::ivec2(focus_horiz.x, focus_horiz.z));
+  const int prev_miss_horiz = world.PhysicsTelemetryData.MissHoriz;
+  const bool rim_probe_throttle =
+      rp.last_missing_near && prev_miss_horiz >= 3 && !pending_underfeet_early &&
+      last_unfinished_hint <= 3;
+  bool missing_near = rp.last_missing_near;
+  bool missing_near_probe_result = false;
+  bool missing_near_probe_memo_hit = false;
+  glm::ivec3 missing_near_probe_coord{0};
+  struct MissingNearProbeWitnessState
+  {
+    int resident{-1};
+    int has_mesh{-1};
+    int drawable{-1};
+    int satisfying{-1};
+    int dirty{-1};
+    int build_in_flight{-1};
+    int pending_gpu_apply{-1};
+    int pending_gpu_queued{-1};
+    int soft_defer_held{-1};
+    int geometry_debt{-1};
+    int repairable_debt{-1};
+    int flow_ticket_valid{-1};
+    int flow_ticket_kind{-1};
+    int flow_ticket_priority{-1};
+    int column_job_stage{-1};
+    uint64_t incarnation{0};
+    uint64_t content_revision{0};
+    uint64_t light_revision{0};
+    uint64_t mesh_revision{0};
+    uint64_t inflight_source_revision{0};
+  } missing_near_probe_witness_state;
+  auto capture_missing_near_probe_witness_state =
+      [&](const glm::ivec3 &coord)
+  {
+    MissingNearProbeWitnessState state{};
+    const UChunk *chunk =
+        world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+    const UWorldMeshService &mesh = world.GetMeshService();
+    state.resident = chunk ? 1 : 0;
+    state.has_mesh = mesh.HasGreedyMesh(coord) ? 1 : 0;
+    state.drawable = mesh.HasDrawableGreedyMesh(coord) ? 1 : 0;
+    state.satisfying = mesh.HasMeshSatisfyingColumnReady(coord) ? 1 : 0;
+    state.dirty = mesh.IsChunkMeshDirty(coord) ? 1 : 0;
+    state.build_in_flight = mesh.HasInflightMeshBuild(coord) ? 1 : 0;
+    state.pending_gpu_apply = mesh.IsPendingGpuApply(coord) ? 1 : 0;
+    state.pending_gpu_queued = mesh.IsPendingGpuQueued(coord) ? 1 : 0;
+    state.soft_defer_held = mesh.IsSoftDeferHeld(coord) ? 1 : 0;
+    if (chunk)
+    {
+      const uint64_t incarnation = chunk->GetIncarnation();
+      state.incarnation = incarnation;
+      state.content_revision = chunk->GetContentRevision();
+      state.light_revision = chunk->GetLightFieldRevision();
+      state.mesh_revision = mesh.GetChunkMeshRevision(coord);
+      state.inflight_source_revision = mesh.GetInflightSourceRevision(coord);
+      state.geometry_debt =
+          mesh.HasGeometryPublicationDebt(coord, incarnation) ? 1 : 0;
+      state.repairable_debt =
+          mesh.HasScreenRayRepairableGeometryDebt(coord, incarnation) ? 1 : 0;
+    }
+    const glm::ivec2 column(coord.x, coord.z);
+    auto &flow = GetColumnFlowExecutor();
+    ColumnWorkItem ticket{};
+    const bool has_ticket = flow.Scheduler().GetLiveTicket(column, ticket);
+    state.flow_ticket_valid = has_ticket ? 1 : 0;
+    state.flow_ticket_kind = has_ticket ? static_cast<int>(ticket.kind) : -1;
+    state.flow_ticket_priority = has_ticket ? ticket.priority : -1;
+    state.column_job_stage = static_cast<int>(flow.GetColumnJobStage(column));
+    return state;
+  };
+  const bool run_miss_probe =
+      enter_miss_probe || rp.miss_probe_cd <= 0 ||
+      (rp.last_missing_near && !rim_probe_throttle) ||
+      (!moving_for_telemetry && !rim_probe_throttle);
+  if (run_miss_probe)
+  {
+    const auto miss_radius_query_t0 =
+        std::chrono::high_resolution_clock::now();
+    missing_near_probe_result =
+        world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_ground, miss_probe_radius,
+            &missing_near_probe_coord, &missing_near_probe_memo_hit);
+    missing_near = missing_near_probe_result;
+    pt.PrepRefreshMissRadiusQueryMs += lap_ms(miss_radius_query_t0);
+    if (missing_near_probe_result)
+    {
+      missing_near_probe_witness_state =
+          capture_missing_near_probe_witness_state(missing_near_probe_coord);
+    }
+    if ((moving_for_telemetry || rim_probe_throttle) && !enter_miss_probe)
+    {
+      rp.miss_probe_cd = missing_near ? 0 : 8;
+    }
+  }
+  else if (moving_for_telemetry || rim_probe_throttle)
+  {
+    --rp.miss_probe_cd;
+  }
+  if (missing_near)
+  {
+    rp.miss_positive_hold = 8;
+  }
+  else if (rp.miss_positive_hold > 0)
+  {
+    --rp.miss_positive_hold;
+    if (rp.miss_positive_hold > 0)
+    {
+      missing_near = rp.last_missing_near;
+    }
+  }
+  rp.last_missing_near = missing_near;
+  // Follow one exact raw miss across frames. The radius query usually selects
+  // the outer frontier; this probe answers whether that same chunk becomes
+  // render-ready before it reaches the configured fog horizon.
+  int tracked_witness_outcome_event = 0;
+  float tracked_witness_distance_blocks = -1.0f;
+  float tracked_witness_fog_horizon_blocks = -1.0f;
+  const auto tracked_witness_sample_t0 =
+      std::chrono::high_resolution_clock::now();
+  const bool tracked_witness_terminal_seen = std::any_of(
+      rp.near_focus_tracked_witness_terminal_coords.begin(),
+      rp.near_focus_tracked_witness_terminal_coords.end(),
+      [&](const glm::ivec3 &coord)
+      {
+        return coord.x == missing_near_probe_coord.x &&
+               coord.y == missing_near_probe_coord.y &&
+               coord.z == missing_near_probe_coord.z;
+      });
+  if (!rp.near_focus_tracked_witness_valid && run_miss_probe &&
+      missing_near_probe_result && !tracked_witness_terminal_seen)
+  {
+    rp.near_focus_tracked_witness_valid = true;
+    rp.near_focus_tracked_witness_coord = missing_near_probe_coord;
+    rp.near_focus_tracked_witness_age_frames = 0;
+    rp.near_focus_tracked_witness_sample_cd = 0;
+    rp.near_focus_tracked_witness_entered_fog = false;
+    rp.near_focus_tracked_witness_last_distance = -1.0f;
+  }
+  if (rp.near_focus_tracked_witness_valid)
+  {
+    ++rp.near_focus_tracked_witness_age_frames;
+    const glm::ivec3 tracked_coord = rp.near_focus_tracked_witness_coord;
+    const int fog_rd = world.GetEffectiveFogRenderDistance();
+    const int fog_margin = world.GetEffectiveFogEndMarginBlocks(0);
+    const float presented_fog_horizon = world.GetPresentedFogHorizonBlocks();
+    tracked_witness_fog_horizon_blocks =
+        presented_fog_horizon >= 0.0f
+            ? presented_fog_horizon
+            : FogHorizonBlocks(fog_rd, fog_margin);
+    const auto axis_distance_to_chunk = [](int block, int chunk)
+    {
+      const int min_block = chunk * CHUNK_SIZE;
+      const int max_block_exclusive = min_block + CHUNK_SIZE;
+      if (block < min_block)
+      {
+        return min_block - block;
+      }
+      if (block >= max_block_exclusive)
+      {
+        return block - (max_block_exclusive - 1);
+      }
+      return 0;
+    };
+    const int dx = axis_distance_to_chunk(focus_block.x, tracked_coord.x);
+    const int dy = axis_distance_to_chunk(focus_block.y, tracked_coord.y);
+    const int dz = axis_distance_to_chunk(focus_block.z, tracked_coord.z);
+    tracked_witness_distance_blocks = static_cast<float>(std::sqrt(
+        static_cast<double>(dx) * dx + static_cast<double>(dy) * dy +
+        static_cast<double>(dz) * dz));
+    const bool within_fog =
+        tracked_witness_distance_blocks <= tracked_witness_fog_horizon_blocks;
+    const bool near_fog = tracked_witness_distance_blocks <=
+                          tracked_witness_fog_horizon_blocks +
+                              2.0f * static_cast<float>(CHUNK_SIZE);
+    const bool sample_due = rp.near_focus_tracked_witness_sample_cd <= 0;
+    if (sample_due)
+    {
+      MissingNearProbeWitnessState tracked_state{};
+      if (run_miss_probe && missing_near_probe_result &&
+          missing_near_probe_coord.x == tracked_coord.x &&
+          missing_near_probe_coord.y == tracked_coord.y &&
+          missing_near_probe_coord.z == tracked_coord.z)
+      {
+        tracked_state = missing_near_probe_witness_state;
+      }
+      else
+      {
+        tracked_state = capture_missing_near_probe_witness_state(tracked_coord);
+      }
+      rp.near_focus_tracked_witness_resident = tracked_state.resident;
+      rp.near_focus_tracked_witness_has_mesh = tracked_state.has_mesh;
+      rp.near_focus_tracked_witness_drawable = tracked_state.drawable;
+      rp.near_focus_tracked_witness_satisfying = tracked_state.satisfying;
+      rp.near_focus_tracked_witness_dirty = tracked_state.dirty;
+      rp.near_focus_tracked_witness_build_in_flight =
+          tracked_state.build_in_flight;
+      rp.near_focus_tracked_witness_pending_gpu_apply =
+          tracked_state.pending_gpu_apply;
+      rp.near_focus_tracked_witness_geometry_debt =
+          tracked_state.geometry_debt;
+      rp.near_focus_tracked_witness_flow_ticket_valid =
+          tracked_state.flow_ticket_valid;
+      rp.near_focus_tracked_witness_column_job_stage =
+          tracked_state.column_job_stage;
+      rp.near_focus_tracked_witness_sample_cd = near_fog ? 3 : 7;
+    }
+    else
+    {
+      --rp.near_focus_tracked_witness_sample_cd;
+    }
+    const bool tracked_ready = rp.near_focus_tracked_witness_drawable > 0 &&
+                               rp.near_focus_tracked_witness_satisfying > 0;
+    if (tracked_ready)
+    {
+      if (rp.near_focus_tracked_witness_entered_fog || within_fog)
+      {
+        tracked_witness_outcome_event = 3;
+        ++rp.near_focus_tracked_witness_resolved_after_fog_total;
+      }
+      else
+      {
+        tracked_witness_outcome_event = 2;
+        ++rp.near_focus_tracked_witness_resolved_before_fog_total;
+      }
+      rp.near_focus_tracked_witness_valid = false;
+    }
+    else if (within_fog && !rp.near_focus_tracked_witness_entered_fog)
+    {
+      rp.near_focus_tracked_witness_entered_fog = true;
+      tracked_witness_outcome_event = 1;
+      ++rp.near_focus_tracked_witness_entered_fog_unready_total;
+    }
+    else if (rp.near_focus_tracked_witness_entered_fog &&
+             rp.near_focus_tracked_witness_last_distance >= 0.0f &&
+             tracked_witness_distance_blocks >
+                 tracked_witness_fog_horizon_blocks +
+                     static_cast<float>(CHUNK_SIZE) &&
+             tracked_witness_distance_blocks >
+                 rp.near_focus_tracked_witness_last_distance &&
+             movement_speed > 2.0f)
+    {
+      tracked_witness_outcome_event = 4;
+      ++rp.near_focus_tracked_witness_exited_fog_unready_total;
+      rp.near_focus_tracked_witness_valid = false;
+    }
+    if (tracked_witness_outcome_event == 2 ||
+        tracked_witness_outcome_event == 3 ||
+        tracked_witness_outcome_event == 4)
+    {
+      rp.near_focus_tracked_witness_terminal_coords.push_back(tracked_coord);
+      constexpr size_t kTrackedWitnessTerminalHistory = 32;
+      while (rp.near_focus_tracked_witness_terminal_coords.size() >
+             kTrackedWitnessTerminalHistory)
+      {
+        rp.near_focus_tracked_witness_terminal_coords.pop_front();
+      }
+    }
+    rp.near_focus_tracked_witness_last_distance =
+        tracked_witness_distance_blocks;
+  }
+  const bool tracked_witness_emitted = tracked_witness_outcome_event != 0;
+  pt.NearFocusTrackedWitnessValid =
+      (rp.near_focus_tracked_witness_valid || tracked_witness_emitted) ? 1 : 0;
+  pt.NearFocusTrackedWitnessCx =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_coord.x
+          : -1;
+  pt.NearFocusTrackedWitnessCy =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_coord.y
+          : -1;
+  pt.NearFocusTrackedWitnessCz =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_coord.z
+          : -1;
+  pt.NearFocusTrackedWitnessAgeFrames =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_age_frames
+          : 0;
+  pt.NearFocusTrackedWitnessDistanceBlocks =
+      pt.NearFocusTrackedWitnessValid ? tracked_witness_distance_blocks : -1.0f;
+  pt.NearFocusTrackedWitnessFogHorizonBlocks =
+      pt.NearFocusTrackedWitnessValid ? tracked_witness_fog_horizon_blocks
+                                      : -1.0f;
+  pt.NearFocusTrackedWitnessInsideFog =
+      pt.NearFocusTrackedWitnessValid &&
+              tracked_witness_distance_blocks <=
+                  tracked_witness_fog_horizon_blocks
+          ? 1
+          : 0;
+  pt.NearFocusTrackedWitnessOutcome =
+      pt.NearFocusTrackedWitnessValid
+          ? (rp.near_focus_tracked_witness_entered_fog ? 2 : 1)
+          : tracked_witness_outcome_event;
+  pt.NearFocusTrackedWitnessResident =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_resident
+          : -1;
+  pt.NearFocusTrackedWitnessHasMesh =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_has_mesh
+          : -1;
+  pt.NearFocusTrackedWitnessDrawable =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_drawable
+          : -1;
+  pt.NearFocusTrackedWitnessSatisfying =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_satisfying
+          : -1;
+  pt.NearFocusTrackedWitnessDirty =
+      pt.NearFocusTrackedWitnessValid ? rp.near_focus_tracked_witness_dirty : -1;
+  pt.NearFocusTrackedWitnessBuildInFlight =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_build_in_flight
+          : -1;
+  pt.NearFocusTrackedWitnessPendingGpuApply =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_pending_gpu_apply
+          : -1;
+  pt.NearFocusTrackedWitnessGeometryDebt =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_geometry_debt
+          : -1;
+  pt.NearFocusTrackedWitnessFlowTicketValid =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_flow_ticket_valid
+          : -1;
+  pt.NearFocusTrackedWitnessColumnJobStage =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_column_job_stage
+          : -1;
+  pt.NearFocusTrackedWitnessOutcomeEvent = tracked_witness_outcome_event;
+  pt.NearFocusTrackedWitnessResolvedBeforeFogTotal =
+      rp.near_focus_tracked_witness_resolved_before_fog_total;
+  pt.NearFocusTrackedWitnessEnteredFogUnreadyTotal =
+      rp.near_focus_tracked_witness_entered_fog_unready_total;
+  pt.NearFocusTrackedWitnessResolvedAfterFogTotal =
+      rp.near_focus_tracked_witness_resolved_after_fog_total;
+  pt.NearFocusTrackedWitnessExitedFogUnreadyTotal =
+      rp.near_focus_tracked_witness_exited_fog_unready_total;
+  pt.NearFocusTrackedWitnessSampleMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() -
+          tracked_witness_sample_t0)
+          .count();
+  const int prev_miss_cx = world.PhysicsTelemetryData.MissCx;
+  const int prev_miss_cz = world.PhysicsTelemetryData.MissCz;
+  const int prev_hold_n = world.PhysicsTelemetryData.RelightWitnessHoldN;
+  world.PhysicsTelemetryData.MissScreenRaySelectedStateValid = 0;
+  world.PhysicsTelemetryData.MissScreenRaySelectedDrawable = -1;
+  world.PhysicsTelemetryData.MissScreenRaySelectedSatisfying = -1;
+  world.PhysicsTelemetryData.MissScreenRaySelectedRepairableGeometryDebt =
+      -1;
+  if (missing_near)
+  {
+    glm::ivec3 miss_coord{0};
+    bool found = false;
+    bool screen_ray_candidate = false;
+    uint64_t screen_ray_frame_epoch = 0;
+    bool capture_screen_ray_trace = false;
+    constexpr size_t kMaxScreenRayRepairCandidates = 4;
+    std::array<glm::ivec3, kMaxScreenRayRepairCandidates>
+        screen_ray_repair_coords{};
+    size_t screen_ray_repair_count = 0;
+    const int prev_horiz = std::max(std::abs(prev_miss_cx - focus_ground.x),
+                                    std::abs(prev_miss_cz - focus_ground.z));
+    const glm::ivec3 pinned(prev_miss_cx, world.PhysicsTelemetryData.MissCy,
+                            prev_miss_cz);
+    auto slice_still_missing = [&](glm::ivec3 coord,
+                                   uint8_t *geometry_debt_out = nullptr,
+                                   uint8_t *repairable_geometry_debt_out = nullptr,
+                                   uint8_t *mesh_satisfying_out = nullptr,
+                                   uint8_t *drawable_mesh_out = nullptr)
+        -> bool
+    {
+      const UWorldMeshService &mesh = world.GetMeshService();
+      if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
+      {
+        return false;
+      }
+      const UChunk *ch =
+          world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+      if (!ch)
+      {
+        return false;
+      }
+      const bool geometry_debt =
+          mesh.HasGeometryPublicationDebt(coord, ch->GetIncarnation());
+      const bool repairable_geometry_debt =
+          mesh.HasScreenRayRepairableGeometryDebt(coord,
+                                                  ch->GetIncarnation());
+      const bool mesh_satisfying = mesh.HasMeshSatisfyingColumnReady(coord);
+      const bool drawable_mesh = mesh.HasDrawableGreedyMesh(coord);
+      if (geometry_debt_out)
+      {
+        *geometry_debt_out = geometry_debt ? 1u : 0u;
+      }
+      if (mesh_satisfying_out)
+      {
+        *mesh_satisfying_out = mesh_satisfying ? 1u : 0u;
+      }
+      if (repairable_geometry_debt_out)
+      {
+        *repairable_geometry_debt_out =
+            repairable_geometry_debt ? 1u : 0u;
+      }
+      if (drawable_mesh_out)
+      {
+        *drawable_mesh_out = drawable_mesh ? 1u : 0u;
+      }
+      if (mesh_satisfying && !repairable_geometry_debt)
+      {
+        return false;
+      }
+      // R4.5.1: sparse solid probe (same step-4 as HasMissing) — avoid O(16³).
+      for (int z = 0; z < CHUNK_SIZE; z += 4)
+      {
+        for (int x = 0; x < CHUNK_SIZE; x += 4)
+        {
+          for (int y = 0; y < CHUNK_SIZE; y += 4)
+          {
+            if (ch->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+            {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    };
+    if (run_miss_probe)
+    {
+      if (const auto probe_camera = world.GetCurrentUserCamera())
+      {
+        const int viewport_width = probe_camera->GetViewportWidth();
+        const int viewport_height = probe_camera->GetViewportHeight();
+        if (viewport_width > 0 && viewport_height > 0)
+        {
+          struct Candidate
+          {
+            glm::ivec3 coord{0};
+            int sample_count{0};
+            int center_rank{INT32_MAX};
+            float nearest_distance{std::numeric_limits<float>::max()};
+            bool geometry_debt{false};
+            bool needs_first_mesh{false};
+            bool snapshot_state_initialized{false};
+            bool snapshot_state_consistent{true};
+            bool snapshot_drawable{false};
+            bool snapshot_satisfying{false};
+            bool snapshot_repairable_geometry_debt{false};
+          };
+          struct ScreenRaySampleTrace
+          {
+            glm::ivec3 coord{0};
+            glm::ivec3 block{0};
+            glm::vec3 origin{0.0f};
+            glm::vec3 direction{0.0f, 0.0f, -1.0f};
+            float screen_x{0.0f};
+            float screen_y{0.0f};
+            float distance{-1.0f};
+            float near_distance{0.0f};
+            uint32_t known_air_steps{0};
+            uint8_t column{0};
+            uint8_t row{0};
+            uint8_t state{0};
+            uint8_t perspective{1};
+            uint8_t in_focus_radius{0};
+            uint8_t in_height_band{0};
+            uint8_t mesh_satisfying{0};
+            uint8_t drawable_mesh{0};
+            uint8_t geometry_debt{0};
+            uint8_t repairable_geometry_debt{0};
+            uint8_t needs_light_repair{0};
+            uint8_t needs_refresh{0};
+            uint8_t candidate{0};
+          };
+          // Cover five of the renderer oracle's twenty exact X tile centers
+          // per probe; rotate phases to scan the full viewport over four calls.
+          // Admit a bounded set of distinct debt slices so a center candidate
+          // cannot starve other stale geometry in the same view.
+          constexpr size_t kRendererPixelColumnCount = 20;
+          constexpr size_t kScreenColumnsPerProbe = 5;
+          // M319 found repeated raster gaps at this exact dense-probe scanline.
+          constexpr std::array<float, 5> kScreenRows = {
+              0.125f, 0.375f, 0.5625f, 0.625f, 0.875f};
+          constexpr size_t kScreenSampleCount =
+              kScreenColumnsPerProbe * kScreenRows.size();
+          std::array<Candidate, kScreenSampleCount> candidates{};
+          std::array<ScreenRaySampleTrace, kScreenSampleCount> ray_traces{};
+          screen_ray_frame_epoch = world.GetStreamingFrameEpoch();
+          // Capture often enough to observe the four rotating X-column phases
+          // near the same camera position. A 60-epoch cadence aliased with the
+          // phase cycle in traces and hid which rays ran between pixel probes.
+          capture_screen_ray_trace =
+              UJobStageTrace::VisualBlackTraceEnabled() &&
+              screen_ray_frame_epoch % 15u == 0;
+          const glm::ivec3 screen_ray_focus_chunk = UChunkManager::WorldToChunk(
+              world.GetPreferredLoadFocusBlock());
+          size_t candidate_count = 0;
+          const size_t column_phase = static_cast<size_t>(
+              std::clamp(rp.screen_ray_sample_phase, 0, 3));
+          rp.screen_ray_sample_phase =
+              static_cast<int>((column_phase + 1) % 4);
+          const float max_distance = std::min(
+              static_cast<float>((miss_probe_radius + 1) * CHUNK_SIZE),
+              192.0f);
+          const auto &settings = world.GetProceduralSettings();
+          const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+          const int max_cy = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+          int cy_scan_lo = min_cy;
+          int cy_scan_hi = max_cy;
+          if (focus_ground.y > 0)
+          {
+            cy_scan_lo = std::max(min_cy, focus_ground.y - 1);
+            cy_scan_hi = std::min(max_cy, focus_ground.y + 1);
+          }
+          const auto screen_ray_probe_t0 =
+              std::chrono::high_resolution_clock::now();
+          ScreenRayTransform screen_ray_transform{};
+          const bool screen_ray_transform_ready = BuildScreenRayTransform(
+              probe_camera->GetViewMatrix(), probe_camera->GetProjection(),
+              screen_ray_transform);
+          const glm::ivec4 screen_ray_viewport(0, 0, viewport_width,
+                                                viewport_height);
+          for (size_t row_index = 0; row_index < kScreenRows.size();
+               ++row_index)
+          {
+            for (size_t sample_column = 0;
+                 sample_column < kScreenColumnsPerProbe; ++sample_column)
+            {
+              const size_t column_index = sample_column * 4 + column_phase;
+              const float screen_x =
+                  (static_cast<float>(column_index) + 0.5f) /
+                  static_cast<float>(kRendererPixelColumnCount);
+              const size_t trace_index = row_index * kScreenColumnsPerProbe +
+                                         sample_column;
+              ScreenRaySampleTrace &ray_trace = ray_traces[trace_index];
+              ray_trace.column = static_cast<uint8_t>(column_index);
+              ray_trace.row = static_cast<uint8_t>(row_index);
+              // Match the pixel oracle's framebuffer pixel centers. The
+              // camera API takes top-left screen coordinates and flips Y.
+              ray_trace.screen_x =
+                  screen_x * static_cast<float>(viewport_width) + 0.5f;
+              ray_trace.screen_y =
+                  kScreenRows[row_index] *
+                      static_cast<float>(viewport_height) -
+                  0.5f;
+              CameraSpaceRay camera_ray{};
+              if (!screen_ray_transform_ready ||
+                  !ScreenPointToCameraSpaceRay(
+                      screen_ray_transform, screen_ray_viewport,
+                      ray_trace.screen_x,
+                      static_cast<float>(viewport_height) -
+                          ray_trace.screen_y,
+                      camera_ray))
+              {
+                continue;
+              }
+              ray_trace.origin = camera_ray.origin;
+              ray_trace.direction = camera_ray.direction;
+              ray_trace.near_distance = camera_ray.near_distance;
+              ray_trace.perspective = camera_ray.perspective ? 1u : 0u;
+              const OpaqueVoxelRayWitness hit = TraceOpaqueVoxelRay(
+                  world, camera_ray.origin, camera_ray.direction, max_distance);
+              ray_trace.state = hit.state;
+              ray_trace.known_air_steps = hit.known_air_unloaded_steps;
+              if (hit.state != 1)
+              {
+                continue;
+              }
+              const glm::ivec3 coord = UChunkManager::WorldToChunk(hit.block);
+              ray_trace.coord = coord;
+              ray_trace.block = hit.block;
+              ray_trace.distance = hit.distance;
+              ray_trace.needs_light_repair =
+                  world.IsPendingLightBeforeMeshSlice(coord) ? 1u : 0u;
+              const int horiz = std::max(std::abs(coord.x - focus_ground.x),
+                                         std::abs(coord.z - focus_ground.z));
+              ray_trace.in_focus_radius =
+                  horiz <= miss_probe_radius ? 1u : 0u;
+              ray_trace.in_height_band =
+                  coord.y >= cy_scan_lo && coord.y <= cy_scan_hi ? 1u : 0u;
+              if (!ray_trace.in_focus_radius || !ray_trace.in_height_band)
+              {
+                continue;
+              }
+              ray_trace.needs_refresh =
+                  slice_still_missing(coord, &ray_trace.geometry_debt,
+                                       &ray_trace.repairable_geometry_debt,
+                                       &ray_trace.mesh_satisfying,
+                                       &ray_trace.drawable_mesh)
+                      ? 1u
+                      : 0u;
+              if (!ray_trace.needs_refresh)
+              {
+                continue;
+              }
+              ray_trace.candidate = 1;
+              size_t candidate_index = 0;
+              while (candidate_index < candidate_count &&
+                     candidates[candidate_index].coord != coord)
+              {
+                ++candidate_index;
+              }
+              if (candidate_index == candidate_count)
+              {
+                candidates[candidate_count].coord = coord;
+                ++candidate_count;
+              }
+              Candidate &candidate = candidates[candidate_index];
+              ++candidate.sample_count;
+              const bool sample_drawable = ray_trace.drawable_mesh != 0;
+              const bool sample_satisfying = ray_trace.mesh_satisfying != 0;
+              const bool sample_repairable_debt =
+                  ray_trace.repairable_geometry_debt != 0;
+              if (!candidate.snapshot_state_initialized)
+              {
+                candidate.snapshot_state_initialized = true;
+                candidate.snapshot_drawable = sample_drawable;
+                candidate.snapshot_satisfying = sample_satisfying;
+                candidate.snapshot_repairable_geometry_debt =
+                    sample_repairable_debt;
+              }
+              else if (candidate.snapshot_drawable != sample_drawable ||
+                       candidate.snapshot_satisfying != sample_satisfying ||
+                       candidate.snapshot_repairable_geometry_debt !=
+                           sample_repairable_debt)
+              {
+                candidate.snapshot_state_consistent = false;
+              }
+              candidate.geometry_debt =
+                  candidate.geometry_debt ||
+                  ray_trace.repairable_geometry_debt != 0;
+              candidate.needs_first_mesh =
+                  candidate.needs_first_mesh ||
+                  ray_trace.mesh_satisfying == 0;
+              const int row_rank =
+                  std::abs(kScreenRows[row_index] - 0.5f) <= 0.125f ? 0 : 2;
+              const int x_center_rank =
+                  std::min(std::abs(static_cast<int>(column_index) - 9),
+                           std::abs(static_cast<int>(column_index) - 10));
+              const int center_rank =
+                  x_center_rank + row_rank * 20;
+              candidate.center_rank =
+                  std::min(candidate.center_rank, center_rank);
+              candidate.nearest_distance =
+                  std::min(candidate.nearest_distance, hit.distance);
+            }
+          }
+          pt.PrepRefreshScreenRayProbeMs += lap_ms(screen_ray_probe_t0);
+          std::array<size_t, kScreenSampleCount> candidate_order{};
+          for (size_t i = 0; i < candidate_count; ++i)
+          {
+            candidate_order[i] = i;
+          }
+          const auto candidate_better = [&](size_t lhs, size_t rhs)
+          {
+            const Candidate &a = candidates[lhs];
+            const Candidate &b = candidates[rhs];
+            if (a.geometry_debt != b.geometry_debt)
+            {
+              return a.geometry_debt;
+            }
+            if (a.sample_count != b.sample_count)
+            {
+              return a.sample_count > b.sample_count;
+            }
+            if (a.center_rank != b.center_rank)
+            {
+              return a.center_rank < b.center_rank;
+            }
+            return a.nearest_distance < b.nearest_distance;
+          };
+          std::sort(candidate_order.begin(),
+                    candidate_order.begin() + candidate_count,
+                    candidate_better);
+          std::array<size_t, kMaxScreenRayRepairCandidates>
+              selected_candidate_indices{};
+          size_t selected_candidate_count = 0;
+          const auto add_selected_candidate = [&](size_t candidate_index)
+          {
+            if (selected_candidate_count >=
+                selected_candidate_indices.size())
+            {
+              return;
+            }
+            const glm::ivec3 coord = candidates[candidate_index].coord;
+            for (size_t selected = 0;
+                 selected < selected_candidate_count; ++selected)
+            {
+              const glm::ivec3 prior = candidates[
+                  selected_candidate_indices[selected]].coord;
+              // ColumnFlow owns one FirstMesh ticket per horizontal column;
+              // do not supersede one visible slice with another Y slice.
+              if (prior.x == coord.x && prior.z == coord.z)
+              {
+                return;
+              }
+            }
+            selected_candidate_indices[selected_candidate_count++] =
+                candidate_index;
+          };
+          // Reserve one slot for a screen-hit slice with no satisfying mesh.
+          // Previously only geometry-debt hits were sent to ColumnFlow, so a
+          // new solid slice outside the one primary focus column could be a
+          // visible ray candidate yet never receive a repair ticket.
+          for (size_t rank = 0; rank < candidate_count; ++rank)
+          {
+            const size_t index = candidate_order[rank];
+            if (candidates[index].needs_first_mesh)
+            {
+              add_selected_candidate(index);
+              break;
+            }
+          }
+          // Keep stale drawable geometry ahead of ordinary nearby misses in
+          // the remaining bounded slots, then use any spare slot for another
+          // ray-confirmed first-mesh slice.
+          for (size_t rank = 0; rank < candidate_count; ++rank)
+          {
+            const size_t index = candidate_order[rank];
+            if (candidates[index].geometry_debt)
+            {
+              add_selected_candidate(index);
+            }
+          }
+          for (size_t rank = 0; rank < candidate_count; ++rank)
+          {
+            add_selected_candidate(candidate_order[rank]);
+          }
+          for (size_t rank = 0; rank < selected_candidate_count; ++rank)
+          {
+            screen_ray_repair_coords[rank] =
+                candidates[selected_candidate_indices[rank]].coord;
+          }
+          screen_ray_repair_count = selected_candidate_count;
+          if (selected_candidate_count > 0)
+          {
+            const Candidate &pressure_candidate =
+                candidates[candidate_order[0]];
+            miss_coord = pressure_candidate.coord;
+            found = true;
+            screen_ray_candidate = true;
+            auto &telem = world.PhysicsTelemetryData;
+            telem.MissScreenRaySelectedStateValid =
+                pressure_candidate.snapshot_state_initialized &&
+                        pressure_candidate.snapshot_state_consistent
+                    ? 1
+                    : 0;
+            if (telem.MissScreenRaySelectedStateValid)
+            {
+              telem.MissScreenRaySelectedDrawable =
+                  pressure_candidate.snapshot_drawable ? 1 : 0;
+              telem.MissScreenRaySelectedSatisfying =
+                  pressure_candidate.snapshot_satisfying ? 1 : 0;
+              telem.MissScreenRaySelectedRepairableGeometryDebt =
+                  pressure_candidate.snapshot_repairable_geometry_debt ? 1
+                                                                        : 0;
+            }
+            const int selected_horiz =
+                std::max(std::abs(miss_coord.x - focus_ground.x),
+                         std::abs(miss_coord.z - focus_ground.z));
+            if (UJobStageTrace::VisualBlackTraceEnabled() &&
+                telem.VisualHoles == 0 && selected_horiz <= 2)
+            {
+              // Capture the bounded ray grid when the selected screen-hit
+              // candidate is already available. The pixel capture itself is
+              // marked from the near-focus proxy edge below, whether or not
+              // this grid has a selected candidate.
+              capture_screen_ray_trace = true;
+            }
+          }
+          if (capture_screen_ray_trace)
+          {
+            for (const ScreenRaySampleTrace &ray_trace : ray_traces)
+            {
+              VisualBlackTraceRecord record{};
+              record.sample_kind = 10;
+              record.frame_epoch = screen_ray_frame_epoch;
+              record.focus_cx = screen_ray_focus_chunk.x;
+              record.focus_cz = screen_ray_focus_chunk.z;
+              record.cx = ray_trace.coord.x;
+              record.cy = ray_trace.coord.y;
+              record.cz = ray_trace.coord.z;
+              record.screen_ray_x = ray_trace.screen_x;
+              record.screen_ray_y = ray_trace.screen_y;
+              record.screen_ray_origin_x = ray_trace.origin.x;
+              record.screen_ray_origin_y = ray_trace.origin.y;
+              record.screen_ray_origin_z = ray_trace.origin.z;
+              record.screen_ray_direction_x = ray_trace.direction.x;
+              record.screen_ray_direction_y = ray_trace.direction.y;
+              record.screen_ray_direction_z = ray_trace.direction.z;
+              record.screen_ray_distance = ray_trace.distance;
+              record.screen_ray_near_distance = ray_trace.near_distance;
+              record.screen_ray_perspective = ray_trace.perspective;
+              record.screen_ray_known_air_steps = ray_trace.known_air_steps;
+              record.screen_ray_block_x = ray_trace.block.x;
+              record.screen_ray_block_y = ray_trace.block.y;
+              record.screen_ray_block_z = ray_trace.block.z;
+              record.screen_ray_column = ray_trace.column;
+              record.screen_ray_row = ray_trace.row;
+              record.screen_ray_state = ray_trace.state;
+              record.screen_ray_in_focus_radius =
+                  ray_trace.in_focus_radius;
+              record.screen_ray_in_height_band = ray_trace.in_height_band;
+              record.screen_ray_mesh_satisfying =
+                  ray_trace.mesh_satisfying;
+              record.screen_ray_geometry_debt = ray_trace.geometry_debt;
+              record.screen_ray_repairable_geometry_debt =
+                  ray_trace.repairable_geometry_debt;
+              record.screen_ray_light_debt = ray_trace.needs_light_repair;
+              record.screen_ray_needs_refresh = ray_trace.needs_refresh;
+              record.screen_ray_candidate = ray_trace.candidate;
+              for (size_t rank = 0;
+                   rank < selected_candidate_count && ray_trace.candidate;
+                   ++rank)
+              {
+                if (ray_trace.coord ==
+                    candidates[selected_candidate_indices[rank]].coord)
+                {
+                  record.screen_ray_selected = 1;
+                  break;
+                }
+              }
+              UJobStageTrace::NoteVisualBlack(record);
+            }
+          }
+        }
+      }
+    }
+    world.PhysicsTelemetryData.MissScreenRayCandidate =
+        screen_ray_candidate ? 1 : 0;
+    if (!screen_ray_candidate)
+    {
+      world.PhysicsTelemetryData.MissScreenRaySelectedStateValid = 0;
+      world.PhysicsTelemetryData.MissScreenRaySelectedDrawable = -1;
+      world.PhysicsTelemetryData.MissScreenRaySelectedSatisfying = -1;
+      world.PhysicsTelemetryData.MissScreenRaySelectedRepairableGeometryDebt =
+          -1;
+    }
+    if (!found &&
+        ShouldHoldNearMissWitness(prev_horiz, slice_still_missing(pinned)))
+    {
+      miss_coord = pinned;
+      found = true;
+    }
+    // R4.5.1: when miss probe is throttled, keep pin — do not FindNearest.
+    if (!found && run_miss_probe)
+    {
+      const auto find_nearest_t0 =
+          std::chrono::high_resolution_clock::now();
+      found = world.GetMeshService().FindNearestMissingGreedyMesh(
+          world.GetBlockWorld(), focus_ground, miss_probe_radius, miss_coord);
+      pt.PrepRefreshFindNearestMs += lap_ms(find_nearest_t0);
+    }
+    if (found)
+    {
+      world.PhysicsTelemetryData.MissCx = miss_coord.x;
+      world.PhysicsTelemetryData.MissCy = miss_coord.y;
+      world.PhysicsTelemetryData.MissCz = miss_coord.z;
+      world.PhysicsTelemetryData.MissHoriz =
+          std::max(std::abs(miss_coord.x - focus_ground.x),
+                   std::abs(miss_coord.z - focus_ground.z));
+      auto &exec = GetColumnFlowExecutor();
+      const glm::ivec2 miss_xz(miss_coord.x, miss_coord.z);
+      const bool empty_stuck =
+          world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0 &&
+          miss_coord.x == world.PhysicsTelemetryData.SoftDeferEmptyStuckCx &&
+          miss_coord.z == world.PhysicsTelemetryData.SoftDeferEmptyStuckCz;
+      const bool hold = ShouldHoldPinnedRelightWitness(
+          world.PhysicsTelemetryData.MissHoriz,
+          world.IsPendingLightBeforeMesh(miss_xz),
+          /*pinned_still_missing=*/true, empty_stuck);
+      if (hold && miss_coord.x == prev_miss_cx &&
+          miss_coord.z == prev_miss_cz)
+      {
+        world.PhysicsTelemetryData.RelightWitnessHoldN = prev_hold_n + 1;
+      }
+      else if (hold)
+      {
+        world.PhysicsTelemetryData.RelightWitnessHoldN = 1;
+      }
+      else
+      {
+        world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
+      }
+      exec.SetPromoteRelightHold(miss_xz, hold);
+      if (world.Persistence && hold)
+      {
+        world.Persistence->SetRelightFifoPin(miss_xz, true);
+        if (world.PhysicsTelemetryData.MissHoriz <= 4)
+        {
+          const glm::ivec2 world_key(miss_xz.x * CHUNK_SIZE,
+                                     miss_xz.y * CHUNK_SIZE);
+          const bool already_in_fifo =
+              world.Persistence->IsTerrainColumnRelightQueued(world_key);
+          const bool pending_or_void =
+              world.IsPendingLightBeforeMesh(miss_xz) || hold;
+          if (ShouldForceMissColumnFifoEnqueue(true, pending_or_void,
+                                               already_in_fifo,
+                                               world.PhysicsTelemetryData
+                                                   .RelightWitnessHoldN /
+                                                   60))
+          {
+            if (!already_in_fifo)
+            {
+              world.Persistence->EnqueueTerrainColumnRelight(
+                  miss_coord.x * CHUNK_SIZE, miss_coord.z * CHUNK_SIZE,
+                  /*priority=*/true, world.GetProceduralSettings().MinHeight,
+                  -1, "miss_witness", &world);
+            }
+            GetColumnFlowExecutor().RequestPromoteRelight(miss_xz, 55);
+          }
+        }
+      }
+      const bool missing_drawable =
+          !world.GetMeshService().HasDrawableGreedyMesh(miss_coord);
+      std::vector<glm::ivec2> protected_screen_ray_columns;
+      protected_screen_ray_columns.reserve(screen_ray_repair_count);
+      for (size_t i = 0; i < screen_ray_repair_count; ++i)
+      {
+        const glm::ivec3 coord = screen_ray_repair_coords[i];
+        const glm::ivec2 column(coord.x, coord.z);
+        if (std::find(protected_screen_ray_columns.begin(),
+                      protected_screen_ray_columns.end(), column) ==
+            protected_screen_ray_columns.end())
+        {
+          protected_screen_ray_columns.push_back(column);
+        }
+      }
+      const auto write_screen_ray_repair_trace =
+        [&](glm::ivec3 coord, bool screen_ray_selected,
+            const char *action, bool light_debt,
+            bool async_before, bool flow_before, bool flow_after,
+            bool visible_geometry_promoted,
+            const char *flow_kind, uint8_t visible_relight_outcome,
+            int visible_relight_victim_horiz,
+            const UWorldPersistence::TerrainColumnRelightQueueInfo &before,
+            const UWorldPersistence::TerrainColumnRelightQueueInfo &after)
+      {
+        if (!capture_screen_ray_trace || !screen_ray_selected)
+        {
+          return;
+        }
+        // Preserve the exact ray witness in the bounded lifecycle/bump rings
+        // so later revision churn can be joined to this request by identity.
+        UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
+        const auto queue_state = [](
+                                const UWorldPersistence::TerrainColumnRelightQueueInfo
+                                    &info)
+        {
+          if (info.in_deque)
+          {
+            return info.priority ? std::string("priority")
+                                 : std::string("far");
+          }
+          if (info.keyed)
+          {
+            return std::string("keyed_no_deque");
+          }
+          return info.deferred_far ? std::string("deferred_far")
+                                   : std::string("none");
+        };
+        const UChunk *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        const ColumnRecord *record = world.GetColumnRecords().Find(
+            glm::ivec2(coord.x, coord.z));
+        const int record_stage =
+            record ? static_cast<int>(
+                         UColumnRecordCoordinator::DeriveJobStageFromRecord(
+                             *record))
+                   : -1;
+        const uint64_t record_pending_token = record ? record->pending.token : 0;
+        const int record_pending_stage =
+            record ? static_cast<int>(record->pending.stage) : -1;
+        const uint64_t record_inflight_job = record ? record->inflight_job : 0;
+        const bool mesh_build_inflight =
+            world.GetMeshService().HasInflightMeshBuild(coord);
+        const bool mesh_dirty = world.GetMeshService().IsChunkMeshDirty(coord);
+        const bool gpu_extract_inflight =
+            world.GetMeshService().IsGpuExtractInFlight(coord);
+        const bool gpu_apply_pending =
+            world.GetMeshService().IsPendingGpuApply(coord);
+        const bool gpu_apply_queued =
+            world.GetMeshService().IsPendingGpuQueued(coord);
+        const bool repairable_geometry_debt =
+            chunk && world.GetMeshService().HasScreenRayRepairableGeometryDebt(
+                         coord, chunk->GetIncarnation());
+        const bool drawable =
+            world.GetMeshService().HasDrawableGreedyMesh(coord);
+        const bool provisional_light_preview =
+            world.GetMeshService().GetCache().HasProvisionalLightPreview(
+                coord);
+        const bool mesh_satisfying =
+            world.GetMeshService().HasMeshSatisfyingColumnReady(coord);
+        const bool geometry_debt =
+            chunk && world.GetMeshService().HasGeometryPublicationDebt(
+                         coord, chunk->GetIncarnation());
+        const int column_emerge_state = static_cast<int>(
+            world.GetColumnEmergeState(glm::ivec3(coord.x, 0, coord.z)));
+        int32_t mesh_dirty_queue_index = -1;
+        int32_t mesh_dirty_queue_size = 0;
+        const uint8_t mesh_dirty_queue_kind =
+            world.GetMeshService().GetCache().GetDirtyQueueTrace(
+                coord, mesh_dirty_queue_index, mesh_dirty_queue_size);
+        const uint64_t mesh_dirty_queue_age =
+            world.GetMeshService().GetCache().GetDirtyQueueAgeFrames(coord);
+        const bool mesh_scheduled_this_frame =
+            world.GetMeshService().GetCache().WasScheduledThisFrame(coord);
+        const uint64_t mesh_revision =
+            world.GetMeshService().GetChunkMeshRevision(coord);
+        const uint64_t world_epoch =
+            world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+        const uint64_t incarnation = chunk ? chunk->GetIncarnation() : 0;
+        const auto published_revisions =
+            world.GetMeshService().GetCache().GetMeshPublishRevs(coord);
+        int column_mesh_dirty_slices = 0;
+        int column_mesh_build_slices = 0;
+        int column_gpu_pending_slices = 0;
+        const int max_cy =
+            FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE);
+        for (int cy = FloorDiv(world.GetProceduralSettings().MinHeight,
+                               CHUNK_SIZE);
+             cy <= max_cy; ++cy)
+        {
+          const glm::ivec3 slice(coord.x, cy, coord.z);
+          column_mesh_dirty_slices +=
+              world.GetMeshService().IsChunkMeshDirty(slice) ? 1 : 0;
+          column_mesh_build_slices +=
+              world.GetMeshService().HasInflightMeshBuild(slice) ? 1 : 0;
+          column_gpu_pending_slices +=
+              (world.GetMeshService().IsGpuExtractInFlight(slice) ||
+               world.GetMeshService().IsPendingGpuApply(slice) ||
+               world.GetMeshService().IsPendingGpuQueued(slice))
+                  ? 1
+                  : 0;
+        }
+        CubatariumLogInfo(
+            "ScreenRayRepair",
+            "frame=" + std::to_string(screen_ray_frame_epoch) +
+                " coord=" + std::to_string(coord.x) + "," +
+                std::to_string(coord.y) + "," + std::to_string(coord.z) +
+                " world_epoch=" + std::to_string(world_epoch) +
+                " incarnation=" + std::to_string(incarnation) +
+                " light_debt=" + std::to_string(light_debt ? 1 : 0) +
+                " action=" + action + " async_before=" +
+                std::to_string(async_before ? 1 : 0) + " fifo_before=" +
+                queue_state(before) + ":" +
+                std::to_string(before.queue_index) + "/" +
+                std::to_string(before.queue_size) + " fifo_after=" +
+                queue_state(after) + ":" +
+                std::to_string(after.queue_index) + "/" +
+                std::to_string(after.queue_size) + " flow=" + flow_kind +
+                " flow_before=" + std::to_string(flow_before ? 1 : 0) +
+                " flow_after=" +
+                std::to_string(flow_after ? 1 : 0) +
+                " visible_relight_outcome=" +
+                std::to_string(visible_relight_outcome) +
+                " visible_relight_victim_horiz=" +
+                std::to_string(visible_relight_victim_horiz) +
+                " visible_geometry_promoted=" +
+                std::to_string(visible_geometry_promoted ? 1 : 0) +
+                " flow_column_ticket=" +
+                std::to_string(exec.HasRepairTicket(
+                                   glm::ivec2(coord.x, coord.z))
+                                   ? 1
+                                   : 0) +
+                " record_stage=" + std::to_string(record_stage) +
+                " record_pending_token=" +
+                std::to_string(record_pending_token) +
+                " record_pending_stage=" +
+                std::to_string(record_pending_stage) +
+                " record_inflight_job=" +
+                std::to_string(record_inflight_job) +
+                " column_emerge_state=" +
+                std::to_string(column_emerge_state) +
+                " column_mesh_dirty_slices=" +
+                std::to_string(column_mesh_dirty_slices) +
+                " column_mesh_build_slices=" +
+                std::to_string(column_mesh_build_slices) +
+                " column_gpu_pending_slices=" +
+                std::to_string(column_gpu_pending_slices) +
+                " mesh_dirty_queue_kind=" +
+                std::to_string(mesh_dirty_queue_kind) +
+                " mesh_dirty_queue_index=" +
+                std::to_string(mesh_dirty_queue_index) + "/" +
+                std::to_string(mesh_dirty_queue_size) +
+                " mesh_dirty_queue_age=" +
+                std::to_string(mesh_dirty_queue_age) +
+                " mesh_scheduled_this_frame=" +
+                std::to_string(mesh_scheduled_this_frame ? 1 : 0) +
+                " mesh_revision=" + std::to_string(mesh_revision) +
+                " published_geom_rev=" +
+                std::to_string(published_revisions.geom_rev) +
+                " published_light_rev=" +
+                std::to_string(published_revisions.light_rev) +
+                " mesh_build_inflight=" +
+                std::to_string(mesh_build_inflight ? 1 : 0) +
+                " mesh_dirty=" + std::to_string(mesh_dirty ? 1 : 0) +
+                " gpu_extract_inflight=" +
+                std::to_string(gpu_extract_inflight ? 1 : 0) +
+                " gpu_apply_pending=" +
+                std::to_string(gpu_apply_pending ? 1 : 0) +
+                " gpu_apply_queued=" +
+                std::to_string(gpu_apply_queued ? 1 : 0) +
+                " drawable=" + std::to_string(drawable ? 1 : 0) +
+                " provisional_light_preview=" +
+                std::to_string(provisional_light_preview ? 1 : 0) +
+                " mesh_satisfying=" +
+                std::to_string(mesh_satisfying ? 1 : 0) +
+                " geometry_debt=" + std::to_string(geometry_debt ? 1 : 0) +
+                " repairable_geometry_debt=" +
+                std::to_string(repairable_geometry_debt ? 1 : 0));
+      };
+      bool screen_ray_preview_marked = false;
+      const auto mark_direct_missing_slice = [&](glm::ivec3 coord)
+      {
+        UWorldMeshService &mesh_service = world.GetMeshService();
+        const bool slice_has_owner =
+            mesh_service.IsChunkMeshDirty(coord) ||
+            mesh_service.HasInflightMeshBuild(coord) ||
+            mesh_service.IsGpuExtractInFlight(coord) ||
+            mesh_service.IsPendingGpuApply(coord) ||
+            mesh_service.IsPendingGpuQueued(coord) ||
+            mesh_service.IsPendingGpuKickedOrDispatched(coord) ||
+            mesh_service.GetCache().HasPendingCaptureWork(coord) ||
+            mesh_service.GetCache().WasScheduledThisFrame(coord);
+        const UChunk *slice_chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        const bool slice_needs_geometry =
+            !mesh_service.HasMeshSatisfyingColumnReady(coord) ||
+            (slice_chunk && mesh_service.HasScreenRayRepairableGeometryDebt(
+                                coord, slice_chunk->GetIncarnation()));
+        if (slice_has_owner || !slice_needs_geometry)
+        {
+          return 0;
+        }
+        const int mark_min = coord.y * CHUNK_SIZE;
+        const int mark_max = mark_min + CHUNK_SIZE - 1;
+        const glm::ivec2 column(coord.x, coord.z);
+        const int marked = mesh_service.MarkMissingSlicesDirtyPriority(
+            world.GetBlockWorld(), glm::ivec3(column.x, 0, column.y),
+            mark_min, mark_max);
+        if (marked > 0)
+        {
+          world.GetPhysicsTelemetryMutable().FmDirtyEnqueueN += marked;
+          world.SetColumnEmergeState(
+              glm::ivec3(column.x, 0, column.y),
+              ColumnEmergeState::Meshing);
+        }
+        return marked;
+      };
+      const auto promote_visible_geometry_debt =
+          [&](glm::ivec3 coord, bool screen_ray_selected)
+      {
+        if (!screen_ray_selected)
+        {
+          return false;
+        }
+        const UChunk *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        if (!chunk ||
+            !world.GetMeshService().HasDrawableGreedyMesh(coord) ||
+            !world.GetMeshService().HasScreenRayRepairableGeometryDebt(
+                coord, chunk->GetIncarnation()))
+        {
+          return false;
+        }
+        return world.GetMeshService()
+            .GetCache()
+            .PrioritizeScreenRayRepairRemesh(coord);
+      };
+      const auto enqueue_first_mesh = [&](glm::ivec3 coord,
+                                          bool screen_ray_selected)
+      {
+        const glm::ivec2 column(coord.x, coord.z);
+        const bool visible_geometry_promoted =
+            promote_visible_geometry_debt(coord, screen_ray_selected);
+        const bool light_debt =
+            world.IsPendingLightBeforeMeshSlice(coord);
+        const glm::ivec2 world_key(coord.x * CHUNK_SIZE,
+                                   coord.z * CHUNK_SIZE);
+        const auto queue_before = world.Persistence
+                                      ? world.Persistence
+                                            ->GetTerrainColumnRelightQueueInfo(
+                                                world_key)
+                                      : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+        const bool async_before = world.IsAsyncRelightColumnInFlight(column);
+        const auto queue_after_now = [&]()
+        {
+          return world.Persistence
+                     ? world.Persistence->GetTerrainColumnRelightQueueInfo(
+                           world_key)
+                     : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+        };
+        if (light_debt)
+        {
+          const char *light_action = "pending_light_without_persistence";
+          bool flow_before = false;
+          bool flow_after = false;
+          const char *flow_kind = "none";
+          uint8_t visible_relight_outcome = 0;
+          int visible_relight_victim_horiz = -1;
+          bool visible_relight_admitted = false;
+          if (screen_ray_selected && world.Persistence && !async_before)
+          {
+            const int min_world_y = std::max(
+                world.GetProceduralSettings().MinHeight,
+                coord.y * CHUNK_SIZE);
+            const int max_world_y = std::min(
+                world.GetProceduralSettings().MaxHeight,
+                min_world_y + CHUNK_SIZE - 1);
+            visible_relight_admitted =
+                world.Persistence->EnqueueVisibleRelight(
+                    world_key.x, world_key.y, min_world_y, max_world_y,
+                    focus_horiz, kVisualStageFirstMeshRelightForwardHoriz,
+                    protected_screen_ray_columns, &visible_relight_outcome,
+                    &visible_relight_victim_horiz, __FUNCTION__);
+            if (visible_relight_admitted)
+            {
+              world.Persistence->NoteVisibleFirstMeshRelight(
+                  world_key, min_world_y, max_world_y);
+              flow_before = exec.Scheduler().Contains(
+                  column, ColumnWorkKind::RelightThenMesh);
+              flow_after = flow_before;
+              flow_kind = "screen_ray_visible_relight";
+              light_action = "screen_ray_visible_relight_admitted";
+            }
+          }
+          if (visible_relight_admitted)
+          {
+            // The exact screen-ray target now owns bounded visible FIFO work.
+            // Leave any existing Flow ticket alone; it will observe the FIFO
+            // owner when drained and cannot enqueue a duplicate relight.
+          }
+          else if (world.Persistence &&
+                   world.Persistence->IsTerrainColumnRelightQueued(world_key))
+          {
+            bool promoted = false;
+            if (!async_before)
+            {
+              promoted = world.Persistence->PrioritizeTerrainColumnRelight(
+                  world_key);
+            }
+            light_action = async_before
+                               ? "fifo_queued_async_owner"
+                               : (promoted ? "fifo_promoted"
+                                           : "fifo_promotion_rejected");
+          }
+          else if (async_before)
+          {
+            light_action = "async_owner_without_fifo";
+          }
+          else if (world.Persistence)
+          {
+            flow_before = exec.Scheduler().Contains(
+                column, ColumnWorkKind::RelightThenMesh);
+            ColumnWorkItem relight{};
+            relight.column = column;
+            relight.kind = ColumnWorkKind::RelightThenMesh;
+            relight.priority = 116;
+            relight.scan_full_focus = false;
+            relight.cy = coord.y;
+            exec.Enqueue(relight);
+            flow_after = exec.Scheduler().Contains(
+                column, ColumnWorkKind::RelightThenMesh);
+            flow_kind = "relight";
+            light_action = flow_after ? "relight_flow_ticket_present"
+                                      : "relight_flow_ticket_rejected";
+          }
+          // Keep the relight owner, and let one exact screen-ray witness
+          // produce a bounded ambient first-mesh preview while light settles.
+          // The normal snapshot stamps and provisional-light draw path still
+          // apply; this only avoids leaving the selected solid slice empty.
+          int preview_marked = 0;
+          // The selected list already contains only bounded exact-ray solid
+          // candidates. Its first no-mesh slice may differ from miss_coord
+          // when a higher-ranked stale-geometry hit owns the primary witness.
+          if (screen_ray_selected && !screen_ray_preview_marked &&
+              !world.GetMeshService().HasDrawableGreedyMesh(coord))
+          {
+            preview_marked = mark_direct_missing_slice(coord);
+            screen_ray_preview_marked = preview_marked > 0;
+          }
+          if (preview_marked > 0)
+          {
+            light_action = "relight_plus_unlit_preview_dirty";
+          }
+          write_screen_ray_repair_trace(
+              coord, screen_ray_selected, light_action, light_debt,
+              async_before, flow_before, flow_after,
+              visible_geometry_promoted, flow_kind,
+              visible_relight_outcome, visible_relight_victim_horiz,
+              queue_before, queue_after_now());
+          return;
+        }
+        ColumnWorkItem fm{};
+        fm.column = column;
+        fm.kind = ColumnWorkKind::FirstMesh;
+        fm.priority = 112;
+        fm.scan_full_focus = false;
+        fm.cy = coord.y;
+        const bool flow_before = exec.Scheduler().Contains(
+            column, ColumnWorkKind::FirstMesh);
+        exec.Enqueue(fm);
+        const bool flow_after = exec.Scheduler().Contains(
+            column, ColumnWorkKind::FirstMesh);
+        int direct_slice_marked = 0;
+        // A column-level Flow ticket is not a concrete owner for this slice.
+        // It may already be queued behind other column work after the Dirty
+        // ticket for this exact geometry/coverage debt was consumed. Let the
+        // per-slice owner check decide whether a direct repair is still needed.
+        if (screen_ray_selected && !light_debt)
+        {
+          direct_slice_marked = mark_direct_missing_slice(coord);
+        }
+        if (screen_ray_selected)
+        {
+          write_screen_ray_repair_trace(
+              coord, screen_ray_selected,
+              direct_slice_marked > 0
+                  ? "first_mesh_slice_dirty_direct"
+                  : (flow_after ? "first_mesh_ticket_present"
+                                : "first_mesh_ticket_rejected"),
+              light_debt, async_before, flow_before, flow_after,
+              visible_geometry_promoted, "first_mesh", 0, -1,
+              queue_before, queue_after_now());
+        }
+      };
+      const bool primary_first_mesh_enqueued =
+          world.PhysicsTelemetryData.MissHoriz <= 1 && missing_drawable;
+      if (primary_first_mesh_enqueued)
+      {
+        bool primary_is_selected_ray = false;
+        for (size_t i = 0; i < screen_ray_repair_count; ++i)
+        {
+          primary_is_selected_ray =
+              primary_is_selected_ray ||
+              screen_ray_repair_coords[i] == miss_coord;
+        }
+        enqueue_first_mesh(miss_coord, primary_is_selected_ray);
+      }
+      // Route a bounded set of ray-confirmed missing or stale geometry slices
+      // through ColumnFlow. Existing drawable images remain available until a
+      // newer geometry/coverage revision publishes successfully.
+      for (size_t i = 0; i < screen_ray_repair_count; ++i)
+      {
+        const glm::ivec3 coord = screen_ray_repair_coords[i];
+        if (primary_first_mesh_enqueued && coord.x == miss_coord.x &&
+            coord.z == miss_coord.z)
+        {
+          const bool visible_geometry_promoted =
+              coord != miss_coord &&
+              promote_visible_geometry_debt(coord, true);
+          if (capture_screen_ray_trace && coord != miss_coord)
+          {
+            const UWorldPersistence::TerrainColumnRelightQueueInfo queue_info =
+                world.Persistence
+                    ? world.Persistence->GetTerrainColumnRelightQueueInfo(
+                          glm::ivec2(coord.x * CHUNK_SIZE,
+                                     coord.z * CHUNK_SIZE))
+                    : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+            write_screen_ray_repair_trace(
+                coord, true, "shadowed_by_primary_column_ticket",
+                world.IsPendingLightBeforeMeshSlice(coord),
+                world.IsAsyncRelightColumnInFlight(
+                    glm::ivec2(coord.x, coord.z)),
+                false, false, visible_geometry_promoted,
+                "primary_first_mesh", 0, -1, queue_info, queue_info);
+          }
+          continue;
+        }
+        enqueue_first_mesh(coord, true);
+      }
+    }
+  }
+  else
+  {
+    world.PhysicsTelemetryData.MissCx = 0;
+    world.PhysicsTelemetryData.MissCy = 0;
+    world.PhysicsTelemetryData.MissCz = 0;
+    world.PhysicsTelemetryData.MissHoriz = 0;
+    world.PhysicsTelemetryData.MissScreenRayCandidate = 0;
+    world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
+    GetColumnFlowExecutor().SetPromoteRelightHold(glm::ivec2(0), false);
+    if (world.Persistence)
+    {
+      world.Persistence->SetRelightFifoPin(glm::ivec2(0), false);
+    }
+  }
+  pt.PrepRefreshMissMs = lap_ms(miss_t0);
+  pt.PrepRefreshMissOtherMs = std::max(
+      0.0, pt.PrepRefreshMissMs - pt.PrepRefreshMissRadiusQueryMs -
+               pt.PrepRefreshScreenRayProbeMs - pt.PrepRefreshFindNearestMs);
+  const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
+  const auto camera_complete_t0 = std::chrono::high_resolution_clock::now();
+  bool incomplete_camera_column = false;
+  if (LastCameraTerrainCompleteFrame == StreamingFrameCounter &&
+      LastCameraTerrainCompleteGround == camera_ground)
+  {
+    incomplete_camera_column = !LastCameraTerrainComplete;
+  }
+  else if (Streamer)
+  {
+    const bool complete =
+        Streamer->IsTerrainChunkCompleteCached(camera_ground);
+    LastCameraTerrainCompleteGround = camera_ground;
+    LastCameraTerrainComplete = complete;
+    LastCameraTerrainCompleteFrame = StreamingFrameCounter;
+    incomplete_camera_column = !complete;
+  }
+  else
+  {
+    incomplete_camera_column =
+        !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
+                                world.GetProceduralSettings().MaxHeight,
+                                kNoTerrainChunkSlice,
+                                world.GetProceduralSettings().MinHeight);
+  }
+  pt.PrepRefreshCameraCompleteMs = lap_ms(camera_complete_t0);
+  const glm::ivec2 under_xz(focus_horiz.x, focus_horiz.z);
+  const auto underfeet_probe_t0 = std::chrono::high_resolution_clock::now();
+  int band_min_y = std::max(world.GetProceduralSettings().MinHeight,
+                            focus_block.y - CHUNK_SIZE);
+  int band_max_y = std::min(world.GetProceduralSettings().MaxHeight,
+                            focus_block.y + CHUNK_SIZE * 2);
+  const bool missing_underfeet_mesh =
+      missing_near &&
+      !ColumnBandHasPresentableMesh(world, under_xz, band_min_y, band_max_y);
+  pt.PrepRefreshUnderfeetProbeMs = lap_ms(underfeet_probe_t0);
   const bool missing_underfeet =
-      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, /*radius=*/1);
+      missing_underfeet_mesh && !incomplete_camera_column;
+  const auto pending_t0 = std::chrono::high_resolution_clock::now();
+  const int miss_horiz_early = world.PhysicsTelemetryData.MissHoriz;
+  const bool visual_holes_early =
+      missing_near && (missing_underfeet || miss_horiz_early <= 2);
+  const bool rim_witness_idle_diet_pre =
+      missing_near && !visual_holes_early && miss_horiz_early >= 3 &&
+      !missing_underfeet && last_unfinished_hint <= 7 && capture_calm &&
+      movement_speed > 50.0f;
+  const bool diet_cruise_cadence =
+      !stream_simple && (moving_for_telemetry || rim_witness_idle_diet_pre);
+  const int effective_pl_radius =
+      (diet_cruise_cadence && !visual_holes_early)
+          ? std::min(pending_pl_radius, 2)
+          : pending_pl_radius;
   const int pending_light_focus =
-      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
-  const bool pending_underfeet =
-      world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
+      world.CountPendingLightBeforeMeshNear(focus_horiz, effective_pl_radius);
+  pt.PrepRefreshPendingMs = lap_ms(pending_t0);
+  const auto input_fill_t0 = std::chrono::high_resolution_clock::now();
+  const bool pending_underfeet = world.IsPendingLightBeforeMesh(
+      glm::ivec2(focus_horiz.x, focus_horiz.z));
 
   StreamingPressureInput in;
   in.pending_light =
       static_cast<int>(world.GetPendingLightBeforeMeshCount());
   in.dirty = static_cast<int>(world.GetMeshService().GetDirtyCount());
   in.frame_ms = world.GetLastMovementFrameMs();
-  // Pressure focus mode: visual holes only (pending light is light_debt).
-  in.visual_holes = missing_near;
-  in.underfeet_need = missing_underfeet || pending_underfeet;
+  in.stream_phase_ms = world.PhysicsTelemetryData.WorldStreamingPhaseMs;
+  // Pressure focus mode: near miss / underfeet only — rim backlog is not crisis.
+  const int miss_horiz = world.PhysicsTelemetryData.MissHoriz;
+  in.visual_holes =
+      missing_near && (missing_underfeet || miss_horiz <= 2);
+  pt.FocusProxyMissCx = -1;
+  pt.FocusProxyMissCy = -1;
+  pt.FocusProxyMissCz = -1;
+  pt.FocusProxyFlowTicketKind = -1;
+  pt.FocusProxyFlowTicketPriority = 0;
+  pt.FocusProxyColumnJobStage = -1;
+  pt.FocusProxyMeshDirty = 0;
+  pt.FocusProxyBuildInFlight = 0;
+  pt.FocusProxyPendingGpuApply = 0;
+  pt.FocusProxyDrawableMesh = 0;
+  pt.FocusProxySatisfyingMesh = 0;
+  pt.FocusProxyGeometryDebt = 0;
+  pt.FocusProxyRepairableGeometryDebt = 0;
+  if (in.visual_holes)
+  {
+    const glm::ivec3 miss_chunk(pt.MissCx, pt.MissCy, pt.MissCz);
+    const glm::ivec2 miss_column(pt.MissCx, pt.MissCz);
+    pt.FocusProxyMissCx = miss_chunk.x;
+    pt.FocusProxyMissCy = miss_chunk.y;
+    pt.FocusProxyMissCz = miss_chunk.z;
+    ColumnWorkItem ticket{};
+    const auto &flow = GetColumnFlowExecutor();
+    if (flow.Scheduler().GetLiveTicket(miss_column, ticket))
+    {
+      pt.FocusProxyFlowTicketKind = static_cast<int>(ticket.kind);
+      pt.FocusProxyFlowTicketPriority = ticket.priority;
+    }
+    pt.FocusProxyColumnJobStage =
+        static_cast<int>(flow.GetColumnJobStage(miss_column));
+    const UWorldMeshService &mesh_service = world.GetMeshService();
+    pt.FocusProxyMeshDirty =
+        mesh_service.IsChunkMeshDirty(miss_chunk) ? 1 : 0;
+    pt.FocusProxyBuildInFlight =
+        mesh_service.HasInflightMeshBuild(miss_chunk) ? 1 : 0;
+    pt.FocusProxyPendingGpuApply =
+        mesh_service.IsPendingGpuApply(miss_chunk) ? 1 : 0;
+    pt.FocusProxyDrawableMesh =
+        mesh_service.HasDrawableGreedyMesh(miss_chunk) ? 1 : 0;
+    pt.FocusProxySatisfyingMesh =
+        mesh_service.HasMeshSatisfyingColumnReady(miss_chunk) ? 1 : 0;
+    const UChunk *proxy_chunk =
+        world.GetBlockWorld().GetChunkManager().GetChunk(miss_chunk);
+    if (proxy_chunk)
+    {
+      const uint64_t incarnation = proxy_chunk->GetIncarnation();
+      pt.FocusProxyGeometryDebt =
+          mesh_service.HasGeometryPublicationDebt(miss_chunk, incarnation) ? 1
+                                                                           : 0;
+      pt.FocusProxyRepairableGeometryDebt =
+          mesh_service.HasScreenRayRepairableGeometryDebt(miss_chunk,
+                                                         incarnation)
+              ? 1
+              : 0;
+    }
+  }
+  in.underfeet_need = FeetColumnUnderfeetNeed(
+      incomplete_camera_column, missing_underfeet_mesh, pending_underfeet);
   in.pending_light_focus = pending_light_focus;
   LastPendingLightFocus = pending_light_focus;
+  pt.PrepRefreshInputFillMs = lap_ms(input_fill_t0);
+  const auto pressure_eval_t0 = std::chrono::high_resolution_clock::now();
   LastPressureCaps = EvaluateStreamingPressure(in, PressureState);
+  pt.PrepRefreshPressureEvalMs = lap_ms(pressure_eval_t0);
 
+  const auto diet_flags_t0 = std::chrono::high_resolution_clock::now();
   world.PhysicsTelemetryData.StreamPressure =
       static_cast<int>(LastPressureCaps.level);
+  world.PhysicsTelemetryData.BackpressureLevel =
+      static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
-  const int sticky_remesh =
-      world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
-  const int pending_dark =
-      world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+  const bool rim_witness_idle_diet =
+      missing_near && !in.visual_holes && miss_horiz >= 3 &&
+      !missing_underfeet && last_unfinished_hint <= 7 && capture_calm &&
+      movement_speed > 50.0f;
+  const bool diet_cruise_cadence_final =
+      !stream_simple && (moving_for_telemetry || rim_witness_idle_diet);
+  const bool stand_stable_prep_diet =
+      ShouldUseStandStablePrepDiet(moving_for_telemetry, in.visual_holes,
+                                   miss_horiz, last_unfinished_hint);
+  pt.PrepRefreshDietFlagsMs += lap_ms(diet_flags_t0);
+  const auto sticky_t0 = std::chrono::high_resolution_clock::now();
+  const bool cruise_ring_reuse =
+      diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet;
+  
+  
+  const int witness_retarget_delta = static_cast<int>(
+      world.PhysicsTelemetryData.SoftDeferWitnessRetarget >=
+              rp.last_softdefer_witness_retarget
+          ? world.PhysicsTelemetryData.SoftDeferWitnessRetarget -
+                rp.last_softdefer_witness_retarget
+          : 0);
+  const int keep_cols_now = (2 * focus_radius + 1) * (2 * focus_radius + 1);
+  const bool sticky_focus_jumped =
+      focus_ground.x != rp.last_sticky_focus_xz.x ||
+      focus_ground.z != rp.last_sticky_focus_xz.y;
+  const bool sticky_keep_changed = keep_cols_now != rp.last_sticky_keep_cols;
+  const int sticky_epoch_delta =
+      ring_sample_prev.valid
+          ? world.GetStreamingFrameEpoch() - ring_sample_prev.frame_epoch
+          : 999;
+  const bool sticky_ring_resync = ShouldRefreshRingResyncForFocusJump(
+      sticky_focus_jumped, sticky_keep_changed, ring_sample_prev.valid,
+      sticky_epoch_delta, witness_retarget_delta);
+  int sticky_remesh = 0;
+  int pending_dark = 0;
+  int provisional_light_preview = 0;
+  double sticky_black_ms = 0.0;
+  double pending_dark_ms = 0.0;
+  double provisional_preview_ms = 0.0;
+  std::size_t sticky_scanned_columns = 0;
+  std::size_t sticky_y_slice_checks = 0;
+  std::size_t pending_scanned_columns = 0;
+  std::size_t pending_y_slice_checks = 0;
+  std::size_t provisional_scanned_meshes = 0;
+  if (cruise_ring_reuse && !sticky_ring_resync)
+  {
+    sticky_remesh = ring_sample_prev.black_sticky;
+    pending_dark = ring_sample_prev.pending_light;
+    provisional_light_preview =
+        ring_sample_prev.provisional_light_preview;
+  }
+  else
+  {
+    auto helper_t0 = std::chrono::high_resolution_clock::now();
+    sticky_remesh =
+        world.CountBlackStickyFocusMeshes(focus_ground, focus_radius,
+                                          &sticky_scanned_columns,
+                                          &sticky_y_slice_checks);
+    sticky_black_ms = lap_ms(helper_t0);
+    helper_t0 = std::chrono::high_resolution_clock::now();
+    pending_dark =
+        world.CountPendingDarkFocusMeshes(focus_ground, focus_radius,
+                                          &pending_scanned_columns,
+                                          &pending_y_slice_checks);
+    pending_dark_ms = lap_ms(helper_t0);
+    helper_t0 = std::chrono::high_resolution_clock::now();
+    provisional_light_preview = world.CountProvisionalLightPreviewFocusMeshes(
+        focus_ground, focus_radius, &provisional_scanned_meshes);
+    provisional_preview_ms = lap_ms(helper_t0);
+    rp.last_sticky_focus_xz = glm::ivec2(focus_ground.x, focus_ground.z);
+    rp.last_sticky_keep_cols = keep_cols_now;
+    pt.PrepRefreshRingResyncMs += lap_ms(sticky_t0);
+  }
+  pt.PrepRefreshStickyMs = lap_ms(sticky_t0);
+  if (pt.PrepRefreshRingResyncMs >= 5.0)
+  {
+    static const char *const detail_trace_env =
+        std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+    if (detail_trace_env && detail_trace_env[0] == '1')
+    {
+      const std::string message =
+          "detail=ring_resync focus=(" +
+          std::to_string(focus_ground.x) + "," +
+          std::to_string(focus_ground.z) + ") radius=" +
+          std::to_string(focus_radius) + " elapsed_ms=" +
+          std::to_string(pt.PrepRefreshRingResyncMs) + " sticky_ms=" +
+          std::to_string(sticky_black_ms) + " pending_dark_ms=" +
+          std::to_string(pending_dark_ms) + " provisional_ms=" +
+          std::to_string(provisional_preview_ms) + " sticky_set_n=" +
+          std::to_string(world.StickyRemeshAfterLight.size()) +
+          " sticky_scanned_n=" + std::to_string(sticky_scanned_columns) +
+          " sticky_y_checks_n=" + std::to_string(sticky_y_slice_checks) +
+          " sticky_match_n=" + std::to_string(sticky_remesh) +
+          " pending_set_n=" +
+          std::to_string(world.PendingLightBeforeMesh.size()) +
+          " pending_scanned_n=" +
+          std::to_string(pending_scanned_columns) +
+          " pending_y_checks_n=" +
+          std::to_string(pending_y_slice_checks) + " pending_match_n=" +
+          std::to_string(pending_dark) + " preview_mesh_scan_n=" +
+          std::to_string(provisional_scanned_meshes) +
+          " preview_match_n=" +
+          std::to_string(provisional_light_preview);
+      CubatariumLogInfo("StreamingDetail", message);
+    }
+  }
   const int dark_preview = sticky_remesh + pending_dark;
-  const int not_render_ready =
-      world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
-  const int focus_dirty_chunks =
-      world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
+  // Cruise: CountUnfinishedVisualNear/ByFacing walk the whole focus ring with
+  // IsTerrainChunkComplete + IsColumnRenderReady — ~5–9ms of stream_ms on
+  // no-hole fly (CB wall_ms_no_holes). Idle/stop still needs the full count
+  // for F2 fd_end / not_ready. Holes still use HasMissing above.
+  // Cruise: sample unfinished every N frames. Hold last SoT count between
+  // samples for UnfinishedVisual / FocusNotRenderReady (ARCH gates).
+  // FocusPressure = pending+dirty proxy for scheduler pressure only.
+  
+  const auto diet_dirty_setup_t0 = std::chrono::high_resolution_clock::now();
+  
+  
+  
+  int focus_dirty_chunks = rp.last_focus_dirty;
+  const auto &ring_prev_early = world.GetFocusRingVisualSample();
+  const int column_no_mesh_hint_early =
+      ring_prev_early.valid ? ring_prev_early.column_loaded_no_mesh_n : 0;
+  const bool rim_hole_pressure_early = ShouldComputeRimHolePressure(
+      miss_horiz, last_unfinished_hint, rp.last_focus_dirty,
+      column_no_mesh_hint_early, missing_near);
+  if (focus_horiz != rp.last_dirty_focus || focus_radius != rp.last_dirty_radius)
+  {
+    rp.focus_dirty_sample_cd = 0;
+    rp.last_dirty_focus = focus_horiz;
+    rp.last_dirty_radius = focus_radius;
+  }
+  if (!diet_cruise_cadence_final || in.visual_holes || rim_hole_pressure_early ||
+      --rp.focus_dirty_sample_cd <= 0)
+  {
+    pt.PrepRefreshDietFlagsMs += lap_ms(diet_dirty_setup_t0);
+    const auto dirty_t0 = std::chrono::high_resolution_clock::now();
+    focus_dirty_chunks =
+        world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
                                                               focus_radius);
+    pt.PrepRefreshDirtyMs = lap_ms(dirty_t0);
+    pt.FocusDirtyReconcileDelta =
+        world.GetMeshService().GetLastFocusDirtyReconcileDelta();
+    rp.last_focus_dirty = focus_dirty_chunks;
+    rp.focus_dirty_sample_cd =
+        (diet_cruise_cadence_final && !in.visual_holes &&
+         !rim_hole_pressure_early)
+            ? 8
+            : 0;
+  }
+  else
+  {
+    pt.PrepRefreshDietFlagsMs += lap_ms(diet_dirty_setup_t0);
+  }
+  
+  
+  
+  
+  const bool unfinished_focus_jumped =
+      focus_horiz.x != rp.last_unfinished_focus.x ||
+      focus_horiz.z != rp.last_unfinished_focus.z ||
+      focus_radius != rp.last_unfinished_radius;
+  bool unfinished_census_invalidated = false;
+  int unfinished_visual = 0;
+  int focus_pressure = 0;
+  const auto unfinished_t0 = std::chrono::high_resolution_clock::now();
+  if (unfinished_focus_jumped)
+  {
+    world.InvalidateUnfinishedVisualCache();
+    unfinished_census_invalidated = true;
+    rp.last_unfinished_focus = focus_horiz;
+    rp.last_unfinished_radius = focus_radius;
+    rp.unfinished_sample_cd = 0;
+  }
+  const auto &ring_prev = world.GetFocusRingVisualSample();
+  const int column_no_mesh_hint =
+      ring_prev.valid ? ring_prev.column_loaded_no_mesh_n : 0;
+  bool rim_hole_pressure = ShouldComputeRimHolePressure(
+      miss_horiz, last_unfinished_hint, focus_dirty_chunks, column_no_mesh_hint,
+      missing_near);
+  if (witness_retarget_delta > 0 || pt.FocusDirtyReconcileDelta > 0)
+  {
+    world.InvalidateUnfinishedVisualCache();
+    unfinished_census_invalidated = true;
+    rp.unfinished_sample_cd = 0;
+    rp.unfinished_reuse_age = 0;
+  }
+  // R3.6: do not force every-frame unfinished walk on rim_hole_pressure —
+  // heal still sees pressure via admission; scan cadence is diet/telemetry.
+  // R4.5.1: under mh∈[1,2] && !underfeet, reuse unfinished 1–2 frames (cadence
+  // only — do not starve mh==0 / underfeet / capture backlog).
+  const bool near_mh_unfinished_reuse =
+      in.visual_holes && miss_horiz >= 1 && miss_horiz <= 2 &&
+      !pending_underfeet && !missing_underfeet && rp.unfinished_reuse_age < 2;
+  // Never take a cadence-reuse path after invalidating the cache: the held
+  // scalar belongs to the previous focus/ownership epoch, while the detailed
+  // readiness-class census has just been cleared. Rebuild both from the same
+  // focus before publishing telemetry or making downstream budget decisions.
+  bool force_full_unfinished =
+      unfinished_census_invalidated || !diet_cruise_cadence_final ||
+      pending_underfeet || capture_backlog ||
+      (in.visual_holes && !near_mh_unfinished_reuse);
+  const bool unfinished_sample_due = --rp.unfinished_sample_cd <= 0;
+  // R4.2: under calm cruise rim, reuse unfinished sample for K frames before
+  // another full R_stream walk (cruise_scan_fast is computed later; use diet).
+  const bool cruise_unfinished_defer =
+      diet_cruise_cadence_final && miss_horiz >= 3 && !in.visual_holes &&
+      !pending_underfeet && !capture_backlog && rp.unfinished_reuse_age < 6;
+  if (force_full_unfinished)
+  {
+    rp.last_unfinished_visual =
+        world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+    unfinished_visual = rp.last_unfinished_visual;
+    focus_pressure = unfinished_visual;
+    rp.unfinished_sample_cd = 0;
+    rp.unfinished_reuse_age = 0;
+  }
+  else if (near_mh_unfinished_reuse)
+  {
+    unfinished_visual = rp.last_unfinished_visual;
+    ++rp.unfinished_reuse_age;
+    rp.unfinished_sample_cd = 2;
+    focus_pressure =
+        pending_light_focus +
+        (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+    if (focus_pressure < unfinished_visual)
+    {
+      focus_pressure = unfinished_visual;
+    }
+  }
+  else if (unfinished_sample_due && cruise_unfinished_defer)
+  {
+    unfinished_visual = rp.last_unfinished_visual;
+    ++rp.unfinished_reuse_age;
+    rp.unfinished_sample_cd = 4;
+    focus_pressure =
+        pending_light_focus +
+        (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+    if (focus_pressure < unfinished_visual)
+    {
+      focus_pressure = unfinished_visual;
+    }
+  }
+  else if (unfinished_sample_due)
+  {
+    rp.last_unfinished_visual =
+        world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+    unfinished_visual = rp.last_unfinished_visual;
+    focus_pressure = unfinished_visual;
+    rp.unfinished_reuse_age = 0;
+    rp.unfinished_sample_cd =
+        ShouldUseStandStablePrepDiet(moving_for_telemetry, in.visual_holes,
+                                     miss_horiz, unfinished_visual)
+            ? UnfinishedSampleCooldownFramesStandStable(unfinished_visual)
+            : (diet_cruise_cadence_final && miss_horiz >= 2
+                   ? UnfinishedSampleCooldownFramesCruise(
+                         diet_cruise_cadence_final, miss_horiz,
+                         unfinished_visual)
+                   : UnfinishedSampleCooldownFrames(unfinished_visual));
+  }
+  else if (ShouldReuseUnfinishedVisualSample(diet_cruise_cadence_final,
+                                             in.visual_holes, rim_hole_pressure,
+                                             pending_underfeet,
+                                             rp.unfinished_sample_cd))
+  {
+    unfinished_visual = rp.last_unfinished_visual;
+    ++rp.unfinished_reuse_age;
+    focus_pressure =
+        pending_light_focus +
+        (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+    if (focus_pressure < unfinished_visual)
+    {
+      focus_pressure = unfinished_visual;
+    }
+  }
+  else
+  {
+    unfinished_visual = rp.last_unfinished_visual;
+    if (in.visual_holes && unfinished_visual == 0)
+    {
+      unfinished_visual = 1;
+    }
+    focus_pressure =
+        pending_light_focus +
+        (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+    if (focus_pressure < unfinished_visual)
+    {
+      focus_pressure = unfinished_visual;
+    }
+  }
+  rim_hole_pressure = ShouldComputeRimHolePressure(
+      miss_horiz, unfinished_visual, focus_dirty_chunks,
+      std::max(column_no_mesh_hint, unfinished_visual), missing_near);
+  const bool focus_pressure_rising = focus_pressure > rp.prev_focus_pressure + 1;
+  rp.prev_focus_pressure = focus_pressure;
+  const bool rim_perf_diet =
+      diet_cruise_cadence_final && !in.visual_holes &&
+      !ShouldExitRimPerfDiet(rim_hole_pressure, rp.unfinished_reuse_age,
+                             focus_pressure_rising);
+  pt.PrepRefreshUnfinishedMs = lap_ms(unfinished_t0);
+  const auto body_t0 = std::chrono::high_resolution_clock::now();
+  world.SetLastUnfinishedVisualSample(unfinished_visual);
+  rp.last_softdefer_witness_retarget =
+      world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+  {
+    UWorld::FocusRingVisualSample sample{};
+    sample.frame_epoch = world.GetStreamingFrameEpoch();
+    sample.pending_light = pending_light_focus;
+    sample.dirty_n = focus_dirty_chunks;
+    sample.black_sticky = sticky_remesh;
+    sample.provisional_light_preview = provisional_light_preview;
+    sample.unfinished = unfinished_visual;
+    sample.valid = true;
+    world.SetFocusRingVisualSample(sample);
+  }
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
-  world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
-  world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
+  // Era39 A4: split Type A — pending-dark (hidden) vs sticky remesh (preview).
+  world.PhysicsTelemetryData.FocusDarkMeshHidden = pending_dark;
+  world.PhysicsTelemetryData.FocusDarkMeshPreview = sticky_remesh;
+  world.PhysicsTelemetryData.FocusProvisionalLightPreview =
+      provisional_light_preview;
+  // Era16 TD-052: VisibleBlack column SoT (independent of StickyRemesh set).
+  // Cruise: every 4 frames. Stand: every frame until VB raw stable, then
+  // cadence 4 (FZ2.7-P17: idle every-frame scan burned stream_ms on 100413).
   {
+
+
+
+
+
+
+
+
+    VisibleBlackFocusCounts vb_counts{};
+    const bool do_full_scan =
+        rp.visible_black_sample_cd <= 0 ||
+        (!diet_cruise_cadence_final && rp.vb_focus_stable_frames < 4);
+    const bool ticketed_consume_scan =
+        !diet_cruise_cadence_final || rp.last_visible_black_no_ticket > 10;
+    const auto vb_t0 = std::chrono::high_resolution_clock::now();
+    if (do_full_scan)
+    {
+      const auto vb_raw_t0 = std::chrono::high_resolution_clock::now();
+      const int prev_raw = rp.vb_pending_raw;
+      vb_counts = world.CountVisibleBlackFocusMeshes(
+          focus_ground, focus_radius, ticketed_consume_scan,
+          rp.vb_focus_stable_frames);
+      const int raw_vb = vb_counts.focus_n;
+      pt.PrepRefreshVbRawMs += lap_ms(vb_raw_t0);
+      world.PhysicsTelemetryData.VisibleBlackFocusRawN = raw_vb;
+      if (prev_raw > 0 && raw_vb == prev_raw)
+      {
+        ++rp.vb_focus_stable_frames;
+      }
+      else
+      {
+        rp.vb_focus_stable_frames = 0;
+      }
+      rp.last_visible_black_no_ticket = vb_counts.no_ticket;
+      rp.last_visible_black_progress = vb_counts.progress;
+      rp.last_visible_black_stalled = vb_counts.stalled;
+      rp.last_visible_black_stale_lit = vb_counts.stale_lit;
+      rp.last_visible_black_fully_dark_repair = vb_counts.fully_dark_repair;
+      rp.last_visible_black_fully_dark_no_ticket =
+          vb_counts.fully_dark_no_ticket;
+      rp.last_visible_black_fully_dark_stalled = vb_counts.fully_dark_stalled;
+      rp.last_visible_black_legal_dark = vb_counts.legal_dark;
+      world.PhysicsTelemetryData.StalledSampleN = vb_counts.stalled_sample_n;
+      world.PhysicsTelemetryData.StalledSampleHasTicketN =
+          vb_counts.stalled_sample_has_ticket_n;
+      world.PhysicsTelemetryData.StalledSamplePendingLightN =
+          vb_counts.stalled_sample_pending_light_n;
+      if (std::abs(raw_vb - rp.vb_published) > 3)
+      {
+        rp.vb_published = raw_vb;
+        rp.vb_pending_raw = raw_vb;
+        rp.vb_pending_stable = 0;
+      }
+      else if (raw_vb == rp.vb_pending_raw)
+      {
+        ++rp.vb_pending_stable;
+        if (rp.vb_pending_stable >= 4)
+        {
+          rp.vb_published = raw_vb;
+        }
+      }
+      else
+      {
+        rp.vb_pending_raw = raw_vb;
+        rp.vb_pending_stable = 1;
+      }
+      rp.visible_black_sample_cd =
+          VbRawScanCadenceFrames(diet_cruise_cadence_final,
+                                 rp.vb_focus_stable_frames,
+                                 rp.last_visible_black_stalled, rp.vb_published);
+      pt.PrepRefreshVbMs += lap_ms(vb_t0);
+      UWorld::VisibleBlackFocusSample vb_sample{};
+      vb_sample.frame_epoch = world.GetStreamingFrameEpoch();
+      vb_sample.focus_n = rp.vb_published;
+      vb_sample.no_ticket_n = rp.last_visible_black_no_ticket;
+      vb_sample.progress_n = rp.last_visible_black_progress;
+      vb_sample.stalled_n = rp.last_visible_black_stalled;
+      vb_sample.valid = true;
+      world.SetVisibleBlackFocusSample(vb_sample);
+    }
+    else if (diet_cruise_cadence_final)
+    {
+      // Phase 5.7.6 / 5.7R: dirty-ring memo — accelerate next full scan without
+      // every-frame O(R²). Under focus_missing+cruise floor cd≥2 (not 1).
+      if (world.ConsumeVisibleBlackFocusSampleDirty())
+      {
+        const bool miss_moving =
+            world.GetPhysicsTelemetry().FocusMissingMesh != 0 &&
+            moving_for_telemetry;
+        const int floor_cd = miss_moving ? 2 : 1;
+        if (rp.visible_black_sample_cd > floor_cd)
+        {
+          rp.visible_black_sample_cd = floor_cd;
+        }
+        else
+        {
+          --rp.visible_black_sample_cd;
+        }
+      }
+      else
+      {
+        --rp.visible_black_sample_cd;
+      }
+    }
+    else
+    {
+      // A cruise cadence can still be armed on the frame movement stops.
+      // Advance it in stand mode too, or the last visible-black census remains
+      // frozen indefinitely after a flight and stop-tail gates read stale data.
+      --rp.visible_black_sample_cd;
+    }
+    world.PhysicsTelemetryData.VisibleBlackFocusN = rp.vb_published;
+    world.PhysicsTelemetryData.VisibleBlackNoTicketN =
+        rp.last_visible_black_no_ticket;
+    world.PhysicsTelemetryData.VisibleBlackProgressN =
+        rp.last_visible_black_progress;
+    world.PhysicsTelemetryData.VisibleBlackStalledN =
+        rp.last_visible_black_stalled;
+    world.PhysicsTelemetryData.VisibleBlackStaleLitN =
+        rp.last_visible_black_stale_lit;
+    world.PhysicsTelemetryData.VisibleBlackFullyDarkRepairN =
+        rp.last_visible_black_fully_dark_repair;
+    world.PhysicsTelemetryData.VisibleBlackFullyDarkNoTicketN =
+        rp.last_visible_black_fully_dark_no_ticket;
+    world.PhysicsTelemetryData.VisibleBlackFullyDarkStalledN =
+        rp.last_visible_black_fully_dark_stalled;
+    world.PhysicsTelemetryData.VisibleBlackLegalDarkN =
+        rp.last_visible_black_legal_dark;
+    // A21 P7: refresh RingReadinessBudget outputs each frame (flag-gated readers).
+    {
+      RingReadinessInputs rin{};
+      rin.unfinished_visual = unfinished_visual;
+      rin.fully_dark_stalled = rp.last_visible_black_fully_dark_stalled;
+      rin.miss_horiz = miss_horiz;
+      rin.dirty_fm = focus_dirty_chunks;
+      rin.wall_ms = world.GetWallFrameDelta() * 1000.0;
+      rin.moving = diet_cruise_cadence_final;
+      rin.baseline_lit = kVisualStageLitDrawableHoriz;
+      rin.focus_radius = focus_radius;
+      rin.prev_effective_lit_ring =
+          RingReadinessLastOutputs().effective_lit_ring;
+      rin.frames_in_mode = RingReadinessLastOutputs().frames_in_mode;
+      RingReadinessLastOutputs() = EvaluateRingReadinessBudget(rin);
+    }
+    world.PhysicsTelemetryData.VisibleBlackCensusMismatch =
+        cutum::CensusMismatchRequiresOracle(unfinished_visual, rp.vb_published)
+            ? 1
+            : 0;
+    {
+      cutum::DrawOracleCensusCounts oracle =
+          cutum::AccumulateDrawOracleFromVbCensus(
+              unfinished_visual, rp.last_visible_black_stale_lit,
+              rp.last_visible_black_fully_dark_repair,
+              rp.last_visible_black_fully_dark_no_ticket,
+              rp.last_visible_black_fully_dark_stalled,
+              rp.last_visible_black_legal_dark);
+      const int object_id_miss_n =
+          cutum::EstimateObjectIdMissesFromCensusMismatch(unfinished_visual,
+                                                          rp.vb_published);
+      cutum::ApplyObjectIdMissesToCensus(oracle, object_id_miss_n);
+      world.PhysicsTelemetryData.DrawOracleMissingResidentN =
+          oracle.missing_resident_n;
+      world.PhysicsTelemetryData.DrawOracleMissingCommandN =
+          oracle.missing_command_n;
+      world.PhysicsTelemetryData.DrawOracleFalseNegCullN =
+          oracle.false_neg_cull_n;
+      world.PhysicsTelemetryData.DrawOracleStaleVertexLightN =
+          oracle.stale_vertex_light_n;
+      world.PhysicsTelemetryData.DrawOracleStaleVlRevN = oracle.stale_vl_rev_n;
+      world.PhysicsTelemetryData.DrawOracleLegalDarkN = oracle.legal_dark_n;
+      world.PhysicsTelemetryData.DrawOracleCorrectLitProxyN =
+          oracle.correct_lit_proxy_n;
+      world.PhysicsTelemetryData.DrawOracleFullyDarkDebtN =
+          oracle.fully_dark_debt_n;
+      world.PhysicsTelemetryData.DrawOracleFaultN = oracle.fault_n;
+
+      const int prev_miss_age = rp.oldest_missing_resident_age_frames;
+      const int prev_stale_age = rp.oldest_stale_vertex_light_age_frames;
+      const int lit_clear_n =
+          world.GetMeshService().GetLastGpuFinishN();
+      rp.oldest_missing_resident_age_frames = cutum::AdvanceOldestDebtAgeFrames(
+          prev_miss_age, oracle.missing_resident_n > 0,
+          rp.prev_oracle_missing_resident_n, oracle.missing_resident_n,
+          lit_clear_n);
+      rp.oldest_stale_vertex_light_age_frames =
+          cutum::AdvanceOldestDebtAgeFrames(
+              prev_stale_age, oracle.stale_vertex_light_n > 0,
+              rp.prev_oracle_stale_vertex_light_n, oracle.stale_vertex_light_n,
+              lit_clear_n);
+      rp.prev_oracle_missing_resident_n = oracle.missing_resident_n;
+      rp.prev_oracle_stale_vertex_light_n = oracle.stale_vertex_light_n;
+      world.PhysicsTelemetryData.OldestMissingResidentAgeFrames =
+          rp.oldest_missing_resident_age_frames;
+      world.PhysicsTelemetryData.OldestStaleVertexLightAgeFrames =
+          rp.oldest_stale_vertex_light_age_frames;
+      const int schedule_ok =
+          world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+      int grew = 0;
+      if (cutum::ShouldCountDebtAgeGrewWithSchedule(
+              prev_miss_age, rp.oldest_missing_resident_age_frames,
+              schedule_ok))
+      {
+        ++grew;
+      }
+      if (cutum::ShouldCountDebtAgeGrewWithSchedule(
+              prev_stale_age, rp.oldest_stale_vertex_light_age_frames,
+              schedule_ok))
+      {
+        ++grew;
+      }
+      world.PhysicsTelemetryData.DebtAgeGrewWithScheduleN = grew;
+    }
+    {
+      UWorld::FocusRingVisualSample ring_update =
+          world.GetFocusRingVisualSample();
+      ring_update.frame_epoch = world.GetStreamingFrameEpoch();
+      ring_update.visible_black_focus_n = rp.vb_published;
+      ring_update.visible_black_no_ticket_n = rp.last_visible_black_no_ticket;
+      ring_update.column_loaded_no_mesh_n =
+          world.PhysicsTelemetryData.ColumnLoadedNoMeshN;
+      ring_update.valid = true;
+      world.SetFocusRingVisualSample(ring_update);
+    }
+  }
+  world.PhysicsTelemetryData.FocusNotRenderReady = unfinished_visual;
+  const FocusRingVisualCensus focus_visual =
+      world.GetFocusRingVisualCensus();
+  world.PhysicsTelemetryData.FocusVisualTerrainIncompleteN =
+      focus_visual.Get(FocusColumnVisualClass::TerrainIncomplete);
+  world.PhysicsTelemetryData.FocusVisualPendingLightN =
+      focus_visual.Get(FocusColumnVisualClass::PendingLight);
+  world.PhysicsTelemetryData.FocusVisualStickyRemeshN =
+      focus_visual.Get(FocusColumnVisualClass::StickyRemesh);
+  world.PhysicsTelemetryData.FocusVisualStaleDarkN =
+      focus_visual.Get(FocusColumnVisualClass::StaleDark);
+  world.PhysicsTelemetryData.FocusVisualMissingMeshN =
+      focus_visual.Get(FocusColumnVisualClass::MissingMesh);
+  world.PhysicsTelemetryData.FocusVisualGpuInFlightN =
+      focus_visual.Get(FocusColumnVisualClass::GpuInFlight);
+  world.PhysicsTelemetryData.FocusVisualNotLoadedN =
+      focus_visual.Get(FocusColumnVisualClass::NotLoaded);
+  world.PhysicsTelemetryData.FocusVisualNotReadyStateN =
+      focus_visual.Get(FocusColumnVisualClass::NotReadyState);
+  world.PhysicsTelemetryData.FocusVisualFaceDebtN =
+      focus_visual.Get(FocusColumnVisualClass::FaceDebt);
+  world.PhysicsTelemetryData.FocusVisualReadyN =
+      focus_visual.Get(FocusColumnVisualClass::Ready);
+  world.PhysicsTelemetryData.FocusDataCensusValid =
+      focus_visual.data_mesh_valid ? 1 : 0;
+  world.PhysicsTelemetryData.FocusDataSampleAgeFrames =
+      focus_visual.data_mesh_sample_age_frames;
+  world.PhysicsTelemetryData.FocusDataSolidSliceN =
+      focus_visual.resident_solid_slice_n;
+  world.PhysicsTelemetryData.FocusDataAirSliceN =
+      focus_visual.resident_air_slice_n;
+  world.PhysicsTelemetryData.FocusDataAbsentSliceN =
+      focus_visual.absent_slice_n;
+  world.PhysicsTelemetryData.FocusDataNonAirVoxelN =
+      focus_visual.non_air_voxel_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidSliceN =
+      focus_visual.band_solid_slice_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidMeshN =
+      focus_visual.band_solid_mesh_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidNoDrawableN =
+      focus_visual.band_solid_no_drawable_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidSatisfyingN =
+      focus_visual.band_solid_satisfying_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidAcceptedEmptyN =
+      focus_visual.band_solid_accepted_empty_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidPendingMeshN =
+      focus_visual.band_solid_pending_mesh_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidPendingWorkN =
+      focus_visual.band_solid_pending_work_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidUnownedN =
+      focus_visual.band_solid_unowned_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidSliceN =
+      focus_visual.camera_band_solid_slice_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidNoDrawableN =
+      focus_visual.camera_band_solid_no_drawable_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidSatisfyingN =
+      focus_visual.camera_band_solid_satisfying_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidPendingWorkN =
+      focus_visual.camera_band_solid_pending_work_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidUnownedN =
+      focus_visual.camera_band_solid_unowned_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidUnresolvedNoWorkN =
+      focus_visual.band_solid_unresolved_no_work_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidDrawGateClosedN =
+      focus_visual.band_solid_draw_gate_closed_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidDrawReadyN =
+      focus_visual.band_solid_draw_ready_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidGpuLiveN =
+      focus_visual.band_solid_gpu_live_n;
+  world.PhysicsTelemetryData.FocusPressure = focus_pressure;
+  world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
+  if (missing_near && world.PhysicsTelemetryData.MissCx != 0)
+  {
+    const glm::ivec3 witness(world.PhysicsTelemetryData.MissCx,
+                             world.PhysicsTelemetryData.MissCy,
+                             world.PhysicsTelemetryData.MissCz);
+    if (ShouldRetireStaleRimMissWitness(
+            miss_horiz, unfinished_visual,
+            world.GetMeshService().HasDrawableGreedyMesh(witness),
+            world.PhysicsTelemetryData.MissWitnessAgeFramesReport,
+            world.PhysicsTelemetryData.ColumnLoadedNoMeshN))
+    {
+      missing_near = false;
+      world.PhysicsTelemetryData.MissCx = 0;
+      world.PhysicsTelemetryData.MissCy = 0;
+      world.PhysicsTelemetryData.MissCz = 0;
+      world.PhysicsTelemetryData.MissHoriz = 0;
+      world.PhysicsTelemetryData.MissScreenRayCandidate = 0;
+      world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
+      GetColumnFlowExecutor().SetPromoteRelightHold(glm::ivec2(0), false);
+      if (world.Persistence)
+      {
+        world.Persistence->SetRelightFifoPin(glm::ivec2(0), false);
+      }
+      rp.last_missing_near = false;
+    }
+  }
+  // I9-B1 / I12-A1: cruise fast-path — skip expensive darkface/facing scans.
+  // I14b-B: decouple diet fast-path from published VB — VB backlog must not
+  // disable facing/darkface skip on rim cruise (manual 204611 VB-spiral).
+  // R3.6: phase-over enables scan skip even under rim_hole_pressure (telemetry
+  // only; admission carve still frozen when pressure is true).
+  // R3.6 fix: stream_phase_ms is zero here because WorldStreamingPhaseMs is
+  // written *after* TickWorldStreamingPhase returns.  Use previous-frame wall
+  // (frame_ms = GetLastMovementFrameMs) which is already valid.
+  // R4.6.2: never enable cruise_scan_fast while focus_missing && mh∈[2,4] —
+  // late 135644 had visual_holes=0 with mh=3 → false clear + flicker.
+  const bool stream_phase_over_budget =
+      moving_for_telemetry && in.frame_ms > 120.0 && !pending_underfeet;
+  const bool rim_miss_heal_band =
+      missing_near && miss_horiz >= 2 && miss_horiz <= 4 && !pending_underfeet;
+  const bool rim_scan_ok =
+      !in.visual_holes && miss_horiz >= 3 && !pending_underfeet &&
+      !capture_backlog && !rim_miss_heal_band &&
+      (rim_perf_diet || stream_phase_over_budget) &&
+      (unfinished_visual <= 4 || stream_phase_over_budget);
+  const bool rim_cruise_fast = rim_scan_ok;
+  const bool pressure_cruise_fast = rim_scan_ok;
+  const bool cruise_scan_fast = pressure_cruise_fast || rim_cruise_fast;
+  pt.PrepRefreshBodyMs = lap_ms(body_t0);
+  // Phase5 S2 R-Deadline: after unfinished+body, skip darkface/facing/underfeet
+  // heavy walks when shared stream budget is exhausted (never under visual gates).
+  const bool stream_deadline_hit =
+      lap_ms(stream_t0) >= stream_budget_ms && !in.visual_holes &&
+      !in.underfeet_need;
+  if (stream_deadline_hit)
+  {
+    pt.PrepRefreshDeadlineHit = 1;
+  }
+  // Actual baked-dark vertices near camera (not PendingLight proxy).
+  // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
+  if (stream_deadline_hit)
+  {
+    // Reuse last DarkFace* samples already latched in telemetry.
+  }
+  else if (!cruise_scan_fast)
+  {
+    const auto darkface_t0 = std::chrono::high_resolution_clock::now();
+    world.PhysicsTelemetryData.DarkFaceNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceStaleNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceVoidNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceDist = 0.0;
+    if (const auto camera = world.GetCurrentUserCamera())
+    {
+      UChunkMeshCache::DarkFaceHit hit{};
+      int near_n = 0;
+      int stale_n = 0;
+      int void_n = 0;
+      if (world.GetMeshService().GetCache().FindNearestDarkFaceNear(
+              camera->GetPosition(), /*max_dist=*/24.0f, /*chunk_radius=*/2,
+              hit, &near_n, &world.GetBlockWorld(), &stale_n, &void_n))
+      {
+        world.PhysicsTelemetryData.DarkFaceNearN = near_n;
+        world.PhysicsTelemetryData.DarkFaceStaleNearN = stale_n;
+        world.PhysicsTelemetryData.DarkFaceVoidNearN = void_n;
+        world.PhysicsTelemetryData.DarkFaceBlockX = hit.block.x;
+        world.PhysicsTelemetryData.DarkFaceBlockY = hit.block.y;
+        world.PhysicsTelemetryData.DarkFaceBlockZ = hit.block.z;
+        world.PhysicsTelemetryData.DarkFaceChunkX = hit.chunk.x;
+        world.PhysicsTelemetryData.DarkFaceChunkY = hit.chunk.y;
+        world.PhysicsTelemetryData.DarkFaceChunkZ = hit.chunk.z;
+        world.PhysicsTelemetryData.DarkFaceBlockId =
+            static_cast<int>(hit.blockId);
+        world.PhysicsTelemetryData.DarkFaceIndex = hit.faceIndex;
+        world.PhysicsTelemetryData.DarkFaceDist = hit.dist;
+      }
+    }
+    pt.PrepRefreshDarkfaceMs = lap_ms(darkface_t0);
+  }
+  else
+  {
+    world.PhysicsTelemetryData.DarkFaceNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceStaleNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceVoidNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceDist = 0.0;
+  }
+  {
+
+
+
+    int ahead = 0;
+    int behind = 0;
     glm::vec2 fwd = world.GetLastMovementDirXz();
     if (glm::length(fwd) < 0.01f)
     {
@@ -401,24 +3102,307 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         fwd = glm::vec2(front.x, front.z);
       }
     }
-    int ahead = 0;
-    int behind = 0;
-    world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
-                                        behind);
+    // R4.6.1: under rim miss / hole pressure, time-slice Facing (Cubyz-style
+    // telemetry probes) — stand clear and underfeet/mh≤1 keep dense sample.
+    // Phase 5.6.3: stand + miss/SoftDefer stuck → dense facing (no stale ahead).
+    const bool stand_miss_dense =
+        !moving_for_telemetry &&
+        (missing_near || world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0);
+    const bool facing_rim_cadence =
+        !stand_miss_dense &&
+        (rim_hole_pressure || rim_miss_heal_band) && !in.underfeet_need &&
+        !(missing_near && miss_horiz <= 1);
+    if (stream_deadline_hit && !stand_miss_dense)
+    {
+      ahead = rp.last_ahead;
+      behind = rp.last_behind;
+    }
+    else if (!diet_cruise_cadence_final &&
+             (!facing_rim_cadence || stand_miss_dense))
+    {
+      const auto facing_t0 = std::chrono::high_resolution_clock::now();
+      world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
+                                          behind);
+      pt.PrepRefreshFacingMs = lap_ms(facing_t0);
+      rp.last_ahead = ahead;
+      rp.last_behind = behind;
+      rp.facing_sample_cd = stand_miss_dense ? 0 : 4;
+    }
+    else if (cruise_scan_fast)
+    {
+      ahead = rp.last_ahead;
+      behind = rp.last_behind;
+    }
+    else if (rp.facing_sample_cd <= 0)
+    {
+      const auto facing_t0 = std::chrono::high_resolution_clock::now();
+      world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
+                                          behind);
+      pt.PrepRefreshFacingMs = lap_ms(facing_t0);
+      rp.last_ahead = ahead;
+      rp.last_behind = behind;
+      rp.facing_sample_cd =
+          facing_rim_cadence ? 12 : (rim_cruise_fast ? 24 : 4);
+    }
+    else
+    {
+      --rp.facing_sample_cd;
+      ahead = rp.last_ahead;
+      behind = rp.last_behind;
+    }
     world.PhysicsTelemetryData.FocusUnfinishedAhead = ahead;
     world.PhysicsTelemetryData.FocusUnfinishedBehind = behind;
   }
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
-  world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
-  // Render contract: lit-but-dirty remesh counts even when pending=0.
-  world.PhysicsTelemetryData.UnfinishedVisual = not_render_ready;
-  world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
-  world.PhysicsTelemetryData.NearFocusHoles =
-      (missing_near || pending_light_focus > 0 || dark_preview > 0) ? 1 : 0;
+  {
+    const auto diet_telem_t0 = std::chrono::high_resolution_clock::now();
+    world.PhysicsTelemetryData.VisualHoles = in.visual_holes ? 1 : 0;
+    world.PhysicsTelemetryData.RimWitnessLatched =
+        (missing_near && !in.visual_holes) ? 1 : 0;
+    world.PhysicsTelemetryData.RimHolePressure = rim_hole_pressure ? 1 : 0;
+    world.PhysicsTelemetryData.RimPerfDiet = rim_perf_diet ? 1 : 0;
+    world.PhysicsTelemetryData.ColumnBumpDenied = 0;
+    world.PhysicsTelemetryData.ColumnFlowUpgradeN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDrainedN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDeferredN = 0;
+    world.PhysicsTelemetryData.ColumnFlowQueueLiveN = 0;
+    world.PhysicsTelemetryData.ColumnFlowQueueStaleHeapN = 0;
+    world.PhysicsTelemetryData.ColumnFlowProbedN = 0;
+    world.PhysicsTelemetryData.ColumnFlowCooldownDeferredN = 0;
+    world.PhysicsTelemetryData.ColumnFlowProbeBudgetHitN = 0;
+    world.PhysicsTelemetryData.ColumnFlowPostDeadlineUnitMsMax = 0.0;
+    world.PhysicsTelemetryData.ColumnFlowDrainRequestN = 0;
+    world.PhysicsTelemetryData.ColumnFlowCriticalUnitsAtEntryN = 0;
+    world.PhysicsTelemetryData.ColumnFlowCriticalUnitsAtExitN = 0;
+    world.PhysicsTelemetryData.ColumnFlowLiveFirstMeshN = 0;
+    world.PhysicsTelemetryData.ColumnFlowLiveRelightN = 0;
+    world.PhysicsTelemetryData.ColumnFlowLiveSeamN = 0;
+    world.PhysicsTelemetryData.ColumnFlowLivePromoteN = 0;
+    world.PhysicsTelemetryData.ColumnFlowProbedFirstMeshN = 0;
+    world.PhysicsTelemetryData.ColumnFlowProbedRelightN = 0;
+    world.PhysicsTelemetryData.ColumnFlowProbedSeamN = 0;
+    world.PhysicsTelemetryData.ColumnFlowProbedPromoteN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDeferredFirstMeshN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDeferredRelightN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDeferredSeamN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDeferredPromoteN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDispatchedFirstMeshN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDispatchedRelightN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDispatchedSeamN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDispatchedPromoteN = 0;
+    world.PhysicsTelemetryData.ColumnFlowDispatchFirstMeshMsMax = 0.0;
+    world.PhysicsTelemetryData.ColumnFlowDispatchRelightMsMax = 0.0;
+    world.PhysicsTelemetryData.ColumnFlowDispatchSeamMsMax = 0.0;
+    world.PhysicsTelemetryData.ColumnFlowDispatchPromoteMsMax = 0.0;
+    // SoT unfinished (held sample while cruise); not pending-proxy.
+    world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
+    world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
+    // A37 H2: unfinished → owned NoteDemand+admit (Kick OFF by default).
+    if (unfinished_visual > 0)
+    {
+      world.AdmitUnfinishedVisualDemand(8);
+      world.KickUnfinishedVisualRemesh(4); // no-op unless CUBA_KICK_UNFINISHED=1
+    }
+    // NearFocusHoles telemetry = missing mesh only (same as VisualHoles).
+    // Pending-light → LightDebt; sticky/pending_dark → FocusDarkMesh /
+    // FocusStickyRemesh / FocusPendingDark. OR-ing dark_preview here was
+    // overwritten after UpdateStreaming's mesh-only write, then re-applied in
+    // TickAsync and inflated nh_no_miss_rate with miss=0 (SoftDefer remesh).
+    world.PhysicsTelemetryData.NearFocusHoles = in.visual_holes ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeRan =
+        run_miss_probe ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeResult =
+        run_miss_probe ? (missing_near_probe_result ? 1 : 0) : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeMemoHit =
+        run_miss_probe && missing_near_probe_memo_hit ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessValid =
+        run_miss_probe && missing_near_probe_result ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessCx =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_coord.x
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessCy =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_coord.y
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessCz =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_coord.z
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessResident =
+        run_miss_probe ? missing_near_probe_witness_state.resident : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessHasMesh =
+        run_miss_probe ? missing_near_probe_witness_state.has_mesh : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessDrawable =
+        run_miss_probe ? missing_near_probe_witness_state.drawable : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessSatisfying =
+        run_miss_probe ? missing_near_probe_witness_state.satisfying : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessDirty =
+        run_miss_probe ? missing_near_probe_witness_state.dirty : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessBuildInFlight =
+        run_miss_probe ? missing_near_probe_witness_state.build_in_flight : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessPendingGpuApply =
+        run_miss_probe ? missing_near_probe_witness_state.pending_gpu_apply : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessPendingGpuQueued =
+        run_miss_probe ? missing_near_probe_witness_state.pending_gpu_queued : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessSoftDeferHeld =
+        run_miss_probe ? missing_near_probe_witness_state.soft_defer_held : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessGeometryDebt =
+        run_miss_probe ? missing_near_probe_witness_state.geometry_debt : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessRepairableDebt =
+        run_miss_probe ? missing_near_probe_witness_state.repairable_debt : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessFlowTicketValid =
+        run_miss_probe ? missing_near_probe_witness_state.flow_ticket_valid : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessFlowTicketKind =
+        run_miss_probe ? missing_near_probe_witness_state.flow_ticket_kind : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessFlowTicketPriority =
+        run_miss_probe
+            ? missing_near_probe_witness_state.flow_ticket_priority
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessColumnJobStage =
+        run_miss_probe
+            ? missing_near_probe_witness_state.column_job_stage
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessIncarnation =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.incarnation
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessContentRevision =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.content_revision
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessLightRevision =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.light_revision
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessMeshRevision =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.mesh_revision
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessInflightSourceRevision =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.inflight_source_revision
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHolesLatched =
+        (in.visual_holes &&
+         !(run_miss_probe && missing_near_probe_result))
+            ? 1
+            : 0;
+    pt.PrepRefreshDietFlagsMs += lap_ms(diet_telem_t0);
+  }
+
+  // Underfeet column: catch draw_ok-but-invisible blind spot (manual 201621).
+  if (stream_deadline_hit)
+  {
+    // Reuse last Underfeet* samples; still publish Self/Pressure below.
+  }
+  else
+  {
+    const auto underfeet_t0 = std::chrono::high_resolution_clock::now();
+    const ColumnRenderableState uf =
+        world.GetColumnRenderableState(under_xz);
+    bool has_mesh = false;
+    bool pending_gpu = false;
+    const auto &settings = world.GetProceduralSettings();
+    const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+    const int max_cy = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+    const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+    int band_min = std::max(settings.MinHeight, focus_block.y - CHUNK_SIZE);
+    int band_max = std::min(settings.MaxHeight,
+                            focus_block.y + CHUNK_SIZE * 2);
+    int cy0 = std::max(min_cy, FloorDiv(band_min, CHUNK_SIZE));
+    int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+    const bool cruise_clear =
+        !in.visual_holes && world.PhysicsTelemetryData.MissHoriz > 2;
+    const bool underfeet_safety_full =
+        in.visual_holes || pending_underfeet ||
+        (world.PhysicsTelemetryData.MissHoriz >= 0 &&
+         world.PhysicsTelemetryData.MissHoriz <= 2);
+    if (!cruise_clear || underfeet_safety_full)
+    {
+      cy0 = min_cy;
+      cy1 = max_cy;
+    }
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(under_xz.x, cy, under_xz.y);
+      if (world.GetMeshService().HasMeshSatisfyingColumnReady(coord) ||
+          world.GetMeshService().HasDrawableGreedyMesh(coord))
+      {
+        has_mesh = true;
+        break;
+      }
+      if (world.GetMeshService().IsPendingGpuApply(coord) ||
+          world.GetMeshService().IsGpuExtractInFlight(coord))
+      {
+        has_mesh = true;
+        pending_gpu = true;
+        break;
+      }
+    }
+    const bool opaque_present =
+        world.PhysicsTelemetryData.UnderfeetOpaquePresentLatched != 0;
+
+
+    bool inflight = false;
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(under_xz.x, cy, under_xz.y);
+      if (world.GetMeshService().HasInflightMeshBuild(coord))
+      {
+        inflight = true;
+        break;
+      }
+    }
+    const bool opaque_predicted = UnderfeetOpaquePresentPredictedHeld(
+        opaque_present, uf.draw_ok, pending_gpu, inflight, rp.uf_predicted_latched,
+        rp.uf_predicted_hold);
+    has_mesh = UnderfeetColumnHasDrawable(has_mesh, pending_gpu, uf.draw_ok,
+                                          opaque_present || opaque_predicted);
+    world.PhysicsTelemetryData.UnderfeetDrawOk = uf.draw_ok ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetHasMesh = has_mesh ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetOpaquePresentPredicted =
+        opaque_predicted ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetSticky =
+        world.IsColumnStickyRemesh(under_xz) ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetPendingLight =
+        world.IsPendingLightBeforeMesh(under_xz) ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetReason = static_cast<int>(
+        ReconcileUnderfeetBlockReason(uf.reason, has_mesh, uf.draw_ok,
+                                      pending_gpu));
+    world.PhysicsTelemetryData.UnderfeetStage =
+        static_cast<int>(uf.stage);
+    world.PhysicsTelemetryData.LightingRelightDeferred =
+        world.IsLightingRelightDeferred() ? 1 : 0;
+    pt.PrepRefreshUnderfeetMs = lap_ms(underfeet_t0);
+  }
+  pt.PrepRefreshPressureMs = lap_ms(refresh_t0);
+  {
+    // R4.5.1: RingResyncMs is sticky full-walk only (no unfinished double-count).
+    // BodyMs covers VB+latch after unfinished; do not also subtract VbRaw.
+    const double sticky_excl =
+        std::max(0.0, pt.PrepRefreshStickyMs - pt.PrepRefreshRingResyncMs);
+    pt.PrepRefreshSelfMs =
+        pt.PrepRefreshPressureMs -
+        (pt.PrepRefreshMissMs + pt.PrepRefreshPendingMs + sticky_excl +
+         pt.PrepRefreshUnfinishedMs + pt.PrepRefreshRingResyncMs +
+         pt.PrepRefreshDarkfaceMs + pt.PrepRefreshFacingMs +
+         pt.PrepRefreshUnderfeetMs + pt.PrepRefreshDirtyMs +
+         pt.PrepRefreshPressureEvalMs + pt.PrepRefreshUnderfeetProbeMs +
+         pt.PrepRefreshCameraCompleteMs + pt.PrepRefreshBodyMs +
+         pt.PrepRefreshSetupMs + pt.PrepRefreshInputFillMs +
+         pt.PrepRefreshDietFlagsMs);
+    // PrepRefreshHasMissingMs is UpdateStreaming HasMissing (outside Refresh);
+    // reported separately for stream attribution, not subtracted from self.
+    pt.PrepRefreshSelfMs = std::max(0.0, pt.PrepRefreshSelfMs);
+    // Compat alias for existing JSON consumers / gates.
+    pt.PrepRefreshGapMs = pt.PrepRefreshSelfMs;
+  }
 }
 
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 {
+  CUBA_ZONE("TickAsyncChunkSystems");
   const auto main_t0 = std::chrono::high_resolution_clock::now();
   auto elapsed_main_ms = [&]()
   {
@@ -431,12 +3415,150 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   world.PhysicsTelemetryData.CommitSealMs = 0.0;
   world.PhysicsTelemetryData.CommitPhysicsMs = 0.0;
   world.PhysicsTelemetryData.IdlePrefetchMs = 0.0;
+  world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs = 0.0;
+  world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs = 0.0;
+  world.PhysicsTelemetryData.AsyncChunkPostSchedulerMs = 0.0;
   // StreamerUpdate / AsyncIo / RelightDrain accumulate for this tick; do not
   // clear RelightDrainMs here — DrainAsyncRelightResults already timed in World.
 
-  // Authoritative pressure for this frame (UpdateStreaming earlier used the
-  // previous frame's caps for Prefetch/MaxLoadOps — one-frame lag is fine).
-  RefreshStreamingPressure(world);
+  constexpr double kStreamBudgetDefaultMs = 5.0;
+  double stream_budget_ms = kStreamBudgetDefaultMs;
+  {
+    const float phase_budget = URuntimeTuning::Get().StreamingPhaseBudgetMs;
+    if (phase_budget > 0.0f && !world.IsEnterLitGateActive() &&
+        !world.IsEnterSessionActive())
+    {
+      // Share StreamingPhaseBudget with emerge — do not let Refresh alone
+      // spend the whole phase wall (Phase5.1 T3).
+      stream_budget_ms =
+          std::min(stream_budget_ms, static_cast<double>(phase_budget) * 0.6);
+    }
+  }
+  RefreshStreamingPressure(world, main_t0, stream_budget_ms);
+  // Phase 5.2.2: after Refresh, stop bulk commit/far work at stream_budget
+  // (0.6×phase) so emerge keeps time. Protect near miss / underfeet / enter;
+  // the over-budget fallback below advances only bounded procedural work.
+  {
+    const auto &pt = world.PhysicsTelemetryData;
+    const bool protect_near =
+        pt.FocusMissingMesh != 0 || pt.UnderfeetHasMesh == 0;
+    const double pre_scheduler_elapsed_ms = elapsed_main_ms();
+    if (pre_scheduler_elapsed_ms >= stream_budget_ms &&
+        !world.IsEnterLitGateActive() && !world.IsEnterSessionActive() &&
+        !protect_near)
+    {
+      // M624V showed that this early frame-budget exit can starve both worker
+      // admission and ready-result commits for hundreds of frames. Keep the
+      // response bounded: admit at most one queued job into a free worker and
+      // commit at most one already-ready result.
+      int pending_before = 0;
+      int ready_before = 0;
+      int worker_slots_before = 0;
+      int admitted = 0;
+      uint64_t skip_frames = 0;
+      bool sample_skip = false;
+      if (ChunkScheduler)
+      {
+        pending_before = ChunkScheduler->GetPendingQueueCount();
+        ready_before = ChunkScheduler->GetCompletedReadyCount();
+        worker_slots_before =
+            ChunkScheduler->GetAvailableGenerationWorkerSlots();
+        // RefreshStreamingPressure has already admitted these requests. Keep
+        // them moving into genuinely idle workers even when its far-stream
+        // phase exhausted the frame budget. This is async admission only: it
+        // neither applies results nor exceeds the worker pool's capacity.
+        admitted =
+            pending_before > 0 && worker_slots_before > 0
+                ? ChunkScheduler->StartQueuedGenerationWorkers(1)
+                : 0;
+        if (IsWorldColumnSourceTraceEnabled() &&
+            (pending_before > 0 || ready_before > 0))
+        {
+          static uint64_t scheduler_budget_skip_frames = 0;
+          skip_frames = ++scheduler_budget_skip_frames;
+          sample_skip = skip_frames == 1 || skip_frames % 60 == 0;
+        }
+      }
+      // RefreshStreamingPressure may have admitted a render demand before this
+      // budget exit. Run the bounded orphan reconciliation on the short path
+      // too; otherwise repeated early returns leave ownerless Created attempts
+      // active indefinitely because finish_telemetry is below this return.
+      world.MaintainChunkRenderDemandStore();
+      // RefreshStreamingPressure may have queued first-light work. The normal
+      // relight capture drain is below the scheduler, so a frame-budget return
+      // here would leave PendingLightFocus without a consumer even while the
+      // focus mesh is drawable. Service at most one queued capture; the
+      // relight drain still applies its own hot-frame and wall-time limits.
+      // FocusVisualMissingMeshN covers visual-ring rim columns whose
+      // pending relight sits outside the focus/underfeet probes (PERF-0.29
+      // manual 20261106: 27 census MissingMesh columns with PendingLightFocus=0
+      // lost their only capture consumer to this early return).
+      if (pt.PendingLightFocus > 0 || pt.UnderfeetPendingLight != 0 ||
+          pt.FocusVisualMissingMeshN > 0)
+      {
+        world.DrainRelightQueuesBudget(/*max_player_jobs=*/0,
+                                       /*max_bg_columns=*/1);
+      }
+      // The early return skips the post-emerge telemetry sample, so policies
+      // reading RelightFifoN/PendingLightN (ShouldEnqueueLatchSideRelight
+      // backpressure, pending-light recovery gates) would act on a value
+      // frozen at the last full-tick frame while the real persistence FIFO
+      // already drained to 0 (PERF-0.30 witness1: RelightFifoN=19 stale,
+      // pcols=0 — latch-side RelightThenMesh never enqueued, 20 chunks kept
+      // orphaned pending-light markers for the whole stop).
+      world.PhysicsTelemetryData.RelightFifoN =
+          world.Persistence
+              ? world.Persistence->GetPendingTerrainColumnRelightCount()
+              : 0;
+      world.PhysicsTelemetryData.PendingLightN =
+          static_cast<int>(world.GetPendingLightBeforeMeshCount());
+      world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs = elapsed_main_ms();
+      int bounded_commits = 0;
+      if (ChunkScheduler && ready_before > 0)
+      {
+        const auto bounded_tick_t0 = std::chrono::high_resolution_clock::now();
+        // The normal Tick is skipped at this point, but leaving completed
+        // columns uncommitted creates visible holes. Apply one ready result;
+        // do not start additional work or use the multi-commit drain boost.
+        ChunkScheduler->Tick(world.BlockWorld, /*maxCommitsPerFrame=*/1,
+                             /*maxGenerationStartsPerFrame=*/0,
+                             /*maxApplyMsPerFrame=*/0.0,
+                             /*allowBoundedReadyDrain=*/false);
+        world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs +=
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() -
+                bounded_tick_t0)
+                .count();
+        world.PhysicsTelemetryData.CommitApplyMs +=
+            ChunkScheduler->GetLastTickApplyMs();
+        bounded_commits = ChunkScheduler->GetLastCommitsThisFrame();
+      }
+      // Opt-in, sparse trace keeps the default/metrics-off path silent.
+      if (sample_skip && ChunkScheduler)
+      {
+        const glm::ivec3 skip_focus = UChunkManager::WorldToChunk(
+            world.GetPreferredLoadFocusBlock());
+        LogWorldColumnSource(
+            "procedural", "scheduler_budget_limited_tick",
+            glm::ivec3(skip_focus.x, 0, skip_focus.z),
+            "skip_frames=" + std::to_string(skip_frames) +
+                " elapsed_ms=" +
+                std::to_string(pre_scheduler_elapsed_ms) +
+                " budget_ms=" + std::to_string(stream_budget_ms) +
+                " pending_before=" + std::to_string(pending_before) +
+                " ready_before=" + std::to_string(ready_before) +
+                " worker_slots_before=" +
+                std::to_string(worker_slots_before) +
+                " admitted=" + std::to_string(admitted) +
+                " committed=" + std::to_string(bounded_commits) +
+                " pending_after=" +
+                std::to_string(ChunkScheduler->GetPendingQueueCount()) +
+                " ready_after=" +
+                std::to_string(ChunkScheduler->GetCompletedReadyCount()));
+      }
+      return;
+    }
+  }
   const StreamingPressureCaps &pressure = LastPressureCaps;
 
   const ProceduralSettings &procedural = world.GetProceduralSettings();
@@ -455,12 +3577,17 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
+  const int pending_pl_radius =
+      (world.IsEnterLitGateActive() || world.NeedsEnterGameMeshWarmup() ||
+       world.NeedsSpawnRingCatchUp())
+          ? EnterVisualWorkRadiusChunks()
+          : focus_radius;
   const size_t mesh_dirty = world.GetMeshService().GetDirtyCount();
+  // Phase5 S2 R-Dup: reuse Refresh latches — avoid second HasDirty/HasMissing.
   const bool near_mesh_backlog =
-      world.GetMeshService().HasDirtyWithinHorizontalRadius(focus_horiz,
-                                                           focus_radius) ||
-      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, focus_radius);
+      world.PhysicsTelemetryData.FocusDirtyChunks > 0 ||
+      world.PhysicsTelemetryData.FocusMissingMesh != 0 ||
+      world.PhysicsTelemetryData.VisualHoles != 0;
   const int gen_backlog_total =
       ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
   const int mesh_async = world.GetMeshService().GetAsyncInFlightCount();
@@ -475,22 +3602,41 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     return std::max(std::abs(coord.x - focus_horiz.x),
                     std::abs(coord.z - focus_horiz.z)) <= focus_radius;
   };
+  const double near_budget_ms = [&]()
+  {
+    double nb = near_mesh_backlog ? 6.0 : kNearCompleteBudgetMs;
+    const float phase_budget = URuntimeTuning::Get().StreamingPhaseBudgetMs;
+    if (phase_budget > 0.0f && !world.IsEnterLitGateActive() &&
+        !world.IsEnterSessionActive())
+    {
+      nb = std::min(nb, static_cast<double>(phase_budget));
+    }
+    return nb;
+  }();
   auto near_exhausted = [&]()
-  { return elapsed_main_ms() >= kNearCompleteBudgetMs; };
+  { return elapsed_main_ms() >= near_budget_ms; };
   auto far_exhausted = [&]()
   {
     if (!keep_prewarm_surplus)
     {
       return true;
     }
-    return elapsed_main_ms() >=
-           (kNearCompleteBudgetMs + kFarStreamingBudgetMs);
+    // Phase 5.2.2: far shed at stream_budget (0.6×phase), not full phase wall.
+    if (elapsed_main_ms() >= stream_budget_ms &&
+        !world.IsEnterLitGateActive() && !world.IsEnterSessionActive())
+    {
+      return true;
+    }
+    return elapsed_main_ms() >= (near_budget_ms + kFarStreamingBudgetMs);
   };
 
+  const auto before_scheduler_t0 = std::chrono::high_resolution_clock::now();
   if (ChunkScheduler && procedural.AsyncChunkGeneration)
   {
     const bool moving_fast =
         world.LastMovementSpeed > procedural.MovementSpeedBoostThreshold;
+    const bool moving_any =
+        world.LastMovementSpeed >= procedural.MovementPrefetchThreshold;
     if (moving_fast &&
         (mesh_dirty > 16 || pending_bg > 8 || frame_ms > 20.0) &&
         !near_mesh_backlog)
@@ -503,32 +3649,45 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     // Near-complete first: do not starve commits when focus Dirty is high.
     const bool missing_near_mesh =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, focus_radius);
+            world.GetBlockWorld(), focus_ground, focus_radius);
+    // ColPipe: feet r=0 only — neighbor pending/missing must not starve commits.
     const bool missing_underfeet =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, /*radius=*/1);
-    const bool pending_underfeet =
-        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
-    const bool underfeet_need = missing_underfeet || pending_underfeet;
+            world.GetBlockWorld(), focus_ground, /*radius=*/0);
+    const bool pending_underfeet = world.IsPendingLightBeforeMesh(
+        glm::ivec2(focus_horiz.x, focus_horiz.z));
     bool incomplete_camera_column = false;
     {
       // Only the camera column completeness gates underfeet commit pressure.
-      // Scanning ±1 kept MaxChunkCommits=1 forever while any neighbor was
-      // still generating — empty underfeet at 100 FPS.
-      const int max_y = procedural.MaxHeight;
       const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
-      if (!IsTerrainChunkComplete(world.BlockWorld, camera_ground, max_y))
+      if (LastCameraTerrainCompleteFrame == StreamingFrameCounter &&
+          LastCameraTerrainCompleteGround == camera_ground)
+      {
+        incomplete_camera_column = !LastCameraTerrainComplete;
+      }
+      else if (Streamer)
+      {
+        const bool complete =
+            Streamer->IsTerrainChunkCompleteCached(camera_ground);
+        LastCameraTerrainCompleteGround = camera_ground;
+        LastCameraTerrainComplete = complete;
+        LastCameraTerrainCompleteFrame = StreamingFrameCounter;
+        incomplete_camera_column = !complete;
+      }
+      else if (!IsTerrainChunkComplete(world.BlockWorld, camera_ground,
+                                       procedural.MaxHeight,
+                                       kNoTerrainChunkSlice,
+                                       procedural.MinHeight))
       {
         incomplete_camera_column = true;
       }
     }
+    const bool underfeet_need = FeetColumnUnderfeetNeed(
+        incomplete_camera_column, missing_underfeet, pending_underfeet);
     const bool near_focus_holes =
         missing_near_mesh ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
-    // Commit pressure: missing/pending mesh underfeet OR camera column not
-    // in RAM yet. Neighbor incompleteness must not starve commits.
-    const bool underfeet_pressure =
-        underfeet_need || incomplete_camera_column;
+    const bool underfeet_pressure = underfeet_need;
     if (near_focus_holes || underfeet_pressure)
     {
       keep_prewarm_surplus = false;
@@ -538,15 +3697,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       // Underfeet first when standing still. Any intentional travel (prefetch
       // threshold) must not clamp — radius=2 + near_skip carved holes mid-flight
       // when speed dipped below boost but player was still moving.
-      const bool moving_any =
-          world.LastMovementSpeed >= procedural.MovementPrefetchThreshold;
       if (moving_fast || moving_any)
       {
         Streamer->SetNearLoadRadius(-1);
       }
       else if (underfeet_pressure)
       {
-        Streamer->SetNearLoadRadius(2);
+        Streamer->SetNearLoadRadius(StoppedUnderfeetNearLoadRadius(
+            world.PhysicsTelemetryData.FocusMissingMesh > 0,
+            world.PhysicsTelemetryData.MissHoriz, focus_radius));
       }
       else if (near_focus_holes || pressure.focus_pressure_mode)
       {
@@ -628,15 +3787,55 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           chunk_budget.MaxChunkCommits,
           std::min(3, procedural.MaxChunkCommitsPerFrameBoost));
     }
+    // FocusIngressBudget (GotBlocks analog): stall new shell commits when focus
+    // mesh is missing and the mesh pool is idle. Do not strand terrain results
+    // that have finished generation; applying one can provide the missing source
+    // column and keeps the completed queue moving.
+    {
+      static int ingress_stall_frames = 0;
+      if (missing_near_mesh && mesh_async == 0)
+      {
+        ++ingress_stall_frames;
+      }
+      else
+      {
+        ingress_stall_frames = 0;
+      }
+      if (ingress_stall_frames > 8 && near_focus_holes && moving_fast &&
+          completed_ready == 0)
+      {
+        chunk_budget.MaxChunkCommits = 0;
+      }
+      // V5 FOV visual SLA (TD-ARCH-007): after stop, do not expand shell while
+      // focus unfinished — PendingLight is a mesh concern, not terrain ring.
+      const double since_stop = world.GetTimeSinceMotionSec();
+      if (since_stop > 0.0 && since_stop <= 8.0 &&
+          world.PhysicsTelemetryData.UnfinishedVisual > 0)
+      {
+        chunk_budget.MaxChunkCommits =
+            std::min(chunk_budget.MaxChunkCommits, 1);
+        chunk_budget.MaxLoadOps = std::min(chunk_budget.MaxLoadOps, 2);
+      }
+    }
     chunk_budget.MaxLoadOps =
         ApplyPressureCap(chunk_budget.MaxLoadOps, pressure.max_load_ops_cap);
     chunk_budget.MaxChunkCommits = ApplyPressureCap(
         chunk_budget.MaxChunkCommits, pressure.max_commits_cap);
+    // Let Tick decide against the actual drained result batch. A ready-queue
+    // snapshot here is stale by the time Completed.DrainAll() runs.
+    const auto scheduler_t0 = std::chrono::high_resolution_clock::now();
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
-                         chunk_budget.MaxLoadOps);
+                         chunk_budget.MaxLoadOps, 0.0, moving_any);
+    world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - scheduler_t0)
+            .count();
     world.PhysicsTelemetryData.CommitApplyMs =
         ChunkScheduler->GetLastTickApplyMs();
   }
+  world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs =
+      std::chrono::duration<double, std::milli>(before_scheduler_t0 - main_t0)
+          .count();
 
   auto finish_telemetry = [&]()
   {
@@ -651,8 +3850,127 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetRelightDiscardedLateCount();
     world.PhysicsTelemetryData.MeshDiscardedLate =
         world.GetMeshDiscardedLateCount();
+    world.PhysicsTelemetryData.MeshDiscardedLateEpoch =
+        world.GetMeshDiscardedLateEpochCount();
+    world.PhysicsTelemetryData.MeshDiscardedLateJobMismatch =
+        world.GetMeshDiscardedLateJobMismatchCount();
     world.PhysicsTelemetryData.MeshApplyStale =
         world.GetMeshService().GetMeshApplyStaleCount();
+    world.PhysicsTelemetryData.MeshApplyStaleVisual =
+        world.GetMeshService().GetMeshApplyStaleVisualCount();
+    world.PhysicsTelemetryData.MeshApplyStaleGeom =
+        world.GetMeshService().GetMeshApplyStaleGeomCount();
+    world.PhysicsTelemetryData.MeshApplyStaleLight =
+        world.GetMeshService().GetMeshApplyStaleLightCount();
+    world.PhysicsTelemetryData.MeshApplyStaleCatalog =
+        world.GetMeshService().GetMeshApplyStaleCatalogCount();
+    world.PhysicsTelemetryData.MeshApplyStaleStampInvalid =
+        world.GetMeshService().GetMeshApplyStaleStampInvalidCount();
+    world.PhysicsTelemetryData.MeshApplyStaleRev =
+        world.GetMeshService().GetMeshApplyStaleRevCount();
+    world.PhysicsTelemetryData.MeshApplyStaleGeomAccepted =
+        world.GetMeshService().GetCache().GetMeshApplyStaleGeomAcceptedCount();
+    world.PhysicsTelemetryData.MeshApplyStaleLightAccepted =
+        world.GetMeshService().GetCache().GetMeshApplyStaleLightAcceptedCount();
+    world.PhysicsTelemetryData.MeshApplyStaleAcceptedRefresh =
+        world.GetMeshService().GetCache().GetMeshApplyStaleAcceptedRefreshCount();
+    world.PhysicsTelemetryData.I3tHoldEmptySpoofN =
+        world.GetMeshService().GetCache().GetI3tHoldEmptySpoofCount();
+    world.PhysicsTelemetryData.MeshApplySuperseded =
+        world.GetMeshService().GetMeshApplySupersededCount();
+    world.PhysicsTelemetryData.MeshApplyDropNoActive =
+        world.GetMeshService().GetMeshApplyDropNoActiveCount();
+    world.PhysicsTelemetryData.MeshReplaceHoleAvoided =
+        world.GetMeshService().GetMeshReplaceHoleAvoidedCount();
+    world.PhysicsTelemetryData.PubRejectLightInvalid =
+        world.GetMeshService().GetPubRejectLightInvalidCount();
+    const uint64_t pub_reject_source_mismatch =
+        world.GetMeshService().GetPubRejectSourceMismatchCount();
+    world.PhysicsTelemetryData.PubRejectSourceMismatch =
+        pub_reject_source_mismatch;
+    world.PhysicsTelemetryData.PubRejectSourceMismatchDelta =
+        pub_reject_source_mismatch >= LastPubRejectSourceMismatch
+            ? pub_reject_source_mismatch - LastPubRejectSourceMismatch
+            : pub_reject_source_mismatch;
+    LastPubRejectSourceMismatch = pub_reject_source_mismatch;
+    world.PhysicsTelemetryData.PubRejectOther =
+        world.GetMeshService().GetPubRejectOtherCount();
+    world.PhysicsTelemetryData.PubAcceptFirstPublish =
+        world.GetMeshService().GetPubAcceptFirstPublishCount();
+    world.PhysicsTelemetryData.PriorLitHoldN =
+        world.GetMeshService().GetPriorLitHoldCount();
+    world.PhysicsTelemetryData.PriorLitHoldAgeMax =
+        world.GetMeshService().GetPriorLitHoldAgeMax();
+    world.PhysicsTelemetryData.RaaCommitMarkDirtyN =
+        world.GetMeshService().GetCache().GetRaaCommitMarkDirtyCount();
+    world.PhysicsTelemetryData.MarkDirtyToRaaN =
+        world.GetMeshService().GetCache().GetMarkDirtyToRaaCount();
+    world.PhysicsTelemetryData.SoftDeferEmptyPublishAvoided =
+        world.GetMeshService().GetSoftDeferEmptyPublishAvoidedCount();
+    world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
+        world.GetMeshService().GetPendingGpuAppliesCount());
+    world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(
+        world.GetMeshService().GetPendingGpuQueuedCount());
+    world.PhysicsTelemetryData.PendingGpuKickedN = static_cast<int>(
+        world.GetMeshService().GetPendingGpuKickedCount());
+    {
+      auto &phys = world.PhysicsTelemetryData;
+      UGpuMeshPipeline *gpu_pipeline =
+          world.GetMeshService().GetCache().GetGpuMeshPipeline();
+      size_t free_slots = 0;
+      size_t bound_slots = 0;
+      size_t max_slots = 0;
+      uint64_t staging_failures = 0;
+      if (gpu_pipeline)
+      {
+        const UGpuMeshSlotAllocator &allocator = gpu_pipeline->GetAllocator();
+        free_slots = allocator.GetFreeSlotCount();
+        bound_slots = allocator.GetBoundSlotCount();
+        max_slots = allocator.GetMaxSlots();
+        staging_failures = allocator.GetStagingAllocationFailureCount();
+      }
+      phys.GpuMeshSlotMaxN =
+          static_cast<int>(std::min<size_t>(max_slots, INT_MAX));
+      phys.GpuMeshSlotFreeN =
+          static_cast<int>(std::min<size_t>(free_slots, INT_MAX));
+      phys.GpuMeshSlotBoundN =
+          static_cast<int>(std::min<size_t>(bound_slots, INT_MAX));
+      const size_t allocated_slots =
+          max_slots > free_slots ? max_slots - free_slots : 0;
+      const size_t unbound_allocated =
+          allocated_slots > bound_slots ? allocated_slots - bound_slots : 0;
+      phys.GpuMeshSlotUnboundAllocatedN =
+          static_cast<int>(std::min<size_t>(unbound_allocated, INT_MAX));
+      phys.GpuStagingAllocationFailureN = staging_failures;
+      phys.GpuStagingAllocationFailureDelta =
+          staging_failures >= LastGpuStagingAllocationFailure
+              ? staging_failures - LastGpuStagingAllocationFailure
+              : staging_failures;
+      LastGpuStagingAllocationFailure = staging_failures;
+      const UChunkMeshCache &mesh_cache = world.GetMeshService().GetCache();
+      phys.GpuMeshSlotEvictionN = mesh_cache.GetGpuSlotEvictionCount();
+      phys.GpuMeshSlotNoVictimN = mesh_cache.GetGpuSlotNoVictimCount();
+      phys.GpuZeroQuadSlotReleaseN =
+          mesh_cache.GetGpuZeroQuadSlotReleaseCount();
+    }
+    {
+      const auto &budget = EmergeCoordinator->GetLastBudget();
+      world.PhysicsTelemetryData.MeshScheduleFinal = budget.MaxMeshSchedule;
+      world.PhysicsTelemetryData.MeshDrainFinal = budget.MaxMeshDrain;
+      world.PhysicsTelemetryData.MeshAdmissionMode = budget.AdmissionMode;
+    }
+    world.PhysicsTelemetryData.GpuKickN =
+        world.GetMeshService().GetLastGpuKickN();
+    world.PhysicsTelemetryData.GpuKickDebtForcedN =
+        world.GetMeshService().GetLastGpuKickDebtForcedN();
+    world.PhysicsTelemetryData.GpuKickDeferReason =
+        world.GetMeshService().GetLastGpuKickDeferReason();
+    world.PhysicsTelemetryData.GpuFinishN =
+        world.GetMeshService().GetLastGpuFinishN();
+    world.PhysicsTelemetryData.GpuFinishNotReadyN =
+        world.GetMeshService().GetLastGpuFinishNotReadyN();
+    world.PhysicsTelemetryData.PostLoadRingNotReady =
+        world.CountPostLoadRingNotReady();
     {
       const auto &tune = URuntimeTuning::Get();
       world.PhysicsTelemetryData.MeshCompletedN = static_cast<int>(
@@ -671,6 +3989,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           static_cast<int>(world.GetMeshService().GetDirtyCount());
       world.PhysicsTelemetryData.PendingLightN =
           static_cast<int>(world.GetPendingLightBeforeMeshCount());
+      // Keep demand-store upkeep at the async stage, but defer the full
+      // logger-only census to the post-emerge sample below.
+      world.MaintainChunkRenderDemandStore();
       world.PhysicsTelemetryData.RelightFifoN =
           world.Persistence
               ? world.Persistence->GetPendingTerrainColumnRelightCount()
@@ -699,8 +4020,55 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     int near_done = 0;
     int far_done = 0;
-    const int near_physics_budget = near_mesh_backlog ? 4 : 2;
-    const int far_physics_budget = keep_prewarm_surplus ? 1 : 0;
+    // Holes/backlog: skip physics seed (was 4) — ScanChunkFluidFrontier stacks
+    // on hole frames; commits already enqueue light via FIFO.
+    const int near_physics_budget = near_mesh_backlog ? 0 : 2;
+    const int far_physics_budget =
+        (keep_prewarm_surplus && !near_mesh_backlog) ? 1 : 0;
+    const int pending_seed =
+        static_cast<int>(DeferredPhysicsSeedQueue.size());
+    auto make_seed_budgets = [&](bool near_column)
+    {
+      ChunkPhysicsSeedBudgets budgets;
+      // Terrain commits can enqueue a large cold fluid frontier burst.
+      // When the queue is long or the frame is already hot, seed only a tiny
+      // subset and let later frames continue the scan instead of spiking phys_ms.
+      const bool hot_frame = frame_ms > 16.0 || pending_seed > 32;
+      const bool cold_backlog = pending_seed > 96 || gen_backlog_total > 0;
+      if (hot_frame)
+      {
+        if (near_column)
+        {
+          budgets.MaxColumnsPerCommit = 1;
+          budgets.MaxLiquidEnqueuePerCommit = 24;
+        }
+        else if (keep_prewarm_surplus && !near_mesh_backlog)
+        {
+          budgets.MaxColumnsPerCommit = 1;
+          budgets.MaxLiquidEnqueuePerCommit = 8;
+        }
+        else
+        {
+          budgets.MaxColumnsPerCommit = 0;
+          budgets.MaxLiquidEnqueuePerCommit = 0;
+        }
+      }
+      if (cold_backlog)
+      {
+        budgets.MaxColumnsPerCommit =
+            std::min(budgets.MaxColumnsPerCommit, near_column ? 1 : 0);
+        budgets.MaxLiquidEnqueuePerCommit =
+            std::min(budgets.MaxLiquidEnqueuePerCommit, near_column ? 8 : 0);
+        if (!near_column && keep_prewarm_surplus && !near_mesh_backlog)
+        {
+          budgets.MaxColumnsPerCommit =
+              std::max(budgets.MaxColumnsPerCommit, 1);
+          budgets.MaxLiquidEnqueuePerCommit =
+              std::max(budgets.MaxLiquidEnqueuePerCommit, 8);
+        }
+      }
+      return budgets;
+    };
     const auto physics_t0 = std::chrono::high_resolution_clock::now();
     for (auto it = DeferredPhysicsSeedQueue.begin();
          it != DeferredPhysicsSeedQueue.end() &&
@@ -713,7 +4081,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       const glm::ivec3 coord = *it;
       it = DeferredPhysicsSeedQueue.erase(it);
-      ChunkPhysicsSeedBudgets seed_budgets;
+      ChunkPhysicsSeedBudgets seed_budgets = make_seed_budgets(true);
       SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
       ++near_done;
     }
@@ -728,7 +4096,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       const glm::ivec3 coord = *it;
       it = DeferredPhysicsSeedQueue.erase(it);
-      ChunkPhysicsSeedBudgets seed_budgets;
+      ChunkPhysicsSeedBudgets seed_budgets = make_seed_budgets(false);
+      if (seed_budgets.MaxColumnsPerCommit <= 0 &&
+          seed_budgets.MaxLiquidEnqueuePerCommit <= 0)
+      {
+        it = DeferredPhysicsSeedQueue.insert(it, coord);
+        break;
+      }
       SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
       ++far_done;
     }
@@ -738,41 +4112,55 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             .count();
   }
 
-  // Shore seal: LiveShoreAir only (IntraChunk already on populate worker).
-  // Near-focus commits already seal sync; this drains far / late columns.
+  // Shore seal: deferred IntraChunk (if populate skipped) + LiveShoreAir.
+  // Cap count+wall time — multi×100–400ms seals/frame were CB hole spikes.
+  // Never zero the budget on hot frames: that starved the queue entirely
+  // (commit_seal_ms≡0) and deferred work into worse bursts.
   {
     const bool underfeet_pending =
         world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1) ||
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, /*radius=*/1);
+            world.GetBlockWorld(), focus_ground, /*radius=*/1);
     const bool shore_focus_holes =
         near_mesh_backlog ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
-    int near_shore_budget = near_mesh_backlog ? 4 : 3;
-    // Holes / pending: drain ShoreAir faster — starving to 1 carved water strips.
-    if (shore_focus_holes || underfeet_pending)
-    {
-      near_shore_budget = frame_ms > kBadFrameMs ? 2 : 4;
-    }
-    else if (frame_ms > kBadFrameMs)
-    {
-      near_shore_budget = 0;
-    }
-    else if (frame_ms > 16.0)
-    {
-      near_shore_budget = std::min(near_shore_budget, 1);
-    }
+    const bool hole_pressure = shore_focus_holes || underfeet_pending;
+    // Holes: do not start ShoreAir/IntraChunk on main — a single seal was
+    // 200–470ms (CB spike_holes). Drain only on healthy frames; ShoreAir is
+    // now 2-pass (was 8) so healthy drains stay cheaper.
+    int near_shore_budget =
+        hole_pressure ? 0 : (frame_ms > 16.0 ? 1 : 2);
+    const double shore_wall_budget_ms = 10.0;
+    const double seal_ms_before = world.PhysicsTelemetryData.CommitSealMs;
     const int far_shore_budget =
-        (keep_prewarm_surplus && !underfeet_pending) ? 1 : 0;
+        (keep_prewarm_surplus && !underfeet_pending && !hole_pressure &&
+         frame_ms <= 16.0)
+            ? 1
+            : 0;
     int near_done = 0;
     int far_done = 0;
+    auto shore_exhausted = [&]()
+    {
+      return near_exhausted() ||
+             (world.PhysicsTelemetryData.CommitSealMs - seal_ms_before) >=
+                 shore_wall_budget_ms;
+    };
     auto seal_one = [&](glm::ivec3 coord, bool near_column)
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
+      bool changed = false;
       const auto seal_t0 = std::chrono::high_resolution_clock::now();
-      const bool changed = SealFluidShoreAirOnChunkCommitted(
-          world.BlockWorld, *world.BlockRegistry, settings,
-          world.WorldgenOwnerPackId, coord);
+      if (DeferredIntraChunkSealNeeded.erase(coord) > 0)
+      {
+        changed = SealFluidIntraChunkOnCommitted(
+                      world.BlockWorld, *world.BlockRegistry, settings,
+                      world.WorldgenOwnerPackId, coord) ||
+                  changed;
+      }
+      changed = SealFluidShoreAirOnChunkCommitted(
+                    world.BlockWorld, *world.BlockRegistry, settings,
+                    world.WorldgenOwnerPackId, coord) ||
+                changed;
       world.PhysicsTelemetryData.CommitSealMs +=
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - seal_t0)
@@ -784,7 +4172,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       const glm::ivec3 ground(coord.x, 0, coord.z);
       // Shore seal mutates fluid after the first mesh — Dirty sea band.
       // Under Dirty backlog skip seamed fanout (ingress control).
-      const int mesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int mesh_min_y =
+          std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
       const int mesh_max_y =
           std::min(settings.MaxHeight - 1, settings.SeaLevel + CHUNK_SIZE * 2);
       const bool seam =
@@ -792,17 +4181,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       if (near_column)
       {
         world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-            ground, mesh_min_y, mesh_max_y, seam);
+            ground, mesh_min_y, mesh_max_y, seam,
+            MeshRevisionBumpReason::PriorityWorldStreamingCommit);
       }
       else if (world.GetMeshService().GetDirtyCount() < 350)
       {
         world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-            ground, mesh_min_y, mesh_max_y, false);
+            ground, mesh_min_y, mesh_max_y, false,
+            MeshRevisionBumpReason::FluidWorldGeometry);
       }
     };
     for (auto it = DeferredShoreSealQueue.begin();
          it != DeferredShoreSealQueue.end() &&
-         near_done < near_shore_budget && !near_exhausted();)
+         near_done < near_shore_budget && !shore_exhausted();)
     {
       if (!is_near_column(*it))
       {
@@ -811,12 +4202,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       const glm::ivec3 coord = *it;
       it = DeferredShoreSealQueue.erase(it);
+      DeferredShoreSealQueued.erase(glm::ivec3(coord.x, 0, coord.z));
       seal_one(coord, true);
       ++near_done;
     }
     for (auto it = DeferredShoreSealQueue.begin();
          it != DeferredShoreSealQueue.end() &&
-         far_done < far_shore_budget && !far_exhausted();)
+         far_done < far_shore_budget && !shore_exhausted();)
     {
       if (is_near_column(*it))
       {
@@ -825,24 +4217,128 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       const glm::ivec3 coord = *it;
       it = DeferredShoreSealQueue.erase(it);
+      DeferredShoreSealQueued.erase(glm::ivec3(coord.x, 0, coord.z));
       seal_one(coord, false);
       ++far_done;
     }
   }
 
-  if (!near_exhausted())
+  const bool near_stream_budget_exhausted = near_exhausted();
   {
     const auto io_t0 = std::chrono::high_resolution_clock::now();
-    world.Persistence->TickAsyncChunkIo(world);
-    world.PhysicsTelemetryData.AsyncIoMs +=
+    AsyncChunkIoTickMetrics io_metrics;
+    if (near_stream_budget_exhausted)
+    {
+      // Keep completed disk results moving while near generation/mesh work is
+      // over budget. One result slice is a bounded fallback; the time target
+      // is checked between slices, so a single costly apply can exceed it.
+      io_metrics = world.Persistence->TickAsyncChunkIo(
+          world, /*max_slice_applies_override=*/1, /*max_apply_ms=*/2.5);
+    }
+    else
+    {
+      io_metrics = world.Persistence->TickAsyncChunkIo(world);
+    }
+    world.PhysicsTelemetryData.AsyncChunkIoDrainMs +=
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - io_t0)
             .count();
+    auto &io_telem = world.PhysicsTelemetryData;
+    io_telem.AsyncChunkIoTickWallMs += io_metrics.tick_wall_ms;
+    io_telem.AsyncChunkIoUnattributedMs += io_metrics.unattributed_ms;
+    io_telem.AsyncChunkIoLightFlagsResultDrainMs +=
+        io_metrics.light_flags_result_drain_ms;
+    io_telem.AsyncChunkIoQueueSnapshotMs += io_metrics.queue_snapshot_ms;
+    io_telem.AsyncChunkIoDiscardCancelledMs +=
+        io_metrics.discard_cancelled_ms;
+    io_telem.AsyncChunkIoResultSelectionMs += io_metrics.result_selection_ms;
+    io_telem.AsyncChunkIoResultSelectionMutexWaitMs +=
+        io_metrics.result_selection_mutex_wait_ms;
+    io_telem.AsyncChunkIoResultSelectionMutexHeldMs +=
+        io_metrics.result_selection_mutex_held_ms;
+    io_telem.AsyncChunkIoResultProcessingMs +=
+        io_metrics.result_processing_ms;
+    io_telem.AsyncChunkIoWorldApplyMs += io_metrics.world_apply_ms;
+    io_telem.AsyncChunkIoColumnFinalizeMs += io_metrics.column_finalize_ms;
+    io_telem.AsyncChunkIoResultRequeueMs += io_metrics.result_requeue_ms;
+    io_telem.AsyncChunkIoResultRequeueMutexWaitMs +=
+        io_metrics.result_requeue_mutex_wait_ms;
+    io_telem.AsyncChunkIoResultRequeueMutexHeldMs +=
+        io_metrics.result_requeue_mutex_held_ms;
+    io_telem.AsyncChunkIoLoadResultPushMutexWaitMs +=
+        io_metrics.load_result_push_mutex_wait_ms;
+    io_telem.AsyncChunkIoLoadResultPushMutexHeldMs +=
+        io_metrics.load_result_push_mutex_held_ms;
+    io_telem.AsyncChunkIoLoadResultPushMutexWaitMaxMs =
+        (std::max)(io_telem.AsyncChunkIoLoadResultPushMutexWaitMaxMs,
+                   io_metrics.load_result_push_mutex_wait_max_ms);
+    io_telem.AsyncChunkIoLoadResultPushMutexHeldMaxMs =
+        (std::max)(io_telem.AsyncChunkIoLoadResultPushMutexHeldMaxMs,
+                   io_metrics.load_result_push_mutex_held_max_ms);
+    io_telem.AsyncChunkIoSaveDrainMs += io_metrics.save_drain_ms;
+    io_telem.AsyncChunkIoLightFlagsSaveMs += io_metrics.light_flags_save_ms;
+    io_telem.AsyncChunkIoLightFlagsSnapshotMs +=
+        io_metrics.light_flags_snapshot_ms;
+    io_telem.AsyncChunkIoLightFlagsEnqueueMs +=
+        io_metrics.light_flags_enqueue_ms;
+    if (io_metrics.light_flags_saved_revision != 0)
+    {
+      io_telem.AsyncChunkIoLightFlagsCompleteColumnsN =
+          static_cast<int>(io_metrics.light_flags_complete_columns_n);
+      io_telem.AsyncChunkIoLightFlagsSavedRevision =
+          io_metrics.light_flags_saved_revision;
+    }
+    if (io_metrics.light_flags_result_count > 0)
+    {
+      io_telem.AsyncChunkIoLightFlagsLastResultRevision =
+          io_metrics.light_flags_last_result_revision;
+      io_telem.AsyncChunkIoLightFlagsLastResultSuccess =
+          io_metrics.light_flags_last_result_success;
+      io_telem.AsyncChunkIoLightFlagsWorkerQueueWaitMs =
+          io_metrics.light_flags_worker_queue_wait_ms;
+      io_telem.AsyncChunkIoLightFlagsWorkerServiceMs =
+          io_metrics.light_flags_worker_service_ms;
+    }
+    io_telem.AsyncChunkIoLoadResultPushN +=
+        static_cast<int>(io_metrics.load_result_push_n);
+    io_telem.AsyncChunkIoCancelledDiscardN +=
+        static_cast<int>(io_metrics.cancelled_discard_n);
+    io_telem.AsyncChunkIoReadyLoadsBeforeN +=
+        static_cast<int>(io_metrics.ready_loads_before_n);
+    io_telem.AsyncChunkIoSelectedLoadsN +=
+        static_cast<int>(io_metrics.selected_loads_n);
+    io_telem.AsyncChunkIoProcessedLoadsN +=
+        static_cast<int>(io_metrics.processed_loads_n);
+    io_telem.AsyncChunkIoRequeuedLoadsN +=
+        static_cast<int>(io_metrics.requeued_loads_n);
+    io_telem.AsyncChunkIoAppliedSlicesN +=
+        static_cast<int>(io_metrics.applied_slices_n);
+    io_telem.AsyncChunkIoSavesProcessedN +=
+        static_cast<int>(io_metrics.saves_processed_n);
+    io_telem.AsyncChunkIoLoadPendingJobsN =
+        static_cast<int>(io_metrics.load_pending_jobs_n);
+    io_telem.AsyncChunkIoLoadActiveJobsN =
+        static_cast<int>(io_metrics.load_active_jobs_n);
+    io_telem.AsyncChunkIoLoadWorkersN =
+        static_cast<int>(io_metrics.load_workers_n);
+    io_telem.AsyncChunkIoBackgroundPendingJobsN =
+        static_cast<int>(io_metrics.background_pending_jobs_n);
+    io_telem.AsyncChunkIoBackgroundActiveJobsN =
+        static_cast<int>(io_metrics.background_active_jobs_n);
+    io_telem.AsyncChunkIoBackgroundWorkersN =
+        static_cast<int>(io_metrics.background_workers_n);
+    io_telem.AsyncChunkIoLoadResultQueueDepthN =
+        static_cast<int>(io_metrics.load_result_queue_depth_n);
+    io_telem.AsyncChunkIoSaveResultQueueDepthN =
+        static_cast<int>(io_metrics.save_result_queue_depth_n);
+    io_telem.AsyncChunkIoApplyTimeBudgetHit +=
+        io_metrics.apply_time_budget_hit ? 1 : 0;
   }
   const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
-  const int player_budget = pending_player > 0 ? 2 : 0;
+  int player_budget = pending_player > 0 ? 2 : 0;
   const bool async_bg =
-      procedural.AsyncRelight && !world.IsLightingRelightDeferred();
+      procedural.AsyncRelight && !world.IsLightingRelightDeferred() &&
+      world.AllowsAsyncLighting();
   int bg_budget =
       async_bg ? (pending_bg > 24 ? 3 : (pending_bg > 8 ? 2 : 1))
                : (pending_bg > 12 ? 2 : (pending_bg > 0 ? 1 : 0));
@@ -931,7 +4427,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // Focus pending stuck while wall healthy: enqueue more async relight jobs
   // (DrainRelightQueues is cheap; MarkRelit is what clears PendingLight).
   const int pending_light_focus_n =
-      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+      world.CountPendingLightBeforeMeshNear(focus_horiz, pending_pl_radius);
+  const int dark_face_near_n = world.GetPhysicsTelemetry().DarkFaceNearN;
   const int black_sticky_focus =
       world.CountBlackStickyFocusMeshes(focus_horiz, focus_radius);
   // Manual flight: pending_focus climbed while relight_drain≈0 on hitch —
@@ -961,30 +4458,89 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, 2);
   }
+  if (pending_light_focus_n > 0 && dark_face_near_n > 500)
+  {
+    // Standing by black faces while focus pending exists: accelerate relight
+    // capture so PendingLight columns do not keep dark meshes for many periods.
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
+  }
+  // Era18 I-L2 / Era19 FrameStreamingBudget: VB bg floor via single Evaluate.
+  const int visible_black_n =
+      world.GetPhysicsTelemetry().VisibleBlackFocusN;
   const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
   const bool missing_focus_mesh =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, focus_radius);
+          world.GetBlockWorld(), focus_ground, focus_radius);
+  const bool moving_now_early =
+      world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold;
+  const auto &tune_budget = URuntimeTuning::Get();
+  constexpr float kHotFrameMs = 80.0f;
+  const int async_queued_budget =
+      Streamer ? Streamer->GetLastFrameStats().asyncQueuedThisFrame
+               : world.PhysicsTelemetryData.StreamAsyncQueued;
+  const int void_n_budget = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+  const int vb_no_ticket_n =
+      world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
+  const FrameStreamingBudgetDecision early_budget =
+      EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
+          frame_ms, kBadFrameMs, kHotFrameMs, missing_focus_mesh,
+          world.PhysicsTelemetryData.UnfinishedVisual, visible_black_n,
+          pending_light_focus_n, moving_now_early,
+          tune_budget.Era18VbCaptureFloor, tune_budget.Era18VbBgBudgetFloor,
+          tune_budget.MissFirstFrameBudget, gen_backlog_total,
+          async_queued_budget, void_n_budget, vb_no_ticket_n,
+          world.IsEnterFovLitPassActive(),
+          world.PhysicsTelemetryData.PostLoadRingNotReady > 0,
+          world.PhysicsTelemetryData.IngressDebtLevel,
+          world.PhysicsTelemetryData.MissHoriz});
+  if (early_budget.apply_vb_bg_floor)
+  {
+    const auto &telem_bp = world.GetPhysicsTelemetry();
+    const int fifo_soft = tune_budget.RelightFifoSoftCap;
+    if (!ShouldSuppressProducerBoostWhenConsumerBoundP9(
+            telem_bp.RelightApplyNPrev, telem_bp.RelightFifoN, fifo_soft,
+            static_cast<ApplyBinding>(telem_bp.ApplyBindingPrev),
+            telem_bp.RelightApplyNPrev > 0
+                ? telem_bp.RelightApplyLightMsPrev /
+                      static_cast<double>(telem_bp.RelightApplyNPrev)
+                : 0.0,
+            static_cast<double>(tune_budget.MissReservedMs),
+            static_cast<int>(world.GetRelightCompletedSize())) &&
+        !ShouldKillProducerBoostOnSimHot(telem_bp.SimMsPrev))
+    {
+      bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
+    }
+  }
+  // Era31 I-T2: Relight carve-out under ocean heal (not stolen by emerge cap).
+  // ColdWall S2a: VB-alone without PL/miss must not raise Capture floor.
+  if (IsOceanHealPressure(missing_focus_mesh, void_n_budget, visible_black_n) &&
+      (missing_focus_mesh || pending_light_focus_n > 0 || void_n_budget > 200))
+  {
+    bg_budget = std::max(bg_budget, 2);
+  }
+  else if (!tune_budget.MissFirstFrameBudget &&
+           tune_budget.Era18VbBgBudgetFloor &&
+           (visible_black_n > 0 || dark_face_near_n > 500))
+  {
+    // Legacy Era18: dark_face_near also keyed the floor (kill-switch gated).
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
+  }
+  world.PhysicsTelemetryData.FrameBudgetMs = early_budget.frame_budget_ms;
+  world.PhysicsTelemetryData.CaptureOverBudget =
+      early_budget.capture_over_budget ? 1 : 0;
+  world.PhysicsTelemetryData.HealDeferredForMiss =
+      early_budget.heal_deferred_for_miss ? 1 : 0;
   const bool idle_recovery =
       world.GetLastMovementSpeed() <=
           procedural.MovementPrefetchThreshold &&
       (pending_light_focus_n > 0 || black_sticky_focus > 0 ||
-       mesh_async_n >= 36 || missing_focus_mesh);
+       mesh_async_n >= 36 || missing_focus_mesh || visible_black_n > 0);
   if (idle_recovery)
   {
-    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 16 : 32);
-    if (black_sticky_focus > 0 || mesh_async_n >= 40 ||
-        pending_light_focus_n > 15 || missing_focus_mesh)
-    {
-      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 20 : 40);
-    }
-    // Clean stop with light debt only: keep enqueue hot so MarkRelit can clear
-    // pending without sync RelightColumn (which caused 1–2s spikes).
-    if (pending_light_focus_n > 15 && black_sticky_focus == 0 &&
-        !missing_focus_mesh)
-    {
-      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 24 : 48);
-    }
+    bg_budget = ComputeIdleRecoveryBgBudget(IdleRecoveryBgBudgetInput{
+        idle_recovery, frame_ms, kBadFrameMs, pending_light_focus_n,
+        black_sticky_focus, missing_focus_mesh, mesh_async_n, bg_budget});
   }
   else if (pending_light_focus_n > 0 && frame_ms > kBadFrameMs)
   {
@@ -998,29 +4554,710 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 4 : 3);
   }
   // P0 frontier ingress via FocusIngressPolicy (dedicated floor, not F2 caps).
+  // Rim FirstMesh SLA: missing mesh OR clnm/ring debt → prefer admit over
+  // Capture/promote thrash (manual 131234 / land_fix miss_stuck / audit16 R1).
+  // Note: FocusIngressPolicy has a separate rim_first_mesh_sla (miss&&pendf>4)
+  // for admit floors — this flag is Streaming bg_budget + FM pri SoT.
+  const bool rim_first_mesh_sla =
+      missing_focus_mesh ||
+      world.PhysicsTelemetryData.ColumnLoadedNoMeshN >= 1 ||
+      world.PhysicsTelemetryData.PostLoadRingNotReady > 0;
   const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
       moving_now, missing_focus_mesh, pending_light_focus_n, mesh_async_n,
-      frame_ms});
+      frame_ms, world.PhysicsTelemetryData.UnfinishedVisual,
+      world.PhysicsTelemetryData.DarkFaceStaleNearN,
+      world.PhysicsTelemetryData.SoftDeferEmptyPlaceholderN, void_n_budget});
   if (ingress.relight_floor > 0)
   {
     bg_budget = std::max(bg_budget, ingress.relight_floor);
   }
-  // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
-  // columns do not jump ahead of the camera column in the priority FIFO.
-  // Ownership: Streaming promotes *before* DrainRelightQueues. When ingress
-  // is active, ChunkEmerge skips PromoteFrontierHoleIngress (promote-after-
-  // drain left cold_relight with relight_drain≈0).
-  if (pending_bg > 0 || underfeet_pending_light)
   {
-    world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz, 1);
+    static int enter_post_lit_frames = 999;
+    if (world.IsEnterLitGateActive())
+    {
+      enter_post_lit_frames = 0;
+    }
+    else if (enter_post_lit_frames < 120)
+    {
+      ++enter_post_lit_frames;
+    }
+    if (ShouldDeferFarRelightDuringEnterBurst(enter_post_lit_frames) &&
+        world.PhysicsTelemetryData.MissHoriz > 2)
+    {
+      bg_budget = std::min(bg_budget, 1);
+    }
   }
-  world.PromotePendingLightRelightsNear(focus_horiz, 1);
-  if (pending_bg > 0 || near_pending_light)
+  // Priority SLA (Cubyz-style): while missing, do not let Capture steal FirstMesh.
+  // Paced 1–2 (not 0 — land_fix_P1; not 4–6 — manual 170154 softd=4 thrash).
+  if (rim_first_mesh_sla)
   {
-    world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz,
-                                                        focus_radius);
+    bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
   }
-  world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+  // Era40: soft-cap FIFO stuck (completed~0) under FOV miss — keep Capture
+  // floor even on hot frames / after rim SLA min (manual 194443 pendf~15).
+  {
+    const int fifo_n =
+        world.Persistence
+            ? world.Persistence->GetPendingTerrainColumnRelightCount()
+            : 0;
+    const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+    if (ShouldBoostRelightDrainUnderFifoMissStarve(
+            fifo_n, soft_cap, world.GetAsyncRelightInFlightCount(),
+            missing_focus_mesh,
+            world.PhysicsTelemetryData.RelightApplyMsPrev))
+    {
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
+    }
+    const auto &rt = URuntimeTuning::Get();
+    if (ShouldCruiseRedFifoLightDrain(
+            world.PhysicsTelemetryData.StreamPressure, fifo_n, soft_cap,
+            rt.RelightFifoAdmitFrac,
+            missing_focus_mesh ||
+                world.PhysicsTelemetryData.VisualHoles != 0,
+            world.PhysicsTelemetryData.PendingLightFocus))
+    {
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
+      // Era22 F3c: ocean relight debt needs stronger capture floor while moving.
+      const int pl_focus = world.PhysicsTelemetryData.PendingLightFocus;
+      if (moving_now && pl_focus > 20 && soft_cap > 0 &&
+          fifo_n >= (soft_cap / 2))
+      {
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 6);
+      }
+    }
+  }
+  if (ingress.active && ingress.promote_once)
+  {
+    auto &exec = GetColumnFlowExecutor();
+    const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+    const glm::ivec2 witness_xz = RepairColumnFromMissWitness(
+        world.PhysicsTelemetryData, focus_xz);
+    const bool land_frontier =
+        IsLandFrontierPressure(moving_now, void_n_budget);
+    glm::ivec2 repair_xz = witness_xz;
+    if (land_frontier && SoftDeferCapturePinValid &&
+        SoftDeferCapturePinAge <
+            LandFrontierCaptureWitnessPinFrames(void_n_budget))
+    {
+      repair_xz = glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz);
+        // Single-owner for pin age:
+        // SoftDeferCapturePinAge is advanced in the "SoftDefer Capture floor"
+        // retarget section. Incrementing here would double-tick and shorten
+        // pin lifetime, causing witness retarget thrash.
+    }
+    else if (witness_xz != focus_xz)
+    {
+      if (!land_frontier)
+      {
+        const bool visual_holes_site_a = world.PhysicsTelemetryData.VisualHoles > 0;
+        const int site_a_pin_horiz =
+            SoftDeferCapturePinValid ? SoftDeferCapturePinHoriz
+                                     : world.PhysicsTelemetryData.MissHoriz;
+        const int site_a_pin_age =
+            SoftDeferCapturePinValid ? SoftDeferCapturePinAge : 0;
+        bool site_a_pin_drawable = false;
+        bool site_a_pin_pending_gpu = false;
+        if (SoftDeferCapturePinValid)
+        {
+          const glm::ivec3 pin_coord(
+              SoftDeferCapturePinCx,
+              SoftDeferCapturePinCy != kNoChunkSlice
+                  ? SoftDeferCapturePinCy
+                  : FloorDiv(world.GetPreferredLoadFocusBlock().y,
+                             CHUNK_SIZE),
+              SoftDeferCapturePinCz);
+          site_a_pin_drawable =
+              world.GetMeshService().HasDrawableGreedyMesh(pin_coord);
+          site_a_pin_pending_gpu =
+              world.GetMeshService().IsPendingGpuApply(pin_coord) ||
+              world.GetMeshService().IsGpuExtractInFlight(pin_coord);
+        }
+        const int schedule_ok_site_a =
+            world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+        const int dirty_fm_site_a = world.GetMeshService().GetLastDirtyFmN();
+        const bool fm_schedule_starved_site_a =
+            dirty_fm_site_a > 0 && schedule_ok_site_a < 2;
+        const bool emergency_hop_site_a =
+            world.PhysicsTelemetryData.MissHoriz >= 0 &&
+            world.PhysicsTelemetryData.MissHoriz <= 1 &&
+            world.PhysicsTelemetryData.FocusMissingMesh > 0;
+        const bool hold_miss_owner_site_a = ShouldHoldMissOwnerUntilDrawable(
+            SoftDeferCapturePinValid, site_a_pin_drawable, emergency_hop_site_a);
+        const bool miss_horiz_zero_site_a =
+            world.PhysicsTelemetryData.MissHoriz == 0 &&
+            world.PhysicsTelemetryData.FocusMissingMesh > 0;
+        const bool block_witness_site_a = ShouldBlockWitnessCaptureRetarget(
+            SoftDeferCapturePinValid, !site_a_pin_drawable || hold_miss_owner_site_a,
+            hold_miss_owner_site_a, miss_horiz_zero_site_a);
+        const bool block_pin_sla_site_a = ShouldBlockWitnessRetargetForPinSla(
+            site_a_pin_age, site_a_pin_horiz, visual_holes_site_a, moving_now);
+        const bool block_gpu_site_a =
+            ShouldBlockCaptureRetargetForIngressGpuPending(
+                site_a_pin_pending_gpu, site_a_pin_horiz, visual_holes_site_a,
+                world.PhysicsTelemetryData.MissHoriz, fm_schedule_starved_site_a,
+                site_a_pin_drawable);
+        if (!hold_miss_owner_site_a && !block_witness_site_a &&
+            !block_pin_sla_site_a && !block_gpu_site_a)
+        {
+          if (kI18WitnessComfortEnabled ||
+              (kI18UnderfeetGraceEnabled &&
+               world.PhysicsTelemetryData.MissHoriz <= 1))
+          {
+            const glm::ivec2 prior_xz = SoftDeferCapturePinValid
+                                            ? glm::ivec2(SoftDeferCapturePinCx,
+                                                         SoftDeferCapturePinCz)
+                                            : focus_xz;
+            const glm::ivec3 prior_coord(prior_xz.x, focus_horiz.y, prior_xz.y);
+            if (world.GetMeshService().HasDrawableGreedyMesh(prior_coord))
+            {
+              WitnessColumnGrace = {prior_xz, kI18UnderfeetGraceFrames};
+              world.GetMeshService().SetWitnessSwapGrace(prior_xz,
+                                                         kI18UnderfeetGraceFrames);
+            }
+          }
+          // FZ2.7-P15a: Site A ingress count (also bumps legacy total).
+          ++world.PhysicsTelemetryData.SoftDeferIngressWitnessN;
+          ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+          world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
+              world.PhysicsTelemetryData.MissHoriz;
+        }
+      }
+      else
+      {
+        SoftDeferCapturePinValid = true;
+        SoftDeferCapturePinCx = witness_xz.x;
+        SoftDeferCapturePinCz = witness_xz.y;
+        SoftDeferCapturePinHoriz = world.PhysicsTelemetryData.MissHoriz;
+        SoftDeferCapturePinAge = 0;
+        SoftDeferCapturePinDrawableRun = 0;
+        SoftDeferCaptureLastAgedKickAge = -1;
+        SoftDeferCapturePinMaxAge =
+            LandFrontierCaptureWitnessPinFrames(void_n_budget);
+      }
+    }
+    // SOTA: enqueue only — TickMeshEmerge DrainBudget is the single owner.
+    if (rim_first_mesh_sla && ingress.first_mesh_admit > 0)
+    {
+      exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 100);
+    }
+    else if (ingress.first_mesh_admit > 0)
+    {
+      exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 80);
+    }
+    if (!rim_first_mesh_sla)
+    {
+      exec.RequestPromoteRelight(repair_xz, 40);
+    }
+  }
+  // TD-ARCH-030 / Era19: SoftDefer Capture floor via FrameStreamingBudget SoT.
+  // (manual 130338 SoftDefer thrash; Era18 VB floor; Era19 miss-first hitch).
+  {
+    const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
+    const int visible_black_n_cap =
+        world.GetPhysicsTelemetry().VisibleBlackFocusN;
+    const int vb_no_ticket_cap =
+        world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
+    const auto &tune = URuntimeTuning::Get();
+    const FrameStreamingBudgetDecision budget =
+        EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
+            frame_ms, kBadFrameMs, /*hot_frame_ms=*/80.0, missing_focus_mesh,
+            unfinished, visible_black_n_cap, pending_light_focus_n, moving_now,
+            tune.Era18VbCaptureFloor, tune.Era18VbBgBudgetFloor,
+            tune.MissFirstFrameBudget, gen_backlog_total, async_queued_budget,
+            void_n_budget, vb_no_ticket_cap, world.IsEnterFovLitPassActive(),
+            world.PhysicsTelemetryData.PostLoadRingNotReady > 0,
+            world.PhysicsTelemetryData.IngressDebtLevel,
+            world.PhysicsTelemetryData.MissHoriz});
+    world.PhysicsTelemetryData.SoftDeferCaptureBudget =
+        budget.soft_defer_capture_budget;
+    world.PhysicsTelemetryData.FrameBudgetMs = budget.frame_budget_ms;
+    world.PhysicsTelemetryData.CaptureOverBudget =
+        budget.capture_over_budget ? 1 : 0;
+    world.PhysicsTelemetryData.HealDeferredForMiss =
+        budget.heal_deferred_for_miss ? 1 : 0;
+    if (budget.apply_vb_bg_floor)
+    {
+      bg_budget = std::max(bg_budget, budget.vb_bg_budget_floor);
+    }
+    const int floor_budget = budget.soft_defer_capture_budget;
+    if (floor_budget > 0)
+    {
+      auto &exec = GetColumnFlowExecutor();
+      const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+      // Anchor on miss witness (horiz 2–3 rim), not focus — else HasRepairTicket
+      // on focus blocks floor while hole never gets FirstMesh (manual 191432).
+      glm::ivec2 cand_xz = RepairColumnFromMissWitness(
+          world.PhysicsTelemetryData, focus_xz);
+      int cand_cy = kNoChunkSlice;
+      int cand_horiz = world.PhysicsTelemetryData.MissHoriz;
+      // Era24: SoftDefer empty stuck witness cy under miss Capture.
+      if (missing_focus_mesh &&
+          world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0)
+      {
+        cand_xz =
+            glm::ivec2(world.PhysicsTelemetryData.SoftDeferEmptyStuckCx,
+                       world.PhysicsTelemetryData.SoftDeferEmptyStuckCz);
+        cand_cy = world.PhysicsTelemetryData.SoftDeferEmptyStuckCy;
+        cand_horiz = world.PhysicsTelemetryData.SoftDeferEmptyStuckHoriz;
+      }
+      // Era27 I-A1: pin Capture witness for T frames — retarget only via
+      // ShouldRetargetSoftDeferCaptureWitness (manual 224912 retarget thrash).
+      glm::ivec2 repair_xz = cand_xz;
+      int repair_cy = cand_cy;
+      int repair_horiz = cand_horiz;
+      bool did_retarget = false;
+      {
+        const int unf = world.PhysicsTelemetryData.UnfinishedVisual;
+        const bool stuck_n =
+            world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0;
+        const glm::ivec2 stuck_xz(
+            world.PhysicsTelemetryData.SoftDeferEmptyStuckCx,
+            world.PhysicsTelemetryData.SoftDeferEmptyStuckCz);
+        const bool pin_is_stuck =
+            SoftDeferCapturePinValid && stuck_n &&
+            SoftDeferCapturePinCx == stuck_xz.x &&
+            SoftDeferCapturePinCz == stuck_xz.y;
+        bool pinned_still = false;
+        bool pin_drawable = false;
+        bool pin_pending_or_inflight_gpu = false;
+        if (SoftDeferCapturePinValid)
+        {
+          const glm::ivec3 pin_coord(SoftDeferCapturePinCx,
+                                     SoftDeferCapturePinCy != kNoChunkSlice
+                                         ? SoftDeferCapturePinCy
+                                         : FloorDiv(
+                                               world.GetPreferredLoadFocusBlock().y,
+                                               CHUNK_SIZE),
+                                     SoftDeferCapturePinCz);
+          pin_drawable =
+              world.GetMeshService().HasDrawableGreedyMesh(pin_coord);
+          pin_pending_or_inflight_gpu =
+              world.GetMeshService().IsPendingGpuApply(pin_coord) ||
+              world.GetMeshService().IsGpuExtractInFlight(pin_coord);
+          const bool pin_greedy =
+              world.GetMeshService().HasGreedyMesh(pin_coord);
+          const bool pin_held =
+              world.GetMeshService().IsSoftDeferHeld(pin_coord);
+          pinned_still =
+              missing_focus_mesh && !pin_drawable && (pin_greedy || pin_held);
+          if (SoftDeferCapturePinCy == kNoChunkSlice)
+          {
+            pinned_still = missing_focus_mesh;
+          }
+          if (pin_is_stuck && !pin_drawable)
+          {
+            pinned_still = true;
+          }
+          // MissOwn VB P2: brief drawable blink still counts as missing for hop.
+          if (pin_drawable)
+          {
+            ++SoftDeferCapturePinDrawableRun;
+          }
+          else
+          {
+            SoftDeferCapturePinDrawableRun = 0;
+          }
+          if (ShouldTreatPinAsStillMissingForHop(
+                  pin_drawable, SoftDeferCapturePinDrawableRun))
+          {
+            pinned_still = pinned_still || missing_focus_mesh;
+          }
+        }
+        if (pin_is_stuck)
+        {
+          cand_xz = stuck_xz;
+          cand_cy = world.PhysicsTelemetryData.SoftDeferEmptyStuckCy;
+          cand_horiz = world.PhysicsTelemetryData.SoftDeferEmptyStuckHoriz;
+        }
+        const bool ocean_heal = IsOceanHealPressure(
+            missing_focus_mesh, world.PhysicsTelemetryData.DarkFaceVoidNearN,
+            world.PhysicsTelemetryData.VisibleBlackFocusN);
+        const bool land_frontier =
+            IsLandFrontierPressure(moving_now, void_n_budget);
+        const bool visual_holes_cap =
+            world.PhysicsTelemetryData.VisualHoles > 0;
+        const bool rim_witness_idle =
+            !moving_now && missing_focus_mesh &&
+            world.PhysicsTelemetryData.MissHoriz >= 3 && !visual_holes_cap;
+        const int schedule_ok_now =
+            world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+        const int dirty_fm_now = world.GetMeshService().GetLastDirtyFmN();
+        const bool fm_schedule_starved =
+            dirty_fm_now > 0 && schedule_ok_now < 2;
+        const IngressDebtLevel ingress_debt =
+            static_cast<IngressDebtLevel>(
+                world.PhysicsTelemetryData.IngressDebtLevel);
+        static int periods_since_witness_retarget = 999;
+        ++periods_since_witness_retarget;
+        const bool better_horiz_raw = ShouldAllowBetterHorizWitnessRetarget(
+            unf, cand_horiz, SoftDeferCapturePinHoriz, moving_now,
+            schedule_ok_now, dirty_fm_now, world.PhysicsTelemetryData.MissHoriz);
+        bool better_horiz = ShouldDampLandFrontierWitnessRetarget(
+            land_frontier && !ocean_heal, cand_horiz,
+            ShouldDampOceanCaptureRetarget(ocean_heal, cand_horiz,
+                                           better_horiz_raw));
+        if (ShouldRateLimitWitnessRetargetUnderDebt(
+                ingress_debt, periods_since_witness_retarget, visual_holes_cap))
+        {
+          better_horiz = false;
+        }
+        if (ShouldDampWitnessRetargetOnUnfinishedCruise(moving_now, unf) ||
+            (ShouldDampWitnessRetargetOnRimIdleCruise(rim_witness_idle,
+                                                      cand_horiz) &&
+             !fm_schedule_starved))
+        {
+          better_horiz = false;
+        }
+        if (ShouldDampWitnessRetargetOnIngressDrawable(
+                pin_pending_or_inflight_gpu, pin_drawable, visual_holes_cap,
+                SoftDeferCapturePinHoriz))
+        {
+          better_horiz = false;
+        }
+        // Miss Ownership SLA / VB P2: pin-until-drawable — emergency only nh≤1.
+        const bool emergency_hop =
+            world.PhysicsTelemetryData.MissHoriz >= 0 &&
+            world.PhysicsTelemetryData.MissHoriz <= 1 && missing_focus_mesh;
+        if (ShouldHoldMissOwnerUntilDrawable(SoftDeferCapturePinValid,
+                                             pin_drawable, emergency_hop))
+        {
+          better_horiz = false;
+        }
+        int pin_T =
+            ocean_heal
+                ? OceanCaptureWitnessPinFrames()
+                : land_frontier
+                      ? LandFrontierCaptureWitnessPinFrames(void_n_budget)
+                      : (SoftDeferCapturePinMaxAge > 0 ? SoftDeferCapturePinMaxAge
+                                                       : kSoftDeferCaptureWitnessPinFrames);
+        if (stuck_n && pinned_still)
+        {
+          pin_T = std::max(pin_T, 24);
+        }
+        if (!visual_holes_cap && moving_now && SoftDeferCapturePinHoriz >= 0 &&
+            SoftDeferCapturePinHoriz <= 4)
+        {
+          pin_T = std::max(pin_T, kIngressCaptureWitnessPinMinAgeFrames);
+        }
+        // R4.6.2: on stop + ShedRim miss, do not extend pin_T past hard expire.
+        if (!moving_now && world.PhysicsTelemetryData.FocusMissingMesh > 0 &&
+            SoftDeferCapturePinHoriz >= 3 && SoftDeferCapturePinHoriz <= 4)
+        {
+          pin_T = std::min(pin_T, kIngressCaptureHardExpireFrames);
+        }
+        const bool hold_nh2 = ShouldHoldPinnedRelightWitness(
+            SoftDeferCapturePinHoriz,
+            world.IsPendingLightBeforeMesh(
+                glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)),
+            missing_focus_mesh, pin_is_stuck);
+        static int last_witness_vb_no_ticket = 0;
+        const int vb_nt_now = world.PhysicsTelemetryData.VisibleBlackNoTicketN;
+        const bool vb_no_ticket_rising = vb_nt_now > last_witness_vb_no_ticket;
+        last_witness_vb_no_ticket = vb_nt_now;
+        const bool miss_witness_kick = ShouldKickMissWitnessPin(
+            world.PhysicsTelemetryData.MissStuckRunFrames,
+            world.PhysicsTelemetryData.MeshDirtyScheduleOkN,
+            SoftDeferCapturePinAge, moving_now);
+        const ColumnJobStage pin_stage =
+            SoftDeferCapturePinValid
+                ? GetColumnFlowExecutor().GetColumnJobStage(
+                      glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz))
+                : ColumnJobStage::Absent;
+        const bool meshing_sla_kick = ShouldKickMissWitnessOnMeshingSla(
+            pin_stage, world.PhysicsTelemetryData.MissWitnessAgeFramesReport);
+        const bool capture_backlog_witness =
+            world.GetMeshService().GetPendingCaptureCount() >= 8;
+        const bool hold_witness_pin =
+            hold_nh2 &&
+            (ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still,
+                                        RelightWitnessPinHoldFrames,
+                                        world.PhysicsTelemetryData.MissHoriz,
+                                        vb_no_ticket_rising,
+                                        miss_witness_kick || meshing_sla_kick) ||
+             (capture_backlog_witness && SoftDeferCapturePinValid));
+        const bool era27_would_retarget =
+            ShouldRetargetSoftDeferCaptureWitness(
+                SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
+                better_horiz, pinned_still, visual_holes_cap,
+                kIngressCaptureRetargetCooldownFrames, cand_horiz,
+                SoftDeferCapturePinHoriz);
+        const bool retarget_allowed = !world.IsEnterSessionActive();
+        const bool miss_horiz_zero_no_drawable =
+            world.PhysicsTelemetryData.MissHoriz == 0 &&
+            world.PhysicsTelemetryData.FocusMissingMesh > 0;
+        const bool block_witness_retarget =
+            !URuntimeTuning::Get().StreamSimple &&
+            (ShouldBlockWitnessCaptureRetarget(
+                 SoftDeferCapturePinValid, pinned_still, hold_witness_pin,
+                 miss_horiz_zero_no_drawable,
+                 world.PhysicsTelemetryData.RelightFifoDropNPrev > 0,
+                 SoftDeferCapturePinAge, kIngressCaptureHardExpireFrames) ||
+             (SoftDeferCapturePinValid &&
+              pin_stage == ColumnJobStage::GpuPending && !pin_drawable &&
+              SoftDeferCapturePinAge < kIngressCaptureHardExpireFrames));
+        const bool block_pin_sla = ShouldBlockWitnessRetargetForPinSla(
+            SoftDeferCapturePinAge, SoftDeferCapturePinHoriz, visual_holes_cap,
+            moving_now);
+        const bool block_ingress_gpu_pending =
+            ShouldBlockCaptureRetargetForIngressGpuPending(
+                pin_pending_or_inflight_gpu, SoftDeferCapturePinHoriz,
+                visual_holes_cap, cand_horiz, fm_schedule_starved, pin_drawable);
+        const bool retarget =
+            retarget_allowed && !block_witness_retarget && !block_pin_sla &&
+            !block_ingress_gpu_pending &&
+            ShouldRetargetRelightWitness(era27_would_retarget, hold_witness_pin);
+        if (!retarget && era27_would_retarget &&
+            (hold_witness_pin || block_witness_retarget || block_pin_sla ||
+             block_ingress_gpu_pending))
+        {
+          ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN;
+        }
+        GetColumnFlowExecutor().SetCaptureWitnessPin(
+            glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz),
+            SoftDeferCapturePinValid, SoftDeferCapturePinAge, hold_witness_pin);
+        if (retarget)
+        {
+          const bool hard_expire_hop =
+              SoftDeferCapturePinAge >= kIngressCaptureHardExpireFrames;
+          const int witness_grace_frames =
+              capture_backlog_witness ? 30 : kI18UnderfeetGraceFrames;
+          if (kI18WitnessComfortEnabled ||
+              (kI18UnderfeetGraceEnabled &&
+               world.PhysicsTelemetryData.MissHoriz <= 1) ||
+              capture_backlog_witness)
+          {
+            const glm::ivec2 prior_pin_xz(SoftDeferCapturePinCx,
+                                          SoftDeferCapturePinCz);
+            const glm::ivec3 prior_pin_coord(
+                prior_pin_xz.x,
+                SoftDeferCapturePinCy != kNoChunkSlice
+                    ? SoftDeferCapturePinCy
+                    : FloorDiv(world.GetPreferredLoadFocusBlock().y,
+                               CHUNK_SIZE),
+                prior_pin_xz.y);
+            if (world.GetMeshService().HasDrawableGreedyMesh(prior_pin_coord) ||
+                capture_backlog_witness)
+            {
+              WitnessColumnGrace = {prior_pin_xz, witness_grace_frames};
+              world.GetMeshService().SetWitnessSwapGrace(prior_pin_xz,
+                                                         witness_grace_frames);
+            }
+          }
+          // R4.6.2: after hard-expire hop on stop rim, PreferKick + Dirty so
+          // schedule_ok is not stuck at 0 with aged watches.
+          if (hard_expire_hop && !moving_now &&
+              world.PhysicsTelemetryData.FocusMissingMesh > 0)
+          {
+            const glm::ivec3 miss_hole(world.PhysicsTelemetryData.MissCx,
+                                       world.PhysicsTelemetryData.MissCy,
+                                       world.PhysicsTelemetryData.MissCz);
+            auto &ms = world.GetMeshService();
+            if (ms.IsPendingGpuQueued(miss_hole) ||
+                ms.IsPendingGpuApply(miss_hole) ||
+                ms.IsPendingGpuKickedOrDispatched(miss_hole))
+            {
+              ms.PreferKickPendingGpuQueued(miss_hole);
+            }
+            ms.MarkDirtyPriority(
+                miss_hole,
+                MeshRevisionBumpReason::PriorityWorldStreamingRepair);
+            const glm::ivec3 cand_hole(
+                cand_xz.x,
+                cand_cy != kNoChunkSlice
+                    ? cand_cy
+                    : FloorDiv(world.GetPreferredLoadFocusBlock().y,
+                               CHUNK_SIZE),
+                cand_xz.y);
+            if (ms.IsPendingGpuQueued(cand_hole) ||
+                ms.IsPendingGpuApply(cand_hole) ||
+                ms.IsPendingGpuKickedOrDispatched(cand_hole))
+            {
+              ms.PreferKickPendingGpuQueued(cand_hole);
+            }
+            ms.MarkDirtyPriority(
+                cand_hole,
+                MeshRevisionBumpReason::PriorityWorldStreamingRepair);
+          }
+          periods_since_witness_retarget = 0;
+          SoftDeferCapturePinValid = true;
+          SoftDeferCapturePinCx = cand_xz.x;
+          SoftDeferCapturePinCz = cand_xz.y;
+          SoftDeferCapturePinCy = cand_cy;
+          SoftDeferCapturePinHoriz = cand_horiz;
+          SoftDeferCapturePinAge = 0;
+          SoftDeferCapturePinDrawableRun = 0;
+          SoftDeferCaptureLastAgedKickAge = -1;
+          SoftDeferCapturePinMaxAge = SoftDeferCapturePinMaxAgeAfterRetarget(
+              SoftDeferCapturePinMaxAge, pin_T,
+              land_frontier || (stuck_n && pinned_still));
+          did_retarget = (cand_xz != focus_xz);
+          ++world.PhysicsTelemetryData.MissOwnerHopN;
+          world.PhysicsTelemetryData.MissOwnerStableFrames = 0;
+        }
+        else
+        {
+          repair_xz = glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz);
+          repair_cy = SoftDeferCapturePinCy;
+          repair_horiz = SoftDeferCapturePinHoriz;
+          ++SoftDeferCapturePinAge;
+          if (SoftDeferCapturePinValid && !pin_drawable)
+          {
+            world.PhysicsTelemetryData.MissOwnerStableFrames =
+                SoftDeferCapturePinAge;
+          }
+          // P1/P3: aged undrawn pin — PreferKick/Dirty without hop, rate-limited.
+          if (SoftDeferCapturePinValid && !pin_drawable &&
+              SoftDeferCapturePinAge >= kIngressCaptureHardExpireFrames &&
+              world.PhysicsTelemetryData.FocusMissingMesh > 0 &&
+              ShouldKickAgedUndrawnPin(SoftDeferCapturePinAge,
+                                       kIngressCaptureHardExpireFrames,
+                                       SoftDeferCaptureLastAgedKickAge))
+          {
+            const glm::ivec3 pin_hole(
+                SoftDeferCapturePinCx,
+                SoftDeferCapturePinCy != kNoChunkSlice
+                    ? SoftDeferCapturePinCy
+                    : FloorDiv(world.GetPreferredLoadFocusBlock().y,
+                               CHUNK_SIZE),
+                SoftDeferCapturePinCz);
+            auto &ms = world.GetMeshService();
+            if (ms.IsPendingGpuQueued(pin_hole) ||
+                ms.IsPendingGpuApply(pin_hole) ||
+                ms.IsPendingGpuKickedOrDispatched(pin_hole))
+            {
+              ms.PreferKickPendingGpuQueued(pin_hole);
+            }
+            ms.MarkDirtyPriority(
+                pin_hole,
+                MeshRevisionBumpReason::PriorityWorldStreamingRepair);
+            SoftDeferCaptureLastAgedKickAge = SoftDeferCapturePinAge;
+          }
+        }
+      }
+      // Era21 I-M6: under miss only FirstMesh Contains blocks Capture —
+      // Relight/Remesh tickets must not starve rim FirstMesh.
+      const bool has_fm =
+          exec.Scheduler().Contains(repair_xz, ColumnWorkKind::FirstMesh);
+      const bool has_any = exec.HasRepairTicket(repair_xz);
+      if (!SoftDeferCaptureBlockedByRepairTicket(missing_focus_mesh, has_fm,
+                                                 has_any))
+      {
+        const ColumnWorkKind kind =
+            (missing_focus_mesh || budget.capture_first_mesh_only)
+                ? ColumnWorkKind::FirstMesh
+                : ColumnWorkKind::RelightThenMesh;
+        // Phase 5.7R5: under Relight BP + Apply idle, do not CaptureFloor Relight
+        // (FirstMesh miss carve still OK).
+        const int fifo_n = world.PhysicsTelemetryData.RelightFifoN;
+        const int apply_prev = world.PhysicsTelemetryData.RelightApplyNPrev;
+        if (kind == ColumnWorkKind::RelightThenMesh &&
+            RelightFifoBackpressured(fifo_n) && apply_prev == 0)
+        {
+          // skip Capture Relight storm
+        }
+        else
+        {
+          ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+          if (did_retarget)
+          {
+            // FZ2.7-P15a: Site B Capture retarget (also bumps legacy total).
+            ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetN;
+            ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+            world.PhysicsTelemetryData.SoftDeferWitnessHoriz = repair_horiz;
+          }
+          ColumnWorkItem item{};
+          item.column = repair_xz;
+          item.kind = kind;
+          item.priority = 90;
+          item.scan_full_focus = missing_focus_mesh;
+          item.cy = repair_cy;
+          exec.Enqueue(item);
+        }
+      }
+    }
+    else if (!missing_focus_mesh)
+    {
+      SoftDeferCapturePinValid = false;
+      SoftDeferCapturePinAge = 0;
+      SoftDeferCapturePinDrawableRun = 0;
+      SoftDeferCaptureLastAgedKickAge = -1;
+    }
+    world.PhysicsTelemetryData.SoftDeferCapturePinAge = SoftDeferCapturePinAge;
+    // Era22 P2 / Era23 I-V4 / Era26 I-O2: Capture FirstMesh KEEP under miss;
+    // drain Relight when no_ticket OR void pressure; do not clamp away void
+    // bg slots under rim_first_mesh_sla.
+    bool void_slots_active = false;
+    int void_relight_n = 0;
+    {
+      const int void_n = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+      const int vb_n = world.PhysicsTelemetryData.VisibleBlackFocusN;
+      const bool void_slots = ShouldReserveVoidRelightSlots(
+          void_n, vb_n, missing_focus_mesh);
+      const bool ocean_heal =
+          IsOceanHealPressure(missing_focus_mesh, void_n, vb_n);
+      // Era31: drain under VB/ocean heal even when no_ticket=0 (autofly soft fail
+      // relight_drain_near_zero_while_vb_sec).
+      if (world.PhysicsTelemetryData.VisibleBlackNoTicketN > 0 || void_slots ||
+          ocean_heal)
+      {
+        void_relight_n =
+            void_slots ? (void_n > 400 ? 2 : 1) : 1;
+        if (ocean_heal)
+        {
+          void_relight_n = std::max(
+              void_relight_n,
+              OceanVoidRelightDrainCapMoving(void_n > 200 || vb_n > 0, 2));
+        }
+        void_slots_active = void_slots || ocean_heal;
+        bg_budget = std::max(bg_budget, void_relight_n);
+        auto &exec = GetColumnFlowExecutor();
+        // Phase 5.4.3 RelightMissTops: near-focus only under sticky miss+move.
+        // Phase 5.5.1: also when PresentableCatchUp / visibility debt after soft_force.
+        int drain_n = void_relight_n;
+        const bool presentable_catch_up =
+            world.PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0 ||
+            (world.IsEnterLitGateActive() &&
+             world.CountEnterVisibilityDebt() > 0);
+        if ((moving_now && world.PhysicsTelemetryData.FocusMissingMesh != 0) ||
+            presentable_catch_up)
+        {
+          drain_n = std::min(drain_n,
+                             pending_light_focus_n > 0 ? 2 : 1);
+        }
+        exec.DrainIdlePendingLight(world, focus_horiz, focus_radius,
+                                   drain_n,
+                                   /*allow_sync=*/false, frame_ms,
+                                   pending_light_focus_n, missing_focus_mesh);
+      }
+    }
+    if (rim_first_mesh_sla)
+    {
+      if (ShouldPreserveVoidBgSlotsUnderRimSla(true, void_slots_active))
+      {
+        bg_budget = std::max(bg_budget, void_relight_n);
+      }
+      else
+      {
+        bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
+      }
+    }
+  }
+  // Promote via ColumnFlow queue only — TickMeshEmerge DrainBudget owns bump.
+  {
+    auto &exec = GetColumnFlowExecutor();
+    const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+    const glm::ivec2 promote_xz = exec.ResolveRelightPromoteColumn(
+        RepairColumnFromMissWitness(world.PhysicsTelemetryData, focus_xz));
+    if (pending_bg > 0 || underfeet_pending_light)
+    {
+      exec.RequestPromoteRelight(promote_xz, 50);
+    }
+    if (!rim_first_mesh_sla &&
+        (pending_bg > 0 || near_pending_light || pending_light_focus_n > 0))
+    {
+      exec.RequestPromoteRelight(promote_xz, 40);
+    }
+  }
 
   // Re-read queue depth after promote — snapshot pending_bg may have been 0.
   const int pending_bg_after =
@@ -1042,12 +5279,21 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       (idle_recovery || pending_light_focus_n > 8 || missing_focus_mesh ||
        world.GetAsyncRelightInFlightCount() == 0))
   {
-    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+    auto &exec = GetColumnFlowExecutor();
+    const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+    const glm::ivec2 promote_xz = exec.ResolveRelightPromoteColumn(
+        RepairColumnFromMissWitness(world.PhysicsTelemetryData, focus_xz));
+    exec.RequestPromoteRelight(
+        promote_xz,
+        rim_first_mesh_sla ? 45 : 40);
     world.ClearPendingLightAfterMeshCommitted(12);
     // Capture is main-thread: never burst 48–56 idle (manual 220018).
+    // While missing: paced 1–2 (priority SLA / manual 170154 softd=4 thrash).
     const int hole_cap =
-        moving_now ? 2
-                   : ((missing_focus_mesh && mesh_async_n < 8) ? 4 : 3);
+        rim_first_mesh_sla
+            ? (moving_now ? 1 : 2)
+            : (moving_now ? 2
+                          : ((missing_focus_mesh && mesh_async_n < 8) ? 4 : 3));
     bg_budget = std::max(
         bg_budget,
         std::min(hole_cap, pending_light_focus_n +
@@ -1068,28 +5314,179 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   else
   {
+    // I7: calm stand with remesh debt but no holes — Capture inflates stream
+    // (manual calm stream~46 with fd flat). Prefer remesh drain over Capture.
+    // P1: lower fd threshold (24→8) once miss is clear so stand stream stays
+    // ≤18 without starving rim FirstMesh (missing_focus_mesh excluded).
+    const int unfinished_vis = world.PhysicsTelemetryData.UnfinishedVisual;
+    const bool calm_fd_plateau =
+        !moving_now && !missing_focus_mesh && unfinished_vis <= 0 &&
+        pending_light_focus_n == 0 &&
+        world.PhysicsTelemetryData.FocusDirtyChunks > 8;
     const int hard_cap =
         moving_now
-            ? ((missing_focus_mesh || underfeet_pending_light)
-                   ? (frame_ms > kBadFrameMs ? 1 : 2)
+            ? ((missing_focus_mesh && pending_light_focus_n > 0)
+                   // SoftDefer FOV holes: keep Capture hot even if async already
+                   // fed (pending plateaus at ~12 while holes stick).
+                   ? (frame_ms > kBadFrameMs
+                          ? 3
+                          : (pending_light_focus_n > 8 ? 6 : 4))
                    : (frame_ms > kBadFrameMs ? 1 : 2))
-            : (frame_ms > kBadFrameMs ? 2 : 4);
-    bg_budget = std::min(bg_budget, hard_cap);
+            : (calm_fd_plateau
+                   ? (frame_ms > kBadFrameMs ? 0 : 1)
+                   : (frame_ms > kBadFrameMs ? 2 : 3));
+    int capture_cap = hard_cap;
+    if (moving_now)
+    {
+      const int sched_ok =
+          world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+      const int eff_cap =
+          world.GetMeshService().GetLastFirstMeshScheduleEffectiveCap();
+      const int consumer_floor = std::max(2, eff_cap > 0 ? eff_cap : 2);
+      if (sched_ok < consumer_floor)
+      {
+        capture_cap = std::min(capture_cap, 1);
+      }
+    }
+    bg_budget = std::min(bg_budget, capture_cap);
+    // Era40 miss exception: do not let hard_cap squash soft-cap starve boost.
+    {
+      const int fifo_n =
+          world.Persistence
+              ? world.Persistence->GetPendingTerrainColumnRelightCount()
+              : 0;
+      const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+      if (ShouldBoostRelightDrainUnderFifoMissStarve(
+              fifo_n, soft_cap, world.GetAsyncRelightInFlightCount(),
+              missing_focus_mesh,
+              world.PhysicsTelemetryData.RelightApplyMsPrev))
+      {
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
+      }
+      const auto &rt = URuntimeTuning::Get();
+      if (ShouldCruiseRedFifoLightDrain(
+              world.PhysicsTelemetryData.StreamPressure, fifo_n, soft_cap,
+              rt.RelightFifoAdmitFrac,
+              missing_focus_mesh ||
+                  world.PhysicsTelemetryData.VisualHoles != 0,
+              world.PhysicsTelemetryData.PendingLightFocus))
+      {
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
+        // Era22 F3c: ocean relight debt needs stronger capture floor while moving.
+        const int pl_focus = world.PhysicsTelemetryData.PendingLightFocus;
+        if (moving_now && pl_focus > 20 && soft_cap > 0 &&
+            fifo_n >= (soft_cap / 2))
+        {
+          bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 6);
+        }
+      }
+    }
     if (LastMemoryDecision.capture_hard_cap >= 0)
     {
       bg_budget = std::min(bg_budget, LastMemoryDecision.capture_hard_cap);
     }
+    // FP-E0.3: stop-phase VB drain — dedicated Capture budget while VB debt remains.
+    // R4.6.2: when focus miss + FM watches, prefer ConsumeGpu heal over VB inflate.
+    if (!moving_now)
+    {
+      static int stop_vb_budget_frames = 0;
+      const int vb_nt = world.PhysicsTelemetryData.VisibleBlackNoTicketN;
+      const int vb_focus = world.PhysicsTelemetryData.VisibleBlackFocusN;
+      if (vb_nt > 0 || vb_focus >= 20)
+      {
+        ++stop_vb_budget_frames;
+      }
+      else
+      {
+        stop_vb_budget_frames = 0;
+      }
+      const bool miss_heal_first =
+          world.PhysicsTelemetryData.FocusMissingMesh > 0 &&
+          world.GetMeshService().GetCache().GetFmDirtyGpuWatchCount() > 0;
+      if (stop_vb_budget_frames > 0 && !miss_heal_first)
+      {
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 6);
+        world.PhysicsTelemetryData.StopVbBudgetActive = 1;
+        world.PhysicsTelemetryData.StopVbDrainFrames = std::max(
+            world.PhysicsTelemetryData.StopVbDrainFrames, stop_vb_budget_frames);
+      }
+      else if (stop_vb_budget_frames > 0 && miss_heal_first)
+      {
+        // Cap VB drain so it does not starve emerge finish budget.
+        stop_vb_budget_frames = std::min(stop_vb_budget_frames, 48);
+        world.PhysicsTelemetryData.StopVbBudgetActive = 0;
+        world.PhysicsTelemetryData.StopVbDrainFrames = std::max(
+            world.PhysicsTelemetryData.StopVbDrainFrames, stop_vb_budget_frames);
+      }
+      else
+      {
+        world.PhysicsTelemetryData.StopVbBudgetActive = 0;
+      }
+    }
+    // P10: after hard_cap, restore Completed-empty fifo refill floor.
+    {
+      const int fifo_n =
+          world.Persistence
+              ? world.Persistence->GetPendingTerrainColumnRelightCount()
+              : 0;
+      const int completed_n =
+          static_cast<int>(world.GetRelightCompletedSize());
+      const int inflight_n = world.GetAsyncRelightInFlightCount();
+      const auto &rt = URuntimeTuning::Get();
+      const double unit =
+          world.PhysicsTelemetryData.RelightApplyNPrev > 0
+              ? world.PhysicsTelemetryData.RelightApplyMsPrev /
+                    static_cast<double>(
+                        world.PhysicsTelemetryData.RelightApplyNPrev)
+              : world.PhysicsTelemetryData.RelightApplyMsPrev;
+      bg_budget = RelightCaptureBgFloorForFifoStarve(
+          bg_budget, fifo_n, rt.RelightFifoSoftCap, completed_n, inflight_n,
+          unit);
+      bg_budget = ClampCaptureBgAfterSimKill(
+          bg_budget,
+          ShouldKillProducerBoostOnSimHot(
+              world.PhysicsTelemetryData.SimMsPrev),
+          completed_n, fifo_n);
+    }
+  }
+  // Enter / spawn-ring SLA: drain pending before idle-head samples.
+  if ((world.IsEnterLitGateActive() || world.NeedsEnterGameMeshWarmup() ||
+       world.NeedsSpawnRingCatchUp() ||
+       world.GetEnterGameMeshBurstFrames() > 0) &&
+      pending_light_focus_n > 0 && frame_ms <= kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, 6);
+    player_budget = std::max(player_budget, 4);
+  }
+  // Phase 5.4.3 RelightMissTops: soft-cap DrainRelightQueues under sticky miss
+  // while moving (cut far/bg first; enter boost above still wins).
+  // Phase 5.5.1: PresentableCatchUp also caps hinterland relight for mesh priority.
+  const bool presentable_catch_up =
+      world.PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0;
+  if (((moving_now && world.PhysicsTelemetryData.FocusMissingMesh != 0) ||
+       presentable_catch_up) &&
+      !world.IsEnterLitGateActive() && !world.NeedsEnterGameMeshWarmup())
+  {
+    bg_budget = std::min(bg_budget, 1);
+    player_budget = std::min(std::max(player_budget, 1), 2);
   }
 
   {
     const auto relight_t0 = std::chrono::high_resolution_clock::now();
     world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);
-    world.PhysicsTelemetryData.RelightDrainMs +=
+    const double capture_ms =
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - relight_t0)
             .count();
+    world.PhysicsTelemetryData.RelightCaptureMs += capture_ms;
+    world.PhysicsTelemetryData.RelightDrainMs += capture_ms;
   }
   finish_telemetry();
+  const double async_elapsed_ms = elapsed_main_ms();
+  world.PhysicsTelemetryData.AsyncChunkPostSchedulerMs = std::max(
+      0.0, async_elapsed_ms -
+               world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs -
+               world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs);
 }
 
 void UWorldStreaming::QuiesceBackgroundWork(
@@ -1101,10 +5498,12 @@ void UWorldStreaming::QuiesceBackgroundWork(
   }
   DeferredPhysicsSeedQueue.clear();
   DeferredShoreSealQueue.clear();
+  DeferredShoreSealQueued.clear();
+  DeferredIntraChunkSealNeeded.clear();
   PauseChunkGeneration(async_io_timeout);
   if (world.Persistence)
   {
-    world.Persistence->ClearPendingRelights();
+    world.Persistence->ClearPendingRelights("streaming_quiesce");
     for (int pass = 0; pass < 64; ++pass)
     {
       if (world.Persistence->TickDrainAsyncChunkIo(world, 8))
@@ -1116,14 +5515,14 @@ void UWorldStreaming::QuiesceBackgroundWork(
   }
 }
 
-void UWorldStreaming::CancelChunkGeneration()
+void UWorldStreaming::CancelChunkGeneration(const char *reason)
 {
   if (!ChunkScheduler)
   {
     return;
   }
   // Zero wait: clear queue + bump tokens so shouldCancel trips; do not join.
-  ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0));
+  ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0), reason);
 }
 
 void UWorldStreaming::AbandonWorkersForProcessExit(
@@ -1134,7 +5533,7 @@ void UWorldStreaming::AbandonWorkersForProcessExit(
     Streamer->SetEnabled(false);
   }
   SyncCoarseCacheGround = glm::ivec3(INT32_MAX, 0, INT32_MAX);
-  CancelChunkGeneration();
+  CancelChunkGeneration("process_exit");
   if (!ChunkScheduler)
   {
     ChunkPopulator.reset();
@@ -1160,7 +5559,7 @@ void UWorldStreaming::PauseChunkGeneration(
   {
     return;
   }
-  ChunkScheduler->CancelAllPending(worker_wait);
+  ChunkScheduler->CancelAllPending(worker_wait, "paused_for_quiesce");
   if (worker_wait.count() > 0)
   {
     (void)ChunkScheduler->WaitForWorkersIdle(worker_wait);
@@ -1177,7 +5576,63 @@ void UWorldStreaming::ResumeStreamerAfterQuiesce()
 
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
-  EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
+  CUBA_ZONE("TickMeshEmerge");
+  const auto emerge_function_t0 = std::chrono::high_resolution_clock::now();
+  auto emerge_elapsed_ms = [&]()
+  {
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - emerge_function_t0)
+        .count();
+  };
+  const auto coordinator_t0 = std::chrono::high_resolution_clock::now();
+  {
+    UFrameStageWatchdog::Scope stage("streaming.emerge_scheduler_tick");
+    EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
+  }
+  world.PhysicsTelemetryData.MeshEmergeCoordinatorMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - coordinator_t0)
+          .count();
+  UFrameStageWatchdog::Scope telemetry_stage("streaming.emerge_post_tick");
+  // MeshWorkAdmission SoT lands in LastBudget at end of TickMeshEmerge.
+  // finish_telemetry in TickAsyncChunkSystems runs *before* emerge — write
+  // final schedule/drain/mode here so periods see HoleDrain under miss.
+  auto post_stage_sample_t0 = std::chrono::high_resolution_clock::now();
+  {
+    const auto &budget = EmergeCoordinator->GetLastBudget();
+    world.PhysicsTelemetryData.MeshScheduleFinal = budget.MaxMeshSchedule;
+    world.PhysicsTelemetryData.MeshDrainFinal = budget.MaxMeshDrain;
+    world.PhysicsTelemetryData.MeshAdmissionMode = budget.AdmissionMode;
+  }
+  world.SampleColumnEmergeStageTelemetry();
+  world.PhysicsTelemetryData.MeshEmergePostStageSampleMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_stage_sample_t0)
+          .count();
+
+  auto post_gpu_counts_t0 = std::chrono::high_resolution_clock::now();
+  world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuAppliesCount());
+  world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuQueuedCount());
+  world.PhysicsTelemetryData.PendingGpuKickedN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuKickedCount());
+  world.PhysicsTelemetryData.GpuKickN =
+      world.GetMeshService().GetLastGpuKickN();
+  world.PhysicsTelemetryData.GpuKickDebtForcedN =
+      world.GetMeshService().GetLastGpuKickDebtForcedN();
+  world.PhysicsTelemetryData.GpuKickDeferReason =
+      world.GetMeshService().GetLastGpuKickDeferReason();
+  world.PhysicsTelemetryData.GpuFinishN =
+      world.GetMeshService().GetLastGpuFinishN();
+  world.PhysicsTelemetryData.GpuFinishNotReadyN =
+      world.GetMeshService().GetLastGpuFinishNotReadyN();
+  world.PhysicsTelemetryData.MeshEmergePostGpuCountsMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_gpu_counts_t0)
+          .count();
+
+  auto post_mesh_snapshot_t0 = std::chrono::high_resolution_clock::now();
   world.PhysicsTelemetryData.MeshSyncMs =
       world.GetMeshService().GetLastMeshSyncMs();
   world.PhysicsTelemetryData.MeshSnapshotMs =
@@ -1186,8 +5641,134 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastMeshImmediateMs();
   world.PhysicsTelemetryData.MeshImmediateCount =
       world.GetMeshService().GetLastMeshImmediateCount();
+  world.PhysicsTelemetryData.EditImmediateN =
+      world.GetMeshService().GetLastEditImmediateN();
+  world.PhysicsTelemetryData.EditDirtyN =
+      world.GetMeshService().GetLastEditDirtyN();
+  world.PhysicsTelemetryData.EditNeighborPendingFrames =
+      static_cast<uint64_t>(
+          (std::max)(0, world.GetMeshService().GetAsyncInFlightCount()));
+  world.PhysicsTelemetryData.ChunkNotReady =
+      static_cast<uint64_t>(
+          (std::max)(0, world.PhysicsTelemetryData.UnfinishedVisual));
+  world.PhysicsTelemetryData.ChunkMeshedUnlit =
+      static_cast<uint64_t>(
+          (std::max)(0, world.PhysicsTelemetryData.FocusDarkMesh));
+  world.PhysicsTelemetryData.ChunkMeshedUnlitHidden =
+      static_cast<uint64_t>(
+          (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshHidden));
+  world.PhysicsTelemetryData.ChunkMeshedUnlitPreview =
+      static_cast<uint64_t>(
+          (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshPreview));
   world.PhysicsTelemetryData.MeshDirtyTickMs =
       world.GetMeshService().GetLastMeshDirtyTickMs();
+  world.PhysicsTelemetryData.MeshDirtyPrePruneMs =
+      world.GetMeshService().GetLastMeshDirtyPrePruneMs();
+  world.PhysicsTelemetryData.MeshDirtyPruneMs =
+      world.GetMeshService().GetLastMeshDirtyPruneMs();
+  world.PhysicsTelemetryData.MeshDirtyPruneN =
+      world.GetMeshService().GetLastMeshDirtyPruneN();
+  world.PhysicsTelemetryData.MeshDirtySortMs =
+      world.GetMeshService().GetLastMeshDirtySortMs();
+  world.PhysicsTelemetryData.MeshDirtyDrainMs =
+      world.GetMeshService().GetLastMeshDirtyDrainMs();
+  world.PhysicsTelemetryData.MeshDirtyDrainN =
+      world.GetMeshService().GetLastMeshDirtyDrainN();
+  world.PhysicsTelemetryData.MeshDirtyScheduleMs =
+      world.GetMeshService().GetLastMeshDirtyScheduleMs();
+  world.PhysicsTelemetryData.MeshDirtyScheduleOkN =
+      world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+  world.PhysicsTelemetryData.MeshDirtyScheduleOkFmN =
+      world.GetMeshService().GetLastMeshDirtyScheduleOkFmN();
+  world.PhysicsTelemetryData.MeshDirtyScheduleOkRemeshN =
+      world.GetMeshService().GetLastMeshDirtyScheduleOkRemeshN();
+  world.PhysicsTelemetryData.MeshDirtyScheduleSkipN =
+      world.GetMeshService().GetLastMeshDirtyScheduleSkipN();
+  world.PhysicsTelemetryData.MeshDirtyGpuMs =
+      world.GetMeshService().GetLastMeshDirtyGpuMs();
+  world.PhysicsTelemetryData.MeshDirtyGpuN =
+      world.GetMeshService().GetLastMeshDirtyGpuN();
+  world.PhysicsTelemetryData.MeshDirtySyncMs =
+      world.GetMeshService().GetLastMeshDirtySyncMs();
+  world.PhysicsTelemetryData.MeshDirtySyncN =
+      world.GetMeshService().GetLastMeshDirtySyncN();
+  world.PhysicsTelemetryData.MeshGpuKickMs =
+      world.GetMeshService().GetLastMeshGpuKickMs();
+  world.PhysicsTelemetryData.MeshGpuFinishMs =
+      world.GetMeshService().GetLastMeshGpuFinishMs();
+  world.PhysicsTelemetryData.MeshAsyncDrainMs =
+      world.GetMeshService().GetLastMeshAsyncDrainMs();
+  world.PhysicsTelemetryData.MeshCaptureStoreHitN =
+      world.GetMeshService().GetLastMeshCaptureStoreHitN();
+  world.PhysicsTelemetryData.MeshCaptureStoreMissN =
+      world.GetMeshService().GetLastMeshCaptureStoreMissN();
+  world.PhysicsTelemetryData.MeshEmergePostMeshSnapshotMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_mesh_snapshot_t0)
+          .count();
+
+  auto post_capture_store_t0 = std::chrono::high_resolution_clock::now();
+  {
+    const auto &capture_store =
+        world.GetMeshService().GetCache().GetCaptureStore();
+    auto &telemetry = world.PhysicsTelemetryData;
+    telemetry.MeshCaptureStoreEntriesN =
+        static_cast<int>(std::min<size_t>(capture_store.Size(), INT_MAX));
+    telemetry.MeshCaptureStoreStaleEvictionsN =
+        capture_store.StaleEntryEvictions();
+    telemetry.MeshCaptureStoreCapacityEvictionsN =
+        capture_store.CapacityEvictions();
+    telemetry.MeshCaptureStorePressureEvictionsN =
+        capture_store.PressureEvictions();
+    telemetry.MeshSnapshotPendingBytes = static_cast<uint64_t>(
+        UPipelineAdmission::Get().SnapshotPendingBytes());
+  }
+  world.PhysicsTelemetryData.MeshEmergePostCaptureStoreMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_capture_store_t0)
+          .count();
+
+  auto post_tail_snapshot_t0 = std::chrono::high_resolution_clock::now();
+  world.PhysicsTelemetryData.MeshPendingCaptureN =
+      world.GetMeshService().GetLastMeshPendingCaptureN();
+  world.PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN =
+      world.GetMeshService().GetLastMeshScheduleRetryAfterCaptureN();
+  world.PhysicsTelemetryData.MeshWorkerInflightN =
+      world.GetMeshService().GetLastMeshWorkerInflightN();
+  world.PhysicsTelemetryData.MeshPendingCaptureReadyN =
+      world.GetMeshService().GetLastMeshPendingCaptureReadyN();
+  world.PhysicsTelemetryData.MeshPendingCaptureStaleN =
+      world.GetMeshService().GetLastMeshPendingCaptureStaleN();
+  world.PhysicsTelemetryData.MeshPendingCaptureMaxAge =
+      world.GetMeshService().GetLastMeshPendingCaptureMaxAge();
+  world.PhysicsTelemetryData.MeshDegradedCaptureN =
+      world.GetMeshService().GetLastMeshDegradedCaptureN();
+  world.PhysicsTelemetryData.DirtyTouchN =
+      world.GetMeshService().GetLastDirtyTouchN();
+  world.PhysicsTelemetryData.DirtyRevisitSameN =
+      world.GetMeshService().GetLastDirtyRevisitSameN();
+  world.PhysicsTelemetryData.DirtyFmN =
+      std::max(world.GetMeshService().GetLastDirtyFmN(),
+               world.GetMeshService().GetLiveDirtyFirstMeshCount());
+  world.PhysicsTelemetryData.DirtyRemeshN =
+      world.GetMeshService().GetLastDirtyRemeshN();
+  world.PhysicsTelemetryData.MeshEmergePostTailSnapshotMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_tail_snapshot_t0)
+          .count();
+
+  const double post_telemetry_ms = std::max(
+      0.0, emerge_elapsed_ms() -
+               world.PhysicsTelemetryData.MeshEmergeCoordinatorMs);
+  const double measured_post_ms =
+      world.PhysicsTelemetryData.MeshEmergePostStageSampleMs +
+      world.PhysicsTelemetryData.MeshEmergePostGpuCountsMs +
+      world.PhysicsTelemetryData.MeshEmergePostMeshSnapshotMs +
+      world.PhysicsTelemetryData.MeshEmergePostCaptureStoreMs +
+      world.PhysicsTelemetryData.MeshEmergePostTailSnapshotMs;
+  world.PhysicsTelemetryData.MeshEmergePostTelemetryMs = post_telemetry_ms;
+  world.PhysicsTelemetryData.MeshEmergePostUnattributedMs =
+      std::max(0.0, post_telemetry_ms - measured_post_ms);
 }
 
 void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
@@ -1203,10 +5784,11 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetMaxLoadOpsPerFrame(world.MaxLoadOpsPerFrame);
   Streamer->SetMaxUnloadOpsPerFrame(world.MaxUnloadOpsPerFrame);
   Streamer->SetMaxTerrainHeight(procedural.MaxHeight);
+  Streamer->SetMinTerrainHeight(procedural.MinHeight);
   Streamer->SetEnabled(StreamingEnabled);
   Streamer->SetWorldFolder(world.GetWorldFolderPath());
   Streamer->SetCallbacks(
-      [this, &world](glm::ivec3 coord)
+      [this, &world](glm::ivec3 coord, uint64_t demand_id)
       {
         UWorldPersistence &persistence = *world.Persistence;
         if (persistence.GetChunkStorage().IsColumnSavePending(coord))
@@ -1220,29 +5802,34 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const ProceduralSettings &settings = world.GetProceduralSettings();
         if (settings.AsyncChunkIo)
         {
-          persistence.RequestAsyncTerrainColumnLoad(world, coord);
+          persistence.RequestAsyncTerrainColumnLoad(world, coord, demand_id);
           return false;
         }
         const auto t0 = std::chrono::high_resolution_clock::now();
         const bool loaded =
             persistence.LoadTerrainColumn(coord, world.BlockWorld,
                                           *world.BlockRegistry,
-                                          settings.MaxHeight) > 0;
+                                          settings.MaxHeight,
+                                          settings.MinHeight) > 0;
         if (loaded)
         {
           if (!IsTerrainChunkComplete(world.BlockWorld, coord,
-                                      settings.MaxHeight))
+                                      settings.MaxHeight,
+                                      kNoTerrainChunkSlice,
+                                      settings.MinHeight))
           {
             persistence.PurgeIncompleteTerrainColumn(world.BlockWorld, coord,
-                                                     settings.MaxHeight);
+                                                     settings.MaxHeight,
+                                                     settings.MinHeight);
             FrameStreamingIoMs +=
                 std::chrono::duration<double, std::milli>(
                     std::chrono::high_resolution_clock::now() - t0)
                     .count();
             return false;
           }
-          persistence.EnqueueTerrainColumnRelight(coord.x * CHUNK_SIZE,
-                                                  coord.z * CHUNK_SIZE);
+          persistence.TryEnqueueTerrainColumnRelight(
+              world, coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE,
+              /*priority=*/false, settings.MinHeight, /*max_y=*/-1);
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
@@ -1254,12 +5841,6 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       {
         UWorldPersistence &persistence = *world.Persistence;
         const glm::ivec3 ground(coord.x, 0, coord.z);
-        persistence.CancelAsyncTerrainColumnLoad(ground);
-        ChunkGenTokens.Bump(ground);
-        if (ChunkScheduler)
-        {
-          ChunkScheduler->Invalidate(ground);
-        }
         const auto t0 = std::chrono::high_resolution_clock::now();
         const ProceduralSettings &settings = world.GetProceduralSettings();
         if (settings.AsyncChunkIo)
@@ -1270,12 +5851,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           persistence.SaveTerrainColumn(ground, world.BlockWorld,
                                         *world.BlockRegistry,
-                                        settings.MaxHeight);
-          ChunkGenTokens.Bump(ground);
-          if (ChunkScheduler)
-          {
-            ChunkScheduler->Invalidate(ground);
-          }
+                                        settings.MaxHeight,
+                                        settings.MinHeight);
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
@@ -1285,13 +5862,16 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       [&world](glm::ivec3 coord)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
-        // Sea-band neighbor remesh must run even under PendingLight — soft-defer
-        // now allows sea cy, and skipping left blank water seams along flight.
+        // Immediate seamed remesh on streamer-complete (H1 defer queue caused
+        // empty/flicker while drain lagged Exhausted). Sea-band neighbor remesh
+        // must run even under PendingLight.
         const ProceduralSettings &settings = world.GetProceduralSettings();
-        const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+        const int remesh_min_y =
+            std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
         const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
-        world.MarkTerrainChunkMeshDirtySeamed(ground, remesh_min_y, remesh_max_y,
-                                              true);
+        world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
+            ground, remesh_min_y, remesh_max_y, true,
+            MeshRevisionBumpReason::StreamerCommitSeaSeam);
       },
       [this, &world](int x, int z)
       {
@@ -1337,25 +5917,255 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         }
       });
   Streamer->SetUnloadColumnCallback(
-      [this, &world](glm::ivec3 ground, int max_cy)
+      [this, &world](glm::ivec3 ground, int max_cy) -> bool
       {
-        world.ClearPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z));
-        world.ClearColumnEmergeState(glm::ivec2(ground.x, ground.z));
-        world.GetMeshService().RemoveColumn(ground, max_cy);
-        for (int cy = 0; cy <= max_cy; ++cy)
+        const auto unload_started = std::chrono::steady_clock::now();
+        const bool trace_unload = IsStreamerUnloadTraceEnabled();
+        const glm::ivec2 col(ground.x, ground.z);
+        const glm::ivec2 world_key(col.x * CHUNK_SIZE,
+                                   col.y * CHUNK_SIZE);
+        const ColumnRecord *rec = world.GetColumnRecords().Find(col);
+        // ChunkStreamer calls this only after the column is outside its keep
+        // ring and the camera capsule. At that point visual work is
+        // cancelable; a pending ticket must not pin resident terrain forever.
+        const bool record_want =
+            UColumnRecordCoordinator::RecordWantsEvictAfterInterestLoss(true);
+        const bool may_evict =
+            UColumnRecordCoordinator::DecideEvict(true, record_want, col);
+        const double decision_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - unload_started)
+                .count();
+        if (!may_evict)
         {
-          world.Collision.RemoveChunkMovementSolidCache(
-              glm::ivec3(ground.x, cy, ground.z));
+          if (trace_unload)
+          {
+            LogWorldColumnUnload(
+                "vetoed", ground,
+                "decision_ms=" + std::to_string(decision_ms) +
+                    " total_ms=" +
+                    std::to_string(std::chrono::duration<double, std::milli>(
+                                       std::chrono::steady_clock::now() -
+                                       unload_started)
+                                       .count()));
+          }
+          return false;
         }
+
+        const auto ownership_started = std::chrono::steady_clock::now();
+        UColumnFlowExecutor &flow = GetColumnFlowExecutor();
+        const auto &flow_scheduler = flow.Scheduler();
+        const bool flow_relight_ticket =
+            flow_scheduler.Contains(col, ColumnWorkKind::RelightThenMesh) ||
+            flow_scheduler.Contains(col, ColumnWorkKind::PromoteRelight);
+        const UWorldPersistence::TerrainColumnRelightQueueInfo relight_queue =
+            world.Persistence->GetTerrainColumnRelightQueueInfo(world_key);
+        const ColumnEmergeState emerge = world.GetColumnEmergeState(ground);
+        const bool pending_light_before_mesh =
+            world.IsPendingLightBeforeMesh(col);
+        const bool relight_inflight = world.IsAsyncRelightColumnInFlight(col);
+        const bool record_pending_light = rec && rec->pending_light;
+        const bool record_visual_needs_relight =
+            rec && rec->visual == ColumnVisualState::NeedRelight;
+        const bool record_light_repair_obligation =
+            rec && rec->visual_obligation == VisualObligation::LightRepair;
+        const bool emerge_lighting = emerge == ColumnEmergeState::Lighting;
+        const bool flow_repair_ticket = flow.HasRepairTicket(col);
+        const bool disk_load_pending =
+            world.Persistence->IsTerrainColumnDiskLoadPending(ground);
+        const bool generation_pending =
+            ChunkScheduler && ChunkScheduler->IsPending(ground);
+        const bool needs_relight =
+            pending_light_before_mesh || relight_inflight ||
+            relight_queue.keyed || relight_queue.boundary_dependency ||
+            relight_queue.deferred_far ||
+            relight_queue.deferred_visible || flow_relight_ticket ||
+            emerge_lighting || record_pending_light ||
+            record_visual_needs_relight || record_light_repair_obligation;
+        const bool light_complete_before_unload =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
+
+        bool active_work = needs_relight || flow_repair_ticket ||
+                           (rec && ColumnHasActivePending(*rec)) ||
+                           disk_load_pending || generation_pending;
+        const double ownership_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - ownership_started)
+                .count();
+        const int min_cy = FloorDiv(
+            world.GetProceduralSettings().MinHeight, CHUNK_SIZE);
+        const int highest_cy = max_cy;
+        const UWorldMeshService &mesh = world.GetMeshService();
+        const auto mesh_scan_started = std::chrono::steady_clock::now();
+        for (int cy = min_cy; cy <= highest_cy; ++cy)
+        {
+          const glm::ivec3 slice(ground.x, cy, ground.z);
+          active_work = active_work || mesh.IsChunkMeshDirty(slice) ||
+                        mesh.HasInflightMeshBuild(slice) ||
+                        mesh.IsPendingGpuApply(slice) ||
+                        mesh.IsGpuExtractInFlight(slice) ||
+                        mesh.GetCache().HasPendingCaptureWork(slice);
+        }
+        const double mesh_scan_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - mesh_scan_started)
+                .count();
+
+        // If we interrupt lighting, persist the column as light-incomplete.
+        // The next disk load will recompute light rather than trusting a
+        // partially updated lightmap saved with otherwise valid voxels.
+        const auto light_flags_started = std::chrono::steady_clock::now();
+        if (needs_relight)
+        {
+          world.Persistence->ClearColumnLightComplete(
+              col, "column_unload_with_relight_work");
+        }
+        const bool light_complete_after_invalidation =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
+        const double light_flags_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - light_flags_started)
+                .count();
+
+        const auto invalidation_started = std::chrono::steady_clock::now();
+        flow.ForgetColumnWork(col);
+        bool invalidated_work = active_work;
+        const int canceled_relight_work =
+            world.Persistence->CancelTerrainColumnRelight(world_key);
+        invalidated_work = canceled_relight_work > 0 || invalidated_work;
+        world.Persistence->CancelAsyncTerrainColumnLoad(ground);
+        ChunkGenTokens.Bump(ground);
         if (ChunkScheduler)
         {
           ChunkScheduler->Invalidate(ground);
         }
+        world.ClearPendingLightBeforeMesh(col);
+        world.ClearColumnEmergeState(col); // erase the obsolete column record
+        const auto mesh_remove_started = std::chrono::steady_clock::now();
+        world.GetMeshService().RemoveColumn(ground, min_cy, highest_cy);
+        const double mesh_remove_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - mesh_remove_started)
+                .count();
+        const auto collision_cleanup_started = std::chrono::steady_clock::now();
+        for (int cy = min_cy; cy <= highest_cy; ++cy)
+        {
+          world.Collision.RemoveChunkMovementSolidCache(
+              glm::ivec3(ground.x, cy, ground.z));
+        }
+        const double collision_cleanup_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - collision_cleanup_started)
+                .count();
+        const bool light_complete_after_unload =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
+        if (ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(ground);
+        }
+        if (invalidated_work)
+        {
+          Streamer->NoteUnloadActiveWorkInvalidated();
+        }
+        if (trace_unload)
+        {
+          const double invalidation_ms =
+              std::chrono::duration<double, std::milli>(
+                  mesh_remove_started - invalidation_started)
+                  .count();
+          LogWorldColumnUnload(
+              "evicted", ground,
+              "max_cy=" + std::to_string(highest_cy) +
+                  " needs_relight=" + std::to_string(needs_relight) +
+                  " relight_keyed=" + std::to_string(relight_queue.keyed) +
+                  " relight_deferred_far=" +
+                  std::to_string(relight_queue.deferred_far) +
+                  " relight_deferred_visible=" +
+                  std::to_string(relight_queue.deferred_visible) +
+                  " relight_boundary_dependency=" +
+                  std::to_string(relight_queue.boundary_dependency) +
+                  " relight_inflight=" + std::to_string(relight_inflight) +
+                  " pending_light_before_mesh=" +
+                  std::to_string(pending_light_before_mesh) +
+                  " emerge_state=" + std::to_string(static_cast<int>(emerge)) +
+                  " emerge_lighting=" + std::to_string(emerge_lighting) +
+                  " record_pending_light=" +
+                  std::to_string(record_pending_light) +
+                  " record_visual=" +
+                  std::to_string(rec ? static_cast<int>(rec->visual) : -1) +
+                  " record_visual_needs_relight=" +
+                  std::to_string(record_visual_needs_relight) +
+                  " record_visual_obligation=" +
+                  std::to_string(rec ? static_cast<int>(rec->visual_obligation)
+                                     : -1) +
+                  " record_light_repair_obligation=" +
+                  std::to_string(record_light_repair_obligation) +
+                  " record_pending_token=" +
+                  std::to_string(rec ? rec->pending.token : 0) +
+                  " record_debt_reason=" +
+                  std::to_string(rec ? rec->debt.reason : 0) +
+                  " flow_relight_ticket=" +
+                  std::to_string(flow_relight_ticket) +
+                  " flow_repair_ticket=" +
+                  std::to_string(flow_repair_ticket) +
+                  " disk_load_pending=" +
+                  std::to_string(disk_load_pending) +
+                  " generation_pending=" +
+                  std::to_string(generation_pending) +
+                  " relight_cancelled=" +
+                  std::to_string(canceled_relight_work) +
+                  " light_complete_before=" +
+                  std::to_string(light_complete_before_unload) +
+                  " light_complete_after_invalidation=" +
+                  std::to_string(light_complete_after_invalidation) +
+                  " light_complete_after_unload=" +
+                  std::to_string(light_complete_after_unload) +
+                  " active_work=" + std::to_string(active_work) +
+                  " invalidated_work=" + std::to_string(invalidated_work) +
+                  " decision_ms=" + std::to_string(decision_ms) +
+                  " ownership_ms=" + std::to_string(ownership_ms) +
+                  " mesh_scan_ms=" + std::to_string(mesh_scan_ms) +
+                  " light_flags_ms=" + std::to_string(light_flags_ms) +
+                  " invalidation_ms=" + std::to_string(invalidation_ms) +
+                  " mesh_remove_ms=" + std::to_string(mesh_remove_ms) +
+                  " collision_cleanup_ms=" +
+                  std::to_string(collision_cleanup_ms) +
+                  " total_ms=" +
+                  std::to_string(std::chrono::duration<double, std::milli>(
+                                     std::chrono::steady_clock::now() -
+                                     unload_started)
+                                     .count()));
+        }
+        return true;
       });
   Streamer->SetAsyncGeneration(procedural.AsyncChunkGeneration);
   Streamer->SetAsyncCallbacks(
-      [this, &world, &procedural](glm::ivec3 coord, int priority)
+      [this, &world, &procedural](glm::ivec3 coord, int priority,
+                                  uint64_t demand_id)
       {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        UWorldPersistence &persistence = *world.Persistence;
+        if (persistence.GetChunkStorage().IsColumnSavePending(ground) ||
+            persistence.IsTerrainColumnDiskLoadPending(ground))
+        {
+          return;
+        }
+        const bool generation_pending =
+            ChunkScheduler && ChunkScheduler->IsPending(ground);
+        // Async streaming used to jump straight to procedural generation,
+        // bypassing OnLoadChunk. Reuse the bounded disk worker first so a
+        // previously visited column is restored with its saved voxel/light data.
+        // Do not issue a second disk load while a procedural request owns it;
+        // fall through so RequestLoad can refresh that request's priority.
+        if (procedural.AsyncChunkIo && !generation_pending)
+        {
+          persistence.RequestAsyncTerrainColumnLoad(world, ground,
+                                                    demand_id);
+          if (persistence.IsTerrainColumnDiskLoadPending(ground))
+          {
+            return;
+          }
+        }
         if (ChunkScheduler)
         {
           glm::ivec2 column_origin(0);
@@ -1370,8 +6180,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             column_origin = glm::ivec2(feet_block.x, feet_block.z);
             has_origin = true;
           }
-          ChunkScheduler->RequestLoad(coord, priority, procedural, column_origin,
-                                      has_origin);
+          ChunkScheduler->RequestLoad(ground, priority, procedural,
+                                      column_origin, has_origin, demand_id);
         }
       },
       [&world, this](glm::ivec3 coord)
@@ -1385,11 +6195,21 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           return false;
         }
         return IsTerrainChunkComplete(world.BlockWorld, coord,
-                                      world.GetProceduralSettings().MaxHeight);
+                                      world.GetProceduralSettings().MaxHeight,
+                                      kNoTerrainChunkSlice,
+                                      world.GetProceduralSettings().MinHeight);
       });
   Streamer->SetColumnPendingCallback(
-      [&world](glm::ivec3 coord)
-      { return world.Persistence->IsTerrainColumnDiskLoadPending(coord); });
+      [this, &world](glm::ivec3 coord)
+      {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        if (world.Persistence->GetChunkStorage().IsColumnSavePending(ground) ||
+            world.Persistence->IsTerrainColumnDiskLoadPending(ground))
+        {
+          return true;
+        }
+        return ChunkScheduler && ChunkScheduler->IsPending(ground);
+      });
   Streamer->SetColumnPendingLightCallback(
       [&world](glm::ivec3 coord)
       {
@@ -1416,8 +6236,37 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const bool near_focus =
             std::max(std::abs(ground.x - focus_ground.x),
                      std::abs(ground.z - focus_ground.z)) <= focus_radius;
-        world.Persistence->EnqueueTerrainColumnRelight(
-            ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus);
+        const int horiz =
+            std::max(std::abs(ground.x - focus_ground.x),
+                     std::abs(ground.z - focus_ground.z));
+        const int fifo_n =
+            world.Persistence
+                ? world.Persistence->GetPendingTerrainColumnRelightCount()
+                : 0;
+        const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+        const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
+        const int relight_min = std::max(settings.MinHeight,
+                                         settings.SeaLevel - CHUNK_SIZE * 2);
+        const int relight_max = settings.MaxHeight;
+        if (world.Persistence &&
+            ShouldDeferFarRelightEnqueueOnFifoPressure(
+                horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap, fifo_frac))
+        {
+          world.Persistence->DeferFarRelightColumn(glm::ivec2(ground.x, ground.z),
+                                                   relight_min, relight_max,
+                                                   near_focus,
+                                                   "stream_dirty_fifo_pressure");
+          world.TryNotePendingLightBeforeMesh(ground, relight_min, relight_max,
+                                              __FUNCTION__);
+          ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;
+        }
+        else
+        {
+          world.Persistence->EnqueueTerrainColumnRelight(
+              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
+              /*min_y=*/settings.MinHeight, /*max_y=*/-1,
+              "stream_dirty_callback", &world);
+        }
       });
 }
 
@@ -1431,6 +6280,7 @@ void UWorldStreaming::RefreshStreamerSettings(const ProceduralSettings &settings
   }
   Streamer->SetAsyncGeneration(settings.AsyncChunkGeneration);
   Streamer->SetMaxTerrainHeight(settings.MaxHeight);
+  Streamer->SetMinTerrainHeight(settings.MinHeight);
   Streamer->SetMaxLoadOpsPerFrame(maxLoadOpsPerFrame);
   Streamer->SetMaxUnloadOpsPerFrame(maxUnloadOpsPerFrame);
   Streamer->SetRingGateEnabled(settings.RingGateEnabled);
@@ -1447,11 +6297,68 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                                       float &lastMovementSpeed,
                                       glm::vec2 &lastMovementDirXz)
 {
+  CUBA_ZONE("UpdateStreaming");
+  world.PhysicsTelemetryData.UpdateStreamingPreCoreMs = 0.0;
+  world.PhysicsTelemetryData.UpdateStreamingPostCoreMs = 0.0;
+  world.PhysicsTelemetryData.UpdateStreamingPostCoreTelemetryMs = 0.0;
+  world.PhysicsTelemetryData.FogLatchFocusMissingMesh = 0;
+  world.PhysicsTelemetryData.FogLatchMissHoriz = 0;
+  world.PhysicsTelemetryData.FogLatchUnfinishedAhead = 0;
+  world.PhysicsTelemetryData.FogLatchVisibleBlackFullyDarkStalled = 0;
+  world.PhysicsTelemetryData.FogLatchVisibleBlackFocus = 0;
+  world.PhysicsTelemetryData.FogLatchNow = 0;
+  world.PhysicsTelemetryData.FogClearConditions = 0;
+  world.PhysicsTelemetryData.FogHoleHoldFrames = 0;
+  world.PhysicsTelemetryData.FogDebtQuietMs = -1.0;
   if (!Streamer || !StreamingEnabled)
   {
     return;
   }
+  const auto update_pre_core_t0 = std::chrono::high_resolution_clock::now();
+  auto update_post_core_t0 = update_pre_core_t0;
+  auto post_core_telemetry_t0 = update_pre_core_t0;
+  bool update_core_ran = false;
+  Streamer->BeginFrameStats();
+  world.PhysicsTelemetryData.VisibilityDebtProbeMs = 0.0;
+  world.PhysicsTelemetryData.SpawnCatchUpProbeMs = 0.0;
+  world.PhysicsTelemetryData.VisibilityDebtSampleValid = 0;
+  world.PhysicsTelemetryData.VisibilityDebtHinterlandSampleValid = 0;
+  GetColumnFlowExecutor().BindDecideWorld(&world);
+  if (kI18WitnessComfortEnabled && WitnessColumnGrace.frames_left > 0)
+  {
+    --WitnessColumnGrace.frames_left;
+  }
+  if (kI18WitnessComfortEnabled || kI18UnderfeetGraceEnabled)
+  {
+    meshService.TickWitnessSwapGrace();
+  }
   URuntimeTuning::LoadStreamingTuneFile("streaming_tune.json");
+  URuntimeTuning::ApplyEnvOverrides();
+  world.PhysicsTelemetryData.PrepRefreshHasMissingMs = 0.0;
+  world.PhysicsTelemetryData.AltitudeSurfaceQueryMs = 0.0;
+  // Explicit Completed caps from tune (stress / low-mem). slots=0 keeps
+  // constructor default and allows CompletedExpandEnabled growth.
+  {
+    const auto &tune = URuntimeTuning::Get();
+    if (tune.MeshCompletedSlots > 0)
+    {
+      const size_t want =
+          static_cast<size_t>(tune.MeshCompletedSlots);
+      if (meshService.GetMeshCompletedCapacity() != want)
+      {
+        meshService.SetMeshCompletedCapacity(want);
+      }
+    }
+    if (tune.RelightCompletedSlots > 0)
+    {
+      const size_t want =
+          static_cast<size_t>(tune.RelightCompletedSlots);
+      if (world.GetRelightCompletedCapacity() != want)
+      {
+        world.SetRelightCompletedCapacity(want);
+      }
+    }
+  }
   if (auto camera = world.GetCurrentUserCamera())
   {
     const PlayerCapsule cap = camera->GetPlayerCapsule();
@@ -1462,15 +6369,72 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     {
       Streamer->SetViewForward(forward);
     }
+    const ProceduralSettings &procedural = world.GetProceduralSettings();
+    const glm::vec3 delta = eye - lastCameraPosition;
+    const float dt = std::max(0.0001f, camera->GetDeltaTime());
+    lastMovementSpeed = MovementSpeedFromDisplacement(
+        glm::length(glm::vec3(delta.x, 0.0f, delta.z)), dt,
+        camera->GetLastPhysicsSubsteps(), kPhysicsFixedDt);
+    world.UpdateMotionState(lastMovementSpeed, dt);
+    {
+      glm::vec2 move_xz(delta.x, delta.z);
+      if (glm::length(move_xz) > 0.001f &&
+          lastMovementSpeed >= procedural.MovementPrefetchThreshold)
+      {
+        lastMovementDirXz = glm::normalize(move_xz);
+      }
+      else
+      {
+        glm::vec2 view_xz(forward.x, forward.z);
+        if (glm::length(view_xz) > 0.01f)
+        {
+          lastMovementDirXz = glm::normalize(view_xz);
+        }
+      }
+    }
+    lastCameraPosition = eye;
+    const bool moving_for_unload =
+        lastMovementSpeed >= procedural.MovementPrefetchThreshold;
+    const double frame_ms = world.GetLastMovementFrameMs();
+    const int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
+    bool unload_pass_early = false;
+    if (unload_mode >= kUnloadAmortizeUD && moving_for_unload)
+    {
+      // Give the cursor a chance before column discovery, loading, and mesh
+      // pressure work consume the shared streaming deadline.
+      Streamer->SetEffectiveUnloadOpsPerFrame(
+          std::min(world.MaxUnloadOpsPerFrame, 1));
+      const auto unload_t0 = std::chrono::high_resolution_clock::now();
+      if (Streamer->HasDeferredUnloadSaves())
+      {
+        Streamer->DrainDeferredUnloadSaves(WorldPosToBlock(eye), eye, cap, 1);
+      }
+      else
+      {
+        Streamer->UnloadPass(WorldPosToBlock(eye), eye, cap);
+      }
+      world.PhysicsTelemetryData.StreamerUnloadMs +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - unload_t0)
+              .count();
+      unload_pass_early = true;
+    }
     if (render.AltitudeAdaptiveFog)
     {
       altitudeParams.AltitudeThresholdBlocks = render.AltitudeFogThresholdBlocks;
       altitudeParams.RenderDistancePenaltyPerChunk = 1;
       altitudeParams.FogStartRatioBoost =
           std::max(0.15f, render.AltitudeFogPenaltyPer16Blocks * 4.0f);
-      const float ground_y = render.AltitudeUseTerrainSurface
-                                 ? QueryTerrainSurfaceWorldY(world, eye)
-                                 : cap.feetY(eye);
+      float ground_y = cap.feetY(eye);
+      if (render.AltitudeUseTerrainSurface)
+      {
+        const auto surface_query_t0 = std::chrono::steady_clock::now();
+        ground_y = QueryTerrainSurfaceWorldY(world, eye);
+        world.PhysicsTelemetryData.AltitudeSurfaceQueryMs =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - surface_query_t0)
+                .count();
+      }
       world.SetAltitudeAboveTerrain(std::max(0.0f, eye.y - ground_y));
       meshService.SetAltitudeCullState(world.GetAltitudeAboveTerrain(),
                                        render.AltitudeFogThresholdBlocks);
@@ -1488,6 +6452,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       effectiveFogStartRatio = render.DistanceFogStartRatio;
     }
 
+    // Altitude/config base before Adaptive — Keep freeze + Adaptive ceiling.
+    const int rd_base = effectiveRenderDistance;
+
     // Optional adaptive RD under streaming pressure (hysteresis).
     PhysMsEma = PhysMsEma <= 0.0
                     ? world.GetPhysicsTelemetry().PhysicsStepMs
@@ -1499,13 +6466,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       {
         AdaptiveEffectiveRd = effectiveRenderDistance;
       }
-      // Memory Green may raise RD ceiling one step above altitude/base RD.
-      int rd_ceiling = effectiveRenderDistance;
-      if (LastMemoryDecision.memory_pressure == 0 &&
-          LastMemoryDecision.max_effective_rd > rd_ceiling)
-      {
-        rd_ceiling = LastMemoryDecision.max_effective_rd;
-      }
+      // Adaptive owns mesh RD ceiling (altitude/base). Memory Green must not
+      // raise it — that re-expanded after dirty shrink (manual 120407 thrash).
+      // Shrink @64 (overload demote). Expand @48 / PhysMs<28 with gap so
+      // cruise dirty~70 holds demoted RD without Memory mesh+1 fight; Keep
+      // freeze (baseline_visual_rd) stops Keep≫Visual wall/side-black.
+      // Do NOT raise shrink to 96 — that kept Visual=5 under dirty~70 and
+      // blew AF wall/clnm (rim_regress_fix_cold 173732).
+      const int rd_ceiling = rd_base;
       const size_t dirty = meshService.GetDirtyCount();
       const int gen_backlog_total =
           ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
@@ -1522,9 +6490,29 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         {
           next = std::max(kAdaptiveRdMin, AdaptiveEffectiveRd - 1);
         }
-        else if (dirty < 24 && PhysMsEma < 20.0)
+        else if (AdaptiveEffectiveRd < rd_ceiling && dirty < 48 &&
+                 PhysMsEma < 28.0)
         {
-          next = std::min(rd_ceiling, AdaptiveEffectiveRd + 1);
+          // Prior-lit ring: no VisualRD expand under FM/relight debt.
+          const int miss_h_ad = world.PhysicsTelemetryData.MissHoriz;
+          const int dirty_fm_ad = world.PhysicsTelemetryData.DirtyFmN;
+          const int schedule_ok_ad =
+              world.PhysicsTelemetryData.MeshDirtyScheduleOkN;
+          const int adm_ad = world.PhysicsTelemetryData.MeshAdmissionMode;
+          const bool hole_drain_or_deep_ad =
+              adm_ad ==
+                  static_cast<int>(MeshWorkAdmission::Mode::HoleDrain) ||
+              adm_ad ==
+                  static_cast<int>(MeshWorkAdmission::Mode::DeepBacklog);
+          const int fm_floor_ad =
+              RimIngressFmScheduleFloor(true, miss_h_ad, dirty_fm_ad);
+          const bool clamp_rd = ShouldClampIngressForLitConvergenceDebt(
+              hole_drain_or_deep_ad, miss_h_ad, dirty_fm_ad, schedule_ok_ad,
+              world.PhysicsTelemetryData.RelightFifoN, fm_floor_ad);
+          if (!clamp_rd)
+          {
+            next = std::min(rd_ceiling, AdaptiveEffectiveRd + 1);
+          }
         }
         if (next != AdaptiveEffectiveRd)
         {
@@ -1552,17 +6540,47 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       sample.last_wall_ms = world.GetWallFrameDelta() * 1000.0;
       sample.visual_holes = world.PhysicsTelemetryData.VisualHoles;
       sample.pending_light_focus = world.PhysicsTelemetryData.PendingLightFocus;
+      sample.dirty_chunks = world.PhysicsTelemetryData.FocusDirtyChunks;
       sample.baseline_keep_margin = URuntimeTuning::Get().KeepPrefetchMargin;
       sample.visual_rd = effectiveRenderDistance;
+      sample.baseline_visual_rd = rd_base;
+      sample.relight_fifo_n = world.PhysicsTelemetryData.RelightFifoN;
+      sample.relight_completed_n =
+          static_cast<int>(world.GetRelightCompletedSize());
+      sample.unfinished_visual = world.PhysicsTelemetryData.UnfinishedVisual;
+      sample.ingress_debt_level = world.PhysicsTelemetryData.IngressDebtLevel;
+      sample.miss_horiz = world.PhysicsTelemetryData.MissHoriz;
+      // Prefer FramePerf cached sample (every ~30 frames) — avoid per-tick
+      // GetProcessMemoryInfo on the streaming hot path (P0b). When optional
+      // perf logging is disabled, keep the MemoryBudget fallback at the same
+      // low sampling rate rather than querying the OS every frame.
+      sample.private_mb = UFramePerfMonitor::GetLastPrivateMb();
 #ifdef _WIN32
-      PROCESS_MEMORY_COUNTERS_EX pmc{};
-      pmc.cb = sizeof(pmc);
-      if (GetProcessMemoryInfo(
-              GetCurrentProcess(),
-              reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc), sizeof(pmc)))
+      static double fallback_private_mb = 0.0;
+      static uint64_t fallback_sample_frame = 0;
+      if (sample.private_mb > 0.0)
       {
-        sample.private_mb =
-            static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+        fallback_private_mb = sample.private_mb;
+        fallback_sample_frame = StreamingFrameCounter;
+      }
+      if (fallback_private_mb <= 0.0 ||
+          StreamingFrameCounter - fallback_sample_frame >= 30)
+      {
+        PROCESS_MEMORY_COUNTERS_EX pmc{};
+        pmc.cb = sizeof(pmc);
+        if (GetProcessMemoryInfo(
+                GetCurrentProcess(),
+                reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc),
+                sizeof(pmc)))
+        {
+          fallback_private_mb =
+              static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+          fallback_sample_frame = StreamingFrameCounter;
+        }
+      }
+      if (sample.private_mb <= 0.0)
+      {
+        sample.private_mb = fallback_private_mb;
       }
 #endif
       MemoryBudgetDecision decision;
@@ -1570,22 +6588,25 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                                  URuntimeTuning::Get(), decision);
       LastMemoryDecision = decision;
       world.PhysicsTelemetryData.MemoryPressure = decision.memory_pressure;
-      Streamer->SetKeepPrefetchMargin(decision.keep_margin);
+      int keep_margin_apply = decision.keep_margin;
+      // Every frame (not only MemoryBudget eval @20f): while Adaptive is below
+      // altitude base, never run Keep Green+1 — stale LastDecision otherwise
+      // left margin=3 → keep_cols=225 at Visual=4 (AF v1/v2).
+      if (AdaptiveEffectiveRd >= 0 && AdaptiveEffectiveRd < rd_base)
+      {
+        keep_margin_apply =
+            std::min(keep_margin_apply, sample.baseline_keep_margin);
+      }
+      Streamer->SetKeepPrefetchMargin(keep_margin_apply);
       if (!decision.allow_keep_prewarm)
       {
         Streamer->SetMaxKeepPrefetchOpsPerFrame(0);
       }
+      // MemoryBudget may shrink mesh RD under pressure; never expand it
+      // (Green keep-only — Apply expand fought Adaptive, thrash 4↔5).
       if (decision.max_effective_rd < effectiveRenderDistance)
       {
-        effectiveRenderDistance = decision.max_effective_rd;
-        if (AdaptiveEffectiveRd >= 0)
-        {
-          AdaptiveEffectiveRd = effectiveRenderDistance;
-        }
-      }
-      else if (decision.max_effective_rd > effectiveRenderDistance &&
-               decision.memory_pressure == 0)
-      {
+        ++world.PhysicsTelemetryData.KeepRingShrinkN;
         effectiveRenderDistance = decision.max_effective_rd;
         if (AdaptiveEffectiveRd >= 0)
         {
@@ -1597,7 +6618,26 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         meshService.CancelInFlightOutsideHorizontalRadius(
             glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
                        world.PhysicsTelemetryData.FocusChunkZ),
-            Streamer->GetVisualRenderDistance());
+            Streamer->GetVisualRenderDistance(), /*keep_horiz_lease=*/1);
+      }
+      // TD-ARCH-009: soft-cap Dirty/Pending under MemoryBudget pressure.
+      // Era42: never trim PendingLight while enter lit pass is draining.
+      if (!world.IsEnterFovLitPassActive() && sample.dirty_chunks > 400 &&
+          sample.pending_light_focus > 8 &&
+          ShouldTrimPendingLightUnderHoles(
+              sample.visual_holes > 0, sample.unfinished_visual,
+              sample.pending_light_focus))
+      {
+        const int soft =
+            std::max(16, URuntimeTuning::Get().PendingLightSoftCap);
+        const int dropped = world.TrimPendingLightBeforeMesh(
+            glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
+                       world.PhysicsTelemetryData.FocusChunkZ),
+            soft);
+        world.PhysicsTelemetryData.PendingLightDropped +=
+            static_cast<uint64_t>(std::max(0, dropped));
+        world.PhysicsTelemetryData.PendingLightTrimMemoryN +=
+            std::max(0, dropped);
       }
       // Free-list size tracks Keep footprint (MaxResidentChunks caps pool).
       {
@@ -1693,23 +6733,93 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // Manual 161702: UnfinishedVisual max≈5 never hit threshold>8 — fog lagged
     // behind popping trees; config start_ratio=0.85 also left mid-range clear.
     // A+B water: unfinished near fluid/sea → stronger pull-in + wider sky horizon.
+    // Manual 084551: do NOT pull from wall≈40 alone (cruise wall often >40 →
+    // fog/trees flicker); latch hole_debt + rate-limit shrink/expand.
+    // Phase B: expand/shrink/severe-wall from RuntimeTuning (not SoT predicates).
     {
-      constexpr double kFogPullInExpandSec = 1.0;
-      constexpr double kFogPullInWallMs = 40.0;
+      const URuntimeTuning &fog_tune = URuntimeTuning::Get();
+      const double kFogPullInShrinkSec =
+          static_cast<double>(fog_tune.FogPullInShrinkSec);
+      const double kFogPullInSevereWallMs =
+          static_cast<double>(fog_tune.FogPullInSevereWallMs);
+      // Shorter latch + fast decay when miss=0 (manual 130338: fog_debt=1
+      // forever while unfinished refreshed 90-frame hold → opaque~279).
+      constexpr int kFogHoleHoldFrames = 30;
+      constexpr int kFogHoleDecayPerFrame = 3;
       int fog_rd = effectiveRenderDistance;
       int fog_margin = render.DistanceFogEndMarginBlocks;
       float fog_start_ratio = effectiveFogStartRatio;
       bool near_water_unfinished = false;
+      const auto now = std::chrono::steady_clock::now();
       if (render.FogPullInEnabled)
       {
         if (FogPullInRd < 0)
         {
           FogPullInRd = fog_rd;
         }
+        if (FogPullInMarginHeld < 0)
+        {
+          FogPullInMarginHeld = fog_margin;
+        }
+        if (FogPullInStartRatioHeld < 0.0f)
+        {
+          FogPullInStartRatioHeld = fog_start_ratio;
+        }
         const auto &phys = world.PhysicsTelemetryData;
         const double wall_ms = world.GetWallFrameDelta() * 1000.0;
-        const int unfinished = phys.UnfinishedVisual;
-        const bool hole_debt = phys.VisualHoles > 0 || unfinished > 0;
+        const int unfinished_ahead = phys.FocusUnfinishedAhead;
+        const int gpu_pending = phys.PendingGpuAppliesN;
+        // Latch on near visual holes OR unfinished/VB rim debt (170548 W1) —
+        // use the facing-sector unfinished count here: the all-ring census also
+        // includes unrelated columns behind/outside the view and can otherwise
+        // keep the water horizon fogged after the focus is ready.
+        const bool hole_debt_now = ShouldLatchFogHoleDebtNow(
+            phys.FocusMissingMesh, phys.MissHoriz, unfinished_ahead,
+            phys.VisibleBlackFullyDarkStalledN, phys.VisibleBlackFocusN);
+        const bool clear_conditions = ShouldClearFogHoleDebtLatch(
+            phys.FocusMissingMesh, phys.VisualHoles, unfinished_ahead,
+            phys.VisibleBlackFullyDarkStalledN, phys.VisibleBlackFocusN);
+        world.PhysicsTelemetryData.FogLatchFocusMissingMesh =
+            phys.FocusMissingMesh;
+        world.PhysicsTelemetryData.FogLatchMissHoriz = phys.MissHoriz;
+        world.PhysicsTelemetryData.FogLatchUnfinishedAhead = unfinished_ahead;
+        world.PhysicsTelemetryData.FogLatchVisibleBlackFullyDarkStalled =
+            phys.VisibleBlackFullyDarkStalledN;
+        world.PhysicsTelemetryData.FogLatchVisibleBlackFocus =
+            phys.VisibleBlackFocusN;
+        world.PhysicsTelemetryData.FogLatchNow = hole_debt_now ? 1 : 0;
+        world.PhysicsTelemetryData.FogClearConditions =
+            clear_conditions ? 1 : 0;
+        const double debt_quiet_sec =
+            FogPullInLastDebtSeen.time_since_epoch().count() == 0
+                ? std::numeric_limits<double>::infinity()
+                : std::chrono::duration<double>(now - FogPullInLastDebtSeen)
+                      .count();
+        world.PhysicsTelemetryData.FogDebtQuietMs =
+            std::isfinite(debt_quiet_sec) ? debt_quiet_sec * 1000.0 : -1.0;
+        if (hole_debt_now)
+        {
+          FogPullInHoleHoldFrames = kFogHoleHoldFrames;
+          FogPullInLastDebtSeen = now;
+        }
+        else if (clear_conditions && debt_quiet_sec >= kFogDebtClearGraceSec)
+        {
+          // Keep a short wall-clock grace after the last local-debt sample so
+          // intermittent probes cannot toggle the rendered fog target.
+          FogPullInHoleHoldFrames = 0;
+        }
+        else if (debt_quiet_sec >= kFogDebtClearGraceSec &&
+                 ShouldDecayFogHoleDebtHold(phys.FocusMissingMesh,
+                                            FogPullInHoleHoldFrames))
+        {
+          FogPullInHoleHoldFrames =
+              std::max(0, FogPullInHoleHoldFrames - kFogHoleDecayPerFrame);
+        }
+        // else: miss still >0 — hold frames steady (SoT 115048 fog thrash).
+        const bool hole_debt = FogPullInHoleHoldFrames > 0;
+        world.PhysicsTelemetryData.FogHoleHoldFrames =
+            FogPullInHoleHoldFrames;
+        world.PhysicsTelemetryData.FogHoleDebt = hole_debt ? 1 : 0;
         const int sea = world.GetProceduralSettings().SeaLevel;
         const glm::ivec3 camera_block = glm::ivec3(glm::floor(eye));
         const bool near_water_ctx =
@@ -1718,94 +6828,195 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         near_water_unfinished = render.FogWaterUnfinishedBoost && hole_debt &&
                                 near_water_ctx;
         int target = effectiveRenderDistance;
-        if (hole_debt)
+        int target_margin = render.DistanceFogEndMarginBlocks;
+        float target_start = effectiveFogStartRatio;
+        if (!hole_debt)
         {
-          // Shrink immediately so fog End covers the incomplete outer ring
-          // before decor/trees pop in clear mid-range.
-          int pull =
-              1 + std::min(2, unfinished / 3) + (phys.VisualHoles > 0 ? 1 : 0);
+          // Passthrough: fog mirrors Visual immediately — no rate-limit expand
+          // that lagged Adaptive shrink/restore (manual 120407 thrash 4↔5).
+          FogPullInRd = effectiveRenderDistance;
+          FogPullInMarginHeld = render.DistanceFogEndMarginBlocks;
+          FogPullInStartRatioHeld = effectiveFogStartRatio;
+          fog_rd = FogPullInRd;
+          fog_margin = FogPullInMarginHeld;
+          fog_start_ratio = FogPullInStartRatioHeld;
+        }
+        else
+        {
+          // Cover incomplete outer ring before decor/trees pop in clear mid-range.
+          const int unfinished_eff = std::max(unfinished_ahead, 1);
+          int pull = 1 + std::min(2, unfinished_eff / 3) +
+                     (phys.VisualHoles > 0 ? 1 : 0);
           if (near_water_unfinished)
           {
             pull += 1;
-            fog_margin += 24;
-            fog_start_ratio =
-                std::min(fog_start_ratio, render.FogWaterStartRatioCap);
+            target_margin += 24;
+            target_start =
+                std::min(target_start, render.FogWaterStartRatioCap);
           }
           else
           {
-            fog_start_ratio = std::min(fog_start_ratio, 0.35f);
+            target_start = std::min(target_start, 0.35f);
           }
           target = std::min(target, effectiveRenderDistance - pull);
-          fog_margin += 16 + std::min(32, unfinished * 4);
+          target_margin += 16 + std::min(32, unfinished_eff * 4);
+          if (unfinished_ahead > 0)
+          {
+            target_margin += 8 + std::min(24, unfinished_ahead * 3);
+          }
+          // Wall alone must NOT shrink fog (cruise wall med≈80 → flicker). Only
+          // reinforce while already in hole latch with real missing mesh, or on
+          // severe hitch (skip when miss=0 — manual 130338 opaque plateau).
+          if (phys.FocusMissingMesh > 0 &&
+              (phys.StreamPressure >= 2 || wall_ms > kFogPullInSevereWallMs))
+          {
+            target = std::min(target, target - 1);
+            target_margin += 8;
+            target_start = std::min(target_start, 0.40f);
+          }
+          const int fog_rd_max = std::max(1, effectiveRenderDistance);
+          const int fog_rd_min =
+              std::min(fog_rd_max, std::max(1, render.FogRdMin));
+          target = std::clamp(target, fog_rd_min, fog_rd_max);
+          const double since_shrink =
+              FogPullInLastShrink.time_since_epoch().count() == 0
+                  ? kFogPullInShrinkSec
+                  : std::chrono::duration<double>(now - FogPullInLastShrink)
+                        .count();
+          if (target < FogPullInRd)
+          {
+            // Rate-limit shrink; severe missing/facing debt may step immediately.
+            // gpu_pending alone is not urgent (213546: apply queue ≠ fog hole).
+            const bool urgent = phys.VisualHoles > 0 || unfinished_ahead >= 3 ||
+                                (hole_debt_now && gpu_pending >= 8);
+            if (urgent || since_shrink >= kFogPullInShrinkSec)
+            {
+              FogPullInRd =
+                  urgent ? target : std::max(target, FogPullInRd - 1);
+              FogPullInLastAdjust = now;
+              FogPullInLastShrink = now;
+            }
+          }
+          // Fog never wider than Visual (also clamps after Adaptive shrink).
+          FogPullInRd = std::min(FogPullInRd, effectiveRenderDistance);
+          fog_rd = FogPullInRd;
+          // Margin / start_ratio: snap tighter immediately under hole_debt.
+          if (target_margin > FogPullInMarginHeld)
+          {
+            FogPullInMarginHeld = target_margin;
+          }
+          if (target_start < FogPullInStartRatioHeld)
+          {
+            FogPullInStartRatioHeld = target_start;
+          }
+          fog_margin = FogPullInMarginHeld;
+          fog_start_ratio = FogPullInStartRatioHeld;
         }
-        if (phys.StreamPressure >= 1 || wall_ms > kFogPullInWallMs)
-        {
-          target = std::min(target, target - 1);
-          fog_margin += 8;
-          fog_start_ratio = std::min(fog_start_ratio, 0.40f);
-        }
-        target = std::clamp(target, std::max(1, render.FogRdMin),
-                            effectiveRenderDistance);
-        const auto now = std::chrono::steady_clock::now();
-        const double since =
-            FogPullInLastAdjust.time_since_epoch().count() == 0
-                ? kFogPullInExpandSec
-                : std::chrono::duration<double>(now - FogPullInLastAdjust)
-                      .count();
-        if (target < FogPullInRd)
-        {
-          FogPullInRd = target;
-          FogPullInLastAdjust = now;
-        }
-        else if (target > FogPullInRd && since >= kFogPullInExpandSec)
-        {
-          FogPullInRd = std::min(FogPullInRd + 1, target);
-          FogPullInLastAdjust = now;
-        }
+        // Hard clamp every frame: fog RD ≤ Visual RD.
+        FogPullInRd = std::min(FogPullInRd, effectiveRenderDistance);
         fog_rd = FogPullInRd;
       }
       else
       {
         FogPullInRd = -1;
+        FogPullInHoleHoldFrames = 0;
+        FogPullInLastDebtSeen = {};
+        FogPullInMarginHeld = -1;
+        FogPullInStartRatioHeld = -1.0f;
+        world.PhysicsTelemetryData.FogHoleDebt = 0;
+        world.PhysicsTelemetryData.FogPullInRd = 0;
+        world.PhysicsTelemetryData.FogPullInMargin = 0;
+        world.PhysicsTelemetryData.FogPullInStartRatio = 0.0f;
       }
       world.SetEffectiveFogRenderDistance(fog_rd);
       world.SetEffectiveFogEndMarginBlocks(fog_margin);
       world.SetNearWaterUnfinishedFog(near_water_unfinished);
       effectiveFogStartRatio = fog_start_ratio;
-    }
-
-    const float dt = std::max(0.0001f, camera->GetDeltaTime());
-    const glm::vec3 delta = eye - lastCameraPosition;
-    lastMovementSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;
-    {
-      const ProceduralSettings &proc_for_dir = world.GetProceduralSettings();
-      glm::vec2 move_xz(delta.x, delta.z);
-      if (glm::length(move_xz) > 0.001f &&
-          lastMovementSpeed >= proc_for_dir.MovementPrefetchThreshold)
+      const float target_horizon = std::min(
+          FogHorizonBlocks(fog_rd, fog_margin),
+          RenderHorizonBlocks(effectiveRenderDistance));
+      const float target_start_max = std::max(16.0f, target_horizon * 0.85f);
+      const float target_start = std::clamp(
+          std::max(16.0f, target_horizon *
+                                std::clamp(fog_start_ratio, 0.0f, 1.0f)),
+          16.0f, target_start_max);
+      if (FogPresentedHorizonBlocks < 0.0f ||
+          FogPresentedStartBlocks < 0.0f)
       {
-        lastMovementDirXz = glm::normalize(move_xz);
+        FogPresentedHorizonBlocks = target_horizon;
+        FogPresentedStartBlocks = target_start;
+        FogHorizonSmoother = {target_horizon, 0.0f};
+        FogStartSmoother = {target_start, 0.0f};
       }
       else
       {
-        glm::vec2 view_xz(forward.x, forward.z);
-        if (glm::length(view_xz) > 0.01f)
-        {
-          lastMovementDirXz = glm::normalize(view_xz);
-        }
+        double delta_sec =
+            FogPresentationLastUpdate.time_since_epoch().count() == 0
+                ? 0.0
+                : std::chrono::duration<double>(now - FogPresentationLastUpdate)
+                      .count();
+        // A suspend/resume or debugger pause must not cause a fog teleport.
+        delta_sec = std::clamp(delta_sec, 0.0, 0.1);
+        // Asymmetric second-order smoothing (see FogRangeSmoother.h): the wall
+        // eases in/out instead of snapping, contracts moderately fast and
+        // expands slowly.
+        const FogRangeSmootherParams smoother_params{};
+        FogPresentedHorizonBlocks = StepFogRangeSmoother(
+            FogHorizonSmoother, target_horizon,
+            static_cast<float>(delta_sec), smoother_params);
+        FogPresentedStartBlocks = StepFogRangeSmoother(
+            FogStartSmoother, target_start, static_cast<float>(delta_sec),
+            smoother_params);
       }
+      // Never fog past geometry that the current visual render radius can draw.
+      FogPresentedHorizonBlocks = std::min(
+          FogPresentedHorizonBlocks,
+          RenderHorizonBlocks(effectiveRenderDistance));
+      FogPresentedStartBlocks = std::clamp(
+          FogPresentedStartBlocks, 16.0f,
+          std::max(16.0f, FogPresentedHorizonBlocks * 0.85f));
+      // Keep the filter state on what is actually presented (the clamps above
+      // can lower it when the visual render radius shrinks).
+      FogHorizonSmoother.Value = FogPresentedHorizonBlocks;
+      FogStartSmoother.Value = FogPresentedStartBlocks;
+      FogPresentationLastUpdate = now;
+      world.SetPresentedFogRange(FogPresentedStartBlocks,
+                                 FogPresentedHorizonBlocks);
+      world.PhysicsTelemetryData.FogPullInRd = fog_rd;
+      world.PhysicsTelemetryData.FogPullInMargin = fog_margin;
+      world.PhysicsTelemetryData.FogPullInStartRatio = fog_start_ratio;
+      world.PhysicsTelemetryData.FogPresentedStartBlocks =
+          FogPresentedStartBlocks;
+      world.PhysicsTelemetryData.FogPresentedHorizonBlocks =
+          FogPresentedHorizonBlocks;
     }
-    lastCameraPosition = eye;
 
-    const ProceduralSettings &procedural = world.GetProceduralSettings();
-    const double frame_ms = world.GetLastMovementFrameMs();
+    const size_t dirty_for_unload = meshService.GetDirtyCount();
     int unload_ops = world.MaxUnloadOpsPerFrame;
-    if (frame_ms > 24.0)
+    // Legacy unload modes still suppress full scans under movement, dirty, or
+    // hitch pressure; U-D uses an early cursor pass and one operation instead.
+    // Era21: dirty>64 (same Adaptive RD shrink trigger) — dirty≈100 plateau
+    // with FogPullIn VisualRD=1 let brief wall dips unload Keep while
+    // near_mesh_backlog blocked reload (land opaque_idle_churn≈1300 / chunks
+    // 1149→124). Era20 survived the same telem by luck of unload timing.
+    const bool unload_stop_skip =
+        unload_mode >= kUnloadAmortizeUC &&
+        ShouldSkipUnloadOnStopFrame(
+            moving_for_unload, frame_ms, UFrameDeadline::Get().Exhausted(),
+            static_cast<int>(dirty_for_unload));
+    const bool unload_during_movement =
+        unload_mode >= kUnloadAmortizeUD && moving_for_unload;
+    if (unload_during_movement)
+    {
+      // Keep one bounded cursor/save unit progressing as the camera advances.
+      // The old hitch/dirty gates suppressed all far-side cleanup for the
+      // entire no-teleport flight, growing the resident world without bound.
+      unload_ops = std::min(unload_ops, 1);
+    }
+    else if (moving_for_unload || frame_ms > 16.0 || dirty_for_unload > 64 ||
+             unload_stop_skip)
     {
       unload_ops = 0;
-    }
-    else if (frame_ms > 16.0)
-    {
-      unload_ops = std::min(unload_ops, 1);
     }
     Streamer->SetEffectiveUnloadOpsPerFrame(unload_ops);
 
@@ -1820,20 +7031,51 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const int gen_backlog_total =
         ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
     const int mesh_async = meshService.GetAsyncInFlightCount();
+    // R4.2: attribute HasMissing walks on the UpdateStreaming hot path.
+    const auto has_missing_t0 = std::chrono::high_resolution_clock::now();
     const bool near_mesh_backlog =
         meshService.HasDirtyWithinHorizontalRadius(focus_horiz, focus_radius) ||
         meshService.HasMissingGreedyMeshInHorizontalRadius(world.GetBlockWorld(),
-                                                         focus_horiz,
+                                                         feet_chunk,
                                                          focus_radius);
-    const bool underfeet_need =
-        meshService.HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, /*radius=*/1) ||
-        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
-    const KeepPrewarmGate keep_gate = EvaluateKeepPrewarmGate(
-        frame_ms, gen_backlog_total, mesh_async, dirty, near_mesh_backlog);
     const bool visual_holes =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, focus_radius);
+            world.GetBlockWorld(), feet_chunk, focus_radius);
+    const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
+    const bool incomplete_camera_column = [&]() -> bool
+    {
+      bool complete = false;
+      if (Streamer)
+      {
+        complete = Streamer->IsTerrainChunkCompleteCached(camera_ground);
+      }
+      else
+      {
+        complete = IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
+                                          procedural.MaxHeight,
+                                          kNoTerrainChunkSlice,
+                                          procedural.MinHeight);
+      }
+      LastCameraTerrainCompleteGround = camera_ground;
+      LastCameraTerrainComplete = complete;
+      LastCameraTerrainCompleteFrame = StreamingFrameCounter;
+      return !complete;
+    }();
+    // ColPipe: feet column only (r=0 mesh + feet pending). Neighbor r=1 must
+    // not latch underfeet_need (manual 205129 need=1 forever on cold enter).
+    const bool missing_feet_mesh =
+        meshService.HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), feet_chunk, /*radius=*/0);
+    world.PhysicsTelemetryData.PrepRefreshHasMissingMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - has_missing_t0)
+            .count();
+    const bool pending_feet = world.IsPendingLightBeforeMesh(
+        glm::ivec2(focus_horiz.x, focus_horiz.z));
+    const bool underfeet_need = FeetColumnUnderfeetNeed(
+        incomplete_camera_column, missing_feet_mesh, pending_feet);
+    const KeepPrewarmGate keep_gate = EvaluateKeepPrewarmGate(
+        frame_ms, gen_backlog_total, mesh_async, dirty, near_mesh_backlog);
     const bool near_focus_holes =
         visual_holes ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
@@ -1845,26 +7087,124 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const StreamingPressureCaps &pressure = LastPressureCaps;
     if (Streamer)
     {
+      const int void_n_load = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+      const int vb_n_load = world.PhysicsTelemetryData.VisibleBlackFocusN;
+      const bool miss_load = world.PhysicsTelemetryData.FocusMissingMesh != 0;
+      const int async_q_load = world.PhysicsTelemetryData.StreamAsyncQueued;
+      const int absent_load =
+          (moving_fast || moving_any)
+              ? world.PhysicsTelemetryData.ColumnAbsentInRdN
+              : 0;
+      const bool frontier_moving =
+          (moving_fast || moving_any) &&
+          IsFrontierPressure(gen_backlog_total, async_q_load, miss_load,
+                             void_n_load, 200, vb_n_load, absent_load);
+      Streamer->SetFrontierLoadAhead(frontier_moving);
       if (moving_fast || moving_any)
       {
-        Streamer->SetNearLoadRadius(-1);
+        // Moving used to force NearLoadRadius=-1 (full VisualRD scan). On hole
+        // frames that alone was ~150ms streamer_update (CB spike_holes).
+        // Audit P3: west-sea rim — underfeet/holes clamp must not leave
+        // LitDrawable ring (R=4) unscanned when near water / unfinished.
+        // Rim ahead P1/P2: couple NearLoad to FM starve; cruise ceiling vs -1.
+        const int sea_lvl = world.GetProceduralSettings().SeaLevel;
+        const glm::ivec3 eye_block = glm::ivec3(glm::floor(eye));
+        const bool near_water_load =
+            eye.y < static_cast<float>(sea_lvl) + 12.0f ||
+            world.HasNearbyFluidSurface(eye_block, 24);
+        const bool rim_debt =
+            world.PhysicsTelemetryData.PostLoadRingNotReady > 0 ||
+            world.PhysicsTelemetryData.UnfinishedVisual > 0 ||
+            world.PhysicsTelemetryData.ColumnLoadedNoMeshN > 0;
+        const bool rim_hole_load =
+            world.PhysicsTelemetryData.RimHolePressure > 0;
+        const int lit_floor = kVisualStageLitDrawableHoriz;
+        const int miss_h_load = world.PhysicsTelemetryData.MissHoriz;
+        const int dirty_fm_load = world.PhysicsTelemetryData.DirtyFmN;
+        const int schedule_ok_load =
+            world.PhysicsTelemetryData.MeshDirtyScheduleOkN;
+        const int adm_mode = world.PhysicsTelemetryData.MeshAdmissionMode;
+        const bool hole_drain_or_deep =
+            adm_mode ==
+                static_cast<int>(MeshWorkAdmission::Mode::HoleDrain) ||
+            adm_mode ==
+                static_cast<int>(MeshWorkAdmission::Mode::DeepBacklog);
+        const int fm_floor_load = RimIngressFmScheduleFloor(
+            true, miss_h_load, dirty_fm_load);
+        const bool defer_prefetch_fm = ShouldDeferPrefetchAheadForFmStarve(
+            hole_drain_or_deep, miss_h_load, dirty_fm_load, schedule_ok_load,
+            fm_floor_load);
+        const bool clamp_lit_debt = ShouldClampIngressForLitConvergenceDebt(
+            hole_drain_or_deep, miss_h_load, dirty_fm_load, schedule_ok_load,
+            world.PhysicsTelemetryData.RelightFifoN, fm_floor_load);
+        if (underfeet_need)
+        {
+          int clamped = 2;
+          if (near_water_load || rim_debt)
+          {
+            clamped = std::max(clamped, lit_floor);
+          }
+          Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
+              frontier_moving, true, clamped, focus_radius));
+        }
+        else if (visual_holes || frame_ms > kBadFrameMs)
+        {
+          int clamped = std::min(focus_radius, 3);
+          if (near_water_load || rim_debt)
+          {
+            clamped = std::max(clamped, lit_floor);
+          }
+          Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
+              frontier_moving, true, clamped, focus_radius));
+        }
+        else if ((defer_prefetch_fm || clamp_lit_debt) &&
+                 (near_water_load || rim_debt || rim_hole_load ||
+                  clamp_lit_debt))
+        {
+          Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
+              frontier_moving, true, lit_floor, focus_radius));
+        }
+        else
+        {
+          const int cruise_near = CruiseNearLoadRadiusCeiling(
+              Streamer->GetVisualRenderDistance(), focus_radius, lit_floor);
+          Streamer->SetNearLoadRadius(cruise_near);
+        }
         // Hitch / Yellow+: keep fill alive but drop boost so load+mesh do not
         // stack. Red also clamps MaxLoadOps via pressure caps below.
         int load_ops = world.MaxLoadOpsPerFrame;
-        if (frame_ms <= 20.0 && moving_fast && pressure.allow_fly_load_boost)
+        if (frame_ms <= 20.0 && moving_fast && pressure.allow_fly_load_boost &&
+            !visual_holes && !underfeet_need && !clamp_lit_debt)
         {
           load_ops = procedural.MaxLoadOpsPerFrameBoost;
         }
+        // Era51: mesh-only holes must not throttle column load — holes are
+        // emerge debt; load_ops=2 with stream_loads=0 was a deadlock.
+        if ((underfeet_need && !incomplete_camera_column) ||
+            frame_ms > kBadFrameMs)
+        {
+          load_ops = std::min(load_ops, 2);
+        }
+        // Era25 I-F5: under frontier_pressure moving, keep NearLoad floor ≥3
+        // (UE load-ahead — do not clamp to underfeet-only).
+        load_ops =
+            FrontierNearLoadOpsFloor(frontier_moving, true, load_ops);
+        // R08-lite: after frontier floor, cap under lit debt (underfeet KEEP).
+        load_ops = CapStreamerLoadOpsForLitConvergenceDebt(
+            load_ops, clamp_lit_debt,
+            underfeet_need || incomplete_camera_column);
         load_ops = ApplyPressureCap(load_ops, pressure.max_load_ops_cap);
         Streamer->SetMaxLoadOpsPerFrame(std::max(1, load_ops));
       }
       else if (underfeet_need)
       {
-        Streamer->SetNearLoadRadius(2);
+        Streamer->SetNearLoadRadius(StoppedUnderfeetNearLoadRadius(
+            world.PhysicsTelemetryData.FocusMissingMesh > 0,
+            world.PhysicsTelemetryData.MissHoriz, focus_radius));
         Streamer->SetMaxLoadOpsPerFrame(ApplyPressureCap(
             world.MaxLoadOpsPerFrame, pressure.max_load_ops_cap));
       }
-      else if (visual_holes || pressure.focus_pressure_mode)
+      else if (pressure.focus_pressure_mode)
       {
         Streamer->SetNearLoadRadius(focus_radius);
         Streamer->SetMaxLoadOpsPerFrame(ApplyPressureCap(
@@ -1879,27 +7219,120 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     }
     {
       const auto update_t0 = std::chrono::high_resolution_clock::now();
-      Streamer->Update(WorldPosToBlock(eye), eye, cap);
-      world.PhysicsTelemetryData.StreamerUpdateMs +=
+      world.PhysicsTelemetryData.UpdateStreamingPreCoreMs =
           std::chrono::duration<double, std::milli>(
-              std::chrono::high_resolution_clock::now() - update_t0)
+              update_t0 - update_pre_core_t0)
+              .count();
+      Streamer->Update(WorldPosToBlock(eye), eye, cap);
+      if (ChunkScheduler)
+      {
+        // Requests which were once near the moving focus can otherwise remain
+        // in the generation queue after leaving the keep ring, eventually
+        // generating terrain far behind the camera and adding first-mesh work.
+        ChunkScheduler->CancelPendingOutsideRadius(
+            focus_horiz, Streamer->GetAsyncRequestRetentionRadius());
+      }
+      if (world.Persistence)
+      {
+        world.Persistence->CancelAsyncTerrainColumnLoadsOutsideRadius(
+            world, focus_horiz, Streamer->GetAsyncRequestRetentionRadius());
+      }
+      update_post_core_t0 = std::chrono::high_resolution_clock::now();
+      world.PhysicsTelemetryData.StreamerUpdateMs +=
+          std::chrono::duration<double, std::milli>(update_post_core_t0 -
+                                                    update_t0)
+              .count();
+      update_core_ran = true;
+    }
+    // SoT 210431: unload timed separately from load core (FrameDeadline).
+    {
+      const auto unload_t0 = std::chrono::high_resolution_clock::now();
+      if (!unload_pass_early)
+      {
+        Streamer->UnloadPass(WorldPosToBlock(eye), eye, cap);
+      }
+      if (unload_mode >= kUnloadAmortizeUD && !moving_for_unload &&
+          frame_ms <= 12.0 && !UFrameDeadline::Get().Exhausted())
+      {
+        Streamer->DrainDeferredUnloadSaves(
+            WorldPosToBlock(eye), eye, cap,
+            std::max(1, world.MaxUnloadOpsPerFrame));
+      }
+      world.PhysicsTelemetryData.StreamerUnloadMs +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - unload_t0)
               .count();
     }
 
     const auto prefetch_t0 = std::chrono::high_resolution_clock::now();
     int prefetch_visual_ops = 0;
-    // Prefetch at cruise speed, but skip when hitch'd or pressure≠allow —
-    // Update still loads; deep ahead would only pile GenQ/Dirty.
-    if (frame_ms <= 20.0 && pressure.allow_prefetch)
+    // Prefetch at cruise speed, but skip when hitch'd, holes, or pressure≠allow —
+    // Update still loads; deep ahead would only pile GenQ/Dirty (CB stream spikes).
+    // Era25 I-F5: under frontier_pressure keep view-forward PrefetchAhead even
+    // with holes (budgeted; still gated by calm wall ≤20ms — no hitch Capture).
+    const bool frontier_prefetch =
+        Streamer &&
+        IsFrontierPressure(
+            gen_backlog_total,
+            world.PhysicsTelemetryData.StreamAsyncQueued,
+            world.PhysicsTelemetryData.FocusMissingMesh != 0,
+            world.PhysicsTelemetryData.DarkFaceVoidNearN, 200,
+            world.PhysicsTelemetryData.VisibleBlackFocusN,
+            (moving_fast || moving_any)
+                ? world.PhysicsTelemetryData.ColumnAbsentInRdN
+                : 0);
+    // R4.3: only exact ShedFar sheds prefetch; ShedRim (protect) may keep ahead.
+    const bool ingress_debt_prefetch_ok =
+        world.PhysicsTelemetryData.IngressDebtLevel !=
+        static_cast<int>(IngressDebtLevel::ShedFar);
+    // Rim ahead P1: defer PrefetchAhead while rim FM consumer is starved.
+    const int miss_h_pf = world.PhysicsTelemetryData.MissHoriz;
+    const int dirty_fm_pf = world.PhysicsTelemetryData.DirtyFmN;
+    const int schedule_ok_pf =
+        world.PhysicsTelemetryData.MeshDirtyScheduleOkN;
+    const int adm_mode_pf = world.PhysicsTelemetryData.MeshAdmissionMode;
+    const bool hole_drain_or_deep_pf =
+        adm_mode_pf ==
+            static_cast<int>(MeshWorkAdmission::Mode::HoleDrain) ||
+        adm_mode_pf ==
+            static_cast<int>(MeshWorkAdmission::Mode::DeepBacklog);
+    const int fm_floor_pf =
+        RimIngressFmScheduleFloor(moving_fast || moving_any, miss_h_pf,
+                                  dirty_fm_pf);
+    const bool defer_prefetch_fm =
+        ShouldDeferPrefetchAheadForFmStarve(hole_drain_or_deep_pf, miss_h_pf,
+                                            dirty_fm_pf, schedule_ok_pf,
+                                            fm_floor_pf);
+    const bool clamp_lit_debt_pf = ShouldClampIngressForLitConvergenceDebt(
+        hole_drain_or_deep_pf, miss_h_pf, dirty_fm_pf, schedule_ok_pf,
+        world.PhysicsTelemetryData.RelightFifoN, fm_floor_pf);
+    Streamer->SetShedPrefetchLateral(ShouldShedPrefetchLateralForLitDebt(
+        clamp_lit_debt_pf, defer_prefetch_fm));
+    if (frame_ms <= 20.0 && pressure.allow_prefetch && ingress_debt_prefetch_ok &&
+        !defer_prefetch_fm &&
+        (((!visual_holes && !underfeet_need) || frontier_prefetch)))
     {
       Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
                               procedural.MovementPrefetchThreshold,
                               &prefetch_visual_ops);
     }
+    Streamer->SetShedPrefetchLateral(false);
+    world.PhysicsTelemetryData.StreamerPrefetchAheadMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - prefetch_t0)
+            .count();
     int prefetch_keep_ops = 0;
     // Idle in a hole pocket: keep-shell used to wait until holes cleared, so
     // standing at 100 FPS never requested the missing ring.
-    if (keep_gate.allow &&
+    const int keep_mode = URuntimeTuning::Get().KeepShellAmortizeMode;
+    const bool idle_underwater =
+        !moving_fast &&
+        eye.y < static_cast<float>(procedural.SeaLevel) + 2.0f;
+    const bool keep_skip = ShouldSkipKeepShell(
+        UFrameDeadline::Get().Exhausted(), frame_ms, idle_underwater,
+        keep_mode);
+    const auto keep_t0 = std::chrono::high_resolution_clock::now();
+    if (!keep_skip && keep_gate.allow &&
         ((!near_focus_holes && !underfeet_need) ||
          (!moving_fast && frame_ms <= 16.0 && near_focus_holes)))
     {
@@ -1911,10 +7344,111 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       Streamer->PrefetchKeepShell(feet_chunk, idle_hole_budget,
                                   &prefetch_keep_ops);
     }
+    world.PhysicsTelemetryData.StreamerKeepShellMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - keep_t0)
+            .count();
+    const auto spawn_catch_up_t0 = std::chrono::high_resolution_clock::now();
+    const bool spawn_catch_up = world.NeedsSpawnRingCatchUp();
+    world.PhysicsTelemetryData.SpawnCatchUpProbeMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - spawn_catch_up_t0)
+            .count();
+    const bool underfeet_miss_sla =
+        world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
+        world.PhysicsTelemetryData.MissHoriz <= 1;
+    // Phase 5.6.1 / 5.7.3 / 5.7R: sample vis debt + clear PresentableCatchUp;
+    // hinterland diagnose on cadence; Mark budget 4 under latch while debt>0
+    // (skip Mark under cruise latch — catch-up on stop/idle only).
+    {
+      auto &pt = world.GetPhysicsTelemetryMutable();
+      // CountEnterVisibilityDebt is needed to release the enter-settle latch,
+      // not as a cruise-time readiness oracle. Its R=4 scan was unbudgeted and
+      // could coincide with the catch-up scan at a chunk boundary.
+      static int vis_debt_cd = 0;
+      static int cached_vis_debt = 0;
+      const bool need_visibility_debt =
+          world.IsEnterSessionActive() ||
+          world.GetEnterGameMeshBurstFrames() > 0 ||
+          pt.EnterSettleSoftForceWithDebt != 0;
+      if (need_visibility_debt && --vis_debt_cd <= 0)
+      {
+        const auto vis_debt_t0 = std::chrono::high_resolution_clock::now();
+        cached_vis_debt = world.CountEnterVisibilityDebt();
+        pt.VisibilityDebtProbeMs =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - vis_debt_t0)
+                .count();
+        vis_debt_cd = moving_fast ? 4 : 1;
+      }
+      else if (!need_visibility_debt)
+      {
+        vis_debt_cd = 0;
+        cached_vis_debt = 0;
+      }
+      const int vis_debt = need_visibility_debt ? cached_vis_debt : 0;
+      pt.VisibilityDebt = vis_debt;
+      pt.VisibilityDebtSampleValid = need_visibility_debt ? 1 : 0;
+      // The old R=8 hinterland scan was telemetry-only and walked up to 289
+      // columns on the game thread. Leave the sample invalid; the bounded
+      // focus-ring readiness counters remain available for cruise diagnosis.
+      pt.VisibilityDebtHinterland = 0;
+      pt.VisibilityDebtHinterlandSampleValid = 0;
+      if (pt.EnterSettleSoftForceWithDebt != 0 &&
+          EnterPresentableCatchUpClear(
+              pt.SoftDeferOwnedNoGpuN, pt.SoftDeferEmptyStuckN, vis_debt,
+              world.CountPostLoadRingNotReady(), pt.FocusMissingMesh,
+              // Phase 5.7R4: honest underfeet only (no FocusMissingMesh==0 OR).
+              world.IsEnterUnderfeetPresentReady()))
+      {
+        pt.EnterSettleSoftForceWithDebt = 0;
+      }
+    }
+    const bool latch_debt =
+        world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
+        world.GetPhysicsTelemetry().VisibilityDebt > 0;
+    // Phase 5.7R2: latch Mark underfeet while cruise; full budget on stop.
+    const bool latch_mark_stand = latch_debt && !moving_fast;
+    const bool latch_mark_underfeet =
+        latch_debt && moving_fast && underfeet_miss_sla;
+    if (!world.IsEnterSessionActive() &&
+        (world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up ||
+         latch_mark_stand || latch_mark_underfeet) &&
+        ShouldRunSpawnRingCatchUpHeal(
+            spawn_catch_up || latch_mark_stand || latch_mark_underfeet,
+            moving_fast, underfeet_miss_sla, world.IsEnterSessionActive()))
+    {
+      const int dirty_n =
+          static_cast<int>(world.GetMeshService().GetDirtyCount());
+      if (latch_mark_underfeet)
+      {
+        world.MarkSpawnRingUnfinishedDirty(/*max_marks=*/2, /*max_horiz=*/1);
+      }
+      else
+      {
+        const int mark_budget =
+            latch_mark_stand
+                ? 4
+                : (dirty_n > 48 ? 2
+                                : (spawn_catch_up ? (moving_fast ? 6 : 8) : 4));
+        world.MarkSpawnRingUnfinishedDirty(mark_budget);
+      }
+      if (ShouldBurstHealPinnedMiss(
+              world.PhysicsTelemetryData.FocusMissingMesh != 0,
+              world.PhysicsTelemetryData.MissHoriz,
+              world.GetEnterGameMeshBurstFrames() > 0, spawn_catch_up))
+      {
+        const glm::ivec3 pin(world.PhysicsTelemetryData.MissCx,
+                             world.PhysicsTelemetryData.MissCy,
+                             world.PhysicsTelemetryData.MissCz);
+        world.HealPinnedMissSlice(pin);
+      }
+    }
     world.PhysicsTelemetryData.IdlePrefetchMs =
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - prefetch_t0)
             .count();
+    post_core_telemetry_t0 = std::chrono::high_resolution_clock::now();
     world.PhysicsTelemetryData.PrefetchVisualOps = prefetch_visual_ops;
     world.PhysicsTelemetryData.PrefetchKeepOps = prefetch_keep_ops;
     world.PhysicsTelemetryData.GenBacklogTotal = gen_backlog_total;
@@ -1928,22 +7462,77 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     {
       world.PhysicsTelemetryData.StreamLoads = st->loadsThisFrame;
       world.PhysicsTelemetryData.StreamAsyncQueued = st->asyncQueuedThisFrame;
+      world.PhysicsTelemetryData.StreamUnloads = st->unloadsThisFrame;
+      world.PhysicsTelemetryData.StreamSaves = st->savesThisFrame;
+      world.PhysicsTelemetryData.StreamUnloadCandidates =
+          st->unloadCandidatesThisFrame;
+      world.PhysicsTelemetryData.StreamUnloadVetoes =
+          st->unloadVetoesThisFrame;
+      world.PhysicsTelemetryData.StreamUnloadActiveWorkInvalidated =
+          st->unloadActiveWorkInvalidatedThisFrame;
+      // R4.6.2: sync+async ingress honesty (loads=0 alone ≠ idle).
+      world.PhysicsTelemetryData.StreamIngressOps =
+          st->loadsThisFrame + st->asyncQueuedThisFrame;
+      world.PhysicsTelemetryData.StreamDiskCompleteN = st->diskCompleteThisFrame;
       world.PhysicsTelemetryData.StreamRingBlocked = st->ringGateBlocked;
       world.PhysicsTelemetryData.StreamNearSkipped = st->nearLoadSkipped;
       world.PhysicsTelemetryData.StreamLoadCandidates = st->loadCandidates;
+      world.PhysicsTelemetryData.ColumnAbsentInRdN = st->loadCandidates;
+    }
+    world.PhysicsTelemetryData.AllowProcFill = world.AllowProceduralFill ? 1 : 0;
+    world.PhysicsTelemetryData.ColumnLoadedNoMeshN =
+        world.PhysicsTelemetryData.FocusNotRenderReady;
+    if (ChunkScheduler)
+    {
+      world.PhysicsTelemetryData.StreamGenCommitN =
+          ChunkScheduler->GetLastCommitsThisFrame();
+    }
+    {
+      const int void_n = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+      const int vb_n = world.PhysicsTelemetryData.VisibleBlackFocusN;
+      const bool miss = world.PhysicsTelemetryData.FocusMissingMesh != 0;
+      world.PhysicsTelemetryData.FrontierPressure =
+          IsFrontierPressure(
+              gen_backlog_total,
+              world.PhysicsTelemetryData.StreamAsyncQueued, miss, void_n, 200,
+              vb_n,
+              (moving_fast || moving_any)
+                  ? world.PhysicsTelemetryData.ColumnAbsentInRdN
+                  : 0)
+              ? 1
+              : 0;
     }
     world.PhysicsTelemetryData.PendingLightCount =
         static_cast<int>(world.GetPendingLightBeforeMeshCount());
     world.PhysicsTelemetryData.FocusChunkX = focus_horiz.x;
     world.PhysicsTelemetryData.FocusChunkZ = focus_horiz.z;
+    {
+      const glm::ivec3 fb = world.GetPreferredLoadFocusBlock();
+      world.PhysicsTelemetryData.PlayerX = static_cast<float>(fb.x);
+      world.PhysicsTelemetryData.PlayerY = static_cast<float>(fb.y);
+      world.PhysicsTelemetryData.PlayerZ = static_cast<float>(fb.z);
+    }
     world.PhysicsTelemetryData.UnderfeetNeed = underfeet_need ? 1 : 0;
     world.PhysicsTelemetryData.VisualHoles = visual_holes ? 1 : 0;
     world.PhysicsTelemetryData.LightDebt =
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius) ? 1 : 0;
-    world.PhysicsTelemetryData.NearFocusHoles = near_focus_holes ? 1 : 0;
+    // Telemetry NearFocusHoles = mesh holes only (see RefreshStreamingPressure).
+    world.PhysicsTelemetryData.NearFocusHoles = visual_holes ? 1 : 0;
     world.PhysicsTelemetryData.PendingFocusCols =
         world.FormatPendingLightFocusColumns(focus_horiz, focus_radius, 12);
     // StreamPressure / PendingLightFocus already set in RefreshStreamingPressure.
+  }
+  if (update_core_ran)
+  {
+    world.PhysicsTelemetryData.UpdateStreamingPostCoreTelemetryMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() -
+            post_core_telemetry_t0)
+            .count();
+    world.PhysicsTelemetryData.UpdateStreamingPostCoreMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - update_post_core_t0)
+            .count();
   }
 }
 

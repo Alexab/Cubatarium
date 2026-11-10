@@ -1,0 +1,138 @@
+#pragma once
+
+#include "Render/GlIncludes.h"
+#include "Render/Mesh/PackedQuad.h"
+#include <cstdint>
+#include <glm/glm.hpp>
+#include <unordered_map>
+#include <vector>
+
+namespace cutum
+{
+
+/// Fixed-size slot within the GPU quad SSBO. Each chunk gets one slot.
+struct GpuMeshSlot
+{
+  uint32_t OffsetQuads{0};
+  uint32_t QuadCount{0};
+  glm::ivec3 ChunkCoord{0};
+  bool Transparent{false};
+  /// A27 S3: generation for deferred retirement / fence ownership.
+  uint64_t generation{0};
+  bool still_live_draw{false};
+};
+
+/// DrawElementsIndirectCommand for glMultiDrawElementsIndirect.
+struct DrawIndirectCmd
+{
+  uint32_t count;
+  uint32_t instanceCount;
+  uint32_t firstIndex;
+  int32_t baseVertex;
+  uint32_t baseInstance;
+};
+
+/// Manages a persistent SSBO of PackedQuads with a free-list slot allocator.
+/// Each chunk occupies a fixed-size slot (kMaxQuadsPerSlot). Slots are
+/// allocated/freed CPU-side; quad data is written GPU-side by the packed emit
+/// compute shader. A separate indirect command buffer is rebuilt each frame
+/// for the visible set (after frustum cull).
+class UGpuMeshSlotAllocator
+{
+public:
+  static constexpr uint32_t kMaxQuadsPerSlot = 2048;
+  static constexpr uint32_t kBytesPerSlot =
+      kMaxQuadsPerSlot * sizeof(PackedQuad);
+
+  bool Init(uint32_t max_slots);
+  void Shutdown();
+
+  /// Allocate a slot for a chunk. Returns slot index or -1 on failure.
+  /// Reuses an existing mapping (overwrites live SSBO) — prefer staging+bind
+  /// for apply paths that may reject after compute.
+  int AllocateSlot(glm::ivec3 chunk_coord, bool transparent);
+
+  /// Allocate a free slot without binding it to a chunk (staging for apply).
+  /// Bound only via BindCommittedSlot after a successful commit.
+  int AllocateStagingSlot(bool transparent);
+
+  /// Publish a staging slot as the live mesh for coord (frees prior live slot).
+  void BindCommittedSlot(glm::ivec3 chunk_coord, int slot_index);
+
+  /// Free a slot previously allocated for a chunk.
+  void FreeSlot(glm::ivec3 chunk_coord);
+
+  /// Free a slot by index (staging reject / failed ProcessSnapshot).
+  void FreeSlotByIndex(int slot_index);
+
+  /// A27 S3: free only when fence/generation allows; returns false if deferred.
+  bool TryFreeSlotByIndex(int slot_index, uint64_t fence_completed_generation,
+                          uint64_t live_generation);
+
+  /// Bump allocator fence watermark after GPU sync completes.
+  void NoteFenceCompletedGeneration(uint64_t gen);
+  uint64_t FenceCompletedGeneration() const { return FenceCompletedGeneration_; }
+  uint64_t NextSlotGeneration();
+
+  /// Returns true if the chunk has an allocated slot.
+  bool HasSlot(glm::ivec3 chunk_coord) const;
+
+  /// Get the slot for a chunk. Returns nullptr if not allocated.
+  const GpuMeshSlot *GetSlot(glm::ivec3 chunk_coord) const;
+
+  /// Get slot by index (staging or committed).
+  const GpuMeshSlot *GetSlotByIndex(int slot_index) const;
+
+  /// Update the quad count for a slot after GPU compute writes the data.
+  void SetSlotQuadCount(int slot_index, uint32_t quad_count);
+
+  /// Build indirect draw commands for all allocated opaque slots.
+  /// Returns the number of commands written.
+  int BuildOpaqueDrawCommands();
+
+  /// Build indirect draw commands for all allocated transparent slots.
+  int BuildTransparentDrawCommands();
+
+  /// Issue the MDI draw call for opaque geometry (desktop GL 4.3).
+  void DrawOpaque() const;
+
+  /// Issue the MDI draw call for transparent geometry (desktop GL 4.3).
+  void DrawTransparent() const;
+
+  /// GLES 3.1 fallback: per-chunk glDrawElementsIndirect in a loop.
+  void DrawOpaqueGles() const;
+  void DrawTransparentGles() const;
+
+  GLuint GetQuadSsbo() const { return QuadSsbo; }
+  GLuint GetIndirectBuffer() const { return IndirectBuffer; }
+  uint32_t GetMaxSlots() const { return MaxSlots; }
+  size_t GetFreeSlotCount() const { return FreeList.size(); }
+  size_t GetBoundSlotCount() const { return ChunkToSlot.size(); }
+  uint64_t GetStagingAllocationFailureCount() const
+  {
+    return StagingAllocationFailureCount_;
+  }
+
+private:
+  GLuint QuadSsbo{0};
+  GLuint IndirectBuffer{0};
+  uint32_t MaxSlots{0};
+  std::vector<int> FreeList;
+  std::vector<GpuMeshSlot> Slots;
+  struct IVec3Hash
+  {
+    size_t operator()(const glm::ivec3 &v) const
+    {
+      return std::hash<int>()(v.x) ^ (std::hash<int>()(v.y) << 11) ^
+             (std::hash<int>()(v.z) << 22);
+    }
+  };
+  std::unordered_map<glm::ivec3, int, IVec3Hash> ChunkToSlot;
+  std::vector<DrawIndirectCmd> OpaqueCommands;
+  std::vector<DrawIndirectCmd> TransparentCommands;
+  uint64_t NextGeneration_{1};
+  uint64_t FenceCompletedGeneration_{0};
+  uint64_t StagingAllocationFailureCount_{0};
+};
+
+} // namespace cutum

@@ -1,10 +1,17 @@
 #include "World/Lighting/AsyncRelightBuilder.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Core/Environment.h"
 #include "Core/Jobs/JobThreadBudget.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Streaming/DependencyStampBuilder.h"
+#include "App/Platform/Log.h"
 #include <algorithm>
+#include <atomic>
+#include <cstdlib>
+#include <memory>
 #include <mutex>
 #include <thread>
 
@@ -39,9 +46,15 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
   const uint64_t job_id = snapshot.GetJobId() > 0
                               ? snapshot.GetJobId()
                               : NextJobId.fetch_add(1, std::memory_order_relaxed);
+  WorkToken work_token = snapshot.GetWorkToken();
+  work_token.world_epoch = submit_epoch;
+  work_token.domain = WorkDomain::Relight;
+  work_token.generation = job_id;
+  snapshot.SetSubmitContext(work_token, snapshot.GetDependencyStamp());
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
-    InFlight[job_id] = job_id;
+    InFlight[job_id] = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
@@ -50,10 +63,15 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                 catalogKeep = std::move(catalogKeep), job_id,
                 submit_epoch]() mutable
                {
-                 (void)catalogKeep;
+                 // Catalog pin proves immutable input identity for install checks;
+                 // Compute still needs registry physics maps (catalog-only flood = follow-on).
                  RelightComputeResult result = snapshot.Compute(*registryPtr);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
+                 result.work_token = snapshot.GetWorkToken();
+                 result.work_token.world_epoch = submit_epoch;
+                 result.dependency_stamp = snapshot.GetDependencyStamp();
+                 result.input_catalog = std::move(catalogKeep);
                  RelightComputeResult dropped;
                  if (Completed.PushDropOldest(std::move(result), &dropped))
                  {
@@ -62,10 +80,14 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                });
 }
 
-void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
-                                      RelightJobSpec spec,
-                                      const UBlockRegistry &registry)
+AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
+    const UBlockWorld &world, RelightJobSpec spec,
+    const UBlockRegistry &registry)
 {
+  AsyncRelightEnqueueTimings timings;
+  const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
+  const auto capture_started = std::chrono::steady_clock::now();
   const uint64_t submit_epoch = Epoch.load(std::memory_order_acquire);
   const uint64_t job_id =
       spec.job_id > 0 ? spec.job_id
@@ -74,40 +96,172 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
 
   UChunkRelightSnapshot snapshot;
   {
-    std::lock_guard<std::mutex> capture_lock(gRelightCaptureMutex);
+    const auto lock_wait_started = std::chrono::steady_clock::now();
+    std::unique_lock<std::mutex> capture_lock(gRelightCaptureMutex);
+    const auto lock_acquired = std::chrono::steady_clock::now();
     snapshot = UChunkRelightSnapshot::Capture(world, spec);
+    const auto snapshot_captured = std::chrono::steady_clock::now();
+    timings.capture_lock_wait_ms =
+        std::chrono::duration<double, std::milli>(lock_acquired -
+                                                  lock_wait_started)
+            .count();
+    timings.snapshot_copy_ms =
+        std::chrono::duration<double, std::milli>(snapshot_captured -
+                                                  lock_acquired)
+            .count();
+  }
+  LastCaptureFullN = snapshot.GetCapturedFullChunks();
+  LastCaptureNeighborLightN = snapshot.GetCapturedNeighborLightChunks();
+  WorkToken work_token;
+  work_token.world_epoch = submit_epoch;
+  work_token.domain = WorkDomain::Relight;
+  work_token.generation = job_id;
+  DependencyStamp deps;
+  const auto dependency_started = std::chrono::steady_clock::now();
+  if (!spec.block_positions.empty())
+  {
+    const glm::ivec3 chunk =
+        UChunkManager::WorldToChunk(spec.block_positions.front());
+    work_token.coord = chunk;
+    work_token.chunk_incarnation = ChunkIncarnationAt(world, chunk);
+    deps = BuildRelightDependencyStamp(world, chunk, registry);
+  }
+  const auto dependency_complete = std::chrono::steady_clock::now();
+  timings.dependency_stamp_ms =
+      std::chrono::duration<double, std::milli>(dependency_complete -
+                                                dependency_started)
+          .count();
+  snapshot.SetSubmitContext(work_token, deps);
+  const double capture_ms = std::chrono::duration<double, std::milli>(
+                                std::chrono::steady_clock::now() - capture_started)
+                                .count();
+  const int captured_full_n = snapshot.GetCapturedFullChunks();
+  const int captured_neighbor_light_n =
+      snapshot.GetCapturedNeighborLightChunks();
+  const int captured_sky_context_n = snapshot.GetCapturedSkyContextChunks();
+  const double sky_context_capture_ms = snapshot.GetSkyContextCaptureMs();
+  if (audit_relight)
+  {
+    const glm::ivec3 source = spec.block_positions.empty()
+                                  ? glm::ivec3(-1)
+                                  : spec.block_positions.front();
+    CubatariumLogInfo(
+        "RelightAudit",
+        "snapshot job=" + std::to_string(job_id) + " source=(" +
+            std::to_string(source.x) + "," + std::to_string(source.y) + "," +
+            std::to_string(source.z) + ") band=" +
+            std::to_string(spec.min_world_y) + ":" +
+            std::to_string(spec.max_world_y) + " capture_ms=" +
+            std::to_string(capture_ms) + " full=" +
+            std::to_string(captured_full_n) + " neighbor_light=" +
+            std::to_string(captured_neighbor_light_n) + " sky_context=" +
+            std::to_string(captured_sky_context_n) + " sky_context_ms=" +
+            std::to_string(sky_context_capture_ms) + " finalize=" +
+            std::to_string(spec.finalize_pending_gate) + " draw_gate=" +
+            std::to_string(spec.visible_draw_gate_repair));
   }
 
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
-    InFlight[job_id] = job_id;
+    InFlight[job_id] = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
 
+  // A21 P5: share work-slot envelope with mesh workers. If denied, still
+  // enqueue (do not drop light demand) under a limited bypass counter —
+  // separate relight pool cutover is follow-on.
+  struct WorkSlotGuard
+  {
+    bool held{false};
+    ~WorkSlotGuard()
+    {
+      if (held)
+      {
+        UPipelineAdmission::Get().ReleaseWorkSlot();
+      }
+    }
+  };
+  auto work_slot = std::make_shared<WorkSlotGuard>();
+  work_slot->held = UPipelineAdmission::Get().TryAcquireWorkSlot();
+  if (!work_slot->held)
+  {
+    static std::atomic<uint64_t> gRelightWorkSlotBypassN{0};
+    gRelightWorkSlotBypassN.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  const auto submit_started = std::chrono::steady_clock::now();
   Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
-                catalogKeep = std::move(catalogKeep), job_id,
-                submit_epoch]() mutable
+                catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
+                work_slot = std::move(work_slot), audit_relight,
+                captured_full_n, captured_neighbor_light_n,
+                captured_sky_context_n, sky_context_capture_ms]() mutable
                {
-                 (void)catalogKeep;
+                 (void)work_slot;
+                 const auto compute_started = std::chrono::steady_clock::now();
+                 if (audit_relight)
+                 {
+                   CubatariumLogInfo("RelightAudit",
+                       "worker_start job=" + std::to_string(job_id));
+                 }
                  RelightComputeResult result = snapshot.Compute(*registry);
+                 const double compute_ms = std::chrono::duration<double, std::milli>(
+                                               std::chrono::steady_clock::now() - compute_started)
+                                               .count();
+                 if (audit_relight)
+                 {
+                   CubatariumLogInfo(
+                       "RelightAudit",
+                       "worker_done job=" + std::to_string(job_id) +
+                           " compute_ms=" + std::to_string(compute_ms) +
+                           " full=" + std::to_string(captured_full_n) +
+                           " neighbor_light=" +
+                           std::to_string(captured_neighbor_light_n) +
+                           " sky_context=" +
+                           std::to_string(captured_sky_context_n) +
+                           " sky_context_ms=" +
+                           std::to_string(sky_context_capture_ms) +
+                           " chunks=" + std::to_string(result.chunks.size()) +
+                           " read_set=" + std::to_string(result.read_set.size()) +
+                           " frontier_unfinished=" +
+                           std::to_string(result.frontier_unfinished));
+                 }
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
+                 result.work_token = snapshot.GetWorkToken();
+                 result.work_token.world_epoch = submit_epoch;
+                 result.dependency_stamp = snapshot.GetDependencyStamp();
+                 result.input_catalog = std::move(catalogKeep);
                  RelightComputeResult dropped;
                  if (Completed.PushDropOldest(std::move(result), &dropped))
                  {
                    NoteCompletedOverflow(std::move(dropped));
                  }
                });
+  const auto submit_complete = std::chrono::steady_clock::now();
+  timings.queue_submit_ms =
+      std::chrono::duration<double, std::milli>(submit_complete -
+                                                submit_started)
+          .count();
+  timings.submit_setup_ms =
+      std::chrono::duration<double, std::milli>(submit_started -
+                                                dependency_complete)
+          .count();
+  return timings;
 }
 
 std::vector<RelightComputeResult>
 UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
 {
-  (void)max_per_frame;
-  // DrainAll so stale epoch results free light arrays immediately instead of
-  // peeling DrainUpTo while new Captures keep enqueueing.
-  std::vector<RelightComputeResult> drained = Completed.DrainAll();
+  // ColdSupply S0: honor Apply budget (Enter/Cruise). DrainAll made Enter×64
+  // and Cruise ladder no-ops while MarkRelit hitch still scaled with ready N.
+  if (max_per_frame <= 0)
+  {
+    return {};
+  }
+  std::vector<RelightComputeResult> drained =
+      Completed.DrainUpTo(static_cast<std::size_t>(max_per_frame));
   const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
   std::vector<RelightComputeResult> accepted;
   accepted.reserve(drained.size());
@@ -148,6 +302,23 @@ int UAsyncRelightBuilder::GetInFlightCount() const
 {
   std::lock_guard<std::mutex> lock(InFlightMutex);
   return static_cast<int>(InFlight.size());
+}
+
+double UAsyncRelightBuilder::GetOldestInFlightAgeMs() const
+{
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  if (InFlight.empty())
+  {
+    return 0.0;
+  }
+  const int64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count();
+  int64_t oldest = now_ms;
+  for (const auto &entry : InFlight)
+  {
+    oldest = std::min(oldest, entry.second);
+  }
+  return static_cast<double>(now_ms - oldest);
 }
 
 void UAsyncRelightBuilder::WaitIdle() { Pool.WaitIdle(); }

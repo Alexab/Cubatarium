@@ -1,0 +1,7 @@
+{
+  "id": "iron_scythe",
+  "format": "gltf",
+  "license": "CC0-1.0",
+  "source": "cubatarium_parts_v1",
+  "notes": "parts_v1 box extrusion; optional upstream pack override"
+}

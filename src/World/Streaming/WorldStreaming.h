@@ -1,17 +1,24 @@
 #ifndef WORLDSTREAMING_H
 #define WORLDSTREAMING_H
 
+#include "Render/Engine/FogRangeSmoother.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "World/Streaming/StreamingPressure.h"
 #include "World/Streaming/MemoryBudgetController.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Math/GridMath.h"
 #include <chrono>
+#include <climits>
+#include <cstdint>
 #include <deque>
 #include <glm/glm.hpp>
 #include <memory>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -64,7 +71,7 @@ public:
       std::chrono::milliseconds worker_wait =
           std::chrono::milliseconds(10000));
   /// Cancel queued gen + bump tokens without waiting for in-flight populate.
-  void CancelChunkGeneration();
+  void CancelChunkGeneration(const char *reason = "cancelled_all");
   /// Process exit: cancel gen, brief wait, then drop or leak workers so
   /// Join never blocks forever on late ChunkPopulate/carve.
   void AbandonWorkersForProcessExit(
@@ -104,7 +111,10 @@ public:
 
 private:
   void InitChunkScheduler(UWorld &world);
-  void RefreshStreamingPressure(UWorld &world);
+  void RefreshStreamingPressure(
+      UWorld &world,
+      std::chrono::high_resolution_clock::time_point stream_t0,
+      double stream_budget_ms);
 
   std::unique_ptr<UChunkStreamer> Streamer;
   std::unique_ptr<UChunkEmergeCoordinator> EmergeCoordinator;
@@ -116,6 +126,13 @@ private:
   double FrameStreamingIoMs{0.0};
   std::deque<glm::ivec3> DeferredPhysicsSeedQueue;
   std::deque<glm::ivec3> DeferredShoreSealQueue;
+  /// Dedupe for DeferredShoreSealQueue: without it, every commit's neighbor
+  /// re-seal (W5.1) multiplies the queue by ~5 during bulk world load and
+  /// each seal mutation re-dirties already-counted meshes — the load
+  /// progress bar oscillates and stalls (user report).
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredShoreSealQueued;
+  /// Columns that still need IntraChunk seal (never sync on commit — CB hitch).
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredIntraChunkSealNeeded;
   /// Sync GenerateColumn path: one CoarseHeightCache per ground chunk.
   glm::ivec3 SyncCoarseCacheGround{INT32_MAX, 0, INT32_MAX};
   int AdaptiveEffectiveRd{-1};
@@ -123,16 +140,117 @@ private:
   std::chrono::steady_clock::time_point AdaptiveRdLastAdjust{};
   int FogPullInRd{-1};
   std::chrono::steady_clock::time_point FogPullInLastAdjust{};
+  std::chrono::steady_clock::time_point FogPullInLastShrink{};
+  /// Hole-debt latch: hold pull-in after holes clear so fog End / start_ratio
+  /// do not thrash every period (manual 084551 opaque 1037↔223).
+  int FogPullInHoleHoldFrames{0};
+  std::chrono::steady_clock::time_point FogPullInLastDebtSeen{};
+  int FogPullInMarginHeld{-1};
+  float FogPullInStartRatioHeld{-1.0f};
+  float FogPresentedHorizonBlocks{-1.0f};
+  float FogPresentedStartBlocks{-1.0f};
+  FogRangeSmootherState FogHorizonSmoother{};
+  FogRangeSmootherState FogStartSmoother{};
+  std::chrono::steady_clock::time_point FogPresentationLastUpdate{};
   StreamingPressureState PressureState{};
   StreamingPressureCaps LastPressureCaps{};
   /// Cached once per RefreshStreamingPressure — safe for commit callback.
   int LastPendingLightFocus{0};
   UMemoryBudgetController MemoryBudget{};
   int StreamingFrameCounter{0};
+  int LastUnderfeetSyncFrame{-1};
   MemoryBudgetDecision LastMemoryDecision{};
   uint64_t LastMeshCompletedDiscarded{0};
   uint64_t LastRelightCompletedDiscarded{0};
+  uint64_t LastPubRejectSourceMismatch{0};
+  uint64_t LastGpuStagingAllocationFailure{0};
   int LastCompletedExpandFrame{-10000};
+  /// Era27 I-A1: SoftDefer Capture witness pin (cx, cz, cy) for T frames.
+  bool SoftDeferCapturePinValid{false};
+  int SoftDeferCapturePinCx{0};
+  int SoftDeferCapturePinCz{0};
+  int SoftDeferCapturePinCy{kNoChunkSlice};
+  int SoftDeferCapturePinHoriz{0};
+  int SoftDeferCapturePinAge{0};
+  /// Pin length; Era29 enter sets EnterSpawnCapturePinFrames(), else Era27 T=8.
+  int SoftDeferCapturePinMaxAge{8};
+  /// MissOwn VB P2: consecutive frames pin has been drawable (flicker damp).
+  int SoftDeferCapturePinDrawableRun{0};
+  /// MissOwn VB P3: last frame age when PreferKick/Dirty fired on aged pin.
+  int SoftDeferCaptureLastAgedKickAge{-1};
+  /// I18-D1: hold prior column drawable briefly on witness column swap.
+  WitnessSwapGrace WitnessColumnGrace{};
+  /// R4.5.1: same-frame camera-column complete (UpdateStreaming → Refresh).
+  glm::ivec3 LastCameraTerrainCompleteGround{INT32_MAX, 0, INT32_MAX};
+  bool LastCameraTerrainComplete{false};
+  int LastCameraTerrainCompleteFrame{-1};
+
+  /// Perf-root P3: explicit cadence state (was function-static locals).
+  struct RefreshProbeState
+  {
+    int miss_probe_cd{0};
+    int screen_ray_sample_phase{0};
+    bool last_missing_near{false};
+    int miss_positive_hold{0};
+    glm::ivec2 last_sticky_focus_xz{INT_MAX, INT_MAX};
+    int last_sticky_keep_cols{-1};
+    int unfinished_reuse_age{0};
+    int prev_focus_pressure{0};
+    int focus_dirty_sample_cd{0};
+    int last_focus_dirty{0};
+    glm::ivec3 last_dirty_focus{0};
+    int last_dirty_radius{-1};
+    int unfinished_sample_cd{0};
+    int last_unfinished_visual{0};
+    glm::ivec3 last_unfinished_focus{0};
+    int last_unfinished_radius{-1};
+    int visible_black_sample_cd{0};
+    int vb_published{0};
+    int vb_pending_raw{0};
+    int vb_pending_stable{0};
+    int last_visible_black_no_ticket{0};
+    int last_visible_black_progress{0};
+    int last_visible_black_stalled{0};
+    int last_visible_black_stale_lit{0};
+    int last_visible_black_fully_dark_repair{0};
+    int last_visible_black_fully_dark_no_ticket{0};
+    int last_visible_black_fully_dark_stalled{0};
+    int last_visible_black_legal_dark{0};
+    /// Diagnostic only: follow the first raw mesh miss until ready or past fog.
+    bool near_focus_tracked_witness_valid{false};
+    glm::ivec3 near_focus_tracked_witness_coord{-1};
+    int near_focus_tracked_witness_age_frames{0};
+    int near_focus_tracked_witness_sample_cd{0};
+    bool near_focus_tracked_witness_entered_fog{false};
+    float near_focus_tracked_witness_last_distance{-1.0f};
+    int near_focus_tracked_witness_resident{-1};
+    int near_focus_tracked_witness_has_mesh{-1};
+    int near_focus_tracked_witness_drawable{-1};
+    int near_focus_tracked_witness_satisfying{-1};
+    int near_focus_tracked_witness_dirty{-1};
+    int near_focus_tracked_witness_build_in_flight{-1};
+    int near_focus_tracked_witness_pending_gpu_apply{-1};
+    int near_focus_tracked_witness_geometry_debt{-1};
+    int near_focus_tracked_witness_flow_ticket_valid{-1};
+    int near_focus_tracked_witness_column_job_stage{-1};
+    uint64_t near_focus_tracked_witness_resolved_before_fog_total{0};
+    uint64_t near_focus_tracked_witness_entered_fog_unready_total{0};
+    uint64_t near_focus_tracked_witness_resolved_after_fog_total{0};
+    uint64_t near_focus_tracked_witness_exited_fog_unready_total{0};
+    std::deque<glm::ivec3> near_focus_tracked_witness_terminal_coords;
+    int oldest_missing_resident_age_frames{0};
+    int oldest_stale_vertex_light_age_frames{0};
+    int prev_oracle_missing_resident_n{0};
+    int prev_oracle_stale_vertex_light_n{0};
+    int vb_focus_stable_frames{0};
+    int facing_sample_cd{0};
+    int last_ahead{0};
+    int last_behind{0};
+    bool uf_predicted_latched{false};
+    int uf_predicted_hold{0};
+    /// SoftDefer witness retarget baseline (was function-static).
+    uint64_t last_softdefer_witness_retarget{0};
+  } RefreshProbe{};
 };
 
 } // namespace cutum

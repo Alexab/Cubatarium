@@ -39,6 +39,15 @@ public:
   std::vector<std::string>
   NormalizeEnabledPackIds(const UCore &core,
                           const std::vector<std::string> &requested) const;
+
+private:
+  /// Identity of the pack set last applied in full (selection + resolved pack
+  /// roots + manifest/dir timestamps). Re-applying the same set is a no-op, so
+  /// creating or loading a world with unchanged packs does not rebuild the
+  /// whole block catalog and every block texture again. Set
+  /// CUBA_PACK_REAPPLY=1 to force a full rebuild (editing pack files live).
+  std::string LastAppliedKey;
+  std::string LastAppliedFingerprint;
 };
 
 } // namespace cutum

@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_flagstone_chiseled",
+  "id": 1629,
+  "displayName": "Masonry Flagstone Chiseled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_flagstone_chiseled",
+    "cu_masonry_flagstone_chiseled",
+    "cu_masonry_flagstone_chiseled",
+    "cu_masonry_flagstone_chiseled",
+    "cu_masonry_flagstone_chiseled",
+    "cu_masonry_flagstone_chiseled"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "flagstone",
+    "variant": "chiseled"
+  }
+}

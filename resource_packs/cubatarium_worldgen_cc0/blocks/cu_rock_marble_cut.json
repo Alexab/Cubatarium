@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_marble_cut",
+  "id": 1081,
+  "displayName": "Rock Marble Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_marble_cut",
+    "cu_rock_marble_cut",
+    "cu_rock_marble_cut",
+    "cu_rock_marble_cut",
+    "cu_rock_marble_cut",
+    "cu_rock_marble_cut"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "marble",
+    "variant": "cut"
+  }
+}

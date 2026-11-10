@@ -1,0 +1,8 @@
+{
+  "id": "wood_pickaxe",
+  "shapeless": true,
+  "inputs": [
+    { "id": "wood", "count": 5 }
+  ],
+  "output": { "id": "wood_pickaxe", "count": 1 }
+}

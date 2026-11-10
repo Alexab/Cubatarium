@@ -495,6 +495,86 @@ tier_b:
     types:
     - natural
     display_name: Redstone Ore
+  granite:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - granite
+    reference_pack: cubatarium_geology_cc0
+    display_name: Granite
+  diorite:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - diorite
+    reference_pack: cubatarium_geology_cc0
+    display_name: Diorite
+  andesite:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - andesite
+    reference_pack: cubatarium_geology_cc0
+    display_name: Andesite
+  deepslate:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - deepslate
+    reference_pack: cubatarium_geology_cc0
+    display_name: Deepslate
+  tuff:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - tuff
+    reference_pack: cubatarium_geology_cc0
+    display_name: Tuff
+  calcite:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - calcite
+    reference_pack: cubatarium_geology_cc0
+    display_name: Calcite
+  smooth_basalt:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - smooth_basalt
+    reference_pack: cubatarium_geology_cc0
+    display_name: Smooth Basalt
+  amethyst_block:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - amethyst_block
+    reference_pack: cubatarium_geology_cc0
+    display_name: Amethyst Block
+  moss_block:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - moss_block
+    reference_pack: cubatarium_geology_cc0
+    display_name: Moss Block
+  rooted_dirt:
+    types:
+    - natural
+    - building
+    worldgen_refs:
+    - rooted_dirt
+    reference_pack: cubatarium_geology_cc0
+    display_name: Rooted Dirt
   blockIron:
     types:
     - building

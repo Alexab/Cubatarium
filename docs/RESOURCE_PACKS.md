@@ -81,6 +81,23 @@ Full block definition. The numeric `id` field is optional and ignored at runtime
 
 Face order for `textures` (6 entries): `[+Z, +X, -Z, -X, +Y, -Y]`
 
+### hardness
+
+Dig resistance. Cubatarium semantics (not identical to Minecraft):
+
+- `hardness = 0` — unbreakable in **Survival** (Creative still breaks instantly)
+- `hardness > 0` — bare-hand / wrong-tool dig time ≈ `hardness * 1.5` seconds (`BlockDigRules`)
+- With matching tool `groupcaps`, dig time uses `times[rating]` (hardness gates unbreakable; packs carry explicit `dig.groups`, `InferDigGroups` is fallback only)
+- Prefer `"dig": { "level", "groups" }` on blocks ([ITEMS_TOOLS.md](ITEMS_TOOLS.md)); dig via Influence Dig channel ([INTERACTION_ARCHITECTURE.md](INTERACTION_ARCHITECTURE.md))
+- Soft plants use small positives (`0.05`–`0.2`), never `0`
+
+Defaults are applied from [`tools/block_hardness_defaults.yaml`](../tools/block_hardness_defaults.yaml) via:
+
+```bash
+python tools/apply_block_hardness.py --dry-run
+python tools/apply_block_hardness.py
+```
+
 Fluid-related `physics` fields:
 
 - `fluid_permeable` (`bool`, optional): explicit waterlogging/permeability override for non-liquid blocks. If omitted, fallback remains render-style + occupancy (`cross`/`cutout` with occupancy `< 1`).
@@ -123,34 +140,55 @@ Cross sprites (torch, plants) sample the same chunk lightmap as greedy mesh vert
 
 ## Placeholder
 
-Unknown block names in saves/prefabs/worldgen get a synthetic solid block with labeled placeholder textures. Reserved names: `__missing__`, `__air__` (do not use in packs).
+Unknown block names in saves/prefabs/worldgen get a synthetic solid block with diagnostic placeholder textures: magenta/dark diagonal stripes, a yellow frame, and a large `?`. This makes fallback blocks easy to spot in generated terrain and saves. Reserved names: `__missing__`, `__air__` (do not use in packs).
 
 ## Configuration
+
+New worlds default to `cubatarium_worldgen_cc0` as the only primary pack.
+`minetest_default_16` is not enabled by default. Worldgen contains the 1,396
+procedurally catalogued Cubatarium blocks, all 258 Cubatarium block definitions
+previously shipped with `minetest_default_16`, and all 10 Cubatarium Geology
+definitions. It also contains 1,718 own 16×16 textures (including replacements
+for all 313 Minetest reference PNGs and 9 geology textures) and 77 voxel
+decoration objects. The standalone geology and Minetest packs remain available
+for existing worlds and manual selection. Geology source mapping is recorded in
+`tools/geology_cc0_mapping.yaml`. Block definitions are Cubatarium-authored;
+Minetest-derived source pixels are not included in Worldgen. See
+[`ASSETGEN.md`](ASSETGEN.md) for the catalog, generator, provenance, and model
+workflow.
+
+Worldgen declares a conflict with `minetest_default_16` because both packs
+provide overlapping block definitions. The resolver rejects selections with
+declared conflicts or missing dependencies.
 
 ### Global defaults — `config.json`
 
 ```json
 "resource_packs": {
-  "default_primary": ["kenney_voxel_16"],
-  "default_secondary": ["cubatarium_cc0_base"],
+  "default_selection_version": 2,
+  "default_primary": ["cubatarium_worldgen_cc0"],
+  "default_secondary": [],
   "placeholder": { "tile_size": 16, "background": "#6b4a9e" }
 }
 ```
 
 - **default_primary** / **default_secondary**: defaults for **New World** UI.
+- Legacy defaults migrate once to Worldgen-only. Configurations saved after
+  this update use `default_selection_version: 2`, so later explicit pack
+  choices remain intact.
 - Legacy `default_enabled` / `enabled` arrays migrate to `primary` on read.
 
 Edit defaults in **Settings → Resource packs** (saved to `config.json`). This does **not** change packs for the currently loaded world.
 
-To change packs for the **loaded world** (after Escape to main menu): **Main menu → World settings → Apply** (persists to `world_data.json`, hot-reloads packs).
+To change packs for the **loaded world** (after Escape to main menu): **Main menu → World settings → Apply** (persists to `world_data.json`, hot-reloads packs). The same screen also edits **view / projection** (perspective vs isometric); see [CAMERA_PROJECTION.md](CAMERA_PROJECTION.md).
 
 ### Per-world — `worlds/World_NNN/world_data.json`
 
 ```json
 "resource_packs": {
-  "primary": ["kenney_voxel_16"],
-  "secondary": ["cubatarium_cc0_base"],
-  "worldgen_owner": "kenney_voxel_16"
+  "primary": ["cubatarium_worldgen_cc0"],
+  "secondary": [],
+  "worldgen_owner": "cubatarium_worldgen_cc0"
 }
 ```
 
@@ -162,7 +200,7 @@ Legacy `"enabled": [...]` is read as `primary`. `worldgen_owner` defaults to `pr
 |--------|---------|
 | **Settings → Resource packs** | Default primary/secondary pack lists → `config.json` |
 | **New World** | Primary (required) + secondary pack lists → `world_data.json` |
-| **Main menu → World settings** | Change packs for the paused/loaded world → hot-reload + save |
+| **Main menu → World settings** | Change packs and view/projection for the paused/loaded world → hot-reload + save |
 | **Load World** | Subtitle shows saved pack ids (debug) |
 
 ## Creatures and skins overlay
@@ -171,11 +209,19 @@ Base definitions live under `models/creatures/` and `models/skins/`. Enabled pac
 
 After pack apply, live creatures refresh visuals from the updated catalog.
 
+## Items overlay
+
+Base item defs live under `content/items/`. Enabled packs may overlay JSON from `resource_packs/<pack_id>/items/*.json` (loaded after base via `ResourcePackBootstrap`; later packs win). Models still resolve from the asset root (`models/items/...`); pack overlays typically change stats/`model` paths, not binary meshes.
+
+See also [`docs/ITEM_ASSETS.md`](ITEM_ASSETS.md) and [`docs/ITEMS_TOOLS.md`](ITEMS_TOOLS.md).
+
 ## Prefabs from packs
 
 `WorkDir/prefabs/` is loaded first (short names). Each enabled pack may add `prefabs/*.json`; names are registered as `pack_id::local_name` (same pattern as duplicate blocks).
 
-Pack lists support **drag-reorder** (mouse) and **Ctrl+Up/Down** for priority. Missing `depends` / active `conflicts` show a **WARN** line under the lists.
+Pack lists support **drag-reorder** (mouse) and **Ctrl+Up/Down** for priority.
+Missing `depends` / active `conflicts` show a **WARN** line under the lists;
+New World creation and settings save are blocked until the selection is valid.
 
 ## Worldgen block resolution
 
@@ -225,7 +271,9 @@ Cubatarium.exe --smoke-packs
 
 Policy: [`tools/pack_dependencies.yaml`](../tools/pack_dependencies.yaml). Apply with `python tools/update_pack_metadata.py`.
 
-Partial pattern/terrain packs declare `depends: [kenney_voxel_16]`. `minetest_default_16` and `minecraft_legacy_16` declare mutual `conflicts`.
+Partial pattern/terrain packs declare `depends: [kenney_voxel_16]`.
+`cubatarium_worldgen_cc0` conflicts with `minetest_default_16`; the Minetest
+and Minecraft legacy packs also declare mutual conflicts.
 
 Offline merge:
 
@@ -269,6 +317,12 @@ Built from `E:/Work/Home/CubatariumTextureResearch/` via mapping YAML in `tools/
 | `sbs_sandbox_terrain_16` | ~13 | CC0 | `sbs_sandbox_terrain` |
 | `kenney_pattern_lines_16` | ~9 | CC0 | `kenney_pattern_lines` |
 | `oga_mc_inspired_16` | ~5 | CC0 | `oga_mc_inspired` |
+
+The `minetest_default_16` license applies to the Minetest-derived texture media
+in that standalone pack ([upstream source and media license notes](https://github.com/minetest-game/default)).
+Its block JSON is built from Cubatarium mappings and gameplay metadata;
+Worldgen includes those definitions with generated replacement textures and
+does not include the source texture pixels.
 
 1. Download research assets (once):
 

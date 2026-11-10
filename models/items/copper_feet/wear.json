@@ -1,0 +1,17 @@
+{
+  "bones": [
+    "leftLeg",
+    "rightLeg"
+  ],
+  "offset": [
+    0,
+    -0.15,
+    0
+  ],
+  "euler_deg": [
+    0,
+    0,
+    0
+  ],
+  "scale": 1.0
+}

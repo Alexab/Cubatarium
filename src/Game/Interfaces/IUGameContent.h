@@ -7,9 +7,10 @@ namespace cutum
 class UBlockDefinitionStorage;
 class UObjectLibrary;
 class UCreatureDefinitionStorage;
+class UItemDefinitionStorage;
 struct WorldGenPack;
 
-/// Read-only catalog of blocks, objects, creatures, and active worldgen pack.
+/// Read-only catalog of blocks, objects, creatures, items, and active worldgen pack.
 class IUGameContent
 {
 public:
@@ -18,6 +19,7 @@ public:
   virtual const UBlockDefinitionStorage &Blocks() const = 0;
   virtual const UObjectLibrary &Objects() const = 0;
   virtual const UCreatureDefinitionStorage &Creatures() const = 0;
+  virtual const UItemDefinitionStorage &Items() const = 0;
   virtual const WorldGenPack &ActiveWorldGenPack() const = 0;
 };
 

@@ -50,7 +50,7 @@ static void TestPitSpreadPreservesGrass(
   world.SetFluidState(glm::ivec3(1, 10, 1), cutum::FluidCellState::Source());
 
   cutum::UFluidUpdateSet queue;
-  queue.Enqueue(glm::ivec3(1, 10, 1));
+  FluidTest::EnqueuePlacedFluid(queue, glm::ivec3(1, 10, 1));
   FluidTest::RunQueueTicks(world, *definitions, queue, fluid, 500);
 
   FluidTest::Expect(world.GetBlock(glm::ivec3(2, 10, 2)) == kTallGrass,

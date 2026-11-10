@@ -1,7 +1,21 @@
-
+#include "Render/Engine/EnvironmentLight.h"
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Camera/GpuPassRefreshPolicy.h"
+#include "Core/FrameDeadline.h"
+#include "Render/Effects/InfluenceFxSystem.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
+#include "Render/Mesh/GpuMeshSlotAllocator.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Diagnostics/Profile.h"
+#include "World/Diagnostics/ScopedPhase.h"
+#include "World/Diagnostics/JobStageTrace.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ChunkRenderDemand.h"
+#include "World/Streaming/VisualObligationPolicy.h"
+#include "World/View/ViewRayMath.h"
 #include "Blocks/BlockRegistry.h"
+#include "Blocks/BlockCatalogQueries.h"
+#include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
@@ -20,32 +34,62 @@
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Engine/IUFluidSurfaceProvider.h"
+#include "Render/Mesh/ChunkMeshFace.h"
+#include "Render/Mesh/GreedyMeshBatch.h"
+#include "Render/Mesh/GreedyMeshVertex.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
+#include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/MdiVertexPoolStore.h"
+#include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Backend/RenderBackendCaps.h"
+#include "Render/Backend/AndroidGpuPolicy.h"
+#include "Render/Backend/GpuHotPathFallback.h"
+#include "Render/Mesh/IUChunkCull.h"
+#include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Render/Pipeline/GreedyDrawCategory.h"
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
 #include "World/Adapters/WorldRenderReadAdapter.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
+#include "World/Lighting/IULightingPipeline.h"
+#include "World/Lighting/LightUtil.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Physics/LiquidDebugTrace.h"
+#include "World/Raycast/BlockRaycast.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <iostream>
+#include <limits>
+#include <mutex>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <limits>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -55,15 +99,1255 @@ namespace cutum
 
 namespace
 {
+// PERF holes: the fluid surface map reference for the probe diagnostics.
+// Set once per frame by the engine before the probe capture walks.
+const UFluidSurfaceMap *g_probe_fluid_map = nullptr;
+
+constexpr int kPackedNearHoriz = 4;
+
+bool FluidRenderDiagnosticWindowContains(const glm::vec3 &camera_position);
+
+bool DebugTransparentFragmentMarkerEnabled(
+    const glm::vec3 &camera_position)
+{
+  static const bool enabled = []() {
+    const char *value =
+        std::getenv("CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled && FluidRenderDiagnosticWindowContains(camera_position);
+}
+
+constexpr int kPixelProbeGridColumns = 20;
+constexpr int kPixelProbeDefaultRows = 4;
+constexpr int kPixelProbeDenseRows = 8;
+constexpr int kScreenRayAlignedPixelRows = 5;
+constexpr size_t kPixelProbeSampleCount =
+    static_cast<size_t>(kPixelProbeGridColumns * kPixelProbeDenseRows);
+constexpr float kOpaqueVertexLightMatchDistance = 0.25f;
+
+bool PixelProbeCenterEveryFrameEnabled()
+{
+  static const bool enabled = []() {
+    const char *value =
+        std::getenv("CUBA_VISUAL_BLACK_TRACE_CENTER_EVERY_FRAME");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+int PixelProbeColumns()
+{
+  return PixelProbeCenterEveryFrameEnabled() ? 1 : kPixelProbeGridColumns;
+}
+
+int PixelProbeSampleX(int column, int width)
+{
+  if (PixelProbeCenterEveryFrameEnabled())
+  {
+    return std::clamp(width / 2, 0, width - 1);
+  }
+  const int columns = PixelProbeColumns();
+  const int x0 = column * width / columns;
+  const int x1 = (column + 1) * width / columns;
+  return std::clamp((x0 + x1) / 2, 0, width - 1);
+}
+
+float ReadPixelProbeEnvFloat(const char *name, float fallback)
+{
+  const char *value = std::getenv(name);
+  if (value == nullptr || value[0] == '\0')
+  {
+    return fallback;
+  }
+  char *end = nullptr;
+  const float parsed = std::strtof(value, &end);
+  if (end == value || *end != '\0' || !std::isfinite(parsed))
+  {
+    return fallback;
+  }
+  return parsed;
+}
+
+int PixelProbeRows()
+{
+  if (PixelProbeCenterEveryFrameEnabled())
+  {
+    return 1;
+  }
+  static const int rows = []() {
+    const char *value = std::getenv("CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS");
+    return value != nullptr && value[0] != '\0' && value[0] != '0'
+               ? kPixelProbeDenseRows
+               : kPixelProbeDefaultRows;
+  }();
+  return rows;
+}
+
+bool PixelProbeOnFocusChangeEnabled()
+{
+  static const bool enabled = []() {
+    const char *value =
+        std::getenv("CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+bool PixelProbeOnStalledCensusEnabled()
+{
+  static const bool enabled = []() {
+    const char *value = std::getenv(
+        "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+bool PixelProbeOnScreenRayEnabled()
+{
+  static const bool enabled = []() {
+    const char *value = std::getenv(
+        "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+uint32_t PixelProbePeriodicStride(float camera_x)
+{
+  static const uint32_t configured_stride = []() {
+    const float value = ReadPixelProbeEnvFloat(
+        "CUBA_VISUAL_BLACK_TRACE_PIXEL_PROBE_STRIDE", 0.0f);
+    if (value < 1.0f)
+    {
+      return 0u;
+    }
+    return static_cast<uint32_t>(
+        std::clamp(std::lround(value), 1l, 120l));
+  }();
+  const uint32_t route_stride =
+      ((camera_x >= -290.0f && camera_x <= -245.0f) ||
+       (camera_x >= -210.0f && camera_x <= -120.0f))
+          ? 60u
+          : 120u;
+  return configured_stride > 0
+             ? std::min(route_stride, configured_stride)
+             : route_stride;
+}
+
+int PixelProbeSampleY(int row, int height, int rows,
+                      bool screen_ray_aligned_rows = false)
+{
+  if (screen_ray_aligned_rows)
+  {
+    // Keep the five streaming-ray rows exactly represented. Dense mode adds
+    // three interleaved rows, still ordered bottom-to-top for GL readback.
+    constexpr std::array<float, kScreenRayAlignedPixelRows> kScreenRows = {
+        0.875f, 0.625f, 0.5625f, 0.375f, 0.125f};
+    constexpr std::array<float, kPixelProbeDenseRows> kDenseScreenRows = {
+        0.875f, 0.75f, 0.625f, 0.5625f, 0.5f, 0.375f, 0.25f, 0.125f};
+    if (rows == kScreenRayAlignedPixelRows)
+    {
+      return std::clamp(
+          static_cast<int>((1.0f - kScreenRows[static_cast<size_t>(row)]) *
+                           static_cast<float>(height)),
+          0, height - 1);
+    }
+    if (rows == kPixelProbeDenseRows)
+    {
+      return std::clamp(
+          static_cast<int>(
+              (1.0f - kDenseScreenRows[static_cast<size_t>(row)]) *
+              static_cast<float>(height)),
+          0, height - 1);
+    }
+  }
+  const int y0 = row * height / rows;
+  const int y1 = (row + 1) * height / rows;
+  return std::clamp((y0 + y1) / 2, 0, height - 1);
+}
+
+struct OpaquePixelProbeCapture
+{
+  bool active{false};
+  uint64_t probe_id{0};
+  uint64_t visual_hole_event_frame_epoch{0};
+  int rows{0};
+  bool screen_ray_aligned_rows{false};
+  uint8_t trigger_flags{0};
+  std::array<uint32_t, kPixelProbeSampleCount> rgba{};
+  std::array<float, kPixelProbeSampleCount> depth{};
+};
+
+void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
+{
+  GLint viewport[4] = {0, 0, 0, 0};
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  const int width = viewport[2];
+  const int height = viewport[3];
+  if (width <= 0 || height <= 0)
+  {
+    return;
+  }
+  const int rows = capture.rows > 0 ? capture.rows : PixelProbeRows();
+
+  // Read one full-width scanline per sampled row. Normal probes use four
+  // vertical bands; screen-ray-aligned probes use the exact five ray rows.
+  // Dense mode adds rows where full-frame captures showed bounded
+  // water-color discontinuities.
+  std::vector<GLubyte> pixels(static_cast<size_t>(width) * rows *
+                              4u);
+  std::vector<GLfloat> depths(static_cast<size_t>(width) * rows);
+  for (int row = 0; row < rows; ++row)
+  {
+    const int local_y = PixelProbeSampleY(
+        row, height, rows, capture.screen_ray_aligned_rows);
+    glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
+                 GL_UNSIGNED_BYTE,
+                 pixels.data() + static_cast<size_t>(row) * width * 4u);
+    glReadPixels(viewport[0], viewport[1] + local_y, width, 1,
+                 GL_DEPTH_COMPONENT, GL_FLOAT,
+                 depths.data() + static_cast<size_t>(row) * width);
+  }
+
+  size_t sample = 0;
+  for (int row = 0; row < rows; ++row)
+  {
+    const int columns = PixelProbeColumns();
+    for (int column = 0; column < columns; ++column)
+    {
+      const int local_x = PixelProbeSampleX(column, width);
+      const size_t pixel_offset =
+          (static_cast<size_t>(row) * static_cast<size_t>(width) +
+           static_cast<size_t>(local_x)) *
+          4u;
+      const uint32_t red = pixels[pixel_offset + 0];
+      const uint32_t green = pixels[pixel_offset + 1];
+      const uint32_t blue = pixels[pixel_offset + 2];
+      const uint32_t alpha = pixels[pixel_offset + 3];
+      capture.rgba[sample] = (red << 24u) | (green << 16u) |
+                             (blue << 8u) | alpha;
+      const size_t depth_offset =
+          static_cast<size_t>(row) * static_cast<size_t>(width) +
+          static_cast<size_t>(local_x);
+      capture.depth[sample] = depths[depth_offset];
+      ++sample;
+    }
+  }
+  capture.active = true;
+}
+
+struct GreedyVertexLightMatch
+{
+  bool valid{false};
+  float distance{std::numeric_limits<float>::infinity()};
+  glm::vec3 surface{0.0f};
+  float sky{0.0f};
+  float block{0.0f};
+  float preview{0.0f};
+  float wetness{0.0f};
+  int face_index{-1};
+  BlockId block_id{BLOCK_AIR};
+};
+
+struct ClosestTrianglePoint
+{
+  glm::vec3 point{0.0f};
+  glm::vec3 barycentric{0.0f};
+};
+
+struct RayTriangleHit
+{
+  float distance{std::numeric_limits<float>::infinity()};
+  glm::vec3 barycentric{0.0f};
+};
+
+bool IntersectRayTriangle(const glm::vec3 &origin,
+                          const glm::vec3 &direction,
+                          const glm::vec3 &a, const glm::vec3 &b,
+                          const glm::vec3 &c, RayTriangleHit &hit)
+{
+  const glm::vec3 edge1 = b - a;
+  const glm::vec3 edge2 = c - a;
+  const glm::vec3 p = glm::cross(direction, edge2);
+  const float determinant = glm::dot(edge1, p);
+  if (std::abs(determinant) <= 1e-7f)
+  {
+    return false;
+  }
+  const float inverse_determinant = 1.0f / determinant;
+  const glm::vec3 tvec = origin - a;
+  const float u = glm::dot(tvec, p) * inverse_determinant;
+  const glm::vec3 q = glm::cross(tvec, edge1);
+  const float v = glm::dot(direction, q) * inverse_determinant;
+  constexpr float kBarycentricTolerance = 1e-5f;
+  if (u < -kBarycentricTolerance || v < -kBarycentricTolerance ||
+      u + v > 1.0f + kBarycentricTolerance)
+  {
+    return false;
+  }
+  const float distance = glm::dot(edge2, q) * inverse_determinant;
+  if (!std::isfinite(distance) || distance < 0.0f)
+  {
+    return false;
+  }
+  hit.distance = distance;
+  hit.barycentric = glm::vec3(1.0f - u - v, u, v);
+  return true;
+}
+
+bool PixelProbeGpuRangeWitnessEnabled()
+{
+  static const bool enabled = []()
+  {
+    const char *value =
+        std::getenv("CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+bool PixelProbeGpuDrawStateWindowContains(const glm::vec3 &camera_position)
+{
+  if (!PixelProbeGpuRangeWitnessEnabled())
+  {
+    return false;
+  }
+  static const float min_x = ReadPixelProbeEnvFloat(
+      "CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X",
+      -std::numeric_limits<float>::infinity());
+  static const float max_x = ReadPixelProbeEnvFloat(
+      "CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X",
+      std::numeric_limits<float>::infinity());
+  return std::isfinite(min_x) && std::isfinite(max_x) && min_x <= max_x &&
+         camera_position.x >= min_x && camera_position.x <= max_x;
+}
+
+struct GpuOpaqueDrawStateWitness
+{
+  bool valid{false};
+  bool submitted{false};
+  uint64_t frame_epoch{0};
+  uint8_t path{0};
+  glm::ivec3 chunk_coord{0};
+  int32_t block_id{-1};
+  uint32_t batch_index{0};
+  uint32_t command_slot{0};
+  uint32_t indirect_buffer{0};
+  uint8_t depth_test{0};
+  uint8_t depth_write{0};
+  uint8_t cull{0};
+  uint8_t scissor{0};
+  uint8_t stencil{0};
+  uint8_t rasterizer_discard{0};
+  uint8_t polygon_offset{0};
+  uint8_t blend{0};
+  uint8_t color_mask{0};
+  int32_t depth_func{0};
+  int32_t cull_mode{0};
+  int32_t front_face{0};
+  std::array<int32_t, 4> viewport{};
+  std::array<int32_t, 4> scissor_box{};
+  int32_t framebuffer{0};
+  int32_t program{0};
+  int32_t vao{0};
+  int32_t array_buffer{0};
+  int32_t element_buffer{0};
+  int32_t texture_2d{0};
+  uint8_t vertex_layout_checked{0};
+  uint8_t vertex_layout_match{0};
+  uint8_t mvp_matrix_valid{0};
+  uint8_t texture_alpha_valid{0};
+  uint8_t texture_alpha_min{0};
+  uint8_t texture_alpha_max{0};
+  uint8_t alpha_cutout{0};
+  uint8_t opaque_depth_guard{0};
+  int32_t greedy_mode{0};
+  int32_t anim_frame{0};
+  int32_t anim_frame_count{0};
+  int32_t active_texture{0};
+  float mvp_matrix_max_delta{-1.0f};
+  int32_t stencil_func{0};
+  int32_t stencil_ref{0};
+  int32_t stencil_value_mask{0};
+  int32_t stencil_write_mask{0};
+  int32_t polygon_mode_front{0};
+  int32_t polygon_mode_back{0};
+  float depth_range_near{0.0f};
+  float depth_range_far{1.0f};
+  float polygon_offset_factor{0.0f};
+  float polygon_offset_units{0.0f};
+};
+
+thread_local GpuOpaqueDrawStateWitness g_gpu_opaque_draw_state_witness;
+thread_local std::vector<GpuOpaqueDrawStateWitness>
+    g_gpu_opaque_draw_state_frame_witnesses;
+thread_local bool g_capture_gpu_draw_state_for_pixel_probe{false};
+thread_local bool g_capture_fluid_draw_witness_for_pixel_probe{false};
+thread_local uint8_t g_fluid_draw_witness_pass_ordinal{255};
+
+void CopyGpuOpaqueDrawStateWitness(const GpuOpaqueDrawStateWitness &witness,
+                                   VisualBlackTraceRecord &record);
+
+bool IsM483DrawStateTarget(const GreedyGpuBatch &batch, size_t command_slot,
+                           const glm::vec3 &camera_position)
+{
+  if (!PixelProbeGpuRangeWitnessEnabled() || batch.chunkCoord.x != -169 ||
+      batch.chunkCoord.y != 3 || batch.chunkCoord.z != 4 ||
+      static_cast<int32_t>(batch.blockId) != 573 || batch.batchIndex != 3 ||
+      command_slot != 281u)
+  {
+    return false;
+  }
+  const glm::vec3 delta =
+      camera_position - glm::vec3(-2693.6f, 70.0f, 55.9646f);
+  return glm::dot(delta, delta) <= 64.0f;
+}
+
+void CaptureGpuOpaqueDrawState(const GreedyGpuPassCache &pass,
+                               size_t batch_index, uint8_t path,
+                               const glm::mat4 &expected_mvp)
+{
+  if (batch_index >= pass.batches.size())
+  {
+    return;
+  }
+  GpuOpaqueDrawStateWitness witness{};
+  const GreedyGpuBatch &batch = pass.batches[batch_index];
+  witness.valid = true;
+  witness.path = path;
+  witness.chunk_coord = batch.chunkCoord;
+  witness.block_id = static_cast<int32_t>(batch.blockId);
+  witness.batch_index = batch.batchIndex;
+  witness.command_slot = static_cast<uint32_t>(batch_index);
+  witness.indirect_buffer = pass.IndirectCmdsBuffer;
+
+  GLboolean enabled = GL_FALSE;
+  glGetBooleanv(GL_DEPTH_TEST, &enabled);
+  witness.depth_test = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_DEPTH_WRITEMASK, &enabled);
+  witness.depth_write = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_CULL_FACE, &enabled);
+  witness.cull = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_SCISSOR_TEST, &enabled);
+  witness.scissor = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_STENCIL_TEST, &enabled);
+  witness.stencil = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_RASTERIZER_DISCARD, &enabled);
+  witness.rasterizer_discard = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_POLYGON_OFFSET_FILL, &enabled);
+  witness.polygon_offset = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_BLEND, &enabled);
+  witness.blend = enabled == GL_TRUE ? 1u : 0u;
+
+  GLboolean color_mask[4] = {GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE};
+  glGetBooleanv(GL_COLOR_WRITEMASK, color_mask);
+  witness.color_mask =
+      (color_mask[0] == GL_TRUE ? 1u : 0u) |
+      (color_mask[1] == GL_TRUE ? 2u : 0u) |
+      (color_mask[2] == GL_TRUE ? 4u : 0u) |
+      (color_mask[3] == GL_TRUE ? 8u : 0u);
+
+  GLint value = 0;
+  glGetIntegerv(GL_DEPTH_FUNC, &value);
+  witness.depth_func = value;
+  glGetIntegerv(GL_CULL_FACE_MODE, &value);
+  witness.cull_mode = value;
+  glGetIntegerv(GL_FRONT_FACE, &value);
+  witness.front_face = value;
+  glGetIntegerv(GL_VIEWPORT, witness.viewport.data());
+  glGetIntegerv(GL_SCISSOR_BOX, witness.scissor_box.data());
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &witness.framebuffer);
+  glGetIntegerv(GL_CURRENT_PROGRAM, &witness.program);
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &witness.vao);
+  glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &witness.array_buffer);
+  glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &witness.element_buffer);
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &witness.texture_2d);
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &witness.active_texture);
+  glGetIntegerv(GL_STENCIL_FUNC, &witness.stencil_func);
+  glGetIntegerv(GL_STENCIL_REF, &witness.stencil_ref);
+  glGetIntegerv(GL_STENCIL_VALUE_MASK, &witness.stencil_value_mask);
+  glGetIntegerv(GL_STENCIL_WRITEMASK, &witness.stencil_write_mask);
+  GLdouble depth_range[2] = {0.0, 1.0};
+  glGetDoublev(GL_DEPTH_RANGE, depth_range);
+  witness.depth_range_near = static_cast<float>(depth_range[0]);
+  witness.depth_range_far = static_cast<float>(depth_range[1]);
+  glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &witness.polygon_offset_factor);
+  glGetFloatv(GL_POLYGON_OFFSET_UNITS, &witness.polygon_offset_units);
+  const GLint mvp_location =
+      glGetUniformLocation(static_cast<GLuint>(witness.program), "mvp_matrix");
+  if (mvp_location >= 0)
+  {
+    GLfloat actual_mvp[16]{};
+    glGetUniformfv(static_cast<GLuint>(witness.program), mvp_location,
+                   actual_mvp);
+    const GLfloat *expected = glm::value_ptr(expected_mvp);
+    float max_delta = 0.0f;
+    for (size_t index = 0; index < 16u; ++index)
+    {
+      max_delta = std::max(max_delta,
+                           std::abs(actual_mvp[index] - expected[index]));
+    }
+    witness.mvp_matrix_valid = 1u;
+    witness.mvp_matrix_max_delta = max_delta;
+  }
+  const auto get_uniform_int = [&](const char *name, int32_t &value)
+  {
+    const GLint location =
+        glGetUniformLocation(static_cast<GLuint>(witness.program), name);
+    if (location >= 0)
+    {
+      glGetUniformiv(static_cast<GLuint>(witness.program), location, &value);
+    }
+  };
+  int32_t alpha_cutout_uniform = 0;
+  get_uniform_int("uAlphaCutout", alpha_cutout_uniform);
+  witness.alpha_cutout = alpha_cutout_uniform != 0 ? 1u : 0u;
+  const GLint opaque_depth_guard_location =
+      glGetUniformLocation(static_cast<GLuint>(witness.program),
+                           "uOpaqueDepthGuard");
+  if (opaque_depth_guard_location >= 0)
+  {
+    GLfloat opaque_depth_guard_uniform = 0.0f;
+    glGetUniformfv(static_cast<GLuint>(witness.program),
+                   opaque_depth_guard_location, &opaque_depth_guard_uniform);
+    witness.opaque_depth_guard = opaque_depth_guard_uniform > 0.5f ? 1u : 0u;
+  }
+  get_uniform_int("uGreedyShaderMode", witness.greedy_mode);
+  get_uniform_int("uAnimFrame", witness.anim_frame);
+  get_uniform_int("uAnimFrameCount", witness.anim_frame_count);
+
+  if (path == 1u || path == 2u)
+  {
+    witness.vertex_layout_checked = 1u;
+    witness.vertex_layout_match = 1u;
+    constexpr std::array<GLint, 7> expected_sizes = {3, 1, 2, 1, 1, 1, 1};
+    constexpr std::array<size_t, 7> expected_offsets = {
+        0u, offsetof(GreedyMeshVertex, faceIndex),
+        offsetof(GreedyMeshVertex, u), offsetof(GreedyMeshVertex, skyLight),
+        offsetof(GreedyMeshVertex, blockLight),
+        offsetof(GreedyMeshVertex, wetness),
+        offsetof(GreedyMeshVertex, lightPreview)};
+    const GLint expected_stride = static_cast<GLint>(sizeof(GreedyMeshVertex));
+    const GLint expected_buffer = static_cast<GLint>(pass.poolVbo);
+    for (GLuint location = 0; location < expected_sizes.size(); ++location)
+    {
+      GLint enabled_attrib = 0;
+      GLint size = 0;
+      GLint type = 0;
+      GLint normalized = 0;
+      GLint stride = 0;
+      GLint buffer = 0;
+      GLint integer = 0;
+      GLint divisor = 0;
+      void *pointer = nullptr;
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_ENABLED,
+                          &enabled_attrib);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_SIZE, &size);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_TYPE, &type);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_NORMALIZED,
+                          &normalized);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &stride);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
+                          &buffer);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_INTEGER, &integer);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_DIVISOR, &divisor);
+      glGetVertexAttribPointerv(location, GL_VERTEX_ATTRIB_ARRAY_POINTER,
+                                &pointer);
+      const std::uintptr_t actual_offset =
+          reinterpret_cast<std::uintptr_t>(pointer);
+      const bool matches =
+          enabled_attrib == GL_TRUE && size == expected_sizes[location] &&
+          type == GL_FLOAT && normalized == GL_FALSE &&
+          stride == expected_stride && buffer == expected_buffer &&
+          integer == GL_FALSE && divisor == 0 &&
+          actual_offset == expected_offsets[location];
+      if (!matches)
+      {
+        witness.vertex_layout_match = 0u;
+        break;
+      }
+    }
+  }
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (witness.texture_2d != 0 && witness.active_texture == GL_TEXTURE0)
+  {
+    GLint texture_width = 0;
+    GLint texture_height = 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,
+                             &texture_width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT,
+                             &texture_height);
+    const uint64_t texel_count =
+        texture_width > 0 && texture_height > 0
+            ? static_cast<uint64_t>(texture_width) *
+                  static_cast<uint64_t>(texture_height)
+            : 0u;
+    if (texel_count > 0u && texel_count <= 4u * 1024u * 1024u)
+    {
+      std::vector<GLubyte> texture_rgba(
+          static_cast<size_t>(texel_count) * 4u);
+      glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                    texture_rgba.data());
+      uint8_t min_alpha = 255u;
+      uint8_t max_alpha = 0u;
+      for (size_t offset = 3u; offset < texture_rgba.size(); offset += 4u)
+      {
+        min_alpha = std::min(min_alpha, texture_rgba[offset]);
+        max_alpha = std::max(max_alpha, texture_rgba[offset]);
+      }
+      witness.texture_alpha_valid = 1u;
+      witness.texture_alpha_min = min_alpha;
+      witness.texture_alpha_max = max_alpha;
+    }
+  }
+#endif
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  GLint polygon_mode[2] = {0, 0};
+  glGetIntegerv(GL_POLYGON_MODE, polygon_mode);
+  witness.polygon_mode_front = polygon_mode[0];
+  witness.polygon_mode_back = polygon_mode[1];
+#endif
+  g_gpu_opaque_draw_state_witness = witness;
+}
+
+void AppendGpuOpaqueDrawStateRangeWitness(
+    const GpuOpaqueDrawStateWitness &state,
+    const GreedyGpuPassCache &pass, size_t begin, size_t end,
+    uint64_t frame_epoch, uint8_t path, bool submitted)
+{
+  if (!state.valid || begin >= end || end > pass.batches.size())
+  {
+    return;
+  }
+  for (size_t index = begin; index < end; ++index)
+  {
+    const GreedyGpuBatch &batch = pass.batches[index];
+    if (batch.blockId != static_cast<BlockId>(573) ||
+        batch.indexCountGl <= 0 || batch.drawInstanceCount == 0 ||
+        g_gpu_opaque_draw_state_frame_witnesses.size() >= 8192u)
+    {
+      continue;
+    }
+    GpuOpaqueDrawStateWitness witness = state;
+    witness.submitted = submitted;
+    witness.frame_epoch = frame_epoch;
+    witness.path = path;
+    witness.chunk_coord = batch.chunkCoord;
+    witness.block_id = static_cast<int32_t>(batch.blockId);
+    witness.batch_index = batch.batchIndex;
+    witness.command_slot = static_cast<uint32_t>(index);
+    g_gpu_opaque_draw_state_frame_witnesses.push_back(witness);
+  }
+}
+
+void CopyMatchingGpuOpaqueDrawStateWitness(
+    uint64_t frame_epoch, const glm::ivec3 &chunk_coord, BlockId block_id,
+    uint16_t batch_index, VisualBlackTraceRecord &record)
+{
+  const auto it = std::find_if(
+      g_gpu_opaque_draw_state_frame_witnesses.begin(),
+      g_gpu_opaque_draw_state_frame_witnesses.end(),
+      [&](const GpuOpaqueDrawStateWitness &witness)
+      {
+        return witness.frame_epoch == frame_epoch &&
+               witness.chunk_coord == chunk_coord &&
+               witness.block_id == static_cast<int32_t>(block_id) &&
+               witness.batch_index == batch_index;
+      });
+  if (it == g_gpu_opaque_draw_state_frame_witnesses.end())
+  {
+    return;
+  }
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match = 1;
+  CopyGpuOpaqueDrawStateWitness(*it, record);
+}
+
+void CopyGpuOpaqueDrawStateWitness(const GpuOpaqueDrawStateWitness &witness,
+                                   VisualBlackTraceRecord &record)
+{
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_valid =
+      witness.valid ? 1u : 0u;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_submitted =
+      witness.submitted ? 1u : 0u;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_path = witness.path;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_test =
+      witness.depth_test;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_write =
+      witness.depth_write;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull = witness.cull;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor = witness.scissor;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil = witness.stencil;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_rasterizer_discard =
+      witness.rasterizer_discard;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset =
+      witness.polygon_offset;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_blend = witness.blend;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_color_mask =
+      witness.color_mask;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_func =
+      witness.depth_func;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull_mode =
+      witness.cull_mode;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_front_face =
+      witness.front_face;
+  std::copy(witness.viewport.begin(), witness.viewport.end(),
+            record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_viewport);
+  std::copy(witness.scissor_box.begin(), witness.scissor_box.end(),
+            record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor_box);
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_framebuffer =
+      witness.framebuffer;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_program =
+      witness.program;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vao = witness.vao;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_array_buffer =
+      witness.array_buffer;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_element_buffer =
+      witness.element_buffer;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_2d =
+      witness.texture_2d;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_checked =
+      witness.vertex_layout_checked;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_match =
+      witness.vertex_layout_match;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_valid =
+      witness.mvp_matrix_valid;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_valid =
+      witness.texture_alpha_valid;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_min =
+      witness.texture_alpha_min;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_max =
+      witness.texture_alpha_max;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_alpha_cutout =
+      witness.alpha_cutout;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_opaque_depth_guard =
+      witness.opaque_depth_guard;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_greedy_mode =
+      witness.greedy_mode;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame =
+      witness.anim_frame;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame_count =
+      witness.anim_frame_count;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_active_texture =
+      witness.active_texture;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_max_delta =
+      witness.mvp_matrix_max_delta;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_func =
+      witness.stencil_func;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_ref =
+      witness.stencil_ref;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_value_mask =
+      witness.stencil_value_mask;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_write_mask =
+      witness.stencil_write_mask;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_front =
+      witness.polygon_mode_front;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_back =
+      witness.polygon_mode_back;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_indirect_buffer =
+      witness.indirect_buffer;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_near =
+      witness.depth_range_near;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_far =
+      witness.depth_range_far;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_factor =
+      witness.polygon_offset_factor;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_units =
+      witness.polygon_offset_units;
+}
+
+void CaptureGpuRangeWitness(
+    const GreedyGpuPassCache &pass, const glm::ivec3 &chunk_coord,
+    BlockId block_id, uint16_t batch_index, const GreedyMeshBatch &source,
+    size_t triangle_index_offset, const std::array<uint32_t, 3> &source_indices,
+    VisualBlackTraceRecord &record)
+{
+  record.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted = 1;
+  record.renderer_pixel_voxel_mesh_ray_gpu_batch_index = batch_index;
+  record.renderer_pixel_voxel_mesh_ray_gpu_compact_active =
+      pass.GpuCompactActive ? 1u : 0u;
+  if (triangle_index_offset > std::numeric_limits<uint32_t>::max())
+  {
+    return;
+  }
+  record.renderer_pixel_voxel_mesh_ray_gpu_source_index_offset =
+      static_cast<uint32_t>(triangle_index_offset);
+  record.renderer_pixel_voxel_mesh_ray_gpu_source_index0 = source_indices[0];
+  record.renderer_pixel_voxel_mesh_ray_gpu_source_index1 = source_indices[1];
+  record.renderer_pixel_voxel_mesh_ray_gpu_source_index2 = source_indices[2];
+
+  const std::array<uint32_t, 3> expected_m483_indices = {56u, 59u, 58u};
+  const bool exact_m483_gap =
+      chunk_coord == glm::ivec3(-169, 3, 4) &&
+      static_cast<int32_t>(block_id) == 573 && batch_index == 3 &&
+      triangle_index_offset == 84u && source_indices == expected_m483_indices &&
+      record.renderer_pixel_voxel_hit_x == -2701 &&
+      record.renderer_pixel_voxel_hit_y == 52 &&
+      record.renderer_pixel_voxel_hit_z == 75;
+
+  const GpuOpaqueDrawStateWitness &draw_state =
+      g_gpu_opaque_draw_state_witness;
+  if (exact_m483_gap && draw_state.valid &&
+      draw_state.chunk_coord == chunk_coord &&
+      draw_state.block_id == static_cast<int32_t>(block_id) &&
+      draw_state.batch_index == batch_index &&
+      draw_state.command_slot == 281u)
+  {
+    record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match = 1;
+    CopyGpuOpaqueDrawStateWitness(draw_state, record);
+  }
+
+  size_t command_slot = pass.batches.size();
+  const GreedyGpuBatch *gpu_batch = nullptr;
+  for (size_t index = 0; index < pass.batches.size(); ++index)
+  {
+    const GreedyGpuBatch &candidate = pass.batches[index];
+    if (candidate.chunkCoord == chunk_coord &&
+        candidate.batchIndex == batch_index &&
+        candidate.blockId == block_id)
+    {
+      command_slot = index;
+      gpu_batch = &candidate;
+      break;
+    }
+  }
+  if (!gpu_batch)
+  {
+    return;
+  }
+  record.renderer_pixel_voxel_mesh_ray_gpu_batch_found = 1;
+  record.renderer_pixel_voxel_mesh_ray_gpu_command_slot =
+      static_cast<uint32_t>(command_slot);
+  record.renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset =
+      static_cast<uint64_t>(gpu_batch->vboByteOffset);
+  record.renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset =
+      static_cast<uint64_t>(gpu_batch->eboByteOffset);
+
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)source;
+  (void)source_indices;
+  (void)pass;
+  return;
+#else
+  if (!gpu_batch->pooled || pass.poolVbo == 0 || pass.poolEbo == 0)
+  {
+    return;
+  }
+
+  GLint previous_copy_read_buffer = 0;
+  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &previous_copy_read_buffer);
+  const auto buffer_contains = [](GLuint buffer, uint64_t offset,
+                                  size_t byte_count)
+  {
+    GLint64 size_bytes = 0;
+    glBindBuffer(GL_COPY_READ_BUFFER, buffer);
+    glGetBufferParameteri64v(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &size_bytes);
+    return size_bytes >= 0 &&
+           offset <= static_cast<uint64_t>(size_bytes) &&
+           byte_count <= static_cast<uint64_t>(size_bytes) - offset;
+  };
+
+  const uint64_t ebo_triangle_offset =
+      static_cast<uint64_t>(gpu_batch->eboByteOffset) +
+      static_cast<uint64_t>(triangle_index_offset) * sizeof(uint32_t);
+  std::array<uint32_t, 3> gpu_indices{};
+  if (buffer_contains(pass.poolEbo, ebo_triangle_offset,
+                      sizeof(gpu_indices)))
+  {
+    glGetBufferSubData(GL_COPY_READ_BUFFER,
+                       static_cast<GLintptr>(ebo_triangle_offset),
+                       static_cast<GLsizeiptr>(sizeof(gpu_indices)),
+                       gpu_indices.data());
+    record.renderer_pixel_voxel_mesh_ray_gpu_indices_readable = 1;
+    record.renderer_pixel_voxel_mesh_ray_gpu_actual_index0 = gpu_indices[0];
+    record.renderer_pixel_voxel_mesh_ray_gpu_actual_index1 = gpu_indices[1];
+    record.renderer_pixel_voxel_mesh_ray_gpu_actual_index2 = gpu_indices[2];
+    record.renderer_pixel_voxel_mesh_ray_gpu_indices_match =
+        gpu_indices == source_indices ? 1u : 0u;
+  }
+
+  bool vertex_ranges_readable = true;
+  bool vertices_match = true;
+  float max_position_delta = 0.0f;
+  for (size_t vertex = 0; vertex < source_indices.size(); ++vertex)
+  {
+    const uint32_t source_index = source_indices[vertex];
+    if (source_index >= source.vertices.size())
+    {
+      vertex_ranges_readable = false;
+      vertices_match = false;
+      break;
+    }
+    const uint64_t vbo_vertex_offset =
+        static_cast<uint64_t>(gpu_batch->vboByteOffset) +
+        static_cast<uint64_t>(source_index) * sizeof(GreedyMeshVertex);
+    GreedyMeshVertex gpu_vertex{};
+    if (!buffer_contains(pass.poolVbo, vbo_vertex_offset,
+                         sizeof(GreedyMeshVertex)))
+    {
+      vertex_ranges_readable = false;
+      vertices_match = false;
+      break;
+    }
+    glGetBufferSubData(GL_COPY_READ_BUFFER,
+                       static_cast<GLintptr>(vbo_vertex_offset),
+                       static_cast<GLsizeiptr>(sizeof(GreedyMeshVertex)),
+                       &gpu_vertex);
+    const GreedyMeshVertex &source_vertex = source.vertices[source_index];
+    max_position_delta =
+        std::max(max_position_delta,
+                 std::max(std::abs(gpu_vertex.px - source_vertex.px),
+                          std::max(std::abs(gpu_vertex.py - source_vertex.py),
+                                   std::abs(gpu_vertex.pz - source_vertex.pz))));
+    vertices_match = vertices_match &&
+                     std::memcmp(&gpu_vertex, &source_vertex,
+                                 sizeof(GreedyMeshVertex)) == 0;
+  }
+  if (vertex_ranges_readable)
+  {
+    record.renderer_pixel_voxel_mesh_ray_gpu_vertices_readable = 1;
+    record.renderer_pixel_voxel_mesh_ray_gpu_vertices_match =
+        vertices_match ? 1u : 0u;
+    record.renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta =
+        max_position_delta;
+  }
+
+  if (pass.GpuCompactActive && pass.IndirectCmdsBuffer != 0 &&
+      command_slot <= std::numeric_limits<uint32_t>::max())
+  {
+    const uint64_t command_offset =
+        static_cast<uint64_t>(command_slot) *
+        sizeof(DrawElementsIndirectCommand);
+    DrawElementsIndirectCommand gpu_command{};
+    if (buffer_contains(pass.IndirectCmdsBuffer, command_offset,
+                        sizeof(gpu_command)))
+    {
+      glGetBufferSubData(GL_COPY_READ_BUFFER,
+                         static_cast<GLintptr>(command_offset),
+                         static_cast<GLsizeiptr>(sizeof(gpu_command)),
+                         &gpu_command);
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_readable = 1;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_count =
+          gpu_command.count;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_instances =
+          gpu_command.instanceCount;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_first_index =
+          gpu_command.firstIndex;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex =
+          gpu_command.baseVertex;
+      const bool command_matches =
+          gpu_command.count ==
+              static_cast<uint32_t>(std::max(0, gpu_batch->indexCountGl)) &&
+          gpu_command.instanceCount == gpu_batch->drawInstanceCount &&
+          gpu_command.firstIndex ==
+              gpu_batch->eboByteOffset / sizeof(uint32_t) &&
+          gpu_command.baseVertex ==
+              static_cast<int32_t>(gpu_batch->vboByteOffset /
+                                   sizeof(GreedyMeshVertex)) &&
+          gpu_command.baseInstance == 0;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_match =
+          command_matches ? 1u : 0u;
+    }
+  }
+  glBindBuffer(GL_COPY_READ_BUFFER,
+               static_cast<GLuint>(previous_copy_read_buffer));
+#endif
+}
+
+struct CurrentFaceLightSample
+{
+  bool valid{false};
+  uint8_t packed{0};
+  /// 0=face air, 1=horizontal fallback, 2=solid fallback.
+  uint8_t source{2};
+};
+
+glm::ivec3 GreedyFaceNormal(int face_index)
+{
+  switch (face_index)
+  {
+  case 0:
+    return {0, 0, 1};
+  case 1:
+    return {1, 0, 0};
+  case 2:
+    return {0, 0, -1};
+  case 3:
+    return {-1, 0, 0};
+  case 4:
+    return {0, 1, 0};
+  default:
+    return {0, -1, 0};
+  }
+}
+
+CurrentFaceLightSample SampleCurrentFaceLight(const UBlockWorld &world,
+                                             const glm::ivec3 &solid,
+                                             int face_index)
+{
+  const glm::ivec3 normal = GreedyFaceNormal(face_index);
+  const glm::ivec3 face_air = solid + normal;
+  bool any_loaded = false;
+  auto sample = [&](const glm::ivec3 &position)
+  {
+    const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(position);
+    const UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+    if (!chunk)
+    {
+      return uint8_t{0};
+    }
+    any_loaded = true;
+    return chunk->GetLightPackedLocal(UChunkManager::WorldToLocal(position));
+  };
+
+  const uint8_t face_light = sample(face_air);
+  if (face_light != 0)
+  {
+    return {any_loaded, face_light, 0};
+  }
+
+  static constexpr glm::ivec3 kHorizontalOffsets[] = {
+      {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+  uint8_t best_light = 0;
+  int best_sum = 0;
+  for (const glm::ivec3 &offset : kHorizontalOffsets)
+  {
+    const uint8_t packed = sample(face_air + offset);
+    const int sum = UnpackSky(packed) + UnpackBlock(packed);
+    if (sum > best_sum)
+    {
+      best_sum = sum;
+      best_light = packed;
+    }
+  }
+  if (best_light != 0)
+  {
+    return {any_loaded, best_light, 1};
+  }
+  return {any_loaded, sample(solid), 2};
+}
+
+ClosestTrianglePoint ClosestPointOnTriangle(const glm::vec3 &p,
+                                            const glm::vec3 &a,
+                                            const glm::vec3 &b,
+                                            const glm::vec3 &c)
+{
+  const glm::vec3 ab = b - a;
+  const glm::vec3 ac = c - a;
+  const glm::vec3 ap = p - a;
+  const float d1 = glm::dot(ab, ap);
+  const float d2 = glm::dot(ac, ap);
+  if (d1 <= 0.0f && d2 <= 0.0f)
+  {
+    return {a, glm::vec3(1.0f, 0.0f, 0.0f)};
+  }
+
+  const glm::vec3 bp = p - b;
+  const float d3 = glm::dot(ab, bp);
+  const float d4 = glm::dot(ac, bp);
+  if (d3 >= 0.0f && d4 <= d3)
+  {
+    return {b, glm::vec3(0.0f, 1.0f, 0.0f)};
+  }
+
+  const float vc = d1 * d4 - d3 * d2;
+  if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f)
+  {
+    const float v = d1 / (d1 - d3);
+    return {a + v * ab, glm::vec3(1.0f - v, v, 0.0f)};
+  }
+
+  const glm::vec3 cp = p - c;
+  const float d5 = glm::dot(ab, cp);
+  const float d6 = glm::dot(ac, cp);
+  if (d6 >= 0.0f && d5 <= d6)
+  {
+    return {c, glm::vec3(0.0f, 0.0f, 1.0f)};
+  }
+
+  const float vb = d5 * d2 - d1 * d6;
+  if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f)
+  {
+    const float w = d2 / (d2 - d6);
+    return {a + w * ac, glm::vec3(1.0f - w, 0.0f, w)};
+  }
+
+  const float va = d3 * d6 - d5 * d4;
+  if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f)
+  {
+    const float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+    return {b + w * (c - b), glm::vec3(0.0f, 1.0f - w, w)};
+  }
+
+  const float inverse_sum = 1.0f / (va + vb + vc);
+  const float v = vb * inverse_sum;
+  const float w = vc * inverse_sum;
+  return {a + ab * v + ac * w, glm::vec3(1.0f - v - w, v, w)};
+}
+
+void ConsiderGreedyVertexLightTriangle(const glm::vec3 &surface,
+                                       const GreedyMeshBatch &batch,
+                                       const GreedyMeshVertex &a,
+                                       const GreedyMeshVertex &b,
+                                       const GreedyMeshVertex &c,
+                                       GreedyVertexLightMatch &best,
+                                       int required_face_index = -1)
+{
+  const int face_index = static_cast<int>(a.faceIndex + 0.5f);
+  if (face_index < 0 || face_index >= 6 ||
+      static_cast<int>(b.faceIndex + 0.5f) != face_index ||
+      static_cast<int>(c.faceIndex + 0.5f) != face_index ||
+      (required_face_index >= 0 && face_index != required_face_index))
+  {
+    return;
+  }
+
+  const glm::vec3 pa(a.px, a.py, a.pz);
+  const glm::vec3 pb(b.px, b.py, b.pz);
+  const glm::vec3 pc(c.px, c.py, c.pz);
+  const ClosestTrianglePoint closest =
+      ClosestPointOnTriangle(surface, pa, pb, pc);
+  const float distance = glm::length(surface - closest.point);
+  if (!std::isfinite(distance) || distance >= best.distance)
+  {
+    return;
+  }
+
+  best.distance = distance;
+  best.surface = closest.point;
+  best.sky = a.skyLight * closest.barycentric.x +
+             b.skyLight * closest.barycentric.y +
+             c.skyLight * closest.barycentric.z;
+  best.block = a.blockLight * closest.barycentric.x +
+               b.blockLight * closest.barycentric.y +
+               c.blockLight * closest.barycentric.z;
+  best.preview = a.lightPreview * closest.barycentric.x +
+                 b.lightPreview * closest.barycentric.y +
+                 c.lightPreview * closest.barycentric.z;
+  best.wetness = a.wetness * closest.barycentric.x +
+                 b.wetness * closest.barycentric.y +
+                 c.wetness * closest.barycentric.z;
+  best.face_index = face_index;
+  best.block_id = batch.blockId;
+  best.valid = distance <= kOpaqueVertexLightMatchDistance;
+}
 
 float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
 {
-  float scale = env.WeatherSkyAttenuation;
-  if (env.PrecipitationIntensity > 0.05f)
+  return SkyLightScaleFromWeather(env.WeatherSkyAttenuation,
+                                  env.PrecipitationIntensity);
+}
+
+/// Per-chunk eased exit from the provisional light preview. The preview shows
+/// dark/unsettled meshes at an ambient floor; snapping from that floor to the
+/// real baked light read as a brightness blink on whole groups of blocks. The
+/// returned fade is 1 right after the chunk leaves preview and eases to 0.
+struct LightPreviewUniforms
+{
+  float override_value{0.0f};
+  float fade{0.0f};
+};
+
+long long gLightPreviewRawToggles = 0;
+long long gLightPreviewShownToggles = 0;
+
+LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
+                                                 glm::ivec3 coord)
+{
+  struct State
   {
-    scale *= 1.0f - std::clamp(env.PrecipitationIntensity, 0.0f, 1.0f) * 0.12f;
+    bool shown{false};        // preview state actually used for drawing
+    bool raw{false};          // last raw policy answer
+    double last_change{-1e9}; // when `shown` last changed
+    double pending_since{-1.0};
+    double fade_start{-1.0};
+  };
+  thread_local std::unordered_map<glm::ivec3, State, IVec3Hash> states;
+  thread_local uint64_t last_epoch = UINT64_MAX;
+  LightPreviewUniforms out;
+  if (!world)
+  {
+    return out;
   }
-  return std::clamp(scale, 0.82f, 1.0f);
+  static const auto t0 = std::chrono::steady_clock::now();
+  const double now =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t0)
+          .count();
+  const bool raw = world->ShouldDrawProvisionalLightPreview(coord);
+  const auto found = states.find(coord);
+  if (!raw && found == states.end())
+  {
+    return out; // never previewed: nothing to ease
+  }
+  if (states.size() > 8192)
+  {
+    states.clear();
+  }
+  const bool first_sight = states.find(coord) == states.end();
+  State &state = states[coord];
+  if (first_sight)
+  {
+    state.shown = raw;
+    state.raw = raw;
+    state.last_change = now;
+  }
+  // The preview policy follows repair ownership, which flips on and off while
+  // light/mesh work is scheduled around a chunk. Showing every flip makes the
+  // dark faces of the chunk (the only ones the preview changes) blink between
+  // their real level and the ambient floor. Debounce: a change must persist
+  // before it is applied and may not follow the previous change too quickly.
+  // A chunk that was never drawn before takes the raw value immediately.
+  if (raw != state.raw)
+  {
+    ++gLightPreviewRawToggles;
+    state.raw = raw;
+  }
+  if (raw == state.shown)
+  {
+    state.pending_since = -1.0;
+  }
+  else
+  {
+    if (state.pending_since < 0.0)
+    {
+      state.pending_since = now;
+    }
+    constexpr double kPersistSeconds = 0.5;
+    constexpr double kMinDwellSeconds = 0.75;
+    if (now - state.pending_since >= kPersistSeconds &&
+        now - state.last_change >= kMinDwellSeconds)
+    {
+      state.shown = raw;
+      state.last_change = now;
+      state.pending_since = -1.0;
+      ++gLightPreviewShownToggles;
+      state.fade_start = raw ? -1.0 : now;
+    }
+  }
+  const bool preview = state.shown;
+  out.override_value = preview ? 1.0f : 0.0f;
+  constexpr double kFadeSeconds = 0.6;
+  if (!preview && state.fade_start >= 0.0)
+  {
+    const double t = (now - state.fade_start) / kFadeSeconds;
+    out.fade = t >= 1.0 ? 0.0f : static_cast<float>(1.0 - t);
+  }
+  static const bool no_fade = std::getenv("CUBA_NO_PREVIEW_FADE") != nullptr;
+  if (no_fade)
+  {
+    out.fade = 0.0f;
+  }
+  (void)last_epoch;
+  return out;
+}
+
+void SetLightPreviewUniforms(const std::shared_ptr<UShaderProgram> &shader,
+                             const UWorld *world, glm::ivec3 coord)
+{
+  const LightPreviewUniforms u = ComputeLightPreviewUniforms(world, coord);
+  shader->SetFloat("uLightPreviewOverride", u.override_value);
+  shader->SetFloat("uLightPreviewFade", u.fade);
 }
 
 void ApplyGreedyEnvironmentUniformsToShader(
@@ -71,30 +1355,2775 @@ void ApplyGreedyEnvironmentUniformsToShader(
     const UWorld::EnvironmentState *env,
     const UWorld::LightingSettings *lighting)
 {
+  static constexpr const char *kNames[9] = {
+      "uEnvFogMultiplier", "uEnvMinAmbient",     "uEnvDayFactor",
+      "uEnvNightFactor",   "uEnvSkyLightScale",  "uEnvLightDebug",
+      "uEnvLightDebugMode", "uEnvPrecipIntensity", "uEnvWetness"};
+  float values[9];
   if (env && lighting)
   {
-    shader->SetFloat("uEnvFogMultiplier", env->WeatherFogMultiplier);
-    shader->SetFloat("uEnvMinAmbient", lighting->MinAmbient);
-    shader->SetFloat("uEnvDayFactor", env->DayNightFactor);
-    shader->SetFloat("uEnvNightFactor", env->MoonNightFactor);
-    shader->SetFloat("uEnvSkyLightScale", EnvironmentSkyLightScale(*env));
-    shader->SetFloat("uEnvLightDebug", lighting->DebugEnabled ? 1.0f : 0.0f);
-    shader->SetFloat("uEnvLightDebugMode",
-                     static_cast<float>(lighting->DebugMode));
-    shader->SetFloat("uEnvPrecipIntensity",
-                     std::clamp(env->PrecipitationIntensity, 0.0f, 1.0f));
-    shader->SetFloat("uEnvWetness", std::clamp(env->SurfaceWetness, 0.0f, 1.0f));
+    values[0] = env->WeatherFogMultiplier;
+    values[1] = lighting->MinAmbient;
+    values[2] = env->DayNightFactor;
+    values[3] = env->MoonNightFactor;
+    values[4] = EnvironmentSkyLightScale(*env);
+    values[5] = lighting->DebugEnabled ? 1.0f : 0.0f;
+    values[6] = static_cast<float>(lighting->DebugMode);
+    values[7] = std::clamp(env->PrecipitationIntensity, 0.0f, 1.0f);
+    values[8] = std::clamp(env->SurfaceWetness, 0.0f, 1.0f);
+  }
+  else
+  {
+    const float defaults[9] = {1.0f, 0.12f, 1.0f, 0.0f, 1.0f,
+                               0.0f, 0.0f,  0.0f, 0.0f};
+    std::copy(defaults, defaults + 9, values);
+  }
+  // This runs once per drawn chunk, but only the weather values vary between
+  // chunks (and often not at all). Every SetFloat builds a std::string and
+  // hashes it (profile: ~8% of the main thread), so only upload values that
+  // changed since this program last received them. These uniforms are written
+  // nowhere else.
+  struct Cached
+  {
+    GLuint program{0};
+    const UShaderProgram *owner{nullptr};
+    bool valid[9]{};
+    float value[9]{};
+  };
+  static Cached cache[8];
+  const GLuint program = shader->GetProgramID();
+  Cached *slot = nullptr;
+  for (Cached &entry : cache)
+  {
+    if (entry.owner == shader.get() && entry.program == program)
+    {
+      slot = &entry;
+      break;
+    }
+  }
+  if (!slot)
+  {
+    static size_t next_slot = 0;
+    slot = &cache[next_slot++ % 8];
+    *slot = Cached{};
+    slot->owner = shader.get();
+    slot->program = program;
+  }
+  for (int i = 0; i < 9; ++i)
+  {
+    if (!slot->valid[i] || slot->value[i] != values[i])
+    {
+      shader->SetFloat(kNames[i], values[i]);
+      slot->valid[i] = true;
+      slot->value[i] = values[i];
+    }
+  }
+}
+
+void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
+                               glm::ivec3 coord,
+                               const glm::vec3 &camera_position,
+                               uint8_t renderer_path,
+                               uint32_t cpu_index_count,
+                               uint32_t gpu_quad_count, bool draw_gate_ready)
+{
+  if (!draw_gate_ready)
+  {
+    world.NoteRendererDrawGateRejection(coord);
+  }
+  if (!UJobStageTrace::VisualBlackTraceEnabled())
+  {
     return;
   }
-  shader->SetFloat("uEnvFogMultiplier", 1.0f);
-  shader->SetFloat("uEnvMinAmbient", 0.12f);
-  shader->SetFloat("uEnvDayFactor", 1.0f);
-  shader->SetFloat("uEnvNightFactor", 0.0f);
-  shader->SetFloat("uEnvSkyLightScale", 1.0f);
-  shader->SetFloat("uEnvLightDebug", 0.0f);
-  shader->SetFloat("uEnvLightDebugMode", 0.0f);
-  shader->SetFloat("uEnvPrecipIntensity", 0.0f);
-  shader->SetFloat("uEnvWetness", 0.0f);
+
+  static uint64_t traced_epoch = UINT64_MAX;
+  static uint64_t last_sampled_epoch = 0;
+  static bool has_sampled_epoch = false;
+  static bool capture_this_epoch = false;
+  static int traced_ready_this_frame = 0;
+  static int traced_rejected_this_frame = 0;
+  const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
+  if (traced_epoch != frame_epoch)
+  {
+    traced_epoch = frame_epoch;
+    traced_ready_this_frame = 0;
+    traced_rejected_this_frame = 0;
+    // Sample every few render epochs rather than tracing every frame. The
+    // trace is opt-in and intended to cover a complete flight; an unsampled
+    // full-rate ring otherwise contains only the final seconds of the route.
+    constexpr uint64_t kRendererGateSampleStrideEpochs = 4;
+    capture_this_epoch =
+        !has_sampled_epoch ||
+        frame_epoch >= last_sampled_epoch + kRendererGateSampleStrideEpochs;
+    if (capture_this_epoch)
+    {
+      last_sampled_epoch = frame_epoch;
+      has_sampled_epoch = true;
+    }
+  }
+  if (!capture_this_epoch)
+  {
+    return;
+  }
+  constexpr int kMaxRendererGateTracesPerOutcomePerFrame = 4;
+  int &outcome_count =
+      draw_gate_ready ? traced_ready_this_frame : traced_rejected_this_frame;
+  if (outcome_count >= kMaxRendererGateTracesPerOutcomePerFrame)
+  {
+    return;
+  }
+  ++outcome_count;
+
+  VisualBlackTraceRecord record{};
+  record.sample_kind = 2;
+  record.cx = coord.x;
+  record.cy = coord.y;
+  record.cz = coord.z;
+  const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
+      world.GetPreferredLoadFocusBlock());
+  record.focus_cx = focus_chunk.x;
+  record.focus_cz = focus_chunk.z;
+  record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+  record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+  record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+  record.frame_epoch = frame_epoch;
+  record.renderer_path = renderer_path;
+  record.renderer_cpu_index_count = cpu_index_count;
+  record.renderer_gpu_quad_count = gpu_quad_count;
+  record.mesh_revision = cache.GetChunkMeshRevision(coord);
+  record.draw_gate_ready = draw_gate_ready ? 1u : 0u;
+  record.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+      coord, record.mesh_dirty_queue_index, record.mesh_dirty_queue_size);
+  record.mesh_dirty_queue_age_frames = cache.GetDirtyQueueAgeFrames(coord);
+  const double demand_sample_now_ms = VisualObligationNowMs();
+  const glm::ivec2 column_coord(coord.x, coord.z);
+  const bool drawable = cache.HasDrawableGreedyMesh(coord);
+  const bool satisfying = cache.HasMeshSatisfyingColumnReady(coord);
+  const bool live_gpu = cache.HasLiveGpuDraw(coord);
+  const bool fully_dark = cache.ChunkHasFullyDarkFace(coord);
+  const bool lit_drawable = cache.ChunkHasLitDrawableFace(coord);
+  const bool stale_dark = fully_dark && !lit_drawable &&
+                          cache.ChunkHasStaleDarkFaces(
+                              coord, world.GetBlockWorld());
+  const bool dirty = cache.IsChunkMeshDirty(coord);
+  const bool mesh_inflight = cache.HasInflightMeshBuild(coord);
+  const bool gpu_pending = cache.IsPendingGpuApply(coord);
+  const bool gpu_extract = cache.IsGpuExtractInFlight(coord);
+  const bool gpu_queued = cache.IsPendingGpuQueued(coord);
+  const bool gpu_kicked = cache.IsPendingGpuKickedOrDispatched(coord);
+  const bool pending_light = world.IsPendingLightBeforeMesh(column_coord);
+  const bool async_relight = world.IsAsyncRelightColumnInFlight(column_coord);
+  const bool sticky_remesh = world.IsColumnStickyRemesh(column_coord);
+  const bool repair_progress = world.ColumnHasRepairProgress(column_coord);
+  const ColumnRenderableState column_state =
+      world.GetColumnRenderableState(column_coord);
+  record.renderer_gate_flags =
+      (drawable ? (1u << 0) : 0u) |
+      (satisfying ? (1u << 1) : 0u) |
+      (live_gpu ? (1u << 2) : 0u) |
+      (fully_dark ? (1u << 3) : 0u) |
+      (lit_drawable ? (1u << 4) : 0u) |
+      (stale_dark ? (1u << 5) : 0u) |
+      (dirty ? (1u << 6) : 0u) |
+      (mesh_inflight ? (1u << 7) : 0u) |
+      (gpu_pending ? (1u << 8) : 0u) |
+      (gpu_extract ? (1u << 9) : 0u) |
+      (gpu_queued ? (1u << 10) : 0u) |
+      (gpu_kicked ? (1u << 11) : 0u) |
+      (pending_light ? (1u << 12) : 0u) |
+      (async_relight ? (1u << 13) : 0u) |
+      (sticky_remesh ? (1u << 14) : 0u) |
+      (repair_progress ? (1u << 15) : 0u) |
+      (column_state.draw_ok ? (1u << 16) : 0u) |
+      (column_state.has_repair_ticket ? (1u << 17) : 0u);
+  record.renderer_column_reason =
+      static_cast<uint8_t>(column_state.reason);
+  record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
+  record.renderer_column_has_repair_ticket =
+      column_state.has_repair_ticket ? 1u : 0u;
+  const bool relight_queued = world.IsTerrainColumnRelightQueued(column_coord);
+  const bool column_lit_ready = world.IsColumnLitReady(
+      glm::ivec3(column_coord.x, 0, column_coord.y));
+  const bool lit_gate_required = world.RequiresLightingLitGate();
+  record.relight_owner_flags =
+      (pending_light ? 1u << 0 : 0u) |
+      (relight_queued ? 1u << 1 : 0u) |
+      (async_relight ? 1u << 2 : 0u) |
+      (cache.IsDeferMeshUntilLit(coord) ? 1u << 3 : 0u) |
+      (cache.IsSoftDeferHeld(coord) ? 1u << 4 : 0u) |
+      (column_lit_ready ? 1u << 5 : 0u) |
+      (lit_gate_required ? 1u << 6 : 0u) |
+      (column_state.has_repair_ticket ? 1u << 7 : 0u);
+  world.PopulateRendererRelightQueueTrace(column_coord, record);
+  record.column_emerge_stage =
+      static_cast<uint8_t>(column_state.stage);
+  record.mesh_work_owner_flags =
+      (dirty ? 1u << 0 : 0u) |
+      (mesh_inflight ? 1u << 1 : 0u) |
+      (cache.IsRemeshAfterApplyPending(coord) ? 1u << 2 : 0u) |
+      (gpu_pending ? 1u << 3 : 0u) |
+      (gpu_queued ? 1u << 4 : 0u) |
+      (gpu_kicked ? 1u << 5 : 0u) |
+      (gpu_extract ? 1u << 6 : 0u) |
+      (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u);
+  const UChunk *chunk =
+      world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+  const ChunkRenderDemandRecord *slice_demand =
+      UChunkRenderDemandStore::Get().Find(coord);
+  if (chunk)
+  {
+    record.non_air_blocks = chunk->GetNonAirCount();
+    record.incarnation = chunk->GetIncarnation();
+    record.chunk_content_revision = chunk->GetContentRevision();
+    record.field_light_rev = chunk->GetLightFieldRevision();
+  }
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+  record.published_geom_rev = published.geom_rev;
+  record.published_light_rev = published.light_rev;
+  record.meshed_light_rev = cache.GetMeshedLightRevision(coord);
+  const uint64_t field_light_rev = chunk ? chunk->GetLightFieldRevision() : 0;
+  const bool demand_identity_current =
+      slice_demand && chunk &&
+      slice_demand->incarnation == chunk->GetIncarnation();
+  const bool demand_light_current =
+      !slice_demand ||
+      (demand_identity_current &&
+       slice_demand->desired_light_rev <= slice_demand->published_light_rev);
+  const bool settled_light_current =
+      demand_identity_current && slice_demand->has_settled_light &&
+      slice_demand->settled_light_rev == field_light_rev;
+  const bool provisional_preview =
+      world.ShouldDrawProvisionalLightPreview(coord);
+  const bool current_dark_image = CurrentDarkSliceImageMayDraw(
+      fully_dark, settled_light_current, stale_dark, demand_light_current,
+      field_light_rev, published.light_rev, record.meshed_light_rev);
+  record.renderer_gate_flags |=
+      (slice_demand && slice_demand->has_settled_light ? (1u << 18) : 0u) |
+      (settled_light_current ? (1u << 19) : 0u) |
+      (demand_light_current ? (1u << 20) : 0u) |
+      (current_dark_image ? (1u << 21) : 0u) |
+      (provisional_preview ? (1u << 22) : 0u);
+  if (slice_demand)
+  {
+    record.world_epoch = slice_demand->world_epoch;
+    record.demand_incarnation = slice_demand->incarnation;
+    record.attempt_id = slice_demand->has_active_attempt
+                            ? slice_demand->active_attempt_id
+                            : 0;
+    record.desired_geom_rev = slice_demand->desired_geom_rev;
+    record.desired_light_rev = slice_demand->desired_light_rev;
+    record.demand_published_geom_rev = slice_demand->published_geom_rev;
+    record.demand_published_light_rev = slice_demand->published_light_rev;
+    record.settled_light_rev = slice_demand->settled_light_rev;
+    record.has_settled_light = slice_demand->has_settled_light ? 1u : 0u;
+    record.active_stage = static_cast<uint8_t>(slice_demand->active_stage);
+    const bool has_attempt_timestamp =
+        slice_demand->has_active_attempt &&
+        slice_demand->attempt_created_ms > 0.0;
+    record.demand_attempt_age_ms =
+        has_attempt_timestamp
+            ? std::max(0.0, demand_sample_now_ms -
+                                slice_demand->attempt_created_ms)
+            : 0.0;
+    record.demand_progress_age_ms =
+        slice_demand->last_progress_ms > 0.0
+            ? std::max(0.0, demand_sample_now_ms -
+                                slice_demand->last_progress_ms)
+            : 0.0;
+  }
+  record.flags = 1u; // candidate was in the renderer's frustum list pre-gate.
+  UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
+  UJobStageTrace::NoteVisualBlack(record);
+}
+
+void CaptureTransparentPixelProbe(
+    UWorld &world, const UUnderwaterFogPass &fog_pass,
+    const UFluidSurfaceMap &fluid_map, const UChunkMeshCache &cache,
+    const std::vector<GreedyBatchRef> &opaque_refs,
+    const std::vector<GreedyBatchRef> &transparent_refs,
+    const std::vector<GreedyBatchRef> &ready_transparent_refs,
+    const GreedyGpuPassCache &mdi_opaque_pass,
+    const GreedyGpuPassCache &mdi_cutout_pass,
+    const GreedyGpuPassCache &mdi_transparent_pass,
+    const std::map<size_t, UTextureCube> &textures,
+    const glm::mat4 &view_projection, const glm::mat4 &view,
+    const glm::mat4 &projection, const glm::vec3 &camera_position,
+    uint64_t frame_epoch, const OpaquePixelProbeCapture &opaque_capture,
+    const std::vector<PackedOpaqueDrawTrace> &packed_draw_trace)
+{
+  const bool marker_mode =
+      DebugTransparentFragmentMarkerEnabled(camera_position);
+
+  GLint viewport[4] = {0, 0, 0, 0};
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  const int width = viewport[2];
+  const int height = viewport[3];
+  if (width <= 0 || height <= 0)
+  {
+    return;
+  }
+  const int rows = opaque_capture.rows > 0 ? opaque_capture.rows
+                                           : PixelProbeRows();
+  const bool screen_ray_aligned_rows =
+      opaque_capture.screen_ray_aligned_rows;
+
+  // Match the opaque-depth probe's active scanlines across the view.
+  std::vector<GLubyte> pixels(static_cast<size_t>(width) * rows * 4u);
+  std::vector<GLubyte> stencil_values(static_cast<size_t>(width) * rows,
+                                      255u);
+  for (int row = 0; row < rows; ++row)
+  {
+    const int local_y =
+        PixelProbeSampleY(row, height, rows, screen_ray_aligned_rows);
+    glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
+                 GL_UNSIGNED_BYTE,
+                 pixels.data() + static_cast<size_t>(row) * width * 4u);
+    glReadPixels(viewport[0], viewport[1] + local_y, width, 1,
+                 GL_STENCIL_INDEX, GL_UNSIGNED_BYTE,
+                 stencil_values.data() + static_cast<size_t>(row) * width);
+  }
+  ScreenRayTransform ray_transform{};
+  if (!BuildScreenRayTransform(view, projection, ray_transform))
+  {
+    return;
+  }
+  const float sea_plane_y =
+      static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
+  const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
+      world.GetPreferredLoadFocusBlock());
+  const auto &voxel_chunks = world.GetBlockWorld().GetChunkManager();
+  // This is an opt-in forensic probe. Limit GPU payload readbacks to three
+  // unique ray-mapped fluid chunks per capture; selection is based on CPU fluid
+  // surface geometry, not framebuffer color. The explicit checked bit is
+  // required because zero MDI fields on an unselected row mean "not sampled",
+  // not "no command".
+  std::unordered_set<glm::ivec3, IVec3Hash> payload_checked_chunks;
+  payload_checked_chunks.reserve(12);
+  std::unordered_set<glm::ivec3, IVec3Hash> opaque_ref_chunks;
+  std::unordered_set<glm::ivec3, IVec3Hash> transparent_ref_chunks;
+  std::unordered_set<glm::ivec3, IVec3Hash> packed_opaque_chunks;
+  std::unordered_set<glm::ivec3, IVec3Hash> packed_transparent_chunks;
+  opaque_ref_chunks.reserve(opaque_refs.size());
+  transparent_ref_chunks.reserve(transparent_refs.size());
+  for (const GreedyBatchRef &ref : opaque_refs)
+  {
+    opaque_ref_chunks.insert(ref.chunkCoord);
+  }
+  for (const GreedyBatchRef &ref : transparent_refs)
+  {
+    transparent_ref_chunks.insert(ref.chunkCoord);
+  }
+  for (const GpuPackedChunkRef &ref : cache.GetGpuPackedOpaqueRefs())
+  {
+    packed_opaque_chunks.insert(ref.chunkCoord);
+  }
+  for (const GpuPackedChunkRef &ref : cache.GetGpuPackedTransparentRefs())
+  {
+    packed_transparent_chunks.insert(ref.chunkCoord);
+  }
+
+  for (int row = 0; row < rows; ++row)
+  {
+    const int local_y =
+        PixelProbeSampleY(row, height, rows, screen_ray_aligned_rows);
+    const int columns = PixelProbeColumns();
+    for (int column = 0; column < columns; ++column)
+    {
+      const int local_x = PixelProbeSampleX(column, width);
+      const size_t pixel_offset =
+          (static_cast<size_t>(row) * static_cast<size_t>(width) +
+           static_cast<size_t>(local_x)) *
+          4u;
+      const uint32_t red = pixels[pixel_offset + 0];
+      const uint32_t green = pixels[pixel_offset + 1];
+      const uint32_t blue = pixels[pixel_offset + 2];
+      const uint32_t alpha = pixels[pixel_offset + 3];
+
+      VisualBlackTraceRecord record{};
+      record.sample_kind = 9;
+      record.frame_epoch = frame_epoch;
+      record.renderer_pixel_sample_time_ms = VisualObligationNowMs();
+      record.renderer_pixel_sample_steady_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now().time_since_epoch())
+              .count();
+      record.renderer_pixel_probe_id = opaque_capture.probe_id;
+      record.renderer_pixel_probe_trigger_flags =
+          opaque_capture.trigger_flags;
+      record.renderer_pixel_probe_event_frame_epoch =
+          opaque_capture.visual_hole_event_frame_epoch;
+      record.renderer_pixel_x = viewport[0] + local_x;
+      record.renderer_pixel_y = viewport[1] + local_y;
+      record.renderer_pixel_rgba = (red << 24u) | (green << 16u) |
+                                   (blue << 8u) | alpha;
+      const size_t sample =
+          static_cast<size_t>(row * columns + column);
+      record.renderer_pixel_pretransparent_rgba =
+          opaque_capture.rgba[sample];
+      record.renderer_pixel_pretransparent_depth =
+          opaque_capture.depth[sample];
+      record.renderer_pixel_stencil_index = stencil_values[
+          static_cast<size_t>(row) * static_cast<size_t>(width) +
+          static_cast<size_t>(local_x)];
+      const bool center_marker_visible =
+          red >= 240u && green <= 15u && blue >= 240u && alpha >= 240u;
+      // 2 is an internal sentinel for the normal-color sample: zero and one
+      // retain their meaning as marker miss/hit when diagnostic mode is on.
+      record.renderer_pixel_marker_visible =
+          marker_mode ? (center_marker_visible ? 1u : 0u) : 2u;
+
+      uint32_t tile_marker_pixels = 0;
+      uint32_t tile_pixel_count = 0;
+      const size_t scanline_offset =
+          static_cast<size_t>(row) * static_cast<size_t>(width) * 4u;
+      const int x0 = PixelProbeCenterEveryFrameEnabled()
+                         ? local_x
+                         : column * width / columns;
+      const int x1 = PixelProbeCenterEveryFrameEnabled()
+                         ? local_x + 1
+                         : (column + 1) * width / columns;
+      for (int px = x0; px < x1; ++px)
+      {
+        const size_t offset = scanline_offset + static_cast<size_t>(px) * 4u;
+        const uint8_t pr = pixels[offset + 0];
+        const uint8_t pg = pixels[offset + 1];
+        const uint8_t pb = pixels[offset + 2];
+        const uint8_t pa = pixels[offset + 3];
+        if (pr >= 240u && pg <= 15u && pb >= 240u && pa >= 240u)
+        {
+          ++tile_marker_pixels;
+        }
+        ++tile_pixel_count;
+      }
+      const float tile_coverage =
+          tile_pixel_count > 0
+              ? static_cast<float>(tile_marker_pixels) /
+                    static_cast<float>(tile_pixel_count)
+              : 0.0f;
+      const uint8_t coverage7 = static_cast<uint8_t>(
+          std::lround(std::clamp(tile_coverage, 0.0f, 1.0f) * 127.0f));
+      record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+      record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+      record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+      record.focus_cx = focus_chunk.x;
+      record.focus_cz = focus_chunk.z;
+      const UWorld::EnvironmentState &shader_env =
+          world.GetEnvironmentState();
+      const UWorld::LightingSettings &shader_lighting =
+          world.GetLightingSettings();
+      record.renderer_pixel_shader_min_ambient = shader_lighting.MinAmbient;
+      record.renderer_pixel_shader_day_factor = shader_env.DayNightFactor;
+      record.renderer_pixel_shader_night_factor = shader_env.MoonNightFactor;
+      record.renderer_pixel_shader_sky_scale =
+          EnvironmentSkyLightScale(shader_env);
+      record.renderer_pixel_shader_precipitation =
+          shader_env.PrecipitationIntensity;
+      record.renderer_pixel_shader_wetness = shader_env.SurfaceWetness;
+      record.renderer_pixel_shader_light_debug_mode =
+          shader_lighting.DebugMode;
+      const glm::vec3 &pixel_fog_color = fog_pass.GetFogColor();
+      record.renderer_pixel_fog_state_valid = 1;
+      record.renderer_pixel_fog_enabled =
+          fog_pass.GetFogEnabled() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_air_fog_enabled =
+          fog_pass.GetAirFogEnabled() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_fog_horizontal =
+          fog_pass.GetFogHorizontal() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_underwater_fog_enabled =
+          fog_pass.GetUnderwaterFogEnabled() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_underwater_fog_submerged =
+          fog_pass.GetUnderwaterFogSubmerged() > 0.5f ? 1u : 0u;
+
+      record.renderer_pixel_camera_pos_x = camera_position.x;
+      record.renderer_pixel_camera_pos_y = camera_position.y;
+      record.renderer_pixel_camera_pos_z = camera_position.z;
+      record.renderer_pixel_fog_start = fog_pass.GetFogStart();
+      record.renderer_pixel_fog_end = fog_pass.GetFogEnd();
+      record.renderer_pixel_fog_min_blend =
+          fog_pass.GetFogMinBlend();
+      record.renderer_pixel_fog_density = fog_pass.GetFogDensity();
+      record.renderer_pixel_fog_env_multiplier =
+          shader_env.WeatherFogMultiplier;
+      record.renderer_pixel_fog_color_r = pixel_fog_color.r;
+      record.renderer_pixel_fog_color_g = pixel_fog_color.g;
+      record.renderer_pixel_fog_color_b = pixel_fog_color.b;
+      const glm::vec3 &pixel_fog_target_color =
+          fog_pass.GetTargetFogColor();
+      record.renderer_pixel_fog_target_color_r = pixel_fog_target_color.r;
+      record.renderer_pixel_fog_target_color_g = pixel_fog_target_color.g;
+      record.renderer_pixel_fog_target_color_b = pixel_fog_target_color.b;
+      record.renderer_pixel_underwater_fog_start =
+          fog_pass.GetUnderwaterFogStart();
+      record.renderer_pixel_underwater_fog_end =
+          fog_pass.GetUnderwaterFogEnd();
+      record.renderer_pixel_underwater_fog_min_blend =
+          fog_pass.GetUnderwaterFogMinBlend();
+
+      const float ndc_x =
+          (static_cast<float>(local_x) + 0.5f) / static_cast<float>(width) *
+              2.0f -
+          1.0f;
+      const float ndc_y =
+          (static_cast<float>(local_y) + 0.5f) / static_cast<float>(height) *
+              2.0f -
+          1.0f;
+      CameraSpaceRay camera_ray{};
+      if (!ScreenNdcToCameraSpaceRay(ray_transform, ndc_x, ndc_y,
+                                     camera_ray))
+      {
+        continue;
+      }
+      const glm::vec3 voxel_ray_origin = camera_ray.origin;
+      const glm::vec3 voxel_ray_direction = camera_ray.direction;
+      record.renderer_pixel_ray_origin_x = voxel_ray_origin.x;
+      record.renderer_pixel_ray_origin_y = voxel_ray_origin.y;
+      record.renderer_pixel_ray_origin_z = voxel_ray_origin.z;
+      record.renderer_pixel_ray_direction_x = voxel_ray_direction.x;
+      record.renderer_pixel_ray_direction_y = voxel_ray_direction.y;
+      record.renderer_pixel_ray_direction_z = voxel_ray_direction.z;
+      const float voxel_ray_near_distance = camera_ray.near_distance;
+      const float opaque_depth = opaque_capture.depth[sample];
+      float opaque_hit_distance = -1.0f;
+      if (std::isfinite(opaque_depth) && opaque_depth >= 0.0f &&
+          opaque_depth < 0.999999f)
+      {
+        glm::vec3 opaque_view_point{};
+        glm::vec3 opaque_point{};
+        if (ScreenNdcDepthToCameraSpacePoint(
+                ray_transform, ndc_x, ndc_y, opaque_depth, opaque_view_point,
+                opaque_point))
+        {
+          opaque_hit_distance = camera_ray.perspective
+                                    ? glm::length(opaque_view_point)
+                                    : glm::dot(opaque_view_point -
+                                                   camera_ray.view_near,
+                                               camera_ray.view_direction);
+          record.renderer_pixel_opaque_hit_distance = opaque_hit_distance;
+          const glm::ivec3 opaque_cell(
+              static_cast<int>(std::floor(opaque_point.x)),
+              static_cast<int>(std::floor(opaque_point.y)),
+              static_cast<int>(std::floor(opaque_point.z)));
+          const glm::ivec3 opaque_chunk =
+              UChunkManager::WorldToChunk(opaque_cell);
+          record.renderer_pixel_opaque_surface_valid = 1;
+          record.renderer_pixel_opaque_surface_x = opaque_point.x;
+          record.renderer_pixel_opaque_surface_y = opaque_point.y;
+          record.renderer_pixel_opaque_surface_z = opaque_point.z;
+          record.renderer_pixel_opaque_chunk_x = opaque_chunk.x;
+          record.renderer_pixel_opaque_chunk_y = opaque_chunk.y;
+          record.renderer_pixel_opaque_chunk_z = opaque_chunk.z;
+          record.renderer_pixel_opaque_ref_flags =
+              (opaque_ref_chunks.count(opaque_chunk) != 0 ? 1u << 0 : 0u) |
+              (transparent_ref_chunks.count(opaque_chunk) != 0 ? 1u << 1
+                                                                : 0u) |
+              (packed_opaque_chunks.count(opaque_chunk) != 0 ? 1u << 2
+                                                             : 0u) |
+              (packed_transparent_chunks.count(opaque_chunk) != 0 ? 1u << 3
+                                                                  : 0u);
+          record.renderer_pixel_opaque_drawable =
+              cache.HasDrawableGreedyMesh(opaque_chunk) ? 1u : 0u;
+          record.renderer_pixel_opaque_draw_ready =
+              world.IsChunkSliceRenderReady(opaque_chunk) ? 1u : 0u;
+          record.renderer_pixel_opaque_live_gpu =
+              cache.HasLiveGpuDraw(opaque_chunk) ? 1u : 0u;
+          record.renderer_pixel_opaque_stale_light_remesh_pending =
+              cache.HasPendingStaleLightRemesh(opaque_chunk) ? 1u : 0u;
+          record.renderer_pixel_opaque_mesh_revision =
+              cache.GetChunkMeshRevision(opaque_chunk);
+          const MeshPublishRevs opaque_published =
+              cache.GetMeshPublishRevs(opaque_chunk);
+          record.renderer_pixel_opaque_published_geom_rev =
+              opaque_published.geom_rev;
+          record.renderer_pixel_opaque_published_light_rev =
+              opaque_published.light_rev;
+          record.renderer_pixel_opaque_meshed_light_rev =
+              cache.GetMeshedLightRevision(opaque_chunk);
+          record.renderer_pixel_opaque_preview_shader_override =
+              world.ShouldDrawProvisionalLightPreview(opaque_chunk) ? 1u : 0u;
+          if (const UChunk *opaque_chunk_data =
+                  world.GetBlockWorld().GetChunkManager().GetChunk(
+                      opaque_chunk))
+          {
+            record.renderer_pixel_opaque_incarnation =
+                opaque_chunk_data->GetIncarnation();
+            record.renderer_pixel_opaque_chunk_nonair =
+                opaque_chunk_data->GetNonAirCount();
+            record.renderer_pixel_opaque_chunk_content_revision =
+                opaque_chunk_data->GetContentRevision();
+            record.renderer_pixel_opaque_field_light_rev =
+                opaque_chunk_data->GetLightFieldRevision();
+          }
+
+          GreedyVertexLightMatch opaque_vertex_light{};
+          const glm::vec3 opaque_surface(opaque_point);
+          const auto collect_opaque_source =
+              [&](const std::vector<GreedyBatchRef> &refs)
+          {
+            for (const GreedyBatchRef &ref : refs)
+            {
+              if (ref.chunkCoord != opaque_chunk)
+              {
+                continue;
+              }
+              const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
+              if (!batch)
+              {
+                continue;
+              }
+              record.renderer_pixel_opaque_source_index_count +=
+                  static_cast<uint32_t>(batch->indices.size());
+              for (size_t index = 0; index + 2u < batch->indices.size();
+                   index += 3u)
+              {
+                const uint32_t ia = batch->indices[index];
+                const uint32_t ib = batch->indices[index + 1u];
+                const uint32_t ic = batch->indices[index + 2u];
+                if (ia >= batch->vertices.size() ||
+                    ib >= batch->vertices.size() ||
+                    ic >= batch->vertices.size())
+                {
+                  continue;
+                }
+                ConsiderGreedyVertexLightTriangle(
+                    opaque_surface, *batch, batch->vertices[ia],
+                    batch->vertices[ib], batch->vertices[ic],
+                    opaque_vertex_light);
+              }
+            }
+          };
+          collect_opaque_source(opaque_refs);
+          collect_opaque_source(transparent_refs);
+          if (std::isfinite(opaque_vertex_light.distance))
+          {
+            record.renderer_pixel_opaque_vertex_light_distance =
+                opaque_vertex_light.distance;
+          }
+          if (opaque_vertex_light.valid)
+          {
+            record.renderer_pixel_opaque_vertex_light_valid = 1;
+            record.renderer_pixel_opaque_vertex_light_block_id =
+                static_cast<int32_t>(opaque_vertex_light.block_id);
+            record.renderer_pixel_opaque_vertex_light_face_index =
+                opaque_vertex_light.face_index;
+            record.renderer_pixel_opaque_vertex_sky_light =
+                opaque_vertex_light.sky;
+            record.renderer_pixel_opaque_vertex_block_light =
+                opaque_vertex_light.block;
+            record.renderer_pixel_opaque_vertex_light_preview =
+                opaque_vertex_light.preview;
+            const glm::ivec3 face_normal =
+                GreedyFaceNormal(opaque_vertex_light.face_index);
+            // Voxel centers are integer coordinates. Move just inside the
+            // sampled face, then use the world's center-based block mapping;
+            // floor() alone assigns positive-normal faces to the previous cell.
+            const glm::vec3 face_interior =
+                opaque_vertex_light.surface -
+                glm::vec3(face_normal) * 0.501f;
+            const glm::ivec3 face_solid = WorldPosToBlock(face_interior);
+            const CurrentFaceLightSample live_face_light =
+                SampleCurrentFaceLight(world.GetBlockWorld(), face_solid,
+                                       opaque_vertex_light.face_index);
+            record.renderer_pixel_opaque_live_face_light_valid =
+                live_face_light.valid ? 1u : 0u;
+            record.renderer_pixel_opaque_live_face_light_packed =
+                live_face_light.packed;
+            record.renderer_pixel_opaque_live_face_light_source =
+                live_face_light.source;
+          }
+          if (const ChunkRenderDemandRecord *opaque_demand =
+                  UChunkRenderDemandStore::Get().Find(opaque_chunk))
+          {
+            record.renderer_pixel_opaque_world_epoch =
+                opaque_demand->world_epoch;
+            record.renderer_pixel_opaque_incarnation =
+                opaque_demand->incarnation;
+            record.renderer_pixel_opaque_demand_present = 1;
+            record.renderer_pixel_opaque_demand_has_active_attempt =
+                opaque_demand->has_active_attempt ? 1u : 0u;
+            record.renderer_pixel_opaque_demand_has_settled_light =
+                opaque_demand->has_settled_light ? 1u : 0u;
+            record.renderer_pixel_opaque_demand_active_stage =
+                static_cast<uint8_t>(opaque_demand->active_stage);
+            record.renderer_pixel_opaque_demand_desired_geom_rev =
+                opaque_demand->desired_geom_rev;
+            record.renderer_pixel_opaque_demand_published_geom_rev =
+                opaque_demand->published_geom_rev;
+            record.renderer_pixel_opaque_demand_desired_light_rev =
+                opaque_demand->desired_light_rev;
+            record.renderer_pixel_opaque_demand_published_light_rev =
+                opaque_demand->published_light_rev;
+            record.renderer_pixel_opaque_demand_settled_light_rev =
+                opaque_demand->settled_light_rev;
+            const double demand_now_ms = VisualObligationNowMs();
+            if (opaque_demand->has_active_attempt &&
+                opaque_demand->attempt_created_ms > 0.0)
+            {
+              record.renderer_pixel_opaque_demand_attempt_age_ms =
+                  std::max(0.0, demand_now_ms -
+                                    opaque_demand->attempt_created_ms);
+            }
+            if (opaque_demand->has_active_attempt &&
+                opaque_demand->last_progress_ms > 0.0)
+            {
+              record.renderer_pixel_opaque_demand_progress_age_ms =
+                  std::max(0.0, demand_now_ms - opaque_demand->last_progress_ms);
+            }
+          }
+
+          // Reuse the renderer-owner fields for the exact opaque depth-hit
+          // slice. Pixel kind 9 also samples the sea plane, so keep
+          // renderer_gate_flags reserved for its established sea-plane
+          // semantics and put opaque ownership only in these generic fields.
+          record.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+              opaque_chunk, record.mesh_dirty_queue_index,
+              record.mesh_dirty_queue_size);
+          record.mesh_dirty_queue_age_frames =
+              cache.GetDirtyQueueAgeFrames(opaque_chunk);
+          const glm::ivec2 opaque_column(opaque_chunk.x, opaque_chunk.z);
+          const bool opaque_dirty = cache.IsChunkMeshDirty(opaque_chunk);
+          const bool opaque_mesh_inflight =
+              cache.HasInflightMeshBuild(opaque_chunk);
+          const bool opaque_gpu_pending =
+              cache.IsPendingGpuApply(opaque_chunk);
+          const bool opaque_gpu_queued =
+              cache.IsPendingGpuQueued(opaque_chunk);
+          const bool opaque_gpu_kicked =
+              cache.IsPendingGpuKickedOrDispatched(opaque_chunk);
+          const bool opaque_gpu_extract =
+              cache.IsGpuExtractInFlight(opaque_chunk);
+          record.mesh_work_owner_flags =
+              (opaque_dirty ? 1u << 0 : 0u) |
+              (opaque_mesh_inflight ? 1u << 1 : 0u) |
+              (cache.IsRemeshAfterApplyPending(opaque_chunk) ? 1u << 2 : 0u) |
+              (opaque_gpu_pending ? 1u << 3 : 0u) |
+              (opaque_gpu_queued ? 1u << 4 : 0u) |
+              (opaque_gpu_kicked ? 1u << 5 : 0u) |
+              (opaque_gpu_extract ? 1u << 6 : 0u) |
+              (cache.HasPendingCaptureWork(opaque_chunk) ? 1u << 7 : 0u);
+          const bool opaque_pending_light =
+              world.IsPendingLightBeforeMesh(opaque_column);
+          const bool opaque_async_relight =
+              world.IsAsyncRelightColumnInFlight(opaque_column);
+          const ColumnRenderableState opaque_column_state =
+              world.GetColumnRenderableState(opaque_column);
+          const bool opaque_relight_queued =
+              world.IsTerrainColumnRelightQueued(opaque_column);
+          const bool opaque_lit_ready = world.IsColumnLitReady(
+              glm::ivec3(opaque_column.x, 0, opaque_column.y));
+          const bool opaque_lit_gate_required =
+              world.RequiresLightingLitGate();
+          record.relight_owner_flags =
+              (opaque_pending_light ? 1u << 0 : 0u) |
+              (opaque_relight_queued ? 1u << 1 : 0u) |
+              (opaque_async_relight ? 1u << 2 : 0u) |
+              (cache.IsDeferMeshUntilLit(opaque_chunk) ? 1u << 3 : 0u) |
+              (cache.IsSoftDeferHeld(opaque_chunk) ? 1u << 4 : 0u) |
+              (opaque_lit_ready ? 1u << 5 : 0u) |
+              (opaque_lit_gate_required ? 1u << 6 : 0u) |
+              (opaque_column_state.has_repair_ticket ? 1u << 7 : 0u);
+          world.PopulateRendererRelightQueueTrace(opaque_column, record);
+          record.column_emerge_stage =
+              static_cast<uint8_t>(opaque_column_state.stage);
+
+          const auto collect_depth_mdi_state =
+              [&](const GreedyGpuPassCache &pass, uint8_t pass_bit)
+          {
+            for (const GreedyGpuBatch &batch : pass.batches)
+            {
+              if (batch.chunkCoord != opaque_chunk || batch.indexCountGl <= 0)
+              {
+                continue;
+              }
+              record.renderer_pixel_opaque_mdi_resident_pass_flags |=
+                  pass_bit;
+              record.renderer_pixel_opaque_mdi_index_count +=
+                  static_cast<uint32_t>(batch.indexCountGl);
+              if (batch.drawInstanceCount == 0)
+              {
+                continue;
+              }
+              record.renderer_pixel_opaque_mdi_visible_pass_flags |=
+                  pass_bit;
+              record.renderer_pixel_opaque_mdi_visible_index_count +=
+                  static_cast<uint32_t>(batch.indexCountGl);
+            }
+          };
+          collect_depth_mdi_state(mdi_opaque_pass, 1u << 0);
+          collect_depth_mdi_state(mdi_cutout_pass, 1u << 1);
+          collect_depth_mdi_state(mdi_transparent_pass, 1u << 2);
+        }
+      }
+      if (glm::length(voxel_ray_direction) > 1e-6f)
+      {
+        const OpaqueVoxelRayWitness voxel_witness = TraceOpaqueVoxelRay(
+            world, voxel_ray_origin, voxel_ray_direction,
+            cache.MaxCullDistance());
+        record.renderer_pixel_voxel_ray_state = voxel_witness.state;
+        record.renderer_pixel_voxel_known_air_steps =
+            voxel_witness.known_air_unloaded_steps;
+        if (voxel_witness.state == 2)
+        {
+          record.renderer_pixel_voxel_unloaded_x =
+              voxel_witness.unloaded_cell.x;
+          record.renderer_pixel_voxel_unloaded_y =
+              voxel_witness.unloaded_cell.y;
+          record.renderer_pixel_voxel_unloaded_z =
+              voxel_witness.unloaded_cell.z;
+          const glm::ivec3 unloaded_chunk =
+              UChunkManager::WorldToChunk(voxel_witness.unloaded_cell);
+          record.renderer_pixel_voxel_unloaded_chunk_x = unloaded_chunk.x;
+          record.renderer_pixel_voxel_unloaded_chunk_y = unloaded_chunk.y;
+          record.renderer_pixel_voxel_unloaded_chunk_z = unloaded_chunk.z;
+          record.renderer_pixel_voxel_unloaded_distance =
+              voxel_witness.distance;
+        }
+        if (voxel_witness.state == 1)
+        {
+          record.renderer_pixel_voxel_hit_x = voxel_witness.block.x;
+          record.renderer_pixel_voxel_hit_y = voxel_witness.block.y;
+          record.renderer_pixel_voxel_hit_z = voxel_witness.block.z;
+
+          record.renderer_pixel_voxel_hit_block_id =
+              static_cast<int32_t>(voxel_witness.block_id);
+          record.renderer_pixel_voxel_previous_block_id =
+              static_cast<int32_t>(voxel_witness.previous_block_id);
+          record.renderer_pixel_voxel_entry_face =
+              voxel_witness.entry_face;
+          record.renderer_pixel_voxel_hit_distance = voxel_witness.distance;
+      // PERF holes: CPU recomputation of the shader's underwater fog inputs
+      // at the voxel hit position — attribution of the fog inversion.
+      if (const glm::vec3 hit_pos =
+              glm::vec3(record.renderer_pixel_voxel_hit_x,
+                        record.renderer_pixel_voxel_hit_y,
+                        record.renderer_pixel_voxel_hit_z);
+          record.renderer_pixel_voxel_hit_block_id > 0 &&
+          std::isfinite(hit_pos.x))
+      {
+        const float uw_start = fog_pass.GetUnderwaterFogStart();
+        const float uw_end = fog_pass.GetUnderwaterFogEnd();
+        const float uw_min_blend = fog_pass.GetUnderwaterFogMinBlend();
+        const bool submerged =
+            fog_pass.GetUnderwaterFogSubmerged() > 0.5f;
+        record.renderer_pixel_fog_submerged = submerged ? 1 : 0;
+        const auto &fluid_surface = *g_probe_fluid_map;
+        const int sx = static_cast<int>(std::floor(hit_pos.x));
+        const int sz = static_cast<int>(std::floor(hit_pos.z));
+        float sy = 1e9f;
+        bool sy_valid = false;
+        if (fluid_surface.SampleSurfaceWorld(
+                glm::ivec2(sx, sz), sy))
+        {
+          sy_valid = sy < 1e8f;
+        }
+        record.renderer_pixel_fog_sy_valid = sy_valid ? 1 : 0;
+        record.renderer_pixel_fog_sy = sy_valid ? sy : -1.0f;
+        const bool below = sy_valid && hit_pos.y < sy;
+        record.renderer_pixel_fog_fragment_below = below ? 1 : 0;
+        float factor = 0.0f;
+        if (below || submerged)
+        {
+          const float dist = submerged
+                                 ? glm::length(hit_pos - camera_position)
+                                 : (sy - hit_pos.y) /
+                                       std::max(
+                                           std::abs(glm::normalize(
+                                               hit_pos - camera_position)
+                                                        .y),
+                                           0.001f);
+          factor = glm::clamp(
+              (dist - uw_start) / std::max(uw_end - uw_start, 0.001f),
+              0.0f, 1.0f);
+          factor = std::max(factor, uw_min_blend);
+        }
+        record.renderer_pixel_fog_factor = factor;
+      }
+          const glm::ivec3 voxel_chunk =
+              UChunkManager::WorldToChunk(voxel_witness.block);
+          if (voxel_witness.entry_face < 6u)
+          {
+            const glm::vec3 expected_face_point =
+                glm::vec3(voxel_witness.block) +
+                glm::vec3(GreedyFaceNormal(voxel_witness.entry_face)) * 0.5f;
+            GreedyVertexLightMatch voxel_face_source{};
+            int matched_batch_index = -1;
+            float voxel_mesh_ray_distance =
+                std::numeric_limits<float>::infinity();
+            float voxel_mesh_ray_edge_margin = -1.0f;
+            size_t voxel_mesh_ray_index_offset =
+                std::numeric_limits<size_t>::max();
+            uint16_t voxel_mesh_ray_batch_index = 0;
+            const GreedyMeshBatch *voxel_mesh_ray_source_batch = nullptr;
+            std::array<uint32_t, 3> voxel_mesh_ray_source_indices{};
+            for (const GreedyBatchRef &ref : opaque_refs)
+            {
+              if (ref.chunkCoord != voxel_chunk ||
+                  ref.blockId != voxel_witness.block_id)
+              {
+                continue;
+              }
+              record.renderer_pixel_voxel_face_batch_ref = 1;
+              const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
+              if (!batch || batch->blockId != voxel_witness.block_id)
+              {
+                continue;
+              }
+              GreedyVertexLightMatch candidate{};
+              for (size_t index = 0; index + 2u < batch->indices.size();
+                   index += 3u)
+              {
+                const uint32_t ia = batch->indices[index];
+                const uint32_t ib = batch->indices[index + 1u];
+                const uint32_t ic = batch->indices[index + 2u];
+                if (ia >= batch->vertices.size() ||
+                    ib >= batch->vertices.size() ||
+                    ic >= batch->vertices.size())
+                {
+                  continue;
+                }
+                const GreedyMeshVertex &vertex_a = batch->vertices[ia];
+                const GreedyMeshVertex &vertex_b = batch->vertices[ib];
+                const GreedyMeshVertex &vertex_c = batch->vertices[ic];
+                const int triangle_face = static_cast<int>(std::lround(
+                    (vertex_a.faceIndex + vertex_b.faceIndex +
+                     vertex_c.faceIndex) /
+                    3.0f));
+                if (triangle_face ==
+                    static_cast<int>(voxel_witness.entry_face))
+                {
+                  RayTriangleHit ray_hit{};
+                  if (IntersectRayTriangle(
+                          voxel_ray_origin, voxel_ray_direction,
+                          glm::vec3(vertex_a.px, vertex_a.py, vertex_a.pz),
+                          glm::vec3(vertex_b.px, vertex_b.py, vertex_b.pz),
+                          glm::vec3(vertex_c.px, vertex_c.py, vertex_c.pz),
+                          ray_hit) &&
+                      std::abs(ray_hit.distance - voxel_witness.distance) <=
+                          0.05f &&
+                      ray_hit.distance < voxel_mesh_ray_distance)
+                  {
+                    voxel_mesh_ray_distance = ray_hit.distance;
+                    voxel_mesh_ray_edge_margin =
+                        std::min(ray_hit.barycentric.x,
+                                 std::min(ray_hit.barycentric.y,
+                                          ray_hit.barycentric.z));
+                    voxel_mesh_ray_index_offset = index;
+                    voxel_mesh_ray_batch_index = ref.batchIndex;
+                    voxel_mesh_ray_source_batch = batch;
+                    voxel_mesh_ray_source_indices = {ia, ib, ic};
+                  }
+                }
+                ConsiderGreedyVertexLightTriangle(
+                    expected_face_point, *batch, batch->vertices[ia],
+                    batch->vertices[ib], batch->vertices[ic], candidate,
+                    voxel_witness.entry_face);
+              }
+              if (candidate.distance < voxel_face_source.distance)
+              {
+                voxel_face_source = candidate;
+                matched_batch_index = static_cast<int>(ref.batchIndex);
+              }
+            }
+            if (std::isfinite(voxel_face_source.distance))
+            {
+              record.renderer_pixel_voxel_face_source_distance =
+                  voxel_face_source.distance;
+              record.renderer_pixel_voxel_face_source_valid =
+                  voxel_face_source.valid ? 1u : 0u;
+            }
+            const auto texture =
+                textures.find(static_cast<size_t>(voxel_witness.block_id));
+            if (texture != textures.end())
+            {
+              record.renderer_pixel_voxel_face_texture_id =
+                  texture->second.GetTextureId();
+              record.renderer_pixel_voxel_face_texture_ready =
+                  record.renderer_pixel_voxel_face_texture_id != 0 ? 1u : 0u;
+            }
+            if (matched_batch_index >= 0)
+            {
+              for (const GreedyGpuBatch &gpu : mdi_opaque_pass.batches)
+              {
+                if (gpu.chunkCoord != voxel_chunk ||
+                    gpu.blockId != voxel_witness.block_id ||
+                    gpu.batchIndex !=
+                        static_cast<uint16_t>(matched_batch_index))
+                {
+                  continue;
+                }
+                record.renderer_pixel_voxel_face_gpu_command =
+                    gpu.indexCountGl > 0 ? 1u : 0u;
+                record.renderer_pixel_voxel_face_gpu_pooled =
+                    gpu.pooled ? 1u : 0u;
+                record.renderer_pixel_voxel_face_gpu_index_count =
+                    static_cast<uint32_t>(std::max(0, gpu.indexCountGl));
+                record.renderer_pixel_voxel_face_gpu_instances =
+                    gpu.drawInstanceCount;
+                break;
+              }
+            }
+            if (std::isfinite(voxel_mesh_ray_distance))
+            {
+              record.renderer_pixel_voxel_mesh_ray_intersects = 1;
+              record.renderer_pixel_voxel_mesh_ray_distance =
+                  voxel_mesh_ray_distance;
+              const float sample_x =
+                  static_cast<float>(viewport[0] + local_x) + 0.5f;
+              const float sample_y =
+                  static_cast<float>(viewport[1] + local_y) + 0.5f;
+              const auto record_ray_projection_delta =
+                  [&](const glm::vec3 &point, float &delta_x,
+                      float &delta_y) {
+                    const glm::vec4 clip =
+                        view_projection * glm::vec4(point, 1.0f);
+                    if (std::abs(clip.w) <= 1e-6f)
+                    {
+                      return;
+                    }
+                    const float inverse_w = 1.0f / clip.w;
+                    const float projected_ndc_x = clip.x * inverse_w;
+                    const float projected_ndc_y = clip.y * inverse_w;
+                    const float projected_x =
+                        static_cast<float>(viewport[0]) +
+                        (projected_ndc_x + 1.0f) *
+                            static_cast<float>(width) * 0.5f;
+                    const float projected_y =
+                        static_cast<float>(viewport[1]) +
+                        (projected_ndc_y + 1.0f) *
+                            static_cast<float>(height) * 0.5f;
+                    delta_x = projected_x - sample_x;
+                    delta_y = projected_y - sample_y;
+                  };
+              record_ray_projection_delta(
+                  voxel_ray_origin +
+                      voxel_ray_direction * voxel_ray_near_distance,
+                  record.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x,
+                  record.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y);
+              record_ray_projection_delta(
+                  voxel_ray_origin +
+                      voxel_ray_direction * (voxel_ray_near_distance + 1.0f),
+                  record.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x,
+                  record.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y);
+              const glm::vec3 mesh_ray_hit_point =
+                  voxel_ray_origin +
+                  voxel_ray_direction * voxel_mesh_ray_distance;
+              const glm::vec4 projected_hit =
+                  view_projection * glm::vec4(mesh_ray_hit_point, 1.0f);
+              if (std::abs(projected_hit.w) > 1e-6f)
+              {
+                const float inverse_w = 1.0f / projected_hit.w;
+                const float projected_ndc_x = projected_hit.x * inverse_w;
+                const float projected_ndc_y = projected_hit.y * inverse_w;
+                const float projected_ndc_z = projected_hit.z * inverse_w;
+                const float projected_x =
+                    static_cast<float>(viewport[0]) +
+                    (projected_ndc_x + 1.0f) *
+                        static_cast<float>(width) * 0.5f;
+                const float projected_y =
+                    static_cast<float>(viewport[1]) +
+                    (projected_ndc_y + 1.0f) *
+                        static_cast<float>(height) * 0.5f;
+                const float projected_depth =
+                    projected_ndc_z * 0.5f + 0.5f;
+                record.renderer_pixel_voxel_mesh_ray_projected_valid = 1u;
+                record.renderer_pixel_voxel_mesh_ray_projected_x = projected_x;
+                record.renderer_pixel_voxel_mesh_ray_projected_y = projected_y;
+                record.renderer_pixel_voxel_mesh_ray_projected_depth =
+                    projected_depth;
+                record.renderer_pixel_voxel_mesh_ray_projected_delta_x =
+                    projected_x - (static_cast<float>(viewport[0] + local_x) +
+                                    0.5f);
+                record.renderer_pixel_voxel_mesh_ray_projected_delta_y =
+                    projected_y - (static_cast<float>(viewport[1] + local_y) +
+                                    0.5f);
+                if (std::isfinite(opaque_depth))
+                {
+                  record.renderer_pixel_voxel_mesh_ray_projected_depth_delta =
+                      projected_depth - opaque_depth;
+                  record.renderer_pixel_voxel_mesh_ray_projected_depth_would_pass =
+                      projected_depth < opaque_depth ? 1u : 0u;
+                }
+              }
+              record.renderer_pixel_voxel_mesh_ray_edge_margin =
+                  voxel_mesh_ray_edge_margin;
+              const glm::ivec3 face_normal =
+                  GreedyFaceNormal(voxel_witness.entry_face);
+              const bool camera_facing =
+                  glm::dot(voxel_ray_direction,
+                           glm::vec3(face_normal)) < -1e-5f;
+              record.renderer_pixel_voxel_mesh_ray_interior =
+                  camera_facing && voxel_mesh_ray_edge_margin >= 0.02f;
+              record.renderer_pixel_voxel_mesh_ray_gap =
+                  record.renderer_pixel_voxel_mesh_ray_interior &&
+                          (opaque_hit_distance < 0.0f ||
+                           opaque_hit_distance >
+                               voxel_mesh_ray_distance + 0.75f)
+                      ? 1u
+                      : 0u;
+              if (record.renderer_pixel_voxel_mesh_ray_gap &&
+                  PixelProbeGpuRangeWitnessEnabled() &&
+                  voxel_mesh_ray_source_batch &&
+                  voxel_mesh_ray_index_offset !=
+                      std::numeric_limits<size_t>::max())
+              {
+                CaptureGpuRangeWitness(
+                    mdi_opaque_pass, voxel_chunk, voxel_witness.block_id,
+                    voxel_mesh_ray_batch_index, *voxel_mesh_ray_source_batch,
+                    voxel_mesh_ray_index_offset,
+                    voxel_mesh_ray_source_indices, record);
+                CopyMatchingGpuOpaqueDrawStateWitness(
+                    frame_epoch, voxel_chunk, voxel_witness.block_id,
+                    voxel_mesh_ray_batch_index, record);
+              }
+            }
+          }
+          record.renderer_pixel_voxel_chunk_x = voxel_chunk.x;
+          record.renderer_pixel_voxel_chunk_y = voxel_chunk.y;
+          record.renderer_pixel_voxel_chunk_z = voxel_chunk.z;
+          const bool voxel_drawable =
+              cache.HasDrawableGreedyMesh(voxel_chunk);
+          const bool voxel_satisfying =
+              cache.HasMeshSatisfyingColumnReady(voxel_chunk);
+          const bool voxel_draw_ready =
+              world.IsChunkSliceRenderReady(voxel_chunk);
+          const bool voxel_live_gpu = cache.HasLiveGpuDraw(voxel_chunk);
+          record.renderer_pixel_voxel_chunk_render_flags =
+              (voxel_drawable ? 1u : 0u) |
+              (voxel_satisfying ? 1u << 1 : 0u) |
+              (voxel_draw_ready ? 1u << 2 : 0u) |
+              (voxel_live_gpu ? 1u << 3 : 0u);
+          record.renderer_pixel_voxel_chunk_ref_flags =
+              (opaque_ref_chunks.count(voxel_chunk) != 0 ? 1u << 0 : 0u) |
+              (transparent_ref_chunks.count(voxel_chunk) != 0 ? 1u << 1
+                                                               : 0u) |
+              (packed_opaque_chunks.count(voxel_chunk) != 0 ? 1u << 2
+                                                            : 0u) |
+              (packed_transparent_chunks.count(voxel_chunk) != 0 ? 1u << 3
+                                                                 : 0u);
+          record.renderer_pixel_voxel_chunk_gpu_slot_quad_count =
+              static_cast<uint32_t>(std::max(
+                  0, cache.QueryGreedyGpuQuadCount(voxel_chunk)));
+          record.renderer_pixel_voxel_chunk_mesh_revision =
+              cache.GetChunkMeshRevision(voxel_chunk);
+          const MeshPublishRevs voxel_published =
+              cache.GetMeshPublishRevs(voxel_chunk);
+          record.renderer_pixel_voxel_chunk_published_geom_rev =
+              voxel_published.geom_rev;
+          record.renderer_pixel_voxel_chunk_published_light_rev =
+              voxel_published.light_rev;
+          const UChunk *voxel_chunk_data = voxel_chunks.GetChunk(voxel_chunk);
+          if (voxel_chunk_data)
+          {
+            record.renderer_pixel_voxel_chunk_nonair =
+                static_cast<uint32_t>(voxel_chunk_data->GetNonAirCount());
+            record.renderer_pixel_voxel_chunk_field_light_rev =
+                voxel_chunk_data->GetLightFieldRevision();
+          }
+          UJobStageTrace::WatchVisualChunk(voxel_chunk.x, voxel_chunk.y,
+                                           voxel_chunk.z);
+          const glm::ivec2 voxel_column(voxel_chunk.x, voxel_chunk.z);
+          record.renderer_pixel_voxel_chunk_pending_light =
+              world.IsPendingLightBeforeMesh(voxel_column) ? 1u : 0u;
+          record.renderer_pixel_voxel_chunk_async_relight_inflight =
+              world.IsAsyncRelightColumnInFlight(voxel_column) ? 1u : 0u;
+          VisualBlackTraceRecord voxel_relight_trace{};
+          world.PopulateRendererRelightQueueTrace(voxel_column,
+                                                  voxel_relight_trace);
+          record.renderer_pixel_voxel_chunk_relight_queue_kind =
+              voxel_relight_trace.relight_queue_kind;
+          record.renderer_pixel_voxel_chunk_relight_y_band_defined =
+              voxel_relight_trace.relight_y_band_defined;
+          record.renderer_pixel_voxel_chunk_relight_queue_index =
+              voxel_relight_trace.relight_queue_index;
+          record.renderer_pixel_voxel_chunk_relight_queue_size =
+              voxel_relight_trace.relight_queue_size;
+          record.renderer_pixel_voxel_chunk_flow_ticket_flags =
+              voxel_relight_trace.column_flow_ticket_flags;
+          const ColumnRenderableState voxel_column_state =
+              world.GetColumnRenderableState(voxel_column);
+          record.renderer_pixel_voxel_chunk_column_reason =
+              static_cast<uint8_t>(voxel_column_state.reason);
+          int voxel_dirty_queue_index = -1;
+          int voxel_dirty_queue_size = 0;
+          record.renderer_pixel_voxel_chunk_dirty_queue_kind =
+              cache.GetDirtyQueueTrace(
+                  voxel_chunk, voxel_dirty_queue_index,
+                  voxel_dirty_queue_size);
+          record.renderer_pixel_voxel_chunk_dirty_queue_index =
+              voxel_dirty_queue_index;
+          record.renderer_pixel_voxel_chunk_dirty_queue_size =
+              voxel_dirty_queue_size;
+          record.renderer_pixel_voxel_chunk_dirty_queue_age_frames =
+              cache.GetDirtyQueueAgeFrames(voxel_chunk);
+          record.renderer_pixel_voxel_chunk_scheduled_this_frame =
+              cache.WasScheduledThisFrame(voxel_chunk) ? 1u : 0u;
+          record.renderer_pixel_voxel_chunk_work_owner_flags =
+              (cache.IsChunkMeshDirty(voxel_chunk) ? 1u : 0u) |
+              (cache.HasInflightMeshBuild(voxel_chunk) ? 1u << 1 : 0u) |
+              (cache.IsRemeshAfterApplyPending(voxel_chunk) ? 1u << 2 : 0u) |
+              (cache.IsPendingGpuApply(voxel_chunk) ? 1u << 3 : 0u) |
+              (cache.IsPendingGpuQueued(voxel_chunk) ? 1u << 4 : 0u) |
+              (cache.IsPendingGpuKickedOrDispatched(voxel_chunk) ? 1u << 5
+                                                                 : 0u) |
+              (cache.IsGpuExtractInFlight(voxel_chunk) ? 1u << 6 : 0u) |
+              (cache.HasPendingCaptureWork(voxel_chunk) ? 1u << 7 : 0u);
+          auto add_voxel_source_indices =
+              [&](const std::vector<GreedyBatchRef> &refs)
+          {
+            for (const GreedyBatchRef &ref : refs)
+            {
+              if (ref.chunkCoord != voxel_chunk)
+              {
+                continue;
+              }
+              if (const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref))
+              {
+                record.renderer_pixel_voxel_chunk_source_index_count +=
+                    static_cast<uint32_t>(batch->indices.size());
+              }
+            }
+          };
+          add_voxel_source_indices(opaque_refs);
+          add_voxel_source_indices(transparent_refs);
+          auto collect_voxel_mdi_state =
+              [&](const GreedyGpuPassCache &pass)
+          {
+            for (const GreedyGpuBatch &batch : pass.batches)
+            {
+              if (batch.chunkCoord != voxel_chunk || batch.indexCountGl <= 0)
+              {
+                continue;
+              }
+              ++record.renderer_pixel_voxel_chunk_mdi_command_count;
+              record.renderer_pixel_voxel_chunk_mdi_index_count +=
+                  static_cast<uint32_t>(batch.indexCountGl);
+              if (batch.drawInstanceCount != 0)
+              {
+                ++record.renderer_pixel_voxel_chunk_mdi_visible_command_count;
+                record.renderer_pixel_voxel_chunk_mdi_visible_index_count +=
+                    static_cast<uint32_t>(batch.indexCountGl);
+              }
+            }
+          };
+          collect_voxel_mdi_state(mdi_opaque_pass);
+          collect_voxel_mdi_state(mdi_cutout_pass);
+          collect_voxel_mdi_state(mdi_transparent_pass);
+          const auto packed_draw = std::find_if(
+              packed_draw_trace.begin(), packed_draw_trace.end(),
+              [&](const PackedOpaqueDrawTrace &entry)
+              { return entry.coord == voxel_chunk; });
+          if (packed_draw != packed_draw_trace.end())
+          {
+            record.renderer_pixel_voxel_chunk_packed_draw_selected =
+                packed_draw->selected;
+            record.renderer_pixel_voxel_chunk_packed_draw_path_ready =
+                packed_draw->draw_path_ready;
+            record.renderer_pixel_voxel_chunk_packed_slot_present =
+                packed_draw->slot_present;
+            record.renderer_pixel_voxel_chunk_packed_slice_ready =
+                packed_draw->slice_ready;
+            record.renderer_pixel_voxel_chunk_packed_opaque_range_count =
+                packed_draw->opaque_range_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_texture_ready_range_count =
+                    packed_draw->texture_ready_range_count;
+            record.renderer_pixel_voxel_chunk_packed_draw_call_count =
+                packed_draw->draw_call_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_missing_texture_entry_count =
+                    packed_draw->missing_texture_entry_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_zero_texture_id_range_count =
+                    packed_draw->zero_texture_id_range_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_first_opaque_range_block_id =
+                    packed_draw->first_opaque_range_block_id;
+            record
+                .renderer_pixel_voxel_chunk_packed_first_missing_texture_block_id =
+                    packed_draw->first_missing_texture_block_id;
+            record
+                .renderer_pixel_voxel_chunk_packed_first_zero_texture_id_block_id =
+                    packed_draw->first_zero_texture_id_block_id;
+            record.renderer_pixel_voxel_chunk_packed_slot_quad_count =
+                packed_draw->slot_quad_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_opaque_range_quad_count =
+                    packed_draw->opaque_range_quad_count;
+            record.renderer_pixel_voxel_chunk_packed_drawn_quad_count =
+                packed_draw->drawn_quad_count;
+            record.renderer_pixel_voxel_chunk_packed_drawn_index_count =
+                packed_draw->drawn_index_count;
+          }
+          if (const ChunkRenderDemandRecord *voxel_demand =
+                  UChunkRenderDemandStore::Get().Find(voxel_chunk);
+              voxel_demand && voxel_chunk_data &&
+              voxel_demand->incarnation ==
+                  voxel_chunk_data->GetIncarnation())
+          {
+            record.renderer_pixel_voxel_chunk_face_debt_mask =
+                voxel_demand->face_debt_mask;
+            record.renderer_pixel_voxel_chunk_demand_has_active_attempt =
+                voxel_demand->has_active_attempt ? 1u : 0u;
+            record.renderer_pixel_voxel_chunk_demand_active_stage =
+                static_cast<uint8_t>(voxel_demand->active_stage);
+            record.renderer_pixel_voxel_chunk_demand_desired_geom_rev =
+                voxel_demand->desired_geom_rev;
+            record.renderer_pixel_voxel_chunk_demand_desired_light_rev =
+                voxel_demand->desired_light_rev;
+            record.renderer_pixel_voxel_chunk_attempt_id =
+                voxel_demand->has_active_attempt
+                    ? voxel_demand->active_attempt_id
+                    : 0;
+            record.renderer_pixel_voxel_chunk_has_settled_light =
+                voxel_demand->has_settled_light ? 1u : 0u;
+            record.renderer_pixel_voxel_chunk_settled_light_rev =
+                voxel_demand->settled_light_rev;
+          }
+          record.renderer_pixel_voxel_chunk_defer_until_lit =
+              cache.IsDeferMeshUntilLit(voxel_chunk) ? 1u : 0u;
+          record.renderer_pixel_voxel_chunk_soft_defer_held =
+              cache.IsSoftDeferHeld(voxel_chunk) ? 1u : 0u;
+          // Compare the voxel witness against the opaque depth snapshot only.
+          // Transparent surfaces are drawn after that snapshot and may cover
+          // the pixel without appearing in opaque_hit_distance, so this flag
+          // is only an opaque-depth mismatch candidate until transparent
+          // coverage (or another nearer surface) has been ruled out.
+          record.renderer_pixel_voxel_ray_gap =
+              opaque_hit_distance < 0.0f ||
+                      opaque_hit_distance > voxel_witness.distance + 0.75f
+                  ? 1u
+                  : 0u;
+        }
+      }
+      if (camera_ray.segment_distance > 0.0f)
+      {
+        const glm::vec3 near_point = camera_ray.near_origin;
+        const glm::vec3 ray =
+            camera_ray.direction * camera_ray.segment_distance;
+        if (std::abs(ray.y) > 1e-6f)
+        {
+          const float t = (sea_plane_y - near_point.y) / ray.y;
+          if (t >= 0.0f && t <= 1.0f)
+          {
+            const glm::vec3 surface_point = near_point + ray * t;
+            record.renderer_pixel_surface_valid = 1;
+            record.renderer_pixel_surface_x = surface_point.x;
+            record.renderer_pixel_surface_y = surface_point.y;
+            record.renderer_pixel_surface_z = surface_point.z;
+            const glm::ivec3 surface_cell(
+                static_cast<int>(std::floor(surface_point.x)),
+                static_cast<int>(std::floor(surface_point.y)),
+                static_cast<int>(std::floor(surface_point.z)));
+            const glm::ivec3 surface_chunk =
+                UChunkManager::WorldToChunk(surface_cell);
+            record.cx = surface_chunk.x;
+            record.cy = surface_chunk.y;
+            record.cz = surface_chunk.z;
+            record.renderer_pixel_fluid_chunk_render_ready =
+                world.IsChunkSliceRenderReady(surface_chunk) ? 1u : 0u;
+
+            // Snapshot the exact ray-mapped slice lifecycle beside its pixel
+            // color. This makes a transient dark sample useful: it can be
+            // joined to the source chunk's current mesh/light/demand versions
+            // without borrowing state from a neighboring MDI candidate.
+            const UChunk *surface_chunk_data =
+                world.GetBlockWorld().GetChunkManager().GetChunk(surface_chunk);
+            if (surface_chunk_data)
+            {
+              record.non_air_blocks = surface_chunk_data->GetNonAirCount();
+              record.incarnation = surface_chunk_data->GetIncarnation();
+              record.chunk_content_revision =
+                  surface_chunk_data->GetContentRevision();
+              record.field_light_rev =
+                  surface_chunk_data->GetLightFieldRevision();
+            }
+            record.mesh_revision = cache.GetChunkMeshRevision(surface_chunk);
+            const MeshPublishRevs pixel_published =
+                cache.GetMeshPublishRevs(surface_chunk);
+            record.published_geom_rev = pixel_published.geom_rev;
+            record.published_light_rev = pixel_published.light_rev;
+            record.meshed_light_rev =
+                cache.GetMeshedLightRevision(surface_chunk);
+            record.draw_gate_ready =
+                world.IsChunkSliceRenderReady(surface_chunk) ? 1u : 0u;
+            const bool pixel_drawable =
+                cache.HasDrawableGreedyMesh(surface_chunk);
+            const bool pixel_satisfying =
+                cache.HasMeshSatisfyingColumnReady(surface_chunk);
+            const bool pixel_live_gpu = cache.HasLiveGpuDraw(surface_chunk);
+            const bool pixel_fully_dark =
+                cache.ChunkHasFullyDarkFace(surface_chunk);
+            const bool pixel_lit_drawable =
+                cache.ChunkHasLitDrawableFace(surface_chunk);
+            const bool pixel_stale_dark =
+                pixel_fully_dark && !pixel_lit_drawable &&
+                cache.ChunkHasStaleDarkFaces(surface_chunk,
+                                             world.GetBlockWorld());
+            const bool pixel_dirty = cache.IsChunkMeshDirty(surface_chunk);
+            const bool pixel_mesh_inflight =
+                cache.HasInflightMeshBuild(surface_chunk);
+            const bool pixel_gpu_pending =
+                cache.IsPendingGpuApply(surface_chunk);
+            const bool pixel_gpu_extract =
+                cache.IsGpuExtractInFlight(surface_chunk);
+            const bool pixel_gpu_queued =
+                cache.IsPendingGpuQueued(surface_chunk);
+            const bool pixel_gpu_kicked =
+                cache.IsPendingGpuKickedOrDispatched(surface_chunk);
+            const glm::ivec2 surface_column(surface_chunk.x, surface_chunk.z);
+            const bool pixel_pending_light =
+                world.IsPendingLightBeforeMesh(surface_column);
+            const bool pixel_async_relight =
+                world.IsAsyncRelightColumnInFlight(surface_column);
+            const bool pixel_sticky_remesh =
+                world.IsColumnStickyRemesh(surface_column);
+            const bool pixel_repair_progress =
+                world.ColumnHasRepairProgress(surface_column);
+            const ColumnRenderableState pixel_column_state =
+                world.GetColumnRenderableState(surface_column);
+            record.renderer_gate_flags =
+                (pixel_drawable ? (1u << 0) : 0u) |
+                (pixel_satisfying ? (1u << 1) : 0u) |
+                (pixel_live_gpu ? (1u << 2) : 0u) |
+                (pixel_fully_dark ? (1u << 3) : 0u) |
+                (pixel_lit_drawable ? (1u << 4) : 0u) |
+                (pixel_stale_dark ? (1u << 5) : 0u) |
+                (pixel_dirty ? (1u << 6) : 0u) |
+                (pixel_mesh_inflight ? (1u << 7) : 0u) |
+                (pixel_gpu_pending ? (1u << 8) : 0u) |
+                (pixel_gpu_extract ? (1u << 9) : 0u) |
+                (pixel_gpu_queued ? (1u << 10) : 0u) |
+                (pixel_gpu_kicked ? (1u << 11) : 0u) |
+                (pixel_pending_light ? (1u << 12) : 0u) |
+                (pixel_async_relight ? (1u << 13) : 0u) |
+                (pixel_sticky_remesh ? (1u << 14) : 0u) |
+                (pixel_repair_progress ? (1u << 15) : 0u) |
+                (pixel_column_state.draw_ok ? (1u << 16) : 0u) |
+                (pixel_column_state.has_repair_ticket ? (1u << 17) : 0u);
+            const ChunkRenderDemandRecord *pixel_demand =
+                UChunkRenderDemandStore::Get().Find(surface_chunk);
+            const bool pixel_demand_identity_current =
+                pixel_demand && surface_chunk_data &&
+                pixel_demand->incarnation ==
+                    surface_chunk_data->GetIncarnation();
+            const uint64_t pixel_field_light_rev =
+                surface_chunk_data
+                    ? surface_chunk_data->GetLightFieldRevision()
+                    : 0;
+            const bool pixel_demand_light_current =
+                !pixel_demand ||
+                (pixel_demand_identity_current &&
+                 pixel_demand->desired_light_rev <=
+                     pixel_demand->published_light_rev);
+            const bool pixel_settled_light_current =
+                pixel_demand_identity_current &&
+                pixel_demand->has_settled_light &&
+                pixel_demand->settled_light_rev == pixel_field_light_rev;
+            const bool pixel_current_dark_image = CurrentDarkSliceImageMayDraw(
+                pixel_fully_dark, pixel_settled_light_current,
+                pixel_stale_dark, pixel_demand_light_current,
+                pixel_field_light_rev, pixel_published.light_rev,
+                record.meshed_light_rev);
+            record.renderer_gate_flags |=
+                (pixel_demand && pixel_demand->has_settled_light
+                     ? (1u << 18)
+                     : 0u) |
+                (pixel_settled_light_current ? (1u << 19) : 0u) |
+                (pixel_demand_light_current ? (1u << 20) : 0u) |
+                (pixel_current_dark_image ? (1u << 21) : 0u) |
+                (world.ShouldDrawProvisionalLightPreview(surface_chunk)
+                     ? (1u << 22)
+                     : 0u);
+            if (pixel_demand)
+            {
+              record.world_epoch = pixel_demand->world_epoch;
+              record.demand_incarnation = pixel_demand->incarnation;
+              record.attempt_id = pixel_demand->has_active_attempt
+                                      ? pixel_demand->active_attempt_id
+                                      : 0;
+              record.desired_geom_rev = pixel_demand->desired_geom_rev;
+              record.desired_light_rev = pixel_demand->desired_light_rev;
+              record.desired_coverage_gen =
+                  pixel_demand->desired_coverage_gen;
+              record.demand_published_geom_rev =
+                  pixel_demand->published_geom_rev;
+              record.demand_published_light_rev =
+                  pixel_demand->published_light_rev;
+              record.demand_published_coverage_gen =
+                  pixel_demand->published_coverage_gen;
+              record.settled_light_rev = pixel_demand->settled_light_rev;
+              record.has_settled_light =
+                  pixel_demand->has_settled_light ? 1u : 0u;
+              record.active_stage =
+                  static_cast<uint8_t>(pixel_demand->active_stage);
+              const double demand_now_ms = VisualObligationNowMs();
+              if (pixel_demand->has_active_attempt &&
+                  pixel_demand->attempt_created_ms > 0.0)
+              {
+                record.demand_attempt_age_ms = std::max(
+                    0.0, demand_now_ms - pixel_demand->attempt_created_ms);
+              }
+              if (pixel_demand->has_active_attempt &&
+                  pixel_demand->last_progress_ms > 0.0)
+              {
+                record.demand_progress_age_ms = std::max(
+                    0.0, demand_now_ms - pixel_demand->last_progress_ms);
+              }
+            }
+            record.renderer_gpu_resident_marker =
+                cache.QueryGreedyGpuResident(surface_chunk) ? 1u : 0u;
+            record.renderer_gpu_slot_quad_count = static_cast<uint32_t>(
+                std::max(0, cache.QueryGreedyGpuQuadCount(surface_chunk)));
+
+            // Tie the sampled screen ray to the CPU source vertices for the
+            // exact fluid chunk slice under that ray. This distinguishes
+            // chunk-local vertex-light/material differences from missing
+            // transparent fragments in neighboring chunks.
+            float source_sky_min = std::numeric_limits<float>::infinity();
+            float source_sky_max = -std::numeric_limits<float>::infinity();
+            float source_block_min = std::numeric_limits<float>::infinity();
+            float source_block_max = -std::numeric_limits<float>::infinity();
+            GreedyVertexLightMatch fluid_vertex_light{};
+            for (const GreedyBatchRef &ref : transparent_refs)
+            {
+              if (ref.chunkCoord != surface_chunk ||
+                  world.GetBlockRegistry().GetRenderStyle(ref.blockId) !=
+                      BlockRenderStyle::Fluid)
+              {
+                continue;
+              }
+              ++record.renderer_pixel_fluid_raw_ref_count;
+              const GreedyMeshBatch *source = cache.TryGetGreedyBatch(ref);
+              if (!source)
+              {
+                continue;
+              }
+              for (size_t index = 0; index + 2u < source->indices.size();
+                   index += 3u)
+              {
+                const uint32_t ia = source->indices[index];
+                const uint32_t ib = source->indices[index + 1u];
+                const uint32_t ic = source->indices[index + 2u];
+                if (ia >= source->vertices.size() ||
+                    ib >= source->vertices.size() ||
+                    ic >= source->vertices.size())
+                {
+                  continue;
+                }
+                const float prior_triangle_distance =
+                    fluid_vertex_light.distance;
+                ConsiderGreedyVertexLightTriangle(
+                    surface_point, *source, source->vertices[ia],
+                    source->vertices[ib], source->vertices[ic],
+                    fluid_vertex_light, /*required_face_index=*/-1);
+                if (fluid_vertex_light.distance < prior_triangle_distance)
+                {
+                  record.renderer_pixel_fluid_source_batch_index =
+                      static_cast<int32_t>(ref.batchIndex);
+                }
+              }
+              const auto texture_it =
+                  textures.find(static_cast<size_t>(source->blockId));
+              if (record.renderer_mdi_first_block_id == 0xffffu)
+              {
+                record.renderer_mdi_first_block_id =
+                    static_cast<uint16_t>(source->blockId);
+                record.renderer_texture_ready =
+                    texture_it != textures.end() &&
+                            texture_it->second.GetTextureId() != 0
+                        ? 1u
+                        : 0u;
+              }
+              for (const GreedyMeshVertex &vertex : source->vertices)
+              {
+                const int face = static_cast<int>(vertex.faceIndex + 0.5f);
+                if (face < 0 || face >= 6)
+                {
+                  continue;
+                }
+                record.renderer_source_face_mask |=
+                    static_cast<uint8_t>(1u << face);
+                if (face != 4)
+                {
+                  continue;
+                }
+                ++record.renderer_source_vertex_count;
+                if (vertex.lightPreview > 0.5f)
+                {
+                  ++record.renderer_source_light_preview_vertices;
+                }
+                source_sky_min = std::min(source_sky_min, vertex.skyLight);
+                source_sky_max = std::max(source_sky_max, vertex.skyLight);
+                source_block_min =
+                    std::min(source_block_min, vertex.blockLight);
+                source_block_max =
+                    std::max(source_block_max, vertex.blockLight);
+              }
+            }
+            for (const GreedyBatchRef &ref : ready_transparent_refs)
+            {
+              if (ref.chunkCoord != surface_chunk ||
+                  world.GetBlockRegistry().GetRenderStyle(ref.blockId) !=
+                      BlockRenderStyle::Fluid)
+              {
+                continue;
+              }
+              ++record.renderer_pixel_fluid_ready_ref_count;
+              if (fluid_vertex_light.valid &&
+                  ref.blockId == fluid_vertex_light.block_id)
+              {
+                record.renderer_pixel_ready_fluid_triangle_match = 1;
+              }
+            }
+            if (record.renderer_source_vertex_count > 0)
+            {
+              record.renderer_source_top_face_quads =
+                  record.renderer_source_vertex_count / 4u;
+              record.renderer_source_index_count =
+                  record.renderer_source_top_face_quads * 6u;
+              record.renderer_source_sky_light_min = source_sky_min;
+              record.renderer_source_sky_light_max = source_sky_max;
+              record.renderer_source_block_light_min = source_block_min;
+              record.renderer_source_block_light_max = source_block_max;
+            }
+            if (std::isfinite(fluid_vertex_light.distance))
+            {
+              record.renderer_pixel_fluid_triangle_match =
+                  fluid_vertex_light.valid ? 1u : 0u;
+              record.renderer_pixel_fluid_triangle_distance =
+                  fluid_vertex_light.distance;
+              record.renderer_pixel_fluid_face_index =
+                  fluid_vertex_light.face_index;
+              record.renderer_pixel_fluid_block_id =
+                  static_cast<int32_t>(fluid_vertex_light.block_id);
+              record.renderer_pixel_fluid_sky_light =
+                  fluid_vertex_light.sky;
+              record.renderer_pixel_fluid_block_light =
+                  fluid_vertex_light.block;
+              record.renderer_pixel_fluid_light_preview =
+                  fluid_vertex_light.preview;
+              record.renderer_pixel_fluid_wetness =
+                  fluid_vertex_light.wetness;
+              // PERF holes: record the cell the fluid face is drawn against
+              // (one step out of the water along the face normal) — the
+              // mesher-vs-voxel-world resolution disagreement attribution.
+              if (fluid_vertex_light.face_index >= 0 &&
+                  fluid_vertex_light.face_index < 6)
+              {
+                const glm::vec3 face_normal =
+                    glm::vec3(ChunkMeshFaceNeighborDelta(
+                        fluid_vertex_light.face_index));
+                const glm::vec3 neighbor_pos =
+                    fluid_vertex_light.surface + face_normal * 0.5f;
+                const glm::ivec3 neighbor_cell =
+                    UChunkManager::WorldToChunk(
+                        glm::ivec3(glm::floor(neighbor_pos)));
+                if (const UChunk *neighbor_chunk =
+                        world.GetBlockWorld().GetChunkManager().GetChunk(
+                            neighbor_cell))
+                {
+                  const glm::ivec3 neighbor_local =
+                      UChunkManager::WorldToLocal(
+                          glm::ivec3(glm::floor(neighbor_pos)));
+                  record.renderer_pixel_fluid_face_neighbor_block =
+                      static_cast<int32_t>(
+                          neighbor_chunk->GetBlockLocal(neighbor_local));
+                  record.renderer_pixel_fluid_face_fluid_packed =
+                      static_cast<int32_t>(PackFluidCellState(
+                          neighbor_chunk->GetFluidLocal(neighbor_local)));
+                }
+              }
+            }
+
+            const uint32_t pretransparent_rgba =
+                record.renderer_pixel_pretransparent_rgba;
+            const uint32_t pretransparent_red =
+                (pretransparent_rgba >> 24u) & 0xffu;
+            const uint32_t pretransparent_green =
+                (pretransparent_rgba >> 16u) & 0xffu;
+            const uint32_t pretransparent_blue =
+                (pretransparent_rgba >> 8u) & 0xffu;
+            const bool transparent_pass_changed_pixel =
+                red != pretransparent_red || green != pretransparent_green ||
+                blue != pretransparent_blue;
+            const bool mapped_fluid_surface_candidate =
+                record.renderer_source_top_face_quads > 0u ||
+                transparent_pass_changed_pixel;
+            if (mapped_fluid_surface_candidate &&
+                record.renderer_mdi_first_block_id != 0xffffu &&
+                payload_checked_chunks.size() < 3u &&
+                payload_checked_chunks.insert(surface_chunk).second)
+            {
+              record.renderer_pixel_fluid_mdi_probe_checked = 1;
+              const BlockId source_block =
+                  record.renderer_pixel_fluid_block_id >= 0
+                      ? static_cast<BlockId>(
+                            record.renderer_pixel_fluid_block_id)
+                      : static_cast<BlockId>(record.renderer_mdi_first_block_id);
+              const GreedyMeshBatch *source_batch = nullptr;
+              const GreedyGpuBatch *gpu_batch = nullptr;
+              size_t gpu_batch_index = 0;
+              const GreedyGpuBatch *fallback_gpu_batch = nullptr;
+              size_t fallback_gpu_batch_index = 0;
+              for (size_t i = 0; i < mdi_transparent_pass.batches.size(); ++i)
+              {
+                const GreedyGpuBatch &candidate =
+                    mdi_transparent_pass.batches[i];
+                if (candidate.chunkCoord != surface_chunk ||
+                    candidate.blockId != source_block ||
+                    candidate.indexCountGl <= 0)
+                {
+                  continue;
+                }
+                if (fallback_gpu_batch == nullptr)
+                {
+                  fallback_gpu_batch = &candidate;
+                  fallback_gpu_batch_index = i;
+                }
+                for (const GreedyBatchRef &ref : transparent_refs)
+                {
+                  if (ref.chunkCoord != surface_chunk ||
+                      ref.batchIndex != candidate.batchIndex ||
+                      ref.blockId != source_block ||
+                      world.GetBlockRegistry().GetRenderStyle(ref.blockId) !=
+                          BlockRenderStyle::Fluid)
+                  {
+                    continue;
+                  }
+                  source_batch = cache.TryGetGreedyBatch(ref);
+                  if (!source_batch)
+                  {
+                    continue;
+                  }
+                  record.renderer_pixel_fluid_source_batch_index =
+                      static_cast<int32_t>(ref.batchIndex);
+                  gpu_batch = &candidate;
+                  gpu_batch_index = i;
+                  break;
+                }
+                if (gpu_batch != nullptr)
+                {
+                  break;
+                }
+              }
+              if (gpu_batch == nullptr && fallback_gpu_batch != nullptr)
+              {
+                gpu_batch = fallback_gpu_batch;
+                gpu_batch_index = fallback_gpu_batch_index;
+              }
+              if (source_batch)
+              {
+                record.renderer_pixel_fluid_source_vertex_count =
+                    static_cast<uint32_t>(source_batch->vertices.size());
+                record.renderer_pixel_fluid_source_index_count =
+                    static_cast<uint32_t>(source_batch->indices.size());
+              }
+
+              if (gpu_batch)
+              {
+                record.renderer_pixel_fluid_gpu_vertex_count =
+                    gpu_batch->vertexCount;
+                record.renderer_pixel_fluid_gpu_index_count =
+                    gpu_batch->indexCount;
+                record.renderer_pixel_fluid_gpu_index_count_gl =
+                    static_cast<uint32_t>(
+                        std::max(gpu_batch->indexCountGl, 0));
+                record.renderer_pixel_fluid_gpu_batch_index =
+                    static_cast<int32_t>(gpu_batch->batchIndex);
+                record.renderer_pixel_fluid_gpu_batch_vector_index =
+                    static_cast<int32_t>(gpu_batch_index);
+                record.renderer_pixel_fluid_gpu_vbo_byte_offset =
+                    static_cast<uint64_t>(gpu_batch->vboByteOffset);
+                record.renderer_pixel_fluid_gpu_ebo_byte_offset =
+                    static_cast<uint64_t>(gpu_batch->eboByteOffset);
+                record.renderer_pixel_fluid_gpu_compact_active =
+                    mdi_transparent_pass.GpuCompactActive ? 1u : 0u;
+                record.renderer_mdi_resident_pass_flags |= 1u << 2;
+                record.renderer_mdi_command_count = 1;
+                record.renderer_mdi_index_count =
+                    static_cast<uint32_t>(gpu_batch->indexCountGl);
+                if (gpu_batch->drawInstanceCount > 0)
+                {
+                  record.renderer_mdi_visible_pass_flags |= 1u << 2;
+                  record.renderer_mdi_visible_command_count = 1;
+                  record.renderer_mdi_visible_index_count =
+                      static_cast<uint32_t>(gpu_batch->indexCountGl);
+                }
+                record.renderer_mdi_first_block_id =
+                    static_cast<uint16_t>(gpu_batch->blockId);
+                record.renderer_mdi_payload_flags |= 1u << 0;
+                if (gpu_batch->pooled)
+                {
+                  record.renderer_mdi_payload_flags |= 1u << 1;
+                }
+                if (source_batch)
+                {
+                  record.renderer_pixel_fluid_payload_check_attempted = 1;
+                  record.renderer_mdi_payload_flags |= 1u << 2;
+                  const bool vertex_count_matches =
+                      gpu_batch->vertexCount == source_batch->vertices.size();
+                  const bool index_count_matches =
+                      gpu_batch->indexCount == source_batch->indices.size() &&
+                      gpu_batch->indexCountGl == static_cast<GLsizei>(
+                                                     source_batch->indices.size());
+                  record.renderer_pixel_fluid_vertex_count_matches =
+                      vertex_count_matches ? 1u : 0u;
+                  record.renderer_pixel_fluid_index_count_matches =
+                      index_count_matches ? 1u : 0u;
+                  const GLuint vertex_buffer = gpu_batch->pooled
+                                                   ? mdi_transparent_pass.poolVbo
+                                                   : gpu_batch->vbo;
+                  const GLuint index_buffer = gpu_batch->pooled
+                                                  ? mdi_transparent_pass.poolEbo
+                                                  : gpu_batch->ebo;
+                  GLint old_copy_read_buffer = 0;
+                  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING,
+                                &old_copy_read_buffer);
+                  if (vertex_count_matches && vertex_buffer != 0 &&
+                      !source_batch->vertices.empty())
+                  {
+                    std::vector<GreedyMeshVertex> gpu_vertices(
+                        source_batch->vertices.size());
+                    const GLintptr vertex_offset = gpu_batch->pooled
+                                                       ? static_cast<GLintptr>(
+                                                             gpu_batch->vboByteOffset)
+                                                       : 0;
+                    glBindBuffer(GL_COPY_READ_BUFFER, vertex_buffer);
+                    GLint64 vertex_buffer_size = 0;
+                    glGetBufferParameteri64v(GL_COPY_READ_BUFFER,
+                                             GL_BUFFER_SIZE,
+                                             &vertex_buffer_size);
+                    record.renderer_pixel_fluid_gpu_vbo_buffer_bytes =
+                        static_cast<uint64_t>(
+                            std::max<GLint64>(vertex_buffer_size, 0));
+                    const size_t vertex_read_bytes =
+                        gpu_vertices.size() * sizeof(GreedyMeshVertex);
+                    const bool vertex_readback_in_bounds =
+                        vertex_offset >= 0 && vertex_buffer_size >= 0 &&
+                        static_cast<uint64_t>(vertex_offset) <=
+                            static_cast<uint64_t>(vertex_buffer_size) &&
+                        vertex_read_bytes <=
+                            static_cast<uint64_t>(vertex_buffer_size) -
+                                static_cast<uint64_t>(vertex_offset);
+                    if (vertex_readback_in_bounds)
+                    {
+                      glGetBufferSubData(
+                          GL_COPY_READ_BUFFER, vertex_offset,
+                          static_cast<GLsizeiptr>(vertex_read_bytes),
+                          gpu_vertices.data());
+                      record.renderer_pixel_fluid_vertex_payload_readback_valid =
+                          1;
+                      if (std::memcmp(gpu_vertices.data(),
+                                      source_batch->vertices.data(),
+                                      vertex_read_bytes) == 0)
+                      {
+                        record.renderer_pixel_fluid_vertex_payload_matches = 1;
+                        record.renderer_mdi_payload_flags |= 1u << 3;
+                      }
+                      else
+                      {
+                        const auto *gpu_bytes =
+                            reinterpret_cast<const unsigned char *>(
+                                gpu_vertices.data());
+                        const auto *source_bytes =
+                            reinterpret_cast<const unsigned char *>(
+                                source_batch->vertices.data());
+                        for (size_t byte = 0; byte < vertex_read_bytes; ++byte)
+                        {
+                          if (gpu_bytes[byte] != source_bytes[byte])
+                          {
+                            record.renderer_pixel_fluid_vertex_payload_first_mismatch_byte =
+                                static_cast<int32_t>(byte);
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }
+                  if (index_count_matches && index_buffer != 0 &&
+                      !source_batch->indices.empty())
+                  {
+                    std::vector<uint32_t> gpu_indices(
+                        source_batch->indices.size());
+                    const GLintptr index_offset = gpu_batch->pooled
+                                                      ? static_cast<GLintptr>(
+                                                            gpu_batch->eboByteOffset)
+                                                      : 0;
+                    glBindBuffer(GL_COPY_READ_BUFFER, index_buffer);
+                    GLint64 index_buffer_size = 0;
+                    glGetBufferParameteri64v(GL_COPY_READ_BUFFER,
+                                             GL_BUFFER_SIZE,
+                                             &index_buffer_size);
+                    record.renderer_pixel_fluid_gpu_ebo_buffer_bytes =
+                        static_cast<uint64_t>(
+                            std::max<GLint64>(index_buffer_size, 0));
+                    const size_t index_read_bytes =
+                        gpu_indices.size() * sizeof(uint32_t);
+                    const bool index_readback_in_bounds =
+                        index_offset >= 0 && index_buffer_size >= 0 &&
+                        static_cast<uint64_t>(index_offset) <=
+                            static_cast<uint64_t>(index_buffer_size) &&
+                        index_read_bytes <=
+                            static_cast<uint64_t>(index_buffer_size) -
+                                static_cast<uint64_t>(index_offset);
+                    if (index_readback_in_bounds)
+                    {
+                      glGetBufferSubData(
+                          GL_COPY_READ_BUFFER, index_offset,
+                          static_cast<GLsizeiptr>(index_read_bytes),
+                          gpu_indices.data());
+                      record.renderer_pixel_fluid_index_payload_readback_valid =
+                          1;
+                      if (std::memcmp(gpu_indices.data(),
+                                      source_batch->indices.data(),
+                                      index_read_bytes) == 0)
+                      {
+                        record.renderer_pixel_fluid_index_payload_matches = 1;
+                        record.renderer_mdi_payload_flags |= 1u << 4;
+                      }
+                      else
+                      {
+                        for (size_t index = 0; index < gpu_indices.size(); ++index)
+                        {
+                          if (gpu_indices[index] !=
+                              source_batch->indices[index])
+                          {
+                            record.renderer_pixel_fluid_index_payload_first_mismatch =
+                                static_cast<int32_t>(index);
+                            record.renderer_pixel_fluid_index_payload_source_value =
+                                source_batch->indices[index];
+                            record.renderer_pixel_fluid_index_payload_gpu_value =
+                                gpu_indices[index];
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }
+                  glBindBuffer(GL_COPY_READ_BUFFER,
+                               static_cast<GLuint>(old_copy_read_buffer));
+                }
+
+                if (gpu_batch->pooled && mdi_transparent_pass.GpuCompactActive &&
+                    mdi_transparent_pass.IndirectCmdsBuffer != 0)
+                {
+                  DrawElementsIndirectCommand command{};
+                  GLint old_copy_read_buffer = 0;
+                  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING,
+                                &old_copy_read_buffer);
+                  glBindBuffer(GL_COPY_READ_BUFFER,
+                               mdi_transparent_pass.IndirectCmdsBuffer);
+                  glGetBufferSubData(
+                      GL_COPY_READ_BUFFER,
+                      static_cast<GLintptr>(gpu_batch_index * sizeof(command)),
+                      static_cast<GLsizeiptr>(sizeof(command)), &command);
+                  glBindBuffer(GL_COPY_READ_BUFFER,
+                               static_cast<GLuint>(old_copy_read_buffer));
+                  record.renderer_mdi_command_flags |= 1u << 0;
+                  record.renderer_mdi_command_instance_count =
+                      command.instanceCount;
+                  record.renderer_mdi_command_first_index = command.firstIndex;
+                  record.renderer_mdi_command_base_vertex = command.baseVertex;
+                  const uint32_t expected_first_index = static_cast<uint32_t>(
+                      gpu_batch->eboByteOffset / sizeof(uint32_t));
+                  const int32_t expected_base_vertex = static_cast<int32_t>(
+                      gpu_batch->vboByteOffset / sizeof(GreedyMeshVertex));
+                  if (command.count ==
+                              static_cast<uint32_t>(gpu_batch->indexCountGl) &&
+                      command.firstIndex == expected_first_index &&
+                      command.baseVertex == expected_base_vertex &&
+                      command.baseInstance == 0)
+                  {
+                    record.renderer_mdi_command_flags |= 1u << 1;
+                  }
+                  if (command.instanceCount == gpu_batch->drawInstanceCount)
+                  {
+                    record.renderer_mdi_command_flags |= 1u << 2;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      // Preserve the valid bit and pack seven bits of tile coverage in the
+      // upper bits; FramePerfMonitor emits both as separate JSON fields.
+      const uint8_t surface_valid =
+          record.renderer_pixel_surface_valid != 0 ? 1u : 0u;
+      record.renderer_pixel_surface_valid =
+          static_cast<uint8_t>(surface_valid | (coverage7 << 1u));
+      UJobStageTrace::NoteVisualBlack(record);
+    }
+  }
+}
+
+void NoteFrustumCoverageGaps(
+    UWorld &world, const UUnderwaterFogPass &fog_pass,
+    const UChunkMeshCache &cache, const Frustum &frustum,
+    const glm::vec3 &camera_position,
+    const std::vector<GreedyBatchRef> &opaque_refs,
+    const std::vector<GreedyBatchRef> &transparent_refs,
+    const std::vector<GreedyBatchRef> &ready_opaque_refs,
+    const std::vector<GreedyBatchRef> &ready_transparent_refs,
+    GreedyGpuPassCache &mdi_opaque_pass,
+    GreedyGpuPassCache &mdi_cutout_pass,
+    GreedyGpuPassCache &mdi_transparent_pass,
+    UMdiVertexPoolStore *mdi_store,
+    const std::map<size_t, UTextureCube> &textures,
+    const glm::mat4 &view_projection, const glm::mat4 &view,
+    const glm::mat4 &projection,
+    const OpaquePixelProbeCapture &opaque_capture,
+    const std::vector<PackedOpaqueDrawTrace> &packed_draw_trace)
+{
+  if (!UJobStageTrace::VisualBlackTraceEnabled() || !opaque_capture.active)
+  {
+    return;
+  }
+  const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
+  // GPU compact culling keeps the SSBO result on-device and leaves the CPU
+  // mirror stale. On this opt-in diagnostic sample only, read back visibility
+  // so the trace reports the command that was actually submitted this frame.
+  if (mdi_store)
+  {
+    mdi_store->SyncCompactVisToCpu(mdi_opaque_pass);
+    mdi_store->SyncCompactVisToCpu(mdi_cutout_pass);
+    mdi_store->SyncCompactVisToCpu(mdi_transparent_pass);
+  }
+  CaptureTransparentPixelProbe(world, fog_pass, *g_probe_fluid_map, cache,
+                                 opaque_refs,
+                               transparent_refs, ready_transparent_refs,
+                               mdi_opaque_pass, mdi_cutout_pass,
+                               mdi_transparent_pass, textures,
+                               view_projection, view, projection,
+                               camera_position, frame_epoch,
+                               opaque_capture, packed_draw_trace);
+
+  std::unordered_set<glm::ivec3, IVec3Hash> draw_refs;
+  draw_refs.reserve(opaque_refs.size() + transparent_refs.size() +
+                    cache.GetGpuPackedOpaqueRefs().size() +
+                    cache.GetGpuPackedTransparentRefs().size());
+  std::unordered_set<glm::ivec3, IVec3Hash> cpu_refs;
+  cpu_refs.reserve(opaque_refs.size() + transparent_refs.size());
+  for (const GreedyBatchRef &ref : opaque_refs)
+  {
+    draw_refs.insert(ref.chunkCoord);
+    cpu_refs.insert(ref.chunkCoord);
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> ready_refs;
+  ready_refs.reserve(ready_opaque_refs.size() + ready_transparent_refs.size());
+  for (const GreedyBatchRef &ref : ready_opaque_refs)
+  {
+    ready_refs.insert(ref.chunkCoord);
+  }
+  for (const GreedyBatchRef &ref : ready_transparent_refs)
+  {
+    ready_refs.insert(ref.chunkCoord);
+  }
+  for (const GreedyBatchRef &ref : transparent_refs)
+  {
+    draw_refs.insert(ref.chunkCoord);
+    cpu_refs.insert(ref.chunkCoord);
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> packed_refs;
+  packed_refs.reserve(cache.GetGpuPackedOpaqueRefs().size() +
+                      cache.GetGpuPackedTransparentRefs().size());
+  const glm::ivec3 camera_chunk = UChunkManager::WorldToChunk(
+      glm::ivec3(static_cast<int>(std::floor(camera_position.x)),
+                 static_cast<int>(std::floor(camera_position.y)),
+                 static_cast<int>(std::floor(camera_position.z))));
+  for (const GpuPackedChunkRef &ref : cache.GetGpuPackedOpaqueRefs())
+  {
+    if (std::max(std::abs(ref.chunkCoord.x - camera_chunk.x),
+                 std::abs(ref.chunkCoord.z - camera_chunk.z)) >
+        kPackedNearHoriz)
+    {
+      continue;
+    }
+    draw_refs.insert(ref.chunkCoord);
+    packed_refs.insert(ref.chunkCoord);
+    if (world.IsChunkSliceRenderReady(ref.chunkCoord))
+    {
+      ready_refs.insert(ref.chunkCoord);
+    }
+  }
+  for (const GpuPackedChunkRef &ref : cache.GetGpuPackedTransparentRefs())
+  {
+    draw_refs.insert(ref.chunkCoord);
+    packed_refs.insert(ref.chunkCoord);
+    if (world.IsChunkSliceRenderReady(ref.chunkCoord))
+    {
+      ready_refs.insert(ref.chunkCoord);
+    }
+  }
+
+  struct PeakTarget
+  {
+    glm::ivec3 coord{0};
+    uint8_t sample_kind{0};
+  };
+  struct Candidate
+  {
+    glm::ivec3 coord{0};
+    // 1=no drawable mesh, 2=drawable mesh missing from CPU/packed refs,
+    // 3=CPU/packed ref rejected by render-ready gate, 4=ready ref sampled to
+    // inspect its actual MDI command after culling.
+    uint8_t state{0};
+    uint8_t peak_kind{0};
+    bool drawable{false};
+    bool exact_frustum{false};
+    bool resident{true};
+    float distance_sq{0.0f};
+  };
+  std::vector<Candidate> candidates;
+  candidates.reserve(64);
+  auto &chunks = world.GetBlockWorld().GetChunkManager();
+  uint32_t resident_non_air_chunk_count = 0;
+  uint32_t exact_frustum_candidate_count = 0;
+
+  struct PeakFrustumSummary
+  {
+    const Frustum *frustum{nullptr};
+    const glm::vec3 *camera_position{nullptr};
+    std::vector<PeakTarget> targets;
+    uint16_t no_drawable_count{0};
+    uint16_t no_drawable_in_view_count{0};
+    uint16_t unowned_count{0};
+    uint16_t unowned_in_view_count{0};
+  } peak_frustum_summary{&frustum, &camera_position};
+  const auto count_peak_frustum_membership =
+      [](const VisualBlackTraceRecord &peak, void *opaque)
+  {
+    auto *summary = static_cast<PeakFrustumSummary *>(opaque);
+    if (!summary || !summary->frustum || !summary->camera_position)
+    {
+      return;
+    }
+    const glm::ivec3 coord(peak.cx, peak.cy, peak.cz);
+    const bool in_exact_frustum = summary->frustum->IntersectsAABB(
+        ChunkAABBMin(coord), ChunkAABBMax(coord), *summary->camera_position);
+    if (peak.sample_kind == 12)
+    {
+      ++summary->no_drawable_count;
+      summary->no_drawable_in_view_count += in_exact_frustum;
+    }
+    else if (peak.sample_kind == 13)
+    {
+      ++summary->unowned_count;
+      summary->unowned_in_view_count += in_exact_frustum;
+    }
+    const auto existing = std::find_if(
+        summary->targets.begin(), summary->targets.end(),
+        [&](const PeakTarget &target) { return target.coord == coord; });
+    if (existing == summary->targets.end())
+    {
+      summary->targets.push_back({coord, peak.sample_kind});
+    }
+    else if (existing->sample_kind != 12 && peak.sample_kind == 12)
+    {
+      existing->sample_kind = peak.sample_kind;
+    }
+  };
+  UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
+      frame_epoch, count_peak_frustum_membership, &peak_frustum_summary);
+
+  chunks.ForEachChunk([&](const UChunk &chunk)
+  {
+    if (chunk.IsAirOnly() || chunk.GetNonAirCount() == 0)
+    {
+      return;
+    }
+    ++resident_non_air_chunk_count;
+    const glm::ivec3 coord = chunk.GetCoord();
+    // This probe answers whether geometry is actually inside the camera clip
+    // volume. The runtime chunk culler intentionally skips near/top/bottom
+    // planes and may admit by distance, which is useful for avoiding false
+    // negatives in draw submission but too permissive for a visual-gap census.
+    const bool exact_frustum = frustum.IntersectsAABB(
+        ChunkAABBMin(coord), ChunkAABBMax(coord), camera_position);
+    const auto peak_target = std::find_if(
+        peak_frustum_summary.targets.begin(), peak_frustum_summary.targets.end(),
+        [&](const PeakTarget &target) { return target.coord == coord; });
+    const uint8_t peak_kind = peak_target == peak_frustum_summary.targets.end()
+                                 ? 0u
+                                 : peak_target->sample_kind;
+    if (!exact_frustum && peak_kind == 0)
+    {
+      return;
+    }
+    if (exact_frustum)
+    {
+      ++exact_frustum_candidate_count;
+    }
+    const bool drawable = cache.HasDrawableGreedyMesh(coord);
+    const glm::vec3 center =
+        (ChunkAABBMin(coord) + ChunkAABBMax(coord)) * 0.5f;
+    const bool in_draw_refs = draw_refs.count(coord) != 0;
+    const bool in_ready_refs = ready_refs.count(coord) != 0;
+    const uint8_t state = in_ready_refs ? 4u
+                            : in_draw_refs ? 3u
+                            : drawable ? 2u
+                                        : 1u;
+    candidates.push_back({coord, state, peak_kind, drawable, exact_frustum,
+                          true,
+                          glm::dot(center - camera_position,
+                                   center - camera_position)});
+  });
+  for (const PeakTarget &target : peak_frustum_summary.targets)
+  {
+    const bool already_added = std::any_of(
+        candidates.begin(), candidates.end(),
+        [&](const Candidate &candidate) { return candidate.coord == target.coord; });
+    if (already_added)
+    {
+      continue;
+    }
+    const glm::vec3 center =
+        (ChunkAABBMin(target.coord) + ChunkAABBMax(target.coord)) * 0.5f;
+    candidates.push_back(
+        {target.coord, 0u, target.sample_kind, false,
+         frustum.IntersectsAABB(ChunkAABBMin(target.coord),
+                                ChunkAABBMax(target.coord), camera_position),
+         false,
+         glm::dot(center - camera_position, center - camera_position)});
+  }
+
+  constexpr size_t kMaxFrustumCoverageTraces = 12;
+  constexpr size_t kMaxFrustumCoverageTracesPerState = 3;
+  std::sort(candidates.begin(), candidates.end(),
+            [](const Candidate &a, const Candidate &b)
+            { return a.distance_sq < b.distance_sq; });
+  // Keep nearest examples from each pipeline failure stage. Without this
+  // quota, many draw-list gate rejects could starve samples where non-air
+  // voxel data has no drawable mesh at all.
+  std::array<size_t, 5> sampled_per_state{};
+  std::vector<Candidate> sampled_candidates;
+  sampled_candidates.reserve(kMaxFrustumCoverageTraces +
+                              peak_frustum_summary.targets.size());
+  size_t sampled_peak_target_count = 0;
+  for (const Candidate &candidate : candidates)
+  {
+    if (candidate.peak_kind == 0)
+    {
+      continue;
+    }
+    sampled_candidates.push_back(candidate);
+    ++sampled_peak_target_count;
+  }
+  for (const Candidate &candidate : candidates)
+  {
+    if (candidate.peak_kind != 0)
+    {
+      continue;
+    }
+    if (candidate.state == 0 || candidate.state >= sampled_per_state.size())
+    {
+      continue;
+    }
+    size_t &state_count = sampled_per_state[candidate.state];
+    if (state_count >= kMaxFrustumCoverageTracesPerState)
+    {
+      continue;
+    }
+    ++state_count;
+    sampled_candidates.push_back(candidate);
+    if (sampled_candidates.size() - sampled_peak_target_count >=
+        kMaxFrustumCoverageTraces)
+    {
+      break;
+    }
+  }
+  const size_t sampled_generic_candidate_count =
+      sampled_candidates.size() - sampled_peak_target_count;
+  const glm::ivec3 focus = UChunkManager::WorldToChunk(
+      world.GetPreferredLoadFocusBlock());
+
+  GLint viewport[4] = {0, 0, 0, 0};
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  const auto fill_projected_screen_rect = [&](const glm::ivec3 &coord,
+                                               VisualBlackTraceRecord &record)
+  {
+    record.renderer_viewport_width = viewport[2];
+    record.renderer_viewport_height = viewport[3];
+    const glm::vec3 aabb_min = ChunkAABBMin(coord);
+    const glm::vec3 aabb_max = ChunkAABBMax(coord);
+    float min_ndc_x = std::numeric_limits<float>::max();
+    float min_ndc_y = std::numeric_limits<float>::max();
+    float max_ndc_x = std::numeric_limits<float>::lowest();
+    float max_ndc_y = std::numeric_limits<float>::lowest();
+    for (int corner = 0; corner < 8; ++corner)
+    {
+      const glm::vec3 point((corner & 1) ? aabb_max.x : aabb_min.x,
+                            (corner & 2) ? aabb_max.y : aabb_min.y,
+                            (corner & 4) ? aabb_max.z : aabb_min.z);
+      const glm::vec4 clip = view_projection * glm::vec4(point, 1.0f);
+      if (!(clip.w > 1.0e-5f))
+      {
+        continue;
+      }
+      const float ndc_x = clip.x / clip.w;
+      const float ndc_y = clip.y / clip.w;
+      if (!std::isfinite(ndc_x) || !std::isfinite(ndc_y))
+      {
+        continue;
+      }
+      ++record.renderer_projected_corner_count;
+      min_ndc_x = std::min(min_ndc_x, ndc_x);
+      min_ndc_y = std::min(min_ndc_y, ndc_y);
+      max_ndc_x = std::max(max_ndc_x, ndc_x);
+      max_ndc_y = std::max(max_ndc_y, ndc_y);
+    }
+    if (record.renderer_projected_corner_count == 0 || viewport[2] <= 0 ||
+        viewport[3] <= 0 || max_ndc_x < -1.0f || min_ndc_x > 1.0f ||
+        max_ndc_y < -1.0f || min_ndc_y > 1.0f)
+    {
+      return;
+    }
+    min_ndc_x = std::clamp(min_ndc_x, -1.0f, 1.0f);
+    max_ndc_x = std::clamp(max_ndc_x, -1.0f, 1.0f);
+    min_ndc_y = std::clamp(min_ndc_y, -1.0f, 1.0f);
+    max_ndc_y = std::clamp(max_ndc_y, -1.0f, 1.0f);
+    record.renderer_projected_screen_min_x = viewport[0] + static_cast<int>(
+        std::floor((min_ndc_x * 0.5f + 0.5f) * viewport[2]));
+    record.renderer_projected_screen_max_x = viewport[0] + static_cast<int>(
+        std::ceil((max_ndc_x * 0.5f + 0.5f) * viewport[2]));
+    // Captured PNG coordinates use a top-left origin.
+    record.renderer_projected_screen_min_y = viewport[1] + static_cast<int>(
+        std::floor((1.0f - (max_ndc_y * 0.5f + 0.5f)) * viewport[3]));
+    record.renderer_projected_screen_max_y = viewport[1] + static_cast<int>(
+        std::ceil((1.0f - (min_ndc_y * 0.5f + 0.5f)) * viewport[3]));
+    record.renderer_projected_screen_rect_valid = 1u;
+  };
+
+  VisualBlackTraceRecord summary{};
+  summary.sample_kind = 15;
+  summary.focus_cx = focus.x;
+  summary.focus_cz = focus.z;
+  summary.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+  summary.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+  summary.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+  summary.frame_epoch = frame_epoch;
+  summary.renderer_cpu_index_count = resident_non_air_chunk_count;
+  summary.renderer_gpu_quad_count = exact_frustum_candidate_count;
+  summary.renderer_mdi_command_count = static_cast<uint16_t>(
+      std::min<size_t>(sampled_generic_candidate_count, 0xffffu));
+  summary.renderer_mdi_visible_command_count = static_cast<uint16_t>(
+      std::count_if(sampled_candidates.begin(), sampled_candidates.end(),
+                    [](const Candidate &candidate)
+                    { return candidate.peak_kind == 0 && candidate.drawable; }));
+  summary.frustum_peak_no_drawable_slice_count =
+      peak_frustum_summary.no_drawable_count;
+  summary.frustum_peak_no_drawable_in_view_count =
+      peak_frustum_summary.no_drawable_in_view_count;
+  summary.frustum_peak_unowned_slice_count = peak_frustum_summary.unowned_count;
+  summary.frustum_peak_unowned_in_view_count =
+      peak_frustum_summary.unowned_in_view_count;
+  summary.flags = opaque_capture.active ? 1u : 0u;
+  UJobStageTrace::NoteVisualBlack(summary);
+
+  for (const Candidate &candidate : sampled_candidates)
+  {
+    const glm::ivec3 coord = candidate.coord;
+    const UChunk *chunk = chunks.GetChunk(coord);
+    if (!chunk)
+    {
+      if (candidate.peak_kind != 0)
+      {
+        VisualBlackTraceRecord record{};
+        record.sample_kind = 16;
+        record.focus_state = candidate.state;
+        record.camera_band_peak_kind = candidate.peak_kind;
+        record.cx = coord.x;
+        record.cy = coord.y;
+        record.cz = coord.z;
+        record.focus_cx = focus.x;
+        record.focus_cz = focus.z;
+        record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+        record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+        record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+        record.frame_epoch = frame_epoch;
+        record.renderer_target_resident = 0u;
+        record.renderer_exact_frustum_intersects =
+            candidate.exact_frustum ? 1u : 0u;
+        fill_projected_screen_rect(coord, record);
+        UJobStageTrace::NoteVisualBlack(record);
+      }
+      continue;
+    }
+    const glm::ivec2 column(coord.x, coord.z);
+    const bool in_draw_refs = draw_refs.count(coord) != 0;
+    const bool in_cpu_refs = cpu_refs.count(coord) != 0;
+    const bool in_packed_refs = packed_refs.count(coord) != 0;
+    const bool satisfying = cache.HasMeshSatisfyingColumnReady(coord);
+    const bool draw_ready = ready_refs.count(coord) != 0;
+    const ColumnRenderableState column_state =
+        world.GetColumnRenderableState(column);
+
+    VisualBlackTraceRecord record{};
+    record.sample_kind = candidate.peak_kind == 0 ? 8u : 16u;
+    record.focus_state = candidate.state;
+    record.camera_band_peak_kind = candidate.peak_kind;
+    record.renderer_target_resident = 1u;
+    record.renderer_exact_frustum_intersects =
+        candidate.exact_frustum ? 1u : 0u;
+    record.cx = coord.x;
+    record.cy = coord.y;
+    record.cz = coord.z;
+    record.focus_cx = focus.x;
+    record.focus_cz = focus.z;
+    record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+    record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+    record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+    record.frame_epoch = frame_epoch;
+    record.stable_published_face_debt =
+        world.HasStablePublishedFaceDebt(coord) ? 1u : 0u;
+    if (candidate.peak_kind != 0)
+    {
+      fill_projected_screen_rect(coord, record);
+    }
+    record.non_air_blocks = chunk->GetNonAirCount();
+    record.chunk_content_revision = chunk->GetContentRevision();
+    record.incarnation = chunk->GetIncarnation();
+    record.mesh_revision = cache.GetChunkMeshRevision(coord);
+    record.draw_gate_ready = draw_ready ? 1u : 0u;
+    // Bit 0=drawable mesh, 1=column-satisfying mesh, 2=live GPU mesh,
+    // 3=prepared CPU ref, 4=passed the render-ready gate, 5=GPU-packed ref.
+    record.renderer_gate_flags = (candidate.drawable ? 1u : 0u) |
+                                 (satisfying ? 1u << 1 : 0u) |
+                                 (cache.HasLiveGpuDraw(coord) ? 1u << 2 : 0u) |
+                                 (in_cpu_refs ? 1u << 3 : 0u) |
+                                 (draw_ready ? 1u << 4 : 0u) |
+                                 (in_packed_refs ? 1u << 5 : 0u);
+    record.renderer_runtime_cull_visible =
+        frustum.IntersectsChunkAABB(ChunkAABBMin(coord), ChunkAABBMax(coord),
+                                    camera_position, cache.MaxCullDistance(),
+                                    cache.UseHorizontalCullDistance())
+            ? 1u
+            : 0u;
+    record.renderer_gpu_resident_marker =
+        cache.QueryGreedyGpuResident(coord) ? 1u : 0u;
+    record.renderer_gpu_slot_quad_count = static_cast<uint32_t>(
+        std::max(0, cache.QueryGreedyGpuQuadCount(coord)));
+    auto collect_mdi_state = [&](const GreedyGpuPassCache &pass,
+                                 uint8_t pass_bit)
+    {
+      for (const GreedyGpuBatch &batch : pass.batches)
+      {
+        if (batch.chunkCoord != coord || batch.indexCountGl <= 0)
+        {
+          continue;
+        }
+        record.renderer_mdi_resident_pass_flags |= pass_bit;
+        ++record.renderer_mdi_command_count;
+        record.renderer_mdi_index_count +=
+            static_cast<uint32_t>(batch.indexCountGl);
+        if (record.renderer_mdi_first_block_id == 0xffffu)
+        {
+          record.renderer_mdi_first_block_id =
+              static_cast<uint16_t>(batch.blockId);
+        }
+        if (batch.drawInstanceCount == 0)
+        {
+          continue;
+        }
+        record.renderer_mdi_visible_pass_flags |= pass_bit;
+        ++record.renderer_mdi_visible_command_count;
+        record.renderer_mdi_visible_index_count +=
+            static_cast<uint32_t>(batch.indexCountGl);
+      }
+    };
+    collect_mdi_state(mdi_opaque_pass, 1u << 0);
+    collect_mdi_state(mdi_cutout_pass, 1u << 1);
+    collect_mdi_state(mdi_transparent_pass, 1u << 2);
+    if (candidate.peak_kind == 0 &&
+        record.renderer_mdi_first_block_id != 0xffffu)
+    {
+      const auto texture_it = textures.find(
+          static_cast<size_t>(record.renderer_mdi_first_block_id));
+      record.renderer_texture_ready =
+          texture_it != textures.end() && texture_it->second.GetTextureId() != 0
+              ? 1u
+              : 0u;
+
+      bool has_source_vertex = false;
+      const GreedyMeshBatch *source_batch = nullptr;
+      auto collect_source_light = [&](const std::vector<GreedyBatchRef> &refs)
+      {
+        for (const GreedyBatchRef &ref : refs)
+        {
+          if (ref.chunkCoord != coord)
+          {
+            continue;
+          }
+          const GreedyMeshBatch *source = cache.TryGetGreedyBatch(ref);
+          if (!source ||
+              source->blockId !=
+                  static_cast<BlockId>(record.renderer_mdi_first_block_id))
+          {
+            continue;
+          }
+          if (!source_batch)
+          {
+            source_batch = source;
+          }
+          record.renderer_source_index_count +=
+              static_cast<uint32_t>(source->indices.size());
+          record.renderer_source_vertex_count +=
+              static_cast<uint32_t>(source->vertices.size());
+          for (const GreedyMeshVertex &vertex : source->vertices)
+          {
+            const int face = static_cast<int>(vertex.faceIndex + 0.5f);
+            if (face >= 0 && face < 6)
+            {
+              record.renderer_source_face_mask |=
+                  static_cast<uint8_t>(1u << face);
+              if (face == 4)
+              {
+                ++record.renderer_source_top_face_quads;
+              }
+            }
+            if (vertex.lightPreview > 0.5f)
+            {
+              ++record.renderer_source_light_preview_vertices;
+            }
+            if (!has_source_vertex)
+            {
+              record.renderer_source_sky_light_min = vertex.skyLight;
+              record.renderer_source_sky_light_max = vertex.skyLight;
+              record.renderer_source_block_light_min = vertex.blockLight;
+              record.renderer_source_block_light_max = vertex.blockLight;
+              has_source_vertex = true;
+            }
+            else
+            {
+              record.renderer_source_sky_light_min =
+                  std::min(record.renderer_source_sky_light_min,
+                           vertex.skyLight);
+              record.renderer_source_sky_light_max =
+                  std::max(record.renderer_source_sky_light_max,
+                           vertex.skyLight);
+              record.renderer_source_block_light_min =
+                  std::min(record.renderer_source_block_light_min,
+                           vertex.blockLight);
+              record.renderer_source_block_light_max =
+                  std::max(record.renderer_source_block_light_max,
+                           vertex.blockLight);
+            }
+          }
+        }
+      };
+      collect_source_light(opaque_refs);
+      collect_source_light(transparent_refs);
+      // In GreedyMesher's convention face 4 is +Y and face 5 is -Y. Each
+      // top-face quad contributes four source vertices. Store the actual
+      // quad count rather than vertex count so the JSON is easy to compare.
+      record.renderer_source_top_face_quads /= 4u;
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+      const GreedyGpuPassCache *payload_pass = nullptr;
+      const GreedyGpuBatch *payload_batch = nullptr;
+      size_t payload_index = 0;
+      auto find_payload_batch = [&](const GreedyGpuPassCache &pass)
+      {
+        for (size_t i = 0; i < pass.batches.size(); ++i)
+        {
+          const GreedyGpuBatch &batch = pass.batches[i];
+          if (batch.chunkCoord == coord && batch.indexCountGl > 0 &&
+              batch.blockId ==
+                  static_cast<BlockId>(record.renderer_mdi_first_block_id))
+          {
+            payload_pass = &pass;
+            payload_batch = &batch;
+            payload_index = i;
+            return true;
+          }
+        }
+        return false;
+      };
+      find_payload_batch(mdi_opaque_pass) ||
+          find_payload_batch(mdi_cutout_pass) ||
+          find_payload_batch(mdi_transparent_pass);
+      if (payload_pass && payload_batch)
+      {
+        record.renderer_mdi_payload_flags |= 1u << 0;
+        if (payload_batch->pooled)
+        {
+          record.renderer_mdi_payload_flags |= 1u << 1;
+        }
+        if (source_batch)
+        {
+          record.renderer_mdi_payload_flags |= 1u << 2;
+          const bool vertex_count_matches =
+              payload_batch->vertexCount == source_batch->vertices.size();
+          const bool index_count_matches =
+              payload_batch->indexCount == source_batch->indices.size() &&
+              payload_batch->indexCountGl ==
+                  static_cast<GLsizei>(source_batch->indices.size());
+          const GLuint vertex_buffer = payload_batch->pooled
+                                           ? payload_pass->poolVbo
+                                           : payload_batch->vbo;
+          const GLuint index_buffer = payload_batch->pooled
+                                          ? payload_pass->poolEbo
+                                          : payload_batch->ebo;
+          if (vertex_count_matches && vertex_buffer != 0 &&
+              !source_batch->vertices.empty())
+          {
+            std::vector<GreedyMeshVertex> gpu_vertices(
+                source_batch->vertices.size());
+            const GLintptr vertex_offset = payload_batch->pooled
+                                               ? static_cast<GLintptr>(
+                                                     payload_batch->vboByteOffset)
+                                               : 0;
+            GLint old_copy_read_buffer = 0;
+            glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy_read_buffer);
+            glBindBuffer(GL_COPY_READ_BUFFER, vertex_buffer);
+            glGetBufferSubData(
+                GL_COPY_READ_BUFFER, vertex_offset,
+                static_cast<GLsizeiptr>(gpu_vertices.size() *
+                                        sizeof(GreedyMeshVertex)),
+                gpu_vertices.data());
+            glBindBuffer(GL_COPY_READ_BUFFER,
+                         static_cast<GLuint>(old_copy_read_buffer));
+            if (std::memcmp(gpu_vertices.data(), source_batch->vertices.data(),
+                            gpu_vertices.size() * sizeof(GreedyMeshVertex)) ==
+                0)
+            {
+              record.renderer_mdi_payload_flags |= 1u << 3;
+            }
+          }
+          if (index_count_matches && index_buffer != 0 &&
+              !source_batch->indices.empty())
+          {
+            std::vector<uint32_t> gpu_indices(source_batch->indices.size());
+            const GLintptr index_offset = payload_batch->pooled
+                                              ? static_cast<GLintptr>(
+                                                    payload_batch->eboByteOffset)
+                                              : 0;
+            GLint old_copy_read_buffer = 0;
+            glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy_read_buffer);
+            glBindBuffer(GL_COPY_READ_BUFFER, index_buffer);
+            glGetBufferSubData(
+                GL_COPY_READ_BUFFER, index_offset,
+                static_cast<GLsizeiptr>(gpu_indices.size() * sizeof(uint32_t)),
+                gpu_indices.data());
+            glBindBuffer(GL_COPY_READ_BUFFER,
+                         static_cast<GLuint>(old_copy_read_buffer));
+            if (std::memcmp(gpu_indices.data(), source_batch->indices.data(),
+                            gpu_indices.size() * sizeof(uint32_t)) == 0)
+            {
+              record.renderer_mdi_payload_flags |= 1u << 4;
+            }
+          }
+        }
+
+        if (payload_batch->pooled && payload_pass->GpuCompactActive &&
+            payload_pass->IndirectCmdsBuffer != 0)
+        {
+          DrawElementsIndirectCommand command{};
+          GLint old_copy_read_buffer = 0;
+          glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy_read_buffer);
+          glBindBuffer(GL_COPY_READ_BUFFER,
+                       payload_pass->IndirectCmdsBuffer);
+          glGetBufferSubData(
+              GL_COPY_READ_BUFFER,
+              static_cast<GLintptr>(payload_index * sizeof(command)),
+              static_cast<GLsizeiptr>(sizeof(command)), &command);
+          glBindBuffer(GL_COPY_READ_BUFFER,
+                       static_cast<GLuint>(old_copy_read_buffer));
+          record.renderer_mdi_command_flags |= 1u << 0;
+          record.renderer_mdi_command_instance_count = command.instanceCount;
+          record.renderer_mdi_command_first_index = command.firstIndex;
+          record.renderer_mdi_command_base_vertex = command.baseVertex;
+          const uint32_t expected_first_index = static_cast<uint32_t>(
+              payload_batch->eboByteOffset / sizeof(uint32_t));
+          const int32_t expected_base_vertex = static_cast<int32_t>(
+              payload_batch->vboByteOffset / sizeof(GreedyMeshVertex));
+          if (command.count ==
+                  static_cast<uint32_t>(payload_batch->indexCountGl) &&
+              command.firstIndex == expected_first_index &&
+              command.baseVertex == expected_base_vertex &&
+              command.baseInstance == 0)
+          {
+            record.renderer_mdi_command_flags |= 1u << 1;
+          }
+          if (command.instanceCount == payload_batch->drawInstanceCount)
+          {
+            record.renderer_mdi_command_flags |= 1u << 2;
+          }
+        }
+      }
+#endif
+    }
+    record.renderer_column_reason =
+        static_cast<uint8_t>(column_state.reason);
+    record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
+    record.renderer_column_has_repair_ticket =
+        column_state.has_repair_ticket ? 1u : 0u;
+    const bool pending_light = world.IsPendingLightBeforeMesh(column);
+    const bool relight_queued = world.IsTerrainColumnRelightQueued(column);
+    const bool relight_inflight = world.IsAsyncRelightColumnInFlight(column);
+    const bool defer_until_lit = cache.IsDeferMeshUntilLit(coord);
+    const bool soft_defer_held = cache.IsSoftDeferHeld(coord);
+    const bool column_lit_ready = world.IsColumnLitReady(
+        glm::ivec3(column.x, 0, column.y));
+    const bool lit_gate_required = world.RequiresLightingLitGate();
+    record.relight_owner_flags =
+        (pending_light ? 1u << 0 : 0u) |
+        (relight_queued ? 1u << 1 : 0u) |
+        (relight_inflight ? 1u << 2 : 0u) |
+        (defer_until_lit ? 1u << 3 : 0u) |
+        (soft_defer_held ? 1u << 4 : 0u) |
+        (column_lit_ready ? 1u << 5 : 0u) |
+        (lit_gate_required ? 1u << 6 : 0u) |
+        (column_state.has_repair_ticket ? 1u << 7 : 0u);
+    const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+    record.column_flow_ticket_flags =
+        (flow_scheduler.Contains(column, ColumnWorkKind::RelightThenMesh)
+             ? 1u << 0
+             : 0u) |
+        (flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh)
+             ? 1u << 1
+             : 0u) |
+        (flow_scheduler.Contains(column, ColumnWorkKind::RemeshSeam)
+             ? 1u << 2
+             : 0u) |
+        (flow_scheduler.Contains(column, ColumnWorkKind::PromoteRelight)
+             ? 1u << 3
+             : 0u);
+    record.column_emerge_stage = static_cast<uint8_t>(column_state.stage);
+    const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+    record.published_geom_rev = published.geom_rev;
+    record.published_light_rev = published.light_rev;
+    record.meshed_light_rev = cache.GetMeshedLightRevision(coord);
+    record.field_light_rev = chunk->GetLightFieldRevision();
+    record.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+        coord, record.mesh_dirty_queue_index, record.mesh_dirty_queue_size);
+    record.mesh_dirty_queue_age_frames = cache.GetDirtyQueueAgeFrames(coord);
+    const double demand_sample_now_ms = VisualObligationNowMs();
+    if (const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(coord))
+    {
+      record.world_epoch = demand->world_epoch;
+      record.demand_incarnation = demand->incarnation;
+      record.attempt_id = demand->has_active_attempt
+                              ? demand->active_attempt_id
+                              : 0;
+      record.desired_geom_rev = demand->desired_geom_rev;
+      record.desired_light_rev = demand->desired_light_rev;
+      record.active_stage = static_cast<uint8_t>(demand->active_stage);
+      const bool has_attempt_timestamp =
+          demand->has_active_attempt && demand->attempt_created_ms > 0.0;
+      record.demand_attempt_age_ms =
+          has_attempt_timestamp
+              ? std::max(0.0, demand_sample_now_ms -
+                                  demand->attempt_created_ms)
+              : 0.0;
+      record.demand_progress_age_ms =
+          demand->last_progress_ms > 0.0
+              ? std::max(0.0, demand_sample_now_ms - demand->last_progress_ms)
+              : 0.0;
+    }
+    UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
+    UJobStageTrace::NoteVisualBlack(record);
+  }
 }
 
 } // namespace
@@ -104,12 +4133,85 @@ void UGeometryEngine::ApplyGreedyEnvironmentUniforms(
 {
   if (WorldInstance)
   {
+    UWorld::EnvironmentState local_env = WorldInstance->GetEnvironmentState();
+    if (const auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      const WeatherSample local_weather =
+          WorldInstance->SampleWeatherAt(camera->GetPosition());
+      local_env.Cloudiness = local_weather.CloudCoverage;
+      local_env.CloudCoverage = local_weather.CloudCoverage;
+      local_env.PrecipitationIntensity = local_weather.PrecipitationIntensity;
+      local_env.WindStrength = local_weather.WindStrength;
+      local_env.WindDirection = local_weather.WindDirection;
+      local_env.WeatherFogMultiplier = local_weather.FogFactor;
+      local_env.WeatherSkyAttenuation = local_weather.SkyLightAttenuation;
+      local_env.SurfaceWetness = local_weather.SurfaceWetness;
+    }
     ApplyGreedyEnvironmentUniformsToShader(
-        shader, &WorldInstance->GetEnvironmentState(),
-        &WorldInstance->GetLightingSettings());
+        shader, &local_env, &WorldInstance->GetLightingSettings());
     return;
   }
   ApplyGreedyEnvironmentUniformsToShader(shader, nullptr, nullptr);
+}
+
+void UGeometryEngine::ApplyGreedyChunkWeatherUniforms(
+    const std::shared_ptr<UShaderProgram> &shader, glm::ivec3 chunk_coord)
+{
+  if (!shader || !WorldInstance)
+  {
+    return;
+  }
+  const uint64_t epoch = WorldInstance->GetStreamingFrameEpoch();
+  // Weather varies smoothly: resample each chunk every 8 streaming epochs
+  // instead of every frame (SampleWeatherAt + state update were ~6% of the
+  // main thread with ~1000 chunks drawn).
+  const uint64_t frame = epoch >> 3;
+  if (!ChunkWeatherFrameValid || CachedChunkWeatherFrame != frame)
+  {
+    ChunkWeatherSamplesForFrame.clear();
+    CachedChunkWeatherFrame = frame;
+    ChunkWeatherFrameValid = true;
+  }
+  auto weather_it = ChunkWeatherSamplesForFrame.find(chunk_coord);
+  if (weather_it == ChunkWeatherSamplesForFrame.end())
+  {
+    const glm::vec3 sample_position =
+        glm::vec3(chunk_coord * CHUNK_SIZE + glm::ivec3(CHUNK_SIZE / 2));
+    const WeatherSample weather =
+        WorldInstance->SampleWeatherAt(sample_position);
+    WorldInstance->UpdateChunkWeatherState(chunk_coord, weather);
+    weather_it = ChunkWeatherSamplesForFrame.emplace(chunk_coord, weather).first;
+  }
+  const WeatherSample &weather = weather_it->second;
+
+  // The base environment is copied once per streaming epoch into a scratch
+  // object; only the weather fields below differ per chunk. Copying the whole
+  // (string/vector holding) state for every drawn chunk allocated each time.
+  thread_local UWorld::EnvironmentState local_env;
+  thread_local uint64_t scratch_epoch = UINT64_MAX;
+  thread_local const UWorld *scratch_owner = nullptr;
+  if (scratch_epoch != epoch || scratch_owner != WorldInstance.get())
+  {
+    local_env = WorldInstance->GetEnvironmentState();
+    scratch_epoch = epoch;
+    scratch_owner = WorldInstance.get();
+  }
+  local_env.Cloudiness = weather.CloudCoverage;
+  local_env.CloudCoverage = weather.CloudCoverage;
+  local_env.PrecipitationIntensity = weather.PrecipitationIntensity;
+  local_env.WindStrength = weather.WindStrength;
+  local_env.WindDirection = weather.WindDirection;
+  local_env.WeatherFogMultiplier = weather.FogFactor;
+  local_env.WeatherSkyAttenuation = weather.SkyLightAttenuation;
+  local_env.SurfaceWetness = weather.SurfaceWetness;
+  if (const UChunk *chunk = WorldInstance->GetBlockWorld()
+                                .GetChunkManager()
+                                .GetChunk(chunk_coord))
+  {
+    local_env.SurfaceWetness = chunk->GetSurfaceWetness();
+  }
+  ApplyGreedyEnvironmentUniformsToShader(
+      shader, &local_env, &WorldInstance->GetLightingSettings());
 }
 
 UGeometryEngine::UGeometryEngine(
@@ -122,8 +4224,11 @@ UGeometryEngine::UGeometryEngine(
       TextureBaseStorageInstance(texture_base_storage),
       TextureCubeStorageInstance(texture_cube_storage),
       textRenderer(text_renderer), skyColor(0.5f, 0.7f, 1.0f, 1.0f),
-      BaseSkyColor(0.5f, 0.7f, 1.0f), useGradientSky(true)
+      BaseSkyColor(0.5f, 0.7f, 1.0f),       useGradientSky(true)
 {
+  GreedyGpuOpaque.passId = GreedyGpuPassId::Opaque;
+  GreedyGpuCutout.passId = GreedyGpuPassId::Cutout;
+  GreedyGpuTransparent.passId = GreedyGpuPassId::Transparent;
 }
 
 UGeometryEngine::~UGeometryEngine()
@@ -131,9 +4236,12 @@ UGeometryEngine::~UGeometryEngine()
   DestroyCubeBuffers();
   DestroyFaceQuadBuffers();
   DestroyGreedyMeshBuffers();
-  FluidSurfaceMap.DestroyGpuResources();
+  FluidMap().DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
   WeatherPass.DestroyGpuResources();
+  BlockCrackPass.DestroyGpuResources();
+  BlockBreakFx.DestroyGpuResources();
+  InfluenceFx.DestroyGpuResources();
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
   CreatureDraw_.DestroyBuffers();
@@ -148,8 +4256,97 @@ void UGeometryEngine::SetCreatureTextureStorage(
   CreatureTextureStorage = std::move(storage);
 }
 
+void UGeometryEngine::EnsureRenderBackendsBound()
+{
+  if (!URenderBackendFactory::IsBound(RenderBackends))
+  {
+    RenderBackendCaps caps = GetActiveRenderBackendCaps();
+    if (!caps.ProbeCompleted)
+    {
+      // Bind before GL probe (tests / early init): keep platform defaults.
+      caps = DetectRenderBackendCaps();
+    }
+    AndroidGpuAllowlistConfig allowlist =
+        LoadAndroidGpuAllowlist("assets/config/android_gpu.json");
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+    // Prefer APK-extracted assets root when present.
+    {
+      const AndroidGpuAllowlistConfig from_assets =
+          LoadAndroidGpuAllowlist("config/android_gpu.json");
+      if (!from_assets.AllowRenderers.empty())
+      {
+        allowlist = from_assets;
+      }
+    }
+#endif
+    ApplyAndroidGpuPolicy(caps, Render.AndroidGpuEnabled, &allowlist);
+    SetActiveRenderBackendCaps(caps);
+    URenderBackendFactory::BindOnce(RenderBackends, caps);
+  }
+  if (!FluidSurfaceProvider)
+  {
+    FluidSurfaceProvider =
+        CreateFluidSurfaceProvider(GetActiveRenderBackendCaps());
+  }
+  if (WorldInstance && RenderBackends.Store)
+  {
+    bool prefer_patch = RenderBackends.Store->SupportsMultiDrawIndirect();
+    static const char *const prefer_patch_env =
+        std::getenv("CUBATARIUM_PREFER_GPU_STORE_PATCH");
+    if (const char *env = prefer_patch_env)
+    {
+      if (env[0] == '0')
+      {
+        prefer_patch = false;
+      }
+      else if (env[0] == '1')
+      {
+        prefer_patch = true;
+      }
+    }
+    WorldInstance->GetMeshService().SetPreferGpuStorePatch(prefer_patch);
+  }
+  if (WorldInstance)
+  {
+    auto &mesh = WorldInstance->GetMeshService();
+    mesh.SetCullBackend(RenderBackends.Cull.get());
+    mesh.SetMesherBackend(RenderBackends.Mesher.get());
+    // R03: bind before first packed CommitGpuMeshResult (not only first draw).
+    if (!PackedRepresentationSwitchBound_ && RenderBackends.Store)
+    {
+      mesh.GetCache().SetOnPackedRepresentationSwitchFn(
+          [this](glm::ivec3 coord)
+          {
+            MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
+            MeshStore().RemoveCoord(GreedyGpuCutout, coord);
+            MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
+          });
+      PackedRepresentationSwitchBound_ = true;
+    }
+  }
+}
+
+IUMeshGpuStore &UGeometryEngine::MeshStore()
+{
+  EnsureRenderBackendsBound();
+  return *RenderBackends.Store;
+}
+
 bool UGeometryEngine::InitEngine()
 {
+  EnsureRenderBackendsBound();
+  if (WorldInstance && !PackedRepresentationSwitchBound_)
+  {
+    WorldInstance->GetMeshService().GetCache().SetOnPackedRepresentationSwitchFn(
+        [this](glm::ivec3 coord)
+        {
+          MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
+          MeshStore().RemoveCoord(GreedyGpuCutout, coord);
+          MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
+        });
+    PackedRepresentationSwitchBound_ = true;
+  }
+
   // Initialize UShaderManager
   shaderManager = std::make_shared<UShaderManager>();
   if (!shaderManager->Initialize())
@@ -360,6 +4557,15 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
+  packedGreedyShader = shaderManager->CreateShader(
+      "packed_greedy", "shaders/vshader_packed_greedy.glsl",
+      "shaders/fshader_greedy.glsl");
+  if (!packedGreedyShader || !packedGreedyShader->IsValid())
+  {
+    std::cerr << "Failed to create packed greedy mesh shader" << std::endl;
+    return false;
+  }
+
   crossInstancedShader = shaderManager->CreateShader(
       "cross_instanced", "shaders/vshader_cross_instanced.glsl",
       "shaders/fshader_greedy.glsl");
@@ -391,12 +4597,34 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
+  // Cosmetic pass: crack falls back to wireframe when the shader is absent.
+  if (!BlockCrackPass.InitShader(shaderManager))
+  {
+    std::cerr << "Textured block crack disabled (shader load failed)"
+              << std::endl;
+  }
+  if (!BlockBreakFx.InitShaders(shaderManager))
+  {
+    std::cerr << "Block break debris disabled (shader load failed)"
+              << std::endl;
+  }
+  if (!InfluenceFx.InitShaders(shaderManager))
+  {
+    std::cerr << "Influence FX disabled (shader load failed)" << std::endl;
+  }
+
   return true;
 }
 
 void UGeometryEngine::Paint(int width_size, int height_size,
                             double view_duration)
 {
+  if (WorldInstance)
+  {
+    WorldInstance->GetPhysicsTelemetryMutable().GpuDrawCmds = 0;
+    WorldInstance->GetPhysicsTelemetryMutable().GpuCullIndirect = 0.0;
+    WorldInstance->GetPhysicsTelemetryMutable().GpuMeshVboDispatch = 0;
+  }
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     AnimationClock.Tick(static_cast<float>(camera->GetDeltaTime()));
@@ -416,7 +4644,19 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   RenderWeatherOverlay(width_size, height_size);
   if (ShowCrosshair)
   {
-    RenderCrosshair(width_size, height_size);
+    bool drawCrosshair = true;
+    if (WorldInstance)
+    {
+      if (auto camera = WorldInstance->GetCurrentUserCamera())
+      {
+        // Isometric aims with the OS cursor; center crosshair is misleading.
+        drawCrosshair = !camera->IsIsometricProjection();
+      }
+    }
+    if (drawCrosshair)
+    {
+      RenderCrosshair(width_size, height_size);
+    }
   }
 
   // Render simple text
@@ -443,7 +4683,20 @@ void UGeometryEngine::Paint(int width_size, int height_size,
 
 void UGeometryEngine::DrawCubeGeometry()
 {
+  CUBA_ZONE("DrawCubeGeometry");
+  // This frame-local handoff joins an opaque draw snapshot to a later
+  // post-transparent pixel/ray trace. Both the legacy M483 exact-target
+  // witness and the bounded per-frame pixel-probe witness use this handoff.
+  g_gpu_opaque_draw_state_witness = {};
+  g_gpu_opaque_draw_state_frame_witnesses.clear();
+  g_capture_gpu_draw_state_for_pixel_probe = false;
+  g_capture_fluid_draw_witness_for_pixel_probe = false;
   auto t_begin = std::chrono::high_resolution_clock::now();
+  double filter_ms = 0.0;
+  double opaque_ms = 0.0;
+  double depth_ms = 0.0;
+  double transparent_ms = 0.0;
+  double overlays_ms = 0.0;
 
   auto camera = WorldRenderReadModel
                     ? WorldRenderReadModel->GetCurrentUserCamera()
@@ -451,6 +4704,14 @@ void UGeometryEngine::DrawCubeGeometry()
   if (!camera)
   {
     return;
+  }
+
+  // IsChunkSliceRenderReady is also sampled during the world streaming tick.
+  // That tick can publish a relight or mesh after the first sample, so the
+  // tick-scoped memo must not carry a stale rejection into this render frame.
+  if (WorldInstance)
+  {
+    WorldInstance->InvalidateChunkSliceRenderReadyMemo();
   }
 
   UGlStateScope glGuard(kGlMaskDrawCubeRestore);
@@ -466,7 +4727,7 @@ void UGeometryEngine::DrawCubeGeometry()
     }
   }
 
-  auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
   UWorldMeshService *mesh_service =
       WorldRenderReadModel ? WorldRenderReadModel->TryGetMeshService()
                            : &WorldInstance->GetMeshService();
@@ -480,8 +4741,6 @@ void UGeometryEngine::DrawCubeGeometry()
     logged_first_paint_diag = true;
     LogWorldLoadDiag("first_paint", *WorldInstance, camera->GetPosition());
   }
-  mesh_service->GetCache().SetSurfaceWetness(std::clamp(
-      WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));
   const uint64_t meshRevision = mesh_service->GetMeshRevision();
   const bool useGreedyMesh = Render.UseFaceQuadDraw();
   const size_t renderCount =
@@ -496,11 +4755,67 @@ void UGeometryEngine::DrawCubeGeometry()
 
   if (useGreedyMesh)
   {
+    // Shared ready memo across opaque+transparent (World also memos per frame).
+    UChunkMeshCache &mesh_cache = mesh_service->GetCache();
+    mesh_cache.BeginGpuPassDirtyFrame();
+    std::unordered_map<int64_t, bool> ready_cache;
+    auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in,
+                                        uint8_t renderer_path)
+    {
+      std::vector<GreedyBatchRef> out;
+      out.reserve(in.size());
+      for (const GreedyBatchRef &ref : in)
+      {
+        // P2: per-cy slice key (not column xz alone).
+        const int64_t key =
+            (static_cast<int64_t>(ref.chunkCoord.x) << 42) ^
+            ((static_cast<int64_t>(ref.chunkCoord.y) & 0x3ffll) << 32) ^
+            (static_cast<int64_t>(ref.chunkCoord.z) & 0xffffffffll);
+        auto it = ready_cache.find(key);
+        bool ready = false;
+        if (it != ready_cache.end())
+        {
+          ready = it->second;
+        }
+        else
+        {
+          ready = WorldInstance->IsChunkSliceRenderReady(ref.chunkCoord);
+          ready_cache.emplace(key, ready);
+          const GreedyMeshBatch *batch = mesh_cache.TryGetGreedyBatch(ref);
+          const uint32_t index_count =
+              batch ? static_cast<uint32_t>(batch->indices.size()) : 0u;
+          NoteRendererGateCandidate(
+              *WorldInstance, mesh_cache, ref.chunkCoord,
+              camera->GetPosition(), renderer_path, index_count, 0u, ready);
+        }
+        if (ready)
+        {
+          out.push_back(ref);
+        }
+      }
+      return out;
+    };
     const UWorldMeshService::GreedyDrawSnapshot draw =
         mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                         WorldInstance->GetBlockRegistry(),
                                         camera);
-    const auto &opaqueCutoutRefs = draw.opaqueCutoutRefs;
+    std::vector<GreedyBatchRef> filtered_opaque;
+    std::vector<GreedyBatchRef> filtered_transparent;
+    {
+      ScopedPhase filter_phase(&filter_ms);
+      CUBA_ZONE("Scene.FilterReady");
+      filtered_opaque = filter_render_ready_refs(draw.opaqueCutoutRefs, 1u);
+      filtered_transparent =
+          filter_render_ready_refs(draw.transparentRefs, 2u);
+    }
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      phys.OpaqueRefsCpuVis =
+          static_cast<uint64_t>(draw.opaqueCutoutRefs.size());
+      phys.OpaqueRefsRenderReady =
+          static_cast<uint64_t>(filtered_opaque.size());
+    }
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs = filtered_opaque;
     if (!useBatchCache || !BlockBatchesValid ||
         opaqueCutoutRefs.size() != CachedInstanceCount ||
         draw.meshRevision != CachedMeshRevision)
@@ -510,24 +4825,220 @@ void UGeometryEngine::DrawCubeGeometry()
       BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-    DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp, textures,
-                            draw.meshRevision, draw.cullRevision);
-    DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
+    OpaquePixelProbeCapture pixel_probe_capture{};
+    const uint64_t pixel_probe_frame_epoch =
+        WorldInstance->GetStreamingFrameEpoch();
+    static const bool visual_trace_cpu_only = []() {
+      const char *value = std::getenv("CUBA_VISUAL_BLACK_TRACE_CPU_ONLY");
+      return value != nullptr && value[0] != '\0' && value[0] != '0';
+    }();
+    if (UJobStageTrace::VisualBlackTraceEnabled() && !visual_trace_cpu_only)
+    {
+      // Take the pre-transparent color/depth on the same render frames as the
+      // post-transparent probe, so each sample is a direct before/after pair.
+      static uint32_t render_probe_count = 0;
+      ++render_probe_count;
+      // M147/M148 dark-water samples were localized around x=-265, while M149
+      // also targeted the adjacent -155 window. Sample both windows twice as
+      // often so a 16-block chunk cannot fall between probes; retain the
+      // lower-cost cadence everywhere else.
+      const float probe_camera_x = camera->GetPosition().x;
+      const glm::ivec3 probe_focus = UChunkManager::WorldToChunk(
+          WorldPosToBlock(camera->GetPosition()));
+      static bool have_last_probe_focus = false;
+      static glm::ivec2 last_probe_focus(0);
+      static uint64_t last_camera_band_peak_probe_epoch = 0;
+      static uint64_t last_screen_ray_probe_epoch = 0;
+      static uint64_t last_visual_hole_event_probe_epoch = 0;
+      static uint32_t screen_ray_pixel_probe_event_count = 0;
+      // Screen-ray captures read back and trace a framebuffer grid. Sample one
+      // in eight source frames so the opt-in witness remains bounded over a
+      // full flight while still spanning its route.
+      constexpr uint32_t kScreenRayPixelProbeStride = 8;
+      // Capture a bounded framebuffer sample for transient camera-band peaks
+      // even when the operator's fixed X window does not include the event.
+      static uint32_t camera_band_peak_pixel_probe_count = 0;
+      constexpr uint32_t kMaxCameraBandPeakPixelProbes = 24;
+      const bool probe_on_focus_change = PixelProbeOnFocusChangeEnabled();
+      const bool probe_on_screen_ray = PixelProbeOnScreenRayEnabled();
+      const bool probe_on_stalled_census =
+          PixelProbeOnStalledCensusEnabled();
+      // Optional camera-space bounds limit framebuffer readback without
+      // changing the world streaming trace or its screen-ray scheduling.
+      static const float pixel_probe_min_x = ReadPixelProbeEnvFloat(
+          "CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X",
+          -std::numeric_limits<float>::infinity());
+      static const float pixel_probe_max_x = ReadPixelProbeEnvFloat(
+          "CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X",
+          std::numeric_limits<float>::infinity());
+      const bool pixel_probe_in_x_range =
+          probe_camera_x >= pixel_probe_min_x &&
+          probe_camera_x <= pixel_probe_max_x;
+      const uint64_t latest_visual_hole_event_epoch =
+          UJobStageTrace::GetLatestVisualHoleEventFrameEpoch();
+      const bool new_visual_hole_event =
+          latest_visual_hole_event_epoch >
+              last_visual_hole_event_probe_epoch &&
+          latest_visual_hole_event_epoch <= pixel_probe_frame_epoch;
+      // A stream update and its render can land on adjacent frame epochs.
+      // Consume the marker once the renderer catches up, instead of requiring
+      // exact epoch equality and silently missing the event after one update.
+      if (new_visual_hole_event)
+      {
+        last_visual_hole_event_probe_epoch =
+            latest_visual_hole_event_epoch;
+      }
+      const bool camera_band_peak_probe =
+          UJobStageTrace::HasCameraBandPeakTraceForFrame(
+              pixel_probe_frame_epoch) &&
+          last_camera_band_peak_probe_epoch != pixel_probe_frame_epoch;
+      const bool visual_hole_edge_pixel_probe =
+          pixel_probe_in_x_range && probe_on_screen_ray &&
+          new_visual_hole_event;
+      const bool screen_ray_probe_event =
+          probe_on_screen_ray &&
+          UJobStageTrace::HasScreenRayTraceForFrame(
+              pixel_probe_frame_epoch) &&
+          last_screen_ray_probe_epoch != pixel_probe_frame_epoch;
+      const bool screen_ray_probe =
+          screen_ray_probe_event &&
+          (screen_ray_pixel_probe_event_count++ %
+               kScreenRayPixelProbeStride ==
+           0u);
+      const bool focus_changed =
+          !have_last_probe_focus || last_probe_focus.x != probe_focus.x ||
+          last_probe_focus.y != probe_focus.z;
+      const uint32_t probe_stride =
+          PixelProbePeriodicStride(probe_camera_x);
+      const bool periodic_pixel_probe =
+          pixel_probe_in_x_range &&
+          (PixelProbeCenterEveryFrameEnabled() ||
+           render_probe_count % probe_stride == 0u);
+      const bool focus_change_pixel_probe = pixel_probe_in_x_range &&
+                                            probe_on_focus_change &&
+                                            focus_changed;
+      const bool screen_ray_pixel_probe =
+          pixel_probe_in_x_range && screen_ray_probe;
+      const bool stalled_census_pixel_probe =
+          pixel_probe_in_x_range && probe_on_stalled_census &&
+          UJobStageTrace::HasStalledVisualBlackTraceForFrame(
+              pixel_probe_frame_epoch);
+      const bool camera_band_peak_pixel_probe =
+          camera_band_peak_probe &&
+          camera_band_peak_pixel_probe_count <
+              kMaxCameraBandPeakPixelProbes;
+      const bool screen_ray_aligned_capture =
+          (screen_ray_probe &&
+           (pixel_probe_in_x_range || camera_band_peak_pixel_probe)) ||
+          stalled_census_pixel_probe;
+      if (periodic_pixel_probe || focus_change_pixel_probe ||
+          screen_ray_pixel_probe || camera_band_peak_pixel_probe ||
+          stalled_census_pixel_probe || visual_hole_edge_pixel_probe)
+      {
+        pixel_probe_capture.probe_id = render_probe_count;
+        pixel_probe_capture.visual_hole_event_frame_epoch =
+            visual_hole_edge_pixel_probe
+                ? latest_visual_hole_event_epoch
+                : 0;
+        pixel_probe_capture.trigger_flags = static_cast<uint8_t>(
+            (periodic_pixel_probe ? 1u << 0 : 0u) |
+            (focus_change_pixel_probe ? 1u << 1 : 0u) |
+            (screen_ray_aligned_capture ? 1u << 2 : 0u) |
+            (camera_band_peak_pixel_probe ? 1u << 3 : 0u) |
+            (stalled_census_pixel_probe ? 1u << 4 : 0u) |
+            (visual_hole_edge_pixel_probe ? 1u << 5 : 0u));
+        const bool ray_grid_row_layout = screen_ray_aligned_capture ||
+                                         visual_hole_edge_pixel_probe;
+        pixel_probe_capture.rows = screen_ray_aligned_capture
+                                       ? std::max(kScreenRayAlignedPixelRows,
+                                                  PixelProbeRows())
+                                       : (visual_hole_edge_pixel_probe
+                                              ? std::max(
+                                                    kScreenRayAlignedPixelRows,
+                                                    PixelProbeRows())
+                                              : PixelProbeRows());
+        pixel_probe_capture.screen_ray_aligned_rows = ray_grid_row_layout;
+        if (camera_band_peak_pixel_probe)
+        {
+          last_camera_band_peak_probe_epoch = pixel_probe_frame_epoch;
+          ++camera_band_peak_pixel_probe_count;
+        }
+        if (screen_ray_aligned_capture)
+        {
+          last_screen_ray_probe_epoch = pixel_probe_frame_epoch;
+        }
+        last_probe_focus = glm::ivec2(probe_focus.x, probe_focus.z);
+        have_last_probe_focus = true;
+      }
+    }
+    {
+      ScopedPhase opaque_phase(&opaque_ms);
+      CUBA_ZONE("Scene.OpaqueDraw");
+      g_capture_gpu_draw_state_for_pixel_probe =
+          pixel_probe_capture.probe_id != 0 &&
+          PixelProbeGpuDrawStateWindowContains(camera->GetPosition());
+      DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
+                              camera->GetPosition(), textures,
                               draw.meshRevision, draw.cullRevision);
-    OpaqueDepthCapture.CaptureFromDefaultFramebuffer();
+      g_capture_gpu_draw_state_for_pixel_probe = false;
+      {
+        double cross_ms = 0.0;
+        ScopedPhase cross_phase(&cross_ms);
+        DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
+                                  draw.meshRevision, draw.cullRevision);
+        if (WorldInstance)
+        {
+          WorldInstance->GetPhysicsTelemetryMutable().SceneOpaqueCrossMs =
+              cross_ms;
+        }
+      }
+    }
+    if (pixel_probe_capture.probe_id != 0)
+    {
+      CaptureOpaquePixelProbe(pixel_probe_capture);
+    }
+    // Skip full-FB depth copy when nothing transparent needs soft particles.
+    if (!filtered_transparent.empty())
+    {
+      ScopedPhase depth_phase(&depth_ms);
+      CUBA_ZONE("Scene.DepthCapture");
+      OpaqueDepthCapture.CaptureFromDefaultFramebuffer();
+    }
     GLboolean blendWasEnabled;
     glGetBooleanv(GL_BLEND, &blendWasEnabled);
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-    GreedyTransparentDrawContext tctx{draw.cache,
-                                      draw.transparentRefs,
-                                      vp,
-                                      draw.meshRevision,
-                                      draw.cullRevision,
-                                      camera->GetPosition(),
-                                      WorldInstance->GetBlockRegistry(),
-                                      textures};
-    UGreedyTransparentPipeline::Draw(*this, tctx);
+    {
+      ScopedPhase transparent_phase(&transparent_ms);
+      CUBA_ZONE("Scene.Transparent");
+      GreedyTransparentDrawContext tctx{draw.cache,
+                                        filtered_transparent,
+                                        vp,
+                                        draw.meshRevision,
+                                        draw.cullRevision,
+                                        camera->GetPosition(),
+                                        WorldInstance->GetBlockRegistry(),
+                                        textures};
+      g_capture_fluid_draw_witness_for_pixel_probe =
+          pixel_probe_capture.probe_id != 0;
+      UGreedyTransparentPipeline::Draw(*this, tctx);
+      g_capture_fluid_draw_witness_for_pixel_probe = false;
+    }
+    if (UJobStageTrace::VisualBlackTraceEnabled())
+    {
+      const glm::mat4 coverage_view = camera->GetViewMatrix();
+      const glm::mat4 coverage_projection = camera->GetProjection();
+      const glm::mat4 coverage_vp = coverage_projection * coverage_view;
+      NoteFrustumCoverageGaps(
+          *WorldInstance, UnderwaterFogPass_, draw.cache,
+          Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
+          draw.opaqueCutoutRefs, draw.transparentRefs, filtered_opaque,
+          filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,
+          GreedyGpuTransparent,
+          dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()), textures,
+          coverage_vp, coverage_view, coverage_projection,
+          pixel_probe_capture, LastOpaquePackedDrawTrace);
+    }
     if (cullWasEnabled)
     {
       glEnable(GL_CULL_FACE);
@@ -543,9 +5054,23 @@ void UGeometryEngine::DrawCubeGeometry()
   }
   else
   {
-    const auto &blockInstances = mesh_service->PrepareFaceInstances(
+    auto blockInstances = mesh_service->PrepareFaceInstances(
         WorldInstance->GetBlockWorld(), WorldInstance->GetBlockRegistry(),
         camera);
+    blockInstances.erase(
+        std::remove_if(
+            blockInstances.begin(), blockInstances.end(),
+            [&](const BlockInstance &inst)
+            {
+              const glm::vec3 world_pos(inst.model[3]);
+              const glm::ivec3 chunk = UChunkManager::WorldToChunk(
+                  glm::ivec3(static_cast<int>(std::floor(world_pos.x)),
+                             static_cast<int>(std::floor(world_pos.y)),
+                             static_cast<int>(std::floor(world_pos.z))));
+              const glm::ivec3 ground(chunk.x, 0, chunk.z);
+              return !WorldInstance->IsColumnRenderReady(ground);
+            }),
+        blockInstances.end());
     if (!useBatchCache || !BlockBatchesValid ||
         renderCount != CachedInstanceCount ||
         meshRevision != CachedMeshRevision)
@@ -559,12 +5084,39 @@ void UGeometryEngine::DrawCubeGeometry()
     RenderBatches(dummy_mvp);
   }
 
-  RenderSelectionOutline();
-  RenderBlockCrackOverlay();
-  RenderBiomeDebugOverlay();
-  if (WorldInstance)
   {
-    CreatureDraw_.Render(*WorldInstance, *this, Render);
+    ScopedPhase overlays_phase(&overlays_ms);
+    CUBA_ZONE("Scene.Overlays");
+    RenderSelectionOutline();
+    RenderBlockCrackOverlay();
+    if (WorldInstance)
+    {
+      if (auto break_camera = WorldInstance->GetCurrentUserCamera())
+      {
+        const glm::mat4 view = break_camera->GetViewMatrix();
+        const glm::mat4 proj = break_camera->GetProjection();
+        const glm::mat4 view_inv = glm::inverse(view);
+        const glm::vec3 camera_right = glm::normalize(glm::vec3(view_inv[0]));
+        const glm::vec3 camera_up = glm::normalize(glm::vec3(view_inv[1]));
+        const float dt = static_cast<float>(break_camera->GetDeltaTime());
+        BlockBreakFx.UpdateAndRender(*WorldInstance, dt, proj * view,
+                                     camera_right, camera_up);
+      }
+    }
+    RenderBiomeDebugOverlay();
+    if (WorldInstance)
+    {
+      CreatureDraw_.Render(*WorldInstance, *this, Render);
+      SetInfluenceFxWorld(WorldInstance.get());
+      UInfluenceFxSystem::Get().RegisterSink();
+      if (auto camera = WorldInstance->GetCurrentUserCamera())
+      {
+        const glm::mat4 view_proj =
+            camera->GetProjection() * camera->GetViewMatrix();
+        InfluenceFx.UpdateAndRender(view_proj,
+                                    static_cast<float>(camera->GetDeltaTime()));
+      }
+    }
   }
 
   // Active object preview disabled to avoid per-frame resource churn
@@ -572,6 +5124,19 @@ void UGeometryEngine::DrawCubeGeometry()
   auto t_end = std::chrono::high_resolution_clock::now();
   DurationDrawSceneMks =
       std::chrono::duration<double, std::micro>(t_end - t_begin).count();
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.SceneFilterReadyMs = filter_ms;
+    phys.SceneOpaqueDrawMs = opaque_ms;
+    phys.SceneDepthCaptureMs = depth_ms;
+    phys.SceneTransparentMs = transparent_ms;
+    phys.SceneOverlaysMs = overlays_ms;
+    const double total_ms = DurationDrawSceneMks / 1000.0;
+    const double accounted =
+        filter_ms + opaque_ms + depth_ms + transparent_ms + overlays_ms;
+    phys.SceneSelfMs = std::max(0.0, total_ms - accounted);
+  }
 }
 
 void UGeometryEngine::ShowTransientMessage(const std::string &msg,
@@ -618,8 +5183,8 @@ void UGeometryEngine::SetRenderSettings(const RenderSettings &settings)
   Render = settings;
   SetGradientSky(Render.GradientSky);
   BlockBatchesValid = false;
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   DestroyFaceQuadBuffers();
 }
 
@@ -788,6 +5353,8 @@ void UGeometryEngine::SetBlockAnimUniforms(
     FrameCount = 1;
   }
 
+  const float materialTimeSec = AnimationClock.ElapsedSeconds();
+  const float materialTimePhase = std::fmod(materialTimeSec, 100.0f) / 100.0f;
   int frame = 0;
   if (FrameCount > 1 && WorldInstance)
   {
@@ -797,8 +5364,7 @@ void UGeometryEngine::SetBlockAnimUniforms(
     const float frameDuration = static_cast<float>(frametimeTicks) / 20.0f;
     if (frameDuration > 0.0f)
     {
-      const float elapsed = AnimationClock.ElapsedSeconds();
-      frame = static_cast<int>(elapsed / frameDuration) % FrameCount;
+      frame = static_cast<int>(materialTimeSec / frameDuration) % FrameCount;
       if (frame < 0)
       {
         frame = 0;
@@ -808,6 +5374,20 @@ void UGeometryEngine::SetBlockAnimUniforms(
 
   shader->SetInt("uAnimFrame", frame);
   shader->SetInt("uAnimFrameCount", FrameCount);
+  shader->SetInt("uMaterialSeed", static_cast<int>(blockId));
+  shader->SetFloat("uMaterialTimePhase", materialTimePhase);
+  float textureVariation = 0.0f;
+  if (WorldInstance)
+  {
+    const auto catalog = WorldInstance->GetBlockRegistry()
+                             .GetDefinitionsCatalogSnapshot();
+    if (const BlockDefinition *definition =
+            FindCatalogDefinition(catalog.get(), blockId))
+    {
+      textureVariation = definition->Render.TextureVariation;
+    }
+  }
+  shader->SetFloat("uTextureVariation", textureVariation);
 }
 
 void UGeometryEngine::PrepareFrameRendering()
@@ -823,15 +5403,23 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     inv_view_rot = glm::transpose(glm::mat3(camera->GetViewMatrix()));
   }
-  FluidSurfaceMap.ClearLastFrameStats();
-  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
-                            BaseSkyColor, inv_view_rot);
+  FluidMap().ClearLastFrameStats();
+  WeatherSample camera_weather;
+  const auto weather_camera = WorldInstance->GetCurrentUserCamera();
+  if (weather_camera)
+  {
+    camera_weather =
+        WorldInstance->SampleWeatherAt(weather_camera->GetPosition());
+  }
+  g_probe_fluid_map = &FluidMap();
+  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidMap(), BaseSkyColor,
+                            inv_view_rot, &camera_weather);
   skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
   OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
   const FluidSurfaceMapFrameStats &fluid_stats =
-      FluidSurfaceMap.GetLastFrameStats();
+      FluidMap().GetLastFrameStats();
   WorldInstance->SetLastFluidMapCpuMs(fluid_stats.CpuMs);
   WorldInstance->SetLastFluidMapGpuMs(fluid_stats.GpuMs);
   WorldInstance->SetLastFluidMapDirtyChunks(fluid_stats.DirtyChunksPending);
@@ -857,7 +5445,7 @@ void UGeometryEngine::ApplyFogUniforms(
     const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos,
     bool applyBelowSurfaceFog)
 {
-  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidSurfaceMap,
+  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidMap(),
                                    applyBelowSurfaceFog);
 }
 
@@ -878,8 +5466,248 @@ void UGeometryEngine::SetGreedyShaderMode(
   }
 }
 
+namespace
+{
+
+bool DebugDisableOpaqueDepthGuard()
+{
+  static const bool enabled = []()
+  {
+    const char *value = std::getenv("CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+bool EnvironmentFlagEnabled(const char *name)
+{
+  // Process-lifetime cache: getenv scans (and locks) the whole environment
+  // block and this is polled from per-frame draw paths.
+  static std::mutex cache_mutex;
+  static std::unordered_map<std::string, bool> cache;
+  std::lock_guard<std::mutex> lock(cache_mutex);
+  const auto it = cache.find(name);
+  if (it != cache.end())
+  {
+    return it->second;
+  }
+  const char *value = std::getenv(name);
+  const bool enabled = value != nullptr && value[0] != '\0' && value[0] != '0';
+  cache.emplace(name, enabled);
+  return enabled;
+}
+
+struct FluidRenderDiagnosticWindow
+{
+  bool enabled = false;
+  bool valid = true;
+  float min_x = -std::numeric_limits<float>::infinity();
+  float max_x = std::numeric_limits<float>::infinity();
+};
+
+const FluidRenderDiagnosticWindow &GetFluidRenderDiagnosticWindow()
+{
+  static const FluidRenderDiagnosticWindow window = []
+  {
+    FluidRenderDiagnosticWindow result{};
+    const auto read_bound = [&](const char *name, float &bound)
+    {
+      const char *value = std::getenv(name);
+      if (value == nullptr || value[0] == '\0')
+      {
+        return false;
+      }
+      char *end = nullptr;
+      bound = std::strtof(value, &end);
+      if (end == value || *end != '\0' || !std::isfinite(bound))
+      {
+        result.valid = false;
+      }
+      return true;
+    };
+    const bool has_min = read_bound("CUBA_FLUID_RENDER_MIN_X", result.min_x);
+    const bool has_max = read_bound("CUBA_FLUID_RENDER_MAX_X", result.max_x);
+    result.enabled = has_min || has_max;
+    if (result.min_x > result.max_x)
+    {
+      result.valid = false;
+    }
+    return result;
+  }();
+  return window;
+}
+
+bool FluidRenderDiagnosticWindowContains(const glm::vec3 &camera_position)
+{
+  const FluidRenderDiagnosticWindow &window =
+      GetFluidRenderDiagnosticWindow();
+  if (!window.enabled)
+  {
+    return true;
+  }
+  return window.valid && std::isfinite(camera_position.x) &&
+         camera_position.x >= window.min_x &&
+         camera_position.x <= window.max_x;
+}
+
+bool FluidRenderTraceEnabled(const glm::vec3 &camera_position)
+{
+  static const bool enabled = EnvironmentFlagEnabled("CUBA_FLUID_RENDER_TRACE") ||
+                              EnvironmentFlagEnabled(
+                                  "CUBA_DEBUG_FLUID_FRAGMENT_MARKER");
+  return enabled && FluidRenderDiagnosticWindowContains(camera_position);
+}
+
+bool DebugFluidFragmentMarkerEnabled(const glm::vec3 &camera_position)
+{
+  static const bool enabled =
+      EnvironmentFlagEnabled("CUBA_DEBUG_FLUID_FRAGMENT_MARKER");
+  return enabled && FluidRenderDiagnosticWindowContains(camera_position);
+}
+
+void NoteFluidGpuDrawWitness(const GreedyGpuPassCache &cache,
+                             const GreedyGpuBatch &batch,
+                             const glm::vec3 &camera_position,
+                             uint64_t frame_epoch, GreedyShaderMode mode,
+                             uint8_t pass_ordinal, uint8_t submit_path,
+                             bool mdi_eligible)
+{
+  if (!g_capture_fluid_draw_witness_for_pixel_probe ||
+      !UJobStageTrace::VisualBlackTraceEnabled() ||
+      !FluidRenderDiagnosticWindowContains(camera_position) ||
+      pass_ordinal > 2 ||
+      (pass_ordinal == 0 && mode != GreedyShaderMode::ShellDepthPrepass) ||
+      (pass_ordinal > 0 && mode != GreedyShaderMode::TransparentColor))
+  {
+    return;
+  }
+
+  static thread_local std::array<uint64_t, 3> last_epoch{
+      std::numeric_limits<uint64_t>::max(),
+      std::numeric_limits<uint64_t>::max(),
+      std::numeric_limits<uint64_t>::max()};
+  const size_t pass_slot = pass_ordinal;
+  if (last_epoch[pass_slot] == frame_epoch)
+  {
+    return;
+  }
+  last_epoch[pass_slot] = frame_epoch;
+
+  VisualBlackTraceRecord record{};
+  record.sample_kind = 19;
+  record.frame_epoch = frame_epoch;
+  record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+  record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+  record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+  record.cx = batch.chunkCoord.x;
+  record.cy = batch.chunkCoord.y;
+  record.cz = batch.chunkCoord.z;
+  record.renderer_fluid_draw_witness_valid = 1;
+  record.renderer_fluid_draw_witness_pass = static_cast<uint8_t>(mode);
+  record.renderer_fluid_draw_witness_pass_ordinal = pass_ordinal;
+  record.renderer_fluid_draw_witness_submit_path = submit_path;
+  record.renderer_fluid_draw_witness_use_mdi = mdi_eligible ? 1u : 0u;
+  record.renderer_fluid_draw_witness_pooled = batch.pooled ? 1u : 0u;
+  record.renderer_fluid_draw_witness_block_id = batch.blockId;
+  record.renderer_fluid_draw_witness_pool_vbo = cache.poolVbo;
+  record.renderer_fluid_draw_witness_pool_ebo = cache.poolEbo;
+  record.renderer_fluid_draw_witness_pool_live_vbo =
+      cache.VertexPool.VertexBuffer();
+  record.renderer_fluid_draw_witness_pool_live_ebo =
+      cache.VertexPool.IndexBuffer();
+  const GLuint vertex_buffer = batch.pooled ? cache.poolVbo : batch.vbo;
+  const GLuint index_buffer = batch.pooled ? cache.poolEbo : batch.ebo;
+  record.renderer_fluid_draw_witness_vbo = vertex_buffer;
+  record.renderer_fluid_draw_witness_ebo = index_buffer;
+  record.renderer_fluid_draw_witness_vbo_is_buffer =
+      vertex_buffer != 0 && glIsBuffer(vertex_buffer) == GL_TRUE ? 1u : 0u;
+  record.renderer_fluid_draw_witness_ebo_is_buffer =
+      index_buffer != 0 && glIsBuffer(index_buffer) == GL_TRUE ? 1u : 0u;
+  record.renderer_fluid_draw_witness_gl_error_after_submit =
+      static_cast<int32_t>(glGetError());
+
+  GLboolean enabled = GL_FALSE;
+  glGetBooleanv(GL_STENCIL_TEST, &enabled);
+  record.renderer_fluid_draw_witness_stencil_test =
+      enabled == GL_TRUE ? 1u : 0u;
+  glGetIntegerv(GL_STENCIL_FUNC,
+                &record.renderer_fluid_draw_witness_stencil_func);
+  glGetIntegerv(GL_STENCIL_REF,
+                &record.renderer_fluid_draw_witness_stencil_ref);
+  glGetIntegerv(GL_STENCIL_VALUE_MASK,
+                &record.renderer_fluid_draw_witness_stencil_value_mask);
+  glGetIntegerv(GL_STENCIL_WRITEMASK,
+                &record.renderer_fluid_draw_witness_stencil_write_mask);
+  glGetIntegerv(GL_STENCIL_FAIL,
+                &record.renderer_fluid_draw_witness_stencil_fail);
+  glGetIntegerv(GL_STENCIL_PASS_DEPTH_FAIL,
+                &record.renderer_fluid_draw_witness_stencil_depth_fail);
+  glGetIntegerv(GL_STENCIL_PASS_DEPTH_PASS,
+                &record.renderer_fluid_draw_witness_stencil_depth_pass);
+  glGetBooleanv(GL_DEPTH_TEST, &enabled);
+  record.renderer_fluid_draw_witness_depth_test =
+      enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_DEPTH_WRITEMASK, &enabled);
+  record.renderer_fluid_draw_witness_depth_write =
+      enabled == GL_TRUE ? 1u : 0u;
+  glGetIntegerv(GL_DEPTH_FUNC,
+                &record.renderer_fluid_draw_witness_depth_func);
+  GLboolean color_mask[4] = {GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE};
+  glGetBooleanv(GL_COLOR_WRITEMASK, color_mask);
+  for (size_t channel = 0; channel < 4; ++channel)
+  {
+    if (color_mask[channel] == GL_TRUE)
+    {
+      record.renderer_fluid_draw_witness_color_write_mask |=
+          static_cast<uint8_t>(1u << channel);
+    }
+  }
+  GLint state_value = 0;
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &state_value);
+  record.renderer_fluid_draw_witness_vao =
+      static_cast<uint32_t>(std::max(state_value, 0));
+  glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &state_value);
+  record.renderer_fluid_draw_witness_array_buffer =
+      static_cast<uint32_t>(std::max(state_value, 0));
+  glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &state_value);
+  record.renderer_fluid_draw_witness_element_buffer =
+      static_cast<uint32_t>(std::max(state_value, 0));
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &state_value);
+  record.renderer_fluid_draw_witness_draw_framebuffer =
+      static_cast<uint32_t>(std::max(state_value, 0));
+
+  GLint old_copy_read_buffer = 0;
+  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy_read_buffer);
+  const auto query_buffer = [&](GLuint buffer, uint64_t &size_out,
+                                int32_t &bind_error_out,
+                                int32_t &query_error_out)
+  {
+    if (buffer == 0)
+    {
+      return;
+    }
+    glBindBuffer(GL_COPY_READ_BUFFER, buffer);
+    bind_error_out = static_cast<int32_t>(glGetError());
+    GLint64 size = 0;
+    glGetBufferParameteri64v(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &size);
+    query_error_out = static_cast<int32_t>(glGetError());
+    size_out = static_cast<uint64_t>(std::max<GLint64>(size, 0));
+  };
+  query_buffer(vertex_buffer, record.renderer_fluid_draw_witness_vbo_bytes,
+               record.renderer_fluid_draw_witness_vbo_bind_error,
+               record.renderer_fluid_draw_witness_vbo_query_error);
+  query_buffer(index_buffer, record.renderer_fluid_draw_witness_ebo_bytes,
+               record.renderer_fluid_draw_witness_ebo_bind_error,
+               record.renderer_fluid_draw_witness_ebo_query_error);
+  glBindBuffer(GL_COPY_READ_BUFFER,
+               static_cast<GLuint>(std::max(old_copy_read_buffer, 0)));
+  UJobStageTrace::NoteVisualBlack(record);
+}
+
+} // namespace
+
 void UGeometryEngine::DrawGreedyGpuBatches(
-    const GreedyGpuPassCache &cache, const glm::mat4 &vp,
+    GreedyGpuPassCache &cache, const glm::mat4 &vp,
     const std::map<size_t, UTextureCube> &textures, bool alphaCutout,
     bool transparentPass, GreedyShaderMode mode, float shellAlphaThreshold)
 {
@@ -896,87 +5724,649 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     return;
   }
 
+  glm::vec3 camera_position(0.0f);
+  if (WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      camera_position = camera->GetPosition();
+    }
+  }
   greedyShader->Use();
   greedyShader->SetMat4("mvp_matrix", vp);
   greedyShader->SetInt("texture0", 0);
-  SetGreedyShaderMode(greedyShader, alphaCutout, transparentPass, mode,
-                      shellAlphaThreshold);
+  SetGreedyShaderMode(greedyShader, transparentPass ? alphaCutout : false,
+                      transparentPass, mode, shellAlphaThreshold);
+  const auto set_alpha_cutout_for_batch = [&](bool material_alpha_cutout)
+  {
+    const bool enabled = ShouldUseGreedyAlphaCutout(
+        transparentPass, alphaCutout, material_alpha_cutout);
+    greedyShader->SetInt("uAlphaCutout", enabled ? 1 : 0);
+  };
+  greedyShader->SetFloat(
+      "uDebugTransparentFragmentMarker",
+      transparentPass && mode == GreedyShaderMode::TransparentColor &&
+              DebugTransparentFragmentMarkerEnabled(camera_position)
+          ? 1.0f
+          : 0.0f);
+  greedyShader->SetFloat("uDebugFluidFragmentMarker", 0.0f);
   const bool opaqueDepthGuard =
-      transparentPass && mode != GreedyShaderMode::ShellDepthPrepass;
+      transparentPass && mode != GreedyShaderMode::ShellDepthPrepass &&
+      !DebugDisableOpaqueDepthGuard();
   if (opaqueDepthGuard)
   {
     OpaqueDepthCapture.Bind();
   }
+  greedyShader->SetFloat("uLightPreviewOverride", 0.0f);
+  greedyShader->SetFloat("uLightPreviewFade", 0.0f);
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
+    camera_position = camera->GetPosition();
+    // alphaCutout here is shader discard mode (GPF5 merges solid+cutout), not
+    // a dedicated cutout-only pass — still apply underwater fog to opaque.
+    // Submerged camera: the transparent (fluid) pass needs the underwater fog
+    // uniforms as well, or the water plane stays raw above a fogged floor.
     ApplyFogUniforms(
-        greedyShader, camera->GetPosition(),
-        cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass, alphaCutout));
+        greedyShader, camera_position,
+        cutum::ShouldApplyBelowSurfaceFogToPass(
+            transparentPass, /*alpha_cutout=*/false,
+            UnderwaterFogPass_.GetUnderwaterFogSubmerged() > 0.5f));
   }
   ApplyGreedyEnvironmentUniforms(greedyShader);
   glActiveTexture(GL_TEXTURE0);
 
   glBindVertexArray(greedyMeshVAO);
   const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
-  for (const GreedyGpuBatch &gpu : cache.batches)
+  uint64_t draw_cmds = 0;
+  uint64_t fluid_draw_calls = 0;
+  uint64_t fluid_draw_indices = 0;
+  const bool fluid_trace = transparentPass &&
+                           FluidRenderTraceEnabled(camera_position) &&
+                           WorldInstance != nullptr;
+  const bool fluid_marker =
+      transparentPass && mode == GreedyShaderMode::TransparentColor &&
+      DebugFluidFragmentMarkerEnabled(camera_position) &&
+      WorldInstance != nullptr;
+  IUMeshGpuStore &store = MeshStore();
+  const bool use_mdi = store.SupportsMultiDrawIndirect() &&
+                       cache.usesVertexPool && cache.poolVbo != 0 &&
+                       cache.poolEbo != 0;
+  const bool regional_weather =
+      WorldInstance && WorldInstance->HasRegionalWeather();
+  const auto is_fluid_block = [&](BlockId block_id)
   {
-    SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
-    if (gpu.indexCountGl <= 0)
+    return fluid_trace && WorldInstance->GetBlockRegistry().GetRenderStyle(
+                              block_id) == BlockRenderStyle::Fluid;
+  };
+  const auto note_fluid_single_submit = [&](const GreedyGpuBatch &batch,
+                                             uint8_t submit_path)
+  {
+    if (!is_fluid_block(batch.blockId))
     {
-      continue;
+      return;
     }
-    const GLuint vbo = gpu.pooled ? cache.poolVbo : gpu.vbo;
-    const GLuint ebo = gpu.pooled ? cache.poolEbo : gpu.ebo;
-    if (vbo == 0 || ebo == 0)
+    ++fluid_draw_calls;
+    fluid_draw_indices +=
+        static_cast<uint64_t>(std::max(batch.indexCountGl, 0));
+    if (WorldInstance)
     {
-      continue;
+      NoteFluidGpuDrawWitness(cache, batch, camera_position,
+                              WorldInstance->GetStreamingFrameEpoch(), mode,
+                              g_fluid_draw_witness_pass_ordinal, submit_path,
+                              use_mdi);
     }
-    const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
-    if (texIt == textures.end())
+  };
+  const auto note_fluid_group_submit = [&](BlockId block_id, size_t begin,
+                                           size_t end, uint8_t submit_path)
+  {
+    if (!is_fluid_block(block_id))
     {
-      continue;
+      return;
     }
-    const GLuint textureId = texIt->second.GetTextureId();
-    if (textureId == 0)
+    ++fluid_draw_calls;
+    for (size_t index = begin; index < end; ++index)
     {
-      continue;
+      fluid_draw_indices += static_cast<uint64_t>(
+          std::max(cache.batches[index].indexCountGl, 0));
     }
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>(gpu.pooled ? gpu.vboByteOffset : 0));
+    if (WorldInstance)
+    {
+      for (size_t index = begin; index < end; ++index)
+      {
+        const GreedyGpuBatch &batch = cache.batches[index];
+        if (!is_fluid_block(batch.blockId))
+        {
+          continue;
+        }
+        NoteFluidGpuDrawWitness(cache, batch, camera_position,
+                                WorldInstance->GetStreamingFrameEpoch(), mode,
+                                g_fluid_draw_witness_pass_ordinal, submit_path,
+                                use_mdi);
+        break;
+      }
+    }
+  };
+  const bool generic_gpu_draw_state_window =
+      !transparentPass && mode == GreedyShaderMode::TransparentColor &&
+      g_capture_gpu_draw_state_for_pixel_probe && WorldInstance != nullptr;
+  glm::vec3 draw_witness_camera_position(0.0f);
+  bool gpu_draw_witness_window = !transparentPass &&
+                                 mode == GreedyShaderMode::TransparentColor &&
+                                 PixelProbeGpuRangeWitnessEnabled();
+  if (gpu_draw_witness_window && WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      draw_witness_camera_position = camera->GetPosition();
+    }
+    else
+    {
+      gpu_draw_witness_window = false;
+    }
+  }
+  else
+  {
+    gpu_draw_witness_window = false;
+  }
+  if (gpu_draw_witness_window)
+  {
+    const glm::vec3 delta =
+        draw_witness_camera_position - glm::vec3(-2693.6f, 70.0f, 55.9646f);
+    gpu_draw_witness_window = glm::dot(delta, delta) <= 64.0f;
+  }
+  const auto is_m483_draw_witness_batch = [&](size_t batch_index)
+  {
+    return gpu_draw_witness_window &&
+           batch_index < cache.batches.size() &&
+           IsM483DrawStateTarget(cache.batches[batch_index], batch_index,
+                                 draw_witness_camera_position);
+  };
+  const auto note_m483_draw_state = [&]()
+  {
+    if (!g_gpu_opaque_draw_state_witness.valid ||
+        !UJobStageTrace::VisualBlackTraceEnabled() || !WorldInstance)
+    {
+      return;
+    }
+    VisualBlackTraceRecord trace{};
+    trace.sample_kind = 17;
+    trace.frame_epoch = WorldInstance->GetStreamingFrameEpoch();
+    trace.cx = g_gpu_opaque_draw_state_witness.chunk_coord.x;
+    trace.cy = g_gpu_opaque_draw_state_witness.chunk_coord.y;
+    trace.cz = g_gpu_opaque_draw_state_witness.chunk_coord.z;
+    trace.camera_x = static_cast<int32_t>(
+        std::floor(draw_witness_camera_position.x));
+    trace.camera_y = static_cast<int32_t>(
+        std::floor(draw_witness_camera_position.y));
+    trace.camera_z = static_cast<int32_t>(
+        std::floor(draw_witness_camera_position.z));
+    trace.renderer_pixel_voxel_hit_x = -2701;
+    trace.renderer_pixel_voxel_hit_y = 52;
+    trace.renderer_pixel_voxel_hit_z = 75;
+    trace.renderer_pixel_voxel_hit_block_id = 573;
+    trace.renderer_pixel_voxel_mesh_ray_gpu_batch_index =
+        g_gpu_opaque_draw_state_witness.batch_index;
+    trace.renderer_pixel_voxel_mesh_ray_gpu_command_slot =
+        g_gpu_opaque_draw_state_witness.command_slot;
+    trace.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match = 1;
+    CopyGpuOpaqueDrawStateWitness(g_gpu_opaque_draw_state_witness, trace);
+    UJobStageTrace::NoteVisualBlack(trace);
+  };
+  if (use_mdi)
+  {
+    // Local indices + baseVertex: attribs at buffer origin once.
+    glBindBuffer(GL_ARRAY_BUFFER, cache.poolVbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cache.poolEbo);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, nullptr);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(
         1, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, faceIndex)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, faceIndex)));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, u)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, u)));
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(
         3, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, skyLight)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, skyLight)));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(
         4, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, blockLight)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, blockLight)));
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(
         5, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, wetness)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
     glEnableVertexAttribArray(5);
-    glDrawElements(
-        GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
-        reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+    glVertexAttribPointer(
+        6, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, lightPreview)));
+    glEnableVertexAttribArray(6);
+
+    std::vector<DrawElementsIndirectCommand> cmds;
+    size_t i = 0;
+    while (i < cache.batches.size())
+    {
+      const GreedyGpuBatch &head = cache.batches[i];
+      if (!head.pooled || head.indexCountGl <= 0)
+      {
+        ++i;
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(head.blockId));
+      if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
+      {
+        ++i;
+        continue;
+      }
+
+      const LightPreviewUniforms light_preview =
+          ComputeLightPreviewUniforms(WorldInstance.get(), head.chunkCoord);
+      size_t j = i + 1;
+      while (j < cache.batches.size() && cache.batches[j].pooled &&
+             cache.batches[j].indexCountGl > 0 &&
+             cache.batches[j].blockId == head.blockId &&
+             cache.batches[j].AlphaCutout == head.AlphaCutout &&
+             (!regional_weather ||
+              cache.batches[j].chunkCoord == head.chunkCoord) &&
+             (!WorldInstance ||
+              [&]
+              {
+                const LightPreviewUniforms other = ComputeLightPreviewUniforms(
+                    WorldInstance.get(), cache.batches[j].chunkCoord);
+                return other.override_value == light_preview.override_value &&
+                       std::abs(other.fade - light_preview.fade) < 1e-3f;
+              }()))
+      {
+        ++j;
+      }
+
+      if (regional_weather)
+      {
+        ApplyGreedyChunkWeatherUniforms(greedyShader, head.chunkCoord);
+      }
+      SetBlockAnimUniforms(greedyShader, head.blockId, textures);
+      set_alpha_cutout_for_batch(head.AlphaCutout);
+      const bool head_is_fluid =
+          WorldInstance->GetBlockRegistry().GetRenderStyle(head.blockId) ==
+          BlockRenderStyle::Fluid;
+      greedyShader->SetFloat(
+          "uDebugFluidFragmentMarker",
+          fluid_marker && head_is_fluid ? 1.0f : 0.0f);
+      // The active water texture (mt_water, id 575) already carries its own
+      // alpha (0.42) — the earlier 0.75 multiplier stacked on it and made
+      // the water nearly invisible. Keep fluid batches at native alpha.
+      greedyShader->SetFloat("uFluidAlpha", 1.0f);
+      greedyShader->SetFloat("uLightPreviewOverride",
+                             light_preview.override_value);
+      greedyShader->SetFloat("uLightPreviewFade", light_preview.fade);
+      glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
+      // P2: prefer GPU-resident 1:1 cmd table (instanceCount from compact).
+      size_t witness_batch_index = cache.batches.size();
+      if (gpu_draw_witness_window)
+      {
+        for (size_t k = i; k < j; ++k)
+        {
+          if (is_m483_draw_witness_batch(k))
+          {
+            witness_batch_index = k;
+            break;
+          }
+        }
+      }
+      const bool has_draw_witness_batch =
+          witness_batch_index < cache.batches.size();
+      if (has_draw_witness_batch)
+      {
+        CaptureGpuOpaqueDrawState(cache, witness_batch_index, 1, vp);
+      }
+      const bool capture_generic_draw_state =
+          generic_gpu_draw_state_window &&
+          head.blockId == static_cast<BlockId>(573);
+      GpuOpaqueDrawStateWitness generic_draw_state{};
+      if (capture_generic_draw_state)
+      {
+        CaptureGpuOpaqueDrawState(cache, i, 1, vp);
+        generic_draw_state = g_gpu_opaque_draw_state_witness;
+      }
+      const bool gpu_range_submitted =
+          store.SubmitIndirectCommandsGpuRange(cache, i, j);
+      if (has_draw_witness_batch)
+      {
+        g_gpu_opaque_draw_state_witness.submitted = gpu_range_submitted;
+      }
+      if (gpu_range_submitted)
+      {
+        if (capture_generic_draw_state)
+        {
+          AppendGpuOpaqueDrawStateRangeWitness(
+              generic_draw_state, cache, i, j,
+              WorldInstance->GetStreamingFrameEpoch(), 1, true);
+        }
+        ++draw_cmds;
+        note_fluid_group_submit(head.blockId, i, j, 1u);
+      }
+      else
+      {
+        const size_t cpu_command_count =
+            store.BuildIndirectCommandsRange(cache, i, j, cmds);
+        bool cpu_range_submitted = false;
+        if (cpu_command_count > 0)
+        {
+          if (has_draw_witness_batch)
+          {
+            CaptureGpuOpaqueDrawState(cache, witness_batch_index, 2, vp);
+          }
+          if (capture_generic_draw_state)
+          {
+            CaptureGpuOpaqueDrawState(cache, i, 2, vp);
+            generic_draw_state = g_gpu_opaque_draw_state_witness;
+          }
+          cpu_range_submitted = store.SubmitIndirectCommands(cmds);
+          if (has_draw_witness_batch)
+          {
+            g_gpu_opaque_draw_state_witness.submitted = cpu_range_submitted;
+          }
+        }
+        if (cpu_command_count > 0 && cpu_range_submitted)
+        {
+          if (capture_generic_draw_state)
+          {
+            AppendGpuOpaqueDrawStateRangeWitness(
+                generic_draw_state, cache, i, j,
+                WorldInstance->GetStreamingFrameEpoch(), 2, true);
+          }
+          NoteGpuHotPathFallback();
+          ++draw_cmds;
+          note_fluid_group_submit(head.blockId, i, j, 2u);
+        }
+        else
+        {
+          NoteGpuHotPathFallback();
+          for (size_t k = i; k < j; ++k)
+          {
+            const GreedyGpuBatch &gpu = cache.batches[k];
+            if (gpu.drawInstanceCount == 0)
+            {
+              continue;
+            }
+            set_alpha_cutout_for_batch(gpu.AlphaCutout);
+            const GLint base_vertex = static_cast<GLint>(
+                gpu.vboByteOffset / sizeof(GreedyMeshVertex));
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+            // GLES 3.1 core has no glDrawElementsBaseVertex (desktop MDI
+            // fallback only). Staging store avoids this path at runtime.
+            (void)base_vertex;
+            continue;
+#else
+            if (has_draw_witness_batch && k == witness_batch_index)
+            {
+              CaptureGpuOpaqueDrawState(cache, k, 3, vp);
+            }
+            GpuOpaqueDrawStateWitness single_draw_state{};
+            if (capture_generic_draw_state)
+            {
+              CaptureGpuOpaqueDrawState(cache, k, 3, vp);
+              single_draw_state = g_gpu_opaque_draw_state_witness;
+            }
+            glDrawElementsBaseVertex(
+                GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+                reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
+            if (capture_generic_draw_state)
+            {
+              AppendGpuOpaqueDrawStateRangeWitness(
+                  single_draw_state, cache, k, k + 1u,
+                  WorldInstance->GetStreamingFrameEpoch(), 3, true);
+            }
+            note_fluid_single_submit(gpu, 3u);
+            if (has_draw_witness_batch && k == witness_batch_index)
+            {
+              g_gpu_opaque_draw_state_witness.submitted = true;
+            }
+            ++draw_cmds;
+#endif
+          }
+        }
+      }
+      if (has_draw_witness_batch)
+      {
+        note_m483_draw_state();
+      }
+      i = j;
+    }
+
+    // Non-pooled leftovers (should be rare when usesVertexPool).
+    for (size_t gpu_index = 0; gpu_index < cache.batches.size(); ++gpu_index)
+    {
+      const GreedyGpuBatch &gpu = cache.batches[gpu_index];
+      if (gpu.pooled || gpu.indexCountGl <= 0)
+      {
+        continue;
+      }
+      if (gpu.vbo == 0 || gpu.ebo == 0)
+      {
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
+      if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
+      {
+        continue;
+      }
+      if (regional_weather)
+      {
+        ApplyGreedyChunkWeatherUniforms(greedyShader, gpu.chunkCoord);
+      }
+      SetLightPreviewUniforms(greedyShader, WorldInstance.get(), gpu.chunkCoord);
+      SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      set_alpha_cutout_for_batch(gpu.AlphaCutout);
+      greedyShader->SetFloat(
+          "uDebugFluidFragmentMarker",
+          fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
+                              gpu.blockId) == BlockRenderStyle::Fluid
+              ? 1.0f
+              : 0.0f);
+      glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
+      glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, nullptr);
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(
+          1, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, faceIndex)));
+      glEnableVertexAttribArray(1);
+      glVertexAttribPointer(
+          2, 2, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, u)));
+      glEnableVertexAttribArray(2);
+      glVertexAttribPointer(
+          3, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, skyLight)));
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(
+          4, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, blockLight)));
+      glEnableVertexAttribArray(4);
+      glVertexAttribPointer(
+          5, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
+      glEnableVertexAttribArray(5);
+      glVertexAttribPointer(
+          6, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, lightPreview)));
+      glEnableVertexAttribArray(6);
+      const bool witness_target = is_m483_draw_witness_batch(gpu_index);
+      if (witness_target)
+      {
+        CaptureGpuOpaqueDrawState(cache, gpu_index, 4, vp);
+      }
+      glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+      note_fluid_single_submit(gpu, 4u);
+      if (witness_target)
+      {
+        g_gpu_opaque_draw_state_witness.submitted = true;
+        note_m483_draw_state();
+      }
+      NoteGpuHotPathFallback();
+      ++draw_cmds;
+    }
+  }
+  else
+  {
+    for (size_t gpu_index = 0; gpu_index < cache.batches.size(); ++gpu_index)
+    {
+      const GreedyGpuBatch &gpu = cache.batches[gpu_index];
+      if (regional_weather)
+      {
+        ApplyGreedyChunkWeatherUniforms(greedyShader, gpu.chunkCoord);
+      }
+      SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      set_alpha_cutout_for_batch(gpu.AlphaCutout);
+      greedyShader->SetFloat(
+          "uDebugFluidFragmentMarker",
+          fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
+                              gpu.blockId) == BlockRenderStyle::Fluid
+              ? 1.0f
+              : 0.0f);
+      if (gpu.indexCountGl <= 0)
+      {
+        continue;
+      }
+      const GLuint vbo = gpu.pooled ? cache.poolVbo : gpu.vbo;
+      const GLuint ebo = gpu.pooled ? cache.poolEbo : gpu.ebo;
+      if (vbo == 0 || ebo == 0)
+      {
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
+      if (texIt == textures.end())
+      {
+        continue;
+      }
+      const GLuint textureId = texIt->second.GetTextureId();
+      if (textureId == 0)
+      {
+        continue;
+      }
+      SetLightPreviewUniforms(greedyShader, WorldInstance.get(), gpu.chunkCoord);
+      glBindTexture(GL_TEXTURE_2D, textureId);
+      glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+      glVertexAttribPointer(
+          0, 3, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(gpu.pooled ? gpu.vboByteOffset : 0));
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(
+          1, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, faceIndex)));
+      glEnableVertexAttribArray(1);
+      glVertexAttribPointer(
+          2, 2, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, u)));
+      glEnableVertexAttribArray(2);
+      glVertexAttribPointer(
+          3, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, skyLight)));
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(
+          4, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, blockLight)));
+      glEnableVertexAttribArray(4);
+      glVertexAttribPointer(
+          5, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, wetness)));
+      glEnableVertexAttribArray(5);
+      glVertexAttribPointer(
+          6, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, lightPreview)));
+      glEnableVertexAttribArray(6);
+      const bool witness_target = is_m483_draw_witness_batch(gpu_index);
+      if (witness_target)
+      {
+        CaptureGpuOpaqueDrawState(cache, gpu_index, 4, vp);
+      }
+      glDrawElements(
+          GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+          reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+      note_fluid_single_submit(gpu, 5u);
+      if (witness_target)
+      {
+        g_gpu_opaque_draw_state_witness.submitted = true;
+        note_m483_draw_state();
+      }
+      NoteGpuHotPathFallback();
+      ++draw_cmds;
+    }
+  }
+
+  if (cache.usesVertexPool)
+  {
+    cache.VertexPool.SignalDrawComplete();
+  }
+
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.GpuDrawCmds += draw_cmds;
+    if (fluid_trace)
+    {
+      phys.FluidDrawCallN += fluid_draw_calls;
+      phys.FluidSubmittedIndexCapacityN += fluid_draw_indices;
+      if (mode == GreedyShaderMode::ShellDepthPrepass)
+      {
+        phys.FluidShellDepthCallN += fluid_draw_calls;
+      }
+      else if (mode == GreedyShaderMode::TransparentColor)
+      {
+        phys.FluidColorPassCallN += fluid_draw_calls;
+      }
+    }
+    phys.GpuCullMs = WorldInstance->GetMeshService().GetLastGpuCullMs();
+    if (RenderBackends.Mesher)
+    {
+      phys.BackendMesher = RenderBackends.Mesher->BackendName();
+    }
+    if (RenderBackends.Store)
+    {
+      phys.BackendStore = RenderBackends.Store->BackendName();
+    }
+    if (RenderBackends.Cull)
+    {
+      phys.BackendCull = RenderBackends.Cull->BackendName();
+    }
+    if (FluidSurfaceProvider)
+    {
+      phys.BackendFluid = FluidSurfaceProvider->BackendName();
+      phys.GpuFluidScanOn = PreferGpuFluidColumnScan() ? 1.0 : 0.0;
+    }
+    {
+      const LightingMode mode = WorldInstance->GetLightingPipeline().GetMode();
+      phys.BackendLightingMode =
+          mode == LightingMode::Flat
+              ? "flat"
+              : ((phys.BackendMesher.find("gpu_") != std::string::npos ||
+                  phys.BackendMesher.find("android_gpu") == 0)
+                     ? "gpu_full"
+                     : "full");
+    }
+    {
+      const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
+      phys.CapsHasCompute = caps.HasCompute ? 1.0 : 0.0;
+      phys.CapsHasSsbo = caps.HasSsbo ? 1.0 : 0.0;
+      phys.CapsProbeCompleted = caps.ProbeCompleted ? 1.0 : 0.0;
+      phys.AndroidGpuUserPref = Render.AndroidGpuEnabled ? 1.0 : 0.0;
+      phys.AndroidGpuEffective = caps.AllowAndroidGpu ? 1.0 : 0.0;
+      phys.AndroidGpuDenyReason = caps.AndroidGpuDenyReason;
+      phys.GlVersion = caps.GlVersion;
+      phys.GlRenderer = caps.GlRenderer;
+    }
   }
 
   glBindVertexArray(0);
@@ -991,9 +6381,9 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 
 void UGeometryEngine::ResetWorldRenderState()
 {
-  FluidSurfaceMap.DestroyGpuResources();
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  FluidMap().DestroyGpuResources();
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   BlockBatchesValid = false;
   CachedMeshRevision = 0;
   CachedInstanceCount = 0;
@@ -1023,7 +6413,9 @@ void UGeometryEngine::ResetWorldRenderState()
           Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio(),
           Render.DistanceFogDensity,
           WorldInstance->GetEffectiveFogEndMarginBlocks(
-              Render.DistanceFogEndMarginBlocks));
+              Render.DistanceFogEndMarginBlocks),
+          WorldInstance->GetPresentedFogHorizonBlocks(),
+          WorldInstance->GetPresentedFogStartBlocks());
       fog_color = distance_fog.Color;
     }
   }
@@ -1052,22 +6444,54 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   {
     return;
   }
-  mesh_service->GetCache().SetSurfaceWetness(std::clamp(
-      WorldInstance->GetEnvironmentState().SurfaceWetness, 0.0f, 1.0f));
   const UWorldMeshService::GreedyDrawSnapshot draw =
       mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                       WorldInstance->GetBlockRegistry(),
                                       camera);
+  auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
+  {
+    std::unordered_map<int64_t, bool> ready_cache;
+    std::vector<GreedyBatchRef> out;
+    out.reserve(in.size());
+    for (const GreedyBatchRef &ref : in)
+    {
+      const int64_t key =
+          (static_cast<int64_t>(ref.chunkCoord.x) << 42) ^
+          ((static_cast<int64_t>(ref.chunkCoord.y) & 0x3ffll) << 32) ^
+          (static_cast<int64_t>(ref.chunkCoord.z) & 0xffffffffll);
+      auto it = ready_cache.find(key);
+      bool ready = false;
+      if (it != ready_cache.end())
+      {
+        ready = it->second;
+      }
+      else
+      {
+        ready = WorldInstance->IsChunkSliceRenderReady(ref.chunkCoord);
+        ready_cache.emplace(key, ready);
+      }
+      if (ready)
+      {
+        out.push_back(ref);
+      }
+    }
+    return out;
+  };
+  const std::vector<GreedyBatchRef> filtered_opaque =
+      filter_render_ready_refs(draw.opaqueCutoutRefs);
+  const std::vector<GreedyBatchRef> filtered_transparent =
+      filter_render_ready_refs(draw.transparentRefs);
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-  const auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
 
-  DrawGreedyOpaqueBatches(draw.cache, draw.opaqueCutoutRefs, vp, textures,
-                          draw.meshRevision, draw.cullRevision);
+  DrawGreedyOpaqueBatches(draw.cache, filtered_opaque, vp,
+                          camera->GetPosition(), textures, draw.meshRevision,
+                          draw.cullRevision);
   DrawCrossInstancedBatches(draw.crossBatches, vp, textures, draw.meshRevision,
                             draw.cullRevision);
 
   GreedyTransparentDrawContext tctx{draw.cache,
-                                    draw.transparentRefs,
+                                    filtered_transparent,
                                     vp,
                                     draw.meshRevision,
                                     draw.cullRevision,
@@ -1076,7 +6500,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
                                     textures};
   PrepareTransparent(tctx);
 
-  CachedInstanceCount = draw.opaqueCutoutRefs.size();
+  CachedInstanceCount = filtered_opaque.size();
   CachedMeshRevision = draw.meshRevision;
   BlockBatchesValid = true;
 }
@@ -1099,8 +6523,64 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     return;
   }
 
-  CrossGpuBackend.RefreshPass(CrossGpuPass, batches, meshRevision,
+  std::unordered_map<int64_t, bool> render_ready_cache;
+  auto is_slice_render_ready = [&](glm::ivec3 chunk) -> bool
+  {
+    const int64_t key =
+        (static_cast<int64_t>(chunk.x) << 42) ^
+        ((static_cast<int64_t>(chunk.y) & 0x3ffll) << 32) ^
+        (static_cast<int64_t>(chunk.z) & 0xffffffffll);
+    const auto it = render_ready_cache.find(key);
+    if (it != render_ready_cache.end())
+    {
+      return it->second;
+    }
+    const bool ready = WorldInstance->IsChunkSliceRenderReady(chunk);
+    render_ready_cache.emplace(key, ready);
+    return ready;
+  };
+  std::vector<CrossInstanceBatch> filtered_batches;
+  filtered_batches.reserve(batches.size());
+  const auto block_catalog =
+      WorldInstance->GetBlockRegistry().GetDefinitionsCatalogSnapshot();
+  for (const CrossInstanceBatch &batch : batches)
+  {
+    CrossInstanceBatch fb;
+    fb.blockId = batch.blockId;
+    if (const BlockDefinition *definition =
+            FindCatalogDefinition(block_catalog.get(), batch.blockId))
+    {
+      fb.shape = definition->Render.DecorShape;
+    }
+    for (const CrossInstanceGpu &inst : batch.instances)
+    {
+      const glm::ivec3 chunk = UChunkManager::WorldToChunk(
+          glm::ivec3(static_cast<int>(std::floor(inst.center.x)),
+                     static_cast<int>(std::floor(inst.center.y)),
+                     static_cast<int>(std::floor(inst.center.z))));
+      if (is_slice_render_ready(chunk))
+      {
+        fb.instances.push_back(inst);
+      }
+    }
+    if (!fb.instances.empty())
+    {
+      filtered_batches.push_back(std::move(fb));
+    }
+  }
+  if (filtered_batches.empty())
+  {
+    return;
+  }
+  CrossGpuBackend.RefreshPass(CrossGpuPass, filtered_batches,
+                              /*candidate*/ meshRevision, cullRevision,
+                              /*expected live desire*/ meshRevision,
                               cullRevision);
+  if (WorldInstance)
+  {
+    WorldInstance->GetPhysicsTelemetryMutable().CrossBatchCount =
+        CrossGpuPass.batches.size();
+  }
   if (CrossGpuPass.batches.empty())
   {
     return;
@@ -1117,12 +6597,16 @@ void UGeometryEngine::DrawCrossInstancedBatches(
                       GreedyShaderMode::TransparentColor, 0.0f);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    ApplyFogUniforms(crossInstancedShader, camera->GetPosition(), false);
+    // Submerged camera: underwater plants fog with the scene (W3.2) — the
+  // shader still excludes cross quads while the camera is above water.
+  ApplyFogUniforms(crossInstancedShader, camera->GetPosition(),
+                   cutum::ShouldApplyBelowSurfaceFogToPass(
+                       /*transparent_pass=*/false, /*alpha_cutout=*/false,
+                       UnderwaterFogPass_.GetUnderwaterFogSubmerged() > 0.5f));
   }
   ApplyGreedyEnvironmentUniforms(crossInstancedShader);
   glActiveTexture(GL_TEXTURE0);
 
-  const GLsizei index_count = CrossGpuBackend.GetTemplateIndexCount();
   for (const CrossGpuBatch &gpu : CrossGpuPass.batches)
   {
     if (gpu.instanceCount == 0 || gpu.instanceVbo == 0 || gpu.vao == 0)
@@ -1141,8 +6625,11 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     }
     glBindTexture(GL_TEXTURE_2D, textureId);
     SetBlockAnimUniforms(crossInstancedShader, gpu.blockId, textures);
+    crossInstancedShader->SetInt("uDecorShape", static_cast<int>(gpu.shape));
     glBindVertexArray(gpu.vao);
-    glDrawElementsInstanced(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, nullptr,
+    glDrawElementsInstanced(GL_TRIANGLES,
+                            CrossGpuBackend.GetTemplateIndexCount(gpu.shape),
+                            GL_UNSIGNED_INT, nullptr,
                             static_cast<GLsizei>(gpu.instanceCount));
   }
   glBindVertexArray(0);
@@ -1156,16 +6643,74 @@ void UGeometryEngine::DrawCrossInstancedBatches(
 
 void UGeometryEngine::DrawGreedyOpaqueBatches(
     const UChunkMeshCache &cache,
-    const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
-    const glm::mat4 &vp,
-    const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
-    uint64_t cullRevision)
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,
+    const glm::vec3 &cameraPos, const std::map<size_t, UTextureCube> &textures,
+    uint64_t meshRevision, uint64_t cullRevision)
 {
+  LastOpaquePackedDrawTrace.clear();
+  if (WorldInstance && !PackedRepresentationSwitchBound_)
+  {
+    WorldInstance->GetMeshService().GetCache().SetOnPackedRepresentationSwitchFn(
+        [this](glm::ivec3 coord)
+        {
+          MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
+          MeshStore().RemoveCoord(GreedyGpuCutout, coord);
+          MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
+        });
+    PackedRepresentationSwitchBound_ = true;
+  }
+  IUMeshGpuStore &store = MeshStore();
+  const bool mdi_indirect_cull = store.SupportsMultiDrawIndirect();
+
+  // V2 / Closeout D hard lock: always use caller-filtered slice-ready refs.
+  // CollectAll must not bypass IsChunkSliceRenderReady. Opaque must NEVER
+  // gate on ColumnEmergeState::RenderReady (settle telem ≠ draw residency).
+  // Empty refs means nothing ready — do not re-expand from the pool.
+  // Frustum cull still runs via ApplyGpuCompactCull on this gated set.
+  std::vector<GreedyBatchRef> upload_refs = opaqueCutoutRefs;
+
+  if (WorldInstance)
+  {
+    const glm::ivec3 focus_block = WorldInstance->GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+    bool underfeet_in_draw = false;
+    for (const GreedyBatchRef &ref : upload_refs)
+    {
+      if (ref.chunkCoord.x == focus_chunk.x &&
+          ref.chunkCoord.z == focus_chunk.z)
+      {
+        underfeet_in_draw = true;
+        break;
+      }
+    }
+    WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresent =
+        underfeet_in_draw ? 1 : 0;
+    WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresentRaw =
+        underfeet_in_draw ? 1 : 0;
+    WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresentLatched =
+        underfeet_in_draw ? 1 : 0;
+    // Post-draw reconcile: streaming sampled underfeet before opaque pass.
+    if (underfeet_in_draw)
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      phys.UnderfeetHasMesh = 1;
+      if (phys.UnderfeetReason ==
+              static_cast<int>(
+                  ColumnRenderableState::BlockReason::NotReadyState) ||
+          phys.UnderfeetReason ==
+              static_cast<int>(ColumnRenderableState::BlockReason::NotLoaded))
+      {
+        phys.UnderfeetReason =
+            static_cast<int>(ColumnRenderableState::BlockReason::None);
+      }
+    }
+  }
+
   std::vector<GreedyBatchRef> solid;
   std::vector<GreedyBatchRef> cutout;
-  solid.reserve(opaqueCutoutRefs.size());
-  cutout.reserve(opaqueCutoutRefs.size());
-  for (const GreedyBatchRef &ref : opaqueCutoutRefs)
+  solid.reserve(upload_refs.size());
+  cutout.reserve(upload_refs.size());
+  for (const GreedyBatchRef &ref : upload_refs)
   {
     const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
     if (!batch)
@@ -1181,37 +6726,237 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       solid.push_back(ref);
     }
   }
-  if (!solid.empty())
+  // GPF5: one opaque MDI pass for solid+cutout (alphaCutout shader path).
+  std::vector<GreedyBatchRef> opaque_draw;
+  opaque_draw.reserve(solid.size() + cutout.size());
+  opaque_draw.insert(opaque_draw.end(), solid.begin(), solid.end());
+  opaque_draw.insert(opaque_draw.end(), cutout.begin(), cutout.end());
+  if (WorldInstance)
   {
-    GreedyGpuBackend.RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
-                                     cullRevision, 0);
-    DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
-                         GreedyShaderMode::TransparentColor, 0.0f);
+    WorldInstance->GetPhysicsTelemetryMutable().OpaqueMdiEligible =
+        static_cast<uint64_t>(opaque_draw.size());
   }
-  if (!cutout.empty())
+  // Sort by blockId so MDI can MultiDraw contiguous same-texture runs.
+  // sort_revision=1 invalidates pre-sort pool layouts (was always 0).
+  // Phase 5.1 T4: skip std::sort when opaque_draw fingerprint unchanged.
+  constexpr uint64_t kBlockIdSortRev = 1;
+  auto by_block_id = [](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
   {
-    std::sort(cutout.begin(), cutout.end(),
-              [&](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
-              {
-                const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
-                const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
-                if (!a || !b)
-                {
-                  return a != nullptr;
-                }
-                return a->blockId < b->blockId;
-              });
-    GLboolean cullWasEnabled;
-    glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-    glDisable(GL_CULL_FACE);
-    GreedyGpuBackend.RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
-                                     cullRevision, 0);
-    DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
-                         GreedyShaderMode::TransparentColor, 0.0f);
-    if (cullWasEnabled)
+    // Perf-root P2: blockId cached on ref — no GreedyCache.find per compare.
+    return ra.blockId < rb.blockId;
+  };
+  auto opaque_draw_fingerprint = [](const std::vector<GreedyBatchRef> &refs)
+  {
+    uint64_t h = refs.size();
+    for (const GreedyBatchRef &r : refs)
+    {
+      h ^= (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.x))
+            << 42) ^
+           (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.y))
+            << 21) ^
+           static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.z));
+      h ^= static_cast<uint64_t>(r.batchIndex) * 0x9e3779b97f4a7c15ull;
+      h ^= static_cast<uint64_t>(r.blockId) * 0xbf58476d1ce4e5b9ull;
+    }
+    return h;
+  };
+
+  auto *mdi = mdi_indirect_cull
+                  ? dynamic_cast<UMdiVertexPoolStore *>(&store)
+                  : nullptr;
+  const Frustum frustum = Frustum::FromViewProjection(vp);
+  // Must match ChunkMeshCache::RebuildVisible (distance admit). 0 = plane-only
+  // and false-negatives hide terrain while cross (built with MaxCullDistance) remains.
+  const float max_cull_distance = cache.MaxCullDistance();
+  const bool horizontal_cull = cache.UseHorizontalCullDistance();
+
+  if (!opaque_draw.empty())
+  {
+    // Phase 5.2.1: Begin only on opaque here. Transparent Begin moves to
+    // PrepareTransparent; cutout pass is destroyed below. RefreshPassRefs
+    // MeshRevAbsorb early-out skips upload — Begin is a counter reset only.
+    // Phase 5.4.4 EnterUnsyncDiet: soft cap while lit-gate. Cap 32 (8 starved
+    // soft_force enter → holes_rate regress on fly).
+    {
+      const bool enter_diet =
+          WorldInstance && WorldInstance->IsEnterLitGateActive();
+      const char *pool_sync = std::getenv("CUBATARIUM_POOL_SYNC");
+      const bool sync_only_enter = pool_sync && pool_sync[0] == '1';
+      GreedyGpuOpaque.VertexPool.SetMaxUnsyncUploadsPerFrame(
+          enter_diet ? (sync_only_enter ? 0 : 32) : 64);
+    }
+    GreedyGpuOpaque.VertexPool.BeginUploadFrame();
+    const uint64_t draw_fp = opaque_draw_fingerprint(opaque_draw);
+    const bool draw_set_stable =
+        draw_fp == CachedOpaqueDrawFingerprint &&
+        !CachedOpaqueSortedRefs.empty() &&
+        CachedOpaqueSortedRefs.size() == opaque_draw.size();
+    if (draw_set_stable)
+    {
+      opaque_draw = CachedOpaqueSortedRefs;
+    }
+    else
+    {
+      std::sort(opaque_draw.begin(), opaque_draw.end(), by_block_id);
+      CachedOpaqueSortedRefs = opaque_draw;
+      CachedOpaqueDrawFingerprint = draw_fp;
+      CachedOpaqueCullInputKey = {};
+      CachedOpaqueCullFocusValid = false;
+      CachedOpaqueCmdOnValid = false;
+      CachedOpaqueCullVbValid = false;
+      CachedOpaqueCullVbDeltaStreak = 0;
+    }
+    GLboolean cullWasEnabled = GL_TRUE;
+    if (!cutout.empty())
+    {
+      glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+      glDisable(GL_CULL_FACE);
+    }
+    double refresh_ms = 0.0;
+    double cull_ms = 0.0;
+    double gpu_draw_ms = 0.0;
+    {
+      ScopedPhase refresh_phase(&refresh_ms);
+      store.RefreshPassRefs(GreedyGpuOpaque, cache, opaque_draw, meshRevision,
+                            cullRevision, kBlockIdSortRev);
+    }
+    if (mdi)
+    {
+      ScopedPhase cull_phase(&cull_ms);
+      // Keep exact GPU CullStats reads out of the frame path. The fence is
+      // polled with timeout=0, but glGetBufferSubData can still stall the CPU.
+      // LastCullOpaqueOn falls back to the CPU AABB estimate for reuse policy;
+      // exact readback remains available through the explicit one-shot request.
+      mdi->SetCullStatsReadbackEnabled(false);
+      // Phase 5.3.4 / audit M06: CullInputKey-gated skip + light-cruise + reuse.
+      float move_spd = 0.0f;
+      bool focus_missing = false;
+      bool vb_edge = false;
+      int miss_horiz = 0;
+      int vb_focus_n = 0;
+      int vb_stalled_n = 0;
+      int vb_no_ticket_n = 0;
+      glm::ivec2 focus_xz(0);
+      if (WorldInstance)
+      {
+        const auto &pt = WorldInstance->GetPhysicsTelemetry();
+        move_spd = pt.MovementSpeed;
+        focus_missing = pt.FocusMissingMesh != 0;
+        miss_horiz = pt.MissHoriz;
+        vb_focus_n = pt.VisibleBlackFocusN;
+        vb_stalled_n = pt.VisibleBlackStalledN;
+        vb_no_ticket_n = pt.VisibleBlackNoTicketN;
+        // Phase 5.7R5: ΔVB hysteresis (|Δ|≥4 or streak≥2) — not micro flicker.
+        if (CachedOpaqueCullVbValid && vb_focus_n != CachedOpaqueCullVbFocusN)
+        {
+          ++CachedOpaqueCullVbDeltaStreak;
+        }
+        else if (CachedOpaqueCullVbValid)
+        {
+          CachedOpaqueCullVbDeltaStreak = 0;
+        }
+        vb_edge = OpaqueCullVbEdgeBlocks(
+            vb_focus_n, CachedOpaqueCullVbFocusN, vb_stalled_n,
+            CachedOpaqueCullVbStalledN, vb_no_ticket_n, miss_horiz,
+            CachedOpaqueCullVbValid, CachedOpaqueCullVbDeltaStreak);
+        focus_xz = glm::ivec2(pt.FocusChunkX, pt.FocusChunkZ);
+      }
+      CachedOpaqueCullVbFocusN = vb_focus_n;
+      CachedOpaqueCullVbStalledN = vb_stalled_n;
+      CachedOpaqueCullVbValid = WorldInstance != nullptr;
+      const uint64_t opaque_cmd_on =
+          CachedOpaqueCmdOnValid ? CachedOpaqueCmdOn : 0;
+      const uint64_t opaque_cmd_on_prev =
+          CachedOpaqueCmdOnValid ? CachedOpaqueCmdOnPrev : 1;
+      const bool focus_unchanged =
+          CachedOpaqueCullFocusValid && focus_xz == CachedOpaqueCullFocusXZ;
+      const CullInputKey opaque_cull_key = MakeCullInputKey(
+          CullPassId::OpaqueGpuCompact, meshRevision, cullRevision, cameraPos,
+          vp, max_cull_distance, horizontal_cull,
+          GreedyGpuOpaque.GpuCompactActive);
+      const bool light_cruise_skip =
+          focus_unchanged &&
+          ShouldSkipOpaqueCullLightCruise(
+              draw_set_stable, CachedOpaqueCullInputKey, opaque_cull_key,
+              GreedyGpuOpaque.IndirectCullReady, GreedyGpuOpaque.GpuCompactActive,
+              move_spd, focus_missing, vb_edge, miss_horiz);
+      const uint32_t cull_parity = OpaqueCullFrameParity++;
+      const bool compact_reuse = ShouldReuseOpaqueCullCompact(
+          draw_set_stable, CachedOpaqueCullInputKey, opaque_cull_key,
+          GreedyGpuOpaque.GpuCompactActive, focus_unchanged, focus_missing,
+          vb_edge, opaque_cmd_on, opaque_cmd_on_prev, cull_parity, miss_horiz);
+      const bool stable_skip = ShouldSkipOpaqueCullStable(
+          draw_set_stable, CachedOpaqueCullInputKey, opaque_cull_key,
+          GreedyGpuOpaque.IndirectCullReady, GreedyGpuOpaque.GpuCompactActive,
+          focus_missing, vb_edge, miss_horiz);
+      const bool do_skip = stable_skip || light_cruise_skip || compact_reuse ||
+                           ShouldDeferOpaqueCompactCullForDeadline(
+                               UFrameDeadline::Get().RemainingMs(),
+                               GreedyGpuOpaque.GpuCompactActive, focus_missing,
+                               vb_edge,
+                               CullInputKeyAllowsCacheReuse(
+                                   CachedOpaqueCullInputKey, opaque_cull_key),
+                               miss_horiz);
+      if (!do_skip)
+      {
+        // Phase 5.7R7.2: cruise spd>1.5 → probe period 10; underfeet/VB force.
+        const bool force_aabb_probe =
+            OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) ||
+            vb_edge;
+        const int aabb_probe_period =
+            (move_spd > 1.5f && !force_aabb_probe) ? 10 : 3;
+        const bool ok = mdi->ApplyGpuCompactCull(
+            GreedyGpuOpaque, frustum, cameraPos, max_cull_distance,
+            horizontal_cull, aabb_probe_period, force_aabb_probe);
+        if (!ok && WorldInstance)
+        {
+          WorldInstance->GetPhysicsTelemetryMutable().GpuCompactFailOpenN++;
+        }
+        CachedOpaqueCullInputKey = opaque_cull_key;
+        CachedOpaqueCullInputKey.resultValid =
+            GreedyGpuOpaque.GpuCompactActive;
+        CachedOpaqueCullFocusXZ = focus_xz;
+        CachedOpaqueCullFocusValid = true;
+        const uint64_t cmd_on = mdi->LastCullOpaqueOn();
+        CachedOpaqueCmdOnPrev = CachedOpaqueCmdOnValid ? CachedOpaqueCmdOn : cmd_on;
+        CachedOpaqueCmdOn = cmd_on;
+        CachedOpaqueCmdOnValid = true;
+      }
+      else if (WorldInstance)
+      {
+        WorldInstance->GetPhysicsTelemetryMutable().OpaqueCullSkippedN++;
+      }
+    }
+    {
+      ScopedPhase gpu_draw_phase(&gpu_draw_ms);
+      DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, true, false,
+                           GreedyShaderMode::TransparentColor, 0.0f);
+    }
+    if (!cutout.empty() && cullWasEnabled)
     {
       glEnable(GL_CULL_FACE);
     }
+    if (WorldInstance)
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      phys.SceneOpaqueRefreshMs = refresh_ms;
+      phys.SceneOpaqueCullMs = cull_ms;
+      phys.SceneOpaqueGpuDrawMs = gpu_draw_ms;
+    }
+  }
+  else
+  {
+    CachedOpaqueSortedRefs.clear();
+    CachedOpaqueDrawFingerprint = 0;
+    CachedOpaqueCullInputKey = {};
+    CachedOpaqueCullFocusValid = false;
+    CachedOpaqueCmdOnValid = false;
+    CachedOpaqueCullVbValid = false;
+    CachedOpaqueCullVbDeltaStreak = 0;
+  }
+  if (!cutout.empty())
+  {
+    MeshStore().DestroyPass(GreedyGpuCutout);
   }
   if (WorldInstance)
   {
@@ -1222,14 +6967,537 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
                        GreedyGpuCutout.VertexPool.CapacityBytes() +
                        GreedyGpuTransparent.VertexPool.CapacityBytes();
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.CullSubmitCpuMs = 0.0;
+    phys.CullGpuExecMs = -1.0;
+    phys.OpaqueMdiCullTotalMs = 0.0;
+    phys.OpaqueMdiCullAabbProbeCpuMs = 0.0;
+    phys.OpaqueMdiCullFallbackCpuMs = 0.0;
+    phys.OpaqueMdiCullSetupCpuMs = 0.0;
+    phys.OpaqueMdiCullQueryPollCpuMs = 0.0;
+    phys.OpaqueMdiCullPostSubmitCpuMs = 0.0;
+    phys.OpaqueMdiCullStatsPollCpuMs = 0.0;
+    phys.OpaqueMdiCullStatsFencePollCpuMs = 0.0;
+    phys.OpaqueMdiCullStatsBufferReadCpuMs = 0.0;
+    phys.OpaqueMdiCullStatsArmCpuMs = 0.0;
+    phys.OpaqueMdiCullBatchStateCpuMs = 0.0;
+    phys.OpaqueMdiCullPostSubmitOtherCpuMs = 0.0;
+    phys.OpaqueMdiCullUnattributedCpuMs = 0.0;
     phys.GpuPoolUsedMb = static_cast<double>(used) / (1024.0 * 1024.0);
     phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
+    phys.VertexPoolFill =
+        cap > 0 ? static_cast<double>(used) / static_cast<double>(cap) : 0.0;
+    phys.PoolUnsyncUploads =
+        GreedyGpuOpaque.VertexPool.ConsumeUnsyncUploads() +
+        GreedyGpuCutout.VertexPool.ConsumeUnsyncUploads() +
+        GreedyGpuTransparent.VertexPool.ConsumeUnsyncUploads();
+    phys.PoolFenceWaitMs =
+        GreedyGpuOpaque.VertexPool.ConsumeFenceWaitMs() +
+        GreedyGpuCutout.VertexPool.ConsumeFenceWaitMs() +
+        GreedyGpuTransparent.VertexPool.ConsumeFenceWaitMs();
+    phys.PoolRetiredReclaimedN =
+        GreedyGpuOpaque.VertexPool.ConsumeRetiredReclaimedN() +
+        GreedyGpuCutout.VertexPool.ConsumeRetiredReclaimedN() +
+        GreedyGpuTransparent.VertexPool.ConsumeRetiredReclaimedN();
+    phys.PoolFenceTimeoutN =
+        GreedyGpuOpaque.VertexPool.ConsumeFenceTimeoutN() +
+        GreedyGpuCutout.VertexPool.ConsumeFenceTimeoutN() +
+        GreedyGpuTransparent.VertexPool.ConsumeFenceTimeoutN();
+    phys.PoolReserveBumpN =
+        GreedyGpuOpaque.VertexPool.ConsumeReserveBumpN() +
+        GreedyGpuCutout.VertexPool.ConsumeReserveBumpN() +
+        GreedyGpuTransparent.VertexPool.ConsumeReserveBumpN();
+    phys.PublicationIncompleteMaterialN =
+        ConsumePublicationIncompleteMaterialN();
+    phys.PublicationOomRetainN = ConsumePublicationOomRetainN();
+    phys.PublicationMaterialBlockIdFlipN = static_cast<int>(
+        ConsumePublicationMaterialBlockIdFlipN());
+    phys.PublicationOverloadRetainN =
+        phys.PublicationIncompleteMaterialN + phys.PublicationOomRetainN;
+    phys.PubVerChangedWithoutFreshN = ConsumePubVerChangedWithoutFreshN();
+    phys.PassMeshRevLagMax = ConsumePassMeshRevLagMax();
+    phys.CullStatsSyncReadN = ConsumeCullStatsSyncReadN();
+    phys.PoolRetiredPendingN = static_cast<int>(
+        GreedyGpuOpaque.VertexPool.RetiredSlotCount() +
+        GreedyGpuOpaque.VertexPool.PendingRetireCount() +
+        GreedyGpuCutout.VertexPool.RetiredSlotCount() +
+        GreedyGpuCutout.VertexPool.PendingRetireCount() +
+        GreedyGpuTransparent.VertexPool.RetiredSlotCount() +
+        GreedyGpuTransparent.VertexPool.PendingRetireCount());
+    phys.PoolFreeSlotN = static_cast<int>(
+        GreedyGpuOpaque.VertexPool.FreeSlotCount() +
+        GreedyGpuCutout.VertexPool.FreeSlotCount() +
+        GreedyGpuTransparent.VertexPool.FreeSlotCount());
+    if (mdi)
+    {
+      phys.OpaqueCmdTotal = mdi->LastCullOpaqueTotal();
+      phys.OpaqueCmdOn = mdi->LastCullOpaqueOn();
+      phys.CpuAabbWouldOn = mdi->LastCpuAabbWouldOn();
+      phys.ChunkMeshedCulled0 =
+          phys.OpaqueCmdTotal > phys.OpaqueCmdOn
+              ? phys.OpaqueCmdTotal - phys.OpaqueCmdOn
+              : 0;
+      // A36 S1: one bounded cull span per frame when opaque cull excludes draws.
+      if (phys.ChunkMeshedCulled0 > 0)
+      {
+        const glm::ivec3 fc = UChunkManager::WorldToChunk(
+            glm::ivec3(static_cast<int>(std::floor(cameraPos.x)),
+                       static_cast<int>(std::floor(cameraPos.y)),
+                       static_cast<int>(std::floor(cameraPos.z))));
+        UJobStageTrace::NoteCullDecision(fc.x, fc.y, fc.z,
+                                         /*cull_decision=*/1);
+      }
+      phys.GpuCullIndirect = 1.0;
+      phys.CullSubmitCpuMs = mdi->LastCullSubmitCpuMs();
+      phys.OpaqueMdiCullTotalMs = mdi->LastCullTotalMs();
+      phys.OpaqueMdiCullAabbProbeCpuMs = mdi->LastCullAabbProbeCpuMs();
+      phys.OpaqueMdiCullFallbackCpuMs = mdi->LastCullFallbackCpuMs();
+      phys.OpaqueMdiCullSetupCpuMs = mdi->LastCullSetupCpuMs();
+      phys.OpaqueMdiCullQueryPollCpuMs = mdi->LastCullQueryPollCpuMs();
+      phys.OpaqueMdiCullPostSubmitCpuMs = mdi->LastCullPostSubmitCpuMs();
+      phys.OpaqueMdiCullStatsPollCpuMs = mdi->LastCullStatsPollCpuMs();
+      phys.OpaqueMdiCullStatsFencePollCpuMs =
+          mdi->LastCullStatsFencePollCpuMs();
+      phys.OpaqueMdiCullStatsBufferReadCpuMs =
+          mdi->LastCullStatsBufferReadCpuMs();
+      phys.OpaqueMdiCullStatsArmCpuMs = mdi->LastCullStatsArmCpuMs();
+      phys.OpaqueMdiCullBatchStateCpuMs = mdi->LastCullBatchStateCpuMs();
+      phys.OpaqueMdiCullPostSubmitOtherCpuMs =
+          mdi->LastCullPostSubmitOtherCpuMs();
+      const double mdi_cull_attributed =
+          phys.OpaqueMdiCullAabbProbeCpuMs +
+          phys.OpaqueMdiCullFallbackCpuMs + phys.OpaqueMdiCullSetupCpuMs +
+          phys.OpaqueMdiCullQueryPollCpuMs + phys.CullSubmitCpuMs +
+          phys.OpaqueMdiCullPostSubmitCpuMs;
+      phys.OpaqueMdiCullUnattributedCpuMs =
+          (std::max)(0.0, phys.OpaqueMdiCullTotalMs - mdi_cull_attributed);
+      if (mdi->CullGpuTimingAvailable())
+      {
+        phys.CullGpuExecMs = mdi->LastCullGpuExecMs();
+      }
+    }
+  }
+
+  // Phase 5.1 T4 / 5.2.1: leftovers-only packed; near/underfeet radius only
+  // (full leftover dual-path still too hot on fly-heavy). Never skip-all.
+  const auto &packed_opaque_refs = cache.GetGpuPackedOpaqueRefs();
+  std::vector<GpuPackedChunkRef> packed_opaque_draw;
+  const std::vector<GpuPackedChunkRef> *packed_to_draw = &packed_opaque_refs;
+  const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
+      glm::ivec3(static_cast<int>(std::floor(cameraPos.x)),
+                 static_cast<int>(std::floor(cameraPos.y)),
+                 static_cast<int>(std::floor(cameraPos.z))));
+  auto packed_near = [&](const glm::ivec3 &coord)
+  {
+    return std::max(std::abs(coord.x - cam_chunk.x),
+                    std::abs(coord.z - cam_chunk.z)) <= kPackedNearHoriz;
+  };
+  auto mdi_has_drawable_batch = [&](const glm::ivec3 &coord) -> bool
+  {
+    const auto has_executable_batch = [&](const GreedyGpuPassCache &pass)
+    {
+      for (const GreedyGpuBatch &gpu : pass.batches)
+      {
+        if (gpu.chunkCoord != coord || gpu.indexCountGl <= 0)
+        {
+          continue;
+        }
+        if (gpu.pooled && pass.poolVbo != 0 && pass.poolEbo != 0)
+        {
+          return true;
+        }
+        if (!gpu.pooled && gpu.vbo != 0 && gpu.ebo != 0)
+        {
+          return true;
+        }
+      }
+      return false;
+    };
+    return has_executable_batch(GreedyGpuOpaque) ||
+           has_executable_batch(GreedyGpuCutout);
+  };
+  auto note_dual_if_packed_and_mdi = [&](const glm::ivec3 &coord)
+  {
+    if (!WorldInstance || !mdi_has_drawable_batch(coord))
+    {
+      return;
+    }
+    ++WorldInstance->GetPhysicsTelemetryMutable().PassDualBackendSameCoordN;
+  };
+  if (mdi && store.SupportsMultiDrawIndirect() && !opaque_draw.empty() &&
+      !packed_opaque_refs.empty())
+  {
+    packed_opaque_draw.reserve(packed_opaque_refs.size());
+    for (const GpuPackedChunkRef &pref : packed_opaque_refs)
+    {
+      if (!packed_near(pref.chunkCoord))
+      {
+        continue;
+      }
+      bool found = false;
+      // CPU refs are not proof that the current mesh is resident on the GPU.
+      // Keep the packed predecessor visible until an executable MDI batch has
+      // actually been published for this chunk.
+      found = mdi_has_drawable_batch(pref.chunkCoord);
+      if (!found)
+      {
+        packed_opaque_draw.push_back(pref);
+        // Renamed meaning (audit S3): packed drawn while absent from MDI resident
+        // and CPU opaque_draw — not proof of stale dual-draw.
+        if (WorldInstance)
+        {
+          ++WorldInstance->GetPhysicsTelemetryMutable()
+                .PassPackedWithoutMdiResidentN;
+        }
+      }
+    }
+    packed_to_draw = &packed_opaque_draw;
+  }
+  else if (!packed_opaque_refs.empty())
+  {
+    // Apply the same representation check when the MDI draw path is inactive.
+    // Merely retaining a stale batch record cannot suppress packed fallback.
+    packed_opaque_draw.reserve(packed_opaque_refs.size());
+    for (const GpuPackedChunkRef &pref : packed_opaque_refs)
+    {
+      if (!packed_near(pref.chunkCoord))
+      {
+        continue;
+      }
+      if (mdi_has_drawable_batch(pref.chunkCoord))
+      {
+        continue;
+      }
+      packed_opaque_draw.push_back(pref);
+    }
+    packed_to_draw = &packed_opaque_draw;
+  }
+  // Honest dual-draw: any packed we still schedule while MDI resident owns it.
+  for (const GpuPackedChunkRef &pref : *packed_to_draw)
+  {
+    note_dual_if_packed_and_mdi(pref.chunkCoord);
+  }
+  size_t packed_opaque_drawn = 0;
+  double packed_ms = 0.0;
+  {
+    ScopedPhase packed_phase(&packed_ms);
+    if (!packed_to_draw->empty())
+    {
+      packed_opaque_drawn =
+          DrawPackedGpuMeshes(cache, *packed_to_draw, vp, textures, false,
+                              GreedyShaderMode::TransparentColor, 0.0f);
+    }
+  }
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.SceneOpaquePackedMs = packed_ms;
+    phys.OpaqueGpuPackedN = static_cast<uint64_t>(packed_opaque_drawn);
+    phys.OpaqueDrawN = phys.OpaqueCmdOn + phys.OpaqueGpuPackedN;
   }
 }
+
+size_t UGeometryEngine::DrawPackedGpuMeshes(
+    const UChunkMeshCache &cache,
+    const std::vector<GpuPackedChunkRef> &chunk_refs, const glm::mat4 &vp,
+    const std::map<size_t, UTextureCube> &textures, bool transparent_pass,
+    GreedyShaderMode mode, float shell_alpha)
+{
+  const bool capture_opaque_packed_trace =
+      !transparent_pass && UJobStageTrace::VisualBlackTraceEnabled();
+  const auto get_opaque_trace = [&](glm::ivec3 coord)
+      -> PackedOpaqueDrawTrace *
+  {
+    if (!capture_opaque_packed_trace)
+    {
+      return nullptr;
+    }
+    const auto it = std::find_if(
+        LastOpaquePackedDrawTrace.begin(), LastOpaquePackedDrawTrace.end(),
+        [&](const PackedOpaqueDrawTrace &entry)
+        { return entry.coord == coord; });
+    if (it != LastOpaquePackedDrawTrace.end())
+    {
+      return &*it;
+    }
+    PackedOpaqueDrawTrace trace{};
+    trace.coord = coord;
+    trace.selected = 1;
+    LastOpaquePackedDrawTrace.push_back(trace);
+    return &LastOpaquePackedDrawTrace.back();
+  };
+  if (capture_opaque_packed_trace)
+  {
+    for (const GpuPackedChunkRef &chunk : chunk_refs)
+    {
+      (void)get_opaque_trace(chunk.chunkCoord);
+    }
+  }
+  const UGpuMeshPipeline *pipeline = cache.GetGpuMeshPipeline();
+  if (!pipeline || !pipeline->IsReady() || chunk_refs.empty())
+  {
+    return 0;
+  }
+  if (!packedGreedyShader || !packedGreedyShader->IsValid())
+  {
+    return 0;
+  }
+  if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers())
+  {
+    return 0;
+  }
+  if (capture_opaque_packed_trace)
+  {
+    for (PackedOpaqueDrawTrace &trace : LastOpaquePackedDrawTrace)
+    {
+      trace.draw_path_ready = 1;
+    }
+  }
+
+  glm::vec3 camera_position(0.0f);
+  if (WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      camera_position = camera->GetPosition();
+    }
+  }
+  packedGreedyShader->Use();
+  packedGreedyShader->SetMat4("mvp_matrix", vp);
+  packedGreedyShader->SetInt("texture0", 0);
+  SetGreedyShaderMode(packedGreedyShader, false, transparent_pass, mode,
+                      shell_alpha);
+  packedGreedyShader->SetFloat(
+      "uDebugTransparentFragmentMarker",
+      transparent_pass && mode == GreedyShaderMode::TransparentColor &&
+              DebugTransparentFragmentMarkerEnabled(camera_position)
+          ? 1.0f
+          : 0.0f);
+  packedGreedyShader->SetFloat("uDebugFluidFragmentMarker", 0.0f);
+  const bool opaque_depth_guard =
+      transparent_pass && mode != GreedyShaderMode::ShellDepthPrepass &&
+      !DebugDisableOpaqueDepthGuard();
+  if (opaque_depth_guard)
+  {
+    OpaqueDepthCapture.Bind();
+  }
+  OpaqueDepthCapture.ApplyShaderUniforms(packedGreedyShader, opaque_depth_guard);
+  if (WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      camera_position = camera->GetPosition();
+      ApplyFogUniforms(
+          packedGreedyShader, camera_position,
+          cutum::ShouldApplyBelowSurfaceFogToPass(
+              transparent_pass, false,
+              UnderwaterFogPass_.GetUnderwaterFogSubmerged() > 0.5f));
+    }
+    ApplyGreedyEnvironmentUniforms(packedGreedyShader);
+  }
+  packedGreedyShader->SetFloat("uLightPreviewOverride", 0.0f);
+  packedGreedyShader->SetFloat("uLightPreviewFade", 0.0f);
+  glActiveTexture(GL_TEXTURE0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
+                   pipeline->GetAllocator().GetQuadSsbo());
+  glBindVertexArray(greedyMeshVAO);
+
+  size_t packed_draw_chunks = 0;
+  uint64_t fluid_draw_calls = 0;
+  uint64_t fluid_draw_indices = 0;
+  const bool fluid_trace =
+      transparent_pass && FluidRenderTraceEnabled(camera_position) &&
+      WorldInstance != nullptr;
+  const bool fluid_marker =
+      transparent_pass && mode == GreedyShaderMode::TransparentColor &&
+      DebugFluidFragmentMarkerEnabled(camera_position) &&
+      WorldInstance != nullptr;
+  for (const GpuPackedChunkRef &chunk : chunk_refs)
+  {
+    PackedOpaqueDrawTrace *trace =
+        capture_opaque_packed_trace ? get_opaque_trace(chunk.chunkCoord)
+                                    : nullptr;
+    const GpuMeshSlot *slot =
+        pipeline->GetAllocator().GetSlot(chunk.chunkCoord);
+    if (!slot || slot->QuadCount == 0)
+    {
+      continue;
+    }
+    if (trace)
+    {
+      trace->slot_present = 1;
+      trace->slot_quad_count = slot->QuadCount;
+    }
+    if (WorldInstance &&
+        !WorldInstance->IsChunkSliceRenderReady(chunk.chunkCoord))
+    {
+      NoteRendererGateCandidate(
+          *WorldInstance, cache, chunk.chunkCoord,
+          WorldInstance->GetCurrentUserCamera()
+              ? WorldInstance->GetCurrentUserCamera()->GetPosition()
+              : glm::vec3(0.0f),
+          transparent_pass ? 4u : 3u, 0u, slot->QuadCount, false);
+      continue;
+    }
+    if (trace)
+    {
+      trace->slice_ready = 1;
+    }
+    if (WorldInstance && WorldInstance->HasRegionalWeather())
+    {
+      ApplyGreedyChunkWeatherUniforms(packedGreedyShader, chunk.chunkCoord);
+    }
+    if (WorldInstance)
+    {
+      NoteRendererGateCandidate(
+          *WorldInstance, cache, chunk.chunkCoord,
+          WorldInstance->GetCurrentUserCamera()
+              ? WorldInstance->GetCurrentUserCamera()->GetPosition()
+              : glm::vec3(0.0f),
+          transparent_pass ? 4u : 3u, 0u, slot->QuadCount, true);
+    }
+    ++packed_draw_chunks;
+    const glm::ivec3 origin = chunk.chunkCoord * CHUNK_SIZE;
+    packedGreedyShader->SetIVec3("chunkOrigin", origin);
+    SetLightPreviewUniforms(packedGreedyShader, WorldInstance.get(),
+                            chunk.chunkCoord);
+    for (const GpuBlockDrawRange &range : chunk.blockRanges)
+    {
+      if (range.Transparent != transparent_pass)
+      {
+        continue;
+      }
+      if (trace)
+      {
+        ++trace->opaque_range_count;
+        trace->opaque_range_quad_count += range.quadCount;
+        if (trace->first_opaque_range_block_id < 0)
+        {
+          trace->first_opaque_range_block_id = range.blockId;
+        }
+      }
+      const auto texIt = textures.find(static_cast<size_t>(range.blockId));
+      if (texIt == textures.end())
+      {
+        if (trace)
+        {
+          ++trace->missing_texture_entry_count;
+          if (trace->first_missing_texture_block_id < 0)
+          {
+            trace->first_missing_texture_block_id = range.blockId;
+          }
+        }
+        continue;
+      }
+      const GLuint texture_id = texIt->second.GetTextureId();
+      if (texture_id == 0)
+      {
+        if (trace)
+        {
+          ++trace->zero_texture_id_range_count;
+          if (trace->first_zero_texture_id_block_id < 0)
+          {
+            trace->first_zero_texture_id_block_id = range.blockId;
+          }
+        }
+        continue;
+      }
+      if (trace)
+      {
+        ++trace->texture_ready_range_count;
+      }
+      SetBlockAnimUniforms(packedGreedyShader, range.blockId, textures);
+      const bool fluid_range =
+          (fluid_trace || fluid_marker) && WorldInstance &&
+          WorldInstance->GetBlockRegistry().GetRenderStyle(range.blockId) ==
+              BlockRenderStyle::Fluid;
+      packedGreedyShader->SetFloat(
+          "uDebugFluidFragmentMarker",
+          fluid_marker && fluid_range ? 1.0f : 0.0f);
+      glBindTexture(GL_TEXTURE_2D, texture_id);
+      const GLint first =
+          static_cast<GLint>((slot->OffsetQuads + range.quadOffset) * 6u);
+      const GLsizei count = static_cast<GLsizei>(range.quadCount * 6u);
+      if (count <= 0)
+      {
+        continue;
+      }
+      packedGreedyShader->SetInt(
+          "uAlphaCutout",
+          ShouldUseGreedyAlphaCutout(transparent_pass, false,
+                                     range.AlphaCutout)
+              ? 1
+              : 0);
+      glDrawArrays(GL_TRIANGLES, first, count);
+      if (fluid_trace && fluid_range)
+      {
+        ++fluid_draw_calls;
+        fluid_draw_indices += static_cast<uint64_t>(count);
+      }
+      if (trace)
+      {
+        ++trace->draw_call_count;
+        trace->drawn_quad_count += range.quadCount;
+        trace->drawn_index_count += static_cast<uint32_t>(count);
+      }
+    }
+  }
+
+  glBindVertexArray(0);
+  packedGreedyShader->Unuse();
+  if (fluid_trace)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.FluidDrawCallN += fluid_draw_calls;
+    phys.FluidSubmittedIndexCapacityN += fluid_draw_indices;
+    if (mode == GreedyShaderMode::ShellDepthPrepass)
+    {
+      phys.FluidShellDepthCallN += fluid_draw_calls;
+    }
+    else if (mode == GreedyShaderMode::TransparentColor)
+    {
+      phys.FluidColorPassCallN += fluid_draw_calls;
+    }
+  }
+  return packed_draw_chunks;
+}
+
+namespace
+{
+
+uint64_t TransparentRefListFingerprint(const std::vector<GreedyBatchRef> &refs)
+{
+  uint64_t h = refs.size();
+  for (const GreedyBatchRef &r : refs)
+  {
+    h ^= (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.x)) << 42) ^
+         (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.y)) << 21) ^
+         static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.z));
+    h ^= static_cast<uint64_t>(r.batchIndex) * 0x9e3779b97f4a7c15ull;
+  }
+  return h;
+}
+
+} // namespace
 
 void UGeometryEngine::PrepareTransparent(
     const GreedyTransparentDrawContext &ctx)
 {
+  PreparedTransparentCache = &ctx.cache;
+  const bool fluid_trace = FluidRenderTraceEnabled(ctx.cameraPos);
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.FluidTransparentRefN = 0;
+    phys.FluidTransparentIndexN = 0;
+    phys.FluidGpuBatchN = 0;
+    phys.FluidGpuIndexN = 0;
+    phys.FluidPackedRangeN = 0;
+    phys.FluidPackedQuadN = 0;
+    phys.FluidDrawCallN = 0;
+    phys.FluidSubmittedIndexCapacityN = 0;
+    phys.FluidShellDepthCallN = 0;
+    phys.FluidColorPassCallN = 0;
+  }
   std::vector<GreedyBatchRef> filtered;
   filtered.reserve(ctx.transparentRefs.size());
   for (const GreedyBatchRef &ref : ctx.transparentRefs)
@@ -1244,20 +7512,194 @@ void UGeometryEngine::PrepareTransparent(
     {
       continue;
     }
+    if (fluid_trace &&
+        ctx.blockRegistry.GetRenderStyle(batch->blockId) ==
+            BlockRenderStyle::Fluid &&
+        WorldInstance)
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      ++phys.FluidTransparentRefN;
+      phys.FluidTransparentIndexN += batch->indices.size();
+    }
     filtered.push_back(ref);
   }
   if (filtered.empty())
   {
-    GreedyGpuBackend.DestroyPass(GreedyGpuTransparent);
+    MeshStore().DestroyPass(GreedyGpuTransparent);
     PreparedTransparentTextures = nullptr;
+    CachedTransparentSortedRefs.clear();
+    CachedTransparentSortRevision = 0;
+    CachedTransparentMeshRevision = 0;
+    CachedTransparentRefFingerprint = 0;
+    CachedTransparentCullFocusValid = false;
+    CachedTransparentCullInputKey = {};
+    CachedTransparentCmdOnValid = false;
+    if (WorldInstance)
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      phys.TransparentSortRevChanged = 0;
+      phys.TransparentUploadFullN = 0;
+      phys.TransparentCmdReorderN = 0;
+      phys.TransparentOrderOnlyFailReason = 0;
+      phys.TransparentBatchN = 0;
+    }
     return;
   }
-  SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
-                               ctx.blockRegistry);
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
-  GreedyGpuBackend.RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
+  const uint64_t refFingerprint = TransparentRefListFingerprint(filtered);
+  const bool mesh_and_refs_stable =
+      ctx.meshRevision == CachedTransparentMeshRevision &&
+      refFingerprint == CachedTransparentRefFingerprint;
+  const bool sort_inputs_unchanged =
+      sortRevision == CachedTransparentSortRevision && mesh_and_refs_stable &&
+      !CachedTransparentSortedRefs.empty();
+  const bool skip_full_resort = ShouldSkipTransparentFullResort(
+      mesh_and_refs_stable, !CachedTransparentSortedRefs.empty(),
+      CachedTransparentPrevCmdReorderN,
+      sortRevision == CachedTransparentSortRevision);
+  if ((sort_inputs_unchanged || skip_full_resort) &&
+      !CachedTransparentSortedRefs.empty())
+  {
+    filtered = CachedTransparentSortedRefs;
+  }
+  else
+  {
+    SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
+                                 ctx.blockRegistry);
+    CachedTransparentSortedRefs = filtered;
+    CachedTransparentSortRevision = sortRevision;
+    CachedTransparentMeshRevision = ctx.meshRevision;
+    CachedTransparentRefFingerprint = refFingerprint;
+  }
+  GreedyGpuRefreshTelem refresh_telem;
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.TransparentSortRevChanged =
+        sortRevision != GreedyGpuTransparent.sortRevision ? 1 : 0;
+  }
+  UGreedyGpuBackend::BindRefreshTelem(&refresh_telem);
+  // Phase 5.2.1: opaque path no longer Begins transparent pool.
+  // Phase 5.4.4 EnterUnsyncDiet for transparent pool (see opaque Begin).
+  {
+    const bool enter_diet =
+        WorldInstance && WorldInstance->IsEnterLitGateActive();
+    const char *pool_sync = std::getenv("CUBATARIUM_POOL_SYNC");
+    const bool sync_only_enter = pool_sync && pool_sync[0] == '1';
+    GreedyGpuTransparent.VertexPool.SetMaxUnsyncUploadsPerFrame(
+        enter_diet ? (sync_only_enter ? 0 : 32) : 64);
+  }
+  GreedyGpuTransparent.VertexPool.BeginUploadFrame();
+  MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
-                                   sortRevision);
+                                   sortRevision, /*consume_dirty=*/false);
+  UGreedyGpuBackend::BindRefreshTelem(nullptr);
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.TransparentUploadFullN = refresh_telem.UploadFullN;
+    phys.TransparentCmdReorderN = refresh_telem.CmdReorderN;
+    phys.TransparentOrderOnlyFailReason = refresh_telem.OrderOnlyFailReason;
+    phys.TransparentBatchN =
+        static_cast<int>(GreedyGpuTransparent.batches.size());
+    CachedTransparentPrevCmdReorderN = refresh_telem.CmdReorderN;
+    if (fluid_trace)
+    {
+      for (const GreedyGpuBatch &batch : GreedyGpuTransparent.batches)
+      {
+        if (ctx.blockRegistry.GetRenderStyle(batch.blockId) !=
+            BlockRenderStyle::Fluid)
+        {
+          continue;
+        }
+        ++phys.FluidGpuBatchN;
+        phys.FluidGpuIndexN +=
+            static_cast<uint64_t>(std::max(batch.indexCountGl, 0));
+      }
+      for (const GpuPackedChunkRef &chunk :
+           ctx.cache.GetGpuPackedTransparentRefs())
+      {
+        for (const GpuBlockDrawRange &range : chunk.blockRanges)
+        {
+          if (!range.Transparent ||
+              ctx.blockRegistry.GetRenderStyle(range.blockId) !=
+                  BlockRenderStyle::Fluid)
+          {
+            continue;
+          }
+          ++phys.FluidPackedRangeN;
+          phys.FluidPackedQuadN += range.quadCount;
+        }
+      }
+    }
+  }
+  if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
+  {
+    const Frustum frustum = Frustum::FromViewProjection(ctx.viewProjection);
+    // Phase 5.7R7.2 / audit M06: transparent compact reuse via CullInputKey.
+    float move_spd = 0.0f;
+    bool focus_missing = false;
+    bool vb_edge = false;
+    int miss_horiz = 0;
+    glm::ivec2 focus_xz(0);
+    if (WorldInstance)
+    {
+      const auto &pt = WorldInstance->GetPhysicsTelemetry();
+      move_spd = pt.MovementSpeed;
+      focus_missing = pt.FocusMissingMesh != 0;
+      miss_horiz = pt.MissHoriz;
+      vb_edge = OpaqueCullVbEdgeBlocks(
+          pt.VisibleBlackFocusN, CachedOpaqueCullVbFocusN,
+          pt.VisibleBlackStalledN, CachedOpaqueCullVbStalledN,
+          pt.VisibleBlackNoTicketN, miss_horiz, CachedOpaqueCullVbValid,
+          CachedOpaqueCullVbDeltaStreak);
+      focus_xz = glm::ivec2(pt.FocusChunkX, pt.FocusChunkZ);
+    }
+    const uint64_t transp_cmd_on =
+        CachedTransparentCmdOnValid ? CachedTransparentCmdOn : 0;
+    const uint64_t transp_cmd_on_prev =
+        CachedTransparentCmdOnValid ? CachedTransparentCmdOnPrev : 1;
+    const bool focus_unchanged = CachedTransparentCullFocusValid &&
+                                 focus_xz == CachedTransparentCullFocusXZ;
+    const bool draw_set_stable =
+        sort_inputs_unchanged && !CachedTransparentSortedRefs.empty();
+    const CullInputKey transparent_cull_key = MakeCullInputKey(
+        CullPassId::TransparentGpuCompact, ctx.meshRevision, ctx.cullRevision,
+        ctx.cameraPos, ctx.viewProjection, ctx.cache.MaxCullDistance(),
+        ctx.cache.UseHorizontalCullDistance(),
+        GreedyGpuTransparent.GpuCompactActive);
+    const uint32_t transp_parity = TransparentCullFrameParity++;
+    const bool transp_reuse = ShouldReuseOpaqueCullCompact(
+        draw_set_stable, CachedTransparentCullInputKey, transparent_cull_key,
+        GreedyGpuTransparent.GpuCompactActive, focus_unchanged, focus_missing,
+        vb_edge, transp_cmd_on, transp_cmd_on_prev, transp_parity, miss_horiz);
+    if (!transp_reuse)
+    {
+      const bool force_aabb_probe =
+          OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge;
+      const int aabb_probe_period =
+          (move_spd > 1.5f && !force_aabb_probe) ? 10 : 3;
+      mdi->ApplyGpuCompactCull(GreedyGpuTransparent, frustum, ctx.cameraPos,
+                               ctx.cache.MaxCullDistance(),
+                               ctx.cache.UseHorizontalCullDistance(),
+                               aabb_probe_period, force_aabb_probe);
+      CachedTransparentCullInputKey = transparent_cull_key;
+      CachedTransparentCullInputKey.resultValid =
+          GreedyGpuTransparent.GpuCompactActive;
+      CachedTransparentCullFocusXZ = focus_xz;
+      CachedTransparentCullFocusValid = true;
+      const uint64_t cmd_on = mdi->LastCullOpaqueOn();
+      CachedTransparentCmdOnPrev =
+          CachedTransparentCmdOnValid ? CachedTransparentCmdOn : cmd_on;
+      CachedTransparentCmdOn = cmd_on;
+      CachedTransparentCmdOnValid = true;
+      if (WorldInstance)
+      {
+        WorldInstance->GetPhysicsTelemetryMutable().CullSubmitCpuMs +=
+            mdi->LastCullSubmitCpuMs();
+      }
+    }
+  }
   PreparedTransparentVp = ctx.viewProjection;
   PreparedTransparentTextures = &ctx.textures;
 }
@@ -1269,14 +7711,47 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
   {
     return;
   }
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  constexpr bool kAlphaCutout = false;
-#else
-  constexpr bool kAlphaCutout = true;
-#endif
+  const uint8_t previous_witness_pass_ordinal =
+      g_fluid_draw_witness_pass_ordinal;
+  if (g_capture_fluid_draw_witness_for_pixel_probe && WorldInstance)
+  {
+    if (mode == GreedyShaderMode::ShellDepthPrepass)
+    {
+      g_fluid_draw_witness_pass_ordinal = 0;
+    }
+    else if (mode == GreedyShaderMode::TransparentColor)
+    {
+      static thread_local uint64_t last_witness_frame_epoch =
+          std::numeric_limits<uint64_t>::max();
+      static thread_local uint8_t color_pass_ordinal = 0;
+      const uint64_t frame_epoch = WorldInstance->GetStreamingFrameEpoch();
+      if (last_witness_frame_epoch != frame_epoch)
+      {
+        last_witness_frame_epoch = frame_epoch;
+        color_pass_ordinal = 0;
+      }
+      color_pass_ordinal = static_cast<uint8_t>(
+          std::min<unsigned int>(color_pass_ordinal + 1u, 2u));
+      g_fluid_draw_witness_pass_ordinal = color_pass_ordinal;
+    }
+    else
+    {
+      g_fluid_draw_witness_pass_ordinal = 255;
+    }
+  }
+  const bool kAlphaCutout =
+      !GetActiveRenderBackendCaps().PreferSinglePassTransparent;
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
                        *PreparedTransparentTextures, kAlphaCutout, true, mode,
                        shellAlpha);
+  g_fluid_draw_witness_pass_ordinal = previous_witness_pass_ordinal;
+  if (PreparedTransparentCache)
+  {
+    DrawPackedGpuMeshes(*PreparedTransparentCache,
+                        PreparedTransparentCache->GetGpuPackedTransparentRefs(),
+                        PreparedTransparentVp, *PreparedTransparentTextures,
+                        true, mode, shellAlpha);
+  }
 }
 
 bool UGeometryEngine::InitGreedyMeshBuffers()
@@ -1312,14 +7787,17 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
   glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, kStride,
                         (void *)(offsetof(GreedyMeshVertex, wetness)));
   glEnableVertexAttribArray(5);
+  glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, lightPreview)));
+  glEnableVertexAttribArray(6);
   glBindVertexArray(0);
   return greedyMeshVAO != 0;
 }
 
 void UGeometryEngine::DestroyGreedyMeshBuffers()
 {
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   CrossGpuBackend.DestroyAll(CrossGpuPass);
   if (greedyMeshEBO)
   {
@@ -1426,7 +7904,24 @@ void UGeometryEngine::DrawSkyGradient()
   WorldInstance->RefreshSkyVisualStateForRender();
 
   float horizon_boost = 0.0f;
-  const UWorld::EnvironmentState &env = WorldInstance->GetEnvironmentState();
+  UWorld::EnvironmentState env = WorldInstance->GetEnvironmentState();
+
+  glm::mat3 inv_view_rot(1.0f);
+  glm::mat4 inv_projection(1.0f);
+  glm::vec3 camera_pos(0.0f);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
+  {
+    const glm::mat3 view_rot = glm::mat3(camera->GetViewMatrix());
+    inv_view_rot = glm::transpose(view_rot);
+    camera_pos = camera->GetPosition();
+    inv_projection = glm::inverse(camera->GetProjection());
+  }
+  const WeatherSample sky_weather = WorldInstance->SampleWeatherAt(camera_pos);
+  env.CloudCoverage = sky_weather.CloudCoverage;
+  env.Cloudiness = sky_weather.CloudCoverage;
+  env.PrecipitationIntensity = sky_weather.PrecipitationIntensity;
+  env.WindStrength = sky_weather.WindStrength;
+  env.WindDirection = sky_weather.WindDirection;
   horizon_boost = std::clamp(
       env.Cloudiness * 0.14f + env.PrecipitationIntensity * 0.1f, 0.0f, 0.35f);
   if (Render.AltitudeAdaptiveFog)
@@ -1437,18 +7932,10 @@ void UGeometryEngine::DrawSkyGradient()
     horizon_boost += std::clamp(altitude / (threshold * 2.0f), 0.0f, 0.25f);
   }
 
-  glm::mat3 inv_view_rot(1.0f);
-  glm::vec3 camera_pos(0.0f);
-  if (auto camera = WorldInstance->GetCurrentUserCamera())
-  {
-    const glm::mat3 view_rot = glm::mat3(camera->GetViewMatrix());
-    inv_view_rot = glm::transpose(view_rot);
-    camera_pos = camera->GetPosition();
-  }
-
-  SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, env, Render,
+  SkyGradientPass_.Draw(skyShader, skyColor, *WorldInstance,
+                        UnderwaterFogPass_, env, Render,
                         EffectiveWeatherPreset(), AnimationClock.ElapsedSeconds(),
-                        inv_view_rot, camera_pos, horizon_boost);
+                        inv_view_rot, camera_pos, inv_projection, horizon_boost);
   DurationSkyGradientMks = SkyGradientPass_.GetLastDrawMs();
 }
 
@@ -1511,7 +7998,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
   {
     return;
   }
-  const auto textures = TextureCubeStorageInstance->GetTextures();
+  const auto &textures = TextureCubeStorageInstance->GetTextures();
   const auto texIt = textures.find(static_cast<size_t>(OverlayBlockId));
   if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
   {
@@ -1771,6 +8258,29 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   OverlaySection world{"World:", {}};
   world.Lines.push_back("Weather: " + WorldInstance->GetWeatherName());
   {
+    // Camera block + chunk coordinates on the debug overlay: user bug
+    // reports reference screen positions, so the position must be visible
+    // in every captured frame (water audit follow-up request).
+    const glm::vec3 camera_pos = [&]()
+    {
+      if (auto camera = WorldInstance->GetCurrentUserCamera())
+      {
+        return camera->GetPosition();
+      }
+      return glm::vec3(0.0f);
+    }();
+    const glm::ivec3 eye_block(WorldCoordToBlockIndex(camera_pos.x),
+                               WorldCoordToBlockIndex(camera_pos.y),
+                               WorldCoordToBlockIndex(camera_pos.z));
+    const glm::ivec3 eye_chunk = UChunkManager::WorldToChunk(eye_block);
+    world.Lines.push_back("Pos: (" + std::to_string(eye_block.x) + "," +
+                          std::to_string(eye_block.y) + "," +
+                          std::to_string(eye_block.z) + ") chunk (" +
+                          std::to_string(eye_chunk.x) + "," +
+                          std::to_string(eye_chunk.y) + "," +
+                          std::to_string(eye_chunk.z) + ")");
+  }
+  {
     float temperature = 0.0f;
     float moisture = 0.0f;
     const ProceduralSettings settings = WorldInstance->GetProceduralSettings();
@@ -1973,6 +8483,9 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
     return;
   }
 
+  UGlStateScope glGuard(kGlMaskOverlay2D);
+  glDisable(GL_DEPTH_TEST);
+
   textRenderer->SetWindowSize(width_size, height_size);
 
   const float scale = 0.8f;
@@ -1991,7 +8504,7 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
       "Space - Jump / Fly up",
       "Shift - Crouch / Fly down",
       "2xSpace - Toggle flight",
-      "0-9 - Primary hotbar; objects via HUD / palette",
+      "0-9 / mouse wheel - Primary hotbar; objects via HUD / palette",
       "Classic: mouse look, hold LMB break, RMB place/use slot",
       "Cubatarium: RMB drag look, LMB tap place/use slot / hold break",
       "Delete - Instant break, F8 weather",
@@ -2043,6 +8556,9 @@ void UGeometryEngine::RenderHotbarLabels(int width_size, int height_size)
   {
     return;
   }
+
+  UGlStateScope glGuard(kGlMaskOverlay2D);
+  glDisable(GL_DEPTH_TEST);
 
   textRenderer->SetWindowSize(width_size, height_size);
   auto user = WorldInstance->GetCurrentUser();
@@ -2263,6 +8779,7 @@ void UGeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
   // Restore viewport
   glViewport(prevViewport[0], prevViewport[1], prevViewport[2],
              prevViewport[3]);
+  glDisable(GL_DEPTH_TEST);
 
   defaultShader->Unuse();
 }
@@ -2500,39 +9017,6 @@ void UGeometryEngine::DestroyOutlineBuffers()
   }
 }
 
-void UGeometryEngine::DrawCreatureTexturedPart(const glm::mat4 &mvp,
-                                               GLuint texture,
-                                               CreaturePartMesh mesh)
-{
-  CreatureDraw_.DrawTexturedPart(mvp, texture, mesh);
-}
-
-void UGeometryEngine::DrawCreatureBoneSkeletonMesh(
-    const glm::mat4 &mvp, GLuint texture, const BoneSkeletonCubeMeshCpu &mesh)
-{
-  CreatureDraw_.DrawBoneSkeletonMesh(mvp, texture, mesh);
-}
-
-void UGeometryEngine::DrawCreatureGltfMesh(const glm::mat4 &mvp, GLuint texture,
-                                           const BoneSkeletonCubeMeshCpu &mesh)
-{
-  CreatureDraw_.DrawGltfMesh(mvp, texture, mesh);
-}
-
-void UGeometryEngine::DrawCreatureSkinnedMesh(
-    const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
-    const std::vector<glm::mat4> &boneMatrices)
-{
-  CreatureDraw_.DrawSkinnedMesh(mvp, texture, mesh, boneMatrices);
-}
-
-void UGeometryEngine::DrawCreatureBillboard(const glm::mat4 &mvp,
-                                            GLuint texture,
-                                            const glm::vec4 &tint)
-{
-  CreatureDraw_.DrawBillboard(mvp, texture, tint);
-}
-
 void UGeometryEngine::DrawBoxWireframe(const glm::mat4 &mvp,
                                        const glm::vec4 &color)
 {
@@ -2606,20 +9090,31 @@ void UGeometryEngine::RenderBlockCrackOverlay()
   }
   const std::optional<glm::ivec3> blockPos =
       WorldInstance->GetBreakSessionBlockPos();
-  if (!blockPos || !outlineShader || !outlineShader->IsValid() ||
-      outlineVAO == 0)
+  auto camera = WorldInstance->GetCurrentUserCamera();
+  if (!blockPos || !camera)
   {
     return;
   }
 
-  auto camera = WorldInstance->GetCurrentUserCamera();
-  if (!camera)
+  const glm::mat4 view = camera->GetViewMatrix();
+  const glm::mat4 proj = camera->GetProjection();
+  BlockCrackOverlayRequest crack_request;
+  crack_request.ViewProj = proj * view;
+  crack_request.BlockPos = *blockPos;
+  crack_request.Progress = WorldInstance->GetBreakProgress();
+  if (BlockCrackPass.Render(crack_request))
+  {
+    return;
+  }
+
+  // TD-BB-004: wireframe stand-in while destroy_stage textures are unavailable.
+  if (!outlineShader || !outlineShader->IsValid() || outlineVAO == 0)
   {
     return;
   }
 
   const float progress = WorldInstance->GetBreakProgress();
-  const glm::mat4 viewProj = camera->GetProjection() * camera->GetViewMatrix();
+  const glm::mat4 viewProj = proj * view;
   const glm::mat4 mvp =
       viewProj * glm::translate(glm::mat4(1.0f), BlockCenter(*blockPos));
 
@@ -2778,6 +9273,13 @@ void UGeometryEngine::RenderBiomeDebugOverlay()
       DrawBoxWireframe(mvp * model, color);
     }
   }
+}
+
+void GetLightPreviewDebounceCounters(long long &raw_toggles,
+                                     long long &shown_toggles)
+{
+  raw_toggles = gLightPreviewRawToggles;
+  shown_toggles = gLightPreviewShownToggles;
 }
 
 } // namespace cutum

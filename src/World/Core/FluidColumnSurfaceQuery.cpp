@@ -20,9 +20,9 @@ FluidColumnSurface FindFluidColumnSurfaceAt(const UBlockWorld &world,
   for (int y = hintY + scanUp; y >= hintY - scanDown; --y)
   {
     const BlockId id = world.GetBlock(glm::ivec3(bx, y, bz));
-    if (!registry.IsLiquid(id))
+    if (id == BLOCK_AIR || !registry.IsLiquid(id))
     {
-      continue;
+      continue; // air is never liquid: skip the registry lookup
     }
     if (registry.GetRenderStyle(id) != BlockRenderStyle::Fluid)
     {

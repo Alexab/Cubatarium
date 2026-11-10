@@ -1,0 +1,39 @@
+{
+  "id": "wood_sword",
+  "displayName": "Wooden Sword",
+  "types": [
+    "combat"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/wood_sword/model.gltf",
+  "repair": {
+    "materials": [
+      "wood"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.0,
+    "damage": {
+      "melee": 4,
+      "fleshy": 4
+    },
+    "groupcaps": {
+      "snappy": {
+        "maxlevel": 0,
+        "uses": 40,
+        "times": {
+          "3": 0.5
+        }
+      }
+    },
+    "punch_attack_uses": 30
+  },
+  "visual": {
+    "wield_scale": 1.35,
+    "swing": {
+      "melee": "slash_weapon"
+    }
+  }
+}

@@ -138,14 +138,33 @@ bool UFluidSpreadSystem::HasSpreadTarget(
     const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
     glm::ivec3 block_pos)
 {
-  return UFluidTransformSim::HasSpreadTarget(blockWorld, definitions, block_pos);
+  return HasSpreadTarget(blockWorld, definitions, block_pos,
+                         blockWorld.GetVerticalProfile().MinY);
+}
+
+bool UFluidSpreadSystem::HasSpreadTarget(
+    const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    glm::ivec3 block_pos, int min_world_y)
+{
+  return UFluidTransformSim::HasSpreadTarget(blockWorld, definitions,
+                                             block_pos, min_world_y);
 }
 
 bool UFluidSpreadSystem::HasSpreadTargetForTick(
     const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
     glm::ivec3 block_pos, uint64_t physics_tick)
 {
-  if (!UFluidTransformSim::HasSpreadTarget(blockWorld, definitions, block_pos))
+  return HasSpreadTargetForTick(blockWorld, definitions, block_pos,
+                                physics_tick,
+                                blockWorld.GetVerticalProfile().MinY);
+}
+
+bool UFluidSpreadSystem::HasSpreadTargetForTick(
+    const UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    glm::ivec3 block_pos, uint64_t physics_tick, int min_world_y)
+{
+  if (!UFluidTransformSim::HasSpreadTarget(blockWorld, definitions, block_pos,
+                                           min_world_y))
   {
     return false;
   }
@@ -174,7 +193,8 @@ FluidSpreadStats UFluidSpreadSystem::Tick(UWorld &world, glm::ivec3 block_pos)
                    world.GetPhysicsTickCounter(), block_pos,
                    world.GetProceduralSettings().FillWater
                        ? world.GetProceduralSettings().SeaLevel
-                       : -1);
+                       : -1,
+                   world.GetProceduralSettings().MinHeight);
 }
 
 FluidSpreadStats UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
@@ -187,17 +207,35 @@ FluidSpreadStats UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
   {
     return {};
   }
-  return TickBlock(blockWorld, *definitions, physics_tick, block_pos, -1);
+  return TickBlock(blockWorld, *definitions, physics_tick, block_pos, -1,
+                   blockWorld.GetVerticalProfile().MinY);
+}
+
+FluidSpreadStats UFluidSpreadSystem::TickBlock(
+    UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    uint64_t physics_tick, glm::ivec3 block_pos)
+{
+  return TickBlock(blockWorld, definitions, physics_tick, block_pos, -1,
+                   blockWorld.GetVerticalProfile().MinY);
+}
+
+FluidSpreadStats UFluidSpreadSystem::TickBlock(
+    UBlockWorld &blockWorld, const UBlockDefinitionStorage &definitions,
+    uint64_t physics_tick, glm::ivec3 block_pos, int sea_level)
+{
+  return TickBlock(blockWorld, definitions, physics_tick, block_pos, sea_level,
+                   blockWorld.GetVerticalProfile().MinY);
 }
 
 FluidSpreadStats
 UFluidSpreadSystem::TickBlock(UBlockWorld &blockWorld,
                               const UBlockDefinitionStorage &definitions,
                               uint64_t physics_tick, glm::ivec3 block_pos,
-                              int sea_level)
+                              int sea_level, int min_world_y)
 {
   return UFluidTransformSim::TickBlock(blockWorld, definitions, physics_tick,
-                                       block_pos, sea_level, ShadowMode);
+                                       block_pos, sea_level, ShadowMode,
+                                       min_world_y);
 }
 
 BlockId UFluidSpreadSystem::ResolveWaterBlockId(

@@ -337,7 +337,17 @@ void UWorldLifecycleFacade::LoadWorldList(UCore &core,
 void UWorldLifecycleFacade::RefreshWorldList(UCore &core)
 {
   std::filesystem::create_directories(core.WorldPath);
+  // UX U4: skip the rescan when the cached list is fresh - hundreds of
+  // world folders were stat-ed on every menu open.
+  const auto now = std::chrono::steady_clock::now();
+  if (WorldListCachedForPath == core.WorldPath.string() &&
+      now - WorldListScannedAt < WorldListTtl)
+  {
+    return;
+  }
   LoadWorldList(core, core.WorldPath.string());
+  WorldListScannedAt = now;
+  WorldListCachedForPath = core.WorldPath.string();
 }
 
 void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name)
@@ -364,7 +374,13 @@ void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name
         core.WorldInstance->IsStreamingEnabled() &&
         UWorld::HasPersistedTerrainOnDisk(core.ActiveWorldFolder.string()))
     {
-      core.WorldInstance->SaveSessionSnapshot(core.ActiveWorldFolder.string());
+      // UX U5: the streaming+persisted snapshot blocked the caller for the
+      // whole world dump (historically 8-12s on quit: 2s pool joins + every
+      // terrain column re-written synchronously). Terrain is already
+      // persisted by the streaming layer and budgeted coop saves, so a
+      // metadata-only refresh here is lossless for the session state.
+      core.WorldInstance->SaveSessionSnapshotMetadataOnly(
+          core.ActiveWorldFolder.string());
     }
     else
     {
@@ -407,11 +423,13 @@ void UWorldLifecycleFacade::CreateNewWorldWithSettings(
 
 void UWorldLifecycleFacade::ApplyNewWorldCreationRequest(
     UCore &core, const ProceduralSettings &settings,
-    const ResourcePackSelection &resourcePacks)
+    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view,
+    WorldGameMode gameMode, WorldDifficulty difficulty)
 {
   core.PendingNewWorldSettings = settings;
-  core.PendingNewWorldSettings->Seed = settings.Seed;
-  core.WorldSeed = settings.Seed + 1;
+  // The seed from the form is used verbatim (it used to be bumped by one, so
+  // typing seed N created world N+1 while the saved seed text still said N).
+  core.WorldSeed = settings.Seed;
   core.PendingNewWorldSettings->Seed = core.WorldSeed;
 
   core.ProceduralTemplate.Generator = settings.Generator;
@@ -421,6 +439,10 @@ void UWorldLifecycleFacade::ApplyNewWorldCreationRequest(
       ProceduralGeneratorToString(core.ProceduralTemplate.Generator);
 
   core.PendingNewWorldPackSelection = resourcePacks;
+  core.PendingNewWorldViewSettings = view;
+  core.PendingNewWorldViewSettings.Validate();
+  core.PendingNewWorldGameMode = gameMode;
+  core.PendingNewWorldDifficulty = difficulty;
 }
 
 std::string UWorldLifecycleFacade::AllocateNextWorldName(const UCore &core) const
@@ -475,7 +497,9 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
     selection.Secondary =
         core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, selection.Secondary);
   }
-  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
+  if (!selection.Primary.empty() &&
+      std::find(selection.Primary.begin(), selection.Primary.end(),
+                selection.WorldgenOwner) == selection.Primary.end())
   {
     selection.WorldgenOwner = selection.Primary.front();
   }
@@ -499,10 +523,12 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
             << core.ActiveWorldFolder.string() << std::endl;
 
   ProceduralSettings worldSettings = core.ProceduralTemplate;
+  bool settingsFromNewWorldForm = false;
   if (core.PendingNewWorldSettings.has_value())
   {
     worldSettings = *core.PendingNewWorldSettings;
     core.PendingNewWorldSettings.reset();
+    settingsFromNewWorldForm = true;
   }
   else
   {
@@ -510,7 +536,13 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
     ResetToGeneratorDefaults(worldSettings);
   }
   ResolveProceduralDefaults(worldSettings);
-  ApplyGeneratorTierDefaults(worldSettings);
+  if (!settingsFromNewWorldForm)
+  {
+    // The New World form already starts from the tier defaults. Re-applying
+    // them here forced trees, caves, ores, water, lava, fire and ravines back
+    // on and made those checkboxes ineffective.
+    ApplyGeneratorTierDefaults(worldSettings);
+  }
   worldSettings.AsyncChunkGeneration =
       core.ProceduralTemplate.AsyncChunkGeneration;
   worldSettings.AsyncChunkIo = core.ProceduralTemplate.AsyncChunkIo;
@@ -519,6 +551,12 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
 
   core.WorldInstance->SetProceduralSettings(worldSettings);
   core.WorldInstance->SetRenderSettings(core.Render);
+  core.WorldInstance->SetViewSettings(core.PendingNewWorldViewSettings);
+  core.WorldInstance->SetGameMode(core.PendingNewWorldGameMode);
+  core.WorldInstance->SetDifficulty(core.PendingNewWorldDifficulty);
+  core.PendingNewWorldViewSettings = WorldViewSettings{};
+  core.PendingNewWorldGameMode = WorldGameMode::Creative;
+  core.PendingNewWorldDifficulty = WorldDifficulty::Normal;
   return new_world_name;
 }
 
@@ -579,7 +617,10 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   settings.Seed = args.Seed;
   ApplyWorldGenPreset(settings, args.Preset);
   settings.TerrainBackendMode = args.TerrainBackendMode;
-  settings.AsyncChunkGeneration = false;
+  // CLI creation has no concurrent app-frame work to protect. Use the same
+  // bounded cooperative generation pool as interactive creation; the later
+  // save still restores the configured runtime policy before serialization.
+  settings.AsyncChunkGeneration = core.ProceduralTemplate.AsyncChunkGeneration;
   settings.AsyncChunkIo = false;
   ResolveProceduralDefaults(settings);
   ApplyGeneratorTierDefaults(settings);
@@ -614,13 +655,24 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
 
   try
   {
-    core.WorldInstance->Create(args.WorldName);
+    core.WorldInstance->CreateHeadless(args.WorldName);
     core.WorldInstance->GenerateUsers();
     if (core.BlockMergeRegistryInstance)
     {
       core.WorldInstance->SetCatalogFingerprint(
           core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
     }
+    // The CLI disables async terrain work while it creates the initial save.
+    // Those execution-only choices must not be persisted as the runtime policy
+    // for later cooperative loads. Normal loads apply this same Core policy in
+    // FinalizeLoadedWorld; set it before SaveWorldData serializes the settings.
+    settings.AsyncChunkGeneration =
+        core.ProceduralTemplate.AsyncChunkGeneration;
+    settings.AsyncChunkIo = core.ProceduralTemplate.AsyncChunkIo;
+    settings.MaxChunkCommitsPerFrame =
+        core.ProceduralTemplate.MaxChunkCommitsPerFrame;
+    core.WorldInstance->SetProceduralSettings(
+        settings, /*rebuildPipeline=*/false);
     core.WorldInstance->Save(core.ActiveWorldFolder.string());
   }
   catch (const std::exception &e)

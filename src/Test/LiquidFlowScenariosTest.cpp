@@ -1,6 +1,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Physics/FluidSpreadSystem.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Math/FluidCellState.h"
 
 #include <cstdlib>
@@ -293,6 +294,80 @@ static void TestLavaIsolatedSpread(const cutum::UBlockDefinitionStorage &definit
          "lava source fluid state should remain");
 }
 
+static void TestWaterFlowingDriesFlag(const cutum::UBlockDefinitionStorage &definitions)
+{
+  constexpr cutum::BlockId kStone = 8;
+  constexpr cutum::BlockId kWater = 9;
+  cutum::UFluidSpreadSystem liquid;
+  liquid.ShadowMode = false;
+
+  // Flag off (default): an isolated flowing cell persists forever.
+  {
+    cutum::URuntimeTuning::ResetToDefaults();
+    Expect(!cutum::URuntimeTuning::Get().WaterFlowingDries,
+           "water_flowing_dries defaults off");
+    cutum::UBlockWorld world;
+    for (int x = 0; x < 5; ++x)
+    {
+      for (int z = 0; z < 5; ++z)
+      {
+        world.SetBlock(glm::ivec3(x, 11, z), kStone);
+      }
+    }
+    // Fully encase the cell: pull-model air neighbors would refill the
+    // region around an open flowing cell and keep it alive.
+    world.SetBlock(glm::ivec3(2, 13, 2), kStone);
+    world.SetBlock(glm::ivec3(1, 12, 2), kStone);
+    world.SetBlock(glm::ivec3(3, 12, 2), kStone);
+    world.SetBlock(glm::ivec3(2, 12, 1), kStone);
+    world.SetBlock(glm::ivec3(2, 12, 3), kStone);
+    world.SetBlock(glm::ivec3(2, 12, 2), kWater);
+    world.SetFluidState(glm::ivec3(2, 12, 2),
+                        cutum::FluidCellState::Flowing(1));
+    RunRegionTicks(world, definitions, liquid, 12, 0, 4, 0, 4, 60);
+    Expect(world.GetBlock(glm::ivec3(2, 12, 2)) == kWater,
+           "isolated flowing water persists with flag off");
+  }
+
+  // Flag on: the same cell dries out (transform_dry).
+  {
+    cutum::URuntimeTuning::ResetToDefaults();
+    cutum::URuntimeTuning::Get().WaterFlowingDries = true;
+    cutum::UBlockWorld world;
+    for (int x = 0; x < 5; ++x)
+    {
+      for (int z = 0; z < 5; ++z)
+      {
+        world.SetBlock(glm::ivec3(x, 11, z), kStone);
+      }
+    }
+    // Fully encase the cell: pull-model air neighbors would refill the
+    // region around an open flowing cell and keep it alive.
+    world.SetBlock(glm::ivec3(2, 13, 2), kStone);
+    world.SetBlock(glm::ivec3(1, 12, 2), kStone);
+    world.SetBlock(glm::ivec3(3, 12, 2), kStone);
+    world.SetBlock(glm::ivec3(2, 12, 1), kStone);
+    world.SetBlock(glm::ivec3(2, 12, 3), kStone);
+    world.SetBlock(glm::ivec3(2, 12, 2), kWater);
+    world.SetFluidState(glm::ivec3(2, 12, 2),
+                        cutum::FluidCellState::Flowing(1));
+    RunRegionTicks(world, definitions, liquid, 12, 0, 4, 0, 4, 60);
+    Expect(world.GetBlock(glm::ivec3(2, 12, 2)) == cutum::BLOCK_AIR,
+           "isolated flowing water dries with flag on");
+
+    // A source is never affected.
+    world.SetBlock(glm::ivec3(2, 12, 2), kWater);
+    world.SetFluidState(glm::ivec3(2, 12, 2),
+                        cutum::FluidCellState::Source());
+    RunRegionTicks(world, definitions, liquid, 12, 0, 4, 0, 4, 60);
+    Expect(world.GetBlock(glm::ivec3(2, 12, 2)) == kWater &&
+               world.GetFluidState(glm::ivec3(2, 12, 2)).IsSource(),
+           "source water survives with flag on");
+
+    cutum::URuntimeTuning::ResetToDefaults();
+  }
+}
+
 int main()
 {
   const auto definitions = MakeDefinitions();
@@ -304,6 +379,7 @@ int main()
   TestWaterHoleInFloor(*definitions);
   TestWaterWallGap(*definitions);
   TestWaterRemovalMatrix(*definitions);
+  TestWaterFlowingDriesFlag(*definitions);
 
   std::cout << "liquid_flow_scenarios_test: OK" << std::endl;
   return 0;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/Settings/UiSettings.h"
+#include "App/Settings/RenderSettings.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
@@ -66,6 +67,16 @@ private:
   UGuiLabel *ControlSchemeLabel{nullptr};
   UGuiButton *ControlSchemeButton{nullptr};
   ControlScheme SelectedControlScheme{ControlScheme::Classic};
+  UGuiLabel *GraphicsQualityLabel{nullptr};
+  UGuiButton *GraphicsQualityButton{nullptr};
+  PerformancePreset SelectedGraphicsQuality{PerformancePreset::Balanced};
+  UGuiLabel *LightingModeLabel{nullptr};
+  UGuiButton *LightingModeButton{nullptr};
+  LightingMode SelectedLightingMode{LightingMode::Full};
+  UGuiCheckbox *AsyncMeshingBox{nullptr};
+  UGuiCheckbox *AsyncRelightBox{nullptr};
+  UGuiCheckbox *AndroidGpuBox{nullptr};
+  bool SelectedAndroidGpuEnabled{true};
 
   UGuiTextInput *DefaultUserInput{nullptr};
   UGuiTextInput *DefaultWorldInput{nullptr};
@@ -79,6 +90,7 @@ private:
   UGuiCheckbox *BatchCacheBox{nullptr};
   UGuiCheckbox *LegacyHudBox{nullptr};
   UGuiCheckbox *ShowPerformanceBox{nullptr};
+  UGuiCheckbox *CreatureNamesBox{nullptr};
   UGuiTextInput *ConsoleKeyInput{nullptr};
   UGuiTextInput *PaletteKeyInput{nullptr};
   UGuiButton *HotbarMinusButton{nullptr};

@@ -21,9 +21,9 @@ public:
   virtual std::vector<CreatureNeighborView>
   QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
                                  CreatureId skip_id) const = 0;
-  virtual bool CreatureVolumeClearAt(const glm::vec3 &body_origin,
-                                     const glm::vec3 &size_blocks,
-                                     CreatureId skip_id) const = 0;
+  virtual bool CreaturesClearAt(const glm::vec3 &body_origin,
+                                const glm::vec3 &size_blocks,
+                                CreatureId skip_id) const = 0;
   virtual std::optional<glm::vec3>
   GetCreatureBodyOrigin(CreatureId id) const = 0;
   virtual bool CanCreatureOccupyAt(CreatureHabitat habitat,

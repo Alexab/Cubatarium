@@ -29,7 +29,10 @@
       "tree_pine": 1.25,
       "tree_jungle": 1.15,
       "tree_apple": 1.05,
-      "tree_aspen": 0.95
+      "tree_aspen": 0.95,
+      "tree_procedural_oak": 1.2,
+      "tree_procedural_aspen": 1.1,
+      "tree_procedural_pine": 0.9
     },
     "decoration": {
       "deco_log_apple": 0.22,
@@ -39,7 +42,10 @@
     },
     "ground_cover": {
       "bush_pine": 0.5,
-      "bush_blueberry": 0.7
+      "bush_blueberry": 0.7,
+      "shrub_procedural_common": 0.85,
+      "shrub_procedural_blueberry": 1.1,
+      "shrub_procedural_pine": 0.9
     }
   }
 }

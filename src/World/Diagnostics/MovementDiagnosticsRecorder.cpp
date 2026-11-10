@@ -6,12 +6,15 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "WorldGen/Features/ObjectFeaturePlacer.h"
+#include <array>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -22,6 +25,146 @@ namespace cutum
 
 using json = nlohmann::json;
 
+namespace
+{
+
+json PopulateMetricToJson(const ChunkPopulateMetric &metric)
+{
+  return json{{"count", metric.count},
+              {"total_ms", metric.totalMs},
+              {"median_ms", metric.medianMs},
+              {"p95_ms", metric.p95Ms},
+              {"max_ms", metric.maxMs}};
+}
+
+const char *PopulateStageName(size_t index)
+{
+  static constexpr std::array<const char *, WorldGenStageIdCount> names = {
+      "terrain",      "ravines",   "valleys",      "lakes",
+      "caves",        "fluids",    "ores",         "vegetation",
+      "ground_cover", "decoration", "structures", "lava_pools",
+      "fire_patch",   "geology",   "aquifers",     "cave_features"};
+  return names[index];
+}
+
+json PopulateSummaryToJson(const ChunkPopulateSummary &summary)
+{
+  json root{{"schema", "chunk_populate_summary.v1"},
+            {"completed_count", summary.completedCount},
+            {"discarded_count", summary.discardedCount},
+            {"detail_count", summary.detailCount},
+            {"total", PopulateMetricToJson(summary.total)},
+            {"sample", PopulateMetricToJson(summary.sample)},
+            {"terrain", PopulateMetricToJson(summary.terrain)},
+            {"carve", PopulateMetricToJson(summary.carve)},
+            {"post", PopulateMetricToJson(summary.post)},
+            {"seal", PopulateMetricToJson(summary.seal)},
+            {"mudflow", PopulateMetricToJson(summary.mudflow)},
+            {"pocket_seal", PopulateMetricToJson(summary.pocketSeal)},
+            {"permeable_seal", PopulateMetricToJson(summary.permeableSeal)},
+            {"permeable_floor_scan", PopulateMetricToJson(summary.permeableFloorScan)},
+            {"permeable_restore", PopulateMetricToJson(summary.permeableRestore)},
+            {"permeable_waterlog", PopulateMetricToJson(summary.permeableWaterlog)},
+            {"pocket_reseal", PopulateMetricToJson(summary.pocketReseal)},
+            {"vegetation_prune", PopulateMetricToJson(summary.vegetationPrune)},
+            {"work", {{"mudflow_columns", summary.mudflowColumns},
+                       {"mudflow_voxels_moved", summary.mudflowVoxelsMoved},
+                       {"pocket_voxels_filled", summary.pocketVoxelsFilled},
+                       {"permeable_columns", summary.permeableColumns},
+                       {"permeable_columns_changed", summary.permeableColumnsChanged},
+                       {"permeable_floor_ground_checks", summary.permeableFloorGroundChecks},
+                       {"permeable_floor_slot_checks", summary.permeableFloorSlotChecks},
+                       {"permeable_restore_cells", summary.permeableRestoreCells},
+                       {"permeable_waterlog_cells", summary.permeableWaterlogCells},
+                       {"reseal_voxels_filled", summary.resealVoxelsFilled},
+                       {"prune_columns", summary.pruneColumns},
+                       {"pruned_voxels", summary.prunedVoxels}}}};
+  for (size_t i = 0; i < summary.postStages.size(); ++i)
+  {
+    root["post_stages"][PopulateStageName(i)] =
+        PopulateMetricToJson(summary.postStages[i]);
+  }
+  return root;
+}
+
+json ObjectFeatureSummaryToJson()
+{
+  json root{{"schema", "object_feature_rules.v1"},
+            {"rules", json::array()}};
+  for (const ObjectFeatureRuleProfile &profile :
+       ObjectFeatureDiagnostics::GetSummary())
+  {
+    root["rules"].push_back(
+        {{"pool", profile.pool},
+         {"rule_index", profile.ruleIndex},
+         {"feature_key", profile.featureKey},
+         {"evaluated", profile.evaluated},
+         {"candidates", profile.candidates},
+         {"placement_attempts", profile.placementAttempts},
+         {"placed", profile.placed},
+         {"evaluation_ms", profile.evaluationMs},
+         {"placement_ms", profile.placementMs},
+         {"prefab_voxel_visits", profile.prefabVoxelVisits},
+         {"prefab_surface_scans", profile.prefabSurfaceScans}});
+  }
+  return root;
+}
+
+json VisibilityMetricToJson(const VisibilityLatencyMetric &metric)
+{
+  return json{{"count", metric.count},
+              {"total_ms", metric.totalMs},
+              {"median_ms", metric.medianMs},
+              {"p95_ms", metric.p95Ms},
+              {"max_ms", metric.maxMs}};
+}
+
+json VisibilityLatencySummaryToJson()
+{
+  const VisibilityLatencySummary summary =
+      UJobStageTrace::GetVisibilityLatencySummary();
+  return json{
+      {"schema", "visibility_latency.v1"},
+      {"demand_to_publish", VisibilityMetricToJson(summary.demandToPublish)},
+      {"demand_to_light_settled",
+       VisibilityMetricToJson(summary.demandToLightSettled)},
+      {"light_settled_to_publish",
+       VisibilityMetricToJson(summary.lightSettledToPublish)},
+      {"edit_to_publish", VisibilityMetricToJson(summary.editToPublish)},
+      {"mesh_created_to_admitted",
+       VisibilityMetricToJson(summary.meshCreatedToAdmitted)},
+      {"mesh_created_to_started",
+       VisibilityMetricToJson(summary.meshCreatedToStarted)},
+      {"mesh_build", VisibilityMetricToJson(summary.meshBuild)},
+      {"mesh_built_to_publish",
+       VisibilityMetricToJson(summary.meshBuiltToPublish)},
+      {"mesh_created_to_publish",
+       VisibilityMetricToJson(summary.meshCreatedToPublish)},
+      {"attempts_created", summary.attemptsCreated},
+      {"attempts_terminal_without_publish",
+       summary.attemptsTerminalWithoutPublish},
+      {"attempts_retained", summary.attemptsRetained},
+      {"attempts_rejected", summary.attemptsRejected},
+      {"attempts_cancelled", summary.attemptsCancelled},
+      {"attempts_orphan_cancelled", summary.attemptsOrphanCancelled},
+      {"attempts_superseded_cancelled",
+       summary.attemptsSupersededCancelled},
+      {"attempts_reminted", summary.attemptsReminted},
+      {"mesh_jobs_terminal_without_publish",
+       summary.meshJobsTerminalWithoutPublish},
+      {"relight_soft_cap_deferred", summary.relightSoftCapDeferred},
+      {"relight_visible_replacement_deferred",
+       summary.relightVisibleReplacementDeferred},
+      {"relight_farthest_trim_deferred", summary.relightFarthestTrimDeferred},
+      {"relight_other_deferred", summary.relightOtherDeferred},
+      {"relight_unique_deferred_columns",
+       summary.relightUniqueDeferredColumns},
+      {"pending_attempts", summary.pendingAttempts},
+      {"pending_edits", summary.pendingEdits}};
+}
+
+} // namespace
+
 void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
                                               const std::string &file_name)
 {
@@ -29,6 +172,10 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
   root["schema"] = "movement_diagnostics.v2";
   root["world_name"] = world.WorldName;
   root["sample_count"] = world.MovementDiagHistory.size();
+  root["populate_summary"] =
+      PopulateSummaryToJson(ChunkPopulateDiagnostics::GetSummary());
+  root["object_feature_summary"] = ObjectFeatureSummaryToJson();
+  root["visibility_latency_summary"] = VisibilityLatencySummaryToJson();
   std::vector<json> samples;
   samples.reserve(world.MovementDiagHistory.size());
   for (const UWorld::MovementDiagnostics &sample : world.MovementDiagHistory)

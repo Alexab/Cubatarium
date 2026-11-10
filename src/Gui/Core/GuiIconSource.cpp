@@ -7,9 +7,10 @@ namespace cutum
 UGuiIconSource::UGuiIconSource(
     std::shared_ptr<UTextureCubeStorage> textures,
     std::unique_ptr<UObjectIconCache> objectCache,
-    std::unique_ptr<UCreatureIconCache> creatureCache)
+    std::unique_ptr<UCreatureIconCache> creatureCache,
+    std::unique_ptr<UItemIconCache> itemCache)
     : Textures(std::move(textures)), ObjectCache(std::move(objectCache)),
-      CreatureCache(std::move(creatureCache))
+      CreatureCache(std::move(creatureCache)), ItemCache(std::move(itemCache))
 {
 }
 
@@ -71,12 +72,61 @@ GLuint UGuiIconSource::GetSkinIconTexture(const std::string &skinId)
   return CreatureCache->GetSkinIcon(skinId);
 }
 
+GLuint UGuiIconSource::GetItemIconTexture(const std::string &itemId)
+{
+  if (!ItemCache || itemId.empty())
+  {
+    return 0;
+  }
+  return ItemCache->GetIcon(itemId);
+}
+
 void UGuiIconSource::WarmupCreatureIcons(size_t maxPerFrame)
 {
   if (CreatureCache)
   {
     CreatureCache->WarmupNext(maxPerFrame);
   }
+}
+
+void UGuiIconSource::WarmupItemIcons(size_t maxPerFrame)
+{
+  if (ItemCache)
+  {
+    ItemCache->WarmupNext(maxPerFrame);
+  }
+}
+
+size_t UGuiIconSource::PendingItemIcons() const
+{
+  return ItemCache ? ItemCache->PendingWarmupCount() : 0;
+}
+
+GLuint UGuiIconSource::GetBlockIconTextureIfCached(
+    const std::string &blockName) const
+{
+  return ObjectCache ? ObjectCache->GetBlockIconTextureIfCached(blockName) : 0;
+}
+
+void UGuiIconSource::QueueBlockIcon(const std::string &blockName)
+{
+  if (ObjectCache)
+  {
+    ObjectCache->QueueBlockIcon(blockName);
+  }
+}
+
+void UGuiIconSource::WarmupBlockIcons(size_t maxPerFrame)
+{
+  if (ObjectCache)
+  {
+    ObjectCache->WarmupBlockIcons(maxPerFrame);
+  }
+}
+
+size_t UGuiIconSource::PendingBlockIcons() const
+{
+  return ObjectCache ? ObjectCache->PendingBlockWarmupCount() : 0;
 }
 
 void UGuiIconSource::WarmupObjectIcons(size_t maxPerFrame)
@@ -100,6 +150,14 @@ void UGuiIconSource::ClearCreatureIconCache()
   if (CreatureCache)
   {
     CreatureCache->ClearRenderedIcons();
+  }
+}
+
+void UGuiIconSource::ClearItemIconCache()
+{
+  if (ItemCache)
+  {
+    ItemCache->Invalidate();
   }
 }
 

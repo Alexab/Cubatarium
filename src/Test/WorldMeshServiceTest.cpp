@@ -78,6 +78,18 @@ int main()
                           {});
   Expect(dirty.begin()->y == 0, "underwater: lower cy should drain first");
 
+  // Partial sort: front window matches full sort order; tail may be unsorted.
+  dirty.Clear();
+  for (int x = 5; x >= 0; --x)
+  {
+    dirty.MarkDirty(glm::ivec3{x, 0, 0});
+  }
+  dirty.PartialSortByDistanceKey(glm::ivec3{0, 0, 0}, 0, false, true, missing,
+                                 /*keep_front=*/3);
+  Expect(dirty.begin()->x == 0, "partial_sort: nearest missing first");
+  Expect((dirty.begin() + 1)->x == 1, "partial_sort: second nearest");
+  Expect((dirty.begin() + 2)->x == 2, "partial_sort: third nearest");
+
   std::cout << "world_mesh_service_test: OK" << std::endl;
   return 0;
 }

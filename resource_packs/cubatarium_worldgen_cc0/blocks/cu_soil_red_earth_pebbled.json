@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_red_earth_pebbled",
+  "id": 1331,
+  "displayName": "Soil Red Earth Pebbled",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_red_earth_pebbled",
+    "cu_soil_red_earth_pebbled",
+    "cu_soil_red_earth_pebbled",
+    "cu_soil_red_earth_pebbled",
+    "cu_soil_red_earth_pebbled_top",
+    "cu_soil_red_earth_pebbled_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "red_earth",
+    "variant": "pebbled"
+  }
+}

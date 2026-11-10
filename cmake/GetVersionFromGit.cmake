@@ -1,7 +1,10 @@
-# Resolves CUBATARIUM_VERSION_STRING for configure_file(Version.h.in).
+# Resolves the Cubatarium version string from git.
 # - Exact semver tag on HEAD -> tag name (optional leading v)
 # - Else -> {nearest_tag}-{branch}-{short_hash}
-# - No git / no tags -> PROJECT_VERSION
+# - No tags -> {fallback}-{branch}-{short_hash}
+# - Uncommitted changes -> "-dirty" suffix
+# - No git -> contents of <source>/VERSION, else the fallback (PROJECT_VERSION)
+# Works both from CMakeLists (include) and in script mode (GenerateVersionHeader.cmake).
 
 function(_cubatarium_git_run GIT_EXE WORK_DIR OUT_RC OUT_STDOUT)
     set(_args ${ARGN})
@@ -71,8 +74,14 @@ function(_cubatarium_sanitize_version_string VERSION OUT_SAFE)
     set(${OUT_SAFE} "${_safe}" PARENT_SCOPE)
 endfunction()
 
-function(cubatarium_resolve_version OUT_VAR)
-    set(_fallback "${PROJECT_VERSION}")
+function(cubatarium_resolve_version OUT_VAR SOURCE_DIR FALLBACK)
+    set(_fallback "${FALLBACK}")
+    if(EXISTS "${SOURCE_DIR}/VERSION")
+        file(STRINGS "${SOURCE_DIR}/VERSION" _file_version LIMIT_COUNT 1)
+        if(_file_version)
+            set(_fallback "${_file_version}")
+        endif()
+    endif()
     set(_resolved "${_fallback}")
 
     find_package(Git QUIET)
@@ -82,33 +91,40 @@ function(cubatarium_resolve_version OUT_VAR)
         return()
     endif()
 
-    _cubatarium_git_run("${GIT_EXECUTABLE}" "${CMAKE_SOURCE_DIR}" _rc _out rev-parse --is-inside-work-tree)
+    _cubatarium_git_run("${GIT_EXECUTABLE}" "${SOURCE_DIR}" _rc _out rev-parse --is-inside-work-tree)
     if(NOT _rc EQUAL 0 OR NOT _out STREQUAL "true")
         _cubatarium_sanitize_version_string("${_resolved}" _safe)
         set(${OUT_VAR} "${_safe}" PARENT_SCOPE)
         return()
     endif()
 
-    _cubatarium_git_run("${GIT_EXECUTABLE}" "${CMAKE_SOURCE_DIR}" _rc _exact
+    # Tracked files only: build output and untracked scratch must not mark dirty.
+    _cubatarium_git_run("${GIT_EXECUTABLE}" "${SOURCE_DIR}" _rc _status
+        status --porcelain --untracked-files=no)
+    set(_dirty "")
+    if(_rc EQUAL 0 AND NOT _status STREQUAL "")
+        set(_dirty "-dirty")
+    endif()
+
+    _cubatarium_git_run("${GIT_EXECUTABLE}" "${SOURCE_DIR}" _rc _exact
         describe --tags --exact-match HEAD)
     if(_rc EQUAL 0)
         _cubatarium_normalize_semver_tag("${_exact}" _exact_semver)
         if(_exact_semver)
-            set(_resolved "${_exact_semver}")
-            _cubatarium_sanitize_version_string("${_resolved}" _safe)
+            _cubatarium_sanitize_version_string("${_exact_semver}${_dirty}" _safe)
             set(${OUT_VAR} "${_safe}" PARENT_SCOPE)
             return()
         endif()
     endif()
 
     set(_nearest_tag "")
-    _cubatarium_git_run("${GIT_EXECUTABLE}" "${CMAKE_SOURCE_DIR}" _rc _describe
-        describe --tags --abbrev=0 HEAD)
+    _cubatarium_git_run("${GIT_EXECUTABLE}" "${SOURCE_DIR}" _rc _describe
+        describe --tags --abbrev=0 --match "[0-9]*" --match "v[0-9]*" HEAD)
     if(_rc EQUAL 0)
         _cubatarium_nearest_tag_name("${_describe}" _nearest_tag)
     endif()
 
-    _cubatarium_git_run("${GIT_EXECUTABLE}" "${CMAKE_SOURCE_DIR}" _rc _branch
+    _cubatarium_git_run("${GIT_EXECUTABLE}" "${SOURCE_DIR}" _rc _branch
         rev-parse --abbrev-ref HEAD)
     if(NOT _rc EQUAL 0)
         set(_branch "unknown")
@@ -116,16 +132,15 @@ function(cubatarium_resolve_version OUT_VAR)
         string(REPLACE "/" "-" _branch "${_branch}")
     endif()
 
-    _cubatarium_git_run("${GIT_EXECUTABLE}" "${CMAKE_SOURCE_DIR}" _rc _hash rev-parse --short=7 HEAD)
+    _cubatarium_git_run("${GIT_EXECUTABLE}" "${SOURCE_DIR}" _rc _hash rev-parse --short=7 HEAD)
     if(NOT _rc EQUAL 0)
         set(_hash "0000000")
     endif()
 
-    if(_nearest_tag)
-        set(_resolved "${_nearest_tag}-${_branch}-${_hash}")
-    else()
-        set(_resolved "${_fallback}")
+    if(NOT _nearest_tag)
+        set(_nearest_tag "${_fallback}")
     endif()
+    set(_resolved "${_nearest_tag}-${_branch}-${_hash}${_dirty}")
 
     _cubatarium_sanitize_version_string("${_resolved}" _safe)
     set(${OUT_VAR} "${_safe}" PARENT_SCOPE)

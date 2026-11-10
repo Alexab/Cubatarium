@@ -25,25 +25,30 @@ UCreatureSpatialIndex::CellForPosition(const glm::vec3 &origin)
 void UCreatureSpatialIndex::GatherCellsForVolume(const CollisionVolume &vol,
                                                   std::vector<CellKey> &out_cells)
 {
+  // Every cell (2x2 blocks) covering the body's block range plus one block
+  // of margin, per axis. Inserts and queries use the same rule, so two
+  // overlapping AABBs always share a cell. This used to sample
+  // (2r+1)^2 blocks with r from the larger half extent on both axes and
+  // dedupe each sample linearly (a whale: 225 samples x ~64 compares).
   out_cells.clear();
-  const int radius =
-      static_cast<int>(std::ceil(std::max(vol.halfExtents.x, vol.halfExtents.z))) +
-      1;
   const glm::ivec3 center = WorldPosToBlock(vol.center);
-  for (int dx = -radius; dx <= radius; ++dx)
+  const int radiusX = static_cast<int>(std::ceil(vol.halfExtents.x)) + 1;
+  const int radiusZ = static_cast<int>(std::ceil(vol.halfExtents.z)) + 1;
+  // Same mapping as CellForPosition (arithmetic shift floors negatives).
+  const int cellMinX = (center.x - radiusX) >> 1;
+  const int cellMaxX = (center.x + radiusX) >> 1;
+  const int cellMinZ = (center.z - radiusZ) >> 1;
+  const int cellMaxZ = (center.z + radiusZ) >> 1;
+  out_cells.reserve(static_cast<size_t>((cellMaxX - cellMinX + 1) *
+                                        (cellMaxZ - cellMinZ + 1)));
+  for (int x = cellMinX; x <= cellMaxX; ++x)
   {
-    for (int dz = -radius; dz <= radius; ++dz)
+    for (int z = cellMinZ; z <= cellMaxZ; ++z)
     {
-      const glm::vec3 sample(static_cast<float>(center.x + dx),
-                             vol.center.y,
-                             static_cast<float>(center.z + dz));
-      const CellKey key = CellForPosition(sample);
-      if (std::find_if(out_cells.begin(), out_cells.end(),
-                       [&](const CellKey &existing)
-                       { return existing == key; }) == out_cells.end())
-      {
-        out_cells.push_back(key);
-      }
+      CellKey key;
+      key.x = x;
+      key.z = z;
+      out_cells.push_back(key);
     }
   }
 }
@@ -51,7 +56,7 @@ void UCreatureSpatialIndex::GatherCellsForVolume(const CollisionVolume &vol,
 void UCreatureSpatialIndex::RemoveEntryFromCells(const Entry &entry)
 {
   CollisionVolume vol;
-  vol.center = entry.bodyOrigin;
+  vol.center = entry.volCenter;
   vol.halfExtents = entry.halfExtents;
   std::vector<CellKey> keys;
   GatherCellsForVolume(vol, keys);
@@ -76,7 +81,18 @@ void UCreatureSpatialIndex::RemoveEntryFromCells(const Entry &entry)
 
 void UCreatureSpatialIndex::InsertEntryIntoCells(const Entry &entry)
 {
-  Cells[CellForPosition(entry.bodyOrigin)].push_back(entry);
+  // Insert into every cell the entry's AABB touches, mirroring
+  // RemoveEntryFromCells: queries gather cells by query volume, so a
+  // single-cell insert lets wide bodies slip past overlap checks.
+  CollisionVolume vol;
+  vol.center = entry.volCenter;
+  vol.halfExtents = entry.halfExtents;
+  std::vector<CellKey> keys;
+  GatherCellsForVolume(vol, keys);
+  for (const CellKey &key : keys)
+  {
+    Cells[key].push_back(entry);
+  }
 }
 
 void UCreatureSpatialIndex::Upsert(CreatureId id, const glm::vec3 &origin,
@@ -101,6 +117,9 @@ void UCreatureSpatialIndex::Upsert(CreatureId id, const glm::vec3 &origin,
   entry.Id = id;
   entry.bodyOrigin = origin;
   entry.halfExtents = half_extents;
+  // bodyOrigin is the FEET position; the collision AABB is centered at
+  // feet + half height (matches UCreature::GetCollisionVolume).
+  entry.volCenter = origin + glm::vec3(0.0f, half_extents.y, 0.0f);
   Tracked[id] = entry;
   InsertEntryIntoCells(entry);
 }
@@ -148,6 +167,9 @@ UCreatureSpatialIndex::QueryRadius(const glm::vec3 &center, float radius,
                                    CreatureId skip_id) const
 {
   std::vector<CreatureId> out;
+  // Entries occupy every cell their AABB touches, so a query walking
+  // neighboring cells can meet the same entry twice — report each once.
+  std::vector<CreatureId> seen;
   const float radius_sq = radius * radius;
   const int cell_radius = static_cast<int>(std::ceil(radius / 2.0f)) + 1;
   const CellKey center_cell = CellForPosition(center);
@@ -163,7 +185,8 @@ UCreatureSpatialIndex::QueryRadius(const glm::vec3 &center, float radius,
       }
       for (const Entry &entry : it->second)
       {
-        if (entry.Id == skip_id)
+        if (entry.Id == skip_id ||
+            std::find(seen.begin(), seen.end(), entry.Id) != seen.end())
         {
           continue;
         }
@@ -171,6 +194,7 @@ UCreatureSpatialIndex::QueryRadius(const glm::vec3 &center, float radius,
         const float dist_sq = delta.x * delta.x + delta.z * delta.z;
         if (dist_sq <= radius_sq)
         {
+          seen.push_back(entry.Id);
           out.push_back(entry.Id);
         }
       }
@@ -184,6 +208,7 @@ UCreatureSpatialIndex::QueryNeighbors(const glm::vec3 &center, float radius,
                                       CreatureId skip_id) const
 {
   std::vector<CreatureNeighborView> out;
+  std::vector<CreatureId> seen;
   const float radius_sq = radius * radius;
   const int cell_radius = static_cast<int>(std::ceil(radius / 2.0f)) + 1;
   const CellKey center_cell = CellForPosition(center);
@@ -199,7 +224,8 @@ UCreatureSpatialIndex::QueryNeighbors(const glm::vec3 &center, float radius,
       }
       for (const Entry &entry : it->second)
       {
-        if (entry.Id == skip_id)
+        if (entry.Id == skip_id ||
+            std::find(seen.begin(), seen.end(), entry.Id) != seen.end())
         {
           continue;
         }
@@ -210,8 +236,45 @@ UCreatureSpatialIndex::QueryNeighbors(const glm::vec3 &center, float radius,
           CreatureNeighborView neighbor;
           neighbor.Id = entry.Id;
           neighbor.bodyOrigin = entry.bodyOrigin;
+          seen.push_back(entry.Id);
           out.push_back(neighbor);
         }
+      }
+    }
+  }
+  return out;
+}
+
+std::vector<CreatureNeighborView>
+UCreatureSpatialIndex::QueryNeighborsOverlappingVolume(
+    const CollisionVolume &vol, CreatureId skip_id) const
+{
+  std::vector<CreatureNeighborView> out;
+  std::vector<CreatureId> seen;
+  std::vector<CellKey> keys;
+  GatherCellsForVolume(vol, keys);
+  for (const CellKey &key : keys)
+  {
+    const auto it = Cells.find(key);
+    if (it == Cells.end())
+    {
+      continue;
+    }
+    for (const Entry &entry : it->second)
+    {
+      if (entry.Id == skip_id ||
+          std::find(seen.begin(), seen.end(), entry.Id) != seen.end())
+      {
+        continue;
+      }
+      if (AabbOverlap(vol.center, vol.halfExtents, entry.volCenter,
+                      entry.halfExtents))
+      {
+        CreatureNeighborView neighbor;
+        neighbor.Id = entry.Id;
+        neighbor.bodyOrigin = entry.bodyOrigin;
+        seen.push_back(entry.Id);
+        out.push_back(neighbor);
       }
     }
   }
@@ -236,7 +299,7 @@ bool UCreatureSpatialIndex::AnyCreatureVolumeOverlaps(const CollisionVolume &vol
       {
         continue;
       }
-      if (AabbOverlap(vol.center, vol.halfExtents, entry.bodyOrigin,
+      if (AabbOverlap(vol.center, vol.halfExtents, entry.volCenter,
                       entry.halfExtents))
       {
         return true;

@@ -1,32 +1,56 @@
 #include "App/Platform/WindowManager.h"
 #include "App/Application.h"
 #include "App/Core.h"
-#include "App/Settings/AppState.h"
+#include "App/Platform/CursorCapture.h"
 #include "App/Platform/InputManager.h"
 #include "App/Platform/Log.h"
+#include "App/Settings/AppState.h"
 #include "Blocks/Input/BlockInputController.h"
+#include "Core/FrameStageWatchdog.h"
+#include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Influence/InfluenceApplier.h"
+#include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Player/User.h"
 #include "Game/CreatureVisualQaSpawner.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Game/ModePolicy.h"
+#include "Game/WorldGameMode.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Interfaces/IUInventoryViewModel.h"
+#include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image.h"
+#include "ThirdParty/stb_image_write.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Diagnostics/Profile.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
-#include "Core/Progress/IUProgressSink.h"
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <condition_variable>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <filesystem>
+#include <iomanip>
 #include <iostream>
+#include <limits>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
+#include <thread>
+#include <utility>
 #include <vector>
+#include "World/Diagnostics/MeshAuditDiagnostics.h"
 
 namespace cutum
 {
@@ -82,7 +106,426 @@ void TrySetWindowIcon(GLFWwindow *window)
   }
 }
 
+float ReadFlightCaptureEnvFloat(const char *name, float fallback)
+{
+  const char *value = std::getenv(name);
+  if (!value || value[0] == '\0')
+  {
+    return fallback;
+  }
+  char *end = nullptr;
+  const float parsed = std::strtof(value, &end);
+  if (end == value || *end != '\0' || !std::isfinite(parsed))
+  {
+    return fallback;
+  }
+  return parsed;
+}
+
+bool ReadFlightCaptureEnvBool(const char *name)
+{
+  const char *value = std::getenv(name);
+  return value && value[0] == '1' && value[1] == '\0';
+}
+
 } // namespace
+
+/// Opt-in evidence capture. GPU readback is pipelined through pixel-pack
+/// buffers and PNG encoding/writes run off the render thread.
+class UFlightCaptureService
+{
+public:
+  UFlightCaptureService() : Worker([this] { WorkerLoop(); }) {}
+
+  ~UFlightCaptureService() { Shutdown(); }
+
+  bool HasPendingGpuReadback() const
+  {
+    return std::any_of(PboSlots.begin(), PboSlots.end(),
+                       [](const PboSlot &slot) { return slot.Busy; });
+  }
+
+  void PollCompleted()
+  {
+    for (PboSlot &slot : PboSlots)
+    {
+      if (!slot.Busy || !slot.Fence)
+      {
+        continue;
+      }
+
+      const GLenum wait = glClientWaitSync(slot.Fence, 0, 0);
+      if (wait == GL_TIMEOUT_EXPIRED)
+      {
+        continue;
+      }
+      if (wait == GL_WAIT_FAILED)
+      {
+        CubatariumLogInfo("FlightCapture",
+                          "GPU readback fence failed index=" +
+                              std::to_string(slot.Payload.Index));
+        ReleaseSlot(slot);
+        continue;
+      }
+
+      GLint previous_pack_buffer = 0;
+      glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
+      const size_t byte_count = static_cast<size_t>(slot.Payload.Width) *
+                                static_cast<size_t>(slot.Payload.Height) * 4u;
+      const auto *mapped = static_cast<const unsigned char *>(glMapBufferRange(
+          GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byte_count),
+          GL_MAP_READ_BIT));
+      bool copied = false;
+      if (mapped)
+      {
+        slot.Payload.Pixels.assign(mapped, mapped + byte_count);
+        copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
+      }
+      glBindBuffer(GL_PIXEL_PACK_BUFFER,
+                   static_cast<GLuint>(previous_pack_buffer));
+
+      if (!copied)
+      {
+        CubatariumLogInfo("FlightCapture",
+                          "GPU readback map failed index=" +
+                              std::to_string(slot.Payload.Index));
+        ReleaseSlot(slot);
+        continue;
+      }
+
+      Frame frame = std::move(slot.Payload);
+      const uint32_t frame_index = frame.Index;
+      ReleaseSlot(slot);
+      if (!QueueImage(std::move(frame), false))
+      {
+        CubatariumLogInfo(
+            "FlightCapture",
+            "PNG worker queue full; dropped completed frame index=" +
+                std::to_string(frame_index));
+      }
+    }
+  }
+
+  bool QueueCapture(GLFWwindow *window, const std::filesystem::path &path,
+                    uint32_t index, float camera_x, float camera_y,
+                    GLenum source_buffer)
+  {
+    if (!window || !EnsurePboBuffers())
+    {
+      return false;
+    }
+
+    PboSlot *slot = nullptr;
+    for (PboSlot &candidate : PboSlots)
+    {
+      if (!candidate.Busy)
+      {
+        slot = &candidate;
+        break;
+      }
+    }
+    if (!slot)
+    {
+      return false;
+    }
+
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    if (width <= 0 || height <= 0)
+    {
+      return false;
+    }
+    const size_t byte_count =
+        static_cast<size_t>(width) * static_cast<size_t>(height) * 4u;
+    if (byte_count >
+        static_cast<size_t>(std::numeric_limits<GLsizeiptr>::max()))
+    {
+      return false;
+    }
+
+    GLint previous_read_framebuffer = 0;
+    GLint previous_read_buffer = GL_BACK;
+    GLint previous_pack_alignment = 4;
+    GLint previous_pack_buffer = 0;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previous_read_framebuffer);
+    glGetIntegerv(GL_READ_BUFFER, &previous_read_buffer);
+    glGetIntegerv(GL_PACK_ALIGNMENT, &previous_pack_alignment);
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glReadBuffer(source_buffer);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, slot->Buffer);
+    glBufferData(GL_PIXEL_PACK_BUFFER, static_cast<GLsizeiptr>(byte_count),
+                 nullptr, GL_STREAM_READ);
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+    glBindBuffer(GL_PIXEL_PACK_BUFFER,
+                 static_cast<GLuint>(previous_pack_buffer));
+    glPixelStorei(GL_PACK_ALIGNMENT, previous_pack_alignment);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER,
+                      static_cast<GLuint>(previous_read_framebuffer));
+    glReadBuffer(static_cast<GLenum>(previous_read_buffer));
+
+    if (!fence)
+    {
+      // The PBO contents cannot be reused safely without a completion fence.
+      glFinish();
+      CubatariumLogInfo("FlightCapture",
+                        "Could not create GPU readback fence index=" +
+                            std::to_string(index));
+      return false;
+    }
+
+    slot->Payload = Frame{width, height, path, index, camera_x, camera_y,
+                          source_buffer, {}};
+    slot->Fence = fence;
+    slot->Busy = true;
+    return true;
+  }
+
+  void Shutdown()
+  {
+    if (Stopped)
+    {
+      return;
+    }
+
+    if (HasPendingGpuReadback())
+    {
+      // Shutdown is the only place where we wait: retain queued evidence while
+      // the GL context is still current, then drain image jobs before teardown.
+      glFinish();
+      PollCompletedForShutdown();
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(Mutex);
+      StopWorker = true;
+    }
+    WorkAvailable.notify_all();
+    if (Worker.joinable())
+    {
+      Worker.join();
+    }
+
+    for (PboSlot &slot : PboSlots)
+    {
+      if (slot.Fence)
+      {
+        glDeleteSync(slot.Fence);
+        slot.Fence = nullptr;
+      }
+    }
+    glDeleteBuffers(static_cast<GLsizei>(PboSlots.size()), PboBuffers.data());
+    PboBuffers.fill(0);
+    Stopped = true;
+  }
+
+private:
+  struct Frame
+  {
+    int Width{};
+    int Height{};
+    std::filesystem::path Path;
+    uint32_t Index{};
+    float CameraX{};
+    float CameraY{};
+    GLenum SourceBuffer{GL_BACK};
+    std::vector<unsigned char> Pixels;
+  };
+
+  struct PboSlot
+  {
+    GLuint Buffer{};
+    GLsync Fence{};
+    Frame Payload;
+    bool Busy{};
+  };
+
+  static constexpr size_t KPboSlotCount = 3;
+  static constexpr size_t KMaxQueuedImages = 4;
+
+  bool EnsurePboBuffers()
+  {
+    if (std::all_of(PboBuffers.begin(), PboBuffers.end(),
+                    [](GLuint buffer) { return buffer != 0; }))
+    {
+      return true;
+    }
+    if (std::any_of(PboBuffers.begin(), PboBuffers.end(),
+                    [](GLuint buffer) { return buffer != 0; }))
+    {
+      glDeleteBuffers(static_cast<GLsizei>(PboBuffers.size()),
+                      PboBuffers.data());
+      PboBuffers.fill(0);
+      for (PboSlot &slot : PboSlots)
+      {
+        slot.Buffer = 0;
+      }
+    }
+    glGenBuffers(static_cast<GLsizei>(PboBuffers.size()), PboBuffers.data());
+    for (size_t i = 0; i < PboSlots.size(); ++i)
+    {
+      PboSlots[i].Buffer = PboBuffers[i];
+    }
+    return PboBuffers[0] != 0 && PboBuffers[1] != 0 && PboBuffers[2] != 0;
+  }
+
+  void ReleaseSlot(PboSlot &slot)
+  {
+    if (slot.Fence)
+    {
+      glDeleteSync(slot.Fence);
+      slot.Fence = nullptr;
+    }
+    slot.Payload = Frame{};
+    slot.Busy = false;
+  }
+
+  bool QueueImage(Frame &&frame, bool wait_for_space)
+  {
+    std::unique_lock<std::mutex> lock(Mutex);
+    if (wait_for_space)
+    {
+      QueueSpaceAvailable.wait(
+          lock,
+          [this] { return ImageJobs.size() < KMaxQueuedImages || StopWorker; });
+    }
+    if (ImageJobs.size() >= KMaxQueuedImages || StopWorker)
+    {
+      return false;
+    }
+    ImageJobs.push_back(std::move(frame));
+    lock.unlock();
+    WorkAvailable.notify_one();
+    return true;
+  }
+
+  void PollCompletedForShutdown()
+  {
+    for (PboSlot &slot : PboSlots)
+    {
+      if (!slot.Busy)
+      {
+        continue;
+      }
+      // glFinish above guarantees this zero-time query must already complete.
+      const GLenum wait =
+          slot.Fence ? glClientWaitSync(slot.Fence, 0, 0) : GL_WAIT_FAILED;
+      if (wait == GL_WAIT_FAILED)
+      {
+        ReleaseSlot(slot);
+        continue;
+      }
+      GLint previous_pack_buffer = 0;
+      glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
+      const size_t byte_count = static_cast<size_t>(slot.Payload.Width) *
+                                static_cast<size_t>(slot.Payload.Height) * 4u;
+      const auto *mapped = static_cast<const unsigned char *>(glMapBufferRange(
+          GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byte_count),
+          GL_MAP_READ_BIT));
+      bool copied = false;
+      if (mapped)
+      {
+        slot.Payload.Pixels.assign(mapped, mapped + byte_count);
+        copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
+      }
+      glBindBuffer(GL_PIXEL_PACK_BUFFER,
+                   static_cast<GLuint>(previous_pack_buffer));
+      if (copied)
+      {
+        Frame frame = std::move(slot.Payload);
+        ReleaseSlot(slot);
+        if (!QueueImage(std::move(frame), true))
+        {
+          CubatariumLogInfo("FlightCapture",
+                            "could not queue completed frame during shutdown");
+        }
+      }
+      else
+      {
+        CubatariumLogInfo("FlightCapture",
+                          "GPU readback map failed during shutdown index=" +
+                              std::to_string(slot.Payload.Index));
+        ReleaseSlot(slot);
+      }
+    }
+  }
+
+  void WorkerLoop()
+  {
+    for (;;)
+    {
+      Frame frame;
+      {
+        std::unique_lock<std::mutex> lock(Mutex);
+        WorkAvailable.wait(lock,
+                           [this] { return StopWorker || !ImageJobs.empty(); });
+        if (ImageJobs.empty() && StopWorker)
+        {
+          return;
+        }
+        frame = std::move(ImageJobs.front());
+        ImageJobs.pop_front();
+      }
+      QueueSpaceAvailable.notify_one();
+
+      bool saved = false;
+      try
+      {
+        const size_t row_bytes = static_cast<size_t>(frame.Width) * 4u;
+        std::vector<unsigned char> row(row_bytes);
+        for (int y = 0; y < frame.Height / 2; ++y)
+        {
+          const size_t top = static_cast<size_t>(y) * row_bytes;
+          const size_t bottom =
+              static_cast<size_t>(frame.Height - 1 - y) * row_bytes;
+          std::memcpy(row.data(), frame.Pixels.data() + top, row_bytes);
+          std::memcpy(frame.Pixels.data() + top, frame.Pixels.data() + bottom,
+                      row_bytes);
+          std::memcpy(frame.Pixels.data() + bottom, row.data(), row_bytes);
+        }
+
+        std::error_code ec;
+        std::filesystem::create_directories(frame.Path.parent_path(), ec);
+        saved =
+            !ec &&
+            row_bytes <= static_cast<size_t>(std::numeric_limits<int>::max()) &&
+            stbi_write_png(frame.Path.string().c_str(), frame.Width,
+                           frame.Height, 4, frame.Pixels.data(),
+                           static_cast<int>(row_bytes)) != 0;
+      }
+      catch (...)
+      {
+        saved = false;
+      }
+      CubatariumLogInfo("FlightCapture",
+                        std::string(saved ? "saved" : "write failed") +
+                            " index=" + std::to_string(frame.Index) +
+                            " source=" +
+                            (frame.SourceBuffer == GL_FRONT ? "GL_FRONT"
+                                                            : "GL_BACK") +
+                            " camera_x=" + std::to_string(frame.CameraX) +
+                            " camera_y=" + std::to_string(frame.CameraY) +
+                            " path=" + frame.Path.string());
+    }
+  }
+
+  std::array<GLuint, KPboSlotCount> PboBuffers{};
+  std::array<PboSlot, KPboSlotCount> PboSlots{};
+  std::mutex Mutex;
+  std::condition_variable WorkAvailable;
+  std::condition_variable QueueSpaceAvailable;
+  std::deque<Frame> ImageJobs;
+  bool StopWorker{};
+  bool Stopped{};
+  std::thread Worker;
+};
 
 UWindowManager::UWindowManager()
     : Window(nullptr), WindowWidth(1280), WindowHeight(720), IsRunning(false),
@@ -111,6 +554,10 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
   {
     glfwDefaultWindowHints();
     glfwWindowHint(GLFW_VISIBLE, visible ? GLFW_TRUE : GLFW_FALSE);
+    if (visible)
+    {
+      glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
+    }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -171,6 +618,7 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
     glfwTerminate();
     return false;
   }
+  RefreshRenderBackendCapsFromGl();
 #endif
 
   // Настройка OpenGL
@@ -185,6 +633,20 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
 
   // Input manager creation
   InputManager->Initialize(Window);
+
+  // Keep explicit flight-sim visibility reliable on Windows. The GLFW hint
+  // requests an initially visible window, but some launch paths create the
+  // context while the parent console is in the foreground. Re-show after GL
+  // initialization so the operator gets a real window to inspect.
+  if (visible)
+  {
+    glfwShowWindow(Window);
+    glfwFocusWindow(Window);
+    CubatariumLogInfo("Window",
+                      glfwGetWindowAttrib(Window, GLFW_VISIBLE) == GLFW_TRUE
+                          ? "Visible window shown"
+                          : "Visible window request did not take effect");
+  }
 
   IsInitialized = true;
   return true;
@@ -264,6 +726,13 @@ void UWindowManager::SetupCallbacks()
         {
           return;
         }
+        if (World)
+        {
+          if (auto camera = World->GetCurrentUserCamera())
+          {
+            camera->UpdateMouseScroll(Xoffset, Yoffset);
+          }
+        }
       });
 
   glfwSetCharCallback(Window,
@@ -287,10 +756,9 @@ void UWindowManager::ApplyPresentSettings()
   const bool vsync = Core->GetRenderSettings().VSync;
   const int interval = vsync ? 1 : 0;
   glfwSwapInterval(interval);
-  CubatariumLogInfo("Window",
-                    std::string("ApplyPresentSettings vsync=") +
-                        (vsync ? "true" : "false") +
-                        " SwapInterval=" + std::to_string(interval));
+  CubatariumLogInfo("Window", std::string("ApplyPresentSettings vsync=") +
+                                  (vsync ? "true" : "false") +
+                                  " SwapInterval=" + std::to_string(interval));
 }
 
 void UWindowManager::Run()
@@ -305,44 +773,71 @@ void UWindowManager::Run()
   ApplyPresentSettings();
   UFramePerfMonitor::EnsureSession();
 
-  while (!glfwWindowShouldClose(Window) && IsRunning)
+  while ((!glfwWindowShouldClose(Window) &&
+          !(Application && Application->IsQuitRequested())) &&
+         IsRunning)
   {
     const auto frame_begin = std::chrono::high_resolution_clock::now();
     DeltaTime =
         std::chrono::duration<double>(frame_begin - LastFrameTime).count();
     LastFrameTime = frame_begin;
 
-    glfwPollEvents();
+    {
+      UFrameStageWatchdog::Scope stage("window.poll_events");
+      glfwPollEvents();
+    }
 
     if (World)
     {
       World->SetWallFrameDelta(DeltaTime);
     }
 
+    // Flight-sim callbacks also advance autopilot state (camera pose and
+    // synthetic key state). Apply that state before movement and streaming so
+    // the renderer and streaming probes observe the same camera for this
+    // frame. StopPredicate is therefore invoked once per frame, here.
+    bool stop_before_update = false;
+    {
+      UFrameStageWatchdog::Scope stage("window.stop_predicate");
+      stop_before_update = StopPredicate && StopPredicate();
+    }
+    if (stop_before_update)
+    {
+      IsRunning = false;
+      break;
+    }
+
     // Input processing
     const auto input_begin = std::chrono::high_resolution_clock::now();
-    ProcessInput();
-    const double input_ms = std::chrono::duration<double, std::milli>(
-                                std::chrono::high_resolution_clock::now() -
-                                input_begin)
-                                .count();
+    {
+      UFrameStageWatchdog::Scope stage("window.process_input");
+      ProcessInput();
+    }
+    const double input_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - input_begin)
+            .count();
     const auto app_begin = std::chrono::high_resolution_clock::now();
     if (Application)
     {
+      UFrameStageWatchdog::Scope stage("window.application_update");
       Application->Update(DeltaTime);
     }
-    const double app_ms = std::chrono::duration<double, std::milli>(
-                              std::chrono::high_resolution_clock::now() -
-                              app_begin)
-                              .count();
+    const double app_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - app_begin)
+            .count();
 
     // Logic update (includes DoMovement → phys_ms)
     const auto world_begin = std::chrono::high_resolution_clock::now();
-    Update();
-    const double world_ms = std::chrono::duration<double, std::milli>(
-                                std::chrono::high_resolution_clock::now() -
-                                world_begin)
-                                .count();
+    {
+      UFrameStageWatchdog::Scope stage("window.logic_update");
+      Update();
+    }
+    const double world_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - world_begin)
+            .count();
     if (World)
     {
       World->SetLastInputMs(input_ms);
@@ -351,16 +846,222 @@ void UWindowManager::Run()
     }
 
     // Outside world_ms so autosave Init/Ticks do not inflate world_extra.
-    TickBudgetedAutosave();
+    {
+      const auto t_autosave = std::chrono::high_resolution_clock::now();
+      {
+        UFrameStageWatchdog::Scope stage("window.autosave");
+        TickBudgetedAutosave();
+      }
+      if (World)
+      {
+        World->SetLastAutosaveMs(
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - t_autosave)
+                .count());
+      }
+    }
 
     // Rendering
-    Render();
+    CUBA_FRAME_MARK;
+    const auto render_begin = std::chrono::high_resolution_clock::now();
+    {
+      UFrameStageWatchdog::Scope stage("window.render");
+      Render();
+    }
+    if (World)
+    {
+      World->SetLastRenderTotalMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - render_begin)
+              .count());
+    }
+
+    {
+      static const bool flicker_trace =
+          std::getenv("CUBA_LIGHT_FLICKER_TRACE") != nullptr;
+      if (flicker_trace && World && Application &&
+          Application->GetState() == AppState::InGame)
+      {
+        UMeshAuditDiagnostics::TraceFlickerFrame(*World);
+      }
+      static const bool flight_telemetry =
+          std::getenv("CUBA_FLIGHT_TELEMETRY") != nullptr;
+      if (flight_telemetry && World && Application &&
+          Application->GetState() == AppState::InGame)
+      {
+        UMeshAuditDiagnostics::TraceFlightTelemetry(*World);
+      }
+    }
+    // Opt-in oracle for see-through holes (CUBA_MESH_AUDIT_AFTER_SEC=<sec>):
+    // one mesh_audit.json per process after the given in-game time.
+    {
+      static const float audit_after_sec =
+          ReadFlightCaptureEnvFloat("CUBA_MESH_AUDIT_AFTER_SEC", -1.0f);
+      static int audit_runs = 0;
+      static std::chrono::steady_clock::time_point audit_t0{};
+      if (audit_after_sec >= 0.0f && audit_runs < 2 && World && Application &&
+          Application->GetState() == AppState::InGame)
+      {
+        const auto audit_now = std::chrono::steady_clock::now();
+        if (audit_t0 == std::chrono::steady_clock::time_point{})
+        {
+          audit_t0 = audit_now;
+        }
+        if (std::chrono::duration<float>(audit_now - audit_t0).count() >=
+            audit_after_sec + 20.0f * static_cast<float>(audit_runs))
+        {
+          const int audited = UMeshAuditDiagnostics::Run(
+              *World, audit_runs == 0
+                          ? std::filesystem::path()
+                          : GetExecutableDirectory() / "mesh_audit_2.json");
+          ++audit_runs;
+          CubatariumLogInfo("MeshAudit",
+                            "audited_chunks=" + std::to_string(audited));
+        }
+      }
+    }
+
+    // Opt-in visual evidence for visible flight-sim runs. Queue a back-buffer
+    // readback before swap; PBO completion and PNG output are handled
+    // asynchronously so evidence capture does not stall the flight.
+    bool capture_front_after_swap = false;
+    std::filesystem::path front_capture_path;
+    uint32_t front_capture_index = 0;
+    float front_capture_camera_x = 0.0f;
+    float front_capture_camera_y = 0.0f;
+    static const char *flight_capture_dir =
+        std::getenv("CUBA_FLIGHT_CAPTURE_DIR");
+    static const bool flight_capture_front_after_swap =
+        ReadFlightCaptureEnvBool("CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP");
+    if (flight_capture_dir && flight_capture_dir[0] != '\0' && World &&
+        Application && Application->GetState() == AppState::InGame)
+    {
+      if (!FlightCapture)
+      {
+        FlightCapture = std::make_unique<UFlightCaptureService>();
+      }
+      FlightCapture->PollCompleted();
+
+      static const float capture_interval_seconds = std::clamp(
+          ReadFlightCaptureEnvFloat("CUBA_FLIGHT_CAPTURE_INTERVAL_SEC", 15.0f),
+          0.1f, 3600.0f);
+      static const float capture_delay_seconds = std::clamp(
+          ReadFlightCaptureEnvFloat("CUBA_FLIGHT_CAPTURE_DELAY_SEC", 0.0f),
+          0.0f, 3600.0f);
+      static const float capture_min_x = ReadFlightCaptureEnvFloat(
+          "CUBA_FLIGHT_CAPTURE_MIN_X", -std::numeric_limits<float>::infinity());
+      static const float capture_max_x = ReadFlightCaptureEnvFloat(
+          "CUBA_FLIGHT_CAPTURE_MAX_X", std::numeric_limits<float>::infinity());
+      static auto next_capture = std::chrono::steady_clock::time_point{};
+      static bool capture_schedule_initialized = false;
+      static uint32_t capture_index = 0;
+      const auto capture_now = std::chrono::steady_clock::now();
+      const auto camera = World->GetCurrentUserCamera();
+      const float camera_x = camera ? camera->GetPosition().x
+                                    : std::numeric_limits<float>::quiet_NaN();
+      const bool inside_capture_x_range =
+          camera_x >= capture_min_x && camera_x <= capture_max_x;
+      if (!inside_capture_x_range)
+      {
+        // Capture immediately on each entry into the selected X interval.
+        next_capture = std::chrono::steady_clock::time_point{};
+        capture_schedule_initialized = false;
+      }
+      else
+      {
+        if (!capture_schedule_initialized)
+        {
+          next_capture =
+              capture_now +
+              std::chrono::duration_cast<
+                  std::chrono::steady_clock::duration>(
+                  std::chrono::duration<double>(capture_delay_seconds));
+          capture_schedule_initialized = true;
+        }
+        if (capture_now >= next_capture)
+        {
+          next_capture =
+              capture_now +
+              std::chrono::duration_cast<
+                  std::chrono::steady_clock::duration>(
+                  std::chrono::duration<double>(capture_interval_seconds));
+          std::ostringstream filename;
+          filename << "frame_" << std::setw(3) << std::setfill('0')
+                   << capture_index++ << ".png";
+          const std::filesystem::path capture_path =
+              std::filesystem::path(flight_capture_dir) / filename.str();
+          {
+            UFrameStageWatchdog::Scope stage("window.frame_capture");
+            const uint32_t frame_index = capture_index - 1;
+            const float camera_y = camera
+                                       ? camera->GetPosition().y
+                                       : std::numeric_limits<float>::quiet_NaN();
+            if (!FlightCapture->QueueCapture(Window, capture_path, frame_index,
+                                             camera_x, camera_y, GL_BACK))
+            {
+              CubatariumLogInfo("FlightCapture",
+                                "Unable to queue framebuffer capture index=" +
+                                    std::to_string(frame_index) +
+                                    " source=GL_BACK" +
+                                    " camera_x=" + std::to_string(camera_x));
+            }
+            else
+            {
+              CubatariumLogInfo("FlightCapture",
+                                "queued index=" + std::to_string(frame_index) +
+                                    " source=GL_BACK" +
+                                    " camera_x=" + std::to_string(camera_x) +
+                                    " camera_y=" + std::to_string(camera_y) +
+                                    " path=" + capture_path.string());
+              capture_front_after_swap = flight_capture_front_after_swap;
+              if (capture_front_after_swap)
+              {
+                front_capture_path = capture_path.parent_path() /
+                                     (capture_path.stem().string() + "_front" +
+                                      capture_path.extension().string());
+                front_capture_index = frame_index;
+                front_capture_camera_x = camera_x;
+                front_capture_camera_y = camera_y;
+              }
+            }
+          }
+        }
+      }
+    }
 
     const auto swap_begin = std::chrono::high_resolution_clock::now();
-    glfwSwapBuffers(Window);
+    {
+      UFrameStageWatchdog::Scope stage("window.swap_buffers");
+      glfwSwapBuffers(Window);
+    }
+    const auto swap_end = std::chrono::high_resolution_clock::now();
+    if (capture_front_after_swap && FlightCapture)
+    {
+      UFrameStageWatchdog::Scope stage("window.frame_capture_front");
+      if (!FlightCapture->QueueCapture(
+              Window, front_capture_path, front_capture_index,
+              front_capture_camera_x, front_capture_camera_y, GL_FRONT))
+      {
+        CubatariumLogInfo(
+            "FlightCapture",
+            "Unable to queue framebuffer capture index=" +
+                std::to_string(front_capture_index) + " source=GL_FRONT" +
+                " camera_x=" + std::to_string(front_capture_camera_x));
+      }
+      else
+      {
+        CubatariumLogInfo(
+            "FlightCapture",
+            "queued index=" + std::to_string(front_capture_index) +
+                " source=GL_FRONT" +
+                " camera_x=" + std::to_string(front_capture_camera_x) +
+                " camera_y=" + std::to_string(front_capture_camera_y) +
+                " path=" + front_capture_path.string());
+      }
+    }
     const auto frame_end = std::chrono::high_resolution_clock::now();
     const double swap_wait_ms =
-        std::chrono::duration<double, std::milli>(frame_end - swap_begin)
+        std::chrono::duration<double, std::milli>(swap_end - swap_begin)
             .count();
     const double frame_wall_ms =
         std::chrono::duration<double, std::milli>(frame_end - frame_begin)
@@ -368,8 +1069,6 @@ void UWindowManager::Run()
     if (World)
     {
       World->SetLastSwapWaitMs(swap_wait_ms);
-      // Same-frame wall for perf log (HUD still uses inter-frame DeltaTime).
-      World->SetWallFrameDelta(frame_wall_ms / 1000.0);
     }
     if (World && Application && Application->GetState() == AppState::InGame)
     {
@@ -378,17 +1077,18 @@ void UWindowManager::Run()
       {
         interval = Core->GetUiSettings().PerfLogIntervalSec;
       }
-      UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval);
-      // Restore inter-frame delta for gameplay timing consistency next frame.
-      World->SetWallFrameDelta(DeltaTime);
+      UFrameStageWatchdog::Scope stage("window.perf_emit");
+      UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval,
+                                       frame_wall_ms);
     }
 
-    if (StopPredicate && StopPredicate())
-    {
-      IsRunning = false;
-    }
   }
 
+  if (FlightCapture)
+  {
+    FlightCapture->Shutdown();
+    FlightCapture.reset();
+  }
   UFramePerfMonitor::Shutdown();
 }
 
@@ -471,6 +1171,26 @@ void UWindowManager::Update()
     PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
     tele.ViewsMs = 0.0;
     tele.DoMovementMs = 0.0;
+    tele.EnsureCollisionMs = 0.0;
+    tele.CreatureTickMs = 0.0;
+    tele.CameraDoMovementMs = 0.0;
+    tele.CameraGroundSupportMs = 0.0;
+    tele.CameraLocomotionMs = 0.0;
+    tele.CameraHorizMoveMs = 0.0;
+    tele.CameraSyncMs = 0.0;
+    tele.EnvironmentTickMs = 0.0;
+    tele.NpcIntentExecuteMs = 0.0;
+    tele.ControlledInfluenceMs = 0.0;
+    tele.VitalsTickMs = 0.0;
+    tele.StatusEffectsTickMs = 0.0;
+    tele.CreaturesTotal = 0;
+    tele.CreaturesAiTicked = 0;
+    tele.WorldCreaturesSkipped = 0;
+    tele.PlayerLocomotionBlockMs = 0.0;
+    tele.WorldAiAfterPlayerMs = 0.0;
+    tele.CreaturesAiBudget = 0;
+    tele.CreaturesAiDeferred = 0;
+    tele.WorldStreamingPhaseMs = 0.0;
     tele.BlockInputMs = 0.0;
     tele.TickEnvMs = 0.0;
     tele.BreakCompleteN = 0;
@@ -478,6 +1198,13 @@ void UWindowManager::Update()
     tele.BreakDarkFaceN = 0;
     tele.PlaceCompleteN = 0;
     tele.PlaceEmissionN = 0;
+    tele.AutosaveDeferredN = 0;
+    tele.AutosaveSkippedTickN = 0;
+    tele.DigSeamPendingN = 0;
+    tele.DigSeamRemeshN = 0;
+    tele.StaleRepairWaveN = 0;
+    tele.StandRimDirtyN = 0;
+    tele.StandRimImmN = 0;
     tele.EditLightEmission = 0;
     tele.FastRelightMs = 0.0;
     tele.EditToFirstMeshMs = 0.0;
@@ -486,7 +1213,10 @@ void UWindowManager::Update()
   if (Views)
   {
     const auto t0 = clock::now();
-    Views->UpdateFrameTime();
+    {
+      UFrameStageWatchdog::Scope stage("world.views_update");
+      Views->UpdateFrameTime();
+    }
     if (World)
     {
       World->GetPhysicsTelemetryMutable().ViewsMs =
@@ -498,10 +1228,20 @@ void UWindowManager::Update()
   {
     {
       const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.do_movement");
       World->DoMovement();
       World->GetPhysicsTelemetryMutable().DoMovementMs =
           std::chrono::duration<double, std::milli>(clock::now() - t0).count();
     }
+    // Era14: stream/mesh outside DoMovement so phys_ms stays locomotion-only.
+    {
+      const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.streaming_phase");
+      World->TickWorldStreamingPhase();
+      World->GetPhysicsTelemetryMutable().WorldStreamingPhaseMs =
+          std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    }
+    UFrameStageWatchdog::Scope break_stage("world.post_streaming_logic");
     if (World->ConsumeFlightSimBreakRequest())
     {
       if (auto camera = World->GetCurrentUserCamera())
@@ -511,9 +1251,27 @@ void UWindowManager::Update()
       glm::ivec3 target = World->GetBreakBlockPos();
       bool have_target = World->GetIsBlockIntersectionExists() &&
                          World->GetBlockWorld().GetBlock(target) != BLOCK_AIR;
+      // An explicit target keeps a synthetic boundary witness independent of
+      // physics camera correction and creature interaction range. This opt-in
+      // does not affect ordinary block input.
+      bool direct_break_target = false;
+      if (const char *block_spec = std::getenv("CUBA_FLIGHT_BREAK_BLOCK"))
+      {
+        int x = 0;
+        int y = 0;
+        int z = 0;
+        std::istringstream block_stream(block_spec);
+        if (block_stream >> x >> y >> z)
+        {
+          target = glm::ivec3(x, y, z);
+          direct_break_target = true;
+          have_target = World->GetBlockWorld().GetBlock(target) != BLOCK_AIR;
+        }
+      }
       if (!have_target)
       {
-        // Standing ocean save may look at empty air/water; break underfeet solid.
+        // Standing ocean save may look at empty air/water; break underfeet
+        // solid.
         if (auto camera = World->GetCurrentUserCamera())
         {
           const glm::vec3 eye = camera->GetPosition();
@@ -539,13 +1297,67 @@ void UWindowManager::Update()
       }
       if (have_target)
       {
-        World->StartBreakSession(target);
-        World->CompleteBreakSession();
+        UCreature *controlled = World->GetControlledCreature();
+        if (controlled && !direct_break_target)
+        {
+          CreatureIntent intent = controlled->GetIntent();
+          intent.Influence = InfluenceIntent{};
+          intent.Influence.Channel = InfluenceChannel::Dig;
+          intent.Influence.TargetBlockPos = target;
+          intent.Influence.HasTargetBlock = true;
+          controlled->SetIntent(intent);
+          InfluencePrediction pred = InfluenceResolver::Resolve(
+              *World, *controlled, World->GetGameMode(), nullptr);
+          InfluenceApplier::Apply(*World, pred, World->GetGameMode(),
+                                  /*dt=*/1.0e6f);
+          CreatureIntent cleared = controlled->GetIntent();
+          cleared.Influence = InfluenceIntent{};
+          controlled->SetIntent(cleared);
+        }
+        else
+        {
+          World->StartBreakSession(target);
+          const bool completed = World->CompleteBreakSession();
+          if (direct_break_target)
+          {
+            std::cout << "flight-sim: explicit break target=(" << target.x
+                      << "," << target.y << "," << target.z
+                      << ") completed=" << completed << " after="
+                      << World->GetBlockWorld().GetBlock(target) << std::endl;
+          }
+        }
+      }
+      else if (direct_break_target)
+      {
+        std::cout << "flight-sim: explicit break target is not solid"
+                  << std::endl;
+      }
+    }
+    // Opt-in synthetic boundary witness: physics may snap the player back to
+    // the ground after AppRunner selects the break target. Restore only the
+    // diagnostic render eye after simulation so the centre ray and the broken
+    // boundary block remain coincident. Ordinary runs never enter this branch.
+    if (const char *eye_spec = std::getenv("CUBA_FLIGHT_BREAK_EYE"))
+    {
+      float x = 0.0f;
+      float y = 0.0f;
+      float z = 0.0f;
+      float yaw = 0.0f;
+      float pitch = 0.0f;
+      std::istringstream eye_stream(eye_spec);
+      if ((eye_stream >> x >> y >> z >> yaw >> pitch))
+      {
+        if (auto camera = World->GetCurrentUserCamera())
+        {
+          camera->SetPosition(glm::vec3(x, y, z));
+          camera->SetOrientation(yaw, pitch);
+        }
       }
     }
     if (BlockInput)
     {
       const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.block_input");
       BlockInputContext ctx;
       ctx.World = World;
       ctx.Geometries = Geometries.get();
@@ -555,6 +1367,23 @@ void UWindowManager::Update()
       BlockInput->Tick(static_cast<float>(DeltaTime), ctx);
       World->GetPhysicsTelemetryMutable().BlockInputMs =
           std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    }
+    RefreshEditHotSticky();
+    // DigSeam after BlockInput so dig Immediate is visible and we do not stack
+    // a second Immediate on the dig frame (manual 215711).
+    {
+      PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
+      UWorldMeshService &mesh = World->GetMeshService();
+      UFrameStageWatchdog::Scope stage("world.dig_seam_drain");
+      mesh.TickDigSeamDrain(World->GetBlockWorld(), World->GetBlockRegistry(),
+                            &tele);
+      tele.DigSeamPendingN = mesh.GetLastDigSeamPendingN();
+      tele.DigSeamRemeshN = mesh.GetLastDigSeamRemeshN();
+      if (tele.DigSeamRemeshN > 0)
+      {
+        tele.MeshImmediateCount = mesh.GetLastMeshImmediateCount();
+        tele.MeshImmediateMs = mesh.GetLastMeshImmediateMs();
+      }
     }
   }
 
@@ -573,13 +1402,51 @@ void UWindowManager::Update()
              std::chrono::duration<double>(now - LastAutosaveTime).count() >=
                  KAutosaveIntervalSec)
     {
+      // Do not advance LastAutosaveTime here — deferred Begin would burn the
+      // interval (dig hitch manual 215711).
       AutosaveRequested = true;
-      LastAutosaveTime = now;
     }
   }
   else
   {
     SeenInGameForAutosave = false;
+  }
+}
+
+bool UWindowManager::IsEditHotForAutosave() const
+{
+  if (!World)
+  {
+    return false;
+  }
+  const PhysicsTelemetry &tele = World->GetPhysicsTelemetry();
+  if (tele.BreakCompleteN > 0 || tele.PlaceCompleteN > 0)
+  {
+    return true;
+  }
+  // Use per-frame Immediate count only — LastEditImmediateN is last-edit policy
+  // size and stays non-zero across idle frames.
+  if (World->GetMeshService().GetLastMeshImmediateCount() > 0)
+  {
+    return true;
+  }
+  return std::chrono::steady_clock::now() < EditHotUntil;
+}
+
+void UWindowManager::RefreshEditHotSticky()
+{
+  if (!World)
+  {
+    return;
+  }
+  const PhysicsTelemetry &tele = World->GetPhysicsTelemetry();
+  if (tele.BreakCompleteN > 0 || tele.PlaceCompleteN > 0 ||
+      World->GetMeshService().GetLastMeshImmediateCount() > 0)
+  {
+    EditHotUntil =
+        std::chrono::steady_clock::now() +
+        std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(KEditHotStickySec));
   }
 }
 
@@ -602,16 +1469,24 @@ void UWindowManager::TickBudgetedAutosave()
     }
     return;
   }
+  PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
   if (AutosaveRequested && !AutosaveInProgress)
   {
-    AutosaveRequested = false;
+    if (IsEditHotForAutosave())
+    {
+      ++tele.AutosaveDeferredN;
+      return;
+    }
     const std::string folder = Core->GetActiveWorldFolder().string();
     if (folder.empty() || World->HasActiveCooperativeOperation())
     {
+      // Keep AutosaveRequested so we retry next frame.
       return;
     }
     World->BeginCooperativeSave(folder);
     AutosaveInProgress = true;
+    AutosaveRequested = false;
+    LastAutosaveTime = std::chrono::steady_clock::now();
   }
   if (!AutosaveInProgress)
   {
@@ -622,8 +1497,13 @@ void UWindowManager::TickBudgetedAutosave()
     AutosaveInProgress = false;
     return;
   }
+  if (IsEditHotForAutosave())
+  {
+    ++tele.AutosaveSkippedTickN;
+    return;
+  }
   UNullProgressSink sink;
-  if (World->TickCooperativeSave(sink, /*chunkBudget=*/8))
+  if (World->TickCooperativeSave(sink, /*chunkBudget=*/1))
   {
     World->ResumeAfterSessionSave();
     AutosaveInProgress = false;
@@ -633,8 +1513,13 @@ void UWindowManager::TickBudgetedAutosave()
 
 void UWindowManager::Render()
 {
+  if (World)
+  {
+    World->SetLastRenderWindowSetupMs(0.0);
+  }
   if (Application)
   {
+    const auto setup_begin = std::chrono::high_resolution_clock::now();
     Application->SetWindow(Window);
     int fb_w = WindowWidth;
     int fb_h = WindowHeight;
@@ -653,6 +1538,13 @@ void UWindowManager::Render()
       platform.ContentScaleX = content_scale_x;
       platform.ContentScaleY = content_scale_y;
       Application->UpdateUiScale(fb_w, fb_h, platform);
+    }
+    if (World)
+    {
+      World->SetLastRenderWindowSetupMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - setup_begin)
+              .count());
     }
     Application->RenderFrame(fb_w, fb_h,
                              Views ? Views->GetDurationUpdateMks() : 0.0);
@@ -726,7 +1618,17 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     {
       if (auto camera = World->GetCurrentUserCamera())
       {
-        if (camera->TryToggleFlightOnDoubleSpace() && Geometries)
+        CreatureHabitat habitat = CreatureHabitat::Terrestrial;
+        if (UCreature *controlled = World->GetControlledCreature())
+        {
+          if (const CreatureDefinition *def =
+                  World->GetCreatureDefinition(controlled->GetTypeId()))
+          {
+            habitat = def->habitat;
+          }
+        }
+        if (ModePolicy::AllowsFlight(World->GetGameMode(), habitat) &&
+            camera->TryToggleFlightOnDoubleSpace() && Geometries)
         {
           const std::string msg =
               camera->GetFreeMove()
@@ -739,8 +1641,8 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     else if (key == KeyCode::Key_F12)
     {
 #ifndef __ANDROID__
-      if (Application && Application->GetGameSession().GetInventoryMode() ==
-                             InventoryMode::Creative)
+      if (Application && World &&
+          ModePolicy::AllowsQaSpawner(World->GetGameMode()))
       {
         UCreatureVisualQaSpawner spawner(*World);
         const bool batch = (Mods & GLFW_MOD_SHIFT) != 0;
@@ -790,7 +1692,7 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
         break;
       }
       World->SetWeather(next, 1.2f);
-      World->SetWeatherOverlayEnabled(false);
+      World->SetWeatherOverlayEnabled(true);
       World->SetWeatherParticlesEnabled(true);
       if (Geometries)
       {
@@ -829,11 +1731,29 @@ void UWindowManager::ResetGameplayMouseCapture()
     double x = 0.0;
     double y = 0.0;
     glfwGetCursorPos(Window, &x, &y);
+    double fb_x = x;
+    double fb_y = y;
+    CursorWindowToFramebuffer(Window, x, y, fb_x, fb_y);
     if (auto camera = World->GetCurrentUserCamera())
     {
-      camera->ResetMouseMove(x, y);
+      camera->ResetMouseMove(fb_x, fb_y);
     }
   }
+}
+
+void UWindowManager::CancelGameplayPointerInteraction()
+{
+  if (!BlockInput || !World)
+  {
+    return;
+  }
+  BlockInputContext ctx;
+  ctx.World = World;
+  ctx.Geometries = Geometries.get();
+  ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
+  ctx.Window = Window;
+  ctx.App = Application.get();
+  BlockInput->CancelPointerInteraction(ctx);
 }
 
 void UWindowManager::HandleMouseButtonEvent(MouseButton Button, bool Pressed,
@@ -876,7 +1796,9 @@ void UWindowManager::HandleMouseButtonEvent(MouseButton Button, bool Pressed,
   ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
   ctx.Window = Window;
   ctx.App = Application.get();
-  BlockInput->OnMouseButton(Button, Pressed, pos, ctx);
+  BlockInput->OnMouseButton(
+      Button, Pressed,
+      glm::vec2(static_cast<float>(fbPos.x), static_cast<float>(fbPos.y)), ctx);
 }
 
 void UWindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta)
@@ -907,7 +1829,9 @@ void UWindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta)
   ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
   ctx.Window = Window;
   ctx.App = Application.get();
-  BlockInput->OnMouseMove(pos, delta, ctx);
+  BlockInput->OnMouseMove(
+      glm::vec2(static_cast<float>(fbPos.x), static_cast<float>(fbPos.y)),
+      delta, ctx);
 }
 
 void UWindowManager::HandleWindowResizeEvent(int width, int height)
@@ -922,14 +1846,14 @@ void UWindowManager::HandleWindowResizeEvent(int width, int height)
   {
     if (auto camera = Views->GetActiveCamera())
     {
-      camera->SetAspectRatio(aspect);
+      camera->SetViewportSize(width, height);
     }
   }
   if (World)
   {
     if (auto camera = World->GetCurrentUserCamera())
     {
-      camera->SetAspectRatio(aspect);
+      camera->SetViewportSize(width, height);
     }
   }
 
@@ -980,6 +1904,12 @@ void UWindowManager::Shutdown()
   if (Window)
   {
     glfwMakeContextCurrent(Window);
+  }
+
+  if (FlightCapture)
+  {
+    FlightCapture->Shutdown();
+    FlightCapture.reset();
   }
 
   if (World)
@@ -1038,7 +1968,8 @@ void UWindowManager::RenderHelpText()
 
   // Main control hints in English
   std::vector<std::string> help_lines = {
-      "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, "
+      "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Cycle view, "
+      "Q/E - Iso camera snap, RMB - Iso orbit, LMB - Place/break at cursor, "
       "RMB hold - Look, ` - Console",
       "Classic: mouse look, LMB break, RMB place; Cubatarium: RMB "
       "look",

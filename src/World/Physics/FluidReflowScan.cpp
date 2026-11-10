@@ -17,7 +17,8 @@ namespace
 {
 
 bool ShouldEnqueueFluidCell(const UBlockWorld &block_world,
-                            const UBlockRegistry &registry, glm::ivec3 pos)
+                            const UBlockRegistry &registry, glm::ivec3 pos,
+                            int min_world_y)
 {
   const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
   if (definitions == nullptr)
@@ -25,7 +26,8 @@ bool ShouldEnqueueFluidCell(const UBlockWorld &block_world,
     return false;
   }
   const BlockId id = block_world.GetBlock(pos);
-  if (UFluidSpreadSystem::HasSpreadTarget(block_world, *definitions, pos))
+  if (UFluidSpreadSystem::HasSpreadTarget(
+          block_world, *definitions, pos, min_world_y))
   {
     return true;
   }
@@ -62,9 +64,21 @@ void TryEnqueueCell(UWorld &world, glm::ivec3 pos)
       }
     }
   }
-  if (ShouldEnqueueFluidCell(world.GetBlockWorld(), registry, pos))
+  if (ShouldEnqueueFluidCell(world.GetBlockWorld(), registry, pos,
+                             world.GetProceduralSettings().MinHeight))
   {
-    world.TryEnqueueFluidAt(pos);
+    // W6.4 (water audit E-5): frontier scans are one-shot (chunk commit /
+    // removal wake); an off-phase liquid cell must not be lost here — the
+    // spread-period phase belongs to the transform tick, not to discovery.
+    // The tick re-schedules throttled cells itself.
+    if (registry.IsLiquid(world.GetBlockWorld().GetBlock(pos)))
+    {
+      world.ForceEnqueueFluidAt(pos);
+    }
+    else
+    {
+      world.TryEnqueueFluidAt(pos);
+    }
   }
 }
 
@@ -99,7 +113,9 @@ void ScanColumn(UWorld &world, glm::ivec3 column_base, int max_enqueue,
     }
     if (UFluidSpreadSystem::CanReceiveFluid(block_world, *definitions, pos))
     {
-      if (UFluidSpreadSystem::HasSpreadTarget(block_world, *definitions, pos))
+      if (UFluidSpreadSystem::HasSpreadTarget(
+              block_world, *definitions, pos,
+              world.GetProceduralSettings().MinHeight))
       {
         TryEnqueueCell(world, pos);
         ++enqueued;

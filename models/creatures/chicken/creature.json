@@ -7,7 +7,18 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 17
+    "sort_order": 17,
+    "natural_spawnable": true,
+    "spawn_weight": 1.2,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "plains",
+      "forest",
+      "savanna",
+      "scrubland",
+      "hills"
+    ]
   },
   "role": "mob",
   "bounds": {
@@ -29,7 +40,7 @@
   },
   "eye_height": 0.55,
   "habitat": "terrestrial",
-  "locomotion_archetype": "aerial",
+  "locomotion_archetype": "terrestrial_biped",
   "locomotion": {
     "can_fly": false,
     "can_crouch": false,
@@ -228,5 +239,23 @@
       32
     ],
     "animation_profile": "chicken"
+  },
+  "vitals": {
+    "max_health": 16,
+    "max_satiety": 100,
+    "max_thirst": 100,
+    "max_fatigue": 100,
+    "max_breath": 100,
+    "max_fatal_wounds": 1,
+    "armor": 0
+  },
+  "attributes": {
+    "strength": 4,
+    "agility": 12,
+    "endurance": 8,
+    "accuracy": 4,
+    "intelligence": 3,
+    "luck": 6,
+    "perception": 10
   }
 }

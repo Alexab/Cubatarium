@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_diorite_polished",
+  "id": 1050,
+  "displayName": "Rock Diorite Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_diorite_polished",
+    "cu_rock_diorite_polished",
+    "cu_rock_diorite_polished",
+    "cu_rock_diorite_polished",
+    "cu_rock_diorite_polished",
+    "cu_rock_diorite_polished"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "diorite",
+    "variant": "polished"
+  }
+}

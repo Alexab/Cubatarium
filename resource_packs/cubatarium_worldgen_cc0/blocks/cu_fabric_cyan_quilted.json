@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_cyan_quilted",
+  "id": 1871,
+  "displayName": "Fabric Cyan Quilted",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_cyan_quilted",
+    "cu_fabric_cyan_quilted",
+    "cu_fabric_cyan_quilted",
+    "cu_fabric_cyan_quilted",
+    "cu_fabric_cyan_quilted",
+    "cu_fabric_cyan_quilted"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "cyan",
+    "variant": "quilted"
+  }
+}

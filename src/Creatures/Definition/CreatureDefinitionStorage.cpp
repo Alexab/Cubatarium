@@ -1,7 +1,10 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Core/Json/JsonVec.h"
 #include "Core/Sort/CatalogSortUtil.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Stats/CreatureStatsDefaults.h"
+#include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include <algorithm>
 #include <filesystem>
@@ -16,31 +19,13 @@ namespace cutum
 namespace
 {
 
-glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
-{
-  if (!arr.is_array() || arr.size() < 3)
-  {
-    return fallback;
-  }
-  return glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
-                   arr[2].get<float>());
-}
 
-glm::vec4 ReadVec4(const nlohmann::json &arr, const glm::vec4 &fallback)
-{
-  if (!arr.is_array() || arr.size() < 4)
-  {
-    return fallback;
-  }
-  return glm::vec4(arr[0].get<float>(), arr[1].get<float>(),
-                   arr[2].get<float>(), arr[3].get<float>());
-}
 
 CreatureAnimationClipDef ReadClipDef(const nlohmann::json &clipJson)
 {
   CreatureAnimationClipDef clip;
-  clip.startSec = clipJson.value("start", clip.startSec);
-  clip.endSec = clipJson.value("end", clip.endSec);
+  // "start"/"end" sub-ranges in creature.json clips are accepted but
+  // intentionally ignored: clips always play whole-file (audit V14).
   clip.loop = clipJson.value("loop", clip.loop);
   clip.speed = clipJson.value("speed", clip.speed);
   return clip;
@@ -100,6 +85,197 @@ void UCreatureDefinitionStorage::LoadOverlay(const std::string &folder)
   }
 }
 
+namespace
+{
+
+void ParseVisualSpec(const nlohmann::json &vis, CreatureDefinition &def,
+                      const std::string &path)
+{
+  def.visual.backend = vis.value("backend", def.visual.backend);
+  def.visual.fallbackBackend = vis.value("fallback_backend", "");
+  const CreatureVisualBackend parsedBackend =
+      ParseCreatureVisualBackend(def.visual.backend);
+  def.visual.backend = ToString(parsedBackend);
+  def.visual.modelYawOffsetDeg = vis.value("model_yaw_offset_deg", 0.f);
+  def.visual.textureLayout =
+      vis.value("texture_layout", def.visual.textureLayout);
+  def.visual.defaultTextureKey =
+      vis.value("default_texture", def.visual.defaultTextureKey);
+  def.visual.rigidModelPath = vis.value("rigid_model", "");
+  if (vis.contains("icon") && vis["icon"].is_object())
+  {
+    const auto &icon = vis["icon"];
+    def.visual.iconMode = icon.value("mode", def.visual.iconMode);
+    def.visual.wireframeColor =
+        ReadVec4(icon.value("color", nlohmann::json::array()),
+                 def.visual.wireframeColor);
+  }
+  if (vis.contains("animation") && vis["animation"].is_object())
+  {
+    const auto &anim = vis["animation"];
+    def.visual.Animation.walkCycleHz =
+        anim.value("walk_cycle_hz", def.visual.Animation.walkCycleHz);
+    def.visual.Animation.legSwingDeg =
+        anim.value("leg_swing_deg", def.visual.Animation.legSwingDeg);
+    def.visual.Animation.armSwingDeg =
+        anim.value("arm_swing_deg", def.visual.Animation.armSwingDeg);
+    def.visual.Animation.flyBodyPitchDeg = anim.value(
+        "fly_body_pitch_deg", def.visual.Animation.flyBodyPitchDeg);
+    def.visual.Animation.bodyBobBlocks =
+        anim.value("body_bob_blocks", def.visual.Animation.bodyBobBlocks);
+    def.visual.Animation.tailSwingDeg =
+        anim.value("tail_swing_deg", def.visual.Animation.tailSwingDeg);
+    def.visual.Animation.runSpeedMultiplier = anim.value(
+        "run_speed_multiplier", def.visual.Animation.runSpeedMultiplier);
+    def.visual.Animation.crouchLegBendDeg = anim.value(
+        "crouch_leg_bend_deg", def.visual.Animation.crouchLegBendDeg);
+    def.visual.Animation.wingIdleSwingDeg = anim.value(
+        "wing_idle_swing_deg", def.visual.Animation.wingIdleSwingDeg);
+    def.visual.Animation.lookAtDeg =
+        anim.value("look_at_deg", def.visual.Animation.lookAtDeg);
+    if (anim.contains("clips") && anim["clips"].is_object())
+    {
+      for (const auto &[clipId, clipJson] : anim["clips"].items())
+      {
+        if (clipJson.is_object())
+        {
+          def.visual.Animation.clips[clipId] = ReadClipDef(clipJson);
+        }
+      }
+    }
+    if (anim.contains("state_map") && anim["state_map"].is_object())
+    {
+      for (const auto &[stateName, clipId] : anim["state_map"].items())
+      {
+        if (clipId.is_string())
+        {
+          def.visual.Animation.stateMap[stateName] =
+              clipId.get<std::string>();
+        }
+      }
+    }
+  }
+  if (vis.contains("gltf") && vis["gltf"].is_object())
+  {
+    const auto &gltf = vis["gltf"];
+    def.visual.gltf.modelPath = gltf.value("model", "");
+    def.visual.gltf.modelScale = gltf.value("model_scale", 1.f);
+    def.visual.gltf.modelYawOffsetDeg =
+        gltf.value("model_yaw_offset_deg", 0.f);
+    def.visual.gltf.modelOffsetY = gltf.value("model_offset_y", 0.f);
+    if (gltf.contains("textures") && gltf["textures"].is_array())
+    {
+      for (const auto &tex : gltf["textures"])
+      {
+        if (tex.is_string())
+        {
+          def.visual.gltf.texturePaths.push_back(tex.get<std::string>());
+        }
+      }
+    }
+    if (gltf.contains("model_yaw_offset_deg"))
+    {
+      def.visual.modelYawOffsetDeg = def.visual.gltf.modelYawOffsetDeg;
+    }
+  }
+  if (vis.contains("rig") && vis["rig"].is_object())
+  {
+    const auto &rig = vis["rig"];
+    def.visual.rig.templateId =
+        rig.value("template", def.visual.rig.templateId);
+    // rig.parts[] in creature.json listed part ids that nothing read;
+    // it is accepted but ignored (audit V14).
+  }
+  if (vis.contains("sprite") && vis["sprite"].is_object())
+  {
+    const auto &sprite = vis["sprite"];
+    def.visual.sprite.billboard = sprite.value("billboard", false);
+    if (sprite.contains("emissive_tint") &&
+        sprite["emissive_tint"].is_array())
+    {
+      const auto &t = sprite["emissive_tint"];
+      if (t.size() >= 4)
+      {
+        def.visual.sprite.emissiveTint =
+            glm::vec4(t[0].get<float>(), t[1].get<float>(),
+                      t[2].get<float>(), t[3].get<float>());
+      }
+      else if (t.size() >= 3)
+      {
+        def.visual.sprite.emissiveTint = glm::vec4(
+            t[0].get<float>(), t[1].get<float>(), t[2].get<float>(), 1.f);
+      }
+    }
+  }
+  if (vis.contains("parts") && vis["parts"].is_array())
+  {
+    for (const auto &partJson : vis["parts"])
+    {
+      CreatureVisualPartDef part;
+      part.Id = partJson.value("id", "");
+      part.textureStem =
+          partJson.value("texture", def.visual.defaultTextureKey);
+      if (part.textureStem.empty())
+      {
+        part.textureStem = "body";
+      }
+      part.offsetBlocks =
+          ReadVec3(partJson.value("offset", nlohmann::json::array()),
+                   part.offsetBlocks);
+      part.sizeBlocks = ReadVec3(
+          partJson.value("size", nlohmann::json::array()), part.sizeBlocks);
+      part.HasPivot = partJson.contains("pivot");
+      if (part.HasPivot)
+      {
+        part.PivotBlocks =
+            ReadVec3(partJson.value("pivot", nlohmann::json::array()),
+                     part.PivotBlocks);
+      }
+      part.LimbKind = partJson.value("limb", "");
+      part.LimbAxis = partJson.value("limb_axis", "x");
+      def.visual.Parts.push_back(part);
+    }
+  }
+  if (!def.visual.rigidModelPath.empty())
+  {
+    const std::string speciesDir =
+        std::filesystem::path(path).parent_path().string();
+    std::vector<CreatureVisualPartDef> rigidParts;
+    if (CreatureRigidModelCache::Instance().LoadParts(
+            speciesDir, def.visual.rigidModelPath, rigidParts))
+    {
+      def.visual.Parts = std::move(rigidParts);
+    }
+  }
+  if (vis.contains("geometry") || vis.contains("geometry_file") ||
+      vis.contains("animation_profile"))
+  {
+    def.visual.boneSkeleton.geometryId = vis.value("geometry", "");
+    def.visual.boneSkeleton.geometryFile =
+        vis.value("geometry_file", def.visual.boneSkeleton.geometryFile);
+    def.visual.boneSkeleton.textureStem =
+        vis.value("texture", def.visual.boneSkeleton.textureStem);
+    def.visual.boneSkeleton.animationProfile =
+        vis.value("animation_profile", "");
+  }
+  if (parsedBackend == CreatureVisualBackend::GltfSkeleton &&
+      def.visual.gltf.modelPath.empty())
+  {
+    std::cerr << "UCreatureDefinitionStorage: " << path
+              << ": gltf_skeleton without visual.gltf.model for " << def.Id
+              << std::endl;
+  }
+  if (parsedBackend == CreatureVisualBackend::BoneSkeleton &&
+      def.visual.boneSkeleton.geometryId.empty())
+  {
+    std::cerr << "UCreatureDefinitionStorage: " << path
+              << ": bone_skeleton without visual.geometry for " << def.Id
+              << std::endl;
+  }
+}
+
+} // namespace
+
 bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
 {
   CreatureDefinition def;
@@ -132,7 +308,28 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
         }
       }
       def.catalog.spawnable = catalog.value("spawnable", false);
+      def.catalog.naturalSpawnable =
+          catalog.value("natural_spawnable", false);
+      def.catalog.spawnWeight =
+          std::max(0.0f, catalog.value("spawn_weight", 1.0f));
+      def.catalog.spawnGroupMin =
+          std::max(1, catalog.value("spawn_group_min", 1));
+      def.catalog.spawnGroupMax = std::max(
+          def.catalog.spawnGroupMin,
+          catalog.value("spawn_group_max", def.catalog.spawnGroupMin));
       def.catalog.sortOrder = catalog.value("sort_order", 0);
+      if (catalog.contains("spawn_biomes") && catalog["spawn_biomes"].is_array())
+      {
+        for (const auto &biome : catalog["spawn_biomes"])
+        {
+          if (biome.is_string())
+          {
+            def.catalog.spawnBiomes.push_back(biome.get<std::string>());
+          }
+        }
+      }
+      def.catalog.activeTime =
+          ParseCreatureActiveTime(catalog.value("active_time", "any"));
     }
     def.role = ParseCreatureRole(data.value("role", ""));
     if (data.contains("bounds"))
@@ -146,6 +343,13 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           b.value("min", nlohmann::json::array()), def.bounds.minSizeBlocks);
     }
     def.eyeHeight = data.value("eye_height", def.eyeHeight);
+    // An eye above the collision box puts the possessed camera inside the
+    // blocks over a tunnel the body fits through.
+    if (def.bounds.restSizeBlocks.y > 0.0f &&
+        def.eyeHeight > def.bounds.restSizeBlocks.y)
+    {
+      def.eyeHeight = def.bounds.restSizeBlocks.y * 0.92f;
+    }
     def.locomotionArchetype = ParseLocomotionArchetype(
         data.value("locomotion_archetype", "terrestrial_biped"));
     def.habitat = ParseCreatureHabitat(data.value("habitat", "terrestrial"));
@@ -170,6 +374,66 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           bp.value("attack_range", def.behavior.attackRange);
       def.behavior.attackCooldown =
           bp.value("attack_cooldown", def.behavior.attackCooldown);
+    }
+    {
+      const auto tmpl = CreatureStatsDefaults::For(
+          def.role, def.catalog.tags, def.habitat, def.Id);
+      def.stats.vitalsTemplate = tmpl.vitals;
+      def.stats.attributes = tmpl.attributes;
+      def.stats.needsTick = tmpl.needsTick;
+      if (data.contains("vitals") && data["vitals"].is_object())
+      {
+        def.stats.hasVitalsOverride = true;
+        CreatureStatsJson::ReadVitalsTemplate(data["vitals"],
+                                              def.stats.vitalsTemplate);
+        def.stats.vitalsTemplate.ClampCurrents();
+        def.stats.vitalsTemplate.FillFull();
+      }
+      if (data.contains("attributes") && data["attributes"].is_object())
+      {
+        def.stats.hasAttributesOverride = true;
+        CreatureStatsJson::ReadAttributes(data["attributes"],
+                                          def.stats.attributes);
+      }
+      if (def.role == CreatureRole::ControlledDefault ||
+          def.role == CreatureRole::Bot)
+      {
+        def.stats.needsTick = true;
+      }
+      if (data.contains("armor_groups") && data["armor_groups"].is_object())
+      {
+        def.stats.hasArmorGroupsOverride = true;
+        def.stats.armorGroups.Ratings.clear();
+        for (auto it = data["armor_groups"].begin();
+             it != data["armor_groups"].end(); ++it)
+        {
+          if (it.value().is_number_integer() ||
+              it.value().is_number_unsigned())
+          {
+            def.stats.armorGroups.Ratings[it.key()] = it.value().get<int>();
+          }
+        }
+        if (def.stats.armorGroups.Ratings.empty())
+        {
+          def.stats.armorGroups = ArmorGroups::DefaultFleshy();
+        }
+      }
+      if (data.contains("bare_hand") && data["bare_hand"].is_object())
+      {
+        const auto &bh = data["bare_hand"];
+        def.stats.bareHand.hasOverride = true;
+        def.stats.bareHand.fullPunchInterval =
+            bh.value("full_punch_interval", 0.5f);
+        if (bh.contains("damage") && bh["damage"].is_object())
+        {
+          def.stats.bareHand.fleshyDamage =
+              bh["damage"].value("fleshy", bh["damage"].value("melee", 0));
+        }
+        else
+        {
+          def.stats.bareHand.fleshyDamage = bh.value("fleshy", 0);
+        }
+      }
     }
     if (data.contains("locomotion"))
     {
@@ -213,207 +477,11 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     }
     if (data.contains("visual") && data["visual"].is_object())
     {
-      const auto &vis = data["visual"];
-      def.visual.backend = vis.value("backend", def.visual.backend);
-      def.visual.fallbackBackend = vis.value("fallback_backend", "");
-      const CreatureVisualBackend parsedBackend =
-          ParseCreatureVisualBackend(def.visual.backend);
-      def.visual.backend = ToString(parsedBackend);
-      def.visual.modelYawOffsetDeg = vis.value("model_yaw_offset_deg", 0.f);
-      def.visual.textureLayout =
-          vis.value("texture_layout", def.visual.textureLayout);
-      def.visual.defaultTextureKey =
-          vis.value("default_texture", def.visual.defaultTextureKey);
-      def.visual.rigidModelPath = vis.value("rigid_model", "");
-      if (vis.contains("icon") && vis["icon"].is_object())
-      {
-        const auto &icon = vis["icon"];
-        def.visual.iconMode = icon.value("mode", def.visual.iconMode);
-        def.visual.wireframeColor =
-            ReadVec4(icon.value("color", nlohmann::json::array()),
-                     def.visual.wireframeColor);
-      }
-      if (vis.contains("animation") && vis["animation"].is_object())
-      {
-        const auto &anim = vis["animation"];
-        def.visual.Animation.walkCycleHz =
-            anim.value("walk_cycle_hz", def.visual.Animation.walkCycleHz);
-        def.visual.Animation.legSwingDeg =
-            anim.value("leg_swing_deg", def.visual.Animation.legSwingDeg);
-        def.visual.Animation.armSwingDeg =
-            anim.value("arm_swing_deg", def.visual.Animation.armSwingDeg);
-        def.visual.Animation.flyBodyPitchDeg = anim.value(
-            "fly_body_pitch_deg", def.visual.Animation.flyBodyPitchDeg);
-        def.visual.Animation.bodyBobBlocks =
-            anim.value("body_bob_blocks", def.visual.Animation.bodyBobBlocks);
-        def.visual.Animation.tailSwingDeg =
-            anim.value("tail_swing_deg", def.visual.Animation.tailSwingDeg);
-        def.visual.Animation.runSpeedMultiplier = anim.value(
-            "run_speed_multiplier", def.visual.Animation.runSpeedMultiplier);
-        def.visual.Animation.crouchLegBendDeg = anim.value(
-            "crouch_leg_bend_deg", def.visual.Animation.crouchLegBendDeg);
-        def.visual.Animation.wingIdleSwingDeg = anim.value(
-            "wing_idle_swing_deg", def.visual.Animation.wingIdleSwingDeg);
-        def.visual.Animation.lookAtDeg =
-            anim.value("look_at_deg", def.visual.Animation.lookAtDeg);
-        if (anim.contains("clips") && anim["clips"].is_object())
-        {
-          for (const auto &[clipId, clipJson] : anim["clips"].items())
-          {
-            if (clipJson.is_object())
-            {
-              def.visual.Animation.clips[clipId] = ReadClipDef(clipJson);
-            }
-          }
-        }
-        if (anim.contains("state_map") && anim["state_map"].is_object())
-        {
-          for (const auto &[stateName, clipId] : anim["state_map"].items())
-          {
-            if (clipId.is_string())
-            {
-              def.visual.Animation.stateMap[stateName] =
-                  clipId.get<std::string>();
-            }
-          }
-        }
-      }
-      if (vis.contains("gltf") && vis["gltf"].is_object())
-      {
-        const auto &gltf = vis["gltf"];
-        def.visual.gltf.modelPath = gltf.value("model", "");
-        def.visual.gltf.modelScale = gltf.value("model_scale", 1.f);
-        def.visual.gltf.modelYawOffsetDeg =
-            gltf.value("model_yaw_offset_deg", 0.f);
-        def.visual.gltf.modelOffsetY = gltf.value("model_offset_y", 0.f);
-        if (gltf.contains("textures") && gltf["textures"].is_array())
-        {
-          for (const auto &tex : gltf["textures"])
-          {
-            if (tex.is_string())
-            {
-              def.visual.gltf.texturePaths.push_back(tex.get<std::string>());
-            }
-          }
-        }
-        if (gltf.contains("model_yaw_offset_deg"))
-        {
-          def.visual.modelYawOffsetDeg = def.visual.gltf.modelYawOffsetDeg;
-        }
-      }
-      if (vis.contains("rig") && vis["rig"].is_object())
-      {
-        const auto &rig = vis["rig"];
-        def.visual.rig.templateId =
-            rig.value("template", def.visual.rig.templateId);
-        if (rig.contains("parts") && rig["parts"].is_array())
-        {
-          for (const auto &partId : rig["parts"])
-          {
-            if (partId.is_string())
-            {
-              def.visual.rig.partIds.push_back(partId.get<std::string>());
-            }
-          }
-        }
-      }
-      if (vis.contains("sprite") && vis["sprite"].is_object())
-      {
-        const auto &sprite = vis["sprite"];
-        def.visual.sprite.billboard = sprite.value("billboard", false);
-        if (sprite.contains("emissive_tint") &&
-            sprite["emissive_tint"].is_array())
-        {
-          const auto &t = sprite["emissive_tint"];
-          if (t.size() >= 4)
-          {
-            def.visual.sprite.emissiveTint =
-                glm::vec4(t[0].get<float>(), t[1].get<float>(),
-                          t[2].get<float>(), t[3].get<float>());
-          }
-          else if (t.size() >= 3)
-          {
-            def.visual.sprite.emissiveTint = glm::vec4(
-                t[0].get<float>(), t[1].get<float>(), t[2].get<float>(), 1.f);
-          }
-        }
-      }
-      if (vis.contains("parts") && vis["parts"].is_array())
-      {
-        for (const auto &partJson : vis["parts"])
-        {
-          CreatureVisualPartDef part;
-          part.Id = partJson.value("id", "");
-          part.textureStem =
-              partJson.value("texture", def.visual.defaultTextureKey);
-          if (part.textureStem.empty())
-          {
-            part.textureStem = "body";
-          }
-          part.offsetBlocks =
-              ReadVec3(partJson.value("offset", nlohmann::json::array()),
-                       part.offsetBlocks);
-          part.sizeBlocks = ReadVec3(
-              partJson.value("size", nlohmann::json::array()), part.sizeBlocks);
-          part.HasPivot = partJson.contains("pivot");
-          if (part.HasPivot)
-          {
-            part.PivotBlocks =
-                ReadVec3(partJson.value("pivot", nlohmann::json::array()),
-                         part.PivotBlocks);
-          }
-          part.LimbKind = partJson.value("limb", "");
-          part.LimbAxis = partJson.value("limb_axis", "x");
-          def.visual.Parts.push_back(part);
-        }
-      }
-      if (!def.visual.rigidModelPath.empty())
-      {
-        const std::string speciesDir =
-            std::filesystem::path(path).parent_path().string();
-        std::vector<CreatureVisualPartDef> rigidParts;
-        if (CreatureRigidModelCache::Instance().LoadParts(
-                speciesDir, def.visual.rigidModelPath, rigidParts))
-        {
-          def.visual.Parts = std::move(rigidParts);
-        }
-      }
-      if (vis.contains("geometry") || vis.contains("geometry_file") ||
-          vis.contains("texture_size") || vis.contains("animation_profile"))
-      {
-        def.visual.boneSkeleton.geometryId = vis.value("geometry", "");
-        def.visual.boneSkeleton.geometryFile =
-            vis.value("geometry_file", def.visual.boneSkeleton.geometryFile);
-        def.visual.boneSkeleton.textureStem =
-            vis.value("texture", def.visual.boneSkeleton.textureStem);
-        def.visual.boneSkeleton.animationProfile =
-            vis.value("animation_profile", "");
-        if (vis.contains("texture_size") && vis["texture_size"].is_array() &&
-            vis["texture_size"].size() >= 2)
-        {
-          def.visual.boneSkeleton.textureSize.x =
-              vis["texture_size"][0].get<int>();
-          def.visual.boneSkeleton.textureSize.y =
-              vis["texture_size"][1].get<int>();
-        }
-      }
-      if (parsedBackend == CreatureVisualBackend::GltfSkeleton &&
-          def.visual.gltf.modelPath.empty())
-      {
-        std::cerr << "UCreatureDefinitionStorage: " << path
-                  << ": gltf_skeleton without visual.gltf.model for " << def.Id
-                  << std::endl;
-      }
-      if (parsedBackend == CreatureVisualBackend::BoneSkeleton &&
-          def.visual.boneSkeleton.geometryId.empty())
-      {
-        std::cerr << "UCreatureDefinitionStorage: " << path
-                  << ": bone_skeleton without visual.geometry for " << def.Id
-                  << std::endl;
-      }
+      ParseVisualSpec(data["visual"], def, path);
     }
     std::unique_lock lock(DefinitionsMutex);
     Definitions[def.Id] = std::move(def);
+    Revision.fetch_add(1, std::memory_order_relaxed);
     return true;
   }
   catch (const std::exception &e)

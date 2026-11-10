@@ -26,8 +26,8 @@ Knobs в `RuntimeTuning` / `bin/streaming_tune.json` (и опционально
 | `MeshCompletedSlots` | 0 → workers×6 | Completed mesh ring |
 | `RelightCompletedSlots` | 0 → workers×8 | Completed relight ring |
 | `DirtySoftCap` | 1200 | drop farthest remesh |
-| `DirtyThrashSoftCap` | 400 | SoftCap under Yellow/Red **or** async thrash |
-| `DirtyThrashAsyncMin` | 36 | async≥N → thrash SoftCap (also Yellow alone) |
+| `DirtyThrashSoftCap` | 320 | SoftCap under Yellow/Red **or** async thrash (Phase B) |
+| `DirtyThrashAsyncMin` | 12 | async≥N → thrash SoftCap (also Yellow alone) |
 | `PendingLightSoftCap` | 80 | drop farthest only if mesh+LitReady |
 | `RelightFifoSoftCap` | 96 | drop farthest FIFO |
 | `GpuVertexPoolReserveMb` | 64 | pre-Reserve |
@@ -37,6 +37,18 @@ Knobs в `RuntimeTuning` / `bin/streaming_tune.json` (и опционально
 | `MaxResidentChunks` | 0 (auto) | free-list cap; 0→Keep footprint/4≤512 |
 | `RelightCaptureBandCy` | 4 | max cy layers per Capture; 0=full column |
 | `CompletedExpandEnabled` | true | stepped Completed slot expand |
+
+### V5 MemoryBudgetController soft-caps (R3 / TD-ARCH-009)
+
+`UMemoryBudgetController::Evaluate` also reacts to runtime sample fields
+`dirty_chunks` + `pending_light_focus` (not only private_mb):
+
+- `dirty>400 && pending_focus>8` → disable keep prewarm, capture_hard_cap≤2
+- `dirty>600` → capture_hard_cap≤1
+- WorldStreaming applies `TrimPendingLightBeforeMesh` under the dirty+pending
+  pressure path so PendingLight soft-cap stays aligned with emerge DropRemesh.
+
+See `docs/TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH-009 (closed).
 
 ## Overflow matrix
 
@@ -110,12 +122,16 @@ emergency_cancel_outside, capture_hard_cap, memory_pressure.
 - Dirty thrash SoftCap (`DirtyThrashSoftCap` when stream Yellow/Red **or**
   `mesh_async≥DirtyThrashAsyncMin`) — SoftCap 1200 never engaged at Dirty~400–590
   with async≤29 (manual `20260723-091724`).
-- Capture hitch gate: `visual_holes>0` or `wall>500ms` → `capture_hard_cap=1`
-  even under byte-budget Green; controller re-evals immediately on holes/wall.
-  Drain checks wall budget **before** every Capture (was only after first).
+- Capture hitch gate: `visual_holes>0` or `wall>MemoryHitchCaptureWallMs` (default
+  **400**, was 500) → `capture_hard_cap=1` even under byte-budget Green; controller
+  re-evals immediately on holes/`MemoryUrgentEvalWallMs`. Drain checks wall budget
+  **before** every Capture (was only after first).
   **Y-band Capture** (`RelightCaptureBandCy=4`, top-down): SoftDefer keeps
   `PendingLight` until `finalize_pending_gate` on the last band (manual
   `102936` full-column ~1.6 s).
+  Phase B: Capture/Immediate/fly/fog budgets live in `URuntimeTuning` (see
+  [`PERF_AUDIT_ENGINE.md`](../PERF_AUDIT_ENGINE.md) §6). Dirty thrash SoftCap
+  default **320**.
 - PendingLight trim requires **HasMesh + LitReady**; free-list sized from Keep.
 - Relight FIFO soft-cap trims **far + priority** deques.
 
@@ -136,15 +152,30 @@ Code path (Era 12 Memory Budget Control) is on branch with:
 - Completed rings + Dirty/Pending/FIFO soft-caps
 - GPU Reserve/Max + `MemoryBudgetController` + UChunk free-list
 
-Manual/autofly gates (checklist for next harness run):
+Manual/autofly gates (checklist — code landed; evidence still open after CB):
 
 1. Walk existing terrain + place lit block: no hang; `private_mb` stays near Soft.
 2. Quiet standing: `mesh_completed_n/cap` fill < 0.85; `dirty_dropped` not
    monotonic when idle and Dirty under SoftCap.
-3. Autofly replay: `private_mb` p95 ≤ `MemorySoftMb`; holes/sticky/max_wall not
-   worse than last-good Rel baseline.
+3. Autofly golden (`cb_pack` class): sticky=0 / cold≤3; record `private_mb` p95
+   vs `MemorySoftMb` from perf jsonl if present.
 4. Stress tune `mesh_completed_slots=4`: discard rises, remesh recovers, private
    stays bounded.
+
+Status 2026-07-26: SoftCap/Dirty drop paths exercised on CB cruise (dirty_no_holes
+~185–380 with drops). Autofly evidence:
+- `cb_pack`: `private_mb` med≈479 / p95≈482 / max≈522 (≪ Soft 1152);
+  mesh_completed fill med≈2/42; `memory_pressure=0`.
+- `premerge_cb2`: `private_mb` p95≈447; completed fill med≈0.12.
+- Stress `mesh_completed_slots=4` (`mem_slots4`): cap held at **4**,
+  `mesh_completed_discarded` → **~329**, Dirty requeue/thrash (dirty_no_holes
+  **637**), `private_mb` p95 **≈442** ≪ Soft, `memory_pressure=0`; stop ended
+  sticky/holes **0** (picture recovers). F2/CB NO-GO under stress is expected —
+  not a golden regress. Tune apply: `UpdateStreaming` forces Completed cap when
+  `mesh_completed_slots>0` (was constructor-only).
+- Place/edit proxy `t1_break_mem` (`--scenario break-stand`): sticky/holes **0**,
+  `break_complete_sum=3`, `private_mb` p95 ≪ Soft (see jsonl), no hang. Closes
+  MEMORY checklist item 1 as automated stand-in for walk+place-lit.
 
 ## Anti-patterns
 

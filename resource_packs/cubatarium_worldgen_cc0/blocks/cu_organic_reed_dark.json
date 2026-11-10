@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_reed_dark",
+  "id": 2258,
+  "displayName": "Organic Reed Dark",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_reed_dark",
+    "cu_organic_reed_dark",
+    "cu_organic_reed_dark",
+    "cu_organic_reed_dark",
+    "cu_organic_reed_dark",
+    "cu_organic_reed_dark"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "reed",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "reed",
+    "variant": "dark"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

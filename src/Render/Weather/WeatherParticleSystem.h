@@ -1,6 +1,7 @@
 #ifndef WEATHER_PARTICLE_SYSTEM_H
 #define WEATHER_PARTICLE_SYSTEM_H
 
+#include "World/Environment/WeatherField.h"
 #include <glm/glm.hpp>
 #include <vector>
 
@@ -23,7 +24,7 @@ public:
 
   void Reset();
   void Update(const UWorld &world, const glm::vec3 &camera_pos,
-              float dt_seconds, int budget);
+              const WeatherSample &weather, float dt_seconds, int budget);
   const std::vector<WeatherParticleGpuInstance> &GetInstances() const
   {
     return Instances;
@@ -41,7 +42,8 @@ private:
     bool Alive{false};
   };
 
-  void SpawnParticle(const glm::vec3 &camera_pos, int kind, float wind,
+  void SpawnParticle(const glm::vec3 &camera_pos, int kind,
+                     const glm::vec2 &wind_direction, float wind,
                      float intensity);
   float Random01();
 

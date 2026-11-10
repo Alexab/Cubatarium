@@ -1,0 +1,82 @@
+schema_version: 2
+benchmark:
+  minecraft_java_version: "26.3"
+  block_definitions_minimum: 1286
+  texture_files_minimum: 1405
+  minetest_replacements: all
+  resolution: 16
+profiles:
+  voxel16:
+    resolution: 16
+    palette_colors: 16
+    default: true
+  photo64:
+    resolution: 64
+    palette_colors: null
+    default: false
+face_recipes:
+  wood:
+    side: side
+    top: top
+    bottom: bottom
+    split: true
+  soil:
+    side: side
+    top: top
+    bottom: bottom
+    split: true
+  masonry:
+    split_variants: [brick, cobble, tiled]
+    side: side
+    top: top
+    bottom: bottom
+  organic:
+    split_materials: [moss, lichen, leaf, fern, needle]
+    side: side
+    top: grass_top
+    bottom: side
+reference_calibration:
+  modes: [qa-only, aggregate-calibration]
+  features: [family_medians, per_texture_color_centroid, luminance_spread, coarse_contrast, directional_neighbor_contrast, alpha_coverage]
+  minetest_pixels_may_enter_output: false
+families:
+  rock:
+    count: 220
+    materials: [basalt, granite, diorite, andesite, limestone, marble, slate, schist, gneiss, quartzite, sandstone, shale, chalk, travertine, porphyry, serpentine, dolomite, conglomerate, obsidian, pumice, tuff, greystone]
+    variants: [natural, rough, layered, fractured, weathered, polished, cut, speckled, banded, darkened]
+  soil:
+    count: 120
+    materials: [loam, clay, peat, podzol, humus, silt, wet_mud, dry_mud, red_earth, pale_sand, desert_sand, volcanic_ash]
+    variants: [natural, dry, damp, compact, coarse, fine, pebbled, rooted, layered, weathered]
+  wood:
+    count: 170
+    materials: [oak, pine, birch, cedar, maple, ash, aspen, walnut, beech, willow, poplar, acacia, jungle, mangrove, larch, redwood, spruce]
+    variants: [bark, endgrain, plank, stripped, aged, dark, pale, carved, cut, weathered]
+  masonry:
+    count: 160
+    materials: [granite, limestone, slate, sandstone, basalt, marble, brick, adobe, cobble, tuff, concrete, terrazzo, flagstone, laterite, quartz, darkstone]
+    variants: [block, brick, cobble, cut, chiseled, tiled, polished, weathered, cracked, mossy]
+  ceramic:
+    count: 120
+    materials: [ivory, cream, ochre, amber, scarlet, rose, violet, cobalt, teal, jade, olive, charcoal]
+    variants: [matte, glossy, speckled, glazed, crackle, mosaic, terracotta, patterned, pale, deep]
+  fabric:
+    count: 128
+    materials: [ivory, cream, tan, ochre, scarlet, coral, rose, violet, indigo, cobalt, cyan, teal, jade, olive, charcoal, umber]
+    variants: [woven, coarse, fine, striped, checked, flecked, quilted, dyed]
+  metal:
+    count: 128
+    materials: [iron, steel, copper, bronze, brass, tin, silver, gold, nickel, cobalt, zinc, titanium, pewter, verdigris, black_iron, meteoric_iron]
+    variants: [raw, brushed, polished, hammered, riveted, oxidized, plated, dark]
+  glass:
+    count: 90
+    materials: [clear, frosted, ivory, amber, scarlet, rose, violet, cobalt, cyan, teal, jade, lime, olive, smoke, charcoal]
+    variants: [plain, bubbled, rippled, flecked, lined, prism]
+  crystal:
+    count: 90
+    materials: [quartz, amethyst, citrine, garnet, jade, opal, fluorite, azurite, malachite]
+    variants: [cluster, raw, cut, pale, deep, veined, fractured, bright, smoky, banded]
+  organic:
+    count: 260
+    materials: [moss, lichen, fern, reed, mushroom, coral, kelp, blossom, leaf, flower_white, flower_yellow, flower_red, flower_pink, flower_blue, flower_purple, flower_orange, mushroom_red, mushroom_gold, mushroom_blue, mushroom_pale, needle, mushroom_stem, crop, cocoa_pod, nether_wart, mushroom_brown]
+    variants: [fresh, dry, dense, sparse, spotted, striped, pale, dark, young, mature]

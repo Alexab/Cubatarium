@@ -1,0 +1,8 @@
+{
+  "id": "slow",
+  "duration_sec": 3.0,
+  "tick_interval_sec": 0.0,
+  "move_speed_mul": 0.6,
+  "agility_delta": -2,
+  "stack": "refresh"
+}

@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_pumice_natural",
+  "id": 1215,
+  "displayName": "Rock Pumice Natural",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_pumice_natural",
+    "cu_rock_pumice_natural",
+    "cu_rock_pumice_natural",
+    "cu_rock_pumice_natural",
+    "cu_rock_pumice_natural",
+    "cu_rock_pumice_natural"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "pumice",
+    "variant": "natural"
+  }
+}

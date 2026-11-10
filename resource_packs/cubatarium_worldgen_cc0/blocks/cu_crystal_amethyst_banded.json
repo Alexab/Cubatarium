@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_amethyst_banded",
+  "id": 2150,
+  "displayName": "Crystal Amethyst Banded",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_amethyst_banded",
+    "cu_crystal_amethyst_banded",
+    "cu_crystal_amethyst_banded",
+    "cu_crystal_amethyst_banded",
+    "cu_crystal_amethyst_banded",
+    "cu_crystal_amethyst_banded"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "amethyst",
+    "variant": "banded"
+  }
+}

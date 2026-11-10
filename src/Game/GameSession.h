@@ -5,6 +5,9 @@
 #include "Console/ConsoleCommandHistory.h"
 #include "Content/ContentTypeRegistry.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
+#include "Gui/Interfaces/IUCharacterStatsViewModel.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
 #include "Gui/Interfaces/IUGameCommandContext.h"
 #include "Gui/Interfaces/IUGuiGameActions.h"
@@ -26,7 +29,8 @@ class IUGameContent;
 class UGameSession : public IUGuiGameActions,
                      public IUHotbarViewModel,
                      public IUInventoryViewModel,
-                     public IUGameCommandContext
+                     public IUGameCommandContext,
+                     public IUCharacterStatsViewModel
 {
 public:
   UGameSession(UApplication *application, std::shared_ptr<UWorld> world);
@@ -71,12 +75,12 @@ public:
   bool DropOnSlot(const SlotAddress &target);
   void CancelDrag();
   InventoryEntryRef GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const;
+  InventoryEntryRef GetArmorEntryRef(size_t armorSlot) const;
+  InventoryEntryRef GetOffhandEntryRef() const;
 
-  std::vector<InventoryGroupView> GetGroups(ContentKind tab,
-                                            InventoryMode mode) const override;
+  std::vector<InventoryGroupView> GetGroups(ContentKind tab) const override;
   std::vector<InventoryEntryView> GetEntries(ContentKind tab,
-                                             const std::string &groupId,
-                                             InventoryMode mode) const override;
+                                             const std::string &groupId) const override;
   bool CanAssignToHotbar(const InventoryEntryRef &entry, size_t barIndex,
                          size_t slotIndex) const override;
   bool AssignToHotbar(const InventoryEntryRef &entry, size_t barIndex,
@@ -84,7 +88,16 @@ public:
   bool CanSpawnCreatureByView(const std::string &speciesId) const;
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId) const;
   InventoryMode GetInventoryMode() const override;
-  void SetInventoryMode(InventoryMode mode) override;
+  void SetCheatCreativeInventory(bool enabled) { CheatCreativeInventory = enabled; }
+  bool GetCheatCreativeInventory() const { return CheatCreativeInventory; }
+  void SyncToWorldGameMode(WorldGameMode mode);
+  void SyncToWorldDifficulty(WorldDifficulty difficulty);
+  WorldGameMode GetWorldGameMode() const override { return ActiveWorldGameMode; }
+  WorldDifficulty GetWorldDifficulty() const override
+  {
+    return ActiveWorldDifficulty;
+  }
+  CharacterStatsSnapshot GetCharacterStatsSnapshot() const override;
 
   CommandResult Execute(const std::vector<std::string> &args) override;
   void AddChatLine(const std::string &line) override;
@@ -99,13 +112,22 @@ public:
   void SaveCommandHistory();
 
 private:
+  std::vector<InventoryGroupView> GetGroups(ContentKind tab,
+                                            InventoryMode mode) const;
+  std::vector<InventoryEntryView>
+  GetEntries(ContentKind tab, const std::string &groupId,
+             InventoryMode mode) const;
+  void EnsureStorageForHotbarEntry(const InventoryEntryRef &entry);
+
   UApplication *Application;
   std::shared_ptr<UWorld> World;
   UCommandRegistry UCommandRegistry;
   UContentTypeRegistry ContentCatalog;
   std::vector<std::string> ChatLog;
   UConsoleCommandHistory CommandHistory;
-  InventoryMode ActiveInventoryMode{InventoryMode::Creative};
+  bool CheatCreativeInventory{false};
+  WorldGameMode ActiveWorldGameMode{WorldGameMode::Creative};
+  WorldDifficulty ActiveWorldDifficulty{WorldDifficulty::Normal};
   std::optional<InventoryEntryRef> PendingAssignment;
   DragState Drag;
 };

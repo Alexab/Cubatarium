@@ -1,0 +1,30 @@
+{
+  "name": "andesite",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "geo_stone_dirt",
+    "geo_stone_dirt",
+    "geo_stone_dirt",
+    "geo_stone_dirt",
+    "geo_stone_dirt",
+    "geo_stone_dirt"
+  ],
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "displayName": "Andesite",
+  "render": {},
+  "id": 2442,
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "cubatarium_geology_cc0",
+    "license": "CC0-1.0"
+  }
+}

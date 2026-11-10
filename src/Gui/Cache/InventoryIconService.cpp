@@ -320,12 +320,21 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
     return false;
   }
   Entries[key] = Entry{fingerprint, fileName, size};
-  if (!SaveManifest())
-  {
-    return false;
-  }
+  // UX R2: O(n) manifest rewrites per icon batch made icon generation
+  // quadratic; serialize once per FlushManifest instead.
+  ManifestDirty = true;
   ++Metrics.RenderStores;
   return true;
+}
+
+void UInventoryIconService::FlushManifest()
+{
+  if (!ManifestDirty)
+  {
+    return;
+  }
+  ManifestDirty = false;
+  (void)SaveManifest();
 }
 
 void UInventoryIconService::InvalidateAll()

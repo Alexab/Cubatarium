@@ -10,6 +10,7 @@ namespace cutum
 
 class IUGuiMenuHost;
 class UResourcePackPickerForm;
+class UWorldViewSettingsForm;
 class UGuiPanel;
 class UGuiWindow;
 class UGuiDialogFrame;
@@ -42,6 +43,7 @@ private:
   UGuiScrollView *BodyScroll{nullptr};
   UGuiPanel *BodyPanel{nullptr};
   UGuiLabel *WarningLabel{nullptr};
+  std::unique_ptr<UWorldViewSettingsForm> ViewForm;
   std::unique_ptr<UResourcePackPickerForm> PackForm;
   bool NeedsBodyRelayout{false};
 };

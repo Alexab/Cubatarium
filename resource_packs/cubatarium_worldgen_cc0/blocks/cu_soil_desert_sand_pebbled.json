@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_desert_sand_pebbled",
+  "id": 2487,
+  "displayName": "Soil Desert Sand Pebbled",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_desert_sand_pebbled",
+    "cu_soil_desert_sand_pebbled",
+    "cu_soil_desert_sand_pebbled",
+    "cu_soil_desert_sand_pebbled",
+    "cu_soil_desert_sand_pebbled_top",
+    "cu_soil_desert_sand_pebbled_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "desert_sand",
+    "variant": "pebbled"
+  }
+}

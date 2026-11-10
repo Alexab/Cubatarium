@@ -2,6 +2,8 @@
 
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiTypes.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
 #include <memory>
 
 namespace cutum
@@ -11,10 +13,13 @@ class IUGuiMenuHost;
 class UGuiWindow;
 class UGuiDialogFrame;
 class UWorldGenSettingsForm;
+class UWorldViewSettingsForm;
 class UResourcePackPickerForm;
 class UGuiPanel;
 class UGuiLabel;
+class UGuiListView;
 class UGuiScrollView;
+class UGuiTabBar;
 
 class UNewWorldScreen : public UGuiScreenBase
 {
@@ -33,16 +38,32 @@ private:
   int MeasureWorldPageContentHeight(int width) const;
   void LayoutWorldPageInScroll(UGuiScrollView &scroll) const;
   void LayoutWorldPage(const GuiRect &area) const;
+  WorldGameMode ReadSelectedGameMode() const;
+  WorldDifficulty ReadSelectedDifficulty() const;
+  void SetActiveTab(int tab);
+  void ApplyTabVisibility();
 
   IUGuiMenuHost *Host{nullptr};
+  UGuiTabBar *MainTabs{nullptr};
+  UGuiPanel *ViewPanel{nullptr};
+  UGuiPanel *PackPanel{nullptr};
+  int ActiveTab{0}; // 0 = Basic, 1 = Advanced
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiScrollView *BodyScroll{nullptr};
   UGuiPanel *WorldPage{nullptr};
   std::unique_ptr<UWorldGenSettingsForm> WorldForm;
+  UGuiLabel *ViewSectionLabel{nullptr};
+  std::unique_ptr<UWorldViewSettingsForm> ViewForm;
+  UGuiLabel *GameModeSectionLabel{nullptr};
+  UGuiListView *GameModeList{nullptr};
+  UGuiLabel *GameModeDescLabel{nullptr};
+  UGuiLabel *DifficultySectionLabel{nullptr};
+  UGuiListView *DifficultyList{nullptr};
   UGuiLabel *PackSectionLabel{nullptr};
   std::unique_ptr<UResourcePackPickerForm> PackForm;
   bool NeedsBodyRelayout{false};
+  bool DifficultyVisibleCached{false};
 };
 
 } // namespace cutum

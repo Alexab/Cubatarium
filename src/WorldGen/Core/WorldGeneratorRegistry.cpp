@@ -61,6 +61,7 @@ void ApplyOverworldDefaults(ProceduralSettings &s)
 {
   s.Generator = ProceduralGenerator::Overworld;
   ApplyGeneratorTierDefaults(s);
+  s.TerrainBackendMode = TerrainBackend::Density3D;
 }
 
 void ApplyBetaRetroDefaults(ProceduralSettings &s)
@@ -128,12 +129,16 @@ std::unique_ptr<IUWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   config.Ores = ctx.Settings.EnableOres;
   config.Ravines = ctx.Settings.Ravines.enabled;
   config.Valleys = true;
+  config.Lakes = true;
   config.Vegetation = ctx.Settings.EnableTrees;
   config.GroundCover = ctx.Settings.EnableGroundCover;
   config.Decoration = ctx.Settings.EnableDecoration;
   config.Structures = ctx.Settings.EnableStructures;
   config.LavaPools = ctx.Settings.FillLava;
   config.FirePatch = ctx.Settings.FillFire;
+  config.Geology = true;
+  config.Aquifers = ctx.Settings.EnableCaves;
+  config.CaveFeatures = ctx.Settings.EnableCaves;
   ApplyTerrainBackend(config, ctx.Settings);
   return MakeComposable(ctx, config);
 }

@@ -1,6 +1,13 @@
 {
   "name": "blockDiamond",
   "id": 607,
+  "hardness": 5,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

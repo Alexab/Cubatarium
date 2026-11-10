@@ -1,5 +1,6 @@
 #include "World/Collision/WorldCollision.h"
 #include "Blocks/BlockRegistry.h"
+#include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Render/Primitives/Cube.h"
 #include "World/Chunks/Chunk.h"
@@ -22,6 +23,21 @@ namespace
 
 constexpr int kFootprintMinSolidSamples = 4;
 constexpr int kSubchunkSize = 4;
+constexpr float kAabbTouchingTolerance = 1e-4f;
+
+bool CheckAabbCollisionWithTouchingTolerance(const glm::vec3 &center,
+                                            const glm::vec3 &half_extents,
+                                            const glm::vec3 &other_center,
+                                            const glm::vec3 &other_half_extents)
+{
+  // Eye-height/feet calculations can turn exact face contact into a tiny
+  // overlap after float rounding. Shrink the tested volume by a negligible
+  // margin so standing on a block does not count as penetrating it.
+  const glm::vec3 tolerant_half = glm::max(
+      half_extents - glm::vec3(kAabbTouchingTolerance), glm::vec3(0.0f));
+  return UCube::CheckAabbCollision(center, tolerant_half, other_center,
+                                   other_half_extents);
+}
 
 int SubchunkBitIndex(glm::ivec3 local)
 {
@@ -51,14 +67,14 @@ struct FootprintStandSampleStats
 FootprintStandSampleStats SampleFootprintAtFeet(
     const UWorldCollision &collision, const UBlockWorld &blockWorld,
     const UBlockRegistry &registry, float feetY, float centerX, float centerZ,
-    float halfWidth, const PlayerCapsule &cap, bool checkValidStand)
+    float halfX, float halfZ, const PlayerCapsule &cap, bool checkValidStand)
 {
   FootprintStandSampleStats stats{};
   const int supportY = static_cast<int>(std::floor(feetY - 0.04f));
   const int centerGx = WorldCoordToBlockIndex(centerX);
   const int centerGz = WorldCoordToBlockIndex(centerZ);
-  const float sampleX[3] = {centerX - halfWidth, centerX, centerX + halfWidth};
-  const float sampleZ[3] = {centerZ - halfWidth, centerZ, centerZ + halfWidth};
+  const float sampleX[3] = {centerX - halfX, centerX, centerX + halfX};
+  const float sampleZ[3] = {centerZ - halfZ, centerZ, centerZ + halfZ};
   for (float sx : sampleX)
   {
     for (float sz : sampleZ)
@@ -128,9 +144,13 @@ glm::vec3 ResolveMovementAxisDda(const UWorldCollision &collision,
       [&](glm::ivec3 /*cell*/)
       {
         traveled += 1.0f;
-        if (traveled > remaining)
+        // The last (fractional) segment must be tested too: stopping before
+        // it let fast falls tunnel through a creature/slab when every
+        // whole-block sample missed but the final target overlapped.
+        const bool lastSegment = traveled >= remaining;
+        if (lastSegment)
         {
-          return true;
+          traveled = remaining;
         }
         const glm::vec3 testBody = fromBody + axisUnit * traveled * sign;
         if (collision.CheckCollisionVolume(
@@ -165,7 +185,7 @@ glm::vec3 ResolveMovementAxisDda(const UWorldCollision &collision,
           return true;
         }
         body = testBody;
-        return false;
+        return lastSegment;
       });
 
   if (!blocked)
@@ -252,9 +272,56 @@ bool FindSteppableLedge(const UWorldCollision &collision,
                         const glm::vec3 &dir, const PlayerCapsule &cap,
                         CreatureId skipCreatureId, glm::ivec3 &outStepCell)
 {
-  const int dx = dir.x > 0.25f ? 1 : (dir.x < -0.25f ? -1 : 0);
-  const int dz = dir.z > 0.25f ? 1 : (dir.z < -0.25f ? -1 : 0);
-  if (dx == 0 && dz == 0)
+  (void)skipCreatureId;
+  // Axis-aligned step: try dominant horizontal axis first, then secondary so
+  // near-corner approaches still climb without diagonal jumps.
+  const float ax = std::abs(dir.x);
+  const float az = std::abs(dir.z);
+  int tryDx[2] = {0, 0};
+  int tryDz[2] = {0, 0};
+  int tryCount = 0;
+  auto pushAxis = [&](int dx, int dz) {
+    if (dx == 0 && dz == 0)
+    {
+      return;
+    }
+    for (int i = 0; i < tryCount; ++i)
+    {
+      if (tryDx[i] == dx && tryDz[i] == dz)
+      {
+        return;
+      }
+    }
+    if (tryCount < 2)
+    {
+      tryDx[tryCount] = dx;
+      tryDz[tryCount] = dz;
+      ++tryCount;
+    }
+  };
+  if (ax >= az)
+  {
+    if (ax > 0.25f)
+    {
+      pushAxis(dir.x > 0.0f ? 1 : -1, 0);
+    }
+    if (az > 0.25f)
+    {
+      pushAxis(0, dir.z > 0.0f ? 1 : -1);
+    }
+  }
+  else
+  {
+    if (az > 0.25f)
+    {
+      pushAxis(0, dir.z > 0.0f ? 1 : -1);
+    }
+    if (ax > 0.25f)
+    {
+      pushAxis(dir.x > 0.0f ? 1 : -1, 0);
+    }
+  }
+  if (tryCount == 0)
   {
     return false;
   }
@@ -266,29 +333,30 @@ bool FindSteppableLedge(const UWorldCollision &collision,
   {
     return false;
   }
-  const glm::ivec3 riserCell(standCell.x + dx, supportY, standCell.z + dz);
-  if (!registry.BlocksMovement(blockWorld.GetBlock(riserCell)))
+  for (int i = 0; i < tryCount; ++i)
   {
-    return false;
+    const int dx = tryDx[i];
+    const int dz = tryDz[i];
+    const glm::ivec3 riserCell(standCell.x + dx, supportY, standCell.z + dz);
+    if (!registry.BlocksMovement(blockWorld.GetBlock(riserCell)))
+    {
+      continue;
+    }
+    const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
+    if (!collision.IsValidStandCell(stepCell, cap))
+    {
+      continue;
+    }
+    const float stepFeetY = BlockTopY(stepCell.y);
+    const float rise = stepFeetY - feetY;
+    if (rise < 0.45f || rise > 1.05f)
+    {
+      continue;
+    }
+    outStepCell = stepCell;
+    return true;
   }
-  const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
-  if (!collision.IsValidStandCell(stepCell, cap))
-  {
-    return false;
-  }
-  const float stepFeetY = BlockTopY(stepCell.y);
-  const float rise = stepFeetY - feetY;
-  if (rise < 0.45f || rise > 1.05f)
-  {
-    return false;
-  }
-  const glm::vec3 landingEye = StepStandPosition(stepCell, cap);
-  if (collision.CheckCollision(landingEye, cap, skipCreatureId))
-  {
-    return false;
-  }
-  outStepCell = stepCell;
-  return true;
+  return false;
 }
 
 float DistanceToStepRiser(const glm::vec3 &eyePos, const glm::ivec3 &stepCell,
@@ -300,7 +368,7 @@ float DistanceToStepRiser(const glm::vec3 &eyePos, const glm::ivec3 &stepCell,
   const glm::vec3 facePoint =
       blockCenter - glm::vec3(dir.x * 0.5f, 0.0f, dir.z * 0.5f);
   const glm::vec3 playerLead =
-      eyePos + glm::vec3(dir.x * cap.halfWidth, 0.0f, dir.z * cap.halfWidth);
+      eyePos + glm::vec3(dir.x * cap.halfX(), 0.0f, dir.z * cap.halfZ());
   return glm::dot(facePoint - playerLead, dir);
 }
 
@@ -318,7 +386,8 @@ std::optional<int> UWorldCollision::FindHighestSolidY(int x, int z) const
   {
     return std::nullopt;
   }
-  for (int y = 255; y >= 0; --y)
+  const WorldVerticalProfile &vertical = BlockWorld.GetVerticalProfile();
+  for (int y = vertical.MaxY; y >= vertical.MinY; --y)
   {
     if (BlockRegistry->IsSolid(BlockWorld.GetBlock(glm::ivec3(x, y, z))))
     {
@@ -347,8 +416,10 @@ UWorldCollision::QueryGroundFeetYUnder(int worldX, int worldZ,
     return std::nullopt;
   }
   const int startY =
-      std::clamp(static_cast<int>(std::floor(referenceFeetY + 0.25f)), 0, 255);
-  for (int y = startY; y >= 0; --y)
+      std::clamp(static_cast<int>(std::floor(referenceFeetY + 0.25f)),
+                 BlockWorld.GetVerticalProfile().MinY,
+                 BlockWorld.GetVerticalProfile().MaxY);
+  for (int y = startY; y >= BlockWorld.GetVerticalProfile().MinY; --y)
   {
     if (BlockRegistry->IsSolid(
             BlockWorld.GetBlock(glm::ivec3(worldX, y, worldZ))))
@@ -394,7 +465,7 @@ bool UWorldCollision::IsValidStandFootprint(const glm::vec3 &eyePos,
   const CollisionVolume vol = CollisionVolumeFromEye(eyePos, cap);
   const FootprintStandSampleStats stats = SampleFootprintAtFeet(
       *this, BlockWorld, *BlockRegistry, feetY, vol.center.x, vol.center.z,
-      cap.halfWidth, cap, true);
+      cap.halfX(), cap.halfZ(), cap, true);
   return stats.centerValidStand &&
          stats.validStandSamples >= kFootprintMinSolidSamples;
 }
@@ -433,7 +504,8 @@ bool UWorldCollision::CheckBlockCollisionVolume(
           continue;
         }
         const glm::vec3 blockCenter = BlockCenter(blockPos);
-        if (UCube::CheckAabbCollision(center, half, blockCenter, blockHalf))
+        if (CheckAabbCollisionWithTouchingTolerance(center, half, blockCenter,
+                                                    blockHalf))
         {
           return true;
         }
@@ -608,6 +680,11 @@ bool UWorldCollision::CheckCreatureCollisionVolume(
   {
     return false;
   }
+  if (RiderMountId != 0 && RiderMountId != skipCreatureId)
+  {
+    return Environment->AnyCreatureVolumeOverlapsExcluding(vol, skipCreatureId,
+                                                           RiderMountId);
+  }
   return Environment->CheckCreatureCollisionVolume(vol, skipCreatureId);
 #endif
 }
@@ -670,7 +747,7 @@ bool UWorldCollision::HasGroundSupportVolume(const CollisionVolume &vol,
   }
   const FootprintStandSampleStats stats = SampleFootprintAtFeet(
       *this, BlockWorld, *BlockRegistry, feetY, vol.center.x, vol.center.z,
-      vol.halfExtents.x, PlayerCapsule{}, false);
+      vol.halfExtents.x, vol.halfExtents.z, PlayerCapsule{}, false);
   int minSamples = kFootprintMinSolidSamples;
   if (vol.halfExtents.x < 0.30f)
   {
@@ -683,6 +760,21 @@ bool UWorldCollision::HasGroundSupportVolume(const CollisionVolume &vol,
   return stats.centerSolid && stats.solidSamples >= minSamples;
 }
 
+bool UWorldCollision::HasBodySupport(const CollisionVolume &vol) const
+{
+  constexpr float kProbeDepth = 0.08f;
+  constexpr float kSideInset = 0.01f;
+  CollisionVolume probe;
+  probe.halfExtents =
+      glm::vec3(std::max(0.01f, vol.halfExtents.x - kSideInset),
+                kProbeDepth * 0.5f,
+                std::max(0.01f, vol.halfExtents.z - kSideInset));
+  const float feetY = vol.center.y - vol.halfExtents.y;
+  probe.center = glm::vec3(vol.center.x, feetY - kProbeDepth * 0.5f,
+                           vol.center.z);
+  return CheckBlockCollisionVolume(probe);
+}
+
 bool UWorldCollision::HasGroundSupport(const glm::vec3 &eyePos,
                                        const PlayerCapsule &cap) const
 {
@@ -690,15 +782,165 @@ bool UWorldCollision::HasGroundSupport(const glm::vec3 &eyePos,
                                 cap.feetY(eyePos));
 }
 
+bool UWorldCollision::DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
+                                                const glm::vec3 &sizeBlocks,
+                                                CreatureId skipCreatureId) const
+{
+  if (!EntityCollisionEnabled || !Environment)
+  {
+    return true;
+  }
+  CollisionVolume self = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
+  if (!CheckCreatureCollisionVolume(self, skipCreatureId))
+  {
+    return true;
+  }
+
+  const std::vector<CreatureNeighborView> neighbors =
+      Environment->QueryCreatureNeighborsOverlappingVolume(self,
+                                                           skipCreatureId);
+  glm::vec3 push_sum(0.0f);
+  int hits = 0;
+  for (const CreatureNeighborView &neighbor : neighbors)
+  {
+    if (neighbor.Id == RiderMountId)
+    {
+      continue;
+    }
+    const UCreature *other = Environment->GetCreature(neighbor.Id);
+    if (!other || other->IsPlayerCharacter())
+    {
+      continue;
+    }
+    const CollisionVolume other_vol = other->GetCollisionVolume();
+    if (!UCube::CheckAabbCollision(self.center, self.halfExtents,
+                                   other_vol.center, other_vol.halfExtents))
+    {
+      continue;
+    }
+    const float overlap_x = self.halfExtents.x + other_vol.halfExtents.x -
+                            std::abs(self.center.x - other_vol.center.x);
+    const float overlap_z = self.halfExtents.z + other_vol.halfExtents.z -
+                            std::abs(self.center.z - other_vol.center.z);
+    if (overlap_x <= 0.0f || overlap_z <= 0.0f)
+    {
+      continue;
+    }
+    glm::vec3 delta = self.center - other_vol.center;
+    delta.y = 0.0f;
+    float dist = glm::length(delta);
+    if (dist < 1e-4f)
+    {
+      const float ang =
+          static_cast<float>((skipCreatureId * 17 + neighbor.Id * 31) % 628) /
+          100.0f;
+      delta = glm::vec3(std::cos(ang), 0.0f, std::sin(ang));
+      dist = 1.0f;
+    }
+    else
+    {
+      delta /= dist;
+    }
+    const float push_amt = std::min(overlap_x, overlap_z) + 0.04f;
+    push_sum += delta * push_amt;
+    ++hits;
+  }
+  if (hits == 0)
+  {
+    return false;
+  }
+
+  float push_len = glm::length(push_sum);
+  if (push_len < 1e-4f)
+  {
+    return false;
+  }
+  // Cap per call so we don't teleport through walls.
+  constexpr float kMaxPush = 0.45f;
+  if (push_len > kMaxPush)
+  {
+    push_sum *= kMaxPush / push_len;
+    push_len = kMaxPush;
+  }
+
+  const glm::vec3 dir = push_sum / push_len;
+  constexpr float kDirs[] = {1.0f, 0.7f, 0.4f, 0.2f};
+  for (float scale : kDirs)
+  {
+    glm::vec3 candidate = bodyOrigin + dir * (push_len * scale);
+    const CollisionVolume cand =
+        CollisionVolumeFromBody(candidate, sizeBlocks);
+    if (CheckBlockCollisionVolume(cand))
+    {
+      continue;
+    }
+    bodyOrigin.x = candidate.x;
+    bodyOrigin.z = candidate.z;
+    self = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
+    if (!CheckCreatureCollisionVolume(self, skipCreatureId))
+    {
+      return true;
+    }
+  }
+
+  // Still overlapping: keep best block-clear push for next frame.
+  glm::vec3 candidate = bodyOrigin + dir * std::min(push_len, 0.2f);
+  if (!CheckBlockCollisionVolume(
+          CollisionVolumeFromBody(candidate, sizeBlocks)))
+  {
+    bodyOrigin.x = candidate.x;
+    bodyOrigin.z = candidate.z;
+  }
+  return !CheckCreatureCollisionVolume(
+      CollisionVolumeFromBody(bodyOrigin, sizeBlocks), skipCreatureId);
+}
+
+bool UWorldCollision::DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
+                                             const glm::vec3 &sizeBlocks) const
+{
+  if (!CheckBlockCollisionVolume(
+          CollisionVolumeFromBody(bodyOrigin, sizeBlocks)))
+  {
+    return true;
+  }
+  // Smallest push first: the largest (0.35) used to be tried first, so a
+  // body a couple of centimetres into a block jumped 0.35 in one frame.
+  constexpr float kOffsets[] = {0.02f, 0.04f, 0.08f, 0.12f, 0.2f, 0.35f};
+  constexpr float kDirs[][2] = {{1.f, 0.f},  {-1.f, 0.f}, {0.f, 1.f},
+                                {0.f, -1.f}, {0.707f, 0.707f},
+                                {-0.707f, 0.707f}, {0.707f, -0.707f},
+                                {-0.707f, -0.707f}};
+  for (float dist : kOffsets)
+  {
+    for (const auto &dir : kDirs)
+    {
+      glm::vec3 candidate =
+          bodyOrigin + glm::vec3(dir[0] * dist, 0.0f, dir[1] * dist);
+      if (!CheckBlockCollisionVolume(
+              CollisionVolumeFromBody(candidate, sizeBlocks)))
+      {
+        bodyOrigin.x = candidate.x;
+        bodyOrigin.z = candidate.z;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 glm::vec3 UWorldCollision::ResolveMovementBody(
     const glm::vec3 &bodyOrigin, const glm::vec3 &delta,
     const glm::vec3 &currentSizeBlocks, CreatureId skipCreatureId) const
 {
+  glm::vec3 body = bodyOrigin;
+  if (EntityCollisionEnabled)
+  {
+    DepenetrateCreatureBodyXZ(body, currentSizeBlocks, skipCreatureId);
+  }
   if (glm::dot(delta, delta) < 1e-10f)
   {
-    return bodyOrigin;
+    return body;
   }
-  glm::vec3 body = bodyOrigin;
   body = ResolveMovementAxisBody(*this, body, delta.y, 1, currentSizeBlocks,
                                  skipCreatureId);
   body = ResolveMovementAxisBody(*this, body, delta.x, 0, currentSizeBlocks,
@@ -713,21 +955,29 @@ glm::vec3 UWorldCollision::ResolveMovement(const glm::vec3 &eyePos,
                                            const PlayerCapsule &cap,
                                            CreatureId skipCreatureId) const
 {
-  if (glm::dot(delta, delta) < 1e-10f)
-  {
-    return eyePos;
-  }
   const glm::vec3 sizeBlocks = SizeBlocksFromCapsule(cap);
   const float feetY = cap.feetY(eyePos);
   glm::vec3 body(eyePos.x, feetY, eyePos.z);
+
+  if (EntityCollisionEnabled)
+  {
+    DepenetrateCreatureBodyXZ(body, sizeBlocks, skipCreatureId);
+  }
+
+  if (glm::dot(delta, delta) < 1e-10f)
+  {
+    return glm::vec3(body.x, body.y + cap.eyeHeight, body.z);
+  }
 
   if (delta.y > 0.0f &&
       CheckCollisionVolume(CollisionVolumeFromBody(body, sizeBlocks),
                            skipCreatureId))
   {
-    glm::vec3 resolvedEye(eyePos.x, feetY + cap.eyeHeight, eyePos.z);
+    glm::vec3 resolvedEye(body.x, body.y + cap.eyeHeight, body.z);
     DepenetrateEye(resolvedEye, cap, skipCreatureId);
     body.y = cap.feetY(resolvedEye);
+    body.x = resolvedEye.x;
+    body.z = resolvedEye.z;
   }
 
   const glm::vec3 newBody =
@@ -804,11 +1054,8 @@ bool UWorldCollision::GetStepUpLanding(const glm::vec3 &eyePos,
     return false;
   }
 
-  outLanding = probe.TargetPos - glm::vec3(probe.MoveDir.x * 0.18f, 0.0f,
-                                           probe.MoveDir.z * 0.18f);
-  return !CheckCollision(outLanding, cap,
-                         Environment ? Environment->GetControlledCreatureId()
-                                     : 0);
+  outLanding = probe.TargetPos;
+  return true;
 }
 
 bool UWorldCollision::TryStepUp(glm::vec3 &eyePos, const glm::vec3 &horiz,
@@ -888,12 +1135,34 @@ bool UWorldCollision::CanPlaceClassic(glm::ivec3 place_pos,
     }
   }
 
+  // Creatures are solid: a block may touch one but not overlap its body. The
+  // controlled (player) creature is covered by the capsule rules above.
+  if (Environment)
+  {
+    constexpr float kTouchEpsilon = 0.02f;
+    CollisionVolume block_vol;
+    block_vol.center = BlockCenter(place_pos);
+    block_vol.halfExtents = glm::vec3(0.5f - kTouchEpsilon);
+    if (Environment->CheckCreatureCollisionVolume(
+            block_vol, Environment->GetControlledCreatureId()))
+    {
+      return false;
+    }
+  }
+
   return true;
 }
 
 BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
     const glm::vec3 &eye, const glm::vec3 &front, const PlayerCapsule &cap,
     float max_distance) const
+{
+  return ResolveBlockPlacement(eye, front, cap, max_distance, eye);
+}
+
+BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
+    const glm::vec3 &ray_origin, const glm::vec3 &front, const PlayerCapsule &cap,
+    float max_distance, const glm::vec3 &player_eye) const
 {
   BlockPlacementResolve result;
   if (!BlockRegistry)
@@ -903,16 +1172,29 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
 
   constexpr float kRaycastDistance = 128.0f;
 
-  const auto hit = RaycastSolidBlocks(BlockWorld, *BlockRegistry, eye, front,
-                                      kRaycastDistance);
+  // Break targeting sees pointable non-solid nodes (leaves, plants); the
+  // placement anchor keeps passing through them so aiming at grass still
+  // places against the ground below/behind.
+  const auto break_ray = RaycastSolidBlocks(BlockWorld, *BlockRegistry,
+                                            ray_origin, front, kRaycastDistance,
+                                            BlockRaycastTargetMode::Pointable);
+  const auto hit = RaycastSolidBlocks(BlockWorld, *BlockRegistry, ray_origin,
+                                      front, kRaycastDistance);
+  if (!hit && !break_ray)
+  {
+    return result;
+  }
+
+  result.break_hit = break_ray;
   if (!hit)
   {
     return result;
   }
 
-  const glm::ivec3 place_pos = hit->blockPos + InferPlacementNormal(*hit, eye);
-  const glm::ivec3 feet_block =
-      WorldPosToBlock(glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z));
+  const glm::ivec3 place_pos =
+      hit->blockPos + InferPlacementNormal(*hit, ray_origin);
+  const glm::ivec3 feet_block = WorldPosToBlock(
+      glm::vec3(player_eye.x, cap.feetY(player_eye) + 0.01f, player_eye.z));
   const int pit_xz_radius = std::max(4, static_cast<int>(max_distance));
   const bool pit_placement =
       place_pos.y <= feet_block.y &&
@@ -923,8 +1205,7 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
     return result;
   }
 
-  result.break_hit = hit;
-  if (CanPlaceClassic(place_pos, eye, front, cap, max_distance))
+  if (CanPlaceClassic(place_pos, player_eye, front, cap, max_distance))
   {
     result.place_block_pos = place_pos;
   }
@@ -957,7 +1238,8 @@ bool UWorldCollision::CheckRayIntersection(
     return false;
   }
   const auto hit =
-      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front);
+      RaycastSolidBlocks(BlockWorld, *BlockRegistry, position, front, 128.0f,
+                         BlockRaycastTargetMode::Pointable);
   if (!hit)
   {
     return false;
@@ -1006,10 +1288,19 @@ FluidColumnSurface UWorldCollision::FindFluidColumnSurfaceAt(int bx, int bz,
 FluidColumnSurface
 UWorldCollision::FindFluidColumnSurfaceEye(const glm::vec3 &eye) const
 {
+  if (!BlockRegistry)
+  {
+    return FluidColumnSurface{};
+  }
   const int bx = WorldCoordToBlockIndex(eye.x);
   const int bz = WorldCoordToBlockIndex(eye.z);
   const int by = WorldCoordToBlockIndex(eye.y);
-  return FindFluidColumnSurfaceAt(bx, bz, by);
+  // Eye query uses the deep scan window: the camera can sit in an underwater
+  // cave far below the ocean surface (beyond the slice-builder window) and
+  // must still classify as submerged for underwater fog.
+  return ::cutum::FindFluidColumnSurfaceAt(
+      BlockWorld, *BlockRegistry, bx, bz, by,
+      FluidSurfaceScanTuning::EyeScanUp, FluidSurfaceScanTuning::EyeScanDown);
 }
 
 SampledFluidState

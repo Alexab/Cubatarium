@@ -1,0 +1,7 @@
+{
+  "id": "bleed",
+  "duration_sec": 4.0,
+  "tick_interval_sec": 1.0,
+  "health_per_tick": -2.0,
+  "stack": "refresh"
+}

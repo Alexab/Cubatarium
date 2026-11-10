@@ -65,10 +65,24 @@
 # Scratch analysis / dumps next to exe
 /bin/_*.py
 /bin/_*.cpp
+/bin/_*.bat
+/bin/audit_*.py
+/bin/scripts/
+
+# Nested mistaken runtime copy (bin synced under bin/)
+/bin/bin/
+
+# Autofly / analyze local dumps. Already-tracked goldens stay tracked;
+# promote a new checkpoint with: git add -f bin/iter_reports/<path>
+/bin/iter_reports/
 
 # Desktop CMake build trees
 /build/desktop-msvc/
 /build/desktop-linux/
+
+# Local experiment artifacts (run manifests, logs, reports, captures)
+/artifacts/
+/assetgen_output/
 
 CMakeFiles
 Debug
@@ -76,6 +90,16 @@ Debug
 
 
 bin/console_history.txt
+
+# Root agent/build scratch logs (not packaging)
+/build_*.txt
+/stdout
+/autofly_*.txt
+
+# Python bytecode / caches (anywhere)
+**/__pycache__/
+*.py[cod]
+*$py.class
 
 # Gradle syncAssets output (sources are in repo root)
 platforms/android/app/src/main/assets/
@@ -94,18 +118,69 @@ resource_packs/minecraft_legacy_16/
 resource_packs/_build_staging_*/
 .placeholder_cache/
 
+# Upstream CC0 pack extracts (manual download; do not commit zips/extracts)
+third_party/asset_cache/
+**/models/items/**/__import_tmp*
+
 # Local dev / debug artifacts
 /emulator-logcat*.txt
 /emulator-*.png
 /emulator_screenshot.png
 /purple_smoke_report.json
-tools/__pycache__/
-tools/audit/__pycache__/
 tools/_members_out.txt
+tools/_download_*.py
+tools/_probe_*.py
+tools/_pack_inventory_*.json
 tools/debug_uv_overlays/
 /_tmp_*.png
 /audit_report.json
 /build*/
+
+# Generated runtime / QA output in bin. Keep masks scoped so useful files can
+# still be added elsewhere under bin. Existing tracked baselines remain tracked;
+# intentionally promoted reports/captures can be added with `git add -f`.
+/bin/flight_captures/
+/bin/suite_reports/
+
+# QA capture / artifact sweep dirs and comparison images next to the exe
+/bin/*_Captures/
+/bin/*_Artifacts/
+/bin/*_captures/
+/bin/*_artifacts/
+/bin/*.png
+/bin/*_Compare/
+/bin/*_compare*.png
+/bin/research_*/
+/bin/worldgen_surface_diag_*/
+/bin/Release/
+/bin/Testing/
+/bin/tmp/
+/bin/tmp_*
+/bin/audit_biome_grid_*.csv
+/bin/world200_*.csv
+/bin/world200_*.json
+/bin/world200_*_artifacts/
+/bin/worldgen_*.csv
+/bin/worldgen_*.json
+/bin/diag_*.out
+/bin/CTestTestfile.cmake
+/bin/Cubatarium.exe.locked*
+/bin/_own_*_commit.bat
+/bin/_v*_commit*.bat
+/bin/tmp_commit_*.bat
+
+# Local editor plans and dated investigation notes, not project source docs.
+/.cursor/plans/
+/.zcode/
+/docs/streaming/A40_*.md
+
+# Local runtime/tool scratch at the repository root.
+/cache/
+/stall_log.txt
+
+# Stray files created by local tools in the repository root.
+/%s
+/1
 
 # Generated code audit artifacts (orchestrator writes here)
 /audit/*

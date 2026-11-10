@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <queue>
 #include <unordered_map>
@@ -42,10 +43,13 @@ public:
   void RequestLoad(glm::ivec3 coord, int priority,
                    const ProceduralSettings &settings,
                    glm::ivec2 column_origin = glm::ivec2(0),
-                   bool has_column_origin = false);
-  void Cancel(glm::ivec3 coord);
+                   bool has_column_origin = false,
+                   uint64_t demand_id = 0);
+  int CancelPendingOutsideRadius(glm::ivec3 center, int radius_chunks);
+  void Cancel(glm::ivec3 coord, const char *reason = "cancelled");
   void CancelAllPending(std::chrono::milliseconds worker_wait =
-                            std::chrono::milliseconds(2000));
+                            std::chrono::milliseconds(2000),
+                        const char *reason = "cancelled_all");
   bool WaitForWorkersIdle(std::chrono::milliseconds timeout =
                                std::chrono::milliseconds(10000));
   /// Cancel + short wait, then detach leftover workers for process exit.
@@ -53,7 +57,13 @@ public:
                                   std::chrono::milliseconds(250));
   void Invalidate(glm::ivec3 coord);
   void Tick(UBlockWorld &world, int maxCommitsPerFrame,
-            int maxGenerationStartsPerFrame = 4);
+            int maxGenerationStartsPerFrame = 4,
+            double maxApplyMsPerFrame = 0.0,
+            bool allowBoundedReadyDrain = false);
+  /// Admit already-requested generation work without applying completed
+  /// results. Used by bounded fallback paths that cannot run a full Tick.
+  int StartQueuedGenerationWorkers(int maxStarts);
+  int GetAvailableGenerationWorkerSlots() const;
   bool IsCommitted(glm::ivec3 coord) const;
   bool IsPending(glm::ivec3 coord) const;
   ChunkLoadState GetState(glm::ivec3 coord) const;
@@ -62,13 +72,19 @@ public:
   int GetCompletedReadyCount() const;
   int GetGenBacklogTotal() const;
   double GetLastTickApplyMs() const { return LastTickApplyMs; }
+  /// Era25: gen commits applied during last Tick (frame honesty).
+  int GetLastCommitsThisFrame() const { return LastCommitsThisFrame; }
 
 private:
   struct PendingRequest
   {
     glm::ivec3 coord;
+    uint64_t requestId{0};
+    uint64_t demandId{0};
     int priority{0};
     ChunkGenerationToken token;
+    std::chrono::steady_clock::time_point requestedAt{};
+    uint64_t queueRevision{0};
     ProceduralSettings settings;
     glm::ivec2 columnOrigin{0};
     bool hasColumnOrigin{false};
@@ -77,8 +93,21 @@ private:
   struct PendingResult
   {
     ChunkPopulateResult result;
+    uint64_t requestId{0};
+    uint64_t demandId{0};
     int priority{0};
     int maxHeight{256};
+    std::chrono::steady_clock::time_point requestedAt{};
+    std::chrono::steady_clock::time_point scheduledAt{};
+    std::chrono::steady_clock::time_point generationStartedAt{};
+    std::chrono::steady_clock::time_point generationFinishedAt{};
+    double generationMs{0.0};
+    std::size_t requestQueueLiveAtSchedule{0};
+    std::size_t requestQueueHeapAtSchedule{0};
+    std::size_t workerPendingAtSubmit{0};
+    std::size_t workerActiveAtSubmit{0};
+    std::size_t workerCount{0};
+    int generationStartCapPerFrame{0};
   };
 
   struct RequestCompare
@@ -89,7 +118,9 @@ private:
     }
   };
 
-  void ScheduleWorker(const PendingRequest &request);
+  void ScheduleWorker(const PendingRequest &request,
+                      int generation_start_cap_per_frame);
+  void CompactRequestQueueIfStale();
 
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
@@ -101,10 +132,19 @@ private:
   std::priority_queue<PendingRequest, std::vector<PendingRequest>,
                       RequestCompare>
       Queue;
+  // Queue is a heap and cannot update an entry in place. Keep the current
+  // request separately so priority changes can invalidate old heap entries.
+  std::unordered_map<glm::ivec3, PendingRequest, IVec3Hash> QueuedRequests;
   std::unordered_map<glm::ivec3, ChunkLoadState, IVec3Hash> States;
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ActiveRequestIds;
   std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;
+  std::unordered_map<glm::ivec3, int, IVec3Hash> InitialRequestPriorities;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
+      RequestPriorityRefreshCounts;
+  uint64_t NextRequestQueueRevision{1};
   double LastTickApplyMs{0.0};
+  int LastCommitsThisFrame{0};
 };
 
 } // namespace cutum

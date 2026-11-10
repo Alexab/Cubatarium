@@ -7,7 +7,14 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 21
+    "sort_order": 21,
+    "natural_spawnable": true,
+    "spawn_weight": 1.0,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "forest"
+    ]
   },
   "role": "mob",
   "bounds": {
@@ -27,7 +34,7 @@
       1.2
     ]
   },
-  "eye_height": 0.95,
+  "eye_height": 0.74,
   "habitat": "terrestrial",
   "locomotion_archetype": "terrestrial_quadruped",
   "locomotion": {

@@ -12,6 +12,7 @@ void CubatariumShutdownLogging();
 void CubatariumLogInfo(const char *tag, const std::string &msg);
 void CubatariumLogError(const char *tag, const std::string &msg);
 void CubatariumSetSuppressErrorDialogs(bool suppress);
+void CubatariumFlushLogs();
 
 /// Installs native crash logging (stack + minidump under bin/logs/).
 void CubatariumInstallWindowsDiagnostics();

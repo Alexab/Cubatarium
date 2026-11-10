@@ -3,11 +3,13 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include "WorldGen/Sampling/CoarseHeightCache.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 
 #include <filesystem>
 #include <iostream>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -90,6 +92,75 @@ static void TestDensityRefineParityMatchesHeightmap()
                     "density refine parity tracks heightmap surface within 3 blocks");
 }
 
+static void TestChunkCoarseCache()
+{
+  cutum::UCoarseHeightCache cache(16, 32, 48, 48);
+  int computations = 0;
+  const auto compute = [&computations](int x, int z)
+  {
+    ++computations;
+    return x * 3 + z;
+  };
+  FluidTest::Expect(cache.GetOrCompute(16, 32, compute) == 80, kTestName,
+                    "coarse cache initial value");
+  FluidTest::Expect(cache.GetOrCompute(16, 32, compute) == 80, kTestName,
+                    "coarse cache repeated value");
+  FluidTest::Expect(computations == 1, kTestName,
+                    "coarse cache avoids repeated computation");
+  FluidTest::Expect(cache.GetOrCompute(0, 0, compute) == 0, kTestName,
+                    "coarse cache out-of-range fallback");
+  FluidTest::Expect(computations == 2, kTestName,
+                    "out-of-range fallback computes directly");
+  FluidTest::Expect(cache.GetStats().Hits == 1 && cache.GetStats().Misses == 1 &&
+                        cache.GetStats().OutOfRange == 1,
+                    kTestName, "coarse cache request counters");
+  cache.Reset(0, 0, 4, 4);
+  FluidTest::Expect(cache.GetStats().Hits == 0 && cache.GetStats().Misses == 0 &&
+                        cache.GetStats().OutOfRange == 0,
+                    kTestName, "coarse cache scope resets counters");
+}
+
+static void TestChunkRouteWobbleParity()
+{
+  const cutum::ProceduralSettings settings = MakeSettings();
+  cutum::DensityFieldParams params;
+  params.routerV3 = true;
+  cutum::UDensityFieldSampler sampler(
+      settings.Seed, settings.SeaLevel, settings.MaxHeight,
+      settings.Tuning.terrainRoughness, params, settings.Caves);
+  std::vector<int> direct;
+  for (int z = -8; z < 8; ++z)
+  {
+    for (int x = -8; x < 8; ++x)
+    {
+      direct.push_back(sampler.SurfaceYAt(x, z));
+      direct.push_back(sampler.CoarseSurfaceYAt(x, z));
+    }
+  }
+  sampler.BeginChunkSamplingCache(-8, -8, 8);
+  size_t index = 0;
+  for (int z = -8; z < 8; ++z)
+  {
+    for (int x = -8; x < 8; ++x)
+    {
+      FluidTest::Expect(sampler.SurfaceYAt(x, z) == direct[index++], kTestName,
+                        "scoped route/wobble exact surface parity");
+      FluidTest::Expect(sampler.CoarseSurfaceYAt(x, z) == direct[index++],
+                        kTestName, "scoped route/wobble coarse surface parity");
+    }
+  }
+  const auto &stats = sampler.GetSamplingCacheStats();
+  FluidTest::Expect(stats.RouteHits == 256 && stats.RouteMisses == 256,
+                    kTestName, "route cache shares exact and coarse lookups");
+  FluidTest::Expect(stats.WobbleHits == 256 && stats.WobbleMisses == 256,
+                    kTestName, "wobble cache shares exact and coarse lookups");
+  FluidTest::Expect(stats.OutOfRange == 0, kTestName,
+                    "route/wobble cache covers requested halo");
+  sampler.EndChunkSamplingCache();
+  FluidTest::Expect(sampler.SurfaceYAt(-8, -8) == direct[0], kTestName,
+                    "route/wobble direct result after scope cleanup");
+}
+
 } // namespace
 
 int main()
@@ -100,6 +171,8 @@ int main()
   cutum::UWorldGenPack::LoadPackId("default");
 
   TestDensityRefineParityMatchesHeightmap();
+  TestChunkCoarseCache();
+  TestChunkRouteWobbleParity();
   std::cout << kTestName << ": all tests passed\n";
   return 0;
 }

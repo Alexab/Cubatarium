@@ -61,6 +61,11 @@ public:
   BlockId RegisterRuntimeBlock(const BlockDefinition &def,
                                const std::array<std::string, 6> &stems);
   RuntimeOverlayFlushResult FlushRuntimeOverlay();
+  /// True while runtime-registered blocks exist (they are not pack content).
+  bool HasRuntimeOverlay() const
+  {
+    return !RuntimeOverlay.empty() || !RuntimeOverlayRemoved.empty();
+  }
   void UnregisterRuntimeBlock(const std::string &name);
 
   void RegisterMissingTextureStems(

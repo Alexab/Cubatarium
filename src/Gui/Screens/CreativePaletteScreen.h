@@ -4,6 +4,8 @@
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
+#include "Gui/Interfaces/IUInventoryViewModel.h"
+#include <vector>
 #include <memory>
 #include <string>
 
@@ -32,6 +34,10 @@ public:
   ~UCreativePaletteScreen();
 
   bool PickSlot(int x, int y, SlotAddress &out) const;
+  /// Hotbar strip only (priority drop target while palette is open).
+  bool PickHotbarStrip(int x, int y, SlotAddress &out) const;
+  /// Creative grid cell only (trash / identity), not hotbar.
+  bool PickGridSlot(int x, int y, SlotAddress &out) const;
 
   void OnViewportChanged(int width, int height) override;
 
@@ -52,9 +58,15 @@ private:
   void ApplyMainTab(int tab);
   void UpdateTooltip();
   void RebuildGrid();
+  void AppendGridSlotsChunk();
+  void FinishGridBuild();
+  void RefreshGridIconTextures();
   void RelayoutPanel();
   void LayoutGridInScroll();
   void SyncPreviewDock();
+  void EnsureHotbarStrip();
+  void LayoutHotbarStrip();
+  void SyncHotbarStrip();
 
   IUContentCatalog *Catalog{nullptr};
   UGameSession *Session{nullptr};
@@ -70,8 +82,16 @@ private:
   UGuiTabBar *SubTabs{nullptr};
   UGuiScrollView *Scroll{nullptr};
   UGuiLabel *TooltipLabel{nullptr};
+  UGuiLabel *UsageHintLabel{nullptr};
+  UGuiLabel *HotbarStripLabel{nullptr};
+  UGuiPanel *HotbarStripDivider{nullptr};
   UGuiRenderer *Renderer{nullptr};
   std::vector<UGuiSlot *> GridSlots;
+  /// UX tail: the grid materializes in chunks per frame - opening the
+  /// Blocks tab (1754 entries) used to construct every widget in one tick.
+  std::vector<InventoryEntryView> GridPendingViews;
+  size_t GridBuiltCount{0};
+  std::vector<UGuiSlot *> HotbarStripSlots;
   int PointerX{-1};
   int PointerY{-1};
   bool PointerPressed{false};
@@ -84,6 +104,7 @@ private:
   const GuiTheme *Theme{nullptr};
   bool Visible{false};
   bool Built{false};
+  bool HotbarStripBuilt{false};
 };
 
 } // namespace cutum

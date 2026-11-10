@@ -3,7 +3,11 @@
 
 #include "App/CreateWorldCli.h"
 #include "ResourcePacks/ResourcePackResolver.h"
+#include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -33,6 +37,15 @@ public:
   void PrepareEnterGameWorldList(UCore &core);
   void LoadWorldList(UCore &core, const std::string &world_path);
   void RefreshWorldList(UCore &core);
+
+private:
+  /// UX U4: directory scan cache - the worlds dir (hundreds of folders)
+  /// was iterated on every menu open; reuse the list within the TTL.
+  std::chrono::steady_clock::time_point WorldListScannedAt{};
+  std::chrono::milliseconds WorldListTtl{std::chrono::seconds(10)};
+  std::string WorldListCachedForPath;
+
+public:
   void SaveWorld(UCore &core, const std::string &world_name);
 
   void CreateNewWorldWithSettings(UCore &core,
@@ -49,7 +62,12 @@ public:
   std::string SetupNewWorldForCreation(UCore &core);
   void ApplyNewWorldCreationRequest(UCore &core,
                                     const ProceduralSettings &settings,
-                                    const ResourcePackSelection &selection);
+                                    const ResourcePackSelection &selection,
+                                    const WorldViewSettings &view = {},
+                                    WorldGameMode gameMode =
+                                        WorldGameMode::Creative,
+                                    WorldDifficulty difficulty =
+                                        WorldDifficulty::Normal);
   void RefreshWorldListAfterSave(UCore &core);
 };
 

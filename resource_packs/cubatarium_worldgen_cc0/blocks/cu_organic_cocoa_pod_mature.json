@@ -1,0 +1,32 @@
+{
+  "name": "cu_organic_cocoa_pod_mature",
+  "id": 2500,
+  "displayName": "Organic Cocoa Pod Mature",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_cocoa_pod_mature",
+    "cu_organic_cocoa_pod_mature",
+    "cu_organic_cocoa_pod_mature",
+    "cu_organic_cocoa_pod_mature",
+    "cu_organic_cocoa_pod_mature",
+    "cu_organic_cocoa_pod_mature"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "cocoa_pod",
+    "variant": "mature"
+  }
+}

@@ -7,7 +7,8 @@ namespace cutum
 namespace locomotion
 {
 constexpr float kMoveSpeedEpsilon = 0.05f;
-constexpr float kRunSpeedFactor = 1.35f;
+// Must sit below typical sprint_speed_multiplier (1.3) so Ctrl-sprint maps to Run.
+constexpr float kRunSpeedFactor = 1.15f;
 constexpr float kJumpVyThreshold = 0.5f;
 constexpr float kFallVyThreshold = -0.5f;
 constexpr float kCrouchStanceThreshold = 0.35f;
@@ -64,15 +65,39 @@ LocomotionState DeriveTerrestrial(const CreatureLocomotionFacts &raw,
   {
     return LocomotionState::Crouch;
   }
+  const bool hinted = hintInput && hintInput->hasSuggestedAnim;
+  const bool walkHint =
+      hinted && hintInput->suggestedAnim == LocomotionState::Walk;
+  const bool runHint =
+      hinted && hintInput->suggestedAnim == LocomotionState::Run;
+  const bool moving =
+      raw.onGround && raw.horizontalSpeed > locomotion::kMoveSpeedEpsilon;
+  // Run hysteresis: an agent that chose Run keeps the Run clip while it is
+  // still moving (collision slow-downs used to drop it to Walk for a frame).
+  if (moving && runHint && hintInput->previousState == LocomotionState::Run)
+  {
+    return LocomotionState::Run;
+  }
   const float runThreshold =
       std::max(caps.walkSpeed * locomotion::kRunSpeedFactor,
                locomotion::kMoveSpeedEpsilon);
-  if (raw.onGround && raw.horizontalSpeed > runThreshold)
+  // An agent that chose Walk walks: single-frame displacement spikes (a
+  // step down, a push from a neighbour) read as 2-3x walk speed and flipped
+  // Walk -> Run -> Walk hundreds of times a minute.
+  if (raw.onGround && raw.horizontalSpeed > runThreshold && !walkHint)
   {
     return LocomotionState::Run;
   }
   if (raw.onGround && raw.horizontalSpeed > locomotion::kMoveSpeedEpsilon)
   {
+    // Camera sprint often sits just under runThreshold; honor Run hint once
+    // speed clearly exceeds walk (not a slow nudge).
+    if (hintInput && hintInput->hasSuggestedAnim &&
+        hintInput->suggestedAnim == LocomotionState::Run &&
+        raw.horizontalSpeed > caps.walkSpeed * 1.05f)
+    {
+      return LocomotionState::Run;
+    }
     return LocomotionState::Walk;
   }
   if (hintInput && hintInput->hasSuggestedAnim)
@@ -81,6 +106,11 @@ LocomotionState DeriveTerrestrial(const CreatureLocomotionFacts &raw,
     {
     case LocomotionState::Walk:
     case LocomotionState::Run:
+      if (raw.horizontalSpeed > locomotion::kMoveSpeedEpsilon)
+      {
+        return hintInput->suggestedAnim;
+      }
+      break;
     case LocomotionState::Crouch:
     case LocomotionState::Fly:
       return hintInput->suggestedAnim;

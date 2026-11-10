@@ -1,0 +1,46 @@
+{
+  "name": "asset_standing_stone_07",
+  "version": 2,
+  "displayName": "Standing Stone 07",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 7591572515353216667,
+    "license": "CC0-1.0",
+    "material_parameter": "limestone"
+  },
+  "tags": [
+    "decoration",
+    "structure"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_limestone_layered"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_limestone_layered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_limestone_layered"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_limestone_layered"
+    }
+  ]
+}

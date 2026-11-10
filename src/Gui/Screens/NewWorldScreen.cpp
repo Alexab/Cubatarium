@@ -8,10 +8,15 @@
 #include "Gui/Widgets/GuiDialogFrame.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
+#include "Gui/Widgets/GuiTabBar.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/GuiLabel.h"
+#include "Gui/Widgets/GuiListView.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
+#include "Gui/Widgets/WorldViewSettingsForm.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
 #include <algorithm>
 #include <iostream>
 
@@ -52,27 +57,77 @@ void UNewWorldScreen::OnCreate()
     return;
   }
   const ProceduralSettings settings = WorldForm->ReadSettings();
+  const WorldViewSettings view =
+      ViewForm ? ViewForm->ReadSettings() : WorldViewSettings{};
+  const WorldGameMode gameMode = ReadSelectedGameMode();
+  const WorldDifficulty difficulty = ReadSelectedDifficulty();
   ResourcePackSelection packs =
       PackForm ? PackForm->ReadSelection() : ResourcePackSelection{};
-  if (packs.Primary.empty())
+  if (!PackForm && packs.Primary.empty())
   {
     packs = Host->GetDefaultResourcePackSelection();
   }
   if (packs.Primary.empty())
   {
     // Keep the dialog open but make the failure visible in logs/console.
-    std::cerr << "NewWorld: Create ignored — no primary resource pack selected "
-                 "and no default packs configured."
+    std::cerr << "NewWorld: Create ignored — no primary resource pack "
+                 "selected."
               << std::endl;
     return;
   }
-  if (packs.WorldgenOwner.empty())
+  if (PackForm && !PackForm->HasValidSelection())
+  {
+    std::cerr << "NewWorld: Create ignored — resource-pack selection has "
+                 "missing dependencies or conflicts."
+              << std::endl;
+    return;
+  }
+  // The picker derives its owner from the first checked primary pack. Keep
+  // this guard for hosts without a picker and any future alternate entry path.
+  if (std::find(packs.Primary.begin(), packs.Primary.end(),
+                packs.WorldgenOwner) == packs.Primary.end())
   {
     packs.WorldgenOwner = packs.Primary.front();
   }
-  auto create = [this, settings, packs]()
-  { Host->CreateNewWorldWithSettings(settings, packs); };
+  auto create = [this, settings, packs, view, gameMode, difficulty]()
+  {
+    Host->CreateNewWorldWithSettings(settings, packs, view, gameMode,
+                                     difficulty);
+  };
   Host->SaveIfNeededAndProceed(create);
+}
+
+WorldGameMode UNewWorldScreen::ReadSelectedGameMode() const
+{
+  if (!GameModeList)
+  {
+    return WorldGameMode::Creative;
+  }
+  return GameModeList->GetSelectedIndex() == 1 ? WorldGameMode::Survival
+                                               : WorldGameMode::Creative;
+}
+
+WorldDifficulty UNewWorldScreen::ReadSelectedDifficulty() const
+{
+  if (!DifficultyList)
+  {
+    return WorldDifficulty::Normal;
+  }
+  switch (DifficultyList->GetSelectedIndex())
+  {
+  case 0:
+    return WorldDifficulty::Peaceful;
+  case 1:
+    return WorldDifficulty::Easy;
+  case 2:
+    return WorldDifficulty::Normal;
+  case 3:
+    return WorldDifficulty::Hard;
+  case 4:
+    return WorldDifficulty::Hardcore;
+  default:
+    return WorldDifficulty::Normal;
+  }
 }
 
 void UNewWorldScreen::Build(UGuiContext &ctx)
@@ -111,22 +166,77 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   body->SetDrawBackground(false);
   WorldPage = body.get();
 
+  // Basic / Advanced switch at the very top of the window.
+  auto tabs = std::make_unique<UGuiTabBar>(&theme);
+  MainTabs = tabs.get();
+  tabs->SetTabs({"Basic", "Advanced"});
+  tabs->SetActiveTab(ActiveTab);
+  tabs->SetOnTabChanged([this](int tab) { SetActiveTab(tab); });
+  body->AddChild(std::move(tabs));
+
+  auto viewSection = std::make_unique<UGuiLabel>(&theme, "View:");
+  ViewSectionLabel = viewSection.get();
+  body->AddChild(std::move(viewSection));
+  auto viewPanel = std::make_unique<UGuiPanel>(&theme);
+  viewPanel->SetDrawBackground(false);
+  ViewPanel = viewPanel.get();
+  ViewForm = std::make_unique<UWorldViewSettingsForm>(&theme);
+  ViewForm->SetSettings(WorldViewSettings{});
+  ViewForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
+  ViewForm->BuildInto(*viewPanel);
+  body->AddChild(std::move(viewPanel));
+
+  auto modeSection = std::make_unique<UGuiLabel>(&theme, "Game mode:");
+  GameModeSectionLabel = modeSection.get();
+  body->AddChild(std::move(modeSection));
+  auto modeList = std::make_unique<UGuiListView>(&theme);
+  GameModeList = modeList.get();
+  GameModeList->SetItems({"Creative", "Survival"});
+  GameModeList->SetSelectedIndex(0);
+  GameModeList->SetVisibleRowCount(2);
+  body->AddChild(std::move(modeList));
+
+  auto modeDesc = std::make_unique<UGuiLabel>(
+      &theme, "Unlimited blocks, fly, no vitals drain.\n"
+              "Build freely from the creative palette.");
+  modeDesc->SetUseSecondaryColor(true);
+  GameModeDescLabel = modeDesc.get();
+  body->AddChild(std::move(modeDesc));
+
+  auto difficultySection = std::make_unique<UGuiLabel>(&theme, "Difficulty:");
+  DifficultySectionLabel = difficultySection.get();
+  body->AddChild(std::move(difficultySection));
+  auto difficultyList = std::make_unique<UGuiListView>(&theme);
+  DifficultyList = difficultyList.get();
+  DifficultyList->SetItems(
+      {"Peaceful", "Easy", "Normal", "Hard", "Hardcore"});
+  DifficultyList->SetSelectedIndex(2);
+  DifficultyList->SetVisibleRowCount(5);
+  body->AddChild(std::move(difficultyList));
+
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
   WorldForm->SetForNewWorldDefaults();
+  WorldForm->UseExternalTabs();
   WorldForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
   WorldForm->BuildInto(*body);
+  WorldForm->SetActiveTab(ActiveTab);
 
   auto packSection = std::make_unique<UGuiLabel>(&theme, "Resource packs:");
   PackSectionLabel = packSection.get();
   body->AddChild(std::move(packSection));
+  auto packPanel = std::make_unique<UGuiPanel>(&theme);
+  packPanel->SetDrawBackground(false);
+  PackPanel = packPanel.get();
   PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
   PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
                           : std::vector<InstalledPackInfo>{});
   PackForm->SetSelection(Host ? Host->GetDefaultResourcePackSelection()
                               : ResourcePackSelection{});
   PackForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
-  PackForm->BuildInto(*body);
+  PackForm->BuildInto(*packPanel);
+  body->AddChild(std::move(packPanel));
+  ApplyTabVisibility();
 
   scroll->Content().AddChild(std::move(body));
   frame->SetFixedBody(std::move(scroll));
@@ -168,11 +278,72 @@ void UNewWorldScreen::Update(double /*dt*/)
     NeedsBodyRelayout = false;
     BodyScroll->LayoutContent(0, 0);
   }
+  const bool survival = ReadSelectedGameMode() == WorldGameMode::Survival;
+  if (GameModeDescLabel)
+  {
+    GameModeDescLabel->SetText(
+        survival ? "Gather resources, craft, manage hunger and health.\n"
+                   "Blocks and items are limited — dig and loot to survive."
+                 : "Unlimited blocks, fly, no vitals drain.\n"
+                   "Build freely from the creative palette.");
+  }
+  ApplyTabVisibility();
+  if (survival != DifficultyVisibleCached)
+  {
+    DifficultyVisibleCached = survival;
+    if (BodyScroll)
+    {
+      BodyScroll->LayoutContent(0, 0);
+    }
+  }
 }
 
 void UNewWorldScreen::RequestBodyRelayout()
 {
   NeedsBodyRelayout = true;
+}
+
+void UNewWorldScreen::SetActiveTab(int tab)
+{
+  ActiveTab = tab == 0 ? 0 : 1;
+  if (MainTabs)
+  {
+    MainTabs->SetActiveTab(ActiveTab);
+  }
+  if (WorldForm)
+  {
+    WorldForm->SetActiveTab(ActiveTab);
+  }
+  ApplyTabVisibility();
+  if (BodyScroll)
+  {
+    BodyScroll->SetScrollY(0);
+  }
+  RequestBodyRelayout();
+}
+
+// Basic: game mode, seed, the three sliders and the five checkboxes.
+// Advanced: everything else (view, difficulty, generator, packs, ...).
+void UNewWorldScreen::ApplyTabVisibility()
+{
+  const bool basic = ActiveTab == 0;
+  const bool survival = ReadSelectedGameMode() == WorldGameMode::Survival;
+  const auto show = [](UGuiWidget *w, bool v)
+  {
+    if (w)
+    {
+      w->SetVisible(v);
+    }
+  };
+  show(GameModeSectionLabel, basic);
+  show(GameModeList, basic);
+  show(GameModeDescLabel, basic);
+  show(ViewSectionLabel, !basic);
+  show(ViewPanel, !basic);
+  show(DifficultySectionLabel, !basic && survival);
+  show(DifficultyList, !basic && survival);
+  show(PackSectionLabel, !basic);
+  show(PackPanel, !basic);
 }
 
 void UNewWorldScreen::Relayout()
@@ -200,18 +371,44 @@ void UNewWorldScreen::Relayout()
 
 int UNewWorldScreen::MeasureWorldPageContentHeight(int width) const
 {
-  if (!WorldForm || width <= 0)
+  if (width <= 0)
   {
     return 0;
   }
   const GuiRect area{0, 0, width, 100000};
   const GuiGridSpec spec = BuildWorldGridSpec(GetMetrics(), width);
   const GuiTheme *theme = GetMetrics().Theme;
-  int height = WorldForm->MeasureGridHeight(area, spec);
-  if (PackForm && theme)
+  const int section_gap = Scaled(12);
+  const int label_h = theme ? theme->TabBarHeight : 28;
+  const bool basic = ActiveTab == 0;
+  int height = 0;
+  if (MainTabs)
   {
-    const int section_gap = Scaled(12);
-    const int label_h = theme->TabBarHeight;
+    height += label_h + section_gap;
+  }
+  if (basic && GameModeList && theme)
+  {
+    height += label_h + GameModeList->GetPreferredHeight() + section_gap;
+    if (GameModeDescLabel)
+    {
+      height += GameModeDescLabel->GetPreferredHeight() + section_gap;
+    }
+  }
+  if (!basic && ViewForm && theme)
+  {
+    height += label_h + ViewForm->MeasureHeight(area) + section_gap;
+  }
+  if (!basic && DifficultyList && theme &&
+      ReadSelectedGameMode() == WorldGameMode::Survival)
+  {
+    height += label_h + DifficultyList->GetPreferredHeight() + section_gap;
+  }
+  if (WorldForm)
+  {
+    height += WorldForm->MeasureGridHeight(area, spec);
+  }
+  if (!basic && PackForm && theme)
+  {
     height += section_gap + label_h + PackForm->MeasureHeight(area);
   }
   return height;
@@ -238,27 +435,92 @@ void UNewWorldScreen::LayoutWorldPageInScroll(UGuiScrollView &scroll) const
 
 void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
 {
-  if (!WorldForm || area.W <= 0)
-  {
-    return;
-  }
-  const GuiGridSpec spec = BuildWorldGridSpec(GetMetrics(), area.W);
-  const int gridH = WorldForm->MeasureGridHeight(area, spec);
-  WorldForm->LayoutGrid({area.X, area.Y, area.W, gridH}, spec);
-  if (!PackForm)
+  if (area.W <= 0)
   {
     return;
   }
   const GuiTheme *theme = GetMetrics().Theme;
   const int section_gap = Scaled(12);
   const int label_h = theme ? theme->TabBarHeight : 28;
-  int y = area.Y + gridH + section_gap;
+  const bool basic = ActiveTab == 0;
+  int y = area.Y;
+
+  if (MainTabs)
+  {
+    MainTabs->SetBounds({area.X, y, area.W, label_h});
+    y += label_h + section_gap;
+  }
+
+  if (!basic && ViewForm)
+  {
+    if (ViewSectionLabel)
+    {
+      ViewSectionLabel->SetBounds({area.X, y, area.W, label_h});
+      y += label_h;
+    }
+    const int viewH = ViewForm->MeasureHeight(area);
+    if (ViewPanel)
+    {
+      ViewPanel->SetBounds({area.X, y, area.W, viewH});
+    }
+    ViewForm->Layout({area.X, y, area.W, viewH});
+    y += viewH + section_gap;
+  }
+
+  if (basic && GameModeList)
+  {
+    if (GameModeSectionLabel)
+    {
+      GameModeSectionLabel->SetBounds({area.X, y, area.W, label_h});
+      y += label_h;
+    }
+    const int modeH = GameModeList->GetPreferredHeight();
+    GameModeList->SetBounds({area.X, y, area.W, modeH});
+    y += modeH + section_gap;
+  }
+
+  if (basic && GameModeDescLabel)
+  {
+    const int descH = GameModeDescLabel->GetPreferredHeight();
+    GameModeDescLabel->SetBounds({area.X, y, area.W, descH});
+    y += descH + section_gap;
+  }
+
+  if (!basic && DifficultyList && ReadSelectedGameMode() == WorldGameMode::Survival)
+  {
+    if (DifficultySectionLabel)
+    {
+      DifficultySectionLabel->SetBounds({area.X, y, area.W, label_h});
+      y += label_h;
+    }
+    const int difficultyH = DifficultyList->GetPreferredHeight();
+    DifficultyList->SetBounds({area.X, y, area.W, difficultyH});
+    y += difficultyH + section_gap;
+  }
+
+  if (WorldForm)
+  {
+    const GuiGridSpec spec = BuildWorldGridSpec(GetMetrics(), area.W);
+    const int gridH = WorldForm->MeasureGridHeight(area, spec);
+    WorldForm->LayoutGrid({area.X, y, area.W, gridH}, spec);
+    y += gridH + section_gap;
+  }
+
+  if (basic || !PackForm)
+  {
+    return;
+  }
   if (PackSectionLabel)
   {
     PackSectionLabel->SetBounds({area.X, y, area.W, label_h});
     y += label_h;
   }
-  PackForm->Layout({area.X, y, area.W, PackForm->MeasureHeight(area)});
+  const int packH = PackForm->MeasureHeight(area);
+  if (PackPanel)
+  {
+    PackPanel->SetBounds({area.X, y, area.W, packH});
+  }
+  PackForm->Layout({area.X, y, area.W, packH});
 }
 
 } // namespace cutum

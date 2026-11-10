@@ -21,8 +21,7 @@
             "group": "build",
             "options": {
                 "env": {
-                    "VCPKG_ROOT": "E:/vcpkg",
-                    "VCToolsVersion": ""
+                    "VCPKG_ROOT": "E:/vcpkg"
                 }
             },
             "presentation": {
@@ -44,17 +43,14 @@
                 "${workspaceFolder}/build/desktop-msvc",
                 "--config",
                 "Debug",
+                "--target",
+                "Cubatarium",
                 "--parallel",
                 "8"
             ],
             "group": {
                 "kind": "build",
-                "isDefault": true
-            },
-            "options": {
-                "env": {
-                    "VCToolsVersion": ""
-                }
+                "isDefault": false
             },
             "presentation": {
                 "echo": true,
@@ -75,15 +71,38 @@
                 "${workspaceFolder}/build/desktop-msvc",
                 "--config",
                 "Release",
+                "--target",
+                "Cubatarium",
+                "--parallel",
+                "8"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-release-all",
+            "type": "shell",
+            "command": "C:/Program Files/CMake/bin/cmake.exe",
+            "args": [
+                "--build",
+                "${workspaceFolder}/build/desktop-msvc",
+                "--config",
+                "Release",
                 "--parallel",
                 "8"
             ],
             "group": "build",
-            "options": {
-                "env": {
-                    "VCToolsVersion": ""
-                }
-            },
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -161,8 +180,7 @@
             ],
             "options": {
                 "env": {
-                    "VCPKG_ROOT": "E:/vcpkg",
-                    "VCToolsVersion": ""
+                    "VCPKG_ROOT": "E:/vcpkg"
                 }
             },
             "presentation": {

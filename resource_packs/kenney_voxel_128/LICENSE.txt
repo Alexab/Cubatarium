@@ -1,2 +1,3 @@
 Kenney Voxel Pack (CC0). See https://kenney.nl/assets/voxel-pack
 Extended block set mapped from PNG/Tiles (85 tiles).
+Hellrock uses Kenney's opaque redstone tile in place of the transparent rock sprite.

@@ -1,0 +1,50 @@
+{
+  "name": "asset_mushroom_cluster_03",
+  "version": 2,
+  "displayName": "Mushroom Cluster 03",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 16195122028197812244,
+    "license": "CC0-1.0",
+    "material_parameter": "mushroom_gold"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "fungi"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_mushroom_gold_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_mushroom_gold_fresh"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_mushroom_gold_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_mushroom_gold_fresh"
+    }
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "cu_glass_violet_bubbled",
+  "id": 2078,
+  "displayName": "Glass Violet Bubbled",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_violet_bubbled",
+    "cu_glass_violet_bubbled",
+    "cu_glass_violet_bubbled",
+    "cu_glass_violet_bubbled",
+    "cu_glass_violet_bubbled",
+    "cu_glass_violet_bubbled"
+  ],
+  "render": {
+    "texture_variation": 0.48,
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "violet",
+    "variant": "bubbled"
+  }
+}

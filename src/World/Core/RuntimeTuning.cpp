@@ -1,7 +1,11 @@
 #include "World/Core/RuntimeTuning.h"
 
+#include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Physics/FluidTuning.h"
 
+#include <chrono>
+#include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -41,7 +45,7 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 2;
     t.MemoryExpandMaxRd = 5;
     t.DirtySoftCap = 800;
-    t.DirtyThrashSoftCap = 280;
+    t.DirtyThrashSoftCap = 240;
     t.MaxResidentChunks = 1024;
   }
   else if (high)
@@ -54,7 +58,7 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 6;
     t.MemoryExpandMaxRd = 8;
     t.DirtySoftCap = 2000;
-    t.DirtyThrashSoftCap = 600;
+    t.DirtyThrashSoftCap = 480;
     t.MaxResidentChunks = 4096;
   }
   else
@@ -68,7 +72,7 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 4;
     t.MemoryExpandMaxRd = 6;
     t.DirtySoftCap = 1200;
-    t.DirtyThrashSoftCap = 400;
+    t.DirtyThrashSoftCap = 280;
     t.MaxResidentChunks = 0; // auto Keep footprint
   }
 }
@@ -82,6 +86,15 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   static std::string last_path;
   static std::filesystem::file_time_type last_mtime{};
   static bool have_mtime = false;
+  // Called every streaming tick; a filesystem stat per frame is measurable.
+  static std::chrono::steady_clock::time_point last_check{};
+  const auto now = std::chrono::steady_clock::now();
+  if (have_mtime && path == last_path &&
+      now - last_check < std::chrono::seconds(1))
+  {
+    return;
+  }
+  last_check = now;
   std::error_code ec;
   const auto mtime = std::filesystem::last_write_time(path, ec);
   if (ec)
@@ -188,10 +201,44 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.PendingLightSoftCap =
         j.value("pending_light_soft_cap", t.PendingLightSoftCap);
   }
+  if (j.contains("dirty_admit_cap_red"))
+  {
+    t.DirtyAdmitCapRed = j.value("dirty_admit_cap_red", t.DirtyAdmitCapRed);
+  }
+  if (j.contains("dirty_admit_cap_yellow"))
+  {
+    t.DirtyAdmitCapYellow =
+        j.value("dirty_admit_cap_yellow", t.DirtyAdmitCapYellow);
+  }
+  if (j.contains("relight_fifo_admit_frac"))
+  {
+    t.RelightFifoAdmitFrac =
+        j.value("relight_fifo_admit_frac", t.RelightFifoAdmitFrac);
+  }
+  if (j.contains("miss_reserved_ms"))
+  {
+    t.MissReservedMs = j.value("miss_reserved_ms", t.MissReservedMs);
+  }
+  if (j.contains("miss_emerge_floor_ms"))
+  {
+    t.MissEmergeFloorMs =
+        j.value("miss_emerge_floor_ms", t.MissEmergeFloorMs);
+  }
+  if (j.contains("streaming_phase_budget_ms"))
+  {
+    t.StreamingPhaseBudgetMs =
+        j.value("streaming_phase_budget_ms", t.StreamingPhaseBudgetMs);
+  }
   if (j.contains("relight_fifo_soft_cap"))
   {
     t.RelightFifoSoftCap =
         j.value("relight_fifo_soft_cap", t.RelightFifoSoftCap);
+    t.Era18VbCaptureFloor =
+        j.value("era18_vb_capture_floor", t.Era18VbCaptureFloor);
+    t.Era18VbBgBudgetFloor =
+        j.value("era18_vb_bg_budget_floor", t.Era18VbBgBudgetFloor);
+    t.MissFirstFrameBudget =
+        j.value("miss_first_frame_budget", t.MissFirstFrameBudget);
   }
   if (j.contains("gpu_vertex_pool_reserve_mb"))
   {
@@ -218,9 +265,265 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.CompletedExpandEnabled =
         j.value("completed_expand_enabled", t.CompletedExpandEnabled);
   }
+  // Phase B: Capture / Immediate / fly / hitch / fog timing.
+  if (j.contains("capture_drain_moving_ms"))
+  {
+    t.CaptureDrainMovingMs =
+        j.value("capture_drain_moving_ms", t.CaptureDrainMovingMs);
+  }
+  if (j.contains("capture_drain_idle_ms"))
+  {
+    t.CaptureDrainIdleMs =
+        j.value("capture_drain_idle_ms", t.CaptureDrainIdleMs);
+  }
+  if (j.contains("capture_drain_holes_moving_ms"))
+  {
+    t.CaptureDrainHolesMovingMs =
+        j.value("capture_drain_holes_moving_ms", t.CaptureDrainHolesMovingMs);
+  }
+  if (j.contains("capture_drain_holes_idle_ms"))
+  {
+    t.CaptureDrainHolesIdleMs =
+        j.value("capture_drain_holes_idle_ms", t.CaptureDrainHolesIdleMs);
+  }
+  if (j.contains("capture_drain_high_pending_moving_ms"))
+  {
+    t.CaptureDrainHighPendingMovingMs = j.value(
+        "capture_drain_high_pending_moving_ms", t.CaptureDrainHighPendingMovingMs);
+  }
+  if (j.contains("capture_drain_high_pending_idle_ms"))
+  {
+    t.CaptureDrainHighPendingIdleMs = j.value(
+        "capture_drain_high_pending_idle_ms", t.CaptureDrainHighPendingIdleMs);
+  }
+  if (j.contains("capture_hot_frame_mult"))
+  {
+    t.CaptureHotFrameMult =
+        j.value("capture_hot_frame_mult", t.CaptureHotFrameMult);
+  }
+  if (j.contains("capture_sync_skip_wall_ms"))
+  {
+    t.CaptureSyncSkipWallMs =
+        j.value("capture_sync_skip_wall_ms", t.CaptureSyncSkipWallMs);
+  }
+  if (j.contains("capture_idle_pending_max_wall_ms"))
+  {
+    t.CaptureIdlePendingMaxWallMs = j.value(
+        "capture_idle_pending_max_wall_ms", t.CaptureIdlePendingMaxWallMs);
+  }
+  if (j.contains("capture_moving_bg_cap"))
+  {
+    t.CaptureMovingBgCap =
+        j.value("capture_moving_bg_cap", t.CaptureMovingBgCap);
+  }
+  if (j.contains("immediate_budget_hot_ms"))
+  {
+    t.ImmediateBudgetHotMs =
+        j.value("immediate_budget_hot_ms", t.ImmediateBudgetHotMs);
+  }
+  if (j.contains("immediate_budget_ok_ms"))
+  {
+    t.ImmediateBudgetOkMs =
+        j.value("immediate_budget_ok_ms", t.ImmediateBudgetOkMs);
+  }
+  if (j.contains("immediate_hot_wall_ms"))
+  {
+    t.ImmediateHotWallMs =
+        j.value("immediate_hot_wall_ms", t.ImmediateHotWallMs);
+  }
+  if (j.contains("mesh_fly_wall_hot_ms"))
+  {
+    t.MeshFlyWallHotMs = j.value("mesh_fly_wall_hot_ms", t.MeshFlyWallHotMs);
+  }
+  if (j.contains("mesh_fly_wall_mid_ms"))
+  {
+    t.MeshFlyWallMidMs = j.value("mesh_fly_wall_mid_ms", t.MeshFlyWallMidMs);
+  }
+  if (j.contains("mesh_fly_cap_wall_hot"))
+  {
+    t.MeshFlyCapWallHot =
+        j.value("mesh_fly_cap_wall_hot", t.MeshFlyCapWallHot);
+  }
+  if (j.contains("mesh_fly_cap_wall_mid"))
+  {
+    t.MeshFlyCapWallMid =
+        j.value("mesh_fly_cap_wall_mid", t.MeshFlyCapWallMid);
+  }
+  if (j.contains("mesh_fly_cap_wall_ok"))
+  {
+    t.MeshFlyCapWallOk = j.value("mesh_fly_cap_wall_ok", t.MeshFlyCapWallOk);
+  }
+  if (j.contains("mesh_fly_cap_holes_hot"))
+  {
+    t.MeshFlyCapHolesHot =
+        j.value("mesh_fly_cap_holes_hot", t.MeshFlyCapHolesHot);
+  }
+  if (j.contains("mesh_fly_cap_holes_ok"))
+  {
+    t.MeshFlyCapHolesOk =
+        j.value("mesh_fly_cap_holes_ok", t.MeshFlyCapHolesOk);
+  }
+  if (j.contains("memory_green_max_wall_ms"))
+  {
+    t.MemoryGreenMaxWallMs =
+        j.value("memory_green_max_wall_ms", t.MemoryGreenMaxWallMs);
+  }
+  if (j.contains("memory_hitch_capture_wall_ms"))
+  {
+    t.MemoryHitchCaptureWallMs =
+        j.value("memory_hitch_capture_wall_ms", t.MemoryHitchCaptureWallMs);
+  }
+  if (j.contains("memory_urgent_eval_wall_ms"))
+  {
+    t.MemoryUrgentEvalWallMs =
+        j.value("memory_urgent_eval_wall_ms", t.MemoryUrgentEvalWallMs);
+  }
+  if (j.contains("fog_pull_in_expand_sec"))
+  {
+    t.FogPullInExpandSec =
+        j.value("fog_pull_in_expand_sec", t.FogPullInExpandSec);
+  }
+  if (j.contains("fog_pull_in_shrink_sec"))
+  {
+    t.FogPullInShrinkSec =
+        j.value("fog_pull_in_shrink_sec", t.FogPullInShrinkSec);
+  }
+  if (j.contains("fog_pull_in_severe_wall_ms"))
+  {
+    t.FogPullInSevereWallMs =
+        j.value("fog_pull_in_severe_wall_ms", t.FogPullInSevereWallMs);
+  }
+  if (j.contains("enter_fov_lit_hard_wall_ms"))
+  {
+    t.EnterFovLitHardWallMs =
+        j.value("enter_fov_lit_hard_wall_ms", t.EnterFovLitHardWallMs);
+  }
+  if (j.contains("enter_fov_lit_capture_budget"))
+  {
+    t.EnterFovLitCaptureBudget =
+        j.value("enter_fov_lit_capture_budget", t.EnterFovLitCaptureBudget);
+  }
+  if (j.contains("enter_fov_lit_apply_budget"))
+  {
+    t.EnterFovLitApplyBudget =
+        j.value("enter_fov_lit_apply_budget", t.EnterFovLitApplyBudget);
+  }
+  if (j.contains("enter_fov_lit_capture_drain_ms"))
+  {
+    t.EnterFovLitCaptureDrainMs =
+        j.value("enter_fov_lit_capture_drain_ms", t.EnterFovLitCaptureDrainMs);
+  }
+  if (j.contains("enter_fov_lit_inflight_mult"))
+  {
+    t.EnterFovLitInflightMult =
+        j.value("enter_fov_lit_inflight_mult", t.EnterFovLitInflightMult);
+  }
+  if (j.contains("enter_lit_require_zero"))
+  {
+    t.EnterLitRequireZero =
+        j.value("enter_lit_require_zero", t.EnterLitRequireZero);
+  }
+  if (j.contains("enter_lit_debt_mode"))
+  {
+    const std::string mode = j.value("enter_lit_debt_mode", std::string("snapshot_rd"));
+    t.EnterLitUseSnapshotDebt = (mode != "live_global");
+  }
+  if (j.contains("enter_lit_abort_ms"))
+  {
+    t.EnterLitAbortMs = j.value("enter_lit_abort_ms", t.EnterLitAbortMs);
+  }
+  if (j.contains("enter_mesh_abort_ms"))
+  {
+    t.EnterMeshAbortMs = j.value("enter_mesh_abort_ms", t.EnterMeshAbortMs);
+  }
+  if (j.contains("enter_gate_mesh_drain_iterations"))
+  {
+    t.EnterGateMeshDrainIterations =
+        j.value("enter_gate_mesh_drain_iterations",
+                t.EnterGateMeshDrainIterations);
+  }
+  if (j.contains("enter_force_ingame_ms"))
+  {
+    t.EnterForceInGameMs =
+        j.value("enter_force_ingame_ms", t.EnterForceInGameMs);
+  }
+  if (j.contains("strict_enter_visual_ready"))
+  {
+    t.StrictEnterVisualReady =
+        j.value("strict_enter_visual_ready", t.StrictEnterVisualReady);
+  }
+  if (j.contains("fz2_defer_gated"))
+  {
+    t.Fz2DeferGated = j.value("fz2_defer_gated", t.Fz2DeferGated);
+  }
+  if (j.contains("fz2_lit_ring_seed"))
+  {
+    t.Fz2LitRingSeed = j.value("fz2_lit_ring_seed", t.Fz2LitRingSeed);
+  }
+  if (j.contains("stream_simple"))
+  {
+    t.StreamSimple = j.value("stream_simple", t.StreamSimple);
+  }
+  if (j.contains("schedule_shed_uv1"))
+  {
+    t.ScheduleShedUv1 = j.value("schedule_shed_uv1", t.ScheduleShedUv1);
+  }
+  if (j.contains("unload_amortize_mode"))
+  {
+    t.UnloadAmortizeMode =
+        std::clamp(j.value("unload_amortize_mode", t.UnloadAmortizeMode), 0, 4);
+  }
+  if (j.contains("keep_shell_amortize_mode"))
+  {
+    t.KeepShellAmortizeMode = std::clamp(
+        j.value("keep_shell_amortize_mode", t.KeepShellAmortizeMode), 0, 4);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;
+}
+
+void URuntimeTuning::ApplyEnvOverrides()
+{
+  URuntimeTuning &t = Get();
+  // Env is process-constant; parse once (called every streaming tick).
+  struct EnvBool
+  {
+    int value{-1};
+  };
+  static const auto read_env = [](const char *name) -> EnvBool
+  {
+    EnvBool out;
+    if (const char *env = std::getenv(name))
+    {
+      if (env[0] == '1' || env[0] == 't' || env[0] == 'T' || env[0] == 'y' ||
+          env[0] == 'Y')
+      {
+        out.value = 1;
+      }
+      else if (env[0] == '0' || env[0] == 'f' || env[0] == 'F' ||
+               env[0] == 'n' || env[0] == 'N')
+      {
+        out.value = 0;
+      }
+    }
+    return out;
+  };
+  static const EnvBool stream_simple = read_env("CUBA_STREAM_SIMPLE");
+  static const EnvBool shed_uv1 = read_env("CUBA_SCHEDULE_SHED_UV1");
+  static const EnvBool replace_owner = read_env("CUBA_RELIGHT_REPLACE_OWNER");
+  auto apply = [](const EnvBool &e, bool &dst)
+  {
+    if (e.value >= 0)
+    {
+      dst = e.value != 0;
+    }
+  };
+  apply(stream_simple, t.StreamSimple);
+  apply(shed_uv1, t.ScheduleShedUv1);
+  apply(replace_owner, t.RelightReplaceDirtyOwner);
+  // Keep MeshApplyPolicy atomic in sync with tuning (AF bisect / streaming_tune).
+  SetRelightReplaceDirtyOwnerEnabled(t.RelightReplaceDirtyOwner);
 }
 
 } // namespace cutum

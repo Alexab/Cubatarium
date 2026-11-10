@@ -69,7 +69,7 @@ flowchart TB
 
 - **Мир → агенты:** вызов `agent->Tick(perception, dt)` (pull со стороны мира, как вы описали: «мир опрашивает агентов»).
 - **Агент → мир:** не прямое изменение блоков; только **запросы чтения** через `IUWorldPerception` + **запись intent** в подчинённых `Creature`.
-- **Агент → существо:** `sink.SetIntent(id, intent)`; на том же кадре `Creature::ExecuteIntent` / locomotion исполняет движение через `World::ResolveMovement`.
+- **Агент → существо:** `sink.SetIntent(id, intent)`; на том же кадре `Creature::ExecuteIntent` исполняет движение через **общий** [`CreatureMotor`](../src/Creatures/Locomotion/CreatureMotor.h) (тот же resolve/step-up path, что у игрока). Подробнее: [`CREATURE_MOVEMENT.md`](CREATURE_MOVEMENT.md).
 
 ### Где живёт ИИ
 
@@ -77,7 +77,7 @@ flowchart TB
 |------|-----|---------|
 | Стратегия (куда патрулировать, агро) | **`IUCreatureActivityAgent`** (позже pluggable `IAgentBrain`) | каждый кадр (throttle — позже) |
 | Тактика (обход препятствия, выбор скорости) | Агент или общий `LocomotionHelper` | 10–20 Гц |
-| Исполнение (коллизии, гравитация, facts, derive state) | **`Creature` + `World`** | каждый кадр |
+| Исполнение (коллизии, гравитация, facts, derive state) | **`Creature` + shared `CreatureMotor` + `World`** | каждый кадр |
 | Presentation (поза частей, walk cycle) | **`src/Pose/*` + `IUCreatureVisual`** | каждый кадр (render) |
 
 ИИ **не** внутри `Creature` как монолит; **мозг** — у агента (или у plug-in мозга агента). Существо — **исполнитель** намерений + особый случай **player input** для controlled.
@@ -165,7 +165,7 @@ src/Activity/
 
 | API perception | Назначение |
 |----------------|------------|
-| `CreatureVolumeClearAt` | Probe без пересечения AABB других существ |
+| `CreaturesClearAt` | Probe без пересечения AABB других существ (не blocks) |
 | `QueryCreatureNeighborsInRadius` | Соседи с `bodyOrigin` для separation |
 | `GetCreatureBodyOrigin` | Позиция по `CreatureId` |
 
@@ -180,6 +180,12 @@ src/Activity/
 
 Модуль [`src/Navigation/`](../src/Navigation/): `UNavigationPathfinder` (A* по stand-nodes), `UWaypointFollower`, `SteerCreatureAlongPath` в [`CreatureActivityNavigation`](../../src/Activity/Helpers/CreatureActivityNavigation.h).
 
+**Важно:** цель A* для chase/flee — `ControlledCreatureInfo.bodyOrigin` (feet), не `eyePosition` (после feet-anchored collision eye не является stand-node).
+
+## Diagnostics
+
+`UCreatureMovementDiagnostics` (`creature_movement_diag.v1`): console `creature_diag`, config `gameplay.creature_movement_diag`. См. [`CREATURE_MOVEMENT.md`](CREATURE_MOVEMENT.md).
+
 ## Масштаб (фаза 2)
 
 - [`CreatureSpatialIndex`](../../src/World/Environment/CreatureSpatialIndex.cpp) — инкрементальный `Upsert`/`Remove`/`PruneExcept`; `SyncCreatureSpatialIndex` перед `TickActivity` обновляет только сдвинувшихся мобов
@@ -190,8 +196,10 @@ src/Activity/
 
 - [`IUAgentBrain`](../../src/Activity/Brain/IUAgentBrain.h), [`USimpleFsmBrain`](../../src/Activity/Brain/SimpleFsmBrain.cpp)
 - `flee` → [`FleeActivityAgent`](../../src/Activity/Agents/FleeActivityAgent.cpp) (sheep); steering фазы 0 (separation + `PickLocomotionDirection`) в flee-ветке brain
-- `melee_attack` → [`MeleeAttackActivityAgent`](../../src/Activity/Agents/MeleeAttackActivityAgent.cpp) (zombie, skeleton, dungeon_master)
-- `CreatureIntent.attackTargetId` — задел под combat (урон вне activity)
+- `melee_attack` → [`MeleeAttackActivityAgent`](../../src/Activity/Agents/MeleeAttackActivityAgent.cpp) (zombie, skeleton, dungeon_master); prefers controlled player, else nearest mob (mob↔mob)
+- `bot_player` → [`BotPlayerActivityAgent`](../../src/Activity/Agents/BotPlayerActivityAgent.cpp) (species `bot`): follow player, chase/attack hostiles via `attackTargetId` + `InfluenceIntent`
+- `CreatureIntent.attackTargetId` / `Influence` → [`CreatureCombat::TryMeleeStrike`](../../src/Creatures/Combat/CreatureCombat.cpp) → Influence resolve/apply (Survival); see [`CREATURE_INTERACTION.md`](CREATURE_INTERACTION.md)
+- Stats / modes: [`CREATURE_STATS.md`](CREATURE_STATS.md)
 
 ---
 

@@ -18,6 +18,8 @@ struct GreedyMeshVertex
   float skyLight;
   float blockLight;
   float wetness;
+  /// Explicit shader marker for provisional first-mesh light presentation.
+  float lightPreview{0.0f};
 };
 
 } // namespace cutum

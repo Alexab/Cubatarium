@@ -1,0 +1,50 @@
+{
+  "name": "asset_mushroom_cluster_04",
+  "version": 2,
+  "displayName": "Mushroom Cluster 04",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 1069829518389827966,
+    "license": "CC0-1.0",
+    "material_parameter": "mushroom_pale"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "fungi"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_mushroom_pale_fresh"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_mushroom_pale_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_mushroom_pale_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_mushroom_pale_fresh"
+    }
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
+}

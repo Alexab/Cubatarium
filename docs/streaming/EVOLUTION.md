@@ -303,10 +303,9 @@ unbounded BFS/queues дают 10–25 GB high-water при «нормальн�
 
 ## Legacy / Мёртвые Пути
 
-- `IsColumnVisualReadyForRing` callback зарегистрирован, но фактически не
-  определяет поведение streamer.
-- `RecoverStickyBlackFocusSync` и `RefreshIdleFocusGreedyRemesh` остались в
-  коде как альтернативные recovery paths.
+- `OnIsColumnPendingLight` (= `!IsColumnVisualReadyForRing`) влияет на
+  PrefetchKeepShell / MemoryBudget SLA; **не** на terrain `RingPrerequisitesMet`.
+- `RecoverStickyBlackFocusSync` удалён (R2); sticky → `ColumnFlowExecutor` RemeshSeam.
 - `RebuildChunkLegacy` остаётся sync fallback path.
 
 ## Anti-Patterns
@@ -318,3 +317,60 @@ unbounded BFS/queues дают 10–25 GB high-water при «нормальн�
 - Drop Completed без Dirty/relight requeue; erase PendingLight у cold hole.
 - Unbounded light BFS вне `HasChunk`; fluid `GetOrCreate` в missing.
 - Expand буферов при Soft/Hard memory pressure; `glBufferData` orphan каждый кадр.
+- Hide sticky/stale-dark **без** ColumnFlow repair ticket.
+- Cap `mesh_schedule` при holes (async underfeed).
+- Fog / draw-hide как замена FOV throughput.
+
+## Эра 13. Июль 29: Root Cause Freeze + Hide⇒Ticket
+
+Артефакты: `manual_latest_1645`, `manual_qual_fix3`, `manual_latest_1752`,
+`edge_qual_fix3`. Executive: [`ROOT_CAUSE_2026-07.md`](ROOT_CAUSE_2026-07.md).
+
+Что показал 1752:
+
+- `post_load_ring_not_ready=37` не падает за idle → spawn burst недостаточен
+  (TD-ARCH-021 reopen → partial).
+- `holes_rate=1.0`, Dirty≈300, MeshAsync≈2 → underfeed + SoftDefer.
+- Hide sticky/dark (022) улучшил stop в qual_fix3, ухудшил cruise (025).
+- GPU packed (Phase3) на ветке; mesher всё ещё hybrid на hot path.
+
+Дорожная карта исправления (не zoo-knobs):
+
+- D1: Hide⇒Ticket, async floor, spawn idle catch-up, stop sticky drain.
+- D2: ColumnRenderable SoT, FirstMesh/Remesh dirty class, ColumnFlow-only,
+  SoftDefer Capture floor.
+- D3: harness gates = architecture DoD; merge develop только после PASS.
+
+TD-ARCH-026..030 открыты в `TECH_DEBT_CHUNK_STREAMING.md`.
+
+## Эра 14. Авг 2026: Frame nest + wall-gated heal deadlock
+
+Артефакты: `manual_latest_151212`, `manual_latest_131827`, `manual_latest_110751`.
+Executive: [`ROOT_CAUSE_2026-08.md`](ROOT_CAUSE_2026-08.md),
+[`ERA14_POSTMORTEM.md`](ERA14_POSTMORTEM.md).
+
+Что показал 151212:
+
+- wall med ~200 / max ~957; phys med ~172 при `physics_block≈0` → nest.
+- miss_cy 0–3 sticky ~38s на land exit; underfeet OK.
+- `stand_rim_dirty_n` рос, но `stale_repair_wave_n=0`, `stand_rim_imm_n=0`
+  (gates wall≤40/50).
+
+Post-Era13 кластеры (1f52bdd5..): MeshWorkAdmission / F0 sync=0 / idle I1–I7 /
+rim witness / DigSeam / stand heal — частичный hold, wall и land tops не закрыты.
+
+Дорожная карта Era14 V4:
+
+- Phase 1: `TickWorldStreamingPhase` вне `RunLegacyPhysicsFrame` (TD-040).
+- Phase 2: DesiredStage; kill calm Imm / wall enqueue (TD-041..043).
+- Phase 3: commit seed + remesh-on-lit (TD-044..045).
+- Phase 4: worker Capture / trim knobs (TD-046..047).
+- Phase 5: PREMERGE + ARCH_D3 DoD (TD-048).
+
+### Матрица Проблем (Era14 addendum)
+
+| Симптом | Историческая причина | Урок |
+|---------|----------------------|------|
+| phys 170+ без collision | stream/emerge inside DoMovement | frame contract first |
+| Imm/wave never fire | heal gated on last_frame_ms | enqueue ≠ sync cost |
+| Invisible chunk tops | miss sticky + Dirty backlog | FirstMesh floor + land gates |

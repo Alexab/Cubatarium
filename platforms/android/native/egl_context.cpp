@@ -1,6 +1,7 @@
 #include "egl_context.h"
 
 #include "App/Platform/Log.h"
+#include "Render/Backend/RenderBackendCaps.h"
 
 #include <EGL/egl.h>
 #include <android/native_window.h>
@@ -141,6 +142,7 @@ bool EglContext::Initialize(android_app *app)
   height_ = ANativeWindow_getHeight(app_->window);
   GLint stencil_bits = 0;
   glGetIntegerv(GL_STENCIL_BITS, &stencil_bits);
+  RefreshRenderBackendCapsFromGl();
   std::ostringstream msg;
   msg << "Context ready GLES" << clientVersion << " " << width_ << "x"
       << height_ << " stencil=" << stencil_bits;

@@ -1,0 +1,21 @@
+{
+  "id": "mountains",
+  "height": {
+    "base_offset": 9,
+    "amplitude_mul": 1.45,
+    "volatility_mul": 0.95
+  },
+  "palette": {
+    "surface": "stone",
+    "subsurface": "dirt"
+  },
+  "features": {
+    "vegetation": {
+      "tree_pine": 0.8,
+      "tree_pine_small": 0.7
+    },
+    "ground_cover": {
+      "bush_pine": 0.5
+    }
+  }
+}

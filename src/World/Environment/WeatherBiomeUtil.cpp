@@ -16,6 +16,8 @@ WeatherClimateGroup MapBiomeToClimateGroup(BiomeId biome)
   {
   case BiomeId::Tundra:
   case BiomeId::ColdSteppe:
+  case BiomeId::SnowySlopes:
+  case BiomeId::JaggedPeaks:
     return WeatherClimateGroup::Cold;
   case BiomeId::Desert:
   case BiomeId::Savanna:
@@ -25,6 +27,12 @@ WeatherClimateGroup MapBiomeToClimateGroup(BiomeId biome)
   case BiomeId::Hills:
   case BiomeId::Foothills:
   case BiomeId::Scrubland:
+  case BiomeId::Mountains:
+  case BiomeId::Ocean:
+  case BiomeId::Beach:
+  case BiomeId::LushCaves:
+  case BiomeId::DripstoneCaves:
+  case BiomeId::DeepDark:
   default:
     return WeatherClimateGroup::Temperate;
   }

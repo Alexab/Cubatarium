@@ -1,6 +1,7 @@
 #ifndef CREATURE_ICON_CACHE_H
 #define CREATURE_ICON_CACHE_H
 
+#include "Gui/Cache/IconWarmupQueue.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -29,6 +30,8 @@ public:
   GLuint GetSpeciesIcon(const std::string &speciesId);
   GLuint GetSkinIcon(const std::string &skinId);
   void WarmupNext(size_t count);
+  /// Shared warmup-list rebuild (Initialize / Invalidate used to duplicate it).
+  void RebuildWarmupList();
 
 private:
   GLuint GetOrCreateSpeciesIcon(const std::string &speciesId);
@@ -41,8 +44,7 @@ private:
 
   std::unordered_map<std::string, GLuint> SpeciesCache;
   std::unordered_map<std::string, GLuint> SkinCache;
-  std::vector<std::string> WarmupQueue;
-  size_t WarmupIndex{0};
+  UGuiIconWarmupQueue Warmup;
 
   static constexpr int kIconSize = 64;
   static constexpr float kIconYaw = 45.0f;

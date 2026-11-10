@@ -1,11 +1,14 @@
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Objects/ObjectUtil.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenBlockResolver.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
@@ -22,8 +25,10 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace cutum
 {
@@ -33,6 +38,78 @@ namespace
 
 std::mutex gPopulateDiagMutex;
 ChunkPopulateTiming gLastPopulateTiming;
+
+struct PopulateMetricSamples
+{
+  std::vector<double> total;
+  std::vector<double> sample;
+  std::vector<double> terrain;
+  std::vector<double> carve;
+  std::vector<double> post;
+  std::vector<double> seal;
+  std::vector<double> mudflow;
+  std::vector<double> pocketSeal;
+  std::vector<double> permeableSeal;
+  std::vector<double> permeableFloorScan;
+  std::vector<double> permeableRestore;
+  std::vector<double> permeableWaterlog;
+  std::vector<double> pocketReseal;
+  std::vector<double> vegetationPrune;
+  std::array<std::vector<double>, WorldGenStageIdCount> postStages;
+};
+
+PopulateMetricSamples gPopulateSamples;
+ChunkPopulateSummary gPopulateSummary;
+
+void AppendPopulateMetric(std::vector<double> &samples, ChunkPopulateMetric &metric,
+                          double value)
+{
+  samples.push_back(value);
+  metric.totalMs += value;
+  metric.maxMs = std::max(metric.maxMs, value);
+}
+
+void FinalizePopulateMetric(std::vector<double> &samples, ChunkPopulateMetric &metric)
+{
+  metric.count = samples.size();
+  if (samples.empty())
+  {
+    return;
+  }
+  std::sort(samples.begin(), samples.end());
+  metric.medianMs = samples[(samples.size() - 1) / 2];
+  metric.p95Ms = samples[static_cast<size_t>(
+      std::ceil(static_cast<double>(samples.size()) * 0.95) - 1.0)];
+}
+
+void FinalizePopulateSummary()
+{
+  FinalizePopulateMetric(gPopulateSamples.total, gPopulateSummary.total);
+  FinalizePopulateMetric(gPopulateSamples.sample, gPopulateSummary.sample);
+  FinalizePopulateMetric(gPopulateSamples.terrain, gPopulateSummary.terrain);
+  FinalizePopulateMetric(gPopulateSamples.carve, gPopulateSummary.carve);
+  FinalizePopulateMetric(gPopulateSamples.post, gPopulateSummary.post);
+  FinalizePopulateMetric(gPopulateSamples.seal, gPopulateSummary.seal);
+  FinalizePopulateMetric(gPopulateSamples.mudflow, gPopulateSummary.mudflow);
+  FinalizePopulateMetric(gPopulateSamples.pocketSeal, gPopulateSummary.pocketSeal);
+  FinalizePopulateMetric(gPopulateSamples.permeableSeal,
+                         gPopulateSummary.permeableSeal);
+  FinalizePopulateMetric(gPopulateSamples.permeableFloorScan,
+                         gPopulateSummary.permeableFloorScan);
+  FinalizePopulateMetric(gPopulateSamples.permeableRestore,
+                         gPopulateSummary.permeableRestore);
+  FinalizePopulateMetric(gPopulateSamples.permeableWaterlog,
+                         gPopulateSummary.permeableWaterlog);
+  FinalizePopulateMetric(gPopulateSamples.pocketReseal,
+                         gPopulateSummary.pocketReseal);
+  FinalizePopulateMetric(gPopulateSamples.vegetationPrune,
+                         gPopulateSummary.vegetationPrune);
+  for (size_t i = 0; i < gPopulateSamples.postStages.size(); ++i)
+  {
+    FinalizePopulateMetric(gPopulateSamples.postStages[i],
+                           gPopulateSummary.postStages[i]);
+  }
+}
 
 bool ChunkPassesCaveGate(int chunkWorldX, int chunkWorldZ, uint32_t seed,
                          const CaveParams &params)
@@ -130,13 +207,43 @@ double ElapsedMs(std::chrono::steady_clock::time_point start)
       .count();
 }
 
+int FloraFeatureBlockRank(const std::string &blockName)
+{
+  if (blockName.find("leaves") != std::string::npos ||
+      blockName.find("needles") != std::string::npos ||
+      blockName.find("flower") != std::string::npos ||
+      blockName.find("grass") != std::string::npos ||
+      blockName.find("mushroom") != std::string::npos)
+  {
+    return 1;
+  }
+  if (blockName.find("stem") != std::string::npos ||
+      blockName.find("branch") != std::string::npos)
+  {
+    return 2;
+  }
+  if (blockName.find("tree") != std::string::npos ||
+      blockName.find("log") != std::string::npos ||
+      blockName.find("trunk") != std::string::npos ||
+      blockName.find("bark") != std::string::npos)
+  {
+    return 3;
+  }
+  return 1;
+}
+
 /// RAII: mirror gen-scratch SetBlock/SetFluid into the transfer ChunkBuffer.
 struct CaptureBufferScope
 {
   UBlockWorld &World;
-  explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer)
+  explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer,
+                              glm::ivec3 ownerChunk,
+                              const UBlockRegistry &registry,
+                              const std::vector<std::pair<BlockId, int>>
+                                  &treeBlockRanks)
       : World(world)
   {
+    buffer.SetWorldGenOwnerChunk(ownerChunk, registry, treeBlockRanks);
     World.SetCaptureBuffer(&buffer);
   }
   ~CaptureBufferScope() { World.SetCaptureBuffer(nullptr); }
@@ -146,16 +253,171 @@ struct CaptureBufferScope
 
 } // namespace
 
-void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing)
+/// Carry deterministic priorities for all flora voxels across chunk borders.
+std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
+    UBlockRegistry &registry, UObjectLibrary *objects,
+    const std::string &ownerPackId, const ObjectFeatureConfig *features)
+{
+  std::vector<std::pair<BlockId, int>> ranks;
+  if (!features)
+  {
+    return ranks;
+  }
+  const auto addBlock = [&](BlockId id, int rank)
+  {
+    if (id == BLOCK_AIR || rank <= 0)
+    {
+      return;
+    }
+    auto found = std::find_if(
+        ranks.begin(), ranks.end(),
+        [id](const std::pair<BlockId, int> &entry) { return entry.first == id; });
+    if (found == ranks.end())
+    {
+      ranks.emplace_back(id, rank);
+    }
+    else
+    {
+      found->second = std::max(found->second, rank);
+    }
+  };
+  const auto collectPool = [&](const std::vector<ObjectFeatureRule> &rules)
+  {
+    for (const ObjectFeatureRule &rule : rules)
+    {
+      if (rule.Mode == ObjectFeatureRuleMode::ProceduralTree)
+      {
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Tree.TrunkBlock),
+                 3);
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Tree.LeavesBlock),
+                 1);
+        continue;
+      }
+      if (rule.Mode == ObjectFeatureRuleMode::ProceduralShrub)
+      {
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Shrub.StemBlock),
+                 2);
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Shrub.LeavesBlock),
+                 1);
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Shrub.AccentBlock),
+                 1);
+        continue;
+      }
+      if (rule.Mode == ObjectFeatureRuleMode::ScatterBlocks)
+      {
+        addBlock(ResolvePackScatterBlockId(registry, ownerPackId,
+                                           rule.Scatter.BlockName),
+                 1);
+        continue;
+      }
+      if (rule.Mode != ObjectFeatureRuleMode::Object || !objects)
+      {
+        continue;
+      }
+      const auto object = objects->GetShared(rule.ObjectName);
+      if (!object)
+      {
+        continue;
+      }
+      for (const ObjectVoxel &voxel : object->voxels)
+      {
+        const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
+        if (id == BLOCK_AIR)
+        {
+          continue;
+        }
+        addBlock(id, FloraFeatureBlockRank(registry.GetTypeNameById(id)));
+      }
+    }
+  };
+  collectPool(features->Vegetation);
+  collectPool(features->GroundCover);
+  // Decoration (surface logs/ruins) and Structures write through the same
+  // capture buffer; without ranks their pack-specific voxels would be
+  // treated as terrain by cross-chunk conflict rules.
+  collectPool(features->Decoration);
+  collectPool(features->Structures);
+  return ranks;
+}
+
+void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing,
+                                      bool discarded)
 {
   std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
   gLastPopulateTiming = timing;
+  if (discarded)
+  {
+    ++gPopulateSummary.discardedCount;
+    return;
+  }
+  ++gPopulateSummary.completedCount;
+  AppendPopulateMetric(gPopulateSamples.total, gPopulateSummary.total, timing.totalMs);
+  AppendPopulateMetric(gPopulateSamples.sample, gPopulateSummary.sample,
+                       timing.sampleMs);
+  AppendPopulateMetric(gPopulateSamples.terrain, gPopulateSummary.terrain,
+                       timing.terrainMs);
+  AppendPopulateMetric(gPopulateSamples.carve, gPopulateSummary.carve, timing.carveMs);
+  AppendPopulateMetric(gPopulateSamples.post, gPopulateSummary.post, timing.postMs);
+  AppendPopulateMetric(gPopulateSamples.seal, gPopulateSummary.seal, timing.sealMs);
+  if (timing.detailEnabled)
+  {
+    ++gPopulateSummary.detailCount;
+    AppendPopulateMetric(gPopulateSamples.mudflow, gPopulateSummary.mudflow,
+                         timing.mudflowMs);
+    AppendPopulateMetric(gPopulateSamples.pocketSeal, gPopulateSummary.pocketSeal,
+                         timing.pocketSealMs);
+    AppendPopulateMetric(gPopulateSamples.permeableSeal,
+                         gPopulateSummary.permeableSeal, timing.permeableSealMs);
+    AppendPopulateMetric(gPopulateSamples.permeableFloorScan,
+                         gPopulateSummary.permeableFloorScan,
+                         timing.permeableFloorScanMs);
+    AppendPopulateMetric(gPopulateSamples.permeableRestore,
+                         gPopulateSummary.permeableRestore,
+                         timing.permeableRestoreMs);
+    AppendPopulateMetric(gPopulateSamples.permeableWaterlog,
+                         gPopulateSummary.permeableWaterlog,
+                         timing.permeableWaterlogMs);
+    AppendPopulateMetric(gPopulateSamples.pocketReseal,
+                         gPopulateSummary.pocketReseal, timing.pocketResealMs);
+    AppendPopulateMetric(gPopulateSamples.vegetationPrune,
+                         gPopulateSummary.vegetationPrune,
+                         timing.vegetationPruneMs);
+    for (size_t i = 0; i < timing.postStageMs.size(); ++i)
+    {
+      AppendPopulateMetric(gPopulateSamples.postStages[i],
+                           gPopulateSummary.postStages[i], timing.postStageMs[i]);
+    }
+  }
+  gPopulateSummary.mudflowColumns += timing.mudflowColumns;
+  gPopulateSummary.mudflowVoxelsMoved += timing.mudflowVoxelsMoved;
+  gPopulateSummary.pocketVoxelsFilled += timing.pocketVoxelsFilled;
+  gPopulateSummary.permeableColumns += timing.permeableColumns;
+  gPopulateSummary.permeableColumnsChanged += timing.permeableColumnsChanged;
+  gPopulateSummary.permeableFloorGroundChecks += timing.permeableFloorGroundChecks;
+  gPopulateSummary.permeableFloorSlotChecks += timing.permeableFloorSlotChecks;
+  gPopulateSummary.permeableRestoreCells += timing.permeableRestoreCells;
+  gPopulateSummary.permeableWaterlogCells += timing.permeableWaterlogCells;
+  gPopulateSummary.resealVoxelsFilled += timing.resealVoxelsFilled;
+  gPopulateSummary.pruneColumns += timing.pruneColumns;
+  gPopulateSummary.prunedVoxels += timing.prunedVoxels;
 }
 
 ChunkPopulateTiming ChunkPopulateDiagnostics::GetLast()
 {
   std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
   return gLastPopulateTiming;
+}
+
+ChunkPopulateSummary ChunkPopulateDiagnostics::GetSummary()
+{
+  std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
+  FinalizePopulateSummary();
+  return gPopulateSummary;
 }
 
 UPipelineChunkPopulator::UPipelineChunkPopulator(
@@ -176,6 +438,11 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   const auto populate_start = std::chrono::steady_clock::now();
   ChunkPopulateTiming timing{};
+  CoarseHeightCacheStats coarse_cache_stats{};
+  UDensityFieldSampler::SamplingCacheStats sampling_cache_stats{};
+  const bool audit_seal =
+      std::getenv("CUBATARIUM_WORLDGEN_SEAL_AUDIT") != nullptr;
+  timing.detailEnabled = audit_seal;
 
   ChunkPopulateResult result;
   result.coord = request.chunkCoord;
@@ -183,6 +450,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   ProceduralSettings settings = request.settings;
   if (settings.EnableCaves &&
+      settings.TerrainBackendMode != TerrainBackend::Density3D &&
       !ChunkPassesCaveGate(request.chunkCoord.x * CHUNK_SIZE,
                            request.chunkCoord.z * CHUNK_SIZE, settings.Seed,
                            settings.Caves))
@@ -201,10 +469,15 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   ThreadLocalPipelineState &tls = GetThreadLocalPipeline();
   UBlockWorld &genWorld = tls.world;
   ResetScatterChunkCounts();
+  ObjectFeatureChunkDiagnosticsScope objectFeatureDiagnostics(audit_seal);
 
   // D1: write gen scratch + transfer buffer together (no final world→buffer scan).
   result.buffer.Clear();
-  CaptureBufferScope capture_scope(genWorld, result.buffer);
+  CaptureBufferScope capture_scope(genWorld, result.buffer, request.chunkCoord,
+                                   Registry,
+                                   CollectFloraFeatureBlockRanks(
+                                       Registry, objects, WorldgenOwnerPackId,
+                                       pin.Get().Features.get()));
 
   const int base_x = request.chunkCoord.x * CHUNK_SIZE;
   const int base_z = request.chunkCoord.z * CHUNK_SIZE;
@@ -307,12 +580,16 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     result.discarded = true;
     result.buffer.Clear();
     timing.totalMs = ElapsedMs(populate_start);
-    ChunkPopulateDiagnostics::Record(timing);
+    ChunkPopulateDiagnostics::Record(timing, result.discarded);
     return result;
   }
 
   if (composable)
   {
+    const auto seal_cancelled = [&]() -> bool
+    {
+      return request.shouldCancel && request.shouldCancel();
+    };
     const ComposableTerrainMode terrain_mode = composable->GetConfig().TerrainMode;
     if (terrain_mode != ComposableTerrainMode::Flat &&
         terrain_mode != ComposableTerrainMode::LegacyHash)
@@ -346,6 +623,17 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             valley_params.widthSigma = pack.WidthSigma;
             valley_params.aquaticDepthScale = pack.AquaticDepthScale;
             valley_params.riverNoiseScale = pack.RiverNoiseScale;
+            valley_params.fillWater = pack.FillWater;
+            valley_params.waterMinStrength = pack.WaterMinStrength;
+            valley_params.waterMinMoisture = pack.WaterMinMoisture;
+            valley_params.waterSurfaceDepth = pack.WaterSurfaceDepth;
+            valley_params.maxWaterElevationAboveSea =
+                pack.WaterMaxElevationAboveSea;
+          }
+          if (settings.WorldGenProfileVersion >= 3)
+          {
+            valley_params.lowlandOnly = true;
+            valley_params.warpBlocks = 36.0f;
           }
           CarveChunkValleys(ctx, base_x, base_z, settings.Seed, valley_params,
                             settings.SeaLevel, settings.Tuning.riverWidth,
@@ -363,30 +651,55 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       }
       timing.carveMs = ElapsedMs(carve_start);
 
+      // Mudflow runs BEFORE the post-terrain stages: vegetation must root on
+      // the post-erosion surface, otherwise erosion undercuts freshly placed
+      // trunks and leaves them standing on air.
+      if (settings.Tuning.useMudflowErosion && !seal_cancelled())
+      {
+        const auto stage_start = audit_seal
+                                     ? std::chrono::steady_clock::now()
+                                     : std::chrono::steady_clock::time_point{};
+        int moved = 0;
+        ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2, &moved);
+        timing.mudflowColumns += CHUNK_SIZE * CHUNK_SIZE;
+        timing.mudflowVoxelsMoved += static_cast<uint64_t>(moved);
+        if (audit_seal)
+        {
+          timing.mudflowMs = ElapsedMs(stage_start);
+        }
+      }
+
       const uint32_t skip_chunk_stages =
           WorldGenStageSkipBit(WorldGenStageId::Valleys) |
           WorldGenStageSkipBit(WorldGenStageId::Ravines);
 
       const auto post_start = std::chrono::steady_clock::now();
-      for (size_t i = 0; i < column_count; ++i)
+      // Tree/object placement can reject a feature when an earlier feature
+      // already occupies its footprint. Use a canonical order here so the
+      // result does not depend on the player-centered order used to prime the
+      // terrain cache above.
+      size_t post_index = 0;
+      for (int lz = 0; lz < CHUNK_SIZE && !cancelled; ++lz)
       {
-        if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
+        for (int lx = 0; lx < CHUNK_SIZE; ++lx, ++post_index)
         {
-          cancelled = true;
-          break;
+          if (request.shouldCancel && (post_index % 4) == 0 &&
+              request.shouldCancel())
+          {
+            cancelled = true;
+            break;
+          }
+          if (!sample_valid[lz][lx])
+          {
+            continue;
+          }
+          const int world_x = base_x + lx;
+          const int world_z = base_z + lz;
+          UBlockWorldColumnWriter writer(genWorld, Registry);
+          UColumnGenerationService::GenerateColumnPostTerrain(
+              *composable, writer, world_x, world_z, skip_chunk_stages,
+              samples[lz][lx], audit_seal ? &timing.postStageMs : nullptr);
         }
-        const int lx = columns[i].first;
-        const int lz = columns[i].second;
-        const int world_x = base_x + lx;
-        const int world_z = base_z + lz;
-        if (!sample_valid[lz][lx])
-        {
-          continue;
-        }
-        UBlockWorldColumnWriter writer(genWorld, Registry);
-        UColumnGenerationService::GenerateColumnPostTerrain(
-            *composable, writer, world_x, world_z, skip_chunk_stages,
-            samples[lz][lx]);
       }
       timing.postMs = ElapsedMs(post_start);
     }
@@ -400,30 +713,57 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       result.discarded = true;
       result.buffer.Clear();
       timing.totalMs = ElapsedMs(populate_start);
-      ChunkPopulateDiagnostics::Record(timing);
+      ChunkPopulateDiagnostics::Record(timing, result.discarded);
       return result;
     }
 
     const auto seal_start = std::chrono::steady_clock::now();
-    auto seal_cancelled = [&]() -> bool
-    {
-      return request.shouldCancel && request.shouldCancel();
-    };
-    if (settings.Tuning.useMudflowErosion && !seal_cancelled())
-    {
-      ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
-    }
     // Pocket seal on worker (with shouldCancel). Main only drains cheap ShoreAir.
     if (settings.FillWater && !seal_cancelled())
     {
-      SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
-      if (!seal_cancelled() &&
-          SealFluidPermeableDecorInChunk(composable->GetContext(), base_x,
-                                         base_z))
+      auto stage_start = audit_seal
+                             ? std::chrono::steady_clock::now()
+                             : std::chrono::steady_clock::time_point{};
+      int filled = 0;
+      SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z, &filled);
+      timing.pocketVoxelsFilled = static_cast<uint64_t>(filled);
+      if (audit_seal)
       {
-        if (!seal_cancelled())
+        timing.pocketSealMs = ElapsedMs(stage_start);
+      }
+      if (!seal_cancelled())
+      {
+        stage_start = audit_seal ? std::chrono::steady_clock::now()
+                                 : std::chrono::steady_clock::time_point{};
+        int columns_changed = 0;
+        FluidPermeableSealStats permeableStats;
+        const bool permeable_changed = SealFluidPermeableDecorInChunk(
+            composable->GetContext(), base_x, base_z, &columns_changed,
+            audit_seal ? &permeableStats : nullptr);
+        timing.permeableColumns = CHUNK_SIZE * CHUNK_SIZE;
+        timing.permeableColumnsChanged = static_cast<uint64_t>(columns_changed);
+        timing.permeableFloorScanMs = permeableStats.floorScanMs;
+        timing.permeableRestoreMs = permeableStats.restoreMs;
+        timing.permeableWaterlogMs = permeableStats.waterlogMs;
+        timing.permeableFloorGroundChecks = permeableStats.floorGroundChecks;
+        timing.permeableFloorSlotChecks = permeableStats.floorSlotChecks;
+        timing.permeableRestoreCells = permeableStats.restoreCells;
+        timing.permeableWaterlogCells = permeableStats.waterlogCells;
+        if (audit_seal)
         {
-          SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+          timing.permeableSealMs = ElapsedMs(stage_start);
+        }
+        if (permeable_changed && !seal_cancelled())
+        {
+          stage_start = audit_seal ? std::chrono::steady_clock::now()
+                                   : std::chrono::steady_clock::time_point{};
+          filled = 0;
+          SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z, &filled);
+          timing.resealVoxelsFilled = static_cast<uint64_t>(filled);
+          if (audit_seal)
+          {
+            timing.pocketResealMs = ElapsedMs(stage_start);
+          }
         }
       }
       result.fluidSealed = !seal_cancelled();
@@ -438,21 +778,38 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       result.buffer.Clear();
       timing.sealMs = ElapsedMs(seal_start);
       timing.totalMs = ElapsedMs(populate_start);
-      ChunkPopulateDiagnostics::Record(timing);
+      ChunkPopulateDiagnostics::Record(timing, result.discarded);
       return result;
     }
-    PruneFloatingVegetationInChunk(composable->GetContext(), base_x, base_z);
+    const auto prune_start = audit_seal
+                                 ? std::chrono::steady_clock::now()
+                                 : std::chrono::steady_clock::time_point{};
+    timing.prunedVoxels = static_cast<uint64_t>(PruneFloatingVegetationInChunk(
+        composable->GetContext(), base_x, base_z));
+    timing.pruneColumns = CHUNK_SIZE * CHUNK_SIZE;
+    if (audit_seal)
+    {
+      timing.vegetationPruneMs = ElapsedMs(prune_start);
+    }
     timing.sealMs = ElapsedMs(seal_start);
   }
 
   if (composable)
   {
+    if (const UCoarseHeightCache *cache = composable->GetChunkCoarseCache())
+    {
+      coarse_cache_stats = cache->GetStats();
+    }
+    if (const UDensityFieldSampler *sampler = composable->GetDensitySampler())
+    {
+      sampling_cache_stats = sampler->GetSamplingCacheStats();
+    }
     composable->EndChunkCoarseCache();
   }
   // result.buffer already mirrors genWorld via CaptureBufferScope (D1).
 
   timing.totalMs = ElapsedMs(populate_start);
-  ChunkPopulateDiagnostics::Record(timing);
+  ChunkPopulateDiagnostics::Record(timing, result.discarded);
 
   static thread_local double s_last_log_ms = 0.0;
   static thread_local auto s_last_log_tp = std::chrono::steady_clock::now();
@@ -471,7 +828,25 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             " terrain_ms=" + std::to_string(timing.terrainMs) +
             " carve_ms=" + std::to_string(timing.carveMs) +
             " post_ms=" + std::to_string(timing.postMs) +
-            " seal_ms=" + std::to_string(timing.sealMs));
+            " seal_ms=" + std::to_string(timing.sealMs) +
+            " coarse_hits=" + std::to_string(coarse_cache_stats.Hits) +
+            " coarse_misses=" + std::to_string(coarse_cache_stats.Misses) +
+            " coarse_out_of_range=" +
+            std::to_string(coarse_cache_stats.OutOfRange) +
+            " route_hits=" + std::to_string(sampling_cache_stats.RouteHits) +
+            " route_misses=" + std::to_string(sampling_cache_stats.RouteMisses) +
+            " wobble_hits=" + std::to_string(sampling_cache_stats.WobbleHits) +
+            " wobble_misses=" + std::to_string(sampling_cache_stats.WobbleMisses) +
+            " sampling_out_of_range=" +
+            std::to_string(sampling_cache_stats.OutOfRange) +
+            (audit_seal
+                 ? (" mudflow_ms=" + std::to_string(timing.mudflowMs) +
+                    " pocket_ms=" + std::to_string(timing.pocketSealMs) +
+                    " permeable_ms=" +
+                        std::to_string(timing.permeableSealMs) +
+                    " reseal_ms=" + std::to_string(timing.pocketResealMs) +
+                    " prune_ms=" + std::to_string(timing.vegetationPruneMs))
+                 : std::string()));
     s_last_log_tp = now;
     s_last_log_ms = timing.totalMs;
   }

@@ -7,7 +7,17 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 53
+    "sort_order": 53,
+    "natural_spawnable": true,
+    "spawn_weight": 1.0,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "beach",
+      "plains",
+      "savanna",
+      "forest"
+    ]
   },
   "role": "mob",
   "bounds": {
@@ -125,6 +135,6 @@
       64,
       32
     ],
-    "animation_profile": "serpentine"
+    "animation_profile": "quadruped"
   }
 }

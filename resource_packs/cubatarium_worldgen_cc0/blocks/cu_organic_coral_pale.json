@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_coral_pale",
+  "id": 2277,
+  "displayName": "Organic Coral Pale",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_coral_pale",
+    "cu_organic_coral_pale",
+    "cu_organic_coral_pale",
+    "cu_organic_coral_pale",
+    "cu_organic_coral_pale",
+    "cu_organic_coral_pale"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "cluster",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "coral",
+    "variant": "pale"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

@@ -21,10 +21,13 @@
   },
   "features": {
     "vegetation": {
-      "tree_acacia": 1.25
+      "tree_acacia": 1.25,
+      "tree_procedural_acacia": 1.35
     },
     "ground_cover": {
-      "bush_acacia": 0.9
+      "bush_acacia": 0.9,
+      "shrub_procedural_acacia": 1.1,
+      "shrub_procedural_common": 0.75
     }
   }
 }

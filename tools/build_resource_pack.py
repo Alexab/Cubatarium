@@ -194,12 +194,18 @@ def build_pack(
                 raise ValueError(f"block {name}: need 6 or 12 face stems")
             types = spec.get("types", ["natural"])
         block = {"name": name, "types": types, "textures": stems}
-        if "physics" in spec and isinstance(spec, dict):
-            block["physics"] = spec["physics"]
-        if "render" in spec and isinstance(spec, dict):
-            block["render"] = spec["render"]
-        if "animation" in spec and isinstance(spec, dict):
-            block["animation"] = spec["animation"]
+        if isinstance(spec, dict):
+            for key in (
+                "physics",
+                "render",
+                "animation",
+                "hardness",
+                "dig",
+                "displayName",
+                "lighting",
+            ):
+                if key in spec:
+                    block[key] = spec[key]
         apply_canonical_meta_to_block_json(block)
         (blocks_dir / f"{name}.json").write_text(json.dumps(block, indent=2), encoding="utf-8")
 

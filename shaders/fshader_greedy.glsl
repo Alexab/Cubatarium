@@ -1,11 +1,13 @@
 #version 330 core
 
 in vec3 vWorldPos;
+flat in vec3 vInstanceCell;
 in vec2 vUV;
 flat in int vFaceIndex;
 in float vSkyLight;
 in float vBlockLight;
 in float vWetness;
+flat in float vLightPreview;
 
 out vec4 FragColor;
 
@@ -13,6 +15,9 @@ uniform sampler2D texture0;
 uniform int uAnimFrame;
 uniform int uAnimFrameCount;
 uniform int uAlphaCutout;
+uniform float uTextureVariation;
+uniform int uMaterialSeed;
+uniform float uMaterialTimePhase;
 // uGreedyShaderMode: 0 = color, 1 = shell depth (discard a < threshold), 2 = fuzzy (discard a >= threshold)
 uniform int uGreedyShaderMode;
 uniform float uShellAlphaThreshold;
@@ -44,6 +49,14 @@ uniform float uEnvNightFactor;
 uniform float uEnvSkyLightScale;
 uniform float uEnvLightDebug;
 uniform float uEnvLightDebugMode;
+uniform float uLightPreviewOverride;
+// Default 1.0: the alpha multiplier is a per-batch fluid tuning knob, but this
+// fragment shader is shared by three programs (greedy, packed_greedy,
+// cross_instanced) and only the greedy path sets the uniform explicitly.
+// A declaration without an initializer leaves the GL default 0.0 on the other
+// programs, zeroing every fragment alpha and discarding all cross plants.
+uniform float uFluidAlpha = 1.0;
+uniform float uLightPreviewFade;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
 uniform vec2 uFluidSurfaceOrigin;
@@ -57,20 +70,27 @@ uniform sampler2D uOpaqueDepthMap;
 uniform float uOpaqueDepthGuard;
 uniform vec2 uOpaqueDepthScreenSize;
 uniform float uOpaqueDepthBias;
+uniform float uDebugTransparentFragmentMarker;
+uniform float uDebugFluidFragmentMarker;
 
 const int kCrossFaceIndex = 127;
 
 float surfaceYAt(vec2 worldXZ) {
     vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
-        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnSurfaceY < 1e8) {
+        if (uUnderwaterFogEnabled > 0.5 && uUnderwaterFogSubmerged > 0.5 &&
+            uCameraColumnSurfaceY < 1e8) {
             return uCameraColumnSurfaceY;
         }
         return 1e9;
     }
     float h = texture(uFluidSurfaceYMap, uv).r;
     if (h < -500.0) {
-        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnSurfaceY < 1e8) {
+        // Camera-column fallback only while submerged: with the camera above
+        // water, sentinel texels (map window edge / not yet filled) must not
+        // tint land fragments with the camera's own water column.
+        if (uUnderwaterFogEnabled > 0.5 && uUnderwaterFogSubmerged > 0.5 &&
+            uCameraColumnSurfaceY < 1e8) {
             return uCameraColumnSurfaceY;
         }
         return 1e9;
@@ -99,14 +119,17 @@ uint fluidIndexAt(vec2 worldXZ) {
 float fluidBottomBlockYAt(vec2 worldXZ) {
     vec2 uv = (worldXZ - uFluidSurfaceOrigin) * uFluidSurfaceInvSize;
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
-        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnBottomBlockY < 1e8) {
+        if (uUnderwaterFogEnabled > 0.5 && uUnderwaterFogSubmerged > 0.5 &&
+            uCameraColumnBottomBlockY < 1e8) {
             return uCameraColumnBottomBlockY;
         }
         return 1e9;
     }
     float h = texture(uFluidBottomBlockMap, uv).r;
     if (h < -500.0) {
-        if (uUnderwaterFogEnabled > 0.5 && uCameraColumnBottomBlockY < 1e8) {
+        // Same submerged-only fallback rule as surfaceYAt.
+        if (uUnderwaterFogEnabled > 0.5 && uUnderwaterFogSubmerged > 0.5 &&
+            uCameraColumnBottomBlockY < 1e8) {
             return uCameraColumnBottomBlockY;
         }
         return 1e9;
@@ -135,14 +158,16 @@ void fluidSurfaceContextAt(vec2 worldXZ, out float surface_y, out uint fluid_ind
             continue;
         }
         if (fluid_index == 0u) {
-            surface_y = sy_nb;
-            fluid_index = fi_nb;
-            bottom_block_y = fluidBottomBlockYAt(neighbor);
-        } else if (sy_nb > surface_y) {
+            // Own texel missing: fall back to the neighbor so the waterline
+            // has no gaps at map seams.
             surface_y = sy_nb;
             fluid_index = fi_nb;
             bottom_block_y = fluidBottomBlockYAt(neighbor);
         }
+        // A valid own texel wins even when a neighbor's surface is higher:
+        // taking the max classified fragments above their own water as
+        // "deep underwater" at every level difference (waterlines covering
+        // trunks, water-under-water planes, non-monotonic fog).
     }
 }
 
@@ -164,10 +189,22 @@ float computeDistanceFogFactor(float dist, float fogStart, float fogEnd,
     return max(fogFactor, minBlend);
 }
 
+// Underwater absorption must not depend on weather: the air fog multiplier
+// thins rain fog on purpose, but water depth physics does not change with
+// weather. Raw linear factor with the same min-blend floor.
+float computeUnderwaterFogFactor(float dist, float fogStart, float fogEnd,
+                                 float minBlend) {
+    float fogRange = max(fogEnd - fogStart, 0.001);
+    float fogFactor = clamp((dist - fogStart) / fogRange, 0.0, 1.0);
+    return max(fogFactor, minBlend);
+}
+
 float blockTileCoord(float axis)
 {
     return fract(axis + 0.5);
 }
+
+float materialNoise(vec2 p);
 
 vec2 atlasHalfTexelInset()
 {
@@ -184,35 +221,140 @@ float insetMix(float a, float b, float t, float inset)
     return mix(a + dir * safeInset, b - dir * safeInset, t);
 }
 
+vec2 materialPlanePosition(int faceIndex, vec3 worldPos)
+{
+    if (faceIndex < 4) {
+        return (faceIndex == 0 || faceIndex == 2)
+            ? worldPos.xy
+            : worldPos.zy;
+    }
+    return worldPos.xz;
+}
+
+uint hashMix32(uint value)
+{
+    value = value ^ (value >> 16u);
+    value *= 0x7feb352du;
+    value = value ^ (value >> 15u);
+    value *= 0x846ca68bu;
+    return value ^ (value >> 16u);
+}
+
+uint hashVoxelCell(ivec3 cell, uint salt)
+{
+    uint value = uint(cell.x) * 0x8da6b343u;
+    value ^= uint(cell.y) * 0xd8163841u;
+    value ^= uint(cell.z) * 0xcb1ab31fu;
+    return hashMix32(value ^ salt);
+}
+
+float hashUnit(uint value)
+{
+    return float(value >> 8u) * (1.0 / 16777216.0);
+}
+
+float materialHash(vec2 p)
+{
+    ivec2 cell = ivec2(floor(p));
+    return hashUnit(hashVoxelCell(ivec3(cell, 0), 0x68bc21ebu));
+}
+
 vec2 atlasUVFromWorldPos(int faceIndex, vec3 worldPos)
 {
     const float kCubeShift = 1.0 / 6.0;
     float u0 = float(faceIndex) * kCubeShift;
     float u1 = float(faceIndex + 1) * kCubeShift;
     vec2 inset = atlasHalfTexelInset();
-
+    vec2 tile;
     if (faceIndex == 0) {
-        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
-                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
+        tile = vec2(blockTileCoord(worldPos.x), blockTileCoord(worldPos.y));
+    } else if (faceIndex == 1) {
+        tile = vec2(1.0 - blockTileCoord(worldPos.z), blockTileCoord(worldPos.y));
+    } else if (faceIndex == 2) {
+        tile = vec2(1.0 - blockTileCoord(worldPos.x), blockTileCoord(worldPos.y));
+    } else if (faceIndex == 3) {
+        tile = vec2(blockTileCoord(worldPos.z), blockTileCoord(worldPos.y));
+    } else if (faceIndex == 4) {
+        tile = vec2(blockTileCoord(worldPos.x), 1.0 - blockTileCoord(worldPos.z));
+    } else {
+        tile = vec2(blockTileCoord(worldPos.x), blockTileCoord(worldPos.z));
     }
-    if (faceIndex == 1) {
-        return vec2(insetMix(u0, u1, 1.0 - blockTileCoord(worldPos.z), inset.x),
-                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
+    vec2 localTile = tile;
+    // Water's small source tile repeats too clearly across broad surfaces.
+    // Slowly warp its phase with a continuous world-space field so neighboring
+    // blocks meet without seams while the texture pattern drifts naturally.
+    if (uTextureVariation >= 0.34 && uTextureVariation <= 0.40 && faceIndex >= 4) {
+        vec2 waterPlane = worldPos.xz;
+        vec2 phaseWarp = vec2(
+            materialNoise(waterPlane * 0.27 + vec2(17.8, 9.3)),
+            materialNoise(waterPlane * 0.27 + vec2(3.2, 29.6))
+        ) - 0.5;
+        tile = fract(tile + phaseWarp * 1.08);
     }
-    if (faceIndex == 2) {
-        return vec2(insetMix(u0, u1, 1.0 - blockTileCoord(worldPos.x), inset.x),
-                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
+    // Keep one continuous, unmodified tile as the seam-safe fallback for the
+    // randomized interior region below.
+    vec2 seamlessTile = tile;
+    // Per-block discrete tile transforms break large repeated ground and rock
+    // patterns. Blend them back to the continuous tile at face boundaries so
+    // randomized rotations and phase shifts cannot create a block-sized seam.
+    // Structured blocks may still use safe rotations on their isotropic top
+    // and bottom tiles. On directional side faces, vary only the horizontal
+    // phase so bark, grass layers, and masonry keep their intended orientation.
+    // Water already receives continuous world-space UV warping and lighting
+    // below. Independent per-voxel transforms leave square brightness seams
+    // on lakes, so keep its atlas coordinates continuous across block edges.
+    bool canTransformTile = uTextureVariation >= 0.75 ||
+                            (uTextureVariation >= 0.45 && faceIndex >= 4);
+    // Bark uses the 0.52-0.74 range: keep its vertical grain unrotated, while
+    // allowing both-axis texel phase changes so stacked logs do not form the
+    // same horizontal bands at every block boundary. Grass-side layers stay
+    // below 0.52 and only shift horizontally, preserving their top edge.
+    bool directionalPhaseOnly = uTextureVariation >= 0.45 &&
+                                 uTextureVariation < 0.75 && faceIndex < 4;
+    if (canTransformTile || directionalPhaseOnly) {
+        ivec3 cell = ivec3(floor(worldPos + vec3(0.5)));
+        uint faceSalt = uint(faceIndex + 1) * 0x9e3779b9u;
+        uint seed = hashVoxelCell(cell, faceSalt);
+        vec2 randomizedTile = tile;
+        if (canTransformTile) {
+            float transform = floor(hashUnit(hashMix32(seed ^ 0xa511e9b3u)) * 8.0);
+            float rotation = mod(transform, 4.0);
+            if (rotation < 0.5) {
+                randomizedTile = vec2(randomizedTile.y, 1.0 - randomizedTile.x);
+            } else if (rotation < 1.5) {
+                randomizedTile = vec2(1.0 - randomizedTile.x, 1.0 - randomizedTile.y);
+            } else if (rotation < 2.5) {
+                randomizedTile = vec2(1.0 - randomizedTile.y, randomizedTile.x);
+            }
+            if (transform >= 4.0) {
+                randomizedTile.x = 1.0 - randomizedTile.x;
+            }
+        }
+        vec2 tileResolution = vec2(textureSize(texture0, 0));
+        tileResolution.x /= 6.0;
+        tileResolution.y /= max(1.0, float(uAnimFrameCount));
+        vec2 offsetRandom = vec2(
+            hashUnit(hashMix32(seed ^ 0x63d83595u)),
+            hashUnit(hashMix32(seed ^ 0xb5297a4du))
+        );
+        if (directionalPhaseOnly && uTextureVariation < 0.52) {
+            offsetRandom.y = 0.0;
+        }
+        // Keep randomized offsets on texel boundaries so nearest-filtered
+        // 16px materials do not become subpixel-blurred or unevenly tiled.
+        vec2 offset = floor(offsetRandom * tileResolution * clamp(uTextureVariation, 0.0, 1.0)) / tileResolution;
+        randomizedTile = fract(randomizedTile + offset);
+        vec2 edgeTexels = min(localTile, vec2(1.0) - localTile) * tileResolution;
+        float edgeDistanceTexels = min(edgeTexels.x, edgeTexels.y);
+        // Preserve crisp pixel art: reserve the outer texel for the shared
+        // tile, then switch to the deterministic transform without blending.
+        float transformWeight = step(1.0, edgeDistanceTexels);
+        tile = mix(seamlessTile, randomizedTile, transformWeight);
     }
-    if (faceIndex == 3) {
-        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.z), inset.x),
-                    insetMix(1.0, 0.0, blockTileCoord(worldPos.y), inset.y));
-    }
-    if (faceIndex == 4) {
-        return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
-                    insetMix(0.0, 1.0, 1.0 - blockTileCoord(worldPos.z), inset.y));
-    }
-    return vec2(insetMix(u0, u1, blockTileCoord(worldPos.x), inset.x),
-                insetMix(0.0, 1.0, blockTileCoord(worldPos.z), inset.y));
+    float v0 = faceIndex < 4 ? 1.0 : 0.0;
+    float v1 = faceIndex < 4 ? 0.0 : 1.0;
+    return vec2(insetMix(u0, u1, tile.x, inset.x),
+                insetMix(v0, v1, tile.y, inset.y));
 }
 
 vec2 crossAtlasUV(vec2 meshUV)
@@ -221,12 +363,126 @@ vec2 crossAtlasUV(vec2 meshUV)
     float u0 = 0.0;
     float u1 = kCubeShift;
     vec2 inset = atlasHalfTexelInset();
-    return vec2(insetMix(u0, u1, meshUV.x, inset.x), insetMix(1.0, 0.0, meshUV.y, inset.y));
+    vec2 tile = meshUV;
+    if (uTextureVariation >= 0.75) {
+        ivec3 cell = ivec3(floor(vInstanceCell + vec3(0.5)));
+        uint seed = hashVoxelCell(cell, 0x4f1bbcdcu);
+        float transform = floor(hashUnit(hashMix32(seed ^ 0xa511e9b3u)) * 8.0);
+        float rotation = mod(transform, 4.0);
+        if (rotation < 0.5) {
+            tile = vec2(tile.y, 1.0 - tile.x);
+        } else if (rotation < 1.5) {
+            tile = vec2(1.0 - tile.x, 1.0 - tile.y);
+        } else if (rotation < 2.5) {
+            tile = vec2(1.0 - tile.y, tile.x);
+        }
+        if (transform >= 4.0) {
+            tile.x = 1.0 - tile.x;
+        }
+    }
+    return vec2(insetMix(u0, u1, tile.x, inset.x), insetMix(1.0, 0.0, tile.y, inset.y));
+}
+
+float materialNoise(vec2 p)
+{
+    vec2 cell = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float n00 = materialHash(cell);
+    float n10 = materialHash(cell + vec2(1.0, 0.0));
+    float n01 = materialHash(cell + vec2(0.0, 1.0));
+    float n11 = materialHash(cell + vec2(1.0, 1.0));
+    return mix(mix(n00, n10, f.x), mix(n01, n11, f.x), f.y);
+}
+
+vec4 materialVariation(vec2 planePosition)
+{
+    return vec4(
+        materialNoise(planePosition * 0.16 + vec2(13.7, 3.1)),
+        materialNoise(planePosition * 0.16 + vec2(27.2, 11.3)),
+        materialNoise(planePosition * 0.43 + vec2(4.9, 23.1)),
+        materialNoise(planePosition * 0.43 + vec2(18.4, 7.7))
+    );
+}
+
+float worldGrainNoise(vec2 planePosition)
+{
+    vec2 texelResolution = vec2(textureSize(texture0, 0));
+    texelResolution.x /= 6.0;
+    texelResolution.y /= max(1.0, float(uAnimFrameCount));
+    // A two-texel lattice makes small coherent grain patches instead of
+    // independent salt-and-pepper pixels. The lattice is world-aligned and
+    // matches across neighboring block faces.
+    vec2 latticePosition = (planePosition + vec2(0.5)) * texelResolution * 0.5;
+    vec2 cell = floor(latticePosition);
+    vec2 f = fract(latticePosition);
+    f = f * f * (3.0 - 2.0 * f);
+    uint materialSalt = uint(uMaterialSeed) * 0x9e3779b9u;
+    materialSalt ^= uint(vFaceIndex + 1) * 0x85ebca6bu;
+    ivec2 cellCoord = ivec2(cell);
+    float n00 = hashUnit(hashVoxelCell(
+        ivec3(cellCoord, vFaceIndex), materialSalt ^ 0x68bc21ebu
+    ));
+    float n10 = hashUnit(hashVoxelCell(
+        ivec3(cellCoord + ivec2(1, 0), vFaceIndex), materialSalt ^ 0x68bc21ebu
+    ));
+    float n01 = hashUnit(hashVoxelCell(
+        ivec3(cellCoord + ivec2(0, 1), vFaceIndex), materialSalt ^ 0x68bc21ebu
+    ));
+    float n11 = hashUnit(hashVoxelCell(
+        ivec3(cellCoord + ivec2(1, 1), vFaceIndex), materialSalt ^ 0x68bc21ebu
+    ));
+    return mix(mix(n00, n10, f.x), mix(n01, n11, f.x), f.y);
+}
+
+float waterSurfaceLight(vec2 planePosition)
+{
+    // Use a warped, multi-scale world-space field. Independent smooth fields
+    // at rotated scales break the large patches into irregular ripples while
+    // keeping the result continuous across neighboring fluid blocks.
+    float phase = uMaterialTimePhase * 6.28318530718;
+    vec2 slowFlow = vec2(cos(phase * 0.31), sin(phase * 0.23)) * 0.38;
+    vec2 fastFlow = vec2(sin(phase * 0.73), cos(phase * 0.59)) * 0.19;
+    vec2 coarseWarp = vec2(
+        materialNoise(planePosition * 0.105 + vec2(11.6, 24.2) + slowFlow),
+        materialNoise(planePosition * 0.105 + vec2(26.4, 6.8) - slowFlow)
+    ) - 0.5;
+    vec2 fineWarp = vec2(
+        materialNoise(planePosition * 0.29 + vec2(16.2, 12.7) + fastFlow),
+        materialNoise(planePosition * 0.29 + vec2(7.9, 22.5) - fastFlow)
+    ) - 0.5;
+    vec2 warped = planePosition + coarseWarp * 4.4 + fineWarp * 1.15;
+    vec2 rotatedA = vec2(warped.x * 0.83 - warped.y * 0.56,
+                         warped.x * 0.56 + warped.y * 0.83);
+    vec2 rotatedB = vec2(warped.x * 0.39 + warped.y * 0.92,
+                         -warped.x * 0.92 + warped.y * 0.39);
+    float swell = materialNoise(rotatedA * 0.092 + vec2(8.7, 16.1) + slowFlow * 0.58);
+    float current = materialNoise(rotatedB * 0.245 + vec2(21.4, 4.8) + slowFlow + fastFlow);
+    float ripple = materialNoise(rotatedA * 0.61 + vec2(3.2, 29.6) + fastFlow * 2.1);
+    float microRipple = materialNoise(rotatedB * 1.34 + vec2(19.3, 2.1) + fastFlow * 2.8);
+    float grain = worldGrainNoise(planePosition * 0.45 + slowFlow * 0.22);
+    // Thresholded highlights are broken up by both the fine animated field
+    // and a small world-aligned grain layer; this avoids parallel wave bands
+    // and a visible one-tile motif over broad water surfaces.
+    float crest = smoothstep(0.74, 0.96, ripple)
+                  * smoothstep(0.22, 0.82, current);
+    float grainCrest = smoothstep(0.79, 0.98, mix(microRipple, grain, 0.34))
+                       * smoothstep(0.18, 0.84, ripple);
+    return clamp(0.96 + (swell - 0.5) * 0.20
+                 + (current - 0.5) * 0.28 + (ripple - 0.5) * 0.20
+                 + (microRipple - 0.5) * 0.12 + (grain - 0.5) * 0.12
+                 + crest * 0.12 + grainCrest * 0.06, 0.68, 1.32);
 }
 
 void main()
 {
     vec2 uv;
+    vec2 materialPlane = vec2(0.0);
+    vec4 materialFields = vec4(0.5);
+    if (vFaceIndex != kCrossFaceIndex && uTextureVariation > 0.001) {
+        materialPlane = materialPlanePosition(vFaceIndex, vWorldPos);
+        materialFields = materialVariation(materialPlane);
+    }
     if (vFaceIndex == kCrossFaceIndex) {
         uv = crossAtlasUV(vUV);
     } else {
@@ -237,6 +493,41 @@ void main()
         uv.y = uv.y * frameH + float(uAnimFrame) * frameH;
     }
     FragColor = texture(texture0, uv);
+    if (vFaceIndex != kCrossFaceIndex && uTextureVariation > 0.001) {
+        float variation = clamp(uTextureVariation, 0.0, 1.0);
+        bool waterSurface = variation >= 0.34 && variation <= 0.40;
+        if (waterSurface) {
+            float waterLight = waterSurfaceLight(materialPlane);
+            FragColor.rgb *= waterLight;
+            vec2 glintPlane = vec2(
+                materialPlane.x * 0.86 - materialPlane.y * 0.51,
+                materialPlane.x * 0.51 + materialPlane.y * 0.86
+            );
+            float glintField = materialNoise(
+                glintPlane * 2.65 + vec2(17.8, 9.3)
+                + (materialFields.zw - 0.5) * 0.44
+                + vec2(sin(uMaterialTimePhase * 18.8495559),
+                       cos(uMaterialTimePhase * 12.5663706)) * 0.8
+            );
+            float glint = smoothstep(0.80, 0.97, glintField);
+            FragColor.rgb = mix(FragColor.rgb, vec3(0.30, 0.66, 0.91), glint * 0.26);
+        } else {
+            float spatialTone = mix(materialFields.x, materialFields.w, 0.26);
+            float fineTone = materialNoise(
+                materialPlane * 7.5 + vec2(13.1, 5.7)
+                + (materialFields.zw - 0.5) * 0.68
+            );
+            bool naturalSurface = variation >= 0.75;
+            spatialTone = mix(spatialTone, fineTone, naturalSurface ? 0.36 : 0.72);
+            float fineGrain = naturalSurface
+                ? worldGrainNoise(materialPlane)
+                : materialNoise(materialPlane * 15.0 + vec2(7.3, 29.1));
+            float broadAmplitude = (naturalSurface ? 0.20 : 0.30) * variation;
+            float grainAmplitude = (naturalSurface ? 0.22 : 0.18) * variation;
+            FragColor.rgb *= 1.0 + (spatialTone - 0.5) * broadAmplitude
+                             + (fineGrain - 0.5) * grainAmplitude;
+        }
+    }
     float sky01 = clamp(vSkyLight, 0.0, 1.0);
     float block01 = clamp(vBlockLight, 0.0, 1.0);
     float daySky = clamp(uEnvDayFactor * uEnvSkyLightScale, 0.0, 1.0);
@@ -250,6 +541,25 @@ void main()
     float blockStrength = mix(0.9, 0.35, daySky);
     float blockLit = mix(blockAmbientFloor, blockStrength, block01);
     float lit = clamp(max(skyLit, blockLit), 0.0, 1.0);
+    // Unsettled first meshes use an explicitly marked ambient presentation
+    // until the light solver publishes a replacement. Light debug remains raw.
+    // Upward faces (grass tops, water surfaces) are almost always open to the
+    // sky, so their provisional level follows the daylight instead of the
+    // generic 0.42 floor: an unlit ocean tile used to read as a dark navy
+    // rectangle next to lit water, then jump when its light published.
+    float previewFloor = (vFaceIndex == 4)
+        ? mix(0.42, 0.80, daySky)
+        : 0.42;
+    if ((vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
+        uEnvLightDebugMode <= 0.5) {
+        lit = max(lit, previewFloor);
+    } else if (uLightPreviewFade > 0.001 && uEnvLightDebugMode <= 0.5) {
+        // The chunk just left the ambient preview: ease from the preview level
+        // to the real light instead of snapping (visible light blink).
+        // Ease only the dark-floor part: bright meshes were never raised by the
+        // preview, so they must not be pulled down to the floor here.
+        lit = mix(lit, max(lit, previewFloor), clamp(uLightPreviewFade, 0.0, 1.0));
+    }
     FragColor.rgb *= lit;
     if (uEnvLightDebugMode > 0.5) {
         if (uEnvLightDebugMode < 1.5) {
@@ -271,6 +581,37 @@ void main()
         vec3 cooler = FragColor.rgb * vec3(0.78, 0.82, 0.9);
         FragColor.rgb = mix(FragColor.rgb, cooler, wet * 0.08);
     }
+    // Opt-in fluid forensic marker. Unlike the regular transparent marker,
+    // this runs before alpha and opaque-depth discards so a missing surface
+    // can be classified without changing the normal render path. M578 uses a
+    // single-pass override to remove stencil-shell state from this probe.
+    if (uDebugFluidFragmentMarker > 0.5 &&
+        uGreedyShaderMode == kGreedyModeColor) {
+        bool alpha_cutout_candidate =
+            uAlphaCutout != 0 && FragColor.a < 0.1;
+        bool depth_guard_candidate = false;
+        if (uOpaqueDepthGuard > 0.5 &&
+            uOpaqueDepthScreenSize.x > 0.0) {
+            vec2 depthUv = gl_FragCoord.xy / uOpaqueDepthScreenSize;
+            float opaqueDepth = texture(uOpaqueDepthMap, depthUv).r;
+            depth_guard_candidate =
+                gl_FragCoord.z > opaqueDepth + uOpaqueDepthBias;
+        }
+        if (alpha_cutout_candidate && depth_guard_candidate) {
+            FragColor = vec4(1.0, 1.0, 0.0, 1.0); // yellow: both guards
+        } else if (alpha_cutout_candidate) {
+            FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red: alpha cutout
+        } else if (depth_guard_candidate) {
+            FragColor = vec4(0.0, 0.0, 1.0, 1.0); // blue: opaque depth guard
+        } else {
+            FragColor = vec4(1.0, 0.0, 1.0, 1.0); // magenta: reaches color pass
+        }
+        return;
+    }
+    // Water surfaces render through the transparent pass with a tuned
+    // alpha: an opaque fluid texture turns the surface (seen from below)
+    // and level-step planes into solid navy walls.
+    FragColor.a *= uFluidAlpha;
     if (uAlphaCutout != 0 && FragColor.a < 0.1) {
         discard;
     }
@@ -288,11 +629,16 @@ void main()
             discard;
         }
     }
+    if (uDebugTransparentFragmentMarker > 0.5) {
+        FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        return;
+    }
     bool frag_underwater = false;
+    float underwater_sky_fog = 0.0;
     vec3 underwater_fog_color = uFogColor;
 
     if (uUnderwaterFogEnabled > 0.5 && uFluidSurfaceInvSize.x > 0.0 &&
-        vFaceIndex != kCrossFaceIndex) {
+        (vFaceIndex != kCrossFaceIndex || uUnderwaterFogSubmerged > 0.5)) {
         float sy;
         float bottom_block_y;
         uint fi;
@@ -302,7 +648,10 @@ void main()
         int bottom_block_index_y = int(round(bottom_block_y));
         bool in_fluid_span = false;
         if (uUnderwaterFogSubmerged > 0.5) {
-            in_fluid_span = true;
+            // Camera submerged: the tint still must not reach fragments above
+            // their local water surface (the far shore rises out of the water
+            // and was fogged like the underwater middle ground).
+            in_fluid_span = vWorldPos.y <= sy + 1.01;
         } else if (bottom_block_index_y < 500 &&
                    block_index_y <= surface_block_y) {
             if (block_index_y + 1 >= bottom_block_index_y) {
@@ -311,13 +660,42 @@ void main()
                 in_fluid_span = true;
             }
         }
-        if (in_fluid_span && fi > 0u && sy < 1e8 && vWorldPos.y < sy) {
+        // Submerged camera: fluid surface faces sit exactly at sy (BlockTopY)
+        // and need the same tolerance as the in-span check, otherwise the
+        // water plane itself stays unfogged while the floor below is fogged.
+        bool under_local_surface =
+            vWorldPos.y < sy ||
+            (uUnderwaterFogSubmerged > 0.5 && vWorldPos.y <= sy + 0.01);
+        if (in_fluid_span && fi > 0u && sy < 1e8 && under_local_surface) {
             frag_underwater = true;
             underwater_fog_color = uUnderwaterFogColors[int(fi)];
             float dist = length(vWorldPos - uCameraPos);
-            float fog_factor = computeDistanceFogFactor(
-                dist, uUnderwaterFogStart, uUnderwaterFogEnd,
-                uUnderwaterFogMinBlend, 1.0);
+            float min_blend = uUnderwaterFogMinBlend;
+            if (uUnderwaterFogSubmerged < 0.5) {
+                // Camera above the surface: the tint comes from the water
+                // thickness along the view ray, not from camera distance.
+                // (sy - y)/|view_dir.y| is the exact flat-surface water path;
+                // the former 0.25 clamp capped it at 4x depth, leaving far
+                // underwater fragments under-fogged (fog strengthened with
+                // distance, then weakened — non-monotonic). Keep only the
+                // divide-by-zero guard: a horizontal underwater ray has a
+                // effectively infinite water path and fogs fully.
+                vec3 view_dir = (vWorldPos - uCameraPos) / max(dist, 0.001);
+                dist = (sy - vWorldPos.y) / max(abs(view_dir.y), 0.001);
+                min_blend = 0.0;
+            }
+            float fog_factor = computeUnderwaterFogFactor(
+                dist, uUnderwaterFogStart, uUnderwaterFogEnd, min_blend);
+            // Grazing view rays (distant water) inflate the computed
+            // thickness and pinned whole horizon water bodies to the full
+            // dark tint. The tint yields to the sky fog with real camera
+            // distance: near water keeps its depth color, distant water is
+            // washed by the normal distance fog like every other surface.
+            float real_sky_fog = computeDistanceFogFactor(
+                length(vWorldPos - uCameraPos), uFogStart, uFogEnd,
+                uFogMinBlend, uFogDensity);
+            fog_factor *= 1.0 - real_sky_fog;
+            underwater_sky_fog = real_sky_fog;
             FragColor.rgb = mix(FragColor.rgb, underwater_fog_color, fog_factor);
         }
     }
@@ -327,7 +705,7 @@ void main()
         float fog_factor = computeDistanceFogFactor(
             dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog_factor);
-    } else if (uAirFogEnabled > 0.5 && !frag_underwater) {
+    } else if (uAirFogEnabled > 0.5) {
         float dist;
         if (uFogHorizontal > 0.5) {
             vec2 delta_xz = vWorldPos.xz - uCameraPos.xz;
@@ -335,8 +713,15 @@ void main()
         } else {
             dist = length(vWorldPos - uCameraPos);
         }
-        float fog_factor = computeDistanceFogFactor(
-            dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
+        // Underwater fragments already yielded to the air fog by the
+        // (1 - real_sky_fog) multiplier above; the air fog then washes them
+        // with the SAME factor so fog never falls to zero at distance. The
+        // old `!frag_underwater` skip double-zeroed fog: tint*(1-sky) -> 0
+        // AND no air fog -> raw seafloor colors far away (non-monotonic).
+        float fog_factor = frag_underwater
+            ? underwater_sky_fog
+            : computeDistanceFogFactor(
+                  dist, uFogStart, uFogEnd, uFogMinBlend, uFogDensity);
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog_factor);
     }
 }

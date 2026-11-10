@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_marble_polished",
+  "id": 1080,
+  "displayName": "Rock Marble Polished",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_marble_polished",
+    "cu_rock_marble_polished",
+    "cu_rock_marble_polished",
+    "cu_rock_marble_polished",
+    "cu_rock_marble_polished",
+    "cu_rock_marble_polished"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "marble",
+    "variant": "polished"
+  }
+}

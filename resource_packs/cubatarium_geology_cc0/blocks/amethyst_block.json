@@ -1,0 +1,24 @@
+{
+  "name": "amethyst_block",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "greystone_ruby",
+    "greystone_ruby",
+    "greystone_ruby",
+    "greystone_ruby",
+    "greystone_ruby",
+    "greystone_ruby"
+  ],
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "displayName": "Amethyst Block",
+  "render": {}
+}

@@ -4,6 +4,7 @@
 #include "World/Collision/WorldCollision.h"
 #include "World/Core/BlockWorld.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -58,9 +59,51 @@ int main()
   Expect(resolved.x < eye.x + delta.x - 0.05f,
          "horizontal movement should stop before the wall");
 
-  const cutum::UWorldCollision::StepUpProbe probe =
+  const cutum::UWorldCollision::StepUpProbe flatProbe =
       collision.ProbeStepUp(eye, glm::vec3(1.0f, 0.0f, 0.0f), cap, 1.25f);
-  Expect(!probe.Valid, "flat floor should not expose a step-up ledge");
+  Expect(!flatProbe.Valid, "flat floor should not expose a step-up ledge");
+
+  // One-block riser in +X: player on (0,0,0) top, riser at (1,0,0), step (1,1,0).
+  cutum::UBlockWorld step_world;
+  step_world.SetBlock(glm::ivec3(0, 0, 0), kStone);
+  step_world.SetBlock(glm::ivec3(1, 0, 0), kStone);
+  step_world.SetBlock(glm::ivec3(1, 1, 0), kStone);
+  cutum::UWorldCollision step_collision(step_world);
+  step_collision.SetBlockRegistry(&registry);
+  step_collision.SetEntityCollisionEnabled(false);
+
+  const glm::vec3 stepEye(0.0f, 0.5f + cap.eyeHeight, 0.0f);
+  const cutum::UWorldCollision::StepUpProbe frontProbe =
+      step_collision.ProbeStepUp(stepEye, glm::vec3(1.0f, 0.0f, 0.0f), cap,
+                                 1.25f);
+  Expect(frontProbe.Valid, "frontal approach should find a 1-block step-up");
+
+  glm::vec3 landing = stepEye;
+  Expect(step_collision.GetStepUpLanding(stepEye, glm::vec3(1.0f, 0.0f, 0.0f),
+                                         cap, 1.25f, landing),
+         "frontal step-up landing should be valid");
+  Expect(std::abs(landing.x - 1.0f) < 0.01f &&
+             std::abs(landing.z - 0.0f) < 0.01f,
+         "landing should be at step cell center without backward offset");
+
+  // Corner diagonal intent must not diagonal-jump (axis-aligned only).
+  step_world.SetBlock(glm::ivec3(0, 0, 1), kStone);
+  step_world.SetBlock(glm::ivec3(1, 0, 1), kStone);
+  step_world.SetBlock(glm::ivec3(1, 1, 1), kStone);
+  step_collision.InvalidateChunkMovementSolid(glm::ivec3(0, 0, 0));
+  const glm::vec3 cornerEye(0.0f, 0.5f + cap.eyeHeight, 0.0f);
+  const glm::vec3 diag(0.707f, 0.0f, 0.707f);
+  const cutum::UWorldCollision::StepUpProbe cornerProbe =
+      step_collision.ProbeStepUp(cornerEye, diag, cap, 1.25f);
+  if (cornerProbe.Valid)
+  {
+    Expect(std::abs(cornerProbe.MoveDir.z) < 0.01f ||
+               std::abs(cornerProbe.MoveDir.x) < 0.01f,
+           "corner step-up must stay axis-aligned, not diagonal");
+    Expect(!(std::abs(cornerProbe.TargetPos.x - 1.0f) < 0.01f &&
+             std::abs(cornerProbe.TargetPos.z - 1.0f) < 0.01f),
+           "corner approach must not land on diagonal step cell");
+  }
 
   std::cout << "movement_integration_test: OK" << std::endl;
   return 0;

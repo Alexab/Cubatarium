@@ -4,5 +4,10 @@
   "max_depth": 12,
   "width_sigma": 2.5,
   "river_noise_scale": 0.008,
-  "aquatic_depth_scale": 0.4
+  "aquatic_depth_scale": 0.4,
+  "fill_water": true,
+  "water_min_strength": 0.65,
+  "water_min_moisture": 0.42,
+  "water_surface_depth": 2,
+  "max_water_elevation_above_sea": 24
 }

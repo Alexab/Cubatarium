@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_redwood_plank",
+  "id": 1497,
+  "displayName": "Wood Redwood Plank",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_redwood_plank",
+    "cu_wood_redwood_plank",
+    "cu_wood_redwood_plank",
+    "cu_wood_redwood_plank",
+    "cu_wood_redwood_plank_top",
+    "cu_wood_redwood_plank_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "redwood",
+    "variant": "plank"
+  }
+}

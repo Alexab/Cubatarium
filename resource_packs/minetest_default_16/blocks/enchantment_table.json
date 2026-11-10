@@ -1,6 +1,13 @@
 {
   "name": "enchantment_table",
   "id": 365,
+  "hardness": 5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

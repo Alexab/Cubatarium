@@ -4,6 +4,7 @@
 #include <string>
 
 #include "WorldGen/Features/CaveCarver.h"
+#include "World/Math/WorldVerticalProfile.h"
 
 namespace cutum
 {
@@ -50,7 +51,7 @@ struct WorldGenTuning
   bool useUnifiedHeightField{false};
   bool useAnalyticValleys{false};
   bool useMudflowErosion{false};
-  bool useDensityRefineParity{false};
+  bool useDensityRefineParity{true};
 };
 
 enum class RavineFeatherMode
@@ -68,6 +69,9 @@ struct RavineParams
   int aquaticMaxDepth{5};
   bool fillWater{false};
   RavineFeatherMode featherMode{RavineFeatherMode::Smoothstep};
+  // Profile 3: >0 turns the vertical well into a shallow dell whose walls
+  // slope out over this many blocks (set per trigger, not configured).
+  int gentleRadius{0};
 };
 
 enum class WorldSeedKind
@@ -90,11 +94,15 @@ struct ProceduralSettings
   std::string SeedText;
   WorldSeedKind SeedKind{WorldSeedKind::Numeric};
   WorldSeedHashAlgo SeedHashAlgo{WorldSeedHashAlgo::Fnv1a32};
-  int SeaLevel{48};
-  int MaxHeight{128};
-  int BedrockTopY{0};
+  int SeaLevel{kDefaultWorldSeaLevelY};
+  int MinHeight{kDefaultWorldMinY};
+  int MaxHeight{kDefaultWorldMaxY};
+  int BedrockTopY{kDefaultWorldMinY};
   std::string WorldGenPackId{"default"};
   std::string WorldGenPresetId{"balanced"};
+  // Profile 1 preserves historical pack interpretation; profile 2 adds the
+  // data-driven biome/feature model.
+  int WorldGenProfileVersion{3};
   bool EnableCaves{false};
   bool EnableTrees{true};
   bool EnableGroundCover{true};
@@ -126,6 +134,12 @@ struct ProceduralSettings
   RavineParams Ravines;
   WorldGenTuning Tuning;
   TerrainBackend TerrainBackendMode{TerrainBackend::Heightmap};
+
+  WorldVerticalProfile GetVerticalProfile() const
+  {
+    return WorldVerticalProfile(MinHeight, MaxHeight, SeaLevel, BedrockTopY,
+                                kWorldDatumY);
+  }
 };
 
 float ClampTuningValue(float value);

@@ -102,7 +102,8 @@ ColumnSampleContext UColumnGenerationService::GenerateColumnTerrainOnly(
 
 void UColumnGenerationService::GenerateColumnPostTerrain(
     UComposableWorldGenerator &generator, IUColumnWriter &writer, int world_x,
-    int world_z, uint32_t skip_stage_mask, const ColumnSampleContext &sample)
+    int world_z, uint32_t skip_stage_mask, const ColumnSampleContext &sample,
+    std::array<double, WorldGenStageIdCount> *out_stage_ms)
 {
   WorldGenContext &ctx = generator.GetContext();
   if (&writer.GetBlockWorld() != &ctx.World || &writer.GetRegistry() != &ctx.Registry)
@@ -118,7 +119,7 @@ void UColumnGenerationService::GenerateColumnPostTerrain(
 
   ctx.ResetColumnDirty(world_x, world_z);
   RunPostTerrainStagesExcluding(generator, sample, world_x, world_z,
-                                skip_stage_mask);
+                                skip_stage_mask, out_stage_ms);
   ctx.FlushColumnDirty();
 }
 

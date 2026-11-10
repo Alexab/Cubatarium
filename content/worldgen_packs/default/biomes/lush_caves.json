@@ -1,0 +1,7 @@
+{
+  "id": "lush_caves",
+  "palette": {
+    "surface": "moss_block",
+    "subsurface": "rooted_dirt"
+  }
+}

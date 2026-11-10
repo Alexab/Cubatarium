@@ -1,6 +1,13 @@
 {
   "name": "mtg_permafrost_with_stones",
   "id": 481,
+  "hardness": 1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],

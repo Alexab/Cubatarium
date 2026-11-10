@@ -2,9 +2,10 @@ name: Windows release smoke
 
 on:
   push:
-    branches: [main, master, thread_chunks]
+    branches: [main, master, thread_chunks, 'cursor_audit_impl*', 'cursor_audit2_impl*', 'codex/**', 'perf/**', 'feature/**']
     paths:
       - "CMakeLists.txt"
+      - ".github/workflows/windows-release-smoke.yml"
       - "vcpkg.json"
       - "src/**"
       - "scripts/build/**"
@@ -16,6 +17,7 @@ on:
     branches: [main, master, thread_chunks]
     paths:
       - "CMakeLists.txt"
+      - ".github/workflows/windows-release-smoke.yml"
       - "vcpkg.json"
       - "src/**"
       - "scripts/build/**"
@@ -108,6 +110,77 @@ jobs:
       - name: C++ unit test (world mesh service)
         shell: pwsh
         run: ./build/desktop-msvc/Release/world_mesh_service_test.exe
+
+      # CPU streaming label only. PASS here does NOT claim GPU/GL acceptance —
+      # greedy_vertex_pool_lifetime_test is mock CPU; real driver is gpu label below.
+      - name: Streaming / mesh policy CTest suite
+        shell: pwsh
+        run: |
+          $tests = @(
+            "job_admission_lifetime_test",
+            "chunk_input_stamp_test",
+            "greedy_vertex_pool_production_test",
+            "column_flow_scheduler_test",
+            "column_scheduler_audit_repro",
+            "streaming_render_ready_invariants_test",
+            "miss_first_mesh_class_test",
+            "mesh_gpu_store_mdi_test",
+            # CPU mock lifetime only — does NOT prove A01 GPU correctness (needs GL fixture).
+            "greedy_vertex_pool_lifetime_test",
+            "capture_token_validation_test",
+            "decor_mesh_integration_test",
+            "relight_result_install_test",
+            "mesh_neighbor_policy_test",
+            "mesh_light_stale_policy_test",
+            "column_emerge_bump_test",
+            "frame_streaming_budget_test",
+            "idle_recovery_policy_test"
+          )
+          $registry = ctest --test-dir build/desktop-msvc -C Release -L streaming --show-only=json-v1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $registered = ($registry | ConvertFrom-Json).tests.name
+          $missing = @()
+          foreach ($t in $tests) {
+            $exe = "./build/desktop-msvc/Release/$t.exe"
+            if (-not (Test-Path $exe) -or $t -notin $registered) { $missing += $t }
+          }
+          if ($missing.Count -gt 0) {
+            Write-Error "Expected streaming tests missing: $($missing -join ', ')"
+            exit 1
+          }
+          ctest --test-dir build/desktop-msvc -C Release -L streaming --no-tests=error --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Hosted Windows runners need not expose GL 4.3. SKIP (exit 0) on the gpu
+      # step below is not PASS — it explicitly declines GPU acceptance.
+      - name: GPU greedy vertex pool driver (optional)
+        shell: pwsh
+        env:
+          CUBATARIUM_RUN_GPU_TESTS: ${{ vars.CUBATARIUM_RUN_GPU_TESTS }}
+        run: |
+          if ($env:CUBATARIUM_RUN_GPU_TESTS -ne '1') {
+            Write-Host 'SKIP: greedy_vertex_pool_driver_test — GPU acceptance not claimed (set CUBATARIUM_RUN_GPU_TESTS=1 on a GL-capable runner).'
+            exit 0
+          }
+          $exe = "./build/desktop-msvc/Release/greedy_vertex_pool_production_test.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "GPU driver fixture exe missing: $exe"
+            exit 1
+          }
+          ctest --test-dir build/desktop-msvc -C Release -R greedy_vertex_pool_driver_test --no-tests=error --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload streaming test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: streaming-ctest-evidence
+          path: build/desktop-msvc/Testing/Temporary/*.log
+          if-no-files-found: warn
+
+      - name: Phase57 scorecard fail-closed unit test
+        shell: pwsh
+        run: python tools/test_AnalyzePhase57Scorecard.py
 
       - name: C++ unit test (physics deterministic replay)
         shell: pwsh

@@ -10,6 +10,7 @@
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
+#include "Gui/Widgets/WorldViewSettingsForm.h"
 #include <algorithm>
 
 namespace cutum
@@ -43,7 +44,12 @@ void UWorldResourcePacksScreen::OnApply()
   {
     selection.WorldgenOwner = selection.Primary.front();
   }
-  Host->ApplyResourcePacksToCurrentWorld(selection);
+  const WorldViewSettings view =
+      ViewForm ? ViewForm->ReadSettings() : WorldViewSettings{};
+  if (!Host->ApplyWorldSettings(selection, view))
+  {
+    return;
+  }
   if (OnClose)
   {
     OnClose();
@@ -87,9 +93,15 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
 
   auto warn = std::make_unique<UGuiLabel>(
       &theme,
-      "Changing packs may alter block textures. Save the world after applying.");
+      "View / Projection is at the top. Changing packs may alter block textures.");
   WarningLabel = warn.get();
   body->AddChild(std::move(warn));
+
+  ViewForm = std::make_unique<UWorldViewSettingsForm>(&theme);
+  ViewForm->SetSettings(Host ? Host->GetCurrentWorldViewSettings()
+                             : WorldViewSettings{});
+  ViewForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
+  ViewForm->BuildInto(*body);
 
   PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
   PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
@@ -176,9 +188,14 @@ int UWorldResourcePacksScreen::MeasureBodyHeight(int width) const
   const int warn_h = theme ? Scaled(48) : 48;
   const int gap = Scaled(12);
   int h = warn_h + gap;
+  const GuiRect area{0, 0, width, 100000};
+  if (ViewForm)
+  {
+    h += ViewForm->MeasureHeight(area) + gap;
+  }
   if (PackForm)
   {
-    h += PackForm->MeasureHeight({0, 0, width, 100000});
+    h += PackForm->MeasureHeight(area);
   }
   return h;
 }
@@ -207,6 +224,12 @@ void UWorldResourcePacksScreen::LayoutBody(UGuiScrollView &scroll) const
   {
     WarningLabel->SetBounds({layoutArea.X, y, layoutArea.W, warn_h});
     y += warn_h + gap;
+  }
+  if (ViewForm)
+  {
+    const int viewH = ViewForm->MeasureHeight(layoutArea);
+    ViewForm->Layout({layoutArea.X, y, layoutArea.W, viewH});
+    y += viewH + gap;
   }
   if (PackForm)
   {

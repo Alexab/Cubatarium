@@ -1,6 +1,7 @@
 #ifndef MELEEATTACKACTIVITYAGENT_H
 #define MELEEATTACKACTIVITYAGENT_H
 
+#include "Activity/Agents/WanderActivityAgent.h"
 #include "Activity/Brain/CreatureActivityBlackboard.h"
 #include "Activity/Brain/SimpleFsmBrain.h"
 #include "Activity/IUCreatureActivityAgent.h"
@@ -22,11 +23,18 @@ public:
   void OnCreatureRemoved(CreatureId Id) override;
   void Tick(IUWorldPerception &perception, IUCreatureActivitySink &sink,
             float dt) override;
+  void TickCreature(CreatureId Id, IUWorldPerception &perception,
+                    IUCreatureActivitySink &sink, float dt) override;
 
 private:
+  template <typename Ids>
+  void TickIds(const Ids &ids, IUWorldPerception &perception,
+               IUCreatureActivitySink &sink, float dt);
+
   std::unordered_set<CreatureId> Members;
   std::unordered_map<CreatureId, UCreatureActivityBlackboard> State;
   std::unique_ptr<IUAgentBrain> Brain;
+  UWanderActivityAgent Wander;
 };
 
 } // namespace cutum

@@ -1,0 +1,33 @@
+{
+  "name": "cu_glass_frosted_plain",
+  "id": 2047,
+  "displayName": "Glass Frosted Plain",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_frosted_plain",
+    "cu_glass_frosted_plain",
+    "cu_glass_frosted_plain",
+    "cu_glass_frosted_plain",
+    "cu_glass_frosted_plain",
+    "cu_glass_frosted_plain"
+  ],
+  "render": {
+    "texture_variation": 0.48,
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "frosted",
+    "variant": "plain"
+  }
+}

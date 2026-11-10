@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_red_earth_layered",
+  "id": 1333,
+  "displayName": "Soil Red Earth Layered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_red_earth_layered",
+    "cu_soil_red_earth_layered",
+    "cu_soil_red_earth_layered",
+    "cu_soil_red_earth_layered",
+    "cu_soil_red_earth_layered_top",
+    "cu_soil_red_earth_layered_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "red_earth",
+    "variant": "layered"
+  }
+}

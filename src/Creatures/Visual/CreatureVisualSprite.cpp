@@ -1,13 +1,11 @@
 #include "Creatures/Visual/CreatureVisualSprite.h"
 
-#include "App/Settings/RenderSettings.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Visual/CreatureDrawQueue.h"
+#include "Creatures/Visual/CreatureDrawRequest.h"
 #include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
-#include "Render/Camera/Camera.h"
-#include "Render/Engine/GeometryEngine.h"
-#include "World/Core/World.h"
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -37,17 +35,15 @@ void UCreatureVisualSprite::UpdatePose(
   EmissiveTint = animDef.visual.sprite.emissiveTint;
 }
 
-void UCreatureVisualSprite::SubmitDraw(UGeometryEngine &engine,
+void UCreatureVisualSprite::SubmitDraw(const CreatureDrawContext &ctx,
                                        const glm::mat4 &viewProj)
 {
-  const RenderSettings &settings = engine.GetRenderSettings();
-  auto creatureTextures = engine.GetCreatureTextureStorage();
-  if (!creatureTextures || !settings.CreatureTexturedParts)
+  if (!DrawEnabled(ctx))
   {
     return;
   }
 
-  const GLuint tex = ResolveCreatureSpeciesTexture(*creatureTextures, SpeciesId,
+  const GLuint tex = ResolveCreatureSpeciesTexture(*ctx.Textures, SpeciesId,
                                                    TextureStem, TextureStem);
   if (tex == 0)
   {
@@ -57,28 +53,30 @@ void UCreatureVisualSprite::SubmitDraw(UGeometryEngine &engine,
     return;
   }
 
+  // Face the camera using the position from the draw context — no more
+  // Visual -> World -> Camera reach-through (audit V9) — and submit through
+  // the draw queue instead of drawing immediately between sorted batches.
   const glm::vec3 center =
       BodyOrigin + glm::vec3(0.0f, SizeBlocks.y * 0.5f, 0.0f);
   float yawDeg = 0.0f;
-  if (const std::shared_ptr<UWorld> world = engine.GetWorld())
+  glm::vec3 toCam = ctx.CameraPosition - center;
+  toCam.y = 0.0f;
+  if (glm::length(toCam) > 0.05f)
   {
-    if (auto camera = world->GetCurrentUserCamera())
-    {
-      const glm::vec3 camPos = camera->GetPosition();
-      glm::vec3 toCam = camPos - center;
-      toCam.y = 0.0f;
-      if (glm::length(toCam) > 0.05f)
-      {
-        yawDeg = glm::degrees(std::atan2(toCam.x, toCam.z));
-      }
-    }
+    yawDeg = glm::degrees(std::atan2(toCam.x, toCam.z));
   }
 
   glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
   model = glm::rotate(model, glm::radians(yawDeg), glm::vec3(0.0f, 1.0f, 0.0f));
   model =
       glm::scale(model, glm::vec3(SizeBlocks.x, SizeBlocks.y, SizeBlocks.x));
-  engine.DrawCreatureBillboard(viewProj * model, tex, EmissiveTint);
+
+  CreatureDrawRequest req;
+  req.Kind = CreatureDrawKind::Billboard;
+  req.Mvp = viewProj * model;
+  req.Texture = tex;
+  req.Tint = EmissiveTint;
+  ctx.Queue->Push(std::move(req));
 }
 
 } // namespace cutum

@@ -7,31 +7,42 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 78
+    "sort_order": 78,
+    "natural_spawnable": true,
+    "spawn_weight": 1.0,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "tundra",
+      "snowy_slopes",
+      "cold_steppe",
+      "beach",
+      "ocean"
+    ]
   },
   "role": "mob",
   "bounds": {
     "rest": [
-      0.9,
-      0.55,
-      1.4
+      1.15,
+      0.57,
+      2.27
     ],
     "max": [
-      0.9,
-      0.55,
-      1.4
+      1.15,
+      0.57,
+      2.27
     ],
     "min": [
-      0.9,
-      0.55,
-      1.4
+      1.15,
+      0.57,
+      2.27
     ]
   },
-  "eye_height": 0.4,
+  "eye_height": 0.41,
   "habitat": "amphibious",
-  "locomotion_archetype": "aquatic",
+  "locomotion_archetype": "terrestrial_quadruped",
   "locomotion": {
-    "can_fly": true,
+    "can_fly": false,
     "can_crouch": false,
     "can_jump": true,
     "jump_height": 1.0,

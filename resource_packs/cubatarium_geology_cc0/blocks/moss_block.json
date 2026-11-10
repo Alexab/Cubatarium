@@ -1,0 +1,24 @@
+{
+  "name": "moss_block",
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "greystone",
+    "greystone",
+    "greystone",
+    "greystone",
+    "grass_top",
+    "greystone"
+  ],
+  "hardness": 0.6,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 1
+    }
+  },
+  "displayName": "Moss Block",
+  "render": {}
+}

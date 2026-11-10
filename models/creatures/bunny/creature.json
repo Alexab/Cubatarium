@@ -7,7 +7,18 @@
       "passive"
     ],
     "spawnable": true,
-    "sort_order": 18
+    "sort_order": 18,
+    "natural_spawnable": true,
+    "spawn_weight": 1.2,
+    "spawn_group_min": 2,
+    "spawn_group_max": 4,
+    "spawn_biomes": [
+      "plains",
+      "forest",
+      "savanna",
+      "foothills",
+      "hills"
+    ]
   },
   "role": "mob",
   "bounds": {
@@ -199,6 +210,6 @@
       64,
       32
     ],
-    "animation_profile": "quadruped"
+    "animation_profile": "rabbit"
   }
 }

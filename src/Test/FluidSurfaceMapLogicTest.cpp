@@ -3,6 +3,7 @@
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 
 #include "World/Core/FluidColumnSurfaceQuery.h"
 
@@ -275,7 +276,11 @@ static void TestUnderwaterFogPolicyV3()
 
   Expect(!cutum::ShouldApplyBelowSurfaceFogToPass(false, true),
 
-         "cutout pass skips underwater fog");
+         "dedicated cutout-only pass skips underwater fog");
+
+  Expect(cutum::ShouldApplyBelowSurfaceFogToPass(false, false),
+
+         "merged opaque (alpha-discard mode) still gets underwater fog");
 
   Expect(cutum::ShouldTintBlockBelowFluidColumn(9, 10, 10),
 
@@ -489,6 +494,8 @@ static void TestScrollStagingPreservesOverlap()
 
 int main()
 {
+  // See FluidSurfaceSliceTest: slices are built through the column scan.
+  cutum::SetPreferGpuFluidColumnScan(true);
   TestSentinelAndTuningDefaults();
   TestWindowMoveThreshold();
   TestColumnScanFindsSurface();

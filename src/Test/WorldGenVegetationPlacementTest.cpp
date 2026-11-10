@@ -5,6 +5,7 @@
 #include "World/Objects/ObjectUtil.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Features/ObjectPlacementConstraints.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
 #include <iostream>
@@ -20,6 +21,7 @@ constexpr cutum::BlockId kWater = 9;
 constexpr cutum::BlockId kLog = 20;
 constexpr cutum::BlockId kLeaves = 21;
 constexpr cutum::BlockId kGrass = 22;
+constexpr cutum::BlockId kTallGrass = 23;
 constexpr int kSea = 48;
 
 static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
@@ -45,18 +47,26 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   cutum::BlockDefinition grass;
   grass.Name = "grass";
   grass.Physics = cutum::BlockPhysicsProfile::Solid();
+  cutum::BlockDefinition tall_grass;
+  tall_grass.Name = "tall_grass";
+  tall_grass.Physics = cutum::BlockPhysicsProfile::Solid();
+  tall_grass.Physics.Movement.Occupancy = 0.0f;
+  tall_grass.Render.Style = cutum::BlockRenderStyle::Cutout;
+  tall_grass.Render.Transparent = true;
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kWater] = water;
   by_id[kLog] = log;
   by_id[kLeaves] = leaves;
   by_id[kGrass] = grass;
+  by_id[kTallGrass] = tall_grass;
   std::unordered_map<std::string, cutum::BlockId> name_to_id;
   name_to_id["stone"] = kStone;
   name_to_id["water"] = kWater;
   name_to_id["tree_log"] = kLog;
   name_to_id["tree_leaves"] = kLeaves;
   name_to_id["grass"] = kGrass;
+  name_to_id["tall_grass"] = kTallGrass;
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return definitions;
 }
@@ -307,7 +317,7 @@ static void TestAcceptFallenLogOverTallGrass()
   for (int dx = -1; dx <= 1; ++dx)
   {
     FillCoastalColumnAt(world, dx, 0);
-    world.SetBlock(glm::ivec3(dx, 52, 0), kLeaves);
+    world.SetBlock(glm::ivec3(dx, 52, 0), kTallGrass);
   }
 
   const cutum::WorldObjectDefinition log = MakeFallenLog();
@@ -324,6 +334,27 @@ static void TestAcceptFallenLogOverTallGrass()
                     "grass preserved under fallen log");
 }
 
+static void TestObjectPlacementWriterCallback()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  const cutum::WorldObjectDefinition log = MakeFallenLog();
+  int writes = 0;
+  const cutum::ObjectPlacementStats stats = cutum::PlaceObjectAt(
+      world, registry, log, glm::ivec3(4, 60, 0), false, {},
+      [&writes](glm::ivec3, cutum::BlockId block)
+      {
+        if (block == kLog)
+        {
+          ++writes;
+        }
+      });
+  FluidTest::Expect(stats.placedCount == writes && writes == 3, kTestName,
+                    "prefab voxels can be routed through a feature sink");
+  FluidTest::Expect(world.IsAir(glm::ivec3(4, 60, 0)), kTestName,
+                    "custom writer owns the prefab voxel output");
+}
+
 static void TestFindSurfaceUnderPlants()
 {
   cutum::UBlockWorld world;
@@ -338,6 +369,49 @@ static void TestFindSurfaceUnderPlants()
   FluidTest::Expect(
       cutum::IsExposedLandSurface(world, registry, 0, 0, surface), kTestName,
       "grass remains placeable with plants above");
+}
+
+static void TestAquaticPlacementAnchors()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+  cutum::ProceduralSettings settings;
+  settings.SeaLevel = kSea;
+  settings.MaxHeight = 128;
+  cutum::WorldGenContext ctx(world, registry, settings);
+  ctx.Blocks.Water = kWater;
+
+  for (int y = 0; y <= 42; ++y)
+  {
+    world.SetBlock(glm::ivec3(4, y, 7), kStone);
+  }
+  for (int y = 43; y <= kSea; ++y)
+  {
+    world.SetBlock(glm::ivec3(4, y, 7), kWater);
+  }
+  world.SetBlock(glm::ivec3(4, kSea + 1, 7), cutum::BLOCK_AIR);
+
+  glm::ivec3 anchor;
+  FluidTest::Expect(
+      cutum::FindWaterSurfaceAnchorForPlacement(ctx, 4, 7, anchor) &&
+          anchor == glm::ivec3(4, kSea + 1, 7),
+      kTestName, "aquatic surface anchor resolves above water");
+  FluidTest::Expect(
+      cutum::FindUnderwaterFloorAnchorForPlacement(ctx, 4, 7, anchor) &&
+          anchor == glm::ivec3(4, 43, 7),
+      kTestName, "underwater feature anchor resolves above ocean floor");
+
+  cutum::SurfaceConstraint surface;
+  surface.Kind = cutum::SurfaceConstraintKind::WaterSurface;
+  FluidTest::Expect(
+      cutum::SatisfiesSurfaceConstraint(ctx, surface, "lily_pad", 4, 7,
+                                        kSea),
+      kTestName, "water-surface rule recognizes a true surface");
+  surface.Kind = cutum::SurfaceConstraintKind::UnderwaterFloor;
+  FluidTest::Expect(
+      cutum::SatisfiesSurfaceConstraint(ctx, surface, "mtg_coral_cyan", 4, 7,
+                                        42),
+      kTestName, "underwater-floor rule recognizes submerged solid ground");
 }
 
 static void TestResolveSurfaceLayerAnchorY()
@@ -481,7 +555,9 @@ int main()
   TestRejectFallenLogOnSlope();
   TestRejectFallenLogBesideTreeTrunk();
   TestAcceptFallenLogOverTallGrass();
+  TestObjectPlacementWriterCallback();
   TestFindSurfaceUnderPlants();
+  TestAquaticPlacementAnchors();
   TestResolveSurfaceLayerAnchorY();
   TestRejectMisTaggedVerticalPlantAsSurfaceLayer();
   TestPruneFloatingLeaves();

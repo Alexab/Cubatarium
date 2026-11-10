@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_mushroom_brown_striped",
+  "id": 2516,
+  "displayName": "Organic Mushroom Brown Striped",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_mushroom_brown_striped",
+    "cu_organic_mushroom_brown_striped",
+    "cu_organic_mushroom_brown_striped",
+    "cu_organic_mushroom_brown_striped",
+    "cu_organic_mushroom_brown_striped",
+    "cu_organic_mushroom_brown_striped"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "mushroom",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "mushroom_brown",
+    "variant": "striped"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

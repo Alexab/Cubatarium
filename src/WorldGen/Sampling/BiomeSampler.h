@@ -2,24 +2,36 @@
 
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Sampling/BiomeTypes.h"
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <string>
+#include <vector>
 
 namespace cutum
 {
 
 enum class BiomeId
 {
-  Plains,
-  Forest,
-  Desert,
-  Hills,
-  Tundra,
-  Savanna,
-  Foothills,
-  Scrubland,
-  ColdSteppe,
+  Plains = 0,
+  Forest = 1,
+  Desert = 2,
+  Hills = 3,
+  Tundra = 4,
+  Savanna = 5,
+  Foothills = 6,
+  Scrubland = 7,
+  ColdSteppe = 8,
+  Ocean = 9,
+  Beach = 10,
+  Mountains = 11,
+  SnowySlopes = 12,
+  JaggedPeaks = 13,
+  LushCaves = 14,
+  DripstoneCaves = 15,
+  DeepDark = 16,
+  Invalid = 255,
 };
 
 enum class SubBiomeId
@@ -36,7 +48,9 @@ enum class SubBiomeId
   ScrubWet,
 };
 
-constexpr int kBiomeCount = 9;
+// Legacy classifier candidates. Surface weights themselves are always stored
+// in the pack-scoped, handle-only BiomeBlend below.
+constexpr int kBuiltinSurfaceBiomeCount = 14;
 
 struct BiomeSurfaceRule
 {
@@ -51,45 +65,55 @@ struct BiomeHeightProfile
   float volatilityMultiplier{1.f};
 };
 
-struct BiomeWeightSet
-{
-  std::array<float, kBiomeCount> weights{};
-};
+using BiomeWeightSet = BiomeBlend;
 
 BiomeHeightProfile BiomeHeightProfileFor(BiomeId biome);
 int ApplyBiomeHeightProfile(int coarseY, int seaLevel, int maxHeight,
-                            const BiomeHeightProfile &profile);
+                            const BiomeHeightProfile &profile,
+                            int minHeight = 0);
 using CoarseHeightCallback = std::function<int(int, int)>;
 
 int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
                              const ProceduralSettings &settings, uint32_t seed,
                              const WorldGenTuning &tuning,
                              const CoarseHeightCallback &getCoarseY = nullptr,
-                             const BiomeWeightSet *weights_override = nullptr);
+                             const BiomeWeightSet *weights_override = nullptr,
+                             int worldgenProfileVersion = 2);
 
 void ComputeBiomeClimate(int x, int z, uint32_t seed, float &temperature,
                          float &moisture);
 BiomeWeightSet ComputeBiomeWeights(int x, int z, int coarseY, int seaLevel,
                                    int maxHeight, uint32_t seed,
-                                   const WorldGenTuning &tuning);
+                                   const WorldGenTuning &tuning,
+                                   int worldgenProfileVersion = 2);
 BiomeWeightSet BlendedBiomeWeights(int x, int z, int coarseY, int seaLevel,
                                    int maxHeight, uint32_t seed,
                                    const WorldGenTuning &tuning,
-                                   const CoarseHeightCallback &getCoarseY = {});
+                                   const CoarseHeightCallback &getCoarseY = {},
+                                   int worldgenProfileVersion = 2);
 BiomeId DominantBiome(const BiomeWeightSet &weights);
+BiomeHandle DominantBiomeHandle(const BiomeWeightSet &weights);
+BiomeHandle PickSurfaceBiomeHandle(int x, int z,
+                                   const BiomeWeightSet &weights);
+BiomeKey BiomeKeyForHandle(BiomeHandle handle);
 BiomeId PickSurfaceBiome(int x, int z, const BiomeWeightSet &weights);
 SubBiomeId SubBiomeFor(int x, int z, BiomeId biome, uint32_t seed);
 
 class UBiomeSampler
 {
 public:
-  UBiomeSampler(uint32_t Seed, const WorldGenTuning &tuning);
+  UBiomeSampler(uint32_t Seed, const WorldGenTuning &tuning,
+                int worldgenProfileVersion = 2);
 
   void SetCoarseHeightCallback(CoarseHeightCallback callback);
   bool HasCoarseHeightCallback() const { return static_cast<bool>(CoarseHeightFn); }
   int CoarseYAt(int x, int z, int fallback_y) const;
 
   BiomeId At(int x, int z, int surfaceY, int SeaLevel, int MaxHeight) const;
+  BiomeId At3D(int x, int y, int z, int surfaceY, int SeaLevel,
+               int MaxHeight) const;
+  BiomeKey At3DKey(int x, int y, int z, int surfaceY, int SeaLevel,
+                   int MaxHeight) const;
   BiomeWeightSet WeightsAt(int x, int z, int surfaceY, int SeaLevel,
                            int MaxHeight) const;
   int RefineSurfaceY(int x, int z, int coarseY,
@@ -105,6 +129,7 @@ public:
 private:
   uint32_t Seed;
   WorldGenTuning Tuning;
+  int ProfileVersion{2};
   CoarseHeightCallback CoarseHeightFn;
 };
 
@@ -115,6 +140,8 @@ BiomeId PickWeightedBiome(int x, int z, uint32_t seed, float temperature,
 
 float BiomeTuningWeight(BiomeId biome, const WorldGenTuning &tuning);
 int BiomeIndex(BiomeId biome);
+BiomeHandle BiomeHandleForId(BiomeId biome);
+float BiomeWeightFor(const BiomeWeightSet &weights, BiomeId biome);
 
 float SampleCoarseHeightGradient(int x, int z,
                                  const CoarseHeightCallback &get_coarse_y);

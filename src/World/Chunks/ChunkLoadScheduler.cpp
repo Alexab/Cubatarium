@@ -1,14 +1,48 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "App/Platform/Log.h"
 #include "Core/Jobs/JobThreadBudget.h"
+#include "World/Streaming/WorldColumnRequestId.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
+#include <string>
 #include <thread>
 
 namespace cutum
 {
+
+namespace
+{
+
+bool IsWorldColumnSourceTraceEnabled()
+{
+  return WorldColumnSourceTraceEnabled();
+}
+
+void LogProceduralRequest(const char *outcome, glm::ivec3 coord,
+                          uint64_t request_id, uint64_t demand_id,
+                          const std::string &details = {})
+{
+  if (!IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  std::string message =
+      "source=procedural outcome=" + std::string(outcome) + " coord=(" +
+      std::to_string(coord.x) + ",0," + std::to_string(coord.z) +
+      ") request_id=" + std::to_string(request_id) +
+      " demand_id=" + std::to_string(demand_id);
+  if (!details.empty())
+  {
+    message += " " + details;
+  }
+  CubatariumLogInfo("WorldColumnSource", message);
+}
+
+} // namespace
 
 UChunkLoadScheduler::UChunkLoadScheduler(IUChunkPopulator &populator,
                                          UChunkGenerationRegistry &tokens)
@@ -31,7 +65,8 @@ void UChunkLoadScheduler::SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn)
 void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
                                       const ProceduralSettings &settings,
                                       glm::ivec2 column_origin,
-                                      bool has_column_origin)
+                                      bool has_column_origin,
+                                      uint64_t demand_id)
 {
   if (coord.y != 0)
   {
@@ -42,23 +77,54 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   {
     if (stateIt->second == ChunkLoadState::Requested)
     {
-      const auto prioIt = RequestPriorities.find(coord);
-      if (prioIt != RequestPriorities.end() && priority >= prioIt->second)
+      const auto queuedIt = QueuedRequests.find(coord);
+      if (queuedIt != QueuedRequests.end())
       {
+        if (priority == queuedIt->second.priority)
+        {
+          return;
+        }
+        // Re-rank in both directions as the focus moves. Preserve the original
+        // request time/settings; resetting them would hide queue wait and make
+        // generated columns depend on which camera update happened last.
+        PendingRequest updated = queuedIt->second;
+        updated.priority = priority;
+        updated.queueRevision = NextRequestQueueRevision++;
+        queuedIt->second = updated;
+        RequestPriorities[coord] = priority;
+        ++RequestPriorityRefreshCounts[coord];
+        Queue.push(std::move(updated));
+        LogProceduralRequest(
+            "priority_refreshed", coord, queuedIt->second.requestId,
+            demand_id, "state=requested priority=" + std::to_string(priority));
+        CompactRequestQueueIfStale();
         return;
       }
     }
     else if (stateIt->second == ChunkLoadState::Generating ||
              stateIt->second == ChunkLoadState::Ready)
     {
-      // Job already running / ready: refresh live priority so commit order
-      // tracks the player even if the column was started far away.
+      // Job already running / ready: refresh live priority in either direction
+      // so stale near-focus work cannot retain its old commit preference.
       const auto prioIt = RequestPriorities.find(coord);
-      if (prioIt != RequestPriorities.end() && priority >= prioIt->second)
+      if (prioIt != RequestPriorities.end() && priority == prioIt->second)
       {
         return;
       }
+      if (InitialRequestPriorities.find(coord) ==
+          InitialRequestPriorities.end())
+      {
+        InitialRequestPriorities[coord] =
+            prioIt != RequestPriorities.end() ? prioIt->second : priority;
+      }
+      ++RequestPriorityRefreshCounts[coord];
       RequestPriorities[coord] = priority;
+      const auto idIt = ActiveRequestIds.find(coord);
+      LogProceduralRequest(
+          "priority_refreshed", coord,
+          idIt != ActiveRequestIds.end() ? idIt->second : 0, demand_id,
+          "state=" + std::to_string(static_cast<int>(stateIt->second)) +
+              " priority=" + std::to_string(priority));
       return;
     }
     else if (stateIt->second != ChunkLoadState::Absent)
@@ -68,27 +134,191 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   }
   PendingRequest pending;
   pending.coord = coord;
+  pending.requestId = IsWorldColumnSourceTraceEnabled()
+                          ? NextWorldColumnRequestId()
+                          : 0;
+  pending.demandId = demand_id;
   pending.priority = priority;
   pending.token = Tokens.Current(coord);
+  pending.requestedAt = std::chrono::steady_clock::now();
+  pending.queueRevision = NextRequestQueueRevision++;
   pending.settings = settings;
   pending.columnOrigin = column_origin;
   pending.hasColumnOrigin = has_column_origin;
+  const uint64_t request_id = pending.requestId;
   States[coord] = ChunkLoadState::Requested;
   ActiveTokens[coord] = pending.token;
+  if (pending.requestId != 0)
+  {
+    ActiveRequestIds[coord] = pending.requestId;
+  }
   RequestPriorities[coord] = priority;
-  Queue.push(pending);
+  InitialRequestPriorities[coord] = priority;
+  RequestPriorityRefreshCounts[coord] = 0;
+  QueuedRequests[coord] = pending;
+  Queue.push(std::move(pending));
+  LogProceduralRequest("requested", coord, request_id, demand_id,
+                       "priority=" + std::to_string(priority));
+  CompactRequestQueueIfStale();
 }
 
-void UChunkLoadScheduler::Cancel(glm::ivec3 coord)
+void UChunkLoadScheduler::Cancel(glm::ivec3 coord, const char *reason)
 {
+  const auto id_it = ActiveRequestIds.find(coord);
+  if (id_it != ActiveRequestIds.end())
+  {
+    LogProceduralRequest(
+        "cancelled", coord, id_it->second, 0,
+        "reason=" + std::string(reason ? reason : "cancelled"));
+  }
   States.erase(coord);
   ActiveTokens.erase(coord);
+  ActiveRequestIds.erase(coord);
   RequestPriorities.erase(coord);
+  InitialRequestPriorities.erase(coord);
+  RequestPriorityRefreshCounts.erase(coord);
+  QueuedRequests.erase(coord);
+  CompactRequestQueueIfStale();
+}
+
+int UChunkLoadScheduler::CancelPendingOutsideRadius(glm::ivec3 center,
+                                                     int radius_chunks)
+{
+  center.y = 0;
+  const int radius = std::max(0, radius_chunks);
+  std::vector<glm::ivec3> stale;
+  for (const auto &entry : ActiveTokens)
+  {
+    const glm::ivec3 coord = entry.first;
+    const int distance = std::max(std::abs(coord.x - center.x),
+                                  std::abs(coord.z - center.z));
+    if (distance > radius)
+    {
+      stale.push_back(coord);
+    }
+  }
+  if (stale.empty())
+  {
+    return 0;
+  }
+
+  const bool trace = IsWorldColumnSourceTraceEnabled();
+  for (const glm::ivec3 coord : stale)
+  {
+    const int distance = std::max(std::abs(coord.x - center.x),
+                                  std::abs(coord.z - center.z));
+    const auto state_it = States.find(coord);
+    const int state = state_it == States.end()
+                          ? static_cast<int>(ChunkLoadState::Absent)
+                          : static_cast<int>(state_it->second);
+    const auto priority_it = RequestPriorities.find(coord);
+    const int priority = priority_it == RequestPriorities.end()
+                             ? 0
+                             : priority_it->second;
+    const auto initial_it = InitialRequestPriorities.find(coord);
+    const int initial_priority = initial_it == InitialRequestPriorities.end()
+                                     ? priority
+                                     : initial_it->second;
+    if (trace)
+    {
+      const auto id_it = ActiveRequestIds.find(coord);
+      LogProceduralRequest(
+          "cancelled_out_of_range", coord,
+          id_it != ActiveRequestIds.end() ? id_it->second : 0, 0,
+          "distance_chunks=" + std::to_string(distance) +
+              " radius_chunks=" + std::to_string(radius) +
+              " state=" + std::to_string(state) +
+              " priority_initial=" + std::to_string(initial_priority) +
+              " priority_current=" + std::to_string(priority));
+    }
+    // Invalidate the token before removing the owner so active worldgen workers
+    // can stop at their next cancellation point instead of filling the ready
+    // queue with terrain the camera has already left behind.
+    Tokens.Bump(coord);
+    States.erase(coord);
+    ActiveTokens.erase(coord);
+    ActiveRequestIds.erase(coord);
+    RequestPriorities.erase(coord);
+    InitialRequestPriorities.erase(coord);
+    RequestPriorityRefreshCounts.erase(coord);
+    QueuedRequests.erase(coord);
+  }
+  CompactRequestQueueIfStale();
+  return static_cast<int>(stale.size());
+}
+
+void UChunkLoadScheduler::CompactRequestQueueIfStale()
+{
+  // Priority refreshes leave obsolete heap nodes behind. Compact only after
+  // stale nodes exceed the live set by a wide margin, bounding memory and the
+  // number of stale pops performed in one frame.
+  constexpr std::size_t kStaleQueueSlack = 64;
+  const std::size_t live = QueuedRequests.size();
+  if (!Queue.empty() &&
+      (live == 0 || Queue.size() > live * 2 + kStaleQueueSlack))
+  {
+    std::priority_queue<PendingRequest, std::vector<PendingRequest>,
+                        RequestCompare>
+        compacted;
+    for (const auto &entry : QueuedRequests)
+    {
+      compacted.push(entry.second);
+    }
+    Queue.swap(compacted);
+  }
 }
 
 void UChunkLoadScheduler::CancelAllPending(
-    const std::chrono::milliseconds worker_wait)
+    const std::chrono::milliseconds worker_wait, const char *reason)
 {
+  if (IsWorldColumnSourceTraceEnabled())
+  {
+    std::size_t requested = 0;
+    std::size_t generating = 0;
+    std::size_t ready = 0;
+    std::size_t committed = 0;
+    for (const auto &entry : States)
+    {
+      switch (entry.second)
+      {
+      case ChunkLoadState::Requested:
+        ++requested;
+        break;
+      case ChunkLoadState::Generating:
+        ++generating;
+        break;
+      case ChunkLoadState::Ready:
+        ++ready;
+        break;
+      case ChunkLoadState::Committed:
+        ++committed;
+        break;
+      case ChunkLoadState::Absent:
+        break;
+      }
+    }
+    const JobThreadPoolSnapshot workers = Pool.GetSnapshot();
+    CubatariumLogInfo(
+        "WorldColumnSource",
+        "source=procedural outcome=shutdown_snapshot reason=" +
+            std::string(reason ? reason : "cancelled_all") +
+            " requested_n=" + std::to_string(requested) +
+            " generating_n=" + std::to_string(generating) +
+            " ready_n=" + std::to_string(ready) +
+            " committed_n=" + std::to_string(committed) +
+            " scheduler_queue_n=" + std::to_string(QueuedRequests.size()) +
+            " worker_pending_n=" + std::to_string(workers.pending) +
+            " worker_active_n=" + std::to_string(workers.active) +
+            " completed_ready_n=" + std::to_string(Completed.Size()));
+  }
+  for (const auto &entry : ActiveTokens)
+  {
+    const auto id_it = ActiveRequestIds.find(entry.first);
+    LogProceduralRequest(
+        "cancelled", entry.first,
+        id_it != ActiveRequestIds.end() ? id_it->second : 0, 0,
+        "reason=" + std::string(reason ? reason : "cancelled_all"));
+  }
   Queue = std::priority_queue<PendingRequest, std::vector<PendingRequest>,
                               RequestCompare>();
   std::vector<glm::ivec3> bump_coords;
@@ -107,7 +337,11 @@ void UChunkLoadScheduler::CancelAllPending(
   }
   States.clear();
   ActiveTokens.clear();
+  ActiveRequestIds.clear();
   RequestPriorities.clear();
+  InitialRequestPriorities.clear();
+  RequestPriorityRefreshCounts.clear();
+  QueuedRequests.clear();
   Pool.CancelPendingJobs();
   (void)Completed.DrainAll();
   if (worker_wait.count() > 0)
@@ -136,7 +370,7 @@ bool UChunkLoadScheduler::WaitForWorkersIdle(
 void UChunkLoadScheduler::ShutdownForProcessExit(
     const std::chrono::milliseconds timeout)
 {
-  CancelAllPending(std::chrono::milliseconds(0));
+  CancelAllPending(std::chrono::milliseconds(0), "process_shutdown");
   Pool.ShutdownForProcessExit(timeout);
   (void)Completed.DrainAll();
 }
@@ -144,12 +378,16 @@ void UChunkLoadScheduler::ShutdownForProcessExit(
 void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
 {
   Tokens.Bump(coord);
-  Cancel(coord);
+  Cancel(coord, "invalidated");
 }
 
-void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
+void UChunkLoadScheduler::ScheduleWorker(
+    const PendingRequest &request, const int generation_start_cap_per_frame)
 {
   States[request.coord] = ChunkLoadState::Generating;
+  LogProceduralRequest(
+      "worker_submitted", request.coord, request.requestId,
+      request.demandId, "priority=" + std::to_string(request.priority));
   ChunkPopulateRequest populateRequest;
   populateRequest.chunkCoord = request.coord;
   populateRequest.token = request.token;
@@ -161,42 +399,84 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
   populateRequest.shouldCancel = [this, coord, start_sequence]()
   { return Tokens.Current(coord).sequence != start_sequence; };
   populateRequest.content = CaptureWorldGenContentSnapshot();
+  const auto requested_at = request.requestedAt;
+  const auto scheduled_at = std::chrono::steady_clock::now();
   const int priority = request.priority;
+  const uint64_t request_id = request.requestId;
+  const uint64_t demand_id = request.demandId;
   const int max_height = request.settings.MaxHeight;
+  const std::size_t request_queue_live_at_schedule =
+      QueuedRequests.empty() ? 0 : QueuedRequests.size() - 1;
+  const std::size_t request_queue_heap_at_schedule = Queue.size();
+  const std::size_t worker_pending_at_submit = Pool.GetPendingJobCount();
+  const std::size_t worker_active_at_submit = Pool.GetActiveJobCount();
+  const std::size_t worker_count = Pool.GetWorkerCount();
   Pool.Enqueue(
-      [this, populateRequest, priority, max_height]()
+      [this, populateRequest, requested_at, scheduled_at, priority,
+       request_id, demand_id,
+       max_height, request_queue_live_at_schedule,
+       request_queue_heap_at_schedule, worker_pending_at_submit,
+       worker_active_at_submit, worker_count,
+       generation_start_cap_per_frame]()
       {
         PendingResult pending;
+        pending.requestId = request_id;
+        pending.demandId = demand_id;
         pending.priority = priority;
         pending.maxHeight = max_height;
+        pending.requestedAt = requested_at;
+        pending.scheduledAt = scheduled_at;
+        pending.generationStartedAt = std::chrono::steady_clock::now();
+        const auto generation_started = pending.generationStartedAt;
+        pending.requestQueueLiveAtSchedule =
+            request_queue_live_at_schedule;
+        pending.requestQueueHeapAtSchedule =
+            request_queue_heap_at_schedule;
+        pending.workerPendingAtSubmit = worker_pending_at_submit;
+        pending.workerActiveAtSubmit = worker_active_at_submit;
+        pending.workerCount = worker_count;
+        pending.generationStartCapPerFrame =
+            generation_start_cap_per_frame;
         pending.result = Populator.Populate(populateRequest);
+        pending.generationFinishedAt = std::chrono::steady_clock::now();
+        pending.generationMs = std::chrono::duration<double, std::milli>(
+                                   pending.generationFinishedAt -
+                                   generation_started)
+                                   .count();
+        LogProceduralRequest(
+            "worker_finished", pending.result.coord, pending.requestId,
+            pending.demandId,
+            "discarded=" + std::to_string(pending.result.discarded ? 1 : 0) +
+                " generation_ms=" + std::to_string(pending.generationMs));
         Completed.Push(std::move(pending));
       });
 }
 
 void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
-                               int maxGenerationStartsPerFrame)
+                               int maxGenerationStartsPerFrame,
+                               double maxApplyMsPerFrame,
+                               bool allowBoundedReadyDrain)
 {
   LastTickApplyMs = 0.0;
-  int generationStarts = 0;
-  while (!Queue.empty() && generationStarts < maxGenerationStartsPerFrame)
-  {
-    const PendingRequest next = Queue.top();
-    Queue.pop();
-    if (States[next.coord] != ChunkLoadState::Requested)
-    {
-      continue;
-    }
-    const auto prioIt = RequestPriorities.find(next.coord);
-    if (prioIt != RequestPriorities.end() && next.priority > prioIt->second)
-    {
-      continue;
-    }
-    ScheduleWorker(next);
-    ++generationStarts;
-  }
+  LastCommitsThisFrame = 0;
+  StartQueuedGenerationWorkers(maxGenerationStartsPerFrame);
 
   std::vector<PendingResult> ready = Completed.DrainAll();
+  // During intentional movement, use the actual drained batch rather than a
+  // racy queue snapshot taken by WorldStreaming before Tick. Bound both the
+  // result count and synchronous ApplyTo + MarkDirty time; one commit may
+  // exceed the target.
+  if (allowBoundedReadyDrain && ready.size() > 1)
+  {
+    constexpr int kReadyDrainMaxCommitsPerFrame = 3;
+    constexpr double kReadyDrainApplyBudgetMs = 12.0;
+    maxCommitsPerFrame = std::max(
+        maxCommitsPerFrame,
+        std::min(kReadyDrainMaxCommitsPerFrame,
+                 static_cast<int>(ready.size())));
+    maxApplyMsPerFrame = std::max(maxApplyMsPerFrame,
+                                  kReadyDrainApplyBudgetMs);
+  }
   std::sort(ready.begin(), ready.end(),
             [this](const PendingResult &a, const PendingResult &b)
             {
@@ -205,7 +485,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                 const auto it = RequestPriorities.find(pending.result.coord);
                 if (it != RequestPriorities.end())
                 {
-                  return std::min(pending.priority, it->second);
+                  return it->second;
                 }
                 return pending.priority;
               };
@@ -214,30 +494,68 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
   int committed = 0;
   for (PendingResult &pending : ready)
   {
-    States[pending.result.coord] = ChunkLoadState::Ready;
     const auto tokenIt = ActiveTokens.find(pending.result.coord);
     if (tokenIt == ActiveTokens.end() ||
         !pending.result.token.IsValidFor(pending.result.coord,
-                                         tokenIt->second.sequence) ||
-        pending.result.discarded)
+                                         tokenIt->second.sequence))
     {
-      States.erase(pending.result.coord);
-      RequestPriorities.erase(pending.result.coord);
+      // A stale worker must not erase or overwrite state for a newer request
+      // at the same coordinate.
+      LogProceduralRequest(
+          "stale_worker_result", pending.result.coord, pending.requestId,
+          pending.demandId, "stage=apply");
       continue;
     }
-    if (committed >= maxCommitsPerFrame)
+    if (pending.result.discarded)
+    {
+      LogProceduralRequest(
+          "discarded", pending.result.coord, pending.requestId,
+          pending.demandId, "stage=apply");
+      States.erase(pending.result.coord);
+      ActiveTokens.erase(tokenIt);
+      ActiveRequestIds.erase(pending.result.coord);
+      RequestPriorities.erase(pending.result.coord);
+      InitialRequestPriorities.erase(pending.result.coord);
+      RequestPriorityRefreshCounts.erase(pending.result.coord);
+      continue;
+    }
+    States[pending.result.coord] = ChunkLoadState::Ready;
+    const bool apply_budget_exhausted =
+        committed > 0 && maxApplyMsPerFrame > 0.0 &&
+        LastTickApplyMs >= maxApplyMsPerFrame;
+    if (committed >= maxCommitsPerFrame || apply_budget_exhausted)
     {
       Completed.Push(std::move(pending));
       continue;
     }
+    const double ready_wait_ms = std::chrono::duration<double, std::milli>(
+                                     std::chrono::steady_clock::now() -
+                                     pending.generationFinishedAt)
+                                     .count();
+    const auto livePriorityIt = RequestPriorities.find(pending.result.coord);
+    const int priorityAtCommit =
+        livePriorityIt != RequestPriorities.end() ? livePriorityIt->second
+                                                   : pending.priority;
+    const auto initialPriorityIt =
+        InitialRequestPriorities.find(pending.result.coord);
+    const int initialPriority =
+        initialPriorityIt != InitialRequestPriorities.end()
+            ? initialPriorityIt->second
+            : pending.priority;
+    const auto priorityRefreshIt =
+        RequestPriorityRefreshCounts.find(pending.result.coord);
+    const uint64_t priorityRefreshCount =
+        priorityRefreshIt != RequestPriorityRefreshCounts.end()
+            ? priorityRefreshIt->second
+            : 0;
     const auto apply_t0 = std::chrono::high_resolution_clock::now();
     pending.result.buffer.ApplyTo(world);
-    LastTickApplyMs += std::chrono::duration<double, std::milli>(
-                           std::chrono::high_resolution_clock::now() - apply_t0)
-                           .count();
     States[pending.result.coord] = ChunkLoadState::Committed;
     ActiveTokens.erase(pending.result.coord);
+    ActiveRequestIds.erase(pending.result.coord);
     RequestPriorities.erase(pending.result.coord);
+    InitialRequestPriorities.erase(pending.result.coord);
+    RequestPriorityRefreshCounts.erase(pending.result.coord);
     int min_y = 0;
     int max_y = pending.maxHeight;
     if (pending.result.buffer.HasYBounds())
@@ -250,8 +568,106 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       MarkDirty(pending.result.coord, min_y, max_y,
                 pending.result.fluidSealed);
     }
+    // Include MarkDirty in apply wall — previously invisible in stream_ms gap.
+    const double apply_ms = std::chrono::duration<double, std::milli>(
+                                std::chrono::high_resolution_clock::now() -
+                                apply_t0)
+                                .count();
+    LastTickApplyMs += apply_ms;
+    if (IsWorldColumnSourceTraceEnabled())
+    {
+      const double queue_ms = std::chrono::duration<double, std::milli>(
+                                  pending.generationStartedAt -
+                                  pending.requestedAt)
+                                  .count();
+      const double scheduler_queue_ms = std::chrono::duration<double, std::milli>(
+                                            pending.scheduledAt -
+                                            pending.requestedAt)
+                                            .count();
+      const double worker_pool_queue_ms = std::chrono::duration<double, std::milli>(
+                                              pending.generationStartedAt -
+                                              pending.scheduledAt)
+                                              .count();
+      const double total_ms = std::chrono::duration<double, std::milli>(
+                                  std::chrono::steady_clock::now() -
+                                  pending.requestedAt)
+                                  .count();
+      const std::string message =
+          "source=procedural outcome=committed coord=(" +
+          std::to_string(pending.result.coord.x) + ",0," +
+          std::to_string(pending.result.coord.z) + ") request_id=" +
+          std::to_string(pending.requestId) + " demand_id=" +
+          std::to_string(pending.demandId) + " priority=" +
+          std::to_string(pending.priority) + " token=" +
+          std::to_string(pending.result.token.sequence) + " queue_ms=" +
+          std::to_string(queue_ms) + " scheduler_queue_ms=" +
+          std::to_string(scheduler_queue_ms) + " worker_pool_queue_ms=" +
+          std::to_string(worker_pool_queue_ms) +
+          " request_queue_live_at_schedule=" +
+          std::to_string(pending.requestQueueLiveAtSchedule) +
+          " request_queue_heap_at_schedule=" +
+          std::to_string(pending.requestQueueHeapAtSchedule) +
+          " worker_pending_at_submit=" +
+          std::to_string(pending.workerPendingAtSubmit) +
+          " worker_active_at_submit=" +
+          std::to_string(pending.workerActiveAtSubmit) +
+          " worker_count=" + std::to_string(pending.workerCount) +
+          " generation_start_cap_per_frame=" +
+          std::to_string(pending.generationStartCapPerFrame) +
+          " generation_ms=" +
+          std::to_string(pending.generationMs) + " ready_wait_ms=" +
+          std::to_string(ready_wait_ms) + " priority_initial=" +
+          std::to_string(initialPriority) + " priority_at_schedule=" +
+          std::to_string(pending.priority) + " priority_at_commit=" +
+          std::to_string(priorityAtCommit) + " priority_refresh_n=" +
+          std::to_string(priorityRefreshCount) + " ready_batch_n=" +
+          std::to_string(ready.size()) + " max_commits_per_frame=" +
+          std::to_string(maxCommitsPerFrame) + " max_apply_budget_ms=" +
+          std::to_string(maxApplyMsPerFrame) + " apply_ms=" +
+          std::to_string(apply_ms) + " total_ms=" + std::to_string(total_ms);
+      CubatariumLogInfo("WorldColumnSource", message);
+    }
     ++committed;
   }
+  LastCommitsThisFrame = committed;
+}
+
+int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
+{
+  int generationStarts = 0;
+  while (!Queue.empty() && generationStarts < maxStarts)
+  {
+    const PendingRequest next = Queue.top();
+    Queue.pop();
+    const auto stateIt = States.find(next.coord);
+    const auto queuedIt = QueuedRequests.find(next.coord);
+    if (stateIt == States.end() ||
+        stateIt->second != ChunkLoadState::Requested ||
+        queuedIt == QueuedRequests.end() ||
+        queuedIt->second.queueRevision != next.queueRevision)
+    {
+      continue;
+    }
+    const auto priorityIt = RequestPriorities.find(next.coord);
+    if (priorityIt != RequestPriorities.end() &&
+        next.priority != priorityIt->second)
+    {
+      continue;
+    }
+    ScheduleWorker(next, maxStarts);
+    QueuedRequests.erase(queuedIt);
+    ++generationStarts;
+  }
+  return generationStarts;
+}
+
+int UChunkLoadScheduler::GetAvailableGenerationWorkerSlots() const
+{
+  const JobThreadPoolSnapshot snapshot = Pool.GetSnapshot();
+  const std::size_t occupied = snapshot.pending + snapshot.active;
+  return snapshot.workers > occupied
+             ? static_cast<int>(snapshot.workers - occupied)
+             : 0;
 }
 
 bool UChunkLoadScheduler::IsCommitted(glm::ivec3 coord) const

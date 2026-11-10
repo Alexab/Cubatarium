@@ -1,0 +1,160 @@
+{
+  "name": "asset_boulder_schist",
+  "version": 2,
+  "displayName": "Boulder Schist",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 6571603104195122558,
+    "license": "CC0-1.0",
+    "material_parameter": "schist"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 2,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_schist_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_schist_natural"
+    }
+  ]
+}

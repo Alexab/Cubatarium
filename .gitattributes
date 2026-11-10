@@ -1,0 +1,11 @@
+# Stable CRLF on Windows — avoids agent/IDE line-ending flips forcing recompiles.
+* text=auto eol=crlf
+*.cpp text eol=crlf
+*.h text eol=crlf
+*.hpp text eol=crlf
+*.c text eol=crlf
+*.cmake text eol=crlf
+*.md text eol=lf
+*.json text eol=crlf
+*.jsonl text eol=lf
+*.sh text eol=lf

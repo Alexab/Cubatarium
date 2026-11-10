@@ -1,25 +1,52 @@
+#include "Creatures/Locomotion/RiderCarry.h"
 #include "World/Core/WorldViewBinding.h"
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <fstream>
 
 #include "Activity/WorldCreatureActivitySink.h"
+#include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Influence/InfluenceApplier.h"
+#include "Creatures/Influence/InfluenceResolver.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Player/User.h"
+#include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Render/Camera/Camera.h"
+#include "Navigation/NavigationPathBudget.h"
 #include "Render/Engine/ViewEngine.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/CreatureTickTrace.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/EmptyBacklogPolicy.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
+#include "World/Streaming/InputFirstPolicy.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Core/RuntimeTuning.h"
+#include "Core/FrameDeadline.h"
+#include "Core/FrameStageWatchdog.h"
 
 #include <chrono>
 #include <optional>
+
+namespace
+{
+// Mount yaw at the start of the frame (set while resolving the rider mount,
+// read when the mount has moved) - carries the rider's turn.
+float gMountYawBefore = 0.0f;
+} // namespace
 
 namespace cutum
 {
@@ -28,6 +55,10 @@ namespace
 {
 
 constexpr float kMinReasonablePlayerY = -32.0f;
+// Creature simulation step cap. The raw frame delta is unbounded (a save or
+// alt-tab stall reported seconds), and one huge step teleported mobs several
+// blocks, saturated gravity and burned wander timers in a single tick.
+constexpr float kMaxCreatureStepDt = 0.1f;
 
 } // namespace
 
@@ -96,6 +127,7 @@ void UWorldViewBinding::ApplySpawnToCamera(UWorld &world)
   {
     camera->SetPosition(world.SpawnPoint);
     camera->SetOrientation(-90.0f, 0.0f);
+    camera->ApplyWorldViewSettings(world.GetViewSettings());
     if (const UCreature *controlled = world.GetControlledCreature())
     {
       if (const CreatureDefinition *def =
@@ -110,6 +142,7 @@ void UWorldViewBinding::ApplySpawnToCamera(UWorld &world)
   {
     Engine_->GetActiveCamera()->SetPosition(world.SpawnPoint);
     Engine_->GetActiveCamera()->SetOrientation(-90.0f, 0.0f);
+    Engine_->GetActiveCamera()->ApplyWorldViewSettings(world.GetViewSettings());
   }
 }
 
@@ -126,6 +159,7 @@ void UWorldViewBinding::ApplyUserToCamera(UWorld &world,
   {
     camera->SetPosition(user->GetPosition());
     camera->SetOrientation(user->GetCameraYaw(), user->GetCameraPitch());
+    camera->ApplyWorldViewSettings(world.GetViewSettings());
     if (const UCreature *controlled = world.GetControlledCreature())
     {
       if (const CreatureDefinition *def =
@@ -175,6 +209,19 @@ void UWorldViewBinding::EnsurePlayerOnGround(UWorld &world)
   std::optional<int> topY = world.FindHighestSolidY(x, z);
   if (!topY)
   {
+    const glm::ivec3 user_ground(FloorDiv(column.x, CHUNK_SIZE), 0,
+                                 FloorDiv(column.z, CHUNK_SIZE));
+    // A saved player can be restored into a column that is not resident yet
+    // (for example, a fresh world whose terrain around the saved position must
+    // be generated on demand). Treating that temporary absence as an empty
+    // column teleports the player to SpawnPoint before streaming can satisfy
+    // the request. Only use the spawn fallback after the user's terrain column
+    // is complete and demonstrably has no solid ground.
+    if (!world.IsTerrainColumnCompleteFast(user_ground))
+    {
+      return;
+    }
+
     const glm::ivec3 spawnColumn = WorldPosToBlock(world.SpawnPoint);
     x = spawnColumn.x;
     z = spawnColumn.z;
@@ -246,9 +293,7 @@ bool UWorldViewBinding::TryGetCurrentViewRay(const UWorld &world,
   {
     return false;
   }
-  position = camera->GetPosition();
-  front = camera->GetFront();
-  return true;
+  return camera->TryGetCenterViewRay(position, front);
 }
 
 void UWorldViewBinding::RefreshIntersectionFromCurrentView(UWorld &world)
@@ -359,8 +404,15 @@ void UWorld::UpdateIntersection(const glm::vec3 &position,
   const PlayerCapsule cap = ViewBinding
                                 ? ViewBinding->ResolvePlacementCapsule(*this)
                                 : PlayerCapsule::Standing();
-  const BlockPlacementResolve resolved =
-      Collision.ResolveBlockPlacement(position, front, cap, 8.0f);
+  float max_distance = 8.0f;
+  glm::vec3 player_eye = position;
+  if (auto camera = GetCurrentUserCamera())
+  {
+    max_distance = camera->GetBlockInteractMaxDistance();
+    player_eye = camera->GetPosition();
+  }
+  const BlockPlacementResolve resolved = Collision.ResolveBlockPlacement(
+      position, front, cap, max_distance, player_eye);
 
   HasIntersectionBlock = resolved.break_hit.has_value();
   PlaceTargetActive = resolved.place_block_pos.has_value();
@@ -396,7 +448,8 @@ void UWorld::RunLegacyPhysicsFrame()
     return;
   }
 
-  auto t_begin = std::chrono::high_resolution_clock::now();
+  using clock_t = std::chrono::high_resolution_clock;
+  auto t_begin = clock_t::now();
   Streaming->ResetFrameTiming();
 
   auto camera = GetCurrentUserCamera();
@@ -409,10 +462,9 @@ void UWorld::RunLegacyPhysicsFrame()
   }
   const float prevPlayerY = camera ? camera->GetPosition().y : 0.0f;
   const float dt = camera ? camera->GetDeltaTime() : 0.0f;
+  const float creatureDt = std::min(dt, kMaxCreatureStepDt);
   glm::ivec3 feetBlockForReadiness(0);
   bool hasFeetBlockForReadiness = false;
-  static bool prev_collision_ring_ready = true;
-
   if (camera && Streaming->HasStreamer() && IsStreamingEnabled())
   {
     const glm::vec3 eyePos = camera->GetPosition();
@@ -423,146 +475,170 @@ void UWorld::RunLegacyPhysicsFrame()
     {
       feetY = BoundsFeetY(controlled->GetBodyOrigin());
     }
-    const glm::ivec3 feetBlock =
+    feetBlockForReadiness =
         WorldPosToBlock(glm::vec3(eyePos.x, feetY + 0.01f, eyePos.z));
-    feetBlockForReadiness = feetBlock;
     hasFeetBlockForReadiness = true;
-    glm::vec3 forward = camera->GetFront();
-    forward.y = 0.0f;
-    if (prev_collision_ring_ready || (PhysicsTickCounter % 2) == 0)
+    EnsureCollisionRingReadiness(camera, feetBlockForReadiness);
+  }
+
+  const bool streaming_red = IsStreamingPhysicsRed(
+      PhysicsTelemetryData.PhaseBudgetOver != 0,
+      PhysicsTelemetryData.FocusMissingMesh != 0,
+      GetWallFrameDelta() * 1000.0);
+  const bool tick_world_ai =
+      ShouldTickWorldCreatures(streaming_red, GetWallFrameDelta() * 1000.0);
+  const auto t_player = clock_t::now();
+
+  // Population maintenance runs on the world step even when expensive NPC
+  // brains are deferred for a streaming hitch. The manager is low frequency
+  // and independently checks mode, loaded terrain, habitat, and population
+  // limits before it can add anything.
+  Environment.TickNaturalPopulation(dt);
+
+  // Rider mount (runtime issue 5): resolve what the player stands on
+  // before the movement step; the mount is excluded from the rider's
+  // collisions for the step and its back acts as the ground plane.
+  CreatureId mountId = 0;
+  glm::vec3 mountOriginBefore(0.0f);
+  if (camera && controlled && controlled->GetId() != 0)
+  {
+    const CollisionVolume riderVol = controlled->GetCollisionVolume();
+    const glm::vec3 &feetPos = controlled->GetBodyOrigin();
+    const CreatureId previousMountId =
+        camera->GetLocomotionController().GetMountSupportId();
+    std::optional<std::pair<CreatureId, float>> mount = FindMountCreatureUnder(
+        feetPos, riderVol.halfExtents, controlled->GetId());
+    if (!mount && previousMountId != 0)
     {
-      Streaming->EnsureCollisionChunks(feetBlock, forward);
-    }
-  }
-
-  UWorldCreatureActivitySink activitySink(*this);
-  Environment.TickActivity(*this, activitySink, dt);
-
-  ForEachCreature(
-      [&](UCreature &creature)
+      // Sticky mount: a mount that steps down a block (or dips while its
+      // feet snap to the ground) leaves the back beyond the normal search
+      // band for a frame; keep the rider on it while it still overlaps the
+      // rider's footprint and its back is within one block + margin below.
+      if (const UCreature *prev = Environment.GetCreature(previousMountId))
       {
-        if (Environment.GetControlledCreatureId() != 0 &&
-            creature.GetId() == Environment.GetControlledCreatureId())
+        const CollisionVolume body = prev->GetCollisionVolume();
+        const float backY = body.center.y + body.halfExtents.y;
+        const float overlapX = riderVol.halfExtents.x + body.halfExtents.x -
+                               std::abs(feetPos.x - body.center.x);
+        const float overlapZ = riderVol.halfExtents.z + body.halfExtents.z -
+                               std::abs(feetPos.z - body.center.z);
+        constexpr float kStickyDrop = 1.6f;
+        constexpr float kStickyRise = 0.5f;
+        if (overlapX > 0.05f && overlapZ > 0.05f &&
+            backY >= feetPos.y - kStickyDrop &&
+            backY <= feetPos.y + kStickyRise)
         {
-          return;
+          mount = std::make_pair(previousMountId, backY);
         }
-        if (creature.IsPossessed())
-        {
-          return;
-        }
-        creature.ExecuteIntent(*this, dt);
-      });
-
-  bool is_moved = camera && camera->DoMovement(this);
-  static bool was_collision_ready = true;
-  const bool collision_ready =
-      !hasFeetBlockForReadiness ||
-      (camera && camera->GetFreeMove()) ||
-      IsCollisionReadyAtFeet(feetBlockForReadiness);
-  if (!collision_ready && camera)
-  {
-    PhysicsTelemetryData.CollisionReadyWaitMs +=
-        static_cast<double>(camera->GetDeltaTime()) * 1000.0;
-  }
-  if (collision_ready != was_collision_ready)
-  {
-    ++PhysicsTelemetryData.CollisionReadyTransitions;
-    was_collision_ready = collision_ready;
-  }
-  prev_collision_ring_ready = collision_ready;
-  if (camera && hasFeetBlockForReadiness && !collision_ready)
-  {
-    camera->SuspendFallThroughUnloadedChunks();
-  }
-  if (Streaming && Streaming->GetStreamer() && hasFeetBlockForReadiness)
-  {
-    const glm::ivec3 feet_chunk =
-        UChunkManager::WorldToChunk(feetBlockForReadiness);
-    Streaming->GetStreamer()->SetCollisionUrgentRing(
-        feet_chunk, PhysicsBudgetConfig.CollisionSafetyRadiusChunks,
-        !collision_ready);
-  }
-
-  if (controlled && camera)
-  {
-    const glm::vec3 eye = camera->GetPosition();
-    float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
-    if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
-    {
-      const int gx = WorldCoordToBlockIndex(eye.x);
-      const int gz = WorldCoordToBlockIndex(eye.z);
-      if (const std::optional<float> gy = QueryGroundFeetYUnder(gx, gz, feetY))
-      {
-        feetY = *gy;
       }
     }
-    controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
-    controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
-    controlled->GetLocomotion().SyncFeetAnchorFromView(
-        feetY, camera->HasAnchoredFeet());
-    controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()),
-                               camera->GetPitch());
-    controlled->SyncBoundsFromStance();
-    controlled->GetLocomotion().SetMode(camera->GetFreeMove()
-                                            ? CreatureMovementMode::Flying
-                                            : CreatureMovementMode::Walking);
-    float horizontalSpeed = 0.0f;
-    const UCreatureLocomotionController &camLoc =
-        camera->GetLocomotionController();
-    const LocomotionState camState = camLoc.GetLocomotionState();
-    const PlayerInput moveInput = camera->GetMovementInput();
-    if (camState == LocomotionState::Walk || camState == LocomotionState::Run ||
-        camState == LocomotionState::Crouch)
+    if (mount)
     {
-      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
+      mountId = mount->first;
+      if (const UCreature *mountCreature = Environment.GetCreature(mountId))
+      {
+        mountOriginBefore = mountCreature->GetBodyOrigin();
+        gMountYawBefore = mountCreature->GetYaw();
+      }
+      camera->GetLocomotionController().SetMountSupport(
+          mountId, mount->second);
+      Collision.SetRiderMountId(mountId);
     }
-    else if (camState == LocomotionState::Fly ||
-             camState == LocomotionState::Glide ||
-             camState == LocomotionState::Hover)
+    else
     {
-      horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
+      camera->GetLocomotionController().ClearMountSupport();
+      Collision.SetRiderMountId(0);
     }
-    controlled->RebuildLocomotionFactsFromController(
-        camLoc, controlled->GetLocomotion().GetCapabilities(),
-        static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
+  }
+
+  const auto t_cam = clock_t::now();
+  bool is_moved = camera && camera->DoMovement(this);
+  Collision.SetRiderMountId(0);
+  PhysicsTelemetryData.CameraDoMovementMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_cam).count();
+  if (camera)
+  {
+    PhysicsTelemetryData.CameraGroundSupportMs =
+        camera->GetLastGroundSupportMs();
+    PhysicsTelemetryData.CameraLocomotionMs = camera->GetLastLocomotionMs();
+    PhysicsTelemetryData.CameraHorizMoveMs = camera->GetLastHorizMoveMs();
+    PhysicsTelemetryData.CameraMoveRequestedXz =
+        camera->GetLastMoveRequestedXz();
+    PhysicsTelemetryData.CameraMoveAppliedXz = camera->GetLastMoveAppliedXz();
+    PhysicsTelemetryData.CameraMoveAttemptSubsteps =
+        camera->GetLastMoveAttemptSubsteps();
+    PhysicsTelemetryData.CameraMoveBlockedSubsteps =
+        camera->GetLastMoveBlockedSubsteps();
+    PhysicsTelemetryData.CameraMoveBlockedXSubsteps =
+        camera->GetLastMoveBlockedXSubsteps();
+    PhysicsTelemetryData.CameraMoveBlockedZSubsteps =
+        camera->GetLastMoveBlockedZSubsteps();
+    PhysicsTelemetryData.CameraFlightGroundContacts =
+        camera->GetLastFlightGroundContacts();
+    PhysicsTelemetryData.CameraFreeMoveAtStart =
+        camera->GetLastFreeMoveAtStart() ? 1 : 0;
+  }
+  const auto t_sync = clock_t::now();
+  UpdateCollisionReadinessGate(camera, feetBlockForReadiness,
+                               hasFeetBlockForReadiness);
+
+  if (controlled && camera && SyncControlledBodyFromCamera(controlled, camera))
+  {
     is_moved = true;
   }
 
-  const auto t_after_move = std::chrono::high_resolution_clock::now();
-  PhysicsTelemetryData.StreamMs = 0.0;
-  PhysicsTelemetryData.StreamerUpdateMs = 0.0;
-  PhysicsTelemetryData.AsyncIoMs = 0.0;
-  PhysicsTelemetryData.RelightDrainMs = 0.0;
-  PhysicsTelemetryData.MeshEmergeMs = 0.0;
-  PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
+  PhysicsTelemetryData.CameraSyncMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_sync).count();
+  PhysicsTelemetryData.PlayerLocomotionBlockMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_player)
+          .count();
 
-  if (camera)
+  const auto t_ai = clock_t::now();
+  UNavigationPathBudget::SetExpandsPerTick(streaming_red ? 100 : 256);
+
+  const auto t_env = clock_t::now();
+  // Input-first A1: world AI runs after player locomotion. Skip agent brains on
+  // red hitch so fixed-step input is not waiting on environment work.
+  if (tick_world_ai)
   {
-    const auto t_before_stream = std::chrono::high_resolution_clock::now();
-    UpdateStreaming();
-    TickAsyncChunkSystems();
-    const auto t_after_stream = std::chrono::high_resolution_clock::now();
-    TickMeshEmerge();
-    const auto t_after_mesh = std::chrono::high_resolution_clock::now();
-    BlockWorldReady = true;
-
-    PhysicsTelemetryData.StreamMs =
-        std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
-            .count();
-    PhysicsTelemetryData.MeshEmergeMs =
-        std::chrono::duration<double, std::milli>(t_after_mesh - t_after_stream)
-            .count();
-    PhysicsTelemetryData.MeshSyncMs =
-        GetMeshService().GetLastMeshSyncMs();
-    PhysicsTelemetryData.MeshSnapshotMs =
-        GetMeshService().GetLastMeshSnapshotMs();
-    PhysicsTelemetryData.MeshImmediateMs =
-        GetMeshService().GetLastMeshImmediateMs();
-    PhysicsTelemetryData.MeshImmediateCount =
-        GetMeshService().GetLastMeshImmediateCount();
-    PhysicsTelemetryData.MeshDirtyTickMs =
-        GetMeshService().GetLastMeshDirtyTickMs();
+    const bool stress_tick =
+        streaming_red || GetWallFrameDelta() * 1000.0 > 28.0;
+    UWorldCreatureActivitySink activitySink(*this);
+    Environment.TickActivity(*this, activitySink, creatureDt, stress_tick);
   }
+  else
+  {
+    // No activity this frame: nothing moves, so the incrementally
+    // maintained index stays valid — no rebuild needed (audit S7).
+  }
+  PhysicsTelemetryData.EnvironmentTickMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
+
+  TickNpcCreatureIntents(creatureDt, tick_world_ai, mountId,
+                         mountOriginBefore);
+  if (mountId != 0 && camera)
+  {
+    // Riding counts as movement: user position/intersection follow the
+    // camera even when the rider itself is idle.
+    is_moved = true;
+  }
+
+  // Controlled / possessed player: resolve Influence after agents (input may
+  // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
+  // player-gated in Resolver; session tick uses the world DigSession.
+  ResolveControlledCreatureInfluence(dt);
+
+  PhysicsTelemetryData.WorldAiAfterPlayerMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_ai).count();
+  PhysicsTelemetryData.CreatureTickMs = PhysicsTelemetryData.WorldAiAfterPlayerMs;
+
+  // After player facts sync so sprint/swim fatigue sees this frame's state.
+  TickSurvivalSystems(dt);
+
+  const auto t_after_move = std::chrono::high_resolution_clock::now();
+  // Era14 TD-ARCH-040: UpdateStreaming / TickMeshEmerge run in
+  // TickWorldStreamingPhase (WindowManager, after DoMovement) so phys_ms /
+  // MovementStepMs stay locomotion-only.
 
   if (is_moved && camera)
   {
@@ -571,10 +647,13 @@ void UWorld::RunLegacyPhysicsFrame()
       user->SetPosition(camera->GetPosition());
       user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
     }
-    UpdateIntersection(camera->GetPosition(), camera->GetFront());
+    if (ViewBinding)
+    {
+      ViewBinding->RefreshIntersectionFromCurrentView(*this);
+    }
   }
 
-  auto t_end = std::chrono::high_resolution_clock::now();
+  auto t_end = clock_t::now();
   DurationDoMovementMks = static_cast<uint64_t>(
       std::chrono::duration<double, std::micro>(t_end - t_begin).count());
   PhysicsTelemetryData.MovementStepMs =
@@ -591,6 +670,960 @@ void UWorld::RunLegacyPhysicsFrame()
                                 : PhysicsTelemetryData.MovementStepMs;
   SetLastMovementFrameMs(hitch_ms);
   UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
+}
+
+namespace
+{
+// Frame-local persistence for the streaming collision readiness gate (was
+// function-local statics inside RunLegacyPhysicsFrame).
+bool gPrevCollisionRingReady = true;
+bool gWasCollisionReady = true;
+} // namespace
+
+void UWorld::EnsureCollisionRingReadiness(const std::shared_ptr<UCamera> &camera,
+                                          const glm::ivec3 &feetBlock)
+{
+  glm::vec3 forward = camera->GetFront();
+  forward.y = 0.0f;
+  if (gPrevCollisionRingReady || (PhysicsTickCounter % 2) == 0)
+  {
+    const auto t_ec = std::chrono::high_resolution_clock::now();
+    Streaming->EnsureCollisionChunks(feetBlock, forward);
+    PhysicsTelemetryData.EnsureCollisionMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - t_ec)
+            .count();
+  }
+}
+
+void UWorld::UpdateCollisionReadinessGate(
+    const std::shared_ptr<UCamera> &camera, const glm::ivec3 &feetBlock,
+    bool hasFeetBlock)
+{
+  const bool collision_ready =
+      !hasFeetBlock || (camera && camera->GetFreeMove()) ||
+      IsCollisionReadyAtFeet(feetBlock);
+  if (!collision_ready && camera)
+  {
+    PhysicsTelemetryData.CollisionReadyWaitMs +=
+        static_cast<double>(camera->GetDeltaTime()) * 1000.0;
+  }
+  if (collision_ready != gWasCollisionReady)
+  {
+    ++PhysicsTelemetryData.CollisionReadyTransitions;
+    gWasCollisionReady = collision_ready;
+  }
+  gPrevCollisionRingReady = collision_ready;
+  if (camera && hasFeetBlock &&
+      (!collision_ready || PhysicsTelemetryData.UnderfeetHasMesh == 0))
+  {
+    camera->SuspendFallThroughUnloadedChunks();
+  }
+  if (Streaming && Streaming->GetStreamer() && hasFeetBlock)
+  {
+    const glm::ivec3 feet_chunk = UChunkManager::WorldToChunk(feetBlock);
+    Streaming->GetStreamer()->SetCollisionUrgentRing(
+        feet_chunk, PhysicsBudgetConfig.CollisionSafetyRadiusChunks,
+        !collision_ready);
+  }
+}
+
+bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
+                                          const std::shared_ptr<UCamera> &camera)
+{
+  // Camera locomotion is the source of truth for the controlled player;
+  // sync body origin / facts from the camera controller (not UpdateControlled).
+  const glm::vec3 eye = camera->GetPosition();
+  float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
+  // Standing on a creature: the feet are anchored to its back, not to the
+  // block column below - snapping to terrain here pulled the body (and the
+  // mount detection that reads it) down into the mount every other frame.
+  if (!camera->GetFreeMove() && camera->HasAnchoredFeet() &&
+      camera->GetLocomotionController().GetMountSupportId() == 0)
+  {
+    const int gx = WorldCoordToBlockIndex(eye.x);
+    const int gz = WorldCoordToBlockIndex(eye.z);
+    if (const std::optional<float> gy = QueryGroundFeetYUnder(gx, gz, feetY))
+    {
+      feetY = *gy;
+    }
+  }
+  controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
+  controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
+  controlled->GetLocomotion().SyncFeetAnchorFromView(feetY,
+                                                     camera->HasAnchoredFeet());
+  const CreatureViewOrientation view_orient =
+      camera->ResolveCreatureViewOrientation();
+  controlled->SetOrientation(view_orient.YawDeg, view_orient.PitchDeg);
+  controlled->SyncBoundsFromStance();
+  controlled->GetLocomotion().SetMode(camera->GetFreeMove()
+                                          ? CreatureMovementMode::Flying
+                                          : CreatureMovementMode::Walking);
+  float horizontalSpeed = 0.0f;
+  const UCreatureLocomotionController &camLoc =
+      camera->GetLocomotionController();
+  const LocomotionState camState = camLoc.GetLocomotionState();
+  const PlayerInput moveInput = camera->GetMovementInput();
+  if (camState == LocomotionState::Walk || camState == LocomotionState::Run ||
+      camState == LocomotionState::Crouch)
+  {
+    horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
+  }
+  else if (camState == LocomotionState::Fly ||
+           camState == LocomotionState::Glide ||
+           camState == LocomotionState::Hover)
+  {
+    horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
+  }
+  // P3: soft streaming integrity clamp (same scale as Camera::ProcessKeyboard).
+  {
+    const float clamp = GetPhysicsTelemetry().StreamSpeedClampScale;
+    if (clamp > 0.0f && clamp < 1.0f)
+    {
+      horizontalSpeed *= clamp;
+    }
+  }
+  controlled->RebuildLocomotionFactsFromController(
+      camLoc, controlled->GetLocomotion().GetCapabilities(),
+      static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
+  return true;
+}
+
+void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
+                                    CreatureId mountId,
+                                    const glm::vec3 &mountOriginBefore)
+{
+  RecordCreatureTickTrace(*this, tick_world_ai);
+  using clock_t = std::chrono::high_resolution_clock;
+  int creatures_total = 0;
+  int creatures_ai_ticked = 0;
+  int world_creatures_skipped = 0;
+  const auto t_npc = clock_t::now();
+  // Riding carry (runtime issue 5): the player standing on the mount moves
+  // with it this frame - on every tick path (hitch frames included).
+  const auto carryRider = [&](UCreature &creature)
+  {
+    if (mountId == 0 || creature.GetId() != mountId)
+    {
+      return;
+    }
+    if (auto riderCamera = GetCurrentUserCamera())
+    {
+      if (UCreature *rider = GetControlledCreature())
+      {
+        const glm::vec3 carry = creature.GetBodyOrigin() - mountOriginBefore;
+        // Turn with the mount (optional): orbit the rider around the mount
+        // and rotate the view by the same angle.
+        const float yawDelta =
+            RiderYawCarryEnabled
+                ? WrapYawDeltaDeg(creature.GetYaw() - gMountYawBefore)
+                : 0.0f;
+        // Swept like the player's own move, the mount excluded: under an
+        // overhang the rider is scraped off rather than carried into blocks.
+        Collision.SetRiderMountId(mountId);
+        const PlayerCapsule cap = riderCamera->GetPlayerCapsule();
+        const CreatureId skipId = rider->GetId();
+        const RiderCarryResult carried = CarryRiderThroughCollision(
+            riderCamera->GetPosition(), rider->GetBodyOrigin(), carry,
+            creature.GetBodyOrigin(), yawDelta,
+            [&](const glm::vec3 &eye, const glm::vec3 &delta)
+            { return ResolveMovement(eye, delta, cap, skipId); });
+        Collision.SetRiderMountId(0);
+        riderCamera->SetPosition(carried.eye);
+        rider->SetBodyOrigin(carried.body);
+        if (std::abs(yawDelta) > 1e-3f)
+        {
+          riderCamera->SetOrientation(
+              riderCamera->GetYaw() + CameraYawDeltaForMountYaw(yawDelta),
+              riderCamera->GetPitch());
+        }
+      }
+    }
+  };
+  ForEachCreature(
+      [&](UCreature &creature)
+      {
+        ++creatures_total;
+        creature.AdvanceInfluenceCooldown(dt);
+        creature.TickHitFlash(dt);
+        creature.TickHealthBar(dt);
+        if (Environment.GetControlledCreatureId() != 0 &&
+            creature.GetId() == Environment.GetControlledCreatureId())
+        {
+          return;
+        }
+        if (creature.IsPossessed())
+        {
+          return;
+        }
+        // A creature whose terrain chunk is not loaded (streaming moved on,
+        // chunk not ready yet) has no ground: simulating it makes it fall
+        // through the void forever. Freeze it until the chunk returns, and
+        // present it standing (it kept its last walk/fly facts and walked in
+        // place).
+        {
+          const CollisionVolume vol = creature.GetCollisionVolume();
+          const UChunkManager &chunkManager = GetBlockWorld().GetChunkManager();
+          if (!chunkManager.HasChunk(UChunkManager::WorldToChunk(
+                  WorldPosToBlock(vol.center))) ||
+              !chunkManager.HasChunk(UChunkManager::WorldToChunk(
+                  WorldPosToBlock(vol.center - glm::vec3(0.0f, vol.halfExtents.y + 0.5f, 0.0f)))))
+          {
+            creature.SettleFrozenLocomotion();
+            return;
+          }
+        }
+        if (!tick_world_ai)
+        {
+          // Hitch gate freezes the BRAINS (TickActivity above), never the
+          // bodies: stored wander intents keep executing so mobs do not
+          // visibly freeze mid-stride on streaming frames (Minecraft
+          // parity - entity simulation is not gated on frame time).
+          ++world_creatures_skipped;
+          creature.ExecuteIntent(*this, dt);
+          Environment.UpdateCreatureInSpatialIndex(creature);
+          carryRider(creature);
+          return;
+        }
+        ++creatures_ai_ticked;
+        const CreatureIntent &intent = creature.GetIntent();
+        if (intent.Influence.Channel == InfluenceChannel::Melee &&
+            intent.Influence.TargetId != 0)
+        {
+          CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
+        }
+        creature.ExecuteIntent(*this, dt);
+        // Keep the spatial index live as bodies move (audit S7): per-move
+        // upserts replace the full per-activity-tick rebuild; Upsert no-ops
+        // when position and extents are unchanged.
+        Environment.UpdateCreatureInSpatialIndex(creature);
+        carryRider(creature);
+      });
+  PhysicsTelemetryData.NpcIntentExecuteMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_npc).count();
+  PhysicsTelemetryData.CreaturesTotal = creatures_total;
+  PhysicsTelemetryData.CreaturesAiTicked = creatures_ai_ticked;
+  PhysicsTelemetryData.WorldCreaturesSkipped = world_creatures_skipped;
+  if (tick_world_ai)
+  {
+    PhysicsTelemetryData.CreaturesAiBudget =
+        Environment.GetLastActivityAgentsTicked();
+    PhysicsTelemetryData.CreaturesAiDeferred =
+        Environment.GetLastActivityAgentsDeferred();
+  }
+  else
+  {
+    PhysicsTelemetryData.CreaturesAiBudget = 0;
+    PhysicsTelemetryData.CreaturesAiDeferred = 0;
+  }
+}
+
+void UWorld::ResolveControlledCreatureInfluence(float dt)
+{
+  using clock_t = std::chrono::high_resolution_clock;
+  const auto t_infl = clock_t::now();
+  if (Environment.GetControlledCreatureId() != 0)
+  {
+    if (UCreature *controlled_creature =
+            GetCreature(Environment.GetControlledCreatureId()))
+    {
+      const CreatureIntent &intent = controlled_creature->GetIntent();
+      if (intent.Influence.Channel == InfluenceChannel::Dig)
+      {
+        InfluencePrediction pred = InfluenceResolver::Resolve(
+            *this, *controlled_creature, GetGameMode(), nullptr);
+        InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
+        if (!HasBreakSession())
+        {
+          CreatureIntent cleared = controlled_creature->GetIntent();
+          cleared.Influence = InfluenceIntent{};
+          controlled_creature->SetIntent(cleared);
+        }
+      }
+      else if (intent.Influence.Channel == InfluenceChannel::Melee &&
+               intent.Influence.TargetId != 0)
+      {
+        CreatureCombat::TryMeleeStrike(*this, *controlled_creature, GetGameMode());
+        // One-shot: clear Melee Intent after resolve attempt so hold-LMB dig
+        // does not spam; cooldown still gates actual hits.
+        CreatureIntent cleared = intent;
+        cleared.Influence = InfluenceIntent{};
+        controlled_creature->SetIntent(cleared);
+      }
+      else if (intent.Influence.Channel == InfluenceChannel::Ranged &&
+               intent.Influence.TargetId != 0)
+      {
+        CreatureCombat::TryRangedStrike(*this, *controlled_creature, GetGameMode());
+        CreatureIntent cleared = intent;
+        cleared.Influence = InfluenceIntent{};
+        controlled_creature->SetIntent(cleared);
+      }
+      else if (intent.Influence.Channel == InfluenceChannel::Use)
+      {
+        InfluencePrediction pred = InfluenceResolver::Resolve(
+            *this, *controlled_creature, GetGameMode(), nullptr);
+        InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
+        CreatureIntent cleared = intent;
+        cleared.Influence = InfluenceIntent{};
+        controlled_creature->SetIntent(cleared);
+      }
+    }
+  }
+  PhysicsTelemetryData.ControlledInfluenceMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_infl)
+          .count();
+}
+
+void UWorld::TickSurvivalSystems(float dt)
+{
+  using clock_t = std::chrono::high_resolution_clock;
+  const auto t_vitals = clock_t::now();
+  CreatureVitalsSystem::Tick(*this, GetGameMode(), GetDifficulty(), dt);
+  PhysicsTelemetryData.VitalsTickMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_vitals)
+          .count();
+  const auto t_status = clock_t::now();
+  StatusEffectSystem::Tick(*this, GetGameMode(), dt);
+  PhysicsTelemetryData.StatusEffectsTickMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_status)
+          .count();
+}
+
+void UWorld::TickWorldStreamingPhase()
+{
+  if (!BlockWorldReady)
+  {
+    return;
+  }
+  if (!GetCurrentUserCamera())
+  {
+    return;
+  }
+
+  AdvanceStreamingFrameEpoch();
+  UJobStageTrace::SetStreamingFrameEpoch(StreamingFrameEpoch);
+  Streaming->ResetFrameTiming();
+
+  PhysicsTelemetryData.StreamMs = 0.0;
+  PhysicsTelemetryData.StreamerUpdateMs = 0.0;
+  PhysicsTelemetryData.StreamerUnloadMs = 0.0;
+  PhysicsTelemetryData.StreamerKeepShellMs = 0.0;
+  PhysicsTelemetryData.StreamerPrefetchAheadMs = 0.0;
+  PhysicsTelemetryData.UpdateStreamingMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkSystemsMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkPreSchedulerMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkSchedulerTickMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkPostSchedulerMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoDrainMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoTickWallMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoUnattributedMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsResultDrainMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoQueueSnapshotMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoDiscardCancelledMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultSelectionMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultSelectionMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultSelectionMutexHeldMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultProcessingMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoWorldApplyMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoColumnFinalizeMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultRequeueMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultRequeueMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultRequeueMutexHeldMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexHeldMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexWaitMaxMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexHeldMaxMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoSaveDrainMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsSaveMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsSnapshotMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsEnqueueMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushN = 0;
+  PhysicsTelemetryData.AsyncChunkIoCancelledDiscardN = 0;
+  PhysicsTelemetryData.AsyncChunkIoReadyLoadsBeforeN = 0;
+  PhysicsTelemetryData.AsyncChunkIoSelectedLoadsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoProcessedLoadsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoRequeuedLoadsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoAppliedSlicesN = 0;
+  PhysicsTelemetryData.AsyncChunkIoSavesProcessedN = 0;
+  PhysicsTelemetryData.AsyncChunkIoLoadPendingJobsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoLoadActiveJobsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoLoadWorkersN = 0;
+  PhysicsTelemetryData.AsyncChunkIoBackgroundPendingJobsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoBackgroundActiveJobsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoBackgroundWorkersN = 0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultQueueDepthN = 0;
+  PhysicsTelemetryData.AsyncChunkIoSaveResultQueueDepthN = 0;
+  PhysicsTelemetryData.AsyncChunkIoApplyTimeBudgetHit = 0;
+  PhysicsTelemetryData.AsyncIoMs = 0.0;
+  PhysicsTelemetryData.RelightDrainMsPrev = PhysicsTelemetryData.RelightDrainMs;
+  PhysicsTelemetryData.RelightApplyMsPrev = PhysicsTelemetryData.RelightApplyMs;
+  PhysicsTelemetryData.RelightApplyLightMsPrev =
+      PhysicsTelemetryData.RelightApplyLightMs;
+  PhysicsTelemetryData.RelightApplyInstallMsPrev =
+      PhysicsTelemetryData.RelightApplyInstallMs;
+  PhysicsTelemetryData.RelightApplyNPrev = PhysicsTelemetryData.RelightApplyN;
+  PhysicsTelemetryData.ApplyBindingPrev = PhysicsTelemetryData.ApplyBinding;
+  PhysicsTelemetryData.RelightFifoDropNPrev = PhysicsTelemetryData.RelightFifoDropN;
+  PhysicsTelemetryData.RelightFifoPinDropNPrev =
+      PhysicsTelemetryData.RelightFifoPinDropN;
+  PhysicsTelemetryData.RelightDrainMs = 0.0;
+  PhysicsTelemetryData.RelightCaptureMs = 0.0;
+  PhysicsTelemetryData.RelightCaptureLockWaitMs = 0.0;
+  PhysicsTelemetryData.RelightSnapshotCopyMs = 0.0;
+  PhysicsTelemetryData.RelightDependencyStampMs = 0.0;
+  PhysicsTelemetryData.RelightSubmitSetupMs = 0.0;
+  PhysicsTelemetryData.RelightQueueSubmitMs = 0.0;
+  PhysicsTelemetryData.RelightApplyMs = 0.0;
+  PhysicsTelemetryData.RelightApplyPolicyMs = 0.0;
+  PhysicsTelemetryData.RelightApplyValidationMs = 0.0;
+  PhysicsTelemetryData.RelightApplyLightMs = 0.0;
+  PhysicsTelemetryData.RelightApplyInstallMs = 0.0;
+  PhysicsTelemetryData.RelightDrainCompletedMs = 0.0;
+  PhysicsTelemetryData.RelightMergeLightMs = 0.0;
+  PhysicsTelemetryData.RelightLightChunksN = 0;
+  PhysicsTelemetryData.RelightLightSkipN = 0;
+  PhysicsTelemetryData.RepairReticketDeferredN = 0;
+  PhysicsTelemetryData.ApplyBinding = 0;
+  PhysicsTelemetryData.RelightCaptureColHoriz = -1;
+  PhysicsTelemetryData.RelightCaptureFinalize = 0;
+  PhysicsTelemetryData.RelightCaptureBandCySpan = 0;
+  PhysicsTelemetryData.RelightCaptureFullN = 0;
+  PhysicsTelemetryData.RelightCaptureNeighborLightN = 0;
+  PhysicsTelemetryData.RelightApplyN = 0;
+  PhysicsTelemetryData.RelightApplyPartialN = 0;
+  PhysicsTelemetryData.RelightApplyFinalN = 0;
+  PhysicsTelemetryData.MarkRelitSkipAlreadyDirtyN = 0;
+  PhysicsTelemetryData.MarkRelitSkipAlreadyRaaN = 0;
+  PhysicsTelemetryData.MarkRelitPreferKickN = 0;
+  PhysicsTelemetryData.MarkRelitSkipInflightN = 0;
+  PhysicsTelemetryData.MarkRelitSkipEnterLitQuiesceN = 0;
+  PhysicsTelemetryData.MarkRelitScheduleN = 0;
+  PhysicsTelemetryData.MarkRelitH2AttemptN = 0;
+  PhysicsTelemetryData.MarkRelitH2FireN = 0;
+  PhysicsTelemetryData.MarkRelitH2FailNoTicketN = 0;
+  PhysicsTelemetryData.MarkRelitH2FailProgressN = 0;
+  PhysicsTelemetryData.MarkRelitHitStalledN = 0;
+  PhysicsTelemetryData.MarkRelitForceStaleN = 0;
+  PhysicsTelemetryData.StalledSampleN = 0;
+  PhysicsTelemetryData.StalledSampleHasTicketN = 0;
+  PhysicsTelemetryData.StalledSamplePendingLightN = 0;
+  PhysicsTelemetryData.MarkRelitEnqueueFirstMeshN = 0;
+  PhysicsTelemetryData.FmDirtyEnqueueN = 0;
+  PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN = 0;
+  PhysicsTelemetryData.FmDirtyEnqueueFromColumnFlowN = 0;
+  PhysicsTelemetryData.AdmitCandidatesN = 0;
+  PhysicsTelemetryData.AdmitMarkedN = 0;
+  PhysicsTelemetryData.MeshPendingCaptureN = 0;
+  PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN = 0;
+  PhysicsTelemetryData.MeshWorkerInflightN = 0;
+  PhysicsTelemetryData.MeshPendingCaptureReadyN = 0;
+  PhysicsTelemetryData.MeshPendingCaptureStaleN = 0;
+  PhysicsTelemetryData.MeshPendingCaptureMaxAge = 0;
+  PhysicsTelemetryData.MeshDegradedCaptureN = 0;
+  PhysicsTelemetryData.FmDirtyDrainN = 0;
+  PhysicsTelemetryData.AdmissionCarveOut = 0;
+  PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN = 0;
+  PhysicsTelemetryData.TicketedVbConsumeN = 0;
+  PhysicsTelemetryData.SeedAtCommitN = 0;
+  PhysicsTelemetryData.MarkRelitInvokedN = 0;
+  PhysicsTelemetryData.MarkMissingPrimaryN = 0;
+  PhysicsTelemetryData.MarkRelitPathPrimaryConsumeN = 0;
+  PhysicsTelemetryData.StaleProbeCallsN = 0;
+  PhysicsTelemetryData.MarkRelitTotalMs = 0.0;
+  PhysicsTelemetryData.MarkRelitSetupMs = 0.0;
+  PhysicsTelemetryData.MarkRelitPrimaryColumnMs = 0.0;
+  PhysicsTelemetryData.MarkRelitSnapshotMs = 0.0;
+  PhysicsTelemetryData.MarkRelitPlanMs = 0.0;
+  PhysicsTelemetryData.MarkRelitExecMs = 0.0;
+  PhysicsTelemetryData.MarkRelitMarkDirtyMs = 0.0;
+  PhysicsTelemetryData.MarkRelitBandMs = 0.0;
+  PhysicsTelemetryData.MarkRelitFlowQueryMs = 0.0;
+  PhysicsTelemetryData.MarkRelitNeighborSeamMs = 0.0;
+  PhysicsTelemetryData.MarkRelitPrefetchMs = 0.0;
+  PhysicsTelemetryData.MarkRelitOrphanGroundMs = 0.0;
+  PhysicsTelemetryData.MarkRelitEmptyRelitMs = 0.0;
+  PhysicsTelemetryData.MarkRelitBandsN = 0;
+  PhysicsTelemetryData.MarkRelitSuppressEnterSettledN = 0;
+  PhysicsTelemetryData.StickyInsertStaleAfterApplyN = 0;
+  PhysicsTelemetryData.StickyInsertSeamN = 0;
+  PhysicsTelemetryData.StickyInsertOtherN = 0;
+  PhysicsTelemetryData.StickyEraseDrawableN = 0;
+  PhysicsTelemetryData.StickyErasePendingClearN = 0;
+  PhysicsTelemetryData.StickyErasePrunedFarN = 0;
+  PhysicsTelemetryData.StickyEraseRemeshCommitN = 0;
+  PhysicsTelemetryData.StickyEraseOtherN = 0;
+  PhysicsTelemetryData.SoftDeferHeldAgeMax = 0;
+  PhysicsTelemetryData.MeshEmergeMs = 0.0;
+  PhysicsTelemetryData.MeshEmergeCoordinatorMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostTelemetryMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostStageSampleMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostGpuCountsMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostMeshSnapshotMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostCaptureStoreMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostTailSnapshotMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostUnattributedMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePlayerRelightBurstMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeStageSampleMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeFocusJobsMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeShadowCensusMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeDemandBreakdownMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeDemandStopMs = 0.0;
+  PhysicsTelemetryData.ChunkDemandMaintenanceMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeStageSampleCount = 0;
+  PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepUnfinishedMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepStickyMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepDropDirtyMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepOtherMs = 0.0;
+  PhysicsTelemetryData.PrepSyncFocusRingMs = 0.0;
+  PhysicsTelemetryData.PrepRecoverMs = 0.0;
+  PhysicsTelemetryData.PrepAdmissionMs = 0.0;
+  PhysicsTelemetryData.PrepScheduleClampMs = 0.0;
+  PhysicsTelemetryData.PrepSoftdeferPolicyMs = 0.0;
+  PhysicsTelemetryData.PrepIsolatedMissMs = 0.0;
+  PhysicsTelemetryData.PrepColumnFlowDrainMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshPressureMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshMissMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshPendingMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshStickyMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshUnfinishedMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshVbMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshDarkfaceMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshFacingMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshUnderfeetMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshDirtyMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshPressureEvalMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshUnderfeetProbeMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshRingResyncMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshVbRawMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshGapMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshSelfMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepSelfMs = 0.0;
+  PhysicsTelemetryData.SceneFilterReadyMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueDrawMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueRefreshMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueCullMs = 0.0;
+  PhysicsTelemetryData.OpaqueCullSkippedN = 0;
+  PhysicsTelemetryData.GpuCompactFailOpenN = 0;
+  PhysicsTelemetryData.SceneOpaqueGpuDrawMs = 0.0;
+  PhysicsTelemetryData.SceneOpaquePackedMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueCrossMs = 0.0;
+  PhysicsTelemetryData.SceneDepthCaptureMs = 0.0;
+  PhysicsTelemetryData.SceneTransparentMs = 0.0;
+  PhysicsTelemetryData.TransparentSortRevChanged = 0;
+  PhysicsTelemetryData.PassPackedWithoutMdiResidentN = 0;
+  PhysicsTelemetryData.PassDualBackendSameCoordN = 0;
+  PhysicsTelemetryData.TransparentUploadFullN = 0;
+  PhysicsTelemetryData.TransparentCmdReorderN = 0;
+  PhysicsTelemetryData.TransparentOrderOnlyFailReason = 0;
+  PhysicsTelemetryData.TransparentBatchN = 0;
+  PhysicsTelemetryData.SceneOverlaysMs = 0.0;
+  PhysicsTelemetryData.SceneSelfMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshHasMissingMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshCameraCompleteMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshBodyMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshSetupMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshSetupFocusMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshSetupRingMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshSetupCaptureMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshSetupProbeMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshInputFillMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshDietFlagsMs = 0.0;
+  PhysicsTelemetryData.PrepWarmupMs = 0.0;
+  PhysicsTelemetryData.PrepSoftdeferPreMs = 0.0;
+  PhysicsTelemetryData.PrepDirtyThrashMs = 0.0;
+  PhysicsTelemetryData.PrepSchedulePolicyMs = 0.0;
+  PhysicsTelemetryData.PrepSpawnRingQueryMs = 0.0;
+  PhysicsTelemetryData.PrepDropRemeshMs = 0.0;
+  PhysicsTelemetryData.PrepCancelAsyncMs = 0.0;
+  PhysicsTelemetryData.PrepPostAdmitDrainMs = 0.0;
+  PhysicsTelemetryData.PrepHoleForceMs = 0.0;
+  PhysicsTelemetryData.PrepSchedOtherMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshDeadlineHit = 0;
+  PhysicsTelemetryData.PrepDeadlineHit = 0;
+  PhysicsTelemetryData.PrepFindNearestN = 0;
+  PhysicsTelemetryData.PrepDrainIdleN = 0;
+  PhysicsTelemetryData.PrepDropRemeshN = 0;
+  PhysicsTelemetryData.PrepCancelAsyncN = 0;
+  PhysicsTelemetryData.PrepHeavyWalkN = 0;
+  PhysicsTelemetryData.FocusDirtyReconcileDelta = 0;
+  PhysicsTelemetryData.RimWitnessLatched = 0;
+  PhysicsTelemetryData.RimHolePressure = 0;
+  PhysicsTelemetryData.RimPerfDiet = 0;
+  PhysicsTelemetryData.MissWitnessRetargetN = 0;
+  PhysicsTelemetryData.StopVbDrainFrames = 0;
+  PhysicsTelemetryData.StopVbBudgetActive = 0;
+  PhysicsTelemetryData.StopVbStuckFrames = 0;
+  PhysicsTelemetryData.MissWitnessAgeFramesReport = 0;
+  PhysicsTelemetryData.MissStuckRunFrames = 0;
+  PhysicsTelemetryData.MissWitnessRemeshN = 0;
+  PhysicsTelemetryData.MissCompletionStuckFrames = 0;
+  PhysicsTelemetryData.MissSlaKickN = 0;
+  PhysicsTelemetryData.RelightApplyToMarkRelitN = 0;
+  PhysicsTelemetryData.MarkRelitToFmDirtyN = 0;
+  PhysicsTelemetryData.FmDirtyToGpuFinishN = 0;
+  PhysicsTelemetryData.FmDirtyGpuWatchN = 0;
+  PhysicsTelemetryData.FmDirtyGpuWatchMaxAge = 0;
+  PhysicsTelemetryData.FmDirtyGpuWatchTimeoutDelta = 0;
+  PhysicsTelemetryData.GpuFinishWatchRimN = 0;
+  // I18 hotfix.2: IngressDebt* latched by ChunkEmergeCoordinator — do not zero here.
+  PhysicsTelemetryData.PostRelightApplyMeshDrainFloor = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOutsideFocusFmN = 0;
+  PhysicsTelemetryData.FmConsumerStarvedActive = 0;
+  PhysicsTelemetryData.PrepPendingLightMs = 0.0;
+  PhysicsTelemetryData.PrepBlackStickyMs = 0.0;
+  PhysicsTelemetryData.PrepDirtyCountMs = 0.0;
+  PhysicsTelemetryData.PrepSoftdeferSetupMs = 0.0;
+  PhysicsTelemetryData.SoftdeferEmptyScanMs = 0.0;
+  PhysicsTelemetryData.SoftdeferEmptyOwnMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyPrePruneMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyPruneMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyPruneN = 0;
+  PhysicsTelemetryData.MeshDirtySortMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyDrainMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyDrainN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyScheduleOkN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleOkFmN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleOkRemeshN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipPipelineN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipSnapshotN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipSoftDeferN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipLockedN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOrphanN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipRemeshStarveN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOtherN = 0;
+  PhysicsTelemetryData.KeepRingShrinkN = 0;
+  PhysicsTelemetryData.FreeChunkLiveN = 0;
+  PhysicsTelemetryData.MeshDirtyGpuMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyGpuN = 0;
+  PhysicsTelemetryData.MeshDirtySyncMs = 0.0;
+  PhysicsTelemetryData.MeshDirtySyncN = 0;
+  PhysicsTelemetryData.DirtyTouchN = 0;
+  PhysicsTelemetryData.DirtyRevisitSameN = 0;
+  PhysicsTelemetryData.PrepUnfinishedCallsN = 0;
+  PhysicsTelemetryData.PrepUnfinishedFullN = 0;
+  PhysicsTelemetryData.PrepUnfinishedIncrementalN = 0;
+  PhysicsTelemetryData.UnfinishedCacheHitN = 0;
+  PhysicsTelemetryData.UnfinishedCacheOverflowN = 0;
+  PhysicsTelemetryData.DirtyAdmitBudgetEnd = 0;
+  PhysicsTelemetryData.FirstMeshScheduleCap = 0;
+  PhysicsTelemetryData.FirstMeshScheduleEffectiveCap = 0;
+  PhysicsTelemetryData.FmDirtyEnqueueReserveN = 0;
+  PhysicsTelemetryData.RemeshScheduleCap = 0;
+  PhysicsTelemetryData.ScheduleLaneStarveReason = 0;
+  PhysicsTelemetryData.RemeshProtectLitSettleN = 0;
+  PhysicsTelemetryData.RelightTrimFarN = 0;
+  PhysicsTelemetryData.RelightFifoDropN = 0;
+  PhysicsTelemetryData.RelightFifoOverflowDropN = 0;
+  PhysicsTelemetryData.RelightFifoProtectBlockN = 0;
+  PhysicsTelemetryData.RelightFifoPinSavedN = 0;
+  PhysicsTelemetryData.RelightFifoPinDropN = 0;
+  PhysicsTelemetryData.PendingLightTrimEmergeN = 0;
+  PhysicsTelemetryData.PendingLightTrimMemoryN = 0;
+  PhysicsTelemetryData.PhaseBudgetOver = 0;
+  PhysicsTelemetryData.PhaseMissCarveOut = 0;
+  PhysicsTelemetryData.MissReservedMs = 0.0;
+  PhysicsTelemetryData.EmergeBudgetCapMs = 0.0;
+  PhysicsTelemetryData.DirtyFmN = 0;
+  PhysicsTelemetryData.DirtyRemeshN = 0;
+
+  const auto t_before_stream = std::chrono::high_resolution_clock::now();
+  // R3.8: previous-frame wall SLA → ShedFar before stream (far rim only).
+  {
+    const double prev_wall_ms = GetLastMovementFrameMs();
+    if (IsInputFirstSlaBroken(prev_wall_ms, 0.0) &&
+        PhysicsTelemetryData.MissHoriz >= 3 &&
+        PhysicsTelemetryData.VisualHoles == 0 &&
+        PhysicsTelemetryData.UnderfeetHasMesh != 0)
+    {
+      const bool protect = IsProtectRingFocusMiss(
+          PhysicsTelemetryData.FocusMissingMesh,
+          PhysicsTelemetryData.MissHoriz,
+          /*underfeet_need=*/false);
+      const int latch = static_cast<int>(
+          protect ? IngressDebtLevel::ShedRim : IngressDebtLevel::ShedFar);
+      PhysicsTelemetryData.IngressDebtLevel =
+          std::max(PhysicsTelemetryData.IngressDebtLevel, latch);
+    }
+  }
+  const auto &tune = URuntimeTuning::Get();
+  // Cruise SoT: StreamingPhaseBudgetMs (default 5). Enter/lit gate keeps a
+  // higher effective phase so FirstMesh/visibility can settle (kill-switch
+  // quality — raise still via JSON; auto floor during enter only).
+  float phase_budget = tune.StreamingPhaseBudgetMs;
+  if (IsEnterLitGateActive() || IsEnterSessionActive())
+  {
+    phase_budget = std::max(phase_budget, 24.0f);
+  }
+  // N03: BeginFrame before streaming so stream/async share the same deadline.
+  cutum::UFrameDeadline::Get().BeginFrame(static_cast<double>(phase_budget));
+  const glm::ivec3 hole_focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  GetMeshService().BeginHoleQueryFrame(hole_focus);
+  const auto t_stream0 = std::chrono::high_resolution_clock::now();
+  {
+    UFrameStageWatchdog::Scope stage("streaming.update_streaming");
+    UpdateStreaming();
+  }
+  const auto t_stream1 = std::chrono::high_resolution_clock::now();
+  {
+    UFrameStageWatchdog::Scope stage("streaming.async_chunk_systems");
+    TickAsyncChunkSystems();
+  }
+  const auto t_after_stream = std::chrono::high_resolution_clock::now();
+  // T0 SoT 210431: do NOT overwrite StreamerUpdateMs (core load) with full
+  // UpdateStreaming — that hid unload/keep costs. Phase wall is separate.
+  PhysicsTelemetryData.UpdateStreamingMs =
+      std::chrono::duration<double, std::milli>(t_stream1 - t_stream0).count();
+  PhysicsTelemetryData.AsyncChunkSystemsMs =
+      std::chrono::duration<double, std::milli>(t_after_stream - t_stream1)
+          .count();
+  // Keep the historical field as an alias: prior logs report the entire
+  // TickAsyncChunkSystems wall time under async_io_ms, not disk-worker latency.
+  PhysicsTelemetryData.AsyncIoMs = PhysicsTelemetryData.AsyncChunkSystemsMs;
+  // Cruise wall P2: real phase time-slice with miss reserved ms.
+  // Stream spends general_budget; emerge gets reserved + remain(general).
+  const double stream_elapsed_ms =
+      std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
+          .count();
+  const bool miss_carve_out =
+      (PhysicsTelemetryData.FocusMissingMesh != 0 &&
+       PhysicsTelemetryData.MissHoriz <= 2) ||
+      PhysicsTelemetryData.FocusStickyRemesh > 0 ||
+      PhysicsTelemetryData.UnderfeetHasMesh == 0;
+  float reserved =
+      miss_carve_out ? std::max(0.0f, tune.MissReservedMs) : 0.0f;
+  // Reserved cannot exceed phase wall (MissReserved default 8 vs phase 5).
+  if (phase_budget > 0.0f && reserved > phase_budget)
+  {
+    reserved = phase_budget;
+  }
+  const float general_budget =
+      phase_budget > 0.0f ? std::max(0.0f, phase_budget - reserved) : 0.0f;
+  const double remain_general =
+      general_budget > 0.0f
+          ? std::max(0.0, static_cast<double>(general_budget) - stream_elapsed_ms)
+          : 0.0;
+  double emerge_cap = static_cast<double>(reserved) + remain_general;
+  if (miss_carve_out)
+  {
+    // Stream overrun must not collapse heal to MissReservedMs alone (manual
+    // 222059: emerge_budget med=8, void p90~1k, remesh starved).
+    const float miss_floor =
+        std::max(reserved, std::max(0.0f, tune.MissEmergeFloorMs));
+    emerge_cap = std::max(emerge_cap, static_cast<double>(miss_floor));
+  }
+  PhysicsTelemetryData.PhaseBudgetOver =
+      (phase_budget > 0.0f &&
+       stream_elapsed_ms >= static_cast<double>(general_budget))
+          ? 1
+          : 0;
+  // R3.6: far-rim phase shed — keep a small emerge floor when stream overran
+  // without near holes/underfeet (avoid emerge_cap=0 starve).
+  if (PhysicsTelemetryData.PhaseBudgetOver != 0 &&
+      PhysicsTelemetryData.MissHoriz >= 3 &&
+      PhysicsTelemetryData.VisualHoles == 0 &&
+      PhysicsTelemetryData.UnderfeetHasMesh != 0)
+  {
+    const float far_floor = std::max(0.0f, tune.MissEmergeFloorMs);
+    emerge_cap = std::max(emerge_cap, static_cast<double>(far_floor));
+    // R3.8: input-first hard shed — do not grow emerge beyond floor after overrun.
+    if (IsInputFirstSlaBroken(GetLastMovementFrameMs(), 0.0))
+    {
+      emerge_cap = std::min(emerge_cap, static_cast<double>(std::max(far_floor, 8.0f)));
+    }
+  }
+  PhysicsTelemetryData.PhaseMissCarveOut = miss_carve_out ? 1 : 0;
+  PhysicsTelemetryData.MissReservedMs = static_cast<double>(reserved);
+  PhysicsTelemetryData.EmergeBudgetCapMs = emerge_cap;
+  if (emerge_cap > 0.0)
+  {
+    GetMeshService().SetMeshEmergeTotalBudgetMs(
+        static_cast<float>(emerge_cap));
+  }
+  // Phase 5.1 T3: latch StreamMs before TickMeshEmerge so emerge phase-abort
+  // sees stream spend (was written only after emerge → StreamMs==0 inside).
+  PhysicsTelemetryData.StreamMs = stream_elapsed_ms;
+  // Burst when general remain > 0 or miss (reserved still feeds emerge).
+  if (remain_general > 0.0 || miss_carve_out)
+  {
+    UFrameStageWatchdog::Scope stage("streaming.enter_game_mesh_burst");
+    TickEnterGameMeshBurst();
+  }
+  // Phase 5.2.2 / 5.3.2: skip empty emerge only when no hole/backlog pressure.
+  const bool skip_empty_emerge =
+      emerge_cap <= 0.0 && !miss_carve_out &&
+      PhysicsTelemetryData.UnderfeetHasMesh != 0 &&
+      PhysicsTelemetryData.MissHoriz > 2 && !IsEnterLitGateActive() &&
+      !IsEnterSessionActive() &&
+      !HasVisualHolePressure(PhysicsTelemetryData,
+                             PhysicsTelemetryData.VisualHoles != 0,
+                             PhysicsTelemetryData.FocusMissingMesh);
+  PhysicsTelemetryData.SkipEmptyEmerge = skip_empty_emerge ? 1 : 0;
+  PhysicsTelemetryData.EmptyBacklogN = EmptyBacklogN(PhysicsTelemetryData);
+  if (!skip_empty_emerge)
+  {
+    UFrameStageWatchdog::Scope stage("streaming.mesh_emerge");
+    TickMeshEmerge();
+  }
+  const auto t_after_mesh = std::chrono::high_resolution_clock::now();
+  BlockWorldReady = true;
+
+  PhysicsTelemetryData.StreamMs = stream_elapsed_ms;
+  PhysicsTelemetryData.MeshEmergeMs =
+      std::chrono::duration<double, std::milli>(t_after_mesh - t_after_stream)
+          .count();
+  PhysicsTelemetryData.MeshSyncMs = GetMeshService().GetLastMeshSyncMs();
+  PhysicsTelemetryData.MeshSnapshotMs =
+      GetMeshService().GetLastMeshSnapshotMs();
+  PhysicsTelemetryData.MeshImmediateMs =
+      GetMeshService().GetLastMeshImmediateMs();
+  PhysicsTelemetryData.MeshImmediateCount =
+      GetMeshService().GetLastMeshImmediateCount();
+  PhysicsTelemetryData.MeshDirtyTickMs =
+      GetMeshService().GetLastMeshDirtyTickMs();
+  PhysicsTelemetryData.MeshDirtyPrePruneMs =
+      GetMeshService().GetLastMeshDirtyPrePruneMs();
+  PhysicsTelemetryData.MeshDirtyPruneMs =
+      GetMeshService().GetLastMeshDirtyPruneMs();
+  PhysicsTelemetryData.MeshDirtyPruneN =
+      GetMeshService().GetLastMeshDirtyPruneN();
+  PhysicsTelemetryData.MeshDirtySortMs =
+      GetMeshService().GetLastMeshDirtySortMs();
+  PhysicsTelemetryData.MeshDirtyDrainMs =
+      GetMeshService().GetLastMeshDirtyDrainMs();
+  PhysicsTelemetryData.MeshDirtyDrainN =
+      GetMeshService().GetLastMeshDirtyDrainN();
+  PhysicsTelemetryData.MeshDirtyScheduleMs =
+      GetMeshService().GetLastMeshDirtyScheduleMs();
+  PhysicsTelemetryData.MeshDependencyQueuedN =
+      GetMeshService().GetLastMeshDependencyQueuedN();
+  PhysicsTelemetryData.MeshDependencyAppliedN =
+      GetMeshService().GetLastMeshDependencyAppliedN();
+  PhysicsTelemetryData.MeshDependencyBacklogN =
+      GetMeshService().GetMeshDependencyInvalidationBacklogN();
+  PhysicsTelemetryData.MeshDirtyScheduleOkN =
+      GetMeshService().GetLastMeshDirtyScheduleOkN();
+  PhysicsTelemetryData.MeshDirtyScheduleOkFmN =
+      GetMeshService().GetLastMeshDirtyScheduleOkFmN();
+  PhysicsTelemetryData.MeshDirtyScheduleOkRemeshN =
+      GetMeshService().GetLastMeshDirtyScheduleOkRemeshN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipPipelineN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipPipelineN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipSnapshotN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipSnapshotN();
+  const MeshSnapshotDeferStats &snapshot_defer =
+      GetMeshService().GetLastMeshSnapshotDeferStats();
+  PhysicsTelemetryData.MeshSnapshotDeferTimeBudgetN =
+      snapshot_defer.ScheduleTimeBudget;
+  PhysicsTelemetryData.MeshSnapshotDeferRefreshBudgetN =
+      snapshot_defer.RefreshCountBudget;
+  const UChunkMeshCache &mesh_cache = GetMeshService().GetCache();
+  PhysicsTelemetryData.MeshSnapshotBudgetMs =
+      mesh_cache.GetMeshSnapshotBudgetMs();
+  PhysicsTelemetryData.CaptureSnapshotCostEmaMs =
+      mesh_cache.GetCaptureSnapshotCostEmaMs();
+  PhysicsTelemetryData.MeshSnapshotRefreshCreditsInitialN =
+      mesh_cache.GetLastMeshSnapshotRefreshCreditsInitialN();
+  PhysicsTelemetryData.MeshSnapshotRefreshCreditsRemainingN =
+      mesh_cache.GetCaptureRefreshBudgetLeft();
+  PhysicsTelemetryData.FirstMeshCaptureReserveRemainingN =
+      mesh_cache.GetFirstMeshCaptureReserveLeft();
+  PhysicsTelemetryData.LightRepairCaptureReserveRemainingN =
+      mesh_cache.GetLightRepairCaptureReserveLeft();
+  PhysicsTelemetryData.MeshSnapshotFirstMeshRefreshDefersN =
+      mesh_cache.GetLastMeshSnapshotFirstMeshRefreshDefersN();
+  PhysicsTelemetryData.MeshSnapshotRemeshRefreshDefersN =
+      mesh_cache.GetLastMeshSnapshotRemeshRefreshDefersN();
+  PhysicsTelemetryData.MeshSnapshotDeferPipelineBytesN =
+      snapshot_defer.PipelineBytes;
+  PhysicsTelemetryData.MeshSnapshotDeferMissingBandN =
+      snapshot_defer.MissingCaptureBand;
+  PhysicsTelemetryData.MeshSnapshotDeferDependencyN =
+      snapshot_defer.DependencyChanged;
+  PhysicsTelemetryData.MeshSnapshotDeferPublicationN =
+      snapshot_defer.PublicationRejected;
+  PhysicsTelemetryData.MeshSnapshotDeferStoreCommitN =
+      snapshot_defer.StoreCommitRejected;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipSoftDeferN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipSoftDeferN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipLockedN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipLockedN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOrphanN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipOrphanN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipRemeshStarveN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipRemeshStarveN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOtherN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipOtherN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOutsideFocusFmN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipOutsideFocusFmN();
+  PhysicsTelemetryData.FmConsumerStarvedActive =
+      GetMeshService().GetLastFmConsumerStarvedActive();
+  PhysicsTelemetryData.FreeChunkLiveN =
+      GetMeshService().GetFreeChunkLiveN();
+  PhysicsTelemetryData.MeshDirtyGpuMs =
+      GetMeshService().GetLastMeshDirtyGpuMs();
+  PhysicsTelemetryData.MeshDirtyGpuN =
+      GetMeshService().GetLastMeshDirtyGpuN();
+  PhysicsTelemetryData.MeshDirtySyncMs =
+      GetMeshService().GetLastMeshDirtySyncMs();
+  PhysicsTelemetryData.MeshDirtySyncN =
+      GetMeshService().GetLastMeshDirtySyncN();
+  PhysicsTelemetryData.DirtyTouchN = GetMeshService().GetLastDirtyTouchN();
+  PhysicsTelemetryData.DirtyRevisitSameN =
+      GetMeshService().GetLastDirtyRevisitSameN();
+  PhysicsTelemetryData.DirtyFmN =
+      std::max(GetMeshService().GetLastDirtyFmN(),
+               GetMeshService().GetLiveDirtyFirstMeshCount());
+  PhysicsTelemetryData.MeshPendingCaptureN =
+      GetMeshService().GetLastMeshPendingCaptureN();
+  PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN =
+      GetMeshService().GetLastMeshScheduleRetryAfterCaptureN();
+  PhysicsTelemetryData.MeshWorkerInflightN =
+      GetMeshService().GetLastMeshWorkerInflightN();
+  PhysicsTelemetryData.MeshPendingCaptureReadyN =
+      GetMeshService().GetLastMeshPendingCaptureReadyN();
+  PhysicsTelemetryData.MeshPendingCaptureStaleN =
+      GetMeshService().GetLastMeshPendingCaptureStaleN();
+  PhysicsTelemetryData.MeshPendingCaptureMaxAge =
+      GetMeshService().GetLastMeshPendingCaptureMaxAge();
+  PhysicsTelemetryData.MeshDegradedCaptureN =
+      GetMeshService().GetLastMeshDegradedCaptureN();
+  if (PhysicsTelemetryData.FmDirtyEnqueueN > 0)
+  {
+    PhysicsTelemetryData.DirtyFmN =
+        std::max(PhysicsTelemetryData.DirtyFmN,
+                 PhysicsTelemetryData.FmDirtyEnqueueN);
+  }
+  PhysicsTelemetryData.FmDirtyDrainN =
+      PhysicsTelemetryData.FmDirtyEnqueueN > 0
+          ? PhysicsTelemetryData.MeshDirtyScheduleOkN
+          : 0;
+  PhysicsTelemetryData.DirtyRemeshN = GetMeshService().GetLastDirtyRemeshN();
+  PhysicsTelemetryData.MovementSpeed = GetLastMovementSpeed();
+  HarvestUnfinishedPrepTelem(PhysicsTelemetryData);
+
+  // Hitch for streaming speed clamp / budgets: EMA stream+emerge (FZ2.6-Perf3).
+  const double stream_hitch =
+      PhysicsTelemetryData.StreamMs + PhysicsTelemetryData.MeshEmergeMs;
+  static double stream_hitch_ema = 0.0;
+  if (stream_hitch_ema <= 0.0)
+  {
+    stream_hitch_ema = stream_hitch;
+  }
+  else
+  {
+    stream_hitch_ema = 0.2 * stream_hitch + 0.8 * stream_hitch_ema;
+  }
+  if (stream_hitch_ema > GetLastMovementFrameMs())
+  {
+    SetLastMovementFrameMs(stream_hitch_ema);
+  }
 }
 
 } // namespace cutum

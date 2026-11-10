@@ -5,6 +5,7 @@
 #include "Activity/IUWorldPerception.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include <glm/glm.hpp>
+#include <random>
 #include <vector>
 
 namespace cutum
@@ -12,11 +13,60 @@ namespace cutum
 
 glm::vec3 RandomLocomotionDirection(CreatureHabitat habitat);
 
+/// Seeded RNG for activity steering and wander timing — replaces the
+/// unseedable global std::rand() (audit M6). Single-threaded world sim.
+std::mt19937 &ActivitySteeringRng();
+
 bool PickLocomotionDirection(IUWorldPerception &perception,
                              const CreatureActivityView &view,
                              CreatureHabitat habitat,
                              const glm::vec3 &bounds_size,
                              glm::vec3 &out_direction);
+
+/// Wander direction pick with amphibious land preference: amphibious
+/// wanderers first look for a dry-land direction (their habitat accepts
+/// water, but every random walk otherwise drifts into the lake trap) and
+/// only fall back to their own habitat — or a purely random direction —
+/// when no land direction exists.
+bool PickWanderDirectionPreferLand(IUWorldPerception &perception,
+                                   const CreatureActivityView &view,
+                                   CreatureHabitat habitat,
+                                   const glm::vec3 &bounds_size,
+                                   glm::vec3 &out_direction);
+
+/// True when a short forward probe along `dir` is volume+habitat clear.
+bool ProbeLocomotionDirectionClear(IUWorldPerception &perception,
+                                   CreatureHabitat habitat,
+                                   const glm::vec3 &body_origin,
+                                   const glm::vec3 &dir,
+                                   const glm::vec3 &bounds_size,
+                                   CreatureId skip_id,
+                                   float probe_distance = 0.65f);
+
+/// Prefer `preferred` (chase/flee), then yaw offsets, before random slide.
+bool PickApproachDirection(IUWorldPerception &perception,
+                           CreatureHabitat habitat,
+                           const glm::vec3 &body_origin,
+                           const glm::vec3 &preferred_dir,
+                           const glm::vec3 &bounds_size, CreatureId skip_id,
+                           glm::vec3 &out_direction);
+
+/// Local wall feelers (±30/60°) along desiredDir; returns bent free dir.
+glm::vec3 ApplyWallFeelers(IUWorldPerception &perception,
+                           CreatureHabitat habitat,
+                           const glm::vec3 &body_origin,
+                           const glm::vec3 &desired_dir,
+                           const glm::vec3 &bounds_size, CreatureId skip_id,
+                           float feeler_length = 0.85f);
+
+/// A* clearance height: slightly shorter than visual AABB so 2-block gaps and
+/// light foliage do not exhaust search for tall bipeds (zombie 1.85).
+float NavigationBodyHeightForBounds(float bounds_height_blocks);
+
+/// A* clearance width: the footprint swaps X/Z as the body turns (audit
+/// P1-B), so the wider axis governs — a long body must fit the corridor in
+/// both orientations. Floor 0.6 keeps humanoids at the classic width.
+float NavigationBodyWidthForBounds(const glm::vec3 &bounds_size_blocks);
 
 glm::vec3 ComputeSeparationDirection(
     const glm::vec3 &self_origin, const glm::vec3 &bounds_size,

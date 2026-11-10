@@ -4,6 +4,7 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include <glm/glm.hpp>
+#include <memory>
 #include <vector>
 
 typedef unsigned int GLuint;
@@ -17,6 +18,7 @@ enum class CreatureDrawKind
   SkeletalMesh,
   SkinnedMesh,
   WireframeBox,
+  Billboard,
 };
 
 struct CreatureDrawRequest
@@ -27,8 +29,16 @@ struct CreatureDrawRequest
   CreaturePartMesh PartMesh{CreaturePartMesh::Box};
   const BoneSkeletonCubeMeshCpu *SkeletalMesh{nullptr};
   const GltfPrimitiveCpu *SkinnedPrimitive{nullptr};
-  std::vector<glm::mat4> BoneMatrices;
+  /// Shared per-creature palette: primitives of one creature reference the
+  /// same immutable vector instead of copying it per primitive (audit V7).
+  std::shared_ptr<const std::vector<glm::mat4>> BoneMatrices;
   glm::vec4 WireColor{1.f};
+  glm::vec4 Tint{1.f};
+  /// Local light of the owning creature: x = sky 0..1, y = block 0..1.
+  glm::vec2 Light{1.f, 0.f};
+  /// Precomputed distance-fog factor 0..1 for the owning creature (terrain
+  /// fog params; creatures used to render crisp beyond the fog wall).
+  float Fog{0.f};
 };
 
 } // namespace cutum

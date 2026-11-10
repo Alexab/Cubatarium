@@ -7,7 +7,7 @@ layout(location = 3) in vec4 aWeights;
 uniform mat4 mvp_matrix;
 layout(std140) uniform BonePalette
 {
-  mat4 uBones[64];
+  mat4 uBones[96];
 };
 
 out vec2 uv;

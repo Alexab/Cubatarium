@@ -40,7 +40,7 @@ CreatureBoundsProfile ProfileFromPlayerCapsule(const PlayerCapsule &cap)
 {
   CreatureBoundsProfile profile;
   profile.restSizeBlocks =
-      glm::vec3(cap.halfWidth * 2.0f, cap.height, cap.halfWidth * 2.0f);
+      glm::vec3(cap.halfX() * 2.0f, cap.height, cap.halfZ() * 2.0f);
   profile.minSizeBlocks = profile.restSizeBlocks;
   profile.maxSizeBlocks = profile.restSizeBlocks;
   return profile;
@@ -76,7 +76,7 @@ CollisionVolume CollisionVolumeFromEye(const glm::vec3 &eyePos,
   const glm::vec3 eyeOffset(0.0f, cap.eyeHeight, 0.0f);
   return CollisionVolumeFromBody(
       BodyOriginFromEye(eyePos, eyeOffset),
-      glm::vec3(cap.halfWidth * 2.0f, cap.height, cap.halfWidth * 2.0f));
+      glm::vec3(cap.halfX() * 2.0f, cap.height, cap.halfZ() * 2.0f));
 }
 
 glm::vec3 BodyOriginFromEye(const glm::vec3 &eyePos, const glm::vec3 &eyeOffset)
@@ -91,7 +91,7 @@ float FeetYFromEye(const glm::vec3 &eyePos, float eyeHeight)
 
 glm::vec3 SizeBlocksFromCapsule(const PlayerCapsule &cap)
 {
-  return glm::vec3(cap.halfWidth * 2.0f, cap.height, cap.halfWidth * 2.0f);
+  return glm::vec3(cap.halfX() * 2.0f, cap.height, cap.halfZ() * 2.0f);
 }
 
 CollisionVolume CollisionVolumeAtFeet(float feetY, float centerX, float centerZ,

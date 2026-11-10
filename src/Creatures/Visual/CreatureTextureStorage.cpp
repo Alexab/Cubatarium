@@ -61,6 +61,14 @@ void IndexPngTextures(const std::filesystem::path &texturesDir,
     const GLuint tex = LoadPngFile(entry.path().string());
     if (tex != 0)
     {
+      // Pack merge over an existing key: release the replaced GL name
+      // instead of leaking it (LoadFromCreatureAndSkinRoots deletes the
+      // whole map, the merge paths do not).
+      const auto existing = out.find(key);
+      if (existing != out.end() && existing->second != 0)
+      {
+        glDeleteTextures(1, &existing->second);
+      }
       out[key] = tex;
     }
   }
@@ -68,10 +76,24 @@ void IndexPngTextures(const std::filesystem::path &texturesDir,
 
 } // namespace
 
+void DeleteCreatureGlTextures(std::unordered_map<std::string, GLuint> &textures)
+{
+  // Reload path (pack overlays): release the old GL names instead of leaking
+  // them (audit V5).
+  for (auto &entry : textures)
+  {
+    if (entry.second != 0)
+    {
+      glDeleteTextures(1, &entry.second);
+    }
+  }
+  textures.clear();
+}
+
 void UCreatureTextureStorage::LoadFromCreatureAndSkinRoots(
     const std::string &creaturesRoot, const std::string &skinsRoot)
 {
-  Textures.clear();
+  DeleteCreatureGlTextures(Textures);
   if (!std::filesystem::exists(creaturesRoot))
   {
     return;

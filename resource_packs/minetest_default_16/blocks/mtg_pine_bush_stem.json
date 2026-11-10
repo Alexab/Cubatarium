@@ -1,6 +1,13 @@
 {
   "name": "mtg_pine_bush_stem",
   "id": 484,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],
@@ -12,5 +19,12 @@
     "mtg_pine_bush_stem_default_pine_bush_stem",
     "mtg_pine_bush_stem_default_pine_bush_stem"
   ],
-  "render": {}
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
 }

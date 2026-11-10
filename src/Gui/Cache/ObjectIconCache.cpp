@@ -74,8 +74,11 @@ bool UObjectIconCache::Initialize()
       glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  WarmupQueue = Objects->ListNames();
-  WarmupIndex = 0;
+  Warmup.Clear();
+  for (const std::string &name : Objects->ListNames())
+  {
+    Warmup.Push(name);
+  }
   return complete;
 }
 
@@ -180,7 +183,7 @@ bool UObjectIconCache::InitCubeMesh()
       -0.5f,
       cubeShift * 2.0f,
       0.0f,
-      0.5f,
+      -0.5f,
       0.5f,
       -0.5f,
       cubeShift * 3.0f,
@@ -300,6 +303,46 @@ void UObjectIconCache::ClearBlockIconCache()
   }
 }
 
+GLuint UObjectIconCache::GetBlockIconTextureIfCached(
+    const std::string &blockName) const
+{
+  if (!BlockDefs || blockName.empty())
+  {
+    return 0;
+  }
+  const BlockDefinition *def = BlockDefs->GetByName(blockName);
+  if (!def)
+  {
+    return 0;
+  }
+  const auto it = BlockCache.find(def->Id);
+  return it != BlockCache.end() ? it->second : 0;
+}
+
+void UObjectIconCache::QueueBlockIcon(const std::string &blockName)
+{
+  BlockWarmup.Push(blockName);
+}
+
+void UObjectIconCache::WarmupBlockIcons(size_t count)
+{
+  size_t done = 0;
+  while (done < count)
+  {
+    const auto next = BlockWarmup.PopFront();
+    if (!next)
+    {
+      break;
+    }
+    GetBlockIconTexture(*next);
+    ++done;
+  }
+  if (done > 0 && IconService)
+  {
+    IconService->FlushManifest();
+  }
+}
+
 GLuint UObjectIconCache::GetBlockIconTexture(const std::string &blockName)
 {
   if (!BlockDefs || !Textures || !Shader || blockName.empty())
@@ -379,8 +422,6 @@ GLuint UObjectIconCache::RenderObjectIcon(const std::string &objectName)
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
-  Shader->SetInt("uAnimFrame", 0);
-  Shader->SetInt("uAnimFrameCount", 1);
   glBindVertexArray(CubeVao);
 
   for (const ObjectVoxel &voxel : object->voxels)
@@ -441,8 +482,6 @@ GLuint UObjectIconCache::RenderBlockIcon(BlockId blockId)
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
-  Shader->SetInt("uAnimFrame", 0);
-  Shader->SetInt("uAnimFrameCount", 1);
   glBindVertexArray(CubeVao);
 
   glActiveTexture(GL_TEXTURE0);
@@ -498,10 +537,18 @@ GLuint UObjectIconCache::GetIcon(const std::string &objectName)
 
 void UObjectIconCache::WarmupNext(size_t count)
 {
-  for (size_t n = 0; n < count && WarmupIndex < WarmupQueue.size();
-       ++n, ++WarmupIndex)
+  for (size_t n = 0; n < count; ++n)
   {
-    GetIcon(WarmupQueue[WarmupIndex]);
+    const auto next = Warmup.PopFront();
+    if (!next)
+    {
+      break;
+    }
+    GetIcon(*next);
+  }
+  if (IconService)
+  {
+    IconService->FlushManifest();
   }
 }
 

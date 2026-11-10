@@ -6,9 +6,16 @@ namespace cutum
 
 enum class PerformancePreset
 {
-  Balanced,
+  Performance,
   Fast,
+  Balanced,
   Quality
+};
+
+enum class LightingMode
+{
+  Full,
+  Flat
 };
 
 /// Runtime Render toggles (config.json "Render" section). Use to bisect FPS
@@ -16,6 +23,10 @@ enum class PerformancePreset
 struct RenderSettings
 {
   PerformancePreset Preset{PerformancePreset::Balanced};
+  /// Explicit lighting backend; preset seeds this, config/GUI may override.
+  LightingMode Lighting{LightingMode::Full};
+  /// True when config/GUI set lighting_mode independently of preset.
+  bool LightingModeExplicit{false};
   bool GreedyMeshing{true};
   bool AsyncMeshing{true};
   bool FaceQuads{true};
@@ -24,6 +35,13 @@ struct RenderSettings
   /// Draw creature current/max collision AABB wireframes (in addition to mob
   /// visual).
   bool CreatureDebugBounds{false};
+  /// Name / id / state / collision-box text above every creature (debugging).
+  bool CreatureDebugLabels{false};
+  /// Species name above nearby creatures (Settings > "Show creature names").
+  bool CreatureNameLabels{true};
+  /// Creatures are lit by the light of the cell they stand in (sky + block).
+  /// When off they only follow the day/night curve.
+  bool CreatureLocalLight{true};
   /// Draw rigid_voxels as textured multi-part cubes (when false, wireframe
   /// fallback per part).
   bool CreatureTexturedParts{true};
@@ -65,6 +83,12 @@ struct RenderSettings
   /// Request MSAA sample count at window create (0 = off). Applied only when
   /// the window is created before config; prefer 0 for GPU-bound present.
   int MsaaSamples{0};
+  /// Android only: use GPU mesh/fluid when probe+allowlist pass. Default ON;
+  /// set false to opt out to the CPU stack (takes effect after world restart).
+  bool AndroidGpuEnabled{true};
+  /// GPU-resident packed quad meshing (mask→greedy→SSBO, no vertex readback).
+  /// Desktop default ON; Android uses GLES per-chunk indirect fallback.
+  bool GpuPackedMeshing{true};
 
   static RenderSettings Legacy()
   {

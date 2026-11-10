@@ -37,7 +37,7 @@ static void TestLavaOnAirSpreads(
       cutum::FluidCellState::Source().WithKind(cutum::FluidKind::Lava));
 
   cutum::UFluidUpdateSet queue;
-  queue.Enqueue(source);
+  FluidTest::EnqueuePlacedFluid(queue, source);
   FluidTest::RunQueueTicks(world, *definitions, queue, fluid, 2000);
 
   FluidTest::Expect(world.GetBlock(source) == kLava, kTestName,

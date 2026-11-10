@@ -21,13 +21,20 @@ glm::ivec3 UChunkManager::WorldToLocal(glm::ivec3 worldPos)
 
 BlockId UChunkManager::GetBlock(glm::ivec3 worldPos) const
 {
+  // Legacy SoT: missing chunk still reports AIR for worldgen/light probes.
+  // Prefer QueryBlock for interaction/raycast (Unloaded ≠ AIR).
+  return QueryBlock(worldPos).id;
+}
+
+BlockQueryResult UChunkManager::QueryBlock(glm::ivec3 worldPos) const
+{
   const glm::ivec3 chunkCoord = WorldToChunk(worldPos);
   auto it = Chunks.find(chunkCoord);
   if (it == Chunks.end())
   {
-    return BLOCK_AIR;
+    return MakeUnloadedQuery();
   }
-  return it->second->GetBlockLocal(WorldToLocal(worldPos));
+  return MakeSolidQuery(it->second->GetBlockLocal(WorldToLocal(worldPos)));
 }
 
 FluidCellState UChunkManager::GetFluidState(glm::ivec3 worldPos) const
@@ -43,8 +50,14 @@ FluidCellState UChunkManager::GetFluidState(glm::ivec3 worldPos) const
 
 void UChunkManager::SetBlock(glm::ivec3 worldPos, BlockId Id)
 {
-  UChunk &chunk = GetOrCreateChunk(WorldToChunk(worldPos));
+  const glm::ivec3 chunkCoord = WorldToChunk(worldPos);
+  UChunk &chunk = GetOrCreateChunk(chunkCoord);
+  const bool was_air_only = chunk.IsAirOnly();
   chunk.SetBlockLocal(WorldToLocal(worldPos), Id);
+  if (was_air_only && !chunk.IsAirOnly() && OnChunkBecameNonAir)
+  {
+    OnChunkBecameNonAir(chunkCoord);
+  }
 }
 
 void UChunkManager::SetFluidState(glm::ivec3 worldPos, FluidCellState state)
@@ -67,6 +80,7 @@ void UChunkManager::ClearFluidState(glm::ivec3 worldPos)
 void UChunkManager::Clear()
 {
   Chunks.clear();
+  ResidentColumnChunkCounts.clear();
   FreeList.clear();
 }
 
@@ -133,6 +147,15 @@ void UChunkManager::ForEachChunk(
   }
 }
 
+void UChunkManager::ForEachColumn(
+    const std::function<void(const glm::ivec3 &)> &fn) const
+{
+  for (const auto &entry : ResidentColumnChunkCounts)
+  {
+    fn(entry.first);
+  }
+}
+
 void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
 {
   auto it = Chunks.find(chunkCoord);
@@ -142,6 +165,19 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
   }
   std::unique_ptr<UChunk> chunk = std::move(it->second);
   Chunks.erase(it);
+  const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
+  auto columnIt = ResidentColumnChunkCounts.find(groundCoord);
+  if (columnIt != ResidentColumnChunkCounts.end())
+  {
+    if (columnIt->second <= 1)
+    {
+      ResidentColumnChunkCounts.erase(columnIt);
+    }
+    else
+    {
+      --columnIt->second;
+    }
+  }
   if (chunk && FreeList.size() < MaxFreeListChunks)
   {
     FreeList.push_back(std::move(chunk));
@@ -171,9 +207,13 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   {
     chunk = std::make_unique<UChunk>(chunkCoord);
   }
-  UChunk &ref = *chunk;
-  Chunks.emplace(chunkCoord, std::move(chunk));
-  return ref;
+  const auto inserted = Chunks.emplace(chunkCoord, std::move(chunk));
+  const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
+  if (inserted.second)
+  {
+    ++ResidentColumnChunkCounts[groundCoord];
+  }
+  return *inserted.first->second;
 }
 
 } // namespace cutum

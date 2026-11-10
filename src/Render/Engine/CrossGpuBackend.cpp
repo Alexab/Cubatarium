@@ -3,6 +3,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
+#include "Render/Mesh/MeshPublishContract.h"
 #include <cstddef>
 #include <glm/glm.hpp>
 #include <vector>
@@ -20,29 +21,53 @@ constexpr unsigned int kElementArrayBuffer = GL_ELEMENT_ARRAY_BUFFER;
 
 bool UCrossGpuBackend::EnsureTemplateMesh()
 {
-  if (TemplateVao != 0)
+  for (int i = 0; i < static_cast<int>(Templates.size()); ++i)
+  {
+    if (!EnsureTemplateMesh(static_cast<BlockDecorShape>(i)))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+GLsizei UCrossGpuBackend::GetTemplateIndexCount(BlockDecorShape shape) const
+{
+  const size_t index = static_cast<size_t>(shape);
+  return index < Templates.size() ? Templates[index].indexCount : 0;
+}
+
+bool UCrossGpuBackend::EnsureTemplateMesh(BlockDecorShape shape)
+{
+  const size_t templateIndex = static_cast<size_t>(shape);
+  if (templateIndex >= Templates.size())
+  {
+    return false;
+  }
+  TemplateMesh &mesh = Templates[templateIndex];
+  if (mesh.vao != 0)
   {
     return true;
   }
 
   std::vector<GreedyMeshVertex> vertices;
   std::vector<uint32_t> indices;
-  AppendCrossSprite(glm::vec3(0.0f), vertices, indices);
+  AppendDecorSprite(shape, glm::vec3(0.0f), vertices, indices);
   if (vertices.empty() || indices.empty())
   {
     return false;
   }
 
-  glGenVertexArrays(1, &TemplateVao);
-  glGenBuffers(1, &TemplateVbo);
-  glGenBuffers(1, &TemplateEbo);
+  glGenVertexArrays(1, &mesh.vao);
+  glGenBuffers(1, &mesh.vbo);
+  glGenBuffers(1, &mesh.ebo);
 
-  glBindVertexArray(TemplateVao);
-  glBindBuffer(kArrayBuffer, TemplateVbo);
+  glBindVertexArray(mesh.vao);
+  glBindBuffer(kArrayBuffer, mesh.vbo);
   glBufferData(kArrayBuffer,
                static_cast<GLsizeiptr>(vertices.size() * sizeof(GreedyMeshVertex)),
                vertices.data(), GL_STATIC_DRAW);
-  glBindBuffer(kElementArrayBuffer, TemplateEbo);
+  glBindBuffer(kElementArrayBuffer, mesh.ebo);
   glBufferData(kElementArrayBuffer,
                static_cast<GLsizeiptr>(indices.size() * sizeof(uint32_t)),
                indices.data(), GL_STATIC_DRAW);
@@ -57,11 +82,11 @@ bool UCrossGpuBackend::EnsureTemplateMesh()
                         (void *)(offsetof(GreedyMeshVertex, u)));
   glEnableVertexAttribArray(2);
 
-  TemplateIndexCountGl = static_cast<GLsizei>(indices.size());
+  mesh.indexCount = static_cast<GLsizei>(indices.size());
   glBindVertexArray(0);
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
-  return TemplateVao != 0;
+  return mesh.vao != 0;
 }
 
 void UCrossGpuBackend::UploadBuffer(GLuint &buffer, size_t &capacity_bytes,
@@ -108,16 +133,23 @@ void UCrossGpuBackend::DestroyInstanceBuffer(CrossGpuBatch &batch)
 
 void UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
 {
-  if (!EnsureTemplateMesh() || gpu.instanceVbo == 0)
+  if (!EnsureTemplateMesh(gpu.shape) || gpu.instanceVbo == 0)
   {
     return;
+  }
+  if (gpu.vao != 0 && gpu.vaoShape != gpu.shape)
+  {
+    glDeleteVertexArrays(1, &gpu.vao);
+    gpu.vao = 0;
   }
   if (gpu.vao == 0)
   {
     glGenVertexArrays(1, &gpu.vao);
   }
+  gpu.vaoShape = gpu.shape;
+  const TemplateMesh &mesh = Templates[static_cast<size_t>(gpu.shape)];
   glBindVertexArray(gpu.vao);
-  glBindBuffer(kArrayBuffer, TemplateVbo);
+  glBindBuffer(kArrayBuffer, mesh.vbo);
   constexpr GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, (void *)0);
   glEnableVertexAttribArray(0);
@@ -127,7 +159,7 @@ void UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, kStride,
                         (void *)(offsetof(GreedyMeshVertex, u)));
   glEnableVertexAttribArray(2);
-  glBindBuffer(kElementArrayBuffer, TemplateEbo);
+  glBindBuffer(kElementArrayBuffer, mesh.ebo);
   glBindBuffer(kArrayBuffer, gpu.instanceVbo);
   constexpr GLsizei kInstanceStride =
       static_cast<GLsizei>(sizeof(CrossInstanceGpu));
@@ -151,6 +183,7 @@ void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
                                        const CrossInstanceBatch &batch)
 {
   gpu.blockId = batch.blockId;
+  gpu.shape = batch.shape;
   gpu.instanceCount = batch.instances.size();
   const size_t byte_size =
       batch.instances.size() * sizeof(CrossInstanceGpu);
@@ -161,12 +194,32 @@ void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
 
 void UCrossGpuBackend::RefreshPass(
     CrossGpuPassCache &cache, const std::vector<CrossInstanceBatch> &batches,
-    uint64_t mesh_revision, uint64_t cull_revision)
+    uint64_t candidate_mesh_rev, uint64_t candidate_cull_rev,
+    uint64_t expected_mesh_rev, uint64_t expected_cull_rev)
 {
-  if (mesh_revision == cache.meshRevision &&
-      cull_revision == cache.cullRevision)
+  if (candidate_mesh_rev == cache.meshRevision &&
+      candidate_cull_rev == cache.cullRevision)
   {
     return;
+  }
+  // A37 H3: reject stale/backwards refresh.
+  if (cache.meshRevision != 0 && candidate_mesh_rev < cache.meshRevision)
+  {
+    return;
+  }
+  // A39 P5: got = candidate; expected = live desire (NOT a copy of got).
+  // Epochs left zero so TableEpochStale does not block intentional forward
+  // refresh; SourceMismatch rejects when candidate ≠ live desire.
+  {
+    const PublicationValidation v = ValidateCrossOrShellPublication(
+        /*got_geom=*/candidate_mesh_rev, /*got_light=*/candidate_cull_rev,
+        /*light_valid=*/true,
+        /*expected_geom=*/expected_mesh_rev,
+        /*expected_light=*/expected_cull_rev);
+    if (!PublicationCandidateAccepted(v))
+    {
+      return; // keep prior resident
+    }
   }
 
   size_t write_index = 0;
@@ -195,8 +248,8 @@ void UCrossGpuBackend::RefreshPass(
   cache.batches.resize(write_index);
 
   glBindBuffer(kArrayBuffer, 0);
-  cache.meshRevision = mesh_revision;
-  cache.cullRevision = cull_revision;
+  cache.meshRevision = candidate_mesh_rev;
+  cache.cullRevision = candidate_cull_rev;
 }
 
 void UCrossGpuBackend::DestroyPass(CrossGpuPassCache &cache)
@@ -213,22 +266,25 @@ void UCrossGpuBackend::DestroyPass(CrossGpuPassCache &cache)
 void UCrossGpuBackend::DestroyAll(CrossGpuPassCache &cache)
 {
   DestroyPass(cache);
-  if (TemplateEbo != 0)
+  for (TemplateMesh &mesh : Templates)
   {
-    glDeleteBuffers(1, &TemplateEbo);
-    TemplateEbo = 0;
+    if (mesh.ebo != 0)
+    {
+      glDeleteBuffers(1, &mesh.ebo);
+      mesh.ebo = 0;
+    }
+    if (mesh.vbo != 0)
+    {
+      glDeleteBuffers(1, &mesh.vbo);
+      mesh.vbo = 0;
+    }
+    if (mesh.vao != 0)
+    {
+      glDeleteVertexArrays(1, &mesh.vao);
+      mesh.vao = 0;
+    }
+    mesh.indexCount = 0;
   }
-  if (TemplateVbo != 0)
-  {
-    glDeleteBuffers(1, &TemplateVbo);
-    TemplateVbo = 0;
-  }
-  if (TemplateVao != 0)
-  {
-    glDeleteVertexArrays(1, &TemplateVao);
-    TemplateVao = 0;
-  }
-  TemplateIndexCountGl = 0;
 }
 
 } // namespace cutum

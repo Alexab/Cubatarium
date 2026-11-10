@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_aspen_cut",
+  "id": 2469,
+  "displayName": "Wood Aspen Cut",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_aspen_cut",
+    "cu_wood_aspen_cut",
+    "cu_wood_aspen_cut",
+    "cu_wood_aspen_cut",
+    "cu_wood_aspen_cut_top",
+    "cu_wood_aspen_cut_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "aspen",
+    "variant": "cut"
+  }
+}

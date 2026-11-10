@@ -20,10 +20,13 @@
 #endif
 #include <windows.h>
 #endif
+#include "Core/StallTimer.h"
 #include "App/Core.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "App/LegacyConfigAdapter.h"
 #include "App/Platform/Log.h"
 #include "App/RuntimeTuningConfig.h"
+#include "App/Settings/GraphicsQualityProfile.h"
 #ifndef __ANDROID__
 #include "App/Platform/GameDataRoot.h"
 #endif
@@ -36,6 +39,8 @@
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
+#include "Render/Camera/Camera.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
@@ -106,6 +111,16 @@ const UCreatureDefinitionStorage &UCore::Creatures() const
   return kEmpty;
 }
 
+const UItemDefinitionStorage &UCore::Items() const
+{
+  static const UItemDefinitionStorage kEmpty;
+  if (ItemDefinitionsInstance)
+  {
+    return *ItemDefinitionsInstance;
+  }
+  return kEmpty;
+}
+
 const WorldGenPack &UCore::ActiveWorldGenPack() const
 {
   return UWorldGenPack::Get();
@@ -129,12 +144,14 @@ std::filesystem::path GetExecutableDirectory()
 UCore::UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage_,
              std::shared_ptr<UTextureCubeStorage> texture_cube_storage_,
              std::shared_ptr<UObjectLibrary> object_library_,
+             std::shared_ptr<UItemDefinitionStorage> item_definitions_,
              std::shared_ptr<UWorld> World,
              std::shared_ptr<UGeometryEngine> Geometries,
              std::shared_ptr<UViewEngine> Views)
     : TextureBaseStorageInstance(texture_base_storage_),
       TextureCubeStorageInstance(texture_cube_storage_),
-      ObjectLibraryInstance(object_library_), WorldInstance(World),
+      ObjectLibraryInstance(object_library_),
+      ItemDefinitionsInstance(std::move(item_definitions_)), WorldInstance(World),
       GeometryEngineInstance(Geometries), ViewEngineInstance(Views)
 {
 }
@@ -292,8 +309,12 @@ void UCore::LoadConfig(const std::string &config_file_name)
         StepUpEnabled = gameplay.value("step_up", true);
         FoliageClimbEnabled = gameplay.value("foliage_climb", true);
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
+        RideCarryYawEnabled = gameplay.value("ride_carry_yaw", false);
         ActivityTickHz = gameplay.value("activity_tick_hz", 20.0f);
+        CreatureMovementDiagEnabled =
+            gameplay.value("creature_movement_diag", false);
       }
+      UCreatureMovementDiagnostics::SetEnabled(CreatureMovementDiagEnabled);
       if (d.contains("physics") && d["physics"].is_object())
       {
         const json &physics = d["physics"];
@@ -374,18 +395,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r["performance_preset"].is_string())
         {
           const std::string preset = r["performance_preset"].get<std::string>();
-          if (preset == "fast")
-          {
-            Render = RenderSettings::FromPreset(PerformancePreset::Fast);
-          }
-          else if (preset == "quality")
-          {
-            Render = RenderSettings::FromPreset(PerformancePreset::Quality);
-          }
-          else
-          {
-            Render = RenderSettings::FromPreset(PerformancePreset::Balanced);
-          }
+          Render = RenderSettings::FromPreset(
+              GraphicsQualityProfile::ParseConfigString(preset));
         }
         else
         {
@@ -393,12 +404,32 @@ void UCore::LoadConfig(const std::string &config_file_name)
         }
         Render.GreedyMeshing = r.value("greedy_meshing", Render.GreedyMeshing);
         Render.AsyncMeshing = r.value("async_meshing", Render.AsyncMeshing);
+        if (r.contains("lighting_mode") && r["lighting_mode"].is_string())
+        {
+          Render.Lighting = GraphicsQualityProfile::ParseLightingModeString(
+              r["lighting_mode"].get<std::string>());
+          Render.LightingModeExplicit = true;
+        }
+        else
+        {
+          Render.Lighting =
+              GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode();
+          Render.LightingModeExplicit = false;
+        }
+        Render.GpuPackedMeshing =
+            r.value("gpu_packed_meshing", Render.GpuPackedMeshing);
         Render.FaceQuads = r.value("face_quads", Render.FaceQuads);
         Render.FrustumCulling =
             r.value("frustum_culling", Render.FrustumCulling);
         Render.BatchCache = r.value("batch_cache", Render.BatchCache);
         Render.CreatureDebugBounds =
             r.value("creature_debug_bounds", Render.CreatureDebugBounds);
+        Render.CreatureDebugLabels =
+            r.value("creature_debug_labels", Render.CreatureDebugLabels);
+        Render.CreatureNameLabels =
+            r.value("creature_name_labels", Render.CreatureNameLabels);
+        Render.CreatureLocalLight =
+            r.value("creature_local_light", Render.CreatureLocalLight);
         Render.CreatureTexturedParts =
             r.value("creature_textured_parts", Render.CreatureTexturedParts);
         Render.CreatureWireframeOverlay = r.value(
@@ -439,6 +470,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Render.VSync = r.value("vsync", Render.VSync);
         Render.MsaaSamples =
             std::clamp(r.value("msaa_samples", Render.MsaaSamples), 0, 16);
+        // Missing key → default true (GPU-by-default).
+        Render.AndroidGpuEnabled =
+            r.value("android_gpu_enabled", Render.AndroidGpuEnabled);
         if (Render.GreedyMeshing && !Render.FaceQuads)
         {
           std::cout
@@ -508,7 +542,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
     BlockMergeRegistryInstance = std::make_shared<UBlockMergeRegistry>();
     auto blockDefinitions = BlockDefinitionsInstance;
 
+    StallStageMark("LoadConfig.pre-placeholder");
     ResourcePackBootstrap.InitPlaceholderCache(*this);
+    StallStageMark("LoadConfig.InitPlaceholderCache");
 
     WorldInstance->SetBlockMergeRegistry(BlockMergeRegistryInstance);
     WorldInstance->SetOnAfterWorldDataLoaded(
@@ -526,10 +562,12 @@ void UCore::LoadConfig(const std::string &config_file_name)
     CreatureGltfCache::Instance().SetCreaturesRoot(
         (WorkDir / "models" / "creatures").string());
     WorldInstance->SetCreatureDefinitionStorage(creatureDefinitions);
+    StallStageMark("LoadConfig.creature-defs");
 
     auto skinDefinitions = std::make_shared<USkinDefinitionStorage>();
     skinDefinitions->Load((WorkDir / "models" / "skins").string());
     WorldInstance->SetSkinDefinitionStorage(skinDefinitions);
+    StallStageMark("LoadConfig.skin-defs");
 
     CreatureTextureStorageInstance =
         std::make_shared<UCreatureTextureStorage>();
@@ -537,6 +575,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
         (WorkDir / "models" / "creatures").string(),
         (WorkDir / "models" / "skins").string());
 
+    StallStageMark("LoadConfig.creature-textures");
     const ResourcePackSelection defaultPacks =
         GetDefaultResourcePackSelection();
     WorldInstance->SetResourcePackSelection(defaultPacks.Primary,
@@ -555,6 +594,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
       WorldInstance->EnsurePlayerHotbarCount(
           user, static_cast<size_t>(Ui.HotbarCount));
     }
+    StallStageMark("LoadConfig.ApplyResourcePacks");
 
     std::cout << "Procedural: "
               << ProceduralGeneratorToString(ProceduralTemplate.Generator)
@@ -571,7 +611,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetStepUpEnabled(StepUpEnabled);
     WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
     WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
+    WorldInstance->SetRiderYawCarryEnabled(RideCarryYawEnabled);
     WorldInstance->SetActivityTickHz(ActivityTickHz);
+    UCreatureMovementDiagnostics::SetEnabled(CreatureMovementDiagEnabled);
     WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
     WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
     WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
@@ -585,7 +627,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     {
       WorldInstance->ClearWeatherManualOverride();
     }
-    WorldInstance->SetWeatherOverlayEnabled(false);
+    WorldInstance->SetWeatherOverlayEnabled(true);
     WorldInstance->SetWeatherParticlesEnabled(true);
     WorldInstance->SetLightingDebugEnabled(false);
     if (GeometryEngineInstance)
@@ -670,7 +712,9 @@ void UCore::SaveConfigFile()
   gameplay["step_up"] = StepUpEnabled;
   gameplay["foliage_climb"] = FoliageClimbEnabled;
   gameplay["entity_collision"] = EntityCollisionEnabled;
+  gameplay["ride_carry_yaw"] = RideCarryYawEnabled;
   gameplay["activity_tick_hz"] = ActivityTickHz;
+  gameplay["creature_movement_diag"] = CreatureMovementDiagEnabled;
   system_data["gameplay"] = gameplay;
   json physics;
   physics["profile"] = ToString(ActivePhysicsProfile);
@@ -719,27 +763,20 @@ void UCore::SaveConfigFile()
       PhysicsBudgetsConfig.FallingScanRadiusChunks;
   system_data["physics"] = physics;
   json render_json;
-  const char *preset_name = "balanced";
-  switch (Render.Preset)
-  {
-  case PerformancePreset::Fast:
-    preset_name = "fast";
-    break;
-  case PerformancePreset::Quality:
-    preset_name = "quality";
-    break;
-  case PerformancePreset::Balanced:
-  default:
-    preset_name = "balanced";
-    break;
-  }
-  render_json["performance_preset"] = preset_name;
+  render_json["performance_preset"] =
+      GraphicsQualityProfile::ToConfigString(Render.Preset);
+  render_json["lighting_mode"] =
+      GraphicsQualityProfile::ToLightingModeString(Render.Lighting);
   render_json["greedy_meshing"] = Render.GreedyMeshing;
   render_json["async_meshing"] = Render.AsyncMeshing;
+  render_json["gpu_packed_meshing"] = Render.GpuPackedMeshing;
   render_json["face_quads"] = Render.FaceQuads;
   render_json["frustum_culling"] = Render.FrustumCulling;
   render_json["batch_cache"] = Render.BatchCache;
   render_json["creature_debug_bounds"] = Render.CreatureDebugBounds;
+  render_json["creature_debug_labels"] = Render.CreatureDebugLabels;
+  render_json["creature_name_labels"] = Render.CreatureNameLabels;
+  render_json["creature_local_light"] = Render.CreatureLocalLight;
   render_json["creature_textured_parts"] = Render.CreatureTexturedParts;
   render_json["creature_wireframe_overlay"] = Render.CreatureWireframeOverlay;
   render_json["distance_fog"] = Render.DistanceFog;
@@ -765,11 +802,13 @@ void UCore::SaveConfigFile()
       Render.AltitudeUseTerrainSurface;
   render_json["vsync"] = Render.VSync;
   render_json["msaa_samples"] = Render.MsaaSamples;
+  render_json["android_gpu_enabled"] = Render.AndroidGpuEnabled;
   system_data["render"] = render_json;
   json environment_json = DefaultEnvironmentConfig.ToJson();
   system_data["environment"] = environment_json;
   WriteUiSettings(system_data, Ui);
   json resource_packs;
+  resource_packs["default_selection_version"] = 2;
   resource_packs["default_primary"] = ResourcePacks.DefaultPrimary;
   resource_packs["default_secondary"] = ResourcePacks.DefaultSecondary;
   if (!ResourcePacks.DefaultEnabled.empty())
@@ -820,7 +859,11 @@ void UCore::SaveSystem(const std::string &config_file_name)
   }
 
   SaveConfigFile();
-  if (!WorldInstance->GetWorldName().empty() || !ActiveWorldFolder.empty())
+  // Cooperative ShutdownSave already persisted terrain. Re-entering
+  // SaveWorld/SaveSessionSnapshot here blocked 8–12s on quit (and could hang
+  // on InitChunkScheduler join). Skip when background work was quiesced.
+  if ((!WorldInstance->GetWorldName().empty() || !ActiveWorldFolder.empty()) &&
+      !WorldInstance->IsBackgroundQuiesceFinished())
   {
     SaveWorld(WorldInstance->GetWorldName());
   }
@@ -836,6 +879,7 @@ AppSettingsSnapshot UCore::GetAppSettings() const
   snapshot.StepUpEnabled = StepUpEnabled;
   snapshot.FoliageClimbEnabled = FoliageClimbEnabled;
   snapshot.EntityCollisionEnabled = EntityCollisionEnabled;
+  snapshot.RideCarryYawEnabled = RideCarryYawEnabled;
   snapshot.ActivityTickHz = ActivityTickHz;
   snapshot.Render = Render;
   snapshot.Ui = Ui;
@@ -853,6 +897,7 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   StepUpEnabled = settings.StepUpEnabled;
   FoliageClimbEnabled = settings.FoliageClimbEnabled;
   EntityCollisionEnabled = settings.EntityCollisionEnabled;
+  RideCarryYawEnabled = settings.RideCarryYawEnabled;
   ActivityTickHz = settings.ActivityTickHz;
   Render = settings.Render;
   Ui = settings.Ui;
@@ -872,6 +917,7 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   WorldInstance->SetStepUpEnabled(StepUpEnabled);
   WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
   WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
+  WorldInstance->SetRiderYawCarryEnabled(RideCarryYawEnabled);
   WorldInstance->SetActivityTickHz(ActivityTickHz);
   WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
   WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
@@ -1095,9 +1141,55 @@ void UCore::CreateNewWorldWithSettings(
 
 void UCore::ApplyNewWorldCreationRequest(
     const ProceduralSettings &settings,
-    const ResourcePackSelection &resourcePacks)
+    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view,
+    WorldGameMode gameMode, WorldDifficulty difficulty)
 {
-  WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks);
+  WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks,
+                                              view, gameMode, difficulty);
+}
+
+WorldViewSettings UCore::GetCurrentWorldViewSettings() const
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return WorldViewSettings{};
+  }
+  return WorldInstance->GetViewSettings();
+}
+
+bool UCore::ApplyViewSettingsInMemory(const WorldViewSettings &view)
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return false;
+  }
+  WorldViewSettings validated = view;
+  validated.Validate();
+  WorldInstance->SetViewSettings(validated);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
+  {
+    camera->ApplyWorldViewSettings(validated);
+  }
+  return true;
+}
+
+bool UCore::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
+{
+  if (!ApplyViewSettingsInMemory(view))
+  {
+    return false;
+  }
+  return PersistWorldMetadata();
+}
+
+bool UCore::PersistWorldMetadata()
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return false;
+  }
+  WorldInstance->PersistWorldMetadata();
+  return true;
 }
 
 std::vector<std::string>
@@ -1144,8 +1236,7 @@ ResourcePackSelection UCore::GetCurrentWorldResourcePackSelection() const
   return selection;
 }
 
-bool UCore::ApplyResourcePacksToCurrentWorld(
-    const ResourcePackSelection &selectionIn)
+bool UCore::ApplyResourcePacksInMemory(const ResourcePackSelection &selectionIn)
 {
   if (!WorldInstance || WorldInstance->GetWorldName().empty())
   {
@@ -1162,8 +1253,17 @@ bool UCore::ApplyResourcePacksToCurrentWorld(
   }
   WorldInstance->SetResourcePackSelection(
       selection.Primary, selection.Secondary, selection.WorldgenOwner);
-  SaveWorld(WorldInstance->GetWorldName());
   return true;
+}
+
+bool UCore::ApplyResourcePacksToCurrentWorld(
+    const ResourcePackSelection &selectionIn)
+{
+  if (!ApplyResourcePacksInMemory(selectionIn))
+  {
+    return false;
+  }
+  return PersistWorldMetadata();
 }
 
 bool UCore::CreateWorldHeadless(const CreateWorldCliArgs &args,

@@ -7,7 +7,18 @@
       "hostile"
     ],
     "spawnable": true,
-    "sort_order": 20
+    "sort_order": 20,
+    "natural_spawnable": true,
+    "spawn_weight": 0.7,
+    "spawn_group_min": 1,
+    "spawn_group_max": 2,
+    "spawn_biomes": [
+      "forest",
+      "tundra",
+      "cold_steppe",
+      "snowy_slopes",
+      "foothills"
+    ]
   },
   "role": "mob",
   "bounds": {
@@ -37,11 +48,14 @@
     "jump_height": 1.0,
     "walk_speed": 2.8
   },
-  "behavior": "wander",
+  "behavior": "melee_attack",
   "behavior_params": {
     "move_speed": 2.8,
     "wander_interval_min": 2.0,
-    "wander_interval_max": 4.0
+    "wander_interval_max": 4.0,
+    "aggro_radius": 12.0,
+    "attack_range": 1.4,
+    "attack_cooldown": 1.5
   },
   "visual": {
     "backend": "bone_skeleton",
@@ -256,5 +270,23 @@
       32
     ],
     "animation_profile": "quadruped"
+  },
+  "vitals": {
+    "max_health": 30,
+    "max_satiety": 100,
+    "max_thirst": 100,
+    "max_fatigue": 100,
+    "max_breath": 100,
+    "max_fatal_wounds": 1,
+    "armor": 0
+  },
+  "attributes": {
+    "strength": 10,
+    "agility": 14,
+    "endurance": 10,
+    "accuracy": 6,
+    "intelligence": 4,
+    "luck": 6,
+    "perception": 12
   }
 }

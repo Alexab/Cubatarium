@@ -8,7 +8,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Core/World.h"
-#include "World/Core/WorldCreatureFacade.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -36,15 +36,30 @@ std::vector<CreatureId> UWorld::CreaturesInRadius(const glm::vec3 &center,
   return Environment.CreaturesInRadius(center, radius);
 }
 
+std::optional<std::pair<CreatureId, float>>
+UWorld::FindMountCreatureUnder(const glm::vec3 &feetPos,
+                               const glm::vec3 &halfExtents,
+                               CreatureId skipId) const
+{
+  return Environment.FindMountUnder(feetPos, halfExtents, skipId);
+}
+
+std::vector<CreatureNeighborView>
+UWorld::QueryCreatureNeighborsOverlappingVolume(const CollisionVolume &vol,
+                                                CreatureId skip_id) const
+{
+  return Environment.QueryCreatureNeighborsOverlappingVolume(vol, skip_id);
+}
+
 std::vector<CreatureNeighborView> UWorld::QueryCreatureNeighborsInRadius(
     const glm::vec3 &center, float radius, CreatureId skip_id) const
 {
   return Environment.QueryCreatureNeighborsInRadius(center, radius, skip_id);
 }
 
-bool UWorld::CreatureVolumeClearAt(const glm::vec3 &body_origin,
-                                   const glm::vec3 &size_blocks,
-                                   CreatureId skip_id) const
+bool UWorld::CreaturesClearAt(const glm::vec3 &body_origin,
+                              const glm::vec3 &size_blocks,
+                              CreatureId skip_id) const
 {
   const CollisionVolume vol = CollisionVolumeFromBody(body_origin, size_blocks);
   return !CheckCreatureCollisionVolume(vol, skip_id);
@@ -89,8 +104,14 @@ bool UWorld::IsWithinActivityRange(const glm::vec3 &body_origin) const
   {
     const glm::vec3 delta = body_origin - controlled->eyePosition;
     const float dist_sq = delta.x * delta.x + delta.z * delta.z;
+    // Brain activity may lead the fog horizon slightly (hysteresis, +16),
+    // but must be based on the same visible world the fog uses — a tighter
+    // fog render distance used to leave brains chasing targets the player
+    // cannot see yet.
+    const int visible_rd =
+        std::min(GetEffectiveRenderDistance(), GetEffectiveFogRenderDistance());
     const float activity_radius =
-        static_cast<float>(GetEffectiveRenderDistance() * CHUNK_SIZE) + 16.0f;
+        static_cast<float>(visible_rd * CHUNK_SIZE) + 16.0f;
     if (dist_sq <= activity_radius * activity_radius)
     {
       return true;
@@ -204,12 +225,18 @@ void UWorld::SnapCreatureFeetToGround(UCreature &creature) const
 
 CreatureId UWorld::SpawnCreature(const std::string &speciesId,
                                  const glm::vec3 &bodyOrigin,
-                                 const std::string &skinId)
+                                 const std::string &skinId,
+                                 CreatureSpawnSource source)
 {
-  return Environment.SpawnCreature(speciesId, bodyOrigin, skinId);
+  return Environment.SpawnCreature(speciesId, bodyOrigin, skinId, source);
 }
 
 void UWorld::RemoveCreature(CreatureId id) { Environment.RemoveCreature(id); }
+
+uint64_t UWorld::GetCreatureGeneration() const
+{
+  return Environment.GetCreatureGeneration();
+}
 
 void UWorld::ForEachCreature(const std::function<void(UCreature &)> &fn)
 {
@@ -239,19 +266,25 @@ UWorld::GetResolvedAppearance(const UCreature &creature) const
   return Environment.GetResolvedAppearance(creature);
 }
 
+std::shared_ptr<const ResolvedCreatureAppearance>
+UWorld::GetResolvedAppearanceShared(const UCreature &creature) const
+{
+  return Environment.GetResolvedAppearanceShared(creature);
+}
+
 bool UWorld::SpawnCreatureByView(const std::string &speciesId)
 {
-  return UWorldCreatureFacade::SpawnCreatureByView(*this, speciesId);
+  return Environment.SpawnCreatureByView(speciesId);
 }
 
 bool UWorld::CanSpawnCreatureByView(const std::string &speciesId)
 {
-  return UWorldCreatureFacade::CanSpawnCreatureByView(*this, speciesId);
+  return Environment.CanSpawnCreatureByView(speciesId);
 }
 
 std::string UWorld::GetCreatureSpawnBlockedHint(const std::string &speciesId)
 {
-  return UWorldCreatureFacade::GetCreatureSpawnBlockedHint(*this, speciesId);
+  return Environment.GetCreatureSpawnBlockedHint(speciesId);
 }
 
 std::optional<CreatureId> UWorld::PickCreatureByView(const glm::vec3 &eye,

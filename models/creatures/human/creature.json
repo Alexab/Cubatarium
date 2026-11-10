@@ -6,7 +6,8 @@
       "humanoid"
     ],
     "spawnable": false,
-    "sort_order": 0
+    "sort_order": 0,
+    "natural_spawnable": false
   },
   "role": "controlled_default",
   "bounds": {
@@ -45,6 +46,24 @@
     "move_speed": 3.0,
     "wander_interval_min": 2.0,
     "wander_interval_max": 4.0
+  },
+  "vitals": {
+    "max_health": 100,
+    "max_satiety": 100,
+    "max_thirst": 100,
+    "max_fatigue": 100,
+    "max_breath": 100,
+    "max_fatal_wounds": 3,
+    "armor": 0
+  },
+  "attributes": {
+    "strength": 10,
+    "agility": 10,
+    "endurance": 10,
+    "accuracy": 10,
+    "intelligence": 10,
+    "luck": 10,
+    "perception": 10
   },
   "visual": {
     "backend": "bone_skeleton",

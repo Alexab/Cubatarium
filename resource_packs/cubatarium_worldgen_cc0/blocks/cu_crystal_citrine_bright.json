@@ -1,0 +1,32 @@
+{
+  "name": "cu_crystal_citrine_bright",
+  "id": 2158,
+  "displayName": "Crystal Citrine Bright",
+  "hardness": 2.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_crystal_citrine_bright",
+    "cu_crystal_citrine_bright",
+    "cu_crystal_citrine_bright",
+    "cu_crystal_citrine_bright",
+    "cu_crystal_citrine_bright",
+    "cu_crystal_citrine_bright"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "crystal",
+    "material": "citrine",
+    "variant": "bright"
+  }
+}

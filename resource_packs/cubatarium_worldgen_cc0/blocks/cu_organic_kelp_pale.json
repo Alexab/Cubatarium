@@ -1,0 +1,41 @@
+{
+  "name": "cu_organic_kelp_pale",
+  "id": 2287,
+  "displayName": "Organic Kelp Pale",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_kelp_pale",
+    "cu_organic_kelp_pale",
+    "cu_organic_kelp_pale",
+    "cu_organic_kelp_pale",
+    "cu_organic_kelp_pale",
+    "cu_organic_kelp_pale"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cross",
+    "shape": "reed",
+    "transparent": true,
+    "double_sided": true
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "kelp",
+    "variant": "pale"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

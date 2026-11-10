@@ -1,6 +1,13 @@
 {
   "name": "mtg_coral_pink",
   "id": 431,
+  "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],

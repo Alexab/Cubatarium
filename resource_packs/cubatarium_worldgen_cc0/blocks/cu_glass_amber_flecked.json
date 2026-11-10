@@ -1,0 +1,33 @@
+{
+  "name": "cu_glass_amber_flecked",
+  "id": 2062,
+  "displayName": "Glass Amber Flecked",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_glass_amber_flecked",
+    "cu_glass_amber_flecked",
+    "cu_glass_amber_flecked",
+    "cu_glass_amber_flecked",
+    "cu_glass_amber_flecked",
+    "cu_glass_amber_flecked"
+  ],
+  "render": {
+    "texture_variation": 0.48,
+    "transparent": true
+  },
+  "assetgen": {
+    "family": "glass",
+    "material": "amber",
+    "variant": "flecked"
+  }
+}

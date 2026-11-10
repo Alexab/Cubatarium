@@ -2,6 +2,7 @@
 
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include <iostream>
+#include <mutex>
 #include <unordered_set>
 
 namespace cutum
@@ -10,6 +11,7 @@ namespace cutum
 namespace
 {
 
+std::mutex gMissingCreatureTextureLoggedMutex;
 std::unordered_set<std::string> gMissingCreatureTextureLogged;
 
 } // namespace
@@ -20,6 +22,19 @@ GLuint ResolveCreatureSpeciesTexture(const UCreatureTextureStorage &textures,
                                      const std::string &defaultStem,
                                      const std::string &skinId)
 {
+  // A skin overrides the species base: with the base keys first the skin
+  // branch was dead — the storage always resolves the species' own texture.
+  if (!skinId.empty())
+  {
+    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/" + stem))
+    {
+      return tex;
+    }
+    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/diffuse"))
+    {
+      return tex;
+    }
+  }
   const std::string keys[] = {
       speciesId + "/" + stem,
       speciesId + "/diffuse",
@@ -36,26 +51,18 @@ GLuint ResolveCreatureSpeciesTexture(const UCreatureTextureStorage &textures,
       }
     }
   }
-  if (!skinId.empty())
-  {
-    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/" + stem))
-    {
-      return tex;
-    }
-    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/diffuse"))
-    {
-      return tex;
-    }
-  }
   return 0;
 }
 
 bool LogCreatureMissingTextureOnce(const std::string &logKey,
                                    const std::string &message)
 {
-  if (!gMissingCreatureTextureLogged.insert(logKey).second)
   {
-    return false;
+    const std::lock_guard<std::mutex> lock(gMissingCreatureTextureLoggedMutex);
+    if (!gMissingCreatureTextureLogged.insert(logKey).second)
+    {
+      return false;
+    }
   }
   std::cerr << message << std::endl;
   return true;

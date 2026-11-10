@@ -1,0 +1,50 @@
+{
+  "name": "asset_flower_patch_02",
+  "version": 2,
+  "displayName": "Flower Patch 02",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 7321703413861604272,
+    "license": "CC0-1.0",
+    "material_parameter": "flower_blue,flower_pink"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "plants"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_flower_blue_young"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_flower_pink_fresh"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_flower_pink_dark"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_organic_flower_blue_young"
+    }
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
+}

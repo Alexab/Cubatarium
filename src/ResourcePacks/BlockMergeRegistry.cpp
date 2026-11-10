@@ -1,3 +1,5 @@
+#include "Core/UiPump.h"
+#include "Core/StallTimer.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Textures/TextureBase.h"
@@ -39,10 +41,18 @@ void UBlockMergeRegistry::Rebuild(
             [](const ResourcePackManifest &a, const ResourcePackManifest &b)
             { return a.EffectivePriority < b.EffectivePriority; });
 
+  UBlockingWorkPump::Pump("Merging block catalog", 0.0f);
   MergeBlockCatalog(sorted);
+  StallStageMark("merge.MergeBlockCatalog");
+  UBlockingWorkPump::Pump("Resolving block definitions", 0.25f);
   ResolveBlockDefinitions(sorted);
+  StallStageMark("merge.ResolveBlockDefinitions");
+  UBlockingWorkPump::Pump("Applying texture overrides", 0.5f);
   ApplyTextureOverrides(sorted);
+  StallStageMark("merge.ApplyTextureOverrides");
+  UBlockingWorkPump::Pump("Resolving texture atlas", 0.75f);
   ResolveTextureAtlas(sorted);
+  StallStageMark("merge.ResolveTextureAtlas");
 
   for (const auto &rt : RuntimeOverlay)
   {
@@ -178,6 +188,14 @@ void UBlockMergeRegistry::ApplyTextureOverrides(
   }
 }
 
+namespace
+{
+/// Per-call memo of "does <pack>/textures/blocks/<stem>.png exist". Most stems
+/// are shared by several faces and blocks; without it every face costs a
+/// filesystem stat (seconds for a ~1800-block catalog).
+std::unordered_map<std::string, bool> *gStemExistsMemo = nullptr;
+} // namespace
+
 std::string
 UBlockMergeRegistry::ResolveStemInPack(const std::string &stem,
                                        const ResourcePackManifest &pack) const
@@ -190,8 +208,26 @@ UBlockMergeRegistry::ResolveStemInPack(const std::string &stem,
   {
     return stem;
   }
-  const fs::path path = UResourcePack::TexturePath(pack, stem);
-  if (fs::exists(path))
+  bool exists = false;
+  if (gStemExistsMemo)
+  {
+    const std::string key = pack.Id + '\n' + stem;
+    const auto hit = gStemExistsMemo->find(key);
+    if (hit != gStemExistsMemo->end())
+    {
+      exists = hit->second;
+    }
+    else
+    {
+      exists = fs::exists(UResourcePack::TexturePath(pack, stem));
+      (*gStemExistsMemo)[key] = exists;
+    }
+  }
+  else
+  {
+    exists = fs::exists(UResourcePack::TexturePath(pack, stem));
+  }
+  if (exists)
   {
     return PackQualifiedTextureStem(pack.Id, stem);
   }
@@ -218,8 +254,27 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
     packById[pack.Id] = pack;
   }
 
+  std::unordered_map<std::string, bool> stem_exists;
+  struct MemoScope
+  {
+    explicit MemoScope(std::unordered_map<std::string, bool> *memo)
+        : Previous(gStemExistsMemo)
+    {
+      gStemExistsMemo = memo;
+    }
+    ~MemoScope() { gStemExistsMemo = Previous; }
+    std::unordered_map<std::string, bool> *Previous;
+  } memo_scope(&stem_exists);
+
+  size_t processed = 0;
   for (auto &pair : BlocksByName)
   {
+    if ((++processed & 63u) == 0)
+    {
+      UBlockingWorkPump::Pump("Resolving block textures",
+                              static_cast<float>(processed) /
+                                  static_cast<float>(BlocksByName.size()));
+    }
     const auto packIt = packById.find(pair.second.OwnerPackId);
     if (packIt == packById.end())
     {

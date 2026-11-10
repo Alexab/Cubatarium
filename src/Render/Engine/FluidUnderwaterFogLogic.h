@@ -54,11 +54,22 @@ inline bool ShouldApplyUnderwaterFogToColumn(bool camera_submerged,
   return true;
 }
 
-/// Per-column tint targets opaque solids only; fluid/cutout/cross keep their own look.
+/// Per-column tint targets opaque solids; fluid/cross keep their own look —
+/// EXCEPT when the camera is submerged: then the transparent (fluid) pass
+/// must receive the underwater fog uniforms too, otherwise the water surface
+/// and level-step planes render as raw dark planes while the floor below is
+/// already fogged (water audit W1.2, D-2).
+/// `alpha_cutout` means a dedicated cutout-only pass — not "alpha discard"
+/// shader mode on a merged solid+cutout draw (GPF5).
 inline bool ShouldApplyBelowSurfaceFogToPass(bool transparent_pass,
-                                             bool alpha_cutout = false)
+                                             bool alpha_cutout = false,
+                                             bool camera_submerged = false)
 {
-  return !transparent_pass && !alpha_cutout;
+  if (alpha_cutout)
+  {
+    return false;
+  }
+  return !transparent_pass || camera_submerged;
 }
 
 /// Solid block is directly under a contiguous fluid span in its column.

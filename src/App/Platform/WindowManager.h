@@ -24,6 +24,7 @@ class UViewEngine;
 class UInputManager;
 class UApplication;
 class UBlockInputController;
+class UFlightCaptureService;
 
 class UWindowManager
 {
@@ -66,6 +67,8 @@ public:
 
   /// Сброс ПКМ-обзора (например при Esc → меню).
   void ResetGameplayMouseCapture();
+  /// Сброс LMB/RMB place-break state after projection change.
+  void CancelGameplayPointerInteraction();
 
   void SetSkyColor(float r, float g, float b, float a = 1.0f);
   void SetSkyColor(const glm::vec4 &color);
@@ -113,6 +116,7 @@ private: // Instances of core systems
   std::shared_ptr<UApplication> Application;
 
   std::unique_ptr<UBlockInputController> BlockInput;
+  std::unique_ptr<UFlightCaptureService> FlightCapture;
 
 private: // Window and rendering state
   GLFWwindow *Window;
@@ -125,14 +129,20 @@ private: // Window and rendering state
 
   std::chrono::high_resolution_clock::time_point LastFrameTime;
   std::chrono::steady_clock::time_point LastAutosaveTime;
-  static constexpr double KAutosaveIntervalSec = 60.0;
+  /// Dig/place Immediate must not collide with cooperative save (manual
+  /// 215711).
+  static constexpr double KAutosaveIntervalSec = 180.0;
+  static constexpr double KEditHotStickySec = 1.5;
   /// Budgeted cooperative autosave (avoids multi-second hitch in Update).
   bool AutosaveEnabled{true};
   bool AutosaveRequested{false};
   bool AutosaveInProgress{false};
   bool SeenInGameForAutosave{false};
+  std::chrono::steady_clock::time_point EditHotUntil{};
   double DeltaTime;
 
+  bool IsEditHotForAutosave() const;
+  void RefreshEditHotSticky();
   void TickBudgetedAutosave();
 
   glm::vec4 SkyColor;

@@ -1,0 +1,32 @@
+{
+  "name": "mtg_lava_flowing",
+  "id": 468,
+  "hardness": 100,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mt_mtg_lava_flowing_default_lava",
+    "mt_mtg_lava_flowing_default_lava",
+    "mt_mtg_lava_flowing_default_lava",
+    "mt_mtg_lava_flowing_default_lava",
+    "mt_mtg_lava_flowing_default_lava",
+    "mt_mtg_lava_flowing_default_lava"
+  ],
+  "render": {
+    "texture_variation": 0.0
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

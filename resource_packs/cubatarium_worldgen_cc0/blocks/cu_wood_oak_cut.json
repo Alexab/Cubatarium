@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_oak_cut",
+  "id": 1363,
+  "displayName": "Wood Oak Cut",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_oak_cut",
+    "cu_wood_oak_cut",
+    "cu_wood_oak_cut",
+    "cu_wood_oak_cut",
+    "cu_wood_oak_cut_top",
+    "cu_wood_oak_cut_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "oak",
+    "variant": "cut"
+  }
+}

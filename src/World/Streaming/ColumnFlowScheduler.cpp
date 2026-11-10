@@ -1,0 +1,176 @@
+#include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/ColumnEmergeBump.h"
+
+#include <algorithm>
+
+namespace cutum
+{
+
+void UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
+                                   int priority)
+{
+  ColumnWorkItem item{};
+  item.column = column;
+  item.kind = kind;
+  item.priority = priority;
+  item.scan_full_focus = false;
+  item.cy = kColumnWorkWholeRemeshBandCy;
+  Enqueue(item);
+}
+
+void UColumnFlowScheduler::PushLive(const ColumnWorkItem &item)
+{
+  ColumnWorkItem stamped = item;
+  stamped.generation = next_generation_++;
+  LiveTicket ticket{};
+  ticket.kind = stamped.kind;
+  ticket.priority = stamped.priority;
+  ticket.scan_full_focus = stamped.scan_full_focus;
+  ticket.cy = stamped.cy;
+  ticket.generation = stamped.generation;
+  live_[ColumnCoord(stamped.column)] = ticket;
+  HeapEntry entry{};
+  entry.item = stamped;
+  entry.sequence = next_sequence_++;
+  heap_.push(entry);
+}
+
+void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
+{
+  const ColumnCoord coord(item.column);
+  const auto it = live_.find(coord);
+  if (it == live_.end())
+  {
+    PushLive(item);
+    return;
+  }
+
+  const LiveTicket &old = it->second;
+  if (old.kind == item.kind)
+  {
+    // Same kind: refresh urgency / preferred slice with a new generation.
+    // Keep the higher priority; prefer a concrete cy (>=0) over whole-band.
+    ColumnWorkItem refreshed = item;
+    refreshed.priority = std::max(old.priority, item.priority);
+    if ((IsConcreteColumnWorkCy(old.cy) &&
+         !IsConcreteColumnWorkCy(item.cy)) ||
+        (old.cy == kColumnWorkWholeColumnCy &&
+         item.cy == kColumnWorkWholeRemeshBandCy))
+    {
+      refreshed.cy = old.cy;
+    }
+    // Prefer full-focus scan if either request asked for it.
+    refreshed.scan_full_focus = old.scan_full_focus || item.scan_full_focus;
+    if (refreshed.priority == old.priority && refreshed.cy == old.cy &&
+        refreshed.scan_full_focus == old.scan_full_focus)
+    {
+      return; // Identical demand must not produce unbounded heap tombstones.
+    }
+    ++superseded_n_;
+    PushLive(refreshed);
+    return;
+  }
+
+  if (ColumnWorkKindExclusiveRank(item.kind) >
+      ColumnWorkKindExclusiveRank(old.kind))
+  {
+    ++upgrade_n_;
+    ++superseded_n_;
+    PushLive(item);
+    return;
+  }
+
+  ++denied_n_;
+}
+
+bool UColumnFlowScheduler::ReplaceColumnTicket(
+    const ColumnWorkItem &item, ColumnWorkKind expected_kind)
+{
+  const ColumnCoord coord(item.column);
+  const auto it = live_.find(coord);
+  if (it == live_.end() || it->second.kind != expected_kind)
+  {
+    return false;
+  }
+  ++superseded_n_;
+  ++upgrade_n_;
+  PushLive(item);
+  return true;
+}
+
+bool UColumnFlowScheduler::DrainOne(ColumnWorkItem &out)
+{
+  while (!heap_.empty())
+  {
+    HeapEntry entry = heap_.top();
+    heap_.pop();
+    const ColumnCoord coord(entry.item.column);
+    const auto it = live_.find(coord);
+    if (it == live_.end() || it->second.generation != entry.item.generation)
+    {
+      // Stale / superseded heap residue.
+      continue;
+    }
+    out = entry.item;
+    live_.erase(it);
+    return true;
+  }
+  return false;
+}
+
+void UColumnFlowScheduler::Clear()
+{
+  while (!heap_.empty())
+  {
+    heap_.pop();
+  }
+  live_.clear();
+}
+
+bool UColumnFlowScheduler::RemoveColumn(glm::ivec2 column)
+{
+  return live_.erase(ColumnCoord(column)) != 0;
+}
+
+bool UColumnFlowScheduler::Contains(glm::ivec2 column,
+                                    ColumnWorkKind kind) const
+{
+  return Contains(column, kind, false) || Contains(column, kind, true);
+}
+
+bool UColumnFlowScheduler::Contains(glm::ivec2 column, ColumnWorkKind kind,
+                                    bool scan_full_focus) const
+{
+  const auto it = live_.find(ColumnCoord(column));
+  if (it == live_.end())
+  {
+    return false;
+  }
+  return it->second.kind == kind &&
+         it->second.scan_full_focus == scan_full_focus;
+}
+
+bool UColumnFlowScheduler::ContainsColumn(glm::ivec2 column) const
+{
+  return live_.count(ColumnCoord(column)) != 0;
+}
+
+bool UColumnFlowScheduler::GetLiveTicket(glm::ivec2 column,
+                                         ColumnWorkItem &out) const
+{
+  const auto it = live_.find(ColumnCoord(column));
+  if (it == live_.end())
+  {
+    return false;
+  }
+
+  out.column = column;
+  out.kind = it->second.kind;
+  out.priority = it->second.priority;
+  out.scan_full_focus = it->second.scan_full_focus;
+  out.cy = it->second.cy;
+  out.generation = it->second.generation;
+  return true;
+}
+
+} // namespace cutum

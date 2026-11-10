@@ -2,6 +2,7 @@
 #define SKINDEFINITIONSTORAGE_H
 
 #include "Creatures/Definition/SkinDefinition.h"
+#include <atomic>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -21,6 +22,10 @@ public:
   std::vector<std::string> ListEquippable() const;
   bool IsCompatible(const std::string &skinId,
                     const std::string &speciesId) const;
+
+  /// Bumped on every Load/LoadOverlay/LoadFile; consumers cache resolved
+  /// data keyed on it (creature appearance cache, audit V6).
+  std::atomic<uint64_t> Revision{1};
 
 private:
   bool LoadFile(const std::string &path);

@@ -1,14 +1,23 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
+#include "App/Platform/Log.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Lighting/ChunkLighting.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/LightUtil.h"
 
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+
+namespace cutum
+{
+uint64_t UJobStageTrace::GetStreamingFrameEpoch() { return 0; }
+void CubatariumLogInfo(const char *, const std::string &) {}
+} // namespace cutum
 
 static void Expect(bool cond, const char *message)
 {
@@ -275,6 +284,152 @@ int main()
                                 kMaxWorldY);
   Expect(SkyAt(world, glm::ivec3(12, 5, 8)) > 0,
          "offset cave lit after shaft and tunnel open");
+
+  {
+    cutum::UBlockWorld neigh_world;
+    for (int x = 0; x < 32; ++x)
+    {
+      for (int z = 0; z < 16; ++z)
+      {
+        neigh_world.SetBlock(glm::ivec3(x, 0, z), kStone);
+      }
+    }
+    neigh_world.SetBlock(glm::ivec3(20, 4, 8), kTorch);
+    cutum::RelightChunk(neigh_world, *registry, glm::ivec3(0, 0, 0));
+    cutum::RelightChunk(neigh_world, *registry, glm::ivec3(1, 0, 0));
+    cutum::RelightJobSpec spec;
+    spec.block_positions = {glm::ivec3(8, 0, 8)};
+    spec.min_world_y = 0;
+    spec.max_world_y = 15;
+    spec.column_center_only = true;
+    spec.frontier_iterations = 0;
+    auto snap = cutum::UChunkRelightSnapshot::Capture(neigh_world, spec);
+    Expect(snap.GetCapturedFullChunks() == 1,
+           "D: center-only copies one full chunk");
+    Expect(snap.HasChunk(glm::ivec3(0, 0, 0)),
+           "D: center chunk has blocks");
+    Expect(!snap.HasChunk(glm::ivec3(1, 0, 0)),
+           "D: neighbor not in Blocks");
+    Expect(snap.HasLight(glm::ivec3(1, 0, 0)),
+           "D: neighbor light copied as seed");
+    Expect(snap.GetCapturedNeighborLightChunks() >= 1,
+           "D: neighbor light count >= 1");
+    auto result = snap.Compute(*registry);
+    Expect(result.chunks.size() == 1,
+           "D: apply only center light");
+    bool center_edge_lit = false;
+    for (const auto &chunk_data : result.chunks)
+    {
+      if (chunk_data.coord != glm::ivec3(0, 0, 0))
+      {
+        continue;
+      }
+      const glm::ivec3 local(15, 4, 8);
+      const int idx = local.x + cutum::CHUNK_SIZE *
+                                    (local.y + cutum::CHUNK_SIZE * local.z);
+      const int block_light = (chunk_data.light_packed[idx] >> 4) & 0x0F;
+      center_edge_lit = block_light > 0;
+    }
+    Expect(center_edge_lit, "D: neighbor torch seeds center face");
+  }
+
+  {
+    constexpr int kTallWorldMaxY = 319;
+    cutum::UBlockWorld tall_world;
+    const glm::ivec3 torch_pos(8, kTallWorldMaxY - 1, 8);
+    tall_world.SetBlock(torch_pos, kTorch);
+    cutum::RelightBlocksAroundAll(tall_world, *registry, {torch_pos},
+                                  kTallWorldMaxY);
+    Expect(BlockAt(tall_world, torch_pos + glm::ivec3(0, 1, 0)) > 0,
+           "block light propagates inside the top supported chunk slice");
+  }
+
+  {
+    constexpr int kMinWorldY = -64;
+    cutum::UBlockWorld deep_world;
+    deep_world.GetChunkManager().EnsureChunk(glm::ivec3(0, -4, 0));
+    deep_world.GetChunkManager().EnsureChunk(glm::ivec3(0, -3, 0));
+    const glm::ivec3 torch_pos(8, -49, 8);
+    deep_world.SetBlock(torch_pos, kTorch);
+    cutum::RelightColumn(deep_world, *registry, torch_pos.x, torch_pos.z,
+                         kMinWorldY, -33, true, false);
+    Expect(BlockAt(deep_world, torch_pos) >= 13,
+           "block light source is processed below world Y=0");
+    Expect(BlockAt(deep_world, glm::ivec3(8, -48, 8)) > 0,
+           "block light crosses the negative chunk seam at Y=-48");
+  }
+
+  // E: one union flood per batch must reach the same fixed point the
+  // per-chunk floods reached. Three stacked chunks, two torches in separate
+  // air shafts; assert exact max-plus attenuation across both chunk seams.
+  {
+    cutum::UBlockWorld stack_world;
+    for (int y = 0; y < 48; ++y)
+    {
+      for (int x = 0; x < 16; ++x)
+      {
+        for (int z = 0; z < 16; ++z)
+        {
+          stack_world.SetBlock(glm::ivec3(x, y, z), kStone);
+        }
+      }
+    }
+    for (int y = 0; y < 48; ++y)
+    {
+      stack_world.SetBlock(glm::ivec3(4, y, 4), cutum::BLOCK_AIR);
+      stack_world.SetBlock(glm::ivec3(12, y, 12), cutum::BLOCK_AIR);
+    }
+    const glm::ivec3 torch_a(4, 6, 4);
+    const glm::ivec3 torch_b(12, 26, 12);
+    stack_world.SetBlock(torch_a, kTorch);
+    stack_world.SetBlock(torch_b, kTorch);
+
+    cutum::RelightJobSpec spec;
+    spec.block_positions = {glm::ivec3(8, 0, 8)};
+    spec.min_world_y = 0;
+    spec.max_world_y = 47;
+    spec.column_center_only = true;
+    spec.frontier_iterations = 0;
+    auto snap = cutum::UChunkRelightSnapshot::Capture(stack_world, spec);
+    Expect(snap.GetCapturedFullChunks() == 3,
+           "E: center-only copies the three-band stack");
+    auto result = snap.Compute(*registry);
+
+    auto block_light_at = [&result](glm::ivec3 pos)
+    {
+      const glm::ivec3 chunk_coord = cutum::UChunkManager::WorldToChunk(pos);
+      for (const auto &chunk_data : result.chunks)
+      {
+        if (chunk_data.coord != chunk_coord)
+        {
+          continue;
+        }
+        const glm::ivec3 local = cutum::UChunkManager::WorldToLocal(pos);
+        const int idx = local.x + cutum::CHUNK_SIZE *
+                                       (local.y + cutum::CHUNK_SIZE * local.z);
+        return (chunk_data.light_packed[idx] >> 4) & 0x0F;
+      }
+      return -1;
+    };
+
+    // Torch A at (4,6,4), emission 14, straight air shaft up: 14 - dy.
+    Expect(block_light_at(glm::ivec3(4, 15, 4)) == 5,
+           "E: torch A lights bottom-chunk seam face");
+    Expect(block_light_at(glm::ivec3(4, 16, 4)) == 4,
+           "E: torch A crosses seam into middle chunk");
+    Expect(block_light_at(glm::ivec3(4, 19, 4)) == 1,
+           "E: torch A reaches attenuation tail in middle chunk");
+    Expect(block_light_at(glm::ivec3(4, 20, 4)) == 0,
+           "E: torch A exhausts at range");
+    // Torch B at (12,26,12): crosses the middle→top seam.
+    Expect(block_light_at(glm::ivec3(12, 31, 12)) == 9,
+           "E: torch B lights middle-chunk seam face");
+    Expect(block_light_at(glm::ivec3(12, 32, 12)) == 8,
+           "E: torch B crosses seam into top chunk");
+    // Both shafts converge in the shared flood without starving either seed.
+    Expect(block_light_at(torch_a) == 14, "E: torch A keeps source emission");
+    Expect(block_light_at(torch_b) == 14, "E: torch B keeps source emission");
+  }
 
   std::cout << "chunk_lighting_propagation_test: OK" << std::endl;
   return 0;

@@ -35,10 +35,10 @@ int main()
     const auto d = EvaluateFocusIngress(in);
     Expect(d.active, "cold hole active");
     Expect(d.promote_once, "cold hole promote");
-    Expect(d.relight_floor >= 2 && d.relight_floor <= 4, "cold hole paced floor");
-    Expect(!d.allow_sync_hole_fill, "cold hole blocks sync fill");
+    Expect(d.relight_floor >= 3 && d.relight_floor <= 6, "cold hole paced floor");
+    Expect(d.allow_sync_hole_fill, "cold hole + missing allows sync fill");
     Expect(AllowSyncHoleFillForColumn(d, true), "underfeet still allowed");
-    Expect(!AllowSyncHoleFillForColumn(d, false), "non-underfeet blocked");
+    Expect(AllowSyncHoleFillForColumn(d, false), "missing allows non-underfeet");
   }
 
   {
@@ -50,7 +50,7 @@ int main()
     in.frame_ms = 120.0;
     const auto d = EvaluateFocusIngress(in);
     Expect(d.active, "cold hitch active");
-    Expect(d.relight_floor == 1, "hitch floor single enqueue");
+    Expect(d.relight_floor == 2, "hitch floor paced enqueue");
   }
 
   {
@@ -74,7 +74,8 @@ int main()
     in.mesh_async = 0;
     in.frame_ms = 16.0;
     const auto d = EvaluateFocusIngress(in);
-    Expect(!d.active, "idle not cruise ingress");
+    Expect(d.active, "Era20: idle miss still activates ingress");
+    Expect(d.first_mesh_admit >= 2, "idle miss → FirstMesh admit");
   }
 
   {
@@ -85,7 +86,76 @@ int main()
     in.mesh_async = 0;
     in.frame_ms = 16.0;
     const auto d = EvaluateFocusIngress(in);
-    Expect(!d.active, "no pending → inactive");
+    Expect(d.active, "missing without pending → SoT frontier active");
+    Expect(d.first_mesh_admit >= 2, "missing → first_mesh admit boost");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = false;
+    in.pending_focus = 0;
+    in.unfinished_visual = 0;
+    in.stale_dark_near = 0;
+    in.mesh_async = 0;
+    in.frame_ms = 16.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(!d.active, "no frontier signal → inactive");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = false;
+    in.pending_focus = 2;
+    in.unfinished_visual = 1;
+    in.stale_dark_near = 20;
+    in.mesh_async = 2;
+    in.frame_ms = 20.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(d.active, "stale-dark + unfinished → frontier active");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = true;
+    in.pending_focus = 19;
+    in.mesh_async = 0;
+    in.frame_ms = 22.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(d.active, "rim SLA cold hole active");
+    Expect(d.first_mesh_admit >= 5, "rim SLA boosts first_mesh admit");
+    Expect(d.relight_floor <= 3, "rim SLA caps Capture floor");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = true;
+    in.pending_focus = 50;
+    in.void_near = 500;
+    in.mesh_async = 0;
+    in.frame_ms = 22.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(d.first_mesh_admit <= 1, "void frontier caps first_mesh admit");
+    Expect(d.relight_floor >= 4, "void frontier raises relight floor");
+  }
+
+  {
+    using cutum::ShouldAllowImmediateMesh;
+    Expect(!ShouldAllowImmediateMesh(true, false),
+           "B: moving never Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, true),
+           "B: pending never Immediate");
+    Expect(ShouldAllowImmediateMesh(false, false),
+           "B: idle without pending may Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, false, 32, 0, 0, false),
+           "P3: gpu_queued>=32 blocks Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, false, 0, 96, 96, false),
+           "P3: fifo at soft-cap blocks Immediate");
+    Expect(ShouldAllowImmediateMesh(false, false, 4, 10, 96, false),
+           "P3: idle low gpuq low fifo allows Immediate");
   }
 
   if (gFails != 0)

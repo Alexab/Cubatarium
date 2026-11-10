@@ -1,0 +1,12 @@
+{
+  "id": "jagged_peaks",
+  "height": {
+    "base_offset": 15,
+    "amplitude_mul": 1.8,
+    "volatility_mul": 1.2
+  },
+  "palette": {
+    "surface": "calcite",
+    "subsurface": "stone"
+  }
+}

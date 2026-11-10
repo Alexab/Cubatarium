@@ -22,6 +22,11 @@ float FBM3D(float x, float y, float z, uint32_t Seed, int octaves,
 
 float NormalizedFBM2D(float x, float z, uint32_t Seed, int octaves,
                       float persistence, float lacunarity);
+/// Profile-3 terrain noise: Perlin with 8 evenly spaced gradient directions
+/// (the legacy 2D noise only has the four diagonals and shows grid-aligned
+/// ridges). Normalized to roughly [-1, 1].
+float SmoothFBM2D(float x, float z, uint32_t Seed, int octaves,
+                  float persistence, float lacunarity);
 float Smoothstep(float edge0, float edge1, float x);
 float TriangularYFactor(int y, int yMin, int yPeak, int yMax);
 

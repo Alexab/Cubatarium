@@ -1,0 +1,32 @@
+{
+  "name": "cu_ceramic_ochre_pale",
+  "id": 1693,
+  "displayName": "Ceramic Ochre Pale",
+  "hardness": 1.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_ceramic_ochre_pale",
+    "cu_ceramic_ochre_pale",
+    "cu_ceramic_ochre_pale",
+    "cu_ceramic_ochre_pale",
+    "cu_ceramic_ochre_pale",
+    "cu_ceramic_ochre_pale"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "ceramic",
+    "material": "ochre",
+    "variant": "pale"
+  }
+}

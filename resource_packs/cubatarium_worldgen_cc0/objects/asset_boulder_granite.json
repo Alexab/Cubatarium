@@ -1,0 +1,166 @@
+{
+  "name": "asset_boulder_granite",
+  "version": 2,
+  "displayName": "Boulder Granite",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 15515135040487869076,
+    "license": "CC0-1.0",
+    "material_parameter": "granite"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": -2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": -2,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": -1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -2,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 2,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": -2,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": -1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": -1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 1,
+      "dy": 1,
+      "dz": 1,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    },
+    {
+      "dx": 2,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_granite_natural"
+    }
+  ]
+}

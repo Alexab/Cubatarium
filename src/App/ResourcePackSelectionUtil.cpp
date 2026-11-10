@@ -2,6 +2,7 @@
 
 #include "App/Core.h"
 #include "App/ResourcePackBootstrap.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -23,7 +24,9 @@ ResourcePackSelection NormalizeResourcePackSelection(
     selection.Secondary =
         bootstrap.NormalizeEnabledPackIds(core, selection.Secondary);
   }
-  if (selection.WorldgenOwner.empty() && !selection.Primary.empty())
+  if (!selection.Primary.empty() &&
+      std::find(selection.Primary.begin(), selection.Primary.end(),
+                selection.WorldgenOwner) == selection.Primary.end())
   {
     selection.WorldgenOwner = selection.Primary.front();
   }

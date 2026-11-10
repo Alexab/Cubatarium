@@ -1,4 +1,5 @@
 #include "Activity/CreatureActivityDirector.h"
+#include "Navigation/NavigationPathBudget.h"
 #include <algorithm>
 
 namespace cutum
@@ -61,22 +62,61 @@ void UCreatureActivityDirector::OnCreatureRemoved(CreatureId Id)
     it->second->OnCreatureRemoved(Id);
   }
   Membership.erase(it);
+  StressBudget.Remove(Id);
 }
 
 void UCreatureActivityDirector::TickAgents(IUWorldPerception &perception,
                                            IUCreatureActivitySink &sink,
-                                           float dt)
+                                           float dt, bool stress_tick)
 {
+  LastAgentsTicked = 0;
+  LastAgentsDeferred = 0;
   AccumulatedTickDt += dt;
   if (AccumulatedTickDt < ActivityTickInterval)
   {
     return;
   }
-  const float cognitive_dt = AccumulatedTickDt;
-  AccumulatedTickDt = 0.0f;
+  const float cognitive_dt =
+      std::min(AccumulatedTickDt, kMaxCognitiveDt);
+  AccumulatedTickDt -= cognitive_dt;
+  UNavigationPathBudget::BeginActivityTick();
+  const size_t agent_count = Agents.size();
+  if (agent_count == 0)
+  {
+    return;
+  }
+  if (stress_tick)
+  {
+    // Budget creatures, not behavior types (see UCreatureTickBudget).
+    std::vector<CreatureId> ids;
+    ids.reserve(Membership.size());
+    for (const auto &entry : Membership)
+    {
+      if (entry.second)
+      {
+        ids.push_back(entry.first);
+      }
+    }
+    std::sort(ids.begin(), ids.end());
+    const auto slice = StressBudget.Select(
+        ids, cognitive_dt, UCreatureTickBudget::BudgetFor(ids.size()));
+    for (const auto &[Id, creatureDt] : slice)
+    {
+      const auto it = Membership.find(Id);
+      if (it != Membership.end() && it->second)
+      {
+        it->second->TickCreature(Id, perception, sink, creatureDt);
+        ++LastAgentsTicked;
+      }
+    }
+    LastAgentsDeferred = static_cast<int>(ids.size() - slice.size());
+    return;
+  }
+  StressBudget.Reset();
   for (const auto &agent : Agents)
   {
     agent->Tick(perception, sink, cognitive_dt);
+    ++LastAgentsTicked;
   }
 }
 

@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_needle_mature",
+  "id": 2430,
+  "displayName": "Organic Needle Mature",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_needle_mature",
+    "cu_organic_needle_mature",
+    "cu_organic_needle_mature",
+    "cu_organic_needle_mature",
+    "cu_organic_needle_mature_top",
+    "cu_organic_needle_mature"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "needle",
+    "variant": "mature"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

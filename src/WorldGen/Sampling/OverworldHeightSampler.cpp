@@ -225,8 +225,10 @@ float OverworldMacroHeight01(int x, int z, uint32_t seed)
 UOverworldHeightSampler::UOverworldHeightSampler(uint32_t Seed, int SeaLevel,
                                                  int MaxHeight,
                                                  HeightPreset preset,
-                                                 float terrainRoughness)
+                                                 float terrainRoughness,
+                                                 int minHeight)
     : Seed(Seed), SeaLevel(SeaLevel), MaxHeight(MaxHeight),
+      MinHeight(minHeight),
       Params(ParamsForPreset(preset, MaxHeight)), Preset(preset)
 {
   const float roughness = std::max(0.25f, terrainRoughness);
@@ -266,9 +268,11 @@ OverworldHeightSample UOverworldHeightSampler::SampleAt(int x, int z) const
   {
     out.climate = SampleClimate(x, z, Seed);
     const float offset = ClimateTerrainOffset(
-        out.climate, SeaLevel, MaxHeight, out.regional01, out.detail01,
+        out.climate, SeaLevel, MaxHeight, MinHeight, out.regional01,
+        out.detail01,
         Params.detailWeight, Params.amplitudeBlocks, TerrainRoughness, x, z,
-        Seed, Params.rolling.weight, Params.rolling.scale, Params.rolling.octaves);
+        Seed, Params.rolling.weight, Params.rolling.scale,
+        Params.rolling.octaves);
     const float delta = (out.h01 - Params.seaBias) * Params.amplitudeBlocks * 0.32f;
     float heightDelta = offset + delta;
     const float maxUp = Params.amplitudeBlocks * 0.62f;
@@ -276,12 +280,12 @@ OverworldHeightSample UOverworldHeightSampler::SampleAt(int x, int z) const
     heightDelta = std::clamp(heightDelta, -maxDown, maxUp);
     out.surfaceY =
         SeaLevel + static_cast<int>(std::floor(heightDelta + 0.5f));
-    out.surfaceY = std::clamp(out.surfaceY, 1, MaxHeight);
+    out.surfaceY = std::clamp(out.surfaceY, MinHeight + 1, MaxHeight);
     return out;
   }
   const float delta = (out.h01 - Params.seaBias) * Params.amplitudeBlocks;
   out.surfaceY = SeaLevel + static_cast<int>(std::floor(delta + 0.5f));
-  out.surfaceY = std::clamp(out.surfaceY, 1, MaxHeight);
+  out.surfaceY = std::clamp(out.surfaceY, MinHeight + 1, MaxHeight);
   return out;
 }
 

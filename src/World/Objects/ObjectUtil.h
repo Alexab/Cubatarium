@@ -2,7 +2,9 @@
 
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include <functional>
 #include <glm/glm.hpp>
+#include <optional>
 
 namespace cutum
 {
@@ -20,23 +22,37 @@ int ResolveWorldGenAnchorY(const WorldObjectDefinition &object,
                            UBlockRegistry &registry, int topSolid,
                            int yOffset);
 
+struct ObjectVoxelCheckStats
+{
+  // Visits in the three prefab-voxel validation passes. Early exits are included.
+  uint64_t voxelVisits{0};
+  // Explicit FindTopSolidSurfaceY calls in CanPlaceObjectAtForWorldGen.
+  uint64_t surfaceScans{0};
+};
+
 bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
                                  glm::ivec3 anchorWorldPos, int maxScanY,
-                                 int seaLevel);
+                                 int seaLevel,
+                                 ObjectVoxelCheckStats *checkStats = nullptr);
 
-bool HasOpenSurfaceAbove(const UBlockWorld &world, UBlockRegistry &registry,
+bool HasOpenSurfaceAbove(const UBlockWorld &world, const UBlockRegistry &registry,
                          int x, int y, int z, int maxY);
 
-bool IsSolidPlantGround(const UBlockWorld &world, UBlockRegistry &registry,
+bool IsSolidPlantGround(const UBlockWorld &world, const UBlockRegistry &registry,
                         glm::ivec3 groundPos);
+bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id);
 bool CanPlacePlantAt(const UBlockWorld &world, UBlockRegistry &registry,
                      glm::ivec3 worldPos);
-bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
+bool IsExposedLandSurface(const UBlockWorld &world, const UBlockRegistry &registry,
                           int x, int z, int surfaceY);
-int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
-                         int x, int z, int maxY);
+int FindTopSolidSurfaceY(const UBlockWorld &world, const UBlockRegistry &registry,
+                         int x, int z, int maxY, int minY = 0);
+std::optional<int> FindTopSolidSurfaceYOptional(const UBlockWorld &world,
+                                                const UBlockRegistry &registry,
+                                                int x, int z, int maxY,
+                                                int minY = 0);
 
 struct PlacementSurfaceInfo
 {
@@ -47,9 +63,10 @@ struct PlacementSurfaceInfo
 PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               UBlockRegistry &registry, int x,
                                               int z, int heightmapSurfaceY,
-                                              int maxHeight, int seaLevel);
+                                              int maxHeight, int seaLevel,
+                                              int minHeight = 0);
 
-bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
+bool HasBlockSupportBelow(const UBlockWorld &world, const UBlockRegistry &registry,
                           glm::ivec3 pos);
 
 BlockId ResolveObjectVoxelPlacementId(const ObjectVoxel &voxel,
@@ -57,7 +74,7 @@ BlockId ResolveObjectVoxelPlacementId(const ObjectVoxel &voxel,
 
 bool IsRemovableFloatingPlantBlock(const UBlockRegistry &registry, BlockId id);
 
-int PruneFloatingPlantsInColumn(UBlockWorld &world, UBlockRegistry &registry,
+int PruneFloatingPlantsInColumn(UBlockWorld &world, const UBlockRegistry &registry,
                                 int x, int z, int maxY);
 
 struct ObjectPlacementStats
@@ -73,17 +90,28 @@ struct ObjectWorldGenPlacementOptions
   int seaLevel{-1};
 };
 
+using ObjectVoxelWriter = std::function<void(glm::ivec3, BlockId)>;
+
 ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
                                    UBlockRegistry &registry,
                                    const WorldObjectDefinition &object,
                                    glm::ivec3 anchorWorldPos,
                                    bool skipOccupied,
                                    const ObjectWorldGenPlacementOptions &options =
-                                       ObjectWorldGenPlacementOptions{});
+                                       ObjectWorldGenPlacementOptions{},
+                                   ObjectVoxelWriter writeVoxel = {});
 
 std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
                                                       UBlockRegistry &registry,
                                                       glm::ivec3 groundPos,
                                                       int maxY = 320);
+
+/// Clears the 26-connected cluster of non-solid, non-liquid blocks (leaves,
+/// plants, decor) around a freshly broken cell when nothing movement-blocking
+/// anchors it anymore. Returns the removed positions (empty when anchored or
+/// larger than maxClusterBlocks).
+std::vector<glm::ivec3> BreakUnsupportedVegetationCluster(
+    UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 origin,
+    int maxClusterBlocks = 4096);
 
 } // namespace cutum

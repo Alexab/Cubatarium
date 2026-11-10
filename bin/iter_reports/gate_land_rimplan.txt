@@ -1,0 +1,10 @@
+NO-GO phase=ARCH_D3_LAND failed=['effective_holes_rate', 'post_stop_black_sticky_max', 'wall_ms_med']
+  miss_stuck_max_run_sec=4.0 le 4.0 -> OK
+  miss_end=0.0 le 0.0 -> OK
+  effective_holes_rate=0.36363636363636365 le 0.1 -> FAIL
+  nh_no_miss_rate=0.0 le 0.25 -> OK
+  stop_dark_face_stale_near_end=0.0 lt 100.0 -> OK
+  opaque_idle_churn_max=37.0 le 120.0 -> OK
+  post_stop_black_sticky_max=8.0 le 0.0 -> FAIL
+  wall_ms_med=127.241 le 55.0 -> FAIL
+  chunks_traveled=3 ge 3.0 -> OK

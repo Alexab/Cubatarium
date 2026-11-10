@@ -8,6 +8,10 @@ WorldGenContentSnapshot CaptureWorldGenContentSnapshot()
 {
   WorldGenContentSnapshot snap;
   snap.Pack = UWorldGenPack::GetSnapshot();
+  if (snap.Pack)
+  {
+    snap.Biomes = snap.Pack->BiomeRegistry;
+  }
   snap.Features = UObjectFeatureConfigStorage::GetSnapshot();
   snap.Refs = UWorldGenRefs::GetSnapshot();
   return snap;

@@ -2,6 +2,7 @@
 #define GUI_ICON_SOURCE_H
 
 #include "Gui/Cache/CreatureIconCache.h"
+#include "Gui/Cache/ItemIconCache.h"
 #include "Gui/Cache/ObjectIconCache.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include <memory>
@@ -16,7 +17,8 @@ class UGuiIconSource : public IUGuiIconSource
 public:
   UGuiIconSource(std::shared_ptr<UTextureCubeStorage> textures,
                  std::unique_ptr<UObjectIconCache> objectCache,
-                 std::unique_ptr<UCreatureIconCache> creatureCache = nullptr);
+                 std::unique_ptr<UCreatureIconCache> creatureCache = nullptr,
+                 std::unique_ptr<UItemIconCache> itemCache = nullptr);
 
   GLuint GetBlockIconTexture(const std::string &blockName) override;
   GLuint GetObjectIconTexture(const std::string &objectName) override;
@@ -24,17 +26,28 @@ public:
   GetObjectIconTextureIfCached(const std::string &objectName) const override;
   GLuint GetCreatureIconTexture(const std::string &speciesId) override;
   GLuint GetSkinIconTexture(const std::string &skinId) override;
+  GLuint GetItemIconTexture(const std::string &itemId) override;
 
   UObjectIconCache &GetObjectCache() { return *ObjectCache; }
   void ClearBlockIconCache();
   void ClearCreatureIconCache();
+  void ClearItemIconCache();
   void WarmupObjectIcons(size_t maxPerFrame);
   void WarmupCreatureIcons(size_t maxPerFrame);
+  /// UX U3: per-frame item icon drain + pending count for the mini bar.
+  void WarmupItemIcons(size_t maxPerFrame);
+  size_t PendingItemIcons() const;
+  /// UX U4: block-icon placeholder flow for the creative palette.
+  GLuint GetBlockIconTextureIfCached(const std::string &blockName) const;
+  void QueueBlockIcon(const std::string &blockName);
+  void WarmupBlockIcons(size_t maxPerFrame);
+  size_t PendingBlockIcons() const;
 
 private:
   std::shared_ptr<UTextureCubeStorage> Textures;
   std::unique_ptr<UObjectIconCache> ObjectCache;
   std::unique_ptr<UCreatureIconCache> CreatureCache;
+  std::unique_ptr<UItemIconCache> ItemCache;
 };
 
 } // namespace cutum

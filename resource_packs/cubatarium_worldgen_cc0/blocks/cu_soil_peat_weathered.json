@@ -1,0 +1,32 @@
+{
+  "name": "cu_soil_peat_weathered",
+  "id": 1274,
+  "displayName": "Soil Peat Weathered",
+  "hardness": 0.65,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_soil_peat_weathered",
+    "cu_soil_peat_weathered",
+    "cu_soil_peat_weathered",
+    "cu_soil_peat_weathered",
+    "cu_soil_peat_weathered_top",
+    "cu_soil_peat_weathered_bottom"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "soil",
+    "material": "peat",
+    "variant": "weathered"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_needle_dense",
+  "id": 2423,
+  "displayName": "Organic Needle Dense",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_needle_dense",
+    "cu_organic_needle_dense",
+    "cu_organic_needle_dense",
+    "cu_organic_needle_dense",
+    "cu_organic_needle_dense_top",
+    "cu_organic_needle_dense"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "needle",
+    "variant": "dense"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

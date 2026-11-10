@@ -1,0 +1,44 @@
+{
+  "name": "asset_mushroom_cluster_01",
+  "version": 2,
+  "displayName": "Mushroom Cluster 01",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 16277408924740037853,
+    "license": "CC0-1.0",
+    "material_parameter": "mushroom_red"
+  },
+  "tags": [
+    "worldgen",
+    "ground_cover",
+    "fungi"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_mushroom_red_striped"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 1,
+      "type": "cu_organic_mushroom_red_striped"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_organic_mushroom_red_striped"
+    }
+  ],
+  "placement": {
+    "mode": "vertical_plant"
+  }
+}

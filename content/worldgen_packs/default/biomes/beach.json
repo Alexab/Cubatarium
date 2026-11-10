@@ -1,0 +1,12 @@
+{
+  "id": "beach",
+  "height": {
+    "base_offset": 0,
+    "amplitude_mul": 0.65,
+    "volatility_mul": 0.2
+  },
+  "palette": {
+    "surface": "sand",
+    "subsurface": "gravel"
+  }
+}

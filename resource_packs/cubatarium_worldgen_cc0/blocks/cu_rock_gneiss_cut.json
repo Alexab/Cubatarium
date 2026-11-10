@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_gneiss_cut",
+  "id": 1111,
+  "displayName": "Rock Gneiss Cut",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_gneiss_cut",
+    "cu_rock_gneiss_cut",
+    "cu_rock_gneiss_cut",
+    "cu_rock_gneiss_cut",
+    "cu_rock_gneiss_cut",
+    "cu_rock_gneiss_cut"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "gneiss",
+    "variant": "cut"
+  }
+}

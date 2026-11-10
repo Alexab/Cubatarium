@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 3,
   "cmakeMinimumRequired": {
     "major": 3,
     "minor": 22,
@@ -73,6 +73,26 @@
     {
       "name": "linux-ninja-tsan",
       "configurePreset": "linux-ninja-tsan"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Windows MSVC Debug tests",
+      "configurePreset": "windows-msvc",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Windows MSVC Release tests",
+      "configurePreset": "windows-msvc",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }

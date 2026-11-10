@@ -1,6 +1,13 @@
 {
   "name": "oreLapis",
   "id": 527,
+  "hardness": 3,
+  "dig": {
+    "level": 1,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

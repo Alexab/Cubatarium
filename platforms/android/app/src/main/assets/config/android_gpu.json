@@ -1,0 +1,5 @@
+{
+  "allowlist_enabled": true,
+  "min_gles": "3.1",
+  "allow_renderers": ["Adreno (TM)", "Mali-G", "Mali-T", "Apple", "ANGLE", "NVIDIA", "Intel", "AMD", "Radeon"]
+}

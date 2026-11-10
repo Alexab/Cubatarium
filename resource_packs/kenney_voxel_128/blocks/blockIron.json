@@ -1,6 +1,13 @@
 {
   "name": "blockIron",
   "id": 56,
+  "hardness": 5,
+  "dig": {
+    "level": 1,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

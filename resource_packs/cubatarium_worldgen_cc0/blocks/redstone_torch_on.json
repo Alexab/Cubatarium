@@ -1,0 +1,46 @@
+{
+  "name": "redstone_torch_on",
+  "id": 546,
+  "hardness": 0.05,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 3,
+      "oddly_breakable_by_hand": 3
+    }
+  },
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mt_redtorch_lit",
+    "mt_redtorch_lit",
+    "mt_redtorch_lit",
+    "mt_redtorch_lit",
+    "mt_redtorch_lit",
+    "mt_redtorch_lit"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross",
+    "double_sided": true,
+    "shape": "torch",
+    "texture_variation": 1.0
+  },
+  "displayName": "Redstone Torch",
+  "lighting": {
+    "emission": 7
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "source_pack": "minetest_default_16",
+    "source_kind": "Cubatarium-authored block definition",
+    "license": "CC0-1.0",
+    "adaptation": "Cubatarium replacement texture stems"
+  }
+}

@@ -1,5 +1,6 @@
 #include "Creatures/Visual/Gltf/CreatureGltfAnimPlayer.h"
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <algorithm>
 #include <cmath>
@@ -69,7 +70,10 @@ glm::mat4 SampleGltfRootTransform(const GltfAnimationCpu &anim, float timeSec,
     }
   }
 
+  // Standard glTF TRS composition; dropping the sampled translation here
+  // would silently pin the animated root at the origin (audit V2).
   glm::mat4 m = glm::mat4(1.f);
+  m = glm::translate(m, translation);
   m = m * glm::mat4_cast(rotation);
   m = glm::scale(m, scale);
   return m;

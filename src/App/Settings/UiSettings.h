@@ -22,11 +22,14 @@ struct UiSettings
   std::string PaletteKey{"b"};      // creative palette, Blocks tab
   std::string WorldGenKey{"g"};     // world generation sets
   std::string InventoryKey{"e"};    // creative palette toggle (last main tab; default Blocks)
+  std::string CharacterKey{"c"};    // character sheet overlay
   int HotbarCount{1};
 
   ControlScheme ControlScheme{ControlScheme::Classic};
   float PlaceClickMaxSeconds{0.20f};
   float BreakHoldMinSeconds{0.50f};
+  /// Deprecated: unused by dig (ResolveDigParams / DigSession). Kept for
+  /// config round-trip only; do not wire into Influence Dig.
   float BreakDurationSeconds{0.25f};
   /// Cubatarium only: RMB drag distance before treating as camera look.
   int RmbDragThresholdPx{4};

@@ -1,0 +1,41 @@
+{
+  "id": "stone_axe",
+  "displayName": "Stone Axe",
+  "types": [
+    "cutting"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/stone_axe/model.gltf",
+  "repair": {
+    "materials": [
+      "stone"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.0,
+    "damage": {
+      "melee": 4,
+      "fleshy": 4
+    },
+    "groupcaps": {
+      "choppy": {
+        "maxlevel": 1,
+        "uses": 60,
+        "times": {
+          "2": 0.9,
+          "3": 0.6
+        }
+      }
+    },
+    "punch_attack_uses": 60
+  },
+  "visual": {
+    "wield_scale": 1.5,
+    "swing": {
+      "dig": "dig_tool",
+      "melee": "dig_tool"
+    }
+  }
+}

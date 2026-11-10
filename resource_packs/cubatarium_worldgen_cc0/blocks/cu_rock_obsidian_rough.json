@@ -1,0 +1,32 @@
+{
+  "name": "cu_rock_obsidian_rough",
+  "id": 1206,
+  "displayName": "Rock Obsidian Rough",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_rock_obsidian_rough",
+    "cu_rock_obsidian_rough",
+    "cu_rock_obsidian_rough",
+    "cu_rock_obsidian_rough",
+    "cu_rock_obsidian_rough",
+    "cu_rock_obsidian_rough"
+  ],
+  "render": {
+    "texture_variation": 1.0
+  },
+  "assetgen": {
+    "family": "rock",
+    "material": "obsidian",
+    "variant": "rough"
+  }
+}

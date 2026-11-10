@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_cedar_stripped",
+  "id": 1388,
+  "displayName": "Wood Cedar Stripped",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_cedar_stripped",
+    "cu_wood_cedar_stripped",
+    "cu_wood_cedar_stripped",
+    "cu_wood_cedar_stripped",
+    "cu_wood_cedar_stripped_endgrain",
+    "cu_wood_cedar_stripped_endgrain"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "cedar",
+    "variant": "stripped"
+  }
+}

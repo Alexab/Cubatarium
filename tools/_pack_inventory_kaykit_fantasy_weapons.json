@@ -1,0 +1,223 @@
+{
+  "source": "kaykit_fantasy_weapons",
+  "pack_root": "e:\\Work\\Home\\Cubatarium\\third_party\\asset_cache\\kaykit_fantasy_weapons",
+  "files": [
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/arrow_A.gltf",
+      "stem": "arrow_A",
+      "class": "weapon",
+      "suggested_id": "arrow_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/arrow_B.gltf",
+      "stem": "arrow_B",
+      "class": "weapon",
+      "suggested_id": "arrow_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/axe_A.gltf",
+      "stem": "axe_A",
+      "class": "tool",
+      "suggested_id": "axe_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/axe_B.gltf",
+      "stem": "axe_B",
+      "class": "tool",
+      "suggested_id": "axe_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/axe_C.gltf",
+      "stem": "axe_C",
+      "class": "tool",
+      "suggested_id": "axe_c",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_A.gltf",
+      "stem": "bow_A",
+      "class": "weapon",
+      "suggested_id": "bow_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_A_withString.gltf",
+      "stem": "bow_A_withString",
+      "class": "weapon",
+      "suggested_id": "bow_a_withstring",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_B.gltf",
+      "stem": "bow_B",
+      "class": "weapon",
+      "suggested_id": "bow_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_B_withString.gltf",
+      "stem": "bow_B_withString",
+      "class": "weapon",
+      "suggested_id": "bow_b_withstring",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/dagger_A.gltf",
+      "stem": "dagger_A",
+      "class": "weapon",
+      "suggested_id": "dagger_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/dagger_B.gltf",
+      "stem": "dagger_B",
+      "class": "weapon",
+      "suggested_id": "dagger_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/fistweapon_A.gltf",
+      "stem": "fistweapon_A",
+      "class": "skip",
+      "suggested_id": "fistweapon_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/fistweapon_A_stacked.gltf",
+      "stem": "fistweapon_A_stacked",
+      "class": "skip",
+      "suggested_id": "fistweapon_a_stacked",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/fistweapon_B.gltf",
+      "stem": "fistweapon_B",
+      "class": "skip",
+      "suggested_id": "fistweapon_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/fistweapon_B_stacked.gltf",
+      "stem": "fistweapon_B_stacked",
+      "class": "skip",
+      "suggested_id": "fistweapon_b_stacked",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/halberd.gltf",
+      "stem": "halberd",
+      "class": "skip",
+      "suggested_id": "halberd",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/hammer_A.gltf",
+      "stem": "hammer_A",
+      "class": "tool",
+      "suggested_id": "hammer_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/hammer_B.gltf",
+      "stem": "hammer_B",
+      "class": "tool",
+      "suggested_id": "hammer_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/hammer_C.gltf",
+      "stem": "hammer_C",
+      "class": "tool",
+      "suggested_id": "hammer_c",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/shield_A.gltf",
+      "stem": "shield_A",
+      "class": "utility",
+      "suggested_id": "shield_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/shield_B.gltf",
+      "stem": "shield_B",
+      "class": "utility",
+      "suggested_id": "shield_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/shield_C.gltf",
+      "stem": "shield_C",
+      "class": "utility",
+      "suggested_id": "shield_c",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/spear_A.gltf",
+      "stem": "spear_A",
+      "class": "weapon",
+      "suggested_id": "spear_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/staff_A.gltf",
+      "stem": "staff_A",
+      "class": "weapon",
+      "suggested_id": "staff_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/staff_B.gltf",
+      "stem": "staff_B",
+      "class": "weapon",
+      "suggested_id": "staff_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_A.gltf",
+      "stem": "sword_A",
+      "class": "weapon",
+      "suggested_id": "sword_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_B.gltf",
+      "stem": "sword_B",
+      "class": "weapon",
+      "suggested_id": "sword_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_C.gltf",
+      "stem": "sword_C",
+      "class": "weapon",
+      "suggested_id": "sword_c",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_D.gltf",
+      "stem": "sword_D",
+      "class": "weapon",
+      "suggested_id": "sword_d",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_E.gltf",
+      "stem": "sword_E",
+      "class": "weapon",
+      "suggested_id": "sword_e",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/wand_A.gltf",
+      "stem": "wand_A",
+      "class": "weapon",
+      "suggested_id": "wand_a",
+      "maps_to_existing": false
+    }
+  ]
+}

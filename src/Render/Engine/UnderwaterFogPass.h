@@ -12,14 +12,17 @@
 namespace cutum
 {
 
+class UCamera;
 class UWorld;
+struct WeatherSample;
 
 class UUnderwaterFogPass
 {
 public:
   void Update(UWorld &world, const RenderSettings &render,
               UFluidSurfaceMap &surface_map, const glm::vec3 &base_sky_color,
-              const glm::mat3 &inv_view_rot = glm::mat3(1.0f));
+              const glm::mat3 &inv_view_rot = glm::mat3(1.0f),
+              const WeatherSample *weather = nullptr);
   void ApplyUniforms(const std::shared_ptr<UShaderProgram> &shader,
                      const glm::vec3 &camera_pos,
                      const UFluidSurfaceMap &surface_map,
@@ -30,6 +33,19 @@ public:
 
   const glm::vec3 &GetSkyTint() const { return SmoothedSkyTint; }
   const glm::vec3 &GetFogColor() const { return SmoothedFogColor; }
+  const glm::vec3 &GetTargetFogColor() const { return TargetFogColor; }
+  float GetFogStart() const { return FogStart; }
+  float GetFogEnd() const { return FogEnd; }
+  float GetFogMinBlend() const { return FogMinBlend; }
+  float GetFogDensity() const { return FogDensity; }
+  float GetFogEnabled() const { return FogEnabled; }
+  float GetFogHorizontal() const { return FogHorizontal; }
+  float GetAirFogEnabled() const { return AirFogEnabled; }
+  float GetUnderwaterFogEnabled() const { return UnderwaterFogEnabled; }
+  float GetUnderwaterFogStart() const { return UnderwaterFogStart; }
+  float GetUnderwaterFogEnd() const { return UnderwaterFogEnd; }
+  float GetUnderwaterFogMinBlend() const { return UnderwaterFogMinBlend; }
+  float GetUnderwaterFogSubmerged() const { return UnderwaterFogSubmerged; }
   float GetFogHorizonBlend() const { return FogHorizonBlend; }
   /// Sky horizon band elevation (lower = thicker fog band near horizon).
   float GetFogHorizonElevation() const { return FogHorizonElevation; }
@@ -44,6 +60,7 @@ public:
 private:
   glm::vec3 SmoothedSkyTint{0.5f, 0.7f, 1.0f};
   glm::vec3 SmoothedFogColor{0.05f, 0.15f, 0.35f};
+  glm::vec3 TargetFogColor{0.05f, 0.15f, 0.35f};
   float FogStart{0.0f};
   float FogEnd{1000.0f};
   float FogMinBlend{0.0f};

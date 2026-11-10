@@ -1,0 +1,38 @@
+{
+  "name": "cu_organic_needle_striped",
+  "id": 2426,
+  "displayName": "Organic Needle Striped",
+  "hardness": 0.45,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_organic_needle_striped",
+    "cu_organic_needle_striped",
+    "cu_organic_needle_striped",
+    "cu_organic_needle_striped",
+    "cu_organic_needle_striped_top",
+    "cu_organic_needle_striped"
+  ],
+  "render": {
+    "texture_variation": 1.0,
+    "style": "cutout"
+  },
+  "assetgen": {
+    "family": "organic",
+    "material": "needle",
+    "variant": "striped"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0.0
+    }
+  }
+}

@@ -1,6 +1,13 @@
 {
   "name": "oreGold",
   "id": 845,
+  "hardness": 3,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

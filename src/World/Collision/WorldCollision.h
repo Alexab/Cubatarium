@@ -57,6 +57,12 @@ public:
   bool IsCollisionDdaEnabled() const { return CollisionDdaEnabled; }
   void SetTelemetry(PhysicsTelemetry *telemetry) { Telemetry = telemetry; }
 
+  /// Rider mount exclusion (runtime issue 5): while the player rides a
+  /// creature its solid body must not push the rider off; set only for the
+  /// duration of the rider's movement step.
+  void SetRiderMountId(CreatureId id) { RiderMountId = id; }
+  CreatureId GetRiderMountId() const { return RiderMountId; }
+
   struct StepUpProbe
   {
     bool Valid{false};
@@ -79,6 +85,19 @@ public:
   bool CheckCollisionVolume(const CollisionVolume &vol,
                             CreatureId skipCreatureId = 0) const;
   bool HasGroundSupportVolume(const CollisionVolume &vol, float feetY) const;
+  /// Creature support: a thin slab under the whole body box touches a
+  /// movement-blocking block, i.e. the body cannot move down. Same notion as
+  /// collision, for any width (rim-held bodies over a hole are supported).
+  bool HasBodySupport(const CollisionVolume &vol) const;
+
+  /// Push body on XZ out of overlapping creature AABBs (blocks still respected).
+  /// Needed because axis resolve cannot escape an already-overlapping start.
+  bool DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
+                                 const glm::vec3 &sizeBlocks,
+                                 CreatureId skipCreatureId) const;
+  /// Nudge body on XZ out of solid blocks (corner / overhang traps).
+  bool DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
+                              const glm::vec3 &sizeBlocks) const;
 
   glm::vec3 ResolveMovementBody(const glm::vec3 &bodyOrigin,
                                 const glm::vec3 &delta,
@@ -109,6 +128,12 @@ public:
                                               const glm::vec3 &front,
                                               const PlayerCapsule &cap,
                                               float max_distance = 8.0f) const;
+  /// Ray from `ray_origin`; self/pit checks use `player_eye` (iso elevated cam).
+  BlockPlacementResolve ResolveBlockPlacement(const glm::vec3 &ray_origin,
+                                              const glm::vec3 &front,
+                                              const PlayerCapsule &cap,
+                                              float max_distance,
+                                              const glm::vec3 &player_eye) const;
   std::optional<glm::vec3>
   FindNearestFreeCubePosition(const glm::vec3 &position, const glm::vec3 &front,
                               const PlayerCapsule &cap) const;
@@ -143,6 +168,7 @@ private:
   UBlockRegistry *BlockRegistry{nullptr};
   PhysicsTelemetry *Telemetry{nullptr};
   bool EntityCollisionEnabled{true};
+  CreatureId RiderMountId{0};
   bool BroadphaseEnabled{false};
   bool CollisionDdaEnabled{false};
   static constexpr int SubchunkSize = 4;

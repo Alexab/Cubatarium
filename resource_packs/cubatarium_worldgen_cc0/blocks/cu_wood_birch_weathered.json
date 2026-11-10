@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_birch_weathered",
+  "id": 1384,
+  "displayName": "Wood Birch Weathered",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_birch_weathered",
+    "cu_wood_birch_weathered",
+    "cu_wood_birch_weathered",
+    "cu_wood_birch_weathered",
+    "cu_wood_birch_weathered_top",
+    "cu_wood_birch_weathered_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "birch",
+    "variant": "weathered"
+  }
+}

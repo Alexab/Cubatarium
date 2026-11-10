@@ -1,0 +1,32 @@
+{
+  "name": "cu_metal_verdigris_brushed",
+  "id": 2018,
+  "displayName": "Metal Verdigris Brushed",
+  "hardness": 3.0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_metal_verdigris_brushed",
+    "cu_metal_verdigris_brushed",
+    "cu_metal_verdigris_brushed",
+    "cu_metal_verdigris_brushed",
+    "cu_metal_verdigris_brushed",
+    "cu_metal_verdigris_brushed"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "metal",
+    "material": "verdigris",
+    "variant": "brushed"
+  }
+}

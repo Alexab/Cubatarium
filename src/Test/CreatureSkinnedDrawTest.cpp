@@ -18,22 +18,23 @@ int main()
 {
   using namespace cutum;
 
-  Expect(kCreatureBonePaletteMaxBones == 64, "bone palette max must be 64");
+  Expect(kCreatureBonePaletteMaxBones == 96,
+         "bone palette max must be 96 (hermitcrab needs 67 joints)");
   Expect(kCreatureBonePaletteBindingPoint == 0,
          "bone palette binding point changed");
   Expect(ClampCreatureBonePaletteBoneCount(12) == 12,
          "small bone count clamp failed");
-  Expect(ClampCreatureBonePaletteBoneCount(96) == 64,
-         "clamp must cap at 64 bones");
+  Expect(ClampCreatureBonePaletteBoneCount(128) == 96,
+         "clamp must cap at 96 bones");
 
-  std::vector<glm::mat4> bones(70, glm::mat4(1.0f));
+  std::vector<glm::mat4> bones(96, glm::mat4(1.0f));
   bones[0] = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 2.0f, 3.0f));
-  bones[63] = glm::translate(glm::mat4(1.0f), glm::vec3(9.0f, 0.0f, 0.0f));
+  bones[95] = glm::translate(glm::mat4(1.0f), glm::vec3(9.0f, 0.0f, 0.0f));
   const auto palette = BuildCreatureBonePaletteData(bones);
   Expect(palette[0][3][0] == 1.0f && palette[0][3][1] == 2.0f &&
              palette[0][3][2] == 3.0f,
          "first bone transform mismatch");
-  Expect(palette[63][3][0] == 9.0f, "64th bone transform mismatch");
+  Expect(palette[95][3][0] == 9.0f, "96th bone transform mismatch");
 
   bones.resize(3);
   const auto shortPalette = BuildCreatureBonePaletteData(bones);

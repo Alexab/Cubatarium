@@ -1,0 +1,32 @@
+{
+  "name": "cu_wood_walnut_cut",
+  "id": 1423,
+  "displayName": "Wood Walnut Cut",
+  "hardness": 1.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_wood_walnut_cut",
+    "cu_wood_walnut_cut",
+    "cu_wood_walnut_cut",
+    "cu_wood_walnut_cut",
+    "cu_wood_walnut_cut_top",
+    "cu_wood_walnut_cut_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "wood",
+    "material": "walnut",
+    "variant": "cut"
+  }
+}

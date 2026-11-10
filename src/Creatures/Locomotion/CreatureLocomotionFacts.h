@@ -17,6 +17,9 @@ struct CreatureLocomotionRawInput
   float dt{0.0f};
   LocomotionState suggestedAnim{LocomotionState::Idle};
   bool hasSuggestedAnim{false};
+  float intentMoveSpeed{0.0f};
+  /// State derived on the previous frame (Run hysteresis).
+  LocomotionState previousState{LocomotionState::Idle};
 };
 
 struct CreatureLocomotionFacts
@@ -44,6 +47,12 @@ void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
                              const CreatureLocomotionRawInput &input,
                              LocomotionArchetype archetype, float bodyYaw,
                              float bodyPitch);
+
+/// Facts for a creature that is not simulated (its terrain chunk is not
+/// loaded): it stands still, so it must not keep presenting the last walk /
+/// fly state and speed (glTF clips kept walking in place). A flyer caught in
+/// the air hovers; everything else idles. Phase and pose fields are kept.
+void SettleFrozenLocomotionFacts(CreatureLocomotionFacts &facts);
 
 void FinalizeLocomotionFacts(CreatureLocomotionFacts &facts,
                              const CreatureLocomotionCapabilities &caps,

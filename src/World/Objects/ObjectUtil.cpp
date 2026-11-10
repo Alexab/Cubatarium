@@ -43,7 +43,7 @@ int ChebyshevDistance3(const glm::ivec3 &a, const glm::ivec3 &b)
 
 } // namespace
 
-bool HasBlockSupportBelow(const UBlockWorld &world, UBlockRegistry &registry,
+bool HasBlockSupportBelow(const UBlockWorld &world, const UBlockRegistry &registry,
                           glm::ivec3 pos)
 {
   const glm::ivec3 below(pos.x, pos.y - 1, pos.z);
@@ -71,17 +71,9 @@ BlockId ResolveObjectVoxelPlacementId(const ObjectVoxel &voxel,
 {
   if (!voxel.Type.empty())
   {
-    const BlockId resolved = registry.GetPackBlockIdByTypeName(voxel.Type);
-    if (resolved != BLOCK_AIR)
-    {
-      return resolved;
-    }
+    return registry.GetPackBlockIdByTypeName(voxel.Type);
   }
-  if (voxel.Id != BLOCK_AIR && voxel.Id < kRuntimeBlockIdMin)
-  {
-    return voxel.Id;
-  }
-  return voxel.Id;
+  return !registry.GetTypeNameById(voxel.Id).empty() ? voxel.Id : BLOCK_AIR;
 }
 
 bool CanPlaceObjectAt(const UBlockWorld &world,
@@ -99,7 +91,7 @@ bool CanPlaceObjectAt(const UBlockWorld &world,
   return !object.voxels.empty();
 }
 
-bool IsSolidPlantGround(const UBlockWorld &world, UBlockRegistry &registry,
+bool IsSolidPlantGround(const UBlockWorld &world, const UBlockRegistry &registry,
                         glm::ivec3 groundPos)
 {
   const BlockId id = world.GetBlock(groundPos);
@@ -145,7 +137,7 @@ bool CanOccupySurfacePlantLayerAt(const UBlockWorld &world,
   return id == BLOCK_AIR || !registry.BlocksMovement(id);
 }
 
-bool HasOpenSurfaceAbove(const UBlockWorld &world, UBlockRegistry &registry,
+bool HasOpenSurfaceAbove(const UBlockWorld &world, const UBlockRegistry &registry,
                          int x, int y, int z, int maxY)
 {
   const int limit =
@@ -166,7 +158,7 @@ bool HasOpenSurfaceAbove(const UBlockWorld &world, UBlockRegistry &registry,
   return true;
 }
 
-bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
+bool IsExposedLandSurface(const UBlockWorld &world, const UBlockRegistry &registry,
                           int x, int z, int surfaceY)
 {
   if (!IsSolidPlantGround(world, registry, glm::ivec3(x, surfaceY, z)))
@@ -178,10 +170,20 @@ bool IsExposedLandSurface(const UBlockWorld &world, UBlockRegistry &registry,
                                  WorldGenPlacementTuning::SurfacePlantClearance);
 }
 
-int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
-                         int x, int z, int maxY)
+int FindTopSolidSurfaceY(const UBlockWorld &world, const UBlockRegistry &registry,
+                         int x, int z, int maxY, int minY)
 {
-  for (int y = std::max(1, maxY); y >= 1; --y)
+  const std::optional<int> surface = FindTopSolidSurfaceYOptional(
+      world, registry, x, z, maxY, minY);
+  return surface.value_or(-1);
+}
+
+std::optional<int> FindTopSolidSurfaceYOptional(const UBlockWorld &world,
+                                                const UBlockRegistry &registry,
+                                                int x, int z, int maxY,
+                                                int minY)
+{
+  for (int y = maxY; y >= minY; --y)
   {
     const glm::ivec3 ground(x, y, z);
     if (!IsSolidPlantGround(world, registry, ground))
@@ -193,7 +195,7 @@ int FindTopSolidSurfaceY(const UBlockWorld &world, UBlockRegistry &registry,
       return y;
     }
   }
-  return -1;
+  return std::nullopt;
 }
 
 namespace
@@ -204,6 +206,32 @@ bool ObjectVoxelIsSolid(const ObjectVoxel &voxel,
 {
   const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
   return id != BLOCK_AIR && registry.BlocksMovement(id);
+}
+
+bool IsSurfaceFollowingPlantPrefab(const WorldObjectDefinition &object,
+                                   const UBlockRegistry &registry)
+{
+  if (object.PlacementMode != ObjectPlacementMode::VerticalPlant ||
+      object.voxels.empty())
+  {
+    return false;
+  }
+
+  bool hasPlantVoxel = false;
+  for (const ObjectVoxel &voxel : object.voxels)
+  {
+    if (ResolveObjectVoxelPlacementId(voxel, registry) == BLOCK_AIR)
+    {
+      continue;
+    }
+    if (ObjectVoxelIsSolid(voxel, registry) ||
+        voxel.offset.y != object.anchor.y)
+    {
+      return false;
+    }
+    hasPlantVoxel = true;
+  }
+  return hasPlantVoxel;
 }
 
 std::optional<int> UniformSurfaceLayerSolidDy(const WorldObjectDefinition &object,
@@ -243,37 +271,56 @@ glm::ivec3 ResolveObjectVoxelWorldPos(const UBlockWorld & /*world*/,
   return anchorWorldPos + voxel.offset - object.anchor;
 }
 
-bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id)
+glm::ivec3 ResolveSurfaceFollowingPlantVoxelWorldPos(
+    const UBlockWorld &world, glm::ivec3 anchorWorldPos,
+    const WorldObjectDefinition &object, const ObjectVoxel &voxel,
+    UBlockRegistry &registry, int maxScanY)
+{
+  glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
+      world, anchorWorldPos, object, voxel, registry, maxScanY);
+  const int localSurface = FindTopSolidSurfaceY(
+      world, registry, worldPos.x, worldPos.z, maxScanY);
+  if (localSurface >= 0)
+  {
+    worldPos.y = localSurface + 1;
+  }
+  return worldPos;
+}
+
+bool IsTreeTrunkType(const std::string &type)
+{
+  if (type == "tree_log" || type == "tree_branch" || type == "tree")
+  {
+    return true;
+  }
+  if (type.rfind("cu_wood_", 0) == 0 && type.size() >= 5 &&
+      type.compare(type.size() - 5, 5, "_bark") == 0)
+  {
+    return true;
+  }
+  return type.find("tree") != std::string::npos &&
+         type.find("leaf") == std::string::npos &&
+         type.find("leave") == std::string::npos;
+}
+
+bool IsTreeVegetationBlockImpl(const UBlockRegistry &registry, BlockId id)
 {
   if (id == BLOCK_AIR)
   {
     return false;
   }
   const std::string &type = registry.GetTypeNameById(id);
-  return type == "tree_log" || type == "tree_leaves" || type == "tree_branch";
-}
-
-bool IsVerticalTreePrefab(const WorldObjectDefinition &object,
-                          const UBlockRegistry &registry)
-{
-  if (object.PlacementMode != ObjectPlacementMode::VerticalPlant)
+  if (IsTreeTrunkType(type) || type == "tree_leaves")
   {
-    return false;
+    return true;
   }
-  for (const auto &voxel : object.voxels)
+  if (type.rfind("cu_organic_leaf_", 0) == 0 ||
+      type.rfind("cu_organic_needle_", 0) == 0)
   {
-    const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
-    if (id == BLOCK_AIR)
-    {
-      continue;
-    }
-    const std::string &type = registry.GetTypeNameById(id);
-    if (type == "tree_log" || type == "tree_branch")
-    {
-      return true;
-    }
+    return true;
   }
-  return false;
+  return type.find("leaves") != std::string::npos ||
+         type.find("leaf") != std::string::npos;
 }
 
 bool HasTreeVegetationInFootprint(const UBlockWorld &world,
@@ -293,17 +340,37 @@ bool HasTreeVegetationInFootprint(const UBlockWorld &world,
   return false;
 }
 
+bool IsTreePrefab(const WorldObjectDefinition &object,
+                  const UBlockRegistry &registry)
+{
+  for (const ObjectVoxel &voxel : object.voxels)
+  {
+    const BlockId id = ResolveObjectVoxelPlacementId(voxel, registry);
+    if (id != BLOCK_AIR && IsTreeTrunkType(registry.GetTypeNameById(id)))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
+
+bool IsTreeVegetationBlock(const UBlockRegistry &registry, BlockId id)
+{
+  return IsTreeVegetationBlockImpl(registry, id);
+}
 
 PlacementSurfaceInfo ResolvePlacementSurfaceY(const UBlockWorld &world,
                                               UBlockRegistry &registry, int x,
                                               int z, int heightmapSurfaceY,
-                                              int maxHeight, int seaLevel)
+                                              int maxHeight, int seaLevel,
+                                              int minHeight)
 {
   PlacementSurfaceInfo info;
   info.maxScanY = ComputeMaxScanY(heightmapSurfaceY, seaLevel, maxHeight);
   info.topSolidY =
-      FindTopSolidSurfaceY(world, registry, x, z, info.maxScanY);
+      FindTopSolidSurfaceY(world, registry, x, z, info.maxScanY, minHeight);
   if (info.topSolidY < seaLevel + WorldGenPlacementTuning::MinLandAboveSea)
   {
     info.topSolidY = -1;
@@ -467,8 +534,22 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
                                  UBlockRegistry &registry,
                                  const WorldObjectDefinition &object,
                                  glm::ivec3 anchorWorldPos, int maxScanY,
-                                 int seaLevel)
+                                 int seaLevel, ObjectVoxelCheckStats *checkStats)
 {
+  ObjectVoxelCheckStats localCheckStats;
+  struct CheckStatsScope
+  {
+    ObjectVoxelCheckStats &Local;
+    ObjectVoxelCheckStats *Output;
+    ~CheckStatsScope()
+    {
+      if (Output)
+      {
+        *Output = Local;
+      }
+    }
+  } checkStatsScope{localCheckStats, checkStats};
+
   if (object.voxels.empty())
   {
     return false;
@@ -476,6 +557,7 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
 
   const int anchorX = anchorWorldPos.x;
   const int anchorZ = anchorWorldPos.z;
+  ++localCheckStats.surfaceScans;
   const int anchorLocalSurface =
       FindTopSolidSurfaceY(world, registry, anchorX, anchorZ, maxScanY);
   if (anchorLocalSurface < 0)
@@ -501,11 +583,18 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
   std::vector<glm::ivec3> nonSolidWorldPositions;
   solidWorldPositions.reserve(object.voxels.size());
   nonSolidWorldPositions.reserve(object.voxels.size());
+  const bool followsLocalSurface =
+      IsSurfaceFollowingPlantPrefab(object, registry);
 
   for (const auto &voxel : object.voxels)
   {
-    const glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
-        world, anchorWorldPos, object, voxel, registry, maxScanY);
+    ++localCheckStats.voxelVisits;
+    const glm::ivec3 worldPos =
+        followsLocalSurface
+            ? ResolveSurfaceFollowingPlantVoxelWorldPos(
+                  world, anchorWorldPos, object, voxel, registry, maxScanY)
+            : ResolveObjectVoxelWorldPos(world, anchorWorldPos, object, voxel,
+                                         registry, maxScanY);
     const bool voxelSolid = ObjectVoxelIsSolid(voxel, registry);
     if (voxelSolid)
     {
@@ -517,7 +606,8 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
     }
   }
 
-  if (solidWorldPositions.empty() && !nonSolidWorldPositions.empty())
+  if (solidWorldPositions.empty() && !nonSolidWorldPositions.empty() &&
+      object.PlacementMode != ObjectPlacementMode::VerticalPlant)
   {
     return false;
   }
@@ -529,6 +619,40 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
   }
 
   const ColumnXZ anchorKey = ColumnKey(anchorX, anchorZ);
+  if (solidWorldPositions.empty())
+  {
+    if (object.PlacementMode != ObjectPlacementMode::VerticalPlant ||
+        nonSolidWorldPositions.empty())
+    {
+      return false;
+    }
+
+    // Plant prefabs (flowers, grasses, and similar vegetation) are made only
+    // from non-colliding blocks. They have no solid voxel in the anchor column,
+    // so validate each plant against its own ground column instead of
+    // requiring a solid prefab voxel below.
+    for (const glm::ivec3 &plantPos : nonSolidWorldPositions)
+    {
+      ++localCheckStats.voxelVisits;
+      ++localCheckStats.surfaceScans;
+      const int localSurface = FindTopSolidSurfaceY(
+          world, registry, plantPos.x, plantPos.z, maxScanY);
+      if (localSurface < 0 || (seaLevel >= 0 && localSurface < seaLevel) ||
+          plantPos.y != localSurface + 1 ||
+          !CanOccupySurfacePlantLayerAt(world, registry, plantPos))
+      {
+        return false;
+      }
+
+      const BlockId existing = world.GetBlock(plantPos);
+      if (existing != BLOCK_AIR && registry.IsLiquid(existing))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
   const auto anchorIt = solidYByColumn.find(anchorKey);
   if (solidYByColumn.empty() || anchorIt == solidYByColumn.end())
   {
@@ -593,6 +717,8 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
 
   for (const glm::ivec3 &worldPos : solidWorldPositions)
   {
+    ++localCheckStats.voxelVisits;
+    ++localCheckStats.surfaceScans;
     const int columnLocalSurface =
         FindTopSolidSurfaceY(world, registry, worldPos.x, worldPos.z, maxScanY);
     if (!CanOccupySolidVoxelForWorldGen(world, registry, worldPos,
@@ -604,6 +730,7 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
 
   for (const glm::ivec3 &worldPos : nonSolidWorldPositions)
   {
+    ++localCheckStats.voxelVisits;
     if (!world.IsAir(worldPos))
     {
       return false;
@@ -623,7 +750,7 @@ bool CanPlaceObjectAtForWorldGen(const UBlockWorld &world,
     }
   }
 
-  if (IsVerticalTreePrefab(object, registry) &&
+  if (IsTreePrefab(object, registry) &&
       HasTreeVegetationInFootprint(world, registry, object, anchorWorldPos,
                                    maxScanY))
   {
@@ -637,21 +764,30 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
                                    UBlockRegistry &registry,
                                    const WorldObjectDefinition &object,
                                    glm::ivec3 anchorWorldPos, bool skipOccupied,
-                                   const ObjectWorldGenPlacementOptions &options)
+                                   const ObjectWorldGenPlacementOptions &options,
+                                   ObjectVoxelWriter writeVoxel)
 {
   ObjectPlacementStats stats;
   if (object.voxels.empty())
   {
     return stats;
   }
+  const bool followsLocalSurface =
+      options.maxScanY >= 0 && options.seaLevel >= 0 &&
+      IsSurfaceFollowingPlantPrefab(object, registry);
 
   stats.minY = anchorWorldPos.y;
   stats.maxY = anchorWorldPos.y;
 
   for (const auto &voxel : object.voxels)
   {
-    const glm::ivec3 worldPos = ResolveObjectVoxelWorldPos(
-        world, anchorWorldPos, object, voxel, registry, options.maxScanY);
+    const glm::ivec3 worldPos =
+        followsLocalSurface
+            ? ResolveSurfaceFollowingPlantVoxelWorldPos(
+                  world, anchorWorldPos, object, voxel, registry,
+                  options.maxScanY)
+            : ResolveObjectVoxelWorldPos(world, anchorWorldPos, object, voxel,
+                                         registry, options.maxScanY);
     const BlockId blockId = ResolveObjectVoxelPlacementId(voxel, registry);
     if (blockId == BLOCK_AIR)
     {
@@ -661,7 +797,14 @@ ObjectPlacementStats PlaceObjectAt(UBlockWorld &world,
     {
       continue;
     }
-    world.SetBlock(worldPos, blockId);
+    if (writeVoxel)
+    {
+      writeVoxel(worldPos, blockId);
+    }
+    else
+    {
+      world.SetBlock(worldPos, blockId);
+    }
     stats.minY = std::min(stats.minY, worldPos.y);
     stats.maxY = std::max(stats.maxY, worldPos.y);
     ++stats.placedCount;
@@ -687,6 +830,12 @@ std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
     {
       break;
     }
+    // Structural solids (stone, bark, walls) stay even without support —
+    // only decor (!BlocksMovement) and falling blocks cascade.
+    if (registry.BlocksMovement(id) && !registry.IsFallingBlock(id))
+    {
+      break;
+    }
     if (registry.BlocksMovement(id) &&
         HasBlockSupportBelow(world, registry, pos))
     {
@@ -700,7 +849,106 @@ std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
   return broken;
 }
 
-int PruneFloatingPlantsInColumn(UBlockWorld &world, UBlockRegistry &registry,
+namespace
+{
+
+struct IVec3KeyHash
+{
+  size_t operator()(const glm::ivec3 &v) const
+  {
+    return std::hash<int64_t>{}(
+        (static_cast<int64_t>(static_cast<uint32_t>(v.x)) << 42) ^
+        (static_cast<int64_t>(static_cast<uint32_t>(v.y)) << 21) ^
+        static_cast<int64_t>(static_cast<uint32_t>(v.z)));
+  }
+};
+
+constexpr std::array<glm::ivec3, 26> kClusterNeighborOffsets = {
+    glm::ivec3(1, 0, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(0, 1, 0),
+    glm::ivec3(0, -1, 0), glm::ivec3(0, 0, 1),  glm::ivec3(0, 0, -1),
+    glm::ivec3(1, 1, 0),  glm::ivec3(1, -1, 0), glm::ivec3(-1, 1, 0),
+    glm::ivec3(-1, -1, 0), glm::ivec3(1, 0, 1), glm::ivec3(1, 0, -1),
+    glm::ivec3(-1, 0, 1), glm::ivec3(-1, 0, -1), glm::ivec3(0, 1, 1),
+    glm::ivec3(0, 1, -1), glm::ivec3(0, -1, 1), glm::ivec3(0, -1, -1),
+    glm::ivec3(1, 1, 1),  glm::ivec3(1, 1, -1), glm::ivec3(1, -1, 1),
+    glm::ivec3(1, -1, -1), glm::ivec3(-1, 1, 1), glm::ivec3(-1, 1, -1),
+    glm::ivec3(-1, -1, 1), glm::ivec3(-1, -1, -1)};
+
+} // namespace
+
+std::vector<glm::ivec3> BreakUnsupportedVegetationCluster(
+    UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 origin,
+    int maxClusterBlocks)
+{
+  // 26-connected cluster of non-solid, non-liquid blocks around the broken
+  // cell (leaves, plants, wall decor). A cluster that still touches any
+  // movement-blocking block — remaining trunk, terrain, wall — is anchored
+  // and stays; only fully detached clusters (chopped-through tree crowns,
+  // generation-time floaters) are cleared. Size-capped to bound cascades.
+  const auto is_removable = [&registry](BlockId id)
+  {
+    return id != BLOCK_AIR && !registry.BlocksMovement(id) &&
+           !registry.IsLiquid(id);
+  };
+
+  std::vector<glm::ivec3> cluster;
+  std::vector<glm::ivec3> queue;
+  std::unordered_set<glm::ivec3, IVec3KeyHash> visited;
+  bool anchored = false;
+
+  const auto try_enqueue = [&](const glm::ivec3 &pos)
+  {
+    if (visited.find(pos) != visited.end())
+    {
+      return;
+    }
+    if (is_removable(world.GetBlock(pos)))
+    {
+      visited.insert(pos);
+      queue.push_back(pos);
+    }
+  };
+
+  for (const glm::ivec3 &offset : kClusterNeighborOffsets)
+  {
+    try_enqueue(origin + offset);
+  }
+
+  while (!queue.empty() && !anchored)
+  {
+    const glm::ivec3 pos = queue.back();
+    queue.pop_back();
+    cluster.push_back(pos);
+    if (static_cast<int>(cluster.size()) > maxClusterBlocks)
+    {
+      return {};
+    }
+    for (const glm::ivec3 &offset : kClusterNeighborOffsets)
+    {
+      const glm::ivec3 neighbor = pos + offset;
+      const BlockId id = world.GetBlock(neighbor);
+      if (id != BLOCK_AIR && registry.BlocksMovement(id))
+      {
+        anchored = true;
+        break;
+      }
+      try_enqueue(neighbor);
+    }
+  }
+
+  if (anchored)
+  {
+    return {};
+  }
+  for (const glm::ivec3 &pos : cluster)
+  {
+    world.SetBlock(pos, BLOCK_AIR);
+    world.ClearFluidState(pos);
+  }
+  return cluster;
+}
+
+int PruneFloatingPlantsInColumn(UBlockWorld &world, const UBlockRegistry &registry,
                                 int x, int z, int maxY)
 {
   const int topSolid =

@@ -1,0 +1,32 @@
+{
+  "name": "cu_fabric_scarlet_checked",
+  "id": 1821,
+  "displayName": "Fabric Scarlet Checked",
+  "hardness": 0.35,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2
+    }
+  },
+  "types": [
+    "building",
+    "decoration"
+  ],
+  "textures": [
+    "cu_fabric_scarlet_checked",
+    "cu_fabric_scarlet_checked",
+    "cu_fabric_scarlet_checked",
+    "cu_fabric_scarlet_checked",
+    "cu_fabric_scarlet_checked",
+    "cu_fabric_scarlet_checked"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "fabric",
+    "material": "scarlet",
+    "variant": "checked"
+  }
+}

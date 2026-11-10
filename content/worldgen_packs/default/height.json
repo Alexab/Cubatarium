@@ -1,6 +1,6 @@
 {
 
-  "schema_version": 1,
+  "schema_version": 2,
 
   "layers": {
 
@@ -14,7 +14,21 @@
 
   },
 
-  "overworld": { "sea_bias": 0.45, "curve_exponent": 1.08 },
+  "overworld": {
+    "sea_bias": 0.45,
+    "curve_exponent": 1.08,
+    "ocean_profile": {
+      "deep_ocean_end": 0.22,
+      "shelf_end": 0.38,
+      "coast_end": 0.68,
+      "deep_ocean_depth_ratio": 0.78,
+      "shelf_depth_ratio": 0.50,
+      "coast_depth_ratio": 0.40,
+      "lowland_height_ratio": 0.03,
+      "hill_height_ratio": 0.13,
+      "highland_height_ratio": 0.22
+    }
+  },
 
   "jitter": { "scale": 0.035, "amplitude": 0.52, "erosion_damp": 0.72 }
 

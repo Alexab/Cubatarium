@@ -1,0 +1,32 @@
+{
+  "name": "cu_masonry_slate_tiled",
+  "id": 1530,
+  "displayName": "Masonry Slate Tiled",
+  "hardness": 1.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
+  "types": [
+    "building",
+    "natural"
+  ],
+  "textures": [
+    "cu_masonry_slate_tiled",
+    "cu_masonry_slate_tiled",
+    "cu_masonry_slate_tiled",
+    "cu_masonry_slate_tiled",
+    "cu_masonry_slate_tiled_top",
+    "cu_masonry_slate_tiled_bottom"
+  ],
+  "render": {
+    "texture_variation": 0.48
+  },
+  "assetgen": {
+    "family": "masonry",
+    "material": "slate",
+    "variant": "tiled"
+  }
+}

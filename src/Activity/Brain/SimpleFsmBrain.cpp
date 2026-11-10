@@ -1,14 +1,136 @@
 #include "Activity/Brain/SimpleFsmBrain.h"
 #include "Activity/Helpers/CreatureActivityNavigation.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
+#include "Activity/Helpers/CreatureHostility.h"
+#include "Creatures/Combat/CreatureCombat.h"
+#include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureIntent.h"
+#include "Creatures/Core/CreatureReach.h"
+#include "Creatures/Influence/InfluenceIntentUtil.h"
+#include "Game/ModePolicy.h"
 #include "Navigation/NavigationTypes.h"
+#include "World/Core/World.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
+#include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace cutum
 {
 
 USimpleFsmBrain::USimpleFsmBrain(SimpleFsmMode mode) : Mode(mode) {}
+
+namespace
+{
+
+/// Seconds a melee mob keeps chasing the last seen position after its target
+/// left aggro range.
+constexpr float kLastSeenChaseSec = 3.f;
+
+const char *FsmStateName(CreatureFsmState state)
+{
+  switch (state)
+  {
+  case CreatureFsmState::Idle:
+    return "Idle";
+  case CreatureFsmState::Flee:
+    return "Flee";
+  case CreatureFsmState::Chase:
+    return "Chase";
+  case CreatureFsmState::Attack:
+    return "Attack";
+  }
+  return "Unknown";
+}
+
+void RecordBrainIntent(CreatureId self_id, const CreatureActivityView &view,
+                       const CreatureBehaviorSnapshot &snapshot,
+                       CreatureFsmState state, const CreatureIntent &intent,
+                       const char *reason = nullptr)
+{
+  if (!UCreatureMovementDiagnostics::IsEnabled())
+  {
+    return;
+  }
+  CreatureMovementDiagRecord rec;
+  rec.event = "intent";
+  rec.creatureId = self_id;
+  rec.typeId = view.typeId;
+  rec.habitat = ToString(snapshot.habitat);
+  rec.behavior = view.behaviorId;
+  rec.fsmState = FsmStateName(state);
+  rec.body = view.bodyOrigin;
+  rec.intentDir = intent.moveDirWorld;
+  rec.intentSpeed = intent.moveSpeed;
+  rec.activityTick = true;
+  if (reason)
+  {
+    rec.reason = reason;
+  }
+  UCreatureMovementDiagnostics::Record(rec);
+}
+
+glm::vec3 SteerWithFeelersAndSeparation(
+    IUWorldPerception &perception, const CreatureActivityView &view,
+    const CreatureBehaviorSnapshot &snapshot, const glm::vec3 &raw_dir,
+    float separation_weight)
+{
+  const bool overlapped = !perception.CreaturesClearAt(
+      view.bodyOrigin, snapshot.boundsSize, view.Id);
+  float sep_weight = separation_weight;
+  if (overlapped)
+  {
+    sep_weight = std::max(sep_weight, 0.85f);
+  }
+  glm::vec3 move_dir = raw_dir;
+  if (!overlapped)
+  {
+    move_dir = ApplyWallFeelers(perception, snapshot.habitat, view.bodyOrigin,
+                                raw_dir, snapshot.boundsSize, view.Id);
+  }
+  const float sep_radius = SeparationQueryRadius(snapshot.boundsSize);
+  const std::vector<CreatureNeighborView> neighbors =
+      perception.QueryCreatureNeighborsInRadius(view.bodyOrigin, sep_radius,
+                                                view.Id);
+  const float min_sep =
+      std::max(snapshot.boundsSize.x, snapshot.boundsSize.z) *
+      (overlapped ? 1.15f : 0.85f);
+  const glm::vec3 separation = ComputeSeparationDirection(
+      view.bodyOrigin, snapshot.boundsSize, neighbors, min_sep);
+  if (overlapped && glm::length(separation) > 1e-4f)
+  {
+    // Escape first; chase wish resumes once clear.
+    return BlendLocomotionDirection(separation, move_dir, 0.25f);
+  }
+  return BlendLocomotionDirection(move_dir, separation, sep_weight);
+}
+
+/// Melee distance to a target body: edge to edge for wide bodies (see
+/// MeleeDistanceXZ); falls back to the center distance when the target is gone.
+float MeleeDistanceToTarget(const UWorld &world,
+                            const CreatureActivityView &view,
+                            const CreatureBehaviorSnapshot &snapshot,
+                            CreatureId targetId, const glm::vec3 &targetBody)
+{
+  if (const UCreature *target = world.GetCreature(targetId))
+  {
+    return MeleeDistanceXZ(view.bodyOrigin, snapshot.boundsSize, targetBody,
+                           target->GetBounds().profile.restSizeBlocks);
+  }
+  return HorizontalDistanceXZ(view.bodyOrigin, targetBody);
+}
+
+float ResolveIntentMoveSpeed(const CreatureBehaviorSnapshot &snapshot)
+{
+  float speed = snapshot.behavior.moveSpeed;
+  if (snapshot.locomotion.walkSpeed > speed)
+  {
+    speed = snapshot.locomotion.walkSpeed;
+  }
+  return speed;
+}
+
+} // namespace
 
 void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
                            CreatureId self_id, IUWorldPerception &perception,
@@ -22,137 +144,518 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     return;
   }
 
-  const std::optional<ControlledCreatureInfo> controlled =
-      perception.QueryControlledCreatureInfo();
-  CreatureIntent intent;
-  intent.clearOnApply = false;
+  const UWorld &brainWorld = sink.GetWorld();
+  if (Mode == SimpleFsmMode::Melee && brainWorld.IsPlayerDead())
+  {
+    blackboard.state = CreatureFsmState::Idle;
+    blackboard.targetId = 0;
+    CreatureIntent idle;
+    idle.clearOnApply = false;
+    idle.suggestedAnim = LocomotionState::Idle;
+    sink.SetIntent(self_id, idle);
+    RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, idle,
+                      "melee_disabled_player_dead");
+    return;
+  }
 
   if (Mode == SimpleFsmMode::Flee)
+  {
+    TickFlee(blackboard, self_id, perception, sink, dt, *view, *snapshot);
+    return;
+  }
+
+  // Mob-vs-mob hunting also runs while a controlled creature exists but
+  // cannot be attacked (Creative): hostile mobs ignore the creative player
+  // yet still fight other mobs (Minecraft parity). Peaceful suppresses it
+  // inside the fallback.
+  const bool aggroControlled =
+      perception.QueryControlledCreatureInfo().has_value() &&
+      ModePolicy::AllowsHostileAggro(brainWorld.GetGameMode(),
+                                     brainWorld.GetDifficulty());
+  if (!aggroControlled)
+  {
+    TickMeleeFallback(blackboard, self_id, perception, sink, dt, *view,
+                      *snapshot);
+    return;
+  }
+
+  TickMeleeAtControlled(blackboard, self_id, perception, sink, dt, *view,
+                        *snapshot);
+}
+
+void USimpleFsmBrain::TickFlee(UCreatureActivityBlackboard &blackboard,
+                              CreatureId self_id, IUWorldPerception &perception,
+                              IUCreatureActivitySink &sink, float dt,
+                              const CreatureActivityView &view,
+                              const CreatureBehaviorSnapshot &snapshot)
+{
+  CreatureIntent intent;
+  intent.clearOnApply = false;
+  // Threat priority: a recent attacker (mob or player) first — prey flees
+  // the wolf that bit it, not only the controlled creature.
+  const UWorld &world = sink.GetWorld();
+  glm::vec3 threat_body = view.bodyOrigin;
+  bool has_threat = false;
+  if (const UCreature *self = world.GetCreature(self_id))
+  {
+    if (self->GetDamageMemorySec() > 0.f &&
+        self->GetLastAttackerId() != 0)
+    {
+      if (const UCreature *attacker =
+              world.GetCreature(self->GetLastAttackerId()))
+      {
+        threat_body = attacker->GetBodyOrigin();
+        has_threat = true;
+      }
+    }
+  }
+  const std::optional<ControlledCreatureInfo> controlled =
+      perception.QueryControlledCreatureInfo();
+  if (!has_threat)
   {
     if (!controlled)
     {
       intent.suggestedAnim = LocomotionState::Idle;
       sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                        "flee_no_controlled");
       return;
     }
-    const glm::vec3 delta = view->bodyOrigin - controlled->eyePosition;
-    const float dist = std::sqrt(delta.x * delta.x + delta.z * delta.z);
-    if (dist > snapshot->behavior.safeDistance)
-    {
-      blackboard.state = CreatureFsmState::Idle;
-      intent.suggestedAnim = LocomotionState::Idle;
-      sink.SetIntent(self_id, intent);
-      return;
-    }
-    if (dist <= snapshot->behavior.fleeRadius)
-    {
-      blackboard.state = CreatureFsmState::Flee;
-      blackboard.lastSeenPos = controlled->eyePosition;
-    }
-    if (blackboard.state != CreatureFsmState::Flee)
-    {
-      intent.suggestedAnim = LocomotionState::Idle;
-      sink.SetIntent(self_id, intent);
-      return;
-    }
-
-    glm::vec3 flee_goal =
-        view->bodyOrigin + glm::normalize(delta) * snapshot->behavior.safeDistance;
-    NavigationQuery query;
-    query.search_distance = 32;
-    query.body_height = snapshot->boundsSize.y;
-    query.max_jump = snapshot->locomotion.jumpHeightBlocks;
-    const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
-        blackboard.navigation, sink.GetWorld(), view->bodyOrigin, flee_goal,
-        query, dt);
-    glm::vec3 move_dir = steer.move_dir;
-    if (!steer.has_path || glm::length(move_dir) < 1e-4f)
-    {
-      if (glm::length(delta) > 1e-4f)
-      {
-        move_dir = glm::normalize(delta);
-      }
-      else if (!PickLocomotionDirection(perception, *view, snapshot->habitat,
-                                        snapshot->boundsSize, move_dir))
-      {
-        move_dir = RandomLocomotionDirection(snapshot->habitat);
-      }
-    }
-    constexpr float kFleeSeparationWeight = 0.5f;
-    const float sep_radius = SeparationQueryRadius(snapshot->boundsSize);
-    const std::vector<CreatureNeighborView> neighbors =
-        perception.QueryCreatureNeighborsInRadius(view->bodyOrigin, sep_radius,
-                                                  self_id);
-    const float min_sep = std::max(snapshot->boundsSize.x, snapshot->boundsSize.z) *
-                          0.85f;
-    const glm::vec3 separation = ComputeSeparationDirection(
-        view->bodyOrigin, snapshot->boundsSize, neighbors, min_sep);
-    move_dir = BlendLocomotionDirection(move_dir, separation, kFleeSeparationWeight);
-    intent.moveDirWorld = move_dir;
-    intent.moveSpeed = snapshot->behavior.moveSpeed *
-                       snapshot->behavior.fleeSpeedMultiplier;
-    intent.suggestedAnim = LocomotionState::Run;
-    sink.SetIntent(self_id, intent);
-    return;
+    threat_body = NavigationGoalBodyFromControlled(*controlled);
   }
-
-  if (!controlled)
+  const float dist = HorizontalDistanceXZ(view.bodyOrigin, threat_body);
+  if (dist > snapshot.behavior.safeDistance)
   {
     blackboard.state = CreatureFsmState::Idle;
     intent.suggestedAnim = LocomotionState::Idle;
     sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                      "flee_safe");
+    return;
+  }
+  if (dist <= snapshot.behavior.fleeRadius)
+  {
+    blackboard.state = CreatureFsmState::Flee;
+    blackboard.lastSeenPos = threat_body;
+  }
+  if (blackboard.state != CreatureFsmState::Flee)
+  {
+    intent.suggestedAnim = LocomotionState::Idle;
+    sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                      "flee_idle");
     return;
   }
 
-  const glm::vec3 delta = controlled->eyePosition - view->bodyOrigin;
-  const float dist = std::sqrt(delta.x * delta.x + delta.z * delta.z);
-  blackboard.actionTimer -= dt;
+  const glm::vec3 flee_dir =
+      XzDirectionFromTo(threat_body, view.bodyOrigin);
+  glm::vec3 flee_goal = view.bodyOrigin;
+  if (glm::length(flee_dir) > 1e-4f)
+  {
+    flee_goal = view.bodyOrigin + flee_dir * snapshot.behavior.safeDistance;
+    flee_goal.y = view.bodyOrigin.y;
+  }
+  NavigationQuery query;
+  query.search_distance = 32;
+  query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
+  query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
+  query.max_jump = snapshot.locomotion.jumpHeightBlocks;
+  // Land mobs must not path across water: a lake-floor A* route ends at the
+  // post-motor habitat gate (habitat_reject) or strands the mob at the shore.
+  query.reject_fluid_nodes = snapshot.habitat == CreatureHabitat::Terrestrial;
+  const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
+      blackboard.navigation, sink.GetWorld(), view.bodyOrigin, flee_goal,
+      query, dt, 0.45f, self_id, view.typeId);
+  glm::vec3 move_dir = steer.move_dir;
+  if (!steer.has_path || glm::length(move_dir) < 1e-4f)
+  {
+    if (glm::length(flee_dir) > 1e-4f)
+    {
+      PickApproachDirection(perception, snapshot.habitat, view.bodyOrigin,
+                            flee_dir, snapshot.boundsSize, self_id,
+                            move_dir);
+    }
+    else if (!PickLocomotionDirection(perception, view, snapshot.habitat,
+                                      snapshot.boundsSize, move_dir))
+    {
+      move_dir = RandomLocomotionDirection(snapshot.habitat);
+    }
+  }
+  move_dir = SteerWithFeelersAndSeparation(perception, view, snapshot,
+                                           move_dir, 0.5f);
+  intent.moveDirWorld = move_dir;
+  intent.moveSpeed = ResolveIntentMoveSpeed(snapshot) *
+                     snapshot.behavior.fleeSpeedMultiplier;
+  intent.suggestedAnim = LocomotionState::Run;
+  sink.SetIntent(self_id, intent);
+  RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                    steer.has_path ? "flee_path" : "flee_fallback");
+  return;
+}
 
-  if (dist > snapshot->behavior.aggroRadius)
+void USimpleFsmBrain::TickMeleeFallback(UCreatureActivityBlackboard &blackboard,
+                                       CreatureId self_id,
+                                       IUWorldPerception &perception,
+                                       IUCreatureActivitySink &sink, float dt,
+                                       const CreatureActivityView &view,
+                                       const CreatureBehaviorSnapshot &snapshot)
+{
+  // Mob-vs-mob hunting stays active in Creative (Minecraft parity: hostile
+  // mobs ignore the creative player but still fight other mobs); Peaceful
+  // suppresses it entirely.
+  if (!ModePolicy::AllowsHostileAggro(WorldGameMode::Survival,
+                                      sink.GetWorld().GetDifficulty()))
+  {
+    blackboard.state = CreatureFsmState::Idle;
+    CreatureIntent idle;
+    idle.clearOnApply = false;
+    idle.suggestedAnim = LocomotionState::Idle;
+    sink.SetIntent(self_id, idle);
+    RecordBrainIntent(self_id, view, snapshot, blackboard.state, idle,
+                      "melee_fallback_peaceful");
+    return;
+  }
+  CreatureIntent intent;
+  intent.clearOnApply = false;
+  // Mob↔mob fallback: hunt prey inside aggro range. Target is sticky — it
+  // only changes when lost, so equidistant neighbors do not flap the FSM
+  // every tick (audit M3).
+  const UWorld &world = sink.GetWorld();
+  // A fresh hit redirects the hunt to the attacker: prey that fights back
+  // becomes the sticky target (mob-vs-mob retaliation).
+  if (const UCreature *self = world.GetCreature(self_id))
+  {
+    const CreatureId attacker = self->GetLastAttackerId();
+    if (self->GetDamageMemorySec() > 7.5f && attacker != 0 &&
+        attacker != blackboard.targetId &&
+        IsMeleeFallbackTarget(world, self_id, attacker))
+    {
+      blackboard.targetId = attacker;
+    }
+  }
+  CreatureId nearest_id = 0;
+  glm::vec3 nearest_body = view.bodyOrigin;
+  float nearest_dist = std::numeric_limits<float>::max();
+  bool sticky_valid = false;
+  const auto neighbors = perception.QueryCreatureNeighborsInRadius(
+      view.bodyOrigin, snapshot.behavior.aggroRadius, self_id);
+  for (const CreatureNeighborView &n : neighbors)
+  {
+    const float d = HorizontalDistanceXZ(view.bodyOrigin, n.bodyOrigin);
+    if (n.Id == blackboard.targetId)
+    {
+      if (IsMeleeFallbackTarget(world, self_id, n.Id))
+      {
+        sticky_valid = true;
+        nearest_id = n.Id;
+        nearest_body = n.bodyOrigin;
+        nearest_dist = d;
+      }
+      continue;
+    }
+    if (!sticky_valid && d < nearest_dist &&
+        IsMeleeFallbackTarget(world, self_id, n.Id))
+    {
+      nearest_dist = d;
+      nearest_id = n.Id;
+      nearest_body = n.bodyOrigin;
+    }
+  }
+  glm::vec3 chase_goal = nearest_body;
+  bool target_lost = false;
+  if (nearest_id == 0)
+  {
+    // No prey in aggro range: briefly chase the last seen spot, then stop.
+    if (blackboard.targetId != 0 && blackboard.lastSeenChaseSec > 0.f &&
+        HorizontalDistanceXZ(view.bodyOrigin, blackboard.lastSeenPos) > 1.5f)
+    {
+      blackboard.state = CreatureFsmState::Chase;
+      blackboard.lastSeenChaseSec -= dt;
+      chase_goal = blackboard.lastSeenPos;
+      target_lost = true;
+    }
+    else
+    {
+      blackboard.state = CreatureFsmState::Idle;
+      blackboard.targetId = 0;
+      blackboard.lastSeenChaseSec = 0.f;
+      intent.suggestedAnim = LocomotionState::Idle;
+      sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                        "melee_no_target");
+      return;
+    }
+  }
+  else
+  {
+    blackboard.lastSeenChaseSec = kLastSeenChaseSec;
+  }
+  if (!target_lost)
+  {
+    blackboard.actionTimer -= dt;
+    blackboard.targetId = nearest_id;
+    blackboard.lastSeenPos = nearest_body;
+  }
+  const float dy = chase_goal.y - view.bodyOrigin.y;
+  const float melee_dist = target_lost
+                               ? std::numeric_limits<float>::max()
+                               : MeleeDistanceToTarget(world, view, snapshot,
+                                                       nearest_id, nearest_body);
+  bool blockedByWall = false;
+  if (melee_dist <= snapshot.behavior.attackRange && std::abs(dy) <= 1.15f)
+  {
+    const UCreature *selfCreature = world.GetCreature(self_id);
+    const UCreature *targetCreature = world.GetCreature(nearest_id);
+    if (selfCreature && targetCreature &&
+        !CreatureMeleeLineOfSight(world, *selfCreature, *targetCreature))
+    {
+      blockedByWall = true;
+    }
+  }
+  if (!blockedByWall && melee_dist <= snapshot.behavior.attackRange &&
+      std::abs(dy) <= 1.15f)
+  {
+    blackboard.state = CreatureFsmState::Attack;
+    intent.moveDirWorld = glm::vec3(0.0f);
+    intent.moveSpeed = 0.0f;
+    // Strike only off cooldown; attackCooldown from the catalog paces melee
+    // mobs (the resolver still enforces its own bare-hand interval on top).
+    if (blackboard.actionTimer <= 0.0f)
+    {
+      SetMeleeInfluenceIntent(intent, nearest_id);
+      intent.suggestedAnim = LocomotionState::Action;
+      blackboard.actionTimer = snapshot.behavior.attackCooldown;
+    }
+    sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                      "melee_attack_mob");
+    return;
+  }
+  // Chase nearest (reuse path below via synthetic controlled goal).
+  blackboard.state = CreatureFsmState::Chase;
+  NavigationQuery query;
+  query.search_distance = 32;
+  query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
+  query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
+  query.max_jump = snapshot.locomotion.jumpHeightBlocks;
+  // Land mobs must not path across water: a lake-floor A* route ends at the
+  // post-motor habitat gate (habitat_reject) or strands the mob at the shore.
+  query.reject_fluid_nodes = snapshot.habitat == CreatureHabitat::Terrestrial;
+  const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
+      blackboard.navigation, sink.GetWorld(), view.bodyOrigin, chase_goal,
+      query, dt, 0.45f, self_id, view.typeId);
+  glm::vec3 move_dir = steer.move_dir;
+  if (!steer.has_path || glm::length(move_dir) < 1e-4f)
+  {
+    const glm::vec3 to_target =
+        XzDirectionFromTo(view.bodyOrigin, chase_goal);
+    if (!PickApproachDirection(perception, snapshot.habitat,
+                               view.bodyOrigin, to_target,
+                               snapshot.boundsSize, self_id, move_dir))
+    {
+      intent.moveDirWorld = glm::vec3(0.0f);
+      intent.moveSpeed = 0.0f;
+      intent.suggestedAnim = LocomotionState::Idle;
+      sink.SetIntent(self_id, intent);
+      return;
+    }
+  }
+  move_dir = SteerWithFeelersAndSeparation(perception, view, snapshot,
+                                           move_dir, 0.45f);
+  intent.moveDirWorld = move_dir;
+  intent.moveSpeed = ResolveIntentMoveSpeed(snapshot);
+  intent.suggestedAnim = LocomotionState::Run;
+  sink.SetIntent(self_id, intent);
+  RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                    target_lost   ? "chase_mob_last_seen"
+                    : blockedByWall ? "chase_mob_no_los"
+                                    : "chase_mob");
+  return;
+}
+
+void USimpleFsmBrain::TickMeleeAtControlled(UCreatureActivityBlackboard &blackboard,
+                                            CreatureId self_id,
+                                            IUWorldPerception &perception,
+                                            IUCreatureActivitySink &sink,
+                                            float dt,
+                                            const CreatureActivityView &view,
+                                            const CreatureBehaviorSnapshot &snapshot)
+{
+  CreatureIntent intent;
+  intent.clearOnApply = false;
+  const std::optional<ControlledCreatureInfo> controlled =
+      perception.QueryControlledCreatureInfo();
+
+const glm::vec3 controlled_body =
+    NavigationGoalBodyFromControlled(*controlled);
+const bool aerial = snapshot.habitat == CreatureHabitat::Aerial;
+const float dist = aerial
+                       ? glm::length(controlled_body - view.bodyOrigin)
+                       : HorizontalDistanceXZ(view.bodyOrigin,
+                                              controlled_body);
+blackboard.actionTimer -= dt;
+
+{
+  const UWorld &world = sink.GetWorld();
+  if (!ModePolicy::AllowsHostileAggro(world.GetGameMode(),
+                                      world.GetDifficulty()) ||
+      world.IsPlayerDead())
   {
     blackboard.state = CreatureFsmState::Idle;
     blackboard.targetId = 0;
     intent.suggestedAnim = LocomotionState::Idle;
     sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                      "melee_peaceful_idle");
     return;
   }
+}
 
+// Provoked mobs (damaged by the player) chase beyond aggro radius.
+const UWorld &world = sink.GetWorld();
+const UCreature *selfCreature = world.GetCreature(self_id);
+const bool provoked =
+    selfCreature && selfCreature->GetDamageMemorySec() > 0.f &&
+    selfCreature->GetLastAttackerId() == controlled->Id;
+glm::vec3 chase_goal = controlled_body;
+if (dist <= snapshot.behavior.aggroRadius || provoked)
+{
   blackboard.targetId = controlled->Id;
-  blackboard.lastSeenPos = controlled->eyePosition;
-
-  if (dist <= snapshot->behavior.attackRange)
-  {
-    blackboard.state = CreatureFsmState::Attack;
-    intent.moveDirWorld = glm::vec3(0.0f);
-    intent.moveSpeed = 0.0f;
-    intent.attackTargetId = controlled->Id;
-    intent.suggestedAnim = LocomotionState::Action;
-    if (blackboard.actionTimer <= 0.0f)
-    {
-      blackboard.actionTimer = snapshot->behavior.attackCooldown;
-    }
-    sink.SetIntent(self_id, intent);
-    return;
-  }
-
+  blackboard.lastSeenPos = controlled_body;
+  blackboard.lastSeenChaseSec = kLastSeenChaseSec;
+}
+else if (blackboard.targetId == controlled->Id &&
+         blackboard.lastSeenChaseSec > 0.f &&
+         HorizontalDistanceXZ(view.bodyOrigin, blackboard.lastSeenPos) > 1.5f)
+{
+  // Target slipped out of aggro range: keep chasing the last seen spot for
+  // a few seconds before giving up.
   blackboard.state = CreatureFsmState::Chase;
-  NavigationQuery query;
-  query.search_distance = 32;
-  query.body_height = snapshot->boundsSize.y;
-  query.max_jump = snapshot->locomotion.jumpHeightBlocks;
-  const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
-      blackboard.navigation, sink.GetWorld(), view->bodyOrigin,
-      controlled->eyePosition, query, dt);
-  glm::vec3 move_dir = steer.move_dir;
-  if (!steer.has_path || glm::length(move_dir) < 1e-4f)
+  blackboard.lastSeenChaseSec -= dt;
+  chase_goal = blackboard.lastSeenPos;
+}
+else
+{
+  blackboard.state = CreatureFsmState::Idle;
+  blackboard.targetId = 0;
+  blackboard.lastSeenChaseSec = 0.f;
+  intent.suggestedAnim = LocomotionState::Idle;
+  sink.SetIntent(self_id, intent);
+  RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                    "melee_out_of_aggro");
+  return;
+}
+const bool targetLost = chase_goal != controlled_body;
+
+const float dy = controlled_body.y - view.bodyOrigin.y;
+const float melee_xz = MeleeDistanceToTarget(world, view, snapshot,
+                                             controlled->Id, controlled_body);
+const float melee_dist =
+    aerial ? std::min(dist, std::sqrt(melee_xz * melee_xz + dy * dy))
+           : melee_xz;
+// Attack only when close in XZ AND within ~1 block vertically; otherwise keep
+// chasing so mobs climb out of pits / up stairs toward the player.
+const bool inMeleeRange = melee_dist <= snapshot.behavior.attackRange &&
+                          (aerial || std::abs(dy) <= 1.15f);
+bool blockedByWall = false;
+if (inMeleeRange && !targetLost)
+{
+  const UCreature *targetCreature = world.GetCreature(controlled->Id);
+  if (selfCreature && targetCreature &&
+      !CreatureMeleeLineOfSight(world, *selfCreature, *targetCreature))
   {
-    move_dir = glm::length(delta) > 1e-4f ? glm::normalize(delta)
-                                          : glm::vec3(0.0f);
+    // Every strike would be cancelled by the resolver: keep chasing around
+    // the wall instead of standing in Attack.
+    blockedByWall = true;
   }
-  intent.moveDirWorld = move_dir;
-  intent.moveSpeed = snapshot->behavior.moveSpeed;
+}
+if (inMeleeRange && !targetLost && !blockedByWall)
+{
+  blackboard.state = CreatureFsmState::Attack;
+  intent.moveDirWorld = glm::vec3(0.0f);
+  intent.moveSpeed = 0.0f;
+  // Strike only off cooldown; attackCooldown from the catalog paces melee
+  // mobs (the resolver still enforces its own bare-hand interval on top).
+  if (blackboard.actionTimer <= 0.0f)
+  {
+    SetMeleeInfluenceIntent(intent, controlled->Id);
+    intent.suggestedAnim = LocomotionState::Action;
+    blackboard.actionTimer = snapshot.behavior.attackCooldown;
+  }
+  sink.SetIntent(self_id, intent);
+  RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                    "melee_attack");
+  return;
+}
+
+blackboard.state = CreatureFsmState::Chase;
+if (aerial)
+{
+  glm::vec3 moveDir = chase_goal - view.bodyOrigin;
+  if (glm::length(moveDir) > 1e-4f)
+  {
+    moveDir = glm::normalize(moveDir);
+  }
+  moveDir = SteerWithFeelersAndSeparation(perception, view, snapshot,
+                                          moveDir, 0.35f);
+  intent.moveDirWorld = moveDir;
+  intent.moveSpeed = ResolveIntentMoveSpeed(snapshot);
   intent.suggestedAnim = LocomotionState::Run;
   sink.SetIntent(self_id, intent);
+  RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                    blockedByWall ? "chase_aerial_no_los"
+                                  : "chase_aerial_direct");
+  return;
+}
+NavigationQuery query;
+query.search_distance = 32;
+query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
+query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
+query.max_jump = snapshot.locomotion.jumpHeightBlocks;
+// Land mobs must not path across water (see the flee/chase sites above).
+query.reject_fluid_nodes = snapshot.habitat == CreatureHabitat::Terrestrial;
+const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
+    blackboard.navigation, sink.GetWorld(), view.bodyOrigin, chase_goal,
+    query, dt, 0.45f, self_id, view.typeId);
+glm::vec3 move_dir = steer.move_dir;
+const char *goal_source = targetLost   ? "chase_last_seen"
+                          : blockedByWall ? "chase_no_los"
+                                          : "chase_path";
+if (!steer.has_path || glm::length(move_dir) < 1e-4f)
+{
+  // Path follow or approach → feelers (not raw soft seek into walls).
+  const glm::vec3 to_player =
+      XzDirectionFromTo(view.bodyOrigin, chase_goal);
+  if (PickApproachDirection(perception, snapshot.habitat, view.bodyOrigin,
+                            to_player, snapshot.boundsSize, self_id,
+                            move_dir))
+  {
+    goal_source =
+        steer.has_path ? "chase_path_steer_fallback" : "chase_approach";
+  }
+  else
+  {
+    intent.moveDirWorld = glm::vec3(0.0f);
+    intent.moveSpeed = 0.0f;
+    intent.suggestedAnim = LocomotionState::Idle;
+    sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                      "chase_path_fail_idle");
+    return;
+  }
+}
+else if (steer.partial_path)
+{
+  goal_source = "chase_partial";
+}
+move_dir = SteerWithFeelersAndSeparation(perception, view, snapshot,
+                                         move_dir, 0.45f);
+intent.moveDirWorld = move_dir;
+intent.moveSpeed = ResolveIntentMoveSpeed(snapshot);
+intent.suggestedAnim = LocomotionState::Run;
+sink.SetIntent(self_id, intent);
+RecordBrainIntent(self_id, view, snapshot, blackboard.state, intent,
+                  goal_source);
 }
 
 } // namespace cutum

@@ -1,0 +1,52 @@
+{
+  "name": "asset_standing_stone_06",
+  "version": 2,
+  "displayName": "Standing Stone 06",
+  "source": {
+    "mod": "cubatarium/assetgen",
+    "seed": 2966030440466436601,
+    "license": "CC0-1.0",
+    "material_parameter": "gneiss"
+  },
+  "tags": [
+    "decoration",
+    "structure"
+  ],
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "blocks": [
+    {
+      "dx": 0,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_gneiss_rough"
+    },
+    {
+      "dx": 0,
+      "dy": 1,
+      "dz": 0,
+      "type": "cu_rock_gneiss_rough"
+    },
+    {
+      "dx": 0,
+      "dy": 2,
+      "dz": 0,
+      "type": "cu_rock_gneiss_rough"
+    },
+    {
+      "dx": -1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_gneiss_rough"
+    },
+    {
+      "dx": 1,
+      "dy": 0,
+      "dz": 0,
+      "type": "cu_rock_gneiss_rough"
+    }
+  ]
+}
