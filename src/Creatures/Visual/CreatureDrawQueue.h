@@ -45,6 +45,14 @@ public:
       Requests[i].Light = light;
     }
   }
+  /// Gives every request pushed since `first` the creature's fog factor.
+  void StampFog(size_t first, float fog)
+  {
+    for (size_t i = first; i < Requests.size(); ++i)
+    {
+      Requests[i].Fog = fog;
+    }
+  }
   void Flush(ICreatureDrawSink &sink);
 
   size_t Size() const { return Requests.size(); }

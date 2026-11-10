@@ -49,6 +49,9 @@ public:
   /// Local light (x = sky, y = block, both 0..1) for the next draw calls.
   void SetActiveLight(const glm::vec2 &skyBlock) { ActiveLight = skyBlock; }
 
+  /// Precomputed distance-fog factor (0..1) for the next draw calls.
+  void SetActiveFog(float fogFactor) { ActiveFog = fogFactor; }
+
   const CreatureRenderStats &GetStats() const { return Stats; }
   CreatureDrawQueue &GetDrawQueue() { return Queue; }
 
@@ -70,6 +73,8 @@ private:
   glm::vec2 SampleCreatureLight(UWorld &world, const UCreature &creature,
                                 float dt, bool localLight);
   void ApplyCreatureLightUniforms(const UWorld &world, bool enabled);
+  void ApplyCreatureFogUniforms(const RenderSettings &render,
+                                const glm::vec3 &fogColor);
   void DrawCreatureLabels(UWorld &world, const glm::mat4 &viewProj,
                           UGeometryEngine &engine);
 
@@ -106,6 +111,7 @@ private:
   CreatureDrawQueue Queue;
   float ActiveHitFlash01{0.f};
   glm::vec2 ActiveLight{1.0f, 0.0f};
+  float ActiveFog{0.f};
   bool LightingActive{false};
   uint64_t FrameCounter{0};
   UCreatureLightCache LightStates;

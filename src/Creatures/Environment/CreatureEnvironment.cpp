@@ -13,8 +13,10 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include "World/Math/CollisionVolume.h"
+#include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/FluidKindPresetUtil.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
 #include <chrono>
 #include <unordered_map>
 #include "World/Raycast/BlockRaycast.h"
@@ -114,6 +116,42 @@ bool IsWaterBlock(const UBlockRegistry &registry, BlockId id)
   return ClassifyFluidBlock(registry, id) == FluidKind::Water;
 }
 
+/// Cell-level fluid identity: liquid blocks by id, plus water stored inside
+/// fluid-permeable decor (kelp, seagrass) as a FluidCellState. Worldgen fills
+/// ocean cells around permeable plants without placing liquid blocks, so an
+/// id-only classifier saw dry seabed under a kelp forest and let terrestrial
+/// mobs pass the habitat check underwater.
+FluidKind ClassifyFluidCell(const UWorld &world, const glm::ivec3 &pos,
+                            BlockId id)
+{
+  const UBlockRegistry &registry = world.GetBlockRegistry();
+  const FluidKind byId = ClassifyFluidBlock(registry, id);
+  if (byId != FluidKind::None)
+  {
+    return byId;
+  }
+  const BlockDefinition *def =
+      registry.GetDefinitions() ? registry.GetDefinitions()->GetById(id)
+                                : nullptr;
+  if (!IsFluidPermeableFromDefinition(id, def, def && def->Physics.IsLiquid))
+  {
+    return FluidKind::None;
+  }
+  const FluidCellState state = world.GetBlockWorld().GetFluidState(pos);
+  if (!FluidCellHasActiveFluid(PackFluidCellState(state)))
+  {
+    return FluidKind::None;
+  }
+  if (state.HasExplicitKind())
+  {
+    return state.GetKind() == cutum::FluidKind::Lava ? FluidKind::Lava
+                                                     : FluidKind::Water;
+  }
+  // Permeable cell filled without an explicit kind: the natural fill is the
+  // ocean's water (lava-permeable decor does not occur in worldgen).
+  return FluidKind::Water;
+}
+
 void SampleHabitatFluidsInVolume(const UWorld &world, const CollisionVolume &vol,
                                  bool &outWater, bool &outLava)
 {
@@ -152,6 +190,19 @@ void SampleHabitatFluidsInVolume(const UWorld &world, const CollisionVolume &vol
         {
           outWater = true;
         }
+        else
+        {
+          // Permeable decor (kelp, seagrass) with a filled fluid cell.
+          const FluidKind kind = ClassifyFluidCell(world, blockPos, id);
+          if (kind == FluidKind::Lava)
+          {
+            outLava = true;
+          }
+          else if (kind == FluidKind::Water)
+          {
+            outWater = true;
+          }
+        }
       }
     }
   }
@@ -166,15 +217,18 @@ struct FluidColumn
 std::optional<FluidColumn> ScanFluidColumn(const UWorld &world, int worldX,
                                            int worldZ, bool wantLava)
 {
-  const UBlockRegistry &registry = world.GetBlockRegistry();
   const UBlockWorld &blockWorld = world.GetBlockWorld();
   FluidColumn column;
   for (int y = 0; y <= 255; ++y)
   {
-    const BlockId id =
-        blockWorld.GetBlock(glm::ivec3(worldX, y, worldZ));
-    const bool lava = IsLavaBlock(registry, id);
-    const bool water = IsWaterBlock(registry, id);
+    const glm::ivec3 cellPos(worldX, y, worldZ);
+    const BlockId id = blockWorld.GetBlock(cellPos);
+    // Cell-level classification: id-level fluids plus water held inside
+    // fluid-permeable decor (kelp columns) — a kelp-only ocean column is
+    // still water for aquatic spawn queries.
+    const FluidKind kind = ClassifyFluidCell(world, cellPos, id);
+    const bool lava = kind == FluidKind::Lava;
+    const bool water = kind == FluidKind::Water;
     if (wantLava ? !lava : !water)
     {
       continue;

@@ -17,11 +17,13 @@ public:
 
   bool IsTerrestrialStandNode(const NavigationStandNode &node,
                               float body_height,
-                              float body_width = 0.6f) const override;
+                              float body_width = 0.6f,
+                              bool reject_fluid_nodes = false) const override;
   bool CanStepTerrestrial(const NavigationStandNode &from,
                           const NavigationStandNode &to, float max_jump,
                           float max_drop, float body_height,
-                          float body_width = 0.6f) const override;
+                          float body_width = 0.6f,
+                          bool reject_fluid_nodes = false) const override;
 
 private:
   const UWorld &World;

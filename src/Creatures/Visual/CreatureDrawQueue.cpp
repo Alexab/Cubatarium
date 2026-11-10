@@ -12,6 +12,7 @@ void CreatureDrawQueue::Flush(ICreatureDrawSink &sink)
   for (const CreatureDrawRequest &req : Requests)
   {
     sink.SetCreatureLight(req.Light);
+    sink.SetCreatureFog(req.Fog);
     switch (req.Kind)
     {
     case CreatureDrawKind::TexturedPart:

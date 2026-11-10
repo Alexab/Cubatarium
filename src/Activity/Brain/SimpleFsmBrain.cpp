@@ -260,6 +260,9 @@ void USimpleFsmBrain::TickFlee(UCreatureActivityBlackboard &blackboard,
   query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
   query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
   query.max_jump = snapshot.locomotion.jumpHeightBlocks;
+  // Land mobs must not path across water: a lake-floor A* route ends at the
+  // post-motor habitat gate (habitat_reject) or strands the mob at the shore.
+  query.reject_fluid_nodes = snapshot.habitat == CreatureHabitat::Terrestrial;
   const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
       blackboard.navigation, sink.GetWorld(), view.bodyOrigin, flee_goal,
       query, dt, 0.45f, self_id, view.typeId);
@@ -435,6 +438,9 @@ void USimpleFsmBrain::TickMeleeFallback(UCreatureActivityBlackboard &blackboard,
   query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
   query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
   query.max_jump = snapshot.locomotion.jumpHeightBlocks;
+  // Land mobs must not path across water: a lake-floor A* route ends at the
+  // post-motor habitat gate (habitat_reject) or strands the mob at the shore.
+  query.reject_fluid_nodes = snapshot.habitat == CreatureHabitat::Terrestrial;
   const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
       blackboard.navigation, sink.GetWorld(), view.bodyOrigin, chase_goal,
       query, dt, 0.45f, self_id, view.typeId);
@@ -606,6 +612,8 @@ query.search_distance = 32;
 query.body_height = NavigationBodyHeightForBounds(snapshot.boundsSize.y);
 query.body_width = NavigationBodyWidthForBounds(snapshot.boundsSize);
 query.max_jump = snapshot.locomotion.jumpHeightBlocks;
+// Land mobs must not path across water (see the flee/chase sites above).
+query.reject_fluid_nodes = snapshot.habitat == CreatureHabitat::Terrestrial;
 const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
     blackboard.navigation, sink.GetWorld(), view.bodyOrigin, chase_goal,
     query, dt, 0.45f, self_id, view.typeId);

@@ -34,7 +34,33 @@ inline bool CreatureBoundsIntersectsFrustum(const Frustum &frustum,
     return true;
   }
 
-  return frustum.IntersectsAABB(bmin, bmax, cameraPos, maxDistanceBlocks);
+  // Full six-plane p-vertex test. Frustum::IntersectsAABB skips the
+  // near/top/bottom planes (precision guards for huge chunk boxes) and
+  // fast-true's on distance — either of which admitted creatures behind the
+  // camera. Creature AABBs are small, so the exact test is both cheap and
+  // correct here.
+  for (const glm::vec4 &plane : frustum.planes)
+  {
+    const glm::vec3 n(plane);
+    glm::vec3 p = bmin;
+    if (n.x >= 0.0f)
+    {
+      p.x = bmax.x;
+    }
+    if (n.y >= 0.0f)
+    {
+      p.y = bmax.y;
+    }
+    if (n.z >= 0.0f)
+    {
+      p.z = bmax.z;
+    }
+    if (glm::dot(n, p) + plane.w < 0.0f)
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 } // namespace cutum

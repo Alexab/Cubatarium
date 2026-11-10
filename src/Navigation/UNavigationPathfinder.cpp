@@ -75,12 +75,14 @@ NavigationStandNode SnapStandNode(const IUWorldNavigation &navigation,
                                   NavigationStandNode node, float body_height,
                                   float body_width,
                                   const glm::vec3 &body_origin,
-                                  float max_snap_blocks)
+                                  float max_snap_blocks,
+                                  bool reject_fluid_nodes)
 {
   const float max_delta = std::max(0.5f, max_snap_blocks) + 0.05f;
   auto accept = [&](const NavigationStandNode &trial) -> bool
   {
-    if (!navigation.IsTerrestrialStandNode(trial, body_height, body_width))
+    if (!navigation.IsTerrestrialStandNode(trial, body_height, body_width,
+                                           reject_fluid_nodes))
     {
       return false;
     }
@@ -193,17 +195,21 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
   NavigationStandNode start =
       SnapStandNode(navigation, StandNodeFromBody(start_body),
                     query.body_height, query.body_width, start_body,
-                    query.max_jump);
+                    query.max_jump, query.reject_fluid_nodes);
   NavigationStandNode goal =
       SnapStandNode(navigation, StandNodeFromBody(goal_body),
                     query.body_height, query.body_width, goal_body,
-                    query.max_jump);
-  if (!navigation.IsTerrestrialStandNode(start, query.body_height, query.body_width))
+                    query.max_jump, query.reject_fluid_nodes);
+  if (!navigation.IsTerrestrialStandNode(start, query.body_height,
+                                         query.body_width,
+                                         query.reject_fluid_nodes))
   {
     result.failReason = "start_invalid";
     return result;
   }
-  if (!navigation.IsTerrestrialStandNode(goal, query.body_height, query.body_width))
+  if (!navigation.IsTerrestrialStandNode(goal, query.body_height,
+                                         query.body_width,
+                                         query.reject_fluid_nodes))
   {
     result.failReason = "goal_invalid";
     return result;
@@ -307,7 +313,8 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
           }
           if (!navigation.CanStepTerrestrial(from, to, query.max_jump,
                                              query.max_drop, query.body_height,
-                                             query.body_width))
+                                             query.body_width,
+                                             query.reject_fluid_nodes))
           {
             continue;
           }

@@ -103,6 +103,13 @@ public:
   bool InitEngine();
   bool InitShaders();
 
+  /// Distance-fog pass state (smoothed fog color etc.); the creature pass
+  /// reads it so mobs fade into the same horizon color as the terrain.
+  const UUnderwaterFogPass &GetUnderwaterFogPass() const
+  {
+    return UnderwaterFogPass_;
+  }
+
   void Paint(int width_size, int height_size, double view_duration);
 
   // Methods for sky color management

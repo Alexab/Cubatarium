@@ -25,7 +25,8 @@ UWorldNavigationQueries::UWorldNavigationQueries(const UWorld &world)
 }
 
 bool UWorldNavigationQueries::IsTerrestrialStandNode(
-    const NavigationStandNode &node, float body_height, float body_width) const
+    const NavigationStandNode &node, float body_height, float body_width,
+    bool reject_fluid_nodes) const
 {
   const UBlockRegistry &registry = World.GetBlockRegistry();
   const glm::ivec3 ground(node.x, node.ground_y, node.z);
@@ -39,13 +40,25 @@ bool UWorldNavigationQueries::IsTerrestrialStandNode(
   const glm::vec3 body_origin(static_cast<float>(node.x), feet_y,
                               static_cast<float>(node.z));
   // Nav-hot path: ground + block clearance only (no fluid volume probe).
-  return CanCreatureStandAtNav(World, body_origin, size_blocks, 1.25f);
+  if (!CanCreatureStandAtNav(World, body_origin, size_blocks, 1.25f))
+  {
+    return false;
+  }
+  // Terrestrial A* runs with reject_fluid_nodes: a stand whose body column
+  // touches water (liquid blocks or waterlogged kelp/seagrass) is not a
+  // walkable node — chase/flee paths must not route across lakes.
+  if (reject_fluid_nodes && CreatureColumnTouchesFluid(World, body_origin,
+                                                       body_height))
+  {
+    return false;
+  }
+  return true;
 }
 
 bool UWorldNavigationQueries::CanStepTerrestrial(
     const NavigationStandNode &from, const NavigationStandNode &to,
     float max_jump, float max_drop, float body_height,
-    float body_width) const
+    float body_width, bool reject_fluid_nodes) const
 {
   const int dx = std::abs(to.x - from.x);
   const int dz = std::abs(to.z - from.z);
@@ -53,7 +66,7 @@ bool UWorldNavigationQueries::CanStepTerrestrial(
   {
     return false;
   }
-  if (!IsTerrestrialStandNode(to, body_height, body_width))
+  if (!IsTerrestrialStandNode(to, body_height, body_width, reject_fluid_nodes))
   {
     return false;
   }

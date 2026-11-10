@@ -17,6 +17,7 @@
 #include "Render/Camera/CameraPerspective.h"
 #include "Render/Camera/Frustum.h"
 #include "Core/StallTimer.h"
+#include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/EnvironmentLight.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
@@ -27,6 +28,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -311,6 +313,7 @@ void UCreatureDrawPass::DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
                          1.0f + ActiveHitFlash01, 1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
   creatureShader->SetVec2("uCreatureLight", ActiveLight);
+  creatureShader->SetFloat("uCreatureFogFactor", ActiveFog);
 
   glBindVertexArray(vao);
   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
@@ -396,6 +399,7 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(
                          1.0f + ActiveHitFlash01, 1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
   creatureShader->SetVec2("uCreatureLight", ActiveLight);
+  creatureShader->SetFloat("uCreatureFogFactor", ActiveFog);
 
   glBindVertexArray(vao);
   glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indices.size()),
@@ -439,6 +443,7 @@ void UCreatureDrawPass::DrawSkinnedMesh(
                          1.0f + ActiveHitFlash01, 1.0f));
   creatureSkinnedShader->SetMat4("mvp_matrix", mvp);
   creatureSkinnedShader->SetVec2("uCreatureLight", ActiveLight);
+  creatureSkinnedShader->SetFloat("uCreatureFogFactor", ActiveFog);
   BindCreatureBonePaletteBlock(creatureSkinnedShader->GetProgramID(),
                                kCreatureBonePaletteBindingPoint);
   // All primitives of one creature share the palette pointer; upload it once
@@ -490,9 +495,31 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   drawContext.CameraPosition = cameraPos;
   drawContext.Items = world.GetItemDefinitionStorage();
 
-  const float maxDistBlocks =
+  // Creature visibility must not exceed world visibility: terrain fades out
+  // at the distance-fog horizon, which the world can pull tighter than the
+  // visual render distance (near water, streaming holes). Cull creatures at
+  // that same horizon and fade them with the same fog — they used to draw
+  // crisp beyond the fog wall (user report).
+  float maxDistBlocks =
       static_cast<float>(world.GetEffectiveRenderDistance()) *
       static_cast<float>(CHUNK_SIZE);
+  DistanceFogParams creatureFog;
+  bool creatureFogEnabled = false;
+  if (render.DistanceFog)
+  {
+    creatureFog = ComputeDistanceFog(
+        world.GetEffectiveFogRenderDistance(),
+        engine.GetUnderwaterFogPass().GetFogColor(),
+        render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
+        render.DistanceFogDensity,
+        world.GetEffectiveFogEndMarginBlocks(render.DistanceFogEndMarginBlocks),
+        world.GetPresentedFogHorizonBlocks(),
+        world.GetPresentedFogStartBlocks());
+    maxDistBlocks = std::min(maxDistBlocks, creatureFog.End);
+    creatureFogEnabled = true;
+    ApplyCreatureFogUniforms(render,
+                             engine.GetUnderwaterFogPass().GetFogColor());
+  }
 
   ++FrameCounter;
   LightingActive = true;
@@ -570,6 +597,28 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
         const size_t firstRequest = Queue.Size();
         SubmitCreatureVisual(world, creature, *def, dt, drawContext, viewProj);
         Queue.StampLight(firstRequest, light);
+        if (creatureFogEnabled)
+        {
+          // Same distance metric and curve as the terrain fog fragment
+          // shader: horizontal distance when the settings request it, then
+          // the weather-scaled density exponent.
+          const glm::vec3 fogCenter = BoundsCollisionCenter(
+              creature.GetBodyOrigin(), creature.GetBounds().profile.maxSizeBlocks);
+          const glm::vec3 toCam = fogCenter - cameraPos;
+          const float fogDist = render.DistanceFogHorizontal
+                                    ? glm::length(glm::vec2(toCam.x, toCam.z))
+                                    : glm::length(toCam);
+          const float fogRange =
+              std::max(creatureFog.End - creatureFog.Start, 0.001f);
+          float fogFactor =
+              std::clamp((fogDist - creatureFog.Start) / fogRange, 0.0f, 1.0f);
+          const float envMul =
+              world.GetEnvironmentState().WeatherFogMultiplier;
+          fogFactor = std::pow(fogFactor, std::max(creatureFog.Density *
+                                                       std::max(envMul, 0.05f),
+                                                   0.1f));
+          Queue.StampFog(firstRequest, fogFactor);
+        }
 
         if (labels && !creature.IsPlayerCharacter() &&
             (debugLabels ||
@@ -581,6 +630,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           PendingLabel label;
           label.World = creature.GetBodyOrigin() +
                         glm::vec3(0.0f, size.y + 0.6f, 0.0f);
+          bool labelVisible = true;
           if (debugLabels)
           {
             const CreatureLocomotionFacts &facts =
@@ -596,9 +646,36 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           }
           else
           {
-            label.Text = creature.GetTypeId();
+            // Name labels must not read through terrain: the label is drawn
+            // with depth test off (screen-space text), so hide it when a
+            // solid block stands between the camera and the label anchor
+            // (user report: подписи видны сквозь стены).
+            const glm::vec3 toLabel = label.World - cameraPos;
+            const float labelDist = glm::length(toLabel);
+            const bool occluded =
+                labelDist > 0.01f &&
+                RaycastSolidBlocks(world.GetBlockWorld(),
+                                   world.GetBlockRegistry(), cameraPos,
+                                   toLabel / labelDist,
+                                   labelDist)
+                    .has_value();
+            if (occluded)
+            {
+              labelVisible = false;
+            }
+            else
+            {
+              const CreatureDefinition *labelDef = def;
+              label.Text =
+                  (labelDef && !labelDef->displayName.empty())
+                      ? labelDef->displayName
+                      : creature.GetTypeId();
+            }
           }
-          PendingLabels.push_back(std::move(label));
+          if (labelVisible)
+          {
+            PendingLabels.push_back(std::move(label));
+          }
         }
 
         DrawCreatureHealthBar(creature, viewProj, engine);
@@ -641,6 +718,10 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
     void SetCreatureLight(const glm::vec2 &skyBlock) override
     {
       Pass.SetActiveLight(skyBlock);
+    }
+    void SetCreatureFog(float fogFactor) override
+    {
+      Pass.SetActiveFog(fogFactor);
     }
     UCreatureDrawPass &Pass;
     UGeometryEngine &Engine;
@@ -701,6 +782,24 @@ void UCreatureDrawPass::ApplyCreatureLightUniforms(const UWorld &world,
     shader->SetFloat("uEnvDayFactor", env.DayNightFactor);
     shader->SetFloat("uEnvNightFactor", env.MoonNightFactor);
     shader->SetFloat("uEnvSkyLightScale", skyScale);
+    shader->Unuse();
+  }
+}
+
+void UCreatureDrawPass::ApplyCreatureFogUniforms(const RenderSettings &render,
+                                                 const glm::vec3 &fogColor)
+{
+  const float enabled = render.DistanceFog ? 1.0f : 0.0f;
+  for (const std::shared_ptr<UShaderProgram> &shader :
+       {creatureShader, creatureSkinnedShader})
+  {
+    if (!shader || !shader->IsValid())
+    {
+      continue;
+    }
+    shader->Use();
+    shader->SetVec3("uFogColor", fogColor);
+    shader->SetFloat("uFogEnabled", enabled);
     shader->Unuse();
   }
 }

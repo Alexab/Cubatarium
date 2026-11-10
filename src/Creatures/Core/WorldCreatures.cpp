@@ -8,6 +8,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Core/World.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -103,8 +104,14 @@ bool UWorld::IsWithinActivityRange(const glm::vec3 &body_origin) const
   {
     const glm::vec3 delta = body_origin - controlled->eyePosition;
     const float dist_sq = delta.x * delta.x + delta.z * delta.z;
+    // Brain activity may lead the fog horizon slightly (hysteresis, +16),
+    // but must be based on the same visible world the fog uses — a tighter
+    // fog render distance used to leave brains chasing targets the player
+    // cannot see yet.
+    const int visible_rd =
+        std::min(GetEffectiveRenderDistance(), GetEffectiveFogRenderDistance());
     const float activity_radius =
-        static_cast<float>(GetEffectiveRenderDistance() * CHUNK_SIZE) + 16.0f;
+        static_cast<float>(visible_rd * CHUNK_SIZE) + 16.0f;
     if (dist_sq <= activity_radius * activity_radius)
     {
       return true;

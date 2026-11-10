@@ -5,7 +5,9 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include "World/Math/CollisionVolume.h"
+#include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -42,11 +44,36 @@ bool IsFluidBlockId(const UBlockRegistry &registry, BlockId id)
          name.find("lava") != std::string::npos;
 }
 
-/// O(height) cell samples — not full AABB fluid volume scan.
-bool BodyColumnTouchesFluid(const UWorld &world, const glm::vec3 &feet_origin,
-                            float body_height)
+/// Cell-level fluid test: id-level fluids plus water held inside
+/// fluid-permeable decor (kelp, seagrass) as a FluidCellState — id-only
+/// classification missed ocean water around plants entirely, so the habitat
+/// gate let terrestrial mobs wade into a kelp forest on the seabed.
+bool IsFluidCell(const UWorld &world, const glm::ivec3 &pos, BlockId id)
 {
   const UBlockRegistry &registry = world.GetBlockRegistry();
+  if (IsFluidBlockId(registry, id))
+  {
+    return true;
+  }
+  if (id == BLOCK_AIR)
+  {
+    return false;
+  }
+  const BlockDefinition *def =
+      registry.GetDefinitions() ? registry.GetDefinitions()->GetById(id)
+                                : nullptr;
+  if (!IsFluidPermeableFromDefinition(id, def, def && def->Physics.IsLiquid))
+  {
+    return false;
+  }
+  const FluidCellState state = world.GetBlockWorld().GetFluidState(pos);
+  return FluidCellHasActiveFluid(PackFluidCellState(state));
+}
+
+/// O(height) cell samples — not full AABB fluid volume scan.
+bool ColumnTouchesFluidImpl(const UWorld &world, const glm::vec3 &feet_origin,
+                            float body_height)
+{
   const UBlockWorld &blocks = world.GetBlockWorld();
   const int gx = WorldCoordToBlockIndex(feet_origin.x);
   const int gz = WorldCoordToBlockIndex(feet_origin.z);
@@ -55,7 +82,8 @@ bool BodyColumnTouchesFluid(const UWorld &world, const glm::vec3 &feet_origin,
       WorldCoordToBlockIndex(feet_origin.y + std::max(0.5f, body_height) - 0.05f);
   for (int y = y0; y <= y1; ++y)
   {
-    if (IsFluidBlockId(registry, blocks.GetBlock(glm::ivec3(gx, y, gz))))
+    if (IsFluidCell(world, glm::ivec3(gx, y, gz),
+                    blocks.GetBlock(glm::ivec3(gx, y, gz))))
     {
       return true;
     }
@@ -64,6 +92,13 @@ bool BodyColumnTouchesFluid(const UWorld &world, const glm::vec3 &feet_origin,
 }
 
 } // namespace
+
+bool CreatureColumnTouchesFluid(const UWorld &world,
+                                const glm::vec3 &feet_origin,
+                                float body_height)
+{
+  return ColumnTouchesFluidImpl(world, feet_origin, body_height);
+}
 
 bool AreBlocksClearAt(const UWorld &world, const glm::vec3 &body_origin,
                       const glm::vec3 &size_blocks)
@@ -116,7 +151,7 @@ bool CanCreatureStandAt(const UWorld &world, const glm::vec3 &body_origin,
   {
     glm::vec3 feet_origin = body_origin;
     feet_origin.y = *feet_y;
-    return !BodyColumnTouchesFluid(world, feet_origin, size_blocks.y);
+    return !CreatureColumnTouchesFluid(world, feet_origin, size_blocks.y);
   }
   // Resting on a rim: the center column steps down (a dip, or ground cover
   // over lower ground) while blocks under the rest of the box hold the body
@@ -131,7 +166,7 @@ bool CanCreatureStandAt(const UWorld &world, const glm::vec3 &body_origin,
   }
   return AreBlocksClearAt(world, body_origin, size_blocks) &&
          world.HasBodySupport(CollisionVolumeFromBody(body_origin, size_blocks)) &&
-         !BodyColumnTouchesFluid(world, body_origin, size_blocks.y);
+         !CreatureColumnTouchesFluid(world, body_origin, size_blocks.y);
 }
 
 bool CanCreatureStep(const UWorld &world, const glm::vec3 &from_body,

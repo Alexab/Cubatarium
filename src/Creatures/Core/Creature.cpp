@@ -464,11 +464,17 @@ void UCreature::EnforceHabitatAfterMove(
   // stuck position, pinning it mid-air forever. Accept strictly descending
   // post-motor positions (gravity always carries a creature toward valid
   // habitat); level and ascending moves stay gated.
-  // Flyers do not fall, so they get no descent pass: a wasp gliding down
-  // into water was accepted here and then pinned on the bottom, every move
-  // out being "level or ascending".
+  // The descent is accepted ONLY from an already-invalid position: a valid
+  // fox stepping down a bank into a pond used to sail through this gate —
+  // every descent was accepted unconditionally, so wading into water was
+  // never reverted until the mob was wet (runtime issue: foxes crossing
+  // lakes). Flyers do not fall, so they get no descent pass: a wasp gliding
+  // down into water was accepted here and then pinned on the bottom, every
+  // move out being "level or ascending".
   if (habitat != CreatureHabitat::Aerial &&
-      BodyOrigin.y < bodyOriginBefore.y - 1.0e-4f)
+      BodyOrigin.y < bodyOriginBefore.y - 1.0e-4f &&
+      !HabitatAllowsMovementAt(world, habitat, bodyOriginBefore, size,
+                               maxClimbDrop))
   {
     Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
     SyncBoundsFromStance();

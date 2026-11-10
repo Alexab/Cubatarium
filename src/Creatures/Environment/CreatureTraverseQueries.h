@@ -39,6 +39,13 @@ bool CanCreatureMoveDirectlyXZ(const UWorld &world, const glm::vec3 &from_body,
 bool AreBlocksClearAt(const UWorld &world, const glm::vec3 &body_origin,
                       const glm::vec3 &size_blocks);
 
+/// O(height) fluid sample along the body column at `feet_origin`: liquid
+/// blocks and water held inside fluid-permeable decor (kelp, seagrass).
+/// Shared by the post-motor habitat gate and the A* node filter.
+bool CreatureColumnTouchesFluid(const UWorld &world,
+                                const glm::vec3 &feet_origin,
+                                float body_height);
+
 } // namespace cutum
 
 #endif

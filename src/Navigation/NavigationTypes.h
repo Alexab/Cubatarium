@@ -36,6 +36,9 @@ struct NavigationQuery
   /// Soft per-search expand cap (0 = default local max). Global tick budget
   /// still applies via UNavigationPathBudget.
   int max_expands{0};
+  /// Terrestrial movers only: A* nodes whose body column touches fluid are
+  /// rejected, so chase/flee paths never route across water.
+  bool reject_fluid_nodes{false};
 };
 
 } // namespace cutum

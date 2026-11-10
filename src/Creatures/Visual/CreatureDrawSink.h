@@ -31,6 +31,8 @@ public:
                              const glm::vec4 &tint) = 0;
   /// Called before each queued request; sinks without lighting ignore it.
   virtual void SetCreatureLight(const glm::vec2 & /*skyBlock*/) {}
+  /// Called before each queued request; sinks without fog ignore it.
+  virtual void SetCreatureFog(float /*fogFactor*/) {}
 };
 
 } // namespace cutum

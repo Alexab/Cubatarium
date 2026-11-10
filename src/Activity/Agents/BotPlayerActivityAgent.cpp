@@ -150,6 +150,10 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
           NavigationBodyHeightForBounds(snapshot->boundsSize.y);
       query.body_width = NavigationBodyWidthForBounds(snapshot->boundsSize);
       query.max_jump = snapshot->locomotion.jumpHeightBlocks;
+      // Land bots must not path across water (post-motor habitat gate would
+      // strand them at the shore).
+      query.reject_fluid_nodes =
+          snapshot->habitat == CreatureHabitat::Terrestrial;
       const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
           bb.navigation, world, view->bodyOrigin, goal, query, dt, 0.45f, Id,
           view->typeId);
@@ -186,6 +190,9 @@ void UBotPlayerActivityAgent::TickIds(const Ids &ids, IUWorldPerception &percept
             NavigationBodyHeightForBounds(snapshot->boundsSize.y);
         query.body_width = NavigationBodyWidthForBounds(snapshot->boundsSize);
         query.max_jump = snapshot->locomotion.jumpHeightBlocks;
+        // Land bots must not path across water (see the chase site above).
+        query.reject_fluid_nodes =
+            snapshot->habitat == CreatureHabitat::Terrestrial;
         const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
             bb.navigation, world, view->bodyOrigin, goal, query, dt, 0.45f, Id,
             view->typeId);

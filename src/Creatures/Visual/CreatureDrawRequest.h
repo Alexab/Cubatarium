@@ -36,6 +36,9 @@ struct CreatureDrawRequest
   glm::vec4 Tint{1.f};
   /// Local light of the owning creature: x = sky 0..1, y = block 0..1.
   glm::vec2 Light{1.f, 0.f};
+  /// Precomputed distance-fog factor 0..1 for the owning creature (terrain
+  /// fog params; creatures used to render crisp beyond the fog wall).
+  float Fog{0.f};
 };
 
 } // namespace cutum
