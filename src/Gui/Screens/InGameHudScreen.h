@@ -63,6 +63,9 @@ private:
   void LayoutHotbar();
   void LayoutVitals();
   void LayoutModeBadge();
+  void EnsureDebugInfoWidgets();
+  void LayoutDebugInfo();
+  void UpdateDebugInfo();
   void UpdateSlotData();
   void UpdateVitalBars();
   void UpdateModeBadge();
@@ -83,12 +86,16 @@ private:
   UGuiLabel *ThirstLabel{nullptr};
   UGuiLabel *FatigueLabel{nullptr};
   UGuiLabel *BreathLabel{nullptr};
+  UGuiLabel *WorldNameInfo{nullptr};
+  UGuiLabel *VersionInfo{nullptr};
+  UGuiLabel *CoordsInfo{nullptr};
   UGuiRenderer *Renderer{nullptr};
   int PointerX{-1};
   int PointerY{-1};
   bool HotbarBuilt{false};
   bool VitalsBuilt{false};
   bool ModeBadgeBuilt{false};
+  bool DebugInfoBuilt{false};
 #if defined(__ANDROID__)
   std::unique_ptr<class UGuiTouchControls> TouchControls;
 #endif

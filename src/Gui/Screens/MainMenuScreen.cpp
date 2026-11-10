@@ -171,7 +171,7 @@ void UMainMenuScreen::Build(UGuiContext &ctx)
 
   auto version = std::make_unique<UGuiLabel>(&theme, kCubatariumVersion);
   version->SetTextAlign(GuiTextAlign::Left);
-  version->SetUseSecondaryColor(true);
+  version->SetInfoBadgeStyle(true);
   VersionLabel = version.get();
 
   auto quitBackdrop = std::make_unique<UGuiPanel>(&theme);
@@ -288,7 +288,7 @@ void UMainMenuScreen::Relayout()
   if (VersionLabel)
   {
     const int margin = theme->Padding;
-    const int labelH = theme->TitleBarHeight;
+    const int labelH = theme->FontSizeBody + theme->Padding;
     const int labelW = Scaled(360);
     VersionLabel->SetBounds(
         {margin, ViewportH - labelH - margin, labelW, labelH});

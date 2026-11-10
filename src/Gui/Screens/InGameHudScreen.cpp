@@ -13,9 +13,13 @@
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Render/Camera/Camera.h"
+#include "Version.h"
 #include "World/Core/World.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
+#include <filesystem>
 
 #if defined(__ANDROID__)
 #include "Gui/Widgets/GuiTouchControls.h"
@@ -537,9 +541,12 @@ void UInGameHudScreen::Update(double /*dt*/)
   EnsureHotbarWidgets();
   EnsureVitalWidgets();
   EnsureModeBadge();
+  EnsureDebugInfoWidgets();
   LayoutHotbar();
   LayoutVitals();
   LayoutModeBadge();
+  LayoutDebugInfo();
+  UpdateDebugInfo();
   UpdateSlotData();
   UpdateVitalBars();
   UpdateModeBadge();
@@ -594,6 +601,83 @@ void UInGameHudScreen::UpdateModeBadge()
   ModeBadge->SetVisible(true);
 }
 
+void UInGameHudScreen::EnsureDebugInfoWidgets()
+{
+  if (DebugInfoBuilt || !RootPanel || !Theme)
+  {
+    return;
+  }
+  auto makeBadge = [this](UGuiLabel *&out, bool alignRight) {
+    auto lab = std::make_unique<UGuiLabel>(Theme, "");
+    lab->SetInfoBadgeStyle(true, alignRight);
+    out = lab.get();
+    RootPanel->AddChild(std::move(lab));
+  };
+  makeBadge(WorldNameInfo, false);
+  makeBadge(VersionInfo, false);
+  makeBadge(CoordsInfo, true);
+  VersionInfo->SetText(kCubatariumVersion);
+  DebugInfoBuilt = true;
+}
+
+void UInGameHudScreen::LayoutDebugInfo()
+{
+  if (!DebugInfoBuilt || !Theme || !Session)
+  {
+    return;
+  }
+  const int line = Theme->FontSizeBody + Theme->Padding;
+  const int pad = Theme->Padding;
+  const int ox = GetContentOffsetX();
+  const int oy = GetContentOffsetY();
+  const int w = std::max(Theme->FontSizeBody * 24, 240);
+  WorldNameInfo->SetBounds({ox + pad, oy + pad, w, line});
+  VersionInfo->SetBounds({ox + pad, oy + ViewportH - pad - line, w, line});
+
+  // Keep clear of the secondary hotbar column in the bottom-right corner.
+  int right = ox + ViewportW - pad;
+  if (Session->GetBarCount() > 1)
+  {
+    const int slotSize = Theme->HotbarSlotSize;
+    right = ViewportW - Theme->HotbarSecondaryMarginRight - slotSize - pad;
+  }
+  CoordsInfo->SetBounds({right - w, oy + ViewportH - pad - line, w, line});
+}
+
+void UInGameHudScreen::UpdateDebugInfo()
+{
+  if (!DebugInfoBuilt || !Session)
+  {
+    return;
+  }
+  const auto world = Session->GetWorld();
+  if (!world)
+  {
+    WorldNameInfo->SetVisible(false);
+    CoordsInfo->SetVisible(false);
+    return;
+  }
+  const std::string name =
+      std::filesystem::u8path(world->GetWorldName()).filename().u8string();
+  WorldNameInfo->SetText(name);
+  WorldNameInfo->SetVisible(!name.empty());
+
+  const auto camera = world->GetCurrentUserCamera();
+  if (!camera)
+  {
+    CoordsInfo->SetVisible(false);
+    return;
+  }
+  const glm::vec3 pos = camera->GetPosition();
+  char buf[96];
+  std::snprintf(buf, sizeof(buf), "X %d  Y %d  Z %d",
+                static_cast<int>(std::floor(pos.x)),
+                static_cast<int>(std::floor(pos.y)),
+                static_cast<int>(std::floor(pos.z)));
+  CoordsInfo->SetText(buf);
+  CoordsInfo->SetVisible(true);
+}
+
 void UInGameHudScreen::EnsureVitalWidgets()
 {
   if (VitalsBuilt || !RootPanel || !Theme)
@@ -627,7 +711,8 @@ void UInGameHudScreen::LayoutVitals()
   const int gap = std::max(2, Theme->Padding / 4);
   const int pad = Theme->Padding;
   const int w = std::max(Theme->FontSizeBody * 12, 120);
-  int y = pad + GetContentOffsetY();
+  // Row 0 belongs to the world-name badge (LayoutDebugInfo).
+  int y = pad + GetContentOffsetY() + line + gap;
   const int x = pad + GetContentOffsetX();
   UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel,
                          BreathLabel};

@@ -36,6 +36,20 @@ void UGuiLabel::Draw(UGuiRenderer &renderer)
   {
     return;
   }
+  if (InfoBadge)
+  {
+    fprintf(stderr, "[badge] '%s' bounds=%d,%d %dx%d\n", Text.c_str(),
+            Bounds.X, Bounds.Y, Bounds.W, Bounds.H);
+    const int pad = std::max(2, Theme->Padding / 2);
+    const int w = renderer.MeasureTextWidth(Text) + pad * 2;
+    const int x = InfoBadgeAlignRight ? Bounds.X + Bounds.W - w : Bounds.X;
+    const GuiRect box{x, Bounds.Y, w, Bounds.H};
+    renderer.DrawFilledRect(box, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    const int textY =
+        Bounds.Y + (Bounds.H - renderer.MeasureTextHeight()) / 2;
+    renderer.DrawText(Text, x + pad, textY, glm::vec3(0.0f));
+    return;
+  }
   if (DrawBackground)
   {
     renderer.DrawFilledRect(Bounds, Theme->TooltipBackground);

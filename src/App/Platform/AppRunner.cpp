@@ -933,7 +933,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::cerr << "flight-sim: startup failed" << std::endl;
       return 1;
     }
-    application->SetMinimalOverlayForBench(true);
+    // QA escape hatch: CUBA_FLIGHT_BENCH_OVERLAY=0 keeps the in-game HUD visible
+    // so frame captures can verify on-screen debug info during flight-sim runs.
+    const char *bench_overlay = std::getenv("CUBA_FLIGHT_BENCH_OVERLAY");
+    if (!bench_overlay || std::string(bench_overlay) != "0")
+    {
+      application->SetMinimalOverlayForBench(true);
+    }
     if (!gallery_pages.empty())
     {
       geometry_engine->SetShowHud(false);

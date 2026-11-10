@@ -88,14 +88,24 @@ if(CUBATARIUM_ENABLE_TRACY)
     message(STATUS "CUBATARIUM_ENABLE_TRACY=ON — TracyClient linked into Cubatarium")
 endif()
 
-include(${CMAKE_SOURCE_DIR}/cmake/GetVersionFromGit.cmake)
-cubatarium_resolve_version(CUBATARIUM_VERSION_STRING)
+# Version.h: generated at configure time (so it always exists) and refreshed on
+# every build by the cubatarium_version target (see cmake/GenerateVersionHeader.cmake).
 set(CUBATARIUM_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY "${CUBATARIUM_GENERATED_DIR}")
-configure_file(
-    "${CMAKE_SOURCE_DIR}/src/Version.h.in"
-    "${CUBATARIUM_GENERATED_DIR}/Version.h"
-    @ONLY
+set(_cubatarium_version_args
+    -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DTEMPLATE=${CMAKE_SOURCE_DIR}/src/Version.h.in
+    -DOUTPUT=${CUBATARIUM_GENERATED_DIR}/Version.h
+    -DFALLBACK_VERSION=${PROJECT_VERSION}
+)
+execute_process(COMMAND ${CMAKE_COMMAND} ${_cubatarium_version_args}
+    -P ${CMAKE_SOURCE_DIR}/cmake/GenerateVersionHeader.cmake)
+add_custom_target(cubatarium_version ALL
+    COMMAND ${CMAKE_COMMAND} ${_cubatarium_version_args}
+        -P ${CMAKE_SOURCE_DIR}/cmake/GenerateVersionHeader.cmake
+    BYPRODUCTS ${CUBATARIUM_GENERATED_DIR}/Version.h
+    COMMENT "Refreshing Cubatarium version from git"
+    VERBATIM
 )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -818,6 +828,7 @@ if(ANDROID)
         ${CUBATARIUM_COMMON_SOURCES}
         ${CUBATARIUM_ANDROID_SOURCES}
     )
+    add_dependencies(cubatarium cubatarium_version)
 
     target_include_directories(cubatarium PRIVATE
         ${CMAKE_SOURCE_DIR}/src
@@ -926,6 +937,7 @@ if(MSVC AND CMAKE_GENERATOR MATCHES "^Visual Studio")
 endif()
 
 add_executable(${PROJECT_NAME} ${CUBATARIUM_DESKTOP_SOURCES})
+add_dependencies(${PROJECT_NAME} cubatarium_version)
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /MP)
 endif()
