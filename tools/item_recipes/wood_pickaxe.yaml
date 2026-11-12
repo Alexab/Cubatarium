@@ -1,0 +1,11 @@
+id: wood_pickaxe
+family: pickaxe
+material: wood
+palette: wood
+recipe_version: 1
+seed: 1
+wield_scale: 1.5
+silhouette: transverse_pick_head
+traits:
+  - lashed_binding
+  - chisel_prongs
