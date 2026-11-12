@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -25,10 +26,12 @@ def _normalize_textures_dir(dest: Path) -> Path:
     for child in list(dest.iterdir()) if dest.is_dir() else []:
         if child.is_dir() and child.name.lower() == "textures" and child.name != "textures":
             tmp = dest / "_textures_case_fix"
-            if tmp.exists():
+            if tmp.is_dir():
                 for old in tmp.iterdir():
                     old.unlink()
                 tmp.rmdir()
+            elif tmp.exists():
+                tmp.unlink()
             child.rename(tmp)
             tmp.rename(desired)
             break
@@ -129,22 +132,33 @@ def build_item(item_id: str, *, publish: bool = True) -> Path:
     if publish:
         dest = MODELS / item_id
         dest.mkdir(parents=True, exist_ok=True)
+        published = {"model.gltf", "model.bin", "ATTRIBUTION.json", "LICENSE.txt",
+                     "textures"}
         for name in ("model.gltf", "model.bin", "ATTRIBUTION.json", "LICENSE.txt"):
             src = staging / name
             if src.is_file():
                 (dest / name).write_bytes(src.read_bytes())
+        wear_src = staging / "wear.json"
+        if wear_src.is_file():
+            (dest / "wear.json").write_bytes(wear_src.read_bytes())
+            published.add("wear.json")
         tex_src = staging / "textures" / "diffuse.png"
         if tex_src.is_file():
             tex_dest = _normalize_textures_dir(dest)
             (tex_dest / "diffuse.png").write_bytes(tex_src.read_bytes())
-            # Drop legacy Minecraft atlas leftovers if present.
-            for stale in ("colormap.png", "body.png"):
-                leftover = tex_dest / stale
-                if leftover.is_file():
-                    leftover.unlink()
-        wear_src = staging / "wear.json"
-        if wear_src.is_file():
-            (dest / "wear.json").write_bytes(wear_src.read_bytes())
+            # Drop stale texture siblings so the atlas stays the single file.
+            for child in tex_dest.iterdir():
+                if child.is_file() and child.name != "diffuse.png":
+                    child.unlink()
+        # Mirror-clean the destination: files left over from a previous
+        # publish (e.g. a wear.json of a family that changed) must not linger.
+        for child in list(dest.iterdir()):
+            if child.name in published:
+                continue
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
         _retarget_content(item_id, recipe)
         return dest
     return staging
@@ -200,8 +214,19 @@ def list_recipe_ids() -> list[str]:
 
 
 def build_all(*, publish: bool = True) -> list[str]:
-    done = []
+    """Build every recipe. One failing item does not abort the run: the
+    failure is reported and the rest keep building; the summary error is
+    raised at the end so CI still fails."""
+    done: list[str] = []
+    failed: list[str] = []
     for item_id in list_recipe_ids():
-        build_item(item_id, publish=publish)
+        try:
+            build_item(item_id, publish=publish)
+        except Exception as exc:  # noqa: BLE001 - keep building the rest
+            failed.append(item_id)
+            print(f"FAIL {item_id}: {type(exc).__name__}: {exc}")
+            continue
         done.append(item_id)
+    if failed:
+        raise RuntimeError(f"{len(failed)} item(s) failed to build: {', '.join(failed)}")
     return done

@@ -29,8 +29,14 @@ def _gray_mean(item_id: str) -> float:
     parts = _load_parts_from_gltf(MODELS / item_id)
     img = _render(parts, mode="gray", size=96, yaw=35.0).convert("L")
     hist = img.histogram()
-    total = sum(hist) or 1
-    return sum(i * hist[i] for i in range(256)) / total
+    # Measure item pixels only: the gray render uses a pure-white backdrop,
+    # excluded here so thin tools are not drowned by background (which used to
+    # compress every family's tier means into one or two buckets).
+    background = hist[255]
+    total = sum(hist) - background
+    total = total or 1
+    numerator = sum(i * hist[i] for i in range(256)) - 255 * background
+    return numerator / total
 
 
 def _triangle_budget(item_id: str) -> int:
@@ -55,21 +61,29 @@ def run_audit() -> dict:
         "warnings": [],
     }
 
-    # Per-item contact sheets for the full catalog with recipes.
+    # Per-item contact sheets for the full catalog with recipes. One broken
+    # item must not abort the audit: record it and keep going.
     for path in sorted(CONTENT.glob("*.json")):
         item_id = path.stem
         if not (MODELS / item_id / "model.gltf").is_file():
             findings["failures"].append(f"missing_model:{item_id}")
             continue
-        make_contact_sheet(item_id)
-        tris = _triangle_budget(item_id)
-        has_tex = _has_diffuse(item_id)
-        entry = {
-            "triangles": tris,
-            "has_diffuse_png": has_tex,
-            "silhouette_hash": _silhouette_hash(item_id),
-            "gray_mean": round(_gray_mean(item_id), 2),
-        }
+        if not (MODELS / item_id / "model.bin").is_file():
+            findings["failures"].append(f"missing_bin:{item_id}")
+            continue
+        try:
+            make_contact_sheet(item_id)
+            tris = _triangle_budget(item_id)
+            has_tex = _has_diffuse(item_id)
+            entry = {
+                "triangles": tris,
+                "has_diffuse_png": has_tex,
+                "silhouette_hash": _silhouette_hash(item_id),
+                "gray_mean": round(_gray_mean(item_id), 2),
+            }
+        except Exception as exc:  # noqa: BLE001 - audit must always report
+            findings["failures"].append(f"render_failed:{item_id}:{type(exc).__name__}")
+            continue
         findings["items"][item_id] = entry
         if not has_tex:
             findings["failures"].append(f"missing_texture:{item_id}")
@@ -91,10 +105,11 @@ def run_audit() -> dict:
         # Wood/stone should not share identical silhouette with forged iron.
         if "wood" in hashes and "iron" in hashes and hashes["wood"] == hashes["iron"]:
             findings["failures"].append(f"same_silhouette:{family}:wood==iron")
-        # Gray means should not all collapse to one value (colorblind tier cue).
+        # Gray means must not all collapse to one value: the gray column is the
+        # colorblind tier cue, so collapsed tiers are a hard failure.
         unique_gray = len(set(int(v) for v in grays.values()))
         if unique_gray < 3 and len(grays) >= 4:
-            findings["warnings"].append(f"weak_gray_separation:{family}:{unique_gray}")
+            findings["failures"].append(f"weak_gray_separation:{family}:{unique_gray}")
         findings["families"][family] = {
             "sheet": str(sheet.relative_to(ROOT)).replace("\\", "/"),
             "silhouette_hashes": hashes,

@@ -9,6 +9,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
+from itemgen.texturegen import role_uv
+
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = ROOT / "models" / "items"
 OUT = ROOT / "docs" / "research" / "item-previews"
@@ -40,11 +42,12 @@ def _load_parts_from_gltf(item_dir: Path) -> list[dict]:
         mat_name = mats[mat_i]["name"] if mat_i < len(mats) else "head"
         color = (180, 180, 180, 255)
         if atlas is not None:
-            # Sample center of role tile via UV0 average.
-            uv_acc = accessors[prim["attributes"]["TEXCOORD_0"]]
-            uv_view = views[uv_acc["bufferView"]]
-            uoff = uv_view.get("byteOffset", 0)
-            u, v = struct.unpack_from("<ff", blob, uoff)
+            # Sample the center of this role's atlas tile. Sampling a vertex
+            # UV would land on the inset tile edge (inside the highlight band);
+            # the tile center carries the flat role color.
+            u0, v0, u1, v1 = role_uv(mat_name)
+            u = (u0 + u1) * 0.5
+            v = (v0 + v1) * 0.5
             px = min(atlas.width - 1, max(0, int(u * atlas.width)))
             py = min(atlas.height - 1, max(0, int(v * atlas.height)))
             color = atlas.getpixel((px, py))
@@ -71,7 +74,10 @@ def _project(x, y, z, yaw_deg: float, pitch_deg: float = -25.0):
 
 
 def _render(parts: list[dict], *, mode: str, size: int = 160, yaw: float = 35.0) -> Image.Image:
-    img = Image.new("RGBA", (size, size), (24, 24, 28, 255) if mode != "silhouette" else (255, 255, 255, 255))
+    # Silhouette and gray columns use a white backdrop: the gray tier check
+    # masks the backdrop out, and thin tools must not drown in background.
+    backdrop = (255, 255, 255, 255) if mode in ("silhouette", "gray") else (24, 24, 28, 255)
+    img = Image.new("RGBA", (size, size), backdrop)
     draw = ImageDraw.Draw(img)
     projected = []
     for part in parts:

@@ -269,7 +269,20 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force", action="store_true", help="Overwrite existing content defs")
+    ap.add_argument(
+        "--legacy",
+        action="store_true",
+        help="Confirm the legacy CC0 import path (primary pipeline is tools/itemgen)",
+    )
     args = ap.parse_args()
+    if not args.legacy:
+        # tools/itemgen is the primary item pipeline now; a casual re-run of
+        # this generator must not silently recreate catalog entries.
+        raise SystemExit(
+            "generate_item_defs_from_manifest.py is a legacy path. "
+            "Use `python -m itemgen build-all` for the procedural catalog, "
+            "or pass --legacy to run this generator anyway."
+        )
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     created = 0
     for item_id, spec in sorted(manifest.get("items", {}).items()):
