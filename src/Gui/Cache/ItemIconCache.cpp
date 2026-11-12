@@ -189,9 +189,10 @@ void UItemIconCache::WarmupNext(size_t count)
 
 std::string UItemIconCache::FingerprintFor(const std::string &itemId) const
 {
-  // Item id + model preset version: stale disk icons re-render when the
-  // model art changes.
+  // Item id + model path + generation tag: bump tag when published meshes
+  // change in place so disk-cached icons do not stick to old silhouettes.
   std::string fingerprint = itemId;
+  fingerprint += "|icon=tools_visual_v2";
   if (Items)
   {
     if (const ItemDefinition *def = Items->Get(itemId))

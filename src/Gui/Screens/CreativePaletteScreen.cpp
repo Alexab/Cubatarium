@@ -654,14 +654,24 @@ void UCreativePaletteScreen::Update(double dt)
     }
   }
 
-  // UX U4: drain queued block icons; refresh textures in place when the
-  // queue empties (a full grid rebuild would re-create every widget).
+  // UX U4: drain queued icons; refresh textures in place when the queue
+  // empties (a full grid rebuild would re-create every widget).
   if (Visible && Icons)
   {
-    const bool hadQueue = Icons->PendingBlockIcons() > 0;
+    const bool hadBlockQueue = Icons->PendingBlockIcons() > 0;
     Icons->WarmupBlockIcons(4);
-    if (hadQueue && Icons->PendingBlockIcons() == 0 &&
+    if (Kind == ContentKind::Item)
+    {
+      Icons->WarmupItemIcons(8);
+    }
+    if (hadBlockQueue && Icons->PendingBlockIcons() == 0 &&
         Kind == ContentKind::Block)
+    {
+      RefreshGridIconTextures();
+    }
+    // Items can finish warming via the global per-frame budget; fill any
+    // still-empty slots once the queue is idle (not only on edge).
+    if (Kind == ContentKind::Item && Icons->PendingItemIcons() == 0)
     {
       RefreshGridIconTextures();
     }
@@ -921,16 +931,29 @@ void UCreativePaletteScreen::FinishGridBuild()
 
 void UCreativePaletteScreen::RefreshGridIconTextures()
 {
-  if (!Icons || Kind != ContentKind::Block)
+  if (!Icons)
   {
     return;
   }
   for (size_t i = 0; i < GridSlots.size() && i < GridEntryIds.size(); ++i)
   {
-    if (GridSlots[i] && GridSlots[i]->GetIconTexture() == 0)
+    if (!GridSlots[i] || GridSlots[i]->GetIconTexture() != 0)
     {
-      GridSlots[i]->SetIconTexture(
-          Icons->GetBlockIconTextureIfCached(GridEntryIds[i]));
+      continue;
+    }
+    GLuint tex = 0;
+    if (Kind == ContentKind::Block)
+    {
+      tex = Icons->GetBlockIconTextureIfCached(GridEntryIds[i]);
+    }
+    else if (Kind == ContentKind::Item)
+    {
+      // Queue is drained; cache hits only (GetItemIconTexture queues misses).
+      tex = Icons->GetItemIconTexture(GridEntryIds[i]);
+    }
+    if (tex != 0)
+    {
+      GridSlots[i]->SetIconTexture(tex);
     }
   }
 }

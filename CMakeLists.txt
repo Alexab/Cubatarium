@@ -3011,8 +3011,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/models")
         COMMAND ${CMAKE_COMMAND}
             -DSYNC_SRC="${CMAKE_SOURCE_DIR}/models"
             -DSYNC_DST="${CUBATARIUM_RUN_DIR}/models"
+            -DSYNC_MIRROR=ON
             -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
-        COMMENT "Syncing models to runtime directory"
+        COMMENT "Syncing models to runtime directory (mirror prune)"
     )
 endif()
 
@@ -3041,8 +3042,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/content")
         COMMAND ${CMAKE_COMMAND}
             -DSYNC_SRC="${CMAKE_SOURCE_DIR}/content"
             -DSYNC_DST="${CUBATARIUM_RUN_DIR}/content"
+            -DSYNC_MIRROR=ON
             -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
-        COMMENT "Syncing content data to runtime directory"
+        COMMENT "Syncing content data to runtime directory (mirror prune)"
     )
 endif()
 
